@@ -1,0 +1,427 @@
+#!/usr/bin/perl -w
+
+# Copyright (c) 2006 by Jeff Ratcliffe (ra28145 at users dot sourceforge dot net)
+# This script is released under the GPL license.  Please
+# see the included LICENSE file for details.
+
+# To do
+# 1. Resize detail, proper thumbnails.
+#    (see google resize image site:http://mail.gnome.org/archives/gtk-perl-list/)
+# 2. Delete single/multiple pages
+# 3. Add save as tiff
+# 4. Import multi-page tiffs
+# 5. Scan preferences (# pages, paper size, scanner device, double-sided, etc.)
+# 6. Rotate
+# 7. Metadata in PDF
+# 8. Reorder pages
+
+use strict;
+use IPC::Open3;
+use IO::Handle;
+use Gtk2 -init;
+use Gtk2::SimpleList;
+use File::Temp qw/tempfile tempdir/; # To create temporary files
+
+use constant TRUE  => 1;
+use constant FALSE => 0;
+
+my $program = "gscan2pdf";
+my $version = 0.11;
+
+if (check_utils() ne 0) {
+ print "$program requires libtiff (tiffcp & tiff2pdf).\nPlease install them.\n";
+ exit 1;
+}
+
+# This is the GtkItemFactoryEntry structure used to generate new menus.
+# Item 1: The menu path. The letter after the underscore indicates an
+#         accelerator key once the menu is open.
+# Item 2: The accelerator key for the entry
+# Item 3: The callback function.
+# Item 4: The callback action.  This changes the parameters with
+#         which the function is called.  The default is 0.
+# Item 5: The item type, used to define what kind of an item it is.
+#         Here are the possible values:
+#          NULL               -> "<Item>"
+#          ""                 -> "<Item>"
+#          "<Title>"          -> create a title item
+#          "<Item>"           -> create a simple item
+#          "<CheckItem>"      -> create a check item
+#          "<ToggleItem>"     -> create a toggle item
+#          "<RadioItem>"      -> create a radio item
+#          <path>             -> path of a radio item to link against
+#          "<Separator>"      -> create a separator
+#          "<Branch>"         -> create an item to hold sub items (optional)
+#          "<LastBranch>"     -> create a right justified branch 
+
+my @menu_items = ( { path        => '/_File',
+		     item_type   => '<Branch>' },
+		   { path        => '/File/_New',
+		     accelerator => '<control>n',
+		     callback    => \&do_new },
+		   { path        => '/File/_Import',
+		     accelerator => '<control>i',
+		     callback    => \&do_import },
+		   { path        => '/File/Sca_n',
+		     callback    => \&do_scan },
+		   { path        => '/File/_Save PDF',
+		     accelerator => '<control>s',
+		     callback    => \&do_save },
+		   { path        => '/File/sep1',
+		     item_type   => '<Separator>' },
+		   { path        => '/File/_Quit',
+		     accelerator => '<control>q',
+		     callback    => sub { Gtk2 -> main_quit; } },
+
+#		   { path        => '/_Edit',
+#		     item_type   => '<Branch>' },
+#		   { path        => '/Edit/Delete' },
+#		   { path        => '/Edit/Preferences' },
+
+		   { path        => '/_Help',
+		     item_type   => '<LastBranch>' },
+		   { path        => '/_Help/About',
+		     callback    => \&do_about } );
+
+# Create the window
+my $window = new Gtk2::Window( 'toplevel' );
+$window -> signal_connect( 'destroy', sub { Gtk2 -> main_quit; } );
+$window -> set_title( "$program v$version" );
+#$window -> set_resizable (TRUE);
+$window -> set_default_size (800, 600);
+
+my $main_vbox = new Gtk2::VBox( FALSE, 1 );
+$window -> add( $main_vbox );
+$main_vbox -> show;
+
+# Create the menu bar
+my $menubar = create_menu_bar( $window );
+$main_vbox -> pack_start( $menubar, FALSE, TRUE, 0 );
+$menubar -> show;
+
+# HPaned for thumbnails and detail view
+my $hpaned = Gtk2::HPaned -> new;
+$main_vbox -> pack_start($hpaned, TRUE, TRUE, 0);
+
+# Scrolled window for thumbnails
+my $scwin_thumbs = Gtk2::ScrolledWindow -> new;
+$hpaned -> pack1 ($scwin_thumbs, TRUE, TRUE);
+$scwin_thumbs -> set_policy ('automatic', 'automatic');
+my $list = Gtk2::SimpleList -> new("Page list", 'text');
+$list -> get_selection -> set_mode ('multiple');
+$scwin_thumbs -> add_with_viewport($list);
+
+# Scrolled window for detail view
+my $scwin_detail = Gtk2::ScrolledWindow -> new;
+$hpaned -> pack2 ($scwin_detail, TRUE, TRUE);
+$scwin_detail -> set_policy ('automatic', 'automatic');
+
+# Globally define the $image widget for $scwin_detail
+my $image;
+
+# Set up call back for list selection to update detail view
+$list -> get_selection -> signal_connect(changed => sub {
+ my @page = $list -> get_selected_indices;
+
+# Remove any image in the detail window
+ if (defined($scwin_detail -> child)) {
+  my $viewport = $image -> get_parent;
+  $image -> destroy;
+  $viewport -> destroy;
+ }
+
+# Display the new image
+ if ($#page > -1) {
+# scalar needed for reasons I don't understand, but which have to do with
+# converting the array to a scalar. Alternatively, it might be a bug.
+  $image = Gtk2::Image -> new_from_file (scalar($list -> {data}[$page[0]][0]));
+  $scwin_detail -> add_with_viewport($image);
+  $scwin_detail -> show_all;
+ }
+});
+
+$window -> show_all;
+Gtk2 -> main;
+
+
+
+### Subroutines
+
+# Create the menu bar, initialize its menus, and return the menu bar.
+
+sub create_menu_bar
+{
+ my ($window) = @_;
+
+ my $accel_group = new Gtk2::AccelGroup;
+
+ # This function initializes the item factory.
+ # Param 1: The type of menu - can be 'Gtk2::MenuBar', 'Gtk2::Menu',
+ #          or 'Gtk2::OptionMenu'.
+ # Param 2: The path of the menu.
+ # Param 3: The accelerator group.  The item factory sets up
+ #          the accelerator table while generating menus.
+ my $item_factory = new Gtk2::ItemFactory( 'Gtk2::MenuBar', '<main>',
+                                                                 $accel_group );
+
+ # This function generates the menu items. Pass the item factory,
+ # the number of items in the array, the array itself, and any
+ # callback data for the the menu items.
+ $item_factory -> create_items( @menu_items );
+
+ # Attach the new accelerator group to the window.
+ $window -> add_accel_group( $accel_group );
+
+ # Finally, return the actual menu bar created by the item factory.
+ #*menubar = gtk_item_factory_get_widget (item_factory, "<main>");
+ return ( $item_factory -> get_widget( '<main>' ) );
+}
+
+
+# Deletes all scans after warning.
+
+sub do_new
+{
+ my $dialog = Gtk2::MessageDialog -> new ($window, 'destroy-with-parent',
+                     'warning', 'ok-cancel',
+                     "This will clear the list of scanned images.\n"
+                     . "Do you want to continue?");
+ if ($dialog -> run eq 'ok') {
+
+# Remove any image in the detail window
+  if ($image) {
+   my $viewport = $image -> get_parent;
+   $image -> destroy;
+   $viewport -> destroy;
+  }
+
+# Depopulate the thumbnail list
+  while ($#{$list -> {data}} > -1) {
+   pop @{$list -> {data}};
+  }
+ }
+ $dialog -> destroy;
+}
+
+
+# Throw up file selector and import selected file
+
+sub do_import {
+ my $fileselection = Gtk2::FileSelection -> new("Import scan from file");
+ $fileselection -> set_modal(TRUE);
+
+# callback for OK button
+ my $fs_ok_button = $fileselection -> ok_button;
+ $fs_ok_button -> signal_connect(clicked => sub {
+
+# Get filename for PDF
+         my $filename =$fileselection -> get_filename;
+         $fileselection -> destroy;
+         import_scan($filename);
+ });
+
+# callback for cancel button
+ my $fs_cancel_b = $fileselection -> cancel_button;
+ $fs_cancel_b -> signal_connect(clicked => sub{ $fileselection -> destroy; });
+
+ $fileselection -> show_all;
+}
+
+
+# Throw up file selector and save selected pages as PDF under given name.
+
+sub do_save {
+# Set up file selector
+ my $fileselection = Gtk2::FileSelection -> new("Save PDF");
+ $fileselection -> set_modal(TRUE);
+ my $fs_ok_button = $fileselection -> ok_button;
+
+# callback for OK button
+ $fs_ok_button -> signal_connect(clicked => sub {
+         my $filename = $fileselection -> get_filename;
+         $fileselection -> destroy;
+
+# fill $pagelist with filenames of selected pages
+         my @page = $list -> get_selected_indices;
+         my $pagelist = $list -> {data}[$page[0]][0];
+         my $i = 1;
+         while ($i <= $#page) {
+          $pagelist = $pagelist." ".$list -> {data}[$page[$i]][0];
+          ++$i;
+         }
+
+# call tiff2pdf and/or tiffcp according to the number of pages
+         if ($#page > 0) {
+          system ("tiffcp $pagelist \"$filename.tif\"");
+          system ("tiff2pdf -z $filename.tif -o \"$filename\"");
+          unlink ("$filename.tif"); # delete the temporary tiff
+         }
+         else {
+          system ("tiff2pdf -z $pagelist -o \"$filename\"");
+         }
+ });
+
+# callback for cancel button
+ my $fs_cancel_b = $fileselection -> cancel_button;
+ $fs_cancel_b -> signal_connect(clicked => sub{ $fileselection -> destroy; });
+
+ $fileselection -> show_all;
+}
+
+
+# Scan
+
+sub do_scan {
+ my $output = `scanimage --version 2>/dev/null`;
+ if ($? == 0) {
+  print "Found $output";
+ }
+ else {
+  printf "Error %d looking for scanimage\n", $? >> 8;
+  exit $? >> 8;
+ }
+ my @output = `scanimage --list-devices 2>/dev/null`;
+ if ($? == 0) {
+  if ($#output > 1 && $output[0] =~ /^\s$/ 
+                   && $output[1] =~ /^No scanners were identified/) {
+   my $dialog = Gtk2::MessageDialog -> new ($window,
+                                          'destroy-with-parent',
+                                          'error',
+                                          'close',
+                                          "No scanners found");
+   $dialog -> run;
+   $dialog -> destroy;
+  }
+  else {
+   print "We have $#output devices:\n";
+   foreach my $line (@output) {
+    chomp($line);
+    print "Found \"$line\"\n";
+   }
+  }
+ }
+ else {
+  printf "Error %d looking for scanimage\n", $? >> 8;
+ }
+ 
+ my @options = ( '-x 210 -y 297', 
+                 '--mode lineart', 
+                 '--format=tiff',  
+                 '--resolution 300',
+                 '--batch' );
+
+# Interface to scanimage
+ my ($write, $read);
+ my $error = IO::handle -> new; # this needed because of a bug in open3.
+ my $pid = open3($write, $read, $error, "scanimage @options" );
+ 
+ my $dialog = Gtk2::Dialog -> new ("Scanning...", $window,
+                                 'destroy-with-parent',
+                                 'gtk-cancel' => 'cancel');
+ my $label = Gtk2::Label -> new ("Scanning...");
+ $dialog -> vbox -> add ($label);
+
+# Ensure that the dialog box is destroyed when the user responds.
+ $dialog -> signal_connect (response => sub { $_[0] -> destroy;
+                                            local $SIG{HUP} = 'IGNORE';
+                                            kill HUP => $pid;
+                                          });
+ $dialog -> show_all;
+ 
+ my $line;
+ Glib::IO -> add_watch(fileno($error), 'in', sub {
+                             my $buffer;
+                             sysread $error, $buffer, 1024;
+                             $line = $line . $buffer; # needed to cover case where line is broken in middle
+                             if ($line =~ /\n/) {
+                              my $scanned;
+                              if ($line =~ /Scanned page ([0-9]*)\. \(scanner status = 5\)/) {
+                               import_scan ("out$1.tif");
+                               $scanned = TRUE;
+                              }
+# This must be done in two separate statements to cover multiline output
+                              if ($line =~ /Scanning page ([0-9]*)/) {
+                               $label -> set_text("Scanning page $1...");
+                               $scanned = TRUE;
+                              }
+                              if ($scanned) {
+                               $line = undef;
+                              }
+                             }
+                             return 1;
+                            });
+}
+
+
+# Take new scan and display it
+
+sub import_scan {
+ my ($filename) = @_;
+
+# Add to the page list
+ push @{$list -> {data}}, [$filename];
+
+# Select new page, deselecting others. This fires the select callback,
+# displaying the page
+ $list -> get_selection -> unselect_all;
+ my @page;
+ $page[0] = $#{$list -> {data}};
+ $list -> select(@page);
+
+ $scwin_thumbs -> show_all;
+}
+
+
+# Display about dialog
+
+sub do_about {
+ my $dialog = Gtk2::MessageDialog -> new ($window, 'destroy-with-parent',
+                     'info', 'ok', "$program v$version\n\n"
+                     . "To aid the scan-to-PDF process.\n\n"
+                     . "Copyright Jeff Ratcliffe\n"
+                     . "Licensed under the GPLv2");
+ $dialog -> run;
+ $dialog -> destroy;
+}
+
+
+# Check that tiffcp & tiff2pdf exist
+
+sub check_utils {
+ system("which tiffcp >/dev/null 2>/dev/null");
+ return $? if $? != 0;
+ system("which tiff2pdf >/dev/null 2>/dev/null");
+ return $? if $? != 0;
+ return 0;
+}
+
+__END__
+
+=head1 NAME
+
+gscan2pdf - A GUI to ease the process of producing PDFs from scanned documents
+
+=head1 SYNOPSIS
+
+1. Scan one or several pages in with File/Scan
+2. Select pages as you wish
+3. Create PDF of selected pages with File/Save PDF
+
+=head1 DESCRIPTION
+
+At maturity, the GUI will have similar features to that of the Windows Imaging program, but with the express objective of writing a PDF, including metadata.
+
+Scanning is handled with SANE via scanimage.
+PDF conversion is done by libtiff.
+
+Perl is used for portability and ease of programming, with gtk2-perl for the GUI. This should therefore work more or less out of the box on any system with Perl, gtk2-perl, scanimage and libtiff.
+
+=head1 SEE ALSO
+
+Requires perl, libgtk2-perl (>=1.100-1), libglib-perl (>= 1.100-1), scanimage and libtiff.
+
+=head1 AUTHOR
+
+Jeffrey Ratcliffe
+
+=cut
