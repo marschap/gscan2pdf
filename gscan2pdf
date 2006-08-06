@@ -63,7 +63,7 @@ my @menu_items = ( { path        => '/_File',
 		     accelerator => '<control>i',
 		     callback    => \&do_import },
 		   { path        => '/File/Sca_n',
-		     callback    => \&do_scan },
+		     callback    => \&scan_dialog },
 		   { path        => '/File/_Save PDF',
 		     accelerator => '<control>s',
 		     callback    => \&do_save },
@@ -271,39 +271,93 @@ sub do_save {
 
 # Scan
 
-sub do_scan {
+sub scan_dialog {
  my $output = `scanimage --version 2>/dev/null`;
- if ($? == 0) {
-  print "Found $output";
- }
- else {
-  printf "Error %d looking for scanimage\n", $? >> 8;
-  exit $? >> 8;
- }
- my @output = `scanimage --list-devices 2>/dev/null`;
- if ($? == 0) {
-  if ($#output > 1 && $output[0] =~ /^\s$/ 
-                   && $output[1] =~ /^No scanners were identified/) {
-   my $dialog = Gtk2::MessageDialog -> new ($window,
+ if ($? ne 0) {
+  my $dialog = Gtk2::MessageDialog -> new ($window,
                                           'destroy-with-parent',
                                           'error',
                                           'close',
-                                          "No scanners found");
+                                          "scanimage not found");
+  $dialog -> run;
+  $dialog -> destroy;
+  return 0;
+ }
+ my @output = `scanimage --list-devices 2>/dev/null`;
+ if ($? eq 0) {
+  if ($#output > 1 && $output[0] =~ /^\s$/ 
+                   && $output[1] =~ /^No scanners were identified/) {
+   my $dialog = Gtk2::MessageDialog -> new ($window,
+                                           'destroy-with-parent',
+                                           'error',
+                                           'close',
+                                           "No scanners found");
    $dialog -> run;
    $dialog -> destroy;
   }
   else {
-   print "We have $#output devices:\n";
-   foreach my $line (@output) {
-    chomp($line);
-    print "Found \"$line\"\n";
+
+# scan pop-up window
+   my $window = Gtk2::Window->new;
+   $window -> set_title ('Scan Document');
+   $window -> signal_connect (delete_event => sub { $_[0] -> destroy; });
+
+   my $vbox = Gtk2::HBox -> new;
+   $window -> add ($vbox);
+
+   my $hbox1 = Gtk2::HBox -> new;
+   $vbox -> add ($hbox1);
+
+# device list
+   my $label = Gtk2::Label -> new ("Device");
+   $hbox1 -> pack_start ($label, TRUE, TRUE, FALSE);
+
+   my $opt = Gtk2::OptionMenu -> new;
+   my $menu = Gtk2::Menu -> new;
+
+# parse out the device and model names
+   my $output = `scanimage --formatted-device-list="%i %d.%v %m;" 2>/dev/null`;
+
+   my @device;
+   my $device = substr($output, 0, index($output, ";")+1);
+   $output = substr($output, index($output, ";")+1, length($output));
+   while ($device =~ /([0-9]*) (.*)\.(.*);/) {
+    $device[$1] = $2;
+
+# Convert all underscores to spaces
+    (my $model = $3) =~ s/_/ /g;
+    $device = substr($output, 0, index($output, ";")+1);
+    $output = substr($output, index($output, ";")+1, length($output));
+
+# read the device names into the optionmenu
+    my $item = Gtk2::MenuItem -> new ($model);
+#    $item -> signal_connect (activate => sub { $slist -> get_selection -> set_mode ($_[1]); }, $_);
+    $item -> show;
+    $menu -> append ($item);
    }
+   $opt -> set_menu ($menu);
+   $hbox1 -> pack_end ($opt, TRUE, TRUE, FALSE);
+   
+   my $hbox2 = Gtk2::HBox -> new;
+#   $vbox -> add ($hbox2);
+   $vbox -> pack_end( $hbox2, FALSE, FALSE, 0 );
+
+# Scan button
+   my $sbutton = Gtk2::Button -> new('Scan');
+   $hbox2 -> pack_start( $sbutton, FALSE, FALSE, 0 );
+   $sbutton -> signal_connect( clicked => \&setall_event );
+
+# Cancel button
+   my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+   $hbox2 -> pack_end( $cbutton, FALSE, FALSE, 0 );
+   $cbutton -> signal_connect( clicked => sub { $window -> destroy; } );
+
+   $window -> show_all;
   }
  }
- else {
-  printf "Error %d looking for scanimage\n", $? >> 8;
- }
- 
+}
+
+sub do_scan {
  my @options = ( '-x 210 -y 297', 
                  '--mode lineart', 
                  '--format=tiff',  
