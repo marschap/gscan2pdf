@@ -5,15 +5,17 @@
 # see the included LICENSE file for details.
 
 # To do
+# 0. Debug multi-page PDF filenames with spaces
 # 1. Resize detail, proper thumbnails.
 #    (see google resize image site:http://mail.gnome.org/archives/gtk-perl-list/)
 # 2. Delete single/multiple pages
-# 3. Add save as tiff
-# 4. Import multi-page tiffs
-# 5. Scan preferences (# pages, paper size, scanner device, double-sided, etc.)
-# 6. Rotate
-# 7. Metadata in PDF
-# 8. Reorder pages
+# 3. Multiselect tiffs to import
+# 4. Scan preferences (double-sided, etc.)
+# 5. Metadata in PDF
+# 6. Reorder pages
+# 7. Add save as tiff
+# 8. Import multi-page tiffs
+# 9. Rotate
 
 use strict;
 use IPC::Open3;
@@ -215,9 +217,9 @@ sub do_import {
  $fs_ok_button -> signal_connect(clicked => sub {
 
 # Get filename for PDF
-         my $filename =$fileselection -> get_filename;
-         $fileselection -> destroy;
-         import_scan($filename);
+  my $filename = $fileselection -> get_filename;
+  $fileselection -> destroy;
+  import_scan($filename);
  });
 
 # callback for cancel button
@@ -238,27 +240,27 @@ sub do_save {
 
 # callback for OK button
  $fs_ok_button -> signal_connect(clicked => sub {
-         my $filename = $fileselection -> get_filename;
-         $fileselection -> destroy;
+  my $filename = $fileselection -> get_filename;
+  $fileselection -> destroy;
 
 # fill $pagelist with filenames of selected pages
-         my @page = $list -> get_selected_indices;
-         my $pagelist = $list -> {data}[$page[0]][0];
-         my $i = 1;
-         while ($i <= $#page) {
-          $pagelist = $pagelist." ".$list -> {data}[$page[$i]][0];
-          ++$i;
-         }
+  my @page = $list -> get_selected_indices;
+  my $pagelist = $list -> {data}[$page[0]][0];
+  my $i = 1;
+  while ($i <= $#page) {
+   $pagelist = $pagelist." ".$list -> {data}[$page[$i]][0];
+   ++$i;
+  }
 
 # call tiff2pdf and/or tiffcp according to the number of pages
-         if ($#page > 0) {
-          system ("tiffcp $pagelist \"$filename.tif\"");
-          system ("tiff2pdf -z $filename.tif -o \"$filename\"");
-          unlink ("$filename.tif"); # delete the temporary tiff
-         }
-         else {
-          system ("tiff2pdf -z $pagelist -o \"$filename\"");
-         }
+  if ($#page > 0) {
+   system ("tiffcp $pagelist \"$filename.tif\"");
+   system ("tiff2pdf -z $filename.tif -o \"$filename\"");
+   unlink ("$filename.tif"); # delete the temporary tiff
+  }
+  else {
+   system ("tiff2pdf -z $pagelist -o \"$filename\"");
+  }
  });
 
 # callback for cancel button
@@ -298,22 +300,26 @@ sub scan_dialog {
   else {
 
 # scan pop-up window
-   my $window = Gtk2::Window->new;
+   my $window = Gtk2::Window -> new;
+   $window -> set_border_width(10);
    $window -> set_title ('Scan Document');
    $window -> signal_connect (delete_event => sub { $_[0] -> destroy; });
 
-   my $vbox = Gtk2::HBox -> new;
+# VBox for window
+   my $vbox = Gtk2::VBox -> new;
    $window -> add ($vbox);
 
-   my $hbox1 = Gtk2::HBox -> new;
-   $vbox -> add ($hbox1);
+# HBox for devices
+   my $hboxd = Gtk2::HBox -> new;
+   $vbox -> pack_start ($hboxd, TRUE, TRUE, 0);
+#   $vbox -> add ($hboxd);
 
 # device list
-   my $label = Gtk2::Label -> new ("Device");
-   $hbox1 -> pack_start ($label, TRUE, TRUE, FALSE);
+   my $labeld = Gtk2::Label -> new ("Device");
+   $hboxd -> pack_start ($labeld, TRUE, TRUE, 0);
 
-   my $opt = Gtk2::OptionMenu -> new;
-   my $menu = Gtk2::Menu -> new;
+   my $optd = Gtk2::OptionMenu -> new;
+   my $menud = Gtk2::Menu -> new;
 
 # parse out the device and model names
    my $output = `scanimage --formatted-device-list="%i %d.%v %m;" 2>/dev/null`;
@@ -331,25 +337,100 @@ sub scan_dialog {
 
 # read the device names into the optionmenu
     my $item = Gtk2::MenuItem -> new ($model);
-#    $item -> signal_connect (activate => sub { $slist -> get_selection -> set_mode ($_[1]); }, $_);
     $item -> show;
-    $menu -> append ($item);
+    $menud -> append ($item);
    }
-   $opt -> set_menu ($menu);
-   $hbox1 -> pack_end ($opt, TRUE, TRUE, FALSE);
+   $optd -> set_menu ($menud);
+   $hboxd -> pack_end ($optd, TRUE, TRUE, 0);
    
-   my $hbox2 = Gtk2::HBox -> new;
-#   $vbox -> add ($hbox2);
-   $vbox -> pack_end( $hbox2, FALSE, FALSE, 0 );
+# HBox for paper size
+   my $hboxp = Gtk2::HBox -> new;
+#   $vbox -> add ($hboxp);
+   $vbox -> pack_start ($hboxp, TRUE, TRUE, 0);
+
+# Paper list
+   my $labelp = Gtk2::Label -> new ("Paper size");
+   $hboxp -> pack_start ($labelp, TRUE, TRUE, 0);
+
+   my $optp = Gtk2::OptionMenu -> new;
+   my $menup = Gtk2::Menu -> new;
+   foreach (qw/A4 Letter Custom/) {
+    my $item = Gtk2::MenuItem -> new ($_);
+    $item -> show;
+    $menup -> append ($item);
+   }
+   $optp -> set_menu ($menup);
+   $hboxp -> pack_end ($optp, TRUE, TRUE, 0);
+
+# Frame for # pages
+   my $frame = Gtk2::Frame -> new('# Pages');
+#   $vbox -> add ($frame);
+   $vbox -> pack_start ($frame, TRUE, TRUE, 0);
+   my $vboxn = Gtk2::VBox -> new;
+   $vboxn -> set_border_width(6);
+   $frame -> add ($vboxn);
+
+#the first radio button has to set the group,
+#which is undef for the first button
+# All button
+   my $buttona = Gtk2::RadioButton -> new(undef, "All");
+   $vboxn -> pack_start($buttona, TRUE, TRUE, 0);
+   $buttona -> set_active(TRUE);
+   $buttona -> show;
+   my @group = $buttona -> get_group;
+
+# Entry button
+   my $hboxn = Gtk2::HBox -> new;
+   $vboxn -> pack_start($hboxn, TRUE, TRUE, 0);
+   my $buttone = Gtk2::RadioButton -> new(@group);
+   $hboxn -> pack_start($buttone, TRUE, TRUE, 0);
+   $buttone -> show;
+
+# Number of pages
+   my $entry = Gtk2::Entry -> new;
+   $entry -> signal_connect ('insert-text' => sub {
+    my ($widget, $string, $len, $position) = @_;
+    if ($string !~ /^[0-9]+$/) { # Only add numbers
+     $entry -> signal_stop_emission_by_name ('insert-text');
+     $buttone -> set_active(TRUE); # Set the radiobutton active
+    }
+    () # this callback must return either 2 or 0 items.
+   });
+   $hboxn -> pack_end ($entry, TRUE, TRUE, 0);
+
+# HBox for buttons
+   my $hboxb = Gtk2::HBox -> new;
+#   $vbox -> add ($hboxb);
+   $vbox -> pack_start ($hboxb, TRUE, TRUE, 0);
 
 # Scan button
    my $sbutton = Gtk2::Button -> new('Scan');
-   $hbox2 -> pack_start( $sbutton, FALSE, FALSE, 0 );
-   $sbutton -> signal_connect( clicked => \&setall_event );
+   $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
+   $sbutton -> signal_connect( clicked => sub {
+    $device = "--device-name=".$device[$optd -> get_history];
+    my @paper = ( '-x 210 -y 297', '-x 216 -y 279' );
+    my $paper;
+    if (($optp -> get_history) > $#paper) {
+# get custom size
+warn "Custom paper sizes not yet implemented\n";
+return 0;
+    }
+    else {
+     $paper = $paper[$optp -> get_history];
+    }
+    my $npages;
+    if ($buttone -> get_active) {
+     $npages = "--batch-count ".$entry -> get_text;
+    }
+    else {
+     $npages = "";
+    }
+    do_scan($device, $paper, $npages);
+   } );
 
 # Cancel button
    my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
-   $hbox2 -> pack_end( $cbutton, FALSE, FALSE, 0 );
+   $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
    $cbutton -> signal_connect( clicked => sub { $window -> destroy; } );
 
    $window -> show_all;
@@ -358,16 +439,18 @@ sub scan_dialog {
 }
 
 sub do_scan {
- my @options = ( '-x 210 -y 297', 
-                 '--mode lineart', 
+ my ($device, $paper, $npages) = @_;
+
+ my @options = ( '--mode lineart', 
                  '--format=tiff',  
                  '--resolution 300',
                  '--batch' );
+ my $cmd = "scanimage $device $paper $npages @options";
 
 # Interface to scanimage
  my ($write, $read);
- my $error = IO::handle -> new; # this needed because of a bug in open3.
- my $pid = open3($write, $read, $error, "scanimage @options" );
+ my $error = IO::Handle -> new; # this needed because of a bug in open3.
+ my $pid = open3($write, $read, $error, $cmd );
  
  my $dialog = Gtk2::Dialog -> new ("Scanning...", $window,
                                  'destroy-with-parent',
