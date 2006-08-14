@@ -5,24 +5,25 @@
 # see the included LICENSE file for details.
 
 # To do
-# 0. cd to temp directory & keep note of last page number, using appropriate --batch-start command to prevent overwrites.
+# 0. Fix unhandled exceptions
+#    cd to temp directory & keep note of last page number, using appropriate --batch-start command to prevent overwrites.
 #    work out how to create a .deb for it, or at least an install script.
 #    Add batch/non-batch toggle and deal with non-ADF usage.
-# 1. Delete single/multiple pages
-# 2. Metadata in PDF
-# 3. Icon for program
-# 4. Multiselect tiffs to import
-# 5. Double-sided
-# 6. Reorder pages
-# 7. Add save as tiff
-# 8. Import multi-page tiffs
-# 9. Rotate
+# 1. Metadata in PDF
+# 2. Icon for program
+# 3. Multiselect tiffs to import
+# 4. Double-sided
+# 5. Reorder pages
+# 6. Add save as tiff
+# 7. Import multi-page tiffs
+# 8. Rotate
 
 use strict;
 use IPC::Open3;
 use IO::Handle;
 use Gtk2 -init;
 use Gtk2::SimpleList;
+use Gtk2::Gdk::Keysyms;
 use File::Temp qw/tempfile tempdir/; # To create temporary files
 
 use constant TRUE  => 1;
@@ -76,14 +77,14 @@ my @menu_items = ( { path        => '/_File',
 		     accelerator => '<control>q',
 		     callback    => sub { Gtk2 -> main_quit; } },
 
-#		   { path        => '/_Edit',
-#		     item_type   => '<Branch>' },
-#		   { path        => '/Edit/Delete',
-#		     accelerator => '<delete>',
-#		     callback    => \&do_delete },
-#		   { path        => '/Edit/Mark _All',
-#		     accelerator => '<control>a',
-#		     callback    => \&do_mark },
+		   { path        => '/_Edit',
+		     item_type   => '<Branch>' },
+		   { path        => '/Edit/_Delete',
+		     accelerator => 'Delete',
+		     callback    => \&do_delete },
+		   { path        => '/Edit/Select _All',
+		     accelerator => '<control>a',
+		     callback    => \&do_select_all },
 
 		   { path        => '/_Help',
 		     item_type   => '<LastBranch>' },
@@ -725,6 +726,24 @@ sub import_scan {
  $list -> select(@page);
 
  $scwin_thumbs -> show_all;
+}
+
+
+# Delete the selected scans
+
+sub do_delete {
+ my @page = $list -> get_selected_indices;
+ while ($#page > -1) {
+  splice @{ $list->{data} }, $page[0], 1;
+  @page = $list -> get_selected_indices;
+ }
+}
+
+
+# Select all scans
+
+sub do_select_all {
+ $list -> get_selection -> select_all;
 }
 
 
