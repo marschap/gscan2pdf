@@ -5,19 +5,18 @@
 # see the included LICENSE file for details.
 
 # To do
-# 0.  Kill the "scanning" dialog when scanimage returns.
-# 1.  Proper thumbnails.
-#     Force the pane divider to the left
-# 2.  Delete single/multiple pages
-# 3.  Icon for program
-# 4.  Scan to /tmp
-# 5.  Multiselect tiffs to import
-# 6.  Scan preferences (double-sided, etc.)
-# 7.  Metadata in PDF
-# 8.  Reorder pages
-# 9.  Add save as tiff
-# 10. Import multi-page tiffs
-# 11. Rotate
+# 0. cd to temp directory & keep note of last page number, using appropriate --batch-start command to prevent overwrites.
+#    work out how to create a .deb for it, or at least an install script.
+#    Add batch/non-batch toggle and deal with non-ADF usage.
+# 1. Delete single/multiple pages
+# 2. Metadata in PDF
+# 3. Icon for program
+# 4. Multiselect tiffs to import
+# 5. Double-sided
+# 6. Reorder pages
+# 7. Add save as tiff
+# 8. Import multi-page tiffs
+# 9. Rotate
 
 use strict;
 use IPC::Open3;
@@ -30,7 +29,7 @@ use constant TRUE  => 1;
 use constant FALSE => 0;
 
 my $program = "gscan2pdf";
-my $version = 0.3;
+my $version = 0.4;
 
 if (check_utils() ne 0) {
  print "$program requires libtiff (tiffcp & tiff2pdf).\nPlease install them.\n";
@@ -79,8 +78,12 @@ my @menu_items = ( { path        => '/_File',
 
 #		   { path        => '/_Edit',
 #		     item_type   => '<Branch>' },
-#		   { path        => '/Edit/Delete' },
-#		   { path        => '/Edit/Preferences' },
+#		   { path        => '/Edit/Delete',
+#		     accelerator => '<delete>',
+#		     callback    => \&do_delete },
+#		   { path        => '/Edit/Mark _All',
+#		     accelerator => '<control>a',
+#		     callback    => \&do_mark },
 
 		   { path        => '/_Help',
 		     item_type   => '<LastBranch>' },
@@ -107,26 +110,46 @@ my $hboxb = Gtk2::HBox -> new;
 $main_vbox -> pack_start ($hboxb, FALSE, FALSE, 0);
 my $bbox = Gtk2::HButtonBox -> new;
 $hboxb -> pack_start ($bbox, FALSE, FALSE, 0);
+
+# Zoom to fullsize button
 my $button1 = Gtk2::Button -> new_from_stock('gtk-zoom-100');
+$button1 -> signal_connect(clicked => \&zoom_button);
 $bbox -> add($button1);
+
+# Zoom to fit button
 my $buttonfit = Gtk2::Button -> new_from_stock('gtk-zoom-fit');
+$buttonfit -> signal_connect(clicked => \&zoom_button);
 $bbox -> add($buttonfit);
+
+# Zoom-in button
 my $buttonin = Gtk2::Button -> new_from_stock('gtk-zoom-in');
+$buttonin -> signal_connect(clicked => \&zoom_button);
 $bbox -> add($buttonin);
+
+# Zoom-out button
 my $buttonout = Gtk2::Button -> new_from_stock('gtk-zoom-out');
+$buttonout -> signal_connect(clicked => \&zoom_button);
 $bbox -> add($buttonout);
 
 # HPaned for thumbnails and detail view
 my $hpaned = Gtk2::HPaned -> new;
 $main_vbox -> pack_start($hpaned, TRUE, TRUE, 0);
 
+# Thumbnail dimensions
+my $widtht = 100;
+my $heightt = 100;
+$hpaned->set_position ($widtht);
+
 # Scrolled window for thumbnails
 my $scwin_thumbs = Gtk2::ScrolledWindow -> new;
 $hpaned -> pack1 ($scwin_thumbs, TRUE, TRUE);
 $scwin_thumbs -> set_policy ('automatic', 'automatic');
-my $list = Gtk2::SimpleList -> new("Page list", 'text');
+my $list = Gtk2::SimpleList -> new('Thumbnails' => 'pixbuf');
 $list -> get_selection -> set_mode ('multiple');
 $scwin_thumbs -> add_with_viewport($list);
+
+# Store the list of filenames for the thumbnails in parallel list
+my @filename;
 
 # Scrolled window for detail view
 my $scwin_detail = Gtk2::ScrolledWindow -> new;
@@ -162,7 +185,7 @@ $list -> get_selection -> signal_connect(changed => sub {
 
 # scalar needed for reasons I don't understand, but which have to do with
 # converting the array to a scalar. Alternatively, it might be a bug.
-  $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file (scalar($list -> {data}[$page[0]][0]));
+  $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file (scalar($filename[$page[0]]));
 
 # Get dimension for image
   $widthi = $src_pixbuf -> get_width;
@@ -171,92 +194,6 @@ $list -> get_selection -> signal_connect(changed => sub {
 # Calculate scale factor to fit window, being conservative
   $scale = ($widthd-1)/$widthi < ($heightd-1)/$heighti ? ($widthd-1)/$widthi : ($heightd-1)/$heighti;
 
-  my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
-                                         $src_pixbuf -> get_has_alpha, 
-                                         $src_pixbuf -> get_bits_per_sample,
-                                         $widthi*$scale, $heighti*$scale);
-  zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
-  $image -> set_from_pixbuf($pixbuf);
-
-  $scwin_detail -> add_with_viewport($image);
-  $scwin_detail -> show_all;
- }
-});
-
-# Callback for the 1:1 button
-$button1 -> signal_connect(clicked => sub {
- if (defined($scwin_detail -> child)) {
-  my $viewport = $image -> get_parent;
-  $image -> destroy;
-  $viewport -> destroy;
-  $scale = 1;
-  my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
-                                         $src_pixbuf -> get_has_alpha, 
-                                         $src_pixbuf -> get_bits_per_sample,
-                                         $widthi*$scale, $heighti*$scale);
-  zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
-  $image -> set_from_pixbuf($pixbuf);
-
-  $scwin_detail -> add_with_viewport($image);
-  $scwin_detail -> show_all;
- }
-});
-
-# Callback for the zoom to fit button
-$buttonfit -> signal_connect(clicked => sub {
- if (defined($scwin_detail -> child)) {
-  my $viewport = $image -> get_parent;
-  $image -> destroy;
-  $viewport -> destroy;
-
-# Get dimensions for detail window
-  my $widthd = $scwin_detail -> allocation -> width;
-  my $heightd = $scwin_detail -> allocation -> height;
-
-# Calculate scale factor to fit window, being conservative
-  $scale = ($widthd-1)/$widthi < ($heightd-1)/$heighti ? ($widthd-1)/$widthi : ($heightd-1)/$heighti;
-  my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
-                                         $src_pixbuf -> get_has_alpha, 
-                                         $src_pixbuf -> get_bits_per_sample,
-                                         $widthi*$scale, $heighti*$scale);
-  zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
-  $image -> set_from_pixbuf($pixbuf);
-
-  $scwin_detail -> add_with_viewport($image);
-  $scwin_detail -> show_all;
- }
-});
-
-# Callback for the zoom-in button
-$buttonin -> signal_connect(clicked => sub {
- if (defined($scwin_detail -> child)) {
-  my $viewport = $image -> get_parent;
-  $image -> destroy;
-  $viewport -> destroy;
-
-# Calculate scale factor to fit window, being conservative
-  $scale *= 1.1;
-  my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
-                                         $src_pixbuf -> get_has_alpha, 
-                                         $src_pixbuf -> get_bits_per_sample,
-                                         $widthi*$scale, $heighti*$scale);
-  zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
-  $image -> set_from_pixbuf($pixbuf);
-
-  $scwin_detail -> add_with_viewport($image);
-  $scwin_detail -> show_all;
- }
-});
-
-# Callback for the zoom-out button
-$buttonout -> signal_connect(clicked => sub {
- if (defined($scwin_detail -> child)) {
-  my $viewport = $image -> get_parent;
-  $image -> destroy;
-  $viewport -> destroy;
-
-# Calculate scale factor to fit window, being conservative
-  $scale /= 1.1;
   my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
                                          $src_pixbuf -> get_has_alpha, 
                                          $src_pixbuf -> get_bits_per_sample,
@@ -307,6 +244,41 @@ sub create_menu_bar
 }
 
 
+# Zoom the detail window
+
+sub zoom_button {
+ my $button = $_[0];
+ if (defined($scwin_detail -> child)) {
+  my $viewport = $image -> get_parent;
+  $image -> destroy;
+  $viewport -> destroy;
+  if ($button eq $button1) {
+   $scale = 1;
+  }
+  elsif ($button eq $buttonin) {
+   $scale *= 1.2;
+  }
+  elsif ($button eq $buttonout) {
+   $scale /= 1.2;
+  }
+  else {
+   my $widthd = $scwin_detail -> allocation -> width;
+   my $heightd = $scwin_detail -> allocation -> height;
+   $scale = ($widthd-1)/$widthi < ($heightd-1)/$heighti ? ($widthd-1)/$widthi : ($heightd-1)/$heighti;
+  }
+  my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
+                                         $src_pixbuf -> get_has_alpha, 
+                                         $src_pixbuf -> get_bits_per_sample,
+                                         $widthi*$scale, $heighti*$scale);
+  zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
+  $image -> set_from_pixbuf($pixbuf);
+
+  $scwin_detail -> add_with_viewport($image);
+  $scwin_detail -> show_all;
+ }
+}
+
+
 # Zoom the image
 
 sub zoom_pixbuf {
@@ -319,8 +291,7 @@ sub zoom_pixbuf {
 
 # Deletes all scans after warning.
 
-sub do_new
-{
+sub do_new {
  my $dialog = Gtk2::MessageDialog -> new ($window, 'destroy-with-parent',
                      'warning', 'ok-cancel',
                      "This will clear the list of scanned images.\n"
@@ -337,6 +308,7 @@ sub do_new
 # Depopulate the thumbnail list
   while ($#{$list -> {data}} > -1) {
    pop @{$list -> {data}};
+   pop @filename;
   }
  }
  $dialog -> destroy;
@@ -382,10 +354,10 @@ sub do_save {
 
 # fill $pagelist with filenames of selected pages
   my @page = $list -> get_selected_indices;
-  my $pagelist = $list -> {data}[$page[0]][0];
+  my $pagelist = $filename[$page[0]];
   my $i = 1;
   while ($i <= $#page) {
-   $pagelist = $pagelist." ".$list -> {data}[$page[$i]][0];
+   $pagelist = $pagelist." ".$filename[$page[$i]];
    ++$i;
   }
 
@@ -666,13 +638,14 @@ sub do_scan {
 
  my @options = ( '--format=tiff',  
                  '--batch' );
- my $cmd = "scanimage $device $paper $mode $resolution $npages @options";
+ my $cmd = "scanimage $device $paper $mode $resolution $npages @options;echo 'End Scan' > /dev/stderr";
 
 # Interface to scanimage
  my ($write, $read);
  my $error = IO::Handle -> new; # this needed because of a bug in open3.
  my $pid = open3($write, $read, $error, $cmd);
- waitpid($pid, 0); # A non-blocking wait for the PID to finish to prevent zombies
+# waitpid($pid, 0); # A non-blocking wait for the PID to finish to prevent zombies
+# only it blocks, unfortunately
  
  my $dialog = Gtk2::Dialog -> new ("Scanning...", $window,
                                    'destroy-with-parent',
@@ -693,20 +666,27 @@ sub do_scan {
   my $buffer;
   sysread $error, $buffer, 1024;
   $line = $line . $buffer; # needed to cover case where line is broken in middle
-  if ($line =~ /\n/) {
+  while ($line =~ /\n/) {
    my $scanned;
-   if ($line =~ /Scanned page ([0-9]*)\. \(scanner status = 5\)/) {
-    import_scan ("out$1.tif");
+   if ($line =~ /Scanning ([0-9]*) pages/) {
+    $label -> set_text("Scanning $1 pages...");
     $scanned = TRUE;
    }
-# This must be done in two separate statements to cover multiline output
-   if ($line =~ /Scanning page ([0-9]*)/) {
+   elsif ($line =~ /Scanning page ([0-9]*)/) {
     $label -> set_text("Scanning page $1...");
     $scanned = TRUE;
    }
-   if ($scanned) {
-    $line = undef;
+   elsif ($line =~ /Scanned page ([0-9]*)\. \(scanner status = 5\)/) {
+    import_scan ("out$1.tif");
+    $scanned = TRUE;
    }
+   elsif ($line =~ /End Scan/) {
+    $dialog -> destroy;
+   }
+   else {
+    $label -> set_text("Unknown message: " . substr($line, 0, index($line, '\n')));
+   }
+   $line = substr($line, index($line, "\n")+1, length($line));
   }
   return 1;
  });
@@ -718,8 +698,24 @@ sub do_scan {
 sub import_scan {
  my ($filename) = @_;
 
+ my $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename);
+
+# Get dimension for image
+ my $widthi = $src_pixbuf -> get_width;
+ my $heighti = $src_pixbuf -> get_height;
+
+# Calculate scale factor for thumbnail, being conservative
+ my $scale = ($widtht-1)/$widthi < ($heightt-1)/$heighti ? ($widtht-1)/$widthi : ($heightt-1)/$heighti;
+
+ my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
+                                        $src_pixbuf -> get_has_alpha, 
+                                        $src_pixbuf -> get_bits_per_sample,
+                                        $widthi*$scale, $heighti*$scale);
+ zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
+
 # Add to the page list
- push @{$list -> {data}}, [$filename];
+ push @{$list -> {data}}, [$pixbuf];
+ push @filename, $filename;
 
 # Select new page, deselecting others. This fires the select callback,
 # displaying the page
