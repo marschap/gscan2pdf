@@ -5,7 +5,7 @@
 # see the included LICENSE file for details.
 
 # To do
-# 0. Fix unhandled exceptions
+# 0. Note default scanner, if any.
 #    cd to temp directory & keep note of last page number, using appropriate --batch-start command to prevent overwrites.
 #    work out how to create a .deb for it, or at least an install script.
 #    Add batch/non-batch toggle and deal with non-ADF usage.
@@ -17,13 +17,13 @@
 # 6. Add save as tiff
 # 7. Import multi-page tiffs
 # 8. Rotate
+# 9. Read options from --help --device-name dev.
 
 use strict;
 use IPC::Open3;
 use IO::Handle;
 use Gtk2 -init;
 use Gtk2::SimpleList;
-use Gtk2::Gdk::Keysyms;
 use File::Temp qw/tempfile tempdir/; # To create temporary files
 
 use constant TRUE  => 1;
@@ -638,6 +638,7 @@ sub do_scan {
  my ($device, $paper, $mode, $resolution, $npages) = @_;
 
  my @options = ( '--format=tiff',  
+                 '--batch-scan=yes',  
                  '--batch' );
  my $cmd = "scanimage $device $paper $mode $resolution $npages @options;echo 'End Scan' > /dev/stderr";
 
@@ -645,8 +646,6 @@ sub do_scan {
  my ($write, $read);
  my $error = IO::Handle -> new; # this needed because of a bug in open3.
  my $pid = open3($write, $read, $error, $cmd);
-# waitpid($pid, 0); # A non-blocking wait for the PID to finish to prevent zombies
-# only it blocks, unfortunately
  
  my $dialog = Gtk2::Dialog -> new ("Scanning...", $window,
                                    'destroy-with-parent',
@@ -668,24 +667,20 @@ sub do_scan {
   sysread $error, $buffer, 1024;
   $line = $line . $buffer; # needed to cover case where line is broken in middle
   while ($line =~ /\n/) {
-   my $scanned;
-   if ($line =~ /Scanning ([0-9]*) pages/) {
+   if ($line =~ /^Scanning (-?[0-9]*) pages/) {
     $label -> set_text("Scanning $1 pages...");
-    $scanned = TRUE;
    }
-   elsif ($line =~ /Scanning page ([0-9]*)/) {
+   elsif ($line =~ /^Scanning page ([0-9]*)/) {
     $label -> set_text("Scanning page $1...");
-    $scanned = TRUE;
    }
-   elsif ($line =~ /Scanned page ([0-9]*)\. \(scanner status = 5\)/) {
+   elsif ($line =~ /^Scanned page ([0-9]*)\. \(scanner status = 5\)/) {
     import_scan ("out$1.tif");
-    $scanned = TRUE;
    }
-   elsif ($line =~ /End Scan/) {
+   elsif ($line =~ /^End Scan/) {
     $dialog -> destroy;
    }
    else {
-    $label -> set_text("Unknown message: " . substr($line, 0, index($line, '\n')));
+    $label -> set_text("Unknown message: " . substr($line, 0, index($line, "\n")));
    }
    $line = substr($line, index($line, "\n")+1, length($line));
   }
@@ -735,6 +730,7 @@ sub do_delete {
  my @page = $list -> get_selected_indices;
  while ($#page > -1) {
   splice @{ $list->{data} }, $page[0], 1;
+  splice @filename, $page[0], 1;
   @page = $list -> get_selected_indices;
  }
 }
