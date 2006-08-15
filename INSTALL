@@ -1,0 +1,51 @@
+Installing
+----------
+
+The program itself for gscan2pdf is in one file, so having extracted it to the
+current directory, you can just run it with
+
+ ./gscan2pdf
+
+
+For those who want an install script, I have included one:
+
+From a system that uses sudo, like Ubuntu, you will need:
+
+ sudo make install
+
+Otherwise change to root with
+
+ su
+
+and then
+
+ make install
+
+followed by CRTL-D to get back to the original user.
+
+gscan2pdf will then be on the path an accessible from any directory with
+
+ gscan2pdf
+
+
+
+Uninstalling
+------------
+
+If you have installed gscan2pdf with
+
+ make install
+
+as described about, then you can uninstall it with:
+
+ sudo make uninstall
+
+or
+
+ su
+
+and then
+
+ make uninstall
+
+as appropriate.
