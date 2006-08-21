@@ -5,33 +5,30 @@
 # see the included LICENSE file for details.
 
 # To do
-# 0. Add make tar to Makefile
-#    Note default scanner, if any.
-#    cd to temp directory & keep note of last page number, using appropriate --batch-start command to prevent overwrites.
-#    work out how to create a .deb for it, or at least an install script.
+# 0. Add .deb to Makefile
+#    Imbed tiny script in Makefile to hack version from source and update control, replacing fixed variable in Makefile
 #    Add batch/non-batch toggle and deal with non-ADF usage.
-# 1. Metadata in PDF
-# 2. Icon for program
-# 3. Multiselect tiffs to import
-# 4. Double-sided
-# 5. Reorder pages
-# 6. Add save as tiff
-# 7. Import multi-page tiffs
-# 8. Rotate
-# 9. Read options from --help --device-name dev.
+#    Only use #2 numbering.
+# 1. Multiselect tiffs to import
+# 2. Reorder pages (DND)
+# 3. Add save as tiff
+# 4. Import multi-page tiffs
+# 5. Rotate
+# 6. Read options from --help --device-name dev.
 
 use strict;
 use IPC::Open3;
 use IO::Handle;
 use Gtk2 -init;
 use Gtk2::SimpleList;
+use Cwd;                             # To obtain current working directory
 use File::Temp qw/tempfile tempdir/; # To create temporary files
 
 use constant TRUE  => 1;
 use constant FALSE => 0;
 
 my $program = "gscan2pdf";
-my $version = 0.4;
+my $version = 0.5;
 
 if (check_utils() ne 0) {
  print "$program requires libtiff (tiffcp & tiff2pdf).\nPlease install them.\n";
@@ -71,7 +68,7 @@ my @menu_items = ( { path        => '/_File',
 		     callback    => \&scan_dialog },
 		   { path        => '/File/_Save PDF',
 		     accelerator => '<control>s',
-		     callback    => \&do_save },
+		     callback    => \&do_PDF },
 		   { path        => '/File/sep1',
 		     item_type   => '<Separator>' },
 		   { path        => '/File/_Quit',
@@ -94,11 +91,19 @@ my @menu_items = ( { path        => '/_File',
 
 # Create the window
 my $window = new Gtk2::Window ( 'toplevel' );
-#$window -> set_icon_from_stock ( 'gtk-print-preview' );
 $window -> signal_connect ( 'destroy', sub { Gtk2 -> main_quit; } );
 $window -> set_title ( "$program v$version" );
 $window -> set_default_size (800, 600);
 $window -> maximize;
+
+# Pass the window a stock icon list
+my @icon;
+my $i = -1;
+foreach my $size (qw/menu small-toolbar large-toolbar button dnd dialog/) {
+ ++$i;
+ $icon[$i] = $window -> render_icon ('gtk-print-preview', $size)
+}
+$window -> set_icon_list ( @icon );
 
 my $main_vbox = new Gtk2::VBox ( FALSE, 1 );
 $window -> add ( $main_vbox );
@@ -146,12 +151,23 @@ $hpaned->set_position ($widtht);
 my $scwin_thumbs = Gtk2::ScrolledWindow -> new;
 $hpaned -> pack1 ($scwin_thumbs, TRUE, TRUE);
 $scwin_thumbs -> set_policy ('automatic', 'automatic');
-my $list = Gtk2::SimpleList -> new('Thumbnails' => 'pixbuf');
-$list -> get_selection -> set_mode ('multiple');
-$scwin_thumbs -> add_with_viewport($list);
 
-# Store the list of filenames for the thumbnails in parallel list
-my @filename;
+# define filename and i to be hidden
+Gtk2::SimpleList -> add_column_type( 'filename',
+                                     type => 'Glib::String',
+                                     attr => 'hidden' );
+Gtk2::SimpleList -> add_column_type( 'i',
+                                     type => 'Glib::Int',
+                                     attr => 'hidden' );
+
+# Set up a SimpleList, sorted by #2, which is hidden
+my $list = Gtk2::SimpleList -> new('#' => 'int',
+                                   'Thumbnails' => 'pixbuf',
+                                   'Filename' => 'filename',
+                                   '#2' => 'i');
+$list -> get_selection -> set_mode ('multiple');
+$list -> get_model -> set_sort_column_id (3, 'ascending');
+$scwin_thumbs -> add_with_viewport($list);
 
 # Scrolled window for detail view
 my $scwin_detail = Gtk2::ScrolledWindow -> new;
@@ -187,7 +203,7 @@ $list -> get_selection -> signal_connect(changed => sub {
 
 # scalar needed for reasons I don't understand, but which have to do with
 # converting the array to a scalar. Alternatively, it might be a bug.
-  $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file (scalar($filename[$page[0]]));
+  $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file (scalar($list->{data}[$page[0]][2]));
 
 # Get dimension for image
   $widthi = $src_pixbuf -> get_width;
@@ -207,6 +223,12 @@ $list -> get_selection -> signal_connect(changed => sub {
   $scwin_detail -> show_all;
  }
 });
+
+# Note the current directory
+my $cwd = getcwd;
+
+# Create a temporary directory for scans
+my $dir = tempdir;
 
 $window -> show_all;
 Gtk2 -> main;
@@ -310,7 +332,6 @@ sub do_new {
 # Depopulate the thumbnail list
   while ($#{$list -> {data}} > -1) {
    pop @{$list -> {data}};
-   pop @filename;
   }
  }
  $dialog -> destroy;
@@ -320,6 +341,10 @@ sub do_new {
 # Throw up file selector and import selected file
 
 sub do_import {
+
+# cd back to cwd to import
+ chdir $cwd;
+
  my $fileselection = Gtk2::FileSelection -> new("Import scan from file");
  $fileselection -> set_modal(TRUE);
 
@@ -338,47 +363,245 @@ sub do_import {
  $fs_cancel_b -> signal_connect(clicked => sub{ $fileselection -> destroy; });
 
  $fileselection -> show_all;
+
+# cd back to tempdir before returning
+ chdir $dir;
 }
 
 
 # Throw up file selector and save selected pages as PDF under given name.
 
-sub do_save {
+sub do_PDF {
+
+# PDF pop-up window
+ my $window = Gtk2::Window -> new;
+ $window -> set_border_width(10);
+ $window -> set_title ('Save as PDF');
+ $window -> signal_connect (delete_event => sub { $_[0] -> destroy; });
+
+# VBox for window
+ my $vbox = Gtk2::VBox -> new;
+ $window -> add ($vbox);
+
+# Frame for metadata
+ my $framem = Gtk2::Frame -> new('Metadata');
+ $vbox -> pack_start ($framem, TRUE, TRUE, 0);
+ my $vboxm = Gtk2::VBox -> new;
+ $vboxm -> set_border_width(6);
+ $framem -> add ($vboxm);
+
+# Date/time
+ my $hboxe = Gtk2::HBox -> new;
+ $vboxm -> pack_start($hboxe, TRUE, TRUE, 0);
+ my $labele = Gtk2::Label -> new ("Date & Time");
+ $hboxe -> pack_start ($labele, FALSE, FALSE, 0);
+ my ($day, $month, $year) = (localtime())[3, 4, 5];
+ $year += 1900;
+ $month += 1;
+ my $buttone = Gtk2::Button -> new("$year/$month/$day");
+ $buttone -> signal_connect( clicked => sub {
+  my $window = Gtk2::Window -> new;
+  $window -> set_title ('Select Date' );
+  $window->set_border_width(5);
+  $window->signal_connect( 'destroy' => sub { $window -> destroy; } );
+  $window->set_resizable(FALSE);
+
+  my $vbox = Gtk2::VBox -> new;
+  $window -> add($vbox);
+
+  my $calendar = Gtk2::Calendar -> new;
+  $vbox -> pack_start ($calendar, TRUE, TRUE, 0);
+
+  $calendar -> signal_connect(day_selected_double_click => sub {
+   ($year, $month, $day) = $calendar -> get_date();
+   $month += 1;
+   $buttone -> set_label ("$year/$month/$day");
+   $window -> destroy;
+  });
+
+  $window -> show_all;
+ } );
+ $hboxe -> pack_end( $buttone, TRUE, TRUE, 0 );
+
+# Document author
+ my $hboxa = Gtk2::HBox -> new;
+ $vboxm -> pack_start($hboxa, TRUE, TRUE, 0);
+ my $labela = Gtk2::Label -> new ("Document author");
+ $hboxa -> pack_start ($labela, FALSE, FALSE, 0);
+ my $entrya = Gtk2::Entry -> new;
+ $hboxa -> pack_end( $entrya, TRUE, TRUE, 0 );
+
+# Title
+ my $hboxt = Gtk2::HBox -> new;
+ $vboxm -> pack_start($hboxt, TRUE, TRUE, 0);
+ my $labelt = Gtk2::Label -> new ("Title");
+ $hboxt -> pack_start ($labelt, FALSE, FALSE, 0);
+ my $entryt = Gtk2::Entry -> new;
+ $hboxt -> pack_end( $entryt, TRUE, TRUE, 0 );
+
+# Subject
+ my $hboxs = Gtk2::HBox -> new;
+ $vboxm -> pack_start($hboxs, TRUE, TRUE, 0);
+ my $labels = Gtk2::Label -> new ("Subject");
+ $hboxs -> pack_start ($labels, FALSE, FALSE, 0);
+ my $entrys = Gtk2::Entry -> new;
+ $hboxs -> pack_end( $entrys, TRUE, TRUE, 0 );
+
+# Keywords
+ my $hboxk = Gtk2::HBox -> new;
+ $vboxm -> pack_start($hboxk, TRUE, TRUE, 0);
+ my $labelk = Gtk2::Label -> new ("Keywords");
+ $hboxk -> pack_start ($labelk, FALSE, FALSE, 0);
+ my $entryk = Gtk2::Entry -> new;
+ $hboxk -> pack_end( $entryk, TRUE, TRUE, 0 );
+
+# Frame for page range
+ my $framep = Gtk2::Frame -> new('Page range');
+ $vbox -> pack_start ($framep, TRUE, TRUE, 0);
+ my $vboxp = Gtk2::VBox -> new;
+ $vboxp -> set_border_width(6);
+ $framep -> add ($vboxp);
+
+#the first radio button has to set the group,
+#which is undef for the first button
+# All button
+ my $buttona = Gtk2::RadioButton -> new(undef, "All");
+ $vboxp -> pack_start($buttona, TRUE, TRUE, 0);
+ my @group = $buttona -> get_group;
+
+# Current button
+ my $buttonc = Gtk2::RadioButton -> new(@group, "Current");
+ $vboxp -> pack_start($buttonc, TRUE, TRUE, 0);
+
+# Selected button
+ my $buttons = Gtk2::RadioButton -> new(@group, "Selected");
+ $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
+ $buttons -> set_active(TRUE);
+
+# Pages button
+# my $hboxp = Gtk2::HBox -> new;
+# $vboxp -> pack_start($hboxp, TRUE, TRUE, 0);
+# my $buttonp = Gtk2::RadioButton -> new(@group, "Pages:");
+# $hboxp -> pack_start($buttonp, FALSE, FALSE, 0);
+
+# Page List
+# my $entryp = Gtk2::Entry -> new;
+# $entryp -> signal_connect ('insert-text' => sub {
+#  my ($widget, $string, $len, $position) = @_;
+#  if ($string !~ /^[0-9]+$/) { # Only add numbers
+#   $entryp -> signal_stop_emission_by_name ('insert-text');
+#   $buttonp -> set_active(TRUE); # Set the radiobutton active
+#  }
+#  () # this callback must return either 2 or 0 items.
+# });
+# $hboxp -> pack_end ($entryp, FALSE, FALSE, 0);
+
+# HBox for filename
+ my $hboxf = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxf, TRUE, TRUE, 0);
+
+# Filename
+ my $labelf = Gtk2::Label -> new ("Filename");
+ $hboxf -> pack_start ($labelf, TRUE, TRUE, 0);
+ my $entryf = Gtk2::Entry -> new;
+ my $filename = "$cwd/out.pdf";
+ $entryf -> set_text($filename);
+ $hboxf -> add ($entryf);
+ my $bbutton = Gtk2::Button -> new('Browse');
+ $hboxf -> pack_end( $bbutton, TRUE, TRUE, 0 );
+ $bbutton -> signal_connect (clicked => sub {
+
+# cd back to cwd to save
+  chdir $cwd;
+
 # Set up file selector
- my $fileselection = Gtk2::FileSelection -> new("Save PDF");
- $fileselection -> set_modal(TRUE);
- my $fs_ok_button = $fileselection -> ok_button;
+  my $fileselection = Gtk2::FileSelection -> new("PDF filename");
+  $fileselection -> set_modal(TRUE);
+  my $fs_ok_button = $fileselection -> ok_button;
 
 # callback for OK button
- $fs_ok_button -> signal_connect(clicked => sub {
-  my $filename = $fileselection -> get_filename;
-  $fileselection -> destroy;
+  $fs_ok_button -> signal_connect(clicked => sub {
+   $filename = $fileselection -> get_filename;
+   $entryf -> set_text($filename);
+   $fileselection -> destroy;
+  });
 
-# fill $pagelist with filenames of selected pages
-  my @page = $list -> get_selected_indices;
-  my $pagelist = $filename[$page[0]];
-  my $i = 1;
-  while ($i <= $#page) {
-   $pagelist = $pagelist." ".$filename[$page[$i]];
-   ++$i;
+# callback for cancel button
+  my $fs_cancel_b = $fileselection -> cancel_button;
+  $fs_cancel_b -> signal_connect(clicked => sub{ $fileselection -> destroy; });
+
+  $fileselection -> show_all;
+
+# cd back to tempdir
+  chdir $dir;
+ } );
+
+# HBox for buttons
+ my $hboxb = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxb, TRUE, TRUE, 0);
+
+# Save button
+ my $sbutton = Gtk2::Button -> new('Save');
+ $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
+ $sbutton -> signal_connect (clicked => sub {
+
+# Get filename
+  $filename = $entryf -> get_text;
+
+# fill $pagelist with filenames depending on which radiobutton is active
+  my $n;
+  my $pagelist;
+  if ($buttona -> get_active) {
+   $n = $#{$list -> {data}};
+   $pagelist = $list -> {data}[0][2];
+   my $i = 1;
+   while ($i <= $#{$list -> {data}}) {
+    $pagelist = $pagelist." ".$list -> {data}[$i][2];
+    ++$i;
+   }
+  }
+  elsif ($buttonc -> get_active) {
+   $n = 1;
+   my @page = $list -> get_selected_indices;
+   $pagelist = $list -> {data}[$page[0]][2];
+  }
+  elsif ($buttons -> get_active) {
+   my @page = $list -> get_selected_indices;
+   $n = $#page;
+   $pagelist = $list -> {data}[$page[0]][2];
+   my $i = 1;
+   while ($i <= $#page) {
+    $pagelist = $pagelist." ".$list -> {data}[$page[$i]][2];
+    ++$i;
+   }
   }
 
+# Set options and metadata
+  my $options = " -z -o \"$filename\""
+              . sprintf (" -e %4i%02i%02i", $year, $month, $day)
+              . " -c \"$program v$version\""
+              . " -a \"" . $entrya -> get_text . "\""
+              . " -t \"" . $entryt -> get_text . "\""
+              . " -s \"" . $entrys -> get_text . "\""
+              . " -k \"" . $entryk -> get_text . "\"";
+
 # call tiff2pdf and/or tiffcp according to the number of pages
-  if ($#page > 0) {
+  if ($n > 0) {
    system ("tiffcp $pagelist \"$filename.tif\"");
-   system ("tiff2pdf -z \"$filename.tif\" -o \"$filename\"");
+   system ("tiff2pdf \"$filename.tif\" $options");
    unlink ("$filename.tif"); # delete the temporary tiff
   }
   else {
-   system ("tiff2pdf -z $pagelist -o \"$filename\"");
+   system ("tiff2pdf $pagelist $options");
   }
- });
+ } );
 
-# callback for cancel button
- my $fs_cancel_b = $fileselection -> cancel_button;
- $fs_cancel_b -> signal_connect(clicked => sub{ $fileselection -> destroy; });
+# Cancel button
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $window -> destroy; } );
 
- $fileselection -> show_all;
+ $window -> show_all;
 }
 
 
@@ -447,11 +670,17 @@ sub scan_dialog {
 
 # read the device names into the optionmenu
     my $item = Gtk2::MenuItem -> new ($model);
-    $item -> show;
     $menud -> append ($item);
    }
    $optd -> set_menu ($menud);
    $hboxd -> pack_end ($optd, FALSE, FALSE, 0);
+
+# If there is a default device, then set it
+   if ($output =~ /default device is `(.*)'/) {
+    my $i = 0;
+    ++$i while ($1 ne $device[$i]);
+    $optd -> set_history($i);
+   }
    
 # HBox for paper size
    my $hboxp = Gtk2::HBox -> new;
@@ -465,7 +694,6 @@ sub scan_dialog {
    my $menup = Gtk2::Menu -> new;
    foreach (qw/A4 Letter Custom/) {
     my $item = Gtk2::MenuItem -> new ($_);
-    $item -> show;
 #    $item -> signal_connect (activate => \&activate, $_);
     $menup -> append ($item);
    }
@@ -482,6 +710,7 @@ sub scan_dialog {
 
    my $entryx = Gtk2::Entry -> new;
    $entryx -> set_text("210");
+   $entryx -> set_width_chars(4);
    $entryx -> signal_connect ('insert-text' => sub {
     my ($widget, $string, $len, $position) = @_;
     if ($string !~ /^[0-9]+$/) { # Only add numbers
@@ -497,6 +726,7 @@ sub scan_dialog {
 
    my $entryy = Gtk2::Entry -> new;
    $entryy -> set_text("297");
+   $entryy -> set_width_chars(4);
    $entryy -> signal_connect ('insert-text' => sub {
     my ($widget, $string, $len, $position) = @_;
     if ($string !~ /^[0-9]+$/) { # Only add numbers
@@ -519,7 +749,6 @@ sub scan_dialog {
    my @mode = qw/Lineart Gray Color/;
    foreach (@mode) {
     my $item = Gtk2::MenuItem -> new ($_);
-    $item -> show;
     $menum -> append ($item);
    }
    $optm -> set_menu ($menum);
@@ -535,6 +764,7 @@ sub scan_dialog {
 
    my $entryr = Gtk2::Entry -> new;
    $entryr -> set_text("300");
+   $entryr -> set_width_chars(4);
    $entryr -> signal_connect ('insert-text' => sub {
     my ($widget, $string, $len, $position) = @_;
     if ($string !~ /^[0-9]+$/) { # Only add numbers
@@ -545,11 +775,11 @@ sub scan_dialog {
    $hboxr -> pack_end ($entryr, FALSE, FALSE, 0);
 
 # Frame for # pages
-   my $frame = Gtk2::Frame -> new('# Pages');
-   $vbox -> pack_start ($frame, TRUE, TRUE, 0);
+   my $framen = Gtk2::Frame -> new('# Pages');
+   $vbox -> pack_start ($framen, TRUE, TRUE, 0);
    my $vboxn = Gtk2::VBox -> new;
    $vboxn -> set_border_width(6);
-   $frame -> add ($vboxn);
+   $framen -> add ($vboxn);
 
 #the first radio button has to set the group,
 #which is undef for the first button
@@ -557,27 +787,56 @@ sub scan_dialog {
    my $buttona = Gtk2::RadioButton -> new(undef, "All");
    $vboxn -> pack_start($buttona, TRUE, TRUE, 0);
    $buttona -> set_active(TRUE);
-   $buttona -> show;
-   my @group = $buttona -> get_group;
+   my @groupn = $buttona -> get_group;
 
 # Entry button
    my $hboxn = Gtk2::HBox -> new;
    $vboxn -> pack_start($hboxn, TRUE, TRUE, 0);
-   my $buttone = Gtk2::RadioButton -> new(@group);
+   my $buttone = Gtk2::RadioButton -> new(@groupn, "#:");
    $hboxn -> pack_start($buttone, FALSE, FALSE, 0);
-   $buttone -> show;
 
 # Number of pages
-   my $entryn = Gtk2::Entry -> new;
-   $entryn -> signal_connect ('insert-text' => sub {
-    my ($widget, $string, $len, $position) = @_;
-    if ($string !~ /^[0-9]+$/) { # Only add numbers
-     $entryn -> signal_stop_emission_by_name ('insert-text');
-     $buttone -> set_active(TRUE); # Set the radiobutton active
-    }
-    () # this callback must return either 2 or 0 items.
+   my $spin_button = Gtk2::SpinButton -> new_with_range(1, 99, 1);
+   $spin_button -> signal_connect ('value-changed' => sub {
+    $buttone -> set_active(TRUE); # Set the radiobutton active
    });
-   $hboxn -> pack_end ($entryn, FALSE, FALSE, 0);
+   $hboxn -> pack_end ($spin_button, FALSE, FALSE, 0);
+
+# Frame for source document
+   my $frames = Gtk2::Frame -> new('Source document');
+   $vbox -> pack_start ($frames, TRUE, TRUE, 0);
+   my $vboxs = Gtk2::VBox -> new;
+   $vboxs -> set_border_width(6);
+   $frames -> add ($vboxs);
+
+# Single sided button
+   my $buttons = Gtk2::RadioButton -> new(undef, "Single sided");
+   $vboxs -> pack_start($buttons, TRUE, TRUE, 0);
+   $buttons -> set_active(TRUE);
+   my @groups = $buttons -> get_group;
+
+# Double sided button
+   my $buttond = Gtk2::RadioButton -> new(@groups, "Double sided");
+   $vboxs -> pack_start($buttond, FALSE, FALSE, 0);
+
+# Facing/reverse page button
+   my $hboxs = Gtk2::HBox -> new;
+   $vboxs -> pack_start($hboxs, TRUE, TRUE, 0);
+   my $labels = Gtk2::Label -> new ("Side to scan");
+   $hboxs -> pack_start($labels, TRUE, TRUE, 0);
+
+   my $opts = Gtk2::OptionMenu -> new;
+   my $menus = Gtk2::Menu -> new;
+   my @side = qw/Facing Reverse/;
+   foreach (@side) {
+    my $item = Gtk2::MenuItem -> new ($_);
+    $item -> signal_connect ('activate' => sub {
+     $buttond -> set_active(TRUE); # Set the radiobutton active
+    });
+    $menus -> append ($item);
+   }
+   $opts -> set_menu ($menus);
+   $hboxs -> pack_end ($opts, FALSE, FALSE, 0);
 
 # HBox for buttons
    my $hboxb = Gtk2::HBox -> new;
@@ -588,7 +847,11 @@ sub scan_dialog {
    my $sbutton = Gtk2::Button -> new('Scan');
    $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
    $sbutton -> signal_connect (clicked => sub {
+
+# Get selected device
     $device = "--device-name=".$device[$optd -> get_history];
+
+# Get selected paper size
     my @paper = ( '-x 210 -y 297', '-x 216 -y 279' );
     my $paper;
     if (($optp -> get_history) > $#paper) {
@@ -597,16 +860,89 @@ sub scan_dialog {
     else {
      $paper = $paper[$optp -> get_history];
     }
+
+# Get selected mode
     my $mode = "--mode=".$mode[$optm -> get_history];
+
+# Get selected resolution
     my $resolution = "--resolution ".$entryr -> get_text;
+
+# Get selected number of pages
     my $npages;
     if ($buttone -> get_active) {
-     $npages = "--batch-count ".$entryn -> get_text;
+     $npages = "--batch-count ".$spin_button -> get_value;
     }
     else {
      $npages = "";
     }
-    do_scan($device, $paper, $mode, $resolution, $npages);
+
+# Start from next available page
+    my $start;
+    if ($#{$list -> {data}} > -1) {
+     $start = $list -> {data}[$#{$list -> {data}}][3] + 1;
+    }
+    else {
+     $start = 1;
+    }
+
+# Set step according to single/double sided, facing/reverse page
+    my $step;
+    if ($buttond -> get_active) {
+     if (($opts -> get_history) == 0) { # facing page
+      $step = 2;
+     }
+     else { # reverse page
+      if ($start == 1) {
+       my $dialog = Gtk2::MessageDialog -> new ($window,
+        'destroy-with-parent',
+        'error', # message type
+        'cancel', # which set of buttons?
+        "Must scan facing pages first");
+       $dialog -> run;
+       $dialog -> destroy;
+       return 1;
+      }
+
+      $step = -2;
+
+# Check that there is room in the list for the reverse pages
+      my $i = 1;
+      my $j = $#{$list -> {data}};
+      while ($list->{data}[$j][3] != $start+$i*$step
+             && $start+$i*$step > 0
+             && $j > -1) {
+       if ($list->{data}[$j][3] > $start+$i*$step) {
+        --$j;
+       }
+       else {
+        ++$i;
+       }
+      }
+      if ($buttone -> get_active) {
+       if (($spin_button -> get_value) > $i) {
+        my $dialog = Gtk2::MessageDialog -> new ($window,
+         'destroy-with-parent',
+         'error', # message type
+         'cancel', # which set of buttons?
+         "Cannot scan more reverse pages\nthan facing pages");
+        $dialog -> run;
+        $dialog -> destroy;
+        return 1;
+       }
+      }
+
+# If user hasn't specified number of pages, then set number that is undefined
+      else {
+       $npages = "--batch-count ".$i;
+      }
+     }
+     $step = "--batch-increment=".$step;
+    }
+    else {
+     $step = "";
+    }
+    $start = "--batch-start=".$start;
+    do_scan($device, $paper, $mode, $resolution, $npages, $start, $step);
    } );
 
 # Cancel button
@@ -636,12 +972,12 @@ sub scan_dialog {
 # Carry out the scan with the options passed.
 
 sub do_scan {
- my ($device, $paper, $mode, $resolution, $npages) = @_;
+ my ($device, $paper, $mode, $resolution, $npages, $start, $step) = @_;
 
  my @options = ( '--format=tiff',  
                  '--batch-scan=yes',  
                  '--batch' );
- my $cmd = "scanimage $device $paper $mode $resolution $npages @options;echo 'End Scan' > /dev/stderr";
+ my $cmd = "scanimage $device $paper $mode $resolution $npages $start $step @options;echo 'End Scan' > /dev/stderr";
 
 # Interface to scanimage
  my ($write, $read);
@@ -711,17 +1047,36 @@ sub import_scan {
  zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
 
 # Add to the page list
- push @{$list -> {data}}, [$pixbuf];
- push @filename, $filename;
+ my $i;
+ if ($filename =~ /out([0-9]*)\.tif/) {
+  $i = $1;
+ }
+ else {
+  $i = $#{$list -> {data}}+2;
+ }
+ push @{$list -> {data}}, [$#{$list -> {data}}+2, $pixbuf, $filename, $i];
 
 # Select new page, deselecting others. This fires the select callback,
 # displaying the page
  $list -> get_selection -> unselect_all;
  my @page;
- $page[0] = $#{$list -> {data}};
- $list -> select(@page);
 
- $scwin_thumbs -> show_all;
+# Due to the sort, must search for new page
+ $i = 0;
+ ++$i while ($list -> {data}[$i][0] != $#{$list -> {data}}+1);
+ $page[0] = $i;
+
+# And renumber the pages
+ if ($i < $#{$list -> {data}}) {
+  $i = $#{$list -> {data}};
+  while ($list -> {data}[$i][0] != $#{$list -> {data}}+1) {
+   $list -> {data}[$i][0] = $i+1;
+   --$i;
+  }
+  $list -> {data}[$i][0] = $i+1;
+ }
+
+ $list -> select(@page);
 }
 
 
@@ -731,7 +1086,6 @@ sub do_delete {
  my @page = $list -> get_selected_indices;
  while ($#page > -1) {
   splice @{ $list->{data} }, $page[0], 1;
-  splice @filename, $page[0], 1;
   @page = $list -> get_selected_indices;
  }
 }
@@ -776,21 +1130,24 @@ gscan2pdf - A GUI to ease the process of producing PDFs from scanned documents
 =head1 SYNOPSIS
 
 1. Scan one or several pages in with File/Scan
-2. Select pages as you wish
-3. Create PDF of selected pages with File/Save PDF
+2. Create PDF of selected pages with File/Save PDF
 
 =head1 DESCRIPTION
 
-At maturity, the GUI will have similar features to that of the Windows Imaging program, but with the express objective of writing a PDF, including metadata.
+At maturity, the GUI will have similar features to that of the Windows Imaging
+program, but with the express objective of writing a PDF, including metadata.
 
 Scanning is handled with SANE via scanimage.
 PDF conversion is done by libtiff.
 
-Perl is used for portability and ease of programming, with gtk2-perl for the GUI. This should therefore work more or less out of the box on any system with Perl, gtk2-perl, scanimage and libtiff.
+Perl is used for portability and ease of programming, with gtk2-perl for the
+GUI. This should therefore work more or less out of the box on any system with
+Perl, gtk2-perl, scanimage and libtiff.
 
 =head1 SEE ALSO
 
-Requires perl, libgtk2-perl (>=1.100-1), libglib-perl (>= 1.100-1), scanimage and libtiff.
+Requires perl, libgtk2-perl (>=1.100-1), libglib-perl (>= 1.100-1), scanimage
+and libtiff.
 
 =head1 AUTHOR
 
