@@ -5,16 +5,21 @@
 # see the included LICENSE file for details.
 
 # To do
-# 0. Add .deb to Makefile
-#    Imbed tiny script in Makefile to hack version from source and update control, replacing fixed variable in Makefile
+# 0. Add renumber
+#    Destroy window after pdf write
+#    Destroy window after finished scanning single side
+#    Hide windows rather than destroying them
+#    Add status line at bottom with messages like "filename saved"
+#    Add Gnome menu
 #    Add batch/non-batch toggle and deal with non-ADF usage.
-#    Only use #2 numbering.
-# 1. Multiselect tiffs to import
-# 2. Reorder pages (DND)
-# 3. Add save as tiff
-# 4. Import multi-page tiffs
-# 5. Rotate
-# 6. Read options from --help --device-name dev.
+# 1. Reorder pages (DND)
+# 2. Rotate
+# 3. Read options from --help --device-name dev.
+# 4. Add icons for import, save tiff, save pdf, quit, etc.
+# 5. Add view menu matching zoom buttons
+# 6. Get documentation up to scratch
+# 7. Translations
+# 8. Progress meter for scans and imports.
 
 use strict;
 use IPC::Open3;
@@ -28,10 +33,10 @@ use constant TRUE  => 1;
 use constant FALSE => 0;
 
 my $program = "gscan2pdf";
-my $version = 0.5;
+my $version = 0.6;
 
-if (check_utils() ne 0) {
- print "$program requires libtiff (tiffcp & tiff2pdf).\nPlease install them.\n";
+if (check_utils()) {
+ print "$program requires the libtiff library.\nPlease install it.\n";
  exit 1;
 }
 
@@ -69,6 +74,9 @@ my @menu_items = ( { path        => '/_File',
 		   { path        => '/File/_Save PDF',
 		     accelerator => '<control>s',
 		     callback    => \&do_PDF },
+		   { path        => '/File/Save _TIFF',
+		     accelerator => '<control>t',
+		     callback    => \&do_TIFF },
 		   { path        => '/File/sep1',
 		     item_type   => '<Separator>' },
 		   { path        => '/File/_Quit',
@@ -156,17 +164,13 @@ $scwin_thumbs -> set_policy ('automatic', 'automatic');
 Gtk2::SimpleList -> add_column_type( 'filename',
                                      type => 'Glib::String',
                                      attr => 'hidden' );
-Gtk2::SimpleList -> add_column_type( 'i',
-                                     type => 'Glib::Int',
-                                     attr => 'hidden' );
 
 # Set up a SimpleList, sorted by #2, which is hidden
 my $list = Gtk2::SimpleList -> new('#' => 'int',
                                    'Thumbnails' => 'pixbuf',
-                                   'Filename' => 'filename',
-                                   '#2' => 'i');
+                                   'Filename' => 'filename');
 $list -> get_selection -> set_mode ('multiple');
-$list -> get_model -> set_sort_column_id (3, 'ascending');
+$list -> get_model -> set_sort_column_id (0, 'ascending');
 $scwin_thumbs -> add_with_viewport($list);
 
 # Scrolled window for detail view
@@ -232,6 +236,10 @@ my $dir = tempdir;
 
 $window -> show_all;
 Gtk2 -> main;
+
+# Remove temporary files (for some reason File::Temp wasn't doing its job here)
+unlink <$dir/*>;
+rmdir $dir;
 
 
 
@@ -342,20 +350,49 @@ sub do_new {
 
 sub do_import {
 
-# cd back to cwd to import
+# cd back to cwd to get filename
  chdir $cwd;
 
  my $fileselection = Gtk2::FileSelection -> new("Import scan from file");
  $fileselection -> set_modal(TRUE);
+ $fileselection -> set_select_multiple(TRUE);
+
+# cd back to tempdir to import
+  chdir $dir;
 
 # callback for OK button
  my $fs_ok_button = $fileselection -> ok_button;
  $fs_ok_button -> signal_connect(clicked => sub {
 
-# Get filename for PDF
-  my $filename = $fileselection -> get_filename;
+# Get filename(s) for PDF
+  my @filename = $fileselection -> get_selections;
+
   $fileselection -> destroy;
-  import_scan($filename);
+
+  foreach my $filename (@filename) {
+
+# Check that the file really is a tiff
+   my $output = `tiffinfo \"$filename\" 2>&1 1>/dev/null`;
+   if ($output =~ /Not a TIFF file/) {
+    my $dialog = Gtk2::MessageDialog -> new ($window,
+                                            'destroy-with-parent',
+                                            'error',
+                                            'close',
+                                            "Not a TIFF file");
+    $dialog -> run;
+    $dialog -> destroy;
+   }
+   else {
+
+# Split the tiff into its pages and import them individually
+    system("tiffsplit \"$filename\"");
+    my @pages = <x???.tif>;
+    foreach (@pages) {
+     import_scan($_);
+    }
+   }
+
+  }
  });
 
 # callback for cancel button
@@ -363,9 +400,6 @@ sub do_import {
  $fs_cancel_b -> signal_connect(clicked => sub{ $fileselection -> destroy; });
 
  $fileselection -> show_all;
-
-# cd back to tempdir before returning
- chdir $dir;
 }
 
 
@@ -594,6 +628,138 @@ sub do_PDF {
   else {
    system ("tiff2pdf $pagelist $options");
   }
+ } );
+
+# Cancel button
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $window -> destroy; } );
+
+ $window -> show_all;
+}
+
+
+# Throw up file selector and save selected pages as PDF under given name.
+
+sub do_TIFF {
+
+# PDF pop-up window
+ my $window = Gtk2::Window -> new;
+ $window -> set_border_width(10);
+ $window -> set_title ('Save as TIFF');
+ $window -> signal_connect (delete_event => sub { $_[0] -> destroy; });
+
+# VBox for window
+ my $vbox = Gtk2::VBox -> new;
+ $window -> add ($vbox);
+
+# Frame for page range
+ my $framep = Gtk2::Frame -> new('Page range');
+ $vbox -> pack_start ($framep, TRUE, TRUE, 0);
+ my $vboxp = Gtk2::VBox -> new;
+ $vboxp -> set_border_width(6);
+ $framep -> add ($vboxp);
+
+#the first radio button has to set the group,
+#which is undef for the first button
+# All button
+ my $buttona = Gtk2::RadioButton -> new(undef, "All");
+ $vboxp -> pack_start($buttona, TRUE, TRUE, 0);
+ my @group = $buttona -> get_group;
+
+# Current button
+ my $buttonc = Gtk2::RadioButton -> new(@group, "Current");
+ $vboxp -> pack_start($buttonc, TRUE, TRUE, 0);
+
+# Selected button
+ my $buttons = Gtk2::RadioButton -> new(@group, "Selected");
+ $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
+ $buttons -> set_active(TRUE);
+
+# HBox for filename
+ my $hboxf = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxf, TRUE, TRUE, 0);
+
+# Filename
+ my $labelf = Gtk2::Label -> new ("Filename");
+ $hboxf -> pack_start ($labelf, TRUE, TRUE, 0);
+ my $entryf = Gtk2::Entry -> new;
+ my $filename = "$cwd/out.tif";
+ $entryf -> set_text($filename);
+ $hboxf -> add ($entryf);
+ my $bbutton = Gtk2::Button -> new('Browse');
+ $hboxf -> pack_end( $bbutton, TRUE, TRUE, 0 );
+ $bbutton -> signal_connect (clicked => sub {
+
+# cd back to cwd to save
+  chdir $cwd;
+
+# Set up file selector
+  my $fileselection = Gtk2::FileSelection -> new("TIFF filename");
+  $fileselection -> set_modal(TRUE);
+  my $fs_ok_button = $fileselection -> ok_button;
+
+# callback for OK button
+  $fs_ok_button -> signal_connect(clicked => sub {
+   $filename = $fileselection -> get_filename;
+   $entryf -> set_text($filename);
+   $fileselection -> destroy;
+  });
+
+# callback for cancel button
+  my $fs_cancel_b = $fileselection -> cancel_button;
+  $fs_cancel_b -> signal_connect(clicked => sub{ $fileselection -> destroy; });
+
+  $fileselection -> show_all;
+
+# cd back to tempdir
+  chdir $dir;
+ } );
+
+# HBox for buttons
+ my $hboxb = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxb, TRUE, TRUE, 0);
+
+# Save button
+ my $sbutton = Gtk2::Button -> new('Save');
+ $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
+ $sbutton -> signal_connect (clicked => sub {
+
+# Get filename
+  $filename = $entryf -> get_text;
+
+# fill $pagelist with filenames depending on which radiobutton is active
+  my $n;
+  my $pagelist;
+  if ($buttona -> get_active) {
+   $n = $#{$list -> {data}};
+   $pagelist = $list -> {data}[0][2];
+   my $i = 1;
+   while ($i <= $#{$list -> {data}}) {
+    $pagelist = $pagelist." ".$list -> {data}[$i][2];
+    ++$i;
+   }
+  }
+  elsif ($buttonc -> get_active) {
+   $n = 1;
+   my @page = $list -> get_selected_indices;
+   $pagelist = $list -> {data}[$page[0]][2];
+  }
+  elsif ($buttons -> get_active) {
+   my @page = $list -> get_selected_indices;
+   $n = $#page;
+   $pagelist = $list -> {data}[$page[0]][2];
+   my $i = 1;
+   while ($i <= $#page) {
+    $pagelist = $pagelist." ".$list -> {data}[$page[$i]][2];
+    ++$i;
+   }
+  }
+
+# Create the tiff
+  system ("tiffcp $pagelist \"$filename\"");
+
+  $window -> destroy;
  } );
 
 # Cancel button
@@ -879,7 +1045,7 @@ sub scan_dialog {
 # Start from next available page
     my $start;
     if ($#{$list -> {data}} > -1) {
-     $start = $list -> {data}[$#{$list -> {data}}][3] + 1;
+     $start = $list -> {data}[$#{$list -> {data}}][0] + 1;
     }
     else {
      $start = 1;
@@ -908,10 +1074,10 @@ sub scan_dialog {
 # Check that there is room in the list for the reverse pages
       my $i = 1;
       my $j = $#{$list -> {data}};
-      while ($list->{data}[$j][3] != $start+$i*$step
+      while ($list->{data}[$j][0] != $start+$i*$step
              && $start+$i*$step > 0
              && $j > -1) {
-       if ($list->{data}[$j][3] > $start+$i*$step) {
+       if ($list->{data}[$j][0] > $start+$i*$step) {
         --$j;
        }
        else {
@@ -1029,7 +1195,9 @@ sub do_scan {
 # Take new scan and display it
 
 sub import_scan {
- my ($filename) = @_;
+ my ($ofilename) = @_;
+ my (undef, $filename) = tempfile(DIR => $dir);
+ system("mv $ofilename $filename");
 
  my $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename);
 
@@ -1048,13 +1216,13 @@ sub import_scan {
 
 # Add to the page list
  my $i;
- if ($filename =~ /out([0-9]*)\.tif/) {
+ if ($ofilename =~ /out([0-9]*)\.tif/) {
   $i = $1;
  }
  else {
   $i = $#{$list -> {data}}+2;
  }
- push @{$list -> {data}}, [$#{$list -> {data}}+2, $pixbuf, $filename, $i];
+ push @{$list -> {data}}, [$i, $pixbuf, $filename];
 
 # Select new page, deselecting others. This fires the select callback,
 # displaying the page
@@ -1062,19 +1230,8 @@ sub import_scan {
  my @page;
 
 # Due to the sort, must search for new page
- $i = 0;
- ++$i while ($list -> {data}[$i][0] != $#{$list -> {data}}+1);
- $page[0] = $i;
-
-# And renumber the pages
- if ($i < $#{$list -> {data}}) {
-  $i = $#{$list -> {data}};
-  while ($list -> {data}[$i][0] != $#{$list -> {data}}+1) {
-   $list -> {data}[$i][0] = $i+1;
-   --$i;
-  }
-  $list -> {data}[$i][0] = $i+1;
- }
+ $page[0] = 0;
+ ++$page[0] while ($list -> {data}[$page[0]][0] != $i);
 
  $list -> select(@page);
 }
