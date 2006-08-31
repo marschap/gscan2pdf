@@ -1,6 +1,6 @@
 SHELL = /bin/sh
 
-version = $(shell awk '{if (match($$0, /my \$$version = (.*);/, a)) print a[1]}' $(program))
+version = $(shell awk '{if (match($$0, /my \$$version = "(.*)";/, a)) print a[1]}' $(program))
 program = gscan2pdf
 
 $(program) : ;
@@ -32,4 +32,4 @@ dist : $(program) deb/control
 	dpkg-deb -b tmp gscan2pdf_$(version).deb
 
 clean :
-	rm -r gscan2pdf_$(version).deb tmp gscan2pdf_$(version).tar.gz
+	rm -r gscan2pdf_$(version).deb* tmp gscan2pdf_$(version).tar.gz
