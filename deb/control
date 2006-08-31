@@ -1,0 +1,15 @@
+Package: gscan2pdf 
+Version: 0.6
+Section: utils 
+Priority: optional
+Architecture: i386
+Depends: libgtk2-perl (>= 1:1.043-1), libglib-perl (>= 1.100-1), libsane, libtiff-tools
+Maintainer: Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+Description: A GUI to ease the process of producing PDFs from scanned documents
+ At maturity, the GUI will have similar features to that of the Windows Imaging program, but with the express objective of writing a PDF, including metadata.
+ .
+ Scanning is handled with SANE via scanimage.
+ .
+ PDF conversion is done by libtiff.
+ .
+ Perl is used for portability and ease of programming, with gtk2-perl for the GUI. This should therefore work more or less out of the box on any system with Perl, gtk2-perl, scanimage and libtiff.
