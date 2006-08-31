@@ -5,21 +5,21 @@
 # see the included LICENSE file for details.
 
 # To do
-# 0. Add renumber
-#    Destroy window after pdf write
-#    Destroy window after finished scanning single side
-#    Hide windows rather than destroying them
+# 0. Fix Failed to load RGB data from TIFF file: libpixbuf-tiff: Read error on strip 134; got 5190 bytes, expected 7130
+#    Add renumber - menu item from 1..n
 #    Add status line at bottom with messages like "filename saved"
 #    Add Gnome menu
-#    Add batch/non-batch toggle and deal with non-ADF usage.
+#    Save PDF/scan settings
+#    Work out how to resize scan window when options change
 # 1. Reorder pages (DND)
 # 2. Rotate
-# 3. Read options from --help --device-name dev.
-# 4. Add icons for import, save tiff, save pdf, quit, etc.
-# 5. Add view menu matching zoom buttons
-# 6. Get documentation up to scratch
+# 3. Add icons for import, save tiff, save pdf, quit, etc.
+# 4. Add view menu matching zoom buttons
+# 5. Get documentation up to scratch
+# 6. Tooltips
 # 7. Translations
 # 8. Progress meter for scans and imports.
+# 9. Hide windows rather than destroying them & other speedups
 
 use strict;
 use IPC::Open3;
@@ -33,7 +33,15 @@ use constant TRUE  => 1;
 use constant FALSE => 0;
 
 my $program = "gscan2pdf";
-my $version = 0.6;
+my $version = "0.6.1";
+
+my $test = FALSE;
+
+foreach (@ARGV) {
+ if ($_ eq "--test") {
+  $test = TRUE;
+ }
+}
 
 if (check_utils()) {
  print "$program requires the libtiff library.\nPlease install it.\n";
@@ -166,12 +174,33 @@ Gtk2::SimpleList -> add_column_type( 'filename',
                                      attr => 'hidden' );
 
 # Set up a SimpleList, sorted by #2, which is hidden
-my $list = Gtk2::SimpleList -> new('#' => 'int',
+my $slist = Gtk2::SimpleList -> new('#' => 'int',
                                    'Thumbnails' => 'pixbuf',
                                    'Filename' => 'filename');
-$list -> get_selection -> set_mode ('multiple');
-$list -> get_model -> set_sort_column_id (0, 'ascending');
-$scwin_thumbs -> add_with_viewport($list);
+$slist -> get_selection -> set_mode ('multiple');
+$slist -> get_model -> set_sort_column_id (0, 'ascending');
+
+# Set the page number to be editable
+$slist -> set_column_editable (0, TRUE);
+
+# Set-up the callback when the page number has been edited.
+$slist -> get_model -> signal_connect('row-changed' => sub {
+
+# turn off the signal whilst in the sub to prevent multiple calls.
+# local $SIG{'row-changed'} = 'IGNORE';
+#warn "in callback\n";
+
+# check here that there an no double page numbers and renumber if needed.
+ my $i = 1;
+ while ($i <= $#{$slist -> {data}}) {
+  if ($slist -> {data}[$i][0] == $slist -> {data}[$i-1][0]) {
+   ++($slist -> {data}[$i][0]);
+  };
+  ++$i;
+ }
+});
+
+$scwin_thumbs -> add_with_viewport($slist);
 
 # Scrolled window for detail view
 my $scwin_detail = Gtk2::ScrolledWindow -> new;
@@ -186,8 +215,8 @@ my $widthi;
 my $heighti;
 
 # Set up call back for list selection to update detail view
-$list -> get_selection -> signal_connect(changed => sub {
- my @page = $list -> get_selected_indices;
+$slist -> get_selection -> signal_connect(changed => sub {
+ my @page = $slist -> get_selected_indices;
 
 # Remove any image in the detail window
  if (defined($scwin_detail -> child)) {
@@ -207,7 +236,7 @@ $list -> get_selection -> signal_connect(changed => sub {
 
 # scalar needed for reasons I don't understand, but which have to do with
 # converting the array to a scalar. Alternatively, it might be a bug.
-  $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file (scalar($list->{data}[$page[0]][2]));
+  $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file (scalar($slist->{data}[$page[0]][2]));
 
 # Get dimension for image
   $widthi = $src_pixbuf -> get_width;
@@ -338,8 +367,8 @@ sub do_new {
   }
 
 # Depopulate the thumbnail list
-  while ($#{$list -> {data}} > -1) {
-   pop @{$list -> {data}};
+  while ($#{$slist -> {data}} > -1) {
+   pop @{$slist -> {data}};
   }
  }
  $dialog -> destroy;
@@ -586,26 +615,26 @@ sub do_PDF {
   my $n;
   my $pagelist;
   if ($buttona -> get_active) {
-   $n = $#{$list -> {data}};
-   $pagelist = $list -> {data}[0][2];
+   $n = $#{$slist -> {data}};
+   $pagelist = $slist -> {data}[0][2];
    my $i = 1;
-   while ($i <= $#{$list -> {data}}) {
-    $pagelist = $pagelist." ".$list -> {data}[$i][2];
+   while ($i <= $#{$slist -> {data}}) {
+    $pagelist = $pagelist." ".$slist -> {data}[$i][2];
     ++$i;
    }
   }
   elsif ($buttonc -> get_active) {
    $n = 1;
-   my @page = $list -> get_selected_indices;
-   $pagelist = $list -> {data}[$page[0]][2];
+   my @page = $slist -> get_selected_indices;
+   $pagelist = $slist -> {data}[$page[0]][2];
   }
   elsif ($buttons -> get_active) {
-   my @page = $list -> get_selected_indices;
+   my @page = $slist -> get_selected_indices;
    $n = $#page;
-   $pagelist = $list -> {data}[$page[0]][2];
+   $pagelist = $slist -> {data}[$page[0]][2];
    my $i = 1;
    while ($i <= $#page) {
-    $pagelist = $pagelist." ".$list -> {data}[$page[$i]][2];
+    $pagelist = $pagelist." ".$slist -> {data}[$page[$i]][2];
     ++$i;
    }
   }
@@ -628,6 +657,8 @@ sub do_PDF {
   else {
    system ("tiff2pdf $pagelist $options");
   }
+  
+  $window -> destroy;
  } );
 
 # Cancel button
@@ -732,26 +763,26 @@ sub do_TIFF {
   my $n;
   my $pagelist;
   if ($buttona -> get_active) {
-   $n = $#{$list -> {data}};
-   $pagelist = $list -> {data}[0][2];
+   $n = $#{$slist -> {data}};
+   $pagelist = $slist -> {data}[0][2];
    my $i = 1;
-   while ($i <= $#{$list -> {data}}) {
-    $pagelist = $pagelist." ".$list -> {data}[$i][2];
+   while ($i <= $#{$slist -> {data}}) {
+    $pagelist = $pagelist." ".$slist -> {data}[$i][2];
     ++$i;
    }
   }
   elsif ($buttonc -> get_active) {
    $n = 1;
-   my @page = $list -> get_selected_indices;
-   $pagelist = $list -> {data}[$page[0]][2];
+   my @page = $slist -> get_selected_indices;
+   $pagelist = $slist -> {data}[$page[0]][2];
   }
   elsif ($buttons -> get_active) {
-   my @page = $list -> get_selected_indices;
+   my @page = $slist -> get_selected_indices;
    $n = $#page;
-   $pagelist = $list -> {data}[$page[0]][2];
+   $pagelist = $slist -> {data}[$page[0]][2];
    my $i = 1;
    while ($i <= $#page) {
-    $pagelist = $pagelist." ".$list -> {data}[$page[$i]][2];
+    $pagelist = $pagelist." ".$slist -> {data}[$page[$i]][2];
     ++$i;
    }
   }
@@ -788,7 +819,8 @@ sub scan_dialog {
  my @output = `scanimage --list-devices 2>/dev/null`;
  if ($? eq 0) {
   if ($#output > 1 && $output[0] =~ /^\s$/ 
-                   && $output[1] =~ /^No scanners were identified/) {
+                   && $output[1] =~ /^No scanners were identified/
+                   && ! $test) {
    my $dialog = Gtk2::MessageDialog -> new ($window,
                                            'destroy-with-parent',
                                            'error',
@@ -803,6 +835,8 @@ sub scan_dialog {
    my $window = Gtk2::Window -> new;
    $window -> set_border_width(10);
    $window -> set_title ('Scan Document');
+   $window -> set_keep_above (TRUE);
+#   $window -> set_modal (TRUE);
    $window -> signal_connect (delete_event => sub { $_[0] -> destroy; });
 
 # VBox for window
@@ -811,7 +845,7 @@ sub scan_dialog {
 
 # HBox for devices
    my $hboxd = Gtk2::HBox -> new;
-   $vbox -> pack_start ($hboxd, TRUE, TRUE, 0);
+   $vbox -> pack_start ($hboxd, FALSE, FALSE, 0);
 
 # device list
    my $labeld = Gtk2::Label -> new ("Device");
@@ -820,23 +854,43 @@ sub scan_dialog {
    my $optd = Gtk2::OptionMenu -> new;
    my $menud = Gtk2::Menu -> new;
 
-# parse out the device and model names
-   my $output = `scanimage --formatted-device-list="%i %d.%v %m;" 2>/dev/null`;
+# Need to define this here to reference it for later.
+   my $vboxd = Gtk2::VBox -> new;
 
+# parse out the device and model names
    my @device;
-   my $device = substr($output, 0, index($output, ";")+1);
-   $output = substr($output, index($output, ";")+1, length($output));
-   while ($device =~ /([0-9]*) (.*)\.(.*);/) {
-    $device[$1] = $2;
+   if (! $test) {
+    $output = `scanimage --formatted-device-list="%i %d.%v %m;" 2>/dev/null`;
+
+    my $device = substr($output, 0, index($output, ";")+1);
+    $output = substr($output, index($output, ";")+1, length($output));
+    while ($device =~ /([0-9]*) (.*)\.(.*);/) {
+     $device[$1] = $2;
 
 # Convert all underscores to spaces
-    (my $model = $3) =~ s/_/ /g;
-    $device = substr($output, 0, index($output, ";")+1);
-    $output = substr($output, index($output, ";")+1, length($output));
+     (my $model = $3) =~ s/_/ /g;
+     $device = substr($output, 0, index($output, ";")+1);
+     $output = substr($output, index($output, ";")+1, length($output));
 
 # read the device names into the optionmenu
-    my $item = Gtk2::MenuItem -> new ($model);
-    $menud -> append ($item);
+     my $item = Gtk2::MenuItem -> new ($model);
+     $item -> signal_connect (activate => sub {
+      update_options($vboxd, $device[$optd -> get_history]);
+      $vboxd -> show_all;
+     });
+     $menud -> append ($item);
+    }
+   }
+   else {
+    foreach (qw/officejet_5500_series?serial=MY42QF209H96 epson:libusb:005:007/) {
+     my $item = Gtk2::MenuItem -> new ($_);
+     $item -> signal_connect (activate => sub {
+      update_options($vboxd, undef, $optd -> get_history);
+      $vboxd -> show_all;
+     });
+     $menud -> append ($item);
+     push @device, $_
+    }
    }
    $optd -> set_menu ($menud);
    $hboxd -> pack_end ($optd, FALSE, FALSE, 0);
@@ -850,7 +904,7 @@ sub scan_dialog {
    
 # HBox for paper size
    my $hboxp = Gtk2::HBox -> new;
-   $vbox -> pack_start ($hboxp, TRUE, TRUE, 0);
+   $vbox -> pack_start ($hboxp, FALSE, FALSE, 0);
 
 # Paper list
    my $labelp = Gtk2::Label -> new ("Paper size");
@@ -858,17 +912,34 @@ sub scan_dialog {
 
    my $optp = Gtk2::OptionMenu -> new;
    my $menup = Gtk2::Menu -> new;
+
+# Define HBox for custom paper here to reference it in callback
+   my $hboxc = Gtk2::HBox -> new;
+
    foreach (qw/A4 Letter Custom/) {
     my $item = Gtk2::MenuItem -> new ($_);
-#    $item -> signal_connect (activate => \&activate, $_);
+    $item -> signal_connect (activate => sub {
+     my ($widget, $data) = @_;
+     my @child = $widget -> get_children;
+     foreach my $widget (@child) {
+      if ($widget -> isa('Gtk2::Label')) {
+       my $label = $widget -> get_label;
+       if ($widget -> get_label eq 'Custom') {
+        $hboxc -> show_all;
+       }
+       else {
+        $hboxc -> hide_all;
+       }
+      }
+     }
+
+    });
     $menup -> append ($item);
    }
    $optp -> set_menu ($menup);
    $hboxp -> pack_end ($optp, FALSE, FALSE, 0);
 
-# HBox for custom paper
-   my $hboxc = Gtk2::HBox -> new;
-   $vbox -> pack_start ($hboxc, TRUE, TRUE, 0);
+   $vbox -> pack_start ($hboxc, FALSE, FALSE, 0);
 
 # custom paper x entry
    my $labelx = Gtk2::Label -> new ("x");
@@ -902,47 +973,9 @@ sub scan_dialog {
    });
    $hboxc -> pack_start ($entryy, FALSE, FALSE, 0);
 
-# HBox for mode
-   my $hboxm = Gtk2::HBox -> new;
-   $vbox -> pack_start ($hboxm, TRUE, TRUE, 0);
-
-# Mode list
-   my $labelm = Gtk2::Label -> new ("Mode");
-   $hboxm -> pack_start ($labelm, FALSE, FALSE, 0);
-
-   my $optm = Gtk2::OptionMenu -> new;
-   my $menum = Gtk2::Menu -> new;
-   my @mode = qw/Lineart Gray Color/;
-   foreach (@mode) {
-    my $item = Gtk2::MenuItem -> new ($_);
-    $menum -> append ($item);
-   }
-   $optm -> set_menu ($menum);
-   $hboxm -> pack_end ($optm, FALSE, FALSE, 0);
-
-# HBox for resolution
-   my $hboxr = Gtk2::HBox -> new;
-   $vbox -> pack_start ($hboxr, TRUE, TRUE, 0);
-
-# resolution entry
-   my $labelr = Gtk2::Label -> new ("Resolution");
-   $hboxr -> pack_start ($labelr, FALSE, FALSE, 0);
-
-   my $entryr = Gtk2::Entry -> new;
-   $entryr -> set_text("300");
-   $entryr -> set_width_chars(4);
-   $entryr -> signal_connect ('insert-text' => sub {
-    my ($widget, $string, $len, $position) = @_;
-    if ($string !~ /^[0-9]+$/) { # Only add numbers
-     $entryr -> signal_stop_emission_by_name ('insert-text');
-    }
-    () # this callback must return either 2 or 0 items.
-   });
-   $hboxr -> pack_end ($entryr, FALSE, FALSE, 0);
-
 # Frame for # pages
    my $framen = Gtk2::Frame -> new('# Pages');
-   $vbox -> pack_start ($framen, TRUE, TRUE, 0);
+   $vbox -> pack_start ($framen, FALSE, FALSE, 0);
    my $vboxn = Gtk2::VBox -> new;
    $vboxn -> set_border_width(6);
    $framen -> add ($vboxn);
@@ -970,7 +1003,7 @@ sub scan_dialog {
 
 # Frame for source document
    my $frames = Gtk2::Frame -> new('Source document');
-   $vbox -> pack_start ($frames, TRUE, TRUE, 0);
+   $vbox -> pack_start ($frames, FALSE, FALSE, 0);
    my $vboxs = Gtk2::VBox -> new;
    $vboxs -> set_border_width(6);
    $frames -> add ($vboxs);
@@ -1004,10 +1037,23 @@ sub scan_dialog {
    $opts -> set_menu ($menus);
    $hboxs -> pack_end ($opts, FALSE, FALSE, 0);
 
+# Frame for device-dependent options
+   my $framed = Gtk2::Frame -> new('Device-dependent options');
+   $vbox -> pack_start ($framed, FALSE, FALSE, 0);
+   $vboxd -> set_border_width(6);
+   $framed -> add ($vboxd);
+
+# Dig the device-dependent options from --help --device-name
+   if ($test) {
+    update_options($vboxd, undef, $optd -> get_history);
+   }
+   else {
+    update_options($vboxd, $device[$optd -> get_history]);
+   }
+
 # HBox for buttons
    my $hboxb = Gtk2::HBox -> new;
-#   $vbox -> add ($hboxb);
-   $vbox -> pack_start ($hboxb, TRUE, TRUE, 0);
+   $vbox -> pack_start ($hboxb, FALSE, FALSE, 0);
 
 # Scan button
    my $sbutton = Gtk2::Button -> new('Scan');
@@ -1015,7 +1061,7 @@ sub scan_dialog {
    $sbutton -> signal_connect (clicked => sub {
 
 # Get selected device
-    $device = "--device-name=".$device[$optd -> get_history];
+    my $device = "--device-name=".$device[$optd -> get_history];
 
 # Get selected paper size
     my @paper = ( '-x 210 -y 297', '-x 216 -y 279' );
@@ -1027,16 +1073,36 @@ sub scan_dialog {
      $paper = $paper[$optp -> get_history];
     }
 
-# Get selected mode
-    my $mode = "--mode=".$mode[$optm -> get_history];
-
-# Get selected resolution
-    my $resolution = "--resolution ".$entryr -> get_text;
+# Get device-specific options
+    my %options;
+    my @child = $vboxd -> get_children;
+    foreach my $hbox (@child) {
+     my $key;
+     if ($hbox -> isa('Gtk2::HBox')) {
+      my @child = $hbox -> get_children;
+      foreach my $widget (@child) {
+       if ($widget -> isa('Gtk2::Label')) {
+        $key = $widget -> get_label;
+       }
+       elsif ($widget -> isa('Gtk2::OptionMenu')) {
+        my @child = $widget -> get_children;
+        foreach my $widget (@child) {
+         if ($widget -> isa('Gtk2::Label')) {
+          $options{$key} = $widget -> get_label;
+         }
+        }
+       }
+       elsif ($widget -> isa('Gtk2::SpinButton')) {
+        $options{$key} = $widget -> get_value;
+       }
+      }
+     }
+    }
 
 # Get selected number of pages
     my $npages;
     if ($buttone -> get_active) {
-     $npages = "--batch-count ".$spin_button -> get_value;
+     $npages = "--batch-count=".$spin_button -> get_value;
     }
     else {
      $npages = "";
@@ -1044,8 +1110,8 @@ sub scan_dialog {
 
 # Start from next available page
     my $start;
-    if ($#{$list -> {data}} > -1) {
-     $start = $list -> {data}[$#{$list -> {data}}][0] + 1;
+    if ($#{$slist -> {data}} > -1) {
+     $start = $slist -> {data}[$#{$slist -> {data}}][0] + 1;
     }
     else {
      $start = 1;
@@ -1073,11 +1139,11 @@ sub scan_dialog {
 
 # Check that there is room in the list for the reverse pages
       my $i = 1;
-      my $j = $#{$list -> {data}};
-      while ($list->{data}[$j][0] != $start+$i*$step
+      my $j = $#{$slist -> {data}};
+      while ($slist->{data}[$j][0] != $start+$i*$step
              && $start+$i*$step > 0
              && $j > -1) {
-       if ($list->{data}[$j][0] > $start+$i*$step) {
+       if ($slist->{data}[$j][0] > $start+$i*$step) {
         --$j;
        }
        else {
@@ -1099,7 +1165,7 @@ sub scan_dialog {
 
 # If user hasn't specified number of pages, then set number that is undefined
       else {
-       $npages = "--batch-count ".$i;
+       $npages = "--batch-count=".$i;
       }
      }
      $step = "--batch-increment=".$step;
@@ -1108,7 +1174,7 @@ sub scan_dialog {
      $step = "";
     }
     $start = "--batch-start=".$start;
-    do_scan($device, $paper, $mode, $resolution, $npages, $start, $step);
+    do_scan($device, $paper, $npages, $start, $step, %options);
    } );
 
 # Cancel button
@@ -1117,78 +1183,91 @@ sub scan_dialog {
    $cbutton -> signal_connect( clicked => sub { $window -> destroy; } );
 
    $window -> show_all;
+   $hboxc -> hide_all;
   }
  }
 }
 
 
-# Callback for paper size option menu
-
-#sub activate {
-# my ($widget, $data) = @_;
-# if ($data eq 'Custom') {
-#  $hboxc -> show_all;
-# }
-# else {
-#  $hboxc -> hide_all;
-# }
-#}
-
-
 # Carry out the scan with the options passed.
 
 sub do_scan {
- my ($device, $paper, $mode, $resolution, $npages, $start, $step) = @_;
+ my ($device, $paper, $npages, $start, $step, %options) = @_;
 
+# Basic options
  my @options = ( '--format=tiff',  
-                 '--batch-scan=yes',  
                  '--batch' );
- my $cmd = "scanimage $device $paper $mode $resolution $npages $start $step @options;echo 'End Scan' > /dev/stderr";
+
+# Add device-specific options
+ my ($key, $value);
+ while (($key, $value) = each(%options)) {
+  push @options, "--$key=$value";
+ }
+
+# Make sure we are in temp directory
+ chdir $dir;
+
+# Create command
+ my $cmd = "scanimage $device $paper $npages $start $step @options;echo 'End Scan' > /dev/stderr";
+
+ if (! $test) {
 
 # Interface to scanimage
- my ($write, $read);
- my $error = IO::Handle -> new; # this needed because of a bug in open3.
- my $pid = open3($write, $read, $error, $cmd);
- 
- my $dialog = Gtk2::Dialog -> new ("Scanning...", $window,
-                                   'destroy-with-parent',
-                                   'gtk-cancel' => 'cancel');
- my $label = Gtk2::Label -> new ("Scanning...");
- $dialog -> vbox -> add ($label);
+  my ($write, $read);
+  my $error = IO::Handle -> new; # this needed because of a bug in open3.
+  my $pid = open3($write, $read, $error, $cmd);
+  
+  my $dialog = Gtk2::Dialog -> new ("Scanning...", $window,
+                                    'destroy-with-parent',
+                                    'gtk-cancel' => 'cancel');
+  my $label = Gtk2::Label -> new ("Scanning...");
+  $dialog -> vbox -> add ($label);
 
 # Ensure that the dialog box is destroyed when the user responds.
- $dialog -> signal_connect (response => sub {
-  $_[0] -> destroy;
-  local $SIG{HUP} = 'IGNORE';
-  kill HUP => $pid;
- });
- $dialog -> show_all;
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   local $SIG{HUP} = 'IGNORE';
+   kill HUP => $pid;
+  });
+  $dialog -> show_all;
  
- my $line;
- Glib::IO -> add_watch(fileno($error), 'in', sub {
-  my $buffer;
-  sysread $error, $buffer, 1024;
-  $line = $line . $buffer; # needed to cover case where line is broken in middle
-  while ($line =~ /\n/) {
-   if ($line =~ /^Scanning (-?[0-9]*) pages/) {
-    $label -> set_text("Scanning $1 pages...");
+  my $line;
+  Glib::IO -> add_watch(fileno($error), 'in', sub {
+   my $buffer;
+   sysread $error, $buffer, 1024;
+   $line = $line . $buffer; # needed to cover case where line is broken in middle
+   while ($line =~ /\n/) {
+    if ($line =~ /^Scanning (-?[0-9]*) pages/) {
+     $label -> set_text("Scanning $1 pages...");
+    }
+    elsif ($line =~ /^Scanning page ([0-9]*)/) {
+     $label -> set_text("Scanning page $1...");
+    }
+    elsif ($line =~ /^Scanned page ([0-9]*)\. \(scanner status = 5\)/) {
+     import_scan ("out$1.tif");
+    }
+    elsif ($line =~ /^End Scan/) {
+     $dialog -> destroy;
+     return 0; # Sascha Hunold [hunoldinho at users dot sourceforge dot net]
+    }
+    else {
+#     $dialog -> destroy;
+     my $text = "Unknown message: " . substr($line, 0, index($line, "\n"));
+warn "$text\n";
+     my $dialog = Gtk2::MessageDialog -> new ($window,
+                                              'destroy-with-parent',
+                                              'error',
+                                              'close',
+                                              $text);
+    }
+    $line = substr($line, index($line, "\n")+1, length($line));
    }
-   elsif ($line =~ /^Scanning page ([0-9]*)/) {
-    $label -> set_text("Scanning page $1...");
-   }
-   elsif ($line =~ /^Scanned page ([0-9]*)\. \(scanner status = 5\)/) {
-    import_scan ("out$1.tif");
-   }
-   elsif ($line =~ /^End Scan/) {
-    $dialog -> destroy;
-   }
-   else {
-    $label -> set_text("Unknown message: " . substr($line, 0, index($line, "\n")));
-   }
-   $line = substr($line, index($line, "\n")+1, length($line));
-  }
-  return 1;
- });
+   return 1;
+  });
+ }
+ else {
+  warn "$cmd\n";
+ }
 }
 
 
@@ -1220,30 +1299,30 @@ sub import_scan {
   $i = $1;
  }
  else {
-  $i = $#{$list -> {data}}+2;
+  $i = $#{$slist -> {data}}+2;
  }
- push @{$list -> {data}}, [$i, $pixbuf, $filename];
+ push @{$slist -> {data}}, [$i, $pixbuf, $filename];
 
 # Select new page, deselecting others. This fires the select callback,
 # displaying the page
- $list -> get_selection -> unselect_all;
+ $slist -> get_selection -> unselect_all;
  my @page;
 
 # Due to the sort, must search for new page
  $page[0] = 0;
- ++$page[0] while ($list -> {data}[$page[0]][0] != $i);
+ ++$page[0] while ($slist -> {data}[$page[0]][0] != $i);
 
- $list -> select(@page);
+ $slist -> select(@page);
 }
 
 
 # Delete the selected scans
 
 sub do_delete {
- my @page = $list -> get_selected_indices;
+ my @page = $slist -> get_selected_indices;
  while ($#page > -1) {
-  splice @{ $list->{data} }, $page[0], 1;
-  @page = $list -> get_selected_indices;
+  splice @{ $slist->{data} }, $page[0], 1;
+  @page = $slist -> get_selected_indices;
  }
 }
 
@@ -1251,7 +1330,7 @@ sub do_delete {
 # Select all scans
 
 sub do_select_all {
- $list -> get_selection -> select_all;
+ $slist -> get_selection -> select_all;
 }
 
 
@@ -1277,6 +1356,298 @@ sub check_utils {
  return $? if $? != 0;
  return 0;
 }
+
+
+# Update device-dependent scan options
+
+sub update_options {
+ my ($vboxd, $device, $device_i) = @_;
+
+# Empty $vboxd first
+ my @child = $vboxd -> get_children;
+ foreach (@child) {
+  $_ -> destroy;
+ }
+
+ my $output;
+ if (defined($device)) {
+  $output = `scanimage --help --device-name=$device`;
+ }
+ else {
+  my @output;
+  $output[0] = <<END;
+Usage: scanimage [OPTION]...
+
+Start image acquisition on a scanner device and write PNM image data to standard output.
+
+-d, --device-name=DEVICE   use a given scanner device (e.g. hp:/dev/scanner)
+    --format=pnm|tiff      file format of output file
+-i, --icc-profile=PROFILE  include this ICC profile into TIFF file
+-L, --list-devices         show available scanner devices
+-f, --formatted-device-list=FORMAT similar to -L, but the FORMAT of the output
+                           can be specified: %d (device name), %v (vendor),
+                           %m (model), %t (type), and %i (index number)
+-b, --batch[=FORMAT]       working in batch mode, FORMAT is `out%d.pnm' or
+                           `out%d.tif' by default depending on --format
+    --batch-start=#        page number to start naming files with
+    --batch-count=#        how many pages to scan in batch mode
+    --batch-increment=#    increase number in filename by an amount of #
+    --batch-double         increment page number by two for 2sided originals
+                           being scanned in a single sided scanner
+    --batch-prompt         ask for pressing a key before scanning a page
+    --accept-md5-only      only accept authorization requests using md5
+-p, --progress             print progress messages
+-n, --dont-scan            only set options, don't actually scan
+-T, --test                 test backend thoroughly
+-h, --help                 display this help message and exit
+-v, --verbose              give even more status messages
+-B, --buffer-size          change default input buffersize
+-V, --version              print version information
+
+Options specific to device `hpaio:/usb/officejet_5500_series?serial=MY42QF209H96':
+  Scan mode:
+    --mode Lineart|Grayscale|Color [Color]
+        Selects the scan mode (e.g., lineart, monochrome, or color).
+    --resolution 75..600dpi [75]
+        Sets the resolution of the scanned image.
+  Advanced:
+    --contrast 0..100 [inactive]
+        Controls the contrast of the acquired image.
+    --compression None|JPEG [JPEG]
+        Selects the scanner compression method for faster scans, possibly at
+        the expense of image quality.
+    --jpeg-compression-factor 0..100 [10]
+        Sets the scanner JPEG compression factor.  Larger numbers mean better
+        compression, and smaller numbers mean better image quality.
+    --batch-scan[=(yes|no)] [no]
+        Guarantees that a "no documents" condition will be returned after the
+        last scanned page, to prevent endless flatbed scans after a batch scan.
+         For some models, option changes in the middle of a batch scan don't
+        take effect until after the last page.
+    --source Auto|Flatbed|ADF [Auto]
+        Selects the desired scan source for models with both flatbed and
+        automatic document feeder (ADF) capabilities.  The "Auto" setting means
+        that the ADF will be used if it's loaded, and the flatbed (if present)
+        will be used otherwise.
+    --duplex[=(yes|no)] [inactive]
+        Enables scanning on both sides of the page for models with
+        duplex-capable document feeders.  For pages printed in "book"-style
+        duplex mode, one side will be scanned upside-down.  This feature is
+        experimental.
+  Geometry:
+    --length-measurement Unknown|Approximate|Padded [Padded]
+        Selects how the scanned image length is measured and reported, which
+        is impossible to know in advance for scrollfed scans.
+    -l 0..215.9mm [0]
+        Top-left x position of scan area.
+    -t 0..381mm [0]
+        Top-left y position of scan area.
+    -x 0..215.9mm [215.9]
+        Width of scan-area.
+    -y 0..381mm [381]
+        Height of scan-area.
+
+Type ``scanimage --help -d DEVICE'' to get list of all options for DEVICE.
+
+List of available devices:
+    v4l:/dev/video1 v4l:/dev/video0
+    hpaio:/usb/officejet_5500_series?serial=MY42QF209H96
+END
+  $output[1] = <<END;
+Usage: scanimage [OPTION]...
+
+Start image acquisition on a scanner device and write PNM image data to
+standard output.
+
+-d, --device-name=DEVICE   use a given scanner device (e.g. hp:/dev/scanner)
+    --format=pnm|tiff      file format of output file
+-i, --icc-profile=PROFILE  include this ICC profile into TIFF file
+-L, --list-devices         show available scanner devices
+-f, --formatted-device-list=FORMAT similar to -L, but the FORMAT of the output
+                           can be specified: %d (device name), %v (vendor),
+                           %m (model), %t (type), and %i (index number)
+-b, --batch[=FORMAT]       working in batch mode, FORMAT is `out%d.pnm' or
+                           `out%d.tif' by default depending on --format
+    --batch-start=#        page number to start naming files with
+    --batch-count=#        how many pages to scan in batch mode
+    --batch-increment=#    increase number in filename by an amount of #
+    --batch-double         increment page number by two for 2sided originals
+                           being scanned in a single sided scanner
+    --batch-prompt         ask for pressing a key before scanning a page
+    --accept-md5-only      only accept authorization requests using md5
+-n, --dont-scan            only set options, don't actually scan
+-T, --test                 test backend thoroughly
+-h, --help                 display this help message and exit
+-v, --verbose              give even more status messages
+-V, --version              print version information
+
+Options specific to device `epson:libusb:005:007':
+  Scan Mode:
+    --mode Binary|Gray|Color [Binary]
+        Selects the scan mode (e.g., lineart, monochrome, or color).
+    --depth 8|16 [inactive]
+        Number of bits per sample, typical values are 1 for "line-art" and 8
+        for multibit scans.
+    --halftoning None|Halftone A (Hard Tone)|Halftone B (Soft Tone)|Halftone C (Net Screen)|Dither A (4x4 Bayer)|Dither B (4x4 Spiral)|Dither C (4x4 Net Screen)|Dither D (8x4 Net Screen)|Text Enhanced Technology|Download pattern A|Download pattern B [Halftone A (Hard Tone)]
+        Selects the halftone.
+    --dropout None|Red|Green|Blue [None]
+        Selects the dropout.
+    --brightness -4..3 [0]
+        Selects the brightness.
+    --sharpness -2..2 [0]
+        
+    --gamma-correction Default|User defined|High density printing|Low density printing|High contrast printing [Default]
+        Selects the gamma correction value from a list of pre-defined devices
+        or the user defined table, which can be downloaded to the scanner
+    --color-correction No Correction|User defined|Impact-dot printers|Thermal printers|Ink-jet printers|CRT monitors [CRT monitors]
+        Sets the color correction table for the selected output device.
+    --resolution 50|60|72|75|80|90|100|120|133|144|150|160|175|180|200|216|240|266|300|320|350|360|400|480|600|720|800|900|1200|1600|1800|2400|3200dpi [50]
+        Sets the resolution of the scanned image.
+    --threshold 0..255 [inactive]
+        Select minimum-brightness to get a white point
+  Advanced:
+    --mirror[=(yes|no)] [no]
+        Mirror the image.
+    --speed[=(yes|no)] [no]
+        Determines the speed at which the scan proceeds.
+    --auto-area-segmentation[=(yes|no)] [yes]
+        
+    --short-resolution[=(yes|no)] [no]
+        Display short resolution list
+    --zoom 50..200 [inactive]
+        Defines the zoom factor the scanner will use
+    --red-gamma-table 0..255,... [inactive]
+        Gamma-correction table for the red band.
+    --green-gamma-table 0..255,... [inactive]
+        Gamma-correction table for the green band.
+    --blue-gamma-table 0..255,... [inactive]
+        Gamma-correction table for the blue band.
+    --wait-for-button[=(yes|no)] [no]
+        After sending the scan command, wait until the button on the scanner
+        is pressed to actually start the scan process.
+  Color correction coefficients:
+    --cct-1 -127..127 [inactive]
+        Controls green level
+    --cct-2 -127..127 [inactive]
+        Adds to red based on green level
+    --cct-3 -127..127 [inactive]
+        Adds to blue based on green level
+    --cct-4 -127..127 [inactive]
+        Adds to green based on red level
+    --cct-5 -127..127 [inactive]
+        Controls red level
+    --cct-6 -127..127 [inactive]
+        Adds to blue based on red level
+    --cct-7 -127..127 [inactive]
+        Adds to green based on blue level
+    --cct-8 -127..127 [inactive]
+        Adds to red based on blue level
+    --cct-9 -127..127 [inactive]
+        Controls blue level
+  Preview:
+    --preview[=(yes|no)] [no]
+        Request a preview-quality scan.
+    --preview-speed[=(yes|no)] [no]
+        
+  Geometry:
+    -l 0..215.9mm [0]
+        Top-left x position of scan area.
+    -t 0..297.18mm [0]
+        Top-left y position of scan area.
+    -x 0..215.9mm [215.9]
+        Width of scan-area.
+    -y 0..297.18mm [297.18]
+        Height of scan-area.
+    --quick-format CD|A5 portrait|A5 landscape|Letter|A4|Max [Max]
+        
+  Optional equipment:
+    --source Flatbed|Transparency Unit [Flatbed]
+        Selects the scan source (such as a document-feeder).
+    --auto-eject[=(yes|no)] [inactive]
+        Eject document after scanning
+    --film-type Positive Film|Negative Film [inactive]
+        
+    --focus-position Focus on glass|Focus 2.5mm above glass [Focus on glass]
+        Sets the focus position to either the glass or 2.5mm above the glass
+    --bay  1 | 2 | 3 | 4 | 5 | 6  [inactive]
+        Select bay to scan
+    --eject [inactive]
+        Eject the sheet in the ADF
+    --adf_mode Simplex|Duplex [inactive]
+        Selects the ADF mode (simplex/duplex)
+
+Type ``scanimage --help -d DEVICE'' to get list of all options for DEVICE.
+
+List of available devices:
+    epson:libusb:005:007
+END
+  $output = $output[$device_i];
+ }
+
+ $output = substr($output, index($output, "Options specific to device"), length($output));
+ $output = substr($output, index($output, "\n")+1, length($output));
+ while ($output =~ /--([a-z_-]*)(.*) \[(.*)\]/) {
+  my $option = $1;
+  my $values = $2;
+  my $default = $3;
+  if ($option =~ /(^mode$|^resolution$|^batch-scan$|^wait-for-button$)/
+      && $default !~ /inactive/) {
+
+# HBox for option
+   my $hbox = Gtk2::HBox -> new;
+   $vboxd -> pack_start ($hbox, TRUE, TRUE, 0);
+
+# Label
+   my $label = Gtk2::Label -> new ($option);
+   $hbox -> pack_start ($label, FALSE, FALSE, 0);
+
+# OptionMenu
+   if ($values =~ /\|/) {
+    my $opt = Gtk2::OptionMenu -> new;
+    my $menu = Gtk2::Menu -> new;
+
+# Counters for defaults
+    my $i = -1;
+    my $o;
+
+# Parse items from output
+    while ($values =~ /\|/) {
+     my $value = substr($values, 0, index($values, "|"));
+     $values = substr($values, index($values, "|")+1, length($values));
+     $value = substr($value, 1, length($value)) while ($value =~ /^ /);
+     $value = substr($value, 3, length($value)) while ($value =~ /^\[=\(/);
+
+# Create item
+     my $item = Gtk2::MenuItem -> new ($value);
+     $menu -> append ($item);
+     $i++;
+     $o = $i if ($value eq $default);
+    }
+
+# Do it all again for the last one
+    $values = substr($values, 0, length($values)-2) while ($values =~ /\)\]/);
+    my $item = Gtk2::MenuItem -> new ($values);
+    $menu -> append ($item);
+    $i++;
+    $o = $i if ($values eq $default);
+
+# Create OptionMenu
+    $opt -> set_menu ($menu);
+    $opt -> set_history ($o);
+    $hbox -> pack_end ($opt, FALSE, FALSE, 0);
+   }
+
+# SpinButton
+   elsif ($values =~ /([0-9]*)\.\.([0-9]*)/) {
+    my $spin_button = Gtk2::SpinButton -> new_with_range($1, $2, 1);
+    $spin_button -> set_value($default);
+    $hbox -> pack_end ($spin_button, FALSE, FALSE, 0);
+   }
+  }
+  $output = substr($output, index($output, "]")+1, length($output));
+ }
+}
+
 
 __END__
 
