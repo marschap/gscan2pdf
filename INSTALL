@@ -28,6 +28,17 @@ gscan2pdf will then be on the path an accessible from any directory with
  gscan2pdf
 
 
+If you have a Debian system (like Ubuntu) then you can make a .deb with
+
+ make dist
+
+and then install it with
+
+ sudo dpkg -i gscan2pdf_0.6.1.deb
+
+This has the advantage of not having to hold on to the Makefile in order to uninstall it.
+
+
 
 Uninstalling
 ------------
@@ -49,3 +60,8 @@ and then
  make uninstall
 
 as appropriate.
+
+
+Alternatively, if you installed the .deb, you can uninstall it with your favourite graphical package manager (e.g. Synaptic), or with
+
+ sudo dpkg -r gscan2pdf
