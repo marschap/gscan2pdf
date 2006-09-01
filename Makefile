@@ -24,12 +24,14 @@ deb/control : $(program)
          deb/control_tmp > deb/control
 	rm deb/control_tmp
 
-dist : $(program) deb/control
+dist : $(program) deb/control tmp
+	cd tmp ; md5sum $(shell find tmp -type f | awk '/.\// { print substr($$0, 5) }') > DEBIAN/md5sums
+	dpkg-deb -b tmp gscan2pdf_$(version).deb
+
+tmp : $(program) deb/control
 	mkdir --parents tmp/DEBIAN tmp/usr/bin
 	cp deb/control tmp/DEBIAN
 	cp $(program) tmp/usr/bin
-	cd tmp ; md5sum $(shell find tmp -type f | awk '/.\// { print substr($$0, 5) }') > DEBIAN/md5sums
-	dpkg-deb -b tmp gscan2pdf_$(version).deb
 
 clean :
 	rm -r gscan2pdf_$(version).deb* tmp gscan2pdf_$(version).tar.gz
