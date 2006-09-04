@@ -3,7 +3,7 @@ SHELL = /bin/sh
 program = gscan2pdf
 version = $(shell awk '{if (match($$0, /my \$$version = "(.*)";/, a)) print a[1]}' $(program))
 
-tar : gscan2pdf-$(version).tar.gz
+tar : $(program)-$(version).tar.gz
 
 $(program) : ;
 
@@ -13,13 +13,13 @@ install : $(program)
 uninstall : $(program)
 	rm /usr/local/bin/$(program)
 
-gscan2pdf-$(version).tar.gz : $(program)
-	mkdir --parents ../gscan2pdf-$(version)/deb
-	cp Makefile INSTALL LICENSE COPYING ../gscan2pdf-$(version)
-	cp deb/debian-binary deb/control ../gscan2pdf-$(version)/deb
-	cd .. ; tar cfvz gscan2pdf-$(version).tar.gz gscan2pdf-$(version)
-	mv ../gscan2pdf-$(version).tar.gz .
-	rm -r ../gscan2pdf-$(version)
+$(program)-$(version).tar.gz : $(program)
+	mkdir --parents ../$(program)-$(version)/deb
+	cp $(program) Makefile INSTALL LICENSE COPYING ../$(program)-$(version)
+	cp deb/debian-binary deb/control ../$(program)-$(version)/deb
+	cd .. ; tar cfvz $(program)-$(version).tar.gz $(program)-$(version)
+	mv ../$(program)-$(version).tar.gz .
+	rm -r ../$(program)-$(version)
 
 deb/control : $(program)
 	cp deb/control deb/control_tmp
@@ -29,7 +29,7 @@ deb/control : $(program)
 
 dist : $(program) deb/control tmp
 	cd tmp ; md5sum $(shell find tmp -type f | awk '/.\// { print substr($$0, 5) }') > DEBIAN/md5sums
-	dpkg-deb -b tmp gscan2pdf-$(version).deb
+	dpkg-deb -b tmp $(program)-$(version).deb
 
 tmp : $(program) deb/control
 	mkdir --parents tmp/DEBIAN tmp/usr/bin
@@ -37,4 +37,4 @@ tmp : $(program) deb/control
 	cp $(program) tmp/usr/bin
 
 clean :
-	rm -r gscan2pdf_$(version).deb* tmp gscan2pdf_$(version).tar.gz
+	rm -r $(program)-$(version).deb* tmp $(program)-$(version).tar.gz
