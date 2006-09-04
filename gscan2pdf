@@ -33,7 +33,7 @@ use constant TRUE  => 1;
 use constant FALSE => 0;
 
 my $program = "gscan2pdf";
-my $version = "0.6.1";
+my $version = "0.6.2";
 
 my $test = FALSE;
 
@@ -1064,7 +1064,7 @@ sub scan_dialog {
     my $device = "--device-name=".$device[$optd -> get_history];
 
 # Get selected paper size
-    my @paper = ( '-x 210 -y 297', '-x 216 -y 279' );
+    my @paper = ( '-x 210 -y 297', '-x 215.9 -y 279' );
     my $paper;
     if (($optp -> get_history) > $#paper) {
      $paper = "-x ".$entryx -> get_text." -y ".$entryy -> get_text;
