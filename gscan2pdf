@@ -9,7 +9,7 @@
 #    Add renumber - menu item from 1..n
 #    Add status line at bottom with messages like "filename saved"
 #    Add Gnome menu
-#    Save PDF/scan settings
+#    Save scan & window (maximise/size) settings
 #    Work out how to resize scan window when options change
 # 1. Reorder pages (DND)
 # 2. Rotate
@@ -33,15 +33,16 @@ use constant TRUE  => 1;
 use constant FALSE => 0;
 
 my $program = "gscan2pdf";
-my $version = "0.6.2";
+my $version = "0.6.3";
+
+# Standard paper sizes
+my @paper = qw/A4 Letter/;
+my @x = ( 210, 215.9 );
+my @y = ( 297, 279 );
 
 my $test = FALSE;
 
-foreach (@ARGV) {
- if ($_ eq "--test") {
-  $test = TRUE;
- }
-}
+$test = $ARGV[1] if ($ARGV[0] eq "--test");
 
 if (check_utils()) {
  print "$program requires the libtiff library.\nPlease install it.\n";
@@ -213,6 +214,9 @@ my $scale;
 my $src_pixbuf;
 my $widthi;
 my $heighti;
+
+# Globally define the custom paper box.
+my $hboxc;
 
 # Set up call back for list selection to update detail view
 $slist -> get_selection -> signal_connect(changed => sub {
@@ -651,11 +655,11 @@ sub do_PDF {
 # call tiff2pdf and/or tiffcp according to the number of pages
   if ($n > 0) {
    system ("tiffcp $pagelist \"$filename.tif\"");
-   system ("tiff2pdf \"$filename.tif\" $options");
+   system ("tiff2pdf $options \"$filename.tif\"");
    unlink ("$filename.tif"); # delete the temporary tiff
   }
   else {
-   system ("tiff2pdf $pagelist $options");
+   system ("tiff2pdf $options $pagelist");
   }
   
   $window -> destroy;
@@ -882,15 +886,13 @@ sub scan_dialog {
     }
    }
    else {
-    foreach (qw/officejet_5500_series?serial=MY42QF209H96 epson:libusb:005:007/) {
-     my $item = Gtk2::MenuItem -> new ($_);
-     $item -> signal_connect (activate => sub {
-      update_options($vboxd, undef, $optd -> get_history);
-      $vboxd -> show_all;
-     });
-     $menud -> append ($item);
-     push @device, $_
-    }
+    my $item = Gtk2::MenuItem -> new ($test);
+    $item -> signal_connect (activate => sub {
+     update_options($vboxd, undef);
+     $vboxd -> show_all;
+    });
+    $menud -> append ($item);
+    push @device, $test
    }
    $optd -> set_menu ($menud);
    $hboxd -> pack_end ($optd, FALSE, FALSE, 0);
@@ -902,77 +904,6 @@ sub scan_dialog {
     $optd -> set_history($i);
    }
    
-# HBox for paper size
-   my $hboxp = Gtk2::HBox -> new;
-   $vbox -> pack_start ($hboxp, FALSE, FALSE, 0);
-
-# Paper list
-   my $labelp = Gtk2::Label -> new ("Paper size");
-   $hboxp -> pack_start ($labelp, FALSE, FALSE, 0);
-
-   my $optp = Gtk2::OptionMenu -> new;
-   my $menup = Gtk2::Menu -> new;
-
-# Define HBox for custom paper here to reference it in callback
-   my $hboxc = Gtk2::HBox -> new;
-
-   foreach (qw/A4 Letter Custom/) {
-    my $item = Gtk2::MenuItem -> new ($_);
-    $item -> signal_connect (activate => sub {
-     my ($widget, $data) = @_;
-     my @child = $widget -> get_children;
-     foreach my $widget (@child) {
-      if ($widget -> isa('Gtk2::Label')) {
-       my $label = $widget -> get_label;
-       if ($widget -> get_label eq 'Custom') {
-        $hboxc -> show_all;
-       }
-       else {
-        $hboxc -> hide_all;
-       }
-      }
-     }
-
-    });
-    $menup -> append ($item);
-   }
-   $optp -> set_menu ($menup);
-   $hboxp -> pack_end ($optp, FALSE, FALSE, 0);
-
-   $vbox -> pack_start ($hboxc, FALSE, FALSE, 0);
-
-# custom paper x entry
-   my $labelx = Gtk2::Label -> new ("x");
-   $hboxc -> pack_start ($labelx, FALSE, FALSE, 0);
-
-   my $entryx = Gtk2::Entry -> new;
-   $entryx -> set_text("210");
-   $entryx -> set_width_chars(4);
-   $entryx -> signal_connect ('insert-text' => sub {
-    my ($widget, $string, $len, $position) = @_;
-    if ($string !~ /^[0-9]+$/) { # Only add numbers
-     $entryx -> signal_stop_emission_by_name ('insert-text');
-    }
-    () # this callback must return either 2 or 0 items.
-   });
-   $hboxc -> pack_start ($entryx, FALSE, FALSE, 0);
-
-# custom paper y entry
-   my $labely = Gtk2::Label -> new ("y");
-   $hboxc -> pack_start ($labely, FALSE, FALSE, 0);
-
-   my $entryy = Gtk2::Entry -> new;
-   $entryy -> set_text("297");
-   $entryy -> set_width_chars(4);
-   $entryy -> signal_connect ('insert-text' => sub {
-    my ($widget, $string, $len, $position) = @_;
-    if ($string !~ /^[0-9]+$/) { # Only add numbers
-     $entryy -> signal_stop_emission_by_name ('insert-text');
-    }
-    () # this callback must return either 2 or 0 items.
-   });
-   $hboxc -> pack_start ($entryy, FALSE, FALSE, 0);
-
 # Frame for # pages
    my $framen = Gtk2::Frame -> new('# Pages');
    $vbox -> pack_start ($framen, FALSE, FALSE, 0);
@@ -1045,7 +976,7 @@ sub scan_dialog {
 
 # Dig the device-dependent options from --help --device-name
    if ($test) {
-    update_options($vboxd, undef, $optd -> get_history);
+    update_options($vboxd, undef);
    }
    else {
     update_options($vboxd, $device[$optd -> get_history]);
@@ -1053,7 +984,7 @@ sub scan_dialog {
 
 # HBox for buttons
    my $hboxb = Gtk2::HBox -> new;
-   $vbox -> pack_start ($hboxb, FALSE, FALSE, 0);
+   $vbox -> pack_end ($hboxb, FALSE, FALSE, 0);
 
 # Scan button
    my $sbutton = Gtk2::Button -> new('Scan');
@@ -1062,16 +993,6 @@ sub scan_dialog {
 
 # Get selected device
     my $device = "--device-name=".$device[$optd -> get_history];
-
-# Get selected paper size
-    my @paper = ( '-x 210 -y 297', '-x 215.9 -y 279' );
-    my $paper;
-    if (($optp -> get_history) > $#paper) {
-     $paper = "-x ".$entryx -> get_text." -y ".$entryy -> get_text;
-    }
-    else {
-     $paper = $paper[$optp -> get_history];
-    }
 
 # Get device-specific options
     my %options;
@@ -1087,7 +1008,9 @@ sub scan_dialog {
        elsif ($widget -> isa('Gtk2::OptionMenu')) {
         my @child = $widget -> get_children;
         foreach my $widget (@child) {
-         if ($widget -> isa('Gtk2::Label')) {
+
+# ignore artificial paper size option
+         if ($widget -> isa('Gtk2::Label') && $key ne 'Paper size') {
           $options{$key} = $widget -> get_label;
          }
         }
@@ -1174,7 +1097,7 @@ sub scan_dialog {
      $step = "";
     }
     $start = "--batch-start=".$start;
-    do_scan($device, $paper, $npages, $start, $step, %options);
+    do_scan($device, $npages, $start, $step, %options);
    } );
 
 # Cancel button
@@ -1183,7 +1106,7 @@ sub scan_dialog {
    $cbutton -> signal_connect( clicked => sub { $window -> destroy; } );
 
    $window -> show_all;
-   $hboxc -> hide_all;
+   $hboxc -> hide_all if ($#paper > -1);
   }
  }
 }
@@ -1192,7 +1115,7 @@ sub scan_dialog {
 # Carry out the scan with the options passed.
 
 sub do_scan {
- my ($device, $paper, $npages, $start, $step, %options) = @_;
+ my ($device, $npages, $start, $step, %options) = @_;
 
 # Basic options
  my @options = ( '--format=tiff',  
@@ -1201,14 +1124,19 @@ sub do_scan {
 # Add device-specific options
  my ($key, $value);
  while (($key, $value) = each(%options)) {
-  push @options, "--$key=$value";
+  if ($key eq 'x' || $key eq 'y') {
+   push @options, "-$key=$value";
+  }
+  else {
+   push @options, "--$key=$value";
+  }
  }
 
 # Make sure we are in temp directory
  chdir $dir;
 
 # Create command
- my $cmd = "scanimage $device $paper $npages $start $step @options;echo 'End Scan' > /dev/stderr";
+ my $cmd = "scanimage $device $npages $start $step @options;echo 'End Scan' > /dev/stderr";
 
  if (! $test) {
 
@@ -1361,7 +1289,7 @@ sub check_utils {
 # Update device-dependent scan options
 
 sub update_options {
- my ($vboxd, $device, $device_i) = @_;
+ my ($vboxd, $device) = @_;
 
 # Empty $vboxd first
  my @child = $vboxd -> get_children;
@@ -1371,221 +1299,99 @@ sub update_options {
 
  my $output;
  if (defined($device)) {
+
+# Get output from scanimage
   $output = `scanimage --help --device-name=$device`;
  }
  else {
-  my @output;
-  $output[0] = <<END;
-Usage: scanimage [OPTION]...
 
-Start image acquisition on a scanner device and write PNM image data to standard output.
-
--d, --device-name=DEVICE   use a given scanner device (e.g. hp:/dev/scanner)
-    --format=pnm|tiff      file format of output file
--i, --icc-profile=PROFILE  include this ICC profile into TIFF file
--L, --list-devices         show available scanner devices
--f, --formatted-device-list=FORMAT similar to -L, but the FORMAT of the output
-                           can be specified: %d (device name), %v (vendor),
-                           %m (model), %t (type), and %i (index number)
--b, --batch[=FORMAT]       working in batch mode, FORMAT is `out%d.pnm' or
-                           `out%d.tif' by default depending on --format
-    --batch-start=#        page number to start naming files with
-    --batch-count=#        how many pages to scan in batch mode
-    --batch-increment=#    increase number in filename by an amount of #
-    --batch-double         increment page number by two for 2sided originals
-                           being scanned in a single sided scanner
-    --batch-prompt         ask for pressing a key before scanning a page
-    --accept-md5-only      only accept authorization requests using md5
--p, --progress             print progress messages
--n, --dont-scan            only set options, don't actually scan
--T, --test                 test backend thoroughly
--h, --help                 display this help message and exit
--v, --verbose              give even more status messages
--B, --buffer-size          change default input buffersize
--V, --version              print version information
-
-Options specific to device `hpaio:/usb/officejet_5500_series?serial=MY42QF209H96':
-  Scan mode:
-    --mode Lineart|Grayscale|Color [Color]
-        Selects the scan mode (e.g., lineart, monochrome, or color).
-    --resolution 75..600dpi [75]
-        Sets the resolution of the scanned image.
-  Advanced:
-    --contrast 0..100 [inactive]
-        Controls the contrast of the acquired image.
-    --compression None|JPEG [JPEG]
-        Selects the scanner compression method for faster scans, possibly at
-        the expense of image quality.
-    --jpeg-compression-factor 0..100 [10]
-        Sets the scanner JPEG compression factor.  Larger numbers mean better
-        compression, and smaller numbers mean better image quality.
-    --batch-scan[=(yes|no)] [no]
-        Guarantees that a "no documents" condition will be returned after the
-        last scanned page, to prevent endless flatbed scans after a batch scan.
-         For some models, option changes in the middle of a batch scan don't
-        take effect until after the last page.
-    --source Auto|Flatbed|ADF [Auto]
-        Selects the desired scan source for models with both flatbed and
-        automatic document feeder (ADF) capabilities.  The "Auto" setting means
-        that the ADF will be used if it's loaded, and the flatbed (if present)
-        will be used otherwise.
-    --duplex[=(yes|no)] [inactive]
-        Enables scanning on both sides of the page for models with
-        duplex-capable document feeders.  For pages printed in "book"-style
-        duplex mode, one side will be scanned upside-down.  This feature is
-        experimental.
-  Geometry:
-    --length-measurement Unknown|Approximate|Padded [Padded]
-        Selects how the scanned image length is measured and reported, which
-        is impossible to know in advance for scrollfed scans.
-    -l 0..215.9mm [0]
-        Top-left x position of scan area.
-    -t 0..381mm [0]
-        Top-left y position of scan area.
-    -x 0..215.9mm [215.9]
-        Width of scan-area.
-    -y 0..381mm [381]
-        Height of scan-area.
-
-Type ``scanimage --help -d DEVICE'' to get list of all options for DEVICE.
-
-List of available devices:
-    v4l:/dev/video1 v4l:/dev/video0
-    hpaio:/usb/officejet_5500_series?serial=MY42QF209H96
-END
-  $output[1] = <<END;
-Usage: scanimage [OPTION]...
-
-Start image acquisition on a scanner device and write PNM image data to
-standard output.
-
--d, --device-name=DEVICE   use a given scanner device (e.g. hp:/dev/scanner)
-    --format=pnm|tiff      file format of output file
--i, --icc-profile=PROFILE  include this ICC profile into TIFF file
--L, --list-devices         show available scanner devices
--f, --formatted-device-list=FORMAT similar to -L, but the FORMAT of the output
-                           can be specified: %d (device name), %v (vendor),
-                           %m (model), %t (type), and %i (index number)
--b, --batch[=FORMAT]       working in batch mode, FORMAT is `out%d.pnm' or
-                           `out%d.tif' by default depending on --format
-    --batch-start=#        page number to start naming files with
-    --batch-count=#        how many pages to scan in batch mode
-    --batch-increment=#    increase number in filename by an amount of #
-    --batch-double         increment page number by two for 2sided originals
-                           being scanned in a single sided scanner
-    --batch-prompt         ask for pressing a key before scanning a page
-    --accept-md5-only      only accept authorization requests using md5
--n, --dont-scan            only set options, don't actually scan
--T, --test                 test backend thoroughly
--h, --help                 display this help message and exit
--v, --verbose              give even more status messages
--V, --version              print version information
-
-Options specific to device `epson:libusb:005:007':
-  Scan Mode:
-    --mode Binary|Gray|Color [Binary]
-        Selects the scan mode (e.g., lineart, monochrome, or color).
-    --depth 8|16 [inactive]
-        Number of bits per sample, typical values are 1 for "line-art" and 8
-        for multibit scans.
-    --halftoning None|Halftone A (Hard Tone)|Halftone B (Soft Tone)|Halftone C (Net Screen)|Dither A (4x4 Bayer)|Dither B (4x4 Spiral)|Dither C (4x4 Net Screen)|Dither D (8x4 Net Screen)|Text Enhanced Technology|Download pattern A|Download pattern B [Halftone A (Hard Tone)]
-        Selects the halftone.
-    --dropout None|Red|Green|Blue [None]
-        Selects the dropout.
-    --brightness -4..3 [0]
-        Selects the brightness.
-    --sharpness -2..2 [0]
-        
-    --gamma-correction Default|User defined|High density printing|Low density printing|High contrast printing [Default]
-        Selects the gamma correction value from a list of pre-defined devices
-        or the user defined table, which can be downloaded to the scanner
-    --color-correction No Correction|User defined|Impact-dot printers|Thermal printers|Ink-jet printers|CRT monitors [CRT monitors]
-        Sets the color correction table for the selected output device.
-    --resolution 50|60|72|75|80|90|100|120|133|144|150|160|175|180|200|216|240|266|300|320|350|360|400|480|600|720|800|900|1200|1600|1800|2400|3200dpi [50]
-        Sets the resolution of the scanned image.
-    --threshold 0..255 [inactive]
-        Select minimum-brightness to get a white point
-  Advanced:
-    --mirror[=(yes|no)] [no]
-        Mirror the image.
-    --speed[=(yes|no)] [no]
-        Determines the speed at which the scan proceeds.
-    --auto-area-segmentation[=(yes|no)] [yes]
-        
-    --short-resolution[=(yes|no)] [no]
-        Display short resolution list
-    --zoom 50..200 [inactive]
-        Defines the zoom factor the scanner will use
-    --red-gamma-table 0..255,... [inactive]
-        Gamma-correction table for the red band.
-    --green-gamma-table 0..255,... [inactive]
-        Gamma-correction table for the green band.
-    --blue-gamma-table 0..255,... [inactive]
-        Gamma-correction table for the blue band.
-    --wait-for-button[=(yes|no)] [no]
-        After sending the scan command, wait until the button on the scanner
-        is pressed to actually start the scan process.
-  Color correction coefficients:
-    --cct-1 -127..127 [inactive]
-        Controls green level
-    --cct-2 -127..127 [inactive]
-        Adds to red based on green level
-    --cct-3 -127..127 [inactive]
-        Adds to blue based on green level
-    --cct-4 -127..127 [inactive]
-        Adds to green based on red level
-    --cct-5 -127..127 [inactive]
-        Controls red level
-    --cct-6 -127..127 [inactive]
-        Adds to blue based on red level
-    --cct-7 -127..127 [inactive]
-        Adds to green based on blue level
-    --cct-8 -127..127 [inactive]
-        Adds to red based on blue level
-    --cct-9 -127..127 [inactive]
-        Controls blue level
-  Preview:
-    --preview[=(yes|no)] [no]
-        Request a preview-quality scan.
-    --preview-speed[=(yes|no)] [no]
-        
-  Geometry:
-    -l 0..215.9mm [0]
-        Top-left x position of scan area.
-    -t 0..297.18mm [0]
-        Top-left y position of scan area.
-    -x 0..215.9mm [215.9]
-        Width of scan-area.
-    -y 0..297.18mm [297.18]
-        Height of scan-area.
-    --quick-format CD|A5 portrait|A5 landscape|Letter|A4|Max [Max]
-        
-  Optional equipment:
-    --source Flatbed|Transparency Unit [Flatbed]
-        Selects the scan source (such as a document-feeder).
-    --auto-eject[=(yes|no)] [inactive]
-        Eject document after scanning
-    --film-type Positive Film|Negative Film [inactive]
-        
-    --focus-position Focus on glass|Focus 2.5mm above glass [Focus on glass]
-        Sets the focus position to either the glass or 2.5mm above the glass
-    --bay  1 | 2 | 3 | 4 | 5 | 6  [inactive]
-        Select bay to scan
-    --eject [inactive]
-        Eject the sheet in the ADF
-    --adf_mode Simplex|Duplex [inactive]
-        Selects the ADF mode (simplex/duplex)
-
-Type ``scanimage --help -d DEVICE'' to get list of all options for DEVICE.
-
-List of available devices:
-    epson:libusb:005:007
-END
-  $output = $output[$device_i];
+# Slurp it from file
+  $output = do { local( @ARGV, $/ ) = $test ; <> } ;
  }
 
+# Skip to the device-specific options
  $output = substr($output, index($output, "Options specific to device"), length($output));
  $output = substr($output, index($output, "\n")+1, length($output));
+
+# Dig out the paper sizes
+ my ($x, $y);
+ $x = $1 if ($output =~ /-x 0\.\.([0-9]*\.?[0-9]*)/);
+ $y = $1 if ($output =~ /-y 0\.\.([0-9]*\.?[0-9]*)/);
+
+ if (defined($x) && defined($y)) {
+
+# HBox for paper size
+  my $hboxp = Gtk2::HBox -> new;
+  $vboxd -> pack_start ($hboxp, FALSE, FALSE, 0);
+
+# Paper list
+  my $labelp = Gtk2::Label -> new ("Paper size");
+  $hboxp -> pack_start ($labelp, FALSE, FALSE, 0);
+
+  my $optp = Gtk2::OptionMenu -> new;
+  my $menup = Gtk2::Menu -> new;
+
+# Define custom paper here to reference it in callback
+  $hboxc = Gtk2::HBox -> new;
+  my $spin_buttonx = Gtk2::SpinButton -> new_with_range(0, $x, 1);
+  my $spin_buttony = Gtk2::SpinButton -> new_with_range(0, $y, 1);
+
+# Add paper size to optionmenu if scanner large enough
+# can't use for because of the splices
+  my $i = 0;
+  while ($i <= $#paper) {
+   if ($x >= $x[$i] && $y >= $y[$i]) {
+    my $item = Gtk2::MenuItem -> new ($paper[$i]);
+    $item -> signal_connect (activate => sub {
+     my $i = $optp -> get_history;
+     $spin_buttonx -> set_value($x[$i]);
+     $spin_buttony -> set_value($y[$i]);
+     $hboxc -> hide_all;
+    });
+    $menup -> append ($item);
+    ++$i;
+   }
+
+# If the paper size isn't possible, remove it from the arrays
+   else {
+    splice @paper, $i, 1;
+    splice @x, $i, 1;
+    splice @y, $i, 1;
+   }
+  }
+
+# Add custom option
+  my $item = Gtk2::MenuItem -> new ('Custom');
+  $item -> signal_connect (activate => sub { $hboxc -> show_all; });
+  $menup -> append ($item);
+  $optp -> set_menu ($menup);
+  $hboxp -> pack_end ($optp, FALSE, FALSE, 0);
+
+# Set default options
+  if ($#paper > -1) {
+   $i = $optp -> get_history;
+   $spin_buttonx -> set_value($x[$i]);
+   $spin_buttony -> set_value($y[$i]);
+  }
+  else {
+   $spin_buttonx -> set_value($x);
+   $spin_buttony -> set_value($y);
+  }
+
+  $vboxd -> pack_start ($hboxc, FALSE, FALSE, 0);
+
+# custom paper x entry
+  my $labelx = Gtk2::Label -> new ("x");
+  $hboxc -> pack_start ($labelx, FALSE, FALSE, 0);
+  $hboxc -> pack_start ($spin_buttonx, FALSE, FALSE, 0);
+
+# custom paper y entry
+  my $labely = Gtk2::Label -> new ("y");
+  $hboxc -> pack_start ($labely, FALSE, FALSE, 0);
+  $hboxc -> pack_start ($spin_buttony, FALSE, FALSE, 0);
+ }
+
+# Add remaining options
  while ($output =~ /--([a-z_-]*)(.*) \[(.*)\]/) {
   my $option = $1;
   my $values = $2;
@@ -1638,7 +1444,7 @@ END
    }
 
 # SpinButton
-   elsif ($values =~ /([0-9]*)\.\.([0-9]*)/) {
+   elsif ($values =~ /([0-9]*\.?[0-9]*)\.\.([0-9]*\.?[0-9]*)/) {
     my $spin_button = Gtk2::SpinButton -> new_with_range($1, $2, 1);
     $spin_button -> set_value($default);
     $hbox -> pack_end ($spin_button, FALSE, FALSE, 0);
