@@ -41,12 +41,29 @@ my @x = ( 210, 215.9 );
 my @y = ( 297, 279 );
 
 my $test = FALSE;
-
-$test = $ARGV[1] if ($ARGV[0] eq "--test");
+$test = $ARGV[1] if (defined($ARGV[0]) && $ARGV[0] eq "--test");
 
 if (check_utils()) {
  print "$program requires the libtiff library.\nPlease install it.\n";
  exit 1;
+}
+
+# Read config file
+my $config = "$ENV{'HOME'}/.$program";
+my %SETTING;
+if (-r $config) {
+ open CONFIG, $config or die "Can't open config file $config";
+
+ while (<CONFIG>) {
+  chomp;				# no newline
+  s/#.*//;			# no comments
+  s/^\s+//;			# no leading white
+  s/\s+$//;			# no trailing white
+  next unless length;		# anything left?
+  my ($key, $value) = split(/\s*=\s*/, $_, 2);
+  $SETTING{$key} = $value;
+ }
+ close CONFIG;
 }
 
 # This is the GtkItemFactoryEntry structure used to generate new menus.
@@ -74,44 +91,58 @@ my @menu_items = ( { path        => '/_File',
 		     item_type   => '<Branch>' },
 		   { path        => '/File/_New',
 		     accelerator => '<control>n',
-		     callback    => \&do_new },
+		     callback    => \&new },
 		   { path        => '/File/_Import',
 		     accelerator => '<control>i',
-		     callback    => \&do_import },
+		     callback    => \&import },
 		   { path        => '/File/Sca_n',
 		     callback    => \&scan_dialog },
 		   { path        => '/File/_Save PDF',
 		     accelerator => '<control>s',
-		     callback    => \&do_PDF },
+		     callback    => \&save_PDF },
 		   { path        => '/File/Save _TIFF',
 		     accelerator => '<control>t',
-		     callback    => \&do_TIFF },
+		     callback    => \&save_TIFF },
 		   { path        => '/File/sep1',
 		     item_type   => '<Separator>' },
 		   { path        => '/File/_Quit',
 		     accelerator => '<control>q',
-		     callback    => sub { Gtk2 -> main_quit; } },
+		     callback    => sub {quit(); Gtk2 -> main_quit; } },
 
 		   { path        => '/_Edit',
 		     item_type   => '<Branch>' },
 		   { path        => '/Edit/_Delete',
 		     accelerator => 'Delete',
-		     callback    => \&do_delete },
+		     callback    => \&delete_pages },
 		   { path        => '/Edit/Select _All',
 		     accelerator => '<control>a',
-		     callback    => \&do_select_all },
+		     callback    => \&select_all },
 
 		   { path        => '/_Help',
 		     item_type   => '<LastBranch>' },
 		   { path        => '/_Help/About',
-		     callback    => \&do_about } );
+		     callback    => \&about } );
 
 # Create the window
 my $window = new Gtk2::Window ( 'toplevel' );
-$window -> signal_connect ( 'destroy', sub { Gtk2 -> main_quit; } );
 $window -> set_title ( "$program v$version" );
-$window -> set_default_size (800, 600);
-$window -> maximize;
+$window -> signal_connect ( 'destroy', sub {quit(); Gtk2 -> main_quit; } );
+
+# Note when the window is maximised or not.
+$window -> signal_connect(window_state_event => sub {
+ my ($w, $event) = @_;
+ $SETTING{"window_maximize"} = ! $SETTING{"window_maximize"} 
+  if ($event -> changed_mask & [ 'maximized' ]);
+});
+
+if (defined($SETTING{"window_width"}) && defined($SETTING{"window_height"})) {
+ $window -> set_default_size ($SETTING{"window_width"}, $SETTING{"window_height"});
+}
+else {
+ $window -> set_default_size (800, 600);
+}
+$window -> maximize
+ if (! (defined($SETTING{"window_maximize"}) && ! $SETTING{"window_maximize"}));
 
 # Pass the window a stock icon list
 my @icon;
@@ -271,8 +302,8 @@ $window -> show_all;
 Gtk2 -> main;
 
 # Remove temporary files (for some reason File::Temp wasn't doing its job here)
-unlink <$dir/*>;
-rmdir $dir;
+ unlink <$dir/*>;
+ rmdir $dir;
 
 
 
@@ -356,7 +387,7 @@ sub zoom_pixbuf {
 
 # Deletes all scans after warning.
 
-sub do_new {
+sub new {
  my $dialog = Gtk2::MessageDialog -> new ($window, 'destroy-with-parent',
                      'warning', 'ok-cancel',
                      "This will clear the list of scanned images.\n"
@@ -381,7 +412,7 @@ sub do_new {
 
 # Throw up file selector and import selected file
 
-sub do_import {
+sub import {
 
 # cd back to cwd to get filename
  chdir $cwd;
@@ -438,7 +469,7 @@ sub do_import {
 
 # Throw up file selector and save selected pages as PDF under given name.
 
-sub do_PDF {
+sub save_PDF {
 
 # PDF pop-up window
  my $window = Gtk2::Window -> new;
@@ -676,7 +707,7 @@ sub do_PDF {
 
 # Throw up file selector and save selected pages as PDF under given name.
 
-sub do_TIFF {
+sub save_TIFF {
 
 # PDF pop-up window
  my $window = Gtk2::Window -> new;
@@ -1097,7 +1128,7 @@ sub scan_dialog {
      $step = "";
     }
     $start = "--batch-start=".$start;
-    do_scan($device, $npages, $start, $step, %options);
+    scan($device, $npages, $start, $step, %options);
    } );
 
 # Cancel button
@@ -1114,7 +1145,7 @@ sub scan_dialog {
 
 # Carry out the scan with the options passed.
 
-sub do_scan {
+sub scan {
  my ($device, $npages, $start, $step, %options) = @_;
 
 # Basic options
@@ -1246,7 +1277,7 @@ sub import_scan {
 
 # Delete the selected scans
 
-sub do_delete {
+sub delete_pages {
  my @page = $slist -> get_selected_indices;
  while ($#page > -1) {
   splice @{ $slist->{data} }, $page[0], 1;
@@ -1257,14 +1288,14 @@ sub do_delete {
 
 # Select all scans
 
-sub do_select_all {
+sub select_all {
  $slist -> get_selection -> select_all;
 }
 
 
 # Display about dialog
 
-sub do_about {
+sub about {
  my $dialog = Gtk2::MessageDialog -> new ($window, 'destroy-with-parent',
                      'info', 'ok', "$program v$version\n\n"
                      . "To aid the scan-to-PDF process.\n\n"
@@ -1453,6 +1484,23 @@ sub update_options {
   $output = substr($output, index($output, "]")+1, length($output));
  }
 }
+
+
+# Note window state, save settings and quit.
+
+sub quit {
+
+# Write window state to settings
+ ($SETTING{"window_width"}, $SETTING{"window_height"}) = $window -> get_size;
+
+# Write config file
+ open (CONFIG, "> $config") || die "Can't open config file $config";
+ while (my ($key, $value) = each %SETTING) {
+  print CONFIG "$key = $value\n";
+ }
+ close CONFIG;
+}
+
 
 
 __END__
