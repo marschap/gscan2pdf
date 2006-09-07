@@ -6,10 +6,9 @@
 
 # To do
 # 0. Fix Failed to load RGB data from TIFF file: libpixbuf-tiff: Read error on strip 134; got 5190 bytes, expected 7130
-#    Add renumber - menu item from 1..n
 #    Add status line at bottom with messages like "filename saved"
 #    Add Gnome menu
-#    Save scan & window (maximise/size) settings
+#    Prevent ability to open same window several times simultaneously
 #    Work out how to resize scan window when options change
 # 1. Reorder pages (DND)
 # 2. Rotate
@@ -27,6 +26,7 @@ use IO::Handle;
 use Gtk2 -init;
 use Gtk2::SimpleList;
 use Cwd;                             # To obtain current working directory
+use File::Basename;                  # Split filename into dir, file, ext
 use File::Temp qw/tempfile tempdir/; # To create temporary files
 
 use constant TRUE  => 1;
@@ -55,7 +55,7 @@ if (-r $config) {
  open CONFIG, $config or die "Can't open config file $config";
 
  while (<CONFIG>) {
-  chomp;				# no newline
+  chomp;			# no newline
   s/#.*//;			# no comments
   s/^\s+//;			# no leading white
   s/\s+$//;			# no trailing white
@@ -66,27 +66,7 @@ if (-r $config) {
  close CONFIG;
 }
 
-# This is the GtkItemFactoryEntry structure used to generate new menus.
-# Item 1: The menu path. The letter after the underscore indicates an
-#         accelerator key once the menu is open.
-# Item 2: The accelerator key for the entry
-# Item 3: The callback function.
-# Item 4: The callback action.  This changes the parameters with
-#         which the function is called.  The default is 0.
-# Item 5: The item type, used to define what kind of an item it is.
-#         Here are the possible values:
-#          NULL               -> "<Item>"
-#          ""                 -> "<Item>"
-#          "<Title>"          -> create a title item
-#          "<Item>"           -> create a simple item
-#          "<CheckItem>"      -> create a check item
-#          "<ToggleItem>"     -> create a toggle item
-#          "<RadioItem>"      -> create a radio item
-#          <path>             -> path of a radio item to link against
-#          "<Separator>"      -> create a separator
-#          "<Branch>"         -> create an item to hold sub items (optional)
-#          "<LastBranch>"     -> create a right justified branch 
-
+# Define the menu items for ItemFactory
 my @menu_items = ( { path        => '/_File',
 		     item_type   => '<Branch>' },
 		   { path        => '/File/_New',
@@ -107,13 +87,16 @@ my @menu_items = ( { path        => '/_File',
 		     item_type   => '<Separator>' },
 		   { path        => '/File/_Quit',
 		     accelerator => '<control>q',
-		     callback    => sub {quit(); Gtk2 -> main_quit; } },
+		     callback    => sub { quit(); Gtk2 -> main_quit; } },
 
 		   { path        => '/_Edit',
 		     item_type   => '<Branch>' },
 		   { path        => '/Edit/_Delete',
 		     accelerator => 'Delete',
 		     callback    => \&delete_pages },
+		   { path        => '/Edit/_Renumber',
+		     accelerator => '<control>r',
+		     callback    => \&renumber },
 		   { path        => '/Edit/Select _All',
 		     accelerator => '<control>a',
 		     callback    => \&select_all },
@@ -124,22 +107,30 @@ my @menu_items = ( { path        => '/_File',
 		     callback    => \&about } );
 
 # Create the window
-my $window = new Gtk2::Window ( 'toplevel' );
+my $window = Gtk2::Window -> new;
 $window -> set_title ( "$program v$version" );
-$window -> signal_connect ( 'destroy', sub {quit(); Gtk2 -> main_quit; } );
+$window -> signal_connect ( 'delete_event', sub { quit(); Gtk2 -> main_quit; } );
 
 # Note when the window is maximised or not.
 $window -> signal_connect(window_state_event => sub {
  my ($w, $event) = @_;
- $SETTING{"window_maximize"} = ! $SETTING{"window_maximize"} 
-  if ($event -> changed_mask & [ 'maximized' ]);
+ if ($event -> new_window_state & [ 'maximized' ]) {
+  $SETTING{"window_maximize"} = 1;
+ }
+ else {
+  $SETTING{"window_maximize"} = 0;
+ }
 });
 
+# If defined in the config file, set the window state, size and position
 if (defined($SETTING{"window_width"}) && defined($SETTING{"window_height"})) {
  $window -> set_default_size ($SETTING{"window_width"}, $SETTING{"window_height"});
 }
 else {
  $window -> set_default_size (800, 600);
+}
+if (defined($SETTING{"window_x"}) && defined($SETTING{"window_y"})) {
+ $window -> move ($SETTING{"window_x"}, $SETTING{"window_y"});
 }
 $window -> maximize
  if (! (defined($SETTING{"window_maximize"}) && ! $SETTING{"window_maximize"}));
@@ -292,18 +283,14 @@ $slist -> get_selection -> signal_connect(changed => sub {
  }
 });
 
-# Note the current directory
-my $cwd = getcwd;
+# If defined in the config file, set the current directory
+$SETTING{"cwd"} = getcwd if (! defined($SETTING{"cwd"}));
 
 # Create a temporary directory for scans
 my $dir = tempdir;
 
 $window -> show_all;
 Gtk2 -> main;
-
-# Remove temporary files (for some reason File::Temp wasn't doing its job here)
- unlink <$dir/*>;
- rmdir $dir;
 
 
 
@@ -415,7 +402,7 @@ sub new {
 sub import {
 
 # cd back to cwd to get filename
- chdir $cwd;
+ chdir $SETTING{"cwd"};
 
  my $fileselection = Gtk2::FileSelection -> new("Import scan from file");
  $fileselection -> set_modal(TRUE);
@@ -434,6 +421,9 @@ sub import {
   $fileselection -> destroy;
 
   foreach my $filename (@filename) {
+
+# Update cwd
+   $SETTING{"cwd"} = dirname($filename);
 
 # Check that the file really is a tiff
    my $output = `tiffinfo \"$filename\" 2>&1 1>/dev/null`;
@@ -493,10 +483,13 @@ sub save_PDF {
  $vboxm -> pack_start($hboxe, TRUE, TRUE, 0);
  my $labele = Gtk2::Label -> new ("Date & Time");
  $hboxe -> pack_start ($labele, FALSE, FALSE, 0);
- my ($day, $month, $year) = (localtime())[3, 4, 5];
- $year += 1900;
- $month += 1;
- my $buttone = Gtk2::Button -> new("$year/$month/$day");
+ if (! (defined($SETTING{'year'}) && defined($SETTING{'month'})
+                               && defined($SETTING{'day'}))) {
+  ($SETTING{'day'}, $SETTING{'month'}, $SETTING{'year'}) = (localtime())[3, 4, 5];
+  $SETTING{'year'} += 1900;
+  $SETTING{'month'} += 1;
+ }
+ my $buttone = Gtk2::Button -> new("$SETTING{'year'}/$SETTING{'month'}/$SETTING{'day'}");
  $buttone -> signal_connect( clicked => sub {
   my $window = Gtk2::Window -> new;
   $window -> set_title ('Select Date' );
@@ -511,9 +504,9 @@ sub save_PDF {
   $vbox -> pack_start ($calendar, TRUE, TRUE, 0);
 
   $calendar -> signal_connect(day_selected_double_click => sub {
-   ($year, $month, $day) = $calendar -> get_date();
-   $month += 1;
-   $buttone -> set_label ("$year/$month/$day");
+   ($SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'}) = $calendar -> get_date();
+   $SETTING{'month'} += 1;
+   $buttone -> set_label ("$SETTING{'year'}/$SETTING{'month'}/$SETTING{'day'}");
    $window -> destroy;
   });
 
@@ -528,6 +521,7 @@ sub save_PDF {
  $hboxa -> pack_start ($labela, FALSE, FALSE, 0);
  my $entrya = Gtk2::Entry -> new;
  $hboxa -> pack_end( $entrya, TRUE, TRUE, 0 );
+ $entrya -> set_text($SETTING{"author"}) if (defined($SETTING{"author"}));
 
 # Title
  my $hboxt = Gtk2::HBox -> new;
@@ -536,6 +530,7 @@ sub save_PDF {
  $hboxt -> pack_start ($labelt, FALSE, FALSE, 0);
  my $entryt = Gtk2::Entry -> new;
  $hboxt -> pack_end( $entryt, TRUE, TRUE, 0 );
+ $entryt -> set_text($SETTING{"title"}) if (defined($SETTING{"title"}));
 
 # Subject
  my $hboxs = Gtk2::HBox -> new;
@@ -544,6 +539,7 @@ sub save_PDF {
  $hboxs -> pack_start ($labels, FALSE, FALSE, 0);
  my $entrys = Gtk2::Entry -> new;
  $hboxs -> pack_end( $entrys, TRUE, TRUE, 0 );
+ $entrys -> set_text($SETTING{"subject"}) if (defined($SETTING{"subject"}));
 
 # Keywords
  my $hboxk = Gtk2::HBox -> new;
@@ -552,6 +548,7 @@ sub save_PDF {
  $hboxk -> pack_start ($labelk, FALSE, FALSE, 0);
  my $entryk = Gtk2::Entry -> new;
  $hboxk -> pack_end( $entryk, TRUE, TRUE, 0 );
+ $entryk -> set_text($SETTING{"keywords"}) if (defined($SETTING{"keywords"}));
 
 # Frame for page range
  my $framep = Gtk2::Frame -> new('Page range');
@@ -574,7 +571,22 @@ sub save_PDF {
 # Selected button
  my $buttons = Gtk2::RadioButton -> new(@group, "Selected");
  $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
- $buttons -> set_active(TRUE);
+
+# Set default
+ if (defined($SETTING{"Page range"})) {
+  if ($SETTING{"Page range"} eq "current") {
+   $buttonc -> set_active(TRUE);
+  }
+  elsif ($SETTING{"Page range"} eq "selected") {
+   $buttons -> set_active(TRUE);
+  }
+  else {
+   $buttona -> set_active(TRUE);
+  }
+ }
+ else {
+  $buttona -> set_active(TRUE);
+ }
 
 # Pages button
 # my $hboxp = Gtk2::HBox -> new;
@@ -602,7 +614,7 @@ sub save_PDF {
  my $labelf = Gtk2::Label -> new ("Filename");
  $hboxf -> pack_start ($labelf, TRUE, TRUE, 0);
  my $entryf = Gtk2::Entry -> new;
- my $filename = "$cwd/out.pdf";
+ my $filename = $SETTING{"cwd"}."/out.pdf";
  $entryf -> set_text($filename);
  $hboxf -> add ($entryf);
  my $bbutton = Gtk2::Button -> new('Browse');
@@ -610,7 +622,7 @@ sub save_PDF {
  $bbutton -> signal_connect (clicked => sub {
 
 # cd back to cwd to save
-  chdir $cwd;
+  chdir $SETTING{"cwd"};
 
 # Set up file selector
   my $fileselection = Gtk2::FileSelection -> new("PDF filename");
@@ -622,6 +634,9 @@ sub save_PDF {
    $filename = $fileselection -> get_filename;
    $entryf -> set_text($filename);
    $fileselection -> destroy;
+
+# Update cwd
+   $SETTING{"cwd"} = dirname($filename);
   });
 
 # callback for cancel button
@@ -650,6 +665,7 @@ sub save_PDF {
   my $n;
   my $pagelist;
   if ($buttona -> get_active) {
+   $SETTING{"Page range"} = "all";
    $n = $#{$slist -> {data}};
    $pagelist = $slist -> {data}[0][2];
    my $i = 1;
@@ -659,11 +675,13 @@ sub save_PDF {
    }
   }
   elsif ($buttonc -> get_active) {
+   $SETTING{"Page range"} = "current";
    $n = 1;
    my @page = $slist -> get_selected_indices;
    $pagelist = $slist -> {data}[$page[0]][2];
   }
   elsif ($buttons -> get_active) {
+   $SETTING{"Page range"} = "selected";
    my @page = $slist -> get_selected_indices;
    $n = $#page;
    $pagelist = $slist -> {data}[$page[0]][2];
@@ -674,14 +692,20 @@ sub save_PDF {
    }
   }
 
+# Note author in config
+  $SETTING{"author"} = $entrya -> get_text;
+  $SETTING{"title"} = $entryt -> get_text;
+  $SETTING{"subject"} = $entrys -> get_text;
+  $SETTING{"keywords"} = $entryk -> get_text;
+
 # Set options and metadata
   my $options = " -z -o \"$filename\""
-              . sprintf (" -e %4i%02i%02i", $year, $month, $day)
+              . sprintf (" -e %4i%02i%02i", $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'})
               . " -c \"$program v$version\""
-              . " -a \"" . $entrya -> get_text . "\""
-              . " -t \"" . $entryt -> get_text . "\""
-              . " -s \"" . $entrys -> get_text . "\""
-              . " -k \"" . $entryk -> get_text . "\"";
+              . " -a \"" . $SETTING{"author"} . "\""
+              . " -t \"" . $SETTING{"title"} . "\""
+              . " -s \"" . $SETTING{"subject"} . "\""
+              . " -k \"" . $SETTING{"keywords"} . "\"";
 
 # call tiff2pdf and/or tiffcp according to the number of pages
   if ($n > 0) {
@@ -740,7 +764,22 @@ sub save_TIFF {
 # Selected button
  my $buttons = Gtk2::RadioButton -> new(@group, "Selected");
  $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
- $buttons -> set_active(TRUE);
+
+# Set default
+ if (defined($SETTING{"Page range"})) {
+  if ($SETTING{"Page range"} eq "current") {
+   $buttonc -> set_active(TRUE);
+  }
+  elsif ($SETTING{"Page range"} eq "selected") {
+   $buttons -> set_active(TRUE);
+  }
+  else {
+   $buttona -> set_active(TRUE);
+  }
+ }
+ else {
+  $buttona -> set_active(TRUE);
+ }
 
 # HBox for filename
  my $hboxf = Gtk2::HBox -> new;
@@ -750,7 +789,7 @@ sub save_TIFF {
  my $labelf = Gtk2::Label -> new ("Filename");
  $hboxf -> pack_start ($labelf, TRUE, TRUE, 0);
  my $entryf = Gtk2::Entry -> new;
- my $filename = "$cwd/out.tif";
+ my $filename = $SETTING{"cwd"}."/out.tif";
  $entryf -> set_text($filename);
  $hboxf -> add ($entryf);
  my $bbutton = Gtk2::Button -> new('Browse');
@@ -758,7 +797,7 @@ sub save_TIFF {
  $bbutton -> signal_connect (clicked => sub {
 
 # cd back to cwd to save
-  chdir $cwd;
+  chdir $SETTING{"cwd"};
 
 # Set up file selector
   my $fileselection = Gtk2::FileSelection -> new("TIFF filename");
@@ -770,6 +809,9 @@ sub save_TIFF {
    $filename = $fileselection -> get_filename;
    $entryf -> set_text($filename);
    $fileselection -> destroy;
+
+# Update cwd
+   $SETTING{"cwd"} = dirname($filename);
   });
 
 # callback for cancel button
@@ -798,6 +840,7 @@ sub save_TIFF {
   my $n;
   my $pagelist;
   if ($buttona -> get_active) {
+   $SETTING{"Page range"} = "all";
    $n = $#{$slist -> {data}};
    $pagelist = $slist -> {data}[0][2];
    my $i = 1;
@@ -807,11 +850,13 @@ sub save_TIFF {
    }
   }
   elsif ($buttonc -> get_active) {
+   $SETTING{"Page range"} = "current";
    $n = 1;
    my @page = $slist -> get_selected_indices;
    $pagelist = $slist -> {data}[$page[0]][2];
   }
   elsif ($buttons -> get_active) {
+   $SETTING{"Page range"} = "selected";
    my @page = $slist -> get_selected_indices;
    $n = $#page;
    $pagelist = $slist -> {data}[$page[0]][2];
@@ -870,7 +915,7 @@ sub scan_dialog {
    my $window = Gtk2::Window -> new;
    $window -> set_border_width(10);
    $window -> set_title ('Scan Document');
-   $window -> set_keep_above (TRUE);
+#   $window -> set_keep_above (TRUE);
 #   $window -> set_modal (TRUE);
    $window -> signal_connect (delete_event => sub { $_[0] -> destroy; });
 
@@ -928,10 +973,15 @@ sub scan_dialog {
    $optd -> set_menu ($menud);
    $hboxd -> pack_end ($optd, FALSE, FALSE, 0);
 
-# If there is a default device, then set it
-   if ($output =~ /default device is `(.*)'/) {
+# If device not set by config and there is a default device, then set it
+   if (! defined($SETTING{"device"}) && $output =~ /default device is `(.*)'/) {
+    $SETTING{"device"} = $1;
+   }
+
+# If device in settings then set it
+   if (defined($SETTING{"device"})) {
     my $i = 0;
-    ++$i while ($1 ne $device[$i]);
+    ++$i while ($SETTING{"device"} ne $device[$i]);
     $optd -> set_history($i);
    }
    
@@ -1023,7 +1073,8 @@ sub scan_dialog {
    $sbutton -> signal_connect (clicked => sub {
 
 # Get selected device
-    my $device = "--device-name=".$device[$optd -> get_history];
+    $SETTING{"device"} = $device[$optd -> get_history];
+    my $device = "--device-name=".$SETTING{"device"};
 
 # Get device-specific options
     my %options;
@@ -1041,13 +1092,15 @@ sub scan_dialog {
         foreach my $widget (@child) {
 
 # ignore artificial paper size option
+         $SETTING{$key} = $widget -> get_label;
          if ($widget -> isa('Gtk2::Label') && $key ne 'Paper size') {
-          $options{$key} = $widget -> get_label;
+          $options{$key} = $SETTING{$key};
          }
         }
        }
        elsif ($widget -> isa('Gtk2::SpinButton')) {
         $options{$key} = $widget -> get_value;
+        $SETTING{$key} = $options{$key};
        }
       }
      }
@@ -1368,7 +1421,7 @@ sub update_options {
   my $spin_buttony = Gtk2::SpinButton -> new_with_range(0, $y, 1);
 
 # Add paper size to optionmenu if scanner large enough
-# can't use for because of the splices
+# can't use "for" because of the splices
   my $i = 0;
   while ($i <= $#paper) {
    if ($x >= $x[$i] && $y >= $y[$i]) {
@@ -1398,15 +1451,36 @@ sub update_options {
   $optp -> set_menu ($menup);
   $hboxp -> pack_end ($optp, FALSE, FALSE, 0);
 
-# Set default options
+# Set default paper size from config
+  if (defined($SETTING{"Paper size"})) {
+   $i = 0;
+   while ($i <= $#paper) {
+    $optp -> set_history($i) if ($paper[$i] eq $SETTING{"Paper size"});
+    ++$i;
+   }
+  }
+
+# Set scan area from paper size if available
   if ($#paper > -1) {
    $i = $optp -> get_history;
    $spin_buttonx -> set_value($x[$i]);
    $spin_buttony -> set_value($y[$i]);
   }
+
+# Otherwise set if from config or max available
   else {
-   $spin_buttonx -> set_value($x);
-   $spin_buttony -> set_value($y);
+   if (defined($SETTING{"x"})) {
+    $spin_buttonx -> set_value($SETTING{"x"});
+   }
+   else {
+    $spin_buttonx -> set_value($x);
+   }
+   if (defined($SETTING{"y"})) {
+    $spin_buttony -> set_value($SETTING{"y"});
+   }
+   else {
+    $spin_buttony -> set_value($y);
+   }
   }
 
   $vboxd -> pack_start ($hboxc, FALSE, FALSE, 0);
@@ -1429,6 +1503,9 @@ sub update_options {
   my $default = $3;
   if ($option =~ /(^mode$|^resolution$|^batch-scan$|^wait-for-button$)/
       && $default !~ /inactive/) {
+
+# Set default from config
+   $default = $SETTING{$option} if (defined($SETTING{$option}));
 
 # HBox for option
    my $hbox = Gtk2::HBox -> new;
@@ -1486,12 +1563,28 @@ sub update_options {
 }
 
 
-# Note window state, save settings and quit.
+# Renumber pages 1..n
+
+sub renumber {
+ my $i = 0;
+ while ($i <= $#{$slist -> {data}}) {
+  $slist -> {data}[$i][0] = $i+1 if ($slist -> {data}[$i][0] != $i+1);
+  ++$i;
+ }
+}
+
+
+# Remove temporary files, note window state, save settings and quit.
 
 sub quit {
 
+# Remove temporary files (for some reason File::Temp wasn't doing its job here)
+ unlink <$dir/*>;
+ rmdir $dir;
+
 # Write window state to settings
  ($SETTING{"window_width"}, $SETTING{"window_height"}) = $window -> get_size;
+ ($SETTING{"window_x"}, $SETTING{"window_y"}) = $window -> get_position;
 
 # Write config file
  open (CONFIG, "> $config") || die "Can't open config file $config";
