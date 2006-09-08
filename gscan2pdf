@@ -8,9 +8,8 @@
 # 0. Fix Failed to load RGB data from TIFF file: libpixbuf-tiff: Read error on strip 134; got 5190 bytes, expected 7130
 #    Add status line at bottom with messages like "filename saved"
 #    Add Gnome menu
-#    Prevent ability to open same window several times simultaneously
-#    Work out how to resize scan window when options change
-# 1. Reorder pages (DND)
+#    reduce multi.tif to 1-bit.
+# 1. Reorder pages (DND) - turn sort on for import_scan and DND on otherwise
 # 2. Rotate
 # 3. Add icons for import, save tiff, save pdf, quit, etc.
 # 4. Add view menu matching zoom buttons
@@ -18,7 +17,6 @@
 # 6. Tooltips
 # 7. Translations
 # 8. Progress meter for scans and imports.
-# 9. Hide windows rather than destroying them & other speedups
 
 use strict;
 use IPC::Open3;
@@ -40,8 +38,12 @@ my @paper = qw/A4 Letter/;
 my @x = ( 210, 215.9 );
 my @y = ( 297, 279 );
 
+# Set up test mode and make sure file has absolute path
 my $test = FALSE;
-$test = $ARGV[1] if (defined($ARGV[0]) && $ARGV[0] eq "--test");
+if (defined($ARGV[0]) && $ARGV[0] eq "--test") {
+ $test = $ARGV[1];
+ $test = getcwd."/$test" if ($test !~ /^\//);
+}
 
 if (check_utils()) {
  print "$program requires the libtiff library.\nPlease install it.\n";
@@ -66,6 +68,10 @@ if (-r $config) {
  close CONFIG;
 }
 
+# Define window variables here so that they can be referenced in the menu
+# callbacks
+my ($windowp, $windowt, $windows);
+
 # Define the menu items for ItemFactory
 my @menu_items = ( { path        => '/_File',
 		     item_type   => '<Branch>' },
@@ -76,13 +82,28 @@ my @menu_items = ( { path        => '/_File',
 		     accelerator => '<control>i',
 		     callback    => \&import },
 		   { path        => '/File/Sca_n',
-		     callback    => \&scan_dialog },
+		     callback    => sub { if (defined($windows)) {
+                                           $windows -> present;
+                                          }
+                                          else {
+                                           scan_dialog();
+                                          } } },
 		   { path        => '/File/_Save PDF',
 		     accelerator => '<control>s',
-		     callback    => \&save_PDF },
+		     callback    => sub { if (defined($windowp)) {
+                                           $windowp -> present;
+                                          }
+                                          else {
+                                           save_PDF();
+                                          } } },
 		   { path        => '/File/Save _TIFF',
 		     accelerator => '<control>t',
-		     callback    => \&save_TIFF },
+		     callback    => sub { if (defined($windowt)) {
+                                           $windowt -> present;
+                                          }
+                                          else {
+                                           save_TIFF();
+                                          } } },
 		   { path        => '/File/sep1',
 		     item_type   => '<Separator>' },
 		   { path        => '/File/_Quit',
@@ -200,7 +221,28 @@ Gtk2::SimpleList -> add_column_type( 'filename',
 my $slist = Gtk2::SimpleList -> new('#' => 'int',
                                    'Thumbnails' => 'pixbuf',
                                    'Filename' => 'filename');
+#$slist -> drag_dest_set( [ "drop" ], [ "copy", "move" ],
+#                    ( { "target" => "STRING",
+#                        "flags" => [],
+#                        "info" => 0 },
+#                      { "target" => "text/plain",
+#                        "flags" => [],
+#                        "info" => 1 }
+#                    ) );
+#$slist -> signal_connect("drag_data_received" => sub {
+# my ( $w, $context, $x, $y, $data, $info, $time ) = @_;
+
+# return unless ($data->length >= 0 and $data->format == 8);
+
+# Drag data is $data->data;
+# printf("Recived type %s format %s length %d target %s selection %s\n",
+#        $data->type, $data->format, $data->length, $data->target, $data->selection);
+# printf("Received $x $y dragged \"%s\"\n", $data->data);
+
+# $context->finish(1, 0, $time);
+#});
 $slist -> get_selection -> set_mode ('multiple');
+#$slist -> set_reorderable( TRUE );
 $slist -> get_model -> set_sort_column_id (0, 'ascending');
 
 # Set the page number to be editable
@@ -462,14 +504,14 @@ sub import {
 sub save_PDF {
 
 # PDF pop-up window
- my $window = Gtk2::Window -> new;
- $window -> set_border_width(10);
- $window -> set_title ('Save as PDF');
- $window -> signal_connect (delete_event => sub { $_[0] -> destroy; });
+ $windowp = Gtk2::Window -> new;
+ $windowp -> set_border_width(10);
+ $windowp -> set_title ('Save as PDF');
+ $windowp -> signal_connect (delete_event => sub { $_[0] -> destroy; });
 
 # VBox for window
  my $vbox = Gtk2::VBox -> new;
- $window -> add ($vbox);
+ $windowp -> add ($vbox);
 
 # Frame for metadata
  my $framem = Gtk2::Frame -> new('Metadata');
@@ -614,7 +656,7 @@ sub save_PDF {
  my $labelf = Gtk2::Label -> new ("Filename");
  $hboxf -> pack_start ($labelf, TRUE, TRUE, 0);
  my $entryf = Gtk2::Entry -> new;
- my $filename = $SETTING{"cwd"}."/out.pdf";
+ my $filename = "$SETTING{'cwd'}/out.pdf";
  $entryf -> set_text($filename);
  $hboxf -> add ($entryf);
  my $bbutton = Gtk2::Button -> new('Browse');
@@ -702,10 +744,10 @@ sub save_PDF {
   my $options = " -z -o \"$filename\""
               . sprintf (" -e %4i%02i%02i", $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'})
               . " -c \"$program v$version\""
-              . " -a \"" . $SETTING{"author"} . "\""
-              . " -t \"" . $SETTING{"title"} . "\""
-              . " -s \"" . $SETTING{"subject"} . "\""
-              . " -k \"" . $SETTING{"keywords"} . "\"";
+              . " -a \"$SETTING{'author'}\""
+              . " -t \"$SETTING{'title'}\""
+              . " -s \"$SETTING{'subject'}\""
+              . " -k \"$SETTING{'keywords'}\"";
 
 # call tiff2pdf and/or tiffcp according to the number of pages
   if ($n > 0) {
@@ -717,15 +759,15 @@ sub save_PDF {
    system ("tiff2pdf $options $pagelist");
   }
   
-  $window -> destroy;
+  $windowp -> hide;
  } );
 
 # Cancel button
  my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton -> signal_connect( clicked => sub { $window -> destroy; } );
+ $cbutton -> signal_connect( clicked => sub { $windowp -> hide; } );
 
- $window -> show_all;
+ $windowp -> show_all;
 }
 
 
@@ -734,14 +776,14 @@ sub save_PDF {
 sub save_TIFF {
 
 # PDF pop-up window
- my $window = Gtk2::Window -> new;
- $window -> set_border_width(10);
- $window -> set_title ('Save as TIFF');
- $window -> signal_connect (delete_event => sub { $_[0] -> destroy; });
+ $windowt = Gtk2::Window -> new;
+ $windowt -> set_border_width(10);
+ $windowt -> set_title ('Save as TIFF');
+ $windowt -> signal_connect (delete_event => sub { $_[0] -> destroy; });
 
 # VBox for window
  my $vbox = Gtk2::VBox -> new;
- $window -> add ($vbox);
+ $windowt -> add ($vbox);
 
 # Frame for page range
  my $framep = Gtk2::Frame -> new('Page range');
@@ -789,7 +831,7 @@ sub save_TIFF {
  my $labelf = Gtk2::Label -> new ("Filename");
  $hboxf -> pack_start ($labelf, TRUE, TRUE, 0);
  my $entryf = Gtk2::Entry -> new;
- my $filename = $SETTING{"cwd"}."/out.tif";
+ my $filename = "$SETTING{'cwd'}/out.tif";
  $entryf -> set_text($filename);
  $hboxf -> add ($entryf);
  my $bbutton = Gtk2::Button -> new('Browse');
@@ -870,21 +912,22 @@ sub save_TIFF {
 # Create the tiff
   system ("tiffcp $pagelist \"$filename\"");
 
-  $window -> destroy;
+  $windowt -> hide;
  } );
 
 # Cancel button
  my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton -> signal_connect( clicked => sub { $window -> destroy; } );
+ $cbutton -> signal_connect( clicked => sub { $windowt -> hide; } );
 
- $window -> show_all;
+ $windowt -> show_all;
 }
 
 
 # Scan
 
 sub scan_dialog {
+
  my $output = `scanimage --version 2>/dev/null`;
  if ($? ne 0) {
   my $dialog = Gtk2::MessageDialog -> new ($window,
@@ -912,16 +955,16 @@ sub scan_dialog {
   else {
 
 # scan pop-up window
-   my $window = Gtk2::Window -> new;
-   $window -> set_border_width(10);
-   $window -> set_title ('Scan Document');
-#   $window -> set_keep_above (TRUE);
-#   $window -> set_modal (TRUE);
-   $window -> signal_connect (delete_event => sub { $_[0] -> destroy; });
+   $windows = Gtk2::Window -> new;
+   $windows -> set_border_width(10);
+   $windows -> set_title ('Scan Document');
+#   $windows -> set_keep_above (TRUE);
+#   $windows -> set_modal (TRUE);
+   $windows -> signal_connect (delete_event => sub { $_[0] -> destroy; });
 
 # VBox for window
    my $vbox = Gtk2::VBox -> new;
-   $window -> add ($vbox);
+   $windows -> add ($vbox);
 
 # HBox for devices
    my $hboxd = Gtk2::HBox -> new;
@@ -962,13 +1005,13 @@ sub scan_dialog {
     }
    }
    else {
-    my $item = Gtk2::MenuItem -> new ($test);
+    my $item = Gtk2::MenuItem -> new (basename($test));
     $item -> signal_connect (activate => sub {
      update_options($vboxd, undef);
      $vboxd -> show_all;
     });
     $menud -> append ($item);
-    push @device, $test
+    push @device, basename($test);
    }
    $optd -> set_menu ($menud);
    $hboxd -> pack_end ($optd, FALSE, FALSE, 0);
@@ -981,8 +1024,8 @@ sub scan_dialog {
 # If device in settings then set it
    if (defined($SETTING{"device"})) {
     my $i = 0;
-    ++$i while ($SETTING{"device"} ne $device[$i]);
-    $optd -> set_history($i);
+    ++$i while ($SETTING{"device"} ne $device[$i] && $i <= $#device);
+    $optd -> set_history($i) if ($i <= $#device);
    }
    
 # Frame for # pages
@@ -997,7 +1040,6 @@ sub scan_dialog {
 # All button
    my $buttona = Gtk2::RadioButton -> new(undef, "All");
    $vboxn -> pack_start($buttona, TRUE, TRUE, 0);
-   $buttona -> set_active(TRUE);
    my @groupn = $buttona -> get_group;
 
 # Entry button
@@ -1012,6 +1054,20 @@ sub scan_dialog {
     $buttone -> set_active(TRUE); # Set the radiobutton active
    });
    $hboxn -> pack_end ($spin_button, FALSE, FALSE, 0);
+
+# Set default
+   if (defined($SETTING{"pages to scan"})) {
+    if ($SETTING{"pages to scan"} eq "all") {
+     $buttona -> set_active(TRUE);
+    }
+    else {
+     $buttone -> set_active(TRUE);
+     $spin_button -> set_value($SETTING{"pages to scan"});
+    }
+   }
+   else {
+    $buttone -> set_active(TRUE);
+   }
 
 # Frame for source document
    my $frames = Gtk2::Frame -> new('Source document');
@@ -1074,7 +1130,7 @@ sub scan_dialog {
 
 # Get selected device
     $SETTING{"device"} = $device[$optd -> get_history];
-    my $device = "--device-name=".$SETTING{"device"};
+    my $device = "--device-name=$SETTING{'device'}";
 
 # Get device-specific options
     my %options;
@@ -1109,9 +1165,11 @@ sub scan_dialog {
 # Get selected number of pages
     my $npages;
     if ($buttone -> get_active) {
-     $npages = "--batch-count=".$spin_button -> get_value;
+     $SETTING{"pages to scan"} = $spin_button -> get_value;
+     $npages = "--batch-count=$SETTING{'pages to scan'}";
     }
     else {
+     $SETTING{"pages to scan"} = "all";
      $npages = "";
     }
 
@@ -1132,7 +1190,7 @@ sub scan_dialog {
      }
      else { # reverse page
       if ($start == 1) {
-       my $dialog = Gtk2::MessageDialog -> new ($window,
+       my $dialog = Gtk2::MessageDialog -> new ($windows,
         'destroy-with-parent',
         'error', # message type
         'cancel', # which set of buttons?
@@ -1159,7 +1217,7 @@ sub scan_dialog {
       }
       if ($buttone -> get_active) {
        if (($spin_button -> get_value) > $i) {
-        my $dialog = Gtk2::MessageDialog -> new ($window,
+        my $dialog = Gtk2::MessageDialog -> new ($windows,
          'destroy-with-parent',
          'error', # message type
          'cancel', # which set of buttons?
@@ -1172,25 +1230,29 @@ sub scan_dialog {
 
 # If user hasn't specified number of pages, then set number that is undefined
       else {
-       $npages = "--batch-count=".$i;
+       $npages = "--batch-count=$i";
       }
      }
-     $step = "--batch-increment=".$step;
+     $step = "--batch-increment=$step";
     }
     else {
      $step = "";
     }
-    $start = "--batch-start=".$start;
+    $start = "--batch-start=$start";
     scan($device, $npages, $start, $step, %options);
    } );
 
 # Cancel button
    my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
    $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
-   $cbutton -> signal_connect( clicked => sub { $window -> destroy; } );
+   $cbutton -> signal_connect( clicked => sub { $windows -> hide; } );
 
-   $window -> show_all;
-   $hboxc -> hide_all if ($#paper > -1);
+   $windows -> show_all;
+   if ($#paper > -1 ||
+       (defined($SETTING{"Paper size"}) && $SETTING{"Paper size"} ne "Custom")) {
+    $hboxc -> hide;
+    $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
+   }
   }
  }
 }
@@ -1209,7 +1271,7 @@ sub scan {
  my ($key, $value);
  while (($key, $value) = each(%options)) {
   if ($key eq 'x' || $key eq 'y') {
-   push @options, "-$key=$value";
+   push @options, "-$key $value";
   }
   else {
    push @options, "--$key=$value";
@@ -1430,7 +1492,8 @@ sub update_options {
      my $i = $optp -> get_history;
      $spin_buttonx -> set_value($x[$i]);
      $spin_buttony -> set_value($y[$i]);
-     $hboxc -> hide_all;
+     $hboxc -> hide;
+     $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
     });
     $menup -> append ($item);
     ++$i;
@@ -1460,27 +1523,23 @@ sub update_options {
    }
   }
 
-# Set scan area from paper size if available
-  if ($#paper > -1) {
+# Set scan area from config if available
+  if (defined($SETTING{"x"}) && defined($SETTING{"y"})) {
+   $spin_buttonx -> set_value($SETTING{"x"});
+   $spin_buttony -> set_value($SETTING{"y"});
+  }
+
+# Otherwise set from paper size if available
+  elsif ($#paper > -1) {
    $i = $optp -> get_history;
    $spin_buttonx -> set_value($x[$i]);
    $spin_buttony -> set_value($y[$i]);
   }
 
-# Otherwise set if from config or max available
+# Or max available
   else {
-   if (defined($SETTING{"x"})) {
-    $spin_buttonx -> set_value($SETTING{"x"});
-   }
-   else {
-    $spin_buttonx -> set_value($x);
-   }
-   if (defined($SETTING{"y"})) {
-    $spin_buttony -> set_value($SETTING{"y"});
-   }
-   else {
-    $spin_buttony -> set_value($y);
-   }
+   $spin_buttonx -> set_value($x);
+   $spin_buttony -> set_value($y);
   }
 
   $vboxd -> pack_start ($hboxc, FALSE, FALSE, 0);
