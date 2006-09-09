@@ -8,15 +8,16 @@
 # 0. Fix Failed to load RGB data from TIFF file: libpixbuf-tiff: Read error on strip 134; got 5190 bytes, expected 7130
 #    Add status line at bottom with messages like "filename saved"
 #    Add Gnome menu
-#    reduce multi.tif to 1-bit.
-# 1. Reorder pages (DND) - turn sort on for import_scan and DND on otherwise
-# 2. Rotate
-# 3. Add icons for import, save tiff, save pdf, quit, etc.
-# 4. Add view menu matching zoom buttons
-# 5. Get documentation up to scratch
-# 6. Tooltips
-# 7. Translations
-# 8. Progress meter for scans and imports.
+#    reduce multi.tif to 1-bit and send home
+#    add sort or something on page number edit
+# 1. Rotate
+# 2. Add icons for import, save tiff, save pdf, quit, etc.
+# 3. Add view menu matching zoom buttons
+# 4. Get documentation up to scratch - ask the gtk-perl list how they display help
+# 5. Tooltips
+# 6. Translations
+# 7. Progress meter for scans and imports.
+# 8. Crop and autocrop
 
 use strict;
 use IPC::Open3;
@@ -31,7 +32,7 @@ use constant TRUE  => 1;
 use constant FALSE => 0;
 
 my $program = "gscan2pdf";
-my $version = "0.6.3";
+my $version = "0.7";
 
 # Standard paper sizes
 my @paper = qw/A4 Letter/;
@@ -221,14 +222,14 @@ Gtk2::SimpleList -> add_column_type( 'filename',
 my $slist = Gtk2::SimpleList -> new('#' => 'int',
                                    'Thumbnails' => 'pixbuf',
                                    'Filename' => 'filename');
-#$slist -> drag_dest_set( [ "drop" ], [ "copy", "move" ],
-#                    ( { "target" => "STRING",
-#                        "flags" => [],
-#                        "info" => 0 },
-#                      { "target" => "text/plain",
-#                        "flags" => [],
-#                        "info" => 1 }
-#                    ) );
+$slist -> drag_dest_set( [ "drop" ], [ "copy", "move" ],
+                    ( { "target" => "STRING",
+                        "flags" => [],
+                        "info" => 0 },
+                      { "target" => "text/plain",
+                        "flags" => [],
+                        "info" => 1 }
+                    ) );
 #$slist -> signal_connect("drag_data_received" => sub {
 # my ( $w, $context, $x, $y, $data, $info, $time ) = @_;
 
@@ -242,8 +243,7 @@ my $slist = Gtk2::SimpleList -> new('#' => 'int',
 # $context->finish(1, 0, $time);
 #});
 $slist -> get_selection -> set_mode ('multiple');
-#$slist -> set_reorderable( TRUE );
-$slist -> get_model -> set_sort_column_id (0, 'ascending');
+$slist -> set_reorderable( TRUE );
 
 # Set the page number to be editable
 $slist -> set_column_editable (0, TRUE);
@@ -1367,7 +1367,8 @@ sub import_scan {
                                         $widthi*$scale, $heighti*$scale);
  zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
 
-# Add to the page list
+# Add to the page list, turning sort on before, and off again afterwards, to
+# allow DND.
  my $i;
  if ($ofilename =~ /out([0-9]*)\.tif/) {
   $i = $1;
@@ -1376,6 +1377,13 @@ sub import_scan {
   $i = $#{$slist -> {data}}+2;
  }
  push @{$slist -> {data}}, [$i, $pixbuf, $filename];
+
+# never sorted before, but we need a defined value here to avoid a
+# warning in manual_sort_by_column().
+ $slist->{last_sort_col} = -1;
+
+# Sort the list
+ manual_sort_by_column ($slist, 0);
 
 # Select new page, deselecting others. This fires the select callback,
 # displaying the page
@@ -1387,6 +1395,42 @@ sub import_scan {
  ++$page[0] while ($slist -> {data}[$page[0]][0] != $i);
 
  $slist -> select(@page);
+}
+
+
+# Helpers:
+sub compare_numeric_col { $_[0] <=> $_[1] }
+sub compare_text_col { $_[0] cmp $_[1] }
+
+
+# Manual one-time sorting of the simplelist's data
+
+sub manual_sort_by_column {
+ my ($slist, $sortcol) = @_;
+
+# The sort function depends on the column type
+ my %sortfuncs = ( 'Glib::Scalar' => \&compare_text_col,
+                   'Glib::String' => \&compare_text_col,
+                   'Glib::Int' => \&compare_numeric_col,
+                   'Glib::Double' => \&compare_numeric_col, );
+
+# Remember, this relies on the fact that simplelist keeps model
+# and view column indices aligned.
+ my $sortfunc = $sortfuncs{$slist->get_model->get_column_type($sortcol)};
+
+# Deep copy the tied data so we can sort it. Otherwise, very bad things happen.
+ my @data = map { [ @$_ ] } @{ $slist->{data} };
+ @data = sort { $sortfunc->($a->[$sortcol], $b->[$sortcol]) } @data;
+ if ($slist->{last_sort_col} == $sortcol) {
+  @data = reverse @data;
+
+# Set this to something invalid to trick us into sorting forward next time.
+  $slist->{last_sort_col} = -1;
+ }
+ else {
+  $slist->{last_sort_col} = $sortcol;
+ }
+ @{$slist->{data}} = @data;
 }
 
 
