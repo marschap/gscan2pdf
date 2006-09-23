@@ -5,20 +5,17 @@
 # see the included LICENSE file for details.
 
 # To do
-# 0. Fix Failed to load RGB data from TIFF file:
-#        libpixbuf-tiff: Read error on strip 134; got 5190 bytes, expected 7130
-#     try doing a tiffinfo before importing.
-#    Add status line at bottom with messages like "filename saved"
+# 0. Add status line at bottom with messages like "filename saved"
 #    Add Gnome menu
 #    Add dialog whilst device-dependent options are being parsed
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
-#    Add libgtk2-podviewer-perl to recomended in config
-#    Overwrite question for save_tiff
+#    Put windows up in centre of parent
 # 1. Translations
 # 2. Progress meter for scans and imports.
 # 3. Rotate
 # 4. Crop and autocrop
+# 5. Look at OCR
 
 # Release procedure:
 # 1. Make tar dist
@@ -86,9 +83,9 @@ if (-r $config) {
  close CONFIG;
 }
 
-# Define window variables here so that they can be referenced in the menu
-# callbacks
-my ($windowp, $windowt, $windows, $windowh);
+# Define application-wide variables here so that they can be referenced
+# in the menu callbacks
+my ($windowp, $windowt, $windows, $windowh, $slist);
 
 # Define the menu items for ItemFactory
 my @menu_items = ( { path        => '/_File',
@@ -135,7 +132,7 @@ my @menu_items = ( { path        => '/_File',
 		     callback    => \&delete_pages },
 		   { path        => '/Edit/_Renumber',
 		     accelerator => '<control>r',
-		     callback    => \&renumber },
+		     callback    => sub { renumber($slist, 0, 1, 1); } },
 		   { path        => '/Edit/Select _All',
 		     accelerator => '<control>a',
 		     callback    => \&select_all },
@@ -238,9 +235,9 @@ foreach (
                                                else {
                                                 save_TIFF();
                                                } } ],
- [ 'gtk-quit',           'Quit', sub { quit(); Gtk2 -> main_quit; } ],
  [ 'gtk-delete',         'Delete selected pages', \&delete_pages ],
- [ 'gtk-sort-ascending', 'Renumber pages from 1 to n', \&renumber ],
+ [ 'gtk-sort-ascending', 'Renumber pages from 1 to n', sub {
+                                                 renumber($slist, 0, 1, 1); } ],
  [ 'gtk-select-all',     'Select all pages', \&select_all ],
  [ 'gtk-zoom-100',       'Zoom to 100%', sub { zoom_button('100%'); } ],
  [ 'gtk-zoom-fit',       'Zoom to fit', sub { zoom_button('fit'); } ],
@@ -251,7 +248,8 @@ foreach (
                                           }
                                           else {
                                            view_pod();
-                                          } } ]
+                                          } } ],
+ [ 'gtk-quit',           'Quit', sub { quit(); Gtk2 -> main_quit; } ]
 ) {
  if (defined(Gtk2::Stock->lookup ($_->[0]))) {
   my $button = Gtk2::Button->new;
@@ -289,7 +287,7 @@ Gtk2::SimpleList -> add_column_type( 'filename',
                                      attr => 'hidden' );
 
 # Set up a SimpleList
-my $slist = Gtk2::SimpleList -> new('#' => 'int',
+$slist = Gtk2::SimpleList -> new('#' => 'int',
                                    'Thumbnails' => 'pixbuf',
                                    'Filename' => 'filename');
 $slist -> drag_dest_set( [ "drop" ], [ "copy", "move" ],
@@ -306,11 +304,11 @@ $slist -> drag_dest_set( [ "drop" ], [ "copy", "move" ],
 my $drop = 0;
 
 # Callback for dropped signal.
-# Check that the numbering is ascending and renumber if needed.
-$slist -> signal_connect("drag_drop" => sub {
+$slist -> signal_connect('drag_drop' => sub {
 # Block row-changed signal so that the list can be renumbered before the sort
 # takes over.
  $slist -> get_model -> signal_handler_block($slist -> {signalid});
+# Flag to the next event that the renumber can take place
  $drop = 1;
  return 0;
 });
@@ -319,14 +317,10 @@ $slist -> signal_connect("drag_drop" => sub {
 # check that the numbering is ascending and renumber if needed.
 $slist->signal_connect (event => sub {
  my ($item, $event) = @_;
- if ($event->type eq 'focus-change' and $drop == 1) { 
-  for (1 .. $#{$slist -> {data}}) {
-   if ($slist -> {data}[$_][0] <= $slist -> {data}[$_-1][0]) {
-    $slist -> {data}[$_][0] = $slist -> {data}[$_-1][0] + 1;
-   };
-  }
- $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
- $drop = 0;
+ if ($event->type eq 'focus-change' and $drop) { 
+  renumber($slist, 0);
+  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+  $drop = 0;
  }
  return 0;
 });
@@ -342,7 +336,12 @@ $slist -> set_column_editable (0, TRUE);
 $slist -> {signalid} = $slist -> get_model ->
  signal_connect('row-changed' => sub {
   $slist -> get_model -> signal_handler_block($slist -> {signalid});
+
+# Sort pages
   manual_sort_by_column ($slist, 0);
+
+# And make sure there are no duplicates
+  renumber ($slist, 0);
   $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
  });
 
@@ -385,14 +384,16 @@ $slist -> get_selection -> signal_connect(changed => sub {
 
 # scalar needed for reasons I don't understand, but which have to do with
 # converting the array to a scalar. Alternatively, it might be a bug.
-  $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file (scalar($slist->{data}[$page[0]][2]));
+  $src_pixbuf = Gtk2::Gdk::Pixbuf ->
+                            new_from_file (scalar($slist->{data}[$page[0]][2]));
 
 # Get dimension for image
   $widthi = $src_pixbuf -> get_width;
   $heighti = $src_pixbuf -> get_height;
 
 # Calculate scale factor to fit window, being conservative
-  $scale = ($widthd-1)/$widthi < ($heightd-1)/$heighti ? ($widthd-1)/$widthi : ($heightd-1)/$heighti;
+  $scale = ($widthd-1)/$widthi < ($heightd-1)/$heighti
+                                 ? ($widthd-1)/$widthi : ($heightd-1)/$heighti;
 
   my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
                                          $src_pixbuf -> get_has_alpha, 
@@ -469,7 +470,8 @@ sub zoom_button {
   else {
    my $widthd = $scwin_detail -> allocation -> width;
    my $heightd = $scwin_detail -> allocation -> height;
-   $scale = ($widthd-1)/$widthi < ($heightd-1)/$heighti ? ($widthd-1)/$widthi : ($heightd-1)/$heighti;
+   $scale = ($widthd-1)/$widthi < ($heightd-1)/$heighti
+                                  ? ($widthd-1)/$widthi : ($heightd-1)/$heighti;
   }
   my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
                                          $src_pixbuf -> get_has_alpha, 
@@ -629,11 +631,13 @@ sub save_PDF {
  $hboxe -> pack_start ($labele, FALSE, FALSE, 0);
  if (! (defined($SETTING{'year'}) && defined($SETTING{'month'})
                                && defined($SETTING{'day'}))) {
-  ($SETTING{'day'}, $SETTING{'month'}, $SETTING{'year'}) = (localtime())[3, 4, 5];
+  ($SETTING{'day'}, $SETTING{'month'}, $SETTING{'year'})
+                                                       = (localtime())[3, 4, 5];
   $SETTING{'year'} += 1900;
   $SETTING{'month'} += 1;
  }
- my $button = Gtk2::Button -> new("$SETTING{'year'}/$SETTING{'month'}/$SETTING{'day'}");
+ my $button = Gtk2::Button ->
+                      new("$SETTING{'year'}/$SETTING{'month'}/$SETTING{'day'}");
  $button -> signal_connect( clicked => sub {
   my $window = Gtk2::Window -> new;
   $window -> set_title ('Select Date' );
@@ -651,7 +655,8 @@ sub save_PDF {
   $vbox -> pack_start ($calendar, TRUE, TRUE, 0);
 
   $calendar -> signal_connect(day_selected_double_click => sub {
-   ($SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'}) = $calendar -> get_date;
+   ($SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'}) = $calendar ->
+                                                                       get_date;
    $SETTING{'month'} += 1;
    $button -> set_label ("$SETTING{'year'}/$SETTING{'month'}/$SETTING{'day'}");
    $window -> destroy;
@@ -742,7 +747,8 @@ sub save_PDF {
   });
   $o = $i
    if (defined($SETTING{'compression'})
-       && $compression eq defined($SETTING{'compression'}));
+       && $compression eq $SETTING{'compression'});
+  ++$i;
  }
  $optc -> set_menu ($menuc);
  $optc -> set_history ($o) if defined($o);
@@ -1448,7 +1454,7 @@ sub scan {
   my $error = IO::Handle -> new; # this needed because of a bug in open3.
   my $pid = open3($write, $read, $error, $cmd);
   
-  my $dialog = Gtk2::Dialog -> new ("Scanning...", $window,
+  my $dialog = Gtk2::Dialog -> new ("Scanning...", $windows,
                                     'destroy-with-parent',
                                     'gtk-cancel' => 'cancel');
   my $label = Gtk2::Label -> new ("Scanning...");
@@ -1475,7 +1481,17 @@ sub scan {
      $label -> set_text("Scanning page $1...");
     }
     elsif ($line =~ /^Scanned page ([0-9]*)\. \(scanner status = 5\)/) {
-     import_scan ("out$1.tif");
+
+# If the scan can't be loaded then blow the scanning dialog away and
+# show an error
+     if (! import_scan ("out$1.tif")) {
+      $dialog -> destroy;
+      $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
+                        'error', 'close', 'Unable to load image');
+      $dialog -> run;
+      $dialog -> destroy;
+      return 0;
+     }
     }
     elsif ($line =~ /^End Scan/) {
      $dialog -> destroy;
@@ -1488,14 +1504,17 @@ sub scan {
      ;
     }
     else {
-#     $dialog -> destroy;
+     $dialog -> destroy;
      my $text = "Unknown message: " . substr($line, 0, index($line, "\n"));
 warn "$text\n";
-     my $dialog = Gtk2::MessageDialog -> new ($window,
+     $dialog = Gtk2::MessageDialog -> new ($windows,
                                               'destroy-with-parent',
                                               'error',
                                               'close',
                                               $text);
+     $dialog -> run;
+     $dialog -> destroy;
+     return 0;
     }
     $line = substr($line, index($line, "\n")+1, length($line));
    }
@@ -1519,6 +1538,7 @@ sub import_scan {
 # For some reason reading the tiff sometimes throws:
 # Failed to load RGB data from TIFF file:
 #        libpixbuf-tiff: Read error on strip 134; got 5190 bytes, expected 7130
+# Normally succeeds on second attempt
  my $src_pixbuf;
 # Change new_from_file for new_from_file_at_scale once I no longer have to
 # develop with Gtk2 < 1.090!
@@ -1527,8 +1547,14 @@ sub import_scan {
 #  recover_from_a_flop ();
 # }
  if ($@) {
-#  die $@;
-warn "error: $@\n";
+  warn "Warning: $@\n";
+  eval { $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename); };
+  if ($@) {
+   return 0;
+  }
+  else {
+   warn "Information: got $filename on second attempt\n";
+  }
  }
 
 # Get dimension for image
@@ -1553,7 +1579,11 @@ warn "error: $@\n";
   $i = $#{$slist -> {data}}+2;
  }
 
+# Block the row-changed signal whilst adding the scan (row) and sorting it.
+ $slist -> get_model -> signal_handler_block($slist -> {signalid});
  push @{$slist -> {data}}, [$i, $pixbuf, $filename];
+ manual_sort_by_column ($slist, 0);
+ $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
 # Select new page, deselecting others. This fires the select callback,
 # displaying the page
@@ -1562,11 +1592,13 @@ warn "error: $@\n";
 
 # Due to the sort, must search for new page
  $page[0] = 0;
-# $page[0] < $#{$slist -> {data}} needed in case of error importing.
+# $page[0] < $#{$slist -> {data}} needed to prevent infinite loop in case of
+# error importing.
  ++$page[0] while ($page[0] < $#{$slist -> {data}}
                     && $slist -> {data}[$page[0]][0] != $i);
 
  $slist -> select(@page);
+ return 1;
 }
 
 
@@ -1594,13 +1626,7 @@ sub manual_sort_by_column {
  my @data = map { [ @$_ ] } @{ $slist->{data} };
  @data = sort { $sortfunc->($a->[$sortcol], $b->[$sortcol]) } @data;
 
-# Only update the array if actually different to avoid infinite loop through
-# callback. 
- my $changed = 0;
- for my $i (0..$#data) {
-  $changed = 1 if ($slist->{data}[$i][$sortcol] != $data[$i][$sortcol]);
- }
- @{$slist->{data}} = @data if ($changed);
+ @{$slist->{data}} = @data;
 }
 
 
@@ -1852,26 +1878,37 @@ sub update_options {
 }
 
 
-# Renumber pages 1..n
+# Renumber pages
 
 sub renumber {
- my $i = 0;
- while ($i <= $#{$slist -> {data}}) {
-  $slist -> {data}[$i][0] = $i+1 if ($slist -> {data}[$i][0] != $i+1);
-  ++$i;
+ my ($slist, $column, $start, $step) = @_;
+
+ $step = 1 if (! defined($step));
+
+ if (defined($start)) {
+  for (0 .. $#{$slist -> {data}}) {
+   $slist -> {data}[$_][$column] = $_*$step + $start;
+  }
  }
-}
 
+# If $start and $step are undefined, just make sure that the numbering is
+# ascending.
+ else {
+  for (0 .. $#{$slist -> {data}}-1) {
+   if ($slist -> {data}[$_+1][$column] <= $slist -> {data}[$_][$column]) {
 
-# Check that the numbering is ascending and renumber if needed.
-
-sub renumber_cond {
- my $i = 1;
- while ($i <= $#{$slist -> {data}}) {
-  if ($slist -> {data}[$i][0] <= $slist -> {data}[$i-1][0]) {
-   $slist -> {data}[$i][0] = $slist -> {data}[$i-1][0] + 1;
-  };
-  ++$i;
+# If at the beginning of the list, start from 1.
+    if ($_ == 0) {
+     $slist -> {data}[0][$column] = 1;
+     $slist -> {data}[1][$column] = 2;
+    }
+    else {
+     $slist -> {data}[$_][$column] = $slist -> {data}[$_-1][$column] + 1;
+     $slist -> {data}[$_+1][$column] = $slist -> {data}[$_][$column] + 1
+      if ($slist -> {data}[$_+1][$column] <= $slist -> {data}[$_][$column]);
+    }
+   }
+  }
  }
 }
 
