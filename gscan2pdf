@@ -7,10 +7,21 @@
 # To do
 # 0. Add status line at bottom with messages like "filename saved"
 #    Add Gnome menu
+#    Use stock buttons where possible on dialogs
+#    Use FileChooser instead of file selector
+#    Rewrite menus with SimpleMenu to get same icons as buttons
+#    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
+#      and    $tree_view->window->set_cursor (undef); when working.
 #    Add dialog whilst device-dependent options are being parsed
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
 #    Put windows up in centre of parent
+#    Scanning window doesn't have a proper icon.
+#    Fix blocking at:
+#      First opening scan window
+#      Changing device
+#    Note in podviewer message about help from command line + information about
+#    package required. Or better still, work out how best to include package.
 # 1. Translations
 # 2. Progress meter for scans and imports.
 # 3. Rotate
@@ -32,18 +43,20 @@ use Gtk2 -init;
 use Gtk2::SimpleList;
 use Cwd;                             # To obtain current working directory
 use File::Basename;                  # Split filename into dir, file, ext
-use File::Temp qw/tempfile tempdir/; # To create temporary files
-
-use constant TRUE  => 1;
-use constant FALSE => 0;
+use File::Temp qw(tempfile tempdir); # To create temporary files
+use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
+use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 
 my $program = "gscan2pdf";
-my $version = "0.7";
+my $version = "0.7.2";
 
 # Standard paper sizes
 my @paper = qw/A4 Letter/;
 my @x = ( 210, 215.9 );
-my @y = ( 297, 279 );
+my @y = ( 297, 279.4 );
+
+# Window parameters
+my $border_width = 6;
 
 # Set up test mode and make sure file has absolute path
 my $test = FALSE;
@@ -64,6 +77,10 @@ if (check_utils()) {
  print "$program requires the libtiff library.\nPlease install it.\n";
  exit 1;
 }
+
+# Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
+# scanimage
+setlocale(LC_NUMERIC, "C");
 
 # Read config file
 my $config = "$ENV{'HOME'}/.$program";
@@ -166,7 +183,7 @@ my @menu_items = ( { path        => '/_File',
 # Create the window
 my $window = Gtk2::Window -> new;
 $window -> set_title ( "$program v$version" );
-$window -> signal_connect ( 'delete_event', sub { quit(); Gtk2 -> main_quit; } );
+$window -> signal_connect ( destroy => sub { quit(); Gtk2 -> main_quit; } );
 
 # Note when the window is maximised or not.
 $window -> signal_connect(window_state_event => sub {
@@ -180,17 +197,17 @@ $window -> signal_connect(window_state_event => sub {
 });
 
 # If defined in the config file, set the window state, size and position
-if (defined($SETTING{"window_width"}) && defined($SETTING{"window_height"})) {
+if (defined($SETTING{"window_width"}) and defined($SETTING{"window_height"})) {
  $window -> set_default_size ($SETTING{"window_width"}, $SETTING{"window_height"});
 }
 else {
  $window -> set_default_size (800, 600);
 }
-if (defined($SETTING{"window_x"}) && defined($SETTING{"window_y"})) {
+if (defined($SETTING{"window_x"}) and defined($SETTING{"window_y"})) {
  $window -> move ($SETTING{"window_x"}, $SETTING{"window_y"});
 }
 $window -> maximize
- if (! (defined($SETTING{"window_maximize"}) && ! $SETTING{"window_maximize"}));
+ if (! (defined($SETTING{"window_maximize"}) and ! $SETTING{"window_maximize"}));
 
 # Pass the window a stock icon list
 my @icon;
@@ -290,38 +307,20 @@ Gtk2::SimpleList -> add_column_type( 'filename',
 $slist = Gtk2::SimpleList -> new('#' => 'int',
                                    'Thumbnails' => 'pixbuf',
                                    'Filename' => 'filename');
-$slist -> drag_dest_set( [ "drop" ], [ "copy", "move" ],
-                    ( { "target" => "STRING",
-                        "flags" => [],
-                        "info" => 0 },
-                      { "target" => "text/plain",
-                        "flags" => [],
-                        "info" => 1 }
-                    ) );
-
-# Can't sort the list until the drag_drop callback has returned, so need a flag
-# to do it in the next event.
-my $drop = 0;
 
 # Callback for dropped signal.
 $slist -> signal_connect('drag_drop' => sub {
 # Block row-changed signal so that the list can be renumbered before the sort
 # takes over.
  $slist -> get_model -> signal_handler_block($slist -> {signalid});
-# Flag to the next event that the renumber can take place
- $drop = 1;
  return 0;
 });
 
 # Now that drag_drop has returned,
 # check that the numbering is ascending and renumber if needed.
-$slist->signal_connect (event => sub {
- my ($item, $event) = @_;
- if ($event->type eq 'focus-change' and $drop) { 
-  renumber($slist, 0);
-  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
-  $drop = 0;
- }
+$slist->signal_connect (drag_end => sub {
+ renumber($slist, 0);
+ $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
  return 0;
 });
 
@@ -454,7 +453,7 @@ sub create_menu_bar {
 
 sub zoom_button {
  my $button = $_[0];
- if (defined($scwin_detail) && defined($scwin_detail -> child)) {
+ if (defined($scwin_detail) and defined($scwin_detail -> child)) {
   my $viewport = $image -> get_parent;
   $image -> destroy;
   $viewport -> destroy;
@@ -605,7 +604,7 @@ sub save_PDF {
 
 # PDF pop-up window
  $windowp = Gtk2::Window -> new;
- $windowp -> set_border_width(10);
+ $windowp -> set_border_width($border_width);
  $windowp -> set_title ('Save as PDF');
  $windowp -> signal_connect (delete_event => sub {
   $windowp -> hide;
@@ -621,7 +620,7 @@ sub save_PDF {
  my $framem = Gtk2::Frame -> new('Metadata');
  $vbox -> pack_start ($framem, TRUE, TRUE, 0);
  my $vboxm = Gtk2::VBox -> new;
- $vboxm -> set_border_width(6);
+ $vboxm -> set_border_width($border_width);
  $framem -> add ($vboxm);
 
 # Date/time
@@ -629,8 +628,8 @@ sub save_PDF {
  $vboxm -> pack_start($hboxe, TRUE, TRUE, 0);
  my $labele = Gtk2::Label -> new ("Date");
  $hboxe -> pack_start ($labele, FALSE, FALSE, 0);
- if (! (defined($SETTING{'year'}) && defined($SETTING{'month'})
-                               && defined($SETTING{'day'}))) {
+ if (! (defined($SETTING{'year'}) and defined($SETTING{'month'})
+                               and defined($SETTING{'day'}))) {
   ($SETTING{'day'}, $SETTING{'month'}, $SETTING{'year'})
                                                        = (localtime())[3, 4, 5];
   $SETTING{'year'} += 1900;
@@ -641,7 +640,7 @@ sub save_PDF {
  $button -> signal_connect( clicked => sub {
   my $window = Gtk2::Window -> new;
   $window -> set_title ('Select Date' );
-  $window->set_border_width(5);
+  $window->set_border_width($border_width);
   $window->signal_connect( 'destroy' => sub { $window -> destroy; } );
   $window->set_resizable(FALSE);
   $window -> set_transient_for($windowp); # Assigns parent
@@ -747,7 +746,7 @@ sub save_PDF {
   });
   $o = $i
    if (defined($SETTING{'compression'})
-       && $compression eq $SETTING{'compression'});
+       and $compression eq $SETTING{'compression'});
   ++$i;
  }
  $optc -> set_menu ($menuc);
@@ -758,7 +757,7 @@ sub save_PDF {
  my $framep = Gtk2::Frame -> new('Page range');
  $vbox -> pack_start ($framep, TRUE, TRUE, 0);
  my $vboxp = Gtk2::VBox -> new;
- $vboxp -> set_border_width(6);
+ $vboxp -> set_border_width($border_width);
  $framep -> add ($vboxp);
 
 #the first radio button has to set the group,
@@ -933,7 +932,7 @@ sub save_PDF {
 
  $windowp -> show_all;
  $hboxq -> hide_all
-  if (! defined($SETTING{'compression'}) || $SETTING{'compression'} ne 'JPEG');
+  if (! defined($SETTING{'compression'}) or $SETTING{'compression'} ne 'JPEG');
 }
 
 
@@ -943,7 +942,7 @@ sub save_TIFF {
 
 # PDF pop-up window
  $windowt = Gtk2::Window -> new;
- $windowt -> set_border_width(10);
+ $windowt -> set_border_width($border_width);
  $windowt -> set_title ('Save as TIFF');
  $windowt -> signal_connect (delete_event => sub {
   $windowt -> hide;
@@ -959,7 +958,7 @@ sub save_TIFF {
  my $framep = Gtk2::Frame -> new('Page range');
  $vbox -> pack_start ($framep, TRUE, TRUE, 0);
  my $vboxp = Gtk2::VBox -> new;
- $vboxp -> set_border_width(6);
+ $vboxp -> set_border_width($border_width);
  $framep -> add ($vboxp);
 
 #the first radio button has to set the group,
@@ -1102,9 +1101,9 @@ sub scan_dialog {
  }
  my @output = `scanimage --list-devices 2>/dev/null`;
  if ($? eq 0) {
-  if ($#output > 1 && $output[0] =~ /^\s$/ 
-                   && $output[1] =~ /^No scanners were identified/
-                   && ! $test) {
+  if ($#output > 1 and $output[0] =~ /^\s$/ 
+                   and $output[1] =~ /^No scanners were identified/
+                   and ! $test) {
    my $dialog = Gtk2::MessageDialog -> new ($window,
                                            'destroy-with-parent',
                                            'error',
@@ -1117,7 +1116,7 @@ sub scan_dialog {
 
 # scan pop-up window
    $windows = Gtk2::Window -> new;
-   $windows -> set_border_width(10);
+   $windows -> set_border_width($border_width);
    $windows -> set_title ('Scan Document');
    $windows -> set_transient_for($window); # Assigns parent
    $windows -> signal_connect (delete_event => sub {
@@ -1180,14 +1179,14 @@ sub scan_dialog {
    $hboxd -> pack_end ($optd, FALSE, FALSE, 0);
 
 # If device not set by config and there is a default device, then set it
-   if (! defined($SETTING{"device"}) && $output =~ /default device is `(.*)'/) {
+   if (! defined($SETTING{"device"}) and $output =~ /default device is `(.*)'/) {
     $SETTING{"device"} = $1;
    }
 
 # If device in settings then set it
    if (defined($SETTING{"device"})) {
     my $i = 0;
-    ++$i while ($i <= $#device && $SETTING{"device"} ne $device[$i]);
+    ++$i while ($i <= $#device and $SETTING{"device"} ne $device[$i]);
     $optd -> set_history($i) if ($i <= $#device);
    }
    
@@ -1195,7 +1194,7 @@ sub scan_dialog {
    my $framen = Gtk2::Frame -> new('# Pages');
    $vbox -> pack_start ($framen, FALSE, FALSE, 0);
    my $vboxn = Gtk2::VBox -> new;
-   $vboxn -> set_border_width(6);
+   $vboxn -> set_border_width($border_width);
    $framen -> add ($vboxn);
 
 #the first radio button has to set the group,
@@ -1236,7 +1235,7 @@ sub scan_dialog {
    my $frames = Gtk2::Frame -> new('Source document');
    $vbox -> pack_start ($frames, FALSE, FALSE, 0);
    my $vboxs = Gtk2::VBox -> new;
-   $vboxs -> set_border_width(6);
+   $vboxs -> set_border_width($border_width);
    $frames -> add ($vboxs);
 
 # Single sided button
@@ -1271,7 +1270,7 @@ sub scan_dialog {
 # Frame for device-dependent options
    my $framed = Gtk2::Frame -> new('Device-dependent options');
    $vbox -> pack_start ($framed, FALSE, FALSE, 0);
-   $vboxd -> set_border_width(6);
+   $vboxd -> set_border_width($border_width);
    $framed -> add ($vboxd);
 
 # Dig the device-dependent options from --help --device-name
@@ -1312,7 +1311,7 @@ sub scan_dialog {
 
 # ignore artificial paper size option
          $SETTING{$key} = $widget -> get_label;
-         if ($widget -> isa('Gtk2::Label') && $key ne 'Paper size') {
+         if ($widget -> isa('Gtk2::Label') and $key ne 'Paper size') {
           $options{$key} = $SETTING{$key};
          }
         }
@@ -1369,8 +1368,8 @@ sub scan_dialog {
       my $i = 1;
       my $j = $#{$slist -> {data}};
       while ($slist->{data}[$j][0] != $start+$i*$step
-             && $start+$i*$step > 0
-             && $j > -1) {
+             and $start+$i*$step > 0
+             and $j > -1) {
        if ($slist->{data}[$j][0] > $start+$i*$step) {
         --$j;
        }
@@ -1411,8 +1410,8 @@ sub scan_dialog {
    $cbutton -> signal_connect( clicked => sub { $windows -> hide; } );
 
    $windows -> show_all;
-   if ($#paper > -1 ||
-       (defined($SETTING{"Paper size"}) && $SETTING{"Paper size"} ne "Custom")) {
+   if ($#paper > -1 or
+       (defined($SETTING{"Paper size"}) and $SETTING{"Paper size"} ne "Custom")) {
     $hboxc -> hide;
     $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
    }
@@ -1433,7 +1432,7 @@ sub scan {
 # Add device-specific options
  my ($key, $value);
  while (($key, $value) = each(%options)) {
-  if ($key eq 'x' || $key eq 'y') {
+  if ($key eq 'x' or $key eq 'y') {
    push @options, "-$key $value";
   }
   else {
@@ -1595,7 +1594,7 @@ sub import_scan {
 # $page[0] < $#{$slist -> {data}} needed to prevent infinite loop in case of
 # error importing.
  ++$page[0] while ($page[0] < $#{$slist -> {data}}
-                    && $slist -> {data}[$page[0]][0] != $i);
+                    and $slist -> {data}[$page[0]][0] != $i);
 
  $slist -> select(@page);
  return 1;
@@ -1704,7 +1703,7 @@ sub update_options {
  $x = $1 if ($output =~ /-x 0\.\.([0-9]*\.?[0-9]*)/);
  $y = $1 if ($output =~ /-y 0\.\.([0-9]*\.?[0-9]*)/);
 
- if (defined($x) && defined($y)) {
+ if (defined($x) and defined($y)) {
 
 # HBox for paper size
   my $hboxp = Gtk2::HBox -> new;
@@ -1728,7 +1727,7 @@ sub update_options {
 # can't use "for" because of the splices
   my $i = 0;
   while ($i <= $#paper) {
-   if ($x >= $x[$i] && $y >= $y[$i]) {
+   if ($x >= $x[$i] and $y >= $y[$i]) {
     my $item = Gtk2::MenuItem -> new ($paper[$i]);
     $item -> signal_connect (activate => sub {
      my $i = $optp -> get_history;
@@ -1766,7 +1765,7 @@ sub update_options {
   }
 
 # Set scan area from config if available
-  if (defined($SETTING{"x"}) && defined($SETTING{"y"})) {
+  if (defined($SETTING{"x"}) and defined($SETTING{"y"})) {
    $spin_buttonx -> set_value($SETTING{"x"});
    $spin_buttony -> set_value($SETTING{"y"});
   }
@@ -1815,8 +1814,16 @@ sub update_options {
    }
    $output = substr($output, index($output, "\n")+1, length($output));
   }
-  if ($option =~ /(^mode$|^resolution$|^batch-scan$|^wait-for-button$)/
-      && $default !~ /inactive/) {
+# batch-scan is HP
+# wait-for-button is Epson
+# button-wait is HP
+# source is various
+  if ($option =~ /(^mode$|^resolution$|^batch-scan$|^wait-for-button$|^button-wait$|^source$)/
+      and $default !~ /inactive/
+
+# This needed for psc1315, that only has one option for source.
+      and ($values =~ /([0-9]*\.?[0-9]*)\.\.([0-9]*\.?[0-9]*)/
+       or $values =~ /\|/)) {
 
 # Set default from config
    $default = $SETTING{$option} if (defined($SETTING{$option}));
@@ -1927,7 +1934,7 @@ sub quit {
  $SETTING{"thumb panel"} = $hpaned -> get_position;
 
 # Write config file
- open (CONFIG, "> $config") || die "Can't open config file $config";
+ open (CONFIG, "> $config") or die "Can't open config file $config";
  while (my ($key, $value) = each %SETTING) {
   print CONFIG "$key = $value\n";
  }
@@ -1944,7 +1951,8 @@ sub view_pod {
                                           'destroy-with-parent',
                                           'error',
                                           'close',
-                   "The help viewer requires module Gtk2::Ex::PodViewer");
+                        "The help viewer requires module Gtk2::Ex::PodViewer\n"
+                        ."Alternatively, try\n$program --help");
   $dialog -> run;
   $dialog -> destroy;
  }
@@ -1955,7 +1963,7 @@ sub view_pod {
 # Window
   $windowh = Gtk2::Window -> new;
   $windowh -> set_transient_for($window); # Assigns parent
-  $windowh -> signal_connect ( 'delete_event', sub {
+  $windowh -> signal_connect ( delete_event => sub {
    $windowh -> hide;
    return TRUE; # ensures that the window is not destroyed
   } );
@@ -1982,7 +1990,7 @@ sub view_pod {
 
 # Viewer
   my $viewer = Gtk2::Ex::PodViewer->new;
-  $viewer->set_border_width(2);
+  $viewer->set_border_width($border_width);
   $viewer->set_cursor_visible(FALSE);
   $viewer->signal_connect(link_clicked => \&link_clicked);
   $viewer->signal_connect('link_enter', sub { set_status("Go to $_[1]") });
@@ -2124,8 +2132,11 @@ These, naturally, depend on your scanner. They can include
 =item Batch-scan
 Guarantees that a "no documents" condition will be returned after the last scanned page, to prevent endless flatbed scans after a batch scan.
 
-=item Wait-for-button
+=item Wait-for-button/Button-wait
 After sending the scan command, wait until the button on the scanner is pressed before actually starting the scan process.
+
+=item Source
+Selects the document source. Possible options can include Flatbed or ADF.
 
 =back
 
