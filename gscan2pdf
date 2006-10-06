@@ -7,8 +7,6 @@
 # To do
 # 0. Add status line at bottom with messages like "filename saved"
 #    Add Gnome menu
-#    Use stock buttons where possible on dialogs
-#    Use FileChooser instead of file selector
 #    Rewrite menus with SimpleMenu to get same icons as buttons
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
@@ -20,20 +18,23 @@
 #    Fix blocking at:
 #      First opening scan window
 #      Changing device
+#      Importing
 #    Note in podviewer message about help from command line + information about
 #    package required. Or better still, work out how best to include package.
-# 1. Translations
-# 2. Progress meter for scans and imports.
-# 3. Rotate
-# 4. Crop and autocrop
-# 5. Look at OCR
+# 1. Implement right-click, following ItemFactory example tutorial/rightclick.pl
+# 2. Translations
+# 3. Progress meter for scans and imports.
+# 4. Rotate
+# 5. Crop and autocrop
+# 6. Look at OCR
 
 # Release procedure:
 # 1. Make tar dist
 # 2. Upload to sourceforge and release files
 # 3. Freshmeat
 # 4. Launchpad
-# 5. Ubuntu forum
+# 5. http://www.gtkfiles.org/app.php/gscan2pdf
+# 6. Ubuntu forum
 
 use warnings;
 use strict;
@@ -48,7 +49,7 @@ use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
 use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 
 my $program = "gscan2pdf";
-my $version = "0.7.2";
+my $version = "0.7.3";
 
 # Standard paper sizes
 my @paper = qw/A4 Letter/;
@@ -527,22 +528,17 @@ sub import {
 # cd back to cwd to get filename
  chdir $SETTING{"cwd"};
 
- my $fileselection = Gtk2::FileSelection -> new("Import scan from file");
- $fileselection -> set_transient_for($window); # Assigns parent
- $fileselection -> set_modal(TRUE);
- $fileselection -> set_select_multiple(TRUE);
+ my $file_chooser = Gtk2::FileChooserDialog -> new('Import scan from file',
+                                      $window, 'open',
+                                      'gtk-cancel' => 'cancel',
+                                      'gtk-ok' => 'ok');
+ $file_chooser -> set_select_multiple(TRUE);
 
 # cd back to tempdir to import
-  chdir $dir;
+ chdir $dir;
 
-# callback for OK button
- my $fs_ok_button = $fileselection -> ok_button;
- $fs_ok_button -> signal_connect(clicked => sub {
-
-# Get filename(s) for PDF
-  my @filename = $fileselection -> get_selections;
-
-  $fileselection -> destroy;
+ if ('ok' eq $file_chooser->run) {
+  my @filename = $file_chooser -> get_filenames;
 
   foreach my $filename (@filename) {
 
@@ -588,13 +584,9 @@ sub import {
    }
 
   }
- });
+ }
 
-# callback for cancel button
- my $fs_cancel_b = $fileselection -> cancel_button;
- $fs_cancel_b -> signal_connect(clicked => sub{ $fileselection -> destroy; });
-
- $fileselection -> show_all;
+ $file_chooser -> destroy;
 }
 
 
@@ -814,7 +806,7 @@ sub save_PDF {
  $vbox -> pack_start ($hboxb, TRUE, TRUE, 0);
 
 # Save button
- my $sbutton = Gtk2::Button -> new('Save');
+ my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
  $sbutton -> signal_connect (clicked => sub {
 
@@ -822,16 +814,15 @@ sub save_PDF {
   chdir $SETTING{"cwd"};
 
 # Set up file selector
-  my $fileselection = Gtk2::FileSelection -> new("PDF filename");
-  $fileselection -> set_transient_for($windowp); # Assigns parent
-  $fileselection -> set_modal(TRUE);
-  my $fs_ok_button = $fileselection -> ok_button;
+  my $file_chooser = Gtk2::FileChooserDialog -> new('PDF filename',
+                                                     $windowp, 'save',
+                                                     'gtk-cancel' => 'cancel',
+                                                     'gtk-save' => 'ok');
 
-# callback for OK button
-  $fs_ok_button -> signal_connect(clicked => sub {
-   my $filename = $fileselection -> get_filename;
+  if ('ok' eq $file_chooser->run) {
+   my $filename = $file_chooser -> get_filename;
    if (-e $filename) {
-    my $dialog = Gtk2::MessageDialog -> new ($fileselection,
+    my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
      'destroy-with-parent',
      'question', # message type
      'ok-cancel', # which set of buttons?
@@ -840,7 +831,6 @@ sub save_PDF {
     $dialog -> destroy;
     return 1 if ($response ne 'ok');
    }
-   $fileselection -> destroy;
 
 # Update cwd
    $SETTING{"cwd"} = dirname($filename);
@@ -913,13 +903,9 @@ sub save_PDF {
    }
   
    $windowp -> hide;
-  });
+  }
 
-# callback for cancel button
-  my $fs_cancel_b = $fileselection -> cancel_button;
-  $fs_cancel_b -> signal_connect(clicked => sub{ $fileselection -> destroy; });
-
-  $fileselection -> show_all;
+  $file_chooser -> destroy;
 
 # cd back to tempdir
   chdir $dir;
@@ -997,7 +983,7 @@ sub save_TIFF {
  $vbox -> pack_start ($hboxb, TRUE, TRUE, 0);
 
 # Save button
- my $sbutton = Gtk2::Button -> new('Save');
+ my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
  $sbutton -> signal_connect (clicked => sub {
 
@@ -1005,16 +991,15 @@ sub save_TIFF {
   chdir $SETTING{"cwd"};
 
 # Set up file selector
-  my $fileselection = Gtk2::FileSelection -> new("TIFF filename");
-  $fileselection -> set_transient_for($windowt); # Assigns parent
-  $fileselection -> set_modal(TRUE);
-  my $fs_ok_button = $fileselection -> ok_button;
+  my $file_chooser = Gtk2::FileChooserDialog -> new('TIFF filename',
+                                                     $windowt, 'save',
+                                                     'gtk-cancel' => 'cancel',
+                                                     'gtk-save' => 'ok');
 
-# callback for OK button
-  $fs_ok_button -> signal_connect(clicked => sub {
-   my $filename = $fileselection -> get_filename;
+  if ('ok' eq $file_chooser->run) {
+   my $filename = $file_chooser -> get_filename;
    if (-e $filename) {
-    my $dialog = Gtk2::MessageDialog -> new ($fileselection,
+    my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
      'destroy-with-parent',
      'question', # message type
      'ok-cancel', # which set of buttons?
@@ -1023,7 +1008,6 @@ sub save_TIFF {
     $dialog -> destroy;
     return 1 if ($response ne 'ok');
    }
-   $fileselection -> destroy;
 
 # Update cwd
    $SETTING{"cwd"} = dirname($filename);
@@ -1066,13 +1050,9 @@ sub save_TIFF {
    system ("tiffcp $pagelist \"$filename\"");
 
    $windowt -> hide;
-  });
+  }
 
-# callback for cancel button
-  my $fs_cancel_b = $fileselection -> cancel_button;
-  $fs_cancel_b -> signal_connect(clicked => sub{ $fileselection -> destroy; });
-
-  $fileselection -> show_all;
+  $file_chooser -> destroy;
  } );
 
 # Cancel button
@@ -1145,17 +1125,18 @@ sub scan_dialog {
 # parse out the device and model names
    my @device;
    if (! $test) {
-    $output = `scanimage --formatted-device-list="%i %d.%v %m;" 2>/dev/null`;
+    $output = `scanimage --formatted-device-list="'%i','%d','%v %m'
+" 2>/dev/null`;
 
-    my $device = substr($output, 0, index($output, ";")+1);
-    $output = substr($output, index($output, ";")+1, length($output));
-    while ($device =~ /([0-9]*) (.*)\.(.*);/) {
+    my $device = substr($output, 0, index($output, "\n")+1);
+    $output = substr($output, index($output, "\n")+1, length($output));
+    while ($device =~ /'([0-9]*)','(.*)','(.*)'/) {
      $device[$1] = $2;
 
 # Convert all underscores to spaces
      (my $model = $3) =~ s/_/ /g;
-     $device = substr($output, 0, index($output, ";")+1);
-     $output = substr($output, index($output, ";")+1, length($output));
+     $device = substr($output, 0, index($output, "\n")+1);
+     $output = substr($output, index($output, "\n")+1, length($output));
 
 # read the device names into the optionmenu
      my $item = Gtk2::MenuItem -> new ($model);
