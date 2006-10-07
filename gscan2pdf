@@ -15,12 +15,14 @@
 #    On quit or delete if page not saved put up dialog
 #    Put windows up in centre of parent
 #    Scanning window doesn't have a proper icon.
+#    Get scanimage calls down to minimum
 #    Fix blocking at:
 #      First opening scan window
 #      Changing device
 #      Importing
 #    Note in podviewer message about help from command line + information about
 #    package required. Or better still, work out how best to include package.
+#    Option to throw up PDF viewer with newly created PDF file
 # 1. Implement right-click, following ItemFactory example tutorial/rightclick.pl
 # 2. Translations
 # 3. Progress meter for scans and imports.
@@ -49,7 +51,7 @@ use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
 use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 
 my $program = "gscan2pdf";
-my $version = "0.7.3";
+my $version = "0.7.4";
 
 # Standard paper sizes
 my @paper = qw/A4 Letter/;
@@ -1273,7 +1275,8 @@ sub scan_dialog {
 
 # Get selected device
     $SETTING{"device"} = $device[$optd -> get_history];
-    my $device = "--device-name=$SETTING{'device'}";
+# inverted commas needed for strange characters in device name
+    my $device = "--device-name='$SETTING{'device'}'";
 
 # Get device-specific options
     my %options;
