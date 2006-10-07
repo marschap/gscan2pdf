@@ -51,7 +51,7 @@ use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
 use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 
 my $program = "gscan2pdf";
-my $version = "0.7.4";
+my $version = "0.7.5";
 
 # Standard paper sizes
 my @paper = qw/A4 Letter/;
@@ -1669,8 +1669,9 @@ sub update_options {
  my $output;
  if (defined($device)) {
 
-# Get output from scanimage
-  $output = `scanimage --help --device-name=$device`;
+# Get output from scanimage.
+# Inverted commas needed for strange characters in device name
+  $output = `scanimage --help --device-name='$device'`;
  }
  else {
 
