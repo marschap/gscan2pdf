@@ -7,9 +7,6 @@
 # To do
 # 0. Add status line at bottom with messages like "filename saved"
 #    Add Gnome menu
-#    Rewrite menus with SimpleMenu to get same icons as buttons
-#    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
-#      and    $tree_view->window->set_cursor (undef); when working.
 #    Add dialog whilst device-dependent options are being parsed
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
@@ -20,15 +17,18 @@
 #      First opening scan window
 #      Changing device
 #      Importing
-#    Note in podviewer message about help from command line + information about
+#    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
+#      and    $tree_view->window->set_cursor (undef); when working.
+#    Note in podviewer message about information on
 #    package required. Or better still, work out how best to include package.
 #    Option to throw up PDF viewer with newly created PDF file
-# 1. Implement right-click, following ItemFactory example tutorial/rightclick.pl
-# 2. Translations
-# 3. Progress meter for scans and imports.
-# 4. Rotate
-# 5. Crop and autocrop
-# 6. Look at OCR
+#    Finish website on sourceforge
+#    Add pot creation to Makefile
+# 1. Translations
+# 2. Progress meter for scans and imports.
+# 3. Rotate
+# 4. Crop and autocrop
+# 5. Look at OCR
 
 # Release procedure:
 # 1. Make tar dist
@@ -37,6 +37,12 @@
 # 4. Launchpad
 # 5. http://www.gtkfiles.org/app.php/gscan2pdf
 # 6. Ubuntu forum
+
+# Shell access to sourceforge:
+# ssh ra28145@shell.sf.net
+
+# On windows you need to install gtk+ runtime too :
+# http://prdownloads.sourceforge.net/gladewin32/gtk-win32-2.6.10-rc1.exe
 
 use warnings;
 use strict;
@@ -49,9 +55,10 @@ use File::Basename;                  # Split filename into dir, file, ext
 use File::Temp qw(tempfile tempdir); # To create temporary files
 use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
 use POSIX qw(locale_h);              # To sort out LC_NUMERIC
+use Locale::gettext;                 # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.7.5";
+my $version = "0.7.8";
 
 # Standard paper sizes
 my @paper = qw/A4 Letter/;
@@ -60,6 +67,9 @@ my @y = ( 297, 279.4 );
 
 # Window parameters
 my $border_width = 6;
+
+# Set up domain for gettext (internationalisation)
+my $d = Locale::gettext->domain($program);
 
 # Set up test mode and make sure file has absolute path
 my $test = FALSE;
@@ -74,10 +84,15 @@ while (defined($ARGV[0])) {
   system("perldoc $0");
   exit;
  }
+ else {
+  warn $d->get('Unknown option'), " $ARGV[0]\n";
+  exit 1;
+ }
 }
 
 if (check_utils()) {
- print "$program requires the libtiff library.\nPlease install it.\n";
+ print "$program ",
+  $d->get('requires the libtiff library.\nPlease install it.'), "\n";
  exit 1;
 }
 
@@ -89,7 +104,7 @@ setlocale(LC_NUMERIC, "C");
 my $config = "$ENV{'HOME'}/.$program";
 my %SETTING;
 if (-r $config) {
- open CONFIG, $config or die "Can't open config file $config";
+ open CONFIG, $config or die $d->get("Can't open config file"). " $config";
 
  while (<CONFIG>) {
   chomp;			# no newline
@@ -108,79 +123,113 @@ if (-r $config) {
 my ($windowp, $windowt, $windows, $windowh, $slist);
 
 # Define the menu items for ItemFactory
-my @menu_items = ( { path        => '/_File',
+my @menu_items = ( { path        => '/'.$d->get('_File'),
 		     item_type   => '<Branch>' },
-		   { path        => '/File/_New',
+		   { path        => '/'.$d->get('File').'/'.$d->get('_New'),
 		     accelerator => '<control>n',
-		     callback    => \&new },
-		   { path        => '/File/_Import',
+		     callback    => \&new,
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-new'},
+		   { path        => '/'.$d->get('File').'/'.$d->get('_Import'),
 		     accelerator => '<control>i',
-		     callback    => \&import },
-		   { path        => '/File/Sca_n',
+		     callback    => \&import,
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-open'},
+		   { path        => '/'.$d->get('File').'/'.$d->get('Sca_n'),
 		     callback    => sub { if (defined($windows)) {
                                            $windows -> present;
                                           }
                                           else {
                                            scan_dialog();
-                                          } } },
-		   { path        => '/File/_Save PDF',
+                                          } },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-print-preview'},
+		   { path        => '/'.$d->get('File').'/'
+		                       .$d->get('_Save PDF'),
 		     accelerator => '<control>s',
 		     callback    => sub { if (defined($windowp)) {
                                            $windowp -> present;
                                           }
                                           else {
                                            save_PDF();
-                                          } } },
-		   { path        => '/File/Save _TIFF',
+                                          } },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-save-as'},
+		   { path        => '/'.$d->get('File').'/'
+		                       .$d->get('Save _TIFF'),
 		     accelerator => '<control>t',
 		     callback    => sub { if (defined($windowt)) {
                                            $windowt -> present;
                                           }
                                           else {
                                            save_TIFF();
-                                          } } },
-		   { path        => '/File/sep1',
+                                          } },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-save'},
+		   { path        => '/'.$d->get('File').'/sep',
 		     item_type   => '<Separator>' },
-		   { path        => '/File/_Quit',
+		   { path        => '/'.$d->get('File').'/'.$d->get('_Quit'),
 		     accelerator => '<control>q',
-		     callback    => sub { quit(); Gtk2 -> main_quit; } },
+		     callback    => sub { quit(); Gtk2 -> main_quit; },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-quit' },
 
-		   { path        => '/_Edit',
+		   { path        => '/'.$d->get('_Edit'),
 		     item_type   => '<Branch>' },
-		   { path        => '/Edit/_Delete',
+		   { path        => '/'.$d->get('Edit').'/'.$d->get('_Delete'),
 		     accelerator => 'Delete',
-		     callback    => \&delete_pages },
-		   { path        => '/Edit/_Renumber',
+		     callback    => \&delete_pages,
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-delete'},
+		   { path        => '/'.$d->get('Edit').'/'
+		                       .$d->get('_Renumber'),
 		     accelerator => '<control>r',
-		     callback    => sub { renumber($slist, 0, 1, 1); } },
-		   { path        => '/Edit/Select _All',
+		     callback    => sub { renumber($slist, 0, 1, 1); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-sort-ascending' },
+		   { path        => '/'.$d->get('Edit').'/'
+		                       .$d->get('Select _All'),
 		     accelerator => '<control>a',
-		     callback    => \&select_all },
+		     callback    => \&select_all,
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-select-all' },
 
-		   { path        => '/_View',
+		   { path        => '/'.$d->get('_View'),
 		     item_type   => '<Branch>' },
-		   { path        => '/View/Zoom _100%',
-		     callback    => sub { zoom_button('100%'); } },
-		   { path        => '/View/Zoom to _fit',
-		     callback    => sub { zoom_button('fit'); } },
-		   { path        => '/View/Zoom _in',
+		   { path        => '/'.$d->get('View').'/'
+		                       .$d->get('Zoom _100%'),
+		     callback    => sub { zoom_button('100%'); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-zoom-100'},
+		   { path        => '/'.$d->get('View').'/'
+		                       .$d->get('Zoom to _fit'),
+		     callback    => sub { zoom_button('fit'); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-zoom-fit'},
+		   { path        => '/'.$d->get('View').'/'.$d->get('Zoom _in'),
 		     accelerator => 'plus',
-		     callback    => sub { zoom_button('in'); } },
-		   { path        => '/View/Zoom _out',
+		     callback    => sub { zoom_button('in'); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-zoom-in'},
+		   { path        => '/'.$d->get('View').'/'.$d->get('Zoom _out'),
 		     accelerator => 'minus',
-		     callback    => sub { zoom_button('out'); } },
+		     callback    => sub { zoom_button('out'); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-zoom-out'},
 
-		   { path        => '/_Help',
+		   { path        => '/'.$d->get('_Help'),
 		     item_type   => '<LastBranch>' },
-		   { path        => '/Help/_Help',
+		   { path        => '/'.$d->get('Help').'/'.$d->get('_Help'),
 		     accelerator => '<control>h',
 		     callback    => sub { if (defined($windowh)) {
                                            $windowh -> present;
                                           }
                                           else {
                                            view_pod();
-                                          } } },
-		   { path        => '/Help/_About',
+                                          } },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-help' },
+		   { path        => '/'.$d->get('Help').'/'.$d->get('_About'),
 		     callback    => \&about } );
 
 # Create the window
@@ -327,6 +376,9 @@ $slist->signal_connect (drag_end => sub {
  return 0;
 });
 
+# Set up callback for right mouse clicks.
+$slist->signal_connect(button_press_event => \&handle_clicks);
+
 $slist -> get_selection -> set_mode ('multiple');
 $slist -> set_headers_visible(FALSE);
 $slist -> set_reorderable( TRUE );
@@ -355,11 +407,7 @@ $hpaned -> pack2 ($scwin_detail, TRUE, TRUE);
 $scwin_detail -> set_policy ('automatic', 'automatic');
 
 # Globally define the $image variables for $scwin_detail
-my $image;
-my $scale;
-my $src_pixbuf;
-my $widthi;
-my $heighti;
+my ($image, $eventbox, $scale, $src_pixbuf, $widthi, $heighti);
 
 # Globally define the custom paper box.
 my $hboxc;
@@ -372,6 +420,7 @@ $slist -> get_selection -> signal_connect(changed => sub {
  if (defined($scwin_detail -> child)) {
   my $viewport = $image -> get_parent;
   $image -> destroy;
+  $eventbox -> destroy;
   $viewport -> destroy;
  }
 
@@ -404,7 +453,12 @@ $slist -> get_selection -> signal_connect(changed => sub {
   zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
   $image -> set_from_pixbuf($pixbuf);
 
-  $scwin_detail -> add_with_viewport($image);
+# Need to pack the image in an eventbox to get it to respond to mouse clicks
+  $eventbox = Gtk2::EventBox -> new;
+  $eventbox -> add ( $image );
+  $eventbox->signal_connect(button_press_event => \&handle_clicks);
+
+  $scwin_detail -> add_with_viewport($eventbox);
   $scwin_detail -> show_all;
  }
 });
@@ -459,6 +513,7 @@ sub zoom_button {
  if (defined($scwin_detail) and defined($scwin_detail -> child)) {
   my $viewport = $image -> get_parent;
   $image -> destroy;
+  $eventbox -> destroy;
   $viewport -> destroy;
   if ($button eq '100%') {
    $scale = 1;
@@ -482,7 +537,12 @@ sub zoom_button {
   zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
   $image -> set_from_pixbuf($pixbuf);
 
-  $scwin_detail -> add_with_viewport($image);
+# Need to pack the image in an eventbox to get it to respond to mouse clicks
+  $eventbox = Gtk2::EventBox -> new;
+  $eventbox -> add ( $image );
+  $eventbox->signal_connect(button_press_event => \&handle_clicks);
+
+  $scwin_detail -> add_with_viewport($eventbox);
   $scwin_detail -> show_all;
  }
 }
@@ -503,8 +563,8 @@ sub zoom_pixbuf {
 sub new {
  my $dialog = Gtk2::MessageDialog -> new ($window, 'destroy-with-parent',
                      'warning', 'ok-cancel',
-                     "This will clear the list of scanned images.\n"
-                     . "Do you want to continue?");
+                     $d->get("This will clear the list of scanned images.\n"
+                     . "Do you want to continue?"));
  if ($dialog -> run eq 'ok') {
 
 # Remove any image in the detail window
@@ -530,7 +590,8 @@ sub import {
 # cd back to cwd to get filename
  chdir $SETTING{"cwd"};
 
- my $file_chooser = Gtk2::FileChooserDialog -> new('Import scan from file',
+ my $file_chooser = Gtk2::FileChooserDialog -> new(
+                                      $d->get('Import scan from file'),
                                       $window, 'open',
                                       'gtk-cancel' => 'cancel',
                                       'gtk-ok' => 'ok');
@@ -554,12 +615,12 @@ sub import {
                                             'destroy-with-parent',
                                             'error',
                                             'close',
-                                            "Not a TIFF file");
+                                            $d->get('Not a TIFF file'));
     $dialog -> run;
     $dialog -> destroy;
    }
    else {
-    my $dialog = Gtk2::Dialog -> new ("Importing...", $window,
+    my $dialog = Gtk2::Dialog -> new ($d->get('Importing')."...", $window,
                                       'destroy-with-parent',
                                       'gtk-cancel' => 'cancel');
 
@@ -599,7 +660,7 @@ sub save_PDF {
 # PDF pop-up window
  $windowp = Gtk2::Window -> new;
  $windowp -> set_border_width($border_width);
- $windowp -> set_title ('Save as PDF');
+ $windowp -> set_title ($d->get('Save as PDF'));
  $windowp -> signal_connect (delete_event => sub {
   $windowp -> hide;
   return TRUE; # ensures that the window is not destroyed
@@ -611,7 +672,7 @@ sub save_PDF {
  $windowp -> add ($vbox);
 
 # Frame for metadata
- my $framem = Gtk2::Frame -> new('Metadata');
+ my $framem = Gtk2::Frame -> new($d->get('Metadata'));
  $vbox -> pack_start ($framem, TRUE, TRUE, 0);
  my $vboxm = Gtk2::VBox -> new;
  $vboxm -> set_border_width($border_width);
@@ -620,7 +681,7 @@ sub save_PDF {
 # Date/time
  my $hboxe = Gtk2::HBox -> new;
  $vboxm -> pack_start($hboxe, TRUE, TRUE, 0);
- my $labele = Gtk2::Label -> new ("Date");
+ my $labele = Gtk2::Label -> new ($d->get('Date'));
  $hboxe -> pack_start ($labele, FALSE, FALSE, 0);
  if (! (defined($SETTING{'year'}) and defined($SETTING{'month'})
                                and defined($SETTING{'day'}))) {
@@ -633,7 +694,7 @@ sub save_PDF {
                       new("$SETTING{'year'}/$SETTING{'month'}/$SETTING{'day'}");
  $button -> signal_connect( clicked => sub {
   my $window = Gtk2::Window -> new;
-  $window -> set_title ('Select Date' );
+  $window -> set_title ($d->get('Select Date'));
   $window->set_border_width($border_width);
   $window->signal_connect( 'destroy' => sub { $window -> destroy; } );
   $window->set_resizable(FALSE);
@@ -657,13 +718,13 @@ sub save_PDF {
 
   $window -> show_all;
  } );
- $tooltips -> set_tip ($button, 'Year/Month/Day');
+ $tooltips -> set_tip ($button, $d->get('Year/Month/Day'));
  $hboxe -> pack_end( $button, TRUE, TRUE, 0 );
 
 # Document author
  my $hboxa = Gtk2::HBox -> new;
  $vboxm -> pack_start($hboxa, TRUE, TRUE, 0);
- my $labela = Gtk2::Label -> new ("Document author");
+ my $labela = Gtk2::Label -> new ($d->get('Document author'));
  $hboxa -> pack_start ($labela, FALSE, FALSE, 0);
  my $entrya = Gtk2::Entry -> new;
  $hboxa -> pack_end( $entrya, TRUE, TRUE, 0 );
@@ -672,7 +733,7 @@ sub save_PDF {
 # Title
  my $hboxt = Gtk2::HBox -> new;
  $vboxm -> pack_start($hboxt, TRUE, TRUE, 0);
- my $labelt = Gtk2::Label -> new ("Title");
+ my $labelt = Gtk2::Label -> new ($d->get('Title'));
  $hboxt -> pack_start ($labelt, FALSE, FALSE, 0);
  my $entryt = Gtk2::Entry -> new;
  $hboxt -> pack_end( $entryt, TRUE, TRUE, 0 );
@@ -681,7 +742,7 @@ sub save_PDF {
 # Subject
  my $hboxs = Gtk2::HBox -> new;
  $vboxm -> pack_start($hboxs, TRUE, TRUE, 0);
- my $labels = Gtk2::Label -> new ("Subject");
+ my $labels = Gtk2::Label -> new ($d->get('Subject'));
  $hboxs -> pack_start ($labels, FALSE, FALSE, 0);
  my $entrys = Gtk2::Entry -> new;
  $hboxs -> pack_end( $entrys, TRUE, TRUE, 0 );
@@ -690,7 +751,7 @@ sub save_PDF {
 # Keywords
  my $hboxk = Gtk2::HBox -> new;
  $vboxm -> pack_start($hboxk, TRUE, TRUE, 0);
- my $labelk = Gtk2::Label -> new ("Keywords");
+ my $labelk = Gtk2::Label -> new ($d->get('Keywords'));
  $hboxk -> pack_start ($labelk, FALSE, FALSE, 0);
  my $entryk = Gtk2::Entry -> new;
  $hboxk -> pack_end( $entryk, TRUE, TRUE, 0 );
@@ -705,7 +766,7 @@ sub save_PDF {
 # Compression optionmenu
  my $hboxc = Gtk2::HBox -> new;
  $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
- my $label = Gtk2::Label -> new ("Compression");
+ my $label = Gtk2::Label -> new ($d->get('Compression'));
  $hboxc -> pack_start ($label, FALSE, FALSE, 0);
  my $optc = Gtk2::OptionMenu -> new;
  my $menuc = Gtk2::Menu -> new;
@@ -713,7 +774,7 @@ sub save_PDF {
 # Set up quality spinbutton here so that it can be shown or hidden by callback
  my $hboxq = Gtk2::HBox -> new;
  $vbox -> pack_start($hboxq, TRUE, TRUE, 0);
- $label = Gtk2::Label -> new ("JPEG Quality");
+ $label = Gtk2::Label -> new ($d->get('JPEG Quality'));
  $hboxq -> pack_start ($label, FALSE, FALSE, 0);
  my $spinbuttonq = Gtk2::SpinButton -> new_with_range(1, 100, 1);
  if (defined($SETTING{'quality'})) {
@@ -748,7 +809,7 @@ sub save_PDF {
  $hboxc -> pack_end ($optc, FALSE, FALSE, 0);
 
 # Frame for page range
- my $framep = Gtk2::Frame -> new('Page range');
+ my $framep = Gtk2::Frame -> new($d->get('Page range'));
  $vbox -> pack_start ($framep, TRUE, TRUE, 0);
  my $vboxp = Gtk2::VBox -> new;
  $vboxp -> set_border_width($border_width);
@@ -757,16 +818,16 @@ sub save_PDF {
 #the first radio button has to set the group,
 #which is undef for the first button
 # All button
- my $buttona = Gtk2::RadioButton -> new(undef, "All");
+ my $buttona = Gtk2::RadioButton -> new(undef, $d->get('All'));
  $vboxp -> pack_start($buttona, TRUE, TRUE, 0);
  my @group = $buttona -> get_group;
 
 # Current button
- my $buttonc = Gtk2::RadioButton -> new(@group, "Current");
+ my $buttonc = Gtk2::RadioButton -> new(@group, $d->get('Current'));
  $vboxp -> pack_start($buttonc, TRUE, TRUE, 0);
 
 # Selected button
- my $buttons = Gtk2::RadioButton -> new(@group, "Selected");
+ my $buttons = Gtk2::RadioButton -> new(@group, $d->get('Selected'));
  $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
 
 # Set default
@@ -816,7 +877,7 @@ sub save_PDF {
   chdir $SETTING{"cwd"};
 
 # Set up file selector
-  my $file_chooser = Gtk2::FileChooserDialog -> new('PDF filename',
+  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('PDF filename'),
                                                      $windowp, 'save',
                                                      'gtk-cancel' => 'cancel',
                                                      'gtk-save' => 'ok');
@@ -828,7 +889,7 @@ sub save_PDF {
      'destroy-with-parent',
      'question', # message type
      'ok-cancel', # which set of buttons?
-     "File $filename exists.\nReally overwrite?");
+     $d->get('File') . " $filename " . $d->get("exists.\nReally overwrite?"));
     my $response = $dialog -> run;
     $dialog -> destroy;
     return 1 if ($response ne 'ok');
@@ -931,7 +992,7 @@ sub save_TIFF {
 # PDF pop-up window
  $windowt = Gtk2::Window -> new;
  $windowt -> set_border_width($border_width);
- $windowt -> set_title ('Save as TIFF');
+ $windowt -> set_title ($d->get('Save as TIFF'));
  $windowt -> signal_connect (delete_event => sub {
   $windowt -> hide;
   return TRUE; # ensures that the window is not destroyed
@@ -943,7 +1004,7 @@ sub save_TIFF {
  $windowt -> add ($vbox);
 
 # Frame for page range
- my $framep = Gtk2::Frame -> new('Page range');
+ my $framep = Gtk2::Frame -> new($d->get('Page range'));
  $vbox -> pack_start ($framep, TRUE, TRUE, 0);
  my $vboxp = Gtk2::VBox -> new;
  $vboxp -> set_border_width($border_width);
@@ -952,16 +1013,16 @@ sub save_TIFF {
 #the first radio button has to set the group,
 #which is undef for the first button
 # All button
- my $buttona = Gtk2::RadioButton -> new(undef, "All");
+ my $buttona = Gtk2::RadioButton -> new(undef, $d->get('All'));
  $vboxp -> pack_start($buttona, TRUE, TRUE, 0);
  my @group = $buttona -> get_group;
 
 # Current button
- my $buttonc = Gtk2::RadioButton -> new(@group, "Current");
+ my $buttonc = Gtk2::RadioButton -> new(@group, $d->get('Current'));
  $vboxp -> pack_start($buttonc, TRUE, TRUE, 0);
 
 # Selected button
- my $buttons = Gtk2::RadioButton -> new(@group, "Selected");
+ my $buttons = Gtk2::RadioButton -> new(@group, $d->get('Selected'));
  $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
 
 # Set default
@@ -993,7 +1054,7 @@ sub save_TIFF {
   chdir $SETTING{"cwd"};
 
 # Set up file selector
-  my $file_chooser = Gtk2::FileChooserDialog -> new('TIFF filename',
+  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('TIFF filename'),
                                                      $windowt, 'save',
                                                      'gtk-cancel' => 'cancel',
                                                      'gtk-save' => 'ok');
@@ -1005,7 +1066,7 @@ sub save_TIFF {
      'destroy-with-parent',
      'question', # message type
      'ok-cancel', # which set of buttons?
-     "File $filename exists.\nReally overwrite?");
+     $d->get('File') . " $filename " . $d->get("exists.\nReally overwrite?"));
     my $response = $dialog -> run;
     $dialog -> destroy;
     return 1 if ($response ne 'ok');
@@ -1076,7 +1137,7 @@ sub scan_dialog {
                                           'destroy-with-parent',
                                           'error',
                                           'close',
-                                          "scanimage not found");
+                                          $d->get('scanimage not found'));
   $dialog -> run;
   $dialog -> destroy;
   return 0;
@@ -1090,7 +1151,7 @@ sub scan_dialog {
                                            'destroy-with-parent',
                                            'error',
                                            'close',
-                                           "No scanners found");
+                                           $d->get('No scanners found'));
    $dialog -> run;
    $dialog -> destroy;
   }
@@ -1099,7 +1160,7 @@ sub scan_dialog {
 # scan pop-up window
    $windows = Gtk2::Window -> new;
    $windows -> set_border_width($border_width);
-   $windows -> set_title ('Scan Document');
+   $windows -> set_title ($d->get('Scan Document'));
    $windows -> set_transient_for($window); # Assigns parent
    $windows -> signal_connect (delete_event => sub {
     $windows -> hide;
@@ -1115,7 +1176,7 @@ sub scan_dialog {
    $vbox -> pack_start ($hboxd, FALSE, FALSE, 0);
 
 # device list
-   my $labeld = Gtk2::Label -> new ("Device");
+   my $labeld = Gtk2::Label -> new ($d->get('Device'));
    $hboxd -> pack_start ($labeld, FALSE, FALSE, 0);
 
    my $optd = Gtk2::OptionMenu -> new;
@@ -1145,6 +1206,12 @@ sub scan_dialog {
      $item -> signal_connect (activate => sub {
       update_options($vboxd, $device[$optd -> get_history]);
       $vboxd -> show_all;
+      if ($#paper > -1 or (defined($SETTING{"Paper size"})
+                            and $SETTING{"Paper size"} ne "Custom")) {
+# Not defined if scanner has no paper size (like my video grabber)
+       $hboxc -> hide if (defined $hboxc);
+       $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
+      }
      });
      $menud -> append ($item);
     }
@@ -1154,6 +1221,12 @@ sub scan_dialog {
     $item -> signal_connect (activate => sub {
      update_options($vboxd, undef);
      $vboxd -> show_all;
+     if ($#paper > -1 or (defined($SETTING{"Paper size"})
+                           and $SETTING{"Paper size"} ne "Custom")) {
+# Not defined if scanner has no paper size (like my video grabber)
+      $hboxc -> hide if (defined $hboxc);
+      $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
+     }
     });
     $menud -> append ($item);
     push @device, basename($test);
@@ -1174,7 +1247,7 @@ sub scan_dialog {
    }
    
 # Frame for # pages
-   my $framen = Gtk2::Frame -> new('# Pages');
+   my $framen = Gtk2::Frame -> new($d->get('# Pages'));
    $vbox -> pack_start ($framen, FALSE, FALSE, 0);
    my $vboxn = Gtk2::VBox -> new;
    $vboxn -> set_border_width($border_width);
@@ -1183,7 +1256,7 @@ sub scan_dialog {
 #the first radio button has to set the group,
 #which is undef for the first button
 # All button
-   my $buttona = Gtk2::RadioButton -> new(undef, "All");
+   my $buttona = Gtk2::RadioButton -> new(undef, $d->get('All'));
    $vboxn -> pack_start($buttona, TRUE, TRUE, 0);
    my @groupn = $buttona -> get_group;
 
@@ -1215,26 +1288,26 @@ sub scan_dialog {
    }
 
 # Frame for source document
-   my $frames = Gtk2::Frame -> new('Source document');
+   my $frames = Gtk2::Frame -> new($d->get('Source document'));
    $vbox -> pack_start ($frames, FALSE, FALSE, 0);
    my $vboxs = Gtk2::VBox -> new;
    $vboxs -> set_border_width($border_width);
    $frames -> add ($vboxs);
 
 # Single sided button
-   my $buttons = Gtk2::RadioButton -> new(undef, "Single sided");
+   my $buttons = Gtk2::RadioButton -> new(undef, $d->get('Single sided'));
    $vboxs -> pack_start($buttons, TRUE, TRUE, 0);
    $buttons -> set_active(TRUE);
    my @groups = $buttons -> get_group;
 
 # Double sided button
-   my $buttond = Gtk2::RadioButton -> new(@groups, "Double sided");
+   my $buttond = Gtk2::RadioButton -> new(@groups, $d->get('Double sided'));
    $vboxs -> pack_start($buttond, FALSE, FALSE, 0);
 
 # Facing/reverse page button
    my $hboxs = Gtk2::HBox -> new;
    $vboxs -> pack_start($hboxs, TRUE, TRUE, 0);
-   my $labels = Gtk2::Label -> new ("Side to scan");
+   my $labels = Gtk2::Label -> new ($d->get('Side to scan'));
    $hboxs -> pack_start($labels, TRUE, TRUE, 0);
 
    my $opts = Gtk2::OptionMenu -> new;
@@ -1242,7 +1315,7 @@ sub scan_dialog {
    my @side = qw/Facing Reverse/;
    foreach (@side) {
     my $item = Gtk2::MenuItem -> new ($_);
-    $item -> signal_connect ('activate' => sub {
+    $item -> signal_connect (activate => sub {
      $buttond -> set_active(TRUE); # Set the radiobutton active
     });
     $menus -> append ($item);
@@ -1251,7 +1324,7 @@ sub scan_dialog {
    $hboxs -> pack_end ($opts, FALSE, FALSE, 0);
 
 # Frame for device-dependent options
-   my $framed = Gtk2::Frame -> new('Device-dependent options');
+   my $framed = Gtk2::Frame -> new($d->get('Device-dependent options'));
    $vbox -> pack_start ($framed, FALSE, FALSE, 0);
    $vboxd -> set_border_width($border_width);
    $framed -> add ($vboxd);
@@ -1269,7 +1342,7 @@ sub scan_dialog {
    $vbox -> pack_end ($hboxb, FALSE, FALSE, 0);
 
 # Scan button
-   my $sbutton = Gtk2::Button -> new('Scan');
+   my $sbutton = Gtk2::Button -> new($d->get('Scan'));
    $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
    $sbutton -> signal_connect (clicked => sub {
 
@@ -1340,7 +1413,7 @@ sub scan_dialog {
         'destroy-with-parent',
         'error', # message type
         'cancel', # which set of buttons?
-        "Must scan facing pages first");
+        $d->get('Must scan facing pages first'));
        $dialog -> run;
        $dialog -> destroy;
        return 1;
@@ -1367,7 +1440,7 @@ sub scan_dialog {
          'destroy-with-parent',
          'error', # message type
          'cancel', # which set of buttons?
-         "Cannot scan more reverse pages\nthan facing pages");
+         $d->get("Cannot scan more reverse pages\nthan facing pages"));
         $dialog -> run;
         $dialog -> destroy;
         return 1;
@@ -1393,10 +1466,12 @@ sub scan_dialog {
    $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
    $cbutton -> signal_connect( clicked => sub { $windows -> hide; } );
 
+# Show window, hiding the custom hbox and sizing if necessary
    $windows -> show_all;
    if ($#paper > -1 or
        (defined($SETTING{"Paper size"}) and $SETTING{"Paper size"} ne "Custom")) {
-    $hboxc -> hide;
+# Not defined if scanner has no paper size (like my video grabber)
+    $hboxc -> hide if (defined $hboxc);
     $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
    }
   }
@@ -1420,7 +1495,7 @@ sub scan {
    push @options, "-$key $value";
   }
   else {
-   push @options, "--$key=$value";
+   push @options, "--$key='$value'";
   }
  }
 
@@ -1437,10 +1512,10 @@ sub scan {
   my $error = IO::Handle -> new; # this needed because of a bug in open3.
   my $pid = open3($write, $read, $error, $cmd);
   
-  my $dialog = Gtk2::Dialog -> new ("Scanning...", $windows,
+  my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
                                     'destroy-with-parent',
                                     'gtk-cancel' => 'cancel');
-  my $label = Gtk2::Label -> new ("Scanning...");
+  my $label = Gtk2::Label -> new ($d->get('Scanning')."...");
   $dialog -> vbox -> add ($label);
 
 # Ensure that the dialog box is destroyed when the user responds.
@@ -1458,10 +1533,10 @@ sub scan {
    $line = $line . $buffer; # needed to cover case where line is broken in middle
    while ($line =~ /\n/) {
     if ($line =~ /^Scanning (-?[0-9]*) pages/) {
-     $label -> set_text("Scanning $1 pages...");
+     $label -> set_text($d->get('Scanning')." $1 ".$d->get('pages')."...");
     }
     elsif ($line =~ /^Scanning page ([0-9]*)/) {
-     $label -> set_text("Scanning page $1...");
+     $label -> set_text($d->get('Scanning page')." $1...");
     }
     elsif ($line =~ /^Scanned page ([0-9]*)\. \(scanner status = 5\)/) {
 
@@ -1470,7 +1545,7 @@ sub scan {
      if (! import_scan ("out$1.tif")) {
       $dialog -> destroy;
       $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
-                        'error', 'close', 'Unable to load image');
+                        'error', 'close', $d->get('Unable to load image'));
       $dialog -> run;
       $dialog -> destroy;
       return 0;
@@ -1486,9 +1561,13 @@ sub scan {
     elsif ($line =~ /^scanimage: sane_start: Document feeder out of documents/) {
      ;
     }
+    elsif ($line =~ /^scanimage: rounded/) {
+     warn substr($line, 0, index($line, "\n")+1);
+    }
     else {
      $dialog -> destroy;
-     my $text = "Unknown message: " . substr($line, 0, index($line, "\n"));
+     my $text = $d->get('Unknown message: ')
+                                        . substr($line, 0, index($line, "\n"));
 warn "$text\n";
      $dialog = Gtk2::MessageDialog -> new ($windows,
                                               'destroy-with-parent',
@@ -1497,7 +1576,6 @@ warn "$text\n";
                                               $text);
      $dialog -> run;
      $dialog -> destroy;
-     return 0;
     }
     $line = substr($line, index($line, "\n")+1, length($line));
    }
@@ -1530,13 +1608,13 @@ sub import_scan {
 #  recover_from_a_flop ();
 # }
  if ($@) {
-  warn "Warning: $@\n";
+  warn $d->get('Warning: ')."$@\n";
   eval { $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename); };
   if ($@) {
    return 0;
   }
   else {
-   warn "Information: got $filename on second attempt\n";
+   warn $d->get('Information: got')." $filename ".$d->get("on second attempt\n");
   }
  }
 
@@ -1636,9 +1714,9 @@ sub select_all {
 sub about {
  my $dialog = Gtk2::MessageDialog -> new ($window, 'destroy-with-parent',
                      'info', 'ok', "$program v$version\n\n"
-                     . "To aid the scan-to-PDF process.\n\n"
-                     . "Copyright Jeff Ratcliffe\n"
-                     . "Licensed under the GPLv2");
+                     . $d->get("To aid the scan-to-PDF process").".\n\n"
+                     . $d->get("Copyright")." Jeff Ratcliffe\n"
+                     . $d->get("Licensed under the GPLv2"));
  $dialog -> run;
  $dialog -> destroy;
 }
@@ -1695,7 +1773,7 @@ sub update_options {
   $vboxd -> pack_start ($hboxp, FALSE, FALSE, 0);
 
 # Paper list
-  my $labelp = Gtk2::Label -> new ("Paper size");
+  my $labelp = Gtk2::Label -> new ($d->get('Paper size'));
   $hboxp -> pack_start ($labelp, FALSE, FALSE, 0);
 
   my $optp = Gtk2::OptionMenu -> new;
@@ -1705,8 +1783,8 @@ sub update_options {
   $hboxc = Gtk2::HBox -> new;
   my $spin_buttonx = Gtk2::SpinButton -> new_with_range(0, $x, 1);
   my $spin_buttony = Gtk2::SpinButton -> new_with_range(0, $y, 1);
-  $tooltips -> set_tip ($spin_buttonx, 'Width of scan-area');
-  $tooltips -> set_tip ($spin_buttony, 'Height of scan-area');
+  $tooltips -> set_tip ($spin_buttonx, $d->get('Width of scan-area'));
+  $tooltips -> set_tip ($spin_buttony, $d->get('Height of scan-area'));
 
 # Add paper size to optionmenu if scanner large enough
 # can't use "for" because of the splices
@@ -1734,7 +1812,7 @@ sub update_options {
   }
 
 # Add custom option
-  my $item = Gtk2::MenuItem -> new ('Custom');
+  my $item = Gtk2::MenuItem -> new ($d->get('Custom'));
   $item -> signal_connect (activate => sub { $hboxc -> show_all; });
   $menup -> append ($item);
   $optp -> set_menu ($menup);
@@ -1905,6 +1983,104 @@ sub renumber {
 }
 
 
+# Handle right-clicks
+
+sub handle_clicks {
+ my ($widget, $event) = @_;
+
+ if ($event->button eq 3) {
+
+  my $item_factory = Gtk2::ItemFactory->new("Gtk2::Menu", '<main>', undef);
+  my $popup_menu = $item_factory->get_widget('<main>');
+
+  my @menu_items;
+  if ($widget->isa('Gtk2::EventBox'))  { # main image
+   @menu_items = (
+		   { path        => '/'.$d->get('Zoom _100%'),
+		     callback    => sub { zoom_button('100%'); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-zoom-100'},
+		   { path        => '/'.$d->get('Zoom to _fit'),
+		     callback    => sub { zoom_button('fit'); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-zoom-fit'},
+		   { path        => '/'.$d->get('Zoom _in'),
+		     accelerator => 'plus',
+		     callback    => sub { zoom_button('in'); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-zoom-in'},
+		   { path        => '/'.$d->get('Zoom _out'),
+		     accelerator => 'minus',
+		     callback    => sub { zoom_button('out'); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-zoom-out'},
+		   { path        => '/sep',
+		     item_type   => '<Separator>' },
+		   { path        => '/'.$d->get('_Delete'),
+		     accelerator => 'Delete',
+		     callback    => \&delete_pages,
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-delete'},
+   );
+  }
+  else { # Thumbnail simplelist
+   @menu_items = (
+		   { path        => '/'.$d->get('_Save PDF'),
+		     accelerator => '<control>s',
+		     callback    => sub { if (defined($windowp)) {
+                                           $windowp -> present;
+                                          }
+                                          else {
+                                           save_PDF();
+                                          } },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-save-as'},
+		   { path        => '/'.$d->get('Save _TIFF'),
+		     accelerator => '<control>t',
+		     callback    => sub { if (defined($windowt)) {
+                                           $windowt -> present;
+                                          }
+                                          else {
+                                           save_TIFF();
+                                          } },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-save'},
+		   { path        => '/sep',
+		     item_type   => '<Separator>' },
+		   { path        => '/'.$d->get('_Renumber'),
+		     accelerator => '<control>r',
+		     callback    => sub { renumber($slist, 0, 1, 1); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-sort-ascending' },
+		   { path        => '/'.$d->get('Select _All'),
+		     accelerator => '<control>a',
+		     callback    => \&select_all,
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-select-all' },
+		   { path        => '/sep',
+		     item_type   => '<Separator>' },
+		   { path        => '/'.$d->get('_Delete'),
+		     accelerator => 'Delete',
+		     callback    => \&delete_pages,
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-delete'},
+   );
+  }
+
+  $item_factory->create_items(undef, @menu_items);
+  $popup_menu->show_all;
+  $popup_menu->popup(undef, undef, undef, undef, 0, 0);
+
+  # block event propagation
+  return 1;
+ }
+
+# let the event chain proceed
+ return 0;
+}
+
+
+
 # Remove temporary files, note window state, save settings and quit.
 
 sub quit {
@@ -1919,7 +2095,7 @@ sub quit {
  $SETTING{"thumb panel"} = $hpaned -> get_position;
 
 # Write config file
- open (CONFIG, "> $config") or die "Can't open config file $config";
+ open (CONFIG, "> $config") or die $d->get("Can't open config file"), " $config";
  while (my ($key, $value) = each %SETTING) {
   print CONFIG "$key = $value\n";
  }
@@ -1936,8 +2112,8 @@ sub view_pod {
                                           'destroy-with-parent',
                                           'error',
                                           'close',
-                        "The help viewer requires module Gtk2::Ex::PodViewer\n"
-                        ."Alternatively, try\n$program --help");
+    $d->get("The help viewer requires module Gtk2::Ex::PodViewer\n"
+                        ."Alternatively, try")."\n$program --help");
   $dialog -> run;
   $dialog -> destroy;
  }
@@ -1978,7 +2154,9 @@ sub view_pod {
   $viewer->set_border_width($border_width);
   $viewer->set_cursor_visible(FALSE);
   $viewer->signal_connect(link_clicked => \&link_clicked);
-  $viewer->signal_connect('link_enter', sub { set_status("Go to $_[1]") });
+  $viewer->signal_connect('link_enter', sub {
+   set_status($d->get('Go to')." $_[1]")
+  });
   $viewer->signal_connect('link_leave', sub { set_status('') });
   $index->get_selection->signal_connect('changed', sub {
    my $idx = ($index->get_selected_indices)[0];
@@ -2042,6 +2220,44 @@ PDF conversion is done by libtiff.
 
 Perl is used for portability and ease of programming, with gtk2-perl for the GUI. This should therefore work more or less out of the box on any system with Perl, gtk2-perl, scanimage and libtiff.
 
+=head1 Download
+
+gscan2pdf is available on Sourceforge.
+
+=head2 Debian-based
+
+If you are using a Debian-based system, just add the following line to your "F</etc/apt/sources.list>" file:
+
+C<deb http://gscan2pdf.sourceforge.net/download/debian binary/>
+
+If you are you are using Synaptic, then use menu I<Edit/Reload Package Information>, search for gscan2pdf in the package list, and lo and behold, you can install the nice shiny new version automatically.
+
+From the command line:
+
+C<apt-get update>
+
+C<apt-get install gscan2pdf>
+
+=head2 Other packaging systems
+
+At the moment, the source is hosted in the files section of the gscan2pdf project on Sourceforge (L<http://sourceforge.net/project/showfiles.php?group_id=174140>).
+
+Having downloaded it, C<make install> will install it for you. Note there is no C<make> or C<make test> step.
+
+If you would like me to create RPMs, or packages from some other system, and you are willing to test it while I set it up, send me an email.
+
+=head1 Reporting bugs
+
+Before reporting bugs, please read the L</"FAQs"> section.
+
+Please report any bugs found to the bugs page of the gscan2pdf project on Sourceforge (L<https://sourceforge.net/tracker/?group_id=174140&atid=868098>).
+
+Please include the output of C<scanimage --help> with any new bug report.
+
+=head1 Translations
+
+I intend to produce a multi-lingual version of gscan2pdf in the near future. At that point, I would be glad of help translating the application.
+
 =head1 Menus
 
 =head2 File
@@ -2081,9 +2297,11 @@ To scan both sides of three pages, i.e. 6 sides:
 =over
 
 =item 1. Select:
+
 # Pages = 3 (or "all" if your scanner can detect when it is out of paper)
 
 Double sided
+
 Facing side
 
 =item 2. Scans sides 1, 3 & 5.
@@ -2091,9 +2309,11 @@ Facing side
 =item 3. Put pile back with scanner ready to scan back of last page.
 
 =item 4. Select:
+
 # Pages = 3 (or "all" if your scanner can detect when it is out of paper)
 
 Double sided
+
 Reverse side
 
 =item 5. Scans sides 6, 4 & 2.
@@ -2115,13 +2335,16 @@ These, naturally, depend on your scanner. They can include
 =item Resolution (in dpi)
 
 =item Batch-scan
+
 Guarantees that a "no documents" condition will be returned after the last scanned page, to prevent endless flatbed scans after a batch scan.
 
 =item Wait-for-button/Button-wait
+
 After sending the scan command, wait until the button on the scanner is pressed before actually starting the scan process.
 
 =item Source
-Selects the document source. Possible options can include Flatbed or ADF.
+
+Selects the document source. Possible options can include Flatbed or ADF. On some scanners, this is the only way of generating an out-of-documents signal.
 
 =back
 
@@ -2149,7 +2372,7 @@ Deletes the selected page.
 
 Renumbers the pages from 1..n.
 
-Note that the page order can also be changed by drag and drop in the thumnail view.
+Note that the page order can also be changed by drag and drop in the thumbnail view.
 
 =head3 Select All
 
@@ -2175,15 +2398,7 @@ Scales the view such the all the page is visible.
 
 Possibly because SANE or your scanner doesn't support it.
 
-If an option listed in the output of
-
-=over
-
-=item scanimage --help
-
-=back
-
-that you would like to use isn't available, send me the output and I will look at implementing it.
+If an option listed in the output of C<scanimage --help> that you would like to use isn't available, send me the output and I will look at implementing it.
 
 =head1 See Also
 
@@ -2193,5 +2408,12 @@ and libtiff.
 =head1 Author
 
 Jeffrey Ratcliffe (ra28145 at users dot sourceforge dot net)
+
+=head1 Thanks to
+
+All the people who have sent patches, bugs and feedback. Also to Sourceforge for hosting the project.
+
+=for html <a href="http://sourceforge.net"><img alt="SourceForge.net Logo" align="right" height="31px" width="88px"
+src="http://sourceforge.net/sflogo.php?group_id=174140&amp;type=1"></a>
 
 =cut
