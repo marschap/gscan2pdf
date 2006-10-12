@@ -46,7 +46,7 @@ tmp : $(program) deb/control
 	cp deb/control tmp/DEBIAN
 	cp $(program) tmp/usr/bin
 
-remote-dist : download/debian/binary/$(program)-$(version).deb download/debian/binary/Packages.gz
+remote-dist : htdocs/download/debian/binary/$(program)-$(version).deb htdocs/download/debian/binary/Packages.gz
 	scp htdocs/download/debian/binary/$(program)-$(version).deb \
             htdocs/download/debian/binary/Packages.gz \
 	    ra28145@shell.sf.net:/home/groups/g/gs/gscan2pdf/htdocs/download/debian/binary
