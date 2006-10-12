@@ -31,7 +31,7 @@
 # 5. Look at OCR
 
 # Release procedure:
-# 1. Make tar dist
+# 1. make tar remote-dist remote-web 
 # 2. Upload to sourceforge and release files
 # 3. Freshmeat
 # 4. Launchpad
@@ -58,7 +58,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext;                 # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.7.8";
+my $version = "0.7.9";
 
 # Standard paper sizes
 my @paper = qw/A4 Letter/;
@@ -73,6 +73,7 @@ my $d = Locale::gettext->domain($program);
 
 # Set up test mode and make sure file has absolute path
 my $test = FALSE;
+my $debug = FALSE;
 while (defined($ARGV[0])) {
  if ($ARGV[0] eq "--test") {
   $test = $ARGV[1];
@@ -83,6 +84,10 @@ while (defined($ARGV[0])) {
  elsif ($ARGV[0] eq "--help") {
   system("perldoc $0");
   exit;
+ }
+ elsif ($ARGV[0] eq "--debug") {
+  $debug = TRUE;
+  shift @ARGV;
  }
  else {
   warn $d->get('Unknown option'), " $ARGV[0]\n";
@@ -1504,6 +1509,7 @@ sub scan {
 
 # Create command
  my $cmd = "scanimage $device $npages $start $step @options;echo 'End Scan' > /dev/stderr";
+ warn "$cmd\n" if $debug;
 
  if (! $test) {
 
@@ -1714,9 +1720,9 @@ sub select_all {
 sub about {
  my $dialog = Gtk2::MessageDialog -> new ($window, 'destroy-with-parent',
                      'info', 'ok', "$program v$version\n\n"
-                     . $d->get("To aid the scan-to-PDF process").".\n\n"
-                     . $d->get("Copyright")." Jeff Ratcliffe\n"
-                     . $d->get("Licensed under the GPLv2"));
+                     . $d->get('To aid the scan-to-PDF process').".\n\n"
+                     . $d->get('Copyright')." Jeff Ratcliffe\n"
+                     . $d->get('Licensed under the GPLv2'));
  $dialog -> run;
  $dialog -> destroy;
 }
@@ -1749,7 +1755,9 @@ sub update_options {
 
 # Get output from scanimage.
 # Inverted commas needed for strange characters in device name
+  warn "scanimage --help --device-name='$device'\n" if $debug;
   $output = `scanimage --help --device-name='$device'`;
+  warn $output if $debug;
  }
  else {
 
