@@ -2,12 +2,17 @@ SHELL = /bin/sh
 
 program = gscan2pdf
 version = $(shell awk '{if (match($$0, /my \$$version = "(.*)";/, a)) print a[1]}' $(program))
+year = $(shell date +%Y)
+author = Jeffrey Ratcliffe
+email = ra28145@users.sourceforge.net
 
 tar : $(program)-$(version).tar.gz
 
 dist : htdocs/download/debian/binary/$(program)-$(version).deb
 
 web : htdocs/index.html
+
+pot : $(program).pot
 
 $(program) : ;
 
@@ -17,7 +22,7 @@ install : $(program)
 uninstall : $(program)
 	rm /usr/local/bin/$(program)
 
-$(program)-$(version).tar.gz : $(program)
+$(program)-$(version).tar.gz : $(program) $(program).pot
 	mkdir --parents ../$(program)-$(version)/deb
 	cp $(program) $(program).pot Makefile INSTALL LICENSE COPYING ../$(program)-$(version)
 	cp deb/debian-binary deb/control ../$(program)-$(version)/deb
@@ -56,6 +61,16 @@ htdocs/index.html : $(program)
 
 remote-web : htdocs/index.html
 	scp htdocs/index.html ra28145@shell.sf.net:/home/groups/g/gs/gscan2pdf/htdocs/
+
+$(program).pot : $(program)
+	xgettext -L perl --keyword=get -o - $(program) | \
+         sed 's/SOME DESCRIPTIVE TITLE/messages.pot for $(program)/' | \
+         sed 's/PACKAGE VERSION/$(program)-$(version)/' | \
+         sed "s/YEAR THE PACKAGE'S COPYRIGHT HOLDER/$(year) $(author)/" | \
+         sed 's/PACKAGE/$(program)/' | \
+         sed 's/FIRST AUTHOR <EMAIL@ADDRESS>, YEAR/$(author) <$(email)>, $(year)/' | \
+         sed 's/Report-Msgid-Bugs-To: /Report-Msgid-Bugs-To: $(email)/' \
+         > $@
 
 clean :
 	rm -r $(program)-$(version).deb* tmp $(program)-$(version).tar.gz
