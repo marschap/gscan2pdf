@@ -6,6 +6,14 @@ year = $(shell date +%Y)
 author = Jeffrey Ratcliffe
 email = ra28145@users.sourceforge.net
 
+BIN_DIR = /usr/local/bin
+LOCALE = .
+
+DEB_BIN = /usr/bin
+DEB_LOCALE = /usr/share/locale
+
+PO = $(wildcard po/*)
+
 tar : $(program)-$(version).tar.gz
 
 dist : htdocs/download/debian/binary/$(program)-$(version).deb
@@ -14,17 +22,39 @@ web : htdocs/index.html
 
 pot : $(program).pot
 
+locale : $(LOCALE)/*/LC_MESSAGES/$(program).mo
+
 $(program) : ;
 
-install : $(program)
-	cp $(program) /usr/local/bin
+install : $(BIN_DIR)/$(program) $(LOCALE)/*/LC_MESSAGES/$(program).mo
 
 uninstall : $(program)
-	rm /usr/local/bin/$(program)
+	rm $(BIN_DIR)/$(program) $(LOCALE)/*/LC_MESSAGES/$(program).mo
 
-$(program)-$(version).tar.gz : $(program) $(program).pot
-	mkdir --parents ../$(program)-$(version)/deb
+$(BIN_DIR)/$(program) : $(program)
+	cp $(program) $(BIN_DIR)
+
+tmp$(DEB_LOCALE)/%/LC_MESSAGES/$(program).mo : $(LOCALE)/*/LC_MESSAGES/$(program).mo
+	path=$@; \
+         dir1=$${path%/*}; \
+	 dir2=$${dir1%/*}; \
+	 locale=$${dir2##*/}; \
+         mkdir --parents tmp$(DEB_LOCALE)/$$locale/LC_MESSAGES; \
+         cp $(LOCALE)/$$locale/LC_MESSAGES/$(program).mo \
+	                                  tmp$(DEB_LOCALE)/$$locale/LC_MESSAGES
+
+$(LOCALE)/%/LC_MESSAGES/$(program).mo : $(PO)
+	for file in $(PO); do \
+         msgfmt $$file; \
+         po=$${file#*/}; \
+         mkdir --parents $(LOCALE)/$${po%%.po}/LC_MESSAGES; \
+	 mv messages.mo $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(program).mo; \
+         done
+
+$(program)-$(version).tar.gz : $(program) $(program).pot $(PO)
+	mkdir --parents ../$(program)-$(version)/deb ../$(program)-$(version)/po
 	cp $(program) $(program).pot Makefile INSTALL LICENSE COPYING ../$(program)-$(version)
+	cp $(PO) ../$(program)-$(version)/po
 	cp deb/debian-binary deb/control ../$(program)-$(version)/deb
 	cd .. ; tar cfvz $(program)-$(version).tar.gz $(program)-$(version)
 	mv ../$(program)-$(version).tar.gz .
@@ -46,10 +76,11 @@ htdocs/download/debian/binary/Packages.gz : htdocs/download/debian/binary/$(prog
 	cd htdocs/download/debian ; \
          dpkg-scanpackages binary /dev/null | gzip -9c > binary/Packages.gz
 
-tmp : $(program) deb/control
-	mkdir --parents tmp/DEBIAN tmp/usr/bin
+tmp : $(program) deb/control \
+      $(wildcard tmp$(DEB_LOCALE)/*/LC_MESSAGES/$(program).mo)
+	mkdir --parents tmp/DEBIAN tmp$(DEB_BIN) tmp$(DEB_LOCALE)
 	cp deb/control tmp/DEBIAN
-	cp $(program) tmp/usr/bin
+	cp $(program) tmp$(DEB_BIN)
 
 remote-dist : htdocs/download/debian/binary/$(program)-$(version).deb htdocs/download/debian/binary/Packages.gz
 	scp htdocs/download/debian/binary/$(program)-$(version).deb \
