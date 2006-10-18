@@ -23,7 +23,6 @@
 #    package required. Or better still, work out how best to include package.
 #    Option to throw up PDF viewer with newly created PDF file
 #    Finish website on sourceforge
-#    Add pot creation to Makefile
 # 1. Translations
 # 2. Progress meter for scans and imports.
 # 3. Rotate
@@ -33,9 +32,9 @@
 # Release procedure:
 # 1. make tar remote-dist remote-web 
 # 2. Upload to sourceforge and release files
-# 3. Freshmeat
-# 4. Launchpad, upload .pot
-# 5. http://www.gtkfiles.org/app.php/gscan2pdf
+# 3. Freshmeat (update description)
+# 4. Launchpad, upload .pot (update description)
+# 5. http://www.gtkfiles.org/app.php/gscan2pdf (update description)
 # 6. Ubuntu forum
 
 # Shell access to sourceforge:
@@ -66,12 +65,13 @@ my @y = ( 297, 279.4 );
 my $border_width = 6;
 
 # Set up domain for gettext (internationalisation)
+# Expects /usr/share/locale/xx_XX/LC_MESSAGES/$program.mo
 my $d = Locale::gettext->domain($program);
 
-# Set up test mode and make sure file has absolute path
 my $test = FALSE;
 my $debug = FALSE;
 while (defined($ARGV[0])) {
+# Set up test mode and make sure file has absolute path
  if ($ARGV[0] eq "--test") {
   $test = $ARGV[1];
   $test = getcwd."/$test" if ($test !~ /^\//);
@@ -81,6 +81,16 @@ while (defined($ARGV[0])) {
  elsif ($ARGV[0] eq "--help") {
   system("perldoc $0");
   exit;
+ }
+ elsif ($ARGV[0] eq "--locale") {
+  if ($ARGV[1] !~ /^\//) {
+   $d->dir(getcwd."/$ARGV[1]");
+  }
+  else {
+   $d->dir($ARGV[1]);
+  }
+  shift @ARGV;
+  shift @ARGV;
  }
  elsif ($ARGV[0] eq "--debug") {
   $debug = TRUE;
@@ -101,6 +111,9 @@ if (check_utils()) {
 # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
 # scanimage
 setlocale(LC_NUMERIC, "C");
+
+#warn $d->dir(),"\n";
+#warn setlocale(LC_MESSAGES), "\n";
 
 # Read config file
 my $config = "$ENV{'HOME'}/.$program";
@@ -1234,6 +1247,8 @@ sub scan_dialog {
     push @device, basename($test);
    }
    $optd -> set_menu ($menud);
+   $tooltips -> set_tip ($optd,
+                           $d->get('Sets the device to be used for the scan'));
    $hboxd -> pack_end ($optd, FALSE, FALSE, 0);
 
 # If device not set by config and there is a default device, then set it
@@ -1259,6 +1274,7 @@ sub scan_dialog {
 #which is undef for the first button
 # All button
    my $buttona = Gtk2::RadioButton -> new(undef, $d->get('All'));
+   $tooltips -> set_tip ($buttona, $d->get('Scan all pages'));
    $vboxn -> pack_start($buttona, TRUE, TRUE, 0);
    my @groupn = $buttona -> get_group;
 
@@ -1266,10 +1282,12 @@ sub scan_dialog {
    my $hboxn = Gtk2::HBox -> new;
    $vboxn -> pack_start($hboxn, TRUE, TRUE, 0);
    my $buttone = Gtk2::RadioButton -> new(@groupn, "#:");
+   $tooltips -> set_tip ($buttone, $d->get('Set number of pages to scan'));
    $hboxn -> pack_start($buttone, FALSE, FALSE, 0);
 
 # Number of pages
    my $spin_button = Gtk2::SpinButton -> new_with_range(1, 99, 1);
+   $tooltips -> set_tip ($spin_button, $d->get('Set number of pages to scan'));
    $spin_button -> signal_connect ('value-changed' => sub {
     $buttone -> set_active(TRUE); # Set the radiobutton active
    });
@@ -1298,12 +1316,14 @@ sub scan_dialog {
 
 # Single sided button
    my $buttons = Gtk2::RadioButton -> new(undef, $d->get('Single sided'));
+   $tooltips -> set_tip ($buttons, $d->get('Source document is single-sided'));
    $vboxs -> pack_start($buttons, TRUE, TRUE, 0);
    $buttons -> set_active(TRUE);
    my @groups = $buttons -> get_group;
 
 # Double sided button
    my $buttond = Gtk2::RadioButton -> new(@groups, $d->get('Double sided'));
+   $tooltips -> set_tip ($buttond, $d->get('Source document is double-sided'));
    $vboxs -> pack_start($buttond, FALSE, FALSE, 0);
 
 # Facing/reverse page button
@@ -1323,6 +1343,8 @@ sub scan_dialog {
     $menus -> append ($item);
    }
    $opts -> set_menu ($menus);
+   $tooltips -> set_tip ($opts,
+              $d->get('Sets which side of a double-sided document is scanned'));
    $hboxs -> pack_end ($opts, FALSE, FALSE, 0);
 
 # Frame for device-dependent options
@@ -1821,6 +1843,8 @@ sub update_options {
   $item -> signal_connect (activate => sub { $hboxc -> show_all; });
   $menup -> append ($item);
   $optp -> set_menu ($menup);
+  $tooltips -> set_tip ($optp,
+                $d->get('Selects the paper size, e.g. A4, Letter, or Custom'));
   $hboxp -> pack_end ($optp, FALSE, FALSE, 0);
 
 # Set default paper size from config
@@ -1865,22 +1889,26 @@ sub update_options {
  }
 
 # Add remaining options
- while ($output =~ /--([a-z_-]*)(.*) \[(.*)\]/) {
+ while ($output =~ /--([a-z_-]*)(.*) \[(.*)\].*\n([\S\s]*)/) {
   my $option = $1;
   my $values = $2;
   my $default = $3;
-  $output = substr($output, index($output, "]\n")+2, length($output));
+
+# Remove everything on the option line and above.
+  $output = $4;
 
 # Parse tooltips from option description based on an 8-character indent.
   my $tip = "";
-  while ($output =~ /^\s{8,}(.*)/) {
+  while ($output =~ /^\s{8,}(.*)\n([\S\s]*)/) {
    if ($tip eq "") {
     $tip = $1;
    }
    else {
     $tip = "$tip $1";
    }
-   $output = substr($output, index($output, "\n")+1, length($output));
+
+# Remove everything on the description line and above.
+   $output = $2;
   }
 # batch-scan is HP
 # wait-for-button is Epson
@@ -2204,7 +2232,7 @@ __END__
 
 =head1 Name
 
-gscan2pdf - A GUI to ease the process of producing PDFs from scanned documents
+gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan. gscan2pdf should work on almost any Linux/BSD machine.
 
 =head1 Synopsis
 
