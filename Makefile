@@ -20,7 +20,11 @@ dist : htdocs/download/debian/binary/$(program)-$(version).deb
 
 web : htdocs/index.html
 
-pot : $(program).pot
+pot : po/$(program).pot
+
+po.tar.gz : po/$(program).pot $(PO)
+	cd po; tar cfvz po.tar.gz $(program).pot *.po
+	mv po/po.tar.gz .
 
 locale : $(LOCALE)/*/LC_MESSAGES/$(program).mo
 
@@ -48,13 +52,13 @@ $(LOCALE)/%/LC_MESSAGES/$(program).mo : $(PO)
          msgfmt $$file; \
          po=$${file#*/}; \
          mkdir --parents $(LOCALE)/$${po%%.po}/LC_MESSAGES; \
-	 mv messages.mo $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(program).mo; \
+         mv messages.mo $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(program).mo; \
          done
 
-$(program)-$(version).tar.gz : $(program) $(program).pot $(PO)
+$(program)-$(version).tar.gz : $(program) Makefile INSTALL LICENSE COPYING po/$(program).pot $(PO)
 	mkdir --parents ../$(program)-$(version)/deb ../$(program)-$(version)/po
-	cp $(program) $(program).pot Makefile INSTALL LICENSE COPYING ../$(program)-$(version)
-	cp $(PO) ../$(program)-$(version)/po
+	cp $(program) Makefile INSTALL LICENSE COPYING ../$(program)-$(version)
+	cp $(PO) po/$(program).pot ../$(program)-$(version)/po
 	cp deb/debian-binary deb/control ../$(program)-$(version)/deb
 	cd .. ; tar cfvz $(program)-$(version).tar.gz $(program)-$(version)
 	mv ../$(program)-$(version).tar.gz .
@@ -66,21 +70,21 @@ deb/control : $(program)
          deb/control_tmp > deb/control
 	rm deb/control_tmp
 
-htdocs/download/debian/binary/$(program)-$(version).deb : $(program) deb/control tmp
-	cd tmp ; md5sum $(shell find tmp -type f | \
-                        awk '/.\// { print substr($$0, 5) }') > DEBIAN/md5sums
+htdocs/download/debian/binary/$(program)-$(version).deb : tmp/DEBIAN/md5sums
 	dpkg-deb -b tmp $(program)-$(version).deb
 	cp $(program)-$(version).deb htdocs/download/debian/binary
+
+tmp/DEBIAN/md5sums : $(program) deb/control \
+                     $(wildcard tmp$(DEB_LOCALE)/*/LC_MESSAGES/$(program).mo)
+	mkdir --parents tmp/DEBIAN tmp$(DEB_BIN) tmp$(DEB_LOCALE)
+	cp deb/control tmp/DEBIAN
+	cp $(program) tmp$(DEB_BIN)
+	cd tmp ; md5sum $(shell find tmp -type f | \
+                        awk '/.\// { print substr($$0, 5) }') > DEBIAN/md5sums
 
 htdocs/download/debian/binary/Packages.gz : htdocs/download/debian/binary/$(program)-$(version).deb
 	cd htdocs/download/debian ; \
          dpkg-scanpackages binary /dev/null | gzip -9c > binary/Packages.gz
-
-tmp : $(program) deb/control \
-      $(wildcard tmp$(DEB_LOCALE)/*/LC_MESSAGES/$(program).mo)
-	mkdir --parents tmp/DEBIAN tmp$(DEB_BIN) tmp$(DEB_LOCALE)
-	cp deb/control tmp/DEBIAN
-	cp $(program) tmp$(DEB_BIN)
 
 remote-dist : htdocs/download/debian/binary/$(program)-$(version).deb htdocs/download/debian/binary/Packages.gz
 	scp htdocs/download/debian/binary/$(program)-$(version).deb \
@@ -93,7 +97,7 @@ htdocs/index.html : $(program)
 remote-web : htdocs/index.html
 	scp htdocs/index.html ra28145@shell.sf.net:/home/groups/g/gs/gscan2pdf/htdocs/
 
-$(program).pot : $(program)
+po/$(program).pot : $(program)
 	xgettext -L perl --keyword=get -o - $(program) | \
          sed 's/SOME DESCRIPTIVE TITLE/messages.pot for $(program)/' | \
          sed 's/PACKAGE VERSION/$(program)-$(version)/' | \
