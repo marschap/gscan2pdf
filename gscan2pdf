@@ -19,10 +19,11 @@
 #      Importing
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
-#    Note in podviewer message about information on
-#    package required. Or better still, work out how best to include package.
+#    Work out how best to include package.
 #    Option to throw up PDF viewer with newly created PDF file
 #    Finish website on sourceforge
+#    get ubuntu locale working
+#    get deb locale installation working.
 # 1. Translations
 # 2. Progress meter for scans and imports.
 # 3. Rotate
@@ -54,10 +55,10 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext;                 # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.7.10";
+my $version = "0.7.11";
 
 # Standard paper sizes
-my @paper = qw/A4 Letter/;
+my @paper = qw(A4 Letter);
 my @x = ( 210, 215.9 );
 my @y = ( 297, 279.4 );
 
@@ -279,7 +280,7 @@ $window -> maximize
 # Pass the window a stock icon list
 my @icon;
 my $i = -1;
-foreach my $size (qw/menu small-toolbar large-toolbar button dnd dialog/) {
+foreach my $size (qw(menu small-toolbar large-toolbar button dnd dialog)) {
  ++$i;
  $icon[$i] = $window -> render_icon ('gtk-print-preview', $size) # or gtk-index
 }
@@ -612,9 +613,6 @@ sub import {
                                       'gtk-ok' => 'ok');
  $file_chooser -> set_select_multiple(TRUE);
 
-# cd back to tempdir to import
- chdir $dir;
-
  if ('ok' eq $file_chooser->run) {
   my @filename = $file_chooser -> get_filenames;
 
@@ -648,6 +646,9 @@ sub import {
 #    my $timer = Glib::Timeout->add (100, sub {$pbar->pulse; return 1;});
     $pbar->set_fraction(.5);
     $dialog -> show_all;
+
+# cd back to tempdir to import
+    chdir $dir;
 
 # Split the tiff into its pages and import them individually
     system("tiffsplit \"$filename\"");
@@ -774,7 +775,7 @@ sub save_PDF {
 
 # Get help page to see what compression options are configured in tiff2pdf
  my $output = `tiff2pdf -h 2>&1 1>/dev/null`;
- my @compression = qw/None/;
+ my @compression = qw(None);
  push @compression, 'Zip' if ($output =~ /-z/);
  push @compression, 'JPEG' if ($output =~ /-j/);
 
@@ -954,8 +955,8 @@ sub save_PDF {
    $SETTING{'compression'} = $compression[$optc -> get_history];
    my $compression = "";
    if ($SETTING{'compression'} eq "JPEG") {
-    $SETTING{'quality'} = get_value($spinbuttonq);
-    $compression = "-j -d $SETTING{'quality'}";
+    $SETTING{'quality'} = $spinbuttonq -> get_value;
+    $compression = "-j -q $SETTING{'quality'}";
    }
    elsif ($SETTING{'compression'} eq "Zip") {
     $compression = "-z";
@@ -1334,7 +1335,7 @@ sub scan_dialog {
 
    my $opts = Gtk2::OptionMenu -> new;
    my $menus = Gtk2::Menu -> new;
-   my @side = qw/Facing Reverse/;
+   my @side = qw(Facing Reverse);
    foreach (@side) {
     my $item = Gtk2::MenuItem -> new ($_);
     $item -> signal_connect (activate => sub {
@@ -2432,6 +2433,12 @@ Scales the view such the all the page is visible.
 Possibly because SANE or your scanner doesn't support it.
 
 If an option listed in the output of C<scanimage --help> that you would like to use isn't available, send me the output and I will look at implementing it.
+
+=head2 I've only got an old flatbed scanner with no automatic sheetfeeder. How do I scan a multipage document?
+
+If you are lucky, you have an option like Wait-for-button or Button-wait, where the scanner will wait for you to press the scan button on the device before it starts the scan, allowing you to scan multiple pages without touching the computer.
+
+Otherwise, you have to set the number of pages to scan to 1 and hit the scan button on the scan window for each page.
 
 =head1 See Also
 
