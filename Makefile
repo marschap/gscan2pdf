@@ -12,7 +12,7 @@ LOCALE = .
 DEB_BIN = /usr/bin
 DEB_LOCALE = /usr/share/locale
 
-PO = $(wildcard po/*)
+PO = $(wildcard po/*.po)
 
 tar : $(program)-$(version).tar.gz
 
