@@ -22,6 +22,7 @@
 #    Work out how best to include package.
 #    Option to throw up PDF viewer with newly created PDF file
 #    Finish website on sourceforge
+#    Update INSTALL with depository details
 #    get ubuntu locale working
 #    get deb locale installation working.
 # 1. Translations
@@ -31,12 +32,14 @@
 # 5. Look at OCR
 
 # Release procedure:
-# 1. make tar remote-dist remote-web 
-# 2. Upload to sourceforge and release files
-# 3. Freshmeat (update description)
-# 4. Launchpad, upload .pot (update description)
-# 5. http://www.gtkfiles.org/app.php/gscan2pdf (update description)
-# 6. Ubuntu forum
+# 1. make tar dist
+# 2. cvs update
+# 3. make remote-dist remote-web 
+# 4. Upload to sourceforge and release files
+# 5. Freshmeat
+# 6. Launchpad, upload .pot if necessary
+# 7. http://www.gtkfiles.org/app.php/gscan2pdf
+# 8. Ubuntu forum
 
 # Shell access to sourceforge:
 # ssh ra28145@shell.sf.net
@@ -55,7 +58,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext;                 # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.7.11";
+my $version = "0.7.12";
 
 # Standard paper sizes
 my @paper = qw(A4 Letter);
@@ -435,9 +438,9 @@ $slist -> get_selection -> signal_connect(changed => sub {
 # Remove any image in the detail window
  if (defined($scwin_detail -> child)) {
   my $viewport = $image -> get_parent;
-  $image -> destroy;
-  $eventbox -> destroy;
-  $viewport -> destroy;
+  $image -> destroy if (defined $image);
+  $eventbox -> destroy if (defined $eventbox);
+  $viewport -> destroy if (defined $viewport);
  }
 
 # Display the new image
