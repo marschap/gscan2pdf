@@ -25,6 +25,12 @@
 #    Update INSTALL with depository details
 #    get ubuntu locale working
 #    get deb locale installation working.
+#    Add donate button to help
+#    Add screenshot to help
+#    Add icon to homepage for GTKfiles.
+#    Make save button default
+#    Contact translators with launchpad details.
+#    Automatically add .pdf extension
 # 1. Translations
 # 2. Progress meter for scans and imports.
 # 3. Rotate
@@ -34,12 +40,13 @@
 # Release procedure:
 # 1. make tar dist
 # 2. cvs update
-# 3. make remote-dist remote-web 
-# 4. Upload to sourceforge and release files
-# 5. Freshmeat
-# 6. Launchpad, upload .pot if necessary
-# 7. http://www.gtkfiles.org/app.php/gscan2pdf
-# 8. Ubuntu forum
+# 3. cvs tag vx-x-x
+# 4. make remote-dist remote-web 
+# 5. Upload to sourceforge and release files
+# 6. Freshmeat
+# 7. Launchpad, upload .pot if necessary
+# 8. http://www.gtkfiles.org/app.php/gscan2pdf
+# 9. Ubuntu forum
 
 # Shell access to sourceforge:
 # ssh ra28145@shell.sf.net
@@ -58,7 +65,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext;                 # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.7.12";
+my $version = "0.8.0";
 
 # Standard paper sizes
 my @paper = qw(A4 Letter);
@@ -144,17 +151,17 @@ my ($windowp, $windowt, $windows, $windowh, $slist);
 # Define the menu items for ItemFactory
 my @menu_items = ( { path        => '/'.$d->get('_File'),
 		     item_type   => '<Branch>' },
-		   { path        => '/'.$d->get('File').'/'.$d->get('_New'),
+		   { path        => '/'.$d->get('_File').'/'.$d->get('_New'),
 		     accelerator => '<control>n',
 		     callback    => \&new,
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-new'},
-		   { path        => '/'.$d->get('File').'/'.$d->get('_Import'),
+		   { path        => '/'.$d->get('_File').'/'.$d->get('_Import'),
 		     accelerator => '<control>i',
 		     callback    => \&import,
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-open'},
-		   { path        => '/'.$d->get('File').'/'.$d->get('Sca_n'),
+		   { path        => '/'.$d->get('_File').'/'.$d->get('Sca_n'),
 		     callback    => sub { if (defined($windows)) {
                                            $windows -> present;
                                           }
@@ -163,7 +170,7 @@ my @menu_items = ( { path        => '/'.$d->get('_File'),
                                           } },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-print-preview'},
-		   { path        => '/'.$d->get('File').'/'
+		   { path        => '/'.$d->get('_File').'/'
 		                       .$d->get('_Save PDF'),
 		     accelerator => '<control>s',
 		     callback    => sub { if (defined($windowp)) {
@@ -174,7 +181,7 @@ my @menu_items = ( { path        => '/'.$d->get('_File'),
                                           } },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-save-as'},
-		   { path        => '/'.$d->get('File').'/'
+		   { path        => '/'.$d->get('_File').'/'
 		                       .$d->get('Save _TIFF'),
 		     accelerator => '<control>t',
 		     callback    => sub { if (defined($windowt)) {
@@ -185,9 +192,9 @@ my @menu_items = ( { path        => '/'.$d->get('_File'),
                                           } },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-save'},
-		   { path        => '/'.$d->get('File').'/sep',
+		   { path        => '/'.$d->get('_File').'/sep',
 		     item_type   => '<Separator>' },
-		   { path        => '/'.$d->get('File').'/'.$d->get('_Quit'),
+		   { path        => '/'.$d->get('_File').'/'.$d->get('_Quit'),
 		     accelerator => '<control>q',
 		     callback    => sub { quit(); Gtk2 -> main_quit; },
                      item_type   => '<StockItem>',
@@ -195,18 +202,18 @@ my @menu_items = ( { path        => '/'.$d->get('_File'),
 
 		   { path        => '/'.$d->get('_Edit'),
 		     item_type   => '<Branch>' },
-		   { path        => '/'.$d->get('Edit').'/'.$d->get('_Delete'),
+		   { path        => '/'.$d->get('_Edit').'/'.$d->get('_Delete'),
 		     accelerator => 'Delete',
 		     callback    => \&delete_pages,
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-delete'},
-		   { path        => '/'.$d->get('Edit').'/'
+		   { path        => '/'.$d->get('_Edit').'/'
 		                       .$d->get('_Renumber'),
 		     accelerator => '<control>r',
 		     callback    => sub { renumber($slist, 0, 1, 1); },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-sort-ascending' },
-		   { path        => '/'.$d->get('Edit').'/'
+		   { path        => '/'.$d->get('_Edit').'/'
 		                       .$d->get('Select _All'),
 		     accelerator => '<control>a',
 		     callback    => \&select_all,
@@ -215,30 +222,47 @@ my @menu_items = ( { path        => '/'.$d->get('_File'),
 
 		   { path        => '/'.$d->get('_View'),
 		     item_type   => '<Branch>' },
-		   { path        => '/'.$d->get('View').'/'
+		   { path        => '/'.$d->get('_View').'/'
 		                       .$d->get('Zoom _100%'),
 		     callback    => sub { zoom_button('100%'); },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-zoom-100'},
-		   { path        => '/'.$d->get('View').'/'
+		   { path        => '/'.$d->get('_View').'/'
 		                       .$d->get('Zoom to _fit'),
 		     callback    => sub { zoom_button('fit'); },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-zoom-fit'},
-		   { path        => '/'.$d->get('View').'/'.$d->get('Zoom _in'),
+		   { path        => '/'.$d->get('_View').'/'.$d->get('Zoom _in'),
 		     accelerator => 'plus',
 		     callback    => sub { zoom_button('in'); },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-zoom-in'},
-		   { path        => '/'.$d->get('View').'/'.$d->get('Zoom _out'),
+		   { path        => '/'.$d->get('_View').'/'.$d->get('Zoom _out'),
 		     accelerator => 'minus',
 		     callback    => sub { zoom_button('out'); },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-zoom-out'},
+		   { path        => '/'.$d->get('_View').'/sep',
+		     item_type   => '<Separator>' },
+		   { path        => '/'.$d->get('_View').'/'
+		                       .$d->get('Rotate 90 clockwise'),
+		     callback    => sub { rotate(90); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-orientation-landscape'},
+		   { path        => '/'.$d->get('_View').'/'
+		                       .$d->get('Rotate 180'),
+		     callback    => sub { rotate(180); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-orientation-reverse-portrait'},
+		   { path        => '/'.$d->get('_View').'/'
+                                       .$d->get('Rotate 90 anticlockwise'),
+		     callback    => sub { rotate(270); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-orientation-reverse-landscape'},
 
 		   { path        => '/'.$d->get('_Help'),
 		     item_type   => '<LastBranch>' },
-		   { path        => '/'.$d->get('Help').'/'.$d->get('_Help'),
+		   { path        => '/'.$d->get('_Help').'/'.$d->get('_Help'),
 		     accelerator => '<control>h',
 		     callback    => sub { if (defined($windowh)) {
                                            $windowh -> present;
@@ -248,7 +272,7 @@ my @menu_items = ( { path        => '/'.$d->get('_File'),
                                           } },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-help' },
-		   { path        => '/'.$d->get('Help').'/'.$d->get('_About'),
+		   { path        => '/'.$d->get('_Help').'/'.$d->get('_About'),
 		     callback    => \&about } );
 
 # Create the window
@@ -331,6 +355,12 @@ foreach (
  [ 'gtk-zoom-fit',       $d->get('Zoom to fit'), sub { zoom_button('fit'); } ],
  [ 'gtk-zoom-in',        $d->get('Zoom in'), sub { zoom_button('in'); } ],
  [ 'gtk-zoom-out',       $d->get('Zoom out'), sub { zoom_button('out'); } ],
+ [ 'gtk-orientation-landscape', $d->get('Rotate 90 clockwise'), sub {
+                                                               rotate(90); } ],
+ [ 'gtk-orientation-reverse-portrait', $d->get('Rotate 180'), sub {
+                                                               rotate(180); } ],
+ [ 'gtk-orientation-reverse-landscape', $d->get('Rotate 90 anticlockwise'),
+                                                         sub { rotate(270); } ],
  [ 'gtk-help',           $d->get('Help'), sub { if (defined($windowh)) {
                                            $windowh -> present;
                                           }
@@ -2020,6 +2050,20 @@ sub renumber {
 }
 
 
+# Rotate image
+
+sub rotate {
+ my ($degrees) = @_;
+
+ my @page = $slist -> get_selected_indices;
+ my $i = 0;
+ while ($i <= $#page) {
+  system("mogrify -rotate 90 ".$slist -> {data}[$page[$i]][2]);
+  ++$i;
+ }
+}
+
+
 # Handle right-clicks
 
 sub handle_clicks {
@@ -2051,6 +2095,20 @@ sub handle_clicks {
 		     callback    => sub { zoom_button('out'); },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-zoom-out'},
+		   { path        => '/sep',
+		     item_type   => '<Separator>' },
+		   { path        => '/'.$d->get('Rotate 90 clockwise'),
+		     callback    => sub { rotate(90); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-orientation-landscape'},
+		   { path        => '/'.$d->get('Rotate 180'),
+		     callback    => sub { rotate(180); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-orientation-reverse-portrait'},
+		   { path        => '/'.$d->get('Rotate 90 anticlockwise'),
+		     callback    => sub { rotate(270); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-orientation-reverse-landscape'},
 		   { path        => '/sep',
 		     item_type   => '<Separator>' },
 		   { path        => '/'.$d->get('_Delete'),
@@ -2094,6 +2152,20 @@ sub handle_clicks {
 		     callback    => \&select_all,
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-select-all' },
+		   { path        => '/sep',
+		     item_type   => '<Separator>' },
+		   { path        => '/'.$d->get('Rotate 90 clockwise'),
+		     callback    => sub { rotate(90); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-orientation-landscape'},
+		   { path        => '/'.$d->get('Rotate 180'),
+		     callback    => sub { rotate(180); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-orientation-reverse-portrait'},
+		   { path        => '/'.$d->get('Rotate 90 anticlockwise'),
+		     callback    => sub { rotate(270); },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-orientation-reverse-landscape'},
 		   { path        => '/sep',
 		     item_type   => '<Separator>' },
 		   { path        => '/'.$d->get('_Delete'),
