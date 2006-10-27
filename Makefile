@@ -49,7 +49,7 @@ tmp$(DEB_LOCALE)/%/LC_MESSAGES/$(program).mo : $(LOCALE)/*/LC_MESSAGES/$(program
 
 $(LOCALE)/%/LC_MESSAGES/$(program).mo : $(PO)
 	for file in $(PO); do \
-         msgfmt $$file; \
+         msgfmt -c $$file; \
          po=$${file#*/}; \
          mkdir --parents $(LOCALE)/$${po%%.po}/LC_MESSAGES; \
          mv messages.mo $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(program).mo; \
