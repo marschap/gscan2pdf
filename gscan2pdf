@@ -6,6 +6,7 @@
 
 # To do
 # 0. Add status line at bottom with messages like "filename saved"
+#    Rewrite in python with python-sane, pytiff & tiff2pdf
 #    Add Gnome menu
 #    Add dialog whilst device-dependent options are being parsed
 #    Add hidden flag whether a page has been saved
@@ -17,6 +18,7 @@
 #      First opening scan window
 #      Changing device
 #      Importing
+#      Rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    Work out how best to include package.
@@ -29,13 +31,11 @@
 #    Add screenshot to help
 #    Add icon to homepage for GTKfiles.
 #    Make save button default
-#    Contact translators with launchpad details.
-#    Automatically add .pdf extension
+#    Add imagemagick recommend in config file
 # 1. Translations
 # 2. Progress meter for scans and imports.
-# 3. Rotate
-# 4. Crop and autocrop
-# 5. Look at OCR
+# 3. Crop and autocrop
+# 4. Look at OCR
 
 # Release procedure:
 # 1. make tar dist
@@ -84,24 +84,22 @@ my $debug = FALSE;
 while (defined($ARGV[0])) {
 # Set up test mode and make sure file has absolute path
  if ($ARGV[0] eq "--test") {
-  $test = $ARGV[1];
+  shift @ARGV;
+  $test = shift @ARGV;
   $test = getcwd."/$test" if ($test !~ /^\//);
-  shift @ARGV;
-  shift @ARGV;
  }
  elsif ($ARGV[0] eq "--help") {
   system("perldoc $0");
   exit;
  }
  elsif ($ARGV[0] eq "--locale") {
-  if ($ARGV[1] !~ /^\//) {
-   $d->dir(getcwd."/$ARGV[1]");
+  shift @ARGV;
+  if ($ARGV[0] !~ /^\//) {
+   $d->dir(getcwd."/".shift @ARGV);
   }
   else {
-   $d->dir($ARGV[1]);
+   $d->dir(shift @ARGV);
   }
-  shift @ARGV;
-  shift @ARGV;
  }
  elsif ($ARGV[0] eq "--debug") {
   $debug = TRUE;
@@ -156,7 +154,7 @@ my @menu_items = ( { path        => '/'.$d->get('_File'),
 		     callback    => \&new,
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-new'},
-		   { path        => '/'.$d->get('_File').'/'.$d->get('_Import'),
+		   { path        => '/'.$d->get('_File').'/'.$d->get('_Import TIFF'),
 		     accelerator => '<control>i',
 		     callback    => \&import,
                      item_type   => '<StockItem>',
@@ -329,7 +327,7 @@ $main_vbox -> pack_start ($hboxb, FALSE, FALSE, 0);
 foreach (
  [ 'gtk-new',            $d->get('Clears all pages'), \&new ],
  [ 'gtk-open',           $d->get('Import TIFF file'), \&import ],
- [ 'gtk-print',          $d->get('Scan document'), sub { if (defined($windows)) {
+ [ 'gtk-print-preview',  $d->get('Scan document'), sub { if (defined($windows)) {
                                                  $windows -> present;
                                                 }
                                                 else {
@@ -481,26 +479,8 @@ $slist -> get_selection -> signal_connect(changed => sub {
   my $heightd = $scwin_detail -> allocation -> height;
 
   $image = Gtk2::Image -> new;
-
-# scalar needed for reasons I don't understand, but which have to do with
-# converting the array to a scalar. Alternatively, it might be a bug.
-  $src_pixbuf = Gtk2::Gdk::Pixbuf ->
-                            new_from_file (scalar($slist->{data}[$page[0]][2]));
-
-# Get dimension for image
-  $widthi = $src_pixbuf -> get_width;
-  $heighti = $src_pixbuf -> get_height;
-
-# Calculate scale factor to fit window, being conservative
-  $scale = ($widthd-1)/$widthi < ($heightd-1)/$heighti
-                                 ? ($widthd-1)/$widthi : ($heightd-1)/$heighti;
-
-  my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
-                                         $src_pixbuf -> get_has_alpha, 
-                                         $src_pixbuf -> get_bits_per_sample,
-                                         $widthi*$scale, $heighti*$scale);
-  zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
-  $image -> set_from_pixbuf($pixbuf);
+  $image -> set_from_pixbuf(
+           get_pixbuf(scalar($slist->{data}[$page[0]][2]), $heightd, $widthd));
 
 # Need to pack the image in an eventbox to get it to respond to mouse clicks
   $eventbox = Gtk2::EventBox -> new;
@@ -604,6 +584,51 @@ sub zoom_pixbuf {
  $src -> composite ($dest, 0, 0, $dest -> get_width,
                                  $dest -> get_height, 
                     0, 0, $scale, $scale, 'bilinear', 255);
+}
+
+
+# Returns the pixbuf scaled to fit in the given box
+
+sub get_pixbuf {
+ my ($filename, $height, $width) = @_;
+ 
+# Need the eval otherwise nothing else in the sub gets carried out after an error
+# For some reason reading the tiff sometimes throws:
+# Failed to load RGB data from TIFF file:
+#        libpixbuf-tiff: Read error on strip 134; got 5190 bytes, expected 7130
+# Normally succeeds on second attempt
+ my $src_pixbuf;
+# Change new_from_file for new_from_file_at_scale once I no longer have to
+# develop with Gtk2 < 1.090!
+ eval { $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename); };
+# if (Glib::Error::matches ($@, 'Mup::Thing::Error', 'flop')) {
+#  recover_from_a_flop ();
+# }
+ if ($@) {
+  warn $d->get('Warning: ')."$@\n";
+  eval { $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename); };
+  if ($@) {
+   return 0;
+  }
+  else {
+   warn $d->get('Information: got')." $filename ".$d->get("on second attempt\n");
+  }
+ }
+
+# Get dimension for image
+ my $widthi = $src_pixbuf -> get_width;
+ my $heighti = $src_pixbuf -> get_height;
+
+# Calculate scale factor
+ my $scale = ($width-1)/$widthi < ($height-1)/$heighti
+                                   ? ($width-1)/$widthi : ($height-1)/$heighti;
+
+ my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
+                                        $src_pixbuf -> get_has_alpha, 
+                                        $src_pixbuf -> get_bits_per_sample,
+                                        $widthi*$scale, $heighti*$scale);
+ zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
+ return $pixbuf;
 }
 
 
@@ -809,7 +834,10 @@ sub save_PDF {
 # Get help page to see what compression options are configured in tiff2pdf
  my $output = `tiff2pdf -h 2>&1 1>/dev/null`;
  my @compression = qw(None);
- push @compression, 'Zip' if ($output =~ /-z/);
+ if ($output =~ /-z/) {
+  push @compression, 'Zip';
+  $SETTING{'compression'} = 'Zip' if (! defined $SETTING{'compression'});
+ }
  push @compression, 'JPEG' if ($output =~ /-j/);
 
 # Compression optionmenu
@@ -933,6 +961,7 @@ sub save_PDF {
 
   if ('ok' eq $file_chooser->run) {
    my $filename = $file_chooser -> get_filename;
+   $filename = $filename.".pdf" if ($filename !~ /.pdf$/i);
    if (-e $filename) {
     my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
      'destroy-with-parent',
@@ -941,7 +970,10 @@ sub save_PDF {
      $d->get('File') . " $filename " . $d->get("exists.\nReally overwrite?"));
     my $response = $dialog -> run;
     $dialog -> destroy;
-    return 1 if ($response ne 'ok');
+    if ($response ne 'ok') {
+     $file_chooser -> destroy;
+     return 1;
+    }
    }
 
 # Update cwd
@@ -987,11 +1019,11 @@ sub save_PDF {
 # Get compression
    $SETTING{'compression'} = $compression[$optc -> get_history];
    my $compression = "";
-   if ($SETTING{'compression'} eq "JPEG") {
+   if ($SETTING{'compression'} eq 'JPEG') {
     $SETTING{'quality'} = $spinbuttonq -> get_value;
     $compression = "-j -q $SETTING{'quality'}";
    }
-   elsif ($SETTING{'compression'} eq "Zip") {
+   elsif ($SETTING{'compression'} eq 'Zip') {
     $compression = "-z";
    }
 
@@ -1520,7 +1552,8 @@ sub scan_dialog {
    } );
 
 # Cancel button
-   my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+   my $cbutton = Gtk2::Button -> new_from_stock('gtk-close');
+#   my $cbutton = Gtk2::Button -> new($d->get('Finished'));
    $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
    $cbutton -> signal_connect( clicked => sub { $windows -> hide; } );
 
@@ -1654,42 +1687,6 @@ sub import_scan {
  my (undef, $filename) = tempfile(DIR => $dir);
  system("mv $ofilename $filename");
 
-# Need the eval otherwise nothing else in the sub gets carried out after an error
-# For some reason reading the tiff sometimes throws:
-# Failed to load RGB data from TIFF file:
-#        libpixbuf-tiff: Read error on strip 134; got 5190 bytes, expected 7130
-# Normally succeeds on second attempt
- my $src_pixbuf;
-# Change new_from_file for new_from_file_at_scale once I no longer have to
-# develop with Gtk2 < 1.090!
- eval { $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename); };
-# if (Glib::Error::matches ($@, 'Mup::Thing::Error', 'flop')) {
-#  recover_from_a_flop ();
-# }
- if ($@) {
-  warn $d->get('Warning: ')."$@\n";
-  eval { $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename); };
-  if ($@) {
-   return 0;
-  }
-  else {
-   warn $d->get('Information: got')." $filename ".$d->get("on second attempt\n");
-  }
- }
-
-# Get dimension for image
- my $widthi = $src_pixbuf -> get_width;
- my $heighti = $src_pixbuf -> get_height;
-
-# Calculate scale factor for thumbnail, being conservative
- my $scale = ($widtht-1)/$widthi < ($heightt-1)/$heighti ? ($widtht-1)/$widthi : ($heightt-1)/$heighti;
-
- my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
-                                        $src_pixbuf -> get_has_alpha, 
-                                        $src_pixbuf -> get_bits_per_sample,
-                                        $widthi*$scale, $heighti*$scale);
- zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
-
 # Add to the page list
  my $i;
  if ($ofilename =~ /out([0-9]*)\.tif/) {
@@ -1701,7 +1698,8 @@ sub import_scan {
 
 # Block the row-changed signal whilst adding the scan (row) and sorting it.
  $slist -> get_model -> signal_handler_block($slist -> {signalid});
- push @{$slist -> {data}}, [$i, $pixbuf, $filename];
+ push @{$slist -> {data}},
+                     [$i, get_pixbuf($filename, $heightt, $widtht), $filename];
  manual_sort_by_column ($slist, 0);
  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
@@ -2058,9 +2056,20 @@ sub rotate {
  my @page = $slist -> get_selected_indices;
  my $i = 0;
  while ($i <= $#page) {
-  system("mogrify -rotate 90 ".$slist -> {data}[$page[$i]][2]);
+
+# Rotate the tiff with imagemagick
+  system("mogrify -rotate $degrees ".$slist -> {data}[$page[$i]][2]);
+
+# Use once I no longer have to develop with Gtk2 < 1.090!
+#  $slist -> {data}[$page[$i]][1] =
+#                  $slist -> {data}[$page[$i]][1] -> rotate_simple ($degrees);
+  $slist -> {data}[$page[$i]][1] =
+                 get_pixbuf($slist -> {data}[$page[$i]][2], $heightt, $widtht);
   ++$i;
  }
+
+# Reselect the pages to display the rotated image(s)
+ $slist->select(@page);
 }
 
 
