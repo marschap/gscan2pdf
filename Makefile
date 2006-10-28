@@ -6,11 +6,9 @@ year = $(shell date +%Y)
 author = Jeffrey Ratcliffe
 email = ra28145@users.sourceforge.net
 
-BIN_DIR = /usr/local/bin
 LOCALE = .
-
-DEB_BIN = /usr/bin
-DEB_LOCALE = /usr/share/locale
+DIST_BIN = /usr/bin
+DIST_LOCALE = /usr/share/locale
 
 PO = $(wildcard po/*.po)
 
@@ -26,34 +24,32 @@ po.tar.gz : po/$(program).pot $(PO)
 	cd po; tar cfvz po.tar.gz $(program).pot *.po
 	mv po/po.tar.gz .
 
-locale : $(LOCALE)/*/LC_MESSAGES/$(program).mo
-
-$(program) : ;
-
-install : $(BIN_DIR)/$(program) $(LOCALE)/*/LC_MESSAGES/$(program).mo
-
-uninstall : $(program)
-	rm $(BIN_DIR)/$(program) $(LOCALE)/*/LC_MESSAGES/$(program).mo
-
-$(BIN_DIR)/$(program) : $(program)
-	cp $(program) $(BIN_DIR)
-
-tmp$(DEB_LOCALE)/%/LC_MESSAGES/$(program).mo : $(LOCALE)/*/LC_MESSAGES/$(program).mo
-	path=$@; \
-         dir1=$${path%/*}; \
-	 dir2=$${dir1%/*}; \
-	 locale=$${dir2##*/}; \
-         mkdir --parents tmp$(DEB_LOCALE)/$$locale/LC_MESSAGES; \
-         cp $(LOCALE)/$$locale/LC_MESSAGES/$(program).mo \
-	                                  tmp$(DEB_LOCALE)/$$locale/LC_MESSAGES
-
-$(LOCALE)/%/LC_MESSAGES/$(program).mo : $(PO)
+locale : $(PO)
 	for file in $(PO); do \
          msgfmt -c $$file; \
          po=$${file#*/}; \
          mkdir --parents $(LOCALE)/$${po%%.po}/LC_MESSAGES; \
          mv messages.mo $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(program).mo; \
+         mkdir --parents tmp$(DIST_LOCALE)/$${po%%.po}/LC_MESSAGES; \
+         cp $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(program).mo \
+                                     tmp$(DIST_LOCALE)/$${po%%.po}/LC_MESSAGES; \
          done
+
+$(program) : ;
+
+install : $(DIST_BIN)/$(program) locale
+	for file in $(PO); do \
+         po=$${file#*/}; \
+         mkdir --parents $(DIST_LOCALE)/$${po%%.po}/LC_MESSAGES; \
+         cp $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(program).mo \
+                                      $(DIST_LOCALE)/$${po%%.po}/LC_MESSAGES; \
+         done
+
+uninstall : $(program)
+	rm $(DIST_BIN)/$(program) $(DIST_LOCALE)/*/LC_MESSAGES/$(program).mo
+
+$(DIST_BIN)/$(program) : $(program)
+	cp $(program) $(DIST_BIN)
 
 $(program)-$(version).tar.gz : $(program) Makefile INSTALL LICENSE COPYING po/$(program).pot $(PO)
 	mkdir --parents ../$(program)-$(version)/deb ../$(program)-$(version)/po
@@ -74,11 +70,10 @@ htdocs/download/debian/binary/$(program)-$(version).deb : tmp/DEBIAN/md5sums
 	dpkg-deb -b tmp $(program)-$(version).deb
 	cp $(program)-$(version).deb htdocs/download/debian/binary
 
-tmp/DEBIAN/md5sums : $(program) deb/control \
-                     $(wildcard tmp$(DEB_LOCALE)/*/LC_MESSAGES/$(program).mo)
-	mkdir --parents tmp/DEBIAN tmp$(DEB_BIN) tmp$(DEB_LOCALE)
+tmp/DEBIAN/md5sums : $(program) deb/control locale
+	mkdir --parents tmp/DEBIAN tmp$(DIST_BIN)
 	cp deb/control tmp/DEBIAN
-	cp $(program) tmp$(DEB_BIN)
+	cp $(program) tmp$(DIST_BIN)
 	cd tmp ; md5sum $(shell find tmp -type f | \
                         awk '/.\// { print substr($$0, 5) }') > DEBIAN/md5sums
 
