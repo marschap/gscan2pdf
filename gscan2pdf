@@ -39,6 +39,7 @@
 
 # Release procedure:
 # 1. make tar dist
+#    test dist sudo dpkg -i gscan2pdf-0....
 # 2. cvs update
 # 3. cvs tag vx-x-x
 # 4. make remote-dist remote-web 
