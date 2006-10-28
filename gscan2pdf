@@ -106,7 +106,7 @@ while (defined($ARGV[0])) {
   shift @ARGV;
  }
  else {
-  warn $d->get('Unknown option'), " $ARGV[0]\n";
+  warn $d->get('Unknown option'), ' ', shift @ARGV, "\n"; # xgettext hack
   exit 1;
  }
 }
@@ -2213,7 +2213,8 @@ sub quit {
  $SETTING{"thumb panel"} = $hpaned -> get_position;
 
 # Write config file
- open (CONFIG, "> $config") or die $d->get("Can't open config file"), " $config";
+ open (CONFIG, "> $config")
+  or die $d->get("Can't open config file"), " ", $config; # xgettext hack
  while (my ($key, $value) = each %SETTING) {
   print CONFIG "$key = $value\n";
  }
