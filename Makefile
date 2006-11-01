@@ -32,28 +32,30 @@ locale : $(PO)
          mv messages.mo $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(program).mo; \
          mkdir --parents tmp$(DIST_LOCALE)/$${po%%.po}/LC_MESSAGES; \
          cp $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(program).mo \
-                                     tmp$(DIST_LOCALE)/$${po%%.po}/LC_MESSAGES; \
+                                    tmp$(DIST_LOCALE)/$${po%%.po}/LC_MESSAGES; \
          done
 
 $(program) : ;
 
-install : $(DIST_BIN)/$(program) locale
+install : $(program)
+	cp $(program) $(DIST_BIN)
 	for file in $(PO); do \
          po=$${file#*/}; \
          mkdir --parents $(DIST_LOCALE)/$${po%%.po}/LC_MESSAGES; \
          cp $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(program).mo \
                                       $(DIST_LOCALE)/$${po%%.po}/LC_MESSAGES; \
          done
+	cp $(program).desktop /usr/share/applications
 
 uninstall : $(program)
-	rm $(DIST_BIN)/$(program) $(DIST_LOCALE)/*/LC_MESSAGES/$(program).mo
+	rm $(DIST_BIN)/$(program) $(DIST_LOCALE)/*/LC_MESSAGES/$(program).mo \
+	    /usr/share/applications/$(program).desktop
 
-$(DIST_BIN)/$(program) : $(program)
-	cp $(program) $(DIST_BIN)
-
-$(program)-$(version).tar.gz : $(program) Makefile INSTALL LICENSE COPYING po/$(program).pot $(PO)
+$(program)-$(version).tar.gz : $(program) Makefile INSTALL LICENSE COPYING \
+                                  po/$(program).pot $(PO)
 	mkdir --parents ../$(program)-$(version)/deb ../$(program)-$(version)/po
-	cp $(program) Makefile INSTALL LICENSE COPYING ../$(program)-$(version)
+	cp $(program) $(program).desktop Makefile INSTALL LICENSE COPYING \
+	                                             ../$(program)-$(version)
 	cp $(PO) po/$(program).pot ../$(program)-$(version)/po
 	cp deb/debian-binary deb/control ../$(program)-$(version)/deb
 	cd .. ; tar cfvz $(program)-$(version).tar.gz $(program)-$(version)
@@ -71,9 +73,10 @@ htdocs/download/debian/binary/$(program)-$(version).deb : tmp/DEBIAN/md5sums
 	cp $(program)-$(version).deb htdocs/download/debian/binary
 
 tmp/DEBIAN/md5sums : $(program) deb/control locale
-	mkdir --parents tmp/DEBIAN tmp$(DIST_BIN)
+	mkdir --parents tmp/DEBIAN tmp$(DIST_BIN) tmp/usr/share/applications
 	cp deb/control tmp/DEBIAN
 	cp $(program) tmp$(DIST_BIN)
+	cp $(program).desktop tmp/usr/share/applications
 	cd tmp ; md5sum $(shell find tmp -type f | \
                         awk '/.\// { print substr($$0, 5) }') > DEBIAN/md5sums
 
@@ -84,13 +87,13 @@ htdocs/download/debian/binary/Packages.gz : htdocs/download/debian/binary/$(prog
 remote-dist : htdocs/download/debian/binary/$(program)-$(version).deb htdocs/download/debian/binary/Packages.gz
 	scp htdocs/download/debian/binary/$(program)-$(version).deb \
             htdocs/download/debian/binary/Packages.gz \
-	    ra28145@shell.sf.net:/home/groups/g/gs/gscan2pdf/htdocs/download/debian/binary
+	    ra28145@shell.sf.net:/home/groups/g/gs/$(program)/htdocs/download/debian/binary
 
 htdocs/index.html : $(program)
 	pod2html --title=$(program)-$(version) $(program) > htdocs/index.html
 
 remote-web : htdocs/index.html
-	scp htdocs/index.html ra28145@shell.sf.net:/home/groups/g/gs/gscan2pdf/htdocs/
+	scp htdocs/index.html ra28145@shell.sf.net:/home/groups/g/gs/$(program)/htdocs/
 
 po/$(program).pot : $(program)
 	xgettext -L perl --keyword=get -o - $(program) | \
