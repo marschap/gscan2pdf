@@ -7,7 +7,7 @@
 # To do
 # 0. Add status line at bottom with messages like "filename saved"
 #    Rewrite in python with python-sane, pytiff & tiff2pdf
-#    Add Gnome menu
+#    Add KDE, xfe? menus
 #    Add dialog whilst device-dependent options are being parsed
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
@@ -31,11 +31,10 @@
 #    Add screenshot to help
 #    Add icon to homepage for GTKfiles.
 #    Make save button default
-#    Add imagemagick recommend in config file
-# 1. Translations
-# 2. Progress meter for scans and imports.
-# 3. Crop and autocrop
-# 4. Look at OCR
+#    Put in a check that mogrify is available
+# 1. Progress meter for scans and imports.
+# 2. Crop and autocrop
+# 3. Look at OCR
 
 # Release procedure:
 # 1. make tar dist
@@ -66,7 +65,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext;                 # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.8.0";
+my $version = "0.8.1";
 
 # Standard paper sizes
 my @paper = qw(A4 Letter);
@@ -598,7 +597,7 @@ sub get_pixbuf {
 # Failed to load RGB data from TIFF file:
 #        libpixbuf-tiff: Read error on strip 134; got 5190 bytes, expected 7130
 # Normally succeeds on second attempt
- my $src_pixbuf;
+
 # Change new_from_file for new_from_file_at_scale once I no longer have to
 # develop with Gtk2 < 1.090!
  eval { $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename); };
@@ -617,8 +616,8 @@ sub get_pixbuf {
  }
 
 # Get dimension for image
- my $widthi = $src_pixbuf -> get_width;
- my $heighti = $src_pixbuf -> get_height;
+ $widthi = $src_pixbuf -> get_width;
+ $heighti = $src_pixbuf -> get_height;
 
 # Calculate scale factor
  my $scale = ($width-1)/$widthi < ($height-1)/$heighti
@@ -834,12 +833,13 @@ sub save_PDF {
 
 # Get help page to see what compression options are configured in tiff2pdf
  my $output = `tiff2pdf -h 2>&1 1>/dev/null`;
- my @compression = qw(None);
+ my @compression;
+ push @compression, $d->get('None');
  if ($output =~ /-z/) {
-  push @compression, 'Zip';
+  push @compression, $d->get('Zip');
   $SETTING{'compression'} = 'Zip' if (! defined $SETTING{'compression'});
  }
- push @compression, 'JPEG' if ($output =~ /-j/);
+ push @compression, $d->get('JPEG') if ($output =~ /-j/);
 
 # Compression optionmenu
  my $hboxc = Gtk2::HBox -> new;
@@ -870,7 +870,7 @@ sub save_PDF {
   my $item = Gtk2::MenuItem -> new ($compression);
   $menuc -> append ($item);
   $item -> signal_connect ('activate' => sub {
-   if ($compression eq 'JPEG') {
+   if ($compression eq $d->get('JPEG')) {
     $hboxq -> show_all;
    }
    else {
@@ -1401,7 +1401,9 @@ sub scan_dialog {
 
    my $opts = Gtk2::OptionMenu -> new;
    my $menus = Gtk2::Menu -> new;
-   my @side = qw(Facing Reverse);
+   my @side;
+   push @side, $d->get('Facing');
+   push @side, $d->get('Reverse');
    foreach (@side) {
     my $item = Gtk2::MenuItem -> new ($_);
     $item -> signal_connect (activate => sub {
@@ -2506,11 +2508,17 @@ Zooms to 1:1. How this appears depends on the desktop resolution.
 
 =head3 Zoom to fit
 
-Scales the view such the all the page is visible.
+Scales the view such that all the page is visible.
 
 =head3 Zoom in
 
 =head3 Zoom out
+
+=head3 Rotate 90 clockwise
+
+=head3 Rotate 180
+
+=head3 Rotate 90 anticlockwise
 
 =head1 FAQs
 
