@@ -1,0 +1,133 @@
+0.8.2:
+
++ Partial Swedish translation (thanks to Daniel Nylander)
++ Partial French translation (thanks to Nicolas Velin)
+Updates to German translation (thanks to joeb)
+Fixed bug in arguments passed to scanimage in non-English locale
++ liblocale-gettext-perl (>= 1.05) dependency in .deb
++ Support for epson_3490 and canoscan_FB_630P scanners
+
+
+0.8.1:
+
++ Gnome menu
+Fixed zoom bug
++ German translation (thanks to Christoph Langner)
+
+
+0.8.0:
+
++ Rotate options
++ Automatically adds .pdf extension if not already there
+Renamed Import menu to Import TIFF
+Changed the scan toolbar button from print to print-preview
+Made Zip compression default if not in settings
++ Fixed lack of shortcut for File menu
++ Start of German translation
+
+
+0.7.12:
+
+Fixed bug displaying detail view in multipage scans
+
+
+0.7.11:
+
+Fixed bug importing from temp
+Fixed bug no PDF file created if JPEG compression selected (thanks Thomas for the patch)
++ FAQ
++ more tooltips
++ Support for niash scanner
++ Right mouse button menus
+Wrapped all strings in gettext calls for internationalisation
+Now ignores "rounded br-" warnings from scanimage
+Update to help to improve html look
+Copes with spaces in device-dependent options
+Copes with strange characters in device names
++ Uses new FileChooser instead of old FileSelection
+
+
+0.7.2:
+
++ button-wait scan option
++ source scan option
+Fixed locale problem, forcing LC_NUMERIC=C
+Tidied up drag and drop routine
+
+
+0.7:
+
++ Drag and drop page reordering
++ Toolbar buttons
++ Tool tips
++ View menu
++ Some documentation
++ Help viewer
++ Improved window handling
++ PDF compression options
+Fixed libpixbuf-tiff Read error
+Fixed dialog after unknown scan warning
+
+
+0.6.3:
+
+Fixed "scanimage: option --br-y: bad option value" bug
+Child windows now hidden rather than destroyed to improve speed and prevent multiple instances.
+Added # pages to scan to config file
++ Renumber menu item
++ Config save for PDF, scan and window settings
++ Added config file support for window maximize state
+Changed order of options in tiff2pdf call for FreeBSD compatibility
+Moved test output to external file
++ Now parses paper size from device-dependent options
+
+
+0.6.2:
+
+Fixed bug in Letter size scans
+
+
+0.6.1:
+
++ Renumber by editing page number
++ Destroy window after pdf write
++ Read options from --help --device-name=<dev>
++ Test mode
++ Hides Custom paper sizes when not needed
+
+
+0.6:
+
++ Error checking for import
++ Import multiselect
++ Save as TIFF
++ Import multipage TIFFs
+
+
+0.5:
+
++ Support for PDF Metadata
++ Doublesided scan options
++ deb packaging
+
+
+0.4:
+
++ Thumbnails
++ Edit menu
++ Install script
+
+
+0.3:
+
++ Resizing widgets and more scan options.
+
+
+0.2:
+
++ Scan options
+
+
+0.1:
+
+Initial release
