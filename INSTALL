@@ -34,10 +34,28 @@ If you have a Debian system (like Ubuntu) then you can make a .deb with
 
 and then install it with
 
- sudo dpkg -i gscan2pdf-0.7.11.deb
+ sudo dpkg -i gscan2pdf-0.8.2.deb
 
-This has the advantage of not having to hold on to the Makefile in order to uninstall it.
+This has the advantage of not having to hold on to the Makefile in order to
+uninstall it.
 
+
+Alternatively, add the following line to your /etc/apt/sources.list:
+
+deb http://gscan2pdf.sourceforge.net/download/debian binary/
+
+If you are you are using Synaptic, then use menu
+'Edit/Reload Package Information', search for gscan2pdf in the package list,
+and lo and behold, you can install the nice shiny new version automatically.
+
+From the command line:
+
+sudo apt-get update
+sudo apt-get install gscan2pdf
+
+The help will require Gtk2::Ex::PodViewer. Rotating requires Imagemagick.
+Having installed gscan2pdf, locate the gscan2pdf entry in Synaptic,
+right-click it and you can install them under "Recommends".
 
 
 Uninstalling
@@ -62,6 +80,7 @@ and then
 as appropriate.
 
 
-Alternatively, if you installed the .deb, you can uninstall it with your favourite graphical package manager (e.g. Synaptic), or with
+Alternatively, if you installed the .deb, you can uninstall it with your
+favourite graphical package manager (e.g. Synaptic), or with
 
  sudo dpkg -r gscan2pdf
