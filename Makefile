@@ -1,7 +1,7 @@
 SHELL = /bin/sh
 
 program = gscan2pdf
-version = $(shell awk '{if (match($$0, /my \$$version = "(.*)";/, a)) print a[1]}' $(program))
+version = $(shell sed -n 's/^my \$$version *= *"\(.*\)";/\1/p' < $(program))
 year = $(shell date +%Y)
 author = Jeffrey Ratcliffe
 email = ra28145@users.sourceforge.net
@@ -55,7 +55,7 @@ $(program)-$(version).tar.gz : $(program) Makefile INSTALL LICENSE COPYING \
                                   po/$(program).pot $(PO)
 	mkdir --parents ../$(program)-$(version)/deb ../$(program)-$(version)/po
 	cp $(program) $(program).desktop Makefile INSTALL LICENSE COPYING \
-	                                             ../$(program)-$(version)
+	                                       History ../$(program)-$(version)
 	cp $(PO) po/$(program).pot ../$(program)-$(version)/po
 	cp deb/debian-binary deb/control ../$(program)-$(version)/deb
 	cd .. ; tar cfvz $(program)-$(version).tar.gz $(program)-$(version)
@@ -64,8 +64,7 @@ $(program)-$(version).tar.gz : $(program) Makefile INSTALL LICENSE COPYING \
 
 deb/control : $(program)
 	cp deb/control deb/control_tmp
-	awk '{if (/^Version:/) print "Version: $(version)" ; else print}' \
-         deb/control_tmp > deb/control
+	sed -n 's/^Version:/Version: $(version)/p < deb/control_tmp > deb/control
 	rm deb/control_tmp
 
 htdocs/download/debian/binary/$(program)-$(version).deb : tmp/DEBIAN/md5sums
