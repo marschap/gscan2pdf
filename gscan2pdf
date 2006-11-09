@@ -24,14 +24,15 @@
 #    Work out how best to include package.
 #    Option to throw up PDF viewer with newly created PDF file
 #    Finish website on sourceforge
-#    Update INSTALL with depository details
-#    get ubuntu locale working
-#    get deb locale installation working.
 #    Add donate button to help
 #    Add screenshot to help
 #    Add icon to homepage for GTKfiles.
 #    Make save button default
 #    Put in a check that mogrify is available
+#    Add tolerance to page sizes
+#    Add changelog
+#    Add dates to history
+#    Make right button stickier, as in nautilus
 # 1. Progress meter for scans and imports.
 # 2. Crop and autocrop
 # 3. Look at OCR
@@ -48,9 +49,6 @@
 # 8. http://www.gtkfiles.org/app.php/gscan2pdf
 # 9. Ubuntu forum
 
-# Shell access to sourceforge:
-# ssh ra28145@shell.sf.net
-
 use warnings;
 use strict;
 use IPC::Open3;
@@ -65,7 +63,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext;                 # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.8.1";
+my $version = "0.8.2";
 
 # Standard paper sizes
 my @paper = qw(A4 Letter);
@@ -82,11 +80,15 @@ my $d = Locale::gettext->domain($program);
 my $test = FALSE;
 my $debug = FALSE;
 while (defined($ARGV[0])) {
-# Set up test mode and make sure file has absolute path
+# Set up test mode and make sure file has absolute path and is readable
  if ($ARGV[0] eq "--test") {
   shift @ARGV;
   $test = shift @ARGV;
   $test = getcwd."/$test" if ($test !~ /^\//);
+  if (! -r $test) {
+   warn $d->get('Error: cannot read'), " '$test'\n";
+   exit 1;
+  }
  }
  elsif ($ARGV[0] eq "--help") {
   system("perldoc $0");
@@ -934,7 +936,7 @@ sub save_PDF {
 # my $entryp = Gtk2::Entry -> new;
 # $entryp -> signal_connect ('insert-text' => sub {
 #  my ($widget, $string, $len, $position) = @_;
-#  if ($string !~ /^[0-9]+$/) { # Only add numbers
+#  if ($string !~ /^\d+$/) { # Only add numbers
 #   $entryp -> signal_stop_emission_by_name ('insert-text');
 #   $buttonp -> set_active(TRUE); # Set the radiobutton active
 #  }
@@ -1275,7 +1277,7 @@ sub scan_dialog {
 
     my $device = substr($output, 0, index($output, "\n")+1);
     $output = substr($output, index($output, "\n")+1, length($output));
-    while ($device =~ /'([0-9]*)','(.*)','(.*)'/) {
+    while ($device =~ /'(\d*)','(.*)','(.*)'/) {
      $device[$1] = $2;
 
 # Convert all underscores to spaces
@@ -1461,7 +1463,7 @@ sub scan_dialog {
 
 # ignore artificial paper size option
          $SETTING{$key} = $widget -> get_label;
-         if ($widget -> isa('Gtk2::Label') and $key ne 'Paper size') {
+         if ($widget -> isa('Gtk2::Label') and $key ne $d->get('Paper size')) {
           $options{$key} = $SETTING{$key};
          }
         }
@@ -1627,13 +1629,13 @@ sub scan {
    sysread $error, $buffer, 1024;
    $line = $line . $buffer; # needed to cover case where line is broken in middle
    while ($line =~ /\n/) {
-    if ($line =~ /^Scanning (-?[0-9]*) pages/) {
+    if ($line =~ /^Scanning (-?\d*) pages/) {
      $label -> set_text($d->get('Scanning')." $1 ".$d->get('pages')."...");
     }
-    elsif ($line =~ /^Scanning page ([0-9]*)/) {
+    elsif ($line =~ /^Scanning page (\d*)/) {
      $label -> set_text($d->get('Scanning page')." $1...");
     }
-    elsif ($line =~ /^Scanned page ([0-9]*)\. \(scanner status = 5\)/) {
+    elsif ($line =~ /^Scanned page (\d*)\. \(scanner status = 5\)/) {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
@@ -1650,7 +1652,7 @@ sub scan {
      $dialog -> destroy;
      return 0; # Sascha Hunold [hunoldinho at users dot sourceforge dot net]
     }
-    elsif ($line =~ /^Scanned page [0-9]*\. \(scanner status = 7\)/) {
+    elsif ($line =~ /^Scanned page \d*\. \(scanner status = 7\)/) {
      ;
     }
     elsif ($line =~ /^scanimage: sane_start: Document feeder out of documents/) {
@@ -1692,7 +1694,7 @@ sub import_scan {
 
 # Add to the page list
  my $i;
- if ($ofilename =~ /out([0-9]*)\.tif/) {
+ if ($ofilename =~ /out(\d*)\.tif/) {
   $i = $1;
  }
  else {
@@ -1825,8 +1827,8 @@ sub update_options {
 
 # Dig out the paper sizes
  my ($x, $y);
- $x = $1 if ($output =~ /-x 0\.\.([0-9]*\.?[0-9]*)/);
- $y = $1 if ($output =~ /-y 0\.\.([0-9]*\.?[0-9]*)/);
+ $x = $2 if ($output =~ /-x (auto\|)?\d\.\.(\d*\.?\d*)/);
+ $y = $2 if ($output =~ /-y (auto\|)?\d\.\.(\d*\.?\d*)/);
 
  if (defined($x) and defined($y)) {
 
@@ -1953,7 +1955,7 @@ sub update_options {
       and $default !~ /inactive/
 
 # This needed for psc1315, that only has one option for source.
-      and ($values =~ /([0-9]*\.?[0-9]*)\.\.([0-9]*\.?[0-9]*)/
+      and ($values =~ /(\d*\.?\d*)\.\.(\d*\.?\d*)/
        or $values =~ /\|/)) {
 
 # Set default from config
@@ -2005,7 +2007,7 @@ sub update_options {
    }
 
 # SpinButton
-   elsif ($values =~ /([0-9]*\.?[0-9]*)\.\.([0-9]*\.?[0-9]*)/) {
+   elsif ($values =~ /(\d*\.?\d*)\.\.(\d*\.?\d*)/) {
     my $spin_button = Gtk2::SpinButton -> new_with_range($1, $2, 1);
     $spin_button -> set_value($default);
     $hbox -> pack_end ($spin_button, FALSE, FALSE, 0);
@@ -2359,6 +2361,8 @@ From the command line:
 C<apt-get update>
 
 C<apt-get install gscan2pdf>
+
+The help will require F<Gtk2::Ex::PodViewer>. Rotating requires F<Imagemagick>. Having installed gscan2pdf, locate the gscan2pdf entry in Synaptic, right-click it and you can install them under I<Recommends>.
 
 =head2 Other packaging systems
 
