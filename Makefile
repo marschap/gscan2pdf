@@ -51,12 +51,11 @@ uninstall : $(program)
 	rm $(DIST_BIN)/$(program) $(DIST_LOCALE)/*/LC_MESSAGES/$(program).mo \
 	    /usr/share/applications/$(program).desktop
 
-$(program)-$(version).tar.gz : $(program) Makefile INSTALL LICENSE COPYING \
-                                  po/$(program).pot $(PO)
+$(program)-$(version).tar.gz : $(program) Makefile INSTALL LICENSE COPYING $(PO)
 	mkdir --parents ../$(program)-$(version)/deb ../$(program)-$(version)/po
 	cp $(program) $(program).desktop Makefile INSTALL LICENSE COPYING \
 	                                       History ../$(program)-$(version)
-	cp $(PO) po/$(program).pot ../$(program)-$(version)/po
+	cp $(PO) ../$(program)-$(version)/po
 	cp deb/debian-binary deb/control ../$(program)-$(version)/deb
 	cd .. ; tar cfvz $(program)-$(version).tar.gz $(program)-$(version)
 	mv ../$(program)-$(version).tar.gz .
@@ -64,7 +63,7 @@ $(program)-$(version).tar.gz : $(program) Makefile INSTALL LICENSE COPYING \
 
 deb/control : $(program)
 	cp deb/control deb/control_tmp
-	sed -n 's/^Version:/Version: $(version)/p < deb/control_tmp > deb/control
+	sed 's/^Version:.*/Version: $(version)/' < deb/control_tmp > deb/control
 	rm deb/control_tmp
 
 htdocs/download/debian/binary/$(program)-$(version).deb : tmp/DEBIAN/md5sums
@@ -75,6 +74,7 @@ tmp/DEBIAN/md5sums : $(program) deb/control locale
 	mkdir --parents tmp/DEBIAN tmp$(DIST_BIN) tmp/usr/share/applications
 	cp deb/control tmp/DEBIAN
 	cp $(program) tmp$(DIST_BIN)
+	chmod a+rx tmp$(DIST_BIN)/$(program)
 	cp $(program).desktop tmp/usr/share/applications
 	cd tmp ; md5sum $(shell find tmp -type f | \
                         awk '/.\// { print substr($$0, 5) }') > DEBIAN/md5sums
