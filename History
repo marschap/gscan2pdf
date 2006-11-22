@@ -1,3 +1,11 @@
+0.8.3:
++ Dutch translation (thanks to ????)
+Moved make to MakeMaker
+Stickier right mouse button
+Corrected .deb to all instead of i386 architecture
++ code to allow translation of scanimage commandline options
+
+
 0.8.2:
 
 + Partial Swedish translation (thanks to Daniel Nylander)
@@ -6,6 +14,7 @@ Updates to German translation (thanks to joeb)
 Fixed bug in arguments passed to scanimage in non-English locale
 + liblocale-gettext-perl (>= 1.05) dependency in .deb
 + Support for epson_3490 and canoscan_FB_630P scanners
++ chmod a+rw for executable in deb
 
 
 0.8.1:
