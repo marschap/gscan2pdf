@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright (c) 2006 by Jeff Ratcliffe (ra28145 at users dot sourceforge dot net)
+# Copyright (c) 2006 by Jeff Ratcliffe (ra28145 at users dot sourceforge.net)
 # This script is released under the GPL license.  Please
 # see the included LICENSE file for details.
 
@@ -37,13 +37,12 @@
 #    Make the pixel gap 10 (or some ratio) to prevent scrolling.
 #    After deleting a page, should display next in thumbnail list
 #    Work out a good place to log error messages
-#    Fix architecture-dependent .deb
 # 1. Progress meter for scans and imports.
 # 2. Crop and autocrop
 # 3. Look at OCR
 
 # Release procedure:
-# 1. make tar dist
+# 1. make rpmdist debdist
 #    test dist sudo dpkg -i gscan2pdf-0....
 # 2. cvs update
 # 3. cvs tag vx-x-x
@@ -91,7 +90,7 @@ while (defined($ARGV[0])) {
   $test = shift @ARGV;
   $test = getcwd."/$test" if ($test !~ /^\//);
   if (! -r $test) {
-   warn $d->get('Error: cannot read'), " '$test'\n";
+   warn $d->get('Error: cannot read'), " '", $test, "'\n"; # xgettext hack
    exit 1;
   }
  }
@@ -127,9 +126,6 @@ if (check_utils()) {
 # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
 # scanimage
 setlocale(LC_NUMERIC, "C");
-
-#warn $d->dir(),"\n";
-#warn setlocale(LC_MESSAGES), "\n";
 
 # Read config file
 my $config = "$ENV{'HOME'}/.$program";
@@ -1522,7 +1518,7 @@ sub scan_dialog {
 
 # ignore artificial paper size option
          $SETTING{$key} = get_value($key, $widget -> get_label);
-         if ($widget -> isa('Gtk2::Label') and $key ne $d->get('Paper size')) {
+         if ($widget -> isa('Gtk2::Label') and $key ne 'Paper size') {
           $options{$key} = $SETTING{$key};
          }
         }
@@ -1985,7 +1981,12 @@ sub update_options {
  }
 
 # Set device-dependent options
- undef %ddo;
+# Dummy entries so that something is returned:
+ %ddo = (
+          'Paper size' => { string => $d->get('Paper size') },
+          'x'          => { string => 'x' },
+          'y'          => { string => 'y' },
+        );
 
 # Add remaining options
  while ($output =~ /--([a-z_-]*)(.*) \[(.*)\].*\n([\S\s]*)/) {
