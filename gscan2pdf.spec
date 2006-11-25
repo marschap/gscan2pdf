@@ -1,15 +1,15 @@
-Name:           gscan2pdf
-Version:        0.8.3
-Release:        1%{?dist}
-Summary:        A GUI to ease the process of producing a multipage PDF from a scan
-
-Group:          Applications/Publishing
-License:        GPL
-URL:            http://gscan2pdf.sourceforge.net/
-Source0:        http://easynews.dl.sourceforge.net/sourceforge/gscan2pdf/gscan2pdf-0.7.12.tar.gz
-BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-
-ExclusiveArch: noarch
+Name:      gscan2pdf
+Version: 0.8.3
+Release:   1%{?dist}
+Summary:   A GUI to ease the process of producing a multipage PDF from a scan
+Group:     Applications/Publishing
+License:   GPL
+URL:       http://%{name}.sourceforge.net/
+Source0:   %{name}-%{version}.tar.gz
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+BuildArch: noarch
+Packager:  Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+Requires:  perl(Gtk2) >= 1:1.043-1, perl(Glib) >= 1.100-1, perl(Locale::gettext) >= 1.05, sane, libtiff
 
 %description
 At maturity, the GUI will have similar features to that of the Windows Imaging
@@ -17,40 +17,35 @@ program, but with the express objective of writing a PDF, including metadata.
 
 Scanning is handled with SANE via scanimage. PDF conversion is done by libtiff.
 
-
 %prep
 %setup -q
 
-# create .desktop file
-cat > %name.desktop <<EOF
-[Desktop Entry]
-Name=gscan2pdf
-Comment=Scan to multipage PDFs
-Exec=/usr/bin/gscan2pdf
-Type=Application
-Terminal=false
-Categories=Application;Office;
-Encoding=UTF-8
-X-Desktop-File-Install-Version=0.9
-EOF
+%build
+rm -rf $RPM_BUILD_ROOT
+perl Makefile.PL
+make
+make test
 
 %install
-rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT%{_bindir}
-make install DESTDIR=$RPM_BUILD_ROOT BIN_DIR=$RPM_BUILD_ROOT%{_bindir}
-
-mkdir -p $RPM_BUILD_ROOT%{_datadir}/applications
-cp %{name}.desktop $RPM_BUILD_ROOT%{_datadir}/applications/
-
+make DESTDIR=$RPM_BUILD_ROOT INSTALLMAN1DIR=/usr/share/man/man1 \
+     INSTALLSITEMAN1DIR=/usr/share/man/man1 INSTALLMAN3DIR=/usr/share/man/man3 \
+     INSTALLSITEMAN3DIR=/usr/share/man/man3 SITEPREFIX=/usr MAN1EXT=1p install
+find $RPM_BUILD_ROOT -name perllocal.pod | xargs rm -f
+find $RPM_BUILD_ROOT -name .packlist | xargs rm -f
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-
 %files
 %defattr(-,root,root,-)
-%doc COPYING INSTALL LICENSE 
+%doc COPYING INSTALL LICENCE History
 %{_bindir}/gscan2pdf
 %{_datadir}/applications/%{name}.desktop
+%{_datadir}/locale/de/LC_MESSAGES/%{name}.mo
+%{_datadir}/locale/en_GB/LC_MESSAGES/%{name}.mo
+%{_datadir}/locale/fr/LC_MESSAGES/%{name}.mo
+%{_datadir}/locale/nl/LC_MESSAGES/%{name}.mo
+%{_datadir}/locale/sv/LC_MESSAGES/%{name}.mo
+%{_datadir}/man/man1/%{name}.1p.gz
 
 %changelog
