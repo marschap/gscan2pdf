@@ -62,17 +62,13 @@ sub MY::install {
     return $string;
 }
 
-sub MY::preamble {
- my $preamble = <<'END';
-PO = $(wildcard po/*.po)
-END
- $preamble;
-}
-
 sub MY::postamble {
  my $postamble = <<'END';
+PO = $(wildcard po/*.po)
+DEB_BUILD_ROOT = /var/tmp/$(NAME)-$(VERSION)
+
 rpmdist : $(NAME).spec tardist
-	$(MKPATH) rpm rpm/SPECS rpm/SOURCES rpm/BUILD rpm/RPMS rpm/SRPMS \
+	mkdir --parents rpm rpm/SPECS rpm/SOURCES rpm/BUILD rpm/RPMS rpm/SRPMS \
                                                   rpm/RPMS/noarch || /bin/true
 	cp $(NAME).spec rpm/SPECS/$(NAME).spec
 	cp $(NAME)-$(VERSION).tar.gz \
@@ -83,13 +79,14 @@ rpmdist : $(NAME).spec tardist
 locale_install : locale
 	for file in $(PO); do \
          po=$${file#*/}; \
-         umask 02; $(MKPATH) $(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
-         cp $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(NAME).mo \
-                                      $(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
+         mkdir --parents $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
+         cp $${po%%.po}/LC_MESSAGES/$(NAME).mo \
+                              $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
          done
 
 icon_install :
-	cp $(NAME).desktop $(SHAREDIR)/applications
+	mkdir --parents $(DESTDIR)$(SHAREDIR)/applications
+	cp $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
 
 debdist : htdocs/download/debian/binary/$(NAME)-$(VERSION).deb
 
@@ -105,30 +102,37 @@ locale : $(PO)
 	for file in $(PO); do \
          msgfmt -c $$file; \
          po=$${file#*/}; \
-         $(MKPATH) $(LOCALE)/$${po%%.po}/LC_MESSAGES; \
-         mv messages.mo $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(NAME).mo; \
-         $(MKPATH) tmp$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
-         cp $(LOCALE)/$${po%%.po}/LC_MESSAGES/$(NAME).mo \
-                                    tmp$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
+         mkdir --parents $${po%%.po}/LC_MESSAGES; \
+         mv messages.mo $${po%%.po}/LC_MESSAGES/$(NAME).mo; \
          done
 
-deb/control : $(NAME)
+deb/control : bin/$(NAME)
 	cp deb/control deb/control_tmp
 	sed 's/^Version:.*/Version: $(VERSION)/' < deb/control_tmp > deb/control
 	rm deb/control_tmp
 
-htdocs/download/debian/binary/$(NAME)-$(VERSION).deb : tmp/DEBIAN/md5sums
-	dpkg-deb -b tmp $(NAME)-$(VERSION).deb
-	cp $(NAME)-$(VERSION).deb htdocs/download/debian/binary
+$(NAME).spec : bin/$(NAME)
+	cp $(NAME).spec $(NAME).spec_tmp
+	sed 's/^Version:.*/Version: $(VERSION)/' < $(NAME).spec_tmp > $(NAME).spec
+	rm $(NAME).spec_tmp
 
-tmp/DEBIAN/md5sums : $(NAME) deb/control locale
-	$(MKPATH) tmp/DEBIAN tmp$(DIST_BIN) tmp/usr/share/applications
-	cp deb/control tmp/DEBIAN
-	cp $(NAME) tmp$(DIST_BIN)
-	chmod a+rx tmp$(DIST_BIN)/$(NAME)
-	cp $(NAME).desktop tmp/usr/share/applications
-	cd tmp ; md5sum $(shell find tmp -type f | \
-                        awk '/.\// { print substr($$0, 5) }') > DEBIAN/md5sums
+htdocs/download/debian/binary/$(NAME)-$(VERSION).deb : $(DEB_BUILD_ROOT)/DEBIAN/md5sums
+	dpkg-deb -b $(DEB_BUILD_ROOT) $(NAME)-$(VERSION).deb
+	cp $(NAME)-$(VERSION).deb htdocs/download/debian/binary
+	rm -rf $(DEB_BUILD_ROOT)
+
+$(DEB_BUILD_ROOT)/DEBIAN/md5sums : bin/$(NAME) deb/control locale
+	make DESTDIR=$(DEB_BUILD_ROOT) INSTALLMAN1DIR=/usr/share/man/man1 \
+         INSTALLSITEMAN1DIR=/usr/share/man/man1 \
+         INSTALLMAN3DIR=/usr/share/man/man3 \
+         INSTALLSITEMAN3DIR=/usr/share/man/man3 SITEPREFIX=/usr MAN1EXT=1p \
+	 install
+	find $(DEB_BUILD_ROOT) -name perllocal.pod | xargs rm -f
+	find $(DEB_BUILD_ROOT) -name .packlist | xargs rm -f
+	mkdir --parents $(DEB_BUILD_ROOT)/DEBIAN
+	cp deb/control deb/debian-binary $(DEB_BUILD_ROOT)/DEBIAN
+	cd $(DEB_BUILD_ROOT) ; md5sum $(shell find $(DEB_BUILD_ROOT) -type f | \
+        awk 'BEGIN {x=length("$(DEB_BUILD_ROOT)")+2} /.\// { print substr($$0, x) }') > $(DEB_BUILD_ROOT)/DEBIAN/md5sums
 
 htdocs/download/debian/binary/Packages.gz : htdocs/download/debian/binary/$(NAME)-$(VERSION).deb
 	cd htdocs/download/debian ; \
@@ -139,21 +143,21 @@ remote-dist : htdocs/download/debian/binary/$(NAME)-$(VERSION).deb htdocs/downlo
             htdocs/download/debian/binary/Packages.gz \
 	    ra28145@shell.sf.net:/home/groups/g/gs/$(NAME)/htdocs/download/debian/binary
 
-htdocs/index.html : $(NAME)
-	pod2html --title=$(NAME)-$(VERSION) $(NAME) > htdocs/index.html
+htdocs/index.html : bin/$(NAME)
+	pod2html --title=$(NAME)-$(VERSION) bin/$(NAME) > htdocs/index.html
 
 remote-html : htdocs/index.html
 	scp htdocs/index.html ra28145@shell.sf.net:/home/groups/g/gs/$(NAME)/htdocs/
 
-po/$(NAME).pot : $(NAME)
-	xgettext -L perl --keyword=get -o - $(NAME) | \
+po/$(NAME).pot : bin/$(NAME)
+	xgettext -L perl --keyword=get -o - bin/$(NAME) | \
          sed 's/SOME DESCRIPTIVE TITLE/messages.pot for $(NAME)/' | \
          sed 's/PACKAGE VERSION/$(NAME)-$(VERSION)/' | \
          sed "s/YEAR THE PACKAGE'S COPYRIGHT HOLDER/$(YEAR) $(AUTHOR)/" | \
          sed 's/PACKAGE/$(NAME)/' | \
          sed 's/FIRST AUTHOR <EMAIL@ADDRESS>, YEAR/$(AUTHOR) <$(EMAIL)>, $(YEAR)/' | \
-         sed 's/Report-Msgid-Bugs-To: /Report-Msgid-Bugs-To: $(EMAIL)/' \
-         > $@
+         sed 's/Report-Msgid-Bugs-To: /Report-Msgid-Bugs-To: $(EMAIL)/' | \
+         grep -v fuzzy > $@
 END
  $postamble;
 }
