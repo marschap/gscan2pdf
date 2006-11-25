@@ -4,10 +4,14 @@ Installing
 The program itself for gscan2pdf is in one file, so having extracted it to the
 current directory, you can just run it with
 
- ./gscan2pdf
+ bin/gscan2pdf
 
 
-For those who want an install script, I have included one:
+For those who want an install script, I have included one. First build with:
+
+ perl Makefile.PL
+ make
+
 
 From a system that uses sudo, like Ubuntu, you will need:
 
@@ -30,11 +34,12 @@ gscan2pdf will then be on the path an accessible from any directory with
 
 If you have a Debian system (like Ubuntu) then you can make a .deb with
 
- make dist
+ perl Makefile.PL
+ make debdist
 
 and then install it with
 
- sudo dpkg -i gscan2pdf-0.8.2.deb
+ sudo dpkg -i gscan2pdf-0.8.3.deb
 
 This has the advantage of not having to hold on to the Makefile in order to
 uninstall it.
@@ -52,6 +57,14 @@ From the command line:
 
 sudo apt-get update
 sudo apt-get install gscan2pdf
+
+
+If you have a system that uses RPMs, like Fedora or Suse, you can build an RPM
+with:
+
+ perl Makefile.PL
+ make rpmdist
+
 
 The help will require Gtk2::Ex::PodViewer. Rotating requires Imagemagick.
 Having installed gscan2pdf, locate the gscan2pdf entry in Synaptic,
