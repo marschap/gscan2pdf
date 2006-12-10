@@ -52,6 +52,13 @@ sub MY::macro {
     $string .= "AUTHOR=$author\n";
     $string .= "EMAIL=$email\n";
     $string .= "YEAR=$year\n";
+
+    $string .= "SITEPREFIX=/usr\n";
+    $string .= "INSTALLMAN1DIR=/usr/share/man/man1\n";
+    $string .= "INSTALLSITEMAN1DIR=/usr/share/man/man1\n";
+    $string .= "INSTALLMAN3DIR=/usr/share/man/man3\n";
+    $string .= "INSTALLSITEMAN3DIR=/usr/share/man/man3\n";
+    $string .= "MAN1EXT=1p\n";
     return $string;
 }
 
@@ -121,18 +128,19 @@ htdocs/download/debian/binary/$(NAME)-$(VERSION).deb : $(DEB_BUILD_ROOT)/DEBIAN/
 	cp $(NAME)-$(VERSION).deb htdocs/download/debian/binary
 	rm -rf $(DEB_BUILD_ROOT)
 
-$(DEB_BUILD_ROOT)/DEBIAN/md5sums : bin/$(NAME) deb/control locale
-	make DESTDIR=$(DEB_BUILD_ROOT) INSTALLMAN1DIR=/usr/share/man/man1 \
-         INSTALLSITEMAN1DIR=/usr/share/man/man1 \
-         INSTALLMAN3DIR=/usr/share/man/man3 \
-         INSTALLSITEMAN3DIR=/usr/share/man/man3 SITEPREFIX=/usr MAN1EXT=1p \
-	 install
+$(DEB_BUILD_ROOT)/DEBIAN/md5sums_files : bin/$(NAME) deb/control locale
+	make DESTDIR=$(DEB_BUILD_ROOT) install
 	find $(DEB_BUILD_ROOT) -name perllocal.pod | xargs rm -f
 	find $(DEB_BUILD_ROOT) -name .packlist | xargs rm -f
 	mkdir --parents $(DEB_BUILD_ROOT)/DEBIAN
 	cp deb/control deb/debian-binary $(DEB_BUILD_ROOT)/DEBIAN
-	cd $(DEB_BUILD_ROOT) ; md5sum $(shell find $(DEB_BUILD_ROOT) -type f | \
-        awk 'BEGIN {x=length("$(DEB_BUILD_ROOT)")+2} /.\// { print substr($$0, x) }') > $(DEB_BUILD_ROOT)/DEBIAN/md5sums
+	find $(DEB_BUILD_ROOT) -type f | \
+         awk 'BEGIN {x=length("$(DEB_BUILD_ROOT)")+2} /.\// { print substr($$0, x) }' > $(DEB_BUILD_ROOT)/DEBIAN/md5sums_files
+
+# Have to do this in two stages because $(shell find....) would be carried out before install otherwise
+$(DEB_BUILD_ROOT)/DEBIAN/md5sums : $(DEB_BUILD_ROOT)/DEBIAN/md5sums_files
+	cd $(DEB_BUILD_ROOT); \
+         md5sum $(shell cat $(DEB_BUILD_ROOT)/DEBIAN/md5sums_files) > $(DEB_BUILD_ROOT)/DEBIAN/md5sums
 
 htdocs/download/debian/binary/Packages.gz : htdocs/download/debian/binary/$(NAME)-$(VERSION).deb
 	cd htdocs/download/debian ; \
