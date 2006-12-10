@@ -28,25 +28,25 @@
 #    Add screenshot to help
 #    Add icon to homepage for GTKfiles.
 #    Make save button default
-#    Put in a check that mogrify is available
+#    Put in a check that mogrify is available (disabling rotations if not)
 #    Add tolerance to page sizes
 #    Add changelog
 #    Add dates to history
 #    Sort out sourceforge backups
 #    Right click save to PDF or TIFF should default to page range "selected"
-#    Make the pixel gap 10 (or some ratio) to prevent scrolling.
 #    After deleting a page, should display next in thumbnail list
 #    Work out a good place to log error messages
-# 1. Progress meter for scans and imports.
-# 2. Crop and autocrop
-# 3. Look at OCR
+# 1. Add support for scanadf
+# 2. Progress meter for scans and imports.
+# 3. Crop and autocrop
+# 4. Look at OCR
 
 # Release procedure:
 # 1. make rpmdist debdist
 #    test dist sudo dpkg -i gscan2pdf-0....
 # 2. cvs update
 # 3. cvs tag vx-x-x
-# 4. make remote-dist remote-web 
+# 4. make remote-dist remote-html 
 # 5. Upload to sourceforge and release files
 # 6. Freshmeat
 # 7. Launchpad, upload .pot if necessary
@@ -67,7 +67,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext;                 # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.8.3";
+my $version = "0.8.4";
 
 # Standard paper sizes
 my @paper = qw(A4 Letter);
@@ -76,6 +76,9 @@ my @y = ( 297, 279.4 );
 
 # Window parameters
 my $border_width = 6;
+
+# Image border to ensure that a scaled to fit image gets no scrollbars
+my $border = 1;
 
 # Set up domain for gettext (internationalisation)
 # Expects /usr/share/locale/xx_XX/LC_MESSAGES/$program.mo
@@ -90,7 +93,7 @@ while (defined($ARGV[0])) {
   $test = shift @ARGV;
   $test = getcwd."/$test" if ($test !~ /^\//);
   if (! -r $test) {
-   warn $d->get('Error: cannot read'), " '", $test, "'\n"; # xgettext hack
+   warn $d->get("Error: cannot read '$test'\n"); # xgettext hack
    exit 1;
   }
  }
@@ -612,8 +615,7 @@ sub zoom_button {
   else {
    my $widthd = $scwin_detail -> allocation -> width;
    my $heightd = $scwin_detail -> allocation -> height;
-   $scale = ($widthd-1)/$widthi < ($heightd-1)/$heighti
-                                  ? ($widthd-1)/$widthi : ($heightd-1)/$heighti;
+   $scale = get_scale($heightd, $widthd, $heighti, $widthi);
   }
   my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
                                          $src_pixbuf -> get_has_alpha, 
@@ -677,8 +679,7 @@ sub get_pixbuf {
  $heighti = $src_pixbuf -> get_height;
 
 # Calculate scale factor
- my $scale = ($width-1)/$widthi < ($height-1)/$heighti
-                                   ? ($width-1)/$widthi : ($height-1)/$heighti;
+ $scale = get_scale($height, $width, $heighti, $widthi);
 
  my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
                                         $src_pixbuf -> get_has_alpha, 
@@ -686,6 +687,20 @@ sub get_pixbuf {
                                         $widthi*$scale, $heighti*$scale);
  zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
  return $pixbuf;
+}
+
+
+# Calculates scale factor to fit box, ignoring zero-width boxes if necessary
+
+sub get_scale {
+ my ($heightb, $widthb, $heighti, $widthi) = @_;
+ if ($widthb > 1) {
+  return ($widthb-$border)/$widthi < ($heightb-$border)/$heighti
+                      ? ($widthb-$border)/$widthi : ($heightb-$border)/$heighti;
+ }
+ else {
+  return ($heightb-$border)/$heighti;
+ }
 }
 
 
@@ -706,9 +721,7 @@ sub new {
   }
 
 # Depopulate the thumbnail list
-  while ($#{$slist -> {data}} > -1) {
-   pop @{$slist -> {data}};
-  }
+  pop @{$slist -> {data}} while ($#{$slist -> {data}} > -1);
  }
  $dialog -> destroy;
 }
@@ -1882,8 +1895,8 @@ sub update_options {
 
 # Dig out the paper sizes
  my ($x, $y);
- $x = $2 if ($output =~ /-x (auto\|)?\d\.\.(\d*\.?\d*)/);
- $y = $2 if ($output =~ /-y (auto\|)?\d\.\.(\d*\.?\d*)/);
+ $x = $2 if ($output =~ /-x (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
+ $y = $2 if ($output =~ /-y (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
 
  if (defined($x) and defined($y)) {
 
@@ -1983,7 +1996,11 @@ sub update_options {
 # Set device-dependent options
 # Dummy entries so that something is returned:
  %ddo = (
-          'Paper size' => { string => $d->get('Paper size') },
+          'Paper size' => { string => $d->get('Paper size'),
+                            values => {
+                                      'A4' => $d->get('A4'),
+                                      'Letter'  => $d->get('Letter'),
+                                      } },
           'x'          => { string => 'x' },
           'y'          => { string => 'y' },
         );
@@ -2490,7 +2507,7 @@ Please include the output of C<scanimage --help> with any new bug report.
 
 =head1 Translations
 
-I intend to produce a multi-lingual version of gscan2pdf in the near future. At that point, I would be glad of help translating the application.
+gscan2pdf has already been partly translated several languages. If you would like to contribute to an existing or new translation, please check out L<Rosetta: https://launchpad.net/products/gscan2pdf/trunk/+pots/gscan2pdf>
 
 =head1 Menus
 
