@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.8.3
+Version: 0.8.4
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -45,7 +45,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/locale/en_GB/LC_MESSAGES/%{name}.mo
 %{_datadir}/locale/fr/LC_MESSAGES/%{name}.mo
 %{_datadir}/locale/nl/LC_MESSAGES/%{name}.mo
+%{_datadir}/locale/pl/LC_MESSAGES/%{name}.mo
 %{_datadir}/locale/sv/LC_MESSAGES/%{name}.mo
-%{_datadir}/man/man1/%{name}.1p.gz
+%{_mandir}/man1/gscan2pdf.1p.gz
 
 %changelog
