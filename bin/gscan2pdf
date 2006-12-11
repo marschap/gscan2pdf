@@ -23,35 +23,30 @@
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    Work out how best to include package.
 #    Option to throw up PDF viewer with newly created PDF file
-#    Finish website on sourceforge
-#    Add donate button to help
-#    Add screenshot to help
+#    Translate documentation
 #    Add icon to homepage for GTKfiles.
-#    Make save button default
 #    Put in a check that mogrify is available (disabling rotations if not)
-#    Add tolerance to page sizes
-#    Add changelog
-#    Add dates to history
 #    Sort out sourceforge backups
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    After deleting a page, should display next in thumbnail list
 #    Work out a good place to log error messages
-# 1. Add support for scanadf
+# 1. Support scanadf, using pnmtotiff.
 # 2. Progress meter for scans and imports.
 # 3. Crop and autocrop
 # 4. Look at OCR
 
 # Release procedure:
-# 1. make rpmdist debdist
+# 1. New screendump required? Print screen creates screenshot.png in Desktop.
+# 2. make rpmdist debdist
 #    test dist sudo dpkg -i gscan2pdf-0....
-# 2. cvs update
-# 3. cvs tag vx-x-x
-# 4. make remote-dist remote-html 
-# 5. Upload to sourceforge and release files
-# 6. Freshmeat
-# 7. Launchpad, upload .pot if necessary
-# 8. http://www.gtkfiles.org/app.php/gscan2pdf
-# 9. Ubuntu forum
+# 3. cvs update
+# 4. cvs tag vx-x-x
+# 5. make remote-dist remote-html 
+# 6. Upload to sourceforge and release files
+# 7. Freshmeat
+# 8. Launchpad, upload .pot if necessary
+# 9. http://www.gtkfiles.org/app.php/gscan2pdf
+#10. Ubuntu forum
 
 use warnings;
 use strict;
@@ -73,6 +68,7 @@ my $version = "0.8.4";
 my @paper = qw(A4 Letter);
 my @x = ( 210, 215.9 );
 my @y = ( 297, 279.4 );
+my $tolerance = 1;
 
 # Window parameters
 my $border_width = 6;
@@ -740,6 +736,7 @@ sub import {
                                       'gtk-cancel' => 'cancel',
                                       'gtk-ok' => 'ok');
  $file_chooser -> set_select_multiple(TRUE);
+ $file_chooser -> set_default_response('ok');
 
  if ('ok' eq $file_chooser->run) {
   my @filename = $file_chooser -> get_filenames;
@@ -1029,6 +1026,7 @@ sub save_PDF {
                                                      $windowp, 'save',
                                                      'gtk-cancel' => 'cancel',
                                                      'gtk-save' => 'ok');
+  $file_chooser -> set_default_response('ok');
 
   if ('ok' eq $file_chooser->run) {
    my $filename = $file_chooser -> get_filename;
@@ -1210,6 +1208,7 @@ sub save_TIFF {
                                                      $windowt, 'save',
                                                      'gtk-cancel' => 'cancel',
                                                      'gtk-save' => 'ok');
+  $file_chooser -> set_default_response('ok');
 
   if ('ok' eq $file_chooser->run) {
    my $filename = $file_chooser -> get_filename;
@@ -1922,7 +1921,7 @@ sub update_options {
 # can't use "for" because of the splices
   my $i = 0;
   while ($i <= $#paper) {
-   if ($x >= $x[$i] and $y >= $y[$i]) {
+   if ($x+$tolerance >= $x[$i] and $y+$tolerance >= $y[$i]) {
     my $item = Gtk2::MenuItem -> new ($paper[$i]);
     $item -> signal_connect (activate => sub {
      my $i = $optp -> get_history;
@@ -2450,6 +2449,10 @@ __END__
 
 gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan. gscan2pdf should work on almost any Linux/BSD machine.
 
+=for html <p align="center">
+ <img src="https://sourceforge.net/dbimage.php?id=101333" border="1" width="632" height="480" alt="Screenshot" /><br />
+ Screenshot: Main page v0.8.4</p>
+
 =head1 Synopsis
 
 =over
@@ -2677,6 +2680,8 @@ Jeffrey Ratcliffe (ra28145 at users dot sourceforge dot net)
 All the people who have sent patches, bugs and feedback. Also to Sourceforge for hosting the project.
 
 =for html <a href="http://sourceforge.net"><img alt="SourceForge.net Logo" align="right" height="31px" width="88px"
-src="http://sourceforge.net/sflogo.php?group_id=174140&amp;type=1"></a>
+src="http://sourceforge.net/sflogo.php?group_id=174140&amp;type=1"></a><a href="http://sourceforge.net/donate/index.php?group_id=174140"><img src="http://sourceforge.net/images/project-support.jpg" width="88" height="32" border="0" alt="Support This Project"></a> 
+
+
 
 =cut
