@@ -118,10 +118,19 @@ deb/control : bin/$(NAME)
 	sed 's/^Version:.*/Version: $(VERSION)/' < deb/control_tmp > deb/control
 	rm deb/control_tmp
 
-$(NAME).spec : bin/$(NAME)
+deb/changelog : bin/$(NAME)
+	cp deb/changelog deb/changelog_tmp
+	sed 's/^$(NAME) (.*)/$(NAME) ($(VERSION))/' < deb/changelog_tmp > deb/changelog
+	rm deb/changelog_tmp
+
+$(NAME).spec : bin/$(NAME) deb/changelog
 	cp $(NAME).spec $(NAME).spec_tmp
-	sed 's/^Version:.*/Version: $(VERSION)/' < $(NAME).spec_tmp > $(NAME).spec
+	sed 's/^Version:.*/Version: $(VERSION)/' < $(NAME).spec_tmp | \
+         sed '/^%changelog/q' > $(NAME).spec
 	rm $(NAME).spec_tmp
+	echo "*" `date +'%a %b %d %Y'` "$(AUTHOR) <$(EMAIL)>" >> $(NAME).spec
+	sed 's/^$(NAME) (.*)//' < deb/changelog | \
+         sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $(NAME).spec
 
 htdocs/download/debian/binary/$(NAME)-$(VERSION).deb : $(DEB_BUILD_ROOT)/DEBIAN/md5sums
 	dpkg-deb -b $(DEB_BUILD_ROOT) $(NAME)-$(VERSION).deb
@@ -152,6 +161,7 @@ remote-dist : htdocs/download/debian/binary/$(NAME)-$(VERSION).deb htdocs/downlo
 	    ra28145@shell.sf.net:/home/groups/g/gs/$(NAME)/htdocs/download/debian/binary
 
 htdocs/index.html : bin/$(NAME)
+	if [ ! -d htdocs ] ; then mkdir htdocs ; fi
 	pod2html --title=$(NAME)-$(VERSION) bin/$(NAME) > htdocs/index.html
 
 remote-html : htdocs/index.html
