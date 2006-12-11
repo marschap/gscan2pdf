@@ -1,8 +1,17 @@
 0.8.4:
+
 + Polish translation (thanks to Wojciech Myrda)
++ Update to French translation (thanks to Nicolas Velin)
++ Support for HP ScanJet 6390c.
++ Fixed bug caused by moving thumbnail/detail window divider so that detail
+  window disappears.
++ Fixed missing translations in scanimage commandline options
++ Set open or save buttons as default on all FileChooserDialogs
++ Added 1mm tolerance to paper size check
 
 
-0.8.3:
+0.8.3 (25.11.2006):
+
 Stickier right mouse button
 + Dutch translation (thanks to Tikkel)
 + Update to German translation (thanks to Christoph Langner)
@@ -13,7 +22,7 @@ Corrected .deb to all instead of i386 architecture
 + .rpm build
 
 
-0.8.2:
+0.8.2 (10.11.2006):
 
 + Partial Swedish translation (thanks to Daniel Nylander)
 + Partial French translation (thanks to Nicolas Velin)
@@ -24,14 +33,14 @@ Fixed bug in arguments passed to scanimage in non-English locale
 + chmod a+rw for executable in deb
 
 
-0.8.1:
+0.8.1 (01.11.2006):
 
 + Gnome menu
 Fixed zoom bug
 + German translation (thanks to Christoph Langner)
 
 
-0.8.0:
+0.8.0 (28.10.2006):
 
 + Rotate options
 + Automatically adds .pdf extension if not already there
@@ -42,12 +51,12 @@ Made Zip compression default if not in settings
 + Start of German translation
 
 
-0.7.12:
+0.7.12 (22.10.2006):
 
 Fixed bug displaying detail view in multipage scans
 
 
-0.7.11:
+0.7.11 (19.10.2006):
 
 Fixed bug importing from temp
 Fixed bug no PDF file created if JPEG compression selected (thanks Thomas for the patch)
@@ -63,7 +72,7 @@ Copes with strange characters in device names
 + Uses new FileChooser instead of old FileSelection
 
 
-0.7.2:
+0.7.2 (05.10.2006):
 
 + button-wait scan option
 + source scan option
@@ -71,7 +80,7 @@ Fixed locale problem, forcing LC_NUMERIC=C
 Tidied up drag and drop routine
 
 
-0.7:
+0.7 (23.09.2006):
 
 + Drag and drop page reordering
 + Toolbar buttons
@@ -85,7 +94,7 @@ Fixed libpixbuf-tiff Read error
 Fixed dialog after unknown scan warning
 
 
-0.6.3:
+0.6.3 (08.09.2006):
 
 Fixed "scanimage: option --br-y: bad option value" bug
 Child windows now hidden rather than destroyed to improve speed and prevent multiple instances.
@@ -98,12 +107,12 @@ Moved test output to external file
 + Now parses paper size from device-dependent options
 
 
-0.6.2:
+0.6.2 (04.09.2006):
 
 Fixed bug in Letter size scans
 
 
-0.6.1:
+0.6.1 (01.09.2006):
 
 + Renumber by editing page number
 + Destroy window after pdf write
@@ -112,7 +121,7 @@ Fixed bug in Letter size scans
 + Hides Custom paper sizes when not needed
 
 
-0.6:
+0.6 (22.08.2006):
 
 + Error checking for import
 + Import multiselect
@@ -120,30 +129,30 @@ Fixed bug in Letter size scans
 + Import multipage TIFFs
 
 
-0.5:
+0.5 (21.08.2006):
 
 + Support for PDF Metadata
 + Doublesided scan options
 + deb packaging
 
 
-0.4:
+0.4 (16.08.2006):
 
 + Thumbnails
 + Edit menu
 + Install script
 
 
-0.3:
+0.3 (08.08.2006):
 
 + Resizing widgets and more scan options.
 
 
-0.2:
+0.2 (07.08.2006):
 
 + Scan options
 
 
-0.1:
+0.1 (06.08.2006):
 
 Initial release
