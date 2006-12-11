@@ -51,10 +51,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Mon Dec 04 2006 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Mon Dec 11 2006 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
   - Polish translation (thanks to Wojciech Myrda)
   - Update to French translation (thanks to Nicolas Velin)
   - Support for HP ScanJet 6390c.
   - Fixed bug caused by moving thumbnail/detail window divider so that detail
     window disappears.
   - Fixed missing translations in scanimage commandline options
+  - Set open or save buttons as default on all FileChooserDialogs
+  - Added 1mm tolerance to paper size check
