@@ -29,7 +29,8 @@ make test
 %install
 make DESTDIR=$RPM_BUILD_ROOT INSTALLMAN1DIR=/usr/share/man/man1 \
      INSTALLSITEMAN1DIR=/usr/share/man/man1 INSTALLMAN3DIR=/usr/share/man/man3 \
-     INSTALLSITEMAN3DIR=/usr/share/man/man3 SITEPREFIX=/usr MAN1EXT=1p install
+     INSTALLSITEMAN3DIR=/usr/share/man/man3 SHAREINSTDIR=/usr/share/%{name} \
+     install
 find $RPM_BUILD_ROOT -name perllocal.pod | xargs rm -f
 find $RPM_BUILD_ROOT -name .packlist | xargs rm -f
 
@@ -47,6 +48,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/locale/nl/LC_MESSAGES/%{name}.mo
 %{_datadir}/locale/pl/LC_MESSAGES/%{name}.mo
 %{_datadir}/locale/sv/LC_MESSAGES/%{name}.mo
-%{_mandir}/man1/gscan2pdf.1p.gz
+%{_mandir}/man1/%{name}.1p.gz
 
 %changelog
+* Mon Dec 04 2006 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - Polish translation (thanks to Wojciech Myrda)
+  - Update to French translation (thanks to Nicolas Velin)
+  - Support for HP ScanJet 6390c.
+  - Fixed bug caused by moving thumbnail/detail window divider so that detail
+    window disappears.
+  - Fixed missing translations in scanimage commandline options
