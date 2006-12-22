@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.8.4
+Version: 0.8.5
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -42,21 +42,21 @@ rm -rf $RPM_BUILD_ROOT
 %doc COPYING INSTALL LICENCE History
 %{_bindir}/gscan2pdf
 %{_datadir}/applications/%{name}.desktop
+%{_datadir}/locale/be/LC_MESSAGES/%{name}.mo
+%{_datadir}/locale/cs/LC_MESSAGES/%{name}.mo
 %{_datadir}/locale/de/LC_MESSAGES/%{name}.mo
 %{_datadir}/locale/en_GB/LC_MESSAGES/%{name}.mo
 %{_datadir}/locale/fr/LC_MESSAGES/%{name}.mo
 %{_datadir}/locale/nl/LC_MESSAGES/%{name}.mo
 %{_datadir}/locale/pl/LC_MESSAGES/%{name}.mo
+%{_datadir}/locale/ru/LC_MESSAGES/%{name}.mo
 %{_datadir}/locale/sv/LC_MESSAGES/%{name}.mo
+%{_datadir}/locale/zh_TW/LC_MESSAGES/%{name}.mo
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Mon Dec 11 2006 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - Polish translation (thanks to Wojciech Myrda)
-  - Update to French translation (thanks to Nicolas Velin)
-  - Support for HP ScanJet 6390c.
-  - Fixed bug caused by moving thumbnail/detail window divider so that detail
-    window disappears.
-  - Fixed missing translations in scanimage commandline options
-  - Set open or save buttons as default on all FileChooserDialogs
-  - Added 1mm tolerance to paper size check
+* Fri Dec 15 2006 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - 2 scanimage calls (speedup).
+  - Adds the device to the model name if the same model present more than once.
+  - Drag-n-drop now autoscrolls the thumbnail list.
+  - Error now thrown if Locale::gettext version < 1.05.
