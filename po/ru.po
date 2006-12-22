@@ -1,275 +1,276 @@
-# Dutch translation for gscan2pdf
+# Russian translation for gscan2pdf
 # Copyright (c) 2006 Rosetta Contributors and Canonical Ltd 2006
 # This file is distributed under the same license as the gscan2pdf package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2006.
 #
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2006-11-22 21:44+0100\n"
-"PO-Revision-Date: 2006-11-14 14:41+0000\n"
-"Last-Translator: Tikkel <co_ti@hotmail.com>\n"
-"Language-Team: Dutch <nl@li.org>\n"
+"PO-Revision-Date: 2006-12-13 10:04+0000\n"
+"Last-Translator: Alexandre Prokoudine <alexandre.prokoudine@gmail.com>\n"
+"Language-Team: Russian <ru@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Rosetta-Export-Date: 2006-12-20 14:58+0000\n"
+"X-Rosetta-Export-Date: 2006-12-13 10:18+0000\n"
 
 #: bin/gscan2pdf:94
 msgid "Error: cannot read"
-msgstr "Foutmelding: leesfout"
+msgstr "Ошибка: невозможно прочитать"
 
 #: bin/gscan2pdf:116
 msgid "Unknown option"
-msgstr "Onbekende optie"
+msgstr "Неизвестный параметр"
 
 #: bin/gscan2pdf:123
 msgid ""
 "requires the libtiff library.\n"
 "Please install it."
 msgstr ""
-"libtiff library is vereist.\n"
-"Installeer deze."
+"требует библиотеки libtiff.\n"
+"Установите её."
 
 #: bin/gscan2pdf:135 bin/gscan2pdf:2291
 msgid "Can't open config file"
-msgstr "Kan config file niet openen"
+msgstr "Невозможно открыть конфигурационный файл"
 
 #: bin/gscan2pdf:154 bin/gscan2pdf:156 bin/gscan2pdf:161 bin/gscan2pdf:166
 #: bin/gscan2pdf:175 bin/gscan2pdf:186 bin/gscan2pdf:197 bin/gscan2pdf:199
 msgid "_File"
-msgstr "_Bestand"
+msgstr "_Файл"
 
 #: bin/gscan2pdf:156
 msgid "_New"
-msgstr "_Nieuw"
+msgstr "_Создать"
 
 #: bin/gscan2pdf:161
 msgid "_Import TIFF"
-msgstr "_Importeren TIFF"
+msgstr "_Импортировать TIFF"
 
 #: bin/gscan2pdf:166
 msgid "Sca_n"
-msgstr "Sca_n"
+msgstr "О_тсканировать"
 
 #: bin/gscan2pdf:176 bin/gscan2pdf:2207
 msgid "_Save PDF"
-msgstr "_Save PDF"
+msgstr "Со_хранить PDF"
 
 #: bin/gscan2pdf:187 bin/gscan2pdf:2217
 msgid "Save _TIFF"
-msgstr "Save _TIFF"
+msgstr "Сохр_анить PDF"
 
 #: bin/gscan2pdf:199
 msgid "_Quit"
-msgstr "_Quit"
+msgstr "В_ыход"
 
 #: bin/gscan2pdf:205 bin/gscan2pdf:207 bin/gscan2pdf:212 bin/gscan2pdf:218
 msgid "_Edit"
-msgstr "_Edit"
+msgstr "_Правка"
 
 #: bin/gscan2pdf:207 bin/gscan2pdf:2198 bin/gscan2pdf:2255
 msgid "_Delete"
-msgstr "_Delete"
+msgstr "_Удалить"
 
 #: bin/gscan2pdf:213 bin/gscan2pdf:2229
 msgid "_Renumber"
-msgstr "_Renumber"
+msgstr "Пере_нумеровать"
 
 #: bin/gscan2pdf:219 bin/gscan2pdf:2234
 msgid "Select _All"
-msgstr "Selecteer _Alles"
+msgstr "_Выбрать все"
 
 #: bin/gscan2pdf:225 bin/gscan2pdf:227 bin/gscan2pdf:232 bin/gscan2pdf:237
 #: bin/gscan2pdf:242 bin/gscan2pdf:247 bin/gscan2pdf:249 bin/gscan2pdf:254
 #: bin/gscan2pdf:259
 msgid "_View"
-msgstr "_View"
+msgstr "_Вид"
 
 #: bin/gscan2pdf:228 bin/gscan2pdf:2164
 msgid "Zoom _100%"
-msgstr "Zoom _100%"
+msgstr "Масштаб _100%"
 
 #: bin/gscan2pdf:233 bin/gscan2pdf:2168
 msgid "Zoom to _fit"
-msgstr "Zoom to _fit"
+msgstr "_Уместить в окне"
 
 #: bin/gscan2pdf:237 bin/gscan2pdf:2172
 msgid "Zoom _in"
-msgstr "Zoom _in"
+msgstr "_Приблизить"
 
 #: bin/gscan2pdf:242 bin/gscan2pdf:2177
 msgid "Zoom _out"
-msgstr "Zoom _out"
+msgstr "_Отдалить"
 
 #: bin/gscan2pdf:250 bin/gscan2pdf:360 bin/gscan2pdf:2184 bin/gscan2pdf:2241
 msgid "Rotate 90 clockwise"
-msgstr "Roteren 90 klok mee"
+msgstr "Повернуть на 90° по часовой стрелке"
 
 #: bin/gscan2pdf:255 bin/gscan2pdf:362 bin/gscan2pdf:2188 bin/gscan2pdf:2245
 msgid "Rotate 180"
-msgstr "Roteren 180"
+msgstr "Повернуть на 180°"
 
 #: bin/gscan2pdf:260 bin/gscan2pdf:364 bin/gscan2pdf:2192 bin/gscan2pdf:2249
 msgid "Rotate 90 anticlockwise"
-msgstr "Roteren 90 tegen klok in"
+msgstr "Повернуть на 90° против часовой стрелки"
 
 #: bin/gscan2pdf:265 bin/gscan2pdf:267 bin/gscan2pdf:277
 msgid "_Help"
-msgstr "_Help"
+msgstr "_Справка"
 
 #: bin/gscan2pdf:277
 msgid "_About"
-msgstr "_About"
+msgstr "_О программе"
 
 #: bin/gscan2pdf:332
 msgid "Clears all pages"
-msgstr "Wissen alle paginas"
+msgstr "Стереть все страницы"
 
 #: bin/gscan2pdf:333
 msgid "Import TIFF file"
-msgstr "Importeren TIFF bestand"
+msgstr "Импортировать изображение TIFF"
 
 #: bin/gscan2pdf:334
 msgid "Scan document"
-msgstr "Scannen document"
+msgstr "Отсканировать документ"
 
 #: bin/gscan2pdf:340 bin/gscan2pdf:795
 msgid "Save as PDF"
-msgstr "Bewaren als PDF"
+msgstr "Сохранить как документ PDF"
 
 #: bin/gscan2pdf:346 bin/gscan2pdf:1135
 msgid "Save as TIFF"
-msgstr "Bewaren als TIFF"
+msgstr "Сохранить как изображение TIFF"
 
 #: bin/gscan2pdf:352
 msgid "Delete selected pages"
-msgstr "Verwijder geselecteerde paginas"
+msgstr "Удалить выбранные страницы"
 
 #: bin/gscan2pdf:353
 msgid "Renumber pages from 1 to n"
-msgstr "Hernummeren paginas 1 tot n"
+msgstr "Перенумеровать страницы от 1 до n"
 
 #: bin/gscan2pdf:355
 msgid "Select all pages"
-msgstr "Selecteer alle paginas"
+msgstr "Выбрать все страницы"
 
 #: bin/gscan2pdf:356
 msgid "Zoom to 100%"
-msgstr "Zoom 100%"
+msgstr "Масштаб 100%"
 
 #: bin/gscan2pdf:357
 msgid "Zoom to fit"
-msgstr "Zoom beeldvullend"
+msgstr "Уместить страницу в окне"
 
 #: bin/gscan2pdf:358
 msgid "Zoom in"
-msgstr "Inzoomen"
+msgstr "Приблизить"
 
 #: bin/gscan2pdf:359
 msgid "Zoom out"
-msgstr "Uitzoomen"
+msgstr "Отдалить"
 
 #: bin/gscan2pdf:366
 msgid "Help"
-msgstr "Help"
+msgstr "Справка"
 
 #: bin/gscan2pdf:372
 msgid "Quit"
-msgstr "Einde"
+msgstr "Выйти"
 
 #: bin/gscan2pdf:411
 msgid "Thumbnails"
-msgstr "Thumbnails"
+msgstr "Эскизы"
 
 #: bin/gscan2pdf:510
 msgid "Mode"
-msgstr ""
+msgstr "Режим"
 
 #: bin/gscan2pdf:512
 msgid "Lineart"
-msgstr ""
+msgstr "Штриховая графика"
 
 #: bin/gscan2pdf:513
 msgid "Grayscale"
-msgstr ""
+msgstr "Градации серого"
 
 #: bin/gscan2pdf:514
 msgid "Gray"
-msgstr ""
+msgstr "Серый"
 
 #: bin/gscan2pdf:515
 msgid "Color"
-msgstr ""
+msgstr "Полноцветный"
 
 #: bin/gscan2pdf:516
 msgid "Black & White"
-msgstr ""
+msgstr "Чёрно-белый"
 
 #: bin/gscan2pdf:517
 msgid "True Gray"
-msgstr ""
+msgstr "«Истинно» серый"
 
 #: bin/gscan2pdf:518
 msgid "Binary"
-msgstr ""
+msgstr "Бинарный"
 
 #: bin/gscan2pdf:519 bin/gscan2pdf:549 bin/gscan2pdf:550
 msgid "Auto"
-msgstr ""
+msgstr "Автоматически определяемый"
 
 #: bin/gscan2pdf:520
 msgid "Halftone"
-msgstr ""
+msgstr "Полутонированный"
 
 #: bin/gscan2pdf:521
 msgid "24bit Color"
-msgstr ""
+msgstr "24-битный цвет"
 
 #: bin/gscan2pdf:524
 msgid "Resolution"
-msgstr ""
+msgstr "Разрешение"
 
 #: bin/gscan2pdf:525
 msgid "Batch scan"
-msgstr ""
+msgstr "Пакетное сканирование"
 
 #: bin/gscan2pdf:527 bin/gscan2pdf:533 bin/gscan2pdf:539
 msgid "Yes"
-msgstr ""
+msgstr "Да"
 
 #: bin/gscan2pdf:528 bin/gscan2pdf:534 bin/gscan2pdf:540
 msgid "No"
-msgstr ""
+msgstr "нет"
 
 #: bin/gscan2pdf:531 bin/gscan2pdf:537
 msgid "Wait for button"
-msgstr ""
+msgstr "Ждать нажатия клавиши"
 
 #: bin/gscan2pdf:543
 msgid "Source"
-msgstr ""
+msgstr "Источник"
 
 #: bin/gscan2pdf:545
 msgid "Normal"
-msgstr ""
+msgstr "Обычный"
 
 #: bin/gscan2pdf:546
 msgid "ADF"
-msgstr ""
+msgstr "ADF"
 
 #: bin/gscan2pdf:547
 msgid "Automatic Document Feeder"
-msgstr ""
+msgstr "Автоматическая подача документов"
 
 #: bin/gscan2pdf:548
 msgid "XPA"
-msgstr ""
+msgstr "XPA"
 
 #: bin/gscan2pdf:551
 msgid "Flatbed"
-msgstr ""
+msgstr "Планшетный"
 
 #: bin/gscan2pdf:552
 msgid "Transparency Adapter"
@@ -277,75 +278,75 @@ msgstr ""
 
 #: bin/gscan2pdf:553
 msgid "Transparency Unit"
-msgstr ""
+msgstr "Единица прозрачности"
 
 #: bin/gscan2pdf:666
 msgid "Warning: "
-msgstr "Waarschuwing: "
+msgstr "Предупреждение: "
 
 #: bin/gscan2pdf:672
 msgid "Information: got"
-msgstr "Information: ontvangen"
+msgstr "Информация: получена"
 
 #: bin/gscan2pdf:672
 msgid "on second attempt\n"
-msgstr "bij tweede poging\n"
+msgstr "со второй попытки\n"
 
 #: bin/gscan2pdf:698
 msgid ""
 "This will clear the list of scanned images.\n"
 "Do you want to continue?"
 msgstr ""
-"Dit schoont de lijst met gescande afbeeldingen op.\n"
-"Wilt u doorgaan?"
+"Список отсканированных изображений будет очищен\n"
+"Вы хотите продолжить?"
 
 #: bin/gscan2pdf:726
 msgid "Import scan from file"
-msgstr "Importeer scan vanuit bestand"
+msgstr "Импортировать отсканированное изображение из файла"
 
 #: bin/gscan2pdf:747
 msgid "Not a TIFF file"
-msgstr "geen TIFF file"
+msgstr "Это не изображение в формате TIFF"
 
 #: bin/gscan2pdf:752
 msgid "Importing"
-msgstr "bezig met importeren"
+msgstr "Импортируется"
 
 #: bin/gscan2pdf:807
 msgid "Metadata"
-msgstr "Metadata"
+msgstr "Метаданные"
 
 #: bin/gscan2pdf:816
 msgid "Date"
-msgstr "Datum"
+msgstr "Дата"
 
 #: bin/gscan2pdf:829
 msgid "Select Date"
-msgstr "Selecteer datum"
+msgstr "Выберите дату"
 
 #: bin/gscan2pdf:853
 msgid "Year/Month/Day"
-msgstr "Jaar/maand/dag"
+msgstr "Год/Месяц/День"
 
 #: bin/gscan2pdf:859
 msgid "Document author"
-msgstr "auteur document"
+msgstr "Автор документа"
 
 #: bin/gscan2pdf:868
 msgid "Title"
-msgstr "Titel"
+msgstr "Заголовок"
 
 #: bin/gscan2pdf:877
 msgid "Subject"
-msgstr "Onderwerp"
+msgstr "Тема"
 
 #: bin/gscan2pdf:886
 msgid "Keywords"
-msgstr "Sleutelwoorden"
+msgstr "Ключевые слова"
 
 #: bin/gscan2pdf:895
 msgid "None"
-msgstr "Geen"
+msgstr "Ничего"
 
 #: bin/gscan2pdf:897
 msgid "Zip"
@@ -357,196 +358,194 @@ msgstr "JPEG"
 
 #: bin/gscan2pdf:905
 msgid "Compression"
-msgstr "Compressie"
+msgstr "Сжатие"
 
 #: bin/gscan2pdf:913
 msgid "JPEG Quality"
-msgstr "JPEG kwaliteit"
+msgstr "Качество JPEG"
 
 #: bin/gscan2pdf:948 bin/gscan2pdf:1147
 msgid "Page range"
-msgstr "Paginareeks"
+msgstr "Диапазон страниц"
 
 #: bin/gscan2pdf:957 bin/gscan2pdf:1156 bin/gscan2pdf:1401
 msgid "All"
-msgstr "Alle"
+msgstr "Все"
 
 #: bin/gscan2pdf:962 bin/gscan2pdf:1161
 msgid "Current"
-msgstr "Huidige"
+msgstr "Текущая"
 
 #: bin/gscan2pdf:966 bin/gscan2pdf:1165
 msgid "Selected"
-msgstr "Geselecteerde"
+msgstr "Выбранные"
 
 #: bin/gscan2pdf:1016
 msgid "PDF filename"
-msgstr "PDF bestandsnaam"
+msgstr "Имя файла PDF"
 
 #: bin/gscan2pdf:1029 bin/gscan2pdf:1209
 msgid "File"
-msgstr "Bestand"
+msgstr "Файл"
 
 #: bin/gscan2pdf:1029 bin/gscan2pdf:1209
 msgid ""
 "exists.\n"
 "Really overwrite?"
 msgstr ""
-"bestaat reeds.\n"
-"Daadwerkelijk overschrijven?"
+"уже существует.\n"
+"Перезаписать?"
 
 #: bin/gscan2pdf:1197
 msgid "TIFF filename"
-msgstr "TIFF bestandsnaam"
+msgstr "Имя файла TIFF"
 
 #: bin/gscan2pdf:1280
 msgid "not found"
-msgstr "niet gevonden"
+msgstr "не найден"
 
 #: bin/gscan2pdf:1294
 msgid "No scanners found"
-msgstr "Geen scanner(s) gevonden"
+msgstr "Сканеров не обнаружено"
 
 #: bin/gscan2pdf:1303
 msgid "Scan Document"
-msgstr "Scan document"
+msgstr "Отсканировать документ"
 
 #: bin/gscan2pdf:1319
 msgid "Device"
-msgstr "Apparaat"
+msgstr "Устройство"
 
 #: bin/gscan2pdf:1376
 msgid "Sets the device to be used for the scan"
-msgstr "Selecteert het voor de scan te gebruiken apparaat"
+msgstr "Указать устройство для сканирования"
 
 #: bin/gscan2pdf:1392
 msgid "# Pages"
-msgstr "# paginas"
+msgstr "# Страниц"
 
 #: bin/gscan2pdf:1402
 msgid "Scan all pages"
-msgstr "Scan alle paginas"
+msgstr "Отсканировать все страницы"
 
 #: bin/gscan2pdf:1410 bin/gscan2pdf:1415
 msgid "Set number of pages to scan"
-msgstr "Bepaal aantal te scannen paginas"
+msgstr "Указать число сканируемых страниц"
 
 #: bin/gscan2pdf:1436
 msgid "Source document"
-msgstr "Brondocument"
+msgstr "Исходный документ"
 
 #: bin/gscan2pdf:1443
 msgid "Single sided"
-msgstr "Enkelzijdig"
+msgstr "Односторонний"
 
 #: bin/gscan2pdf:1444
 msgid "Source document is single-sided"
-msgstr "Brondocument is enkelzijdig"
+msgstr "В исходном документе односторонняя печать"
 
 #: bin/gscan2pdf:1450
 msgid "Double sided"
-msgstr "Dubbelzijdig"
+msgstr "Двухсторонний"
 
 #: bin/gscan2pdf:1451
 msgid "Source document is double-sided"
-msgstr "Brondocument is dubbelzijdig"
+msgstr "В исходном документе двухсторонняя печать"
 
 #: bin/gscan2pdf:1457
 msgid "Side to scan"
-msgstr "Te scannen zijde"
+msgstr "Какую сторону сканировать"
 
 #: bin/gscan2pdf:1463
 msgid "Facing"
-msgstr "Voorzijde"
+msgstr "Парные страницы"
 
 #: bin/gscan2pdf:1464
 msgid "Reverse"
-msgstr "Achterzijde"
+msgstr ""
 
 #: bin/gscan2pdf:1474
 msgid "Sets which side of a double-sided document is scanned"
-msgstr "Bepaalt welke zijde van een dubbelzijdig document gescand wordt"
+msgstr "Указать, какую сторону документа с двухсторонней печатью сканировать"
 
 #: bin/gscan2pdf:1478
 msgid "Device-dependent options"
-msgstr "Apparaatafhankelijke opties"
+msgstr "Параметры, уникальные для разных устройств"
 
 #: bin/gscan2pdf:1496
 msgid "Scan"
-msgstr "Scan"
+msgstr "Отсканировать"
 
 #: bin/gscan2pdf:1522 bin/gscan2pdf:1896
 msgid "Paper size"
-msgstr "Papierformaat"
+msgstr "Формат бумаги"
 
 #: bin/gscan2pdf:1567
 msgid "Must scan facing pages first"
-msgstr "Moet eerst voorzijden scannen"
+msgstr "Сначала нужно отсканировать парные страницы"
 
 #: bin/gscan2pdf:1594
 msgid ""
 "Cannot scan more reverse pages\n"
 "than facing pages"
 msgstr ""
-"Kan niet meer achterzijden scannen\n"
-"dan er voorzijden zijn"
 
 #: bin/gscan2pdf:1668 bin/gscan2pdf:1671 bin/gscan2pdf:1689
 msgid "Scanning"
-msgstr "Bezig met scannen"
+msgstr "Выполняется сканирование"
 
 #: bin/gscan2pdf:1689
 msgid "pages"
-msgstr "paginas"
+msgstr "страниц"
 
 #: bin/gscan2pdf:1692
 msgid "Scanning page"
-msgstr "Pagina wordt gescand"
+msgstr "Сканируется страница"
 
 #: bin/gscan2pdf:1701
 msgid "Unable to load image"
-msgstr "Kan afbeelding niet laden"
+msgstr "Невозможно загрузить изображение"
 
 #: bin/gscan2pdf:1722
 msgid "Unknown message: "
-msgstr "Onbekende melding: "
+msgstr "Неизвестное сообщение: "
 
 #: bin/gscan2pdf:1835
 msgid "To aid the scan-to-PDF process"
-msgstr "Ten behoeve van het scan-naar-PDF proces"
+msgstr "Упрощение процесса сканирования в PDF"
 
 #: bin/gscan2pdf:1836
 msgid "Copyright"
-msgstr "Copyright"
+msgstr "Авторские права"
 
 #: bin/gscan2pdf:1837
 msgid "Licensed under the GPLv2"
-msgstr "onder de GPLv2 licentie"
+msgstr "Лицензировано под GPLv2"
 
 #: bin/gscan2pdf:1906
 msgid "Width of scan-area"
-msgstr "Breedte van het scangebied"
+msgstr "Ширина сканируемой области"
 
 #: bin/gscan2pdf:1907
 msgid "Height of scan-area"
-msgstr "Hoogte van het scangebied"
+msgstr "Высота сканируемой области"
 
 #: bin/gscan2pdf:1935
 msgid "Custom"
-msgstr "Persoonlijk"
+msgstr "Другой"
 
 #: bin/gscan2pdf:1940
 msgid "Selects the paper size, e.g. A4, Letter, or Custom"
-msgstr "Bepaalt het papierformaat b.v. A4, Letter of Custom"
+msgstr "Указать формат бумаги, например, A4, Letter или собственный"
 
 #: bin/gscan2pdf:2308
 msgid ""
 "The help viewer requires module Gtk2::Ex::PodViewer\n"
 "Alternatively, try"
 msgstr ""
-"De helpviewer vereist de Gtk2::Ex::PodViewer module\n"
-"Probeer als alternatief"
+"Для просмотра справки нужен модуль Gtk2::Ex::PodViewer\n"
+"Как вариант, попробуйте"
 
 #: bin/gscan2pdf:2351
 msgid "Go to"
-msgstr "Ga naar"
+msgstr "Переход к"
