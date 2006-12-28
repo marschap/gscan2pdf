@@ -91,9 +91,13 @@ locale_install : locale
                               $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
          done
 
-icon_install :
+$(DESTDIR)$(SHAREDIR)/$(NAME) :
+	mkdir --parents $(DESTDIR)$(SHAREDIR)/$(NAME)
+
+icon_install : $(DESTDIR)$(SHAREDIR)/$(NAME)
 	mkdir --parents $(DESTDIR)$(SHAREDIR)/applications
 	cp $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
+	cp $(NAME).png rotate90.png rotate180.png rotate270.png $(DESTDIR)$(SHAREDIR)/$(NAME)
 
 debdist : htdocs/download/debian/binary/$(NAME)-$(VERSION).deb
 
