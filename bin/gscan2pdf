@@ -12,7 +12,6 @@
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
 #    Put windows up in centre of parent
-#    Scanning window doesn't have a proper icon.
 #    Fix blocking at:
 #      First opening scan window
 #      Changing device
@@ -29,6 +28,10 @@
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    After deleting a page, should display next in thumbnail list
 #    Work out a good place to log error messages
+#    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
+#    Changing the number of pages to scan should activate #.
+#    Add option to delete pages after save.
+#    Check encoding (umlauts) of metadata.
 # 1. Support scanadf, using pnmtotiff.
 # 2. Progress meter for scans and imports.
 # 3. Crop and autocrop
@@ -63,7 +66,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.8.5";
+my $version = "0.8.6";
 
 # Standard paper sizes
 my @paper = qw(A4 Letter);
@@ -158,9 +161,16 @@ if (-r $config) {
 
 # Create icons for rotate buttons
 my $IconFactory = undef;
-init_icons( [ 'rotate90',  'rotate90.png' ], 
-            [ 'rotate180', 'rotate180.png' ], 
-            [ 'rotate270', 'rotate270.png' ], );
+my $path;
+if (-d '/usr/share/gscan2pdf') {
+ $path = '/usr/share/gscan2pdf';
+}
+else {
+ $path = '.'; # make this a big cleverer, going one dir down from bin.
+}
+init_icons( [ 'rotate90',  "$path/rotate90.png" ], 
+            [ 'rotate180', "$path/rotate180.png" ], 
+            [ 'rotate270', "$path/rotate270.png" ], );
 
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
@@ -210,17 +220,17 @@ my @menu_items = ( { path        => '/'.$d->get('_File'),
                                           } },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-save'},
-		   { path        => '/'.$d->get('_File').'/'
-		                       .$d->get('_Email as PDF'),
-		     accelerator => '<control>e',
-		     callback    => sub { if (defined($windowe)) {
-                                           $windowe -> present;
-                                          }
-                                          else {
-                                           email();
-                                          } },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-edit'},
+# 		   { path        => '/'.$d->get('_File').'/'
+#		                       .$d->get('_Email as PDF'),
+#		     accelerator => '<control>e',
+#		     callback    => sub { if (defined($windowe)) {
+#                                           $windowe -> present;
+#                                          }
+#                                          else {
+#                                           email();
+#                                          } },
+#                     item_type   => '<StockItem>',
+#                     extra_data  => 'gtk-edit'},
 		   { path        => '/'.$d->get('_File').'/sep',
 		     item_type   => '<Separator>' },
 		   { path        => '/'.$d->get('_File').'/'.$d->get('_Quit'),
@@ -341,7 +351,7 @@ $window -> maximize
 # $icon[$i] = $window -> render_icon ('gtk-print-preview', $size) # or gtk-index
 #}
 #$window -> set_icon_list ( @icon );
-$window->set_default_icon_from_file ('gscan2pdf.png');
+$window->set_default_icon_from_file ("$path/gscan2pdf.png");
 
 my $main_vbox = new Gtk2::VBox ( FALSE, 1 );
 $window -> add ( $main_vbox );
@@ -1511,7 +1521,7 @@ sub scan_dialog {
  my $optd = Gtk2::OptionMenu -> new;
  my $menud = Gtk2::Menu -> new;
 
-# Need to define this here to reference it for later.
+# Need to define this here to reference it later.
  my $vboxd = Gtk2::VBox -> new;
 
 # parse out the device and model names
@@ -1522,8 +1532,7 @@ sub scan_dialog {
    $device[$1] = $2;
 
 # Convert all underscores to spaces
-   (my $model = $3) =~ s/_/ /g;
-   $model[$1] = $model;
+   ($model[$1] = $3) =~ s/_/ /g;
    $device = substr($output, 0, index($output, "\n")+1);
    $output = substr($output, index($output, "\n")+1, length($output));
   }
@@ -2632,10 +2641,13 @@ sub register_icon {
 
  my $icon;
  eval { $icon = Gtk2::Gdk::Pixbuf->new_from_file($path); };
- croak("Unable to load icon at `$path': $@") if ($@);
-
- my $set = Gtk2::IconSet->new_from_pixbuf($icon);
- $IconFactory->add($stock_id, $set);
+ if ($@) {
+  warn("Unable to load icon at `$path': $@");
+ }
+ else {
+  my $set = Gtk2::IconSet->new_from_pixbuf($icon);
+  $IconFactory->add($stock_id, $set);
+ }
 }
 
 
