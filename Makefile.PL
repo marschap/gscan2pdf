@@ -99,7 +99,7 @@ icon_install : $(DESTDIR)$(SHAREDIR)/$(NAME)
 	cp $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
 	cp $(NAME).png rotate90.png rotate180.png rotate270.png $(DESTDIR)$(SHAREDIR)/$(NAME)
 
-debdist : htdocs/download/debian/binary/$(NAME)-$(VERSION).deb
+debdist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb
 
 html : htdocs/index.html
 
@@ -117,50 +117,32 @@ locale : $(PO)
          mv messages.mo $${po%%.po}/LC_MESSAGES/$(NAME).mo; \
          done
 
-deb/control : bin/$(NAME)
-	cp deb/control deb/control_tmp
-	sed 's/^Version:.*/Version: $(VERSION)/' < deb/control_tmp > deb/control
-	rm deb/control_tmp
+debian/changelog : bin/$(NAME)
+	cp debian/changelog debian/changelog_tmp
+	sed 's/^$(NAME) (.*)/$(NAME) ($(VERSION))/' < debian/changelog_tmp > debian/changelog
+	rm debian/changelog_tmp
 
-deb/changelog : bin/$(NAME)
-	cp deb/changelog deb/changelog_tmp
-	sed 's/^$(NAME) (.*)/$(NAME) ($(VERSION))/' < deb/changelog_tmp > deb/changelog
-	rm deb/changelog_tmp
-
-$(NAME).spec : bin/$(NAME) deb/changelog
+$(NAME).spec : bin/$(NAME) debian/changelog
 	cp $(NAME).spec $(NAME).spec_tmp
 	sed 's/^Version:.*/Version: $(VERSION)/' < $(NAME).spec_tmp | \
          sed '/^%changelog/q' > $(NAME).spec
 	rm $(NAME).spec_tmp
 	echo "*" `date +'%a %b %d %Y'` "$(AUTHOR) <$(EMAIL)>" >> $(NAME).spec
-	sed 's/^$(NAME) (.*)//' < deb/changelog | \
+	sed 's/^$(NAME) (.*)//' < debian/changelog | \
          sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $(NAME).spec
 
-htdocs/download/debian/binary/$(NAME)-$(VERSION).deb : $(DEB_BUILD_ROOT)/DEBIAN/md5sums
-	dpkg-deb -b $(DEB_BUILD_ROOT) $(NAME)-$(VERSION).deb
-	cp $(NAME)-$(VERSION).deb htdocs/download/debian/binary
-	rm -rf $(DEB_BUILD_ROOT)
+htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb : ../$(NAME)_$(VERSION)_all.deb
+	cp ../$(NAME)_$(VERSION)_all.deb htdocs/download/debian/binary
 
-$(DEB_BUILD_ROOT)/DEBIAN/md5sums_files : bin/$(NAME) deb/control locale
-	make DESTDIR=$(DEB_BUILD_ROOT) install
-	find $(DEB_BUILD_ROOT) -name perllocal.pod | xargs rm -f
-	find $(DEB_BUILD_ROOT) -name .packlist | xargs rm -f
-	mkdir --parents $(DEB_BUILD_ROOT)/DEBIAN
-	cp deb/control deb/debian-binary $(DEB_BUILD_ROOT)/DEBIAN
-	find $(DEB_BUILD_ROOT) -type f | \
-         awk 'BEGIN {x=length("$(DEB_BUILD_ROOT)")+2} /.\// { print substr($$0, x) }' > $(DEB_BUILD_ROOT)/DEBIAN/md5sums_files
+../$(NAME)_$(VERSION)_all.deb : bin/$(NAME) debian/control debian/changelog locale
+	debuild
 
-# Have to do this in two stages because $(shell find....) would be carried out before install otherwise
-$(DEB_BUILD_ROOT)/DEBIAN/md5sums : $(DEB_BUILD_ROOT)/DEBIAN/md5sums_files
-	cd $(DEB_BUILD_ROOT); \
-         md5sum $(shell cat $(DEB_BUILD_ROOT)/DEBIAN/md5sums_files) > $(DEB_BUILD_ROOT)/DEBIAN/md5sums
-
-htdocs/download/debian/binary/Packages.gz : htdocs/download/debian/binary/$(NAME)-$(VERSION).deb
+htdocs/download/debian/binary/Packages.gz : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb
 	cd htdocs/download/debian ; \
          dpkg-scanpackages binary /dev/null | gzip -9c > binary/Packages.gz
 
-remote-dist : htdocs/download/debian/binary/$(NAME)-$(VERSION).deb htdocs/download/debian/binary/Packages.gz
-	scp htdocs/download/debian/binary/$(NAME)-$(VERSION).deb \
+remote-dist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb htdocs/download/debian/binary/Packages.gz
+	scp htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb \
             htdocs/download/debian/binary/Packages.gz \
 	    ra28145@shell.sf.net:/home/groups/g/gs/$(NAME)/htdocs/download/debian/binary
 
