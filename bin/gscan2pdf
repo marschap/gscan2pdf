@@ -22,7 +22,6 @@
 #    Work out how best to include package.
 #    Option to throw up PDF viewer with newly created PDF file
 #    Translate documentation
-#    Add icon to homepage for GTKfiles.
 #    Put in a check that mogrify is available (disabling rotations if not)
 #    Sort out sourceforge backups
 #    Right click save to PDF or TIFF should default to page range "selected"
@@ -32,6 +31,13 @@
 #    Changing the number of pages to scan should activate #.
 #    Add option to delete pages after save.
 #    Check encoding (umlauts) of metadata.
+#    get Makefile.PL to update date in changelog
+#    check debian/copyright
+#    fix test mode
+#    add warming-up dialog "[snapscan] Scanner warming up - waiting 11 seconds."
+#    Enable email as PDF
+#    Eliminate duplicate devices
+#    Rewrite Gtk2::ItemFactory with Gtk2::UIManager
 # 1. Support scanadf, using pnmtotiff.
 # 2. Progress meter for scans and imports.
 # 3. Crop and autocrop
@@ -39,7 +45,7 @@
 
 # Release procedure:
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
-#    Make sure that file list in .spec reflects MANIFEST
+#    Make sure that file list in .spec and cvs update reflects MANIFEST
 #    Make sure that changelog reflects History
 # 2. make rpmdist debdist
 #    test dist sudo dpkg -i gscan2pdf-0....
@@ -66,7 +72,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.8.7";
+my $version = "0.8.8";
 
 # Standard paper sizes
 my @paper = qw(A4 Letter);
@@ -91,6 +97,7 @@ my $debug = FALSE;
 while (defined($ARGV[0])) {
 # Set up test mode and make sure file has absolute path and is readable
  if ($ARGV[0] eq "--test") {
+warn "Test mode\n";
   shift @ARGV;
   my $test = shift @ARGV;
   if ($test =~ /(.*)=(.*)/) {
@@ -98,7 +105,7 @@ while (defined($ARGV[0])) {
    $test = $1;
    $test = getcwd."/$test" if ($test !~ /^\//);
    if (! -r $test) {
-    warn $d->get("Error: cannot read '$test'\n"); # xgettext hack
+    warn $d->get("Error: cannot read file:", $test, "\n");
     exit 1;
    }
    push @test, $test;
@@ -220,17 +227,17 @@ my @menu_items = ( { path        => '/'.$d->get('_File'),
                                           } },
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-save'},
-# 		   { path        => '/'.$d->get('_File').'/'
-#		                       .$d->get('_Email as PDF'),
-#		     accelerator => '<control>e',
-#		     callback    => sub { if (defined($windowe)) {
-#                                           $windowe -> present;
-#                                          }
-#                                          else {
-#                                           email();
-#                                          } },
-#                     item_type   => '<StockItem>',
-#                     extra_data  => 'gtk-edit'},
+ 		   { path        => '/'.$d->get('_File').'/'
+		                       .$d->get('_Email as PDF'),
+		     accelerator => '<control>e',
+		     callback    => sub { if (defined($windowe)) {
+                                           $windowe -> present;
+                                          }
+                                          else {
+                                           email();
+                                          } },
+                     item_type   => '<StockItem>',
+                     extra_data  => 'gtk-edit'},
 		   { path        => '/'.$d->get('_File').'/sep',
 		     item_type   => '<Separator>' },
 		   { path        => '/'.$d->get('_File').'/'.$d->get('_Quit'),
@@ -258,6 +265,18 @@ my @menu_items = ( { path        => '/'.$d->get('_File'),
 		     callback    => \&select_all,
                      item_type   => '<StockItem>',
                      extra_data  => 'gtk-select-all' },
+		   { path        => '/'.$d->get('_Edit').'/sep',
+		     item_type   => '<Separator>' },
+		   { path        => '/'.$d->get('_Edit').'/'.$d->get('_Frontend'),
+		     item_type   => '<Branch>' },
+		   { path        => '/'.$d->get('_Edit').'/'.$d->get('_Frontend').'/scan_image',
+		     item_type   => '<RadioItem>',
+		     callback    => \&change_frontend,
+		     callback_action => 1 },
+		   { path        => '/'.$d->get('_Edit').'/'.$d->get('_Frontend').'/scan_adf',
+		     item_type   => '/'.$d->get('Edit').'/'.$d->get('Frontend').'/scanimage',
+		     callback    => \&change_frontend,
+		     callback_action => 2 },
 
 		   { path        => '/'.$d->get('_View'),
 		     item_type   => '<Branch>' },
@@ -644,6 +663,9 @@ sub create_menu_bar {
  # the number of items in the array, the array itself, and any
  # callback data for the the menu items.
  $item_factory -> create_items( @menu_items );
+ $item_factory
+  -> get_item('/'.$d->get('Edit').'/'.$d->get('Frontend').'/scanadf')
+   -> set_active(TRUE) if ($SETTING{'frontend'} eq 'scanadf');
 
  # Attach the new accelerator group to the window.
  $window -> add_accel_group( $accel_group );
@@ -651,6 +673,19 @@ sub create_menu_bar {
  # Finally, return the actual menu bar created by the item factory.
  #*menubar = gtk_item_factory_get_widget (item_factory, "<main>");
  return ( $item_factory -> get_widget( '<main>' ) );
+}
+
+
+# Callback from RadioItem Edit/Frontend
+
+sub change_frontend {
+ my ($user_data, $action_id, $menu_item) = @_;
+ if ($action_id == 1) {
+  $SETTING{'frontend'} = "scanimage";
+ }
+ else {
+  $SETTING{'frontend'} = "scanadf";
+ }
 }
 
 
@@ -1440,6 +1475,7 @@ sub email {
 
 # Create the tiff
   my (undef, $filename) = tempfile(DIR => $dir);
+  $filename .= ".pdf";
 
 # call tiff2pdf and/or tiffcp according to the number of pages
   if ($n > 0) {
@@ -1450,7 +1486,7 @@ sub email {
   else {
    system ("tiff2pdf -o \"$filename\" $pagelist");
   }
-  system ("xdg-email --attach \"$filename\"");
+  system ("xdg-email --attach \"$filename\" 'x\@y'");
 
   $windowe -> hide;
 
@@ -1685,8 +1721,6 @@ sub scan_dialog {
 
 # Get selected device
   $SETTING{"device"} = $device[$optd -> get_history];
-# inverted commas needed for strange characters in device name
-  my $device = "--device-name='$SETTING{'device'}'";
 
 # Get device-specific options
   my %options;
@@ -1722,11 +1756,11 @@ sub scan_dialog {
   my $npages;
   if ($buttone -> get_active) {
    $SETTING{"pages to scan"} = $spin_button -> get_value;
-   $npages = "--batch-count=$SETTING{'pages to scan'}";
+   $npages = $SETTING{'pages to scan'};
   }
   else {
    $SETTING{"pages to scan"} = "all";
-   $npages = "";
+   $npages = 0;
   }
 
 # Start from next available page
@@ -1784,18 +1818,18 @@ sub scan_dialog {
      }
     }
 
-# If user hasn't specified number of pages, then set number that is undefined
+# If user hasn't specified number of pages, then set number that is possible
     else {
-     $npages = "--batch-count=$i";
+     $npages = $i;
     }
    }
-   $step = "--batch-increment=$step";
+  }
+  if ($SETTING{'frontend'} eq "scanimage") {
+   scanimage($SETTING{'device'}, $npages, $start, $step, %options);
   }
   else {
-   $step = "";
+   scanadf($SETTING{'device'}, $npages, $start, $step, %options);
   }
-  $start = "--batch-start=$start";
-  scan($device, $npages, $start, $step, %options);
  } );
 
 # Cancel button
@@ -1814,25 +1848,28 @@ sub scan_dialog {
 }
 
 
-# Carry out the scan with the options passed.
+# Carry out the scan with scanimage and the options passed.
 
-sub scan {
+sub scanimage {
  my ($device, $npages, $start, $step, %options) = @_;
 
-# Basic options
- my @options = ( '--format=tiff',  
-                 '--batch' );
-
-# Add device-specific options
- my ($key, $value);
- while (($key, $value) = each(%options)) {
-  if ($key eq 'x' or $key eq 'y') {
-   push @options, "-$key $value";
-  }
-  else {
-   push @options, "--$key='$value'";
-  }
+# inverted commas needed for strange characters in device name
+ $device = "--device-name='$device'";
+ $npages = "--batch-count=$npages"   if ($npages != 0);
+ $start  = "--batch-start=$start";
+ if (defined $step) {
+  $step   = "--batch-increment=$step";
  }
+ else {
+  $step   = "";
+ }
+
+# Device-specific options
+ my @options = hash2options(%options);
+
+# Add basic options
+ push @options, '--format=tiff';
+ push @options, '--batch';
 
 # Make sure we are in temp directory
  chdir $dir;
@@ -1841,6 +1878,7 @@ sub scan {
  my $cmd = "scanimage $device $npages $start $step @options;echo 'End Scan' > /dev/stderr";
  warn "$cmd\n" if $debug;
 
+warn @test, "\n";
  if (! @test) {
 
 # Interface to scanimage
@@ -1921,6 +1959,142 @@ warn "$text\n";
  else {
   warn "$cmd\n";
  }
+}
+
+
+# Carry out the scan with scanadf and the options passed.
+
+sub scanadf {
+ my ($device, $npages, $start, $step, %options) = @_;
+
+# inverted commas needed for strange characters in device name
+ $device = "--device-name='$device'";
+ $start  = "--start-count=$start";
+ my $end;
+ if ($npages != 0) {
+  $end = "--end-count=".$start+$npages;
+ }
+ else {
+  $end = "";
+ }
+
+# Device-specific options
+ my @options = hash2options(%options);
+
+# Add basic options
+ push @options, '-o out%d.pnm -S scanscript.sh --script-wait';
+
+# Make sure we are in temp directory
+ chdir $dir;
+
+# Create scanscript.sh
+ my $script = <<END;
+#!/bin/bash
+convert \$1 \${1\%.*}.tif
+status=\$?
+echo "gscan2pdf created" \${1\%.*}.tif >> "/dev/stderr"
+exit \$status
+END
+
+ open SCRIPT, "> scanscript.sh" or die "Can't create scanscript.sh: $!";
+ print SCRIPT $script;
+ close SCRIPT;
+ chmod 0755, "scanscript.sh"; # u+rwx,go+rw
+
+# Create command
+ my $cmd = "scanadf $device $start $end @options;echo 'End Scan' > /dev/stderr";
+ warn "$cmd\n" if $debug;
+
+warn @test, "\n";
+ if (! @test) {
+
+# Interface to scanimage
+  my ($write, $read);
+  my $error = IO::Handle -> new; # this needed because of a bug in open3.
+  my $pid = open3($write, $read, $error, $cmd);
+  
+  my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
+                                    'destroy-with-parent',
+                                    'gtk-cancel' => 'cancel');
+  my $label = Gtk2::Label -> new ($d->get('Scanning')."...");
+  $dialog -> vbox -> add ($label);
+
+# Ensure that the dialog box is destroyed when the user responds.
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   local $SIG{HUP} = 'IGNORE';
+   kill HUP => $pid;
+  });
+  $dialog -> show_all;
+ 
+  my $line;
+  Glib::IO -> add_watch(fileno($error), 'in', sub {
+   my $buffer;
+   sysread $error, $buffer, 1024;
+   $line = $line . $buffer; # needed to cover case where line is broken in middle
+   while ($line =~ /\n/) {
+    if ($line =~ /^Scanned document out(\d*)\.pnm/) {
+     $label -> set_text($d->get('Scanned page')." $1...");
+    }
+    elsif ($line =~ /^gscan2pdf created out(\d*)\.tif/) {
+
+# If the scan can't be loaded then blow the scanning dialog away and
+# show an error
+     if (! import_scan ("out$1.tif")) {
+      $dialog -> destroy;
+      $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
+                        'error', 'close', $d->get('Unable to load image'));
+      $dialog -> run;
+      $dialog -> destroy;
+      return 0;
+     }
+    }
+    elsif ($line =~ /^End Scan/) {
+     $dialog -> destroy;
+     return 0; # Sascha Hunold [hunoldinho at users dot sourceforge dot net]
+    }
+    elsif ($line =~ /^Scanned \d* pages/) {
+     ;
+    }
+    else {
+     $dialog -> destroy;
+     my $text = $d->get('Unknown message: ')
+                                        . substr($line, 0, index($line, "\n"));
+warn "$text\n";
+     $dialog = Gtk2::MessageDialog -> new ($windows,
+                                              'destroy-with-parent',
+                                              'error',
+                                              'close',
+                                              $text);
+     $dialog -> run;
+     $dialog -> destroy;
+    }
+    $line = substr($line, index($line, "\n")+1, length($line));
+   }
+   return 1;
+  });
+ }
+ else {
+  warn "$cmd\n";
+ }
+}
+
+
+# Take a hash of options and push them onto an array
+
+sub hash2options {
+ my %options = @_;
+
+ my (@options, $key, $value);
+ while (($key, $value) = each(%options)) {
+  if ($key eq 'x' or $key eq 'y') {
+   push @options, "-$key $value";
+  }
+  else {
+   push @options, "--$key='$value'";
+  }
+ }
+ return @options;
 }
 
 
@@ -2046,6 +2220,7 @@ sub update_options {
  }
 
  my $output;
+warn @test, "\n";
  if (! @test) {
 
 # Get output from scanimage.
