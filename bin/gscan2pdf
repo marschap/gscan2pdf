@@ -33,15 +33,12 @@
 #    Check encoding (umlauts) of metadata.
 #    get Makefile.PL to update date in changelog
 #    check debian/copyright
-#    fix test mode
-#    add warming-up dialog "[snapscan] Scanner warming up - waiting 11 seconds."
-#    Enable email as PDF
+#    Finish email as PDF - toolbar, icons, RMB, etc.
 #    Eliminate duplicate devices
 #    Rewrite Gtk2::ItemFactory with Gtk2::UIManager
-# 1. Support scanadf, using pnmtotiff.
-# 2. Progress meter for scans and imports.
-# 3. Crop and autocrop
-# 4. Look at OCR
+# 1. Progress meter for scans and imports.
+# 2. Crop and autocrop
+# 3. Look at OCR
 
 # Release procedure:
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
@@ -97,7 +94,6 @@ my $debug = FALSE;
 while (defined($ARGV[0])) {
 # Set up test mode and make sure file has absolute path and is readable
  if ($ARGV[0] eq "--test") {
-warn "Test mode\n";
   shift @ARGV;
   my $test = shift @ARGV;
   if ($test =~ /(.*)=(.*)/) {
@@ -113,6 +109,10 @@ warn "Test mode\n";
 # Convert all underscores to spaces
    $test =~ s/_/ /g;
    push @model, basename($test);
+  }
+  else {
+   warn $d->get("Usage:\n$0 --test <file>=<model>\n");
+   exit 1;
   }
  }
  elsif ($ARGV[0] eq "--help") {
@@ -181,7 +181,7 @@ init_icons( [ 'rotate90',  "$path/rotate90.png" ],
 
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
-my ($windowp, $windowt, $windowe, $windows, $windowh, $slist);
+my ($windowp, $windowt, $windowe, $windows, $windowh, $slist, $frames);
 
 # Define the menu items for ItemFactory
 my @menu_items = ( { path        => '/'.$d->get('_File'),
@@ -362,14 +362,6 @@ if (defined($SETTING{"window_x"}) and defined($SETTING{"window_y"})) {
 $window -> maximize
  if (! (defined($SETTING{"window_maximize"}) and ! $SETTING{"window_maximize"}));
 
-# Pass the window a stock icon list
-#my @icon;
-#my $i = -1;
-#foreach my $size (qw(menu small-toolbar large-toolbar button dnd dialog)) {
-# ++$i;
-# $icon[$i] = $window -> render_icon ('gtk-print-preview', $size) # or gtk-index
-#}
-#$window -> set_icon_list ( @icon );
 $window->set_default_icon_from_file ("$path/gscan2pdf.png");
 
 my $main_vbox = new Gtk2::VBox ( FALSE, 1 );
@@ -665,7 +657,13 @@ sub create_menu_bar {
  $item_factory -> create_items( @menu_items );
  $item_factory
   -> get_item('/'.$d->get('Edit').'/'.$d->get('Frontend').'/scanadf')
-   -> set_active(TRUE) if ($SETTING{'frontend'} eq 'scanadf');
+   -> set_active(TRUE)
+       if (defined($SETTING{'frontend'}) and $SETTING{'frontend'} eq 'scanadf');
+
+ $item_factory
+  -> get_item('/'.$d->get('File').'/'.$d->get('Email as PDF'))
+   -> set_sensitive(FALSE)
+       if (system("which xdg-email >/dev/null 2>/dev/null") != 0);
 
  # Attach the new accelerator group to the window.
  $window -> add_accel_group( $accel_group );
@@ -681,10 +679,12 @@ sub create_menu_bar {
 sub change_frontend {
  my ($user_data, $action_id, $menu_item) = @_;
  if ($action_id == 1) {
-  $SETTING{'frontend'} = "scanimage";
+  $SETTING{'frontend'} = 'scanimage';
+  $frames->set_sensitive(TRUE) if (defined($windows));
  }
  else {
-  $SETTING{'frontend'} = "scanadf";
+  $SETTING{'frontend'} = 'scanadf';
+  $frames->set_sensitive(FALSE) if (defined($windows));
  }
 }
 
@@ -893,23 +893,123 @@ sub import {
 }
 
 
-# Throw up file selector and save selected pages as PDF under given name.
+# Create $window_new transient to $window with $title and $vbox
 
-sub save_PDF {
-
-# PDF pop-up window
- $windowp = Gtk2::Window -> new;
- $windowp -> set_border_width($border_width);
- $windowp -> set_title ($d->get('Save as PDF'));
- $windowp -> signal_connect (delete_event => sub {
-  $windowp -> hide;
-  return TRUE; # ensures that the window is not destroyed
- });
- $windowp -> set_transient_for($window); # Assigns parent
+sub create_window {
+ my ($window, $title, $destroy) = @_;
+ my $window_new = Gtk2::Window -> new;
+ $window_new -> set_border_width($border_width);
+ $window_new -> set_title ($title);
+ if ($destroy) {
+  $window_new -> signal_connect (destroy => sub { $window_new -> destroy; } );
+ }
+ else {
+  $window_new -> signal_connect (delete_event => sub {
+   $window_new -> hide;
+   return TRUE; # ensures that the window is not destroyed
+  });
+ }
+ $window_new -> set_transient_for($window); # Assigns parent
 
 # VBox for window
  my $vbox = Gtk2::VBox -> new;
- $windowp -> add ($vbox);
+ $window_new -> add ($vbox);
+
+ return ($window_new, $vbox);
+}
+
+
+# Add a frame and radio buttons to $vbox,
+# returning $buttona, $buttonc, $buttons
+
+sub add_page_range {
+ my ($vbox) = @_;
+
+# Frame for page range
+ my $frame = Gtk2::Frame -> new($d->get('Page range'));
+ $vbox -> pack_start ($frame, TRUE, TRUE, 0);
+ my $vboxp = Gtk2::VBox -> new;
+ $vboxp -> set_border_width($border_width);
+ $frame -> add ($vboxp);
+
+#the first radio button has to set the group,
+#which is undef for the first button
+# All button
+ my $buttona = Gtk2::RadioButton -> new(undef, $d->get('All'));
+ $vboxp -> pack_start($buttona, TRUE, TRUE, 0);
+ my @group = $buttona -> get_group;
+
+# Current button
+ my $buttonc = Gtk2::RadioButton -> new(@group, $d->get('Current'));
+ $vboxp -> pack_start($buttonc, TRUE, TRUE, 0);
+
+# Selected button
+ my $buttons = Gtk2::RadioButton -> new(@group, $d->get('Selected'));
+ $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
+
+# Set default
+ if (defined($SETTING{"Page range"})) {
+  if ($SETTING{"Page range"} eq "current") {
+   $buttonc -> set_active(TRUE);
+  }
+  elsif ($SETTING{"Page range"} eq "selected") {
+   $buttons -> set_active(TRUE);
+  }
+  else {
+   $buttona -> set_active(TRUE);
+  }
+ }
+ else {
+  $buttona -> set_active(TRUE);
+ }
+ 
+ return ($buttona, $buttonc, $buttons);
+}
+
+
+# fill $pagelist with filenames depending on which radiobutton is active
+
+sub fill_pagelist {
+ my ($buttona, $buttonc, $buttons) = @_;
+
+ my $n;
+ my $pagelist;
+ if ($buttona -> get_active) {
+  $SETTING{"Page range"} = "all";
+  $n = $#{$slist -> {data}};
+  $pagelist = $slist -> {data}[0][2];
+  my $i = 1;
+  while ($i <= $#{$slist -> {data}}) {
+   $pagelist = $pagelist." ".$slist -> {data}[$i][2];
+   ++$i;
+  }
+ }
+ elsif ($buttonc -> get_active) {
+  $SETTING{"Page range"} = "current";
+  $n = 1;
+  my @page = $slist -> get_selected_indices;
+  $pagelist = $slist -> {data}[$page[0]][2];
+ }
+ elsif ($buttons -> get_active) {
+  $SETTING{"Page range"} = "selected";
+  my @page = $slist -> get_selected_indices;
+  $n = $#page;
+  $pagelist = $slist -> {data}[$page[0]][2];
+  my $i = 1;
+  while ($i <= $#page) {
+   $pagelist = $pagelist." ".$slist -> {data}[$page[$i]][2];
+   ++$i;
+  }
+ }
+ 
+ return ($pagelist, $n);
+}
+
+
+# Add PDF options to $vbox
+
+sub add_PDF_options {
+ my ($vbox) = @_;
 
 # Frame for metadata
  my $framem = Gtk2::Frame -> new($d->get('Metadata'));
@@ -933,15 +1033,8 @@ sub save_PDF {
  my $button = Gtk2::Button ->
                       new("$SETTING{'year'}/$SETTING{'month'}/$SETTING{'day'}");
  $button -> signal_connect( clicked => sub {
-  my $window = Gtk2::Window -> new;
-  $window -> set_title ($d->get('Select Date'));
-  $window->set_border_width($border_width);
-  $window->signal_connect( 'destroy' => sub { $window -> destroy; } );
+  my ($window, $vbox) = create_window($windowp, $d->get('Select Date'), TRUE);
   $window->set_resizable(FALSE);
-  $window -> set_transient_for($windowp); # Assigns parent
-
-  my $vbox = Gtk2::VBox -> new;
-  $window -> add($vbox);
 
   my $calendar = Gtk2::Calendar -> new;
   $calendar -> select_day($SETTING{'day'});
@@ -1052,43 +1145,55 @@ sub save_PDF {
  $optc -> set_history ($o) if defined($o);
  $hboxc -> pack_end ($optc, FALSE, FALSE, 0);
 
+ return ($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc,
+          $hboxq, @compression);
+}
+
+
+sub get_PDF_options {
+ my ($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc, @compression) = @_;
+
+# Get metadata
+ $SETTING{"author"} = $entrya -> get_text;
+ $SETTING{"title"} = $entryt -> get_text;
+ $SETTING{"subject"} = $entrys -> get_text;
+ $SETTING{"keywords"} = $entryk -> get_text;
+
+# Get compression
+ $SETTING{'compression'} = $compression[$optc -> get_history];
+ my $compression = "";
+ if ($SETTING{'compression'} eq 'JPEG') {
+  $SETTING{'quality'} = $spinbuttonq -> get_value;
+  $compression = "-j -q $SETTING{'quality'}";
+ }
+ elsif ($SETTING{'compression'} eq 'Zip') {
+  $compression = "-z";
+ }
+
+# Set options
+ return " $compression"
+             . sprintf (" -e %4i%02i%02i", $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'})
+             . " -c \"$program v$version\""
+             . " -a \"$SETTING{'author'}\""
+             . " -t \"$SETTING{'title'}\""
+             . " -s \"$SETTING{'subject'}\""
+             . " -k \"$SETTING{'keywords'}\"";
+}
+
+
+# Throw up file selector and save selected pages as PDF under given name.
+
+sub save_PDF {
+
+# PDF pop-up window
+ ($windowp, my $vbox) = create_window($window, $d->get('Save as PDF'), FALSE);
+
+# PDF options
+ my ($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc,
+      $hboxq, @compression) = add_PDF_options ($vbox);
+
 # Frame for page range
- my $framep = Gtk2::Frame -> new($d->get('Page range'));
- $vbox -> pack_start ($framep, TRUE, TRUE, 0);
- my $vboxp = Gtk2::VBox -> new;
- $vboxp -> set_border_width($border_width);
- $framep -> add ($vboxp);
-
-#the first radio button has to set the group,
-#which is undef for the first button
-# All button
- my $buttona = Gtk2::RadioButton -> new(undef, $d->get('All'));
- $vboxp -> pack_start($buttona, TRUE, TRUE, 0);
- my @group = $buttona -> get_group;
-
-# Current button
- my $buttonc = Gtk2::RadioButton -> new(@group, $d->get('Current'));
- $vboxp -> pack_start($buttonc, TRUE, TRUE, 0);
-
-# Selected button
- my $buttons = Gtk2::RadioButton -> new(@group, $d->get('Selected'));
- $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
-
-# Set default
- if (defined($SETTING{"Page range"})) {
-  if ($SETTING{"Page range"} eq "current") {
-   $buttonc -> set_active(TRUE);
-  }
-  elsif ($SETTING{"Page range"} eq "selected") {
-   $buttons -> set_active(TRUE);
-  }
-  else {
-   $buttona -> set_active(TRUE);
-  }
- }
- else {
-  $buttona -> set_active(TRUE);
- }
+ my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # Pages button
 # my $hboxp = Gtk2::HBox -> new;
@@ -1148,70 +1253,23 @@ sub save_PDF {
    $SETTING{"cwd"} = dirname($filename);
 
 # fill $pagelist with filenames depending on which radiobutton is active
-   my $n;
-   my $pagelist;
-   if ($buttona -> get_active) {
-    $SETTING{"Page range"} = "all";
-    $n = $#{$slist -> {data}};
-    $pagelist = $slist -> {data}[0][2];
-    my $i = 1;
-    while ($i <= $#{$slist -> {data}}) {
-     $pagelist = $pagelist." ".$slist -> {data}[$i][2];
-     ++$i;
-    }
-   }
-   elsif ($buttonc -> get_active) {
-    $SETTING{"Page range"} = "current";
-    $n = 1;
-    my @page = $slist -> get_selected_indices;
-    $pagelist = $slist -> {data}[$page[0]][2];
-   }
-   elsif ($buttons -> get_active) {
-    $SETTING{"Page range"} = "selected";
-    my @page = $slist -> get_selected_indices;
-    $n = $#page;
-    $pagelist = $slist -> {data}[$page[0]][2];
-    my $i = 1;
-    while ($i <= $#page) {
-     $pagelist = $pagelist." ".$slist -> {data}[$page[$i]][2];
-     ++$i;
-    }
-   }
-
-# Get metadata
-   $SETTING{"author"} = $entrya -> get_text;
-   $SETTING{"title"} = $entryt -> get_text;
-   $SETTING{"subject"} = $entrys -> get_text;
-   $SETTING{"keywords"} = $entryk -> get_text;
-
-# Get compression
-   $SETTING{'compression'} = $compression[$optc -> get_history];
-   my $compression = "";
-   if ($SETTING{'compression'} eq 'JPEG') {
-    $SETTING{'quality'} = $spinbuttonq -> get_value;
-    $compression = "-j -q $SETTING{'quality'}";
-   }
-   elsif ($SETTING{'compression'} eq 'Zip') {
-    $compression = "-z";
-   }
+   my ($pagelist, $n) = fill_pagelist($buttona, $buttonc, $buttons);
 
 # Set options
-   my $options = " $compression -o \"$filename\""
-               . sprintf (" -e %4i%02i%02i", $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'})
-               . " -c \"$program v$version\""
-               . " -a \"$SETTING{'author'}\""
-               . " -t \"$SETTING{'title'}\""
-               . " -s \"$SETTING{'subject'}\""
-               . " -k \"$SETTING{'keywords'}\"";
+   my $options = get_PDF_options ($entrya, $entryt, $entrys, $entryk,
+                                   $spinbuttonq, $optc, @compression);
+
+# Temporary filename for tiff
+   my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
 
 # call tiff2pdf and/or tiffcp according to the number of pages
    if ($n > 0) {
-    system ("tiffcp $pagelist \"$filename.tif\"");
-    system ("tiff2pdf $options \"$filename.tif\"");
-    unlink ("$filename.tif"); # delete the temporary tiff
+    system ("tiffcp $pagelist $tif");
+    system ("tiff2pdf -o \"$filename\" $options $tif");
+    unlink ($tif); # delete the temporary tiff
    }
    else {
-    system ("tiff2pdf $options $pagelist");
+    system ("tiff2pdf -o \"$filename\" $options $pagelist");
    }
   
    $windowp -> hide;
@@ -1238,57 +1296,10 @@ sub save_PDF {
 
 sub save_TIFF {
 
-# PDF pop-up window
- $windowt = Gtk2::Window -> new;
- $windowt -> set_border_width($border_width);
- $windowt -> set_title ($d->get('Save as TIFF'));
- $windowt -> signal_connect (delete_event => sub {
-  $windowt -> hide;
-  return TRUE; # ensures that the window is not destroyed
- });
- $windowt -> set_transient_for($window); # Assigns parent
-
-# VBox for window
- my $vbox = Gtk2::VBox -> new;
- $windowt -> add ($vbox);
+ ($windowt, my $vbox) = create_window($window, $d->get('Save as TIFF'), FALSE);
 
 # Frame for page range
- my $framep = Gtk2::Frame -> new($d->get('Page range'));
- $vbox -> pack_start ($framep, TRUE, TRUE, 0);
- my $vboxp = Gtk2::VBox -> new;
- $vboxp -> set_border_width($border_width);
- $framep -> add ($vboxp);
-
-#the first radio button has to set the group,
-#which is undef for the first button
-# All button
- my $buttona = Gtk2::RadioButton -> new(undef, $d->get('All'));
- $vboxp -> pack_start($buttona, TRUE, TRUE, 0);
- my @group = $buttona -> get_group;
-
-# Current button
- my $buttonc = Gtk2::RadioButton -> new(@group, $d->get('Current'));
- $vboxp -> pack_start($buttonc, TRUE, TRUE, 0);
-
-# Selected button
- my $buttons = Gtk2::RadioButton -> new(@group, $d->get('Selected'));
- $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
-
-# Set default
- if (defined($SETTING{"Page range"})) {
-  if ($SETTING{"Page range"} eq "current") {
-   $buttonc -> set_active(TRUE);
-  }
-  elsif ($SETTING{"Page range"} eq "selected") {
-   $buttons -> set_active(TRUE);
-  }
-  else {
-   $buttona -> set_active(TRUE);
-  }
- }
- else {
-  $buttona -> set_active(TRUE);
- }
+ my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
@@ -1329,35 +1340,7 @@ sub save_TIFF {
    chdir $dir;
 
 # fill $pagelist with filenames depending on which radiobutton is active
-   my $n;
-   my $pagelist;
-   if ($buttona -> get_active) {
-    $SETTING{"Page range"} = "all";
-    $n = $#{$slist -> {data}};
-    $pagelist = $slist -> {data}[0][2];
-    my $i = 1;
-    while ($i <= $#{$slist -> {data}}) {
-     $pagelist = $pagelist." ".$slist -> {data}[$i][2];
-     ++$i;
-    }
-   }
-   elsif ($buttonc -> get_active) {
-    $SETTING{"Page range"} = "current";
-    $n = 1;
-    my @page = $slist -> get_selected_indices;
-    $pagelist = $slist -> {data}[$page[0]][2];
-   }
-   elsif ($buttons -> get_active) {
-    $SETTING{"Page range"} = "selected";
-    my @page = $slist -> get_selected_indices;
-    $n = $#page;
-    $pagelist = $slist -> {data}[$page[0]][2];
-    my $i = 1;
-    while ($i <= $#page) {
-     $pagelist = $pagelist." ".$slist -> {data}[$page[$i]][2];
-     ++$i;
-    }
-   }
+   my ($pagelist, $n) = fill_pagelist($buttona, $buttonc, $buttons);
 
 # Create the tiff
    system ("tiffcp $pagelist \"$filename\"");
@@ -1381,57 +1364,14 @@ sub save_TIFF {
 
 sub email {
 
-# PDF pop-up window
- $windowe = Gtk2::Window -> new;
- $windowe -> set_border_width($border_width);
- $windowe -> set_title ($d->get('Email as PDF'));
- $windowe -> signal_connect (delete_event => sub {
-  $windowe -> hide;
-  return TRUE; # ensures that the window is not destroyed
- });
- $windowe -> set_transient_for($window); # Assigns parent
+ ($windowe, my $vbox) = create_window($window, $d->get('Email as PDF'), FALSE);
 
-# VBox for window
- my $vbox = Gtk2::VBox -> new;
- $windowe -> add ($vbox);
+# PDF options
+ my ($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc,
+      $hboxq, @compression) = add_PDF_options ($vbox);
 
 # Frame for page range
- my $framep = Gtk2::Frame -> new($d->get('Page range'));
- $vbox -> pack_start ($framep, TRUE, TRUE, 0);
- my $vboxp = Gtk2::VBox -> new;
- $vboxp -> set_border_width($border_width);
- $framep -> add ($vboxp);
-
-#the first radio button has to set the group,
-#which is undef for the first button
-# All button
- my $buttona = Gtk2::RadioButton -> new(undef, $d->get('All'));
- $vboxp -> pack_start($buttona, TRUE, TRUE, 0);
- my @group = $buttona -> get_group;
-
-# Current button
- my $buttonc = Gtk2::RadioButton -> new(@group, $d->get('Current'));
- $vboxp -> pack_start($buttonc, TRUE, TRUE, 0);
-
-# Selected button
- my $buttons = Gtk2::RadioButton -> new(@group, $d->get('Selected'));
- $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
-
-# Set default
- if (defined($SETTING{"Page range"})) {
-  if ($SETTING{"Page range"} eq "current") {
-   $buttonc -> set_active(TRUE);
-  }
-  elsif ($SETTING{"Page range"} eq "selected") {
-   $buttons -> set_active(TRUE);
-  }
-  else {
-   $buttona -> set_active(TRUE);
-  }
- }
- else {
-  $buttona -> set_active(TRUE);
- }
+ my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
@@ -1443,50 +1383,26 @@ sub email {
  $sbutton -> signal_connect (clicked => sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
-  my $n;
-  my $pagelist;
-  if ($buttona -> get_active) {
-   $SETTING{"Page range"} = "all";
-   $n = $#{$slist -> {data}};
-   $pagelist = $slist -> {data}[0][2];
-   my $i = 1;
-   while ($i <= $#{$slist -> {data}}) {
-    $pagelist = $pagelist." ".$slist -> {data}[$i][2];
-    ++$i;
-   }
-  }
-  elsif ($buttonc -> get_active) {
-   $SETTING{"Page range"} = "current";
-   $n = 1;
-   my @page = $slist -> get_selected_indices;
-   $pagelist = $slist -> {data}[$page[0]][2];
-  }
-  elsif ($buttons -> get_active) {
-   $SETTING{"Page range"} = "selected";
-   my @page = $slist -> get_selected_indices;
-   $n = $#page;
-   $pagelist = $slist -> {data}[$page[0]][2];
-   my $i = 1;
-   while ($i <= $#page) {
-    $pagelist = $pagelist." ".$slist -> {data}[$page[$i]][2];
-    ++$i;
-   }
-  }
+  my ($pagelist, $n) = fill_pagelist($buttona, $buttonc, $buttons);
+
+# Set options
+  my $options = get_PDF_options ($entrya, $entryt, $entrys, $entryk,
+                                  $spinbuttonq, $optc, @compression);
 
 # Create the tiff
-  my (undef, $filename) = tempfile(DIR => $dir);
-  $filename .= ".pdf";
+  my (undef, $pdf) = tempfile(DIR => $dir, SUFFIX => '.pdf');
+  my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
 
 # call tiff2pdf and/or tiffcp according to the number of pages
   if ($n > 0) {
-   system ("tiffcp $pagelist \"$filename.tif\"");
-   system ("tiff2pdf -o \"$filename\" \"$filename.tif\"");
-   unlink ("$filename.tif"); # delete the temporary tiff
+   system ("tiffcp $pagelist $tif");
+   system ("tiff2pdf -o $pdf $options $tif");
+   unlink ($tif); # delete the temporary tiff
   }
   else {
-   system ("tiff2pdf -o \"$filename\" $pagelist");
+   system ("tiff2pdf -o $pdf $options $pagelist");
   }
-  system ("xdg-email --attach \"$filename\" 'x\@y'");
+  system ("xdg-email --attach $pdf 'x\@y'");
 
   $windowe -> hide;
 
@@ -1498,6 +1414,8 @@ sub email {
  $cbutton -> signal_connect( clicked => sub { $windowe -> hide; } );
 
  $windowe -> show_all;
+ $hboxq -> hide_all
+  if (! defined($SETTING{'compression'}) or $SETTING{'compression'} ne 'JPEG');
 }
 
 
@@ -1533,18 +1451,7 @@ sub scan_dialog {
  }
 
 # scan pop-up window
- $windows = Gtk2::Window -> new;
- $windows -> set_border_width($border_width);
- $windows -> set_title ($d->get('Scan Document'));
- $windows -> set_transient_for($window); # Assigns parent
- $windows -> signal_connect (delete_event => sub {
-  $windows -> hide;
-  return TRUE; # ensures that the window is not destroyed
- });
-
-# VBox for window
- my $vbox = Gtk2::VBox -> new;
- $windows -> add ($vbox);
+ ($windows, my $vbox) = create_window($window, $d->get('Scan Document'), FALSE);
 
 # HBox for devices
  my $hboxd = Gtk2::HBox -> new;
@@ -1604,8 +1511,9 @@ sub scan_dialog {
  $hboxd -> pack_end ($optd, FALSE, FALSE, 0);
 
 # If device not set by config and there is a default device, then set it
- if (! defined($SETTING{"device"}) and $output =~ /default device is `(.*)'/) {
-  $SETTING{"device"} = $1;
+ if (! defined($SETTING{'device'})
+      and defined($output) and $output =~ /default device is `(.*)'/) {
+  $SETTING{'device'} = $1;
  }
 
 # If device in settings then set it
@@ -1660,7 +1568,9 @@ sub scan_dialog {
  }
 
 # Frame for source document
- my $frames = Gtk2::Frame -> new($d->get('Source document'));
+ $frames = Gtk2::Frame -> new($d->get('Source document'));
+ $frames->set_sensitive(FALSE)
+  if (defined($SETTING{'frontend'}) and $SETTING{'frontend'} eq 'scanadf');
  $vbox -> pack_start ($frames, FALSE, FALSE, 0);
  my $vboxs = Gtk2::VBox -> new;
  $vboxs -> set_border_width($border_width);
@@ -1824,7 +1734,7 @@ sub scan_dialog {
     }
    }
   }
-  if ($SETTING{'frontend'} eq "scanimage") {
+  if ($SETTING{'frontend'} eq 'scanimage') {
    scanimage($SETTING{'device'}, $npages, $start, $step, %options);
   }
   else {
@@ -1878,7 +1788,6 @@ sub scanimage {
  my $cmd = "scanimage $device $npages $start $step @options;echo 'End Scan' > /dev/stderr";
  warn "$cmd\n" if $debug;
 
-warn @test, "\n";
  if (! @test) {
 
 # Interface to scanimage
@@ -1928,6 +1837,9 @@ warn @test, "\n";
     elsif ($line =~ /^End Scan/) {
      $dialog -> destroy;
      return 0; # Sascha Hunold [hunoldinho at users dot sourceforge dot net]
+    }
+    elsif ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
+     $label -> set_text($d->get('Scanner warming up'));
     }
     elsif ($line =~ /^Scanned page \d*\. \(scanner status = 7\)/) {
      ;
@@ -2005,7 +1917,6 @@ END
  my $cmd = "scanadf $device $start $end @options;echo 'End Scan' > /dev/stderr";
  warn "$cmd\n" if $debug;
 
-warn @test, "\n";
  if (! @test) {
 
 # Interface to scanimage
@@ -2102,7 +2013,7 @@ sub hash2options {
 
 sub import_scan {
  my ($ofilename) = @_;
- my (undef, $filename) = tempfile(DIR => $dir);
+ my (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.tif');
  system("mv $ofilename $filename");
 
 # Add to the page list
@@ -2220,7 +2131,6 @@ sub update_options {
  }
 
  my $output;
-warn @test, "\n";
  if (! @test) {
 
 # Get output from scanimage.
