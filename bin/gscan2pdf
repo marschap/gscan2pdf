@@ -36,6 +36,9 @@
 #    Finish email as PDF - toolbar, icons, RMB, etc.
 #    Eliminate duplicate devices
 #    Rewrite Gtk2::ItemFactory with Gtk2::UIManager
+#    Either get cancel button during scan to actually cancel the scan,
+#     or change the button.
+#    check for imagemagick and ghost scanadf and rotate options if not there.
 # 1. Progress meter for scans and imports.
 # 2. Crop and autocrop
 # 3. Look at OCR
@@ -69,7 +72,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.8.8";
+my $version = "0.8.9";
 
 # Standard paper sizes
 my @paper = qw(A4 Letter);
@@ -1919,7 +1922,7 @@ END
 
  if (! @test) {
 
-# Interface to scanimage
+# Interface to frontend
   my ($write, $read);
   my $error = IO::Handle -> new; # this needed because of a bug in open3.
   my $pid = open3($write, $read, $error, $cmd);
@@ -1946,6 +1949,9 @@ END
    while ($line =~ /\n/) {
     if ($line =~ /^Scanned document out(\d*)\.pnm/) {
      $label -> set_text($d->get('Scanned page')." $1...");
+    }
+    elsif ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
+     $label -> set_text($d->get('Scanner warming up'));
     }
     elsif ($line =~ /^gscan2pdf created out(\d*)\.tif/) {
 
