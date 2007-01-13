@@ -1,14 +1,10 @@
-gscan2pdf (0.8.8) unstable; urgency=low
+gscan2pdf (0.8.9) unstable; urgency=low
 
-  * Belarusian translation (thanks to booxter)
-  * Chinese (Taiwan) translation (thanks to cwchien)
-  * Czech translation (thanks to Petr Jelínek)
-  * Russian translation (thanks to Alexandre Prokoudine)
-  * Update to Swedish translation (thanks to Daniel Nylander)
-  * 2 scanimage calls (speedup).
-  * Adds the device to the model name if the same model present more than once.
-  * Drag-n-drop now autoscrolls the thumbnail list.
-  * Error now thrown if Locale::gettext version < 1.05.
-  * New icons for application and rotate buttons
+  * Spanish translation (thanks to mecedesjorge)
+  * Update to Czech translation (thanks to Petr Jelínek)
+  * Support for scanadf frontend
+  * Email as PDF
+  * Displays warm-up message if backend supports it
+  * Now ghosts out the rotate menus and buttons if imagemagick not installed
 
- -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Mon, 01 Jan 2007 20:00:00 +0100
+ -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Thu, 11 Jan 2007 21:00:00 +0100
