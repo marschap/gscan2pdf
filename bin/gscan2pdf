@@ -8,7 +8,6 @@
 # 0. Add status line at bottom with messages like "filename saved"
 #    Rewrite in python with python-sane, pytiff & tiff2pdf
 #    Add KDE, xfe? menus
-#    Add dialog whilst device-dependent options are being parsed
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
 #    Put windows up in centre of parent
@@ -22,7 +21,6 @@
 #    Work out how best to include package.
 #    Option to throw up PDF viewer with newly created PDF file
 #    Translate documentation
-#    Put in a check that mogrify is available (disabling rotations if not)
 #    Sort out sourceforge backups
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    After deleting a page, should display next in thumbnail list
@@ -34,11 +32,9 @@
 #    get Makefile.PL to update date in changelog
 #    check debian/copyright
 #    Finish email as PDF - toolbar, icons, RMB, etc.
-#    Eliminate duplicate devices
 #    Rewrite Gtk2::ItemFactory with Gtk2::UIManager
 #    Either get cancel button during scan to actually cancel the scan,
 #     or change the button.
-#    check for imagemagick and ghost scanadf and rotate options if not there.
 # 1. Progress meter for scans and imports.
 # 2. Crop and autocrop
 # 3. Look at OCR
@@ -146,6 +142,8 @@ if (check_utils()) {
   $d->get("requires the libtiff library.\nPlease install it."), "\n";
  exit 1;
 }
+# Check for presence of imagemagick
+my $imagemagick = system("which convert >/dev/null 2>/dev/null");
 
 # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
 # scanimage
@@ -381,44 +379,44 @@ my $hboxb = Gtk2::HBox -> new;
 $main_vbox -> pack_start ($hboxb, FALSE, FALSE, 0);
 
 foreach (
- [ 'gtk-new',            $d->get('Clears all pages'), \&new ],
- [ 'gtk-open',           $d->get('Import TIFF file'), \&import ],
+ [ 'gtk-new',            $d->get('Clears all pages'), \&new, 0 ],
+ [ 'gtk-open',           $d->get('Import TIFF file'), \&import, 0 ],
  [ 'gtk-print-preview',  $d->get('Scan document'), sub { if (defined($windows)) {
                                                  $windows -> present;
                                                 }
                                                 else {
                                                  scan_dialog();
-                                                } } ],
+                                                } }, 0 ],
  [ 'gtk-save-as',        $d->get('Save as PDF'), sub { if (defined($windowp)) {
                                                $windowp -> present;
                                               }
                                               else {
                                                save_PDF();
-                                              } } ],
+                                              } }, 0 ],
  [ 'gtk-save',           $d->get('Save as TIFF'), sub { if (defined($windowt)) {
                                                 $windowt -> present;
                                                }
                                                else {
                                                 save_TIFF();
-                                               } } ],
- [ 'gtk-delete',         $d->get('Delete selected pages'), \&delete_pages ],
+                                               } }, 0 ],
+ [ 'gtk-delete',         $d->get('Delete selected pages'), \&delete_pages, 0 ],
  [ 'gtk-sort-ascending', $d->get('Renumber pages from 1 to n'), sub {
-                                                 renumber($slist, 0, 1, 1); } ],
- [ 'gtk-select-all',     $d->get('Select all pages'), \&select_all ],
- [ 'gtk-zoom-100',       $d->get('Zoom to 100%'), sub { zoom_button('100%'); } ],
- [ 'gtk-zoom-fit',       $d->get('Zoom to fit'), sub { zoom_button('fit'); } ],
- [ 'gtk-zoom-in',        $d->get('Zoom in'), sub { zoom_button('in'); } ],
- [ 'gtk-zoom-out',       $d->get('Zoom out'), sub { zoom_button('out'); } ],
- [ 'rotate90',           $d->get('Rotate 90 clockwise'), sub { rotate(90); } ],
- [ 'rotate180',          $d->get('Rotate 180'), sub { rotate(180); } ],
- [ 'rotate270',          $d->get('Rotate 90 anticlockwise'), sub { rotate(270); } ],
+                                              renumber($slist, 0, 1, 1); }, 0 ],
+ [ 'gtk-select-all',     $d->get('Select all pages'), \&select_all, 0 ],
+ [ 'gtk-zoom-100',       $d->get('Zoom to 100%'), sub { zoom_button('100%'); }, 0 ],
+ [ 'gtk-zoom-fit',       $d->get('Zoom to fit'), sub { zoom_button('fit'); }, 0 ],
+ [ 'gtk-zoom-in',        $d->get('Zoom in'), sub { zoom_button('in'); }, 0 ],
+ [ 'gtk-zoom-out',       $d->get('Zoom out'), sub { zoom_button('out'); }, 0 ],
+ [ 'rotate90',           $d->get('Rotate 90 clockwise'), sub { rotate(90); }, $imagemagick ],
+ [ 'rotate180',          $d->get('Rotate 180'), sub { rotate(180); }, $imagemagick ],
+ [ 'rotate270',          $d->get('Rotate 90 anticlockwise'), sub { rotate(270); }, $imagemagick ],
  [ 'gtk-help',           $d->get('Help'), sub { if (defined($windowh)) {
                                            $windowh -> present;
                                           }
                                           else {
                                            view_pod();
-                                          } } ],
- [ 'gtk-quit',           $d->get('Quit'), sub { quit(); Gtk2 -> main_quit; } ]
+                                          } }, 0],
+ [ 'gtk-quit',           $d->get('Quit'), sub { quit(); Gtk2 -> main_quit; }, 0 ]
 ) {
  my $button = Gtk2::Button->new;
  my $image;
@@ -429,6 +427,7 @@ foreach (
   $button -> signal_connect(clicked => $_->[2]);
   $hboxb -> pack_start ($button, FALSE, FALSE, 0);
   $tooltips->set_tip ($button, $_->[1]);
+  $button->set_sensitive(FALSE) if ($_->[3] != 0);
  }
 }
 $tooltips->enable;
@@ -658,15 +657,37 @@ sub create_menu_bar {
  # the number of items in the array, the array itself, and any
  # callback data for the the menu items.
  $item_factory -> create_items( @menu_items );
- $item_factory
-  -> get_item('/'.$d->get('Edit').'/'.$d->get('Frontend').'/scanadf')
-   -> set_active(TRUE)
-       if (defined($SETTING{'frontend'}) and $SETTING{'frontend'} eq 'scanadf');
 
+# Ghost scanadf item if scanadf or imagemagick not available
+ my $item = $item_factory
+            -> get_item('/'.$d->get('Edit').'/'.$d->get('Frontend').'/scanadf');
+ if (system("which scanadf >/dev/null 2>/dev/null") != 0 or $imagemagick != 0) {
+  $item -> set_sensitive(FALSE);
+ }
+
+# Set scanadf active if in config
+ elsif (defined($SETTING{'frontend'}) and $SETTING{'frontend'} eq 'scanadf') {
+  $item -> set_active(TRUE);
+ }
+
+# Ghost email item if xdg-email not available
  $item_factory
   -> get_item('/'.$d->get('File').'/'.$d->get('Email as PDF'))
    -> set_sensitive(FALSE)
        if (system("which xdg-email >/dev/null 2>/dev/null") != 0);
+
+# Ghost rotations if imagemagick not available
+ if ($imagemagick != 0) {
+  $item_factory
+   -> get_item('/'.$d->get('View').'/'.$d->get('Rotate 90 clockwise'))
+    -> set_sensitive(FALSE);
+  $item_factory
+   -> get_item('/'.$d->get('View').'/'.$d->get('Rotate 180'))
+    -> set_sensitive(FALSE);
+  $item_factory
+   -> get_item('/'.$d->get('View').'/'.$d->get('Rotate 90 anticlockwise'))
+    -> set_sensitive(FALSE);
+ }
 
  # Attach the new accelerator group to the window.
  $window -> add_accel_group( $accel_group );
@@ -1380,8 +1401,8 @@ sub email {
  my $hboxb = Gtk2::HBox -> new;
  $vbox -> pack_start ($hboxb, TRUE, TRUE, 0);
 
-# Save button
- my $sbutton = Gtk2::Button -> new_from_stock('gtk-edit');
+# OK button
+ my $sbutton = Gtk2::Button -> new_from_stock('gtk-ok');
  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
  $sbutton -> signal_connect (clicked => sub {
 
@@ -1449,6 +1470,7 @@ sub scan_dialog {
                                             $d->get('No scanners found'));
     $dialog -> run;
     $dialog -> destroy;
+    return 0;
    }
   }
  }
@@ -1484,8 +1506,22 @@ sub scan_dialog {
   }
  }
 
-# Note any duplicate model names and add the device if necessary
+# Note any duplicate device names and delete if necessary
  my %seen;
+ my $i = 0;
+ while ($i < @device) {
+  $seen{ $device[$i] }++;
+  if ($seen{$device[$i]} > 1) {
+   splice @device, $i, 1;
+   splice @model, $i, 1;
+  }
+  else {
+   $i++;
+  }
+ }
+
+# Note any duplicate model names and add the device if necessary
+ undef %seen;
  foreach ( @model ) {
   $seen{ $_ }++;
  }
@@ -1741,7 +1777,7 @@ sub scan_dialog {
    scanimage($SETTING{'device'}, $npages, $start, $step, %options);
   }
   else {
-   scanadf($SETTING{'device'}, $npages, $start, $step, %options);
+   scanadf($SETTING{'device'}, $npages, $start, %options);
   }
  } );
 
@@ -1768,7 +1804,12 @@ sub scanimage {
 
 # inverted commas needed for strange characters in device name
  $device = "--device-name='$device'";
- $npages = "--batch-count=$npages"   if ($npages != 0);
+ if ($npages != 0) {
+  $npages = "--batch-count=$npages";
+ }
+ else {
+  $npages = "";
+ }
  $start  = "--batch-start=$start";
  if (defined $step) {
   $step   = "--batch-increment=$step";
@@ -1880,18 +1921,18 @@ warn "$text\n";
 # Carry out the scan with scanadf and the options passed.
 
 sub scanadf {
- my ($device, $npages, $start, $step, %options) = @_;
+ my ($device, $npages, $start, %options) = @_;
 
 # inverted commas needed for strange characters in device name
  $device = "--device-name='$device'";
- $start  = "--start-count=$start";
  my $end;
  if ($npages != 0) {
-  $end = "--end-count=".$start+$npages;
+  $end = "--end-count=".($start+$npages);
  }
  else {
   $end = "";
  }
+ $start  = "--start-count=$start";
 
 # Device-specific options
  my @options = hash2options(%options);
@@ -2469,15 +2510,15 @@ sub handle_clicks {
                   { path        => '/'.$d->get('Rotate 90 clockwise'),
                     callback    => sub { rotate(90); },
                     item_type   => '<StockItem>',
-                    extra_data  => 'gtk-orientation-landscape'},
+                    extra_data  => 'rotate90'},
                   { path        => '/'.$d->get('Rotate 180'),
                     callback    => sub { rotate(180); },
                     item_type   => '<StockItem>',
-                    extra_data  => 'gtk-orientation-reverse-portrait'},
+                    extra_data  => 'rotate180'},
                   { path        => '/'.$d->get('Rotate 90 anticlockwise'),
                     callback    => sub { rotate(270); },
                     item_type   => '<StockItem>',
-                    extra_data  => 'gtk-orientation-reverse-landscape'},
+                    extra_data  => 'rotate270'},
                   { path        => '/sep',
                     item_type   => '<Separator>' },
                   { path        => '/'.$d->get('_Delete'),
@@ -2526,15 +2567,15 @@ sub handle_clicks {
                   { path        => '/'.$d->get('Rotate 90 clockwise'),
                     callback    => sub { rotate(90); },
                     item_type   => '<StockItem>',
-                    extra_data  => 'gtk-orientation-landscape'},
+                    extra_data  => 'rotate90'},
                   { path        => '/'.$d->get('Rotate 180'),
                     callback    => sub { rotate(180); },
                     item_type   => '<StockItem>',
-                    extra_data  => 'gtk-orientation-reverse-portrait'},
+                    extra_data  => 'rotate180'},
                   { path        => '/'.$d->get('Rotate 90 anticlockwise'),
                     callback    => sub { rotate(270); },
                     item_type   => '<StockItem>',
-                    extra_data  => 'gtk-orientation-reverse-landscape'},
+                    extra_data  => 'rotate270'},
                   { path        => '/sep',
                     item_type   => '<Separator>' },
                   { path        => '/'.$d->get('_Delete'),
@@ -2546,6 +2587,21 @@ sub handle_clicks {
  }
 
  $item_factory->create_items(undef, @menu_items);
+
+
+# Ghost rotations if imagemagick not available
+ if ($imagemagick != 0) {
+  $item_factory
+   -> get_item('/'.$d->get('Rotate 90 clockwise'))
+    -> set_sensitive(FALSE);
+  $item_factory
+   -> get_item('/'.$d->get('Rotate 180'))
+    -> set_sensitive(FALSE);
+  $item_factory
+   -> get_item('/'.$d->get('Rotate 90 anticlockwise'))
+    -> set_sensitive(FALSE);
+ }
+
  $popup_menu->show_all;
  $popup_menu->popup(undef, undef,
                     undef, undef,
