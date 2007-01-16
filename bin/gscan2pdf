@@ -31,14 +31,25 @@
 #    Check encoding (umlauts) of metadata.
 #    get Makefile.PL to update date in changelog
 #    check debian/copyright
-#    Finish email as PDF - toolbar, icons, RMB, etc.
-#    Rewrite Gtk2::ItemFactory with Gtk2::UIManager
 #    Either get cancel button during scan to actually cancel the scan,
 #     or change the button.
+#    Add download path on sourceforge to web page
+#    check out scanbuttond
+#    add notes about xdg-utils, imagemagick & scanadf dependency to docs,
+#     plus a start-up dialog warning about missing packages
+#
+# From schmolch
+# 1.) If the scanning process gets interrupted the automatic numbering screws up.
+#      It would be very helpfull to be able to tell the number at which it is supposed
+#      to continue counting and into which direction (reverse counting stops working
+#      after the interruption).
+# 2.) Some basic image manipulation capabilities would be very usefull like adjusting contrast and brightness. 
+#
 # 1. Progress meter for scans and imports.
 # 2. Crop and autocrop
 # 3. Look at OCR
-
+# 4. Unpaper support
+#
 # Release procedure:
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
 #    Make sure that file list in .spec and cvs update reflects MANIFEST
@@ -68,7 +79,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.8.9";
+my $version = "0.9.0";
 
 # Standard paper sizes
 my @paper = qw(A4 Letter);
@@ -110,7 +121,7 @@ while (defined($ARGV[0])) {
    push @model, basename($test);
   }
   else {
-   warn $d->get("Usage:\n$0 --test <file>=<model>\n");
+   warn sprintf($d->get("Usage:\n%s --test <file>=<model>\n"), $0); # better xgettext hack
    exit 1;
   }
  }
@@ -184,155 +195,167 @@ init_icons( [ 'rotate90',  "$path/rotate90.png" ],
 # in the menu callbacks
 my ($windowp, $windowt, $windowe, $windows, $windowh, $slist, $frames);
 
-# Define the menu items for ItemFactory
-my @menu_items = ( { path        => '/'.$d->get('_File'),
-		     item_type   => '<Branch>' },
-		   { path        => '/'.$d->get('_File').'/'.$d->get('_New'),
-		     accelerator => '<control>n',
-		     callback    => \&new,
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-new'},
-		   { path        => '/'.$d->get('_File').'/'.$d->get('_Import TIFF'),
-		     accelerator => '<control>i',
-		     callback    => \&import,
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-open'},
-		   { path        => '/'.$d->get('_File').'/'.$d->get('Sca_n'),
-		     callback    => sub { if (defined($windows)) {
+my @action_items = (
+ # Fields for each action item:
+ # [name, stock_id, value, label, accelerator, tooltip, callback]
+ 
+ # File menu
+ [ 'File', undef, $d->get('_File') ],
+ [ 'New', 'gtk-new', $d->get('_New'), '<control>n', $d->get('Clears all pages'), \&new ],
+ [ 'Import TIFF', 'gtk-open', $d->get('_Import TIFF'), '<control>i', $d->get('Import TIFF file'), \&import ],
+ [ 'Scan', 'gtk-print-preview', $d->get('S_can'), undef, $d->get('Scan document'), sub { if (defined($windows)) {
                                            $windows -> present;
                                           }
                                           else {
                                            scan_dialog();
-                                          } },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-print-preview'},
-		   { path        => '/'.$d->get('_File').'/'
-		                       .$d->get('_Save PDF'),
-		     accelerator => '<control>s',
-		     callback    => sub { if (defined($windowp)) {
+                                          } } ],
+ [ 'Save PDF', 'gtk-save-as', $d->get('_Save PDF'), '<control>s', $d->get('Save as PDF'), sub { if (defined($windowp)) {
                                            $windowp -> present;
                                           }
                                           else {
                                            save_PDF();
-                                          } },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-save-as'},
-		   { path        => '/'.$d->get('_File').'/'
-		                       .$d->get('Save _TIFF'),
-		     accelerator => '<control>t',
-		     callback    => sub { if (defined($windowt)) {
+                                          } } ],
+ [ 'Save TIFF', 'gtk-save', $d->get('Save _TIFF'), '<control>t', $d->get('Save as TIFF'), sub { if (defined($windowt)) {
                                            $windowt -> present;
                                           }
                                           else {
                                            save_TIFF();
-                                          } },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-save'},
- 		   { path        => '/'.$d->get('_File').'/'
-		                       .$d->get('_Email as PDF'),
-		     accelerator => '<control>e',
-		     callback    => sub { if (defined($windowe)) {
+                                          } } ],
+ [ 'Email as PDF', 'gtk-edit', $d->get('_Email as PDF'), '<control>e', $d->get('Attach as PDF to a new email'), sub { if (defined($windowe)) {
                                            $windowe -> present;
                                           }
                                           else {
                                            email();
-                                          } },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-edit'},
-		   { path        => '/'.$d->get('_File').'/sep',
-		     item_type   => '<Separator>' },
-		   { path        => '/'.$d->get('_File').'/'.$d->get('_Quit'),
-		     accelerator => '<control>q',
-		     callback    => sub { quit(); Gtk2 -> main_quit; },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-quit' },
+                                          } } ],
+ [ 'Quit', 'gtk-quit', $d->get('_Quit'), '<control>q', $d->get('Quit'), sub { quit(); Gtk2 -> main_quit; } ],
+ 
+ # Edit menu
+ [ 'Edit', undef, $d->get('_Edit') ],
+ [ 'Delete', 'gtk-delete', $d->get('_Delete'), '<control>q', $d->get('Delete selected pages'), \&delete_pages ],
+ [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages from 1 to n'), sub { renumber($slist, 0, 1, 1); } ],
+ [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
+ [ 'Frontend', undef, $d->get('_Frontend') ],
+ 
+ # View menu
+ [ 'View', undef, $d->get('_View') ],
+ [ 'Zoom 100', 'gtk-zoom-100', $d->get('Zoom _100%'), undef, $d->get('Zoom to 100%'), sub { zoom_button('100%'); } ],
+ [ 'Zoom to fit', 'gtk-zoom-fit', $d->get('Zoom to _fit'), undef, $d->get('Zoom to fit'), sub { zoom_button('fit'); } ],
+ [ 'Zoom in', 'gtk-zoom-in', $d->get('Zoom _in'), 'plus', $d->get('Zoom in'), sub { zoom_button('in'); } ],
+ [ 'Zoom out', 'gtk-zoom-out', $d->get('Zoom _out'), 'minus', $d->get('Zoom out'), sub { zoom_button('out'); } ],
+ [ 'Rotate 90', 'rotate90', $d->get('Rotate 90 clockwise'), undef, $d->get('Rotate 90 clockwise'), sub { rotate(90); } ],
+ [ 'Rotate 180', 'rotate180', $d->get('Rotate 180'), undef, $d->get('Rotate 180'), sub { rotate(180); } ],
+ [ 'Rotate 270', 'rotate270', $d->get('Rotate 90 anticlockwise'), undef, $d->get('Rotate 90 anticlockwise'), sub { rotate(270); } ],
 
-		   { path        => '/'.$d->get('_Edit'),
-		     item_type   => '<Branch>' },
-		   { path        => '/'.$d->get('_Edit').'/'.$d->get('_Delete'),
-		     accelerator => 'Delete',
-		     callback    => \&delete_pages,
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-delete'},
-		   { path        => '/'.$d->get('_Edit').'/'
-		                       .$d->get('_Renumber'),
-		     accelerator => '<control>r',
-		     callback    => sub { renumber($slist, 0, 1, 1); },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-sort-ascending' },
-		   { path        => '/'.$d->get('_Edit').'/'
-		                       .$d->get('Select _All'),
-		     accelerator => '<control>a',
-		     callback    => \&select_all,
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-select-all' },
-		   { path        => '/'.$d->get('_Edit').'/sep',
-		     item_type   => '<Separator>' },
-		   { path        => '/'.$d->get('_Edit').'/'.$d->get('_Frontend'),
-		     item_type   => '<Branch>' },
-		   { path        => '/'.$d->get('_Edit').'/'.$d->get('_Frontend').'/scan_image',
-		     item_type   => '<RadioItem>',
-		     callback    => \&change_frontend,
-		     callback_action => 1 },
-		   { path        => '/'.$d->get('_Edit').'/'.$d->get('_Frontend').'/scan_adf',
-		     item_type   => '/'.$d->get('Edit').'/'.$d->get('Frontend').'/scanimage',
-		     callback    => \&change_frontend,
-		     callback_action => 2 },
-
-		   { path        => '/'.$d->get('_View'),
-		     item_type   => '<Branch>' },
-		   { path        => '/'.$d->get('_View').'/'
-		                       .$d->get('Zoom _100%'),
-		     callback    => sub { zoom_button('100%'); },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-zoom-100'},
-		   { path        => '/'.$d->get('_View').'/'
-		                       .$d->get('Zoom to _fit'),
-		     callback    => sub { zoom_button('fit'); },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-zoom-fit'},
-		   { path        => '/'.$d->get('_View').'/'.$d->get('Zoom _in'),
-		     accelerator => 'plus',
-		     callback    => sub { zoom_button('in'); },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-zoom-in'},
-		   { path        => '/'.$d->get('_View').'/'.$d->get('Zoom _out'),
-		     accelerator => 'minus',
-		     callback    => sub { zoom_button('out'); },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-zoom-out'},
-		   { path        => '/'.$d->get('_View').'/sep',
-		     item_type   => '<Separator>' },
-		   { path        => '/'.$d->get('_View').'/'
-		                       .$d->get('Rotate 90 clockwise'),
-		     callback    => sub { rotate(90); },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'rotate90'},
-		   { path        => '/'.$d->get('_View').'/'
-		                       .$d->get('Rotate 180'),
-		     callback    => sub { rotate(180); },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'rotate180'},
-		   { path        => '/'.$d->get('_View').'/'
-                                       .$d->get('Rotate 90 anticlockwise'),
-		     callback    => sub { rotate(270); },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'rotate270'},
-
-		   { path        => '/'.$d->get('_Help'),
-		     item_type   => '<LastBranch>' },
-		   { path        => '/'.$d->get('_Help').'/'.$d->get('_Help'),
-		     accelerator => '<control>h',
-		     callback    => sub { if (defined($windowh)) {
+ # Help menu
+ [ 'Help menu', undef, $d->get('_Help') ],
+ [ 'Help', 'gtk-help', $d->get('_Help'), '<control>h', $d->get('Help'), sub { if (defined($windowh)) {
                                            $windowh -> present;
                                           }
                                           else {
                                            view_pod();
-                                          } },
-                     item_type   => '<StockItem>',
-                     extra_data  => 'gtk-help' },
-		   { path        => '/'.$d->get('_Help').'/'.$d->get('_About'),
-		     callback    => \&about } );
+                                          } } ],
+ [ 'About', undef, $d->get('_About'), undef, $d->get('_About'), \&about ],
+);
+
+my @frontends = (
+
+  #Fields for each radio-action item:
+  #[name, stock_id, value, label, accelerator, tooltip, value]
+
+ [ 'scanimage', undef, 'scan_image', undef, 'scanimage', 0 ],
+ [ 'scanadf',  undef, 'scan_adf', undef, 'scanadf', 1 ],
+);
+
+# Declare the XML structure
+my $uimanager;
+my $ui = "<ui>
+ <menubar name='MenuBar'>
+  <menu action='File'> 
+   <menuitem action='New'/>
+   <menuitem action='Import TIFF'/>
+   <menuitem action='Scan'/>
+   <menuitem action='Save PDF'/>
+   <menuitem action='Save TIFF'/>
+   <menuitem action='Email as PDF'/>
+   <separator/>
+   <menuitem action='Quit'/>
+  </menu>
+  <menu action='Edit'> 
+   <menuitem action='Delete'/>
+   <menuitem action='Renumber'/>
+   <menuitem action='Select All'/>
+   <separator/>
+   <menu action='Frontend'>
+    <menuitem action='scanimage'/>
+    <menuitem action='scanadf'/>
+   </menu>
+  </menu>
+  <menu action='View'> 
+   <menuitem action='Zoom 100'/>
+   <menuitem action='Zoom to fit'/>
+   <menuitem action='Zoom in'/>
+   <menuitem action='Zoom out'/>
+   <separator/>
+   <menuitem action='Rotate 90'/>
+   <menuitem action='Rotate 180'/>
+   <menuitem action='Rotate 270'/>
+  </menu>
+  <menu action='Help menu'> 
+   <menuitem action='Help'/>
+   <menuitem action='About'/>
+  </menu>
+ </menubar>
+ <toolbar name='ToolBar'>
+  <toolitem action='New'/>
+  <toolitem action='Import TIFF'/>
+  <toolitem action='Scan'/>
+  <toolitem action='Save PDF'/>
+  <toolitem action='Save TIFF'/>
+  <toolitem action='Email as PDF'/>
+  <separator/>
+  <toolitem action='Delete'/>
+  <toolitem action='Renumber'/>
+  <toolitem action='Select All'/>
+  <separator/>
+  <toolitem action='Zoom 100'/>
+  <toolitem action='Zoom to fit'/>
+  <toolitem action='Zoom in'/>
+  <toolitem action='Zoom out'/>
+  <separator/>
+  <toolitem action='Rotate 90'/>
+  <toolitem action='Rotate 180'/>
+  <toolitem action='Rotate 270'/>
+  <separator/>
+  <toolitem action='Help'/>
+  <toolitem action='Quit'/>
+ </toolbar>
+ <popup name='Detail_Popup'>
+  <menuitem action='Zoom 100'/>
+  <menuitem action='Zoom to fit'/>
+  <menuitem action='Zoom in'/>
+  <menuitem action='Zoom out'/>
+  <separator/>
+  <menuitem action='Rotate 90'/>
+  <menuitem action='Rotate 180'/>
+  <menuitem action='Rotate 270'/>
+  <separator/>
+  <menuitem action='Delete'/>
+ </popup>
+ <popup name='Thumb_Popup'>
+  <menuitem action='Save PDF'/>
+  <menuitem action='Save TIFF'/>
+  <menuitem action='Email as PDF'/>
+  <separator/>
+  <menuitem action='Renumber'/>
+  <menuitem action='Select All'/>
+  <separator/>
+  <menuitem action='Rotate 90'/>
+  <menuitem action='Rotate 180'/>
+  <menuitem action='Rotate 270'/>
+  <separator/>
+  <menuitem action='Delete'/>
+ </popup>
+</ui>";
 
 # Create the window
 my $window = Gtk2::Window -> new;
@@ -369,67 +392,11 @@ my $main_vbox = new Gtk2::VBox ( FALSE, 1 );
 $window -> add ( $main_vbox );
 
 # Create the menu bar
-my $menubar = create_menu_bar( $window );
+my ($menubar, $toolbar) = create_menu_bar( $window );
 $main_vbox -> pack_start( $menubar, FALSE, TRUE, 0 );
+$main_vbox -> pack_start( $toolbar, FALSE, FALSE,0 );
 
 my $tooltips = Gtk2::Tooltips->new;
-
-# Button hbox
-my $hboxb = Gtk2::HBox -> new;
-$main_vbox -> pack_start ($hboxb, FALSE, FALSE, 0);
-
-foreach (
- [ 'gtk-new',            $d->get('Clears all pages'), \&new, 0 ],
- [ 'gtk-open',           $d->get('Import TIFF file'), \&import, 0 ],
- [ 'gtk-print-preview',  $d->get('Scan document'), sub { if (defined($windows)) {
-                                                 $windows -> present;
-                                                }
-                                                else {
-                                                 scan_dialog();
-                                                } }, 0 ],
- [ 'gtk-save-as',        $d->get('Save as PDF'), sub { if (defined($windowp)) {
-                                               $windowp -> present;
-                                              }
-                                              else {
-                                               save_PDF();
-                                              } }, 0 ],
- [ 'gtk-save',           $d->get('Save as TIFF'), sub { if (defined($windowt)) {
-                                                $windowt -> present;
-                                               }
-                                               else {
-                                                save_TIFF();
-                                               } }, 0 ],
- [ 'gtk-delete',         $d->get('Delete selected pages'), \&delete_pages, 0 ],
- [ 'gtk-sort-ascending', $d->get('Renumber pages from 1 to n'), sub {
-                                              renumber($slist, 0, 1, 1); }, 0 ],
- [ 'gtk-select-all',     $d->get('Select all pages'), \&select_all, 0 ],
- [ 'gtk-zoom-100',       $d->get('Zoom to 100%'), sub { zoom_button('100%'); }, 0 ],
- [ 'gtk-zoom-fit',       $d->get('Zoom to fit'), sub { zoom_button('fit'); }, 0 ],
- [ 'gtk-zoom-in',        $d->get('Zoom in'), sub { zoom_button('in'); }, 0 ],
- [ 'gtk-zoom-out',       $d->get('Zoom out'), sub { zoom_button('out'); }, 0 ],
- [ 'rotate90',           $d->get('Rotate 90 clockwise'), sub { rotate(90); }, $imagemagick ],
- [ 'rotate180',          $d->get('Rotate 180'), sub { rotate(180); }, $imagemagick ],
- [ 'rotate270',          $d->get('Rotate 90 anticlockwise'), sub { rotate(270); }, $imagemagick ],
- [ 'gtk-help',           $d->get('Help'), sub { if (defined($windowh)) {
-                                           $windowh -> present;
-                                          }
-                                          else {
-                                           view_pod();
-                                          } }, 0],
- [ 'gtk-quit',           $d->get('Quit'), sub { quit(); Gtk2 -> main_quit; }, 0 ]
-) {
- my $button = Gtk2::Button->new;
- my $image;
- if (defined(Gtk2::Stock->lookup ($_->[0]))
-     or defined($IconFactory->lookup ($_->[0]))) {
-  $image = Gtk2::Image->new_from_stock ($_->[0], 'large-toolbar');
-  $button->add ($image);
-  $button -> signal_connect(clicked => $_->[2]);
-  $hboxb -> pack_start ($button, FALSE, FALSE, 0);
-  $tooltips->set_tip ($button, $_->[1]);
-  $button->set_sensitive(FALSE) if ($_->[3] != 0);
- }
-}
 $tooltips->enable;
 
 # HPaned for thumbnails and detail view
@@ -642,25 +609,39 @@ Gtk2 -> main;
 sub create_menu_bar {
  my ($window) = @_;
 
+# Create a Gtk2::UIManager instance     
+ $uimanager = Gtk2::UIManager->new;
+
+# extract the accelgroup and add it to the window
+ my $accelgroup = $uimanager->get_accel_group;
+ $window->add_accel_group($accelgroup);
+
+# Create the basic Gtk2::ActionGroup instance
+# and fill it with Gtk2::Action instances
+ my $actions_basic = Gtk2::ActionGroup->new ("actions_basic");
+ $actions_basic->add_actions (\@action_items, undef);
+	
+# Add the actiongroup to the uimanager  
+ $uimanager->insert_action_group($actions_basic, 0);
+
  my $accel_group = new Gtk2::AccelGroup;
 
- # This function initializes the item factory.
- # Param 1: The type of menu - can be 'Gtk2::MenuBar', 'Gtk2::Menu',
- #          or 'Gtk2::OptionMenu'.
- # Param 2: The path of the menu.
- # Param 3: The accelerator group.  The item factory sets up
- #          the accelerator table while generating menus.
- my $item_factory = new Gtk2::ItemFactory( 'Gtk2::MenuBar', '<main>',
-                                                                 $accel_group );
+# Create the CD Gtk2::ActionGroup instance
+# and fill it with Gtk2::RadioAction instances
+ my $actions_frontends = Gtk2::ActionGroup->new ("frontends");
+ $actions_frontends->add_radio_actions(\@frontends, 0, \&change_frontend);
 
- # This function generates the menu items. Pass the item factory,
- # the number of items in the array, the array itself, and any
- # callback data for the the menu items.
- $item_factory -> create_items( @menu_items );
+# Add the actiongroup to the uimanager          
+ $uimanager->insert_action_group($actions_frontends, 0);
+
+# add the basic XML description of the GUI
+ $uimanager->add_ui_from_string ($ui);
+
+# extract the menubar
+ my $menubar = $uimanager->get_widget('/MenuBar');
 
 # Ghost scanadf item if scanadf or imagemagick not available
- my $item = $item_factory
-            -> get_item('/'.$d->get('Edit').'/'.$d->get('Frontend').'/scanadf');
+ my $item = $uimanager->get_widget('/MenuBar/Edit/Frontend/scanadf');
  if (system("which scanadf >/dev/null 2>/dev/null") != 0 or $imagemagick != 0) {
   $item -> set_sensitive(FALSE);
  }
@@ -671,43 +652,48 @@ sub create_menu_bar {
  }
 
 # Ghost email item if xdg-email not available
- $item_factory
-  -> get_item('/'.$d->get('File').'/'.$d->get('Email as PDF'))
-   -> set_sensitive(FALSE)
-       if (system("which xdg-email >/dev/null 2>/dev/null") != 0);
+ if (system("which xdg-email >/dev/null 2>/dev/null") != 0) {
+  $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(FALSE);
+ }
 
 # Ghost rotations if imagemagick not available
  if ($imagemagick != 0) {
-  $item_factory
-   -> get_item('/'.$d->get('View').'/'.$d->get('Rotate 90 clockwise'))
-    -> set_sensitive(FALSE);
-  $item_factory
-   -> get_item('/'.$d->get('View').'/'.$d->get('Rotate 180'))
-    -> set_sensitive(FALSE);
-  $item_factory
-   -> get_item('/'.$d->get('View').'/'.$d->get('Rotate 90 anticlockwise'))
-    -> set_sensitive(FALSE);
+  $uimanager->get_widget('/MenuBar/View/Rotate 90') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/MenuBar/View/Rotate 180') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/MenuBar/View/Rotate 270') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/ToolBar/Rotate 90') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/ToolBar/Rotate 180') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/ToolBar/Rotate 270') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Detail_Popup/Rotate 90') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Detail_Popup/Rotate 180') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Detail_Popup/Rotate 270') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Thumb_Popup/Rotate 90') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Thumb_Popup/Rotate 180') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Thumb_Popup/Rotate 270') -> set_sensitive(FALSE);
  }
 
- # Attach the new accelerator group to the window.
- $window -> add_accel_group( $accel_group );
+# extract the toolbar
+ my $toolbar = $uimanager->get_widget('/ToolBar');
 
- # Finally, return the actual menu bar created by the item factory.
- #*menubar = gtk_item_factory_get_widget (item_factory, "<main>");
- return ( $item_factory -> get_widget( '<main>' ) );
+# turn off labels
+ my $settings = $toolbar->get_settings();
+ $settings->set('gtk-toolbar-style', 'icons'); # only icons
+
+ return ( $menubar, $toolbar );
 }
 
 
 # Callback from RadioItem Edit/Frontend
 
 sub change_frontend {
- my ($user_data, $action_id, $menu_item) = @_;
- if ($action_id == 1) {
-  $SETTING{'frontend'} = 'scanimage';
+ my ($action, $current) = @_;
+ my $name = $current->get_name;
+ $SETTING{'frontend'} = $name;
+ if ($name eq 'scanimage') {
   $frames->set_sensitive(TRUE) if (defined($windows));
  }
  else {
-  $SETTING{'frontend'} = 'scanadf';
   $frames->set_sensitive(FALSE) if (defined($windows));
  }
 }
@@ -2481,125 +2467,12 @@ sub handle_clicks {
 # let the event chain proceed if not right mouse button
  return FALSE if $event->button != 3;
 
- my $item_factory = Gtk2::ItemFactory->new("Gtk2::Menu", '<main>', undef);
- my $popup_menu = $item_factory->get_widget('<main>');
-
- my @menu_items;
+ my $popup_menu;
  if ($widget->isa('Gtk2::EventBox'))  { # main image
-  @menu_items = (
-                  { path        => '/'.$d->get('Zoom _100%'),
-                    callback    => sub { zoom_button('100%'); },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'gtk-zoom-100'},
-                  { path        => '/'.$d->get('Zoom to _fit'),
-                    callback    => sub { zoom_button('fit'); },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'gtk-zoom-fit'},
-                  { path        => '/'.$d->get('Zoom _in'),
-                    accelerator => 'plus',
-                    callback    => sub { zoom_button('in'); },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'gtk-zoom-in'},
-                  { path        => '/'.$d->get('Zoom _out'),
-                    accelerator => 'minus',
-                    callback    => sub { zoom_button('out'); },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'gtk-zoom-out'},
-                  { path        => '/sep',
-                    item_type   => '<Separator>' },
-                  { path        => '/'.$d->get('Rotate 90 clockwise'),
-                    callback    => sub { rotate(90); },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'rotate90'},
-                  { path        => '/'.$d->get('Rotate 180'),
-                    callback    => sub { rotate(180); },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'rotate180'},
-                  { path        => '/'.$d->get('Rotate 90 anticlockwise'),
-                    callback    => sub { rotate(270); },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'rotate270'},
-                  { path        => '/sep',
-                    item_type   => '<Separator>' },
-                  { path        => '/'.$d->get('_Delete'),
-                    accelerator => 'Delete',
-                    callback    => \&delete_pages,
-                    item_type   => '<StockItem>',
-                    extra_data  => 'gtk-delete'},
-  );
+  $popup_menu = $uimanager->get_widget('/Detail_Popup');
  }
  else { # Thumbnail simplelist
-  @menu_items = (
-                  { path        => '/'.$d->get('_Save PDF'),
-                    accelerator => '<control>s',
-                    callback    => sub { if (defined($windowp)) {
-                                          $windowp -> present;
-                                         }
-                                         else {
-                                          save_PDF();
-                                         } },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'gtk-save-as'},
-                  { path        => '/'.$d->get('Save _TIFF'),
-                    accelerator => '<control>t',
-                    callback    => sub { if (defined($windowt)) {
-                                          $windowt -> present;
-                                         }
-                                         else {
-                                          save_TIFF();
-                                         } },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'gtk-save'},
-                  { path        => '/sep',
-                    item_type   => '<Separator>' },
-                  { path        => '/'.$d->get('_Renumber'),
-                    accelerator => '<control>r',
-                    callback    => sub { renumber($slist, 0, 1, 1); },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'gtk-sort-ascending' },
-                  { path        => '/'.$d->get('Select _All'),
-                    accelerator => '<control>a',
-                    callback    => \&select_all,
-                    item_type   => '<StockItem>',
-                    extra_data  => 'gtk-select-all' },
-                  { path        => '/sep',
-                    item_type   => '<Separator>' },
-                  { path        => '/'.$d->get('Rotate 90 clockwise'),
-                    callback    => sub { rotate(90); },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'rotate90'},
-                  { path        => '/'.$d->get('Rotate 180'),
-                    callback    => sub { rotate(180); },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'rotate180'},
-                  { path        => '/'.$d->get('Rotate 90 anticlockwise'),
-                    callback    => sub { rotate(270); },
-                    item_type   => '<StockItem>',
-                    extra_data  => 'rotate270'},
-                  { path        => '/sep',
-                    item_type   => '<Separator>' },
-                  { path        => '/'.$d->get('_Delete'),
-                    accelerator => 'Delete',
-                    callback    => \&delete_pages,
-                    item_type   => '<StockItem>',
-                    extra_data  => 'gtk-delete'},
-  );
- }
-
- $item_factory->create_items(undef, @menu_items);
-
-
-# Ghost rotations if imagemagick not available
- if ($imagemagick != 0) {
-  $item_factory
-   -> get_item('/'.$d->get('Rotate 90 clockwise'))
-    -> set_sensitive(FALSE);
-  $item_factory
-   -> get_item('/'.$d->get('Rotate 180'))
-    -> set_sensitive(FALSE);
-  $item_factory
-   -> get_item('/'.$d->get('Rotate 90 anticlockwise'))
-    -> set_sensitive(FALSE);
+  $popup_menu = $uimanager->get_widget('/Thumb_Popup');
  }
 
  $popup_menu->show_all;
