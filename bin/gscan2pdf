@@ -35,8 +35,9 @@
 #     or change the button.
 #    Add download path on sourceforge to web page
 #    check out scanbuttond
-#    add notes about xdg-utils, imagemagick & scanadf dependency to docs,
-#     plus a start-up dialog warning about missing packages
+#    add a start-up dialog warning about missing packages
+#    As soon as I don't have to develop with gtk+2.4, change all OptionMenus to
+#     ComboBoxes
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
@@ -82,9 +83,10 @@ my $program = "gscan2pdf";
 my $version = "0.9.0";
 
 # Standard paper sizes
-my @paper = qw(A4 Letter);
-my @x = ( 210, 215.9 );
-my @y = ( 297, 279.4 );
+my @paperg = qw(A4 Letter);
+my @xg = ( 210, 215.9 );
+my @yg = ( 297, 279.4 );
+my (@paper, @x, @y);
 my $tolerance = 1;
 
 # Window parameters
@@ -111,7 +113,7 @@ while (defined($ARGV[0])) {
    $test = $1;
    $test = getcwd."/$test" if ($test !~ /^\//);
    if (! -r $test) {
-    warn $d->get("Error: cannot read file:", $test, "\n");
+    warn sprintf($d->get("Error: cannot read file: %s\n"), $test);
     exit 1;
    }
    push @test, $test;
@@ -143,14 +145,14 @@ while (defined($ARGV[0])) {
   shift @ARGV;
  }
  else {
-  warn $d->get('Unknown option'), ' ', shift @ARGV, "\n"; # xgettext hack
+  warn sprintf($d->get("Unknown option %s.\n"), shift @ARGV); # xgettext hack
   exit 1;
  }
 }
 
 if (check_utils()) {
- print "$program ",
-  $d->get("requires the libtiff library.\nPlease install it."), "\n";
+ printf($d->get("%s requires the libtiff library.\nPlease install it.\n"),
+                                                                      $program);
  exit 1;
 }
 # Check for presence of imagemagick
@@ -164,7 +166,8 @@ setlocale(LC_NUMERIC, "C");
 my $config = "$ENV{'HOME'}/.$program";
 my %SETTING;
 if (-r $config) {
- open CONFIG, $config or die $d->get("Can't open config file"). " $config";
+ open CONFIG, $config
+  or die sprintf($d->get("Can't open config file: %s\n"), $config);
 
  while (<CONFIG>) {
   chomp;			# no newline
@@ -193,7 +196,8 @@ init_icons( [ 'rotate90',  "$path/rotate90.png" ],
 
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
-my ($windowp, $windowt, $windowe, $windows, $windowh, $slist, $frames);
+my ($windowp, $windowt, $windowe, $windows, $windowh, $windowo, $slist, $frames,
+    $vboxd, $optd, $optp, $hboxc);
 
 my @action_items = (
  # Fields for each action item:
@@ -245,6 +249,15 @@ my @action_items = (
  [ 'Rotate 90', 'rotate90', $d->get('Rotate 90 clockwise'), undef, $d->get('Rotate 90 clockwise'), sub { rotate(90); } ],
  [ 'Rotate 180', 'rotate180', $d->get('Rotate 180'), undef, $d->get('Rotate 180'), sub { rotate(180); } ],
  [ 'Rotate 270', 'rotate270', $d->get('Rotate 90 anticlockwise'), undef, $d->get('Rotate 90 anticlockwise'), sub { rotate(270); } ],
+ 
+ # Tools menu
+ [ 'Tools', undef, $d->get('_Tools') ],
+ [ 'OCR',   undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition of current page'), sub { if (defined($windowo)) {
+                                           $windowo -> present;
+                                          }
+                                          else {
+                                           OCR();
+                                          } } ],
 
  # Help menu
  [ 'Help menu', undef, $d->get('_Help') ],
@@ -299,6 +312,9 @@ my $ui = "<ui>
    <menuitem action='Rotate 90'/>
    <menuitem action='Rotate 180'/>
    <menuitem action='Rotate 270'/>
+  </menu>
+  <menu action='Tools'> 
+   <menuitem action='OCR'/>
   </menu>
   <menu action='Help menu'> 
    <menuitem action='Help'/>
@@ -503,9 +519,6 @@ $scwin_detail -> set_policy ('automatic', 'automatic');
 # Globally define the $image variables for $scwin_detail
 my ($image, $eventbox, $scale, $src_pixbuf, $widthi, $heighti);
 
-# Globally define the custom paper box.
-my $hboxc;
-
 # Set up call back for list selection to update detail view
 $slist -> get_selection -> signal_connect(changed => sub {
  my @page = $slist -> get_selected_indices;
@@ -691,10 +704,16 @@ sub change_frontend {
  my $name = $current->get_name;
  $SETTING{'frontend'} = $name;
  if ($name eq 'scanimage') {
-  $frames->set_sensitive(TRUE) if (defined($windows));
+  if (defined($windows)) {
+   $frames->set_sensitive(TRUE);
+   update_options($vboxd, $device[$optd -> get_history]);
+  }
  }
  else {
-  $frames->set_sensitive(FALSE) if (defined($windows));
+  if (defined($windows)) {
+   $frames->set_sensitive(FALSE);
+   update_options($vboxd, $device[$optd -> get_history]);
+  }
  }
 }
 
@@ -775,7 +794,7 @@ sub get_pixbuf {
    return 0;
   }
   else {
-   warn $d->get('Information: got')." $filename ".$d->get("on second attempt\n");
+   warn sprintf($d->get("Information: got %s on second attempt\n"), $filename);
   }
  }
 
@@ -1225,7 +1244,7 @@ sub save_PDF {
 
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxb, TRUE, TRUE, 0);
+ $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
 
 # Save button
  my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
@@ -1250,7 +1269,7 @@ sub save_PDF {
      'destroy-with-parent',
      'question', # message type
      'ok-cancel', # which set of buttons?
-     $d->get('File') . " $filename " . $d->get("exists.\nReally overwrite?"));
+     sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
     my $response = $dialog -> run;
     $dialog -> destroy;
     if ($response ne 'ok') {
@@ -1313,7 +1332,7 @@ sub save_TIFF {
 
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxb, TRUE, TRUE, 0);
+ $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
 
 # Save button
  my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
@@ -1337,7 +1356,7 @@ sub save_TIFF {
      'destroy-with-parent',
      'question', # message type
      'ok-cancel', # which set of buttons?
-     $d->get('File') . " $filename " . $d->get("exists.\nReally overwrite?"));
+     sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
     my $response = $dialog -> run;
     $dialog -> destroy;
     return 1 if ($response ne 'ok');
@@ -1385,7 +1404,7 @@ sub email {
 
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxb, TRUE, TRUE, 0);
+ $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
 
 # OK button
  my $sbutton = Gtk2::Button -> new_from_stock('gtk-ok');
@@ -1472,11 +1491,10 @@ sub scan_dialog {
  my $labeld = Gtk2::Label -> new ($d->get('Device'));
  $hboxd -> pack_start ($labeld, FALSE, FALSE, 0);
 
- my $optd = Gtk2::OptionMenu -> new;
- my $menud = Gtk2::Menu -> new;
-
 # Need to define this here to reference it later.
- my $vboxd = Gtk2::VBox -> new;
+ $vboxd = Gtk2::VBox -> new;
+ $optd = Gtk2::OptionMenu -> new;
+ my $menud = Gtk2::Menu -> new;
 
 # parse out the device and model names
  if (! @test) {
@@ -1521,8 +1539,7 @@ sub scan_dialog {
   $item -> signal_connect (activate => sub {
    update_options($vboxd, $device[$optd -> get_history]);
    $vboxd -> show_all;
-   if ($#paper > -1 or (defined($SETTING{"Paper size"})
-                         and $SETTING{"Paper size"} ne "Custom")) {
+   if ($optp->get_child->get_text ne $d->get('Custom')) {
 # Not defined if scanner has no paper size (like my video grabber)
     $hboxc -> hide if (defined $hboxc);
     $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
@@ -1774,8 +1791,7 @@ sub scan_dialog {
 
 # Show window, hiding the custom hbox and sizing if necessary
  $windows -> show_all;
- if ($#paper > -1 or
-     (defined($SETTING{"Paper size"}) and $SETTING{"Paper size"} ne "Custom")) {
+ if ($optp->get_child->get_text ne $d->get('Custom')) {
 # Not defined if scanner has no paper size (like my video grabber)
   $hboxc -> hide if (defined $hboxc);
   $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
@@ -2163,13 +2179,20 @@ sub update_options {
   $_ -> destroy;
  }
 
+# Stupidly, the different frontends also show different paper sizes, so
+# make a device-dependent paper size, starting from the global one
+ @paper = @paperg;
+ @x = @xg;
+ @y = @yg;
+
  my $output;
  if (! @test) {
 
-# Get output from scanimage.
+# Get output from scanimage or scanadf.
 # Inverted commas needed for strange characters in device name
-  warn "scanimage --help --device-name='$device'\n" if $debug;
-  $output = `scanimage --help --device-name='$device'`;
+  my $cmd = $SETTING{'frontend'}." --help --device-name='$device'";
+  warn "$cmd\n" if $debug;
+  $output = `$cmd`;
   warn $output if $debug;
  }
  else {
@@ -2199,7 +2222,7 @@ sub update_options {
   my $labelp = Gtk2::Label -> new ($d->get('Paper size'));
   $hboxp -> pack_start ($labelp, FALSE, FALSE, 0);
 
-  my $optp = Gtk2::OptionMenu -> new;
+  $optp = Gtk2::OptionMenu -> new;
   my $menup = Gtk2::Menu -> new;
 
 # Define custom paper here to reference it in callback
@@ -2244,10 +2267,10 @@ sub update_options {
   $hboxp -> pack_end ($optp, FALSE, FALSE, 0);
 
 # Set default paper size from config
-  if (defined($SETTING{"Paper size"})) {
+  if (defined($SETTING{'Paper size'})) {
    $i = 0;
    while ($i <= $#paper) {
-    $optp -> set_history($i) if ($paper[$i] eq $SETTING{"Paper size"});
+    $optp -> set_history($i) if ($paper[$i] eq $SETTING{'Paper size'});
     ++$i;
    }
   }
@@ -2486,6 +2509,144 @@ sub handle_clicks {
 }
 
 
+# Run OCR on current page and display result
+
+sub OCR {
+
+ ($windowo, my $vbox) = create_window($window, $d->get('OCR'), FALSE);
+ my $buffer = Gtk2::TextBuffer->new;
+
+# HBox for buttons
+ my $hboxo = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxo, FALSE, TRUE, 0);
+
+# Start button
+ my $obutton = Gtk2::Button -> new($d->get('Start OCR'));
+ $hboxo -> pack_start( $obutton, TRUE, TRUE, 0 );
+ $obutton -> signal_connect( clicked => sub {
+
+# Get current page
+  my @page = $slist -> get_selected_indices;
+  if ($#page < 0) {
+   my $dialog = Gtk2::MessageDialog -> new ($windowo,
+                                           'destroy-with-parent',
+                                           'error',
+                                           'close',
+                                           $d->get("No page selected"));
+   $dialog -> run;
+   $dialog -> destroy;
+   return;
+  }
+  my $tif = $slist -> {data}[$page[0]][2];
+
+# Temporary filename for pnm
+  my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+
+  my $cmd = "convert $tif $pnm; gocr $pnm; rm $pnm";
+
+# Interface to gocr
+  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+  
+  my $dialog = Gtk2::Dialog -> new ($d->get('Running OCR')."...", $windowo,
+                                    'destroy-with-parent',
+                                    'gtk-cancel' => 'cancel');
+  my $label = Gtk2::Label -> new ($d->get('Running OCR')."...");
+  $dialog -> vbox -> add ($label);
+
+# Ensure that the dialog box is destroyed when the user responds.
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   local $SIG{HUP} = 'IGNORE';
+   kill HUP => $pid;
+  });
+  $dialog -> show_all;
+ 
+# Update TextBuffer without blocking
+  Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+   if ($condition eq 'hup') {
+    close $read;
+    $dialog -> destroy;
+    return 0;  # uninstall
+   }
+   my $line;
+   sysread $read, $line, 1024;
+   $buffer->insert($buffer->get_end_iter, $line);
+   return 1;  # continue without uninstalling
+  });
+
+ } );
+
+# Clear button
+ my $rbutton = Gtk2::Button -> new($d->get('Clear'));
+ $hboxo -> pack_end( $rbutton, TRUE, TRUE, 0 );
+ $rbutton -> signal_connect( clicked => sub {
+  $buffer -> delete($buffer->get_start_iter, $buffer->get_end_iter);
+ } );
+
+# ScrolledWindow with a TextView for output
+ my $sw = Gtk2::ScrolledWindow->new;
+ my $view = Gtk2::TextView->new_with_buffer ($buffer);
+ $sw->add ($view);
+ $vbox -> pack_start ($sw, TRUE, TRUE, 0);
+
+# HBox for buttons
+ my $hboxb = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+
+# Save button
+ my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
+ $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
+ $sbutton -> signal_connect (clicked => sub {
+
+# cd back to cwd to save
+  chdir $SETTING{"cwd"};
+
+# Set up file selector
+  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('Save OCR output'),
+                                                     $windowo, 'save',
+                                                     'gtk-cancel' => 'cancel',
+                                                     'gtk-save' => 'ok');
+  $file_chooser -> set_default_response('ok');
+
+  if ('ok' eq $file_chooser->run) {
+   my $filename = $file_chooser -> get_filename;
+   if (-e $filename) {
+    my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
+     'destroy-with-parent',
+     'question', # message type
+     'ok-cancel', # which set of buttons?
+     sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
+    my $response = $dialog -> run;
+    $dialog -> destroy;
+    return 1 if ($response ne 'ok');
+   }
+
+# Update cwd
+   $SETTING{"cwd"} = dirname($filename);
+
+# cd back to tempdir
+   chdir $dir;
+
+# Save the output
+   my $text = $buffer -> get_text($buffer->get_start_iter,
+                                  $buffer->get_end_iter, FALSE);
+   open TXT, ">  $filename" or die "can't open $filename: $!";
+   print TXT $text;
+   close TXT;
+  }
+
+  $file_chooser -> destroy;
+ } );
+
+# Close button
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-close');
+ $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $windowo -> hide; } );
+
+ $windowo -> show_all;
+}
+
 
 # Remove temporary files, note window state, save settings and quit.
 
@@ -2502,7 +2663,7 @@ sub quit {
 
 # Write config file
  open (CONFIG, "> $config")
-  or die $d->get("Can't open config file"), " ", $config; # xgettext hack
+  or die sprintf($d->get("Can't open config file: %s"), $config); # xgettext hack
  while (my ($key, $value) = each %SETTING) {
   print CONFIG "$key = $value\n";
  }
@@ -2519,8 +2680,8 @@ sub view_pod {
                                           'destroy-with-parent',
                                           'error',
                                           'close',
-    $d->get("The help viewer requires module Gtk2::Ex::PodViewer\n"
-                        ."Alternatively, try")."\n$program --help");
+    sprintf($d->get("The help viewer requires module Gtk2::Ex::PodViewer\n"
+                        ."Alternatively, try: %s\n\n"), "$program --help"));
   $dialog -> run;
   $dialog -> destroy;
  }
@@ -2673,9 +2834,9 @@ sub register_icon {
 
 __END__
 
-=head1 Name
+=head1 gscan2pdf
 
-gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan. gscan2pdf should work on almost any Linux/BSD machine.
+A GUI to ease the process of producing a multipage PDF from a scan. gscan2pdf should work on almost any Linux/BSD machine.
 
 =for html <p align="center">
  <img src="https://sourceforge.net/dbimage.php?id=101333" border="1" width="632" height="480" alt="Screenshot" /><br />
@@ -2702,7 +2863,7 @@ Perl is used for portability and ease of programming, with gtk2-perl for the GUI
 
 =head1 Download
 
-gscan2pdf is available on Sourceforge.
+gscan2pdf is available on Sourceforge (L<https://sourceforge.net/project/showfiles.php?group_id=174140&package_id=199621>).
 
 =head2 Debian-based
 
@@ -2720,13 +2881,15 @@ C<apt-get install gscan2pdf>
 
 The help will require F<Gtk2::Ex::PodViewer>. Rotating requires F<Imagemagick>. Having installed gscan2pdf, locate the gscan2pdf entry in Synaptic, right-click it and you can install them under I<Recommends>.
 
-=head2 Other packaging systems
+=head2 RPMs
 
-At the moment, the source is hosted in the files section of the gscan2pdf project on Sourceforge (L<http://sourceforge.net/project/showfiles.php?group_id=174140>).
+Download the rpm from Sourceforge, and then install it with C<rpm -i gscan2pdf-version.rpm>
+
+=head2 From source
+
+The source is hosted in the files section of the gscan2pdf project on Sourceforge (L<http://sourceforge.net/project/showfiles.php?group_id=174140>).
 
 Having downloaded it, C<make install> will install it for you. Note there is no C<make> or C<make test> step.
-
-If you would like me to create RPMs, or packages from some other system, and you are willing to test it while I set it up, send me an email.
 
 =head1 Reporting bugs
 
@@ -2748,7 +2911,7 @@ gscan2pdf has already been partly translated several languages. If you would lik
 
 Clears the page list.
 
-=head3 Import
+=head3 Import TIFF
 
 Imports a single or multipage TIFF.
 
@@ -2844,6 +3007,10 @@ The metadata are completely optional.
 
 Saves the current, selected or all pages as a TIFF.
 
+=head3 Email as PDF
+
+Attaches the current, selected or all pages as a PDF to a blank email. This requires xdg-email, which is in the xdg-utils package. If this is not present, the option is ghosted out.
+
 =head2 Edit
 
 =head3 Delete
@@ -2860,6 +3027,10 @@ Note that the page order can also be changed by drag and drop in the thumbnail v
 
 Selects all pages.
 
+=head3 Frontend
+
+gscan2pdf supports two frontends, scanimage and scanadf. scanadf support was added when it was realised that scanadf works better with some scanners than scanimage. However, to convert the output, the scanadf option requires imagemagick and if this is not present the option is ghosted out. On Ubuntu Edgy, scanadf is in the sane package, not, like scanimage, in sane-utils. If scanadf is not present, the option is obviously ghosted out.
+
 =head2 View
 
 =head3 Zoom 100%
@@ -2875,6 +3046,8 @@ Scales the view such that all the page is visible.
 =head3 Zoom out
 
 =head3 Rotate 90 clockwise
+
+The rotate options require the package imagemagick and, if this is not present, are ghosted out.
 
 =head3 Rotate 180
 
@@ -2893,6 +3066,10 @@ If an option listed in the output of C<scanimage --help> that you would like to 
 If you are lucky, you have an option like Wait-for-button or Button-wait, where the scanner will wait for you to press the scan button on the device before it starts the scan, allowing you to scan multiple pages without touching the computer.
 
 Otherwise, you have to set the number of pages to scan to 1 and hit the scan button on the scan window for each page.
+
+=head2 Why is option xyz ghosted out?
+
+Probably because the package required for that option is not installed. Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options require imagemagick.
 
 =head1 See Also
 
