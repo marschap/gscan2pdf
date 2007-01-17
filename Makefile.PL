@@ -148,7 +148,7 @@ remote-dist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb htdocs/do
 
 htdocs/index.html : bin/$(NAME)
 	if [ ! -d htdocs ] ; then mkdir htdocs ; fi
-	pod2html --title=$(NAME)-$(VERSION) bin/$(NAME) > htdocs/index.html
+	pod2html --noindex --title=$(NAME)-$(VERSION) bin/$(NAME) > htdocs/index.html
 
 remote-html : htdocs/index.html
 	scp htdocs/index.html ra28145@shell.sf.net:/home/groups/g/gs/$(NAME)/htdocs/
