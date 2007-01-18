@@ -33,9 +33,7 @@
 #    check debian/copyright
 #    Either get cancel button during scan to actually cancel the scan,
 #     or change the button.
-#    Add download path on sourceforge to web page
 #    check out scanbuttond
-#    add a start-up dialog warning about missing packages
 #    As soon as I don't have to develop with gtk+2.4, change all OptionMenus to
 #     ComboBoxes
 #
@@ -48,8 +46,7 @@
 #
 # 1. Progress meter for scans and imports.
 # 2. Crop and autocrop
-# 3. Look at OCR
-# 4. Unpaper support
+# 3. Unpaper support
 #
 # Release procedure:
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
@@ -155,8 +152,6 @@ if (check_utils()) {
                                                                       $program);
  exit 1;
 }
-# Check for presence of imagemagick
-my $imagemagick = system("which convert >/dev/null 2>/dev/null");
 
 # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
 # scanimage
@@ -653,9 +648,16 @@ sub create_menu_bar {
 # extract the menubar
  my $menubar = $uimanager->get_widget('/MenuBar');
 
+# Check for presence of various packages
+ my $imagemagick = system("which convert >/dev/null 2>/dev/null");
+ my $scanadf = system("which scanadf >/dev/null 2>/dev/null");
+ my $xdg = system("which xdg-email >/dev/null 2>/dev/null");
+ my $gocr = system("which gocr >/dev/null 2>/dev/null");
+ my $msg = '';
+
 # Ghost scanadf item if scanadf or imagemagick not available
  my $item = $uimanager->get_widget('/MenuBar/Edit/Frontend/scanadf');
- if (system("which scanadf >/dev/null 2>/dev/null") != 0 or $imagemagick != 0) {
+ if ($scanadf != 0 or $imagemagick != 0) {
   $item -> set_sensitive(FALSE);
  }
 
@@ -663,11 +665,15 @@ sub create_menu_bar {
  elsif (defined($SETTING{'frontend'}) and $SETTING{'frontend'} eq 'scanadf') {
   $item -> set_active(TRUE);
  }
+ if ($scanadf != 0) {
+  $msg .= $d->get("The scanadf frontend is not available\n");
+ }
 
 # Ghost email item if xdg-email not available
- if (system("which xdg-email >/dev/null 2>/dev/null") != 0) {
+ if ($xdg != 0) {
   $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(FALSE);
   $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(FALSE);
+  $msg .= $d->get("Email as PDF requires xdg-email\n");
  }
 
 # Ghost rotations if imagemagick not available
@@ -684,6 +690,31 @@ sub create_menu_bar {
   $uimanager->get_widget('/Thumb_Popup/Rotate 90') -> set_sensitive(FALSE);
   $uimanager->get_widget('/Thumb_Popup/Rotate 180') -> set_sensitive(FALSE);
   $uimanager->get_widget('/Thumb_Popup/Rotate 270') -> set_sensitive(FALSE);
+  $msg .= $d->get("The rotating options and the scanadf frontend require imagemagick\n");
+ }
+
+# Ghost ocr item if gocr not available
+ if ($gocr != 0) {
+  $uimanager->get_widget('/MenuBar/Tools/OCR') -> set_sensitive(FALSE);
+  $msg .= $d->get("OCR requires gocr\n");
+ }
+
+# Put up warning if needed
+ if ((! defined($SETTING{'startup warning'})
+      or $SETTING{'startup warning'} eq TRUE) and ($msg ne '')) {
+  my $dialog = Gtk2::Dialog -> new ($d->get('Warning: missing packages'),
+                                    $window, 'destroy-with-parent',
+                                    'gtk-ok' => 'none');
+  my $label = Gtk2::Label->new ($msg);
+  $dialog->vbox->add ($label);
+  my $cb = Gtk2::CheckButton->new_with_label (
+                                     $d->get("Don't show this message again"));
+  $cb->set_active (TRUE);
+  $dialog->vbox->add ($cb);
+  $dialog->show_all;
+  $dialog -> run;
+  $SETTING{'startup warning'} = FALSE if ($cb->get_active);
+  $dialog -> destroy;
  }
 
 # extract the toolbar
@@ -2417,6 +2448,16 @@ sub update_options {
     $hbox -> pack_end ($spin_button, FALSE, FALSE, 0);
     $tooltips -> set_tip ($spin_button, $tip);
    }
+  }
+ }
+
+ if ($windows->visible) {
+# Show window, hiding the custom hbox and sizing if necessary
+  $vboxd -> show_all;
+  if ($optp->get_child->get_text ne $d->get('Custom')) {
+# Not defined if scanner has no paper size (like my video grabber)
+   $hboxc -> hide if (defined $hboxc);
+   $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
   }
  }
 }
