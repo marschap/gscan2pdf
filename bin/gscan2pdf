@@ -42,7 +42,7 @@
 #      It would be very helpfull to be able to tell the number at which it is supposed
 #      to continue counting and into which direction (reverse counting stops working
 #      after the interruption).
-# 2.) Some basic image manipulation capabilities would be very usefull like adjusting contrast and brightness. 
+# 2.) Some basic image manipulation capabilities would be very useful like adjusting contrast and brightness. 
 #
 # 1. Progress meter for scans and imports.
 # 2. Crop and autocrop
@@ -51,7 +51,7 @@
 # Release procedure:
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
 #    Make sure that file list in .spec and cvs update reflects MANIFEST
-#    Make sure that changelog reflects History
+#    Make sure that changelog reflects History and cvs log from bin/gscan2pdf
 # 2. make rpmdist debdist
 #    test dist sudo dpkg -i gscan2pdf-0....
 # 3. cvs update
