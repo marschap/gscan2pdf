@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.8.9
+Version: 0.9.0
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -51,10 +51,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Thu Jan 11 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - Spanish translation (thanks to mecedesjorge)
-  - Update to Czech translation (thanks to Petr Jelínek)
-  - Support for scanadf frontend
-  - Email as PDF
-  - Displays warm-up message if backend supports it
-  - Now ghosts out the rotate menus and buttons if imagemagick not installed
+* Fri Jan 19 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - OCR support
+  - scanadf frontend now uses own device-dependent options
+  - Displays start-up message if optional packages missing
