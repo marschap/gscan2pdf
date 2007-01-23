@@ -7,7 +7,7 @@
 # To do
 # 0. Add status line at bottom with messages like "filename saved"
 #    Rewrite in python with python-sane, pytiff & tiff2pdf
-#    Add KDE, xfe? menus
+#    Add KDE, Xfce? menus
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
 #    Put windows up in centre of parent
@@ -34,6 +34,8 @@
 #    Either get cancel button during scan to actually cancel the scan,
 #     or change the button.
 #    check out scanbuttond
+#    sort out "dpkg-source: warning: source directory `./gscan2pdf' is not <sourcepackage>-<upstreamversion> `gscan2pdf-0.9.0'" error
+#    fix bug importing changelog to .spec
 #    As soon as I don't have to develop with gtk+2.4, change all OptionMenus to
 #     ComboBoxes
 #
@@ -77,7 +79,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.0";
+my $version = "0.9.1";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -659,11 +661,16 @@ sub create_menu_bar {
  my $item = $uimanager->get_widget('/MenuBar/Edit/Frontend/scanadf');
  if ($scanadf != 0 or $imagemagick != 0) {
   $item -> set_sensitive(FALSE);
+  $SETTING{'frontend'} = 'scanimage';
  }
 
 # Set scanadf active if in config
  elsif (defined($SETTING{'frontend'}) and $SETTING{'frontend'} eq 'scanadf') {
   $item -> set_active(TRUE);
+ }
+# if scanadf isn't set, make sure that scanimage is
+ else {
+  $SETTING{'frontend'} = 'scanimage';
  }
  if ($scanadf != 0) {
   $msg .= $d->get("The scanadf frontend is not available\n");
@@ -2722,7 +2729,7 @@ sub view_pod {
                                           'error',
                                           'close',
     sprintf($d->get("The help viewer requires module Gtk2::Ex::PodViewer\n"
-                        ."Alternatively, try: %s\n\n"), "$program --help"));
+                        ."Alternatively, try: %s %s\n\n"), $program, "--help"));
   $dialog -> run;
   $dialog -> destroy;
  }
