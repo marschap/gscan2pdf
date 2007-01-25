@@ -79,7 +79,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.1";
+my $version = "0.9.2";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -193,8 +193,8 @@ init_icons( [ 'rotate90',  "$path/rotate90.png" ],
 
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
-my ($windowp, $windowt, $windowe, $windows, $windowh, $windowo, $slist, $frames,
-    $vboxd, $optd, $optp, $hboxc);
+my ($windowp, $windowt, $windowv, $windowe, $windows, $windowh, $windowo,
+    $windowu, $slist, $frames, $vboxd, $optd, $optp, $hboxc);
 
 my @action_items = (
  # Fields for each action item:
@@ -222,6 +222,12 @@ my @action_items = (
                                           else {
                                            save_TIFF();
                                           } } ],
+ [ 'Save DjVu', undef, $d->get('Save _DjVu'), undef, $d->get('Save as DjVu'), sub { if (defined($windowv)) {
+                                           $windowv -> present;
+                                          }
+                                          else {
+                                           save_djvu();
+                                          } } ],
  [ 'Email as PDF', 'gtk-edit', $d->get('_Email as PDF'), '<control>e', $d->get('Attach as PDF to a new email'), sub { if (defined($windowe)) {
                                            $windowe -> present;
                                           }
@@ -232,7 +238,7 @@ my @action_items = (
  
  # Edit menu
  [ 'Edit', undef, $d->get('_Edit') ],
- [ 'Delete', 'gtk-delete', $d->get('_Delete'), '<control>q', $d->get('Delete selected pages'), \&delete_pages ],
+ [ 'Delete', 'gtk-delete', $d->get('_Delete'), 'Delete', $d->get('Delete selected pages'), \&delete_pages ],
  [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages from 1 to n'), sub { renumber($slist, 0, 1, 1); } ],
  [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
  [ 'Frontend', undef, $d->get('_Frontend') ],
@@ -249,7 +255,13 @@ my @action_items = (
  
  # Tools menu
  [ 'Tools', undef, $d->get('_Tools') ],
- [ 'OCR',   undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition of current page'), sub { if (defined($windowo)) {
+ [ 'unpaper', undef, $d->get('_unpaper'), undef, $d->get('Clean up current page with unpaper'), sub { if (defined($windowu)) {
+                                           $windowu -> present;
+                                          }
+                                          else {
+                                           unpaper();
+                                          } } ],
+ [ 'OCR', undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition of current page'), sub { if (defined($windowo)) {
                                            $windowo -> present;
                                           }
                                           else {
@@ -286,6 +298,7 @@ my $ui = "<ui>
    <menuitem action='Scan'/>
    <menuitem action='Save PDF'/>
    <menuitem action='Save TIFF'/>
+   <menuitem action='Save DjVu'/>
    <menuitem action='Email as PDF'/>
    <separator/>
    <menuitem action='Quit'/>
@@ -311,6 +324,7 @@ my $ui = "<ui>
    <menuitem action='Rotate 270'/>
   </menu>
   <menu action='Tools'> 
+   <menuitem action='unpaper'/>
    <menuitem action='OCR'/>
   </menu>
   <menu action='Help menu'> 
@@ -357,6 +371,7 @@ my $ui = "<ui>
  <popup name='Thumb_Popup'>
   <menuitem action='Save PDF'/>
   <menuitem action='Save TIFF'/>
+  <menuitem action='Save DjVu'/>
   <menuitem action='Email as PDF'/>
   <separator/>
   <menuitem action='Renumber'/>
@@ -655,6 +670,8 @@ sub create_menu_bar {
  my $scanadf = system("which scanadf >/dev/null 2>/dev/null");
  my $xdg = system("which xdg-email >/dev/null 2>/dev/null");
  my $gocr = system("which gocr >/dev/null 2>/dev/null");
+ my $djvu = system("which cjb2 >/dev/null 2>/dev/null");
+ my $unpaper = system("which unpaper >/dev/null 2>/dev/null");
  my $msg = '';
 
 # Ghost scanadf item if scanadf or imagemagick not available
@@ -676,10 +693,18 @@ sub create_menu_bar {
   $msg .= $d->get("The scanadf frontend is not available\n");
  }
 
+# Ghost djvu item if cjb2 not available
+ if ($djvu != 0) {
+  $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(FALSE);
+  $msg .= $d->get("Save as DjVu requires djvulibre-bin\n");
+ }
+
 # Ghost email item if xdg-email not available
  if ($xdg != 0) {
   $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(FALSE);
   $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
   $msg .= $d->get("Email as PDF requires xdg-email\n");
  }
 
@@ -698,6 +723,12 @@ sub create_menu_bar {
   $uimanager->get_widget('/Thumb_Popup/Rotate 180') -> set_sensitive(FALSE);
   $uimanager->get_widget('/Thumb_Popup/Rotate 270') -> set_sensitive(FALSE);
   $msg .= $d->get("The rotating options and the scanadf frontend require imagemagick\n");
+ }
+
+# Ghost unpaper item if gocr not available
+ if ($unpaper != 0) {
+  $uimanager->get_widget('/MenuBar/Tools/unpaper') -> set_sensitive(FALSE);
+  $msg .= $d->get("unpaper missing\n");
  }
 
 # Ghost ocr item if gocr not available
@@ -1424,6 +1455,89 @@ sub save_TIFF {
  $cbutton -> signal_connect( clicked => sub { $windowt -> hide; } );
 
  $windowt -> show_all;
+}
+
+
+# Display page selector and on save a fileselector.
+
+sub save_djvu {
+
+ ($windowv, my $vbox) = create_window($window, $d->get('Save as DjVu'), FALSE);
+
+# Frame for page range
+ my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+
+# HBox for buttons
+ my $hboxb = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+
+# Save button
+ my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
+ $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
+ $sbutton -> signal_connect (clicked => sub {
+
+# cd back to cwd to save
+  chdir $SETTING{"cwd"};
+
+# Set up file selector
+  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('DjVu filename'),
+                                                     $windowv, 'save',
+                                                     'gtk-cancel' => 'cancel',
+                                                     'gtk-save' => 'ok');
+  $file_chooser -> set_default_response('ok');
+
+  if ('ok' eq $file_chooser->run) {
+   my $filename = $file_chooser -> get_filename;
+   if (-e $filename) {
+    my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
+     'destroy-with-parent',
+     'question', # message type
+     'ok-cancel', # which set of buttons?
+     sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
+    my $response = $dialog -> run;
+    $dialog -> destroy;
+    return 1 if ($response ne 'ok');
+   }
+
+# Update cwd
+   $SETTING{"cwd"} = dirname($filename);
+
+# cd back to tempdir
+   chdir $dir;
+
+# fill $pagelist with filenames depending on which radiobutton is active
+   my ($pagelist, $n) = fill_pagelist($buttona, $buttonc, $buttons);
+   
+   if ($n > 1) {
+    my @pagelist = split / /, $pagelist;
+    foreach (@pagelist) {
+
+     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
+
+# Create the djvu
+     system ("cjb2 $_ $djvu");
+
+     $_ = $djvu;
+    }
+    $pagelist = "@pagelist";
+    system ("djvm -c $filename $pagelist");
+   }
+   else {
+    system ("cjb2 $pagelist $filename");
+   }
+
+   $windowv -> hide;
+  }
+
+  $file_chooser -> destroy;
+ } );
+
+# Cancel button
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $windowv -> hide; } );
+
+ $windowv -> show_all;
 }
 
 
@@ -2514,8 +2628,16 @@ sub rotate {
  my $i = 0;
  while ($i <= $#page) {
 
+# To cover for a bug in imagemagick, check image depth
+  my $cmd = "tiffinfo \"".$slist -> {data}[$page[$i]][2]."\"";
+
 # Rotate the tiff with imagemagick
-  system("mogrify -rotate $degrees ".$slist -> {data}[$page[$i]][2]);
+  if (`$cmd` =~ /Bits\/Sample: (\d*)/) {
+   system("mogrify -depth $1 -rotate $degrees ".$slist -> {data}[$page[$i]][2]);
+  }
+  else {
+   system("mogrify -rotate $degrees ".$slist -> {data}[$page[$i]][2]);
+  }
 
 # Use once I no longer have to develop with Gtk2 < 1.090!
 #  $slist -> {data}[$page[$i]][1] =
@@ -2554,6 +2676,49 @@ sub handle_clicks {
 
  # block event propagation
  return 1;
+}
+
+
+# Run unpaper to clean up scan.
+
+sub unpaper {
+
+ ($windowu, my $vbox) = create_window($window, $d->get('unpaper'), FALSE);
+
+# Frame for page range
+ my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+
+# HBox for buttons
+ my $hboxb = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+
+# OK button
+ my $sbutton = Gtk2::Button -> new_from_stock('gtk-ok');
+ $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
+ $sbutton -> signal_connect (clicked => sub {
+
+# fill $pagelist with filenames depending on which radiobutton is active
+  my ($pagelist, $n) = fill_pagelist($buttona, $buttonc, $buttons);
+  my @pagelist = split / /, $pagelist;
+
+  foreach (@pagelist) {
+
+# Temporary filename for pnm
+   my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+
+   system ("convert $_ $pnm");
+   system ("unpaper --overwrite $pnm $pnm");
+   system ("convert $pnm $_");
+  }
+
+ } );
+
+# Cancel button
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $windowu -> hide; } );
+
+ $windowu -> show_all;
 }
 
 
