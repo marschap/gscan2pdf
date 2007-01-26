@@ -7,7 +7,7 @@
 # To do
 # 0. Add status line at bottom with messages like "filename saved"
 #    Rewrite in python with python-sane, pytiff & tiff2pdf
-#    Add KDE, Xfce? menus
+#    Add KDE, Xfce menus
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
 #    Put windows up in centre of parent
@@ -18,6 +18,7 @@
 #      Rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
+#    weed out inactive progress bar in import and other such stuff
 #    Work out how best to include package.
 #    Option to throw up PDF viewer with newly created PDF file
 #    Translate documentation
@@ -210,13 +211,13 @@ my @action_items = (
                                           else {
                                            scan_dialog();
                                           } } ],
- [ 'Save PDF', 'gtk-save-as', $d->get('_Save PDF'), '<control>s', $d->get('Save as PDF'), sub { if (defined($windowp)) {
+ [ 'Save PDF', 'gtk-save-as', $d->get('_Save PDF'), '<shift><control>s', $d->get('Save as PDF'), sub { if (defined($windowp)) {
                                            $windowp -> present;
                                           }
                                           else {
                                            save_PDF();
                                           } } ],
- [ 'Save TIFF', 'gtk-save', $d->get('Save _TIFF'), '<control>t', $d->get('Save as TIFF'), sub { if (defined($windowt)) {
+ [ 'Save TIFF', 'gtk-save', $d->get('Save _TIFF'), '<control>s', $d->get('Save as TIFF'), sub { if (defined($windowt)) {
                                            $windowt -> present;
                                           }
                                           else {
@@ -1259,7 +1260,7 @@ sub get_PDF_options {
 
 # Get compression
  $SETTING{'compression'} = $compression[$optc -> get_history];
- my $compression = "";
+ my $compression = '';
  if ($SETTING{'compression'} eq 'JPEG') {
   $SETTING{'quality'} = $spinbuttonq -> get_value;
   $compression = "-j -q $SETTING{'quality'}";
@@ -1463,6 +1464,20 @@ sub save_TIFF {
 sub save_djvu {
 
  ($windowv, my $vbox) = create_window($window, $d->get('Save as DjVu'), FALSE);
+
+# Compression optionmenu
+ my $hboxc = Gtk2::HBox -> new;
+ $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Compression'));
+ $hboxc -> pack_start ($label, FALSE, FALSE, 0);
+ my $optc = Gtk2::OptionMenu -> new;
+ my $menuc = Gtk2::Menu -> new;
+
+# Fill compression optionmenu
+ my $item = Gtk2::MenuItem -> new ($d->get('Bitonal'));
+ $menuc -> append ($item);
+ $optc -> set_menu ($menuc);
+ $hboxc -> pack_end ($optc, FALSE, FALSE, 0);
 
 # Frame for page range
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
@@ -1941,13 +1956,8 @@ sub scan_dialog {
  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
  $cbutton -> signal_connect( clicked => sub { $windows -> hide; } );
 
-# Show window, hiding the custom hbox and sizing if necessary
+# Show window
  $windows -> show_all;
- if ($optp->get_child->get_text ne $d->get('Custom')) {
-# Not defined if scanner has no paper size (like my video grabber)
-  $hboxc -> hide if (defined $hboxc);
-  $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
- }
 }
 
 
@@ -2337,14 +2347,51 @@ sub update_options {
  @x = @xg;
  @y = @yg;
 
- my $output;
+ my $output = '';
  if (! @test) {
 
 # Get output from scanimage or scanadf.
 # Inverted commas needed for strange characters in device name
-  my $cmd = $SETTING{'frontend'}." --help --device-name='$device'";
+  my $cmd = "$SETTING{'frontend'} --help --device-name='$device'";
   warn "$cmd\n" if $debug;
-  $output = `$cmd`;
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $pbar -> set_pulse_step(.1);
+  $pbar->set_text ($d->get('Updating options'));
+  $vboxd->pack_start ($pbar, FALSE, FALSE, 0);
+  $vboxd -> show_all;
+  my $running = TRUE;
+
+# Timer will run until callback returns false 
+  my $timer = Glib::Timeout->add (100, sub { if ($running) {
+                                              $pbar->pulse;
+                                              return TRUE;
+                                             }
+                                             else {
+                                              return FALSE;
+                                             } });
+
+# Interface to frontend
+  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+ 
+# Read without blocking
+  Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+   if ($condition eq 'hup') {
+    close $read;
+    $running = FALSE;
+    $pbar -> destroy;
+    $vboxd -> hide_all;
+    parse_options($vboxd, $device, $output);
+    return FALSE;  # uninstall
+   }
+   my $line;
+   sysread $read, $line, 1024;
+   $output .= $line;
+   return TRUE;  # continue without uninstalling
+  });
+
   warn $output if $debug;
  }
  else {
@@ -2353,7 +2400,13 @@ sub update_options {
 
 # Slurp it from file
   $output = do { local( @ARGV, $/ ) = $test[$i] ; <> } ;
+  parse_options($vboxd, $device, $output);
  }
+}
+
+
+sub parse_options {
+ my ($vboxd, $device, $output) = @_;
 
 # Skip to the device-specific options
  $output = substr($output, index($output, "Options specific to device"), length($output));
@@ -2572,14 +2625,12 @@ sub update_options {
   }
  }
 
- if ($windows->visible) {
 # Show window, hiding the custom hbox and sizing if necessary
-  $vboxd -> show_all;
-  if ($optp->get_child->get_text ne $d->get('Custom')) {
+ $vboxd -> show_all;
+ if ($optp->get_child->get_text ne $d->get('Custom')) {
 # Not defined if scanner has no paper size (like my video grabber)
-   $hboxc -> hide if (defined $hboxc);
-   $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
-  }
+  $hboxc -> hide if (defined $hboxc);
+  $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
  }
 }
 
@@ -2685,6 +2736,35 @@ sub unpaper {
 
  ($windowu, my $vbox) = create_window($window, $d->get('unpaper'), FALSE);
 
+# Layout optionmenu
+ my $hboxl = Gtk2::HBox -> new;
+ $vbox -> pack_start($hboxl, TRUE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Layout'));
+ $hboxl -> pack_start ($label, FALSE, FALSE, 0);
+ my $optl = Gtk2::OptionMenu -> new;
+ my $menul = Gtk2::Menu -> new;
+
+ my @layout = (
+  [ $d->get('single'),
+    $d->get('One page per sheet, oriented upwards without rotation.') ],
+  [ $d->get('Double'),
+    $d->get('Two pages per sheet, landscape orientation (one page on the left half, one page on the right half).') ],
+ );  
+
+# Fill layout optionmenu updating the tooltips when changed
+ foreach my $layout (@layout) {
+  my $item = Gtk2::MenuItem -> new ($layout->[0]);
+  $item -> signal_connect ('activate' => sub {
+   $tooltips -> set_tip ($optl, $layout->[1]);
+  });
+  $menul -> append ($item);
+ }
+
+# Set default tooltip
+ $tooltips -> set_tip ($optl, $layout[0]->[1]);
+ $optl -> set_menu ($menul);
+ $hboxl -> pack_end ($optl, FALSE, FALSE, 0);
+
 # Frame for page range
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
@@ -2697,6 +2777,8 @@ sub unpaper {
  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
  $sbutton -> signal_connect (clicked => sub {
 
+ $SETTING{'layout'} = $layout[$optl -> get_history]->[0];
+
 # fill $pagelist with filenames depending on which radiobutton is active
   my ($pagelist, $n) = fill_pagelist($buttona, $buttonc, $buttons);
   my @pagelist = split / /, $pagelist;
@@ -2707,7 +2789,8 @@ sub unpaper {
    my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
 
    system ("convert $_ $pnm");
-   system ("unpaper --overwrite $pnm $pnm");
+warn "layout options need to be back translated\n";
+   system ("unpaper --layout $SETTING{'layout'} --overwrite $pnm $pnm");
    system ("convert $pnm $_");
   }
 
@@ -3052,7 +3135,7 @@ __END__
 A GUI to ease the process of producing a multipage PDF from a scan. gscan2pdf should work on almost any Linux/BSD machine.
 
 =for html <p align="center">
- <img src="https://sourceforge.net/dbimage.php?id=101333" border="1" width="632" height="480" alt="Screenshot" /><br />
+ <img src="https://sourceforge.net/dbimage.php?id=107427" border="1" width="632" height="480" alt="Screenshot" /><br />
  Screenshot: Main page v0.8.4</p>
 
 =head1 Synopsis
