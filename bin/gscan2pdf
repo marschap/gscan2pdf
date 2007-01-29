@@ -12,14 +12,11 @@
 #    On quit or delete if page not saved put up dialog
 #    Put windows up in centre of parent
 #    Fix blocking at:
-#      First opening scan window
-#      Changing device
 #      Importing
 #      Rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    weed out inactive progress bar in import and other such stuff
-#    Work out how best to include package.
 #    Option to throw up PDF viewer with newly created PDF file
 #    Translate documentation
 #    Sort out sourceforge backups
@@ -49,7 +46,6 @@
 #
 # 1. Progress meter for scans and imports.
 # 2. Crop and autocrop
-# 3. Unpaper support
 #
 # Release procedure:
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
@@ -195,7 +191,8 @@ init_icons( [ 'rotate90',  "$path/rotate90.png" ],
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
 my ($windowp, $windowt, $windowv, $windowe, $windows, $windowh, $windowo,
-    $windowu, $slist, $frames, $vboxd, $optd, $optp, $hboxc);
+    $windowu, $slist, $frames, $vboxd, $optd, $optp, $hboxc, @undo_buffer,
+    @redo_buffer, @undo_selection, @redo_selection);
 
 my @action_items = (
  # Fields for each action item:
@@ -238,6 +235,8 @@ my @action_items = (
  [ 'Quit', 'gtk-quit', $d->get('_Quit'), '<control>q', $d->get('Quit'), sub { quit(); Gtk2 -> main_quit; } ],
  
  # Edit menu
+ [ 'Undo', 'gtk-undo', $d->get('_Undo'), '<control>z', $d->get('Undo'), \&undo ],
+ [ 'Redo', 'gtk-redo', $d->get('_Redo'), '<shift><control>z', $d->get('Redo'), \&unundo ],
  [ 'Edit', undef, $d->get('_Edit') ],
  [ 'Delete', 'gtk-delete', $d->get('_Delete'), 'Delete', $d->get('Delete selected pages'), \&delete_pages ],
  [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages from 1 to n'), sub { renumber($slist, 0, 1, 1); } ],
@@ -305,6 +304,9 @@ my $ui = "<ui>
    <menuitem action='Quit'/>
   </menu>
   <menu action='Edit'> 
+   <menuitem action='Undo'/>
+   <menuitem action='Redo'/>
+   <separator/>
    <menuitem action='Delete'/>
    <menuitem action='Renumber'/>
    <menuitem action='Select All'/>
@@ -340,6 +342,9 @@ my $ui = "<ui>
   <toolitem action='Save PDF'/>
   <toolitem action='Save TIFF'/>
   <toolitem action='Email as PDF'/>
+  <separator/>
+  <toolitem action='Undo'/>
+  <toolitem action='Redo'/>
   <separator/>
   <toolitem action='Delete'/>
   <toolitem action='Renumber'/>
@@ -709,6 +714,12 @@ sub create_menu_bar {
   $msg .= $d->get("Email as PDF requires xdg-email\n");
  }
 
+# Undo/redo start off ghosted anyway-
+ $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/Edit/Redo') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/ToolBar/Redo') -> set_sensitive(FALSE);
+
 # Ghost rotations if imagemagick not available
  if ($imagemagick != 0) {
   $uimanager->get_widget('/MenuBar/View/Rotate 90') -> set_sensitive(FALSE);
@@ -901,23 +912,19 @@ sub get_scale {
 # Deletes all scans after warning.
 
 sub new {
- my $dialog = Gtk2::MessageDialog -> new ($window, 'destroy-with-parent',
-                     'warning', 'ok-cancel',
-                     $d->get("This will clear the list of scanned images.\n"
-                     . "Do you want to continue?"));
- if ($dialog -> run eq 'ok') {
+
+# Update undo/redo buffers
+ take_snapshot();
 
 # Remove any image in the detail window
-  if ($image) {
-   my $viewport = $image -> get_parent;
-   $image -> destroy;
-   $viewport -> destroy;
-  }
+ if ($image) {
+  my $viewport = $image -> get_parent;
+  $image -> destroy;
+  $viewport -> destroy;
+ }
 
 # Depopulate the thumbnail list
-  pop @{$slist -> {data}} while ($#{$slist -> {data}} > -1);
- }
- $dialog -> destroy;
+ pop @{$slist -> {data}} while ($#{$slist -> {data}} > -1);
 }
 
 
@@ -937,6 +944,10 @@ sub import {
  $file_chooser -> set_default_response('ok');
 
  if ('ok' eq $file_chooser->run) {
+
+# Update undo/redo buffers
+  take_snapshot();
+
   my @filename = $file_chooser -> get_filenames;
 
   foreach my $filename (@filename) {
@@ -1066,9 +1077,9 @@ sub add_page_range {
 }
 
 
-# fill $pagelist with filenames depending on which radiobutton is active
+# return string of filenames depending on which radiobutton is active
 
-sub fill_pagelist {
+sub get_pagelist {
  my ($buttona, $buttonc, $buttons) = @_;
 
  my $n;
@@ -1102,6 +1113,33 @@ sub fill_pagelist {
  }
  
  return ($pagelist, $n);
+}
+
+
+# return array index of filenames depending on which radiobutton is active
+
+sub get_page_index {
+ my ($buttona, $buttonc, $buttons) = @_;
+
+ my @page;
+ if ($buttona -> get_active) {
+  $SETTING{"Page range"} = "all";
+  my $i = 0;
+  while ($i <= $#{$slist -> {data}}) {
+   push @page, $i;
+   ++$i;
+  }
+ }
+ elsif ($buttonc -> get_active) {
+  $SETTING{"Page range"} = "current";
+  push @page, ($slist -> get_selected_indices)[0];
+ }
+ elsif ($buttons -> get_active) {
+  $SETTING{"Page range"} = "selected";
+  @page = $slist -> get_selected_indices;
+ }
+ 
+ return @page;
 }
 
 
@@ -1352,7 +1390,7 @@ sub save_PDF {
    $SETTING{"cwd"} = dirname($filename);
 
 # fill $pagelist with filenames depending on which radiobutton is active
-   my ($pagelist, $n) = fill_pagelist($buttona, $buttonc, $buttons);
+   my ($pagelist, $n) = get_pagelist($buttona, $buttonc, $buttons);
 
 # Set options
    my $options = get_PDF_options ($entrya, $entryt, $entrys, $entryk,
@@ -1439,7 +1477,7 @@ sub save_TIFF {
    chdir $dir;
 
 # fill $pagelist with filenames depending on which radiobutton is active
-   my ($pagelist, $n) = fill_pagelist($buttona, $buttonc, $buttons);
+   my ($pagelist, $n) = get_pagelist($buttona, $buttonc, $buttons);
 
 # Create the tiff
    system ("tiffcp $pagelist \"$filename\"");
@@ -1521,7 +1559,7 @@ sub save_djvu {
    chdir $dir;
 
 # fill $pagelist with filenames depending on which radiobutton is active
-   my ($pagelist, $n) = fill_pagelist($buttona, $buttonc, $buttons);
+   my ($pagelist, $n) = get_pagelist($buttona, $buttonc, $buttons);
    
    if ($n > 1) {
     my @pagelist = split / /, $pagelist;
@@ -1579,7 +1617,7 @@ sub email {
  $sbutton -> signal_connect (clicked => sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
-  my ($pagelist, $n) = fill_pagelist($buttona, $buttonc, $buttons);
+  my ($pagelist, $n) = get_pagelist($buttona, $buttonc, $buttons);
 
 # Set options
   my $options = get_PDF_options ($entrya, $entryt, $entrys, $entryk,
@@ -1838,6 +1876,9 @@ sub scan_dialog {
  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
  $sbutton -> signal_connect (clicked => sub {
 
+# Update undo/redo buffers
+  take_snapshot();
+
 # Get selected device
   $SETTING{"device"} = $device[$optd -> get_history];
 
@@ -1850,14 +1891,14 @@ sub scan_dialog {
     my @child = $hbox -> get_children;
     foreach my $widget (@child) {
      if ($widget -> isa('Gtk2::Label')) {
-      $key = get_key($widget -> get_label);
+      $key = get_key(\%ddo, $widget -> get_label);
      }
      elsif ($widget -> isa('Gtk2::OptionMenu')) {
       my @child = $widget -> get_children;
       foreach my $widget (@child) {
 
 # ignore artificial paper size option
-       $SETTING{$key} = get_value($key, $widget -> get_label);
+       $SETTING{$key} = get_value(\%ddo, $key, $widget -> get_label);
        if ($widget -> isa('Gtk2::Label') and $key ne 'Paper size') {
         $options{$key} = $SETTING{$key};
        }
@@ -2291,6 +2332,10 @@ sub manual_sort_by_column {
 # Delete the selected scans
 
 sub delete_pages {
+
+# Update undo/redo buffers
+ take_snapshot();
+
  my @page = $slist -> get_selected_indices;
  while ($#page > -1) {
   splice @{ $slist->{data} }, $page[0], 1;
@@ -2640,6 +2685,9 @@ sub parse_options {
 sub renumber {
  my ($slist, $column, $start, $step) = @_;
 
+# Update undo/redo buffers
+ take_snapshot();
+
  $step = 1 if (! defined($step));
 
  if (defined($start)) {
@@ -2674,6 +2722,9 @@ sub renumber {
 
 sub rotate {
  my ($degrees) = @_;
+
+# Update undo/redo buffers
+ take_snapshot();
 
  my @page = $slist -> get_selected_indices;
  my $i = 0;
@@ -2744,26 +2795,75 @@ sub unpaper {
  my $optl = Gtk2::OptionMenu -> new;
  my $menul = Gtk2::Menu -> new;
 
- my @layout = (
-  [ $d->get('single'),
-    $d->get('One page per sheet, oriented upwards without rotation.') ],
-  [ $d->get('Double'),
-    $d->get('Two pages per sheet, landscape orientation (one page on the left half, one page on the right half).') ],
- );  
+ my %option = (
+  single => {
+   string => $d->get('Single'),
+   tooltip => $d->get('One page per sheet, oriented upwards without rotation.'),
+  },
+  double => {
+   string => $d->get('Double'),
+   tooltip => $d->get('Two pages per sheet, landscape orientation (one page on the left half, one page on the right half).'),
+  },
+  'deskew-scan-direction' => {
+   string => $d->get('Deskew Scan Direction'),
+   tooltip => $d->get("Edges from which to scan for rotation. Each edge of a mask can be used to detect the mask's rotation. If multiple edges are specified, the average value will be used, unless the statistical deviation exceeds --deskew-scan-deviation."),
+  },
+  left => {
+   string => $d->get('Left'),
+   tooltip => $d->get("Use 'left' for scanning from the left edge."),
+  },
+  top => {
+   string => $d->get('Top'),
+   tooltip => $d->get("Use 'top' for scanning from the top edge."),
+  },
+  right => {
+   string => $d->get('Right'),
+   tooltip => $d->get("Use 'right' for scanning from the right edge."),
+  },
+  bottom => {
+   string => $d->get('Bottom'),
+   tooltip => $d->get("Use 'bottom' for scanning from the bottom."),
+  },
+ );
 
 # Fill layout optionmenu updating the tooltips when changed
- foreach my $layout (@layout) {
-  my $item = Gtk2::MenuItem -> new ($layout->[0]);
+ foreach my $layout (qw/single double/) {
+  my $item = Gtk2::MenuItem -> new ($option{$layout}{string});
   $item -> signal_connect ('activate' => sub {
-   $tooltips -> set_tip ($optl, $layout->[1]);
+   $tooltips -> set_tip ($optl, $option{$layout}{tooltip});
   });
   $menul -> append ($item);
  }
 
 # Set default tooltip
- $tooltips -> set_tip ($optl, $layout[0]->[1]);
+ $tooltips -> set_tip ($optl, $option{single}{tooltip});
  $optl -> set_menu ($menul);
  $hboxl -> pack_end ($optl, FALSE, FALSE, 0);
+
+# Frame for Deskew Scan Direction
+ my $frame = Gtk2::Frame -> new($option{'deskew-scan-direction'}{string});
+ $vbox -> pack_start ($frame, TRUE, TRUE, 0);
+ my $vboxd = Gtk2::VBox -> new;
+ $vboxd -> set_border_width($border_width);
+ $frame -> add ($vboxd);
+
+ foreach (qw/left top right bottom/) {
+  my $button = Gtk2::CheckButton -> new($option{$_}{string});
+  $tooltips -> set_tip ($button, $option{'deskew-scan-direction'}{tooltip}
+                                                    ." ".$option{$_}{tooltip});
+  $button->set_active(TRUE) if (/left/ or /right/);
+
+# Ensure that at least one checkbutton stays active
+  $button -> signal_connect (toggled => sub {
+   my $n = 0;
+   my @child = $vboxd -> get_children;
+   foreach (@child) {
+    $n++ if ($_ -> get_active);
+   }
+   $button->set_active(TRUE) if ($n == 0);
+  });
+  $vboxd -> pack_start($button, TRUE, TRUE, 0);
+ }
 
 # Frame for page range
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
@@ -2777,23 +2877,77 @@ sub unpaper {
  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
  $sbutton -> signal_connect (clicked => sub {
 
- $SETTING{'layout'} = $layout[$optl -> get_history]->[0];
+# Update undo/redo buffers
+  take_snapshot();
 
-# fill $pagelist with filenames depending on which radiobutton is active
-  my ($pagelist, $n) = fill_pagelist($buttona, $buttonc, $buttons);
-  my @pagelist = split / /, $pagelist;
+  $SETTING{layout} = get_key(\%option, $optl -> get_child -> get_label);
 
-  foreach (@pagelist) {
-
-# Temporary filename for pnm
-   my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-
-   system ("convert $_ $pnm");
-warn "layout options need to be back translated\n";
-   system ("unpaper --layout $SETTING{'layout'} --overwrite $pnm $pnm");
-   system ("convert $pnm $_");
+  my $direction = '';
+  my @child = $vboxd -> get_children;
+  foreach (@child) {
+   if ($_ -> get_active) {
+    $direction .= "," if ($direction ne '');
+    $direction .= get_key(\%option, $_ -> get_label);
+   }
   }
 
+# Note page selection for later
+  my @selection = $slist -> get_selected_indices;
+
+  my @pagelist = get_page_index($buttona, $buttonc, $buttons);
+  foreach my $page (@pagelist) {
+
+# Temporary filenames for pnm and new tif
+   my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+   my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+   
+   my $cmd = "convert -compress zip ".$slist -> {data}[$page][2]." $pnm;"
+             ."unpaper --layout $SETTING{layout} --deskew-scan-direction $direction --overwrite $pnm $pnm;"
+             ."convert $pnm $tif";
+
+# Interface to unpaper
+   my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+  
+   my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $windowo,
+                                     'destroy-with-parent',
+                                     'gtk-cancel' => 'cancel');
+   my $label = Gtk2::Label -> new ($d->get('Running unpaper')."...");
+   $dialog -> vbox -> add ($label);
+
+# Ensure that the dialog box is destroyed when the user responds.
+   $dialog -> signal_connect (response => sub {
+    $_[0] -> destroy;
+    local $SIG{HUP} = 'IGNORE';
+    kill HUP => $pid;
+   });
+   $dialog -> show_all;
+ 
+# Update TextBuffer without blocking
+   Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+    my ($fileno, $condition) = @_;
+    if ($condition eq 'hup') {
+     close $read;
+     $dialog -> destroy;
+
+     $slist -> {data}[$page][2] = $tif;
+
+# Use once I no longer have to develop with Gtk2 < 1.090!
+#  $slist -> {data}[$page][1] =
+#                  $slist -> {data}[$page[$i]][1] -> rotate_simple ($degrees);
+     $slist -> {data}[$page][1] =
+                      get_pixbuf($slist -> {data}[$page][2], $heightt, $widtht);
+
+# Reselect selected pages, firing the display callback
+     $slist -> get_selection -> unselect_all;
+     $slist -> select(@selection);
+
+     return 0;  # uninstall
+    }
+    my $line;
+    sysread $read, $line, 1024;
+    return 1;  # continue without uninstalling
+   });
+  }
  } );
 
 # Cancel button
@@ -3078,20 +3232,77 @@ sub add_to_options {
 # Get option string from label
 
 sub get_key {
- my ($value) = @_;
- foreach my $key ( keys %ddo ) {
-  return $key if ($ddo{$key}{string} eq $value);
+ my ($options, $value) = @_;
+ foreach my $key ( keys %$options ) {
+  return $key if ($options->{$key}{string} eq $value);
  }
+ return FALSE;
 }
 
 
 # Get value string from optionmenu
 
 sub get_value {
- my ($option, $value) = @_;
- foreach my $key ( keys %{$ddo{$option}{values}} ) {
-  return $key if ($ddo{$option}{values}{$key} eq $value);
+ my ($options, $option, $value) = @_;
+ foreach my $key ( keys %{$options->{$option}{values}} ) {
+  return $key if ($options->{$option}{values}{$key} eq $value);
  }
+ return FALSE;
+}
+
+
+# Update undo/redo buffers before doing something
+
+sub take_snapshot {
+
+# Deep copy the tied data. Otherwise, very bad things happen.
+ @undo_buffer = map { [ @$_ ] } @{ $slist->{data} };
+
+# Unghost Undo/redo
+ $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(TRUE);
+ $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(TRUE);
+}
+
+
+# Put things back to last snapshot after updating redo buffer
+
+sub undo {
+
+# Deep copy the tied data. Otherwise, very bad things happen.
+ @redo_buffer = map { [ @$_ ] } @{ $slist->{data} };
+
+ my @page = $slist -> get_selected_indices;
+ @{$slist->{data}} = @undo_buffer;
+
+# Reselect the pages to display the rotated image(s)
+ $slist->select(@page);
+
+# Update menus/buttons
+ $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/Edit/Redo') -> set_sensitive(TRUE);
+ $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/ToolBar/Redo') -> set_sensitive(TRUE);
+}
+
+
+# Put things back to last snapshot after updating redo buffer
+
+sub unundo {
+
+# Deep copy the tied data. Otherwise, very bad things happen.
+ @undo_buffer = map { [ @$_ ] } @{ $slist->{data} };
+
+ my @page = $slist -> get_selected_indices;
+ @{$slist->{data}} = @redo_buffer;
+
+# Reselect the pages to display the rotated image(s)
+ $slist->select(@page);
+
+# Update menus/buttons
+ $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(TRUE);
+ $uimanager->get_widget('/MenuBar/Edit/Redo') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(TRUE);
+ $uimanager->get_widget('/ToolBar/Redo') -> set_sensitive(FALSE);
 }
 
 
