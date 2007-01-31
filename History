@@ -1,9 +1,14 @@
-0.9.2 (26.01.2007):
+0.9.2 (29.01.2007):
 
 + Update to Czech translation (thanks to Petr Jelínek)
 + Spanish translation (thanks to mecedesjorge)
 + Passes image depth to imagemagick to ensure rotation produces a valid TIFF
-+ Added DjVu support
++ DjVu support
+Fixed bug where device-dependent options disappear if frontend changed whilst
+  scan dialog hidden.
++ Progress bar whilst updating device-dependent options
++ unpaper support
++ Undo/redo
 
 
 0.9.1 (23.01.2007):
