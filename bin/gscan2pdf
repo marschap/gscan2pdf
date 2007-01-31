@@ -3341,9 +3341,9 @@ sub register_icon {
 
 __END__
 
-=head1 gscan2pdf
+=head1 NAME
 
-A GUI to ease the process of producing a multipage PDF from a scan. gscan2pdf should work on almost any Linux/BSD machine.
+gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan. gscan2pdf should work on almost any Linux/BSD machine.
 
 =for html <p align="center">
  <img src="https://sourceforge.net/dbimage.php?id=107427" border="1" width="632" height="480" alt="Screenshot" /><br />
@@ -3514,6 +3514,10 @@ The metadata are completely optional.
 
 Saves the current, selected or all pages as a TIFF.
 
+=head3 Save DjVu
+
+Saves the current, selected or all pages as a DjVu. Currently, only bitonal compression is available. This is best suited to black and white scans and as such, produces better compression than PDF. See L<http://www.djvuzone.org/> for more details.
+
 =head3 Email as PDF
 
 Attaches the current, selected or all pages as a PDF to a blank email. This requires xdg-email, which is in the xdg-utils package. If this is not present, the option is ghosted out.
@@ -3559,6 +3563,18 @@ The rotate options require the package imagemagick and, if this is not present, 
 =head3 Rotate 180
 
 =head3 Rotate 90 anticlockwise
+
+=head2 Tools
+
+=head3 unpaper
+
+unpaper (see L<http://unpaper.berlios.de/>) is a utility for cleaning up a scan. At the moment, having selected whether the scan has a single or a double page, and which sides to use for the alignment, the scan will be deskewed (rotated) and centred.
+
+=head3 OCR (Optical Character Recognition)
+
+The gocr utility is used to process the current page. The output is displayed and an option is given to save it to a text file.
+
+I hope that in the future I can find a way to imbed the output in the PDF.
 
 =head1 FAQs
 
