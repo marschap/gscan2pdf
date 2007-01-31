@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.0
+Version: 0.9.2
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -51,7 +51,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Fri Jan 19 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - OCR support
-  - scanadf frontend now uses own device-dependent options
-  - Displays start-up message if optional packages missing
+* Wed Jan 31 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - Update to Czech translation (thanks to Petr Jelínek)
+  - Spanish translation (thanks to mecedesjorge)
+  - Passes image depth to imagemagick to ensure rotation produces a valid TIFF
+  - DjVu support
+  - Fixed bug where device-dependent options disappear if frontend changed whilst scan dialog hidden.
+  - Progress bar whilst updating device-dependent options
+  - unpaper support
+  - Undo/redo
