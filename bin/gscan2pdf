@@ -25,15 +25,16 @@
 #    Work out a good place to log error messages
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
 #    Changing the number of pages to scan should activate #.
-#    Add option to delete pages after save.
 #    Check encoding (umlauts) of metadata.
 #    get Makefile.PL to update date in changelog
 #    check debian/copyright
 #    Either get cancel button during scan to actually cancel the scan,
 #     or change the button.
 #    check out scanbuttond
+#    add home, end page up and down
 #    sort out "dpkg-source: warning: source directory `./gscan2pdf' is not <sourcepackage>-<upstreamversion> `gscan2pdf-0.9.0'" error
 #    fix bug importing changelog to .spec
+#    Add pan with LMB in detail window
 #    As soon as I don't have to develop with gtk+2.4, change all OptionMenus to
 #     ComboBoxes
 #
@@ -67,7 +68,7 @@ use strict;
 use IPC::Open3;
 use IO::Handle;
 use Gtk2 -init;
-use Gtk2::SimpleList;
+use Gtk2::Ex::Simple::List;
 use Cwd;                             # To obtain current working directory
 use File::Basename;                  # Split filename into dir, file, ext
 use File::Temp qw(tempfile tempdir); # To create temporary files
@@ -76,7 +77,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.2";
+my $version = "0.9.3";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -453,14 +454,14 @@ $hpaned -> pack1 ($scwin_thumbs, TRUE, TRUE);
 $scwin_thumbs -> set_policy ('automatic', 'automatic');
 
 # define filename and i to be hidden
-Gtk2::SimpleList -> add_column_type( 'filename',
-                                     type => 'Glib::String',
-                                     attr => 'hidden' );
+Gtk2::Ex::Simple::List -> add_column_type( 'filename',
+                                           type => 'Glib::String',
+                                           attr => 'hidden' );
 
 # Set up a SimpleList
-$slist = Gtk2::SimpleList -> new('#' => 'int',
-                                 $d->get('Thumbnails') => 'pixbuf',
-                                 'Filename' => 'filename');
+$slist = Gtk2::Ex::Simple::List -> new('#' => 'int',
+                                       $d->get('Thumbnails') => 'pixbuf',
+                                       'Filename' => 'filename');
 
 # Callback for dropped signal.
 $slist -> signal_connect('drag_drop' => sub {
@@ -720,7 +721,7 @@ sub create_menu_bar {
  $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Redo') -> set_sensitive(FALSE);
 
-# Ghost rotations if imagemagick not available
+# Ghost rotations and unpaper if imagemagick not available
  if ($imagemagick != 0) {
   $uimanager->get_widget('/MenuBar/View/Rotate 90') -> set_sensitive(FALSE);
   $uimanager->get_widget('/MenuBar/View/Rotate 180') -> set_sensitive(FALSE);
@@ -734,10 +735,11 @@ sub create_menu_bar {
   $uimanager->get_widget('/Thumb_Popup/Rotate 90') -> set_sensitive(FALSE);
   $uimanager->get_widget('/Thumb_Popup/Rotate 180') -> set_sensitive(FALSE);
   $uimanager->get_widget('/Thumb_Popup/Rotate 270') -> set_sensitive(FALSE);
-  $msg .= $d->get("The rotating options and the scanadf frontend require imagemagick\n");
+  $uimanager->get_widget('/MenuBar/Tools/unpaper') -> set_sensitive(FALSE);
+  $msg .= $d->get("The rotating options, unpaper support and the scanadf frontend require imagemagick\n");
  }
 
-# Ghost unpaper item if gocr not available
+# Ghost unpaper item if unpaper not available
  if ($unpaper != 0) {
   $uimanager->get_widget('/MenuBar/Tools/unpaper') -> set_sensitive(FALSE);
   $msg .= $d->get("unpaper missing\n");
@@ -924,7 +926,7 @@ sub new {
  }
 
 # Depopulate the thumbnail list
- pop @{$slist -> {data}} while ($#{$slist -> {data}} > -1);
+ @{$slist -> {data}} = ();
 }
 
 
@@ -1332,24 +1334,6 @@ sub save_PDF {
 # Frame for page range
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
-# Pages button
-# my $hboxp = Gtk2::HBox -> new;
-# $vboxp -> pack_start($hboxp, TRUE, TRUE, 0);
-# my $buttonp = Gtk2::RadioButton -> new(@group, "Pages:");
-# $hboxp -> pack_start($buttonp, FALSE, FALSE, 0);
-
-# Page List
-# my $entryp = Gtk2::Entry -> new;
-# $entryp -> signal_connect ('insert-text' => sub {
-#  my ($widget, $string, $len, $position) = @_;
-#  if ($string !~ /^\d+$/) { # Only add numbers
-#   $entryp -> signal_stop_emission_by_name ('insert-text');
-#   $buttonp -> set_active(TRUE); # Set the radiobutton active
-#  }
-#  () # this callback must return either 2 or 0 items.
-# });
-# $hboxp -> pack_end ($entryp, FALSE, FALSE, 0);
-
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
  $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
@@ -1438,6 +1422,61 @@ sub save_TIFF {
 # Frame for page range
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
+ my @compression = (
+  [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
+  [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
+  [ 'jpeg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
+  [ 'packbits', $d->get('Packbits'), $d->get('Compress output with Packbits encoding.') ],
+  [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
+  [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
+  [ 'none', $d->get('None'), $d->get('Use no compression algorithm on output.') ],
+ );
+
+# Compression optionmenu
+ my $hboxc = Gtk2::HBox -> new;
+ $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Compression'));
+ $hboxc -> pack_start ($label, FALSE, FALSE, 0);
+ my $optc = Gtk2::OptionMenu -> new;
+ my $menuc = Gtk2::Menu -> new;
+
+# Set up quality spinbutton here so that it can be shown or hidden by callback
+ my $hboxq = Gtk2::HBox -> new;
+ $vbox -> pack_start($hboxq, TRUE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('JPEG Quality'));
+ $hboxq -> pack_start ($label, FALSE, FALSE, 0);
+ my $spinbuttonq = Gtk2::SpinButton -> new_with_range(1, 100, 1);
+ if (defined($SETTING{'quality'})) {
+  $spinbuttonq->set_value($SETTING{'quality'});
+ }
+ else {
+  $spinbuttonq->set_value(75);
+ }
+ $hboxq -> pack_end ($spinbuttonq, FALSE, FALSE, 0);
+
+# Fill compression optionmenu
+ my $i = 0;
+ my $o;
+ foreach my $option ( @compression ) {
+  my $item = Gtk2::MenuItem -> new ($option->[1]);
+  $menuc -> append ($item);
+  $item -> signal_connect ('activate' => sub {
+   if ($option->[0] eq 'jpeg') {
+    $hboxq -> show_all;
+   }
+   else {
+    $hboxq -> hide_all;
+   }
+  });
+  $o = $i
+   if (defined($SETTING{'compression'})
+       and $option->[0] eq $SETTING{'compression'});
+  ++$i;
+ }
+ $optc -> set_menu ($menuc);
+ $optc -> set_history ($o) if defined($o);
+ $hboxc -> pack_end ($optc, FALSE, FALSE, 0);
+
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
  $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
@@ -1479,8 +1518,13 @@ sub save_TIFF {
 # fill $pagelist with filenames depending on which radiobutton is active
    my ($pagelist, $n) = get_pagelist($buttona, $buttonc, $buttons);
 
+# dig out the compression
+   $SETTING{'compression'} = $compression[$optc -> get_history][0];
+   my $compression = $SETTING{'compression'};
+   $compression .= ':'.$spinbuttonq->get_value if ($compression eq 'jpeg');
+
 # Create the tiff
-   system ("tiffcp $pagelist \"$filename\"");
+   system ("tiffcp -c $compression $pagelist \"$filename\"");
 
    $windowt -> hide;
   }
@@ -1494,6 +1538,7 @@ sub save_TIFF {
  $cbutton -> signal_connect( clicked => sub { $windowt -> hide; } );
 
  $windowt -> show_all;
+ $hboxq -> hide_all if ($compression[$optc -> get_history][0] ne 'jpeg');
 }
 
 
@@ -2336,10 +2381,20 @@ sub delete_pages {
 # Update undo/redo buffers
  take_snapshot();
 
- my @page = $slist -> get_selected_indices;
- while ($#page > -1) {
-  splice @{ $slist->{data} }, $page[0], 1;
-  @page = $slist -> get_selected_indices;
+ my @pages = $slist -> get_selected_indices;
+ my @page = @pages;
+ while ($#pages > -1) {
+  splice @{ $slist->{data} }, $pages[0], 1;
+  @pages = $slist -> get_selected_indices;
+ }
+
+# Select nearest page to last current page
+ if ($#{$slist->{data}} > -1 and @page) {
+
+# Select just the first one
+  @page = ($page[0]);
+  $page[0] = $#{$slist->{data}} if ($page[0] > $#{$slist->{data}});
+  $slist->select(@page);
  }
 }
 
@@ -2787,14 +2842,6 @@ sub unpaper {
 
  ($windowu, my $vbox) = create_window($window, $d->get('unpaper'), FALSE);
 
-# Layout optionmenu
- my $hboxl = Gtk2::HBox -> new;
- $vbox -> pack_start($hboxl, TRUE, TRUE, 0);
- my $label = Gtk2::Label -> new ($d->get('Layout'));
- $hboxl -> pack_start ($label, FALSE, FALSE, 0);
- my $optl = Gtk2::OptionMenu -> new;
- my $menul = Gtk2::Menu -> new;
-
  my %option = (
   single => {
    string => $d->get('Single'),
@@ -2805,26 +2852,58 @@ sub unpaper {
    tooltip => $d->get('Two pages per sheet, landscape orientation (one page on the left half, one page on the right half).'),
   },
   'deskew-scan-direction' => {
-   string => $d->get('Deskew Scan Direction'),
+   string => $d->get('Deskew to edge'),
    tooltip => $d->get("Edges from which to scan for rotation. Each edge of a mask can be used to detect the mask's rotation. If multiple edges are specified, the average value will be used, unless the statistical deviation exceeds --deskew-scan-deviation."),
+   left => {
+    string => $d->get('Left'),
+    tooltip => $d->get("Use 'left' for scanning from the left edge."),
+   },
+   top => {
+    string => $d->get('Top'),
+    tooltip => $d->get("Use 'top' for scanning from the top edge."),
+   },
+   right => {
+    string => $d->get('Right'),
+    tooltip => $d->get("Use 'right' for scanning from the right edge."),
+   },
+   bottom => {
+    string => $d->get('Bottom'),
+    tooltip => $d->get("Use 'bottom' for scanning from the bottom."),
+   },
   },
-  left => {
-   string => $d->get('Left'),
-   tooltip => $d->get("Use 'left' for scanning from the left edge."),
+  'border-align' => {
+   string => $d->get('Align to edge'),
+   tooltip => $d->get('Edge to which to align the page.'),
+   left => {
+    string => $d->get('Left'),
+    tooltip => $d->get("Use 'left' to align to the left edge."),
+   },
+   top => {
+    string => $d->get('Top'),
+    tooltip => $d->get("Use 'top' to align to the top edge."),
+   },
+   right => {
+    string => $d->get('Right'),
+    tooltip => $d->get("Use 'right' to align to the right edge."),
+   },
+   bottom => {
+    string => $d->get('Bottom'),
+    tooltip => $d->get("Use 'bottom' to align to the bottom."),
+   },
   },
-  top => {
-   string => $d->get('Top'),
-   tooltip => $d->get("Use 'top' for scanning from the top edge."),
-  },
-  right => {
-   string => $d->get('Right'),
-   tooltip => $d->get("Use 'right' for scanning from the right edge."),
-  },
-  bottom => {
-   string => $d->get('Bottom'),
-   tooltip => $d->get("Use 'bottom' for scanning from the bottom."),
+  'border-margin' => {
+   string => $d->get('Margin'),
+   tooltip => $d->get('Margin for aligned edges.'),
   },
  );
+
+# Layout optionmenu
+ my $hboxl = Gtk2::HBox -> new;
+ $vbox -> pack_start($hboxl, TRUE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Layout'));
+ $hboxl -> pack_start ($label, FALSE, FALSE, 0);
+ my $optl = Gtk2::OptionMenu -> new;
+ my $menul = Gtk2::Menu -> new;
 
 # Fill layout optionmenu updating the tooltips when changed
  foreach my $layout (qw/single double/) {
@@ -2841,16 +2920,16 @@ sub unpaper {
  $hboxl -> pack_end ($optl, FALSE, FALSE, 0);
 
 # Frame for Deskew Scan Direction
- my $frame = Gtk2::Frame -> new($option{'deskew-scan-direction'}{string});
- $vbox -> pack_start ($frame, TRUE, TRUE, 0);
+ my $dframe = Gtk2::Frame -> new($option{'deskew-scan-direction'}{string});
+ $vbox -> pack_start ($dframe, TRUE, TRUE, 0);
  my $vboxd = Gtk2::VBox -> new;
  $vboxd -> set_border_width($border_width);
- $frame -> add ($vboxd);
+ $dframe -> add ($vboxd);
 
  foreach (qw/left top right bottom/) {
-  my $button = Gtk2::CheckButton -> new($option{$_}{string});
+  my $button = Gtk2::CheckButton -> new($option{'deskew-scan-direction'}{$_}{string});
   $tooltips -> set_tip ($button, $option{'deskew-scan-direction'}{tooltip}
-                                                    ." ".$option{$_}{tooltip});
+                            ." ".$option{'deskew-scan-direction'}{$_}{tooltip});
   $button->set_active(TRUE) if (/left/ or /right/);
 
 # Ensure that at least one checkbutton stays active
@@ -2864,6 +2943,54 @@ sub unpaper {
   });
   $vboxd -> pack_start($button, TRUE, TRUE, 0);
  }
+
+# Frame for Align Border
+ my $bframe = Gtk2::Frame -> new($option{'border-align'}{string});
+ $vbox -> pack_start ($bframe, TRUE, TRUE, 0);
+ my $vboxb = Gtk2::VBox -> new;
+ $vboxb -> set_border_width($border_width);
+ $bframe -> add ($vboxb);
+
+# Define margins here to reference them below
+ my $hboxd = Gtk2::HBox -> new;
+ $hboxd->set_sensitive(FALSE);
+ my $spin_buttonx = Gtk2::SpinButton -> new_with_range(0, 10, 1);
+ my $spin_buttony = Gtk2::SpinButton -> new_with_range(0, 10, 1);
+ $tooltips -> set_tip ($spin_buttonx, $d->get('Vertical margin'));
+ $tooltips -> set_tip ($spin_buttony, $d->get('Horizontal margin'));
+
+ foreach (qw/left top right bottom/) {
+  my $button = Gtk2::CheckButton -> new($option{'border-align'}{$_}{string});
+  $tooltips -> set_tip ($button, $option{'border-align'}{tooltip}
+                            ." ".$option{'border-align'}{$_}{tooltip});
+  $vboxb -> pack_start($button, TRUE, TRUE, 0);
+
+# Ghost margin if nothing selected
+  $button -> signal_connect (toggled => sub {
+   my $n = 0;
+   my @child = $vboxb -> get_children;
+   foreach (@child) {
+    $n++ if ($_ -> isa('Gtk2::CheckButton') and $_ -> get_active);
+   }
+   if ($n == 0) {
+    $hboxd->set_sensitive(FALSE);
+   }
+   else {
+    $hboxd->set_sensitive(TRUE);
+   }
+  });
+ }
+
+# custom paper x entry
+ my $labelx = Gtk2::Label -> new ("v");
+ $hboxd -> pack_start ($labelx, FALSE, FALSE, 0);
+ $hboxd -> pack_start ($spin_buttonx, FALSE, FALSE, 0);
+
+# custom paper y entry
+ my $labely = Gtk2::Label -> new ("h");
+ $hboxd -> pack_start ($labely, FALSE, FALSE, 0);
+ $hboxd -> pack_start ($spin_buttony, FALSE, FALSE, 0);
+ $vboxb -> pack_start($hboxd, TRUE, TRUE, 0);
 
 # Frame for page range
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
@@ -2882,14 +3009,27 @@ sub unpaper {
 
   $SETTING{layout} = get_key(\%option, $optl -> get_child -> get_label);
 
-  my $direction = '';
+  my $scan_direction = '';
   my @child = $vboxd -> get_children;
   foreach (@child) {
    if ($_ -> get_active) {
-    $direction .= "," if ($direction ne '');
-    $direction .= get_key(\%option, $_ -> get_label);
+    $scan_direction .= "," if ($scan_direction ne '');
+    $scan_direction .= get_key($option{'deskew-scan-direction'}, $_ -> get_label);
    }
   }
+  $scan_direction = "--deskew-scan-direction $scan_direction";
+
+  my $border_align = '';
+  @child = $vboxb -> get_children;
+  foreach (@child) {
+   if ($_ -> isa('Gtk2::CheckButton') and $_ -> get_active) {
+    $border_align .= "," if ($border_align ne '');
+    $border_align .= get_key($option{'border-align'}, $_ -> get_label);
+   }
+  }
+  $border_align = "--border-align $border_align"
+   ." --border-margin ".$spin_buttonx->get_value.",".$spin_buttony->get_value
+   if ($border_align ne '');
 
 # Note page selection for later
   my @selection = $slist -> get_selected_indices;
@@ -2902,8 +3042,10 @@ sub unpaper {
    my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
    
    my $cmd = "convert -compress zip ".$slist -> {data}[$page][2]." $pnm;"
-             ."unpaper --layout $SETTING{layout} --deskew-scan-direction $direction --overwrite $pnm $pnm;"
+             ."unpaper --layout $SETTING{layout} $scan_direction"
+             ." $border_align --overwrite $pnm $pnm;"
              ."convert $pnm $tif";
+   warn "$cmd\n" if ($debug);
 
 # Interface to unpaper
    my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
@@ -3154,7 +3296,7 @@ sub view_pod {
   $windowh -> add($pane);
 
 # Index list
-  my $index = Gtk2::SimpleList->new('icon' => 'pixbuf',
+  my $index = Gtk2::Ex::Simple::List->new('icon' => 'pixbuf',
                                           'title' => 'text',
                                           'link' => 'filename');
   $index->set_headers_visible(FALSE);
@@ -3234,7 +3376,8 @@ sub add_to_options {
 sub get_key {
  my ($options, $value) = @_;
  foreach my $key ( keys %$options ) {
-  return $key if ($options->{$key}{string} eq $value);
+  return $key if ($key ne 'tooltip' and $key ne 'string'
+                                       and $options->{$key}{string} eq $value);
  }
  return FALSE;
 }
@@ -3257,6 +3400,7 @@ sub take_snapshot {
 
 # Deep copy the tied data. Otherwise, very bad things happen.
  @undo_buffer = map { [ @$_ ] } @{ $slist->{data} };
+ @undo_selection = $slist -> get_selected_indices;
 
 # Unghost Undo/redo
  $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(TRUE);
@@ -3270,12 +3414,17 @@ sub undo {
 
 # Deep copy the tied data. Otherwise, very bad things happen.
  @redo_buffer = map { [ @$_ ] } @{ $slist->{data} };
+ @redo_selection = $slist -> get_selected_indices;
 
- my @page = $slist -> get_selected_indices;
+# Block slist signals whilst updating
+ $slist -> get_model -> signal_handler_block($slist -> {signalid});
  @{$slist->{data}} = @undo_buffer;
 
-# Reselect the pages to display the rotated image(s)
- $slist->select(@page);
+# Unblock slist signals now finished
+ $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+
+# Reselect the pages to display the detail view
+ $slist->select(@undo_selection);
 
 # Update menus/buttons
  $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(FALSE);
@@ -3291,12 +3440,17 @@ sub unundo {
 
 # Deep copy the tied data. Otherwise, very bad things happen.
  @undo_buffer = map { [ @$_ ] } @{ $slist->{data} };
+ @undo_selection = $slist -> get_selected_indices;
 
- my @page = $slist -> get_selected_indices;
+# Block slist signals whilst updating
+ $slist -> get_model -> signal_handler_block($slist -> {signalid});
  @{$slist->{data}} = @redo_buffer;
 
-# Reselect the pages to display the rotated image(s)
- $slist->select(@page);
+# Unblock slist signals now finished
+ $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+
+# Reselect the pages to display the detail view
+ $slist->select(@redo_selection);
 
 # Update menus/buttons
  $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(TRUE);
@@ -3347,7 +3501,7 @@ gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan. 
 
 =for html <p align="center">
  <img src="https://sourceforge.net/dbimage.php?id=107427" border="1" width="632" height="480" alt="Screenshot" /><br />
- Screenshot: Main page v0.8.4</p>
+ Screenshot: Main page v0.9.0</p>
 
 =head1 Synopsis
 
