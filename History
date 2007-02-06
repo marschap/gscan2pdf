@@ -1,4 +1,14 @@
-0.9.2 (29.01.2007):
+0.9.3 (09.02.2007):
+
+Switched the deprecated Gtk2::SimpleList to Gtk2::Ex::Simple::List.
+Fixed bug where thumbnail lost after undo/redo
+Deleting pages now selects nearest page
++ unpaper --border-align and --border-margin support
++ compression options for save TIFF
++ unpaper ghosted if imagemagick not present
+
+
+0.9.2 (31.01.2007):
 
 + Update to Czech translation (thanks to Petr Jelínek)
 + Spanish translation (thanks to mecedesjorge)
