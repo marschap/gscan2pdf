@@ -8,7 +8,7 @@ Standards-Version: 3.6.1
 
 Package: gscan2pdf
 Architecture: all
-Depends: libgtk2-perl (>= 1:1.043-1), libglib-perl (>= 1.100-1), liblocale-gettext-perl (>= 1.05), libsane, sane-utils, libtiff-tools
+Depends: libgtk2-perl (>= 1:1.043-1), libgtk2-ex-simple-list-perl, libglib-perl (>= 1.100-1), liblocale-gettext-perl (>= 1.05), libsane, sane-utils, libtiff-tools
 Recommends: libgtk2-ex-podviewer-perl, imagemagick, sane, xdg-utils, djvulibre-bin, unpaper, gocr
 Description: A GUI to ease the process of producing PDFs from scanned documents
  At maturity, the GUI will have similar features to that of the Windows Imaging program, but with the express objective of writing a PDF, including metadata.
