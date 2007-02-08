@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.2
+Version: 0.9.3
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -51,12 +51,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Wed Jan 31 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - Update to Czech translation (thanks to Petr Jelínek)
-  - Spanish translation (thanks to mecedesjorge)
-  - Passes image depth to imagemagick to ensure rotation produces a valid TIFF
-  - DjVu support
-  - Fixed bug where device-dependent options disappear if frontend changed whilst scan dialog hidden.
-  - Progress bar whilst updating device-dependent options
-  - unpaper support
-  - Undo/redo
+* Thu Feb 08 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+ unstable; urgency=low
+  - Switched the deprecated Gtk2::SimpleList to Gtk2::Ex::Simple::List.
+  - Fixed bug where thumbnail lost after undo/redo
+  - Deleting pages now selects nearest page
+  - unpaper --border-align and --border-margin support
+  - compression options for save TIFF
+  - unpaper ghosted if imagemagick not present
+  - updated scan and PDF icons (thanks to lodp)
