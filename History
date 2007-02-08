@@ -1,4 +1,4 @@
-0.9.3 (09.02.2007):
+0.9.3 (08.02.2007):
 
 Switched the deprecated Gtk2::SimpleList to Gtk2::Ex::Simple::List.
 Fixed bug where thumbnail lost after undo/redo
@@ -6,6 +6,7 @@ Deleting pages now selects nearest page
 + unpaper --border-align and --border-margin support
 + compression options for save TIFF
 + unpaper ghosted if imagemagick not present
++ updated scan and PDF icons (thanks to lodp)
 
 
 0.9.2 (31.01.2007):
@@ -54,7 +55,7 @@ Fixed bug where frontend not properly selected
 Adds the device to the model name if the same model present more than once.
 + Drag-n-drop now autoscrolls the thumbnail list.
 + Error now thrown if Locale::gettext version < 1.05.
-+ New icons for application and rotate buttons
++ New icons for application and rotate buttons (thanks to lodp)
 
 
 0.8.4 (11.12.2006):
