@@ -2,18 +2,18 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gscan2pdf-0.8.7\n"
 "POT-Creation-Date: 2007-01-19 22:00+0100\n"
-"PO-Revision-Date: 2007-01-19 22:09+0000\n"
+"PO-Revision-Date: 2007-01-29 12:00+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Rosetta-Export-Date: 2007-01-23 22:08+0000\n"
+"X-Rosetta-Export-Date: 2007-02-07 06:36+0000\n"
 "Last-Translator: mecedesjorge <mercedesjorge@wanadoo.es>\n"
 "Language-Team: Spanish <es@li.org>\n"
 
 #: bin/gscan2pdf:115
 #, perl-format
 msgid "Error: cannot read file: %s\n"
-msgstr ""
+msgstr "Error: no se abre fichero de lectura: %s\n"
 
 #: bin/gscan2pdf:125
 #, perl-format
@@ -27,7 +27,7 @@ msgstr ""
 #: bin/gscan2pdf:147
 #, perl-format
 msgid "Unknown option %s.\n"
-msgstr ""
+msgstr "Opción desconocida %s\n"
 
 #: bin/gscan2pdf:153
 #, perl-format
@@ -35,11 +35,15 @@ msgid ""
 "%s requires the libtiff library.\n"
 "Please install it.\n"
 msgstr ""
+"%s precisa la librería libtiff.\n"
+"Por favor instálala.\n"
 
 #: bin/gscan2pdf:167
 #, perl-format
 msgid "Can't open config file: %s\n"
 msgstr ""
+"No se puede abrir el fichero\n"
+"de configuración: %s\n"
 
 #: bin/gscan2pdf:204
 msgid "_File"
@@ -63,7 +67,7 @@ msgstr "Importar un fichero TIFF"
 
 #: bin/gscan2pdf:207
 msgid "S_can"
-msgstr ""
+msgstr "Es_canear"
 
 #: bin/gscan2pdf:207
 msgid "Scan document"
@@ -87,11 +91,11 @@ msgstr "guardar como TIFF"
 
 #: bin/gscan2pdf:225
 msgid "_Email as PDF"
-msgstr ""
+msgstr "_Email como PDF"
 
 #: bin/gscan2pdf:225
 msgid "Attach as PDF to a new email"
-msgstr ""
+msgstr "Adjuntar a un email como PDF"
 
 #: bin/gscan2pdf:231
 msgid "_Quit"
@@ -131,7 +135,7 @@ msgstr "Seleccionar todas las paginas"
 
 #: bin/gscan2pdf:238
 msgid "_Frontend"
-msgstr ""
+msgstr "_Mascara"
 
 #: bin/gscan2pdf:241
 msgid "_View"
@@ -183,15 +187,15 @@ msgstr "Girar 90 grados a la Izquierda"
 
 #: bin/gscan2pdf:251
 msgid "_Tools"
-msgstr ""
+msgstr "_Herramientas"
 
 #: bin/gscan2pdf:252
 msgid "_OCR"
-msgstr ""
+msgstr "_OCR"
 
 #: bin/gscan2pdf:252
 msgid "Optical Character Recognition of current page"
-msgstr ""
+msgstr "Reconocimiento de caracteres de la pagina actual"
 
 #: bin/gscan2pdf:260 bin/gscan2pdf:261
 msgid "_Help"
@@ -259,7 +263,7 @@ msgstr "Resolucion"
 
 #: bin/gscan2pdf:577
 msgid "Batch scan"
-msgstr ""
+msgstr "Escaneo en bateria"
 
 #: bin/gscan2pdf:579 bin/gscan2pdf:585 bin/gscan2pdf:591
 msgid "Yes"
@@ -303,31 +307,32 @@ msgstr "Adaptador de transparencias"
 
 #: bin/gscan2pdf:605
 msgid "Transparency Unit"
-msgstr ""
+msgstr "Unidad de Transparencias"
 
 #: bin/gscan2pdf:671
 msgid "The scanadf frontend is not available\n"
-msgstr ""
+msgstr "La mascara scanafd no esta accesible\n"
 
 #: bin/gscan2pdf:678
 msgid "Email as PDF requires xdg-email\n"
-msgstr ""
+msgstr "Email como PDF necesita xdg-email\n"
 
 #: bin/gscan2pdf:695
 msgid "The rotating options and the scanadf frontend require imagemagick\n"
 msgstr ""
+"Las opciones de rotacion y la mascara scanadf necesitan imagemagick\n"
 
 #: bin/gscan2pdf:701
 msgid "OCR requires gocr\n"
-msgstr ""
+msgstr "Se precisa gocr para OCR\n"
 
 #: bin/gscan2pdf:707
 msgid "Warning: missing packages"
-msgstr ""
+msgstr "Aviso: paquetes perdidos"
 
 #: bin/gscan2pdf:713
 msgid "Don't show this message again"
-msgstr ""
+msgstr "No mostrar el mensaje otra vez"
 
 #: bin/gscan2pdf:824
 msgid "Warning: "
@@ -336,7 +341,7 @@ msgstr "Advertencia : "
 #: bin/gscan2pdf:830
 #, perl-format
 msgid "Information: got %s on second attempt\n"
-msgstr ""
+msgstr "Información:Conseguido %s al 2ª intento\n"
 
 #: bin/gscan2pdf:869
 msgid ""
@@ -352,11 +357,11 @@ msgstr "Importar desde un fichero"
 
 #: bin/gscan2pdf:917
 msgid "Not a TIFF file"
-msgstr ""
+msgstr "No es un fichero TIFF"
 
 #: bin/gscan2pdf:922
 msgid "Importing"
-msgstr ""
+msgstr "Importando"
 
 #: bin/gscan2pdf:991
 msgid "Page range"
@@ -436,6 +441,8 @@ msgid ""
 "File %s exists.\n"
 "Really overwrite?"
 msgstr ""
+"El fichero %s existe\n"
+"¿Sobreescribirlo?"
 
 #: bin/gscan2pdf:1379
 msgid "TIFF filename"
@@ -443,7 +450,7 @@ msgstr "Nombre del fichero TIFF"
 
 #: bin/gscan2pdf:1429
 msgid "Email as PDF"
-msgstr ""
+msgstr "Email como PDF"
 
 #: bin/gscan2pdf:1497
 msgid "not found"
@@ -527,13 +534,15 @@ msgstr "Escanear"
 
 #: bin/gscan2pdf:1772
 msgid "Must scan facing pages first"
-msgstr ""
+msgstr "Escanear las paginas primero"
 
 #: bin/gscan2pdf:1799
 msgid ""
 "Cannot scan more reverse pages\n"
 "than facing pages"
 msgstr ""
+"No se pude escanear mas\n"
+"paginas traseras que frontales"
 
 #: bin/gscan2pdf:1877 bin/gscan2pdf:1880 bin/gscan2pdf:1898 bin/gscan2pdf:2006
 #: bin/gscan2pdf:2009
@@ -554,7 +563,7 @@ msgstr "No es posible cargar la imagen"
 
 #: bin/gscan2pdf:1921 bin/gscan2pdf:2030
 msgid "Scanner warming up"
-msgstr ""
+msgstr "Calentando el Escaner"
 
 #: bin/gscan2pdf:1934 bin/gscan2pdf:2054
 msgid "Unknown message: "
@@ -562,7 +571,7 @@ msgstr "Mensaje desconocido : "
 
 #: bin/gscan2pdf:2027
 msgid "Scanned page"
-msgstr ""
+msgstr "Pagina Escaneada"
 
 #: bin/gscan2pdf:2185
 msgid "To aid the scan-to-PDF process"
@@ -582,7 +591,7 @@ msgstr "Tamaño del papel"
 
 #: bin/gscan2pdf:2265
 msgid "Width of scan-area"
-msgstr ""
+msgstr "Ancho del area de escaneo"
 
 #: bin/gscan2pdf:2266
 msgid "Height of scan-area"
@@ -602,32 +611,32 @@ msgstr "Carta"
 
 #: bin/gscan2pdf:2559
 msgid "OCR"
-msgstr ""
+msgstr "OCR"
 
 #: bin/gscan2pdf:2567
 msgid "Start OCR"
-msgstr ""
+msgstr "Iniciar OCR"
 
 #: bin/gscan2pdf:2578
 msgid "No page selected"
-msgstr ""
+msgstr "No hay pagina seleccionada"
 
 #: bin/gscan2pdf:2593 bin/gscan2pdf:2596
 msgid "Running OCR"
-msgstr ""
+msgstr "Ejecutando OCR"
 
 #: bin/gscan2pdf:2624
 msgid "Clear"
-msgstr ""
+msgstr "Limpiar"
 
 #: bin/gscan2pdf:2649
 msgid "Save OCR output"
-msgstr ""
+msgstr "Guardar la salida OCR"
 
 #: bin/gscan2pdf:2709
 #, perl-format
 msgid "Can't open config file: %s"
-msgstr ""
+msgstr "No se abre el fichero de configuración: %s"
 
 #: bin/gscan2pdf:2726
 #, perl-format
@@ -636,6 +645,9 @@ msgid ""
 "Alternatively, try: %s %s\n"
 "\n"
 msgstr ""
+"El visor de ayuda necesita el modulo Gtk2::Ex::PodViewer\n"
+"Prueba con: %s%s\n"
+"\n"
 
 #: bin/gscan2pdf:2769
 msgid "Go to"
