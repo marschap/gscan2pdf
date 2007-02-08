@@ -21,7 +21,6 @@
 #    Translate documentation
 #    Sort out sourceforge backups
 #    Right click save to PDF or TIFF should default to page range "selected"
-#    After deleting a page, should display next in thumbnail list
 #    Work out a good place to log error messages
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
 #    Changing the number of pages to scan should activate #.
@@ -187,7 +186,9 @@ else {
 }
 init_icons( [ 'rotate90',  "$path/rotate90.png" ], 
             [ 'rotate180', "$path/rotate180.png" ], 
-            [ 'rotate270', "$path/rotate270.png" ], );
+            [ 'rotate270', "$path/rotate270.png" ],
+            [ 'scanner',   "$path/scanner.png" ],
+            [ 'pdf',       "$path/pdf.png" ], );
 
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
@@ -203,13 +204,13 @@ my @action_items = (
  [ 'File', undef, $d->get('_File') ],
  [ 'New', 'gtk-new', $d->get('_New'), '<control>n', $d->get('Clears all pages'), \&new ],
  [ 'Import TIFF', 'gtk-open', $d->get('_Import TIFF'), '<control>i', $d->get('Import TIFF file'), \&import ],
- [ 'Scan', 'gtk-print-preview', $d->get('S_can'), undef, $d->get('Scan document'), sub { if (defined($windows)) {
+ [ 'Scan', 'scanner', $d->get('S_can'), undef, $d->get('Scan document'), sub { if (defined($windows)) {
                                            $windows -> present;
                                           }
                                           else {
                                            scan_dialog();
                                           } } ],
- [ 'Save PDF', 'gtk-save-as', $d->get('_Save PDF'), '<shift><control>s', $d->get('Save as PDF'), sub { if (defined($windowp)) {
+ [ 'Save PDF', 'pdf', $d->get('_Save PDF'), '<shift><control>s', $d->get('Save as PDF'), sub { if (defined($windowp)) {
                                            $windowp -> present;
                                           }
                                           else {
@@ -3495,7 +3496,7 @@ sub register_icon {
 
 __END__
 
-=head1 NAME
+=head1 Name
 
 gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan. gscan2pdf should work on almost any Linux/BSD machine.
 
