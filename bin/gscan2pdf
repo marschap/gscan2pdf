@@ -31,6 +31,7 @@
 #     or change the button.
 #    check out scanbuttond
 #    don't display dialogs for "rounded" messages
+#    seperate the compression setting from the scan dialog to that from the save as pdf dialog
 #    sort out the fact that Gtk2::Ex::Simple::List isn't in dapper
 #    add home, end page up and down
 #    sort out "dpkg-source: warning: source directory `./gscan2pdf' is not <sourcepackage>-<upstreamversion> `gscan2pdf-0.9.0'" error
@@ -2507,21 +2508,19 @@ sub update_options {
    my ($fileno, $condition) = @_;
    if ($condition & 'in') { # bit field operation. >= would also work
     my $line;
-    sysread $read, $line, 1024;
-    $output .= $line;
+    $output .= $line while (sysread $read, $line, 1024);
    }
    if ($condition & 'hup') { # bit field operation. >= would also work
     close $read;
     $running = FALSE;
     $pbar -> destroy;
     $vboxd -> hide_all;
+    warn $output if $debug;
     parse_options($vboxd, $device, $output);
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
   });
-
-  warn $output if $debug;
  }
  else {
   my $i = 0;
@@ -3100,7 +3099,7 @@ sub unpaper {
     my ($fileno, $condition) = @_;
     if ($condition & 'in') { # bit field operation. >= would also work
      my $line;
-     sysread $read, $line, 1024;
+     while (sysread $read, $line, 1024) {}
     }
     if ($condition & 'hup') { # bit field operation. >= would also work
      close $read;
@@ -3196,8 +3195,8 @@ sub OCR {
    my ($fileno, $condition) = @_;
    if ($condition & 'in') { # bit field operation. >= would also work
     my $line;
-    sysread $read, $line, 1024;
-    $buffer->insert($buffer->get_end_iter, $line);
+    $buffer->insert($buffer->get_end_iter, $line)
+     while (sysread $read, $line, 1024);
    }
    if ($condition & 'hup') { # bit field operation. >= would also work
     close $read;
