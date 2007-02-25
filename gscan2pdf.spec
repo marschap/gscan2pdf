@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.3
+Version: 0.9.4
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -53,12 +53,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Thu Feb 08 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sun Feb 25 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
  unstable; urgency=low
-  - Switched the deprecated Gtk2::SimpleList to Gtk2::Ex::Simple::List.
-  - Fixed bug where thumbnail lost after undo/redo
-  - Deleting pages now selects nearest page
-  - unpaper --border-align and --border-margin support
-  - compression options for save TIFF
-  - unpaper ghosted if imagemagick not present
-  - updated scan and PDF icons (thanks to lodp)
+  - Using the top right hand close button to quit now saves the settings properly.
+  - enable PDF options toggle
+  - compression scan option
+  - fixed bug 1656900 where hup condition not recognised under FreeBSD.
+  - update to Czech translation (thanks to Petr Jelínek)
+  - update to German translation (thanks to Florian)
+  - update to Russian translation (thanks to Alexandre Prokoudine)
