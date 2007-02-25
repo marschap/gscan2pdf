@@ -30,6 +30,8 @@
 #    Either get cancel button during scan to actually cancel the scan,
 #     or change the button.
 #    check out scanbuttond
+#    don't display dialogs for "rounded" messages
+#    sort out the fact that Gtk2::Ex::Simple::List isn't in dapper
 #    add home, end page up and down
 #    sort out "dpkg-source: warning: source directory `./gscan2pdf' is not <sourcepackage>-<upstreamversion> `gscan2pdf-0.9.0'" error
 #    fix bug importing changelog to .spec
@@ -76,7 +78,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.3";
+my $version = "0.9.4";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -204,42 +206,17 @@ my @action_items = (
  [ 'File', undef, $d->get('_File') ],
  [ 'New', 'gtk-new', $d->get('_New'), '<control>n', $d->get('Clears all pages'), \&new ],
  [ 'Import TIFF', 'gtk-open', $d->get('_Import TIFF'), '<control>i', $d->get('Import TIFF file'), \&import ],
- [ 'Scan', 'scanner', $d->get('S_can'), undef, $d->get('Scan document'), sub { if (defined($windows)) {
-                                           $windows -> present;
-                                          }
-                                          else {
-                                           scan_dialog();
-                                          } } ],
- [ 'Save PDF', 'pdf', $d->get('_Save PDF'), '<shift><control>s', $d->get('Save as PDF'), sub { if (defined($windowp)) {
-                                           $windowp -> present;
-                                          }
-                                          else {
-                                           save_PDF();
-                                          } } ],
- [ 'Save TIFF', 'gtk-save', $d->get('Save _TIFF'), '<control>s', $d->get('Save as TIFF'), sub { if (defined($windowt)) {
-                                           $windowt -> present;
-                                          }
-                                          else {
-                                           save_TIFF();
-                                          } } ],
- [ 'Save DjVu', undef, $d->get('Save _DjVu'), undef, $d->get('Save as DjVu'), sub { if (defined($windowv)) {
-                                           $windowv -> present;
-                                          }
-                                          else {
-                                           save_djvu();
-                                          } } ],
- [ 'Email as PDF', 'gtk-edit', $d->get('_Email as PDF'), '<control>e', $d->get('Attach as PDF to a new email'), sub { if (defined($windowe)) {
-                                           $windowe -> present;
-                                          }
-                                          else {
-                                           email();
-                                          } } ],
+ [ 'Scan', 'scanner', $d->get('S_can'), undef, $d->get('Scan document'), \&scan_dialog ],
+ [ 'Save PDF', 'pdf', $d->get('_Save PDF'), '<shift><control>s', $d->get('Save as PDF'), \&save_PDF_dialog ],
+ [ 'Save TIFF', 'gtk-save', $d->get('Save _TIFF'), '<control>s', $d->get('Save as TIFF'), \&save_TIFF ],
+ [ 'Save DjVu', undef, $d->get('Save _DjVu'), undef, $d->get('Save as DjVu'), \&save_djvu ],
+ [ 'Email as PDF', 'gtk-edit', $d->get('_Email as PDF'), '<control>e', $d->get('Attach as PDF to a new email'), \&email ],
  [ 'Quit', 'gtk-quit', $d->get('_Quit'), '<control>q', $d->get('Quit'), sub { quit(); Gtk2 -> main_quit; } ],
  
  # Edit menu
+ [ 'Edit', undef, $d->get('_Edit') ],
  [ 'Undo', 'gtk-undo', $d->get('_Undo'), '<control>z', $d->get('Undo'), \&undo ],
  [ 'Redo', 'gtk-redo', $d->get('_Redo'), '<shift><control>z', $d->get('Redo'), \&unundo ],
- [ 'Edit', undef, $d->get('_Edit') ],
  [ 'Delete', 'gtk-delete', $d->get('_Delete'), 'Delete', $d->get('Delete selected pages'), \&delete_pages ],
  [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages from 1 to n'), sub { renumber($slist, 0, 1, 1); } ],
  [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
@@ -257,32 +234,16 @@ my @action_items = (
  
  # Tools menu
  [ 'Tools', undef, $d->get('_Tools') ],
- [ 'unpaper', undef, $d->get('_unpaper'), undef, $d->get('Clean up current page with unpaper'), sub { if (defined($windowu)) {
-                                           $windowu -> present;
-                                          }
-                                          else {
-                                           unpaper();
-                                          } } ],
- [ 'OCR', undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition of current page'), sub { if (defined($windowo)) {
-                                           $windowo -> present;
-                                          }
-                                          else {
-                                           OCR();
-                                          } } ],
+ [ 'unpaper', undef, $d->get('_unpaper'), undef, $d->get('Clean up current page with unpaper'), \&unpaper ],
+ [ 'OCR', undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition of current page'), \&OCR ],
 
  # Help menu
  [ 'Help menu', undef, $d->get('_Help') ],
- [ 'Help', 'gtk-help', $d->get('_Help'), '<control>h', $d->get('Help'), sub { if (defined($windowh)) {
-                                           $windowh -> present;
-                                          }
-                                          else {
-                                           view_pod();
-                                          } } ],
+ [ 'Help', 'gtk-help', $d->get('_Help'), '<control>h', $d->get('Help'), \&view_pod ],
  [ 'About', undef, $d->get('_About'), undef, $d->get('_About'), \&about ],
 );
 
 my @frontends = (
-
   #Fields for each radio-action item:
   #[name, stock_id, value, label, accelerator, tooltip, value]
 
@@ -317,6 +278,8 @@ my $ui = "<ui>
     <menuitem action='scanimage'/>
     <menuitem action='scanadf'/>
    </menu>
+   <separator/>
+   <menuitem action='Options'/>
   </menu>
   <menu action='View'> 
    <menuitem action='Zoom 100'/>
@@ -396,7 +359,7 @@ my $ui = "<ui>
 # Create the window
 my $window = Gtk2::Window -> new;
 $window -> set_title ( "$program v$version" );
-$window -> signal_connect ( destroy => sub { quit(); Gtk2 -> main_quit; } );
+$window -> signal_connect ( 'delete-event' => sub { quit(); Gtk2 -> main_quit; } );
 
 # Note when the window is maximised or not.
 $window -> signal_connect(window_state_event => sub {
@@ -469,7 +432,7 @@ $slist -> signal_connect('drag_drop' => sub {
 # Block row-changed signal so that the list can be renumbered before the sort
 # takes over.
  $slist -> get_model -> signal_handler_block($slist -> {signalid});
- return 0;
+ return FALSE;
 });
 
 # Now that drag_drop has returned,
@@ -477,7 +440,7 @@ $slist -> signal_connect('drag_drop' => sub {
 $slist->signal_connect (drag_end => sub {
  renumber($slist, 0);
  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
- return 0;
+ return FALSE;
 });
 
 # If dragged below the bottom of the window, scroll it.
@@ -502,7 +465,7 @@ $slist->signal_connect('drag-motion' => sub {
    $adj->set_value($v < $m ? $m : $v);
  }
 
- return 0;
+ return FALSE;
 });
 
 # Set up callback for right mouse clicks.
@@ -596,6 +559,12 @@ my %pddo = (
                                    '24bit Color'   => $d->get('24bit Color'),
                                    }
                        },
+            'compression'     => { string => $d->get('Compression'),
+                                   values => {
+                                             'None' => $d->get('None'),
+                                             'JPEG' => $d->get('JPEG'),
+                                             },
+                                 },
             'resolution'      => { string => $d->get('Resolution') },
             'batch-scan'      => { string => $d->get('Batch scan'),
                                    values => {
@@ -657,15 +626,23 @@ sub create_menu_bar {
 # Add the actiongroup to the uimanager  
  $uimanager->insert_action_group($actions_basic, 0);
 
- my $accel_group = new Gtk2::AccelGroup;
-
-# Create the CD Gtk2::ActionGroup instance
+# Create the frontend Gtk2::ActionGroup instance
 # and fill it with Gtk2::RadioAction instances
  my $actions_frontends = Gtk2::ActionGroup->new ("frontends");
  $actions_frontends->add_radio_actions(\@frontends, 0, \&change_frontend);
 
 # Add the actiongroup to the uimanager          
  $uimanager->insert_action_group($actions_frontends, 0);
+
+# Create the options Gtk2::ActionGroup instance
+# and fill it with Gtk2::ToggleAction instances
+ my $actions_options = Gtk2::ActionGroup->new ("options");
+ $actions_options->add_toggle_actions ( [
+  [ 'Options', 'gtk-preferences', $d->get('Enable _Options'), undef, $d->get('View options before saving'), undef, TRUE ],
+ ] );
+
+# Add the actiongroup to the uimanager          
+ $uimanager->insert_action_group($actions_options, 0);
 
 # add the basic XML description of the GUI
  $uimanager->add_ui_from_string ($ui);
@@ -700,6 +677,10 @@ sub create_menu_bar {
  if ($scanadf != 0) {
   $msg .= $d->get("The scanadf frontend is not available\n");
  }
+
+# Disable options if necessary
+ $uimanager->get_widget('/MenuBar/Edit/Options') -> set_active(FALSE)
+  if (defined($SETTING{'enable options'}) and ! $SETTING{'enable options'});
 
 # Ghost djvu item if cjb2 not available
  if ($djvu != 0) {
@@ -875,7 +856,7 @@ sub get_pixbuf {
   warn $d->get('Warning: ')."$@\n";
   eval { $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename); };
   if ($@) {
-   return 0;
+   return FALSE;
   }
   else {
    warn sprintf($d->get("Information: got %s on second attempt\n"), $filename);
@@ -1049,23 +1030,32 @@ sub add_page_range {
 #which is undef for the first button
 # All button
  my $buttona = Gtk2::RadioButton -> new(undef, $d->get('All'));
+ $buttona -> signal_connect ('toggled' => sub {
+  $SETTING{'Page range'} = 'all' if ($buttona -> get_active);
+ });
  $vboxp -> pack_start($buttona, TRUE, TRUE, 0);
  my @group = $buttona -> get_group;
 
 # Current button
  my $buttonc = Gtk2::RadioButton -> new(@group, $d->get('Current'));
+ $buttonc -> signal_connect ('toggled' => sub {
+  $SETTING{'Page range'} = 'current' if ($buttonc -> get_active);
+ });
  $vboxp -> pack_start($buttonc, TRUE, TRUE, 0);
 
 # Selected button
  my $buttons = Gtk2::RadioButton -> new(@group, $d->get('Selected'));
+ $buttons -> signal_connect ('toggled' => sub {
+  $SETTING{'Page range'} = 'selected' if ($buttons -> get_active);
+ });
  $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
 
 # Set default
- if (defined($SETTING{"Page range"})) {
-  if ($SETTING{"Page range"} eq "current") {
+ if (defined($SETTING{'Page range'})) {
+  if ($SETTING{'Page range'} eq 'current') {
    $buttonc -> set_active(TRUE);
   }
-  elsif ($SETTING{"Page range"} eq "selected") {
+  elsif ($SETTING{'Page range'} eq 'selected') {
    $buttons -> set_active(TRUE);
   }
   else {
@@ -1083,12 +1073,9 @@ sub add_page_range {
 # return string of filenames depending on which radiobutton is active
 
 sub get_pagelist {
- my ($buttona, $buttonc, $buttons) = @_;
-
  my $n;
  my $pagelist;
- if ($buttona -> get_active) {
-  $SETTING{"Page range"} = "all";
+ if ($SETTING{'Page range'} eq 'all') {
   $n = $#{$slist -> {data}};
   $pagelist = $slist -> {data}[0][2];
   my $i = 1;
@@ -1097,14 +1084,12 @@ sub get_pagelist {
    ++$i;
   }
  }
- elsif ($buttonc -> get_active) {
-  $SETTING{"Page range"} = "current";
+ elsif ($SETTING{'Page range'} eq 'current') {
   $n = 1;
   my @page = $slist -> get_selected_indices;
   $pagelist = $slist -> {data}[$page[0]][2];
  }
- elsif ($buttons -> get_active) {
-  $SETTING{"Page range"} = "selected";
+ elsif ($SETTING{'Page range'} eq 'selected') {
   my @page = $slist -> get_selected_indices;
   $n = $#page;
   $pagelist = $slist -> {data}[$page[0]][2];
@@ -1122,23 +1107,18 @@ sub get_pagelist {
 # return array index of filenames depending on which radiobutton is active
 
 sub get_page_index {
- my ($buttona, $buttonc, $buttons) = @_;
-
  my @page;
- if ($buttona -> get_active) {
-  $SETTING{"Page range"} = "all";
+ if ($SETTING{'Page range'} eq 'all') {
   my $i = 0;
   while ($i <= $#{$slist -> {data}}) {
    push @page, $i;
    ++$i;
   }
  }
- elsif ($buttonc -> get_active) {
-  $SETTING{"Page range"} = "current";
+ elsif ($SETTING{'Page range'} eq 'current') {
   push @page, ($slist -> get_selected_indices)[0];
  }
- elsif ($buttons -> get_active) {
-  $SETTING{"Page range"} = "selected";
+ elsif ($SETTING{'Page range'} eq 'selected') {
   @page = $slist -> get_selected_indices;
  }
  
@@ -1290,7 +1270,7 @@ sub add_PDF_options {
 }
 
 
-sub get_PDF_options {
+sub update_PDF_settings {
  my ($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc, @compression) = @_;
 
 # Get metadata
@@ -1299,25 +1279,29 @@ sub get_PDF_options {
  $SETTING{"subject"} = $entrys -> get_text;
  $SETTING{"keywords"} = $entryk -> get_text;
 
-# Get compression
+# Set compression
  $SETTING{'compression'} = $compression[$optc -> get_history];
+ $SETTING{'quality'} = $spinbuttonq -> get_value
+  if ($SETTING{'compression'} eq 'JPEG');
+}
+
+
+sub get_PDF_options {
  my $compression = '';
  if ($SETTING{'compression'} eq 'JPEG') {
-  $SETTING{'quality'} = $spinbuttonq -> get_value;
   $compression = "-j -q $SETTING{'quality'}";
  }
  elsif ($SETTING{'compression'} eq 'Zip') {
   $compression = "-z";
  }
 
-# Set options
- return " $compression"
-             . sprintf (" -e %4i%02i%02i", $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'})
-             . " -c \"$program v$version\""
-             . " -a \"$SETTING{'author'}\""
-             . " -t \"$SETTING{'title'}\""
-             . " -s \"$SETTING{'subject'}\""
-             . " -k \"$SETTING{'keywords'}\"";
+ return $compression
+         . sprintf (" -e %4i%02i%02i", $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'})
+         . " -c \"$program v$version\""
+         . " -a \"$SETTING{'author'}\""
+         . " -t \"$SETTING{'title'}\""
+         . " -s \"$SETTING{'subject'}\""
+         . " -k \"$SETTING{'keywords'}\"";
 }
 
 
@@ -1325,92 +1309,111 @@ sub get_PDF_options {
 
 sub save_PDF {
 
-# PDF pop-up window
- ($windowp, my $vbox) = create_window($window, $d->get('Save as PDF'), FALSE);
-
-# PDF options
- my ($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc,
-      $hboxq, @compression) = add_PDF_options ($vbox);
-
-# Frame for page range
- my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
-
-# HBox for buttons
- my $hboxb = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
-
-# Save button
- my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
- $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
- $sbutton -> signal_connect (clicked => sub {
-
 # cd back to cwd to save
-  chdir $SETTING{"cwd"};
+ chdir $SETTING{"cwd"};
 
 # Set up file selector
-  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('PDF filename'),
-                                                     $windowp, 'save',
-                                                     'gtk-cancel' => 'cancel',
-                                                     'gtk-save' => 'ok');
-  $file_chooser -> set_default_response('ok');
+ my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('PDF filename'),
+                                                    $windowp, 'save',
+                                                    'gtk-cancel' => 'cancel',
+                                                    'gtk-save' => 'ok');
+ $file_chooser -> set_default_response('ok');
 
-  if ('ok' eq $file_chooser->run) {
-   my $filename = $file_chooser -> get_filename;
-   $filename = $filename.".pdf" if ($filename !~ /.pdf$/i);
-   if (-e $filename) {
-    my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
-     'destroy-with-parent',
-     'question', # message type
-     'ok-cancel', # which set of buttons?
-     sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
-    my $response = $dialog -> run;
-    $dialog -> destroy;
-    if ($response ne 'ok') {
-     $file_chooser -> destroy;
-     return 1;
-    }
+ if ('ok' eq $file_chooser->run) {
+  my $filename = $file_chooser -> get_filename;
+  $filename = $filename.".pdf" if ($filename !~ /.pdf$/i);
+  if (-e $filename) {
+   my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
+    'destroy-with-parent',
+    'question', # message type
+    'ok-cancel', # which set of buttons?
+    sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
+   my $response = $dialog -> run;
+   $dialog -> destroy;
+   if ($response ne 'ok') {
+    $file_chooser -> destroy;
+    return TRUE;
    }
-
-# Update cwd
-   $SETTING{"cwd"} = dirname($filename);
-
-# fill $pagelist with filenames depending on which radiobutton is active
-   my ($pagelist, $n) = get_pagelist($buttona, $buttonc, $buttons);
-
-# Set options
-   my $options = get_PDF_options ($entrya, $entryt, $entrys, $entryk,
-                                   $spinbuttonq, $optc, @compression);
-
-# Temporary filename for tiff
-   my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
-
-# call tiff2pdf and/or tiffcp according to the number of pages
-   if ($n > 0) {
-    system ("tiffcp $pagelist $tif");
-    system ("tiff2pdf -o \"$filename\" $options $tif");
-    unlink ($tif); # delete the temporary tiff
-   }
-   else {
-    system ("tiff2pdf -o \"$filename\" $options $pagelist");
-   }
-  
-   $windowp -> hide;
   }
 
-  $file_chooser -> destroy;
+# Update cwd
+  $SETTING{"cwd"} = dirname($filename);
+
+# fill $pagelist with filenames depending on which radiobutton is active
+  my ($pagelist, $n) = get_pagelist();
+
+# Set options
+  my $options = get_PDF_options();
+
+# Temporary filename for tiff
+  my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+
+# call tiff2pdf and/or tiffcp according to the number of pages
+  if ($n > 0) {
+   system ("tiffcp $pagelist $tif");
+   system ("tiff2pdf -o \"$filename\" $options $tif");
+   unlink ($tif); # delete the temporary tiff
+  }
+  else {
+   system ("tiff2pdf -o \"$filename\" $options $pagelist");
+  }
+  
+  $windowp -> hide if defined $windowp;
+ }
+
+ $file_chooser -> destroy;
 
 # cd back to tempdir
-  chdir $dir;
- } );
+ chdir $dir;
+}
+
+
+sub save_PDF_dialog {
+
+# $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
+#warn "rmb pdf $SETTING{'RMB'} $SETTING{'Page range'}\n";
+
+ if ($uimanager->get_widget('/MenuBar/Edit/Options') -> get_active) {
+
+  if (defined $windowp) {
+   $windowp -> present;
+   return;
+  }
+
+# PDF pop-up window
+  ($windowp, my $vbox) = create_window($window, $d->get('Save as PDF'), FALSE);
+
+# PDF options
+  my ($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc,
+       $hboxq, @compression) = add_PDF_options ($vbox);
+
+# Frame for page range
+  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+
+# HBox for buttons
+  my $hboxb = Gtk2::HBox -> new;
+  $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+
+# Save button
+  my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
+  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
+  $sbutton -> signal_connect (clicked => sub {
+   update_PDF_settings($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc, @compression);
+   save_PDF();
+  } );
 
 # Cancel button
- my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
- $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton -> signal_connect( clicked => sub { $windowp -> hide; } );
+  my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+  $cbutton -> signal_connect( clicked => sub { $windowp -> hide; } );
 
- $windowp -> show_all;
- $hboxq -> hide_all
-  if (! defined($SETTING{'compression'}) or $SETTING{'compression'} ne 'JPEG');
+  $windowp -> show_all;
+  $hboxq -> hide_all
+   if (! defined($SETTING{'compression'}) or $SETTING{'compression'} ne 'JPEG');
+ }
+ else {
+  save_PDF();
+ }
 }
 
 
@@ -1418,6 +1421,12 @@ sub save_PDF {
 
 sub save_TIFF {
 
+ if (defined $windowt) {
+  $windowt -> present;
+  return;
+ }
+
+# $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
  ($windowt, my $vbox) = create_window($window, $d->get('Save as TIFF'), FALSE);
 
 # Frame for page range
@@ -1507,7 +1516,7 @@ sub save_TIFF {
      sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
     my $response = $dialog -> run;
     $dialog -> destroy;
-    return 1 if ($response ne 'ok');
+    return TRUE if ($response ne 'ok');
    }
 
 # Update cwd
@@ -1517,7 +1526,7 @@ sub save_TIFF {
    chdir $dir;
 
 # fill $pagelist with filenames depending on which radiobutton is active
-   my ($pagelist, $n) = get_pagelist($buttona, $buttonc, $buttons);
+   my ($pagelist, $n) = get_pagelist();
 
 # dig out the compression
    $SETTING{'compression'} = $compression[$optc -> get_history][0];
@@ -1547,6 +1556,12 @@ sub save_TIFF {
 
 sub save_djvu {
 
+ if (defined $windowv) {
+  $windowv -> present;
+  return;
+ }
+
+# $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
  ($windowv, my $vbox) = create_window($window, $d->get('Save as DjVu'), FALSE);
 
 # Compression optionmenu
@@ -1595,7 +1610,7 @@ sub save_djvu {
      sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
     my $response = $dialog -> run;
     $dialog -> destroy;
-    return 1 if ($response ne 'ok');
+    return TRUE if ($response ne 'ok');
    }
 
 # Update cwd
@@ -1605,7 +1620,7 @@ sub save_djvu {
    chdir $dir;
 
 # fill $pagelist with filenames depending on which radiobutton is active
-   my ($pagelist, $n) = get_pagelist($buttona, $buttonc, $buttons);
+   my ($pagelist, $n) = get_pagelist();
    
    if ($n > 1) {
     my @pagelist = split / /, $pagelist;
@@ -1644,6 +1659,12 @@ sub save_djvu {
 
 sub email {
 
+ if (defined $windowe) {
+  $windowe -> present;
+  return;
+ }
+
+# $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
  ($windowe, my $vbox) = create_window($window, $d->get('Email as PDF'), FALSE);
 
 # PDF options
@@ -1663,11 +1684,11 @@ sub email {
  $sbutton -> signal_connect (clicked => sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
-  my ($pagelist, $n) = get_pagelist($buttona, $buttonc, $buttons);
+  my ($pagelist, $n) = get_pagelist();
 
 # Set options
-  my $options = get_PDF_options ($entrya, $entryt, $entrys, $entryk,
-                                  $spinbuttonq, $optc, @compression);
+  update_PDF_settings($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc, @compression);
+  my $options = get_PDF_options();
 
 # Create the tiff
   my (undef, $pdf) = tempfile(DIR => $dir, SUFFIX => '.pdf');
@@ -1703,6 +1724,11 @@ sub email {
 
 sub scan_dialog {
 
+ if (defined $windows) {
+  $windows -> present;
+  return;
+ }
+
  my $output;
  if (! @test) {
   $output = `scanimage --formatted-device-list="'%i','%d','%v %m'
@@ -1715,7 +1741,7 @@ sub scan_dialog {
                                            'scanimage '.$d->get('not found'));
    $dialog -> run;
    $dialog -> destroy;
-   return 0;
+   return FALSE;
   }
   else {
    if ($output eq "") {
@@ -1726,7 +1752,7 @@ sub scan_dialog {
                                             $d->get('No scanners found'));
     $dialog -> run;
     $dialog -> destroy;
-    return 0;
+    return FALSE;
    }
   }
  }
@@ -1848,7 +1874,7 @@ sub scan_dialog {
 
 # Set default
  if (defined($SETTING{"pages to scan"})) {
-  if ($SETTING{"pages to scan"} eq "all") {
+  if ($SETTING{"pages to scan"} eq 'all') {
    $buttona -> set_active(TRUE);
   }
   else {
@@ -1965,7 +1991,7 @@ sub scan_dialog {
    $npages = $SETTING{'pages to scan'};
   }
   else {
-   $SETTING{"pages to scan"} = "all";
+   $SETTING{"pages to scan"} = 'all';
    $npages = 0;
   }
 
@@ -1993,7 +2019,7 @@ sub scan_dialog {
       $d->get('Must scan facing pages first'));
      $dialog -> run;
      $dialog -> destroy;
-     return 1;
+     return TRUE;
     }
 
     $step = -2;
@@ -2020,7 +2046,7 @@ sub scan_dialog {
        $d->get("Cannot scan more reverse pages\nthan facing pages"));
       $dialog -> run;
       $dialog -> destroy;
-      return 1;
+      return TRUE;
      }
     }
 
@@ -2126,12 +2152,12 @@ sub scanimage {
                         'error', 'close', $d->get('Unable to load image'));
       $dialog -> run;
       $dialog -> destroy;
-      return 0;
+      return FALSE;
      }
     }
     elsif ($line =~ /^End Scan/) {
      $dialog -> destroy;
-     return 0; # Sascha Hunold [hunoldinho at users dot sourceforge dot net]
+     return FALSE; # Sascha Hunold [hunoldinho at users dot sourceforge dot net]
     }
     elsif ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
      $label -> set_text($d->get('Scanner warming up'));
@@ -2160,7 +2186,7 @@ warn "$text\n";
     }
     $line = substr($line, index($line, "\n")+1, length($line));
    }
-   return 1;
+   return TRUE;
   });
  }
  else {
@@ -2255,12 +2281,12 @@ END
                         'error', 'close', $d->get('Unable to load image'));
       $dialog -> run;
       $dialog -> destroy;
-      return 0;
+      return FALSE;
      }
     }
     elsif ($line =~ /^End Scan/) {
      $dialog -> destroy;
-     return 0; # Sascha Hunold [hunoldinho at users dot sourceforge dot net]
+     return FALSE; # Sascha Hunold [hunoldinho at users dot sourceforge dot net]
     }
     elsif ($line =~ /^Scanned \d* pages/) {
      ;
@@ -2280,7 +2306,7 @@ warn "$text\n";
     }
     $line = substr($line, index($line, "\n")+1, length($line));
    }
-   return 1;
+   return TRUE;
   });
  }
  else {
@@ -2343,7 +2369,7 @@ sub import_scan {
                     and $slist -> {data}[$page[0]][0] != $i);
 
  $slist -> select(@page);
- return 1;
+ return TRUE;
 }
 
 
@@ -2427,7 +2453,7 @@ sub check_utils {
  return $? if $? != 0;
  system("which tiff2pdf >/dev/null 2>/dev/null");
  return $? if $? != 0;
- return 0;
+ return FALSE;
 }
 
 
@@ -2479,7 +2505,12 @@ sub update_options {
 # Read without blocking
   Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
-   if ($condition eq 'hup') {
+   if ($condition & 'in') { # bit field operation. >= would also work
+    my $line;
+    sysread $read, $line, 1024;
+    $output .= $line;
+   }
+   if ($condition & 'hup') { # bit field operation. >= would also work
     close $read;
     $running = FALSE;
     $pbar -> destroy;
@@ -2487,9 +2518,6 @@ sub update_options {
     parse_options($vboxd, $device, $output);
     return FALSE;  # uninstall
    }
-   my $line;
-   sysread $read, $line, 1024;
-   $output .= $line;
    return TRUE;  # continue without uninstalling
   });
 
@@ -2651,20 +2679,14 @@ sub parse_options {
 # wait-for-button is Epson
 # button-wait is HP
 # source is various
-  if ($option =~ /(^mode$|^resolution$|^batch-scan$|^wait-for-button$|^button-wait$|^source$)/
-      and $default !~ /inactive/
+  if (defined($pddo{$option}) and $default !~ /inactive/
 
 # This needed for psc1315, that only has one option for source.
       and ($values =~ /(\d*\.?\d*)\.\.(\d*\.?\d*)/
        or $values =~ /\|/)) {
 
-# Dig out of possible options, if defined
-   if (defined($pddo{$option})) {
-    $ddo{$option}{string} = $pddo{$option}{string};
-   }
-   else {
-    $ddo{$option}{string} = $option;
-   }
+# Dig out of possible options
+   $ddo{$option}{string} = $pddo{$option}{string};
 
 # Set default from config
    $default = $SETTING{$option} if (defined($SETTING{$option}));
@@ -2815,6 +2837,9 @@ sub rotate {
 sub handle_clicks {
  my ($widget, $event) = @_;
 
+# $SETTING{'RMB'} = ($event->button == 3);
+#warn "rmb $SETTING{'RMB'}\n";
+
 # let the event chain proceed if not right mouse button
  return FALSE if $event->button != 3;
 
@@ -2833,13 +2858,18 @@ sub handle_clicks {
                     $event->time);
 
  # block event propagation
- return 1;
+ return TRUE;
 }
 
 
 # Run unpaper to clean up scan.
 
 sub unpaper {
+
+ if (defined $windowu) {
+  $windowu -> present;
+  return;
+ }
 
  ($windowu, my $vbox) = create_window($window, $d->get('unpaper'), FALSE);
 
@@ -3035,7 +3065,7 @@ sub unpaper {
 # Note page selection for later
   my @selection = $slist -> get_selected_indices;
 
-  my @pagelist = get_page_index($buttona, $buttonc, $buttons);
+  my @pagelist = get_page_index();
   foreach my $page (@pagelist) {
 
 # Temporary filenames for pnm and new tif
@@ -3068,7 +3098,11 @@ sub unpaper {
 # Update TextBuffer without blocking
    Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
     my ($fileno, $condition) = @_;
-    if ($condition eq 'hup') {
+    if ($condition & 'in') { # bit field operation. >= would also work
+     my $line;
+     sysread $read, $line, 1024;
+    }
+    if ($condition & 'hup') { # bit field operation. >= would also work
      close $read;
      $dialog -> destroy;
 
@@ -3084,11 +3118,9 @@ sub unpaper {
      $slist -> get_selection -> unselect_all;
      $slist -> select(@selection);
 
-     return 0;  # uninstall
+     return FALSE;  # uninstall
     }
-    my $line;
-    sysread $read, $line, 1024;
-    return 1;  # continue without uninstalling
+    return TRUE;  # continue without uninstalling
    });
   }
  } );
@@ -3105,6 +3137,11 @@ sub unpaper {
 # Run OCR on current page and display result
 
 sub OCR {
+
+ if (defined $windowo) {
+  $windowo -> present;
+  return;
+ }
 
  ($windowo, my $vbox) = create_window($window, $d->get('OCR'), FALSE);
  my $buffer = Gtk2::TextBuffer->new;
@@ -3157,15 +3194,17 @@ sub OCR {
 # Update TextBuffer without blocking
   Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
-   if ($condition eq 'hup') {
+   if ($condition & 'in') { # bit field operation. >= would also work
+    my $line;
+    sysread $read, $line, 1024;
+    $buffer->insert($buffer->get_end_iter, $line);
+   }
+   if ($condition & 'hup') { # bit field operation. >= would also work
     close $read;
     $dialog -> destroy;
-    return 0;  # uninstall
+    return FALSE;  # uninstall
    }
-   my $line;
-   sysread $read, $line, 1024;
-   $buffer->insert($buffer->get_end_iter, $line);
-   return 1;  # continue without uninstalling
+   return TRUE;  # continue without uninstalling
   });
 
  } );
@@ -3212,7 +3251,7 @@ sub OCR {
      sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
     my $response = $dialog -> run;
     $dialog -> destroy;
-    return 1 if ($response ne 'ok');
+    return TRUE if ($response ne 'ok');
    }
 
 # Update cwd
@@ -3254,6 +3293,12 @@ sub quit {
  ($SETTING{"window_x"}, $SETTING{"window_y"}) = $window -> get_position;
  $SETTING{"thumb panel"} = $hpaned -> get_position;
 
+# Save options setting
+ $SETTING{'enable options'} =
+  $uimanager->get_widget('/MenuBar/Edit/Options') -> get_active;
+
+# delete $SETTING{'RMB'};
+
 # Write config file
  open (CONFIG, "> $config")
   or die sprintf($d->get("Can't open config file: %s"), $config); # xgettext hack
@@ -3267,6 +3312,12 @@ sub quit {
 # View POD
 
 sub view_pod {
+
+ if (defined $windowh) {
+  $windowh -> present;
+  return;
+ }
+
  eval {require Gtk2::Ex::PodViewer;};
  if ($@) {
   my $dialog = Gtk2::MessageDialog -> new ($window,
@@ -3323,7 +3374,7 @@ sub view_pod {
    my $idx = ($index->get_selected_indices)[0];
    my $mark = $index->{data}[$idx][2];
    $viewer->jump_to($mark);
-   return 1;
+   return TRUE;
   });
 
   my $viewer_scrwin = Gtk2::ScrolledWindow->new;
