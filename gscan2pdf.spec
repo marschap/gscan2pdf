@@ -48,6 +48,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/%{name}/rotate90.png
 %{_datadir}/%{name}/rotate180.png
 %{_datadir}/%{name}/rotate270.png
+%{_datadir}/%{name}/scanner.png
+%{_datadir}/%{name}/pdf.png
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog

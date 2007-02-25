@@ -97,7 +97,7 @@ $(DESTDIR)$(SHAREDIR)/$(NAME) :
 icon_install : $(DESTDIR)$(SHAREDIR)/$(NAME)
 	mkdir --parents $(DESTDIR)$(SHAREDIR)/applications
 	cp $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
-	cp $(NAME).png rotate90.png rotate180.png rotate270.png $(DESTDIR)$(SHAREDIR)/$(NAME)
+	cp $(NAME).png rotate90.png rotate180.png rotate270.png scanner.png pdf.png $(DESTDIR)$(SHAREDIR)/$(NAME)
 
 debdist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb
 
@@ -143,6 +143,8 @@ htdocs/download/debian/binary/Packages.gz : htdocs/download/debian/binary/$(NAME
 
 remote-dist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb htdocs/download/debian/binary/Packages.gz
 	scp htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb \
+            htdocs/download/debian/binary/$(NAME)_$(VERSION).dsc \
+            htdocs/download/debian/binary/$(NAME)_$(VERSION)_i386.changes \
             htdocs/download/debian/binary/Packages.gz \
 	    ra28145@shell.sf.net:/home/groups/g/gs/$(NAME)/htdocs/download/debian/binary
 
