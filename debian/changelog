@@ -1,11 +1,9 @@
-gscan2pdf (0.9.4) unstable; urgency=low
+gscan2pdf (0.9.5) unstable; urgency=low
 
-  * Using the top right hand close button to quit now saves the settings properly.
-  * enable PDF options toggle
-  * compression scan option
-  * fixed bug 1656900 where hup condition not recognised under FreeBSD.
+  * Fixed bug where nothing saved if no default for page rage
+  * Seperated pdf, tiff and scan compression defaults
+  * Save TIFF and DjVu now respects enable options toggle
+  * cancel on scan dialog now sends ctrl-c to scanimage
   * update to Czech translation (thanks to Petr Jelínek)
-  * update to German translation (thanks to Florian)
-  * update to Russian translation (thanks to Alexandre Prokoudine)
 
- -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Wed, 25 Feb 2007 16:00:00 +0100
+ -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Wed, 07 Mar 2007 11:05:43 +0100

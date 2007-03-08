@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.4
+Version: 0.9.5
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -53,12 +53,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Sun Feb 25 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
- unstable; urgency=low
-  - Using the top right hand close button to quit now saves the settings properly.
-  - enable PDF options toggle
-  - compression scan option
-  - fixed bug 1656900 where hup condition not recognised under FreeBSD.
+* Thu Mar 08 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - Fixed bug where nothing saved if no default for page rage
+  - Seperated pdf, tiff and scan compression defaults
+  - Save TIFF and DjVu now respects enable options toggle
+  - cancel on scan dialog now sends ctrl-c to scanimage
   - update to Czech translation (thanks to Petr Jelínek)
-  - update to German translation (thanks to Florian)
-  - update to Russian translation (thanks to Alexandre Prokoudine)

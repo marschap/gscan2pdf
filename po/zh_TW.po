@@ -7,619 +7,627 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2007-02-08 22:17+0100\n"
+"POT-Creation-Date: 2007-02-25 22:15+0100\n"
 "PO-Revision-Date: 2007-01-14 18:35+0000\n"
 "Last-Translator: cwchien <e.cwchien@gmail.com>\n"
 "Language-Team: Chinese (Taiwan) <zh_TW@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Rosetta-Export-Date: 2007-02-25 12:58+0000\n"
+"X-Rosetta-Export-Date: 2007-03-06 20:48+0000\n"
 
-#: bin/gscan2pdf:112
+#: bin/gscan2pdf:115
 #, perl-format
 msgid "Error: cannot read file: %s\n"
 msgstr ""
 
-#: bin/gscan2pdf:122
+#: bin/gscan2pdf:125
 #, perl-format
 msgid ""
 "Usage:\n"
 "%s --test <file>=<model>\n"
 msgstr ""
 
-#: bin/gscan2pdf:144
+#: bin/gscan2pdf:147
 #, perl-format
 msgid "Unknown option %s.\n"
 msgstr ""
 
-#: bin/gscan2pdf:150
+#: bin/gscan2pdf:153
 #, perl-format
 msgid ""
 "%s requires the libtiff library.\n"
 "Please install it.\n"
 msgstr ""
 
-#: bin/gscan2pdf:164
+#: bin/gscan2pdf:167
 #, perl-format
 msgid "Can't open config file: %s\n"
 msgstr ""
 
-#: bin/gscan2pdf:204
+#: bin/gscan2pdf:207
 msgid "_File"
 msgstr "檔案"
 
-#: bin/gscan2pdf:205
+#: bin/gscan2pdf:208
 msgid "_New"
 msgstr "新增(_N)"
 
-#: bin/gscan2pdf:205
+#: bin/gscan2pdf:208
 msgid "Clears all pages"
 msgstr "清除所有頁面"
 
-#: bin/gscan2pdf:206
+#: bin/gscan2pdf:209
 msgid "_Import TIFF"
 msgstr "匯入 TIFF(_I)"
 
-#: bin/gscan2pdf:206
+#: bin/gscan2pdf:209
 msgid "Import TIFF file"
 msgstr "匯入 TIFF 檔"
 
-#: bin/gscan2pdf:207
+#: bin/gscan2pdf:210
 msgid "S_can"
 msgstr ""
 
-#: bin/gscan2pdf:207
+#: bin/gscan2pdf:210
 msgid "Scan document"
 msgstr "掃描文件"
 
-#: bin/gscan2pdf:213
+#: bin/gscan2pdf:211
 msgid "_Save PDF"
 msgstr "儲存 PDF(_S)"
 
-#: bin/gscan2pdf:213 bin/gscan2pdf:1329
+#: bin/gscan2pdf:211 bin/gscan2pdf:1385
 msgid "Save as PDF"
 msgstr "另存為 PDF"
 
-#: bin/gscan2pdf:219
+#: bin/gscan2pdf:212
 msgid "Save _TIFF"
 msgstr "儲存 TIFF(_T)"
 
-#: bin/gscan2pdf:219 bin/gscan2pdf:1421
+#: bin/gscan2pdf:212 bin/gscan2pdf:1431
 msgid "Save as TIFF"
 msgstr "另存為 TIFF"
 
-#: bin/gscan2pdf:225
+#: bin/gscan2pdf:213
 msgid "Save _DjVu"
 msgstr ""
 
-#: bin/gscan2pdf:225 bin/gscan2pdf:1550
+#: bin/gscan2pdf:213 bin/gscan2pdf:1566
 msgid "Save as DjVu"
 msgstr ""
 
-#: bin/gscan2pdf:231
+#: bin/gscan2pdf:214
 msgid "_Email as PDF"
 msgstr ""
 
-#: bin/gscan2pdf:231
+#: bin/gscan2pdf:214
 msgid "Attach as PDF to a new email"
 msgstr ""
 
-#: bin/gscan2pdf:237
+#: bin/gscan2pdf:215
 msgid "_Quit"
 msgstr "離開(_Q)"
 
-#: bin/gscan2pdf:237
+#: bin/gscan2pdf:215
 msgid "Quit"
 msgstr "退出"
 
-#: bin/gscan2pdf:240
-msgid "_Undo"
-msgstr ""
-
-#: bin/gscan2pdf:240
-msgid "Undo"
-msgstr ""
-
-#: bin/gscan2pdf:241
-msgid "_Redo"
-msgstr ""
-
-#: bin/gscan2pdf:241
-msgid "Redo"
-msgstr ""
-
-#: bin/gscan2pdf:242
+#: bin/gscan2pdf:218
 msgid "_Edit"
 msgstr "編輯(_E)"
 
-#: bin/gscan2pdf:243
+#: bin/gscan2pdf:219
+msgid "_Undo"
+msgstr ""
+
+#: bin/gscan2pdf:219
+msgid "Undo"
+msgstr ""
+
+#: bin/gscan2pdf:220
+msgid "_Redo"
+msgstr ""
+
+#: bin/gscan2pdf:220
+msgid "Redo"
+msgstr ""
+
+#: bin/gscan2pdf:221
 msgid "_Delete"
 msgstr "刪除(_D)"
 
-#: bin/gscan2pdf:243
+#: bin/gscan2pdf:221
 msgid "Delete selected pages"
 msgstr "刪除所選頁面"
 
-#: bin/gscan2pdf:244
+#: bin/gscan2pdf:222
 msgid "_Renumber"
 msgstr "重新編號(_R)"
 
-#: bin/gscan2pdf:244
+#: bin/gscan2pdf:222
 msgid "Renumber pages from 1 to n"
 msgstr "重新編號頁面從 1 到 n"
 
-#: bin/gscan2pdf:245
+#: bin/gscan2pdf:223
 msgid "Select _All"
 msgstr "全選(_A)"
 
-#: bin/gscan2pdf:245
+#: bin/gscan2pdf:223
 msgid "Select all pages"
 msgstr "全選頁面"
 
-#: bin/gscan2pdf:246
+#: bin/gscan2pdf:224
 msgid "_Frontend"
 msgstr ""
 
-#: bin/gscan2pdf:249
+#: bin/gscan2pdf:227
 msgid "_View"
 msgstr "檢視(_V)"
 
-#: bin/gscan2pdf:250
+#: bin/gscan2pdf:228
 msgid "Zoom _100%"
 msgstr "實際尺寸(_100%)"
 
-#: bin/gscan2pdf:250
+#: bin/gscan2pdf:228
 msgid "Zoom to 100%"
 msgstr "實際大小"
 
-#: bin/gscan2pdf:251
+#: bin/gscan2pdf:229
 msgid "Zoom to _fit"
 msgstr "符合頁面(_f)"
 
-#: bin/gscan2pdf:251
+#: bin/gscan2pdf:229
 msgid "Zoom to fit"
 msgstr "符合頁面"
 
-#: bin/gscan2pdf:252
+#: bin/gscan2pdf:230
 msgid "Zoom _in"
 msgstr "放大(_i)"
 
-#: bin/gscan2pdf:252
+#: bin/gscan2pdf:230
 msgid "Zoom in"
 msgstr "放大"
 
-#: bin/gscan2pdf:253
+#: bin/gscan2pdf:231
 msgid "Zoom _out"
 msgstr "縮小(_o)"
 
-#: bin/gscan2pdf:253
+#: bin/gscan2pdf:231
 msgid "Zoom out"
 msgstr "縮小"
 
-#: bin/gscan2pdf:254
+#: bin/gscan2pdf:232
 msgid "Rotate 90 clockwise"
 msgstr "順時針旋轉 90 度"
 
-#: bin/gscan2pdf:255
+#: bin/gscan2pdf:233
 msgid "Rotate 180"
 msgstr "旋轉 180 度"
 
-#: bin/gscan2pdf:256
+#: bin/gscan2pdf:234
 msgid "Rotate 90 anticlockwise"
 msgstr "逆時針旋轉 90 度"
 
-#: bin/gscan2pdf:259
+#: bin/gscan2pdf:237
 msgid "_Tools"
 msgstr ""
 
-#: bin/gscan2pdf:260
+#: bin/gscan2pdf:238
 msgid "_unpaper"
 msgstr ""
 
-#: bin/gscan2pdf:260
+#: bin/gscan2pdf:238
 msgid "Clean up current page with unpaper"
 msgstr ""
 
-#: bin/gscan2pdf:266
+#: bin/gscan2pdf:239
 msgid "_OCR"
 msgstr ""
 
-#: bin/gscan2pdf:266
+#: bin/gscan2pdf:239
 msgid "Optical Character Recognition of current page"
 msgstr ""
 
-#: bin/gscan2pdf:274 bin/gscan2pdf:275
+#: bin/gscan2pdf:242 bin/gscan2pdf:243
 msgid "_Help"
 msgstr "說明(_H)"
 
-#: bin/gscan2pdf:275
+#: bin/gscan2pdf:243
 msgid "Help"
 msgstr "幫助"
 
-#: bin/gscan2pdf:281
+#: bin/gscan2pdf:244
 msgid "_About"
 msgstr "關於(_A)"
 
-#: bin/gscan2pdf:464
+#: bin/gscan2pdf:428
 msgid "Thumbnails"
 msgstr "縮圖"
 
-#: bin/gscan2pdf:585
+#: bin/gscan2pdf:549
 msgid "Mode"
 msgstr "顯示模式"
 
-#: bin/gscan2pdf:587
+#: bin/gscan2pdf:551
 msgid "Lineart"
 msgstr "描邊"
 
-#: bin/gscan2pdf:588
+#: bin/gscan2pdf:552
 msgid "Grayscale"
 msgstr "灰階"
 
-#: bin/gscan2pdf:589
+#: bin/gscan2pdf:553
 msgid "Gray"
 msgstr "灰度"
 
-#: bin/gscan2pdf:590
+#: bin/gscan2pdf:554
 msgid "Color"
 msgstr "彩色"
 
-#: bin/gscan2pdf:591
+#: bin/gscan2pdf:555
 msgid "Black & White"
 msgstr "黑白"
 
-#: bin/gscan2pdf:592
+#: bin/gscan2pdf:556
 msgid "True Gray"
 msgstr "全灰 (TrueGray)"
 
-#: bin/gscan2pdf:593
+#: bin/gscan2pdf:557
 msgid "Binary"
 msgstr "雙值 (Binary)"
 
-#: bin/gscan2pdf:594 bin/gscan2pdf:624 bin/gscan2pdf:625
+#: bin/gscan2pdf:558 bin/gscan2pdf:594 bin/gscan2pdf:595
 msgid "Auto"
 msgstr "自動"
 
-#: bin/gscan2pdf:595
+#: bin/gscan2pdf:559
 msgid "Halftone"
 msgstr "半色調"
 
-#: bin/gscan2pdf:596
+#: bin/gscan2pdf:560
 msgid "24bit Color"
 msgstr "全彩"
 
-#: bin/gscan2pdf:599
+#: bin/gscan2pdf:563 bin/gscan2pdf:1227 bin/gscan2pdf:1449 bin/gscan2pdf:1571
+msgid "Compression"
+msgstr "壓縮"
+
+#: bin/gscan2pdf:565 bin/gscan2pdf:1217 bin/gscan2pdf:1443
+msgid "None"
+msgstr "無"
+
+#: bin/gscan2pdf:566 bin/gscan2pdf:1222 bin/gscan2pdf:1253 bin/gscan2pdf:1439
+msgid "JPEG"
+msgstr "JPEG 格式"
+
+#: bin/gscan2pdf:569
 msgid "Resolution"
 msgstr "解析度"
 
-#: bin/gscan2pdf:600
+#: bin/gscan2pdf:570
 msgid "Batch scan"
 msgstr "批次掃描"
 
-#: bin/gscan2pdf:602 bin/gscan2pdf:608 bin/gscan2pdf:614
+#: bin/gscan2pdf:572 bin/gscan2pdf:578 bin/gscan2pdf:584
 msgid "Yes"
 msgstr "確定"
 
-#: bin/gscan2pdf:603 bin/gscan2pdf:609 bin/gscan2pdf:615
+#: bin/gscan2pdf:573 bin/gscan2pdf:579 bin/gscan2pdf:585
 msgid "No"
 msgstr "取消"
 
-#: bin/gscan2pdf:606 bin/gscan2pdf:612
+#: bin/gscan2pdf:576 bin/gscan2pdf:582
 msgid "Wait for button"
 msgstr "掃描器就緒"
 
-#: bin/gscan2pdf:618
+#: bin/gscan2pdf:588
 msgid "Source"
 msgstr "來源"
 
-#: bin/gscan2pdf:620
+#: bin/gscan2pdf:590
 msgid "Normal"
 msgstr "一般"
 
-#: bin/gscan2pdf:621
+#: bin/gscan2pdf:591
 msgid "ADF"
 msgstr "ADF 模式"
 
-#: bin/gscan2pdf:622
+#: bin/gscan2pdf:592
 msgid "Automatic Document Feeder"
 msgstr "掃描器自動進紙"
 
-#: bin/gscan2pdf:623
+#: bin/gscan2pdf:593
 msgid "XPA"
 msgstr "XPA 投影模式"
 
-#: bin/gscan2pdf:626
+#: bin/gscan2pdf:596
 msgid "Flatbed"
 msgstr "Flatbed 平台模式"
 
-#: bin/gscan2pdf:627
+#: bin/gscan2pdf:597
 msgid "Transparency Adapter"
 msgstr "透明度調節"
 
-#: bin/gscan2pdf:628
+#: bin/gscan2pdf:598
 msgid "Transparency Unit"
 msgstr "透明度單元"
 
-#: bin/gscan2pdf:701
+#: bin/gscan2pdf:642
+msgid "Enable _Options"
+msgstr ""
+
+#: bin/gscan2pdf:642
+msgid "View options before saving"
+msgstr ""
+
+#: bin/gscan2pdf:679
 msgid "The scanadf frontend is not available\n"
 msgstr ""
 
-#: bin/gscan2pdf:708
+#: bin/gscan2pdf:690
 msgid "Save as DjVu requires djvulibre-bin\n"
 msgstr ""
 
-#: bin/gscan2pdf:716
+#: bin/gscan2pdf:698
 msgid "Email as PDF requires xdg-email\n"
 msgstr ""
 
-#: bin/gscan2pdf:740
+#: bin/gscan2pdf:722
 msgid ""
 "The rotating options, unpaper support and the scanadf frontend require "
 "imagemagick\n"
 msgstr ""
 
-#: bin/gscan2pdf:746
+#: bin/gscan2pdf:728
 msgid "unpaper missing\n"
 msgstr ""
 
-#: bin/gscan2pdf:752
+#: bin/gscan2pdf:734
 msgid "OCR requires gocr\n"
 msgstr ""
 
-#: bin/gscan2pdf:758
+#: bin/gscan2pdf:740
 msgid "Warning: missing packages"
 msgstr ""
 
-#: bin/gscan2pdf:764
+#: bin/gscan2pdf:746
 msgid "Don't show this message again"
 msgstr ""
 
-#: bin/gscan2pdf:875
+#: bin/gscan2pdf:857
 msgid "Warning: "
 msgstr "警告： "
 
-#: bin/gscan2pdf:881
+#: bin/gscan2pdf:863
 #, perl-format
 msgid "Information: got %s on second attempt\n"
 msgstr ""
 
-#: bin/gscan2pdf:942
+#: bin/gscan2pdf:924
 msgid "Import scan from file"
 msgstr "從檔案匯入掃描"
 
-#: bin/gscan2pdf:968
+#: bin/gscan2pdf:950
 msgid "Not a TIFF file"
 msgstr "並非 TIFF 檔"
 
-#: bin/gscan2pdf:973
+#: bin/gscan2pdf:955
 msgid "Importing"
 msgstr "正在匯入"
 
-#: bin/gscan2pdf:1042
+#: bin/gscan2pdf:1024
 msgid "Page range"
 msgstr "頁面範圍"
 
-#: bin/gscan2pdf:1051 bin/gscan2pdf:1829
+#: bin/gscan2pdf:1033 bin/gscan2pdf:1856
 msgid "All"
 msgstr "全部"
 
-#: bin/gscan2pdf:1056
+#: bin/gscan2pdf:1041
 msgid "Current"
 msgstr "目前頁面"
 
-#: bin/gscan2pdf:1060
+#: bin/gscan2pdf:1048
 msgid "Selected"
 msgstr "選取的"
 
-#: bin/gscan2pdf:1155
+#: bin/gscan2pdf:1136
 msgid "Metadata"
 msgstr "摘要資訊"
 
-#: bin/gscan2pdf:1164
+#: bin/gscan2pdf:1145
 msgid "Date"
 msgstr "日期"
 
-#: bin/gscan2pdf:1176
+#: bin/gscan2pdf:1157
 msgid "Select Date"
 msgstr "選擇日期"
 
-#: bin/gscan2pdf:1194
+#: bin/gscan2pdf:1175
 msgid "Year/Month/Day"
 msgstr "年/月/日"
 
-#: bin/gscan2pdf:1200
+#: bin/gscan2pdf:1181
 msgid "Document author"
 msgstr "文件作者"
 
-#: bin/gscan2pdf:1209
+#: bin/gscan2pdf:1190
 msgid "Title"
 msgstr "主標題"
 
-#: bin/gscan2pdf:1218
+#: bin/gscan2pdf:1199
 msgid "Subject"
 msgstr "副標題"
 
-#: bin/gscan2pdf:1227
+#: bin/gscan2pdf:1208
 msgid "Keywords"
 msgstr "關鍵字"
 
-#: bin/gscan2pdf:1236 bin/gscan2pdf:1433
-msgid "None"
-msgstr "無"
-
-#: bin/gscan2pdf:1238 bin/gscan2pdf:1428
+#: bin/gscan2pdf:1219 bin/gscan2pdf:1438
 msgid "Zip"
 msgstr "Zip 壓縮"
 
-#: bin/gscan2pdf:1241 bin/gscan2pdf:1272 bin/gscan2pdf:1429
-msgid "JPEG"
-msgstr "JPEG 格式"
-
-#: bin/gscan2pdf:1246 bin/gscan2pdf:1439 bin/gscan2pdf:1555
-msgid "Compression"
-msgstr "壓縮"
-
-#: bin/gscan2pdf:1254 bin/gscan2pdf:1447
+#: bin/gscan2pdf:1235 bin/gscan2pdf:1457
 msgid "JPEG Quality"
 msgstr "JPEG 品質"
 
-#: bin/gscan2pdf:1351
+#: bin/gscan2pdf:1317
 msgid "PDF filename"
 msgstr "PDF 檔名"
 
-#: bin/gscan2pdf:1365 bin/gscan2pdf:1507 bin/gscan2pdf:1595 bin/gscan2pdf:3212
+#: bin/gscan2pdf:1331 bin/gscan2pdf:1517 bin/gscan2pdf:1611 bin/gscan2pdf:3250
 #, perl-format
 msgid ""
 "File %s exists.\n"
 "Really overwrite?"
 msgstr ""
 
-#: bin/gscan2pdf:1427
+#: bin/gscan2pdf:1437
 msgid "LZW"
 msgstr ""
 
-#: bin/gscan2pdf:1427
+#: bin/gscan2pdf:1437
 msgid "Compress output with Lempel-Ziv & Welch encoding."
 msgstr ""
 
-#: bin/gscan2pdf:1428
+#: bin/gscan2pdf:1438
 msgid "Compress output with deflate encoding."
 msgstr ""
 
-#: bin/gscan2pdf:1429
+#: bin/gscan2pdf:1439
 msgid "Compress output with JPEG encoding."
 msgstr ""
 
-#: bin/gscan2pdf:1430
+#: bin/gscan2pdf:1440
 msgid "Packbits"
 msgstr ""
 
-#: bin/gscan2pdf:1430
+#: bin/gscan2pdf:1440
 msgid "Compress output with Packbits encoding."
 msgstr ""
 
-#: bin/gscan2pdf:1431
+#: bin/gscan2pdf:1441
 msgid "G3"
 msgstr ""
 
-#: bin/gscan2pdf:1431
+#: bin/gscan2pdf:1441
 msgid "Compress output with CCITT Group 3 encoding."
 msgstr ""
 
-#: bin/gscan2pdf:1432
+#: bin/gscan2pdf:1442
 msgid "G4"
 msgstr ""
 
-#: bin/gscan2pdf:1432
+#: bin/gscan2pdf:1442
 msgid "Compress output with CCITT Group 4 encoding."
 msgstr ""
 
-#: bin/gscan2pdf:1433
+#: bin/gscan2pdf:1443
 msgid "Use no compression algorithm on output."
 msgstr ""
 
-#: bin/gscan2pdf:1494
+#: bin/gscan2pdf:1504
 msgid "TIFF filename"
 msgstr "TIFF 檔名"
 
-#: bin/gscan2pdf:1561
+#: bin/gscan2pdf:1577
 msgid "Bitonal"
 msgstr ""
 
-#: bin/gscan2pdf:1582
+#: bin/gscan2pdf:1598
 msgid "DjVu filename"
 msgstr ""
 
-#: bin/gscan2pdf:1647
+#: bin/gscan2pdf:1669
 msgid "Email as PDF"
 msgstr ""
 
-#: bin/gscan2pdf:1715
+#: bin/gscan2pdf:1742
 msgid "not found"
 msgstr "找不到"
 
-#: bin/gscan2pdf:1726
+#: bin/gscan2pdf:1753
 msgid "No scanners found"
 msgstr "找不到掃描器"
 
-#: bin/gscan2pdf:1735
+#: bin/gscan2pdf:1762
 msgid "Scan Document"
 msgstr "掃描文件"
 
-#: bin/gscan2pdf:1742
+#: bin/gscan2pdf:1769
 msgid "Device"
 msgstr "裝置"
 
-#: bin/gscan2pdf:1793 bin/gscan2pdf:2567 bin/gscan2pdf:2731
+#: bin/gscan2pdf:1820 bin/gscan2pdf:2594 bin/gscan2pdf:2752
 msgid "Custom"
 msgstr "自訂"
 
-#: bin/gscan2pdf:1803
+#: bin/gscan2pdf:1830
 msgid "Sets the device to be used for the scan"
 msgstr "指定使用此裝置來掃描"
 
-#: bin/gscan2pdf:1820
+#: bin/gscan2pdf:1847
 msgid "# Pages"
 msgstr "# 頁"
 
-#: bin/gscan2pdf:1830
+#: bin/gscan2pdf:1857
 msgid "Scan all pages"
 msgstr "全選頁面"
 
-#: bin/gscan2pdf:1838 bin/gscan2pdf:1843
+#: bin/gscan2pdf:1865 bin/gscan2pdf:1870
 msgid "Set number of pages to scan"
 msgstr "指定要掃描的頁面編號"
 
-#: bin/gscan2pdf:1864
+#: bin/gscan2pdf:1891
 msgid "Source document"
 msgstr "來源文件"
 
-#: bin/gscan2pdf:1873
+#: bin/gscan2pdf:1900
 msgid "Single sided"
 msgstr "單面"
 
-#: bin/gscan2pdf:1874
+#: bin/gscan2pdf:1901
 msgid "Source document is single-sided"
 msgstr "來源文件為單面"
 
-#: bin/gscan2pdf:1880
+#: bin/gscan2pdf:1907
 msgid "Double sided"
 msgstr "雙面"
 
-#: bin/gscan2pdf:1881
+#: bin/gscan2pdf:1908
 msgid "Source document is double-sided"
 msgstr "來源文件為雙面"
 
-#: bin/gscan2pdf:1887
+#: bin/gscan2pdf:1914
 msgid "Side to scan"
 msgstr "掃描正/反面"
 
-#: bin/gscan2pdf:1893
+#: bin/gscan2pdf:1920
 msgid "Facing"
 msgstr "正面"
 
-#: bin/gscan2pdf:1894
+#: bin/gscan2pdf:1921
 msgid "Reverse"
 msgstr "反面"
 
-#: bin/gscan2pdf:1904
+#: bin/gscan2pdf:1931
 msgid "Sets which side of a double-sided document is scanned"
 msgstr "指定雙面文件要掃描正或反面"
 
-#: bin/gscan2pdf:1908
+#: bin/gscan2pdf:1935
 msgid "Device-dependent options"
 msgstr "裝置額外選項"
 
-#: bin/gscan2pdf:1921
+#: bin/gscan2pdf:1948
 msgid "Scan"
 msgstr "掃描"
 
-#: bin/gscan2pdf:1993
+#: bin/gscan2pdf:2020
 msgid "Must scan facing pages first"
 msgstr "必須先掃描正面"
 
-#: bin/gscan2pdf:2020
+#: bin/gscan2pdf:2047
 msgid ""
 "Cannot scan more reverse pages\n"
 "than facing pages"
@@ -627,102 +635,102 @@ msgstr ""
 "無法掃描反面頁\n"
 "多過於正面頁"
 
-#: bin/gscan2pdf:2093 bin/gscan2pdf:2096 bin/gscan2pdf:2114 bin/gscan2pdf:2222
-#: bin/gscan2pdf:2225
+#: bin/gscan2pdf:2120 bin/gscan2pdf:2123 bin/gscan2pdf:2141 bin/gscan2pdf:2249
+#: bin/gscan2pdf:2252
 msgid "Scanning"
 msgstr "正在掃描"
 
-#: bin/gscan2pdf:2114
+#: bin/gscan2pdf:2141
 msgid "pages"
 msgstr "頁面"
 
-#: bin/gscan2pdf:2117
+#: bin/gscan2pdf:2144
 msgid "Scanning page"
 msgstr "正在掃描頁面"
 
-#: bin/gscan2pdf:2126 bin/gscan2pdf:2255
+#: bin/gscan2pdf:2153 bin/gscan2pdf:2282
 msgid "Unable to load image"
 msgstr "無法載入頁面"
 
-#: bin/gscan2pdf:2137 bin/gscan2pdf:2246
+#: bin/gscan2pdf:2164 bin/gscan2pdf:2273
 msgid "Scanner warming up"
 msgstr ""
 
-#: bin/gscan2pdf:2150 bin/gscan2pdf:2270
+#: bin/gscan2pdf:2177 bin/gscan2pdf:2297
 msgid "Unknown message: "
 msgstr "未知的訊息： "
 
-#: bin/gscan2pdf:2243
+#: bin/gscan2pdf:2270
 msgid "Scanned page"
 msgstr ""
 
-#: bin/gscan2pdf:2415
+#: bin/gscan2pdf:2442
 msgid "To aid the scan-to-PDF process"
 msgstr "加速掃描至 PDF 流程"
 
-#: bin/gscan2pdf:2416
+#: bin/gscan2pdf:2443
 msgid "Copyright"
 msgstr "授權方式"
 
-#: bin/gscan2pdf:2417
+#: bin/gscan2pdf:2444
 msgid "Licensed under the GPLv2"
 msgstr "以 GPL 第二版方式授權"
 
-#: bin/gscan2pdf:2462
+#: bin/gscan2pdf:2489
 msgid "Updating options"
 msgstr ""
 
-#: bin/gscan2pdf:2528 bin/gscan2pdf:2619
+#: bin/gscan2pdf:2555 bin/gscan2pdf:2646
 msgid "Paper size"
 msgstr "紙張大小"
 
-#: bin/gscan2pdf:2538
+#: bin/gscan2pdf:2565
 msgid "Width of scan-area"
 msgstr "掃描區域寬度"
 
-#: bin/gscan2pdf:2539
+#: bin/gscan2pdf:2566
 msgid "Height of scan-area"
 msgstr "掃描區域高度"
 
-#: bin/gscan2pdf:2572
+#: bin/gscan2pdf:2599
 msgid "Selects the paper size, e.g. A4, Letter, or Custom"
 msgstr "選擇紙張大小，即 A4，Letter，或自訂"
 
-#: bin/gscan2pdf:2621
+#: bin/gscan2pdf:2648
 msgid "A4"
 msgstr ""
 
-#: bin/gscan2pdf:2622
+#: bin/gscan2pdf:2649
 msgid "Letter"
 msgstr ""
 
-#: bin/gscan2pdf:2844
+#: bin/gscan2pdf:2873
 msgid "unpaper"
 msgstr ""
 
-#: bin/gscan2pdf:2848
+#: bin/gscan2pdf:2877
 msgid "Single"
 msgstr ""
 
-#: bin/gscan2pdf:2849
+#: bin/gscan2pdf:2878
 msgid "One page per sheet, oriented upwards without rotation."
 msgstr ""
 
-#: bin/gscan2pdf:2852
+#: bin/gscan2pdf:2881
 msgid "Double"
 msgstr ""
 
-#: bin/gscan2pdf:2853
+#: bin/gscan2pdf:2882
 msgid ""
 "Two pages per sheet, landscape orientation (one page on the left half, one "
 "page on the right half)."
 msgstr ""
 
-#: bin/gscan2pdf:2856
+#: bin/gscan2pdf:2885
 msgid "Deskew to edge"
 msgstr ""
 
-#: bin/gscan2pdf:2857
+#: bin/gscan2pdf:2886
 msgid ""
 "Edges from which to scan for rotation. Each edge of a mask can be used to "
 "detect the mask's rotation. If multiple edges are specified, the average "
@@ -730,116 +738,116 @@ msgid ""
 "deviation."
 msgstr ""
 
-#: bin/gscan2pdf:2859 bin/gscan2pdf:2879
+#: bin/gscan2pdf:2888 bin/gscan2pdf:2908
 msgid "Left"
 msgstr ""
 
-#: bin/gscan2pdf:2860
+#: bin/gscan2pdf:2889
 msgid "Use 'left' for scanning from the left edge."
 msgstr ""
 
-#: bin/gscan2pdf:2863 bin/gscan2pdf:2883
+#: bin/gscan2pdf:2892 bin/gscan2pdf:2912
 msgid "Top"
 msgstr ""
 
-#: bin/gscan2pdf:2864
+#: bin/gscan2pdf:2893
 msgid "Use 'top' for scanning from the top edge."
 msgstr ""
 
-#: bin/gscan2pdf:2867 bin/gscan2pdf:2887
+#: bin/gscan2pdf:2896 bin/gscan2pdf:2916
 msgid "Right"
 msgstr ""
 
-#: bin/gscan2pdf:2868
+#: bin/gscan2pdf:2897
 msgid "Use 'right' for scanning from the right edge."
 msgstr ""
 
-#: bin/gscan2pdf:2871 bin/gscan2pdf:2891
+#: bin/gscan2pdf:2900 bin/gscan2pdf:2920
 msgid "Bottom"
 msgstr ""
 
-#: bin/gscan2pdf:2872
+#: bin/gscan2pdf:2901
 msgid "Use 'bottom' for scanning from the bottom."
 msgstr ""
 
-#: bin/gscan2pdf:2876
+#: bin/gscan2pdf:2905
 msgid "Align to edge"
 msgstr ""
 
-#: bin/gscan2pdf:2877
+#: bin/gscan2pdf:2906
 msgid "Edge to which to align the page."
 msgstr ""
 
-#: bin/gscan2pdf:2880
+#: bin/gscan2pdf:2909
 msgid "Use 'left' to align to the left edge."
 msgstr ""
 
-#: bin/gscan2pdf:2884
+#: bin/gscan2pdf:2913
 msgid "Use 'top' to align to the top edge."
 msgstr ""
 
-#: bin/gscan2pdf:2888
+#: bin/gscan2pdf:2917
 msgid "Use 'right' to align to the right edge."
 msgstr ""
 
-#: bin/gscan2pdf:2892
+#: bin/gscan2pdf:2921
 msgid "Use 'bottom' to align to the bottom."
 msgstr ""
 
-#: bin/gscan2pdf:2896
+#: bin/gscan2pdf:2925
 msgid "Margin"
 msgstr ""
 
-#: bin/gscan2pdf:2897
+#: bin/gscan2pdf:2926
 msgid "Margin for aligned edges."
 msgstr ""
 
-#: bin/gscan2pdf:2904
+#: bin/gscan2pdf:2933
 msgid "Layout"
 msgstr ""
 
-#: bin/gscan2pdf:2960
+#: bin/gscan2pdf:2989
 msgid "Vertical margin"
 msgstr ""
 
-#: bin/gscan2pdf:2961
+#: bin/gscan2pdf:2990
 msgid "Horizontal margin"
 msgstr ""
 
-#: bin/gscan2pdf:3054 bin/gscan2pdf:3057
+#: bin/gscan2pdf:3083 bin/gscan2pdf:3086
 msgid "Running unpaper"
 msgstr ""
 
-#: bin/gscan2pdf:3109
+#: bin/gscan2pdf:3145
 msgid "OCR"
 msgstr ""
 
-#: bin/gscan2pdf:3117
+#: bin/gscan2pdf:3153
 msgid "Start OCR"
 msgstr ""
 
-#: bin/gscan2pdf:3128
+#: bin/gscan2pdf:3164
 msgid "No page selected"
 msgstr ""
 
-#: bin/gscan2pdf:3143 bin/gscan2pdf:3146
+#: bin/gscan2pdf:3179 bin/gscan2pdf:3182
 msgid "Running OCR"
 msgstr ""
 
-#: bin/gscan2pdf:3174
+#: bin/gscan2pdf:3212
 msgid "Clear"
 msgstr ""
 
-#: bin/gscan2pdf:3199
+#: bin/gscan2pdf:3237
 msgid "Save OCR output"
 msgstr ""
 
-#: bin/gscan2pdf:3259
+#: bin/gscan2pdf:3303
 #, perl-format
 msgid "Can't open config file: %s"
 msgstr ""
 
-#: bin/gscan2pdf:3276
+#: bin/gscan2pdf:3326
 #, perl-format
 msgid ""
 "The help viewer requires module Gtk2::Ex::PodViewer\n"
@@ -847,7 +855,7 @@ msgid ""
 "\n"
 msgstr ""
 
-#: bin/gscan2pdf:3319
+#: bin/gscan2pdf:3369
 msgid "Go to"
 msgstr "移至"
 
