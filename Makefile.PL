@@ -119,8 +119,10 @@ locale : $(PO)
 
 debian/changelog : bin/$(NAME)
 	cp debian/changelog debian/changelog_tmp
-	sed 's/^$(NAME) (.*)/$(NAME) ($(VERSION))/' < debian/changelog_tmp > debian/changelog
+	sed 's/^$(NAME) (.*)/$(NAME) ($(VERSION))/' < debian/changelog_tmp | \
+         sed '/^ --.*/d' > debian/changelog
 	rm debian/changelog_tmp
+	echo " -- $(AUTHOR) <Jeffrey.Ratcliffe@bigfoot.com>  "`date +'%a, %d %b %Y %H:%M:%S %z'` >> debian/changelog
 
 $(NAME).spec : bin/$(NAME) debian/changelog
 	cp $(NAME).spec $(NAME).spec_tmp
@@ -128,7 +130,7 @@ $(NAME).spec : bin/$(NAME) debian/changelog
          sed '/^%changelog/q' > $(NAME).spec
 	rm $(NAME).spec_tmp
 	echo "*" `date +'%a %b %d %Y'` "$(AUTHOR) <$(EMAIL)>" >> $(NAME).spec
-	sed 's/^$(NAME) (.*)//' < debian/changelog | \
+	sed 's/^$(NAME).*//' < debian/changelog | \
          sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $(NAME).spec
 
 htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb : ../$(NAME)_$(VERSION)_all.deb
