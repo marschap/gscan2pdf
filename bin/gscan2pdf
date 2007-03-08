@@ -23,22 +23,15 @@
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    Work out a good place to log error messages
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
-#    Changing the number of pages to scan should activate #.
-#    Check encoding (umlauts) of metadata.
-#    get Makefile.PL to update date in changelog
+#    Check encoding (umlauts) of metadata (into PDFDocEncoding)
 #    check debian/copyright
-#    Either get cancel button during scan to actually cancel the scan,
-#     or change the button.
 #    check out scanbuttond
 #    don't display dialogs for "rounded" messages
-#    seperate the compression setting from the scan dialog to that from the save as pdf dialog
-#    sort out the fact that Gtk2::Ex::Simple::List isn't in dapper
-#    add home, end page up and down
 #    sort out "dpkg-source: warning: source directory `./gscan2pdf' is not <sourcepackage>-<upstreamversion> `gscan2pdf-0.9.0'" error
-#    fix bug importing changelog to .spec
-#    Add pan with LMB in detail window
 #    As soon as I don't have to develop with gtk+2.4, change all OptionMenus to
 #     ComboBoxes
+#    Switch viewing widget as soon as packages are available for:
+#     http://giv.sourceforge.net/gtk-image-viewer/
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
@@ -79,7 +72,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.4";
+my $version = "0.9.5";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -178,6 +171,9 @@ if (-r $config) {
  close CONFIG;
 }
 
+# Set some defaults if they weren't in the config
+$SETTING{'Page range'} = 'all';
+
 # Create icons for rotate buttons
 my $IconFactory = undef;
 my $path;
@@ -209,8 +205,8 @@ my @action_items = (
  [ 'Import TIFF', 'gtk-open', $d->get('_Import TIFF'), '<control>i', $d->get('Import TIFF file'), \&import ],
  [ 'Scan', 'scanner', $d->get('S_can'), undef, $d->get('Scan document'), \&scan_dialog ],
  [ 'Save PDF', 'pdf', $d->get('_Save PDF'), '<shift><control>s', $d->get('Save as PDF'), \&save_PDF_dialog ],
- [ 'Save TIFF', 'gtk-save', $d->get('Save _TIFF'), '<control>s', $d->get('Save as TIFF'), \&save_TIFF ],
- [ 'Save DjVu', undef, $d->get('Save _DjVu'), undef, $d->get('Save as DjVu'), \&save_djvu ],
+ [ 'Save TIFF', 'gtk-save', $d->get('Save _TIFF'), '<control>s', $d->get('Save as TIFF'), \&save_TIFF_dialog ],
+ [ 'Save DjVu', undef, $d->get('Save _DjVu'), undef, $d->get('Save as DjVu'), \&save_djvu_dialog ],
  [ 'Email as PDF', 'gtk-edit', $d->get('_Email as PDF'), '<control>e', $d->get('Attach as PDF to a new email'), \&email ],
  [ 'Quit', 'gtk-quit', $d->get('_Quit'), '<control>q', $d->get('Quit'), sub { quit(); Gtk2 -> main_quit; } ],
  
@@ -1217,7 +1213,7 @@ sub add_PDF_options {
  push @compression, $d->get('None');
  if ($output =~ /-z/) {
   push @compression, $d->get('Zip');
-  $SETTING{'compression'} = 'Zip' if (! defined $SETTING{'compression'});
+  $SETTING{'pdf compression'} = 'Zip' if (! defined $SETTING{'pdf compression'});
  }
  push @compression, $d->get('JPEG') if ($output =~ /-j/);
 
@@ -1258,8 +1254,8 @@ sub add_PDF_options {
    }
   });
   $o = $i
-   if (defined($SETTING{'compression'})
-       and $compression eq $SETTING{'compression'});
+   if (defined($SETTING{'pdf compression'})
+       and $compression eq $SETTING{'pdf compression'});
   ++$i;
  }
  $optc -> set_menu ($menuc);
@@ -1281,28 +1277,36 @@ sub update_PDF_settings {
  $SETTING{"keywords"} = $entryk -> get_text;
 
 # Set compression
- $SETTING{'compression'} = $compression[$optc -> get_history];
+ $SETTING{'pdf compression'} = $compression[$optc -> get_history];
  $SETTING{'quality'} = $spinbuttonq -> get_value
-  if ($SETTING{'compression'} eq 'JPEG');
+  if ($SETTING{'pdf compression'} eq 'JPEG');
 }
 
 
 sub get_PDF_options {
- my $compression = '';
- if ($SETTING{'compression'} eq 'JPEG') {
-  $compression = "-j -q $SETTING{'quality'}";
- }
- elsif ($SETTING{'compression'} eq 'Zip') {
-  $compression = "-z";
- }
+ if (defined $SETTING{'pdf compression'} and defined $SETTING{'year'}
+      and defined $SETTING{'month'} and defined $SETTING{'day'}
+      and defined $SETTING{'author'} and defined $SETTING{'title'}
+      and defined $SETTING{'subject'} and defined $SETTING{'keywords'}) {
+  my $compression = '';
+  if ($SETTING{'pdf compression'} eq 'JPEG') {
+   $compression = "-j -q $SETTING{'quality'}";
+  }
+  elsif ($SETTING{'pdf compression'} eq 'Zip') {
+   $compression = "-z";
+  }
 
- return $compression
-         . sprintf (" -e %4i%02i%02i", $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'})
-         . " -c \"$program v$version\""
-         . " -a \"$SETTING{'author'}\""
-         . " -t \"$SETTING{'title'}\""
-         . " -s \"$SETTING{'subject'}\""
-         . " -k \"$SETTING{'keywords'}\"";
+  return $compression
+          . sprintf (" -e %4i%02i%02i", $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'})
+          . " -c \"$program v$version\""
+          . " -a \"$SETTING{'author'}\""
+          . " -t \"$SETTING{'title'}\""
+          . " -s \"$SETTING{'subject'}\""
+          . " -k \"$SETTING{'keywords'}\"";
+ }
+ else {
+  return " -c \"$program v$version\"";
+ }
 }
 
 
@@ -1410,7 +1414,8 @@ sub save_PDF_dialog {
 
   $windowp -> show_all;
   $hboxq -> hide_all
-   if (! defined($SETTING{'compression'}) or $SETTING{'compression'} ne 'JPEG');
+   if (! defined($SETTING{'pdf compression'})
+        or $SETTING{'pdf compression'} ne 'JPEG');
  }
  else {
   save_PDF();
@@ -1420,239 +1425,265 @@ sub save_PDF_dialog {
 
 # Display page selector and on save a fileselector.
 
-sub save_TIFF {
-
- if (defined $windowt) {
-  $windowt -> present;
-  return;
- }
+sub save_TIFF_dialog {
 
 # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
- ($windowt, my $vbox) = create_window($window, $d->get('Save as TIFF'), FALSE);
+
+ if ($uimanager->get_widget('/MenuBar/Edit/Options') -> get_active) {
+
+  if (defined $windowt) {
+   $windowt -> present;
+   return;
+  }
+
+  ($windowt, my $vbox) = create_window($window, $d->get('Save as TIFF'), FALSE);
 
 # Frame for page range
- my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
- my @compression = (
-  [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
-  [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
-  [ 'jpeg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
-  [ 'packbits', $d->get('Packbits'), $d->get('Compress output with Packbits encoding.') ],
-  [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
-  [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
-  [ 'none', $d->get('None'), $d->get('Use no compression algorithm on output.') ],
- );
+  my @compression = (
+   [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
+   [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
+   [ 'jpeg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
+   [ 'packbits', $d->get('Packbits'), $d->get('Compress output with Packbits encoding.') ],
+   [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
+   [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
+   [ 'none', $d->get('None'), $d->get('Use no compression algorithm on output.') ],
+  );
 
 # Compression optionmenu
- my $hboxc = Gtk2::HBox -> new;
- $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
- my $label = Gtk2::Label -> new ($d->get('Compression'));
- $hboxc -> pack_start ($label, FALSE, FALSE, 0);
- my $optc = Gtk2::OptionMenu -> new;
- my $menuc = Gtk2::Menu -> new;
+  my $hboxc = Gtk2::HBox -> new;
+  $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
+  my $label = Gtk2::Label -> new ($d->get('Compression'));
+  $hboxc -> pack_start ($label, FALSE, FALSE, 0);
+  my $optc = Gtk2::OptionMenu -> new;
+  my $menuc = Gtk2::Menu -> new;
 
 # Set up quality spinbutton here so that it can be shown or hidden by callback
- my $hboxq = Gtk2::HBox -> new;
- $vbox -> pack_start($hboxq, TRUE, TRUE, 0);
- $label = Gtk2::Label -> new ($d->get('JPEG Quality'));
- $hboxq -> pack_start ($label, FALSE, FALSE, 0);
- my $spinbuttonq = Gtk2::SpinButton -> new_with_range(1, 100, 1);
- if (defined($SETTING{'quality'})) {
-  $spinbuttonq->set_value($SETTING{'quality'});
- }
- else {
-  $spinbuttonq->set_value(75);
- }
- $hboxq -> pack_end ($spinbuttonq, FALSE, FALSE, 0);
+  my $hboxq = Gtk2::HBox -> new;
+  $vbox -> pack_start($hboxq, TRUE, TRUE, 0);
+  $label = Gtk2::Label -> new ($d->get('JPEG Quality'));
+  $hboxq -> pack_start ($label, FALSE, FALSE, 0);
+  my $spinbuttonq = Gtk2::SpinButton -> new_with_range(1, 100, 1);
+  if (defined($SETTING{'quality'})) {
+   $spinbuttonq->set_value($SETTING{'quality'});
+  }
+  else {
+   $spinbuttonq->set_value(75);
+  }
+  $hboxq -> pack_end ($spinbuttonq, FALSE, FALSE, 0);
 
 # Fill compression optionmenu
- my $i = 0;
- my $o;
- foreach my $option ( @compression ) {
-  my $item = Gtk2::MenuItem -> new ($option->[1]);
-  $menuc -> append ($item);
-  $item -> signal_connect ('activate' => sub {
-   if ($option->[0] eq 'jpeg') {
-    $hboxq -> show_all;
-   }
-   else {
-    $hboxq -> hide_all;
-   }
-  });
-  $o = $i
-   if (defined($SETTING{'compression'})
-       and $option->[0] eq $SETTING{'compression'});
-  ++$i;
- }
- $optc -> set_menu ($menuc);
- $optc -> set_history ($o) if defined($o);
- $hboxc -> pack_end ($optc, FALSE, FALSE, 0);
+  my $i = 0;
+  my $o;
+  foreach my $option ( @compression ) {
+   my $item = Gtk2::MenuItem -> new ($option->[1]);
+   $menuc -> append ($item);
+   $item -> signal_connect ('activate' => sub {
+    if ($option->[0] eq 'jpeg') {
+     $hboxq -> show_all;
+    }
+    else {
+     $hboxq -> hide_all;
+    }
+   });
+   $o = $i
+    if (defined($SETTING{'tiff compression'})
+        and $option->[0] eq $SETTING{'tiff compression'});
+   ++$i;
+  }
+  $optc -> set_menu ($menuc);
+  $optc -> set_history ($o) if defined($o);
+  $hboxc -> pack_end ($optc, FALSE, FALSE, 0);
 
 # HBox for buttons
- my $hboxb = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+  my $hboxb = Gtk2::HBox -> new;
+  $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
 
 # Save button
- my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
- $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
- $sbutton -> signal_connect (clicked => sub {
+  my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
+  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
+  $sbutton -> signal_connect (clicked => sub {
+
+# dig out the compression
+   $SETTING{'tiff compression'} = $compression[$optc -> get_history][0];
+   $SETTING{'quality'} = $spinbuttonq->get_value
+    if ($SETTING{'tiff compression'} eq 'jpeg');
+
+   save_TIFF();
+  } );
+
+# Cancel button
+  my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+  $cbutton -> signal_connect( clicked => sub { $windowt -> hide; } );
+
+  $windowt -> show_all;
+  $hboxq -> hide_all if ($compression[$optc -> get_history][0] ne 'jpeg');
+ }
+ else {
+  save_TIFF();
+ }
+}
+
+
+sub save_TIFF {
 
 # cd back to cwd to save
-  chdir $SETTING{"cwd"};
+ chdir $SETTING{"cwd"};
 
 # Set up file selector
-  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('TIFF filename'),
+ my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('TIFF filename'),
                                                      $windowt, 'save',
                                                      'gtk-cancel' => 'cancel',
                                                      'gtk-save' => 'ok');
-  $file_chooser -> set_default_response('ok');
+ $file_chooser -> set_default_response('ok');
 
-  if ('ok' eq $file_chooser->run) {
-   my $filename = $file_chooser -> get_filename;
-   if (-e $filename) {
-    my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
-     'destroy-with-parent',
-     'question', # message type
-     'ok-cancel', # which set of buttons?
-     sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
-    my $response = $dialog -> run;
-    $dialog -> destroy;
-    return TRUE if ($response ne 'ok');
-   }
-
-# Update cwd
-   $SETTING{"cwd"} = dirname($filename);
-
-# cd back to tempdir
-   chdir $dir;
-
-# fill $pagelist with filenames depending on which radiobutton is active
-   my ($pagelist, $n) = get_pagelist();
-
-# dig out the compression
-   $SETTING{'compression'} = $compression[$optc -> get_history][0];
-   my $compression = $SETTING{'compression'};
-   $compression .= ':'.$spinbuttonq->get_value if ($compression eq 'jpeg');
-
-# Create the tiff
-   system ("tiffcp -c $compression $pagelist \"$filename\"");
-
-   $windowt -> hide;
+ if ('ok' eq $file_chooser->run) {
+  my $filename = $file_chooser -> get_filename;
+  if (-e $filename) {
+   my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
+    'destroy-with-parent',
+    'question', # message type
+    'ok-cancel', # which set of buttons?
+    sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
+   my $response = $dialog -> run;
+   $dialog -> destroy;
+   return TRUE if ($response ne 'ok');
   }
 
-  $file_chooser -> destroy;
- } );
+# Update cwd
+  $SETTING{"cwd"} = dirname($filename);
 
-# Cancel button
- my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
- $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton -> signal_connect( clicked => sub { $windowt -> hide; } );
+# cd back to tempdir
+  chdir $dir;
 
- $windowt -> show_all;
- $hboxq -> hide_all if ($compression[$optc -> get_history][0] ne 'jpeg');
+# fill $pagelist with filenames depending on which radiobutton is active
+  my ($pagelist, $n) = get_pagelist();
+
+  my $compression = $SETTING{'tiff compression'};
+  $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpeg');
+
+# Create the tiff
+  system ("tiffcp -c $compression $pagelist \"$filename\"");
+
+  $windowt -> hide;
+ }
+
+ $file_chooser -> destroy;
 }
 
 
 # Display page selector and on save a fileselector.
 
-sub save_djvu {
-
- if (defined $windowv) {
-  $windowv -> present;
-  return;
- }
+sub save_djvu_dialog {
 
 # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
- ($windowv, my $vbox) = create_window($window, $d->get('Save as DjVu'), FALSE);
+
+ if ($uimanager->get_widget('/MenuBar/Edit/Options') -> get_active) {
+
+  if (defined $windowv) {
+   $windowv -> present;
+   return;
+  }
+
+  ($windowv, my $vbox) = create_window($window, $d->get('Save as DjVu'), FALSE);
 
 # Compression optionmenu
- my $hboxc = Gtk2::HBox -> new;
- $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
- my $label = Gtk2::Label -> new ($d->get('Compression'));
- $hboxc -> pack_start ($label, FALSE, FALSE, 0);
- my $optc = Gtk2::OptionMenu -> new;
- my $menuc = Gtk2::Menu -> new;
+  my $hboxc = Gtk2::HBox -> new;
+  $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
+  my $label = Gtk2::Label -> new ($d->get('Compression'));
+  $hboxc -> pack_start ($label, FALSE, FALSE, 0);
+  my $optc = Gtk2::OptionMenu -> new;
+  my $menuc = Gtk2::Menu -> new;
 
 # Fill compression optionmenu
- my $item = Gtk2::MenuItem -> new ($d->get('Bitonal'));
- $menuc -> append ($item);
- $optc -> set_menu ($menuc);
- $hboxc -> pack_end ($optc, FALSE, FALSE, 0);
+  my $item = Gtk2::MenuItem -> new ($d->get('Bitonal'));
+  $menuc -> append ($item);
+  $optc -> set_menu ($menuc);
+  $hboxc -> pack_end ($optc, FALSE, FALSE, 0);
 
 # Frame for page range
- my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # HBox for buttons
- my $hboxb = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+  my $hboxb = Gtk2::HBox -> new;
+  $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
 
 # Save button
- my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
- $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
- $sbutton -> signal_connect (clicked => sub {
+  my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
+  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
+  $sbutton -> signal_connect (clicked => sub { save_djvu(); } );
+
+# Cancel button
+  my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+  $cbutton -> signal_connect( clicked => sub { $windowv -> hide; } );
+
+  $windowv -> show_all;
+ }
+ else {
+  save_djvu();
+ }
+}
+
+
+sub save_djvu {
 
 # cd back to cwd to save
-  chdir $SETTING{"cwd"};
+ chdir $SETTING{"cwd"};
 
 # Set up file selector
-  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('DjVu filename'),
+ my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('DjVu filename'),
                                                      $windowv, 'save',
                                                      'gtk-cancel' => 'cancel',
                                                      'gtk-save' => 'ok');
-  $file_chooser -> set_default_response('ok');
+ $file_chooser -> set_default_response('ok');
 
-  if ('ok' eq $file_chooser->run) {
-   my $filename = $file_chooser -> get_filename;
-   if (-e $filename) {
-    my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
-     'destroy-with-parent',
-     'question', # message type
-     'ok-cancel', # which set of buttons?
-     sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
-    my $response = $dialog -> run;
-    $dialog -> destroy;
-    return TRUE if ($response ne 'ok');
-   }
-
-# Update cwd
-   $SETTING{"cwd"} = dirname($filename);
-
-# cd back to tempdir
-   chdir $dir;
-
-# fill $pagelist with filenames depending on which radiobutton is active
-   my ($pagelist, $n) = get_pagelist();
-   
-   if ($n > 1) {
-    my @pagelist = split / /, $pagelist;
-    foreach (@pagelist) {
-
-     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
-
-# Create the djvu
-     system ("cjb2 $_ $djvu");
-
-     $_ = $djvu;
-    }
-    $pagelist = "@pagelist";
-    system ("djvm -c $filename $pagelist");
-   }
-   else {
-    system ("cjb2 $pagelist $filename");
-   }
-
-   $windowv -> hide;
+ if ('ok' eq $file_chooser->run) {
+  my $filename = $file_chooser -> get_filename;
+  if (-e $filename) {
+   my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
+    'destroy-with-parent',
+    'question', # message type
+    'ok-cancel', # which set of buttons?
+    sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
+   my $response = $dialog -> run;
+   $dialog -> destroy;
+   return TRUE if ($response ne 'ok');
   }
 
-  $file_chooser -> destroy;
- } );
+# Update cwd
+  $SETTING{"cwd"} = dirname($filename);
 
-# Cancel button
- my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
- $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton -> signal_connect( clicked => sub { $windowv -> hide; } );
+# cd back to tempdir
+  chdir $dir;
 
- $windowv -> show_all;
+# fill $pagelist with filenames depending on which radiobutton is active
+  my ($pagelist, $n) = get_pagelist();
+   
+  if ($n > 1) {
+   my @pagelist = split / /, $pagelist;
+   foreach (@pagelist) {
+
+    my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
+
+# Create the djvu
+    system ("cjb2 $_ $djvu");
+
+    $_ = $djvu;
+   }
+   $pagelist = "@pagelist";
+   system ("djvm -c $filename $pagelist");
+  }
+  else {
+   system ("cjb2 $pagelist $filename");
+  }
+
+  $windowv -> hide;
+ }
+
+ $file_chooser -> destroy;
 }
 
 
@@ -1717,7 +1748,8 @@ sub email {
 
  $windowe -> show_all;
  $hboxq -> hide_all
-  if (! defined($SETTING{'compression'}) or $SETTING{'compression'} ne 'JPEG');
+  if (! defined($SETTING{'pdf compression'})
+       or $SETTING{'pdf compression'} ne 'JPEG');
 }
 
 
@@ -2107,7 +2139,7 @@ sub scanimage {
  chdir $dir;
 
 # Create command
- my $cmd = "scanimage $device $npages $start $step @options;echo 'End Scan' > /dev/stderr";
+ my $cmd = "scanimage $device $npages $start $step @options";
  warn "$cmd\n" if $debug;
 
  if (! @test) {
@@ -2115,7 +2147,7 @@ sub scanimage {
 # Interface to scanimage
   my ($write, $read);
   my $error = IO::Handle -> new; # this needed because of a bug in open3.
-  my $pid = open3($write, $read, $error, $cmd);
+  my $pid = open3($write, $read, $error, $cmd)+1;
   
   my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
                                     'destroy-with-parent',
@@ -2126,68 +2158,77 @@ sub scanimage {
 # Ensure that the dialog box is destroyed when the user responds.
   $dialog -> signal_connect (response => sub {
    $_[0] -> destroy;
-   local $SIG{HUP} = 'IGNORE';
-   kill HUP => $pid;
+   local $SIG{INT} = 'IGNORE';
+   kill INT => $pid;
   });
   $dialog -> show_all;
  
   my $line;
-  Glib::IO -> add_watch(fileno($error), 'in', sub {
-   my $buffer;
-   sysread $error, $buffer, 1024;
-   $line = $line . $buffer; # needed to cover case where line is broken in middle
-   while ($line =~ /\n/) {
-    if ($line =~ /^Scanning (-?\d*) pages/) {
-     $label -> set_text($d->get('Scanning')." $1 ".$d->get('pages')."...");
-    }
-    elsif ($line =~ /^Scanning page (\d*)/) {
-     $label -> set_text($d->get('Scanning page')." $1...");
-    }
-    elsif ($line =~ /^Scanned page (\d*)\. \(scanner status = 5\)/) {
+  Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    my $buffer;
+
+# Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
+    sysread $error, $buffer, 1024;
+    $line .= $buffer;
+
+    while ($line =~ /\n/) {
+     if ($line =~ /^Scanning (-?\d*) pages/) {
+      $label -> set_text($d->get('Scanning')." $1 ".$d->get('pages')."...");
+     }
+     elsif ($line =~ /^Scanning page (\d*)/) {
+      $label -> set_text($d->get('Scanning page')." $1...");
+     }
+     elsif ($line =~ /^Scanned page (\d*)\. \(scanner status = 5\)/) {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-     if (! import_scan ("out$1.tif")) {
+      if (! import_scan ("out$1.tif")) {
+       $dialog -> destroy;
+       $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
+                         'error', 'close', $d->get('Unable to load image'));
+       $dialog -> run;
+       $dialog -> destroy;
+       return FALSE;
+      }
+     }
+     elsif ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
+      $label -> set_text($d->get('Scanner warming up'));
+     }
+     elsif ($line =~ /^Scanned page \d*\. \(scanner status = 7\)/) {
+      ;
+     }
+     elsif ($line =~ /^scanimage: sane_start: Document feeder out of documents/) {
+      ;
+     }
+     elsif ($line =~ /^scanimage: (rounded|received signal 2|trying to stop scanner)/) {
+      warn substr($line, 0, index($line, "\n")+1);
+     }
+     else {
       $dialog -> destroy;
-      $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
-                        'error', 'close', $d->get('Unable to load image'));
+      my $text = $d->get('Unknown message: ')
+                                         . substr($line, 0, index($line, "\n"));
+warn "$text\n";
+      $dialog = Gtk2::MessageDialog -> new ($windows,
+                                               'destroy-with-parent',
+                                               'error',
+                                               'close',
+                                               $text);
       $dialog -> run;
       $dialog -> destroy;
       return FALSE;
      }
+     $line = substr($line, index($line, "\n")+1, length($line));
     }
-    elsif ($line =~ /^End Scan/) {
-     $dialog -> destroy;
-     return FALSE; # Sascha Hunold [hunoldinho at users dot sourceforge dot net]
-    }
-    elsif ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
-     $label -> set_text($d->get('Scanner warming up'));
-    }
-    elsif ($line =~ /^Scanned page \d*\. \(scanner status = 7\)/) {
-     ;
-    }
-    elsif ($line =~ /^scanimage: sane_start: Document feeder out of documents/) {
-     ;
-    }
-    elsif ($line =~ /^scanimage: rounded/) {
-     warn substr($line, 0, index($line, "\n")+1);
-    }
-    else {
-     $dialog -> destroy;
-     my $text = $d->get('Unknown message: ')
-                                        . substr($line, 0, index($line, "\n"));
-warn "$text\n";
-     $dialog = Gtk2::MessageDialog -> new ($windows,
-                                              'destroy-with-parent',
-                                              'error',
-                                              'close',
-                                              $text);
-     $dialog -> run;
-     $dialog -> destroy;
-    }
-    $line = substr($line, index($line, "\n")+1, length($line));
+    return TRUE;  # continue without uninstalling
    }
-   return TRUE;
+   elsif ($condition & 'hup') { # bit field operation. >= would also work
+    close $read;
+    $dialog -> destroy;
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # Shouldn't need this a second time...
   });
  }
  else {
@@ -2236,7 +2277,7 @@ END
  chmod 0755, "scanscript.sh"; # u+rwx,go+rw
 
 # Create command
- my $cmd = "scanadf $device $start $end @options;echo 'End Scan' > /dev/stderr";
+ my $cmd = "scanadf $device $start $end @options > /dev/stderr";
  warn "$cmd\n" if $debug;
 
  if (! @test) {
@@ -2261,53 +2302,61 @@ END
   $dialog -> show_all;
  
   my $line;
-  Glib::IO -> add_watch(fileno($error), 'in', sub {
-   my $buffer;
-   sysread $error, $buffer, 1024;
-   $line = $line . $buffer; # needed to cover case where line is broken in middle
-   while ($line =~ /\n/) {
-    if ($line =~ /^Scanned document out(\d*)\.pnm/) {
-     $label -> set_text($d->get('Scanned page')." $1...");
-    }
-    elsif ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
-     $label -> set_text($d->get('Scanner warming up'));
-    }
-    elsif ($line =~ /^gscan2pdf created out(\d*)\.tif/) {
+  Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    my $buffer;
+
+# Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
+    sysread $error, $buffer, 1024;
+    $line .= $buffer;
+
+    while ($line =~ /\n/) {
+     if ($line =~ /^Scanned document out(\d*)\.pnm/) {
+      $label -> set_text($d->get('Scanned page')." $1...");
+     }
+     elsif ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
+      $label -> set_text($d->get('Scanner warming up'));
+     }
+     elsif ($line =~ /^gscan2pdf created out(\d*)\.tif/) {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-     if (! import_scan ("out$1.tif")) {
+      if (! import_scan ("out$1.tif")) {
+       $dialog -> destroy;
+       $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
+                         'error', 'close', $d->get('Unable to load image'));
+       $dialog -> run;
+       $dialog -> destroy;
+       return FALSE;
+      }
+     }
+     elsif ($line =~ /^Scanned \d* pages/) {
+      ;
+     }
+     else {
       $dialog -> destroy;
-      $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
-                        'error', 'close', $d->get('Unable to load image'));
+      my $text = $d->get('Unknown message: ')
+                                         . substr($line, 0, index($line, "\n"));
+warn "$text\n";
+      $dialog = Gtk2::MessageDialog -> new ($windows,
+                                               'destroy-with-parent',
+                                               'error',
+                                               'close',
+                                               $text);
       $dialog -> run;
       $dialog -> destroy;
-      return FALSE;
      }
+     $line = substr($line, index($line, "\n")+1, length($line));
     }
-    elsif ($line =~ /^End Scan/) {
-     $dialog -> destroy;
-     return FALSE; # Sascha Hunold [hunoldinho at users dot sourceforge dot net]
-    }
-    elsif ($line =~ /^Scanned \d* pages/) {
-     ;
-    }
-    else {
-     $dialog -> destroy;
-     my $text = $d->get('Unknown message: ')
-                                        . substr($line, 0, index($line, "\n"));
-warn "$text\n";
-     $dialog = Gtk2::MessageDialog -> new ($windows,
-                                              'destroy-with-parent',
-                                              'error',
-                                              'close',
-                                              $text);
-     $dialog -> run;
-     $dialog -> destroy;
-    }
-    $line = substr($line, index($line, "\n")+1, length($line));
+    return TRUE;  # continue without uninstalling
    }
-   return TRUE;
+   if ($condition & 'hup') { # bit field operation. >= would also work
+    close $read;
+    $dialog -> destroy;
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # Shouldn't need this a second time...
   });
  }
  else {
@@ -3161,7 +3210,7 @@ sub OCR {
                                            'destroy-with-parent',
                                            'error',
                                            'close',
-                                           $d->get("No page selected"));
+                                           $d->get('No page selected'));
    $dialog -> run;
    $dialog -> destroy;
    return;
