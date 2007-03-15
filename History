@@ -1,3 +1,14 @@
+0.9.6 (22.03.2007):
+
+"Enable Options" now "Enable Save Options"
++ After cancelling scan, I/O error ignored.
++ tiff2pdf replaced with PDF::API2,
+  fixing character encoding bug in metadata
++ OCR result buffer now embedded as annotation in PDF
++ PDF import
++ Now loads modules when needed, rather than at start to speed up start-up.
+
+
 0.9.5 (08.03.2007):
 
 Fixed bug where nothing saved if no default for page rage
