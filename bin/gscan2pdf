@@ -6,7 +6,7 @@
 
 # To do
 # 0. Add status line at bottom with messages like "filename saved"
-#    Rewrite in python with python-sane, pytiff & tiff2pdf
+#    Rewrite in python with python-sane & pytiff
 #    Add KDE, Xfce menus
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
@@ -23,7 +23,6 @@
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    Work out a good place to log error messages
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
-#    Check encoding (umlauts) of metadata (into PDFDocEncoding)
 #    check debian/copyright
 #    check out scanbuttond
 #    don't display dialogs for "rounded" messages
@@ -32,6 +31,8 @@
 #     ComboBoxes
 #    Switch viewing widget as soon as packages are available for:
 #     http://giv.sourceforge.net/gtk-image-viewer/
+#    Cope with any graphic file that imagemagick recognises.
+#    Switch all imagemagick convert and tiffinfo calls to perlmagick
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
@@ -60,8 +61,6 @@
 
 use warnings;
 use strict;
-use IPC::Open3;
-use IO::Handle;
 use Gtk2 -init;
 use Gtk2::Ex::Simple::List;
 use Cwd;                             # To obtain current working directory
@@ -72,7 +71,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.5";
+my $version = "0.9.6";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -193,7 +192,7 @@ init_icons( [ 'rotate90',  "$path/rotate90.png" ],
 # in the menu callbacks
 my ($windowp, $windowt, $windowv, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $frames, $vboxd, $optd, $optp, $hboxc, @undo_buffer,
-    @redo_buffer, @undo_selection, @redo_selection);
+    @redo_buffer, @undo_selection, @redo_selection, $buffer);
 
 my @action_items = (
  # Fields for each action item:
@@ -202,7 +201,7 @@ my @action_items = (
  # File menu
  [ 'File', undef, $d->get('_File') ],
  [ 'New', 'gtk-new', $d->get('_New'), '<control>n', $d->get('Clears all pages'), \&new ],
- [ 'Import TIFF', 'gtk-open', $d->get('_Import TIFF'), '<control>i', $d->get('Import TIFF file'), \&import ],
+ [ 'Import', 'gtk-open', $d->get('_Import'), '<control>i', $d->get('Import image file(s)'), \&import ],
  [ 'Scan', 'scanner', $d->get('S_can'), undef, $d->get('Scan document'), \&scan_dialog ],
  [ 'Save PDF', 'pdf', $d->get('_Save PDF'), '<shift><control>s', $d->get('Save as PDF'), \&save_PDF_dialog ],
  [ 'Save TIFF', 'gtk-save', $d->get('Save _TIFF'), '<control>s', $d->get('Save as TIFF'), \&save_TIFF_dialog ],
@@ -254,7 +253,7 @@ my $ui = "<ui>
  <menubar name='MenuBar'>
   <menu action='File'> 
    <menuitem action='New'/>
-   <menuitem action='Import TIFF'/>
+   <menuitem action='Import'/>
    <menuitem action='Scan'/>
    <menuitem action='Save PDF'/>
    <menuitem action='Save TIFF'/>
@@ -299,7 +298,7 @@ my $ui = "<ui>
  </menubar>
  <toolbar name='ToolBar'>
   <toolitem action='New'/>
-  <toolitem action='Import TIFF'/>
+  <toolitem action='Import'/>
   <toolitem action='Scan'/>
   <toolitem action='Save PDF'/>
   <toolitem action='Save TIFF'/>
@@ -414,15 +413,16 @@ my $scwin_thumbs = Gtk2::ScrolledWindow -> new;
 $hpaned -> pack1 ($scwin_thumbs, TRUE, TRUE);
 $scwin_thumbs -> set_policy ('automatic', 'automatic');
 
-# define filename and i to be hidden
-Gtk2::Ex::Simple::List -> add_column_type( 'filename',
+# define hidden string column for filename and annotation buffer
+Gtk2::Ex::Simple::List -> add_column_type( 'hstring',
                                            type => 'Glib::String',
                                            attr => 'hidden' );
 
 # Set up a SimpleList
 $slist = Gtk2::Ex::Simple::List -> new('#' => 'int',
                                        $d->get('Thumbnails') => 'pixbuf',
-                                       'Filename' => 'filename');
+                                       'Filename' => 'hstring',
+                                       'Buffer' => 'hstring');
 
 # Callback for dropped signal.
 $slist -> signal_connect('drag_drop' => sub {
@@ -530,6 +530,14 @@ $slist -> get_selection -> signal_connect(changed => sub {
 
   $scwin_detail -> add_with_viewport($eventbox);
   $scwin_detail -> show_all;
+
+# Update the buffer, if created
+  if (defined $buffer and defined $slist -> {data}[$page[0]][3]) {
+   $buffer->set_text ($slist -> {data}[$page[0]][3]);
+  }
+  elsif (defined $buffer) {
+   $buffer -> delete($buffer->get_start_iter, $buffer->get_end_iter);
+  }
  }
 });
 
@@ -635,7 +643,7 @@ sub create_menu_bar {
 # and fill it with Gtk2::ToggleAction instances
  my $actions_options = Gtk2::ActionGroup->new ("options");
  $actions_options->add_toggle_actions ( [
-  [ 'Options', 'gtk-preferences', $d->get('Enable _Options'), undef, $d->get('View options before saving'), undef, TRUE ],
+  [ 'Options', 'gtk-preferences', $d->get('Enable Save _Options'), undef, $d->get('View options before saving'), undef, TRUE ],
  ] );
 
 # Add the actiongroup to the uimanager          
@@ -912,12 +920,13 @@ sub new {
 # Throw up file selector and import selected file
 
 sub import {
+ require Image::Magick;
 
 # cd back to cwd to get filename
  chdir $SETTING{"cwd"};
 
  my $file_chooser = Gtk2::FileChooserDialog -> new(
-                                      $d->get('Import scan from file'),
+                                      $d->get('Import image from file'),
                                       $window, 'open',
                                       'gtk-cancel' => 'cancel',
                                       'gtk-ok' => 'ok');
@@ -929,6 +938,9 @@ sub import {
 # Update undo/redo buffers
   take_snapshot();
 
+# cd back to tempdir to import
+  chdir $dir;
+
   my @filename = $file_chooser -> get_filenames;
 
   foreach my $filename (@filename) {
@@ -936,49 +948,76 @@ sub import {
 # Update cwd
    $SETTING{"cwd"} = dirname($filename);
 
-# Check that the file really is a tiff
-   my $output = `tiffinfo \"$filename\" 2>&1 1>/dev/null`;
-   if ($output =~ /Not a TIFF file/) {
-    my $dialog = Gtk2::MessageDialog -> new ($window,
-                                            'destroy-with-parent',
-                                            'error',
-                                            'close',
-                                            $d->get('Not a TIFF file'));
-    $dialog -> run;
-    $dialog -> destroy;
+# Get file type
+   my $image = Image::Magick->new;
+   my $x = $image->Read($filename);
+   warn "$x" if "$x";
+
+   my $format = $image->Get('format');
+   undef $image;
+warn "$format\n";
+
+   if ($format eq 'Portable Document Format') {
+
+# Extract images from PDF
+    system ("pdfimages \"$filename\" x");
+
+# Convert each image from ppm to tif and import
+    my @images = <x-???.???>;
+    foreach (@images) {
+warn "$_\n";
+     my $image = Image::Magick->new;
+     my $x = $image->Read($_);
+     warn "$x" if "$x";
+
+# Calculate the resolution
+     my $height = $image->Get('height');
+     my $width = $image->Get('width');
+     my $ratio = $height/$width;
+     $ratio = 1/$ratio if ($ratio < 1);
+     my $density = 72;
+     for (my $i = 0; $i <= $#paperg; ++$i) {
+      if (abs($ratio - $yg[$i]/$xg[$i]) < 0.01) {
+warn "$height, $width, $paperg[$i]\n";
+       $density = (($height > $width) ? $height : $width)/$yg[$i]*25.4;
+      }
+     }
+warn "$density\n";
+
+# Write the tif
+     $image->Write(units => 'PixelsPerInch',
+                   density => $density.'x'.$density,
+                   filename => "$_.tif");
+     import_scan("$_.tif");
+     unlink $_;
+    }
    }
-   else {
-    my $dialog = Gtk2::Dialog -> new ($d->get('Importing')."...", $window,
-                                      'destroy-with-parent',
-                                      'gtk-cancel' => 'cancel');
-
-# Set up ProgressBar
-    my $pbar = new Gtk2::ProgressBar;
-    $pbar -> set_pulse_step(.1);
-    $dialog -> vbox -> add($pbar);
-
-# Timer will run until callback returns false 
-#    my $timer = Glib::Timeout->add (100, sub {$pbar->pulse; return 1;});
-    $pbar->set_fraction(.5);
-    $dialog -> show_all;
-
-# cd back to tempdir to import
-    chdir $dir;
+   elsif ($format eq 'Tagged Image File Format') {
 
 # Split the tiff into its pages and import them individually
     system("tiffsplit \"$filename\"");
-    $pbar->set_fraction(1);
     my @pages = <x???.tif>;
     foreach (@pages) {
      import_scan($_);
     }
     
-#    Glib::Source -> remove($timer);
+   }
+   else {
+
+    my $dialog = Gtk2::MessageDialog -> new ($window,
+                                            'destroy-with-parent',
+                                            'error',
+                                            'close',
+                                            $d->get('Not a recognised file'));
+    $dialog -> run;
     $dialog -> destroy;
    }
 
   }
  }
+
+# cd back to tempdir
+ chdir $dir;
 
  $file_chooser -> destroy;
 }
@@ -1207,106 +1246,92 @@ sub add_PDF_options {
  $hboxk -> pack_end( $entryk, TRUE, TRUE, 0 );
  $entryk -> set_text($SETTING{"keywords"}) if (defined($SETTING{"keywords"}));
 
-# Get help page to see what compression options are configured in tiff2pdf
- my $output = `tiff2pdf -h 2>&1 1>/dev/null`;
- my @compression;
- push @compression, $d->get('None');
- if ($output =~ /-z/) {
-  push @compression, $d->get('Zip');
-  $SETTING{'pdf compression'} = 'Zip' if (! defined $SETTING{'pdf compression'});
- }
- push @compression, $d->get('JPEG') if ($output =~ /-j/);
-
-# Compression optionmenu
- my $hboxc = Gtk2::HBox -> new;
- $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
- my $label = Gtk2::Label -> new ($d->get('Compression'));
- $hboxc -> pack_start ($label, FALSE, FALSE, 0);
- my $optc = Gtk2::OptionMenu -> new;
- my $menuc = Gtk2::Menu -> new;
-
-# Set up quality spinbutton here so that it can be shown or hidden by callback
- my $hboxq = Gtk2::HBox -> new;
- $vbox -> pack_start($hboxq, TRUE, TRUE, 0);
- $label = Gtk2::Label -> new ($d->get('JPEG Quality'));
- $hboxq -> pack_start ($label, FALSE, FALSE, 0);
- my $spinbuttonq = Gtk2::SpinButton -> new_with_range(1, 100, 1);
- if (defined($SETTING{'quality'})) {
-  $spinbuttonq->set_value($SETTING{'quality'});
- }
- else {
-  $spinbuttonq->set_value(80);
- }
- $hboxq -> pack_end ($spinbuttonq, FALSE, FALSE, 0);
-
-# Fill compression optionmenu
- my $i = 0;
- my $o;
- foreach my $compression (@compression) {
-  my $item = Gtk2::MenuItem -> new ($compression);
-  $menuc -> append ($item);
-  $item -> signal_connect ('activate' => sub {
-   if ($compression eq $d->get('JPEG')) {
-    $hboxq -> show_all;
-   }
-   else {
-    $hboxq -> hide_all;
-   }
-  });
-  $o = $i
-   if (defined($SETTING{'pdf compression'})
-       and $compression eq $SETTING{'pdf compression'});
-  ++$i;
- }
- $optc -> set_menu ($menuc);
- $optc -> set_history ($o) if defined($o);
- $hboxc -> pack_end ($optc, FALSE, FALSE, 0);
-
- return ($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc,
-          $hboxq, @compression);
+ return ($entrya, $entryt, $entrys, $entryk);
 }
 
 
 sub update_PDF_settings {
- my ($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc, @compression) = @_;
+ my ($entrya, $entryt, $entrys, $entryk) = @_;
 
 # Get metadata
  $SETTING{"author"} = $entrya -> get_text;
  $SETTING{"title"} = $entryt -> get_text;
  $SETTING{"subject"} = $entrys -> get_text;
  $SETTING{"keywords"} = $entryk -> get_text;
-
-# Set compression
- $SETTING{'pdf compression'} = $compression[$optc -> get_history];
- $SETTING{'quality'} = $spinbuttonq -> get_value
-  if ($SETTING{'pdf compression'} eq 'JPEG');
 }
 
 
 sub get_PDF_options {
- if (defined $SETTING{'pdf compression'} and defined $SETTING{'year'}
-      and defined $SETTING{'month'} and defined $SETTING{'day'}
-      and defined $SETTING{'author'} and defined $SETTING{'title'}
-      and defined $SETTING{'subject'} and defined $SETTING{'keywords'}) {
-  my $compression = '';
-  if ($SETTING{'pdf compression'} eq 'JPEG') {
-   $compression = "-j -q $SETTING{'quality'}";
+ my %h;
+ $h{'Author'} = $SETTING{'author'} if defined $SETTING{'author'};
+ if (defined $SETTING{'year'} and defined $SETTING{'month'}
+                                               and defined $SETTING{'day'}) {
+  $h{'CreationDate'} = sprintf ("D:%4i%02i%02i000000+00'00'",
+                        $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'});
+  $h{'ModDate'} = sprintf ("D:%4i%02i%02i000000+00'00'",
+                        $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'});
+ }
+ $h{'Creator'} = "$program v$version";
+ $h{'Producer'} = "PDF::API2";
+ $h{'Title'} = $SETTING{'title'} if defined $SETTING{'title'};
+ $h{'Subject'} = $SETTING{'subject'} if defined $SETTING{'subject'};
+ $h{'Keywords'} = $SETTING{'keywords'} if defined $SETTING{'keywords'};
+ return %h;
+}
+
+
+# Create the PDF
+
+sub create_PDF {
+ my ($filename) = @_;
+
+ require PDF::API2;
+
+# fill $pagelist with filenames depending on which radiobutton is active
+ my @pagelist = get_page_index();
+
+# Create PDF with PDF::API2
+ my $pdf = PDF::API2->new(-file => $filename);
+ $pdf->info(get_PDF_options());
+ foreach (@pagelist) {
+  my $page = $pdf->page;
+
+# Get the tiff size and resolution
+  my $cmd = "tiffinfo \"".$slist -> {data}[$_][2]."\"";
+  my $output = `$cmd`;
+  my ($w, $h, $resolution);
+  if ($output =~ /Image Width: (\d*)/) {
+   $w = $1;
   }
-  elsif ($SETTING{'pdf compression'} eq 'Zip') {
-   $compression = "-z";
+  else {
+   warn "Image width not found\n";
+  }
+  if ($output =~ /Image Length: (\d*)/) {
+   $h = $1;
+  }
+  else {
+   warn "Image height not found\n";
+  }
+  if ($output =~ /Resolution: (\d*)/) {
+   $resolution = $1;
+  }
+  else {
+   warn "Image resolution not found\n";
   }
 
-  return $compression
-          . sprintf (" -e %4i%02i%02i", $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'})
-          . " -c \"$program v$version\""
-          . " -a \"$SETTING{'author'}\""
-          . " -t \"$SETTING{'title'}\""
-          . " -s \"$SETTING{'subject'}\""
-          . " -k \"$SETTING{'keywords'}\"";
+  $page->mediabox($w*72/$resolution, $h*72/$resolution);
+  my $gfx = $page->gfx;
+  my $imgobj = $pdf->image_tiff($slist -> {data}[$_][2]);
+  $gfx->image($imgobj,0,0,72/$resolution);
+
+  if (defined $slist -> {data}[$_][3]) {
+   my $ant=$page->annotation;
+   $ant->text($slist -> {data}[$_][3],
+    -rect=>[0,0,$w*72/$resolution,$h*72/$resolution]);
+  }
  }
- else {
-  return " -c \"$program v$version\"";
- }
+ $pdf->save;
+ $pdf->end();
 }
 
 
@@ -1344,24 +1369,8 @@ sub save_PDF {
 # Update cwd
   $SETTING{"cwd"} = dirname($filename);
 
-# fill $pagelist with filenames depending on which radiobutton is active
-  my ($pagelist, $n) = get_pagelist();
-
-# Set options
-  my $options = get_PDF_options();
-
-# Temporary filename for tiff
-  my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
-
-# call tiff2pdf and/or tiffcp according to the number of pages
-  if ($n > 0) {
-   system ("tiffcp $pagelist $tif");
-   system ("tiff2pdf -o \"$filename\" $options $tif");
-   unlink ($tif); # delete the temporary tiff
-  }
-  else {
-   system ("tiff2pdf -o \"$filename\" $options $pagelist");
-  }
+# Create the PDF
+  create_PDF($filename);
   
   $windowp -> hide if defined $windowp;
  }
@@ -1389,8 +1398,7 @@ sub save_PDF_dialog {
   ($windowp, my $vbox) = create_window($window, $d->get('Save as PDF'), FALSE);
 
 # PDF options
-  my ($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc,
-       $hboxq, @compression) = add_PDF_options ($vbox);
+  my ($entrya, $entryt, $entrys, $entryk) = add_PDF_options ($vbox);
 
 # Frame for page range
   my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
@@ -1403,7 +1411,7 @@ sub save_PDF_dialog {
   my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
   $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
   $sbutton -> signal_connect (clicked => sub {
-   update_PDF_settings($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc, @compression);
+   update_PDF_settings($entrya, $entryt, $entrys, $entryk);
    save_PDF();
   } );
 
@@ -1413,9 +1421,6 @@ sub save_PDF_dialog {
   $cbutton -> signal_connect( clicked => sub { $windowp -> hide; } );
 
   $windowp -> show_all;
-  $hboxq -> hide_all
-   if (! defined($SETTING{'pdf compression'})
-        or $SETTING{'pdf compression'} ne 'JPEG');
  }
  else {
   save_PDF();
@@ -1700,8 +1705,7 @@ sub email {
  ($windowe, my $vbox) = create_window($window, $d->get('Email as PDF'), FALSE);
 
 # PDF options
- my ($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc,
-      $hboxq, @compression) = add_PDF_options ($vbox);
+ my ($entrya, $entryt, $entrys, $entryk) = add_PDF_options ($vbox);
 
 # Frame for page range
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
@@ -1719,22 +1723,13 @@ sub email {
   my ($pagelist, $n) = get_pagelist();
 
 # Set options
-  update_PDF_settings($entrya, $entryt, $entrys, $entryk, $spinbuttonq, $optc, @compression);
-  my $options = get_PDF_options();
+  update_PDF_settings($entrya, $entryt, $entrys, $entryk);
 
-# Create the tiff
   my (undef, $pdf) = tempfile(DIR => $dir, SUFFIX => '.pdf');
-  my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
 
-# call tiff2pdf and/or tiffcp according to the number of pages
-  if ($n > 0) {
-   system ("tiffcp $pagelist $tif");
-   system ("tiff2pdf -o $pdf $options $tif");
-   unlink ($tif); # delete the temporary tiff
-  }
-  else {
-   system ("tiff2pdf -o $pdf $options $pagelist");
-  }
+# Create the PDF
+  create_PDF($pdf);
+
   system ("xdg-email --attach $pdf 'x\@y'");
 
   $windowe -> hide;
@@ -1747,9 +1742,6 @@ sub email {
  $cbutton -> signal_connect( clicked => sub { $windowe -> hide; } );
 
  $windowe -> show_all;
- $hboxq -> hide_all
-  if (! defined($SETTING{'pdf compression'})
-       or $SETTING{'pdf compression'} ne 'JPEG');
 }
 
 
@@ -2112,6 +2104,9 @@ sub scan_dialog {
 sub scanimage {
  my ($device, $npages, $start, $step, %options) = @_;
 
+ require IPC::Open3;
+ require IO::Handle;
+
 # inverted commas needed for strange characters in device name
  $device = "--device-name='$device'";
  if ($npages != 0) {
@@ -2144,6 +2139,9 @@ sub scanimage {
 
  if (! @test) {
 
+# flag to ignore error messages after cancelling scan
+  my $cancel = FALSE;
+
 # Interface to scanimage
   my ($write, $read);
   my $error = IO::Handle -> new; # this needed because of a bug in open3.
@@ -2160,6 +2158,7 @@ sub scanimage {
    $_[0] -> destroy;
    local $SIG{INT} = 'IGNORE';
    kill INT => $pid;
+   $cancel = TRUE;
   });
   $dialog -> show_all;
  
@@ -2202,7 +2201,11 @@ sub scanimage {
      elsif ($line =~ /^scanimage: sane_start: Document feeder out of documents/) {
       ;
      }
-     elsif ($line =~ /^scanimage: (rounded|received signal 2|trying to stop scanner)/) {
+     elsif ($cancel
+             and $line =~ /^scanimage: sane_start: Error during device I\/O/) {
+      ;
+     }
+     elsif ($line =~ /^scanimage: rounded/) {
       warn substr($line, 0, index($line, "\n")+1);
      }
      else {
@@ -2241,6 +2244,9 @@ warn "$text\n";
 
 sub scanadf {
  my ($device, $npages, $start, %options) = @_;
+
+ require IPC::Open3;
+ require IO::Handle;
 
 # inverted commas needed for strange characters in device name
  $device = "--device-name='$device'";
@@ -2496,12 +2502,10 @@ sub about {
 }
 
 
-# Check that tiffcp & tiff2pdf exist
+# Check that tiffcp exists
 
 sub check_utils {
  system("which tiffcp >/dev/null 2>/dev/null");
- return $? if $? != 0;
- system("which tiff2pdf >/dev/null 2>/dev/null");
  return $? if $? != 0;
  return FALSE;
 }
@@ -2849,6 +2853,8 @@ sub renumber {
 sub rotate {
  my ($degrees) = @_;
 
+ require Image::Magick;
+
 # Update undo/redo buffers
  take_snapshot();
 
@@ -2856,16 +2862,14 @@ sub rotate {
  my $i = 0;
  while ($i <= $#page) {
 
-# To cover for a bug in imagemagick, check image depth
-  my $cmd = "tiffinfo \"".$slist -> {data}[$page[$i]][2]."\"";
-
 # Rotate the tiff with imagemagick
-  if (`$cmd` =~ /Bits\/Sample: (\d*)/) {
-   system("mogrify -depth $1 -rotate $degrees ".$slist -> {data}[$page[$i]][2]);
-  }
-  else {
-   system("mogrify -rotate $degrees ".$slist -> {data}[$page[$i]][2]);
-  }
+  my $image = Image::Magick->new;
+  my $x = $image->Read($slist -> {data}[$page[$i]][2]);
+  warn "$x" if "$x";
+  $x = $image->Rotate($degrees);
+  warn "$x" if "$x";
+  $x = $image->Write(filename => $slist -> {data}[$page[$i]][2]);
+  warn "$x" if "$x";
 
 # Use once I no longer have to develop with Gtk2 < 1.090!
 #  $slist -> {data}[$page[$i]][1] =
@@ -3123,7 +3127,7 @@ sub unpaper {
    my $cmd = "convert -compress zip ".$slist -> {data}[$page][2]." $pnm;"
              ."unpaper --layout $SETTING{layout} $scan_direction"
              ." $border_align --overwrite $pnm $pnm;"
-             ."convert $pnm $tif";
+             ."convert $pnm $tif; rm $pnm";
    warn "$cmd\n" if ($debug);
 
 # Interface to unpaper
@@ -3192,7 +3196,17 @@ sub OCR {
  }
 
  ($windowo, my $vbox) = create_window($window, $d->get('OCR'), FALSE);
- my $buffer = Gtk2::TextBuffer->new;
+ $buffer = Gtk2::TextBuffer->new;
+
+# Keep the simple list buffer up to date
+ $buffer -> signal_connect( changed => sub {
+  $slist -> get_model -> signal_handler_block($slist -> {signalid});
+  my @page = $slist -> get_selected_indices;
+  $slist -> {data}[$page[0]][3] =
+   $buffer->get_text ($buffer->get_start_iter, $buffer->get_end_iter, FALSE)
+    if ($#page > -1);
+  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+ } );
 
 # HBox for buttons
  my $hboxo = Gtk2::HBox -> new;
