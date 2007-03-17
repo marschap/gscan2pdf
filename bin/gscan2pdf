@@ -2145,7 +2145,7 @@ sub scanimage {
 # Interface to scanimage
   my ($write, $read);
   my $error = IO::Handle -> new; # this needed because of a bug in open3.
-  my $pid = open3($write, $read, $error, $cmd)+1;
+  my $pid = IPC::Open3::open3($write, $read, $error, $cmd)+1;
   
   my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
                                     'destroy-with-parent',
@@ -2202,7 +2202,9 @@ sub scanimage {
       ;
      }
      elsif ($cancel
-             and $line =~ /^scanimage: sane_start: Error during device I\/O/) {
+             and ($line =~ /^scanimage: sane_start: Error during device I\/O/
+                  or $line =~ /^scanimage: received signal 2/
+                  or $line =~ /^scanimage: trying to stop scanner/)) {
       ;
      }
      elsif ($line =~ /^scanimage: rounded/) {
@@ -2291,7 +2293,7 @@ END
 # Interface to frontend
   my ($write, $read);
   my $error = IO::Handle -> new; # this needed because of a bug in open3.
-  my $pid = open3($write, $read, $error, $cmd);
+  my $pid = IPC::Open3::open3($write, $read, $error, $cmd);
   
   my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
                                     'destroy-with-parent',
