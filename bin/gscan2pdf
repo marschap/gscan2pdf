@@ -31,7 +31,6 @@
 #     ComboBoxes
 #    Switch viewing widget as soon as packages are available for:
 #     http://giv.sourceforge.net/gtk-image-viewer/
-#    Cope with any graphic file that imagemagick recognises.
 #    Switch all imagemagick convert and tiffinfo calls to perlmagick
 #
 # From schmolch
@@ -497,7 +496,7 @@ $hpaned -> pack2 ($scwin_detail, TRUE, TRUE);
 $scwin_detail -> set_policy ('automatic', 'automatic');
 
 # Globally define the $image variables for $scwin_detail
-my ($image, $eventbox, $scale, $src_pixbuf, $widthi, $heighti);
+my ($image, $eventbox, $scale);
 
 # Set up call back for list selection to update detail view
 $slist -> get_selection -> signal_connect(changed => sub {
@@ -791,31 +790,50 @@ sub change_frontend {
 # Zoom the detail window
 
 sub zoom_button {
- my $button = $_[0];
+ my ($button) = @_;
  if (defined($scwin_detail) and defined($scwin_detail -> child)) {
   my $viewport = $image -> get_parent;
   $image -> destroy;
   $eventbox -> destroy;
   $viewport -> destroy;
+
+# Get dimensions for detail window
+  my $widthd = $scwin_detail -> allocation -> width;
+  my $heightd = $scwin_detail -> allocation -> height;
+  my $pixbuf;
+
+  my @page = $slist -> get_selected_indices;
+  my $filename = $slist->{data}[$page[0]][2];
+
   if ($button eq '100%') {
-   $scale = 1;
+   $pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename);
+   my $widthi = $pixbuf->get_width;
+   my $heighti =  $pixbuf->get_height;
+   if ($widthd > $border) {
+    $scale = $widthi/($widthd-$border) > $heighti/($heightd-$border)
+                      ? $widthi/($widthd-$border) : $heighti/($heightd-$border);
+   }
+   else {
+    return ($heightd-$border)/$heighti;
+   }
   }
   elsif ($button eq 'in') {
    $scale *= 1.2;
+   $pixbuf = Gtk2::Gdk::Pixbuf ->
+      new_from_file_at_scale ($filename, $widthd*$scale, $heightd*$scale, TRUE);
   }
   elsif ($button eq 'out') {
    $scale /= 1.2;
+   $pixbuf = Gtk2::Gdk::Pixbuf ->
+      new_from_file_at_scale ($filename, $widthd*$scale, $heightd*$scale, TRUE);
   }
   else {
-   my $widthd = $scwin_detail -> allocation -> width;
-   my $heightd = $scwin_detail -> allocation -> height;
-   $scale = get_scale($heightd, $widthd, $heighti, $widthi);
+   $scale = 1;
+   $pixbuf = Gtk2::Gdk::Pixbuf ->
+                    new_from_file_at_scale ($filename, $widthd, $heightd, TRUE);
   }
-  my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
-                                         $src_pixbuf -> get_has_alpha, 
-                                         $src_pixbuf -> get_bits_per_sample,
-                                         $widthi*$scale, $heighti*$scale);
-  zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
+warn "$scale\n";
+
   $image -> set_from_pixbuf($pixbuf);
 
 # Need to pack the image in an eventbox to get it to respond to mouse clicks
@@ -830,36 +848,26 @@ sub zoom_button {
 }
 
 
-# Zoom the image
-
-sub zoom_pixbuf {
- my ($src, $dest, $scale) = @_;
- $src -> composite ($dest, 0, 0, $dest -> get_width,
-                                 $dest -> get_height, 
-                    0, 0, $scale, $scale, 'bilinear', 255);
-}
-
-
 # Returns the pixbuf scaled to fit in the given box
 
 sub get_pixbuf {
  my ($filename, $height, $width) = @_;
  
+ my $pixbuf;
 # Need the eval otherwise nothing else in the sub gets carried out after an error
 # For some reason reading the tiff sometimes throws:
 # Failed to load RGB data from TIFF file:
 #        libpixbuf-tiff: Read error on strip 134; got 5190 bytes, expected 7130
 # Normally succeeds on second attempt
-
-# Change new_from_file for new_from_file_at_scale once I no longer have to
-# develop with Gtk2 < 1.090!
- eval { $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename); };
+ eval { $pixbuf = Gtk2::Gdk::Pixbuf ->
+                  new_from_file_at_scale ($filename, $width, $height, TRUE); };
 # if (Glib::Error::matches ($@, 'Mup::Thing::Error', 'flop')) {
 #  recover_from_a_flop ();
 # }
  if ($@) {
   warn $d->get('Warning: ')."$@\n";
-  eval { $src_pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename); };
+  eval { $pixbuf = Gtk2::Gdk::Pixbuf ->
+                  new_from_file_at_scale ($filename, $width, $height, TRUE); };
   if ($@) {
    return FALSE;
   }
@@ -868,33 +876,8 @@ sub get_pixbuf {
   }
  }
 
-# Get dimension for image
- $widthi = $src_pixbuf -> get_width;
- $heighti = $src_pixbuf -> get_height;
-
-# Calculate scale factor
- $scale = get_scale($height, $width, $heighti, $widthi);
-
- my $pixbuf = Gtk2::Gdk::Pixbuf -> new ($src_pixbuf -> get_colorspace,
-                                        $src_pixbuf -> get_has_alpha, 
-                                        $src_pixbuf -> get_bits_per_sample,
-                                        $widthi*$scale, $heighti*$scale);
- zoom_pixbuf($src_pixbuf, $pixbuf, $scale);
+ $scale = 1;
  return $pixbuf;
-}
-
-
-# Calculates scale factor to fit box, ignoring zero-width boxes if necessary
-
-sub get_scale {
- my ($heightb, $widthb, $heighti, $widthi) = @_;
- if ($widthb > 1) {
-  return ($widthb-$border)/$widthi < ($heightb-$border)/$heighti
-                      ? ($widthb-$border)/$widthi : ($heightb-$border)/$heighti;
- }
- else {
-  return ($heightb-$border)/$heighti;
- }
 }
 
 
@@ -917,6 +900,35 @@ sub new {
 }
 
 
+sub convert_to_tiff {
+ my ($filename) = @_;
+warn "$filename\n";
+ my $image = Image::Magick->new;
+ my $x = $image->Read($filename);
+ warn "$x" if "$x";
+
+# Calculate the resolution
+ my $height = $image->Get('height');
+ my $width = $image->Get('width');
+ my $ratio = $height/$width;
+ $ratio = 1/$ratio if ($ratio < 1);
+ my $density = 72;
+ for (my $i = 0; $i <= $#paperg; ++$i) {
+  if (abs($ratio - $yg[$i]/$xg[$i]) < 0.01) {
+warn "$height, $width, $paperg[$i]\n";
+   $density = (($height > $width) ? $height : $width)/$yg[$i]*25.4;
+  }
+ }
+warn "$density\n";
+
+# Write the tif
+ $image->Write(units => 'PixelsPerInch',
+               density => $density.'x'.$density,
+               filename => "$filename.tif");
+ return "$filename.tif";
+}
+
+
 # Throw up file selector and import selected file
 
 sub import {
@@ -935,11 +947,11 @@ sub import {
 
  if ('ok' eq $file_chooser->run) {
 
-# Update undo/redo buffers
-  take_snapshot();
-
 # cd back to tempdir to import
   chdir $dir;
+
+# Update undo/redo buffers
+  take_snapshot();
 
   my @filename = $file_chooser -> get_filenames;
 
@@ -957,7 +969,16 @@ sub import {
    undef $image;
 warn "$format\n";
 
-   if ($format eq 'Portable Document Format') {
+   if (! defined $format) {
+    my $dialog = Gtk2::MessageDialog -> new ($window,
+                                            'destroy-with-parent',
+                                            'error',
+                                            'close',
+                                            $d->get('Not a recognised file'));
+    $dialog -> run;
+    $dialog -> destroy;
+   }
+   elsif ($format eq 'Portable Document Format') {
 
 # Extract images from PDF
     system ("pdfimages \"$filename\" x");
@@ -965,30 +986,8 @@ warn "$format\n";
 # Convert each image from ppm to tif and import
     my @images = <x-???.???>;
     foreach (@images) {
-warn "$_\n";
-     my $image = Image::Magick->new;
-     my $x = $image->Read($_);
-     warn "$x" if "$x";
-
-# Calculate the resolution
-     my $height = $image->Get('height');
-     my $width = $image->Get('width');
-     my $ratio = $height/$width;
-     $ratio = 1/$ratio if ($ratio < 1);
-     my $density = 72;
-     for (my $i = 0; $i <= $#paperg; ++$i) {
-      if (abs($ratio - $yg[$i]/$xg[$i]) < 0.01) {
-warn "$height, $width, $paperg[$i]\n";
-       $density = (($height > $width) ? $height : $width)/$yg[$i]*25.4;
-      }
-     }
-warn "$density\n";
-
-# Write the tif
-     $image->Write(units => 'PixelsPerInch',
-                   density => $density.'x'.$density,
-                   filename => "$_.tif");
-     import_scan("$_.tif");
+     my $tiff = convert_to_tiff($_);
+     import_scan($tiff);
      unlink $_;
     }
    }
@@ -1003,14 +1002,8 @@ warn "$density\n";
     
    }
    else {
-
-    my $dialog = Gtk2::MessageDialog -> new ($window,
-                                            'destroy-with-parent',
-                                            'error',
-                                            'close',
-                                            $d->get('Not a recognised file'));
-    $dialog -> run;
-    $dialog -> destroy;
+    my $tiff = convert_to_tiff($filename);
+    import_scan($tiff);
    }
 
   }
