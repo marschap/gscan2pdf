@@ -32,6 +32,8 @@
 #    Switch viewing widget as soon as packages are available for:
 #     http://giv.sourceforge.net/gtk-image-viewer/
 #    Switch all imagemagick convert and tiffinfo calls to perlmagick
+#    As soon as gtk+ 2.12 is available and released in Feisty+1, remove the
+#     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
@@ -190,8 +192,8 @@ init_icons( [ 'rotate90',  "$path/rotate90.png" ],
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
 my ($windowp, $windowt, $windowv, $windowe, $windows, $windowh, $windowo,
-    $windowu, $slist, $frames, $vboxd, $optd, $optp, $hboxc, @undo_buffer,
-    @redo_buffer, @undo_selection, @redo_selection, $buffer);
+    $windowu, $slist, $frames, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
+    @redo_buffer, @undo_selection, @redo_selection, $buffer, %dependencies);
 
 my @action_items = (
  # Fields for each action item:
@@ -655,17 +657,17 @@ sub create_menu_bar {
  my $menubar = $uimanager->get_widget('/MenuBar');
 
 # Check for presence of various packages
- my $imagemagick = system("which convert >/dev/null 2>/dev/null");
- my $scanadf = system("which scanadf >/dev/null 2>/dev/null");
- my $xdg = system("which xdg-email >/dev/null 2>/dev/null");
- my $gocr = system("which gocr >/dev/null 2>/dev/null");
- my $djvu = system("which cjb2 >/dev/null 2>/dev/null");
- my $unpaper = system("which unpaper >/dev/null 2>/dev/null");
+ $dependencies{imagemagick} = system("which convert >/dev/null 2>/dev/null");
+ $dependencies{scanadf} = system("which scanadf >/dev/null 2>/dev/null");
+ $dependencies{xdg} = system("which xdg-email >/dev/null 2>/dev/null");
+ $dependencies{gocr} = system("which gocr >/dev/null 2>/dev/null");
+ $dependencies{djvu} = system("which cjb2 >/dev/null 2>/dev/null");
+ $dependencies{unpaper} = system("which unpaper >/dev/null 2>/dev/null");
  my $msg = '';
 
 # Ghost scanadf item if scanadf or imagemagick not available
  my $item = $uimanager->get_widget('/MenuBar/Edit/Frontend/scanadf');
- if ($scanadf != 0 or $imagemagick != 0) {
+ if ($dependencies{scanadf} != 0 or $dependencies{imagemagick} != 0) {
   $item -> set_sensitive(FALSE);
   $SETTING{'frontend'} = 'scanimage';
  }
@@ -678,7 +680,7 @@ sub create_menu_bar {
  else {
   $SETTING{'frontend'} = 'scanimage';
  }
- if ($scanadf != 0) {
+ if ($dependencies{scanadf} != 0) {
   $msg .= $d->get("The scanadf frontend is not available\n");
  }
 
@@ -687,14 +689,14 @@ sub create_menu_bar {
   if (defined($SETTING{'enable options'}) and ! $SETTING{'enable options'});
 
 # Ghost djvu item if cjb2 not available
- if ($djvu != 0) {
+ if ($dependencies{djvu} != 0) {
   $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(FALSE);
   $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(FALSE);
   $msg .= $d->get("Save as DjVu requires djvulibre-bin\n");
  }
 
 # Ghost email item if xdg-email not available
- if ($xdg != 0) {
+ if ($dependencies{xdg} != 0) {
   $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(FALSE);
   $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(FALSE);
   $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
@@ -707,8 +709,24 @@ sub create_menu_bar {
  $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Redo') -> set_sensitive(FALSE);
 
+# save * start off ghosted anyway-
+ $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/File/Save TIFF') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/ToolBar/Save TIFF') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/Thumb_Popup/Save TIFF') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
+
+# a convenient place to put these
+ $dependencies{pages} = -1;
+
 # Ghost rotations and unpaper if imagemagick not available
- if ($imagemagick != 0) {
+ if ($dependencies{imagemagick} != 0) {
   $uimanager->get_widget('/MenuBar/View/Rotate 90') -> set_sensitive(FALSE);
   $uimanager->get_widget('/MenuBar/View/Rotate 180') -> set_sensitive(FALSE);
   $uimanager->get_widget('/MenuBar/View/Rotate 270') -> set_sensitive(FALSE);
@@ -726,13 +744,13 @@ sub create_menu_bar {
  }
 
 # Ghost unpaper item if unpaper not available
- if ($unpaper != 0) {
+ if ($dependencies{unpaper} != 0) {
   $uimanager->get_widget('/MenuBar/Tools/unpaper') -> set_sensitive(FALSE);
   $msg .= $d->get("unpaper missing\n");
  }
 
 # Ghost ocr item if gocr not available
- if ($gocr != 0) {
+ if ($dependencies{gocr} != 0) {
   $uimanager->get_widget('/MenuBar/Tools/OCR') -> set_sensitive(FALSE);
   $msg .= $d->get("OCR requires gocr\n");
  }
@@ -766,6 +784,58 @@ sub create_menu_bar {
 }
 
 
+# ghost or unghost as necessary as # pages > 0 or not.
+
+sub update_uimanager {
+ if ($#{$slist -> {data}} > -1) {
+  if ($dependencies{pages} == -1) {
+   if ($dependencies{djvu} == 0) {
+    $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(TRUE);
+    $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(TRUE);
+   }
+   if ($dependencies{xdg} == 0) {
+    $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(TRUE);
+    $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(TRUE);
+    $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(TRUE);
+   }
+   $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(TRUE);
+   $uimanager->get_widget('/MenuBar/File/Save TIFF') -> set_sensitive(TRUE);
+   $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(TRUE);
+   $uimanager->get_widget('/ToolBar/Save TIFF') -> set_sensitive(TRUE);
+   $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(TRUE);
+   $uimanager->get_widget('/Thumb_Popup/Save TIFF') -> set_sensitive(TRUE);
+
+   $dependencies{pages} = $#{$slist -> {data}};
+  }
+ }
+ else {
+  if ($dependencies{pages} > -1) {
+   if ($dependencies{djvu} == 0) {
+    $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(FALSE);
+    $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(FALSE);
+    $windowv->hide if defined $windowv;
+   }
+   if ($dependencies{xdg} == 0) {
+    $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(FALSE);
+    $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(FALSE);
+    $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
+    $windowe->hide if defined $windowe;
+   }
+   $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(FALSE);
+   $uimanager->get_widget('/MenuBar/File/Save TIFF') -> set_sensitive(FALSE);
+   $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(FALSE);
+   $uimanager->get_widget('/ToolBar/Save TIFF') -> set_sensitive(FALSE);
+   $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(FALSE);
+   $uimanager->get_widget('/Thumb_Popup/Save TIFF') -> set_sensitive(FALSE);
+   $windowp->hide if defined $windowp;
+   $windowt->hide if defined $windowt;
+
+   $dependencies{pages} = $#{$slist -> {data}};
+  }
+ }
+}
+
+
 # Callback from RadioItem Edit/Frontend
 
 sub change_frontend {
@@ -775,13 +845,13 @@ sub change_frontend {
  if ($name eq 'scanimage') {
   if (defined($windows)) {
    $frames->set_sensitive(TRUE);
-   update_options($vboxd, $device[$optd -> get_history]);
+   update_options($vboxd, $device[$combobd -> get_active]);
   }
  }
  else {
   if (defined($windows)) {
    $frames->set_sensitive(FALSE);
-   update_options($vboxd, $device[$optd -> get_history]);
+   update_options($vboxd, $device[$combobd -> get_active]);
   }
  }
 }
@@ -897,6 +967,8 @@ sub new {
 
 # Depopulate the thumbnail list
  @{$slist -> {data}} = ();
+
+ update_uimanager();
 }
 
 
@@ -1007,6 +1079,8 @@ warn "$format\n";
    }
 
   }
+
+  update_uimanager();
  }
 
 # cd back to tempdir
@@ -1449,13 +1523,11 @@ sub save_TIFF_dialog {
    [ 'none', $d->get('None'), $d->get('Use no compression algorithm on output.') ],
   );
 
-# Compression optionmenu
+# Compression ComboBox
   my $hboxc = Gtk2::HBox -> new;
   $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
   my $label = Gtk2::Label -> new ($d->get('Compression'));
   $hboxc -> pack_start ($label, FALSE, FALSE, 0);
-  my $optc = Gtk2::OptionMenu -> new;
-  my $menuc = Gtk2::Menu -> new;
 
 # Set up quality spinbutton here so that it can be shown or hidden by callback
   my $hboxq = Gtk2::HBox -> new;
@@ -1471,28 +1543,29 @@ sub save_TIFF_dialog {
   }
   $hboxq -> pack_end ($spinbuttonq, FALSE, FALSE, 0);
 
-# Fill compression optionmenu
+# Fill compression ComboBox
   my $i = 0;
   my $o;
+  my $combobc = Gtk2::ComboBox->new_text;
   foreach my $option ( @compression ) {
-   my $item = Gtk2::MenuItem -> new ($option->[1]);
-   $menuc -> append ($item);
-   $item -> signal_connect ('activate' => sub {
-    if ($option->[0] eq 'jpeg') {
-     $hboxq -> show_all;
-    }
-    else {
-     $hboxq -> hide_all;
-    }
-   });
+   $combobc->append_text ($option->[1]);
+
    $o = $i
     if (defined($SETTING{'tiff compression'})
         and $option->[0] eq $SETTING{'tiff compression'});
    ++$i;
   }
-  $optc -> set_menu ($menuc);
-  $optc -> set_history ($o) if defined($o);
-  $hboxc -> pack_end ($optc, FALSE, FALSE, 0);
+  $o = 1 if (! defined $o);
+  $combobc -> set_active ($o);
+  $combobc -> signal_connect (changed => sub {
+   if ($compression[$combobc->get_active][0] eq 'jpeg') {
+    $hboxq -> show_all;
+   }
+   else {
+    $hboxq -> hide_all;
+   }
+  });
+  $hboxc -> pack_end ($combobc, FALSE, FALSE, 0);
 
 # HBox for buttons
   my $hboxb = Gtk2::HBox -> new;
@@ -1504,7 +1577,7 @@ sub save_TIFF_dialog {
   $sbutton -> signal_connect (clicked => sub {
 
 # dig out the compression
-   $SETTING{'tiff compression'} = $compression[$optc -> get_history][0];
+   $SETTING{'tiff compression'} = $compression[$combobc->get_active][0];
    $SETTING{'quality'} = $spinbuttonq->get_value
     if ($SETTING{'tiff compression'} eq 'jpeg');
 
@@ -1517,7 +1590,7 @@ sub save_TIFF_dialog {
   $cbutton -> signal_connect( clicked => sub { $windowt -> hide; } );
 
   $windowt -> show_all;
-  $hboxq -> hide_all if ($compression[$optc -> get_history][0] ne 'jpeg');
+  $hboxq -> hide_all if ($compression[$combobc->get_active][0] ne 'jpeg');
  }
  else {
   save_TIFF();
@@ -1565,7 +1638,7 @@ sub save_TIFF {
 # Create the tiff
   system ("tiffcp -c $compression $pagelist \"$filename\"");
 
-  $windowt -> hide;
+  $windowt -> hide if defined $windowt;
  }
 
  $file_chooser -> destroy;
@@ -1587,19 +1660,16 @@ sub save_djvu_dialog {
 
   ($windowv, my $vbox) = create_window($window, $d->get('Save as DjVu'), FALSE);
 
-# Compression optionmenu
+# Compression ComboBox
   my $hboxc = Gtk2::HBox -> new;
   $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
   my $label = Gtk2::Label -> new ($d->get('Compression'));
   $hboxc -> pack_start ($label, FALSE, FALSE, 0);
-  my $optc = Gtk2::OptionMenu -> new;
-  my $menuc = Gtk2::Menu -> new;
+  my $combobc = Gtk2::ComboBox->new_text;
 
-# Fill compression optionmenu
-  my $item = Gtk2::MenuItem -> new ($d->get('Bitonal'));
-  $menuc -> append ($item);
-  $optc -> set_menu ($menuc);
-  $hboxc -> pack_end ($optc, FALSE, FALSE, 0);
+# Fill compression ComboBox
+  $combobc->append_text ($d->get('Bitonal'));
+  $hboxc -> pack_end ($combobc, FALSE, FALSE, 0);
 
 # Frame for page range
   my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
@@ -1788,8 +1858,9 @@ sub scan_dialog {
 
 # Need to define this here to reference it later.
  $vboxd = Gtk2::VBox -> new;
- $optd = Gtk2::OptionMenu -> new;
- my $menud = Gtk2::Menu -> new;
+ my $ev = Gtk2::EventBox->new;
+ $combobd = Gtk2::ComboBox->new_text;
+ $ev->add($combobd);
 
 # parse out the device and model names
  if (! @test) {
@@ -1828,24 +1899,22 @@ sub scan_dialog {
   $model[$i] .= " on $device[$i]" if ($seen{$model[$i]} > 1);
  }
 
-# read the model names into the optionmenu
- for (my $i = 0; $i < @model; $i++) {
-  my $item = Gtk2::MenuItem -> new ($model[$i]);
-  $item -> signal_connect (activate => sub {
-   update_options($vboxd, $device[$optd -> get_history]);
-   $vboxd -> show_all;
-   if ($optp->get_child->get_text ne $d->get('Custom')) {
-# Not defined if scanner has no paper size (like my video grabber)
-    $hboxc -> hide if (defined $hboxc);
-    $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
-   }
-  });
-  $menud -> append ($item);
+# read the model names into the combobox
+ foreach (@model) {
+  $combobd->append_text ($_);
  }
- $optd -> set_menu ($menud);
- $tooltips -> set_tip ($optd,
+ $combobd -> signal_connect (changed => sub {
+  update_options($vboxd, $device[$combobd -> get_active]);
+  $vboxd -> show_all;
+  if (! defined($combobp) or ($combobp->get_active_text ne $d->get('Custom'))) {
+# Not defined if scanner has no paper size (like my video grabber)
+   $hboxc -> hide if (defined $hboxc);
+   $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
+  }
+ });
+ $tooltips -> set_tip ($ev,
                          $d->get('Sets the device to be used for the scan'));
- $hboxd -> pack_end ($optd, FALSE, FALSE, 0);
+ $hboxd -> pack_end ($ev, FALSE, FALSE, 0);
 
 # If device not set by config and there is a default device, then set it
  if (! defined($SETTING{'device'})
@@ -1857,7 +1926,7 @@ sub scan_dialog {
  if (defined($SETTING{"device"})) {
   my $i = 0;
   ++$i while ($i <= $#device and $SETTING{"device"} ne $device[$i]);
-  $optd -> set_history($i) if ($i <= $#device);
+  $combobd -> set_active($i) if ($i <= $#device);
  }
    
 # Frame for # pages
@@ -1931,22 +2000,20 @@ sub scan_dialog {
  my $labels = Gtk2::Label -> new ($d->get('Side to scan'));
  $hboxs -> pack_start($labels, TRUE, TRUE, 0);
 
- my $opts = Gtk2::OptionMenu -> new;
- my $menus = Gtk2::Menu -> new;
- my @side;
- push @side, $d->get('Facing');
- push @side, $d->get('Reverse');
+ $ev = Gtk2::EventBox->new;
+ my $combobs = Gtk2::ComboBox -> new_text;
+ $ev->add($combobs);
+ my @side = ($d->get('Facing'), $d->get('Reverse'));
  foreach (@side) {
-  my $item = Gtk2::MenuItem -> new ($_);
-  $item -> signal_connect (activate => sub {
-   $buttond -> set_active(TRUE); # Set the radiobutton active
-  });
-  $menus -> append ($item);
+  $combobs -> append_text ($_);
  }
- $opts -> set_menu ($menus);
- $tooltips -> set_tip ($opts,
+ $combobs -> signal_connect (changed => sub {
+  $buttond -> set_active(TRUE); # Set the radiobutton active
+ });
+ $tooltips -> set_tip ($ev,
               $d->get('Sets which side of a double-sided document is scanned'));
- $hboxs -> pack_end ($opts, FALSE, FALSE, 0);
+ $combobs -> set_active(0);
+ $hboxs -> pack_end ($ev, FALSE, FALSE, 0);
 
 # Frame for device-dependent options
  my $framed = Gtk2::Frame -> new($d->get('Device-dependent options'));
@@ -1955,7 +2022,7 @@ sub scan_dialog {
  $framed -> add ($vboxd);
 
 # Dig the device-dependent options from --help --device-name
- update_options($vboxd, $device[$optd -> get_history]);
+ update_options($vboxd, $device[$combobd -> get_active]);
 
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
@@ -1970,7 +2037,7 @@ sub scan_dialog {
   take_snapshot();
 
 # Get selected device
-  $SETTING{"device"} = $device[$optd -> get_history];
+  $SETTING{"device"} = $device[$combobd -> get_active];
 
 # Get device-specific options
   my %options;
@@ -1983,16 +2050,12 @@ sub scan_dialog {
      if ($widget -> isa('Gtk2::Label')) {
       $key = get_key(\%ddo, $widget -> get_label);
      }
-     elsif ($widget -> isa('Gtk2::OptionMenu')) {
-      my @child = $widget -> get_children;
-      foreach my $widget (@child) {
+     elsif ($widget -> isa('Gtk2::EventBox')) {
+      $widget = $widget -> get_child;
 
 # ignore artificial paper size option
-       $SETTING{$key} = get_value(\%ddo, $key, $widget -> get_label);
-       if ($widget -> isa('Gtk2::Label') and $key ne 'Paper size') {
-        $options{$key} = $SETTING{$key};
-       }
-      }
+      $SETTING{$key} = get_value(\%ddo, $key, $widget -> get_active_text);
+      $options{$key} = $SETTING{$key} if ($key ne 'Paper size');
      }
      elsif ($widget -> isa('Gtk2::SpinButton')) {
       $options{$key} = $widget -> get_value;
@@ -2025,7 +2088,7 @@ sub scan_dialog {
 # Set step according to single/double sided, facing/reverse page
   my $step;
   if ($buttond -> get_active) {
-   if (($opts -> get_history) == 0) { # facing page
+   if (($combobs -> get_active) == 0) { # facing page
     $step = 2;
    }
    else { # reverse page
@@ -2158,6 +2221,7 @@ sub scanimage {
   my $line;
   Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
+warn "$condition\n";
    if ($condition & 'in') { # bit field operation. >= would also work
     my $buffer;
 
@@ -2373,7 +2437,7 @@ sub hash2options {
 
  my (@options, $key, $value);
  while (($key, $value) = each(%options)) {
-  if ($key eq 'x' or $key eq 'y') {
+  if ($key eq 'x' or $key eq 'y' or $key eq 'l' or $key eq 't') {
    push @options, "-$key $value";
   }
   else {
@@ -2420,6 +2484,9 @@ sub import_scan {
                     and $slist -> {data}[$page[0]][0] != $i);
 
  $slist -> select(@page);
+
+ update_uimanager();
+
  return TRUE;
 }
 
@@ -2474,6 +2541,8 @@ sub delete_pages {
   $page[0] = $#{$slist->{data}} if ($page[0] > $#{$slist->{data}});
   $slist->select(@page);
  }
+
+ update_uimanager();
 }
 
 
@@ -2589,9 +2658,11 @@ sub parse_options {
  $output = substr($output, index($output, "\n")+1, length($output));
 
 # Dig out the paper sizes
- my ($x, $y);
+ my ($x, $y, $l, $t);
  $x = $2 if ($output =~ /-x (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
  $y = $2 if ($output =~ /-y (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
+ $l = $2 if ($output =~ /-l (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
+ $t = $2 if ($output =~ /-t (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
 
  if (defined($x) and defined($y)) {
 
@@ -2603,8 +2674,9 @@ sub parse_options {
   my $labelp = Gtk2::Label -> new ($d->get('Paper size'));
   $hboxp -> pack_start ($labelp, FALSE, FALSE, 0);
 
-  $optp = Gtk2::OptionMenu -> new;
-  my $menup = Gtk2::Menu -> new;
+  my $ev = Gtk2::EventBox->new;
+  $combobp = Gtk2::ComboBox -> new_text;
+  $ev->add($combobp);
 
 # Define custom paper here to reference it in callback
   $hboxc = Gtk2::HBox -> new;
@@ -2613,20 +2685,12 @@ sub parse_options {
   $tooltips -> set_tip ($spin_buttonx, $d->get('Width of scan-area'));
   $tooltips -> set_tip ($spin_buttony, $d->get('Height of scan-area'));
 
-# Add paper size to optionmenu if scanner large enough
+# Add paper size to combobox if scanner large enough
 # can't use "for" because of the splices
   my $i = 0;
   while ($i <= $#paper) {
    if ($x+$tolerance >= $x[$i] and $y+$tolerance >= $y[$i]) {
-    my $item = Gtk2::MenuItem -> new ($paper[$i]);
-    $item -> signal_connect (activate => sub {
-     my $i = $optp -> get_history;
-     $spin_buttonx -> set_value($x[$i]);
-     $spin_buttony -> set_value($y[$i]);
-     $hboxc -> hide;
-     $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
-    });
-    $menup -> append ($item);
+    $combobp -> append_text ($paper[$i]);
     ++$i;
    }
 
@@ -2639,41 +2703,33 @@ sub parse_options {
   }
 
 # Add custom option
-  my $item = Gtk2::MenuItem -> new ($d->get('Custom'));
-  $item -> signal_connect (activate => sub { $hboxc -> show_all; });
-  $menup -> append ($item);
-  $optp -> set_menu ($menup);
-  $tooltips -> set_tip ($optp,
+  $combobp -> append_text ($d->get('Custom'));
+  $combobp -> signal_connect (changed => sub {
+   if ($combobp -> get_active_text eq $d->get('Custom')) {
+    $hboxc -> show_all;
+   }
+   else {
+    my $i = $combobp -> get_active;
+    $spin_buttonx -> set_value($x[$i]);
+    $spin_buttony -> set_value($y[$i]);
+    $hboxc -> hide;
+    $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
+   }
+  });
+  $tooltips -> set_tip ($ev,
                 $d->get('Selects the paper size, e.g. A4, Letter, or Custom'));
-  $hboxp -> pack_end ($optp, FALSE, FALSE, 0);
+  $hboxp -> pack_end ($ev, FALSE, FALSE, 0);
 
 # Set default paper size from config
+  my $o = 0;
   if (defined($SETTING{'Paper size'})) {
    $i = 0;
    while ($i <= $#paper) {
-    $optp -> set_history($i) if ($paper[$i] eq $SETTING{'Paper size'});
+    $o = $i if ($paper[$i] eq $SETTING{'Paper size'});
     ++$i;
    }
   }
-
-# Set scan area from config if available
-  if (defined($SETTING{"x"}) and defined($SETTING{"y"})) {
-   $spin_buttonx -> set_value($SETTING{"x"});
-   $spin_buttony -> set_value($SETTING{"y"});
-  }
-
-# Otherwise set from paper size if available
-  elsif ($#paper > -1) {
-   $i = $optp -> get_history;
-   $spin_buttonx -> set_value($x[$i]);
-   $spin_buttony -> set_value($y[$i]);
-  }
-
-# Or max available
-  else {
-   $spin_buttonx -> set_value($x);
-   $spin_buttony -> set_value($y);
-  }
+  $combobp -> set_active($i);
 
   $vboxd -> pack_start ($hboxc, FALSE, FALSE, 0);
 
@@ -2686,6 +2742,50 @@ sub parse_options {
   my $labely = Gtk2::Label -> new ("y");
   $hboxc -> pack_start ($labely, FALSE, FALSE, 0);
   $hboxc -> pack_start ($spin_buttony, FALSE, FALSE, 0);
+
+# Origin
+  my $labelo = Gtk2::Label -> new ($d->get('Top-left position of scan area'));
+  $vboxd -> pack_start ($labelo, FALSE, FALSE, 0);
+  my $hboxo = Gtk2::HBox -> new;
+  my $labell = Gtk2::Label -> new ('l');
+  my $spin_buttonl = Gtk2::SpinButton -> new_with_range(0, $l, 1);
+  my $labelt = Gtk2::Label -> new ('t');
+  my $spin_buttont = Gtk2::SpinButton -> new_with_range(0, $t, 1);
+  $tooltips -> set_tip ($spin_buttonl, $d->get('Top-left x position of scan area'));
+  $tooltips -> set_tip ($spin_buttont, $d->get('Top-left y position of scan area'));
+  $hboxo -> pack_start ($labell, FALSE, FALSE, 0);
+  $hboxo -> pack_start ($spin_buttonl, FALSE, FALSE, 0);
+  $hboxo -> pack_start ($labelt, FALSE, FALSE, 0);
+  $hboxo -> pack_start ($spin_buttont, FALSE, FALSE, 0);
+  $vboxd -> pack_start ($hboxo, FALSE, FALSE, 0);
+
+  $spin_buttonx -> signal_connect ('value-changed' => sub {
+   my ($minx, $maxx) = $spin_buttonx -> get_range;
+   $spin_buttonl -> set_range(0, $maxx-$spin_buttonx->get_value);
+  });
+  $spin_buttony -> signal_connect ('value-changed' => sub {
+   my ($miny, $maxy) = $spin_buttony -> get_range;
+   $spin_buttont -> set_range(0, $maxy-$spin_buttony->get_value);
+  });
+
+# Set scan area from config if available, thus triggering updates for l & t
+  if (defined($SETTING{"x"}) and defined($SETTING{"y"})) {
+   $spin_buttonx -> set_value($SETTING{"x"});
+   $spin_buttony -> set_value($SETTING{"y"});
+  }
+
+# Otherwise set from paper size if available
+  elsif ($#paper > -1) {
+   $i = $combobp -> get_active;
+   $spin_buttonx -> set_value($x[$i]);
+   $spin_buttony -> set_value($y[$i]);
+  }
+
+# Or max available
+  else {
+   $spin_buttonx -> set_value($x);
+   $spin_buttony -> set_value($y);
+  }
  }
 
 # Set device-dependent options
@@ -2698,6 +2798,9 @@ sub parse_options {
                                       } },
           'x'          => { string => 'x' },
           'y'          => { string => 'y' },
+          'Origin'     => { string => $d->get('Top-left position of scan area'), },
+          'l'          => { string => 'l' },
+          't'          => { string => 't' },
         );
 
 # Add remaining options
@@ -2746,14 +2849,15 @@ sub parse_options {
    my $label = Gtk2::Label -> new ($ddo{$option}{string});
    $hbox -> pack_start ($label, FALSE, FALSE, 0);
 
-# OptionMenu
+# ComboBox
    if ($values =~ /\|/) {
-    my $opt = Gtk2::OptionMenu -> new;
-    my $menu = Gtk2::Menu -> new;
+    my $ev = Gtk2::EventBox->new;
+    my $combob = Gtk2::ComboBox -> new_text;
+    $ev->add($combob);
 
 # Counters for defaults
     my $i = -1;
-    my $o;
+    my $o = 0;
 
 # Parse items from output
     while ($values =~ /\|/) {
@@ -2764,8 +2868,7 @@ sub parse_options {
      add_to_options($option, $value);
 
 # Create item
-     my $item = Gtk2::MenuItem -> new ($ddo{$option}{values}{$value});
-     $menu -> append ($item);
+     $combob -> append_text ($ddo{$option}{values}{$value});
      $i++;
      $o = $i if ($value eq $default);
     }
@@ -2773,16 +2876,14 @@ sub parse_options {
 # Do it all again for the last one
     $values = substr($values, 0, length($values)-2) while ($values =~ /\)\]/);
     add_to_options($option, $values);
-    my $item = Gtk2::MenuItem -> new ($ddo{$option}{values}{$values});
-    $menu -> append ($item);
+    $combob -> append_text ($ddo{$option}{values}{$values});
     $i++;
     $o = $i if ($values eq $default);
 
-# Create OptionMenu
-    $opt -> set_menu ($menu);
-    $opt -> set_history ($o) if defined($o);
-    $hbox -> pack_end ($opt, FALSE, FALSE, 0);
-    $tooltips -> set_tip ($opt, $tip);
+# Create ComboBox
+    $combob -> set_active ($o);
+    $hbox -> pack_end ($ev, FALSE, FALSE, 0);
+    $tooltips -> set_tip ($ev, $tip);
    }
 
 # SpinButton
@@ -2797,7 +2898,7 @@ sub parse_options {
 
 # Show window, hiding the custom hbox and sizing if necessary
  $vboxd -> show_all;
- if ($optp->get_child->get_text ne $d->get('Custom')) {
+ if (! defined($combobp) or ($combobp->get_active_text ne $d->get('Custom'))) {
 # Not defined if scanner has no paper size (like my video grabber)
   $hboxc -> hide if (defined $hboxc);
   $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
@@ -2975,27 +3076,28 @@ sub unpaper {
   },
  );
 
-# Layout optionmenu
+# Layout ComboBox
  my $hboxl = Gtk2::HBox -> new;
  $vbox -> pack_start($hboxl, TRUE, TRUE, 0);
  my $label = Gtk2::Label -> new ($d->get('Layout'));
  $hboxl -> pack_start ($label, FALSE, FALSE, 0);
- my $optl = Gtk2::OptionMenu -> new;
- my $menul = Gtk2::Menu -> new;
+ my $ev = Gtk2::EventBox->new;
+ my $combobl = Gtk2::ComboBox->new_text;
+ $ev->add($combobl);
 
-# Fill layout optionmenu updating the tooltips when changed
- foreach my $layout (qw/single double/) {
-  my $item = Gtk2::MenuItem -> new ($option{$layout}{string});
-  $item -> signal_connect ('activate' => sub {
-   $tooltips -> set_tip ($optl, $option{$layout}{tooltip});
-  });
-  $menul -> append ($item);
+# Fill layout combobox updating the tooltips when changed
+ my @layout = qw/single double/;
+ foreach (@layout) {
+  $combobl -> append_text ($option{$_}{string});
  }
+ $combobl -> signal_connect (changed => sub {
+  $tooltips -> set_tip ($ev, $option{$layout[$combobl->get_active]}{tooltip});
+ });
 
 # Set default tooltip
- $tooltips -> set_tip ($optl, $option{single}{tooltip});
- $optl -> set_menu ($menul);
- $hboxl -> pack_end ($optl, FALSE, FALSE, 0);
+ $tooltips -> set_tip ($ev, $option{single}{tooltip});
+ $hboxl -> pack_end ($ev, FALSE, FALSE, 0);
+ $combobl -> set_active (0);
 
 # Frame for Deskew Scan Direction
  my $dframe = Gtk2::Frame -> new($option{'deskew-scan-direction'}{string});
@@ -3085,7 +3187,7 @@ sub unpaper {
 # Update undo/redo buffers
   take_snapshot();
 
-  $SETTING{layout} = get_key(\%option, $optl -> get_child -> get_label);
+  $SETTING{layout} = get_key(\%option, $combobl -> get_active_text);
 
   my $scan_direction = '';
   my @child = $vboxd -> get_children;
@@ -3492,7 +3594,7 @@ sub get_key {
 }
 
 
-# Get value string from optionmenu
+# Get value string from combobox
 
 sub get_value {
  my ($options, $option, $value) = @_;
