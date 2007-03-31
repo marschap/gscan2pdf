@@ -74,7 +74,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.6";
+my $version = "0.9.7";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -1926,6 +1926,7 @@ sub scan_dialog {
    $o = $i if ($SETTING{"device"} eq $device[$i]);
   }
  }
+# This then fires the callback, updating the options, so no need to do it further down.
  $combobd -> set_active($o);
    
 # Frame for # pages
@@ -2020,9 +2021,6 @@ sub scan_dialog {
  $vbox -> pack_start ($framed, FALSE, FALSE, 0);
  $vboxd -> set_border_width($border_width);
  $framed -> add ($vboxd);
-
-# Dig the device-dependent options from --help --device-name
- update_options($vboxd, $device[$combobd -> get_active]);
 
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
@@ -2221,7 +2219,7 @@ sub scanimage {
   my $line;
   Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
-#warn "$condition\n";
+warn "$condition\n";
    if ($condition & 'in') { # bit field operation. >= would also work
     my $buffer;
 
