@@ -16,7 +16,6 @@
 #      Rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
-#    weed out inactive progress bar in import and other such stuff
 #    Option to throw up PDF viewer with newly created PDF file
 #    Translate documentation
 #    Sort out sourceforge backups
@@ -27,13 +26,15 @@
 #    check out scanbuttond
 #    don't display dialogs for "rounded" messages
 #    sort out "dpkg-source: warning: source directory `./gscan2pdf' is not <sourcepackage>-<upstreamversion> `gscan2pdf-0.9.0'" error
-#    As soon as I don't have to develop with gtk+2.4, change all OptionMenus to
-#     ComboBoxes
 #    Switch viewing widget as soon as packages are available for:
 #     http://giv.sourceforge.net/gtk-image-viewer/
 #    Switch all imagemagick convert and tiffinfo calls to perlmagick
 #    As soon as gtk+ 2.12 is available and released in Feisty+1, remove the
 #     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
+#    replace $image = Gtk2::Image -> new_from_pixbuf with set_from_pixbuf and
+#     then no need to keep destroying and rebuilding
+#    Move scan area spinbuttons to be right-justified
+#    Remember top left scan position
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
@@ -155,6 +156,10 @@ setlocale(LC_NUMERIC, "C");
 # Read config file
 my $config = "$ENV{'HOME'}/.$program";
 my %SETTING;
+
+# Set some defaults
+$SETTING{'Page range'} = 'all';
+
 if (-r $config) {
  open CONFIG, $config
   or die sprintf($d->get("Can't open config file: %s\n"), $config);
@@ -170,9 +175,6 @@ if (-r $config) {
  }
  close CONFIG;
 }
-
-# Set some defaults if they weren't in the config
-$SETTING{'Page range'} = 'all';
 
 # Create icons for rotate buttons
 my $IconFactory = undef;
@@ -519,8 +521,7 @@ $slist -> get_selection -> signal_connect(changed => sub {
   my $widthd = $scwin_detail -> allocation -> width;
   my $heightd = $scwin_detail -> allocation -> height;
 
-  $image = Gtk2::Image -> new;
-  $image -> set_from_pixbuf(
+  $image = Gtk2::Image -> new_from_pixbuf(
            get_pixbuf(scalar($slist->{data}[$page[0]][2]), $heightd, $widthd));
 
 # Need to pack the image in an eventbox to get it to respond to mouse clicks
@@ -902,7 +903,6 @@ sub zoom_button {
    $pixbuf = Gtk2::Gdk::Pixbuf ->
                     new_from_file_at_scale ($filename, $widthd, $heightd, TRUE);
   }
-warn "$scale\n";
 
   $image -> set_from_pixbuf($pixbuf);
 
@@ -974,7 +974,6 @@ sub new {
 
 sub convert_to_tiff {
  my ($filename) = @_;
-warn "$filename\n";
  my $image = Image::Magick->new;
  my $x = $image->Read($filename);
  warn "$x" if "$x";
@@ -987,11 +986,9 @@ warn "$filename\n";
  my $density = 72;
  for (my $i = 0; $i <= $#paperg; ++$i) {
   if (abs($ratio - $yg[$i]/$xg[$i]) < 0.01) {
-warn "$height, $width, $paperg[$i]\n";
    $density = (($height > $width) ? $height : $width)/$yg[$i]*25.4;
   }
  }
-warn "$density\n";
 
 # Write the tif
  $image->Write(units => 'PixelsPerInch',
@@ -1039,7 +1036,6 @@ sub import {
 
    my $format = $image->Get('format');
    undef $image;
-warn "$format\n";
 
    if (! defined $format) {
     my $dialog = Gtk2::MessageDialog -> new ($window,
@@ -1923,11 +1919,13 @@ sub scan_dialog {
  }
 
 # If device in settings then set it
+ my $o = 0;
  if (defined($SETTING{"device"})) {
-  my $i = 0;
-  ++$i while ($i <= $#device and $SETTING{"device"} ne $device[$i]);
-  $combobd -> set_active($i) if ($i <= $#device);
+  for (my $i = 0; $i <= $#device; $i++) {
+   $o = $i if ($SETTING{"device"} eq $device[$i]);
+  }
  }
+ $combobd -> set_active($o);
    
 # Frame for # pages
  my $framen = Gtk2::Frame -> new($d->get('# Pages'));
@@ -1986,7 +1984,6 @@ sub scan_dialog {
  my $buttons = Gtk2::RadioButton -> new(undef, $d->get('Single sided'));
  $tooltips -> set_tip ($buttons, $d->get('Source document is single-sided'));
  $vboxs -> pack_start($buttons, TRUE, TRUE, 0);
- $buttons -> set_active(TRUE);
  my @groups = $buttons -> get_group;
 
 # Double sided button
@@ -2013,6 +2010,8 @@ sub scan_dialog {
  $tooltips -> set_tip ($ev,
               $d->get('Sets which side of a double-sided document is scanned'));
  $combobs -> set_active(0);
+# Have to do this here because setting the facing combobox switches it
+ $buttons -> set_active(TRUE);
  $hboxs -> pack_end ($ev, FALSE, FALSE, 0);
 
 # Frame for device-dependent options
@@ -2221,7 +2220,7 @@ sub scanimage {
   my $line;
   Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
-warn "$condition\n";
+#warn "$condition\n";
    if ($condition & 'in') { # bit field operation. >= would also work
     my $buffer;
 
@@ -2729,7 +2728,7 @@ sub parse_options {
     ++$i;
    }
   }
-  $combobp -> set_active($i);
+  $combobp -> set_active($o);
 
   $vboxd -> pack_start ($hboxc, FALSE, FALSE, 0);
 
