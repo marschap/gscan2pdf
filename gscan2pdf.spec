@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.5
+Version: 0.9.6
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -53,9 +53,18 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Thu Mar 08 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - Fixed bug where nothing saved if no default for page rage
-  - Seperated pdf, tiff and scan compression defaults
-  - Save TIFF and DjVu now respects enable options toggle
-  - cancel on scan dialog now sends ctrl-c to scanimage
-  - update to Czech translation (thanks to Petr Jelínek)
+* Sat Mar 31 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - "Enable Options" now "Enable Save Options"
+  - After cancelling scan, I/O error ignored.
+  - tiff2pdf replaced with PDF::API2, fixing character encoding bug in metadata
+  - OCR result buffer now embedded as annotation in PDF
+  - PDF import
+  - Now loads modules when needed, rather than at start to speed up start-up.
+  - Can import any format that imagemagick recognises
+  - Makes use of new_from_file_at_scale (speedup)
+  - OptionMenus swapped for ComboBoxes (+EventBoxes to wrap ToolTips)
+  - Fixed bug caused by trying to hide save_TIFF dialog although not created
+  - SpinButtons to adjust top left corner of scan area
+  - Now ghosts save options when no pages to save
+  - Italian translation (thanks to Alberto Boiti)
+  - Update to Dutch translation (thanks to Eric Spierings)
