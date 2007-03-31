@@ -35,6 +35,7 @@
 #     then no need to keep destroying and rebuilding
 #    Move scan area spinbuttons to be right-justified
 #    Remember top left scan position
+#    Find set_status sub in podbrowser
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
@@ -3508,7 +3509,7 @@ sub view_pod {
 # Index list
   my $index = Gtk2::Ex::Simple::List->new('icon' => 'pixbuf',
                                           'title' => 'text',
-                                          'link' => 'filename');
+                                          'link' => 'hstring');
   $index->set_headers_visible(FALSE);
   $index->get_column(1)->set_sizing('autosize');
 
@@ -3524,10 +3525,10 @@ sub view_pod {
   $viewer->set_border_width($border_width);
   $viewer->set_cursor_visible(FALSE);
   $viewer->signal_connect(link_clicked => \&link_clicked);
-  $viewer->signal_connect('link_enter', sub {
-   set_status($d->get('Go to')." $_[1]")
-  });
-  $viewer->signal_connect('link_leave', sub { set_status('') });
+#  $viewer->signal_connect('link_enter', sub {
+#   set_status($d->get('Go to')." $_[1]")
+#  });
+#  $viewer->signal_connect('link_leave', sub { set_status('') });
   $index->get_selection->signal_connect('changed', sub {
    my $idx = ($index->get_selected_indices)[0];
    my $mark = $index->{data}[$idx][2];
