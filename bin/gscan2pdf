@@ -35,7 +35,7 @@
 #     then no need to keep destroying and rebuilding
 #    Move scan area spinbuttons to be right-justified
 #    Remember top left scan position
-#    Find set_status sub in podbrowser
+#    Find set_status and link_clicked subs in podbrowser
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
@@ -3524,7 +3524,7 @@ sub view_pod {
   my $viewer = Gtk2::Ex::PodViewer->new;
   $viewer->set_border_width($border_width);
   $viewer->set_cursor_visible(FALSE);
-  $viewer->signal_connect(link_clicked => \&link_clicked);
+#  $viewer->signal_connect(link_clicked => \&link_clicked);
 #  $viewer->signal_connect('link_enter', sub {
 #   set_status($d->get('Go to')." $_[1]")
 #  });
