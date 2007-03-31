@@ -7,7 +7,7 @@ my $year = (localtime)[5] + 1900;
 my $author = "Jeffrey Ratcliffe";
 my $email = 'ra28145@users.sourceforge.net';
 
-# Slurp the gscan2pdf source and dig out the version number.
+# Slurp the program source and dig out the version number.
 my $text = do { local( @ARGV, $/ ) = "bin/$program" ; <> };
 my $version = $1 if ($text =~ /my \$version = "(.*)"/);
 
