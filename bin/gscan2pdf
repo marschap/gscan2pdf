@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Copyright (c) 2006 by Jeff Ratcliffe (ra28145 at users dot sourceforge.net)
+# Copyright (c) 2006--2007 by Jeff Ratcliffe (ra28145 at users dot sourceforge.net)
 # This script is released under the GPL license.  Please
 # see the included LICENSE file for details.
 
@@ -24,18 +24,14 @@
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
 #    check debian/copyright
 #    check out scanbuttond
-#    don't display dialogs for "rounded" messages
 #    sort out "dpkg-source: warning: source directory `./gscan2pdf' is not <sourcepackage>-<upstreamversion> `gscan2pdf-0.9.0'" error
 #    Switch viewing widget as soon as packages are available for:
 #     http://giv.sourceforge.net/gtk-image-viewer/
 #    Switch all imagemagick convert and tiffinfo calls to perlmagick
 #    As soon as gtk+ 2.12 is available and released in Feisty+1, remove the
 #     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
-#    replace $image = Gtk2::Image -> new_from_pixbuf with set_from_pixbuf and
-#     then no need to keep destroying and rebuilding
-#    Move scan area spinbuttons to be right-justified
-#    Remember top left scan position
-#    Find set_status and link_clicked subs in podbrowser
+#    rewrite update_uimanager with loop
+#    put window defaults in settings
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
@@ -74,7 +70,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.7";
+my $version = "0.9.7rc4";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -156,10 +152,13 @@ setlocale(LC_NUMERIC, "C");
 
 # Read config file
 my $config = "$ENV{'HOME'}/.$program";
-my %SETTING;
 
 # Set some defaults
-$SETTING{'Page range'} = 'all';
+my %SETTING = (
+ 'Page range' => 'all',
+ 'l'          => 0,
+ 't'          => 0,
+);
 
 if (-r $config) {
  open CONFIG, $config
@@ -365,25 +364,25 @@ $window -> signal_connect ( 'delete-event' => sub { quit(); Gtk2 -> main_quit; }
 $window -> signal_connect(window_state_event => sub {
  my ($w, $event) = @_;
  if ($event -> new_window_state & [ 'maximized' ]) {
-  $SETTING{"window_maximize"} = 1;
+  $SETTING{'window_maximize'} = 1;
  }
  else {
-  $SETTING{"window_maximize"} = 0;
+  $SETTING{'window_maximize'} = 0;
  }
 });
 
 # If defined in the config file, set the window state, size and position
-if (defined($SETTING{"window_width"}) and defined($SETTING{"window_height"})) {
- $window -> set_default_size ($SETTING{"window_width"}, $SETTING{"window_height"});
+if (defined($SETTING{'window_width'}) and defined($SETTING{'window_height'})) {
+ $window -> set_default_size ($SETTING{'window_width'}, $SETTING{'window_height'});
 }
 else {
  $window -> set_default_size (800, 600);
 }
-if (defined($SETTING{"window_x"}) and defined($SETTING{"window_y"})) {
- $window -> move ($SETTING{"window_x"}, $SETTING{"window_y"});
+if (defined($SETTING{'window_x'}) and defined($SETTING{'window_y'})) {
+ $window -> move ($SETTING{'window_x'}, $SETTING{'window_y'});
 }
 $window -> maximize
- if (! (defined($SETTING{"window_maximize"}) and ! $SETTING{"window_maximize"}));
+ if (! (defined($SETTING{'window_maximize'}) and ! $SETTING{'window_maximize'}));
 
 $window->set_default_icon_from_file ("$path/gscan2pdf.png");
 
@@ -405,8 +404,8 @@ $main_vbox -> pack_start($hpaned, TRUE, TRUE, 0);
 # Thumbnail dimensions
 my $widtht = 100;
 my $heightt = 100;
-if (defined($SETTING{"thumb panel"})) {
- $hpaned -> set_position ($SETTING{"thumb panel"});
+if (defined($SETTING{'thumb panel'})) {
+ $hpaned -> set_position ($SETTING{'thumb panel'});
 }
 else {
  $hpaned -> set_position ($widtht);
@@ -500,20 +499,20 @@ my $scwin_detail = Gtk2::ScrolledWindow -> new;
 $hpaned -> pack2 ($scwin_detail, TRUE, TRUE);
 $scwin_detail -> set_policy ('automatic', 'automatic');
 
-# Globally define the $image variables for $scwin_detail
-my ($image, $eventbox, $scale);
+my $scale;
+my $image = Gtk2::Image -> new;
+
+# Need to pack the image in an eventbox to get it to respond to mouse clicks
+my $eventbox = Gtk2::EventBox -> new;
+$eventbox -> add ( $image );
+$eventbox->signal_connect(button_press_event => \&handle_clicks);
+$eventbox->signal_connect(button_release_event => \&handle_clicks);
+
+$scwin_detail -> add_with_viewport($eventbox);
 
 # Set up call back for list selection to update detail view
 $slist -> get_selection -> signal_connect(changed => sub {
  my @page = $slist -> get_selected_indices;
-
-# Remove any image in the detail window
- if (defined($scwin_detail -> child)) {
-  my $viewport = $image -> get_parent;
-  $image -> destroy if (defined $image);
-  $eventbox -> destroy if (defined $eventbox);
-  $viewport -> destroy if (defined $viewport);
- }
 
 # Display the new image
  if ($#page > -1) {
@@ -522,17 +521,9 @@ $slist -> get_selection -> signal_connect(changed => sub {
   my $widthd = $scwin_detail -> allocation -> width;
   my $heightd = $scwin_detail -> allocation -> height;
 
-  $image = Gtk2::Image -> new_from_pixbuf(
+  $image -> set_from_pixbuf(
            get_pixbuf(scalar($slist->{data}[$page[0]][2]), $heightd, $widthd));
-
-# Need to pack the image in an eventbox to get it to respond to mouse clicks
-  $eventbox = Gtk2::EventBox -> new;
-  $eventbox -> add ( $image );
-  $eventbox->signal_connect(button_press_event => \&handle_clicks);
-  $eventbox->signal_connect(button_release_event => \&handle_clicks);
-
-  $scwin_detail -> add_with_viewport($eventbox);
-  $scwin_detail -> show_all;
+  $image -> show;
 
 # Update the buffer, if created
   if (defined $buffer and defined $slist -> {data}[$page[0]][3]) {
@@ -542,10 +533,13 @@ $slist -> get_selection -> signal_connect(changed => sub {
    $buffer -> delete($buffer->get_start_iter, $buffer->get_end_iter);
   }
  }
+ else {
+  $image -> clear;
+ }
 });
 
 # If defined in the config file, set the current directory
-$SETTING{"cwd"} = getcwd if (! defined($SETTING{"cwd"}));
+$SETTING{'cwd'} = getcwd if (! defined($SETTING{'cwd'}));
 
 # Create a temporary directory for scans
 my $dir = tempdir;
@@ -606,6 +600,8 @@ my %pddo = (
                                    },
                                  },
           );
+
+update_uimanager();
 
 $window -> show_all;
 Gtk2 -> main;
@@ -789,6 +785,68 @@ sub create_menu_bar {
 # ghost or unghost as necessary as # pages > 0 or not.
 
 sub update_uimanager {
+ if ($slist -> get_selected_indices) {
+  $uimanager->get_widget('/MenuBar/View/Zoom 100') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/MenuBar/View/Zoom to fit') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/MenuBar/View/Zoom in') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/MenuBar/View/Zoom out') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/MenuBar/View/Rotate 90') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/MenuBar/View/Rotate 180') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/MenuBar/View/Rotate 270') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/MenuBar/Tools/unpaper') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/MenuBar/Tools/OCR') -> set_sensitive(TRUE);
+
+  $uimanager->get_widget('/ToolBar/Zoom 100') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/ToolBar/Zoom to fit') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/ToolBar/Zoom in') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/ToolBar/Zoom out') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/ToolBar/Rotate 90') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/ToolBar/Rotate 180') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/ToolBar/Rotate 270') -> set_sensitive(TRUE);
+
+  $uimanager->get_widget('/Detail_Popup/Zoom 100') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/Detail_Popup/Zoom to fit') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/Detail_Popup/Zoom in') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/Detail_Popup/Zoom out') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/Detail_Popup/Rotate 90') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/Detail_Popup/Rotate 180') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/Detail_Popup/Rotate 270') -> set_sensitive(TRUE);
+
+  $uimanager->get_widget('/Thumb_Popup/Rotate 90') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/Thumb_Popup/Rotate 180') -> set_sensitive(TRUE);
+  $uimanager->get_widget('/Thumb_Popup/Rotate 270') -> set_sensitive(TRUE);
+ }
+ else {
+  $uimanager->get_widget('/MenuBar/View/Zoom 100') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/MenuBar/View/Zoom to fit') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/MenuBar/View/Zoom in') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/MenuBar/View/Zoom out') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/MenuBar/View/Rotate 90') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/MenuBar/View/Rotate 180') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/MenuBar/View/Rotate 270') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/MenuBar/Tools/unpaper') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/MenuBar/Tools/OCR') -> set_sensitive(FALSE);
+
+  $uimanager->get_widget('/ToolBar/Zoom 100') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/ToolBar/Zoom to fit') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/ToolBar/Zoom in') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/ToolBar/Zoom out') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/ToolBar/Rotate 90') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/ToolBar/Rotate 180') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/ToolBar/Rotate 270') -> set_sensitive(FALSE);
+
+  $uimanager->get_widget('/Detail_Popup/Zoom 100') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Detail_Popup/Zoom to fit') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Detail_Popup/Zoom in') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Detail_Popup/Zoom out') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Detail_Popup/Rotate 90') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Detail_Popup/Rotate 180') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Detail_Popup/Rotate 270') -> set_sensitive(FALSE);
+
+  $uimanager->get_widget('/Thumb_Popup/Rotate 90') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Thumb_Popup/Rotate 180') -> set_sensitive(FALSE);
+  $uimanager->get_widget('/Thumb_Popup/Rotate 270') -> set_sensitive(FALSE);
+ }
  if ($#{$slist -> {data}} > -1) {
   if ($dependencies{pages} == -1) {
    if ($dependencies{djvu} == 0) {
@@ -863,59 +921,45 @@ sub change_frontend {
 
 sub zoom_button {
  my ($button) = @_;
- if (defined($scwin_detail) and defined($scwin_detail -> child)) {
-  my $viewport = $image -> get_parent;
-  $image -> destroy;
-  $eventbox -> destroy;
-  $viewport -> destroy;
 
 # Get dimensions for detail window
-  my $widthd = $scwin_detail -> allocation -> width;
-  my $heightd = $scwin_detail -> allocation -> height;
-  my $pixbuf;
+ my $widthd = $scwin_detail -> allocation -> width;
+ my $heightd = $scwin_detail -> allocation -> height;
+ my $pixbuf;
 
-  my @page = $slist -> get_selected_indices;
-  my $filename = $slist->{data}[$page[0]][2];
+ my @page = $slist -> get_selected_indices;
+ my $filename = $slist->{data}[$page[0]][2];
 
-  if ($button eq '100%') {
-   $pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename);
-   my $widthi = $pixbuf->get_width;
-   my $heighti =  $pixbuf->get_height;
-   if ($widthd > $border) {
-    $scale = $widthi/($widthd-$border) > $heighti/($heightd-$border)
-                      ? $widthi/($widthd-$border) : $heighti/($heightd-$border);
-   }
-   else {
-    return ($heightd-$border)/$heighti;
-   }
-  }
-  elsif ($button eq 'in') {
-   $scale *= 1.2;
-   $pixbuf = Gtk2::Gdk::Pixbuf ->
-      new_from_file_at_scale ($filename, $widthd*$scale, $heightd*$scale, TRUE);
-  }
-  elsif ($button eq 'out') {
-   $scale /= 1.2;
-   $pixbuf = Gtk2::Gdk::Pixbuf ->
-      new_from_file_at_scale ($filename, $widthd*$scale, $heightd*$scale, TRUE);
+ if ($button eq '100%') {
+  $pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename);
+  my $widthi = $pixbuf->get_width;
+  my $heighti =  $pixbuf->get_height;
+  if ($widthd > $border) {
+   $scale = $widthi/($widthd-$border) > $heighti/($heightd-$border)
+                     ? $widthi/($widthd-$border) : $heighti/($heightd-$border);
   }
   else {
-   $scale = 1;
-   $pixbuf = Gtk2::Gdk::Pixbuf ->
-                    new_from_file_at_scale ($filename, $widthd, $heightd, TRUE);
+   return ($heightd-$border)/$heighti;
   }
-
-  $image -> set_from_pixbuf($pixbuf);
-
-# Need to pack the image in an eventbox to get it to respond to mouse clicks
-  $eventbox = Gtk2::EventBox -> new;
-  $eventbox -> add ( $image );
-  $eventbox->signal_connect(button_press_event => \&handle_clicks);
-  $eventbox->signal_connect(button_release_event => \&handle_clicks);
-
-  $scwin_detail -> add_with_viewport($eventbox);
-  $scwin_detail -> show_all;
  }
+ elsif ($button eq 'in') {
+  $scale *= 1.2;
+  $pixbuf = Gtk2::Gdk::Pixbuf ->
+     new_from_file_at_scale ($filename, $widthd*$scale, $heightd*$scale, TRUE);
+ }
+ elsif ($button eq 'out') {
+  $scale /= 1.2;
+  $pixbuf = Gtk2::Gdk::Pixbuf ->
+     new_from_file_at_scale ($filename, $widthd*$scale, $heightd*$scale, TRUE);
+ }
+ else {
+  $scale = 1;
+  $pixbuf = Gtk2::Gdk::Pixbuf ->
+                   new_from_file_at_scale ($filename, $widthd, $heightd, TRUE);
+ }
+
+ $image -> set_from_pixbuf($pixbuf);
+ $image -> show;
 }
 
 
@@ -959,13 +1003,6 @@ sub new {
 # Update undo/redo buffers
  take_snapshot();
 
-# Remove any image in the detail window
- if ($image) {
-  my $viewport = $image -> get_parent;
-  $image -> destroy;
-  $viewport -> destroy;
- }
-
 # Depopulate the thumbnail list
  @{$slist -> {data}} = ();
 
@@ -1005,7 +1042,7 @@ sub import {
  require Image::Magick;
 
 # cd back to cwd to get filename
- chdir $SETTING{"cwd"};
+ chdir $SETTING{'cwd'};
 
  my $file_chooser = Gtk2::FileChooserDialog -> new(
                                       $d->get('Import image from file'),
@@ -1028,7 +1065,7 @@ sub import {
   foreach my $filename (@filename) {
 
 # Update cwd
-   $SETTING{"cwd"} = dirname($filename);
+   $SETTING{'cwd'} = dirname($filename);
 
 # Get file type
    my $image = Image::Magick->new;
@@ -1281,7 +1318,7 @@ sub add_PDF_options {
  $hboxa -> pack_start ($labela, FALSE, FALSE, 0);
  my $entrya = Gtk2::Entry -> new;
  $hboxa -> pack_end( $entrya, TRUE, TRUE, 0 );
- $entrya -> set_text($SETTING{"author"}) if (defined($SETTING{"author"}));
+ $entrya -> set_text($SETTING{'author'}) if (defined($SETTING{'author'}));
 
 # Title
  my $hboxt = Gtk2::HBox -> new;
@@ -1290,7 +1327,7 @@ sub add_PDF_options {
  $hboxt -> pack_start ($labelt, FALSE, FALSE, 0);
  my $entryt = Gtk2::Entry -> new;
  $hboxt -> pack_end( $entryt, TRUE, TRUE, 0 );
- $entryt -> set_text($SETTING{"title"}) if (defined($SETTING{"title"}));
+ $entryt -> set_text($SETTING{'title'}) if (defined($SETTING{'title'}));
 
 # Subject
  my $hboxs = Gtk2::HBox -> new;
@@ -1299,7 +1336,7 @@ sub add_PDF_options {
  $hboxs -> pack_start ($labels, FALSE, FALSE, 0);
  my $entrys = Gtk2::Entry -> new;
  $hboxs -> pack_end( $entrys, TRUE, TRUE, 0 );
- $entrys -> set_text($SETTING{"subject"}) if (defined($SETTING{"subject"}));
+ $entrys -> set_text($SETTING{'subject'}) if (defined($SETTING{'subject'}));
 
 # Keywords
  my $hboxk = Gtk2::HBox -> new;
@@ -1308,7 +1345,7 @@ sub add_PDF_options {
  $hboxk -> pack_start ($labelk, FALSE, FALSE, 0);
  my $entryk = Gtk2::Entry -> new;
  $hboxk -> pack_end( $entryk, TRUE, TRUE, 0 );
- $entryk -> set_text($SETTING{"keywords"}) if (defined($SETTING{"keywords"}));
+ $entryk -> set_text($SETTING{'keywords'}) if (defined($SETTING{'keywords'}));
 
  return ($entrya, $entryt, $entrys, $entryk);
 }
@@ -1318,10 +1355,10 @@ sub update_PDF_settings {
  my ($entrya, $entryt, $entrys, $entryk) = @_;
 
 # Get metadata
- $SETTING{"author"} = $entrya -> get_text;
- $SETTING{"title"} = $entryt -> get_text;
- $SETTING{"subject"} = $entrys -> get_text;
- $SETTING{"keywords"} = $entryk -> get_text;
+ $SETTING{'author'} = $entrya -> get_text;
+ $SETTING{'title'} = $entryt -> get_text;
+ $SETTING{'subject'} = $entrys -> get_text;
+ $SETTING{'keywords'} = $entryk -> get_text;
 }
 
 
@@ -1404,7 +1441,7 @@ sub create_PDF {
 sub save_PDF {
 
 # cd back to cwd to save
- chdir $SETTING{"cwd"};
+ chdir $SETTING{'cwd'};
 
 # Set up file selector
  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('PDF filename'),
@@ -1431,7 +1468,7 @@ sub save_PDF {
   }
 
 # Update cwd
-  $SETTING{"cwd"} = dirname($filename);
+  $SETTING{'cwd'} = dirname($filename);
 
 # Create the PDF
   create_PDF($filename);
@@ -1598,7 +1635,7 @@ sub save_TIFF_dialog {
 sub save_TIFF {
 
 # cd back to cwd to save
- chdir $SETTING{"cwd"};
+ chdir $SETTING{'cwd'};
 
 # Set up file selector
  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('TIFF filename'),
@@ -1621,7 +1658,7 @@ sub save_TIFF {
   }
 
 # Update cwd
-  $SETTING{"cwd"} = dirname($filename);
+  $SETTING{'cwd'} = dirname($filename);
 
 # cd back to tempdir
   chdir $dir;
@@ -1696,7 +1733,7 @@ sub save_djvu_dialog {
 sub save_djvu {
 
 # cd back to cwd to save
- chdir $SETTING{"cwd"};
+ chdir $SETTING{'cwd'};
 
 # Set up file selector
  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('DjVu filename'),
@@ -1719,7 +1756,7 @@ sub save_djvu {
   }
 
 # Update cwd
-  $SETTING{"cwd"} = dirname($filename);
+  $SETTING{'cwd'} = dirname($filename);
 
 # cd back to tempdir
   chdir $dir;
@@ -1903,11 +1940,7 @@ sub scan_dialog {
  $combobd -> signal_connect (changed => sub {
   update_options($vboxd, $device[$combobd -> get_active]);
   $vboxd -> show_all;
-  if (! defined($combobp) or ($combobp->get_active_text ne $d->get('Custom'))) {
-# Not defined if scanner has no paper size (like my video grabber)
-   $hboxc -> hide if (defined $hboxc);
-   $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
-  }
+  hide_custom();
  });
  $tooltips -> set_tip ($ev,
                          $d->get('Sets the device to be used for the scan'));
@@ -1921,9 +1954,9 @@ sub scan_dialog {
 
 # If device in settings then set it
  my $o = 0;
- if (defined($SETTING{"device"})) {
+ if (defined($SETTING{'device'})) {
   for (my $i = 0; $i <= $#device; $i++) {
-   $o = $i if ($SETTING{"device"} eq $device[$i]);
+   $o = $i if ($SETTING{'device'} eq $device[$i]);
   }
  }
 # This then fires the callback, updating the options, so no need to do it further down.
@@ -1960,13 +1993,13 @@ sub scan_dialog {
  $hboxn -> pack_end ($spin_button, FALSE, FALSE, 0);
 
 # Set default
- if (defined($SETTING{"pages to scan"})) {
-  if ($SETTING{"pages to scan"} eq 'all') {
+ if (defined($SETTING{'pages to scan'})) {
+  if ($SETTING{'pages to scan'} eq 'all') {
    $buttona -> set_active(TRUE);
   }
   else {
    $buttone -> set_active(TRUE);
-   $spin_button -> set_value($SETTING{"pages to scan"});
+   $spin_button -> set_value($SETTING{'pages to scan'});
   }
  }
  else {
@@ -1997,7 +2030,7 @@ sub scan_dialog {
  my $hboxs = Gtk2::HBox -> new;
  $vboxs -> pack_start($hboxs, TRUE, TRUE, 0);
  my $labels = Gtk2::Label -> new ($d->get('Side to scan'));
- $hboxs -> pack_start($labels, TRUE, TRUE, 0);
+ $hboxs -> pack_start($labels, FALSE, FALSE, 0);
 
  $ev = Gtk2::EventBox->new;
  my $combobs = Gtk2::ComboBox -> new_text;
@@ -2035,7 +2068,7 @@ sub scan_dialog {
   take_snapshot();
 
 # Get selected device
-  $SETTING{"device"} = $device[$combobd -> get_active];
+  $SETTING{'device'} = $device[$combobd -> get_active];
 
 # Get device-specific options
   my %options;
@@ -2066,11 +2099,11 @@ sub scan_dialog {
 # Get selected number of pages
   my $npages;
   if ($buttone -> get_active) {
-   $SETTING{"pages to scan"} = $spin_button -> get_value;
+   $SETTING{'pages to scan'} = $spin_button -> get_value;
    $npages = $SETTING{'pages to scan'};
   }
   else {
-   $SETTING{"pages to scan"} = 'all';
+   $SETTING{'pages to scan'} = 'all';
    $npages = 0;
   }
 
@@ -2150,6 +2183,7 @@ sub scan_dialog {
 
 # Show window
  $windows -> show_all;
+ hide_custom();
 }
 
 
@@ -2219,9 +2253,8 @@ sub scanimage {
   my $line;
   Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
-warn "$condition\n";
+   my $buffer;
    if ($condition & 'in') { # bit field operation. >= would also work
-    my $buffer;
 
 # Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
     sysread $error, $buffer, 1024;
@@ -2281,14 +2314,15 @@ warn "$text\n";
      }
      $line = substr($line, index($line, "\n")+1, length($line));
     }
-    return TRUE;  # continue without uninstalling
    }
-   elsif ($condition & 'hup') { # bit field operation. >= would also work
+# Because reading from stderr with sysread seems to cause problems, only
+# allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
     close $read;
     $dialog -> destroy;
     return FALSE;  # uninstall
    }
-   return TRUE;  # Shouldn't need this a second time...
+   return TRUE;  # continue without uninstalling
   });
  }
  else {
@@ -2397,6 +2431,9 @@ END
      elsif ($line =~ /^Scanned \d* pages/) {
       ;
      }
+     elsif ($line =~ /^scanadf: rounded/) {
+      warn substr($line, 0, index($line, "\n")+1);
+     }
      else {
       $dialog -> destroy;
       my $text = $d->get('Unknown message: ')
@@ -2412,14 +2449,15 @@ warn "$text\n";
      }
      $line = substr($line, index($line, "\n")+1, length($line));
     }
-    return TRUE;  # continue without uninstalling
    }
-   if ($condition & 'hup') { # bit field operation. >= would also work
+# Because reading from stderr with sysread seems to cause problems, only
+# allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
     close $read;
     $dialog -> destroy;
     return FALSE;  # uninstall
    }
-   return TRUE;  # Shouldn't need this a second time...
+   return TRUE;  # continue without uninstalling
   });
  }
  else {
@@ -2731,30 +2769,34 @@ sub parse_options {
 
   $vboxd -> pack_start ($hboxc, FALSE, FALSE, 0);
 
-# custom paper x entry
-  my $labelx = Gtk2::Label -> new ("x");
-  $hboxc -> pack_start ($labelx, FALSE, FALSE, 0);
-  $hboxc -> pack_start ($spin_buttonx, FALSE, FALSE, 0);
-
 # custom paper y entry
   my $labely = Gtk2::Label -> new ("y");
-  $hboxc -> pack_start ($labely, FALSE, FALSE, 0);
-  $hboxc -> pack_start ($spin_buttony, FALSE, FALSE, 0);
+  $hboxc -> pack_end ($spin_buttony, FALSE, FALSE, 0);
+  $hboxc -> pack_end ($labely, FALSE, FALSE, 0);
+
+# custom paper x entry
+  my $labelx = Gtk2::Label -> new ("x");
+  $hboxc -> pack_end ($spin_buttonx, FALSE, FALSE, 0);
+  $hboxc -> pack_end ($labelx, FALSE, FALSE, 0);
 
 # Origin
-  my $labelo = Gtk2::Label -> new ($d->get('Top-left position of scan area'));
-  $vboxd -> pack_start ($labelo, FALSE, FALSE, 0);
   my $hboxo = Gtk2::HBox -> new;
+  my $hboxol = Gtk2::HBox -> new;
+  my $labelo = Gtk2::Label -> new ($d->get('Top-left position of scan area'));
+  $hboxol -> pack_start ($labelo, FALSE, FALSE, 0);
+  $vboxd -> pack_start ($hboxol, TRUE, TRUE, 0);
   my $labell = Gtk2::Label -> new ('l');
   my $spin_buttonl = Gtk2::SpinButton -> new_with_range(0, $l, 1);
+  $spin_buttonl -> set_value($SETTING{'l'});
   my $labelt = Gtk2::Label -> new ('t');
   my $spin_buttont = Gtk2::SpinButton -> new_with_range(0, $t, 1);
+  $spin_buttont -> set_value($SETTING{'t'});
   $tooltips -> set_tip ($spin_buttonl, $d->get('Top-left x position of scan area'));
   $tooltips -> set_tip ($spin_buttont, $d->get('Top-left y position of scan area'));
-  $hboxo -> pack_start ($labell, FALSE, FALSE, 0);
-  $hboxo -> pack_start ($spin_buttonl, FALSE, FALSE, 0);
-  $hboxo -> pack_start ($labelt, FALSE, FALSE, 0);
-  $hboxo -> pack_start ($spin_buttont, FALSE, FALSE, 0);
+  $hboxo -> pack_end ($spin_buttont, FALSE, FALSE, 0);
+  $hboxo -> pack_end ($labelt, FALSE, FALSE, 0);
+  $hboxo -> pack_end ($spin_buttonl, FALSE, FALSE, 0);
+  $hboxo -> pack_end ($labell, FALSE, FALSE, 0);
   $vboxd -> pack_start ($hboxo, FALSE, FALSE, 0);
 
   $spin_buttonx -> signal_connect ('value-changed' => sub {
@@ -2767,9 +2809,9 @@ sub parse_options {
   });
 
 # Set scan area from config if available, thus triggering updates for l & t
-  if (defined($SETTING{"x"}) and defined($SETTING{"y"})) {
-   $spin_buttonx -> set_value($SETTING{"x"});
-   $spin_buttony -> set_value($SETTING{"y"});
+  if (defined($SETTING{'x'}) and defined($SETTING{'y'})) {
+   $spin_buttonx -> set_value($SETTING{'x'});
+   $spin_buttony -> set_value($SETTING{'y'});
   }
 
 # Otherwise set from paper size if available
@@ -2896,6 +2938,13 @@ sub parse_options {
 
 # Show window, hiding the custom hbox and sizing if necessary
  $vboxd -> show_all;
+ hide_custom();
+}
+
+
+# Hides the custom paper size on scan dialog if not necessary
+
+sub hide_custom {
  if (! defined($combobp) or ($combobp->get_active_text ne $d->get('Custom'))) {
 # Not defined if scanner has no paper size (like my video grabber)
   $hboxc -> hide if (defined $hboxc);
@@ -3389,7 +3438,7 @@ sub OCR {
  $sbutton -> signal_connect (clicked => sub {
 
 # cd back to cwd to save
-  chdir $SETTING{"cwd"};
+  chdir $SETTING{'cwd'};
 
 # Set up file selector
   my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('Save OCR output'),
@@ -3412,7 +3461,7 @@ sub OCR {
    }
 
 # Update cwd
-   $SETTING{"cwd"} = dirname($filename);
+   $SETTING{'cwd'} = dirname($filename);
 
 # cd back to tempdir
    chdir $dir;
@@ -3446,9 +3495,9 @@ sub quit {
  rmdir $dir;
 
 # Write window state to settings
- ($SETTING{"window_width"}, $SETTING{"window_height"}) = $window -> get_size;
- ($SETTING{"window_x"}, $SETTING{"window_y"}) = $window -> get_position;
- $SETTING{"thumb panel"} = $hpaned -> get_position;
+ ($SETTING{'window_width'}, $SETTING{'window_height'}) = $window -> get_size;
+ ($SETTING{'window_x'}, $SETTING{'window_y'}) = $window -> get_position;
+ $SETTING{'thumb panel'} = $hpaned -> get_position;
 
 # Save options setting
  $SETTING{'enable options'} =
@@ -3522,11 +3571,6 @@ sub view_pod {
   my $viewer = Gtk2::Ex::PodViewer->new;
   $viewer->set_border_width($border_width);
   $viewer->set_cursor_visible(FALSE);
-#  $viewer->signal_connect(link_clicked => \&link_clicked);
-#  $viewer->signal_connect('link_enter', sub {
-#   set_status($d->get('Go to')." $_[1]")
-#  });
-#  $viewer->signal_connect('link_leave', sub { set_status('') });
   $index->get_selection->signal_connect('changed', sub {
    my $idx = ($index->get_selected_indices)[0];
    my $mark = $index->{data}[$idx][2];
@@ -3706,7 +3750,8 @@ __END__
 
 =head1 Name
 
-gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan. gscan2pdf should work on almost any Linux/BSD machine.
+gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan.
+gscan2pdf should work on almost any Linux/BSD machine.
 
 =for html <p align="center">
  <img src="https://sourceforge.net/dbimage.php?id=107427" border="1" width="632" height="480" alt="Screenshot" /><br />
@@ -3724,12 +3769,12 @@ gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan. 
 
 =head1 Description
 
-At maturity, the GUI will have similar features to that of the Windows Imaging program, but with the express objective of writing a PDF, including metadata.
-
 Scanning is handled with SANE via scanimage.
-PDF conversion is done by libtiff.
+PDF conversion is done by PDF::API2.
+TIFF export is handled by libtiff (faster and smaller memory footprint for multipage files).
 
-Perl is used for portability and ease of programming, with gtk2-perl for the GUI. This should therefore work more or less out of the box on any system with Perl, gtk2-perl, scanimage and libtiff.
+Perl is used for portability and ease of programming, with gtk2-perl for the GUI.
+This should therefore work more or less out of the box on any system with Perl, gtk2-perl, scanimage and libtiff.
 
 =head1 Download
 
@@ -3749,7 +3794,9 @@ C<apt-get update>
 
 C<apt-get install gscan2pdf>
 
-The help will require F<Gtk2::Ex::PodViewer>. Rotating requires F<Imagemagick>. Having installed gscan2pdf, locate the gscan2pdf entry in Synaptic, right-click it and you can install them under I<Recommends>.
+The help will require F<Gtk2::Ex::PodViewer>.
+Rotating requires F<Imagemagick>.
+Having installed gscan2pdf, locate the gscan2pdf entry in Synaptic, right-click it and you can install them under I<Recommends>.
 
 =head2 RPMs
 
@@ -3759,11 +3806,12 @@ Download the rpm from Sourceforge, and then install it with C<rpm -i gscan2pdf-v
 
 The source is hosted in the files section of the gscan2pdf project on Sourceforge (L<http://sourceforge.net/project/showfiles.php?group_id=174140>).
 
-Having downloaded it, C<make install> will install it for you. Note there is no C<make> or C<make test> step.
+Having downloaded it, C<make install> will install it for you.
+Note there is no C<make> or C<make test> step.
 
 =head1 Reporting bugs
 
-Before reporting bugs, please read the L</"FAQs"> section.
+Before reporting bugs, please read the L<FAQs> section.
 
 Please report any bugs found to the bugs page of the gscan2pdf project on Sourceforge (L<https://sourceforge.net/tracker/?group_id=174140&atid=868098>).
 
@@ -3771,7 +3819,8 @@ Please include the output of C<scanimage --help> with any new bug report.
 
 =head1 Translations
 
-gscan2pdf has already been partly translated several languages. If you would like to contribute to an existing or new translation, please check out Rosetta: L<https://launchpad.net/products/gscan2pdf/trunk/+pots/gscan2pdf>
+gscan2pdf has already been partly translated several languages.
+If you would like to contribute to an existing or new translation, please check out Rosetta: L<https://launchpad.net/products/gscan2pdf/trunk/+pots/gscan2pdf>
 
 =head1 Menus
 
@@ -3801,7 +3850,9 @@ Selects the number of pages, or all pages to scan.
 
 Selects between single sided or double sides pages.
 
-This affects the page numbering. Single sided scans are numbered consecutively. Double sided scans are incremented (or decremented, see below) by 2, i.e. 1, 3, 5, etc..
+This affects the page numbering.
+Single sided scans are numbered consecutively.
+Double sided scans are incremented (or decremented, see below) by 2, i.e. 1, 3, 5, etc..
 
 =head4 Side to scan
 
@@ -3839,7 +3890,8 @@ Reverse side
 
 =head4 Device-dependent options
 
-These, naturally, depend on your scanner. They can include
+These, naturally, depend on your scanner.
+They can include
 
 =over
 
@@ -3859,7 +3911,9 @@ After sending the scan command, wait until the button on the scanner is pressed 
 
 =item Source
 
-Selects the document source. Possible options can include Flatbed or ADF. On some scanners, this is the only way of generating an out-of-documents signal.
+Selects the document source.
+Possible options can include Flatbed or ADF.
+On some scanners, this is the only way of generating an out-of-documents signal.
 
 =back
 
@@ -3873,17 +3927,28 @@ Metadata are information that are not visible when viewing the PDF, but are embe
 
 The metadata are completely optional.
 
+=head4 OCR output
+
+The OCR output buffer is embedded as an annotation (pop-up note) in the PDF produced.
+Unfortunately, Beagle does not index (i.e. search) the contents of annotation, as it relies on pdftotext.
+Suggestions for a better way to embed the text are welcome.
+
 =head3 Save TIFF
 
 Saves the current, selected or all pages as a TIFF.
 
 =head3 Save DjVu
 
-Saves the current, selected or all pages as a DjVu. Currently, only bitonal compression is available. This is best suited to black and white scans and as such, produces better compression than PDF. See L<http://www.djvuzone.org/> for more details.
+Saves the current, selected or all pages as a DjVu.
+Currently, only bitonal compression is available.
+This is best suited to black and white scans and as such, produces better compression than PDF.
+See L<http://www.djvuzone.org/> for more details.
 
 =head3 Email as PDF
 
-Attaches the current, selected or all pages as a PDF to a blank email. This requires xdg-email, which is in the xdg-utils package. If this is not present, the option is ghosted out.
+Attaches the current, selected or all pages as a PDF to a blank email.
+This requires xdg-email, which is in the xdg-utils package.
+If this is not present, the option is ghosted out.
 
 =head2 Edit
 
@@ -3903,7 +3968,11 @@ Selects all pages.
 
 =head3 Frontend
 
-gscan2pdf supports two frontends, scanimage and scanadf. scanadf support was added when it was realised that scanadf works better with some scanners than scanimage. However, to convert the output, the scanadf option requires imagemagick and if this is not present the option is ghosted out. On Ubuntu Edgy, scanadf is in the sane package, not, like scanimage, in sane-utils. If scanadf is not present, the option is obviously ghosted out.
+gscan2pdf supports two frontends, scanimage and scanadf.
+scanadf support was added when it was realised that scanadf works better with some scanners than scanimage.
+However, to convert the output, the scanadf option requires imagemagick and if this is not present the option is ghosted out.
+On Ubuntu Edgy, scanadf is in the sane package, not, like scanimage, in sane-utils.
+If scanadf is not present, the option is obviously ghosted out.
 
 =head2 View
 
@@ -3931,13 +4000,17 @@ The rotate options require the package imagemagick and, if this is not present, 
 
 =head3 unpaper
 
-unpaper (see L<http://unpaper.berlios.de/>) is a utility for cleaning up a scan. At the moment, having selected whether the scan has a single or a double page, and which sides to use for the alignment, the scan will be deskewed (rotated) and centred.
+unpaper (see L<http://unpaper.berlios.de/>) is a utility for cleaning up a scan.
+At the moment, having selected whether the scan has a single or a double page, and which sides to use for the alignment, the scan will be deskewed (rotated) and centred.
 
 =head3 OCR (Optical Character Recognition)
 
-The gocr utility is used to process the current page. The output is displayed and an option is given to save it to a text file.
+The gocr utility is used to process the current page.
+The output is displayed and an option is given to save it to a text file.
 
-I hope that in the future I can find a way to imbed the output in the PDF.
+There is an OCR output buffer for each page and is embedded as an annotation (pop-up note) in the PDF produced.
+Unfortunately, Beagle does not index (i.e. search) the contents of annotation, as it relies on pdftotext.
+Suggestions for a better way to embed the text are welcome.
 
 =head1 FAQs
 
@@ -3947,7 +4020,8 @@ Possibly because SANE or your scanner doesn't support it.
 
 If an option listed in the output of C<scanimage --help> that you would like to use isn't available, send me the output and I will look at implementing it.
 
-=head2 I've only got an old flatbed scanner with no automatic sheetfeeder. How do I scan a multipage document?
+=head2 I've only got an old flatbed scanner with no automatic sheetfeeder.
+How do I scan a multipage document?
 
 If you are lucky, you have an option like Wait-for-button or Button-wait, where the scanner will wait for you to press the scan button on the device before it starts the scan, allowing you to scan multiple pages without touching the computer.
 
@@ -3955,7 +4029,8 @@ Otherwise, you have to set the number of pages to scan to 1 and hit the scan but
 
 =head2 Why is option xyz ghosted out?
 
-Probably because the package required for that option is not installed. Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options require imagemagick.
+Probably because the package required for that option is not installed.
+Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options require imagemagick.
 
 =head1 See Also
 
@@ -3968,7 +4043,8 @@ Jeffrey Ratcliffe (ra28145 at users dot sourceforge dot net)
 
 =head1 Thanks to
 
-All the people who have sent patches, bugs and feedback. Also to Sourceforge for hosting the project.
+All the people who have sent patches, bugs and feedback.
+Also to Sourceforge for hosting the project.
 
 =for html <a href="http://sourceforge.net"><img alt="SourceForge.net Logo" align="right" height="31px" width="88px"
 src="http://sourceforge.net/sflogo.php?group_id=174140&amp;type=1"></a><a href="http://sourceforge.net/donate/index.php?group_id=174140"><img src="http://sourceforge.net/images/project-support.jpg" width="88" height="32" border="0" alt="Support This Project"></a>
