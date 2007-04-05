@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.6
+Version: 0.9.7
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -10,7 +10,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
 ExclusiveArch: noarch
 Packager:  Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-Requires:  perl(Gtk2) >= 1:1.043-1, perl(Glib) >= 1.100-1, perl(Locale::gettext) >= 1.05, sane, libtiff
+Requires:  perl(Gtk2) >= 1:1.043-1, perl(Glib) >= 1.100-1, perl(Locale::gettext) >= 1.05, perl(PDF::API2), perlmagick, sane, libtiff
 
 %description
 At maturity, the GUI will have similar features to that of the Windows Imaging
@@ -53,18 +53,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Sat Mar 31 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - "Enable Options" now "Enable Save Options"
-  - After cancelling scan, I/O error ignored.
-  - tiff2pdf replaced with PDF::API2, fixing character encoding bug in metadata
-  - OCR result buffer now embedded as annotation in PDF
-  - PDF import
-  - Now loads modules when needed, rather than at start to speed up start-up.
-  - Can import any format that imagemagick recognises
-  - Makes use of new_from_file_at_scale (speedup)
-  - OptionMenus swapped for ComboBoxes (+EventBoxes to wrap ToolTips)
-  - Fixed bug caused by trying to hide save_TIFF dialog although not created
-  - SpinButtons to adjust top left corner of scan area
-  - Now ghosts save options when no pages to save
-  - Italian translation (thanks to Alberto Boiti)
-  - Update to Dutch translation (thanks to Eric Spierings)
+* Thu Apr 05 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - Fixed bug calling help
+  - Fixed error message caused by update_options sub being called twice.
+  - Streamlined image creation (speedup)
+  - Adjusted widget justification in scan dialog
+  - Suppressed rounded messages from scanadf frontend
+  - Remembers scan area
+  - Ghosts zoom and rotate buttons if no page selected
+  - Fixed bug where custom scan area not hidden when A4 or Letter selected
+  - Help update

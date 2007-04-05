@@ -1,18 +1,13 @@
-gscan2pdf (0.9.6) unstable; urgency=low
+gscan2pdf (0.9.7) unstable; urgency=low
 
-  * "Enable Options" now "Enable Save Options"
-  * After cancelling scan, I/O error ignored.
-  * tiff2pdf replaced with PDF::API2, fixing character encoding bug in metadata
-  * OCR result buffer now embedded as annotation in PDF
-  * PDF import
-  * Now loads modules when needed, rather than at start to speed up start-up.
-  * Can import any format that imagemagick recognises
-  * Makes use of new_from_file_at_scale (speedup)
-  * OptionMenus swapped for ComboBoxes (+EventBoxes to wrap ToolTips)
-  * Fixed bug caused by trying to hide save_TIFF dialog although not created
-  * SpinButtons to adjust top left corner of scan area
-  * Now ghosts save options when no pages to save
-  * Italian translation (thanks to Alberto Boiti)
-  * Update to Dutch translation (thanks to Eric Spierings)
+  * Fixed bug calling help
+  * Fixed error message caused by update_options sub being called twice.
+  * Streamlined image creation (speedup)
+  * Adjusted widget justification in scan dialog
+  * Suppressed rounded messages from scanadf frontend
+  * Remembers scan area
+  * Ghosts zoom and rotate buttons if no page selected
+  * Fixed bug where custom scan area not hidden when A4 or Letter selected
+  * Help update
 
- -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Sat, 31 Mar 2007 21:15:54 +0200
+ -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Thu, 05 Apr 2007 22:24:47 +0200
