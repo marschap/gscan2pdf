@@ -29,9 +29,7 @@
 #     http://giv.sourceforge.net/gtk-image-viewer/
 #    As soon as gtk+ 2.12 is available and released in Feisty+1, remove the
 #     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
-#    double-sided scanning with scanadf
-#    check system overload whilst using unpaper on multiple pages
-#    steal rotate icons from eye of gnome
+#    steal rotate icons from eye of gnome 2.18
 #    --no-mask-scan - I suspect this is the one that is eating my cell borders.
 #    --no-deskew - Personally this is the most useful feature to me, but since it is a major funtion of unpaper, maybe it deserves it's own toggle in case someone doesn't want it.
 #    --no-blackfilter
@@ -878,20 +876,8 @@ sub update_uimanager {
 
 sub change_frontend {
  my ($action, $current) = @_;
- my $name = $current->get_name;
- $SETTING{'frontend'} = $name;
- if ($name eq 'scanimage') {
-  if (defined($windows)) {
-   $frames->set_sensitive(TRUE);
-   update_options($vboxd, $device[$combobd -> get_active]);
-  }
- }
- else {
-  if (defined($windows)) {
-   $frames->set_sensitive(FALSE);
-   update_options($vboxd, $device[$combobd -> get_active]);
-  }
- }
+ $SETTING{'frontend'} = $current->get_name;
+ update_options($vboxd, $device[$combobd -> get_active]) if (defined $windows);
 }
 
 
@@ -1986,8 +1972,6 @@ sub scan_dialog {
 
 # Frame for source document
  $frames = Gtk2::Frame -> new($d->get('Source document'));
- $frames->set_sensitive(FALSE)
-  if (defined($SETTING{'frontend'}) and $SETTING{'frontend'} eq 'scanadf');
  $vbox -> pack_start ($frames, FALSE, FALSE, 0);
  my $vboxs = Gtk2::VBox -> new;
  $vboxs -> set_border_width($border_width);
@@ -2151,10 +2135,10 @@ sub scan_dialog {
    }
   }
   if ($SETTING{'frontend'} eq 'scanimage') {
-   scanimage($SETTING{'device'}, $npages, $start, $step, %options);
+   scanimage($SETTING{'device'}, $npages, $start-$step, $step, %options);
   }
   else {
-   scanadf($SETTING{'device'}, $npages, $start, %options);
+   scanadf($SETTING{'device'}, $npages, $start-$step, $step, %options);
   }
  } );
 
@@ -2172,7 +2156,7 @@ sub scan_dialog {
 # Carry out the scan with scanimage and the options passed.
 
 sub scanimage {
- my ($device, $npages, $start, $step, %options) = @_;
+ my ($device, $npages, $offset, $step, %options) = @_;
 
  require IPC::Open3;
  require IO::Handle;
@@ -2184,13 +2168,6 @@ sub scanimage {
  }
  else {
   $npages = "";
- }
- $start  = "--batch-start=$start";
- if (defined $step) {
-  $step   = "--batch-increment=$step";
- }
- else {
-  $step   = "";
  }
 
 # Device-specific options
@@ -2204,7 +2181,7 @@ sub scanimage {
  chdir $dir;
 
 # Create command
- my $cmd = "scanimage $device $npages $start $step @options";
+ my $cmd = "scanimage $device $npages @options";
  warn "$cmd\n" if $debug;
 
  if (! @test) {
@@ -2247,13 +2224,13 @@ sub scanimage {
       $label -> set_text($d->get('Scanning')." $1 ".$d->get('pages')."...");
      }
      elsif ($line =~ /^Scanning page (\d*)/) {
-      $label -> set_text($d->get('Scanning page')." $1...");
+      $label -> set_text(sprintf($d->get('Scanning page %i...'), $1*$step+$offset));
      }
      elsif ($line =~ /^Scanned page (\d*)\. \(scanner status = 5\)/) {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.tif")) {
+      if (! import_scan ("out$1.tif", $1*$step+$offset)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -2316,7 +2293,7 @@ warn "$text\n";
 # Carry out the scan with scanadf and the options passed.
 
 sub scanadf {
- my ($device, $npages, $start, %options) = @_;
+ my ($device, $npages, $offset, $step, %options) = @_;
 
  require IPC::Open3;
  require IO::Handle;
@@ -2325,12 +2302,12 @@ sub scanadf {
  $device = "--device-name='$device'";
  my $end;
  if ($npages != 0) {
-  $end = "--end-count=".($start+$npages);
+  $end = "--end-count=".($npages+1);
  }
  else {
   $end = "";
  }
- $start  = "--start-count=$start";
+ my $start  = "--start-count=1";
 
 # Device-specific options
  my @options = hash2options(%options);
@@ -2392,7 +2369,7 @@ END
 
     while ($line =~ /\n/) {
      if ($line =~ /^Scanned document out(\d*)\.pnm/) {
-      $label -> set_text($d->get('Scanned page')." $1...");
+      $label -> set_text(sprintf($d->get('Scanned page %i...'), $1*$step+$offset));
      }
      elsif ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
       $label -> set_text($d->get('Scanner warming up'));
@@ -2401,7 +2378,7 @@ END
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.tif")) {
+      if (! import_scan ("out$1.tif", $1*$step+$offset)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -2469,23 +2446,17 @@ sub hash2options {
 # Take new scan and display it
 
 sub import_scan {
- my ($ofilename) = @_;
+ my ($ofilename, $page) = @_;
  my (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.tif');
  system("mv $ofilename $filename");
 
 # Add to the page list
- my $i;
- if ($ofilename =~ /out(\d*)\.tif/) {
-  $i = $1;
- }
- else {
-  $i = $#{$slist -> {data}}+2;
- }
+ $page = $#{$slist -> {data}}+2 if (! defined($page));
 
 # Block the row-changed signal whilst adding the scan (row) and sorting it.
  $slist -> get_model -> signal_handler_block($slist -> {signalid});
  push @{$slist -> {data}},
-                     [$i, get_pixbuf($filename, $heightt, $widtht), $filename];
+                     [$page, get_pixbuf($filename, $heightt, $widtht), $filename];
  manual_sort_by_column ($slist, 0);
  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
@@ -2499,7 +2470,7 @@ sub import_scan {
 # $page[0] < $#{$slist -> {data}} needed to prevent infinite loop in case of
 # error importing.
  ++$page[0] while ($page[0] < $#{$slist -> {data}}
-                    and $slist -> {data}[$page[0]][0] != $i);
+                    and $slist -> {data}[$page[0]][0] != $page);
 
  $slist -> select(@page);
 
@@ -3244,63 +3215,100 @@ sub unpaper {
   my @selection = $slist -> get_selected_indices;
 
   my @pagelist = get_page_index();
-  foreach my $page (@pagelist) {
-
-# Temporary filenames for pnm and new tif
-   my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-   my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
-   
-   my $cmd = "convert -compress zip ".$slist -> {data}[$page][2]." $pnm;"
-             ."unpaper --layout $SETTING{layout} $scan_direction"
-             ." $border_align --overwrite $pnm $pnm;"
-             ."convert $pnm $tif; rm $pnm";
-   warn "$cmd\n" if ($debug);
-
-# Interface to unpaper
-   my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
   
-   my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $windowo,
+  my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $windowo,
                                      'destroy-with-parent',
                                      'gtk-cancel' => 'cancel');
-   my $label = Gtk2::Label -> new ($d->get('Running unpaper')."...");
-   $dialog -> vbox -> add ($label);
+  my $label = Gtk2::Label -> new ($d->get('Running unpaper')."...");
+  $dialog -> vbox -> add ($label);
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog -> vbox -> add  ($pbar);
+
+# Flag set if unpaper is running
+  my $running = FALSE;
+  my $cancelled = FALSE;
+  my $page = -1;
 
 # Ensure that the dialog box is destroyed when the user responds.
-   $dialog -> signal_connect (response => sub {
-    $_[0] -> destroy;
-    local $SIG{HUP} = 'IGNORE';
-    kill HUP => $pid;
-   });
-   $dialog -> show_all;
+  my ($pid, $tif);
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   local $SIG{HUP} = 'IGNORE';
+   kill HUP => $pid;
+   $cancelled = TRUE;
+
+# Retain the existing page
+   $tif = $slist -> {data}[$page][2];
+  });
+  $dialog -> show_all;
+
+# Timer will run until callback returns false 
+  my $timer = Glib::Timeout->add (100, sub {
+
+# To prevent any further pages being processed
+   if ($cancelled) {
+    return FALSE;  # uninstall
+   }
+   elsif ($page < $#pagelist) {
+    if (! $running) {
+     $running = TRUE;
+     $page++;
+     my $i = $page+1;
+     my $n = $#pagelist+1;
+     $pbar->set_text ($d->get("Page $i of $n"));
+     $pbar->set_fraction ($page/($#pagelist+1));
+
+# Temporary filenames for pnm and new tif
+     my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+     (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+   
+     my $cmd = "convert -compress zip ".$slist -> {data}[$page][2]." $pnm;"
+              ."unpaper --layout $SETTING{layout} $scan_direction"
+              ." $border_align --overwrite $pnm $pnm;"
+              ."convert $pnm $tif; rm $pnm";
+     warn "$cmd\n" if ($debug);
+
+# Interface to unpaper
+     $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
  
 # Update TextBuffer without blocking
-   Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
-    my ($fileno, $condition) = @_;
-    if ($condition & 'in') { # bit field operation. >= would also work
-     my $line;
-     while (sysread $read, $line, 1024) {}
-    }
-    if ($condition & 'hup') { # bit field operation. >= would also work
-     close $read;
-     $dialog -> destroy;
+     Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+      my ($fileno, $condition) = @_;
+      if ($condition & 'in') { # bit field operation. >= would also work
+       my $line;
+       while (sysread $read, $line, 1024) {}
+      }
+      if ($condition & 'hup') { # bit field operation. >= would also work
+       close $read;
 
-     $slist -> {data}[$page][2] = $tif;
-
-# Use once I no longer have to develop with Gtk2 < 1.090!
-#  $slist -> {data}[$page][1] =
-#                  $slist -> {data}[$page[$i]][1] -> rotate_simple ($degrees);
-     $slist -> {data}[$page][1] =
+       $slist -> {data}[$page][2] = $tif;
+       $slist -> {data}[$page][1] =
                       get_pixbuf($slist -> {data}[$page][2], $heightt, $widtht);
 
 # Reselect selected pages, firing the display callback
-     $slist -> get_selection -> unselect_all;
-     $slist -> select(@selection);
+       $slist -> get_selection -> unselect_all;
+       $slist -> select(@selection);
 
-     return FALSE;  # uninstall
+       $running = FALSE;
+
+       return FALSE;  # uninstall
+      }
+      return TRUE;  # continue without uninstalling
+     });
     }
     return TRUE;  # continue without uninstalling
-   });
-  }
+   }
+   elsif (! $running) {
+    $dialog -> destroy;
+    return FALSE;  # uninstall
+   }
+   else {
+    return TRUE;  # continue without uninstalling
+   }
+  });
+
  } );
 
 # Cancel button
