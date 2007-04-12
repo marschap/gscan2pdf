@@ -30,14 +30,6 @@
 #    As soon as gtk+ 2.12 is available and released in Feisty+1, remove the
 #     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
 #    steal rotate icons from eye of gnome 2.18
-#    --no-mask-scan - I suspect this is the one that is eating my cell borders.
-#    --no-deskew - Personally this is the most useful feature to me, but since it is a major funtion of unpaper, maybe it deserves it's own toggle in case someone doesn't want it.
-#    --no-blackfilter
-#    --no-noisefilter
-#    --no-blurfilter
-#    --no-border-scan
-#    -w --white-threshold
-#    -b --black-threshold
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
@@ -3030,6 +3022,34 @@ sub unpaper {
    string => $d->get('Double'),
    tooltip => $d->get('Two pages per sheet, landscape orientation (one page on the left half, one page on the right half).'),
   },
+  'no-deskew' => {
+   string => $d->get('No deskew'),
+   tooltip => $d->get('Disable deskewing.'),
+  },
+  'no-mask-scan' => {
+   string => $d->get('No mask scan'),
+   tooltip => $d->get('Disable mask detection.'),
+  },
+  'no-blackfilter' => {
+   string => $d->get('No black filter'),
+   tooltip => $d->get('Disable black area scan.'),
+  },
+  'no-noisefilter' => {
+   string => $d->get('No noise filter'),
+   tooltip => $d->get('Disable noise filter.'),
+  },
+  'no-blurfilter' => {
+   string => $d->get('No blur filter'),
+   tooltip => $d->get('Disable blur filter.'),
+  },
+  'no-border-scan' => {
+   string => $d->get('No border scan'),
+   tooltip => $d->get('Disable border scanning.'),
+  },
+  'no-border-align' => {
+   string => $d->get('No border align'),
+   tooltip => $d->get('Disable aligning of the area detected by border scanning.'),
+  },
   'deskew-scan-direction' => {
    string => $d->get('Deskew to edge'),
    tooltip => $d->get("Edges from which to scan for rotation. Each edge of a mask can be used to detect the mask's rotation. If multiple edges are specified, the average value will be used, unless the statistical deviation exceeds --deskew-scan-deviation."),
@@ -3074,6 +3094,14 @@ sub unpaper {
    string => $d->get('Margin'),
    tooltip => $d->get('Margin for aligned edges.'),
   },
+  'white-threshold' => {
+   string => $d->get('White threshold'),
+   tooltip => $d->get('Brightness ratio above which a pixel is considered white.'),
+  },
+  'black-threshold' => {
+   string => $d->get('Black threshold'),
+   tooltip => $d->get('Brightness ratio below which a pixel is considered black (non-gray). This is used by the gray-filter. This value is also used when converting a grayscale image to black-and-white mode.'),
+  },
  );
 
 # Layout ComboBox
@@ -3099,12 +3127,24 @@ sub unpaper {
  $hboxl -> pack_end ($ev, FALSE, FALSE, 0);
  $combobl -> set_active (0);
 
+ my $dsbutton = Gtk2::CheckButton -> new($option{'no-deskew'}{string});
+ $tooltips -> set_tip ($dsbutton, $option{'no-deskew'}{tooltip});
+ $vbox -> pack_start ($dsbutton, TRUE, TRUE, 0);
+
 # Frame for Deskew Scan Direction
  my $dframe = Gtk2::Frame -> new($option{'deskew-scan-direction'}{string});
  $vbox -> pack_start ($dframe, TRUE, TRUE, 0);
  my $vboxd = Gtk2::VBox -> new;
  $vboxd -> set_border_width($border_width);
  $dframe -> add ($vboxd);
+ $dsbutton -> signal_connect (toggled => sub {
+  if ($dsbutton -> get_active) {
+   $dframe->set_sensitive(FALSE);
+  }
+  else {
+   $dframe->set_sensitive(TRUE);
+  }
+ });
 
  foreach (qw/left top right bottom/) {
   my $button = Gtk2::CheckButton -> new($option{'deskew-scan-direction'}{$_}{string});
@@ -3124,20 +3164,46 @@ sub unpaper {
   $vboxd -> pack_start($button, TRUE, TRUE, 0);
  }
 
+ my $bsbutton = Gtk2::CheckButton -> new($option{'no-border-scan'}{string});
+ $tooltips -> set_tip ($bsbutton, $option{'no-border-scan'}{tooltip});
+ $vbox -> pack_start ($bsbutton, TRUE, TRUE, 0);
+
+ my $babutton = Gtk2::CheckButton -> new($option{'no-border-align'}{string});
+ $tooltips -> set_tip ($babutton, $option{'no-border-align'}{tooltip});
+ $vbox -> pack_start ($babutton, TRUE, TRUE, 0);
+
 # Frame for Align Border
  my $bframe = Gtk2::Frame -> new($option{'border-align'}{string});
  $vbox -> pack_start ($bframe, TRUE, TRUE, 0);
  my $vboxb = Gtk2::VBox -> new;
  $vboxb -> set_border_width($border_width);
  $bframe -> add ($vboxb);
+ $bsbutton -> signal_connect (toggled => sub {
+  if ($bsbutton -> get_active) {
+   $bframe->set_sensitive(FALSE);
+   $babutton->set_sensitive(FALSE);
+  }
+  else {
+   $babutton->set_sensitive(TRUE);
+   $bframe->set_sensitive(TRUE) if (! ($babutton -> get_active));
+  }
+ });
+ $babutton -> signal_connect (toggled => sub {
+  if ($babutton -> get_active) {
+   $bframe->set_sensitive(FALSE);
+  }
+  else {
+   $bframe->set_sensitive(TRUE);
+  }
+ });
 
 # Define margins here to reference them below
  my $hboxd = Gtk2::HBox -> new;
  $hboxd->set_sensitive(FALSE);
- my $spin_buttonx = Gtk2::SpinButton -> new_with_range(0, 10, 1);
- my $spin_buttony = Gtk2::SpinButton -> new_with_range(0, 10, 1);
- $tooltips -> set_tip ($spin_buttonx, $d->get('Vertical margin'));
- $tooltips -> set_tip ($spin_buttony, $d->get('Horizontal margin'));
+ my $spin_buttonv = Gtk2::SpinButton -> new_with_range(0, 10, 1);
+ my $spin_buttonh = Gtk2::SpinButton -> new_with_range(0, 10, 1);
+ $tooltips -> set_tip ($spin_buttonv, $d->get('Vertical margin'));
+ $tooltips -> set_tip ($spin_buttonh, $d->get('Horizontal margin'));
 
  foreach (qw/left top right bottom/) {
   my $button = Gtk2::CheckButton -> new($option{'border-align'}{$_}{string});
@@ -3161,16 +3227,55 @@ sub unpaper {
   });
  }
 
-# custom paper x entry
- my $labelx = Gtk2::Label -> new ("v");
- $hboxd -> pack_start ($labelx, FALSE, FALSE, 0);
- $hboxd -> pack_start ($spin_buttonx, FALSE, FALSE, 0);
+ my $labelb = Gtk2::Label -> new ($option{'border-margin'}{string});
+ $hboxd -> pack_start ($labelb, FALSE, FALSE, 0);
 
-# custom paper y entry
- my $labely = Gtk2::Label -> new ("h");
- $hboxd -> pack_start ($labely, FALSE, FALSE, 0);
- $hboxd -> pack_start ($spin_buttony, FALSE, FALSE, 0);
+# border margin v entry
+ my $labelv = Gtk2::Label -> new ('v');
+ $hboxd -> pack_start ($labelv, FALSE, FALSE, 0);
+ $hboxd -> pack_start ($spin_buttonv, FALSE, FALSE, 0);
+
+# border margin v entry
+ my $labelh = Gtk2::Label -> new ('h');
+ $hboxd -> pack_start ($labelh, FALSE, FALSE, 0);
+ $hboxd -> pack_start ($spin_buttonh, FALSE, FALSE, 0);
  $vboxb -> pack_start($hboxd, TRUE, TRUE, 0);
+
+# White threshold
+ my $hboxwt = Gtk2::HBox -> new;
+ my $labelwt = Gtk2::Label -> new ($option{'white-threshold'}{string});
+ $hboxwt -> pack_start ($labelwt, FALSE, FALSE, 0);
+ my $spinbuttonwt = Gtk2::SpinButton -> new_with_range(0, 1, .01);
+ $spinbuttonwt->set_value(0.9);
+ $tooltips -> set_tip ($spinbuttonwt, $option{'white-threshold'}{tooltip});
+ $hboxwt -> pack_end ($spinbuttonwt, FALSE, FALSE, 0);
+ $vbox -> pack_start ($hboxwt, TRUE, TRUE, 0);
+
+# Black threshold
+ my $hboxbt = Gtk2::HBox -> new;
+ my $labelbt = Gtk2::Label -> new ($option{'black-threshold'}{string});
+ $hboxbt -> pack_start ($labelbt, FALSE, FALSE, 0);
+ my $spinbuttonbt = Gtk2::SpinButton -> new_with_range(0, 1, .01);
+ $spinbuttonbt->set_value(0.33);
+ $tooltips -> set_tip ($spinbuttonbt, $option{'black-threshold'}{tooltip});
+ $hboxbt -> pack_end ($spinbuttonbt, FALSE, FALSE, 0);
+ $vbox -> pack_start ($hboxbt, TRUE, TRUE, 0);
+
+ my $msbutton = Gtk2::CheckButton -> new($option{'no-mask-scan'}{string});
+ $tooltips -> set_tip ($msbutton, $option{'no-mask-scan'}{tooltip});
+ $vbox -> pack_start ($msbutton, TRUE, TRUE, 0);
+
+ my $bfbutton = Gtk2::CheckButton -> new($option{'no-blackfilter'}{string});
+ $tooltips -> set_tip ($bfbutton, $option{'no-blackfilter'}{tooltip});
+ $vbox -> pack_start ($bfbutton, TRUE, TRUE, 0);
+
+ my $nfbutton = Gtk2::CheckButton -> new($option{'no-noisefilter'}{string});
+ $tooltips -> set_tip ($nfbutton, $option{'no-noisefilter'}{tooltip});
+ $vbox -> pack_start ($nfbutton, TRUE, TRUE, 0);
+
+ my $blbutton = Gtk2::CheckButton -> new($option{'no-blurfilter'}{string});
+ $tooltips -> set_tip ($blbutton, $option{'no-blurfilter'}{tooltip});
+ $vbox -> pack_start ($blbutton, TRUE, TRUE, 0);
 
 # Frame for page range
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
@@ -3189,27 +3294,55 @@ sub unpaper {
 
   $SETTING{layout} = get_key(\%option, $combobl -> get_active_text);
 
-  my $scan_direction = '';
-  my @child = $vboxd -> get_children;
-  foreach (@child) {
-   if ($_ -> get_active) {
-    $scan_direction .= "," if ($scan_direction ne '');
-    $scan_direction .= get_key($option{'deskew-scan-direction'}, $_ -> get_label);
-   }
+  my $deskew = '';
+  if ($dsbutton -> get_active) {
+   $deskew = '--no-deskew';
   }
-  $scan_direction = "--deskew-scan-direction $scan_direction";
+  else {
+   my @child = $vboxd -> get_children;
+   foreach (@child) {
+    if ($_ -> get_active) {
+     $deskew .= "," if ($deskew ne '');
+     $deskew .= get_key($option{'deskew-scan-direction'}, $_ -> get_label);
+    }
+   }
+   $deskew = "--deskew-scan-direction $deskew";
+  }
 
   my $border_align = '';
-  @child = $vboxb -> get_children;
-  foreach (@child) {
-   if ($_ -> isa('Gtk2::CheckButton') and $_ -> get_active) {
-    $border_align .= "," if ($border_align ne '');
-    $border_align .= get_key($option{'border-align'}, $_ -> get_label);
-   }
+  if ($bsbutton -> get_active) {
+   $border_align = '--no-border-scan';
   }
-  $border_align = "--border-align $border_align"
-   ." --border-margin ".$spin_buttonx->get_value.",".$spin_buttony->get_value
-   if ($border_align ne '');
+  elsif ($babutton -> get_active) {
+   $border_align = '--no-border-align';
+  }
+  else {
+   my @child = $vboxb -> get_children;
+   foreach (@child) {
+    if ($_ -> isa('Gtk2::CheckButton') and $_ -> get_active) {
+     $border_align .= "," if ($border_align ne '');
+     $border_align .= get_key($option{'border-align'}, $_ -> get_label);
+    }
+   }
+   $border_align = "--border-align $border_align"
+    ." --border-margin ".$spin_buttonv->get_value.",".$spin_buttonh->get_value
+    if ($border_align ne '');
+  }
+
+  my $white = "--white-threshold ".$spinbuttonwt->get_value;
+  my $black = "--black-threshold ".$spinbuttonbt->get_value;
+  
+  my $maskscan = '';
+  $maskscan = '--no-mask-scan' if ($msbutton -> get_active);
+
+  my $blackfilter = '';
+  $blackfilter = '--no-blackfilter' if ($bfbutton -> get_active);
+
+  my $noisefilter = '';
+  $noisefilter = '--no-noisefilter' if ($nfbutton -> get_active);
+
+  my $blurfilter = '';
+  $blurfilter = '--no-blurfilter' if ($blbutton -> get_active);
 
 # Note page selection for later
   my @selection = $slist -> get_selected_indices;
@@ -3265,8 +3398,9 @@ sub unpaper {
      (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
    
      my $cmd = "convert -compress zip ".$slist -> {data}[$page][2]." $pnm;"
-              ."unpaper --layout $SETTING{layout} $scan_direction"
-              ." $border_align --overwrite $pnm $pnm;"
+              ."unpaper --layout $SETTING{layout} $deskew $border_align "
+              ."$maskscan $white $black $blackfilter $noisefilter $blurfilter "
+              ."--overwrite $pnm $pnm;"
               ."convert $pnm $tif; rm $pnm";
      warn "$cmd\n" if ($debug);
 
