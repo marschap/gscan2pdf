@@ -245,7 +245,7 @@ my @action_items = (
  # Help menu
  [ 'Help menu', undef, $d->get('_Help') ],
  [ 'Help', 'gtk-help', $d->get('_Help'), '<control>h', $d->get('Help'), \&view_pod ],
- [ 'About', undef, $d->get('_About'), undef, $d->get('_About'), \&about ],
+ [ 'About', 'gtk-about', $d->get('_About'), undef, $d->get('_About'), \&about ],
 );
 
 my @frontends = (
