@@ -12,7 +12,7 @@
 #    On quit or delete if page not saved put up dialog
 #    Put windows up in centre of parent
 #    Fix blocking at:
-#      Importing
+#      Importing (e.g. 12 page multi.tif)
 #      Rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
@@ -492,7 +492,7 @@ $slist -> {signalid} = $slist -> get_model ->
   $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
  });
 
-$scwin_thumbs -> add_with_viewport($slist);
+$scwin_thumbs -> add($slist);
 
 # Scrolled window for detail view
 my $scwin_detail = Gtk2::ScrolledWindow -> new;
@@ -515,7 +515,10 @@ $slist -> get_selection -> signal_connect(changed => sub {
  my @page = $slist -> get_selected_indices;
 
 # Display the new image
- if ($#page > -1) {
+ if (@page) {
+
+  my $path = Gtk2::TreePath->new_from_indices($page[0]);
+  $slist->scroll_to_cell($path);
 
 # Get dimensions for detail window
   my $widthd = $scwin_detail -> allocation -> width;
@@ -1377,15 +1380,33 @@ sub create_PDF {
   }
 
   $page->mediabox($w*72/$resolution, $h*72/$resolution);
-  my $gfx = $page->gfx;
-  my $imgobj = $pdf->image_tiff($slist -> {data}[$_][2]);
-  $gfx->image($imgobj,0,0,72/$resolution);
 
-  if (defined $slist -> {data}[$_][3]) {
+# Add OCR as annotation
+  if (defined($slist -> {data}[$_][3]) and $slist -> {data}[$_][3] ne '') {
    my $ant=$page->annotation;
    $ant->text($slist -> {data}[$_][3],
     -rect=>[0,0,$w*72/$resolution,$h*72/$resolution]);
+
+# Add OCR as text behind the scan
+   my $font = $pdf->corefont('Times-Roman');
+   my $text = $page->text();
+   my $size = 1;
+   $text->font($font, $size);
+   $text->strokecolor('white');
+   $text->fillcolor('white');
+   my $y = $h*72/$resolution;
+   my @text = split("\n", $slist -> {data}[$_][3]);
+   for (my $i = 0; $i < @text; $i++) {
+    $text->translate(0,$y);
+    $text->text($text[$i]);
+    $y -= $size;
+   }
   }
+
+# Add scan
+  my $gfx = $page->gfx;
+  my $imgobj = $pdf->image_tiff($slist -> {data}[$_][2]);
+  $gfx->image($imgobj,0,0,72/$resolution);
  }
  $pdf->save;
  $pdf->end();
