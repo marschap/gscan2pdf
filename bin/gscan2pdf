@@ -30,6 +30,7 @@
 #    As soon as gtk+ 2.12 is available and released in Feisty+1, remove the
 #     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
 #    steal rotate icons from eye of gnome 2.18
+#    for scan profiles, switch to Config::General (libconfig-general-perl)
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
@@ -1389,16 +1390,25 @@ sub create_PDF {
 
 # Add OCR as text behind the scan
    my $font = $pdf->corefont('Times-Roman');
-   my $text = $page->text();
+   my $text = $page->text;
    my $size = 1;
    $text->font($font, $size);
    $text->strokecolor('white');
    $text->fillcolor('white');
    my $y = $h*72/$resolution;
-   my @text = split("\n", $slist -> {data}[$_][3]);
-   for (my $i = 0; $i < @text; $i++) {
-    $text->translate(0,$y);
-    $text->text($text[$i]);
+   foreach my $line (split("\n", $slist -> {data}[$_][3])) {
+    my $x = 0;
+
+# Add a word at a time in order to linewrap
+    foreach my $word (split(' ', $line)) {
+     if (length($word)*$size+$x > $w) {
+      $x = 0;
+      $y -= $size;
+     }
+     $text -> translate($x, $y);
+     $word = ' '.$word if ($x > 0);
+     $x += $text->text($word);
+    }
     $y -= $size;
    }
   }
