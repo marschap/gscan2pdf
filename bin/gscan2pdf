@@ -606,6 +606,7 @@ my %pddo = (
                                    }
                        },
             'resolution'      => { string => $d->get('Resolution') },
+	    'brightness'      => { string => $d->get('Brightness') },
             'batch-scan'      => { string => $d->get('Batch scan'),
                                    values => {
                                              'yes' => $d->get('Yes'),
@@ -2953,7 +2954,7 @@ sub parse_options {
    }
 
 # SpinButton
-   elsif ($values =~ /(\d*\.?\d*)\.\.(\d*\.?\d*)/) {
+   elsif ($values =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)/) {
     my $spin_button = Gtk2::SpinButton -> new_with_range($1, $2, 1);
     $spin_button -> set_value($default);
     $hbox -> pack_end ($spin_button, FALSE, FALSE, 0);
