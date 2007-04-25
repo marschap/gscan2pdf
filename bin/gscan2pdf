@@ -1674,6 +1674,7 @@ sub save_TIFF {
 
  if ('ok' eq $file_chooser->run) {
   my $filename = $file_chooser -> get_filename;
+  $filename = $filename.".djvu" if ($filename !~ /\.djvu$/i);
   if (-e $filename) {
    my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
     'destroy-with-parent',
