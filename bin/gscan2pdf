@@ -1480,7 +1480,7 @@ sub save_PDF {
 
  if ('ok' eq $file_chooser->run) {
   my $filename = $file_chooser -> get_filename;
-  $filename = $filename.".pdf" if ($filename !~ /.pdf$/i);
+  $filename = $filename.".pdf" if ($filename !~ /\.pdf$/i);
   if (-e $filename) {
    my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
     'destroy-with-parent',
@@ -1773,6 +1773,7 @@ sub save_djvu {
 
  if ('ok' eq $file_chooser->run) {
   my $filename = $file_chooser -> get_filename;
+  $filename = $filename.".tif" if ($filename !~ /\.tif$/i);
   if (-e $filename) {
    my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
     'destroy-with-parent',
