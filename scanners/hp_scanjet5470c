@@ -1,0 +1,52 @@
+Usage: scanimage [OPTION]...
+
+Start image acquisition on a scanner device and write PNM image data to standard output.
+
+-d, --device-name=DEVICE   use a given scanner device (e.g. hp:/dev/scanner)
+   --format=pnm|tiff      file format of output file
+-i, --icc-profile=PROFILE  include this ICC profile into TIFF file
+-L, --list-devices         show available scanner devices
+-f, --formatted-device-list=FORMAT similar to -L, but the FORMAT of the output
+                          can be specified: %d (device name), %v (vendor),
+                          %m (model), %t (type), and %i (index number)
+-b, --batch[=FORMAT]       working in batch mode, FORMAT is `out%d.pnm' or
+                          `out%d.tif' by default depending on --format
+   --batch-start=#        page number to start naming files with
+   --batch-count=#        how many pages to scan in batch mode
+   --batch-increment=#    increase number in filename by an amount of #
+   --batch-double         increment page number by two for 2sided originals
+                          being scanned in a single sided scanner
+   --batch-prompt         ask for pressing a key before scanning a page
+   --accept-md5-only      only accept authorization requests using md5
+-p, --progress             print progress messages
+-n, --dont-scan            only set options, don't actually scan
+-T, --test                 test backend thoroughly
+-h, --help                 display this help message and exit
+-v, --verbose              give even more status messages
+-B, --buffer-size          change default input buffersize
+-V, --version              print version information
+
+Options specific to device `hp5400:libusb:002:002':
+  Geometry:
+    -l 0..220mm (in steps of 1) [5]
+        Top-left x position of scan area.
+    -t 0..300mm (in steps of 1) [52]
+        Top-left y position of scan area.
+    -x 0..215mm (in steps of 1) [220]
+        Width of scan-area.
+    -y 0..248mm (in steps of 1) [300]
+        Height of scan-area.
+    --resolution 75|150|300|600|1200dpi [75]
+        Sets the resolution of the scanned image.
+  Image:
+    --red-gamma-table 0..65535,... (in steps of 1)
+        Gamma-correction table for the red band.
+    --green-gamma-table 0..65535,... (in steps of 1)
+        Gamma-correction table for the green band.
+    --blue-gamma-table 0..65535,... (in steps of 1)
+        Gamma-correction table for the blue band.
+
+Type ``scanimage --help -d DEVICE'' to get list of all options for DEVICE.
+
+List of available devices:
+   hp:libusb:001:002

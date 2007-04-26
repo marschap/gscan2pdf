@@ -1,0 +1,44 @@
+Usage: scanadf [OPTION]...
+
+Start image acquisition on a scanner device and write image data to
+output files.
+
+   [ -d | --device-name <device> ]   use a given scanner device.
+   [ -h | --help ]                   display this help message and exit.
+   [ -L | --list-devices ]           show available scanner devices.
+   [ -v | --verbose ]                give even more status messages.
+   [ -V | --version ]                print version information.
+   [ -N | --no-overwrite ]           don't overwrite existing files.
+
+   [ -o | --output-file <name> ]     name of file to write image data
+                                     (%d replacement in output file name).
+   [ -S | --scan-script <name> ]     name of script to run after every scan.
+   [ --script-wait ]                 wait for scripts to finish before exit
+   [ -s | --start-count <num> ]      page count of first scanned image.
+   [ -e | --end-count <num> ]        last page number to scan.
+   [ -r | --raw ]                    write raw image data to file.
+
+Options specific to device `hp5400:libusb:002:003':
+  Geometry:
+    -l 0..220mm (in steps of 1) [5]
+        Top-left x position of scan area.
+    -t 0..300mm (in steps of 1) [52]
+        Top-left y position of scan area.
+    -x 0..220mm (in steps of 1) [225]
+        Width of scan-area.
+    -y 0..300mm (in steps of 1) [352]
+        Height of scan-area.
+    --resolution 75|150|300|600|1200dpi [75]
+        Sets the resolution of the scanned image.
+  Image:
+    --red-gamma-table 0..65535,... (in steps of 1) [0]
+        Gamma-correction table for the red band.
+    --green-gamma-table 0..65535,... (in steps of 1) [0]
+        Gamma-correction table for the green band.
+    --blue-gamma-table 0..65535,... (in steps of 1) [0]
+        Gamma-correction table for the blue band.
+
+Type ``scanadf --help -d DEVICE'' to get list of all options for DEVICE.
+
+List of available devices:
+    hp5400:libusb:002:003
