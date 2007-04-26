@@ -5,7 +5,13 @@
 # see the included LICENSE file for details.
 
 # To do
-# 0. Add status line at bottom with messages like "filename saved"
+# 0. if no page selected, clear buffer and make insensitive
+#    put check for convert back in, as perlmagick can be in feisty without imagemagick
+#    fix delete button in buffer deleting page
+#    switch unpaper to using ocr stack
+#    check out freeze when gocr does not return properly
+#    for scan profiles, switch to Config::General (libconfig-general-perl)
+#    Add status line at bottom with messages like "filename saved"
 #    Rewrite in python with python-sane & pytiff
 #    Add KDE, Xfce menus
 #    Add hidden flag whether a page has been saved
@@ -30,11 +36,10 @@
 #    As soon as gtk+ 2.12 is available and released in Feisty+1, remove the
 #     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
 #    steal rotate icons from eye of gnome 2.18
-#    for scan profiles, switch to Config::General (libconfig-general-perl)
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
-#      It would be very helpfull to be able to tell the number at which it is supposed
+#      It would be very helpful to be able to tell the number at which it is supposed
 #      to continue counting and into which direction (reverse counting stops working
 #      after the interruption).
 # 2.) Some basic image manipulation capabilities would be very useful like adjusting contrast and brightness. 
@@ -202,7 +207,8 @@ init_icons( [ 'rotate90',  "$path/rotate90.png" ],
 # in the menu callbacks
 my ($windowp, $windowt, $windowv, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $frames, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
-    @redo_buffer, @undo_selection, @redo_selection, $buffer, %dependencies);
+    @redo_buffer, @undo_selection, @redo_selection, %dependencies,
+    @ocr_stack, $ocr_timer);
 
 my @action_items = (
  # Fields for each action item:
@@ -414,8 +420,9 @@ else {
 
 # Scrolled window for thumbnails
 my $scwin_thumbs = Gtk2::ScrolledWindow -> new;
-$hpaned -> pack1 ($scwin_thumbs, TRUE, TRUE);
-$scwin_thumbs -> set_policy ('automatic', 'automatic');
+$hpaned -> pack1($scwin_thumbs, TRUE, TRUE);
+$scwin_thumbs -> set_policy('automatic', 'automatic');
+$scwin_thumbs -> set_shadow_type('etched-in');
 
 # define hidden string column for filename and annotation buffer
 Gtk2::Ex::Simple::List -> add_column_type( 'hstring',
@@ -495,9 +502,13 @@ $slist -> {signalid} = $slist -> get_model ->
 
 $scwin_thumbs -> add($slist);
 
+# VPaned for detail view and OCR buffer
+my $vpaned = Gtk2::VPaned -> new;
+$hpaned -> pack2 ($vpaned, TRUE, TRUE);
+
 # Scrolled window for detail view
 my $scwin_detail = Gtk2::ScrolledWindow -> new;
-$hpaned -> pack2 ($scwin_detail, TRUE, TRUE);
+$vpaned -> pack1 ($scwin_detail, TRUE, TRUE);
 $scwin_detail -> set_policy ('automatic', 'automatic');
 
 my $scale;
@@ -510,6 +521,35 @@ $eventbox->signal_connect(button_press_event => \&handle_clicks);
 $eventbox->signal_connect(button_release_event => \&handle_clicks);
 
 $scwin_detail -> add_with_viewport($eventbox);
+
+# OCR buffer
+my $scwin_buffer = Gtk2::ScrolledWindow->new;
+$scwin_buffer -> set_policy ('never', 'automatic');
+$scwin_buffer -> set_shadow_type('etched-in');
+my $buffer = Gtk2::TextBuffer->new;
+my $textview = Gtk2::TextView->new_with_buffer($buffer);
+$textview->set_wrap_mode ('word');
+$scwin_buffer->add($textview);
+$vpaned -> pack2 ($scwin_buffer, TRUE, TRUE);
+if (defined($SETTING{'ocr panel'})) {
+ $vpaned -> set_position ($SETTING{'ocr panel'});
+}
+else {
+# $vpaned -> allocation -> height gives 1
+#  my $height = $vpaned -> allocation -> height;
+ my ($width, $height) = $window->get_size;
+ $vpaned -> set_position ($height*3/4);
+}
+
+# Keep the simple list buffer up to date
+$buffer -> {signalid} = $buffer -> signal_connect( changed => sub {
+ $slist -> get_model -> signal_handler_block($slist -> {signalid});
+ my @page = $slist -> get_selected_indices;
+ $slist -> {data}[$page[0]][3] =
+  $buffer->get_text ($buffer->get_start_iter, $buffer->get_end_iter, FALSE)
+   if ($#page > -1);
+ $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+} );
 
 # Set up call back for list selection to update detail view
 $slist -> get_selection -> signal_connect(changed => sub {
@@ -530,10 +570,10 @@ $slist -> get_selection -> signal_connect(changed => sub {
   $image -> show;
 
 # Update the buffer, if created
-  if (defined $buffer and defined $slist -> {data}[$page[0]][3]) {
+  if (defined $slist -> {data}[$page[0]][3]) {
    $buffer->set_text ($slist -> {data}[$page[0]][3]);
   }
-  elsif (defined $buffer) {
+  else {
    $buffer -> delete($buffer->get_start_iter, $buffer->get_end_iter);
   }
  }
@@ -2034,6 +2074,12 @@ sub scan_dialog {
  $buttons -> set_active(TRUE);
  $hboxs -> pack_end ($ev, FALSE, FALSE, 0);
 
+# Checkbox for OCR
+ my $obutton = Gtk2::CheckButton -> new($d->get('OCR scanned pages'));
+ $obutton -> set_active(TRUE);
+ $obutton -> set_sensitive(FALSE) if ($dependencies{gocr} != 0);
+ $vbox -> pack_start($obutton, TRUE, TRUE, 0);
+
 # Frame for device-dependent options
  my $framed = Gtk2::Frame -> new($d->get('Device-dependent options'));
  $vbox -> pack_start ($framed, FALSE, FALSE, 0);
@@ -2106,7 +2152,7 @@ sub scan_dialog {
   }
 
 # Set step according to single/double sided, facing/reverse page
-  my $step;
+  my $step = 1;
   if ($buttond -> get_active) {
    if (($combobs -> get_active) == 0) { # facing page
     $step = 2;
@@ -2158,10 +2204,12 @@ sub scan_dialog {
    }
   }
   if ($SETTING{'frontend'} eq 'scanimage') {
-   scanimage($SETTING{'device'}, $npages, $start-$step, $step, %options);
+   scanimage($SETTING{'device'}, $npages, $start-$step, $step,
+                                                $obutton->get_active, %options);
   }
   else {
-   scanadf($SETTING{'device'}, $npages, $start-$step, $step, %options);
+   scanadf($SETTING{'device'}, $npages, $start-$step, $step,
+                                                $obutton->get_active, %options);
   }
  } );
 
@@ -2179,7 +2227,7 @@ sub scan_dialog {
 # Carry out the scan with scanimage and the options passed.
 
 sub scanimage {
- my ($device, $npages, $offset, $step, %options) = @_;
+ my ($device, $npages, $offset, $step, $ocr, %options) = @_;
 
  require IPC::Open3;
  require IO::Handle;
@@ -2253,7 +2301,7 @@ sub scanimage {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.tif", $1*$step+$offset)) {
+      if (! import_scan ("out$1.tif", $1*$step+$offset, $ocr)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -2316,7 +2364,7 @@ warn "$text\n";
 # Carry out the scan with scanadf and the options passed.
 
 sub scanadf {
- my ($device, $npages, $offset, $step, %options) = @_;
+ my ($device, $npages, $offset, $step, $ocr, %options) = @_;
 
  require IPC::Open3;
  require IO::Handle;
@@ -2401,7 +2449,7 @@ END
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.tif", $1*$step+$offset)) {
+      if (! import_scan ("out$1.tif", $1*$step+$offset, $ocr)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -2469,7 +2517,7 @@ sub hash2options {
 # Take new scan and display it
 
 sub import_scan {
- my ($ofilename, $page) = @_;
+ my ($ofilename, $page, $ocr) = @_;
  my (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.tif');
  system("mv $ofilename $filename");
 
@@ -2496,6 +2544,8 @@ sub import_scan {
                     and $slist -> {data}[$page[0]][0] != $page);
 
  $slist -> select(@page);
+ 
+ ocr_page(@page) if $ocr;
 
  update_uimanager();
 
@@ -3485,6 +3535,110 @@ sub unpaper {
 }
 
 
+# Add $page to the OCR stack, setting it off if not running.
+
+sub ocr_page {
+ push @ocr_stack, @_;
+
+ if (! defined($ocr_timer)) {
+  my $dialog = Gtk2::Dialog -> new ($d->get('Running OCR')."...", $windowo,
+                                    'destroy-with-parent',
+                                    'gtk-cancel' => 'cancel');
+  my $label = Gtk2::Label -> new ($d->get('Running OCR')."...");
+  $dialog -> vbox -> add($label);
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog -> vbox -> add($pbar);
+
+# Flag set if ocr is running
+  my $running = FALSE;
+  my $cancelled = FALSE;
+  my $page = 0;
+  my $npages = 0;
+
+# Ensure that the dialog box is destroyed when the user responds.
+  my $pid;
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   local $SIG{HUP} = 'IGNORE';
+   kill HUP => $pid;
+   $cancelled = TRUE;
+  });
+  $dialog -> show_all;
+
+# Timer will run until callback returns false 
+  $ocr_timer = Glib::Timeout->add (100, sub {
+
+# To prevent any further pages being processed
+   if ($cancelled) {
+    undef $ocr_timer;
+    return FALSE;  # uninstall
+   }
+   elsif (@ocr_stack) {
+    if (! $running) {
+     $running = TRUE;
+     $page++;
+     $npages++;
+     my $pagenum = shift @ocr_stack;
+     $pbar->set_text(sprintf($d->get("Page %i of %i"), $page, $#ocr_stack+$npages+1));
+     $pbar->set_fraction (($page-1)/($#ocr_stack+$npages+1));
+
+# Temporary filenames for pnm and new tif
+     my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+     my $tif = $slist -> {data}[$pagenum][2];
+   
+     my $cmd = "convert $tif $pnm; gocr $pnm; rm $pnm";
+     warn "$cmd\n" if ($debug);
+
+# Interface to gocr
+     $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+     my $page_buffer = '';
+ 
+# Update TextBuffer without blocking
+     Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+      my ($fileno, $condition) = @_;
+      if ($condition & 'in') { # bit field operation. >= would also work
+       my $line;
+       $page_buffer .= $line while (sysread $read, $line, 1024);
+      }
+      if ($condition & 'hup') { # bit field operation. >= would also work
+       close $read;
+       $dialog -> destroy;
+       $running = FALSE;
+
+# Doing this once at the end to avoid firing the row-changed signal too often
+       $slist -> get_model -> signal_handler_block($slist -> {signalid});
+       $slist -> {data}[$pagenum][3] .= $page_buffer;
+       $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+
+# Update the buffer if current
+       my @page = $slist -> get_selected_indices;
+       if ($page[0] == $pagenum) {
+        $buffer -> signal_handler_block($buffer -> {signalid});
+        $buffer -> set_text ($slist -> {data}[$pagenum][3]);
+        $buffer -> signal_handler_unblock($buffer -> {signalid});
+       }
+       return FALSE;  # uninstall
+      }
+      return TRUE;  # continue without uninstalling
+     });
+    }
+    return TRUE;  # continue without uninstalling
+   }
+   elsif (! $running) {
+    $dialog -> destroy;
+    undef $ocr_timer;
+    return FALSE;  # uninstall
+   }
+   else {
+    return TRUE;  # continue without uninstalling
+   }
+  });
+ }
+}
+
+
 # Run OCR on current page and display result
 
 sub OCR {
@@ -3495,30 +3649,22 @@ sub OCR {
  }
 
  ($windowo, my $vbox) = create_window($window, $d->get('OCR'), FALSE);
- $buffer = Gtk2::TextBuffer->new;
 
-# Keep the simple list buffer up to date
- $buffer -> signal_connect( changed => sub {
-  $slist -> get_model -> signal_handler_block($slist -> {signalid});
-  my @page = $slist -> get_selected_indices;
-  $slist -> {data}[$page[0]][3] =
-   $buffer->get_text ($buffer->get_start_iter, $buffer->get_end_iter, FALSE)
-    if ($#page > -1);
-  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
- } );
+# Frame for page range
+  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # HBox for buttons
- my $hboxo = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxo, FALSE, TRUE, 0);
+ my $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hbox, FALSE, TRUE, 0);
 
 # Start button
  my $obutton = Gtk2::Button -> new($d->get('Start OCR'));
- $hboxo -> pack_start( $obutton, TRUE, TRUE, 0 );
+ $hbox -> pack_start( $obutton, TRUE, TRUE, 0 );
  $obutton -> signal_connect( clicked => sub {
 
-# Get current page
-  my @page = $slist -> get_selected_indices;
-  if ($#page < 0) {
+# fill $pagelist with filenames depending on which radiobutton is active
+  my @pagelist = get_page_index();
+  if (! @pagelist) {
    my $dialog = Gtk2::MessageDialog -> new ($windowo,
                                            'destroy-with-parent',
                                            'error',
@@ -3528,113 +3674,12 @@ sub OCR {
    $dialog -> destroy;
    return;
   }
-  my $tif = $slist -> {data}[$page[0]][2];
-
-# Temporary filename for pnm
-  my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-
-  my $cmd = "convert $tif $pnm; gocr $pnm; rm $pnm";
-
-# Interface to gocr
-  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-  
-  my $dialog = Gtk2::Dialog -> new ($d->get('Running OCR')."...", $windowo,
-                                    'destroy-with-parent',
-                                    'gtk-cancel' => 'cancel');
-  my $label = Gtk2::Label -> new ($d->get('Running OCR')."...");
-  $dialog -> vbox -> add ($label);
-
-# Ensure that the dialog box is destroyed when the user responds.
-  $dialog -> signal_connect (response => sub {
-   $_[0] -> destroy;
-   local $SIG{HUP} = 'IGNORE';
-   kill HUP => $pid;
-  });
-  $dialog -> show_all;
- 
-# Update TextBuffer without blocking
-  Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
-   my ($fileno, $condition) = @_;
-   if ($condition & 'in') { # bit field operation. >= would also work
-    my $line;
-    $buffer->insert($buffer->get_end_iter, $line)
-     while (sysread $read, $line, 1024);
-   }
-   if ($condition & 'hup') { # bit field operation. >= would also work
-    close $read;
-    $dialog -> destroy;
-    return FALSE;  # uninstall
-   }
-   return TRUE;  # continue without uninstalling
-  });
-
- } );
-
-# Clear button
- my $rbutton = Gtk2::Button -> new($d->get('Clear'));
- $hboxo -> pack_end( $rbutton, TRUE, TRUE, 0 );
- $rbutton -> signal_connect( clicked => sub {
-  $buffer -> delete($buffer->get_start_iter, $buffer->get_end_iter);
- } );
-
-# ScrolledWindow with a TextView for output
- my $sw = Gtk2::ScrolledWindow->new;
- my $view = Gtk2::TextView->new_with_buffer ($buffer);
- $sw->add ($view);
- $vbox -> pack_start ($sw, TRUE, TRUE, 0);
-
-# HBox for buttons
- my $hboxb = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
-
-# Save button
- my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
- $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
- $sbutton -> signal_connect (clicked => sub {
-
-# cd back to cwd to save
-  chdir $SETTING{'cwd'};
-
-# Set up file selector
-  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('Save OCR output'),
-                                                     $windowo, 'save',
-                                                     'gtk-cancel' => 'cancel',
-                                                     'gtk-save' => 'ok');
-  $file_chooser -> set_default_response('ok');
-
-  if ('ok' eq $file_chooser->run) {
-   my $filename = $file_chooser -> get_filename;
-   if (-e $filename) {
-    my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
-     'destroy-with-parent',
-     'question', # message type
-     'ok-cancel', # which set of buttons?
-     sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
-    my $response = $dialog -> run;
-    $dialog -> destroy;
-    return TRUE if ($response ne 'ok');
-   }
-
-# Update cwd
-   $SETTING{'cwd'} = dirname($filename);
-
-# cd back to tempdir
-   chdir $dir;
-
-# Save the output
-   my $text = $buffer -> get_text($buffer->get_start_iter,
-                                  $buffer->get_end_iter, FALSE);
-   open TXT, ">  $filename" or die "can't open $filename: $!";
-   print TXT $text;
-   close TXT;
-  }
-
-  $file_chooser -> destroy;
+  ocr_page(@pagelist);
  } );
 
 # Close button
  my $cbutton = Gtk2::Button -> new_from_stock('gtk-close');
- $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $hbox -> pack_end( $cbutton, FALSE, FALSE, 0 );
  $cbutton -> signal_connect( clicked => sub { $windowo -> hide; } );
 
  $windowo -> show_all;
@@ -3653,6 +3698,7 @@ sub quit {
  ($SETTING{'window_width'}, $SETTING{'window_height'}) = $window -> get_size;
  ($SETTING{'window_x'}, $SETTING{'window_y'}) = $window -> get_position;
  $SETTING{'thumb panel'} = $hpaned -> get_position;
+ $SETTING{'ocr panel'} = $vpaned -> get_position;
 
 # Save options setting
  $SETTING{'enable options'} =
