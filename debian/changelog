@@ -1,13 +1,26 @@
-gscan2pdf (0.9.7) unstable; urgency=low
+gscan2pdf (0.9.8) unstable; urgency=low
 
   * Fixed bug calling help
-  * Fixed error message caused by update_options sub being called twice.
-  * Streamlined image creation (speedup)
-  * Adjusted widget justification in scan dialog
-  * Suppressed rounded messages from scanadf frontend
-  * Remembers scan area
-  * Ghosts zoom and rotate buttons if no page selected
-  * Fixed bug where custom scan area not hidden when A4 or Letter selected
-  * Help update
+  * - compression option from scan dialog.
+  * Explicitly sets compression=None if mode=Lineart
+  * Check for PDF::API2
+  * Forces startup check on new version
+  * Runs unpaper sequencially on pages instead of in parallel
+  * Enabled double sided scanning for scanadf frontend
+  * no-deskew, no-border-scan, no-border-align, no-mask-scan, no-blackfilter
+    no-noisefilter, no-blurfilter, black-threshold, white-threshold options to
+    unpaper
+  * Stock icon for about
+  * Scrolls thumb list to selected page
+  * Embeds OCR output in white on white hidden behind scan. pdftotext can extract
+    contents, and can be indexed by Beagle.
+  * Update to Spanish translation (thanks to Th3n3k)
+  * Moved OCR buffer to main window
+  * Patch from John Goerzen to adjust brightness
+    and add negative support for SpinBoxes
+  * Patches from John Goerzen to add .tif and .djvu endings if necessary,
+    plus fixed bug adding .pdf ending.
+  * Separated perlmagick and imagemagick dependencies
+  * Updated French translation (thanks to Mathieu Goeminne)
 
- -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Thu, 05 Apr 2007 22:24:47 +0200
+ -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Fri, 27 Apr 2007 22:42:25 +0200

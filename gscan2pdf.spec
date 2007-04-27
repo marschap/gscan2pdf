@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.7
+Version: 0.9.8
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -53,13 +53,26 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Thu Apr 05 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Fri Apr 27 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
   - Fixed bug calling help
-  - Fixed error message caused by update_options sub being called twice.
-  - Streamlined image creation (speedup)
-  - Adjusted widget justification in scan dialog
-  - Suppressed rounded messages from scanadf frontend
-  - Remembers scan area
-  - Ghosts zoom and rotate buttons if no page selected
-  - Fixed bug where custom scan area not hidden when A4 or Letter selected
-  - Help update
+  - - compression option from scan dialog.
+  - Explicitly sets compression=None if mode=Lineart
+  - Check for PDF::API2
+  - Forces startup check on new version
+  - Runs unpaper sequencially on pages instead of in parallel
+  - Enabled double sided scanning for scanadf frontend
+  - no-deskew, no-border-scan, no-border-align, no-mask-scan, no-blackfilter
+    no-noisefilter, no-blurfilter, black-threshold, white-threshold options to
+    unpaper
+  - Stock icon for about
+  - Scrolls thumb list to selected page
+  - Embeds OCR output in white on white hidden behind scan. pdftotext can extract
+    contents, and can be indexed by Beagle.
+  - Update to Spanish translation (thanks to Th3n3k)
+  - Moved OCR buffer to main window
+  - Patch from John Goerzen to adjust brightness
+    and add negative support for SpinBoxes
+  - Patches from John Goerzen to add .tif and .djvu endings if necessary,
+    plus fixed bug adding .pdf ending.
+  - Separated perlmagick and imagemagick dependencies
+  - Updated French translation (thanks to Mathieu Goeminne)
