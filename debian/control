@@ -1,20 +1,24 @@
 Source: gscan2pdf
-Section: utils 
+Section: utils
 Priority: optional
 Build-Depends: debhelper (>= 4.0.2)
 Build-Depends-Indep: perl (>= 5.8.0-7)
 Maintainer: Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-Standards-Version: 3.6.1
+Standards-Version: 3.7.2
 
 Package: gscan2pdf
 Architecture: all
-Depends: libgtk2-perl (>= 1:1.043-1), libgtk2-ex-simple-list-perl, libglib-perl (>= 1.100-1), liblocale-gettext-perl (>= 1.05), libsane, sane-utils, libtiff-tools, libpdf-api2-perl, perlmagick
+Depends: libgtk2-perl (>= 1:1.043-1), libgtk2-ex-simple-list-perl, libglib-perl (>= 1.100-1), liblocale-gettext-perl (>= 1.05), libsane, sane-utils, libtiff-tools, libpdf-api2-perl, imagemagick, perlmagick
 Recommends: libgtk2-ex-podviewer-perl, sane, xdg-utils, djvulibre-bin, unpaper, gocr
 Description: A GUI to ease the process of producing PDFs from scanned documents
- Only two clicks are required to scan several pages and then save all or a selection as a PDF file, including metadata if required.
+ Only two clicks are required to scan several pages and then save all or a
+ selection as a PDF file, including metadata if required.
  .
- Scanning is handled with SANE via scanimage.
+ gscan2pdf can control regular or sheet-fed (ADF) scanners with SANE via
+ scanimage or scanadf, and can scan multiple pages at once. It presents a
+ thumbnail view of scanned pages, and permits simple operations such as rotating
+ and deleting pages. 
  .
  PDF conversion is done by PDF::API2.
  .
- Perl is used for portability and ease of programming, with gtk2-perl for the GUI.
+ The resulting document may be saved as a PDF or a multipage TIFF file.
