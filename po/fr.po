@@ -8,13 +8,13 @@ msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2007-03-31 21:49+0200\n"
-"PO-Revision-Date: 2007-02-09 00:28+0000\n"
-"Last-Translator: Simon Leblanc <contact@leblanc-simon.eu>\n"
+"PO-Revision-Date: 2007-04-22 12:56+0000\n"
+"Last-Translator: Mathieu Goeminne <mgoeminne@gmail.com>\n"
 "Language-Team: French <fr@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Rosetta-Export-Date: 2007-04-17 12:48:20+0000\n"
+"X-Rosetta-Export-Date: 2007-04-27 19:48:08+0000\n"
 
 #: bin/gscan2pdf:109
 #, perl-format
@@ -59,11 +59,11 @@ msgstr "_Nouveau"
 
 #: bin/gscan2pdf:206
 msgid "Clears all pages"
-msgstr ""
+msgstr "Efface toutes les pages"
 
 #: bin/gscan2pdf:207
 msgid "_Import"
-msgstr ""
+msgstr "_Importer"
 
 #: bin/gscan2pdf:207
 msgid "Import image file(s)"
@@ -71,7 +71,7 @@ msgstr ""
 
 #: bin/gscan2pdf:208
 msgid "S_can"
-msgstr ""
+msgstr "S_canner"
 
 #: bin/gscan2pdf:208
 #, fuzzy
@@ -104,11 +104,11 @@ msgstr ""
 
 #: bin/gscan2pdf:212
 msgid "_Email as PDF"
-msgstr ""
+msgstr "_Email comme PDF"
 
 #: bin/gscan2pdf:212
 msgid "Attach as PDF to a new email"
-msgstr ""
+msgstr "Attacher comme PDF dans un nouveau email"
 
 #: bin/gscan2pdf:213
 msgid "_Quit"
@@ -231,11 +231,11 @@ msgstr ""
 
 #: bin/gscan2pdf:237
 msgid "_OCR"
-msgstr ""
+msgstr "R_OC"
 
 #: bin/gscan2pdf:237
 msgid "Optical Character Recognition of current page"
-msgstr ""
+msgstr "Reconnaissance Optique de Caractères de la page courante"
 
 #: bin/gscan2pdf:240 bin/gscan2pdf:241
 msgid "_Help"
@@ -280,7 +280,7 @@ msgstr "Noir et blanc"
 
 #: bin/gscan2pdf:562
 msgid "True Gray"
-msgstr ""
+msgstr "Vrai Gris"
 
 #: bin/gscan2pdf:563
 #, fuzzy
@@ -289,7 +289,7 @@ msgstr "Binaire"
 
 #: bin/gscan2pdf:564 bin/gscan2pdf:600 bin/gscan2pdf:601
 msgid "Auto"
-msgstr ""
+msgstr "Auto"
 
 #: bin/gscan2pdf:565
 #, fuzzy
@@ -318,7 +318,7 @@ msgstr "Résolution"
 
 #: bin/gscan2pdf:576
 msgid "Batch scan"
-msgstr ""
+msgstr "Scan par lot"
 
 #: bin/gscan2pdf:578 bin/gscan2pdf:584 bin/gscan2pdf:590
 msgid "Yes"
@@ -376,11 +376,11 @@ msgstr ""
 
 #: bin/gscan2pdf:648
 msgid "View options before saving"
-msgstr ""
+msgstr "Voir les options avant de sauvegarder"
 
 #: bin/gscan2pdf:685
 msgid "The scanadf frontend is not available\n"
-msgstr ""
+msgstr "Le frontend scanadf n'est pas disponible\n"
 
 #: bin/gscan2pdf:696
 msgid "Save as DjVu requires djvulibre-bin\n"
@@ -423,11 +423,11 @@ msgstr ""
 
 #: bin/gscan2pdf:1010
 msgid "Import image from file"
-msgstr ""
+msgstr "Importer l'image d'un fichier"
 
 #: bin/gscan2pdf:1045
 msgid "Not a recognised file"
-msgstr ""
+msgstr "Pas un fichier reconnu"
 
 #: bin/gscan2pdf:1122
 msgid "Page range"
@@ -486,7 +486,7 @@ msgstr "Nom du fichier PDF"
 msgid ""
 "File %s exists.\n"
 "Really overwrite?"
-msgstr ""
+msgstr "Le fichier %s existe."
 
 #: bin/gscan2pdf:1513
 msgid "LZW"
@@ -494,7 +494,7 @@ msgstr ""
 
 #: bin/gscan2pdf:1513
 msgid "Compress output with Lempel-Ziv & Welch encoding."
-msgstr ""
+msgstr "Compresse la sortie avec l'encodage de Lempel-Ziv & Welch."
 
 #: bin/gscan2pdf:1514
 msgid "Zip"
@@ -506,7 +506,7 @@ msgstr ""
 
 #: bin/gscan2pdf:1515
 msgid "Compress output with JPEG encoding."
-msgstr ""
+msgstr "Compresse la sortie avec l'encodage JPEG."
 
 #: bin/gscan2pdf:1516
 msgid "Packbits"
@@ -534,7 +534,7 @@ msgstr ""
 
 #: bin/gscan2pdf:1519
 msgid "Use no compression algorithm on output."
-msgstr ""
+msgstr "Ne pas utiliser d'algorithme de compression sur la sortie."
 
 #: bin/gscan2pdf:1531
 msgid "JPEG Quality"
@@ -550,11 +550,11 @@ msgstr ""
 
 #: bin/gscan2pdf:1701
 msgid "DjVu filename"
-msgstr ""
+msgstr "Nom de fichier DjVu"
 
 #: bin/gscan2pdf:1764
 msgid "Email as PDF"
-msgstr ""
+msgstr "Envoyer par mail comme PDF"
 
 #: bin/gscan2pdf:1825
 msgid "not found"
@@ -649,10 +649,13 @@ msgid "Must scan facing pages first"
 msgstr ""
 
 #: bin/gscan2pdf:2126
+#, fuzzy
 msgid ""
 "Cannot scan more reverse pages\n"
 "than facing pages"
 msgstr ""
+"Impossible de scanner plus de pages verso\n"
+"que de pages recto"
 
 #: bin/gscan2pdf:2205 bin/gscan2pdf:2208 bin/gscan2pdf:2233 bin/gscan2pdf:2354
 #: bin/gscan2pdf:2357
@@ -683,7 +686,7 @@ msgstr "Message inconnu : "
 
 #: bin/gscan2pdf:2380
 msgid "Scanned page"
-msgstr ""
+msgstr "Page scannée"
 
 #: bin/gscan2pdf:2560
 #, fuzzy
@@ -700,7 +703,7 @@ msgstr "Sous licence GPLv2"
 
 #: bin/gscan2pdf:2605
 msgid "Updating options"
-msgstr ""
+msgstr "Mise à jour des options"
 
 #: bin/gscan2pdf:2673 bin/gscan2pdf:2793
 msgid "Paper size"
@@ -750,17 +753,19 @@ msgstr ""
 
 #: bin/gscan2pdf:3026
 msgid "One page per sheet, oriented upwards without rotation."
-msgstr ""
+msgstr "Une page par feuille, orienté verticalement sans rotation."
 
 #: bin/gscan2pdf:3029
 msgid "Double"
-msgstr ""
+msgstr "Double"
 
 #: bin/gscan2pdf:3030
 msgid ""
 "Two pages per sheet, landscape orientation (one page on the left half, one "
 "page on the right half)."
 msgstr ""
+"Deux pages par feuille, orientation paysage (une page sur la moitié gauche, "
+"une page sur la moitié droite)."
 
 #: bin/gscan2pdf:3033
 msgid "Deskew to edge"
@@ -776,19 +781,19 @@ msgstr ""
 
 #: bin/gscan2pdf:3036 bin/gscan2pdf:3056
 msgid "Left"
-msgstr ""
+msgstr "Gauche :"
 
 #: bin/gscan2pdf:3037
 msgid "Use 'left' for scanning from the left edge."
-msgstr ""
+msgstr "Utilisez 'gauche' pour scanner depuis le bord gauche."
 
 #: bin/gscan2pdf:3040 bin/gscan2pdf:3060
 msgid "Top"
-msgstr ""
+msgstr "Haut"
 
 #: bin/gscan2pdf:3041
 msgid "Use 'top' for scanning from the top edge."
-msgstr ""
+msgstr "Utilisez 'haut' pour scanner depuis le bord supérieur."
 
 #: bin/gscan2pdf:3044 bin/gscan2pdf:3064
 msgid "Right"
@@ -820,11 +825,11 @@ msgstr ""
 
 #: bin/gscan2pdf:3061
 msgid "Use 'top' to align to the top edge."
-msgstr ""
+msgstr "Utilisez 'haut' pour aligner sur le bord supérieur."
 
 #: bin/gscan2pdf:3065
 msgid "Use 'right' to align to the right edge."
-msgstr ""
+msgstr "Utilisez 'droite' pour aligner sur le bord droit."
 
 #: bin/gscan2pdf:3069
 msgid "Use 'bottom' to align to the bottom."
@@ -844,11 +849,11 @@ msgstr ""
 
 #: bin/gscan2pdf:3138
 msgid "Vertical margin"
-msgstr ""
+msgstr "Marges verticales"
 
 #: bin/gscan2pdf:3139
 msgid "Horizontal margin"
-msgstr ""
+msgstr "Marges horizontales"
 
 #: bin/gscan2pdf:3232 bin/gscan2pdf:3235
 msgid "Running unpaper"
@@ -856,7 +861,7 @@ msgstr ""
 
 #: bin/gscan2pdf:3294
 msgid "OCR"
-msgstr ""
+msgstr "ROC"
 
 #: bin/gscan2pdf:3312
 msgid "Start OCR"
@@ -881,7 +886,7 @@ msgstr ""
 #: bin/gscan2pdf:3462
 #, perl-format
 msgid "Can't open config file: %s"
-msgstr ""
+msgstr "Impossible d'ouvrir le fichier de configuration: %s"
 
 #: bin/gscan2pdf:3485
 #, perl-format
@@ -890,6 +895,9 @@ msgid ""
 "Alternatively, try: %s %s\n"
 "\n"
 msgstr ""
+"Le visionneur d'aide requiert le module Gtk2::Ex::PodViewer\n"
+"Alternativement, essayez: %s %s\n"
+"\n"
 
 #: bin/gscan2pdf:3528
 msgid "Go to"
