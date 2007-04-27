@@ -133,15 +133,18 @@ $(NAME).spec : bin/$(NAME) debian/changelog
 	sed 's/^$(NAME).*//' < debian/changelog | \
          sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $(NAME).spec
 
-htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb : ../$(NAME)_$(VERSION)_all.deb
+htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb : ../$(NAME)_$(VERSION)_all.deb | htdocs/download/debian/binary
 	cp ../$(NAME)_$(VERSION)_all.deb ../$(NAME)_$(VERSION).dsc ../$(NAME)_$(VERSION)_i386.changes htdocs/download/debian/binary
 
 ../$(NAME)_$(VERSION)_all.deb : bin/$(NAME) debian/control debian/changelog locale
 	debuild
 
-htdocs/download/debian/binary/Packages.gz : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb
+htdocs/download/debian/binary/Packages.gz : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb | htdocs/download/debian/binary
 	cd htdocs/download/debian ; \
          dpkg-scanpackages binary /dev/null | gzip -9c > binary/Packages.gz
+
+htdocs/download/debian/binary :
+	mkdir --parents htdocs/download/debian/binary
 
 remote-dist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb htdocs/download/debian/binary/Packages.gz
 	scp htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb \
