@@ -35,6 +35,7 @@ clean:
 
 	# Add commands to clean up after the build process here
 	[ ! -f Makefile ] || $(MAKE) realclean
+	-rm -f */LC_MESSAGES/*.mo
 
 	dh_clean build-stamp install-stamp
 
