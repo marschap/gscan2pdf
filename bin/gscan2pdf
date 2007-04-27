@@ -47,12 +47,13 @@
 #
 # Release procedure:
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
-#    Make sure that file list in .spec and cvs update reflects MANIFEST
-#    Make sure that changelog reflects History and cvs log from bin/gscan2pdf
+#    Make sure that file list in .spec and hg status reflects MANIFEST
+#    Make sure that changelog reflects History and hg log from bin/gscan2pdf
 # 2. make rpmdist debdist
 #    test dist sudo dpkg -i gscan2pdf-0....
-# 3. cvs update
-#    cvs tag vx-x-x
+# 3. hg status
+#    hg tag vx-x-x
+#    hg push
 # 4. make remote-dist remote-html 
 # 5. Upload to sourceforge and release files
 # 6. Freshmeat
@@ -4032,6 +4033,7 @@ The source is hosted in the files section of the gscan2pdf project on Sourceforg
 
 Having downloaded it, C<perl Makefile.PL>, will create the Makefile, C<make> will build the application and C<make install> will install it for you.
 Note there is no C<make test> step.
+To build the RPM and .deb packages, you will additionally need the rpm, devscripts, fakeroot, debhelper and gettext packages.
 
 =head1 Reporting bugs
 
@@ -4054,9 +4056,9 @@ If you would like to contribute to an existing or new translation, please check 
 
 Clears the page list.
 
-=head3 Import TIFF
+=head3 Import
 
-Imports a single or multipage TIFF.
+Imports any format that imagemagick supports. PDFs will have their embedded images extracted and imported one per page.
 
 =head3 Scan
 
