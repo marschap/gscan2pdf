@@ -1,4 +1,4 @@
-0.9.8 (21.04.2007):
+0.9.8 (27.04.2007):
 
 - compression option from scan dialog.
 + Explicitly sets compression=None if mode=Lineart
@@ -15,6 +15,12 @@
   contents, and can be indexed by Beagle.
 + Update to Spanish translation (thanks to Th3n3k)
 + Moved OCR buffer to main window
++ Patch from John Goerzen to adjust brightness
+  and add negative support for SpinBoxes
++ Patches from John Goerzen to add .tif and .djvu endings if necessary,
+  plus fixed bug adding .pdf ending.
++ Separated perlmagick and imagemagick dependencies
++ Updated French translation (thanks to Mathieu Goeminne)
 
 
 0.9.7 (04.04.2007):

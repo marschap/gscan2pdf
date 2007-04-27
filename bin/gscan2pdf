@@ -6,6 +6,7 @@
 
 # To do
 # 0. switch unpaper to using ocr stack
+#    fix encoding problem with OCR output
 #    check out freeze when gocr does not return properly
 #    for scan profiles, switch to Config::General (libconfig-general-perl)
 #    investigate JPEG or PNG compression
@@ -72,7 +73,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.8rc1";
+my $version = "0.9.8";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
