@@ -7,6 +7,8 @@
 # To do
 # 0. switch unpaper to using ocr stack
 #    fix encoding problem with OCR output
+#    move locales to locale directory for build
+#    look at adding make clean to release procedure
 #    check out freeze when gocr does not return properly
 #    for scan profiles, switch to Config::General (libconfig-general-perl)
 #    investigate JPEG or PNG compression
@@ -53,7 +55,7 @@
 #    test dist sudo dpkg -i gscan2pdf-0....
 # 3. hg status
 #    hg tag vx-x-x
-#    hg push
+#    hg push ssh://ra28145@shell.sf.net//home/groups/g/gs/gscan2pdf/hg/gscan2pdf
 # 4. make remote-dist remote-html 
 # 5. Upload to sourceforge and release files
 # 6. Freshmeat
@@ -3498,7 +3500,7 @@ sub unpaper {
      $page++;
      my $i = $page+1;
      my $n = $#pagelist+1;
-     $pbar->set_text ($d->get("Page $i of $n"));
+     $pbar->set_text(sprintf($d->get("Page %i of %i"), $i, $n));
      $pbar->set_fraction ($page/($#pagelist+1));
 
 # Temporary filenames for pnm and new tif
@@ -3979,8 +3981,8 @@ gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan.
 gscan2pdf should work on almost any Linux/BSD machine.
 
 =for html <p align="center">
- <img src="https://sourceforge.net/dbimage.php?id=107427" border="1" width="632" height="480" alt="Screenshot" /><br />
- Screenshot: Main page v0.9.0</p>
+ <img src="https://sourceforge.net/dbimage.php?id=121788" border="1" width="632" height="480" alt="Screenshot" /><br />
+ Screenshot: Main page v0.9.8</p>
 
 =head1 Synopsis
 
@@ -4257,6 +4259,10 @@ Otherwise, you have to set the number of pages to scan to 1 and hit the scan but
 
 Probably because the package required for that option is not installed.
 Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options require imagemagick.
+
+=head2 Why doesn't Email to PDF work with Thunderbird?
+
+Because Thunderbird doesn't support creating new emails with attachments.
 
 =head1 See Also
 
