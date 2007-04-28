@@ -76,7 +76,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.8";
+my $version = "0.9.9rc1";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -2369,7 +2369,6 @@ warn "$text\n";
                                                $text);
       $dialog -> run;
       $dialog -> destroy;
-      return FALSE;
      }
      $line = substr($line, index($line, "\n")+1, length($line));
     }
