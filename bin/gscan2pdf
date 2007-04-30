@@ -9,6 +9,11 @@
 #    fix encoding problem with OCR output
 #    move locales to locale directory for build
 #    look at adding make clean to release procedure
+#    put notes in help about hg
+#    switch about to using Gtk2::AboutDialog
+#    make sure gocr is really turned off and not run auto when not installed.
+#    set up mailing list on sourceforge
+#    delete cvs repository on sourceforge
 #    check out freeze when gocr does not return properly
 #    for scan profiles, switch to Config::General (libconfig-general-perl)
 #    investigate JPEG or PNG compression
@@ -623,6 +628,12 @@ my %pddo = (
                                    '24bit Color'   => $d->get('24bit Color'),
                                    }
                        },
+	    'compression'     => { string => $d->get('Compression'),
+				   values => {
+					     'None' => $d->get('None'),
+					     'JPEG' => $d->get('JPEG'),
+					     },
+				 },
             'resolution'      => { string => $d->get('Resolution') },
             'brightness'      => { string => $d->get('Brightness') },
             'batch-scan'      => { string => $d->get('Batch scan'),
@@ -2157,8 +2168,7 @@ sub scan_dialog {
   }
 
 # Workaround for HP bug mode=lineart and compression!=none
-  $options{compression} = 'None'
-   if (defined($options{mode}) and $options{mode} eq 'Lineart');
+  $options{compression} = 'None' if (defined($ddo{compression}));
 
 # Get selected number of pages
   my $npages;
@@ -2931,6 +2941,9 @@ sub parse_options {
 
 # Dig out of possible options
    $ddo{$option}{string} = $pddo{$option}{string};
+
+# For HPs
+   next if ($option eq 'compression');
 
 # Set default from config
    $default = $SETTING{$option} if (defined($SETTING{$option}));
