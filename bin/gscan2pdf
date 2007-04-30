@@ -3277,13 +3277,21 @@ sub unpaper {
  $hboxl -> pack_end ($ev, FALSE, FALSE, 0);
  $combobl -> set_active (0);
 
+# Notebook to collate options
+ my $notebook = Gtk2::Notebook->new;
+ $vbox->pack_start($notebook, TRUE, TRUE, 0);
+
+# Notebook page 1
+ my $vbox1 = Gtk2::VBox->new;
+ $notebook->append_page($vbox1, $d->get('Deskew'));
+
  my $dsbutton = Gtk2::CheckButton -> new($option{'no-deskew'}{string});
  $tooltips -> set_tip ($dsbutton, $option{'no-deskew'}{tooltip});
- $vbox -> pack_start ($dsbutton, TRUE, TRUE, 0);
+ $vbox1 -> pack_start ($dsbutton, TRUE, TRUE, 0);
 
 # Frame for Deskew Scan Direction
  my $dframe = Gtk2::Frame -> new($option{'deskew-scan-direction'}{string});
- $vbox -> pack_start ($dframe, TRUE, TRUE, 0);
+ $vbox1 -> pack_start ($dframe, TRUE, TRUE, 0);
  my $vboxd = Gtk2::VBox -> new;
  $vboxd -> set_border_width($border_width);
  $dframe -> add ($vboxd);
@@ -3314,17 +3322,21 @@ sub unpaper {
   $vboxd -> pack_start($button, TRUE, TRUE, 0);
  }
 
+# Notebook page 2
+ my $vbox2 = Gtk2::VBox->new;
+ $notebook->append_page($vbox2, $d->get('Border'));
+
  my $bsbutton = Gtk2::CheckButton -> new($option{'no-border-scan'}{string});
  $tooltips -> set_tip ($bsbutton, $option{'no-border-scan'}{tooltip});
- $vbox -> pack_start ($bsbutton, TRUE, TRUE, 0);
+ $vbox2 -> pack_start ($bsbutton, TRUE, TRUE, 0);
 
  my $babutton = Gtk2::CheckButton -> new($option{'no-border-align'}{string});
  $tooltips -> set_tip ($babutton, $option{'no-border-align'}{tooltip});
- $vbox -> pack_start ($babutton, TRUE, TRUE, 0);
+ $vbox2 -> pack_start ($babutton, TRUE, TRUE, 0);
 
 # Frame for Align Border
  my $bframe = Gtk2::Frame -> new($option{'border-align'}{string});
- $vbox -> pack_start ($bframe, TRUE, TRUE, 0);
+ $vbox2 -> pack_start ($bframe, TRUE, TRUE, 0);
  my $vboxb = Gtk2::VBox -> new;
  $vboxb -> set_border_width($border_width);
  $bframe -> add ($vboxb);
@@ -3391,6 +3403,10 @@ sub unpaper {
  $hboxd -> pack_start ($spin_buttonh, FALSE, FALSE, 0);
  $vboxb -> pack_start($hboxd, TRUE, TRUE, 0);
 
+# Notebook page 3
+ my $vbox3 = Gtk2::VBox->new;
+ $notebook->append_page($vbox3, $d->get('Filters'));
+
 # White threshold
  my $hboxwt = Gtk2::HBox -> new;
  my $labelwt = Gtk2::Label -> new ($option{'white-threshold'}{string});
@@ -3399,7 +3415,7 @@ sub unpaper {
  $spinbuttonwt->set_value(0.9);
  $tooltips -> set_tip ($spinbuttonwt, $option{'white-threshold'}{tooltip});
  $hboxwt -> pack_end ($spinbuttonwt, FALSE, FALSE, 0);
- $vbox -> pack_start ($hboxwt, TRUE, TRUE, 0);
+ $vbox3 -> pack_start ($hboxwt, TRUE, TRUE, 0);
 
 # Black threshold
  my $hboxbt = Gtk2::HBox -> new;
@@ -3409,23 +3425,23 @@ sub unpaper {
  $spinbuttonbt->set_value(0.33);
  $tooltips -> set_tip ($spinbuttonbt, $option{'black-threshold'}{tooltip});
  $hboxbt -> pack_end ($spinbuttonbt, FALSE, FALSE, 0);
- $vbox -> pack_start ($hboxbt, TRUE, TRUE, 0);
+ $vbox3 -> pack_start ($hboxbt, TRUE, TRUE, 0);
 
  my $msbutton = Gtk2::CheckButton -> new($option{'no-mask-scan'}{string});
  $tooltips -> set_tip ($msbutton, $option{'no-mask-scan'}{tooltip});
- $vbox -> pack_start ($msbutton, TRUE, TRUE, 0);
+ $vbox3 -> pack_start ($msbutton, TRUE, TRUE, 0);
 
  my $bfbutton = Gtk2::CheckButton -> new($option{'no-blackfilter'}{string});
  $tooltips -> set_tip ($bfbutton, $option{'no-blackfilter'}{tooltip});
- $vbox -> pack_start ($bfbutton, TRUE, TRUE, 0);
+ $vbox3 -> pack_start ($bfbutton, TRUE, TRUE, 0);
 
  my $nfbutton = Gtk2::CheckButton -> new($option{'no-noisefilter'}{string});
  $tooltips -> set_tip ($nfbutton, $option{'no-noisefilter'}{tooltip});
- $vbox -> pack_start ($nfbutton, TRUE, TRUE, 0);
+ $vbox3 -> pack_start ($nfbutton, TRUE, TRUE, 0);
 
  my $blbutton = Gtk2::CheckButton -> new($option{'no-blurfilter'}{string});
  $tooltips -> set_tip ($blbutton, $option{'no-blurfilter'}{tooltip});
- $vbox -> pack_start ($blbutton, TRUE, TRUE, 0);
+ $vbox3 -> pack_start ($blbutton, TRUE, TRUE, 0);
 
 # Frame for page range
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
@@ -4276,9 +4292,8 @@ At the moment, having selected whether the scan has a single or a double page, a
 The gocr utility is used to process the current page.
 The output is displayed and an option is given to save it to a text file.
 
-There is an OCR output buffer for each page and is embedded as an annotation (pop-up note) in the PDF produced.
-Unfortunately, Beagle does not index (i.e. search) the contents of annotation, as it relies on pdftotext.
-Suggestions for a better way to embed the text are welcome.
+There is an OCR output buffer for each page and is embedded both as an annotation (pop-up note) and as plain text behind the scanned image in the PDF produced.
+This way, Beagle can index (i.e. search) the plain text, and the contents of the annotations, can be viewed in Acrobat Reader.
 
 =head1 FAQs
 
@@ -4302,12 +4317,11 @@ Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options requ
 
 =head2 Why doesn't Email to PDF work with Thunderbird?
 
-Because Thunderbird doesn't support creating new emails with attachments.
+Because xdg-email doesn't support creating new emails with attachments in Thunderbird.
 
 =head1 See Also
 
-Requires perl, libgtk2-perl (>=1.100-1), libglib-perl (>= 1.100-1), scanimage
-and libtiff.
+Xsane
 
 =head1 Author
 
