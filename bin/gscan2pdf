@@ -14,6 +14,7 @@
 #    delete cvs repository on sourceforge
 #    check out freeze when gocr does not return properly
 #    for scan profiles, switch to Config::General (libconfig-general-perl)
+#    add tesseract support
 #    investigate JPEG or PNG compression
 #    Add status line at bottom with messages like "filename saved"
 #    Rewrite in python with python-sane & pytiff
@@ -79,7 +80,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.9";
+my $version = "0.9.10rc1";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -2661,7 +2662,15 @@ sub about {
 # Gtk2::AboutDialog->set_email_hook ($func, $data=undef);
  $about->set_name ($program);
  $about->set_version ($version);
- $about->set_authors ('Jeff Ratcliffe');
+ my $authors = <<EOS;
+John Goerzen
+Sascha Hunold
+Chris Mayo
+David Hampton
+EOS
+ $about->set_authors ("Jeff Ratcliffe\n\n"
+                      .$d->get('Patches gratefully received from:')
+		      ."\n$authors");
  $about->set_comments ($d->get('To aid the scan-to-PDF process'));
  $about->set_copyright ($d->get('Copyright 2006--2007 Jeffrey Ratcliffe'));
  $about->set_license ($d->get('Licensed under the GPLv2'));
