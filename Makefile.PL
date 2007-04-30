@@ -161,7 +161,7 @@ remote-html : htdocs/index.html
 	scp htdocs/index.html ra28145@shell.sf.net:/home/groups/g/gs/$(NAME)/htdocs/
 
 po/$(NAME).pot : bin/$(NAME)
-	xgettext -L perl --keyword=get -o - bin/$(NAME) | \
+	xgettext -L perl --keyword=get --from-code=UTF-8 -o - bin/$(NAME) | \
          sed 's/SOME DESCRIPTIVE TITLE/messages.pot for $(NAME)/' | \
          sed 's/PACKAGE VERSION/$(NAME)-$(VERSION)/' | \
          sed "s/YEAR THE PACKAGE'S COPYRIGHT HOLDER/$(YEAR) $(AUTHOR)/" | \
