@@ -2117,7 +2117,10 @@ sub scan_dialog {
 # Checkbox for OCR
  my $obutton = Gtk2::CheckButton -> new($d->get('OCR scanned pages'));
  $obutton -> set_active(TRUE);
- $obutton -> set_sensitive(FALSE) if ($dependencies{gocr} != 0);
+ if ($dependencies{gocr} != 0) {
+  $obutton -> set_sensitive(FALSE);
+  $obutton -> set_active(FALSE);
+ }
  $vbox -> pack_start($obutton, TRUE, TRUE, 0);
 
 # Frame for device-dependent options
