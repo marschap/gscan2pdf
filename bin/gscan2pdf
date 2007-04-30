@@ -10,8 +10,6 @@
 #    move locales to locale directory for build
 #    look at adding make clean to release procedure
 #    put notes in help about hg
-#    switch about to using Gtk2::AboutDialog
-#    make sure gocr is really turned off and not run auto when not installed.
 #    set up mailing list on sourceforge
 #    delete cvs repository on sourceforge
 #    check out freeze when gocr does not return properly
@@ -236,7 +234,6 @@ my @action_items = (
  [ 'Edit', undef, $d->get('_Edit') ],
  [ 'Undo', 'gtk-undo', $d->get('_Undo'), '<control>z', $d->get('Undo'), \&undo ],
  [ 'Redo', 'gtk-redo', $d->get('_Redo'), '<shift><control>z', $d->get('Redo'), \&unundo ],
-# [ 'Delete', 'gtk-delete', $d->get('_Delete'), 'Delete', $d->get('Delete selected pages'), \&delete_pages ],
  [ 'Delete', 'gtk-delete', $d->get('_Delete'), undef, $d->get('Delete selected pages'), \&delete_pages ],
  [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages from 1 to n'), sub { renumber($slist, 0, 1, 1); } ],
  [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
@@ -2659,13 +2656,41 @@ sub select_all {
 # Display about dialog
 
 sub about {
- my $dialog = Gtk2::MessageDialog -> new ($window, 'destroy-with-parent',
-                     'info', 'ok', "$program v$version\n\n"
-                     . $d->get('To aid the scan-to-PDF process').".\n\n"
-                     . $d->get('Copyright')." Jeff Ratcliffe\n"
-                     . $d->get('Licensed under the GPLv2'));
- $dialog -> run;
- $dialog -> destroy;
+ my $about = Gtk2::AboutDialog->new;
+# Gtk2::AboutDialog->set_url_hook ($func, $data=undef);
+# Gtk2::AboutDialog->set_email_hook ($func, $data=undef);
+ $about->set_name ($program);
+ $about->set_version ($version);
+ $about->set_authors ('Jeff Ratcliffe');
+ $about->set_comments ($d->get('To aid the scan-to-PDF process'));
+ $about->set_copyright ($d->get('Copyright 2006--2007 Jeffrey Ratcliffe'));
+ $about->set_license ($d->get('Licensed under the GPLv2'));
+ $about->set_website ('http://gscan2pdf.sf.net');
+ my $translators = <<EOS;
+Jen Fraggle
+Alberto Boiti
+Petr Jelínek
+Alexandre Prokoudine
+mecedesjorge
+cwchien
+booxter
+Daniel Nylander
+Tikkel
+Christoph Langner
+Nicolas Velin
+Mathieu Goeminne
+Simon Leblanc
+florian
+Eric Spierings
+Th3n3k
+joeb
+Maddy67
+Pierre Slamich
+EOS
+ $about->set_translator_credits ($translators);
+ $about->set_artists ('lodp');
+ $about->run;
+ $about->destroy;
 }
 
 
