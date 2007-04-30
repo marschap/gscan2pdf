@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.8
+Version: 0.9.9
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -53,26 +53,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Fri Apr 27 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Mon Apr 30 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
   - Fixed bug calling help
-  - - compression option from scan dialog.
-  - Explicitly sets compression=None if mode=Lineart
-  - Check for PDF::API2
-  - Forces startup check on new version
-  - Runs unpaper sequencially on pages instead of in parallel
-  - Enabled double sided scanning for scanadf frontend
-  - no-deskew, no-border-scan, no-border-align, no-mask-scan, no-blackfilter
-    no-noisefilter, no-blurfilter, black-threshold, white-threshold options to
-    unpaper
-  - Stock icon for about
-  - Scrolls thumb list to selected page
-  - Embeds OCR output in white on white hidden behind scan. pdftotext can extract
-    contents, and can be indexed by Beagle.
-  - Update to Spanish translation (thanks to Th3n3k)
-  - Moved OCR buffer to main window
-  - Patch from John Goerzen to adjust brightness
-    and add negative support for SpinBoxes
-  - Patches from John Goerzen to add .tif and .djvu endings if necessary,
-    plus fixed bug adding .pdf ending.
-  - Separated perlmagick and imagemagick dependencies
-  - Updated French translation (thanks to Mathieu Goeminne)
+  - Fixed Fixed bug 1709377
+     ("Unknwn msg: scanimage: unrec'd option --compression=None'")
+  - Fixed bug where attempt to run gocr after scanning despite not being installed
+  - Replaced about MessageDialog with AboutDialog
+  - Update to Russian translation (thanks to Alexandre Prokoudine)
+  - Update to Czech translation (thanks to Petr Jelínek)
+  - Update to Dutch translation (thanks to Eric Spierings)
+  - Packed unpaper options into Gtk2::Notebook to make dialog shorter, fixed bug
+     1709379 ("unpaper-0.2 dialog too tall for 1024x768")

@@ -1,4 +1,17 @@
-0.9.8 (27.04.2007):
+0.9.9 (30.04.2007):
+
++ Fixed Fixed bug 1709377
+   ("Unknwn msg: scanimage: unrec'd option --compression=None'")
++ Fixed bug where attempt to run gocr after scanning despite not being installed
++ Replaced about MessageDialog with AboutDialog
++ Update to Russian translation (thanks to Alexandre Prokoudine)
++ Update to Czech translation (thanks to Petr Jelínek)
++ Update to Dutch translation (thanks to Eric Spierings)
++ Packed unpaper options into Gtk2::Notebook to make dialog shorter, fixed bug
+  1709379 ("unpaper-0.2 dialog too tall for 1024x768")
+
+
+0.9.8 (28.04.2007):
 
 - compression option from scan dialog.
 + Explicitly sets compression=None if mode=Lineart
