@@ -8,13 +8,13 @@ msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2007-03-31 21:49+0200\n"
-"PO-Revision-Date: 2007-03-08 16:25+0000\n"
-"Last-Translator: Eric Spierings <eric.spierings@gmail.com>\n"
+"PO-Revision-Date: 2007-04-29 20:42+0000\n"
+"Last-Translator: Maddy67 <dirk.tas@telenet.be>\n"
 "Language-Team: Dutch <nl@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Rosetta-Export-Date: 2007-04-17 12:48:21+0000\n"
+"X-Rosetta-Export-Date: 2007-04-30 13:18:08+0000\n"
 
 #: bin/gscan2pdf:109
 #, perl-format
@@ -22,11 +22,13 @@ msgid "Error: cannot read file: %s\n"
 msgstr "Fout: kan het volgende bestand niet lezen: %s\n"
 
 #: bin/gscan2pdf:119
-#, perl-format
+#, fuzzy
 msgid ""
 "Usage:\n"
 "%s --test <file>=<model>\n"
 msgstr ""
+"Gebruik:\n"
+"%s --test <file>=<model>\n"
 
 #: bin/gscan2pdf:141
 #, perl-format
@@ -34,11 +36,13 @@ msgid "Unknown option %s.\n"
 msgstr "Onbekende optie %s.\n"
 
 #: bin/gscan2pdf:147
-#, perl-format
+#, fuzzy
 msgid ""
 "%s requires the libtiff library.\n"
 "Please install it.\n"
-msgstr "%s gebruikt de libtiff bibliotheek.\n"
+msgstr ""
+"%s gebruikt de libtiff bibliotheek.\n"
+"Instaleer deze aub.\n"
 
 #: bin/gscan2pdf:165
 #, perl-format
@@ -58,12 +62,14 @@ msgid "Clears all pages"
 msgstr "Wissen alle paginas"
 
 #: bin/gscan2pdf:207
+#, fuzzy
 msgid "_Import"
-msgstr ""
+msgstr "_Importeer"
 
 #: bin/gscan2pdf:207
+#, fuzzy
 msgid "Import image file(s)"
-msgstr ""
+msgstr "Importeer beeld bestand(en)"
 
 #: bin/gscan2pdf:208
 msgid "S_can"
