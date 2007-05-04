@@ -204,11 +204,13 @@ if (-d '/usr/share/gscan2pdf') {
 else {
  $path = '.'; # make this a big cleverer, going one dir down from bin.
 }
-init_icons( [ 'rotate90',  "$path/rotate90.png" ], 
-            [ 'rotate180', "$path/rotate180.png" ], 
-            [ 'rotate270', "$path/rotate270.png" ],
-            [ 'scanner',   "$path/scanner.png" ],
-            [ 'pdf',       "$path/pdf.png" ], );
+init_icons(
+ [ 'rotate90',  "$path/stock-rotate-90.svg" ], 
+ [ 'rotate180', "$path/stock-rotate-180.svg" ], 
+ [ 'rotate270', "$path/stock-rotate-270.svg" ],
+ [ 'scanner',	"$path/scanner.png" ],
+ [ 'pdf',	"$path/pdf.png" ],
+);
 
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
