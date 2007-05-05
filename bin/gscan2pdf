@@ -537,7 +537,7 @@ $scwin_buffer -> set_policy ('never', 'automatic');
 $scwin_buffer -> set_shadow_type('etched-in');
 my $textbuffer = Gtk2::TextBuffer->new;
 my $textview = Gtk2::TextView->new_with_buffer($textbuffer);
-$textview->set_wrap_mode ('word');
+$textview->set_wrap_mode ('word-char');
 $textview -> set_sensitive(FALSE);
 $scwin_buffer->add($textview);
 $vpaned -> pack2 ($scwin_buffer, TRUE, TRUE);
