@@ -4050,7 +4050,7 @@ gscan2pdf should work on almost any Linux/BSD machine.
 
 =for html <p align="center">
  <img src="https://sourceforge.net/dbimage.php?id=121788" border="1" width="632" height="480" alt="Screenshot" /><br />
- Screenshot: Main page v0.9.8</p>
+ Screenshot: Main page v0.9.9</p>
 
 =head1 Synopsis
 
@@ -4105,9 +4105,15 @@ Having downloaded it, C<perl Makefile.PL>, will create the Makefile, C<make> wil
 Note there is no C<make test> step.
 To build the RPM and .deb packages, you will additionally need the rpm, devscripts, fakeroot, debhelper and gettext packages.
 
+=head2 From the repository
+
+gscan2pdf uses Mercurial for its Revision Control System. You can browse the tree at L<http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf/>. You can also download snapshots as .tar.gz, .zip, and .tar.bz2.
+
+Mercurial users can clone the complete tree with C<hg clone http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf>
+
 =head1 Reporting bugs
 
-Before reporting bugs, please read the L<FAQs> section.
+Before reporting bugs, please read the L<"FAQs"> section.
 
 Please report any bugs found to the bugs page of the gscan2pdf project on Sourceforge (L<https://sourceforge.net/tracker/?group_id=174140&atid=868098>).
 
