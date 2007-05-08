@@ -6,6 +6,9 @@
 
 # To do
 # 0. switch unpaper to using ocr stack
+#    fix jpeg import
+#    fix pdf import colour reversal
+#    add single image save as png, etc.
 #    fix encoding problem with OCR output
 #    move locales to locale directory for build
 #    look at adding make clean to release procedure
@@ -23,11 +26,11 @@
 #    Fix blocking at:
 #      Importing (e.g. 12 page multi.tif)
 #      Rotating
+#      Saving
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    Option to throw up PDF viewer with newly created PDF file
 #    Translate documentation
-#    Sort out sourceforge backups
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    Work out a good place to log error messages
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
@@ -37,14 +40,12 @@
 #     http://giv.sourceforge.net/gtk-image-viewer/
 #    As soon as gtk+ 2.12 is available and released in Feisty+1, remove the
 #     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
-#    steal rotate icons from eye of gnome 2.18
 #
 # From schmolch
 # 1.) If the scanning process gets interrupted the automatic numbering screws up.
 #      It would be very helpful to be able to tell the number at which it is supposed
 #      to continue counting and into which direction (reverse counting stops working
 #      after the interruption).
-# 2.) Some basic image manipulation capabilities would be very useful like adjusting contrast and brightness. 
 #
 # 1. Progress meter for scans and imports.
 # 2. Crop and autocrop
