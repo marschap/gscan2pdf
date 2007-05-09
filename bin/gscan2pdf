@@ -6,8 +6,8 @@
 
 # To do
 # 0. switch unpaper to using ocr stack
-#    fix jpeg import
-#    fix pdf import colour reversal
+#    fix pdf import colour reversal or add negate button
+#    now jpegs dealt with natively, can use pdfimages jpeg output.
 #    add single image save as png, etc.
 #    fix encoding problem with OCR output
 #    move locales to locale directory for build
@@ -51,6 +51,7 @@
 # 2. Crop and autocrop
 #
 # Release procedure:
+# 0. Test scan in lineart, greyscale and colour.
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
 #    Make sure that file list in .spec and hg status reflects MANIFEST
 #    Make sure that changelog reflects History and hg log from bin/gscan2pdf
@@ -1128,27 +1129,23 @@ sub import {
 # Extract images from PDF
     system ("pdfimages \"$filename\" x");
 
-# Convert each image from ppm to tif and import
+# Import each image
     my @images = <x-???.???>;
-    foreach (@images) {
-     my $tiff = convert_to_tiff($_);
-     import_scan($tiff);
-     unlink $_;
-    }
+    import_scan($_, undef, undef, 'Portable anymap', TRUE) foreach (@images);
    }
    elsif ($format eq 'Tagged Image File Format') {
 
 # Split the tiff into its pages and import them individually
     system("tiffsplit \"$filename\"");
     my @pages = <x???.tif>;
-    foreach (@pages) {
-     import_scan($_);
-    }
-    
+    import_scan($_, undef, undef, $format, TRUE) foreach (@pages);
+   }
+   elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
+    import_scan($filename, undef, undef, $format);
    }
    else {
     my $tiff = convert_to_tiff($filename);
-    import_scan($tiff);
+    import_scan($tiff, undef, undef, 'TIFF', TRUE);
    }
 
   }
@@ -1436,28 +1433,13 @@ sub create_PDF {
  foreach (@pagelist) {
   my $page = $pdf->page;
 
-# Get the tiff size and resolution
-  my $cmd = "tiffinfo \"".$slist -> {data}[$_][2]."\"";
-  my $output = `$cmd`;
-  my ($w, $h, $resolution);
-  if ($output =~ /Image Width: (\d*)/) {
-   $w = $1;
-  }
-  else {
-   warn "Image width not found\n";
-  }
-  if ($output =~ /Image Length: (\d*)/) {
-   $h = $1;
-  }
-  else {
-   warn "Image height not found\n";
-  }
-  if ($output =~ /Resolution: (\d*)/) {
-   $resolution = $1;
-  }
-  else {
-   warn "Image resolution not found\n";
-  }
+# Get the size and resolution
+  my $image = Image::Magick->new;
+  my $x = $image->Read($slist -> {data}[$_][2]);
+  warn "$x" if "$x";
+  my $w = $image->Get('width');
+  my $h = $image->Get('height');
+  my $resolution = $image->Get('x-resolution');
 
   $page->mediabox($w*72/$resolution, $h*72/$resolution);
 
@@ -1494,7 +1476,23 @@ sub create_PDF {
 
 # Add scan
   my $gfx = $page->gfx;
-  my $imgobj = $pdf->image_tiff($slist -> {data}[$_][2]);
+  my $format = $1 if ($slist -> {data}[$_][2] =~ /\.(\w*)$/);
+  my $imgobj;
+  if ($format eq 'png') {
+   $imgobj = $pdf->image_png($slist -> {data}[$_][2]);
+  }
+  elsif ($format eq 'jpg') {
+   $imgobj = $pdf->image_jpeg($slist -> {data}[$_][2]);
+  }
+  elsif ($format eq 'pnm') {
+   $imgobj = $pdf->image_pnm($slist -> {data}[$_][2]);
+  }
+  elsif ($format eq 'gif') {
+   $imgobj = $pdf->image_gif($slist -> {data}[$_][2]);
+  }
+  else {
+   $imgobj = $pdf->image_tiff($slist -> {data}[$_][2]);
+  }
   $gfx->image($imgobj,0,0,72/$resolution);
  }
  $pdf->save;
@@ -1732,6 +1730,20 @@ sub save_TIFF {
 
 # fill $pagelist with filenames depending on which radiobutton is active
   my ($pagelist, $n) = get_pagelist();
+
+  my @pagelist = split / /, $pagelist;
+  foreach (@pagelist) {
+
+   if ($_ !~ /\.tif/) {
+    my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+
+# Convert to tiff
+    system ("convert $_ $tif");
+
+    $_ = $tif;
+   }
+  }
+  $pagelist = "@pagelist";
 
   my $compression = $SETTING{'tiff compression'};
   $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpeg');
@@ -2288,7 +2300,6 @@ sub scanimage {
  my @options = hash2options(%options);
 
 # Add basic options
- push @options, '--format=tiff';
  push @options, '--batch';
 
 # Make sure we are in temp directory
@@ -2344,7 +2355,7 @@ sub scanimage {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.tif", $1*$step+$offset, $ocr)) {
+      if (! import_scan ("out$1.pnm", $1*$step+$offset, $ocr, 'PNM', TRUE)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -2426,24 +2437,10 @@ sub scanadf {
  my @options = hash2options(%options);
 
 # Add basic options
- push @options, '-o out%d.pnm -S scanscript.sh --script-wait';
+ push @options, '-o out%d.pnm';
 
 # Make sure we are in temp directory
  chdir $dir;
-
-# Create scanscript.sh
- my $script = <<END;
-#!/bin/bash
-convert \$1 \${1\%.*}.tif
-status=\$?
-echo "gscan2pdf created" \${1\%.*}.tif >> "/dev/stderr"
-exit \$status
-END
-
- open SCRIPT, "> scanscript.sh" or die "Can't create scanscript.sh: $!";
- print SCRIPT $script;
- close SCRIPT;
- chmod 0755, "scanscript.sh"; # u+rwx,go+rw
 
 # Create command
  my $cmd = "scanadf $device $start $end @options > /dev/stderr";
@@ -2481,17 +2478,15 @@ END
     $line .= $buffer;
 
     while ($line =~ /\n/) {
-     if ($line =~ /^Scanned document out(\d*)\.pnm/) {
-      $label -> set_text(sprintf($d->get('Scanned page %i...'), $1*$step+$offset));
-     }
-     elsif ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
+     if ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
       $label -> set_text($d->get('Scanner warming up'));
      }
-     elsif ($line =~ /^gscan2pdf created out(\d*)\.tif/) {
+     elsif ($line =~ /^Scanned document out(\d*)\.pnm/) {
+      $label -> set_text(sprintf($d->get('Scanned page %i...'), $1*$step+$offset));
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.tif", $1*$step+$offset, $ocr)) {
+      if (! import_scan ("out$1.pnm", $1*$step+$offset, $ocr, 'PNM', TRUE)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -2559,9 +2554,23 @@ sub hash2options {
 # Take new scan and display it
 
 sub import_scan {
- my ($ofilename, $page, $ocr) = @_;
- my (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.tif');
- system("mv $ofilename $filename");
+ my ($ofilename, $page, $ocr, $format, $delete) = @_;
+
+ my %suffix = (
+  'Portable Network Graphics'                    => '.png',
+  'Joint Photographic Experts Group JFIF format' => '.jpg',
+  'Tagged Image File Format'                     => '.tiff',
+  'Portable anymap'                              => '.pnm',
+  'CompuServe graphics interchange format'       => '.gif',
+ );
+
+ my (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix{$format});
+ if (defined($delete) and $delete) {
+  system("mv $ofilename $filename");
+ }
+ else {
+  system("cp $ofilename $filename");
+ }
 
 # Add to the page list
  $page = $#{$slist -> {data}}+2 if (! defined($page));
@@ -3543,7 +3552,7 @@ sub unpaper {
   my $page = -1;
 
 # Ensure that the dialog box is destroyed when the user responds.
-  my ($pid, $tif);
+  my ($pid, $out);
   $dialog -> signal_connect (response => sub {
    $_[0] -> destroy;
    local $SIG{HUP} = 'IGNORE';
@@ -3551,7 +3560,7 @@ sub unpaper {
    $cancelled = TRUE;
 
 # Retain the existing page
-   $tif = $slist -> {data}[$page][2];
+   $out = $slist -> {data}[$page][2];
   });
   $dialog -> show_all;
 
@@ -3570,16 +3579,23 @@ sub unpaper {
      my $n = $#pagelist+1;
      $pbar->set_text(sprintf($d->get("Page %i of %i"), $i, $n));
      $pbar->set_fraction ($page/($#pagelist+1));
-
-# Temporary filenames for pnm and new tif
-     my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-     (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
    
-     my $cmd = "convert -compress zip ".$slist -> {data}[$page][2]." $pnm;"
-              ."unpaper --layout $SETTING{layout} $deskew $border_align "
-              ."$maskscan $white $black $blackfilter $noisefilter $blurfilter "
-              ."--overwrite $pnm $pnm;"
-              ."convert $pnm $tif; rm $pnm";
+     my $cmd = '';
+     my $in;
+     if ($slist -> {data}[$page][2] !~ /\.pnm/) {
+
+# Temporary filename for new file
+      (undef, $in) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+
+      $cmd .= "convert -compress zip ".$slist -> {data}[$page][2]." $in;";
+     }
+     else {
+      $in = $slist -> {data}[$page][2];
+     }
+     $cmd .= "unpaper --layout $SETTING{layout} $deskew $border_align "
+             ."$maskscan $white $black $blackfilter $noisefilter $blurfilter "
+             ."$in $out;";
+     $cmd .= "rm $in" if ($slist -> {data}[$page][2] !~ /\.pnm/);
      warn "$cmd\n" if ($debug);
 
 # Interface to unpaper
@@ -3595,7 +3611,7 @@ sub unpaper {
       if ($condition & 'hup') { # bit field operation. >= would also work
        close $read;
 
-       $slist -> {data}[$page][2] = $tif;
+       $slist -> {data}[$page][2] = $out;
        $slist -> {data}[$page][1] =
                       get_pixbuf($slist -> {data}[$page][2], $heightt, $widtht);
 
@@ -3681,11 +3697,19 @@ sub ocr_page {
      $pbar->set_text(sprintf($d->get("Page %i of %i"), $page, $#ocr_stack+$npages+1));
      $pbar->set_fraction (($page-1)/($#ocr_stack+$npages+1));
 
-# Temporary filenames for pnm and new tif
-     my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-     my $tif = $slist -> {data}[$pagenum][2];
-   
-     my $cmd = "convert $tif $pnm; gocr $pnm; rm $pnm";
+     my ($cmd, $pnm);
+     if ($slist -> {data}[$page][2] !~ /\.pnm/) {
+      my $file = $slist -> {data}[$pagenum][2];
+
+# Temporary filename for new file
+      (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+
+      $cmd = "convert $file $pnm; gocr $pnm; rm $pnm";
+     }
+     else {
+      $pnm = $slist -> {data}[$page][2];
+      $cmd .= "gocr $pnm;";
+     }
      warn "$cmd\n" if ($debug);
 
 # Interface to gocr
