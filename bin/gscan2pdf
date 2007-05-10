@@ -7,7 +7,6 @@
 # To do
 # 0. switch unpaper to using ocr stack
 #    fix pdf import colour reversal or add negate button
-#    now jpegs dealt with natively, can use pdfimages jpeg output.
 #    add single image save as png, etc.
 #    fix encoding problem with OCR output
 #    move locales to locale directory for build
@@ -26,7 +25,8 @@
 #    Fix blocking at:
 #      Importing (e.g. 12 page multi.tif)
 #      Rotating
-#      Saving
+#      Saving tiff
+#      Saving pdf
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    Option to throw up PDF viewer with newly created PDF file
@@ -1433,10 +1433,22 @@ sub create_PDF {
  foreach (@pagelist) {
   my $page = $pdf->page;
 
-# Get the size and resolution
+  my $filename = $slist -> {data}[$_][2];
   my $image = Image::Magick->new;
-  my $x = $image->Read($slist -> {data}[$_][2]);
+  my $x = $image->Read($filename);
   warn "$x" if "$x";
+
+# Convert file if necessary
+  my $format = $1 if ($filename =~ /\.(\w*)$/);
+  if (defined($SETTING{'pdf compression'})
+       and $SETTING{'pdf compression'} ne 'none'
+       and $SETTING{'pdf compression'} ne $format) {
+   (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$format);
+   $x = $image->Write($filename);
+   warn "$x" if "$x";
+  }
+
+# Get the size and resolution
   my $w = $image->Get('width');
   my $h = $image->Get('height');
   my $resolution = $image->Get('x-resolution');
@@ -1476,22 +1488,21 @@ sub create_PDF {
 
 # Add scan
   my $gfx = $page->gfx;
-  my $format = $1 if ($slist -> {data}[$_][2] =~ /\.(\w*)$/);
   my $imgobj;
   if ($format eq 'png') {
-   $imgobj = $pdf->image_png($slist -> {data}[$_][2]);
+   $imgobj = $pdf->image_png($filename);
   }
   elsif ($format eq 'jpg') {
-   $imgobj = $pdf->image_jpeg($slist -> {data}[$_][2]);
+   $imgobj = $pdf->image_jpeg($filename);
   }
   elsif ($format eq 'pnm') {
-   $imgobj = $pdf->image_pnm($slist -> {data}[$_][2]);
+   $imgobj = $pdf->image_pnm($filename);
   }
   elsif ($format eq 'gif') {
-   $imgobj = $pdf->image_gif($slist -> {data}[$_][2]);
+   $imgobj = $pdf->image_gif($filename);
   }
   else {
-   $imgobj = $pdf->image_tiff($slist -> {data}[$_][2]);
+   $imgobj = $pdf->image_tiff($filename);
   }
   $gfx->image($imgobj,0,0,72/$resolution);
  }
@@ -1547,6 +1558,41 @@ sub save_PDF {
 }
 
 
+sub add_pdf_compression {
+ my ($vbox) = @_;
+
+# Compression options
+ my @compression = (
+  [ 'jpg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
+  [ 'png',  $d->get('PNG'),  $d->get('Compress output with PNG encoding.') ],
+  [ 'none', $d->get('None'), $d->get('Use no compression algorithm on output.') ],
+ );
+
+# Compression ComboBox
+ my $hboxc = Gtk2::HBox -> new;
+ $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Compression'));
+ $hboxc -> pack_start ($label, FALSE, FALSE, 0);
+
+# Fill compression ComboBox
+ my $i = 0;
+ my $o;
+ my $combobc = Gtk2::ComboBox->new_text;
+ foreach my $option ( @compression ) {
+  $combobc->append_text ($option->[1]);
+
+  $o = $i
+   if (defined($SETTING{'pdf compression'})
+       and $option->[0] eq $SETTING{'pdf compression'});
+  ++$i;
+ }
+ $o = 1 if (! defined $o);
+ $combobc -> set_active ($o);
+ $hboxc -> pack_end ($combobc, FALSE, FALSE, 0);
+ return ($combobc, @compression);
+}
+
+
 sub save_PDF_dialog {
 
 # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
@@ -1568,6 +1614,9 @@ sub save_PDF_dialog {
 # Frame for page range
   my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
+# Compression options
+  my ($combobc, @compression) = add_pdf_compression($vbox);
+
 # HBox for buttons
   my $hboxb = Gtk2::HBox -> new;
   $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
@@ -1576,6 +1625,10 @@ sub save_PDF_dialog {
   my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
   $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
   $sbutton -> signal_connect (clicked => sub {
+
+# dig out the compression
+   $SETTING{'pdf compression'} = $compression[$combobc->get_active][0];
+
    update_PDF_settings($entrya, $entryt, $entrys, $entryk);
    save_PDF();
   } );
@@ -1887,6 +1940,9 @@ sub email {
 # Frame for page range
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
+# Compression options
+ my ($combobc, @compression) = add_pdf_compression($vbox);
+
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
  $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
@@ -1901,6 +1957,9 @@ sub email {
 
 # Set options
   update_PDF_settings($entrya, $entryt, $entrys, $entryk);
+
+# dig out the compression
+  $SETTING{'pdf compression'} = $compression[$combobc->get_active][0];
 
   my (undef, $pdf) = tempfile(DIR => $dir, SUFFIX => '.pdf');
 

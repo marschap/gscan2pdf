@@ -2,23 +2,25 @@
 
 + patch credits
 + Switched rotate icons from Crystal (KDE) to those stolen from Eye of Gnome
-+ Fixed bug 1712967
++ Closed bug 1712967
   (long lines in ocr output resized document display off screen)
 + contrast and threshold controls
 + handle PNG, JPEG, GIF, PNM natively,
-   fixing feature request 1708448 and bug 1714874
+   closing feature request 1708448 (JPG to PDF)
+   and bug 1714874 (import b/w pdf problem)
++ PDF compression options (JPEG, PNG), closing feature request 1708036
 
 
 0.9.9 (30.04.2007):
 
-+ Fixed Fixed bug 1709377
++ Closed bug 1709377
    ("Unknwn msg: scanimage: unrec'd option --compression=None'")
 + Fixed bug where attempt to run gocr after scanning despite not being installed
 + Replaced about MessageDialog with AboutDialog
 + Update to Russian translation (thanks to Alexandre Prokoudine)
 + Update to Czech translation (thanks to Petr Jelínek)
 + Update to Dutch translation (thanks to Eric Spierings)
-+ Packed unpaper options into Gtk2::Notebook to make dialog shorter, fixed bug
++ Packed unpaper options into Gtk2::Notebook to make dialog shorter, closed bug
   1709379 ("unpaper-0.2 dialog too tall for 1024x768")
 
 
@@ -93,7 +95,7 @@
 + Using the top right hand close button to quit saves the settings properly.
 + enable PDF options toggle
 + compression scan option
-+ fixed bug 1656900 where hup condition not recognised under FreeBSD.
++ closed bug 1656900 where hup condition not recognised under FreeBSD.
 + update to Czech translation (thanks to Petr Jelínek)
 + update to German translation (thanks to Florian)
 + update to Russian translation (thanks to Alexandre Prokoudine)
