@@ -638,6 +638,12 @@ my %pddo = (
             'brightness'      => { string => $d->get('Brightness') },
             'contrast'        => { string => $d->get('Contrast') },
             'threshold'       => { string => $d->get('Threshold') },
+            'speed'           => { string => $d->get('Speed'),
+                                   values => {
+                                             'yes' => $d->get('Yes'),
+                                             'no'  => $d->get('No'),
+                                             },
+                                 },
             'batch-scan'      => { string => $d->get('Batch scan'),
                                    values => {
                                              'yes' => $d->get('Yes'),
