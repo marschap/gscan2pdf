@@ -221,7 +221,7 @@ init_icons(
 my ($windowp, $windowt, $windowv, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $frames, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
-    @ocr_stack, $ocr_timer);
+    @ocr_stack, $ocr_timer, %helperTag);
 
 my @action_items = (
  # Fields for each action item:
@@ -1435,90 +1435,125 @@ sub create_PDF {
 
  require PDF::API2;
 
+ my $dialog = Gtk2::Dialog -> new ($d->get('Saving PDF')."...", $windowo,
+                                   'destroy-with-parent',
+                                   'gtk-cancel' => 'cancel');
+ my $label = Gtk2::Label -> new ($d->get('Saving PDF')."...");
+ $dialog -> vbox -> add($label);
+
+# Set up ProgressBar
+ my $pbar = Gtk2::ProgressBar->new;
+ $pbar -> set_pulse_step(.1);
+ $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+ $dialog -> signal_connect (response => sub {
+  $_[0] -> destroy;
+  kill_subs();
+ });
+ $dialog -> show_all;
+
+ $SIG{CHLD} = \&sig_child;
+
+ my $pid = start_process(sub {
+
 # fill $pagelist with filenames depending on which radiobutton is active
- my @pagelist = get_page_index();
+  my @pagelist = get_page_index();
 
 # Create PDF with PDF::API2
- my $pdf = PDF::API2->new(-file => $filename);
- $pdf->info(get_PDF_options());
- foreach (@pagelist) {
-  my $page = $pdf->page;
+  my $pdf = PDF::API2->new(-file => $filename);
+  $pdf->info(get_PDF_options());
 
-  my $filename = $slist -> {data}[$_][2];
-  my $image = Image::Magick->new;
-  my $x = $image->Read($filename);
-  warn "$x" if "$x";
+  foreach (@pagelist) {
+   my $page = $pdf->page;
+
+   my $filename = $slist -> {data}[$_][2];
+   my $image = Image::Magick->new;
+   my $x = $image->Read($filename);
+   warn "$x" if "$x";
 
 # Convert file if necessary
-  my $format = $1 if ($filename =~ /\.(\w*)$/);
-  if (defined($SETTING{'pdf compression'})
-       and $SETTING{'pdf compression'} ne 'none'
-       and $SETTING{'pdf compression'} ne $format) {
-   (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$format);
-   $x = $image->Write($filename);
-   warn "$x" if "$x";
-  }
+   my $format = $1 if ($filename =~ /\.(\w*)$/);
+   if (defined($SETTING{'pdf compression'})
+        and $SETTING{'pdf compression'} ne 'none'
+        and $SETTING{'pdf compression'} ne $format) {
+    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$format);
+    $x = $image->Write($filename);
+    warn "$x" if "$x";
+   }
 
 # Get the size and resolution
-  my $w = $image->Get('width');
-  my $h = $image->Get('height');
-  my $resolution = $image->Get('x-resolution');
+   my $w = $image->Get('width');
+   my $h = $image->Get('height');
+   my $resolution = $image->Get('x-resolution');
 
-  $page->mediabox($w*72/$resolution, $h*72/$resolution);
+   $page->mediabox($w*72/$resolution, $h*72/$resolution);
 
 # Add OCR as annotation
-  if (defined($slist -> {data}[$_][3]) and $slist -> {data}[$_][3] ne '') {
-   my $ant=$page->annotation;
-   $ant->text($slist -> {data}[$_][3],
-    -rect=>[0,0,$w*72/$resolution,$h*72/$resolution]);
+   if (defined($slist -> {data}[$_][3]) and $slist -> {data}[$_][3] ne '') {
+    my $ant=$page->annotation;
+    $ant->text($slist -> {data}[$_][3],
+     -rect=>[0,0,$w*72/$resolution,$h*72/$resolution]);
 
 # Add OCR as text behind the scan
-   my $font = $pdf->corefont('Times-Roman');
-   my $text = $page->text;
-   my $size = 1;
-   $text->font($font, $size);
-   $text->strokecolor('white');
-   $text->fillcolor('white');
-   my $y = $h*72/$resolution;
-   foreach my $line (split("\n", $slist -> {data}[$_][3])) {
-    my $x = 0;
+    my $font = $pdf->corefont('Times-Roman');
+    my $text = $page->text;
+    my $size = 1;
+    $text->font($font, $size);
+    $text->strokecolor('white');
+    $text->fillcolor('white');
+    my $y = $h*72/$resolution;
+    foreach my $line (split("\n", $slist -> {data}[$_][3])) {
+     my $x = 0;
 
 # Add a word at a time in order to linewrap
-    foreach my $word (split(' ', $line)) {
-     if (length($word)*$size+$x > $w) {
-      $x = 0;
-      $y -= $size;
+     foreach my $word (split(' ', $line)) {
+      if (length($word)*$size+$x > $w) {
+       $x = 0;
+       $y -= $size;
+      }
+      $text -> translate($x, $y);
+      $word = ' '.$word if ($x > 0);
+      $x += $text->text($word);
      }
-     $text -> translate($x, $y);
-     $word = ' '.$word if ($x > 0);
-     $x += $text->text($word);
+     $y -= $size;
     }
-    $y -= $size;
    }
-  }
 
 # Add scan
-  my $gfx = $page->gfx;
-  my $imgobj;
-  if ($format eq 'png') {
-   $imgobj = $pdf->image_png($filename);
+   my $gfx = $page->gfx;
+   my $imgobj;
+   if ($format eq 'png') {
+    $imgobj = $pdf->image_png($filename);
+   }
+   elsif ($format eq 'jpg') {
+    $imgobj = $pdf->image_jpeg($filename);
+   }
+   elsif ($format eq 'pnm') {
+    $imgobj = $pdf->image_pnm($filename);
+   }
+   elsif ($format eq 'gif') {
+    $imgobj = $pdf->image_gif($filename);
+   }
+   else {
+    $imgobj = $pdf->image_tiff($filename);
+   }
+   $gfx->image($imgobj,0,0,72/$resolution);
   }
-  elsif ($format eq 'jpg') {
-   $imgobj = $pdf->image_jpeg($filename);
-  }
-  elsif ($format eq 'pnm') {
-   $imgobj = $pdf->image_pnm($filename);
-  }
-  elsif ($format eq 'gif') {
-   $imgobj = $pdf->image_gif($filename);
-  }
-  else {
-   $imgobj = $pdf->image_tiff($filename);
-  }
-  $gfx->image($imgobj,0,0,72/$resolution);
- }
- $pdf->save;
- $pdf->end();
+  $pdf->save;
+  $pdf->end();
+ });
+
+
+# Timer will run until callback returns false 
+ my $timer = Glib::Timeout->add (100, sub { if (defined $helperTag{$pid}) {
+                                             $pbar->pulse;
+                                             return TRUE;
+                                            }
+                                            else {
+                                             $dialog -> destroy;
+                                             return FALSE;
+                                            } });
 }
 
 
@@ -3904,6 +3939,8 @@ sub quit {
   print CONFIG "$key = $value\n";
  }
  close CONFIG;
+
+ kill_subs();
 }
 
 
@@ -4132,6 +4169,52 @@ sub register_icon {
   my $set = Gtk2::IconSet->new_from_pixbuf($icon);
   $IconFactory->add($stock_id, $set);
  }
+}
+
+
+# Process the exit of the child. If you were doing something useful,
+# you might keep things like information about what data needs
+# to be reloaded when a child process exits.
+
+sub sig_child {
+ my $pid = wait;
+ if ($pid >= 0) {
+warn("process $pid finished\n");
+  delete $helperTag{$pid};
+ }
+}
+
+sub start_process {
+ my ( $process ) = @_;
+
+ my $pid = fork();
+ if ($pid) {
+
+# We're still in the parent; note pid
+
+  $helperTag{$pid} = $pid;
+warn("Started process $pid\n");
+  return $pid;
+ }
+ else {
+
+# We're in the child. Do whatever processes we need to. We *must*
+# exit this process with POSIX::_exit(...), because exit() would
+# "clean up" open file handles, including our display connection,
+# and merely returning from this subroutine in a separate process
+# would *really* confuse things.
+  $process->();
+  POSIX::_exit(0);
+ }
+}
+
+
+# We should clean up after ourselves so that we don't
+# leave dead processes flying around.
+sub kill_subs {
+
+# 15 = SIGTERM
+ kill 15, $_ foreach (keys %helperTag);
 }
 
 
