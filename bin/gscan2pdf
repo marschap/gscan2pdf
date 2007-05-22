@@ -5,13 +5,15 @@
 # see the included LICENCE file for details.
 
 # To do
-# 0. switch unpaper to using ocr stack
+# 0. add ocr default on scan
+#    switch unpaper to using ocr stack
 #    fix pdf import colour reversal or add negate button
 #    add single image save as png, etc.
 #    fix encoding problem with OCR output
 #    move locales to locale directory for build
 #    look at adding make clean to release procedure
 #    delete cvs repository on sourceforge
+#    add run script option
 #    check out freeze when gocr does not return properly
 #    for scan profiles, switch to Config::General (libconfig-general-perl)
 #    add tesseract support
@@ -49,6 +51,8 @@
 #
 # 1. Progress meter for scans and imports.
 # 2. Crop and autocrop
+#     (see http://mail.gnome.org/archives/gtk-perl-list/2006-June/msg00002.html
+#       and ../../Gtk2-Perl-Demo-0.04/examples/scribble.pl)
 #
 # Release procedure:
 # 0. Test scan in lineart, greyscale and colour.
@@ -66,6 +70,7 @@
 # 7. Launchpad, upload .pot if necessary
 # 8. http://www.gtkfiles.org/app.php/gscan2pdf
 # 9. Ubuntu forum
+#    gscan2pdf-announce
 
 use warnings;
 use strict;
