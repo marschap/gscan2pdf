@@ -1156,7 +1156,7 @@ sub import {
    }
    else {
     my $tiff = convert_to_tiff($filename);
-    import_scan($tiff, undef, undef, 'TIFF', TRUE);
+    import_scan($tiff, undef, undef, 'Tagged Image File Format', TRUE);
    }
 
   }
@@ -2460,7 +2460,7 @@ sub scanimage {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.pnm", $1*$step+$offset, $ocr, 'PNM', TRUE)) {
+      if (! import_scan ("out$1.pnm", $1*$step+$offset, $ocr, 'Portable anymap', TRUE)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -2591,7 +2591,7 @@ sub scanadf {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.pnm", $1*$step+$offset, $ocr, 'PNM', TRUE)) {
+      if (! import_scan ("out$1.pnm", $1*$step+$offset, $ocr, 'Portable anymap', TRUE)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -3803,7 +3803,7 @@ sub ocr_page {
      $pbar->set_fraction (($page-1)/($#ocr_stack+$npages+1));
 
      my ($cmd, $pnm);
-     if ($slist -> {data}[$page][2] !~ /\.pnm/) {
+     if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
       my $file = $slist -> {data}[$pagenum][2];
 
 # Temporary filename for new file
@@ -3812,7 +3812,7 @@ sub ocr_page {
       $cmd = "convert $file $pnm; gocr $pnm; rm $pnm";
      }
      else {
-      $pnm = $slist -> {data}[$page][2];
+      $pnm = $slist -> {data}[$pagenum][2];
       $cmd .= "gocr $pnm;";
      }
      warn "$cmd\n" if ($debug);
