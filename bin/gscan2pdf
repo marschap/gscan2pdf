@@ -1,11 +1,13 @@
 #!/usr/bin/perl
 
-# Copyright (c) 2006--2007 by Jeff Ratcliffe (ra28145 at users dot sourceforge dot net)
+# Copyright (c) 2006--2007 by Jeff Ratcliffe (ra28145 at users dot sourceforge.net)
 # This script is released under the GPL license.  Please
 # see the included LICENCE file for details.
 
 # To do
-# 0. fix pdf import colour reversal or add negate button
+# 0. add ocr default on scan
+#    switch unpaper to using ocr stack
+#    fix pdf import colour reversal or add negate button
 #    add single image save as png, etc.
 #    fix encoding problem with OCR output
 #    move locales to locale directory for build
@@ -174,7 +176,6 @@ my %SETTING = (
  'Page range'      => 'all',
  'l'               => 0,
  't'               => 0,
- 'layout'          => 'single',
 );
 
 if (-r $config) {
@@ -220,7 +221,7 @@ init_icons(
 my ($windowp, $windowt, $windowv, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $frames, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
-    @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer);
+    @ocr_stack, $ocr_timer, %helperTag);
 
 my @action_items = (
  # Fields for each action item:
@@ -1141,21 +1142,21 @@ sub import {
 
 # Import each image
     my @images = <x-???.???>;
-    import_scan($_, undef, 'Portable anymap', TRUE) foreach (@images);
+    import_scan($_, undef, undef, 'Portable anymap', TRUE) foreach (@images);
    }
    elsif ($format eq 'Tagged Image File Format') {
 
 # Split the tiff into its pages and import them individually
     system("tiffsplit \"$filename\"");
     my @pages = <x???.tif>;
-    import_scan($_, undef, $format, TRUE) foreach (@pages);
+    import_scan($_, undef, undef, $format, TRUE) foreach (@pages);
    }
    elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
-    import_scan($filename, undef, $format);
+    import_scan($filename, undef, undef, $format);
    }
    else {
     my $tiff = convert_to_tiff($filename);
-    import_scan($tiff, undef, 'Tagged Image File Format', TRUE);
+    import_scan($tiff, undef, undef, 'TIFF', TRUE);
    }
 
   }
@@ -1476,10 +1477,9 @@ sub create_PDF {
    if (defined($SETTING{'pdf compression'})
         and $SETTING{'pdf compression'} ne 'none'
         and $SETTING{'pdf compression'} ne $format) {
-    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$SETTING{'pdf compression'});
+    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$format);
     $x = $image->Write($filename);
     warn "$x" if "$x";
-    $format = $1 if ($filename =~ /\.(\w*)$/);
    }
 
 # Get the size and resolution
@@ -1546,14 +1546,14 @@ sub create_PDF {
 
 
 # Timer will run until callback returns false 
- Glib::Timeout->add (100, sub { if (defined $helperTag{$pid}) {
-                                 $pbar->pulse;
-                                 return TRUE;
-                                }
-                                else {
-                                 $dialog -> destroy;
-                                 return FALSE;
-                                } });
+ my $timer = Glib::Timeout->add (100, sub { if (defined $helperTag{$pid}) {
+                                             $pbar->pulse;
+                                             return TRUE;
+                                            }
+                                            else {
+                                             $dialog -> destroy;
+                                             return FALSE;
+                                            } });
 }
 
 
@@ -2232,25 +2232,12 @@ sub scan_dialog {
  $buttons -> set_active(TRUE);
  $hboxs -> pack_end ($ev, FALSE, FALSE, 0);
 
-# Checkbox for unpaper
- my $ubutton = Gtk2::CheckButton -> new($d->get('unpaper scanned pages'));
- if ($dependencies{unpaper} != 0) {
-  $ubutton -> set_sensitive(FALSE);
-  $ubutton -> set_active(FALSE);
- }
- elsif (defined($SETTING{'unpaper on scan'}) and $SETTING{'unpaper on scan'}) {
-  $ubutton -> set_active(TRUE);
- }
- $vbox -> pack_start($ubutton, TRUE, TRUE, 0);
-
 # Checkbox for OCR
  my $obutton = Gtk2::CheckButton -> new($d->get('OCR scanned pages'));
+ $obutton -> set_active(TRUE);
  if ($dependencies{gocr} != 0) {
   $obutton -> set_sensitive(FALSE);
   $obutton -> set_active(FALSE);
- }
- elsif (defined($SETTING{'OCR on scan'}) and $SETTING{'OCR on scan'}) {
-  $obutton -> set_active(TRUE);
  }
  $vbox -> pack_start($obutton, TRUE, TRUE, 0);
 
@@ -2376,16 +2363,13 @@ sub scan_dialog {
     }
    }
   }
-
-  $SETTING{'unpaper on scan'} = $ubutton->get_active;
-  $SETTING{'OCR on scan'} = $obutton->get_active;
   if ($SETTING{'frontend'} eq 'scanimage') {
    scanimage($SETTING{'device'}, $npages, $start-$step, $step,
-                $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
+                                                $obutton->get_active, %options);
   }
   else {
    scanadf($SETTING{'device'}, $npages, $start-$step, $step,
-                $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
+                                                $obutton->get_active, %options);
   }
  } );
 
@@ -2403,7 +2387,7 @@ sub scan_dialog {
 # Carry out the scan with scanimage and the options passed.
 
 sub scanimage {
- my ($device, $npages, $offset, $step, $unpaper, $ocr, %options) = @_;
+ my ($device, $npages, $offset, $step, $ocr, %options) = @_;
 
  require IPC::Open3;
  require IO::Handle;
@@ -2476,7 +2460,7 @@ sub scanimage {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap', TRUE, $unpaper, $ocr)) {
+      if (! import_scan ("out$1.pnm", $1*$step+$offset, $ocr, 'PNM', TRUE)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -2538,7 +2522,7 @@ warn "$text\n";
 # Carry out the scan with scanadf and the options passed.
 
 sub scanadf {
- my ($device, $npages, $offset, $step, $unpaper, $ocr, %options) = @_;
+ my ($device, $npages, $offset, $step, $ocr, %options) = @_;
 
  require IPC::Open3;
  require IO::Handle;
@@ -2607,7 +2591,7 @@ sub scanadf {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap', TRUE, $unpaper, $ocr)) {
+      if (! import_scan ("out$1.pnm", $1*$step+$offset, $ocr, 'PNM', TRUE)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -2675,7 +2659,7 @@ sub hash2options {
 # Take new scan and display it
 
 sub import_scan {
- my ($ofilename, $page, $format, $delete, $unpaper, $ocr) = @_;
+ my ($ofilename, $page, $ocr, $format, $delete) = @_;
 
  my %suffix = (
   'Portable Network Graphics'                    => '.png',
@@ -2699,7 +2683,7 @@ sub import_scan {
 # Block the row-changed signal whilst adding the scan (row) and sorting it.
  $slist -> get_model -> signal_handler_block($slist -> {signalid});
  push @{$slist -> {data}},
-                   [$page, get_pixbuf($filename, $heightt, $widtht), $filename];
+                     [$page, get_pixbuf($filename, $heightt, $widtht), $filename];
  manual_sort_by_column ($slist, 0);
  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
@@ -2717,12 +2701,7 @@ sub import_scan {
 
  $slist -> select(@page);
  
- if ($unpaper) {
-  unpaper_page($ocr, undef, @page);
- }
- else {
-  ocr_page(@page) if ($ocr);
- }
+ ocr_page(@page) if $ocr;
 
  update_uimanager();
 
@@ -3299,125 +3278,6 @@ sub handle_clicks {
 }
 
 
-# Add $page to the unpaper stack, setting it off if not running.
-
-sub unpaper_page {
- my $ocr = shift;
- my $options = shift;
- push @unpaper_stack, [ $_, $ocr ] foreach (@_);
-
- if (! defined($unpaper_timer)) {
-  my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $windowo,
-                                    'destroy-with-parent',
-                                    'gtk-cancel' => 'cancel');
-  my $label = Gtk2::Label -> new ($d->get('Running unpaper')."...");
-  $dialog -> vbox -> add($label);
-
-# Set up ProgressBar
-  my $pbar = Gtk2::ProgressBar->new;
-  $dialog -> vbox -> add($pbar);
-
-# Flag set if unpaper is running
-  my $running = FALSE;
-  my $cancelled = FALSE;
-  my $page = 0;
-  my $npages = 0;
-
-# Ensure that the dialog box is destroyed when the user responds.
-  my $pid;
-  $dialog -> signal_connect (response => sub {
-   $_[0] -> destroy;
-   local $SIG{HUP} = 'IGNORE';
-   kill HUP => $pid;
-   $cancelled = TRUE;
-  });
-  $dialog -> show_all;
-
-# Timer will run until callback returns false 
-  $unpaper_timer = Glib::Timeout->add (100, sub {
-
-# To prevent any further pages being processed
-   if ($cancelled) {
-    undef $unpaper_timer;
-    return FALSE;  # uninstall
-   }
-   elsif (@unpaper_stack) {
-    if (! $running) {
-     $running = TRUE;
-     $page++;
-     $npages++;
-     my ($pagenum, $ocr) = @{shift @unpaper_stack};
-     $pbar->set_text(sprintf($d->get("Page %i of %i"), $page, $#unpaper_stack+$npages+1));
-     $pbar->set_fraction (($page-1)/($#unpaper_stack+$npages+1));
-
-     my $cmd = '';
-     my $in;
-
-# Retain the existing page
-     my $out = $slist -> {data}[$pagenum][2];
-
-     if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
-
-# Temporary filename for new file
-      (undef, $in) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-
-      $cmd .= "convert -compress zip ".$slist -> {data}[$pagenum][2]." $in;";
-     }
-     else {
-      $in = $slist -> {data}[$pagenum][2];
-     }
-     $cmd .= "unpaper $options $in $out;";
-     $cmd .= "rm $in" if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/);
-     warn "$cmd\n" if ($debug);
-
-# Interface to unpaper
-     $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-     my $page_buffer = '';
- 
-# Update TextBuffer without blocking
-     Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
-      my ($fileno, $condition) = @_;
-      if ($condition & 'in') { # bit field operation. >= would also work
-       my $line;
-       $page_buffer .= $line while (sysread $read, $line, 1024);
-      }
-      if ($condition & 'hup') { # bit field operation. >= would also work
-       close $read;
-       wait;
-
-# Note page selection
-       my @selection = $slist -> get_selected_indices;
-
-       $slist -> {data}[$pagenum][2] = $out;
-       $slist -> {data}[$pagenum][1] =
-                   get_pixbuf($slist -> {data}[$pagenum][2], $heightt, $widtht);
-
-# Reselect selected pages, firing the display callback
-       $slist -> get_selection -> unselect_all;
-       $slist -> select(@selection);
-
-       $running = FALSE;
-
-       return FALSE;  # uninstall
-      }
-      return TRUE;  # continue without uninstalling
-     });
-    }
-    return TRUE;  # continue without uninstalling
-   }
-   elsif (! $running) {
-    $dialog -> destroy;
-    undef $unpaper_timer;
-    return FALSE;  # uninstall
-   }
-   else {
-    return TRUE;  # continue without uninstalling
-   }
-  });
- }
-}
-
-
 # Run unpaper to clean up scan.
 
 sub unpaper {
@@ -3776,12 +3636,112 @@ sub unpaper {
   my $blurfilter = '';
   $blurfilter = '--no-blurfilter' if ($blbutton -> get_active);
 
-  my @pagelist = get_page_index();
+# Note page selection for later
+  my @selection = $slist -> get_selected_indices;
 
-  my $options = "--layout $SETTING{layout} $deskew $border_align "
-               ."$maskscan $white $black $blackfilter $noisefilter $blurfilter";
+  my @pagelist = get_page_index();
   
-  unpaper_page(undef, $options, @pagelist);
+  my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $windowo,
+                                     'destroy-with-parent',
+                                     'gtk-cancel' => 'cancel');
+  my $label = Gtk2::Label -> new ($d->get('Running unpaper')."...");
+  $dialog -> vbox -> add ($label);
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog -> vbox -> add  ($pbar);
+
+# Flag set if unpaper is running
+  my $running = FALSE;
+  my $cancelled = FALSE;
+  my $page = -1;
+
+# Ensure that the dialog box is destroyed when the user responds.
+  my ($pid, $out);
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   local $SIG{HUP} = 'IGNORE';
+   kill HUP => $pid;
+   $cancelled = TRUE;
+
+# Retain the existing page
+   $out = $slist -> {data}[$page][2];
+  });
+  $dialog -> show_all;
+
+# Timer will run until callback returns false 
+  my $timer = Glib::Timeout->add (100, sub {
+
+# To prevent any further pages being processed
+   if ($cancelled) {
+    return FALSE;  # uninstall
+   }
+   elsif ($page < $#pagelist) {
+    if (! $running) {
+     $running = TRUE;
+     $page++;
+     my $i = $page+1;
+     my $n = $#pagelist+1;
+     $pbar->set_text(sprintf($d->get("Page %i of %i"), $i, $n));
+     $pbar->set_fraction ($page/($#pagelist+1));
+   
+     my $cmd = '';
+     my $in;
+     if ($slist -> {data}[$page][2] !~ /\.pnm/) {
+
+# Temporary filename for new file
+      (undef, $in) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+
+      $cmd .= "convert -compress zip ".$slist -> {data}[$page][2]." $in;";
+     }
+     else {
+      $in = $slist -> {data}[$page][2];
+     }
+     $cmd .= "unpaper --layout $SETTING{layout} $deskew $border_align "
+             ."$maskscan $white $black $blackfilter $noisefilter $blurfilter "
+             ."$in $out;";
+     $cmd .= "rm $in" if ($slist -> {data}[$page][2] !~ /\.pnm/);
+     warn "$cmd\n" if ($debug);
+
+# Interface to unpaper
+     $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+ 
+# Update TextBuffer without blocking
+     Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+      my ($fileno, $condition) = @_;
+      if ($condition & 'in') { # bit field operation. >= would also work
+       my $line;
+       while (sysread $read, $line, 1024) {}
+      }
+      if ($condition & 'hup') { # bit field operation. >= would also work
+       close $read;
+
+       $slist -> {data}[$page][2] = $out;
+       $slist -> {data}[$page][1] =
+                      get_pixbuf($slist -> {data}[$page][2], $heightt, $widtht);
+
+# Reselect selected pages, firing the display callback
+       $slist -> get_selection -> unselect_all;
+       $slist -> select(@selection);
+
+       $running = FALSE;
+
+       return FALSE;  # uninstall
+      }
+      return TRUE;  # continue without uninstalling
+     });
+    }
+    return TRUE;  # continue without uninstalling
+   }
+   elsif (! $running) {
+    $dialog -> destroy;
+    return FALSE;  # uninstall
+   }
+   else {
+    return TRUE;  # continue without uninstalling
+   }
+  });
+
  } );
 
 # Cancel button
@@ -3843,7 +3803,7 @@ sub ocr_page {
      $pbar->set_fraction (($page-1)/($#ocr_stack+$npages+1));
 
      my ($cmd, $pnm);
-     if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
+     if ($slist -> {data}[$page][2] !~ /\.pnm/) {
       my $file = $slist -> {data}[$pagenum][2];
 
 # Temporary filename for new file
@@ -3852,7 +3812,7 @@ sub ocr_page {
       $cmd = "convert $file $pnm; gocr $pnm; rm $pnm";
      }
      else {
-      $pnm = $slist -> {data}[$pagenum][2];
+      $pnm = $slist -> {data}[$page][2];
       $cmd .= "gocr $pnm;";
      }
      warn "$cmd\n" if ($debug);
