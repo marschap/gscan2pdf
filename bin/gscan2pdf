@@ -1477,9 +1477,10 @@ sub create_PDF {
    if (defined($SETTING{'pdf compression'})
         and $SETTING{'pdf compression'} ne 'none'
         and $SETTING{'pdf compression'} ne $format) {
-    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$format);
+    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$SETTING{'pdf compression'});
     $x = $image->Write($filename);
     warn "$x" if "$x";
+    $format = $1 if ($filename =~ /\.(\w*)$/);
    }
 
 # Get the size and resolution
@@ -1546,14 +1547,14 @@ sub create_PDF {
 
 
 # Timer will run until callback returns false 
- my $timer = Glib::Timeout->add (100, sub { if (defined $helperTag{$pid}) {
-                                             $pbar->pulse;
-                                             return TRUE;
-                                            }
-                                            else {
-                                             $dialog -> destroy;
-                                             return FALSE;
-                                            } });
+ Glib::Timeout->add (100, sub { if (defined $helperTag{$pid}) {
+                                 $pbar->pulse;
+                                 return TRUE;
+                                }
+                                else {
+                                 $dialog -> destroy;
+                                 return FALSE;
+                                } });
 }
 
 
