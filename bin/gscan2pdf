@@ -2508,6 +2508,7 @@ warn "$text\n";
 # allow the hup if sure an empty buffer has been read.
    if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
     close $read;
+    wait; # So we don't leave zombies
     $dialog -> destroy;
     return FALSE;  # uninstall
    }
@@ -2627,6 +2628,7 @@ warn "$text\n";
 # allow the hup if sure an empty buffer has been read.
    if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
     close $read;
+    wait; # So we don't leave zombies
     $dialog -> destroy;
     return FALSE;  # uninstall
    }
@@ -2884,6 +2886,7 @@ sub update_options {
    }
    if ($condition & 'hup') { # bit field operation. >= would also work
     close $read;
+    wait; # So we don't leave zombies
     $running = FALSE;
     $pbar -> destroy;
     $vboxd -> hide_all;
@@ -3716,6 +3719,7 @@ sub unpaper {
       }
       if ($condition & 'hup') { # bit field operation. >= would also work
        close $read;
+       wait; # So we don't leave zombies
 
        $slist -> {data}[$page][2] = $out;
        $slist -> {data}[$page][1] =
@@ -3831,6 +3835,7 @@ sub ocr_page {
       }
       if ($condition & 'hup') { # bit field operation. >= would also work
        close $read;
+       wait; # So we don't leave zombies
        $dialog -> destroy;
        $running = FALSE;
 
@@ -4178,11 +4183,8 @@ sub register_icon {
 # to be reloaded when a child process exits.
 
 sub sig_child {
- my $pid = wait;
- if ($pid >= 0) {
-warn("process $pid finished\n");
-  delete $helperTag{$pid};
- }
+ my $pid = wait; # So we don't leave zombies
+ delete $helperTag{$pid} if ($pid >= 0);
 }
 
 sub start_process {
@@ -4194,7 +4196,6 @@ sub start_process {
 # We're still in the parent; note pid
 
   $helperTag{$pid} = $pid;
-warn("Started process $pid\n");
   return $pid;
  }
  else {
