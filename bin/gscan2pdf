@@ -28,7 +28,7 @@
 #      Importing (e.g. 12 page multi.tif)
 #      Rotating
 #      Saving tiff
-#      Saving pdf
+#    add information to pdf save dialog whilst saving
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    Option to throw up PDF viewer with newly created PDF file
@@ -2797,9 +2797,11 @@ EOS
  $about->set_website ('http://gscan2pdf.sf.net');
  my $translators = <<EOS;
 Jen Fraggle
+Hugo Pereira
 Alberto Boiti
 Petr Jelínek
 Alexandre Prokoudine
+Maddy67
 mecedesjorge
 cwchien
 booxter
@@ -2809,12 +2811,10 @@ Christoph Langner
 Nicolas Velin
 Mathieu Goeminne
 Simon Leblanc
-florian
 Eric Spierings
+codL
+florian
 Th3n3k
-joeb
-Maddy67
-Pierre Slamich
 EOS
  $about->set_translator_credits ($translators);
  $about->set_artists ('lodp');
