@@ -1,12 +1,11 @@
 #!/usr/bin/perl
 
-# Copyright (c) 2006--2007 by Jeff Ratcliffe (ra28145 at users dot sourceforge.net)
+# Copyright (c) 2006--2007 by Jeff Ratcliffe (ra28145 at users dot sourceforge dot net)
 # This script is released under the GPL license.  Please
 # see the included LICENCE file for details.
 
 # To do
-# 0. add ocr default on scan
-#    switch unpaper to using ocr stack
+# 0. switch unpaper to using ocr stack
 #    fix pdf import colour reversal or add negate button
 #    add single image save as png, etc.
 #    fix encoding problem with OCR output
@@ -2235,10 +2234,12 @@ sub scan_dialog {
 
 # Checkbox for OCR
  my $obutton = Gtk2::CheckButton -> new($d->get('OCR scanned pages'));
- $obutton -> set_active(TRUE);
  if ($dependencies{gocr} != 0) {
   $obutton -> set_sensitive(FALSE);
   $obutton -> set_active(FALSE);
+ }
+ elsif (defined($SETTING{'OCR on scan'}) and $SETTING{'OCR on scan'}) {
+  $obutton -> set_active(TRUE);
  }
  $vbox -> pack_start($obutton, TRUE, TRUE, 0);
 
@@ -2364,13 +2365,15 @@ sub scan_dialog {
     }
    }
   }
+
+  $SETTING{'OCR on scan'} = $obutton->get_active;
   if ($SETTING{'frontend'} eq 'scanimage') {
    scanimage($SETTING{'device'}, $npages, $start-$step, $step,
-                                                $obutton->get_active, %options);
+                                             $SETTING{'OCR on scan'}, %options);
   }
   else {
    scanadf($SETTING{'device'}, $npages, $start-$step, $step,
-                                                $obutton->get_active, %options);
+                                             $SETTING{'OCR on scan'}, %options);
   }
  } );
 
