@@ -1025,11 +1025,6 @@ sub get_pixbuf {
  my ($filename, $height, $width) = @_;
  
  my $pixbuf;
-# Need the eval otherwise nothing else in the sub gets carried out after an error
-# For some reason reading the tiff sometimes throws:
-# Failed to load RGB data from TIFF file:
-#        libpixbuf-tiff: Read error on strip 134; got 5190 bytes, expected 7130
-# Normally succeeds on second attempt
  eval { $pixbuf = Gtk2::Gdk::Pixbuf ->
                   new_from_file_at_scale ($filename, $width, $height, TRUE); };
 # if (Glib::Error::matches ($@, 'Mup::Thing::Error', 'flop')) {
@@ -3313,6 +3308,7 @@ sub handle_clicks {
 sub unpaper_page {
  my $ocr = shift;
  my $options = shift;
+ $options = '' if (! defined($options));
  push @unpaper_stack, [ $_, $ocr ] foreach (@_);
 
  if (! defined($unpaper_timer)) {
@@ -3361,15 +3357,10 @@ sub unpaper_page {
 
      my $cmd = '';
      my $in;
-
-# Retain the existing page
-     my $out = $slist -> {data}[$pagenum][2];
+     my (undef, $out) = tempfile(DIR => $dir, SUFFIX => '.pnm');
 
      if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
-
-# Temporary filename for new file
       (undef, $in) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-
       $cmd .= "convert -compress zip ".$slist -> {data}[$pagenum][2]." $in;";
      }
      else {
