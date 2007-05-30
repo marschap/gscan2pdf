@@ -83,7 +83,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = "gscan2pdf";
-my $version = "0.9.10rc1";
+my $version = "0.9.10";
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -661,6 +661,12 @@ my %pddo = (
                                              },
                                  },
             'button-wait'     => { string => $d->get('Wait for button'),
+                                   values => {
+                                             'yes' => $d->get('Yes'),
+                                             'no'  => $d->get('No'),
+                                             },
+                                 },
+            'calibration-cache' => { string => $d->get('Cache calibration'),
                                    values => {
                                              'yes' => $d->get('Yes'),
                                              'no'  => $d->get('No'),
