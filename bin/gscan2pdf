@@ -6,6 +6,7 @@
 
 # To do
 # 0. fix pdf import colour reversal or add negate button
+#    fix ocr & unpaper stacks so that they don't run concurrently on scan
 #    add single image save as png, etc.
 #    fix encoding problem with OCR output
 #    move locales to locale directory for build
@@ -3335,6 +3336,7 @@ sub unpaper_page {
    local $SIG{HUP} = 'IGNORE';
    kill HUP => $pid;
    $cancelled = TRUE;
+   undef(@unpaper_stack);
   });
   $dialog -> show_all;
 
@@ -3400,6 +3402,7 @@ sub unpaper_page {
        $slist -> select(@selection);
 
        $running = FALSE;
+       ocr_page($pagenum) if ($ocr);
 
        return FALSE;  # uninstall
       }
@@ -3825,6 +3828,7 @@ sub ocr_page {
    local $SIG{HUP} = 'IGNORE';
    kill HUP => $pid;
    $cancelled = TRUE;
+   undef(@ocr_stack);
   });
   $dialog -> show_all;
 
