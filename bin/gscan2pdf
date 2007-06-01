@@ -3393,9 +3393,10 @@ sub unpaper_page {
 # Note page selection
        my @selection = $slist -> get_selected_indices;
 
+       $slist -> get_model -> signal_handler_block($slist -> {signalid});
        $slist -> {data}[$pagenum][2] = $out;
-       $slist -> {data}[$pagenum][1] =
-                   get_pixbuf($slist -> {data}[$pagenum][2], $heightt, $widtht);
+       $slist -> {data}[$pagenum][1] = get_pixbuf($out, $heightt, $widtht);
+       $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
 # Reselect selected pages, firing the display callback
        $slist -> get_selection -> unselect_all;
