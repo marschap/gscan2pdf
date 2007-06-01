@@ -6,7 +6,6 @@
 
 # To do
 # 0. fix pdf import colour reversal or add negate button
-#    fix ocr & unpaper stacks so that they don't run concurrently on scan
 #    add single image save as png, etc.
 #    fix encoding problem with OCR output
 #    move locales to locale directory for build
@@ -3312,7 +3311,8 @@ sub unpaper_page {
  $options = '' if (! defined($options));
  push @unpaper_stack, [ $_, $ocr ] foreach (@_);
 
- if (! defined($unpaper_timer)) {
+# don't run ocr and unpaper concurrently
+ if (! defined($unpaper_timer) and ! defined($ocr_timer)) {
   my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $windowo,
                                     'destroy-with-parent',
                                     'gtk-cancel' => 'cancel');
@@ -3414,6 +3414,9 @@ sub unpaper_page {
    elsif (! $running) {
     $dialog -> destroy;
     undef $unpaper_timer;
+
+# set off ocr if necessary now that unpaper has finished
+    ocr_page() if (@ocr_stack);
     return FALSE;  # uninstall
    }
    else {
@@ -3804,7 +3807,8 @@ sub unpaper {
 sub ocr_page {
  push @ocr_stack, @_;
 
- if (! defined($ocr_timer)) {
+# don't run ocr and unpaper concurrently
+ if (! defined($unpaper_timer) and ! defined($ocr_timer)) {
   my $dialog = Gtk2::Dialog -> new ($d->get('Running OCR')."...", $windowo,
                                     'destroy-with-parent',
                                     'gtk-cancel' => 'cancel');
@@ -3903,6 +3907,9 @@ sub ocr_page {
    elsif (! $running) {
     $dialog -> destroy;
     undef $ocr_timer;
+
+# start unpaper if necessary now that ocr has finished
+    unpaper_page() if (@unpaper_stack);
     return FALSE;  # uninstall
    }
    else {
