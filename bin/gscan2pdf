@@ -5,7 +5,8 @@
 # see the included LICENCE file for details.
 
 # To do
-# 0. fix pdf import colour reversal or add negate button
+# 0. option button for unpaper on scan
+#    use -x option (first column 0-100) in gocr to give more detail to progressbar
 #    add single image save as png, etc.
 #    fix encoding problem with OCR output
 #    move locales to locale directory for build
@@ -223,7 +224,7 @@ init_icons(
 my ($windowp, $windowt, $windowv, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $frames, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
-    @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer);
+    @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer, $scanwatch);
 
 my @action_items = (
  # Fields for each action item:
@@ -2445,7 +2446,7 @@ sub scanimage {
 # Interface to scanimage
   my ($write, $read);
   my $error = IO::Handle -> new; # this needed because of a bug in open3.
-  my $pid = IPC::Open3::open3($write, $read, $error, $cmd)+1;
+  my $pid = IPC::Open3::open3($write, $read, $error, $cmd);
   warn "Forked PID $pid\n" if ($debug);
   
   my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
@@ -2464,7 +2465,7 @@ sub scanimage {
   $dialog -> show_all;
  
   my $line;
-  Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
+  $scanwatch = Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
    my $buffer;
    if ($condition & 'in') { # bit field operation. >= would also work
@@ -2533,6 +2534,16 @@ warn "$text\n";
     close $read;
     my $pid = wait; # So we don't leave zombies
     warn "Reaped PID $pid\n" if ($debug);
+
+# Now finished scanning, set off unpaper or ocr if necessary
+    undef $scanwatch;
+    if ($unpaper) {
+     unpaper_page();
+    }
+    else {
+     ocr_page() if ($ocr);
+    }
+
     $dialog -> destroy;
     return FALSE;  # uninstall
    }
@@ -2600,7 +2611,7 @@ sub scanadf {
   $dialog -> show_all;
  
   my $line;
-  Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
+  $scanwatch = Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
    my $buffer;
    if ($condition & 'in') { # bit field operation. >= would also work
@@ -2655,6 +2666,16 @@ warn "$text\n";
     close $read;
     my $pid = wait; # So we don't leave zombies
     warn "Reaped PID $pid\n" if ($debug);
+
+# Now finished scanning, set off unpaper or ocr if necessary
+    undef $scanwatch;
+    if ($unpaper) {
+     unpaper_page();
+    }
+    else {
+     ocr_page() if ($ocr);
+    }
+
     $dialog -> destroy;
     return FALSE;  # uninstall
    }
@@ -3324,7 +3345,7 @@ sub unpaper_page {
  push @unpaper_stack, [ $_, $ocr ] foreach (@_);
 
 # don't run ocr and unpaper concurrently
- if (! defined($unpaper_timer) and ! defined($ocr_timer)) {
+ if (! defined($scanwatch) and ! defined($unpaper_timer) and ! defined($ocr_timer)) {
   my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $windowo,
                                     'destroy-with-parent',
                                     'gtk-cancel' => 'cancel');
@@ -3823,7 +3844,7 @@ sub ocr_page {
  push @ocr_stack, @_;
 
 # don't run ocr and unpaper concurrently
- if (! defined($unpaper_timer) and ! defined($ocr_timer)) {
+ if (! defined($scanwatch) and ! defined($unpaper_timer) and ! defined($ocr_timer)) {
   my $dialog = Gtk2::Dialog -> new ($d->get('Running OCR')."...", $windowo,
                                     'destroy-with-parent',
                                     'gtk-cancel' => 'cancel');
