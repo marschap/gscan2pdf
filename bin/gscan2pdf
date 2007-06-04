@@ -15,7 +15,10 @@
 #    check out freeze when gocr does not return properly
 #    for scan profiles, switch to Config::General (libconfig-general-perl)
 #    add tesseract support
-#    investigate JPEG or PNG compression
+#    for hidden text layer in DjVu:
+#     djvused set-txt
+#     DjVutoXML
+#     http://djvu.org/resources/embedding_transcripts_in_handwritten_pages.php
 #    Add status line at bottom with messages like "filename saved"
 #    Rewrite in python with python-sane & pytiff
 #    Add KDE, Xfce menus
@@ -2445,6 +2448,7 @@ sub scanimage {
   my ($write, $read);
   my $error = IO::Handle -> new; # this needed because of a bug in open3.
   my $pid = IPC::Open3::open3($write, $read, $error, $cmd)+1;
+  warn "Forked PID $pid\n" if ($debug);
   
   my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
                                     'destroy-with-parent',
@@ -2529,7 +2533,8 @@ warn "$text\n";
 # allow the hup if sure an empty buffer has been read.
    if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
     close $read;
-    wait; # So we don't leave zombies
+    my $pid = wait; # So we don't leave zombies
+    warn "Reaped PID $pid\n" if ($debug);
     $dialog -> destroy;
     return FALSE;  # uninstall
    }
@@ -2580,6 +2585,7 @@ sub scanadf {
   my ($write, $read);
   my $error = IO::Handle -> new; # this needed because of a bug in open3.
   my $pid = IPC::Open3::open3($write, $read, $error, $cmd);
+  warn "Forked PID $pid\n" if ($debug);
   
   my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
                                     'destroy-with-parent',
@@ -2649,7 +2655,8 @@ warn "$text\n";
 # allow the hup if sure an empty buffer has been read.
    if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
     close $read;
-    wait; # So we don't leave zombies
+    my $pid = wait; # So we don't leave zombies
+    warn "Reaped PID $pid\n" if ($debug);
     $dialog -> destroy;
     return FALSE;  # uninstall
    }
@@ -2902,6 +2909,7 @@ sub update_options {
 
 # Interface to frontend
   my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+  warn "Forked PID $pid\n" if ($debug);
  
 # Read without blocking
   Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
@@ -2912,7 +2920,8 @@ sub update_options {
    }
    if ($condition & 'hup') { # bit field operation. >= would also work
     close $read;
-    wait; # So we don't leave zombies
+    my $pid = wait; # So we don't leave zombies
+    warn "Reaped PID $pid\n" if ($debug);
     $running = FALSE;
     $pbar -> destroy;
     $vboxd -> hide_all;
@@ -3381,6 +3390,7 @@ sub unpaper_page {
 
 # Interface to unpaper
      $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+     warn "Forked PID $pid\n" if ($debug);
      my $page_buffer = '';
  
 # Update TextBuffer without blocking
@@ -3393,7 +3403,8 @@ sub unpaper_page {
       if ($condition & 'hup') { # bit field operation. >= would also work
        warn $page_buffer if ($debug);
        close $read;
-       wait;
+       my $pid = wait;
+       warn "Reaped PID $pid\n" if ($debug);
 
 # Note page selection
        my @selection = $slist -> get_selected_indices;
@@ -3876,6 +3887,7 @@ sub ocr_page {
 
 # Interface to gocr
      $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+     warn "Forked PID $pid\n" if ($debug);
      my $page_buffer = '';
  
 # Update TextBuffer without blocking
@@ -3887,7 +3899,8 @@ sub ocr_page {
       }
       if ($condition & 'hup') { # bit field operation. >= would also work
        close $read;
-       wait; # So we don't leave zombies
+       my $pid = wait; # So we don't leave zombies
+       warn "Reaped PID $pid\n" if ($debug);
        $running = FALSE;
 
 # Doing this once at the end to avoid firing the row-changed signal too often
@@ -4238,6 +4251,7 @@ sub register_icon {
 
 sub sig_child {
  my $pid = wait; # So we don't leave zombies
+ warn "Reaped PID $pid\n" if ($debug);
  delete $helperTag{$pid} if ($pid >= 0);
 }
 
@@ -4250,6 +4264,7 @@ sub start_process {
 # We're still in the parent; note pid
 
   $helperTag{$pid} = $pid;
+  warn "Forked PID $pid\n" if ($debug);
   return $pid;
  }
  else {
@@ -4574,6 +4589,10 @@ Because xdg-email doesn't support creating new emails with attachments in Thunde
 
 =over
 
+=item 0.9.11
+
+=over
+
 =item Tesseract support.
 
 Google's OCR engine is supposed to be very good - but at the moment only supports one-column text in English
@@ -4582,7 +4601,33 @@ Google's OCR engine is supposed to be very good - but at the moment only support
 
 =item Add single image save as png, etc.
 
+=item Option button for unpaper on scan.
+
+=item More information on save PDF progress bar
+
+=back
+
+=item 1.0.0
+
+=over
+
+=item Progress bars for import & save as TIFF/DjVu
+
+=item Downsample option for PDF export.
+
+=item Scan profiles.
+
+=back
+
+=item When I've worked out how to do it
+
+=over
+
 =item Crop function.
+
+=item Use the "hidden text" layer in DjVu documents.
+
+=back
 
 =back
 
@@ -4592,12 +4637,21 @@ Xsane
 
 =head1 Author
 
-Jeffrey Ratcliffe (ra28145 at users dot sourceforge dot net)
+Jeffrey Ratcliffe (ra28145 at users dot sf dot net)
 
 =head1 Thanks to
 
-All the people who have sent patches, bugs and feedback.
-Also to Sourceforge for hosting the project.
+=over
+
+=item all the people who have sent patches, translations, bugs and feedback.
+
+=item the GTK2 project for a most excellent graphics toolkit.
+
+=item the Gtk2-Perl project for their superb Perl bindings for GTK2.
+
+=item Sourceforge for hosting the project.
+
+=back
 
 =for html <a href="http://sourceforge.net"><img alt="SourceForge.net Logo" align="right" height="31px" width="88px"
 src="http://sourceforge.net/sflogo.php?group_id=174140&amp;type=1"></a><a href="http://sourceforge.net/donate/index.php?group_id=174140"><img src="http://sourceforge.net/images/project-support.jpg" width="88" height="32" border="0" alt="Support This Project"></a>
