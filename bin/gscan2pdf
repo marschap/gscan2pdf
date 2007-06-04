@@ -85,8 +85,8 @@ use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
 use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
-my $program = "gscan2pdf";
-my $version = "0.9.10";
+my $program = 'gscan2pdf';
+my $version = '0.9.10';
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -4585,6 +4585,22 @@ Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options requ
 
 Because xdg-email doesn't support creating new emails with attachments in Thunderbird.
 
+=head1 Support
+
+There are two mailing lists for gscan2pdf:
+
+=over
+
+=item L<gscan2pdf-announce@lists.sourceforge.net>
+
+A low-traffic list for announcements, mostly of new releases.
+
+=item L<gscan2pdf-help@lists.sourceforge.net>
+
+General support, questions, etc..
+
+=back
+
 =head1 Roadmap
 
 =over
@@ -4611,11 +4627,13 @@ Google's OCR engine is supposed to be very good - but at the moment only support
 
 =over
 
-=item Progress bars for import & save as TIFF/DjVu
+=item Progress bars for import, scan & save as TIFF/DjVu
 
 =item Downsample option for PDF export.
 
 =item Scan profiles.
+
+=item More numbering control in scan dialog - useful if scanner jams.
 
 =back
 
