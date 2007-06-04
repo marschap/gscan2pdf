@@ -578,8 +578,10 @@ $slist -> get_selection -> signal_connect(changed => sub {
   my $widthd = $scwin_detail -> allocation -> width;
   my $heightd = $scwin_detail -> allocation -> height;
 
+use Data::Dumper;
+print Dumper(@page);
   $image -> set_from_pixbuf(
-           get_pixbuf(scalar($slist->{data}[$page[0]][2]), $heightd, $widthd));
+                    get_pixbuf($slist->{data}[$page[0]][2], $heightd, $widthd));
   $image -> show;
 
 # Update the buffer, if created
@@ -1053,6 +1055,9 @@ sub new {
 
 # Update undo/redo buffers
  take_snapshot();
+
+# Deselect everything to prevent error removing selected thumbs
+ $slist -> get_selection -> unselect_all;
 
 # Depopulate the thumbnail list
  @{$slist -> {data}} = ();
