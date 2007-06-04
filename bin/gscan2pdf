@@ -4566,6 +4566,20 @@ Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options requ
 
 Because xdg-email doesn't support creating new emails with attachments in Thunderbird.
 
+=head1 Roadmap
+
+=over
+
+=item Tesseract support.
+
+Google's OCR engine is supposed to be very good - but at the moment only supports one-column text in English
+
+=item Either find a way of fixing the PDF import colour reversal problem or add a negate button.
+
+=item Add single image save as png, etc.
+
+=back
+
 =head1 See Also
 
 Xsane
