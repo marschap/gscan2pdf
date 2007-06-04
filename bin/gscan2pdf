@@ -581,8 +581,6 @@ $slist -> get_selection -> signal_connect(changed => sub {
   my $widthd = $scwin_detail -> allocation -> width;
   my $heightd = $scwin_detail -> allocation -> height;
 
-use Data::Dumper;
-print Dumper(@page);
   $image -> set_from_pixbuf(
                     get_pixbuf($slist->{data}[$page[0]][2], $heightd, $widthd));
   $image -> show;
@@ -4337,10 +4335,6 @@ C<apt-get update>
 
 C<apt-get install gscan2pdf>
 
-The help will require F<Gtk2::Ex::PodViewer>.
-Rotating requires F<Imagemagick>.
-Having installed gscan2pdf, locate the gscan2pdf entry in Synaptic, right-click it and you can install them under I<Recommends>.
-
 =head2 RPMs
 
 Download the rpm from Sourceforge, and then install it with C<rpm -i gscan2pdf-version.rpm>
@@ -4358,6 +4352,113 @@ To build the RPM and .deb packages, you will additionally need the rpm, devscrip
 gscan2pdf uses Mercurial for its Revision Control System. You can browse the tree at L<http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf/>. You can also download snapshots as .tar.gz, .zip, and .tar.bz2.
 
 Mercurial users can clone the complete tree with C<hg clone http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf>
+
+=head1 Dependencies
+
+The list below looks daunting, but all packages are available from any reasonable up-to-date distribution.
+If you are using Synaptic, having installed gscan2pdf, locate the gscan2pdf entry in Synaptic, right-click it and you can install them under I<Recommends>.
+
+=over
+
+=item Required
+
+=over
+
+=item libgtk2.0-0 (>= 2.4)
+
+The GTK+ graphical user interface library.
+
+=item libglib-perl (>= 1.100-1)
+
+Perl interface to the GLib and GObject libraries
+
+=item libgtk2-ex-simple-list-perl
+
+A simple interface to Gtk2's complex MVC list widget
+
+=item libgtk2-perl (>= 1:1.043-1)
+
+Perl interface to the 2.x series of the Gimp Toolkit library
+
+=item liblocale-gettext-perl (>= 1.05)
+
+Using libc functions for internationalization in Perl
+
+=item libpdf-api2-perl
+
+provides the functions for creating PDF documents in Perl
+
+=item libsane
+
+API library for scanners
+
+=item libtiff-tools
+
+TIFF manipulation and conversion tools
+
+=item Imagemagick
+
+Image manipulation programs
+
+=item perlmagick
+
+A perl interface to the libMagick graphics routines
+
+=item sane-utils
+
+API library for scanners -- utilities.
+
+=back
+
+=item Optional
+
+=over
+
+=item sane
+
+scanner graphical frontends. Only required for the scanadf frontend.
+
+=item libgtk2-ex-podviewer-perl
+
+Perl Gtk2 widget for displaying Plain Old Documentation (POD). Not required if you don't need the gscan2pdf documentation (which is anyway repeated on the website).
+
+=item unpaper
+
+post-processing tool for scanned pages
+
+=item xdg-utils
+
+Desktop integration utilities from freedesktop.org. Required for Email as PDF.
+
+=item djvulibre-bin
+
+Utilities for the DjVu image format
+
+=item gocr
+
+A command line OCR
+
+=back
+
+=back
+
+=head1 Support
+
+There are two mailing lists for gscan2pdf:
+
+=over
+
+=item gscan2pdf-announce
+
+A low-traffic list for announcements, mostly of new releases.
+You can subscribe at L<http://lists.sourceforge.net/lists/listinfo/gscan2pdf-announce>
+
+=item gscan2pdf-help
+
+General support, questions, etc..
+You can subscribe at L<http://lists.sourceforge.net/lists/listinfo/gscan2pdf-help>
+
+=back
 
 =head1 Reporting bugs
 
@@ -4520,7 +4621,6 @@ Selects all pages.
 
 gscan2pdf supports two frontends, scanimage and scanadf.
 scanadf support was added when it was realised that scanadf works better with some scanners than scanimage.
-However, to convert the output, the scanadf option requires imagemagick and if this is not present the option is ghosted out.
 On Ubuntu Edgy, scanadf is in the sane package, not, like scanimage, in sane-utils.
 If scanadf is not present, the option is obviously ghosted out.
 
@@ -4551,12 +4651,10 @@ The rotate options require the package imagemagick and, if this is not present, 
 =head3 unpaper
 
 unpaper (see L<http://unpaper.berlios.de/>) is a utility for cleaning up a scan.
-At the moment, having selected whether the scan has a single or a double page, and which sides to use for the alignment, the scan will be deskewed (rotated) and centred.
 
 =head3 OCR (Optical Character Recognition)
 
-The gocr utility is used to process the current page.
-The output is displayed and an option is given to save it to a text file.
+The gocr utility is used to produce text from an image.
 
 There is an OCR output buffer for each page and is embedded both as an annotation (pop-up note) and as plain text behind the scanned image in the PDF produced.
 This way, Beagle can index (i.e. search) the plain text, and the contents of the annotations, can be viewed in Acrobat Reader.
@@ -4585,22 +4683,6 @@ Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options requ
 
 Because xdg-email doesn't support creating new emails with attachments in Thunderbird.
 
-=head1 Support
-
-There are two mailing lists for gscan2pdf:
-
-=over
-
-=item L<gscan2pdf-announce@lists.sourceforge.net>
-
-A low-traffic list for announcements, mostly of new releases.
-
-=item L<gscan2pdf-help@lists.sourceforge.net>
-
-General support, questions, etc..
-
-=back
-
 =head1 Roadmap
 
 =over
@@ -4612,8 +4694,6 @@ General support, questions, etc..
 =item Tesseract support.
 
 Google's OCR engine is supposed to be very good - but at the moment only supports one-column text in English
-
-=item Either find a way of fixing the PDF import colour reversal problem or add a negate button.
 
 =item Add single image save as png, etc.
 
