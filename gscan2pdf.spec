@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.9
+Version: 0.9.10
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -45,22 +45,33 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/locale/*/LC_MESSAGES/%{name}.mo
 %{_datadir}/%{name}/%{name}.png
-%{_datadir}/%{name}/rotate90.png
-%{_datadir}/%{name}/rotate180.png
-%{_datadir}/%{name}/rotate270.png
+%{_datadir}/%{name}/stock-rotate-90.svg
+%{_datadir}/%{name}/stock-rotate-180.svg
+%{_datadir}/%{name}/stock-rotate-270.svg
 %{_datadir}/%{name}/scanner.png
 %{_datadir}/%{name}/pdf.png
 %{_mandir}/man1/%{name}.1p.gz
 
 %changelog
-* Mon Apr 30 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - Fixed bug calling help
-  - Fixed Fixed bug 1709377
-     ("Unknwn msg: scanimage: unrec'd option --compression=None'")
-  - Fixed bug where attempt to run gocr after scanning despite not being installed
-  - Replaced about MessageDialog with AboutDialog
-  - Update to Russian translation (thanks to Alexandre Prokoudine)
+* Mon Jun 04 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - patch credits
+  - Switched rotate icons from Crystal (KDE) to those stolen from Eye of Gnome
+  - Closed bug 1712967
+     (long lines in ocr output resized document display off screen)
+  - contrast and threshold controls
+  - handle PNG, JPEG, GIF, PNM natively,
+     closing feature request 1708448 (JPG to PDF)
+     and bugs 1714874 (import b/w pdf problem)
+     and 1669413 (Problem with "callback")
+  - PDF compression options (JPEG, PNG), closing feature request 1708036
+  - --speed option (Epson 1200)
+  - ProgressBar for PDF save, closing feature request 1712964
+  - Portuguese translation (thanks to Hugo Pereira)
+  - Danish translation (thanks to Jacob Nielsen)
   - Update to Czech translation (thanks to Petr Jelínek)
   - Update to Dutch translation (thanks to Eric Spierings)
-  - Packed unpaper options into Gtk2::Notebook to make dialog shorter, fixed bug
-     1709379 ("unpaper-0.2 dialog too tall for 1024x768")
+  - Update to French translation (thanks to codL)
+  - remembers OCR on scan setting
+  - unpaper on scan
+  - calibration-cache option for Canon LiDE25
+  - roadmap to website/help

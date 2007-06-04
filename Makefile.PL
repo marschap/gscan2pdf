@@ -9,7 +9,7 @@ my $email = 'ra28145@users.sourceforge.net';
 
 # Slurp the program source and dig out the version number.
 my $text = do { local( @ARGV, $/ ) = "bin/$program" ; <> };
-my $version = $1 if ($text =~ /my \$version = "(.*)"/);
+my $version = $1 if ($text =~ /my \$version = '(.*)'/);
 
 my @argv=@ARGV;
 my $prefixdir;
@@ -97,7 +97,7 @@ $(DESTDIR)$(SHAREDIR)/$(NAME) :
 icon_install : $(DESTDIR)$(SHAREDIR)/$(NAME)
 	mkdir --parents $(DESTDIR)$(SHAREDIR)/applications
 	cp $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
-	cp $(NAME).png rotate90.png rotate180.png rotate270.png scanner.png pdf.png $(DESTDIR)$(SHAREDIR)/$(NAME)
+	cp $(NAME).png stock-rotate-90.svg stock-rotate-180.svg stock-rotate-270.svg scanner.png pdf.png $(DESTDIR)$(SHAREDIR)/$(NAME)
 
 debdist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb
 
