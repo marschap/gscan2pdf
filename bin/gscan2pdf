@@ -1552,7 +1552,6 @@ sub create_PDF {
   $pdf->end();
  });
 
-
 # Timer will run until callback returns false 
  Glib::Timeout->add (100, sub { if (defined $helperTag{$pid}) {
                                  $pbar->pulse;
