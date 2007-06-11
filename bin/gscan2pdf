@@ -6,6 +6,7 @@
 
 # To do
 # 0. option button for unpaper on scan
+#    handle corrupted images properly
 #    use -x option (first column 0-100) in gocr to give more detail to progressbar
 #    add single image save as png, etc.
 #    fix encoding problem with OCR output
@@ -1855,9 +1856,20 @@ sub save_TIFF {
   $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpeg');
 
 # Create the tiff
-  system ("tiffcp -c $compression $pagelist \"$filename\"");
-
-  $windowt -> hide if defined $windowt;
+  my $output = `tiffcp -c $compression $pagelist "$filename" 2>&1`;
+  if ($output eq '') {
+   $windowt -> hide if defined $windowt;
+  }
+  else {
+   unlink $filename;
+   my $dialog = Gtk2::MessageDialog -> new ($windowt,
+                                           'destroy-with-parent',
+                                           'error',
+                                           'close',
+                                           $output);
+   $dialog -> run;
+   $dialog -> destroy;
+  }
  }
 
  $file_chooser -> destroy;
