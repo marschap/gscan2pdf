@@ -15,7 +15,7 @@
 #    add run script option
 #    check out freeze when gocr does not return properly
 #    for scan profiles, switch to Config::General (libconfig-general-perl)
-#    add tesseract support
+#    add tesseract, ocrad, ocre support
 #    for hidden text layer in DjVu:
 #     djvused set-txt
 #     DjVutoXML
@@ -4315,8 +4315,8 @@ gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan.
 gscan2pdf should work on almost any Linux/BSD machine.
 
 =for html <p align="center">
- <img src="https://sourceforge.net/dbimage.php?id=121788" border="1" width="632" height="480" alt="Screenshot" /><br />
- Screenshot: Main page v0.9.9</p>
+ <img src="https://sourceforge.net/dbimage.php?id=121788" border="1" width="632"
+ height="480" alt="Screenshot" /><br/>Screenshot: Main page v0.9.9</p>
 
 =head1 Synopsis
 
@@ -4332,22 +4332,28 @@ gscan2pdf should work on almost any Linux/BSD machine.
 
 Scanning is handled with SANE via scanimage.
 PDF conversion is done by PDF::API2.
-TIFF export is handled by libtiff (faster and smaller memory footprint for multipage files).
+TIFF export is handled by libtiff (faster and smaller memory footprint for
+multipage files).
 
-Perl is used for portability and ease of programming, with gtk2-perl for the GUI.
-This should therefore work more or less out of the box on any system with Perl, gtk2-perl, scanimage and libtiff.
+Perl is used for portability and ease of programming, with gtk2-perl for the
+GUI. This should therefore work more or less out of the box on any system with
+Perl, gtk2-perl, scanimage and libtiff.
 
 =head1 Download
 
-gscan2pdf is available on Sourceforge (L<https://sourceforge.net/project/showfiles.php?group_id=174140&package_id=199621>).
+gscan2pdf is available on Sourceforge
+(L<https://sourceforge.net/project/showfiles.php?group_id=174140&package_id=199621>).
 
 =head2 Debian-based
 
-If you are using a Debian-based system, just add the following line to your "F</etc/apt/sources.list>" file:
+If you are using a Debian-based system, just add the following line to your
+"F</etc/apt/sources.list>" file:
 
 C<deb http://gscan2pdf.sourceforge.net/download/debian binary/>
 
-If you are you are using Synaptic, then use menu I<Edit/Reload Package Information>, search for gscan2pdf in the package list, and lo and behold, you can install the nice shiny new version automatically.
+If you are you are using Synaptic, then use menu
+I<Edit/Reload Package Information>, search for gscan2pdf in the package list,
+and lo and behold, you can install the nice shiny new version automatically.
 
 From the command line:
 
@@ -4357,26 +4363,34 @@ C<apt-get install gscan2pdf>
 
 =head2 RPMs
 
-Download the rpm from Sourceforge, and then install it with C<rpm -i gscan2pdf-version.rpm>
+Download the rpm from Sourceforge, and then install it with
+C<rpm -i gscan2pdf-version.rpm>
 
 =head2 From source
 
-The source is hosted in the files section of the gscan2pdf project on Sourceforge (L<http://sourceforge.net/project/showfiles.php?group_id=174140>).
+The source is hosted in the files section of the gscan2pdf project on
+Sourceforge (L<http://sourceforge.net/project/showfiles.php?group_id=174140>).
 
-Having downloaded it, C<perl Makefile.PL>, will create the Makefile, C<make> will build the application and C<make install> will install it for you.
-Note there is no C<make test> step.
-To build the RPM and .deb packages, you will additionally need the rpm, devscripts, fakeroot, debhelper and gettext packages.
+Having downloaded it, C<perl Makefile.PL>, will create the Makefile, C<make>
+will build the application and C<make install> will install it for you. Note
+there is no C<make test> step. To build the RPM and .deb packages, you will
+additionally need the rpm, devscripts, fakeroot, debhelper and gettext packages.
 
 =head2 From the repository
 
-gscan2pdf uses Mercurial for its Revision Control System. You can browse the tree at L<http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf/>. You can also download snapshots as .tar.gz, .zip, and .tar.bz2.
+gscan2pdf uses Mercurial for its Revision Control System. You can browse the
+tree at L<http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf/>.
+You can also download snapshots as .tar.gz, .zip, and .tar.bz2.
 
-Mercurial users can clone the complete tree with C<hg clone http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf>
+Mercurial users can clone the complete tree with
+C<hg clone http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf>
 
 =head1 Dependencies
 
-The list below looks daunting, but all packages are available from any reasonable up-to-date distribution.
-If you are using Synaptic, having installed gscan2pdf, locate the gscan2pdf entry in Synaptic, right-click it and you can install them under I<Recommends>.
+The list below looks daunting, but all packages are available from any
+reasonable up-to-date distribution. If you are using Synaptic, having installed
+gscan2pdf, locate the gscan2pdf entry in Synaptic, right-click it and you can
+install them under I<Recommends>.
 
 =over
 
@@ -4440,7 +4454,9 @@ scanner graphical frontends. Only required for the scanadf frontend.
 
 =item libgtk2-ex-podviewer-perl
 
-Perl Gtk2 widget for displaying Plain Old Documentation (POD). Not required if you don't need the gscan2pdf documentation (which is anyway repeated on the website).
+Perl Gtk2 widget for displaying Plain Old Documentation (POD). Not required if
+you don't need the gscan2pdf documentation (which is anyway repeated on the
+website).
 
 =item unpaper
 
@@ -4470,13 +4486,13 @@ There are two mailing lists for gscan2pdf:
 
 =item gscan2pdf-announce
 
-A low-traffic list for announcements, mostly of new releases.
-You can subscribe at L<http://lists.sourceforge.net/lists/listinfo/gscan2pdf-announce>
+A low-traffic list for announcements, mostly of new releases. You can subscribe
+at L<http://lists.sourceforge.net/lists/listinfo/gscan2pdf-announce>
 
 =item gscan2pdf-help
 
-General support, questions, etc..
-You can subscribe at L<http://lists.sourceforge.net/lists/listinfo/gscan2pdf-help>
+General support, questions, etc.. You can subscribe at
+L<http://lists.sourceforge.net/lists/listinfo/gscan2pdf-help>
 
 =back
 
@@ -4484,14 +4500,16 @@ You can subscribe at L<http://lists.sourceforge.net/lists/listinfo/gscan2pdf-hel
 
 Before reporting bugs, please read the L<"FAQs"> section.
 
-Please report any bugs found to the bugs page of the gscan2pdf project on Sourceforge (L<https://sourceforge.net/tracker/?group_id=174140&atid=868098>).
+Please report any bugs found to the bugs page of the gscan2pdf project on
+Sourceforge (L<https://sourceforge.net/tracker/?group_id=174140&atid=868098>).
 
 Please include the output of C<scanimage --help> with any new bug report.
 
 =head1 Translations
 
 gscan2pdf has already been partly translated several languages.
-If you would like to contribute to an existing or new translation, please check out Rosetta: L<https://launchpad.net/products/gscan2pdf/trunk/+pots/gscan2pdf>
+If you would like to contribute to an existing or new translation, please check
+out Rosetta: L<https://launchpad.net/products/gscan2pdf/trunk/+pots/gscan2pdf>
 
 =head1 Menus
 
@@ -4503,7 +4521,8 @@ Clears the page list.
 
 =head3 Import
 
-Imports any format that imagemagick supports. PDFs will have their embedded images extracted and imported one per page.
+Imports any format that imagemagick supports. PDFs will have their embedded
+images extracted and imported one per page.
 
 =head3 Scan
 
@@ -4523,11 +4542,14 @@ Selects between single sided or double sides pages.
 
 This affects the page numbering.
 Single sided scans are numbered consecutively.
-Double sided scans are incremented (or decremented, see below) by 2, i.e. 1, 3, 5, etc..
+Double sided scans are incremented (or decremented, see below) by 2, i.e. 1, 3,
+5, etc..
 
 =head4 Side to scan
 
-If double sided is selected above, assuming a non-duplex scanner, i.e. a scanner that cannot automatically scan both sides of a page, this determines whether the page number is incremented or decremented by 2.
+If double sided is selected above, assuming a non-duplex scanner, i.e. a
+scanner that cannot automatically scan both sides of a page, this determines
+whether the page number is incremented or decremented by 2.
 
 To scan both sides of three pages, i.e. 6 sides:
 
@@ -4555,7 +4577,8 @@ Reverse side
 
 =item 5. Scans sides 6, 4 & 2.
 
-=item 6. gscan2pdf automatically sorts the pages so that they appear in the correct order.
+=item 6. gscan2pdf automatically sorts the pages so that they appear in the
+correct order.
 
 =back
 
@@ -4574,11 +4597,13 @@ They can include
 
 =item Batch-scan
 
-Guarantees that a "no documents" condition will be returned after the last scanned page, to prevent endless flatbed scans after a batch scan.
+Guarantees that a "no documents" condition will be returned after the last
+scanned page, to prevent endless flatbed scans after a batch scan.
 
 =item Wait-for-button/Button-wait
 
-After sending the scan command, wait until the button on the scanner is pressed before actually starting the scan process.
+After sending the scan command, wait until the button on the scanner is pressed
+before actually starting the scan process.
 
 =item Source
 
@@ -4594,15 +4619,11 @@ Saves the current, selected or all pages as a PDF.
 
 =head4 Metadata
 
-Metadata are information that are not visible when viewing the PDF, but are embedded in the file and so searchable and can be examined, typically with the "Properties" option of the PDF viewer.
+Metadata are information that are not visible when viewing the PDF, but are
+embedded in the file and so searchable and can be examined, typically with the
+"Properties" option of the PDF viewer.
 
 The metadata are completely optional.
-
-=head4 OCR output
-
-The OCR output buffer is embedded as an annotation (pop-up note) in the PDF produced.
-Unfortunately, Beagle does not index (i.e. search) the contents of annotation, as it relies on pdftotext.
-Suggestions for a better way to embed the text are welcome.
 
 =head3 Save TIFF
 
@@ -4612,8 +4633,8 @@ Saves the current, selected or all pages as a TIFF.
 
 Saves the current, selected or all pages as a DjVu.
 Currently, only bitonal compression is available.
-This is best suited to black and white scans and as such, produces better compression than PDF.
-See L<http://www.djvuzone.org/> for more details.
+This is best suited to black and white scans and as such, produces better
+compression than PDF. See L<http://www.djvuzone.org/> for more details.
 
 =head3 Email as PDF
 
@@ -4631,7 +4652,8 @@ Deletes the selected page.
 
 Renumbers the pages from 1..n.
 
-Note that the page order can also be changed by drag and drop in the thumbnail view.
+Note that the page order can also be changed by drag and drop in the thumbnail
+view.
 
 =head3 Select All
 
@@ -4640,9 +4662,10 @@ Selects all pages.
 =head3 Frontend
 
 gscan2pdf supports two frontends, scanimage and scanadf.
-scanadf support was added when it was realised that scanadf works better with some scanners than scanimage.
-On Ubuntu Edgy, scanadf is in the sane package, not, like scanimage, in sane-utils.
-If scanadf is not present, the option is obviously ghosted out.
+scanadf support was added when it was realised that scanadf works better with
+some scanners than scanimage. On Ubuntu Edgy, scanadf is in the sane package,
+not, like scanimage, in sane-utils. If scanadf is not present, the option is
+obviously ghosted out.
 
 =head2 View
 
@@ -4660,7 +4683,8 @@ Scales the view such that all the page is visible.
 
 =head3 Rotate 90 clockwise
 
-The rotate options require the package imagemagick and, if this is not present, are ghosted out.
+The rotate options require the package imagemagick and, if this is not present,
+are ghosted out.
 
 =head3 Rotate 180
 
@@ -4676,8 +4700,13 @@ unpaper (see L<http://unpaper.berlios.de/>) is a utility for cleaning up a scan.
 
 The gocr utility is used to produce text from an image.
 
-There is an OCR output buffer for each page and is embedded both as an annotation (pop-up note) and as plain text behind the scanned image in the PDF produced.
-This way, Beagle can index (i.e. search) the plain text, and the contents of the annotations, can be viewed in Acrobat Reader.
+There is an OCR output buffer for each page and is embedded both as an
+annotation (pop-up note) and as plain text behind the scanned image in the PDF
+produced. This way, Beagle can index (i.e. search) the plain text, and the
+contents of the annotations, can be viewed in Acrobat Reader.
+
+There is an interesting review of OCR software at L<http://groundstate.ca/ocr>.
+An important conclusion was that 400dpi is necessary for decent results.
 
 =head1 FAQs
 
@@ -4685,35 +4714,43 @@ This way, Beagle can index (i.e. search) the plain text, and the contents of the
 
 Possibly because SANE or your scanner doesn't support it.
 
-If an option listed in the output of C<scanimage --help> that you would like to use isn't available, send me the output and I will look at implementing it.
+If an option listed in the output of C<scanimage --help> that you would like to
+use isn't available, send me the output and I will look at implementing it.
 
 =head2 I've only got an old flatbed scanner with no automatic sheetfeeder.
 How do I scan a multipage document?
 
-If you are lucky, you have an option like Wait-for-button or Button-wait, where the scanner will wait for you to press the scan button on the device before it starts the scan, allowing you to scan multiple pages without touching the computer.
+If you are lucky, you have an option like Wait-for-button or Button-wait, where
+the scanner will wait for you to press the scan button on the device before it
+starts the scan, allowing you to scan multiple pages without touching the
+computer.
 
-Otherwise, you have to set the number of pages to scan to 1 and hit the scan button on the scan window for each page.
+Otherwise, you have to set the number of pages to scan to 1 and hit the scan
+button on the scan window for each page.
 
 =head2 Why is option xyz ghosted out?
 
 Probably because the package required for that option is not installed.
-Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options require imagemagick.
+Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options
+require imagemagick.
 
 =head2 Why doesn't Email to PDF work with Thunderbird?
 
-Because xdg-email doesn't support creating new emails with attachments in Thunderbird.
+Because xdg-email doesn't support creating new emails with attachments in
+Thunderbird.
 
 =head1 Roadmap
 
 =over
 
-=item 0.9.11
+=item v0.9.11
 
 =over
 
 =item Tesseract support.
 
-Google's OCR engine is supposed to be very good - but at the moment only supports one-column text in English
+Google's OCR engine is supposed to be very good - but at the moment only
+supports one-column text in English
 
 =item Add single image save as png, etc.
 
@@ -4723,7 +4760,7 @@ Google's OCR engine is supposed to be very good - but at the moment only support
 
 =back
 
-=item 1.0.0
+=item v1.0.0
 
 =over
 
@@ -4771,7 +4808,11 @@ Jeffrey Ratcliffe (ra28145 at users dot sf dot net)
 
 =back
 
-=for html <a href="http://sourceforge.net"><img alt="SourceForge.net Logo" align="right" height="31px" width="88px"
-src="http://sourceforge.net/sflogo.php?group_id=174140&amp;type=1"></a><a href="http://sourceforge.net/donate/index.php?group_id=174140"><img src="http://sourceforge.net/images/project-support.jpg" width="88" height="32" border="0" alt="Support This Project"></a>
+=for html <a href="http://sourceforge.net"><img alt="SourceForge.net Logo"
+ align="right" height="31px" width="88px"
+ src="http://sourceforge.net/sflogo.php?group_id=174140&amp;type=1"></a>
+ <a href="http://sourceforge.net/donate/index.php?group_id=174140">
+ <img src="http://sourceforge.net/images/project-support.jpg" width="88"
+ height="32" border="0" alt="Support This Project"></a>
 
 =cut
