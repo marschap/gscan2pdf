@@ -6,6 +6,7 @@
 
 # To do
 # 0. option button for unpaper on scan
+#    what has happened to the progressbar whilst getting scan options?
 #    handle corrupted images properly
 #    use -x option (first column 0-100) in gocr to give more detail to progressbar
 #    add single image save as png, etc.
@@ -88,7 +89,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.10';
+my $version = '0.9.11rc1';
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -2915,7 +2916,7 @@ sub update_options {
 # Get output from scanimage or scanadf.
 # Inverted commas needed for strange characters in device name
   my $cmd = "$SETTING{'frontend'} --help --device-name='$device'";
-  $cmd .= "--mode $SETTING{mode}" if (defined $SETTING{mode});
+  $cmd .= " --mode $SETTING{mode}" if (defined $SETTING{mode});
   warn "$cmd\n" if $debug;
 
 # Set up ProgressBar
@@ -4723,7 +4724,7 @@ The gocr utility is used to produce text from an image.
 There is an OCR output buffer for each page and is embedded both as an
 annotation (pop-up note) and as plain text behind the scanned image in the PDF
 produced. This way, Beagle can index (i.e. search) the plain text, and the
-contents of the annotations, can be viewed in Acrobat Reader.
+contents of the annotations can be viewed in Acrobat Reader.
 
 There is an interesting review of OCR software at L<http://groundstate.ca/ocr>.
 An important conclusion was that 400dpi is necessary for decent results.
