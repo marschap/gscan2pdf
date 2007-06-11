@@ -410,7 +410,7 @@ $window -> maximize if ($SETTING{'window_maximize'});
 
 $window -> set_default_icon_from_file ("$path/gscan2pdf.png");
 
-my $main_vbox = new Gtk2::VBox ( FALSE, 1 );
+my $main_vbox = Gtk2::VBox -> new;
 $window -> add ( $main_vbox );
 
 # Create the menu bar
@@ -1632,12 +1632,12 @@ sub add_pdf_compression {
  my $i = 0;
  my $o;
  my $combobc = Gtk2::ComboBox->new_text;
- foreach my $option ( @compression ) {
-  $combobc->append_text ($option->[1]);
+ foreach ( @compression ) {
+  $combobc->append_text ($_->[1]);
 
   $o = $i
    if (defined($SETTING{'pdf compression'})
-       and $option->[0] eq $SETTING{'pdf compression'});
+       and $_->[0] eq $SETTING{'pdf compression'});
   ++$i;
  }
  $o = 1 if (! defined $o);
@@ -2296,12 +2296,10 @@ sub scan_dialog {
 
 # Get device-specific options
   my %options;
-  my @child = $vboxd -> get_children;
-  foreach my $hbox (@child) {
+  foreach my $hbox ($vboxd -> get_children) {
    my $key;
    if ($hbox -> isa('Gtk2::HBox')) {
-    my @child = $hbox -> get_children;
-    foreach my $widget (@child) {
+    foreach my $widget ($hbox -> get_children) {
      if ($widget -> isa('Gtk2::Label')) {
       $key = get_key(\%ddo, $widget -> get_label);
      }
@@ -2901,8 +2899,7 @@ sub update_options {
  my ($vboxd, $device) = @_;
 
 # Empty $vboxd first
- my @child = $vboxd -> get_children;
- foreach (@child) {
+ foreach ($vboxd -> get_children) {
   $_ -> destroy;
  }
 
@@ -2918,6 +2915,7 @@ sub update_options {
 # Get output from scanimage or scanadf.
 # Inverted commas needed for strange characters in device name
   my $cmd = "$SETTING{'frontend'} --help --device-name='$device'";
+  $cmd .= "--mode $SETTING{mode}" if (defined $SETTING{mode});
   warn "$cmd\n" if $debug;
 
 # Set up ProgressBar
@@ -3152,10 +3150,6 @@ sub parse_options {
 # Remove everything on the description line and above.
    $output = $2;
   }
-# batch-scan is HP
-# wait-for-button is Epson
-# button-wait is HP
-# source is various
   if (defined($pddo{$option}) and $default !~ /inactive/
 
 # This needed for psc1315, that only has one option for source.
@@ -3209,9 +3203,16 @@ sub parse_options {
     $combob -> append_text ($ddo{$option}{values}{$values});
     $i++;
     $o = $i if ($values eq $default);
-
-# Create ComboBox
     $combob -> set_active ($o);
+
+# callback for mode
+    if ($option eq 'mode') {
+     $combob -> signal_connect (changed => sub {
+      $SETTING{$option} = get_value(\%ddo, $option, $combob -> get_active_text);
+      update_options($vboxd, $device);
+     });
+    }
+    
     $hbox -> pack_end ($ev, FALSE, FALSE, 0);
     $tooltips -> set_tip ($ev, $tip);
    }
@@ -3639,8 +3640,7 @@ sub unpaper {
 # Ensure that at least one checkbutton stays active
   $button -> signal_connect (toggled => sub {
    my $n = 0;
-   my @child = $vboxd -> get_children;
-   foreach (@child) {
+   foreach ($vboxd -> get_children) {
     $n++ if ($_ -> get_active);
    }
    $button->set_active(TRUE) if ($n == 0);
@@ -3702,8 +3702,7 @@ sub unpaper {
 # Ghost margin if nothing selected
   $button -> signal_connect (toggled => sub {
    my $n = 0;
-   my @child = $vboxb -> get_children;
-   foreach (@child) {
+   foreach ($vboxb -> get_children) {
     $n++ if ($_ -> isa('Gtk2::CheckButton') and $_ -> get_active);
    }
    if ($n == 0) {
@@ -3795,8 +3794,7 @@ sub unpaper {
    $deskew = '--no-deskew';
   }
   else {
-   my @child = $vboxd -> get_children;
-   foreach (@child) {
+   foreach ($vboxd -> get_children) {
     if ($_ -> get_active) {
      $deskew .= "," if ($deskew ne '');
      $deskew .= get_key($option{'deskew-scan-direction'}, $_ -> get_label);
@@ -3813,8 +3811,7 @@ sub unpaper {
    $border_align = '--no-border-align';
   }
   else {
-   my @child = $vboxb -> get_children;
-   foreach (@child) {
+   foreach ($vboxb -> get_children) {
     if ($_ -> isa('Gtk2::CheckButton') and $_ -> get_active) {
      $border_align .= "," if ($border_align ne '');
      $border_align .= get_key($option{'border-align'}, $_ -> get_label);
