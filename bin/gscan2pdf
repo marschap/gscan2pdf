@@ -3506,6 +3506,10 @@ sub unpaper {
    string => $d->get('No black filter'),
    tooltip => $d->get('Disable black area scan.'),
   },
+  'no-grayfilter' => {
+   string => $d->get('No gray filter'),
+   tooltip => $d->get('Disable gray area scan.'),
+  },
   'no-noisefilter' => {
    string => $d->get('No noise filter'),
    tooltip => $d->get('Disable noise filter.'),
@@ -3757,6 +3761,10 @@ sub unpaper {
  $tooltips -> set_tip ($bfbutton, $option{'no-blackfilter'}{tooltip});
  $vbox3 -> pack_start ($bfbutton, TRUE, TRUE, 0);
 
+ my $gfbutton = Gtk2::CheckButton -> new($option{'no-grayfilter'}{string});
+ $tooltips -> set_tip ($gfbutton, $option{'no-blackfilter'}{tooltip});
+ $vbox3 -> pack_start ($gfbutton, TRUE, TRUE, 0);
+
  my $nfbutton = Gtk2::CheckButton -> new($option{'no-noisefilter'}{string});
  $tooltips -> set_tip ($nfbutton, $option{'no-noisefilter'}{tooltip});
  $vbox3 -> pack_start ($nfbutton, TRUE, TRUE, 0);
@@ -3826,6 +3834,9 @@ sub unpaper {
   my $blackfilter = '';
   $blackfilter = '--no-blackfilter' if ($bfbutton -> get_active);
 
+  my $grayfilter = '';
+  $grayfilter = '--no-grayfilter' if ($gfbutton -> get_active);
+
   my $noisefilter = '';
   $noisefilter = '--no-noisefilter' if ($nfbutton -> get_active);
 
@@ -3835,7 +3846,7 @@ sub unpaper {
   my @pagelist = get_page_index();
 
   my $options = "--layout $SETTING{layout} $deskew $border_align "
-               ."$maskscan $white $black $blackfilter $noisefilter $blurfilter";
+   ."$maskscan $white $black $blackfilter $grayfilter $noisefilter $blurfilter";
   
   unpaper_page(undef, $options, @pagelist);
  } );
