@@ -3211,11 +3211,9 @@ sub parse_options {
 
 # callback for mode
     if ($option eq 'mode') {
-     $combob -> {signalid} = $combob -> signal_connect (changed => sub {
+     $combob -> signal_connect (changed => sub {
       $SETTING{$option} = get_value(\%ddo, $option, $combob -> get_active_text);
-      $combob -> signal_handler_block($combob -> {signalid});
       update_options($vboxd, $device);
-      $combob -> signal_handler_unblock($combob -> {signalid});
      });
     }
     
@@ -3294,8 +3292,8 @@ sub update_options {
     $pbar -> destroy;
     $vboxd -> hide_all;
     warn $output if $debug;
-    my %hash = options2hash($output);
-    update_options_hash($vboxd, %hash);
+    update_options_hash($vboxd, options2hash($output));
+    $vboxd -> show_all;
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
@@ -3307,10 +3305,9 @@ sub update_options {
 
 # Slurp it from file
   $output = do { local( @ARGV, $/ ) = $test[$i] ; <> } ;
-  my %hash = options2hash($output);
-  update_options_hash($vboxd, %hash);
+  update_options_hash($vboxd, options2hash($output));
+  $vboxd -> show_all;
  }
- $vboxd -> show_all;
 }
 
 
@@ -3366,7 +3363,10 @@ sub update_options_hash {
     if ($widget -> isa('Gtk2::Label')) {
      $key = get_key(\%ddo, $widget -> get_label);
     }
-    elsif ($widget -> isa('Gtk2::EventBox') and defined($hash{$key}{values})
+    elsif ($widget -> isa('Gtk2::EventBox')
+# to prevent recursion
+                                            and $key ne 'mode'
+                                            and defined($hash{$key}{values})
                                             and $hash{$key}{values} !~ /\.\./) {
      $widget = $widget -> get_child;
      
