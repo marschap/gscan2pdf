@@ -6,8 +6,10 @@
 
 # To do
 # 0. option button for unpaper on scan
+#    once --mode updates seem to be working ok, take out scan compression hacks.
 #    what has happened to the progressbar whilst getting scan options?
 #    handle corrupted images properly
+#    move test tif and correct blank PDF with compression=none
 #    use -x option (first column 0-100) in gocr to give more detail to progressbar
 #    add single image save as png, etc.
 #    fix encoding problem with OCR output
@@ -975,7 +977,7 @@ sub update_uimanager {
 sub change_frontend {
  my ($action, $current) = @_;
  $SETTING{'frontend'} = $current->get_name;
- update_options($vboxd, $device[$combobd -> get_active]) if (defined $windows);
+ rescan_options($vboxd, $device[$combobd -> get_active]) if (defined $windows);
 }
 
 
@@ -2143,7 +2145,7 @@ sub scan_dialog {
   $combobd->append_text ($_);
  }
  $combobd -> signal_connect (changed => sub {
-  update_options($vboxd, $device[$combobd -> get_active]);
+  rescan_options($vboxd, $device[$combobd -> get_active]);
   $vboxd -> show_all;
   hide_custom();
  });
@@ -2894,9 +2896,9 @@ sub check_utils {
 }
 
 
-# Update device-dependent scan options
+# Rescan device-dependent scan options
 
-sub update_options {
+sub rescan_options {
  my ($vboxd, $device) = @_;
 
 # Empty $vboxd first
@@ -3139,7 +3141,7 @@ sub parse_options {
   $output = $4;
 
 # Parse tooltips from option description based on an 8-character indent.
-  my $tip = "";
+  my $tip = '';
   while ($output =~ /^\s{8,}(.*)\n([\S\s]*)/) {
    if ($tip eq "") {
     $tip = $1;
@@ -3151,7 +3153,7 @@ sub parse_options {
 # Remove everything on the description line and above.
    $output = $2;
   }
-  if (defined($pddo{$option}) and $default !~ /inactive/
+  if (defined($pddo{$option})
 
 # This needed for psc1315, that only has one option for source.
       and ($values =~ /(\d*\.?\d*)\.\.(\d*\.?\d*)/
@@ -3169,6 +3171,7 @@ sub parse_options {
 # HBox for option
    my $hbox = Gtk2::HBox -> new;
    $vboxd -> pack_start ($hbox, TRUE, TRUE, 0);
+   $hbox->set_sensitive(FALSE) if ($default =~ /inactive/);
 
 # Label
    my $label = Gtk2::Label -> new ($ddo{$option}{string});
@@ -3208,9 +3211,11 @@ sub parse_options {
 
 # callback for mode
     if ($option eq 'mode') {
-     $combob -> signal_connect (changed => sub {
+     $combob -> {signalid} = $combob -> signal_connect (changed => sub {
       $SETTING{$option} = get_value(\%ddo, $option, $combob -> get_active_text);
+      $combob -> signal_handler_block($combob -> {signalid});
       update_options($vboxd, $device);
+      $combob -> signal_handler_unblock($combob -> {signalid});
      });
     }
     
@@ -3221,7 +3226,7 @@ sub parse_options {
 # SpinButton
    elsif ($values =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)/) {
     my $spin_button = Gtk2::SpinButton -> new_with_range($1, $2, 1);
-    $spin_button -> set_value($default);
+    $spin_button -> set_value($default) if ($default !~ /inactive/);
     $hbox -> pack_end ($spin_button, FALSE, FALSE, 0);
     $tooltips -> set_tip ($spin_button, $tip);
    }
@@ -3231,6 +3236,210 @@ sub parse_options {
 # Show window, hiding the custom hbox and sizing if necessary
  $vboxd -> show_all;
  hide_custom();
+}
+
+
+# Update device-dependent scan options having selected a new mode
+
+sub update_options {
+ my ($vboxd, $device) = @_;
+
+# Empty $vboxd first
+ foreach ($vboxd -> get_children) {
+  $_ -> hide;
+ }
+
+ my $output = '';
+ if (! @test) {
+
+# Get output from scanimage or scanadf.
+# Inverted commas needed for strange characters in device name
+  my $cmd = "$SETTING{'frontend'} --help --device-name='$device'";
+  $cmd .= " --mode $SETTING{mode}" if (defined $SETTING{mode});
+  warn "$cmd\n" if $debug;
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $pbar -> set_pulse_step(.1);
+  $pbar->set_text ($d->get('Updating options'));
+  $vboxd->pack_start ($pbar, FALSE, FALSE, 0);
+  $pbar -> show;
+  my $running = TRUE;
+
+# Timer will run until callback returns false 
+  my $timer = Glib::Timeout->add (100, sub { if ($running) {
+                                              $pbar->pulse;
+                                              return TRUE;
+                                             }
+                                             else {
+                                              return FALSE;
+                                             } });
+
+# Interface to frontend
+  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+  warn "Forked PID $pid\n" if ($debug);
+ 
+# Read without blocking
+  Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    my $line;
+    $output .= $line while (sysread $read, $line, 1024);
+   }
+   if ($condition & 'hup') { # bit field operation. >= would also work
+    close $read;
+    my $pid = wait; # So we don't leave zombies
+    warn "Reaped PID $pid\n" if ($debug);
+    $running = FALSE;
+    $pbar -> destroy;
+    $vboxd -> hide_all;
+    warn $output if $debug;
+    my %hash = options2hash($output);
+    update_options_hash($vboxd, %hash);
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # continue without uninstalling
+  });
+ }
+ else {
+  my $i = 0;
+  $i++ while ($device[$i] ne $device);
+
+# Slurp it from file
+  $output = do { local( @ARGV, $/ ) = $test[$i] ; <> } ;
+  my %hash = options2hash($output);
+  update_options_hash($vboxd, %hash);
+ }
+ $vboxd -> show_all;
+}
+
+
+# return a hash of the passed options
+
+sub options2hash {
+
+ my ($output) = @_;
+ my %hash;
+ while ($output =~ /--([a-z_-]*)(.*) \[(.*)\].*\n([\S\s]*)/) {
+  my $option = $1;
+  my $values = $2;
+  my $default = $3;
+
+# Set default from config
+  $default = $SETTING{$option} if (defined($SETTING{$option}));
+
+# Remove everything on the option line and above.
+  $output = $4;
+
+# Parse tooltips from option description based on an 8-character indent.
+  my $tip = '';
+  while ($output =~ /^\s{8,}(.*)\n([\S\s]*)/) {
+   if ($tip eq "") {
+    $tip = $1;
+   }
+   else {
+    $tip = "$tip $1";
+   }
+
+# Remove everything on the description line and above.
+   $output = $2;
+  }
+
+  $hash{$option}{values} = $values;
+  $hash{$option}{default} = $default;
+  $hash{$option}{tip} = $tip;
+ }
+ return %hash;
+}
+
+
+# walk the widget tree and update them from the hash
+
+sub update_options_hash {
+
+ my ($vboxd, %hash) = @_;
+
+ foreach my $hbox ($vboxd -> get_children) {
+  my $key;
+  if ($hbox -> isa('Gtk2::HBox')) {
+   foreach my $widget ($hbox -> get_children) {
+    if ($widget -> isa('Gtk2::Label')) {
+     $key = get_key(\%ddo, $widget -> get_label);
+    }
+    elsif ($widget -> isa('Gtk2::EventBox') and defined($hash{$key}{values})
+                                            and $hash{$key}{values} !~ /\.\./) {
+     $widget = $widget -> get_child;
+     
+# Empty the list
+     $widget->get_model->clear;
+
+# Fill it again
+     my @array = options2array($hash{$key}{values});
+     my $index = default2index($hash{$key}{default}, @array);
+     foreach (@array) {
+      $widget->append_text($ddo{$key}{values}{$_});
+     }
+
+# Set the default
+     $widget -> set_active($index);
+
+     if ($hash{$key}{default} =~ /inactive/) {
+      $widget->set_sensitive(FALSE);
+     }
+     else {
+      $widget->set_sensitive(TRUE);
+     }
+    }
+    elsif ($widget -> isa('Gtk2::SpinButton') and defined($hash{$key}{values})
+                                            and $hash{$key}{values} =~ /\.\./) {
+     $widget->set_range($1, $2)
+      if ($hash{$key}{values} =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)/);
+
+# Set the default
+     if ($hash{$key}{default} =~ /inactive/) {
+      $widget->set_sensitive(FALSE);
+     }
+     else {
+      $widget->set_sensitive(TRUE);
+      $widget -> set_value($hash{$key}{default});
+     }
+    }
+   }
+  }
+ }
+}
+
+
+# take a list of |-seperated options and return an array
+
+sub options2array {
+
+ my ($options) = @_;
+ my @array;
+ while ($options =~ /\|/) {
+  my $value = substr($options, 0, index($options, "|"));
+  $options = substr($options, index($options, "|")+1, length($options));
+  $value = substr($value, 1, length($value)) while ($value =~ /^ /);
+  $value = substr($value, 3, length($value)) while ($value =~ /^\[=\(/);
+  push @array, $value;
+ }
+
+# Do it all again for the last one
+ $options = substr($options, 0, length($options)-2) while ($options =~ /\)\]/);
+ push @array, $options;
+ return @array;
+}
+
+
+# return the position that a string occurs in an array
+
+sub default2index {
+
+ my ($default, @array) = @_;
+ for (my $i = 0; $i <= $#array; $i++) {
+  return $i if ($array[$i] eq $default);
+ }
+ return undef;
 }
 
 
