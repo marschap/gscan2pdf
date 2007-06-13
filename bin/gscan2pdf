@@ -453,7 +453,8 @@ Gtk2::Ex::Simple::List -> add_column_type( 'hstring',
 $slist = Gtk2::Ex::Simple::List -> new('#' => 'int',
                                        $d->get('Thumbnails') => 'pixbuf',
                                        'Filename' => 'hstring',
-                                       'Buffer' => 'hstring');
+                                       'Buffer' => 'hstring',
+                                       'Resolution' => 'hstring');
 
 # Callback for dropped signal.
 $slist -> signal_connect('drag_drop' => sub {
@@ -1092,7 +1093,7 @@ sub convert_to_tiff {
 
 # Write the tif
  $image->Write(units => 'PixelsPerInch',
-               density => $density.'x'.$density,
+               density => $density,
                filename => "$filename.tif");
  return "$filename.tif";
 }
@@ -1153,21 +1154,21 @@ sub import {
 
 # Import each image
     my @images = <x-???.???>;
-    import_scan($_, undef, 'Portable anymap', TRUE) foreach (@images);
+    import_scan($_, undef, 'Portable anymap', undef, TRUE) foreach (@images);
    }
    elsif ($format eq 'Tagged Image File Format') {
 
 # Split the tiff into its pages and import them individually
     system("tiffsplit \"$filename\"");
     my @pages = <x???.tif>;
-    import_scan($_, undef, $format, TRUE) foreach (@pages);
+    import_scan($_, undef, $format, undef, TRUE) foreach (@pages);
    }
    elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
     import_scan($filename, undef, $format);
    }
    else {
     my $tiff = convert_to_tiff($filename);
-    import_scan($tiff, undef, 'Tagged Image File Format', TRUE);
+    import_scan($tiff, undef, 'Tagged Image File Format', undef, TRUE);
    }
 
   }
@@ -1497,7 +1498,8 @@ sub create_PDF {
 # Get the size and resolution
    my $w = $image->Get('width');
    my $h = $image->Get('height');
-   my $resolution = $image->Get('x-resolution');
+   my $resolution = $slist -> {data}[$_][4];
+   $resolution = $image->Get('x-resolution') if (! defined($resolution));
 
    $page->mediabox($w*72/$resolution, $h*72/$resolution);
 
@@ -2497,7 +2499,8 @@ sub scanimage {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap', TRUE, $unpaper, $ocr)) {
+      if (! import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap',
+                                  $SETTING{resolution}, TRUE, $unpaper, $ocr)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -2641,7 +2644,8 @@ sub scanadf {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap', TRUE, $unpaper, $ocr)) {
+      if (! import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap',
+                                  $SETTING{resolution}, TRUE, $unpaper, $ocr)) {
        $dialog -> destroy;
        $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
                          'error', 'close', $d->get('Unable to load image'));
@@ -2721,7 +2725,7 @@ sub hash2options {
 # Take new scan and display it
 
 sub import_scan {
- my ($ofilename, $page, $format, $delete, $unpaper, $ocr) = @_;
+ my ($ofilename, $page, $format, $resolution, $delete, $unpaper, $ocr) = @_;
 
  my %suffix = (
   'Portable Network Graphics'                    => '.png',
@@ -2744,8 +2748,9 @@ sub import_scan {
 
 # Block the row-changed signal whilst adding the scan (row) and sorting it.
  $slist -> get_model -> signal_handler_block($slist -> {signalid});
- push @{$slist -> {data}},
-                   [$page, get_pixbuf($filename, $heightt, $widtht), $filename];
+ push @{$slist -> {data}}, [ $page, 
+                             get_pixbuf($filename, $heightt, $widtht),
+                             $filename, undef, $resolution ];
  manual_sort_by_column ($slist, 0);
  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 

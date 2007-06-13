@@ -1,7 +1,10 @@
-0.9.11 (13.06.2007):
+0.9.11 (14.06.2007):
 
 + no-grayfilter option
 + check for mode-dependent options.
++ note resolution info so that the resulting PDF has the correct paper size.
+  Closes bug 1736036 (page size is somehow a ratio of resolution)
+  and Debian bug 426525 (after unpaper, saving PDF causes magnified page)
 
 
 0.9.10 (05.06.2007):
