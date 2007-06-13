@@ -91,7 +91,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.11rc1';
+my $version = '0.9.11rc2';
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -2301,7 +2301,7 @@ sub scan_dialog {
   my %options;
   foreach my $hbox ($vboxd -> get_children) {
    my $key;
-   if ($hbox -> isa('Gtk2::HBox')) {
+   if ($hbox -> isa('Gtk2::HBox') and $hbox->sensitive) {
     foreach my $widget ($hbox -> get_children) {
      if ($widget -> isa('Gtk2::Label')) {
       $key = get_key(\%ddo, $widget -> get_label);
@@ -3166,7 +3166,8 @@ sub parse_options {
    next if ($option eq 'compression');
 
 # Set default from config
-   $default = $SETTING{$option} if (defined($SETTING{$option}));
+   $default = $SETTING{$option}
+    if ($default !~ /inactive/ and defined($SETTING{$option}));
 
 # HBox for option
    my $hbox = Gtk2::HBox -> new;
@@ -3322,11 +3323,12 @@ sub options2hash {
   my $values = $2;
   my $default = $3;
 
-# Set default from config
-  $default = $SETTING{$option} if (defined($SETTING{$option}));
-
 # Remove everything on the option line and above.
   $output = $4;
+
+# Set default from config
+  $default = $SETTING{$option}
+   if ($default !~ /inactive/ and defined($SETTING{$option}));
 
 # Parse tooltips from option description based on an 8-character indent.
   my $tip = '';
@@ -3381,14 +3383,7 @@ sub update_options_hash {
      }
 
 # Set the default
-     $widget -> set_active($index);
-
-     if ($hash{$key}{default} =~ /inactive/) {
-      $widget->set_sensitive(FALSE);
-     }
-     else {
-      $widget->set_sensitive(TRUE);
-     }
+     $widget -> set_active($index) if (defined $index);
     }
     elsif ($widget -> isa('Gtk2::SpinButton') and defined($hash{$key}{values})
                                             and $hash{$key}{values} =~ /\.\./) {
@@ -3396,15 +3391,18 @@ sub update_options_hash {
       if ($hash{$key}{values} =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)/);
 
 # Set the default
-     if ($hash{$key}{default} =~ /inactive/) {
-      $widget->set_sensitive(FALSE);
-     }
-     else {
-      $widget->set_sensitive(TRUE);
-      $widget -> set_value($hash{$key}{default});
-     }
+     $widget -> set_value($hash{$key}{default})
+      if ($hash{$key}{default} !~ /inactive/);
     }
    }
+
+# Update ghosting
+   if (defined($hash{$key}{default}) and $hash{$key}{default} =~ /inactive/) {
+    $hbox->set_sensitive(FALSE);
+   }
+   else {
+    $hbox->set_sensitive(TRUE);
+   }    
   }
  }
 }
