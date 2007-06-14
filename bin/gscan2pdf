@@ -1487,9 +1487,12 @@ sub create_PDF {
 # Convert file if necessary
    my $format = $1 if ($filename =~ /\.(\w*)$/);
    if (defined($SETTING{'pdf compression'})
-        and $SETTING{'pdf compression'} ne 'none'
-        and $SETTING{'pdf compression'} ne $format) {
+        and ($SETTING{'pdf compression'} ne 'none'
+        and $SETTING{'pdf compression'} ne $format)
+        or $SETTING{'pdf compression'} eq 'jpg') {
     (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$SETTING{'pdf compression'});
+    $image->Set(quality => $SETTING{quality})
+     if $SETTING{'pdf compression'} eq 'jpg';
     $x = $image->Write($filename);
     warn "$x" if "$x";
     $format = $1 if ($filename =~ /\.(\w*)$/);
@@ -1616,6 +1619,27 @@ sub save_PDF {
 }
 
 
+# Set up quality spinbutton here so that it can be shown or hidden by callback
+
+sub add_quality_spinbutton {
+
+ my ($vbox) = @_;
+ my $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('JPEG Quality'));
+ $hbox -> pack_start ($label, FALSE, FALSE, 0);
+ my $spinbutton = Gtk2::SpinButton -> new_with_range(1, 100, 1);
+ if (defined($SETTING{'quality'})) {
+  $spinbutton->set_value($SETTING{'quality'});
+ }
+ else {
+  $spinbutton->set_value(75);
+ }
+ $hbox -> pack_end ($spinbutton, FALSE, FALSE, 0);
+ return ($hbox, $spinbutton);
+}
+
+
 sub add_pdf_compression {
  my ($vbox) = @_;
 
@@ -1632,6 +1656,9 @@ sub add_pdf_compression {
  my $label = Gtk2::Label -> new ($d->get('Compression'));
  $hboxc -> pack_start ($label, FALSE, FALSE, 0);
 
+# Set up quality spinbutton here so that it can be shown or hidden by callback
+ my ($hboxq, $spinbuttonq) = add_quality_spinbutton($vbox);
+
 # Fill compression ComboBox
  my $i = 0;
  my $o;
@@ -1646,8 +1673,17 @@ sub add_pdf_compression {
  }
  $o = 1 if (! defined $o);
  $combobc -> set_active ($o);
+ $combobc -> signal_connect (changed => sub {
+  if ($compression[$combobc->get_active][0] eq 'jpg') {
+   $hboxq -> show_all;
+  }
+  else {
+   $hboxq -> hide_all;
+  }
+ });
  $hboxc -> pack_end ($combobc, FALSE, FALSE, 0);
- return ($combobc, @compression);
+
+ return ($combobc, $hboxq, $spinbuttonq, @compression);
 }
 
 
@@ -1673,7 +1709,7 @@ sub save_PDF_dialog {
   my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # Compression options
-  my ($combobc, @compression) = add_pdf_compression($vbox);
+  my ($combobc, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
 
 # HBox for buttons
   my $hboxb = Gtk2::HBox -> new;
@@ -1686,6 +1722,7 @@ sub save_PDF_dialog {
 
 # dig out the compression
    $SETTING{'pdf compression'} = $compression[$combobc->get_active][0];
+   $SETTING{'quality'} = $spinbuttonq->get_value;
 
    update_PDF_settings($entrya, $entryt, $entrys, $entryk);
    save_PDF();
@@ -1697,6 +1734,7 @@ sub save_PDF_dialog {
   $cbutton -> signal_connect( clicked => sub { $windowp -> hide; } );
 
   $windowp -> show_all;
+  $hboxq -> hide_all if ($compression[$combobc->get_active][0] ne 'jpg');
  }
  else {
   save_PDF();
@@ -1739,18 +1777,7 @@ sub save_TIFF_dialog {
   $hboxc -> pack_start ($label, FALSE, FALSE, 0);
 
 # Set up quality spinbutton here so that it can be shown or hidden by callback
-  my $hboxq = Gtk2::HBox -> new;
-  $vbox -> pack_start($hboxq, TRUE, TRUE, 0);
-  $label = Gtk2::Label -> new ($d->get('JPEG Quality'));
-  $hboxq -> pack_start ($label, FALSE, FALSE, 0);
-  my $spinbuttonq = Gtk2::SpinButton -> new_with_range(1, 100, 1);
-  if (defined($SETTING{'quality'})) {
-   $spinbuttonq->set_value($SETTING{'quality'});
-  }
-  else {
-   $spinbuttonq->set_value(75);
-  }
-  $hboxq -> pack_end ($spinbuttonq, FALSE, FALSE, 0);
+  my ($hboxq, $spinbuttonq) = add_quality_spinbutton($vbox);
 
 # Fill compression ComboBox
   my $i = 0;
@@ -2010,7 +2037,7 @@ sub email {
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # Compression options
- my ($combobc, @compression) = add_pdf_compression($vbox);
+ my ($combobc, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
 
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
@@ -2029,6 +2056,7 @@ sub email {
 
 # dig out the compression
   $SETTING{'pdf compression'} = $compression[$combobc->get_active][0];
+  $SETTING{'quality'} = $spinbuttonq->get_value;
 
   my (undef, $pdf) = tempfile(DIR => $dir, SUFFIX => '.pdf');
 
@@ -2047,6 +2075,7 @@ sub email {
  $cbutton -> signal_connect( clicked => sub { $windowe -> hide; } );
 
  $windowe -> show_all;
+ $hboxq -> hide_all if ($compression[$combobc->get_active][0] ne 'jpg');
 }
 
 
@@ -2738,7 +2767,7 @@ sub import_scan {
   my $image = Image::Magick->new;
   my $x = $image->Read($ofilename);
   warn "$x" if "$x";
-  $resolution = $image->Get('x-resolution') if (! defined($resolution));
+  $resolution = $image->Get('x-resolution');
  }
 
  my (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix{$format});
@@ -4982,7 +5011,7 @@ Thunderbird.
 
 =over
 
-=item v0.9.11
+=item v0.9.12
 
 =over
 
