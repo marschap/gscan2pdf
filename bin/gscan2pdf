@@ -91,7 +91,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.11rc2';
+my $version = '0.9.11rc3';
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -1499,7 +1499,6 @@ sub create_PDF {
    my $w = $image->Get('width');
    my $h = $image->Get('height');
    my $resolution = $slist -> {data}[$_][4];
-   $resolution = $image->Get('x-resolution') if (! defined($resolution));
 
    $page->mediabox($w*72/$resolution, $h*72/$resolution);
 
@@ -2734,6 +2733,13 @@ sub import_scan {
   'Portable anymap'                              => '.pnm',
   'CompuServe graphics interchange format'       => '.gif',
  );
+
+ if (! defined($resolution)) {
+  my $image = Image::Magick->new;
+  my $x = $image->Read($ofilename);
+  warn "$x" if "$x";
+  $resolution = $image->Get('x-resolution') if (! defined($resolution));
+ }
 
  my (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix{$format});
  if (defined($delete) and $delete) {
