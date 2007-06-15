@@ -6,6 +6,7 @@
 
 # To do
 # 0. option button for unpaper on scan
+#    in date metadata, add "today", but save offset, not date
 #    once --mode updates seem to be working ok, take out scan compression hacks.
 #    what has happened to the progressbar whilst getting scan options?
 #    handle corrupted images properly
@@ -3007,8 +3008,13 @@ sub rescan_options {
   my $i = 0;
   $i++ while ($device[$i] ne $device);
 
+# check if we have output for the mode
+  my $filename = $test[$i];
+  $filename .= ".$SETTING{mode}" if (-e "$filename.$SETTING{mode}");
+
 # Slurp it from file
-  $output = do { local( @ARGV, $/ ) = $test[$i] ; <> } ;
+  $output = do { local( @ARGV, $/ ) = $filename ; <> } ;
+  $vboxd -> hide_all; # merely here for consistency with normal operation
   parse_options($vboxd, $device, $output);
  }
 }
@@ -3294,7 +3300,7 @@ sub update_options {
 # Get output from scanimage or scanadf.
 # Inverted commas needed for strange characters in device name
   my $cmd = "$SETTING{'frontend'} --help --device-name='$device'";
-  $cmd .= " --mode $SETTING{mode}" if (defined $SETTING{mode});
+  $cmd .= " --mode=$SETTING{mode}" if (defined $SETTING{mode});
   warn "$cmd\n" if $debug;
 
 # Set up ProgressBar
@@ -3335,6 +3341,7 @@ sub update_options {
     warn $output if $debug;
     update_options_hash($vboxd, options2hash($output));
     $vboxd -> show_all;
+    hide_custom();
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
@@ -3344,10 +3351,16 @@ sub update_options {
   my $i = 0;
   $i++ while ($device[$i] ne $device);
 
+# check if we have output for the new mode
+  my $filename = $test[$i];
+  $filename .= ".$SETTING{mode}" if (-e "$filename.$SETTING{mode}");
+
 # Slurp it from file
-  $output = do { local( @ARGV, $/ ) = $test[$i] ; <> } ;
+  $output = do { local( @ARGV, $/ ) = $filename ; <> } ;
+  $vboxd -> hide_all; # merely here for consistency with normal operation
   update_options_hash($vboxd, options2hash($output));
   $vboxd -> show_all;
+  hide_custom();
  }
 }
 
