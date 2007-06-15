@@ -1591,18 +1591,9 @@ sub save_PDF {
  if ('ok' eq $file_chooser->run) {
   my $filename = $file_chooser -> get_filename;
   $filename = $filename.".pdf" if ($filename !~ /\.pdf$/i);
-  if (-e $filename) {
-   my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
-    'destroy-with-parent',
-    'question', # message type
-    'ok-cancel', # which set of buttons?
-    sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
-   my $response = $dialog -> run;
-   $dialog -> destroy;
-   if ($response ne 'ok') {
-    $file_chooser -> destroy;
-    return TRUE;
-   }
+  if (file_exists($file_chooser, $filename)) {
+   $file_chooser -> destroy;
+   return TRUE;
   }
 
 # Update cwd
@@ -1960,15 +1951,9 @@ sub save_TIFF {
  if ('ok' eq $file_chooser->run) {
   my $filename = $file_chooser -> get_filename;
   $filename = $filename.".tif" if ($filename !~ /\.tif$/i);
-  if (-e $filename) {
-   my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
-    'destroy-with-parent',
-    'question', # message type
-    'ok-cancel', # which set of buttons?
-    sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
-   my $response = $dialog -> run;
-   $dialog -> destroy;
-   return TRUE if ($response ne 'ok');
+  if (file_exists($file_chooser, $filename)) {
+   $file_chooser -> destroy;
+   return TRUE;
   }
 
 # Update cwd
@@ -2084,15 +2069,9 @@ sub save_djvu {
  if ('ok' eq $file_chooser->run) {
   my $filename = $file_chooser -> get_filename;
   $filename = $filename.".djvu" if ($filename !~ /\.djvu$/i);
-  if (-e $filename) {
-   my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
-    'destroy-with-parent',
-    'question', # message type
-    'ok-cancel', # which set of buttons?
-    sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
-   my $response = $dialog -> run;
-   $dialog -> destroy;
-   return TRUE if ($response ne 'ok');
+  if (file_exists($file_chooser, $filename)) {
+   $file_chooser -> destroy;
+   return TRUE;
   }
 
 # Update cwd
