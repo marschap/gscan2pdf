@@ -226,10 +226,11 @@ init_icons(
 
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
-my ($windowp, $windowt, $windowv, $windowe, $windows, $windowh, $windowo,
+my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $frames, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
-    @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer, $scanwatch);
+    @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
+    $scanwatch);
 
 my @action_items = (
  # Fields for each action item:
@@ -241,7 +242,7 @@ my @action_items = (
  [ 'Import', 'gtk-open', $d->get('_Import'), '<control>i', $d->get('Import image file(s)'), \&import ],
  [ 'Scan', 'scanner', $d->get('S_can'), undef, $d->get('Scan document'), \&scan_dialog ],
  [ 'Save PDF', 'pdf', $d->get('_Save PDF'), '<shift><control>s', $d->get('Save as PDF'), \&save_PDF_dialog ],
- [ 'Save TIFF', 'gtk-save', $d->get('Save _TIFF'), '<control>s', $d->get('Save as TIFF'), \&save_TIFF_dialog ],
+ [ 'Save image', 'gtk-save', $d->get('Save _Image'), '<control>s', $d->get('Save image'), \&save_image_dialog ],
  [ 'Save DjVu', undef, $d->get('Save _DjVu'), undef, $d->get('Save as DjVu'), \&save_djvu_dialog ],
  [ 'Email as PDF', 'gtk-edit', $d->get('_Email as PDF'), '<control>e', $d->get('Attach as PDF to a new email'), \&email ],
  [ 'Quit', 'gtk-quit', $d->get('_Quit'), '<control>q', $d->get('Quit'), sub { quit(); Gtk2 -> main_quit; } ],
@@ -293,7 +294,7 @@ my $ui = "<ui>
    <menuitem action='Import'/>
    <menuitem action='Scan'/>
    <menuitem action='Save PDF'/>
-   <menuitem action='Save TIFF'/>
+   <menuitem action='Save image'/>
    <menuitem action='Save DjVu'/>
    <menuitem action='Email as PDF'/>
    <separator/>
@@ -338,7 +339,7 @@ my $ui = "<ui>
   <toolitem action='Import'/>
   <toolitem action='Scan'/>
   <toolitem action='Save PDF'/>
-  <toolitem action='Save TIFF'/>
+  <toolitem action='Save image'/>
   <toolitem action='Email as PDF'/>
   <separator/>
   <toolitem action='Undo'/>
@@ -374,7 +375,7 @@ my $ui = "<ui>
  </popup>
  <popup name='Thumb_Popup'>
   <menuitem action='Save PDF'/>
-  <menuitem action='Save TIFF'/>
+  <menuitem action='Save image'/>
   <menuitem action='Save DjVu'/>
   <menuitem action='Email as PDF'/>
   <separator/>
@@ -801,14 +802,14 @@ sub create_menu_bar {
 
 # save * start off ghosted anyway-
  $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(FALSE);
- $uimanager->get_widget('/MenuBar/File/Save TIFF') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/File/Save image') -> set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(FALSE);
- $uimanager->get_widget('/ToolBar/Save TIFF') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/ToolBar/Save image') -> set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(FALSE);
  $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(FALSE);
- $uimanager->get_widget('/Thumb_Popup/Save TIFF') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/Thumb_Popup/Save image') -> set_sensitive(FALSE);
  $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(FALSE);
  $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
 
@@ -937,11 +938,11 @@ sub update_uimanager {
     $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(TRUE);
    }
    $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(TRUE);
-   $uimanager->get_widget('/MenuBar/File/Save TIFF') -> set_sensitive(TRUE);
+   $uimanager->get_widget('/MenuBar/File/Save image') -> set_sensitive(TRUE);
    $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(TRUE);
-   $uimanager->get_widget('/ToolBar/Save TIFF') -> set_sensitive(TRUE);
+   $uimanager->get_widget('/ToolBar/Save image') -> set_sensitive(TRUE);
    $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(TRUE);
-   $uimanager->get_widget('/Thumb_Popup/Save TIFF') -> set_sensitive(TRUE);
+   $uimanager->get_widget('/Thumb_Popup/Save image') -> set_sensitive(TRUE);
 
    $dependencies{pages} = $#{$slist -> {data}};
   }
@@ -960,13 +961,13 @@ sub update_uimanager {
     $windowe->hide if defined $windowe;
    }
    $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(FALSE);
-   $uimanager->get_widget('/MenuBar/File/Save TIFF') -> set_sensitive(FALSE);
+   $uimanager->get_widget('/MenuBar/File/Save image') -> set_sensitive(FALSE);
    $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(FALSE);
-   $uimanager->get_widget('/ToolBar/Save TIFF') -> set_sensitive(FALSE);
+   $uimanager->get_widget('/ToolBar/Save image') -> set_sensitive(FALSE);
    $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(FALSE);
-   $uimanager->get_widget('/Thumb_Popup/Save TIFF') -> set_sensitive(FALSE);
+   $uimanager->get_widget('/Thumb_Popup/Save image') -> set_sensitive(FALSE);
    $windowp->hide if defined $windowp;
-   $windowt->hide if defined $windowt;
+   $windowi->hide if defined $windowi;
 
    $dependencies{pages} = $#{$slist -> {data}};
   }
@@ -1745,93 +1746,202 @@ sub save_PDF_dialog {
 
 # Display page selector and on save a fileselector.
 
-sub save_TIFF_dialog {
+sub save_image_dialog {
 
 # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
- if ($uimanager->get_widget('/MenuBar/Edit/Options') -> get_active) {
+ if (defined $windowi) {
+  $windowi -> present;
+  return;
+ }
 
-  if (defined $windowt) {
-   $windowt -> present;
-   return;
-  }
-
-  ($windowt, my $vbox) = create_window($window, $d->get('Save as TIFF'), FALSE);
+ ($windowi, my $vbox) = create_window($window, $d->get('Save image'), FALSE);
 
 # Frame for page range
-  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+ my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
-  my @compression = (
-   [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
-   [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
-   [ 'jpeg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
-   [ 'packbits', $d->get('Packbits'), $d->get('Compress output with Packbits encoding.') ],
-   [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
-   [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
-   [ 'none', $d->get('None'), $d->get('Use no compression algorithm on output.') ],
-  );
+# Image type ComboBox
+ my $hboxi = Gtk2::HBox -> new;
+ $vbox -> pack_start($hboxi, TRUE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Image type'));
+ $hboxi -> pack_start ($label, FALSE, FALSE, 0);
+
+ my @type = (
+  [ 'tif', $d->get('TIFF'), $d->get('Tagged Image File Format') ],
+  [ 'png', $d->get('PNG'), $d->get('Portable Network Graphics') ],
+  [ 'jpg', $d->get('JPEG'), $d->get('Joint Photographic Experts Group JFIF format') ],
+  [ 'pnm', $d->get('PNM'), $d->get('Portable anymap') ],
+  [ 'gif', $d->get('GIF'), $d->get('CompuServe graphics interchange format') ],
+ );
+
+ my @compression = (
+  [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
+  [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
+  [ 'jpeg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
+  [ 'packbits', $d->get('Packbits'), $d->get('Compress output with Packbits encoding.') ],
+  [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
+  [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
+  [ 'none', $d->get('None'), $d->get('Use no compression algorithm on output.') ],
+ );
 
 # Compression ComboBox
-  my $hboxc = Gtk2::HBox -> new;
-  $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
-  my $label = Gtk2::Label -> new ($d->get('Compression'));
-  $hboxc -> pack_start ($label, FALSE, FALSE, 0);
+ my $hboxc = Gtk2::HBox -> new;
+ $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('Compression'));
+ $hboxc -> pack_start ($label, FALSE, FALSE, 0);
 
 # Set up quality spinbutton here so that it can be shown or hidden by callback
-  my ($hboxq, $spinbuttonq) = add_quality_spinbutton($vbox);
+ my ($hboxq, $spinbuttonq) = add_quality_spinbutton($vbox);
 
 # Fill compression ComboBox
-  my $i = 0;
-  my $o;
-  my $combobc = Gtk2::ComboBox->new_text;
-  foreach my $option ( @compression ) {
-   $combobc->append_text ($option->[1]);
+ my $i = 0;
+ my $o;
+ my $combobc = Gtk2::ComboBox->new_text;
+ foreach my $option ( @compression ) {
+  $combobc->append_text ($option->[1]);
 
-   $o = $i
-    if (defined($SETTING{'tiff compression'})
-        and $option->[0] eq $SETTING{'tiff compression'});
-   ++$i;
+  $o = $i
+   if (defined($SETTING{'tiff compression'})
+       and $option->[0] eq $SETTING{'tiff compression'});
+  ++$i;
+ }
+ $o = 1 if (! defined $o);
+ $combobc -> set_active ($o);
+ $combobc -> signal_connect (changed => sub {
+  if ($compression[$combobc->get_active][0] eq 'jpeg') {
+   $hboxq -> show_all;
   }
-  $o = 1 if (! defined $o);
-  $combobc -> set_active ($o);
-  $combobc -> signal_connect (changed => sub {
-   if ($compression[$combobc->get_active][0] eq 'jpeg') {
-    $hboxq -> show_all;
-   }
-   else {
-    $hboxq -> hide_all;
-   }
-  });
-  $hboxc -> pack_end ($combobc, FALSE, FALSE, 0);
+  else {
+   $hboxq -> hide_all;
+  }
+ });
+ $hboxc -> pack_end ($combobc, FALSE, FALSE, 0);
+
+# Fill image type ComboBox
+ $i = 0;
+ undef($o);
+ my $combobi = Gtk2::ComboBox->new_text;
+ foreach my $option ( @type ) {
+  $combobi->append_text ($option->[1]);
+
+  $o = $i
+   if (defined($SETTING{'image type'})
+       and $option->[0] eq $SETTING{'image type'});
+  ++$i;
+ }
+ $o = 1 if (! defined $o);
+ $combobi -> set_active ($o);
+ $combobi -> signal_connect (changed => sub {
+  if ($type[$combobi->get_active][0] eq 'tif') {
+   $hboxc -> show_all;
+  }
+  else {
+   $hboxc -> hide_all;
+  }
+  if ($type[$combobi->get_active][0] eq 'jpg'
+      or ($type[$combobi->get_active][0] eq 'tif'
+          and $compression[$combobc->get_active][0] eq 'jpeg')) {
+   $hboxq -> show_all;
+  }
+  else {
+   $hboxq -> hide_all;
+  }
+ });
+ $hboxi -> pack_end ($combobi, FALSE, FALSE, 0);
 
 # HBox for buttons
-  my $hboxb = Gtk2::HBox -> new;
-  $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+ my $hboxb = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
 
 # Save button
-  my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
-  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
-  $sbutton -> signal_connect (clicked => sub {
+ my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
+ $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
+ $sbutton -> signal_connect (clicked => sub {
 
-# dig out the compression
-   $SETTING{'tiff compression'} = $compression[$combobc->get_active][0];
-   $SETTING{'quality'} = $spinbuttonq->get_value
-    if ($SETTING{'tiff compression'} eq 'jpeg');
+# dig out the image type, compression and quality
+  $SETTING{'image type'} = $type[$combobi->get_active][0];
+  $SETTING{'tiff compression'} = $compression[$combobc->get_active][0];
+  $SETTING{'quality'} = $spinbuttonq->get_value;
 
+  if ($SETTING{'image type'} eq 'tif') {
    save_TIFF();
-  } );
+  }
+  else {
+   save_image();
+  }
+ } );
 
 # Cancel button
-  my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
-  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
-  $cbutton -> signal_connect( clicked => sub { $windowt -> hide; } );
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $windowi -> hide; } );
 
-  $windowt -> show_all;
-  $hboxq -> hide_all if ($compression[$combobc->get_active][0] ne 'jpeg');
+ $windowi -> show_all;
+ $hboxq -> hide_all if ($type[$combobi->get_active][0] ne 'jpg'
+                        or ($type[$combobi->get_active][0] eq 'tif'
+                          and $compression[$combobc->get_active][0] ne 'jpeg'));
+ $hboxc -> hide_all if ($type[$combobi->get_active][0] ne 'tif');
+}
+
+
+sub file_exists {
+ my ($file_chooser, $filename) = @_;
+ if (-e $filename) {
+  my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
+   'destroy-with-parent',
+   'question', # message type
+   'ok-cancel', # which set of buttons?
+   sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
+  my $response = $dialog -> run;
+  $dialog -> destroy;
+  return TRUE if ($response ne 'ok');
  }
- else {
-  save_TIFF();
+ return FALSE;
+}
+
+
+sub save_image {
+
+# cd back to cwd to save
+ chdir $SETTING{'cwd'};
+
+# Set up file selector
+ my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('Image filename'),
+                                                     $windowi, 'save',
+                                                     'gtk-cancel' => 'cancel',
+                                                     'gtk-save' => 'ok');
+ $file_chooser -> set_default_response('ok');
+
+ if ('ok' eq $file_chooser->run) {
+  my $filename = $file_chooser -> get_filename;
+
+# Update cwd
+  $SETTING{'cwd'} = dirname($filename);
+
+# cd back to tempdir
+  chdir $dir;
+
+# fill $pagelist with filenames depending on which radiobutton is active
+  my ($pagelist, $n) = get_pagelist();
+
+  my @pagelist = split / /, $pagelist;
+  if ($#pagelist == 0) {
+   $filename = $filename.".$SETTING{'image type'}"
+    if ($filename !~ /\.$SETTING{'image type'}$/i);
+   system ("convert $pagelist[0] $filename")
+    if (! file_exists($file_chooser, $filename));
+  }
+  else {
+   my $i = 1;
+   foreach (@pagelist) {
+    system ("convert $_ \"$filename.$i.$SETTING{'image type'}\"")
+     if (! file_exists($file_chooser, "$filename.$i.$SETTING{'image type'}"));
+    $i++;
+   }
+  }
  }
+
+ $file_chooser -> destroy;
 }
 
 
@@ -1842,7 +1952,7 @@ sub save_TIFF {
 
 # Set up file selector
  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('TIFF filename'),
-                                                     $windowt, 'save',
+                                                     $windowi, 'save',
                                                      'gtk-cancel' => 'cancel',
                                                      'gtk-save' => 'ok');
  $file_chooser -> set_default_response('ok');
@@ -1890,11 +2000,11 @@ sub save_TIFF {
 # Create the tiff
   my $output = `tiffcp -c $compression $pagelist "$filename" 2>&1`;
   if ($output eq '') {
-   $windowt -> hide if defined $windowt;
+   $windowi -> hide if defined $windowi;
   }
   else {
    unlink $filename;
-   my $dialog = Gtk2::MessageDialog -> new ($windowt,
+   my $dialog = Gtk2::MessageDialog -> new ($windowi,
                                            'destroy-with-parent',
                                            'error',
                                            'close',
@@ -4906,9 +5016,9 @@ embedded in the file and so searchable and can be examined, typically with the
 
 The metadata are completely optional.
 
-=head3 Save TIFF
+=head3 Save image
 
-Saves the current, selected or all pages as a TIFF.
+Saves the current, selected or all pages as a TIFF, PNG, JPEG, PNM or GIF.
 
 =head3 Save DjVu
 
