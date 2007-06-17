@@ -6,13 +6,17 @@
 
 # To do
 # 0. option button for unpaper on scan
+#    rotating doesn't update detail view - sometimes (wait problem?)
+#    problem with wait after cancelling scan?
+#    default for no-black-filter in unpaper
+#    cover case where unpaper or ocr starts running on a page that has in the
+#     meantime been deleted
 #    in date metadata, add "today", but save offset, not date
 #    once --mode updates seem to be working ok, take out scan compression hacks.
 #    what has happened to the progressbar whilst getting scan options?
 #    handle corrupted images properly
 #    move test tif and correct blank PDF with compression=none
 #    use -x option (first column 0-100) in gocr to give more detail to progressbar
-#    add single image save as png, etc.
 #    fix encoding problem with OCR output
 #    move locales to locale directory for build
 #    look at adding make clean to release procedure
@@ -2665,6 +2669,7 @@ warn "$text\n";
 # allow the hup if sure an empty buffer has been read.
    if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
     close $read;
+    warn 'Waiting to reap process' if ($debug);
     my $pid = wait; # So we don't leave zombies
     warn "Reaped PID $pid\n" if ($debug);
 
@@ -2798,6 +2803,7 @@ warn "$text\n";
 # allow the hup if sure an empty buffer has been read.
    if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
     close $read;
+    warn 'Waiting to reap process' if ($debug);
     my $pid = wait; # So we don't leave zombies
     warn "Reaped PID $pid\n" if ($debug);
 
@@ -3081,6 +3087,7 @@ sub rescan_options {
    }
    if ($condition & 'hup') { # bit field operation. >= would also work
     close $read;
+    warn 'Waiting to reap process' if ($debug);
     my $pid = wait; # So we don't leave zombies
     warn "Reaped PID $pid\n" if ($debug);
     $running = FALSE;
@@ -3422,6 +3429,7 @@ sub update_options {
    }
    if ($condition & 'hup') { # bit field operation. >= would also work
     close $read;
+    warn 'Waiting to reap process' if ($debug);
     my $pid = wait; # So we don't leave zombies
     warn "Reaped PID $pid\n" if ($debug);
     $running = FALSE;
@@ -3784,6 +3792,7 @@ sub unpaper_page {
       if ($condition & 'hup') { # bit field operation. >= would also work
        warn $page_buffer if ($debug);
        close $read;
+       warn 'Waiting to reap process' if ($debug);
        my $pid = wait;
        warn "Reaped PID $pid\n" if ($debug);
 
@@ -4287,6 +4296,7 @@ sub ocr_page {
       }
       if ($condition & 'hup') { # bit field operation. >= would also work
        close $read;
+       warn 'Waiting to reap process' if ($debug);
        my $pid = wait; # So we don't leave zombies
        warn "Reaped PID $pid\n" if ($debug);
        $running = FALSE;
@@ -4638,6 +4648,7 @@ sub register_icon {
 # to be reloaded when a child process exits.
 
 sub sig_child {
+ warn 'Waiting to reap process' if ($debug);
  my $pid = wait; # So we don't leave zombies
  warn "Reaped PID $pid\n" if ($debug);
  delete $helperTag{$pid} if ($pid >= 0);
