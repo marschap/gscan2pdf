@@ -1361,8 +1361,6 @@ sub add_PDF_options {
   my $calendar = Gtk2::Calendar -> new;
   $calendar -> select_day($SETTING{'day'});
   $calendar -> select_month($SETTING{'month'}-1, $SETTING{'year'});
-  $vbox -> pack_start ($calendar, TRUE, TRUE, 0);
-
   $calendar -> signal_connect(day_selected_double_click => sub {
    ($SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'}) = $calendar ->
                                                                        get_date;
@@ -1370,6 +1368,16 @@ sub add_PDF_options {
    $button -> set_label ("$SETTING{'year'}/$SETTING{'month'}/$SETTING{'day'}");
    $window -> destroy;
   });
+  $vbox -> pack_start ($calendar, TRUE, TRUE, 0);
+
+  my $today = Gtk2::Button -> new($d->get('Today'));
+  $today -> signal_connect( clicked => sub {
+   my ($day, $month, $year) = (localtime())[3, 4, 5];
+   $year += 1900;
+   $calendar -> select_day($day);
+   $calendar -> select_month($month, $year);
+  });
+  $vbox -> pack_start ($today, TRUE, TRUE, 0);
 
   $window -> show_all;
  } );
