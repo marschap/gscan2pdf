@@ -1345,27 +1345,27 @@ sub add_PDF_options {
  $vboxm -> pack_start($hboxe, TRUE, TRUE, 0);
  my $labele = Gtk2::Label -> new ($d->get('Date'));
  $hboxe -> pack_start ($labele, FALSE, FALSE, 0);
- if (! (defined($SETTING{'year'}) and defined($SETTING{'month'})
-                               and defined($SETTING{'day'}))) {
-  ($SETTING{'day'}, $SETTING{'month'}, $SETTING{'year'})
-                                                       = (localtime())[3, 4, 5];
-  $SETTING{'year'} += 1900;
-  $SETTING{'month'} += 1;
- }
- my $button = Gtk2::Button ->
-                      new("$SETTING{'year'}/$SETTING{'month'}/$SETTING{'day'}");
+ $SETTING{'date offset'} = 0 if (! (defined($SETTING{'date offset'})));
+ my ($day, $month, $year) =
+                    (localtime(time+$SETTING{'date offset'}*24*60*60))[3, 4, 5];
+ $year += 1900;
+ $month += 1;
+
+ my $button = Gtk2::Button -> new("$year/$month/$day");
  $button -> signal_connect( clicked => sub {
   my ($window, $vbox) = create_window($windowp, $d->get('Select Date'), TRUE);
   $window->set_resizable(FALSE);
 
   my $calendar = Gtk2::Calendar -> new;
-  $calendar -> select_day($SETTING{'day'});
-  $calendar -> select_month($SETTING{'month'}-1, $SETTING{'year'});
+  $calendar -> select_day($day);
+  $calendar -> select_month($month-1, $year);
   $calendar -> signal_connect(day_selected_double_click => sub {
-   ($SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'}) = $calendar ->
-                                                                       get_date;
-   $SETTING{'month'} += 1;
-   $button -> set_label ("$SETTING{'year'}/$SETTING{'month'}/$SETTING{'day'}");
+   ($year, $month, $day) = $calendar -> get_date;
+   $month += 1;
+   $button -> set_label ("$year/$month/$day");
+   use Time::Local;
+   $SETTING{'date offset'} =
+               int((timelocal(0, 0, 0, $day, $month-1, $year) - time)/60/60/24);
    $window -> destroy;
   });
   $vbox -> pack_start ($calendar, TRUE, TRUE, 0);
@@ -1438,12 +1438,14 @@ sub update_PDF_settings {
 sub get_PDF_options {
  my %h;
  $h{'Author'} = $SETTING{'author'} if defined $SETTING{'author'};
- if (defined $SETTING{'year'} and defined $SETTING{'month'}
-                                               and defined $SETTING{'day'}) {
+ if (defined $SETTING{'date offset'}) {
+  my ($day, $month, $year) =
+                    (localtime(time+$SETTING{'date offset'}*24*60*60))[3, 4, 5];
+  $year += 1900;
+  $month += 1;
   $h{'CreationDate'} = sprintf ("D:%4i%02i%02i000000+00'00'",
-                        $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'});
-  $h{'ModDate'} = sprintf ("D:%4i%02i%02i000000+00'00'",
-                        $SETTING{'year'}, $SETTING{'month'}, $SETTING{'day'});
+                                                           $year, $month, $day);
+  $h{'ModDate'} = sprintf ("D:%4i%02i%02i000000+00'00'", $year, $month, $day);
  }
  $h{'Creator'} = "$program v$version";
  $h{'Producer'} = "PDF::API2";
