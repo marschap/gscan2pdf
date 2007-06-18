@@ -2571,7 +2571,7 @@ sub scanimage {
  chdir $dir;
 
 # Create command
- my $cmd = "scanimage $device $npages @options";
+ my $cmd = "scanimage $device @options $npages";
  warn "$cmd\n" if $debug;
 
  if (! @test) {
@@ -2723,7 +2723,7 @@ sub scanadf {
  chdir $dir;
 
 # Create command
- my $cmd = "scanadf $device $start $end @options > /dev/stderr";
+ my $cmd = "scanadf $device @options $start $end > /dev/stderr";
  warn "$cmd\n" if $debug;
 
  if (! @test) {
@@ -2834,6 +2834,13 @@ sub hash2options {
  my %options = @_;
 
  my (@options, $key, $value);
+
+# Make sure mode is first in case of mode-dependent options
+ if (defined($options{mode})) {
+  push @options, "--mode='$options{mode}'";
+  delete $options{mode};
+ }
+
  while (($key, $value) = each(%options)) {
   if ($key eq 'x' or $key eq 'y' or $key eq 'l' or $key eq 't') {
    push @options, "-$key $value";
