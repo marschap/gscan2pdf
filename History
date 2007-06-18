@@ -1,4 +1,4 @@
-0.9.11 (15.06.2007):
+0.9.11 (19.06.2007):
 
 + no-grayfilter option
 + check for mode-dependent options.
@@ -10,6 +10,8 @@
   and bug 1736582 (PDFs with embedded JPEGS are large)
 + save image functionality supporting TIFF, PNG, JPEG, PNM & GIF.
   Closes feature request 1709380 (Support PNG output equivalent to TIFF)
++ save default dates as offset from current, closing bug 1736037
+  (pdf file->save dialog should automatically set the date to the current day)
 
 
 0.9.10 (05.06.2007):
