@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.11
+Version: 0.9.12
 Release:   1%{?dist}
 Summary:   A GUI to ease the process of producing a multipage PDF from a scan
 Group:     Applications/Publishing
@@ -66,3 +66,7 @@ rm -rf $RPM_BUILD_ROOT
     Closes feature request 1709380 (Support PNG output equivalent to TIFF)
   - save default dates as offset from current, closing bug 1736037
     (pdf file->save dialog should automatically set the date to the current day)
+  - Update to Czech translation (thanks to Petr Jelínek)
+  - update to German translation (thanks to Florian)
+  - update to Portuguese translation (thanks to Hugo Pereira)
+  - Update to Spanish translation (thanks to Raúl González Duque)
