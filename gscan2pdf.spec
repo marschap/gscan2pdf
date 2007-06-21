@@ -1,7 +1,8 @@
 Name:      gscan2pdf
 Version: 0.9.10
 Release:   1%{?dist}
-Summary:   A GUI to ease the process of producing a multipage PDF from a scan
+Summary:   A GUI for producing a multipage PDF from a scan
+
 Group:     Applications/Publishing
 License:   GPL
 URL:       http://%{name}.sourceforge.net/
@@ -9,8 +10,15 @@ Source0:   %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
 ExclusiveArch: noarch
+
+BuildRequires:  perl(ExtUtils::MakeMaker), gettext, desktop-file-utils
+
+Requires:  perl(Gtk2) >= 1:1.043-1, perl(Glib) >= 1.100-1
+Requires:  perl(Locale::gettext) >= 1.05, perlmagick, libtiff
+Requires:  ImageMagick, djvulibre, sane-backends, sane-frontends, xdg-utils
+Requires:  perl(Gtk2::Ex::PodViewer), perl(PDF::API2), unpaper, gocr
+
 Packager:  Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-Requires:  perl(Gtk2) >= 1:1.043-1, perl(Glib) >= 1.100-1, perl(Locale::gettext) >= 1.05, perl(PDF::API2), perlmagick, sane, libtiff
 
 %description
 At maturity, the GUI will have similar features to that of the Windows Imaging
@@ -22,10 +30,9 @@ Scanning is handled with SANE via scanimage. PDF conversion is done by libtiff.
 %setup -q
 
 %build
-rm -rf $RPM_BUILD_ROOT
 perl Makefile.PL
 make
-make test
+
 
 %install
 make DESTDIR=$RPM_BUILD_ROOT INSTALLMAN1DIR=/usr/share/man/man1 \
@@ -34,6 +41,11 @@ make DESTDIR=$RPM_BUILD_ROOT INSTALLMAN1DIR=/usr/share/man/man1 \
      install
 find $RPM_BUILD_ROOT -name perllocal.pod | xargs rm -f
 find $RPM_BUILD_ROOT -name .packlist | xargs rm -f
+
+%find_lang %{name}
+
+%check
+make test
 
 %clean
 rm -rf $RPM_BUILD_ROOT
