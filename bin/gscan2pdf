@@ -2243,7 +2243,7 @@ sub scan_dialog {
   $combobd->append_text ($_);
  }
  $combobd -> signal_connect (changed => sub {
-  undef $SETTING{mode};
+  delete $SETTING{mode};
   rescan_options($vboxd, $device[$combobd -> get_active]);
   $vboxd -> show_all;
   hide_custom();
