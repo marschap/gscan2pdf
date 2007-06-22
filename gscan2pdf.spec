@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.10
+Version: 0.9.12
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -82,25 +82,20 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Mon Jun 04 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - patch credits
-  - Switched rotate icons from Crystal (KDE) to those stolen from Eye of Gnome
-  - Closed bug 1712967
-     (long lines in ocr output resized document display off screen)
-  - contrast and threshold controls
-  - handle PNG, JPEG, GIF, PNM natively,
-     closing feature request 1708448 (JPG to PDF)
-     and bugs 1714874 (import b/w pdf problem)
-     and 1669413 (Problem with "callback")
-  - PDF compression options (JPEG, PNG), closing feature request 1708036
-  - --speed option (Epson 1200)
-  - ProgressBar for PDF save, closing feature request 1712964
-  - Portuguese translation (thanks to Hugo Pereira)
-  - Danish translation (thanks to Jacob Nielsen)
+* Tue Jun 19 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - no-grayfilter option
+  - check for mode-dependent options.
+  - note resolution info so that the resulting PDF has the correct paper size.
+    Closes bug 1736036 (page size is somehow a ratio of resolution)
+    and Debian bug 426525 (after unpaper, saving PDF causes magnified page)
+  - quality setting for JPG compression in save as PDF.
+    Closes feature request 1736043 (Compression setting)
+    and bug 1736582 (PDFs with embedded JPEGS are large)
+  - save image functionality supporting TIFF, PNG, JPEG, PNM & GIF.
+    Closes feature request 1709380 (Support PNG output equivalent to TIFF)
+  - save default dates as offset from current, closing bug 1736037
+    (pdf file->save dialog should automatically set the date to the current day)
   - Update to Czech translation (thanks to Petr Jelínek)
-  - Update to Dutch translation (thanks to Eric Spierings)
-  - Update to French translation (thanks to codL)
-  - remembers OCR on scan setting
-  - unpaper on scan
-  - calibration-cache option for Canon LiDE25
-  - roadmap to website/help
+  - update to German translation (thanks to Florian)
+  - update to Portuguese translation (thanks to Hugo Pereira)
+  - Update to Spanish translation (thanks to Raúl González Duque)

@@ -69,6 +69,7 @@
 # 0. Test scan in lineart, greyscale and colour.
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
 #    Make sure that file list in .spec and hg status reflects MANIFEST
+#    Download new translations
 #    Make sure that changelog reflects History and hg log from bin/gscan2pdf
 # 2. make rpmdist debdist
 #    test dist sudo dpkg -i gscan2pdf-0....
@@ -96,7 +97,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.13';
+my $version = '0.9.13rc1';
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -846,7 +847,6 @@ sub create_menu_bar {
   $uimanager->get_widget('/MenuBar/Tools/unpaper') -> set_sensitive(FALSE);
   $msg .= $d->get("The rotating options, unpaper support and the scanadf frontend require perlmagick\n");
  }
-
 
 # Ghost unpaper item if unpaper not available
  if ($dependencies{unpaper} != 0) {
@@ -5173,7 +5173,7 @@ Thunderbird.
 
 =over
 
-=item v0.9.12
+=item v0.9.13
 
 =over
 
@@ -5181,8 +5181,6 @@ Thunderbird.
 
 Google's OCR engine is supposed to be very good - but at the moment only
 supports one-column text in English
-
-=item Add single image save as png, etc.
 
 =item Option button for unpaper on scan.
 
