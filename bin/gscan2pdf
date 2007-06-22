@@ -4262,7 +4262,7 @@ sub ocr_page {
      $pbar->set_fraction (($page-1)/($#ocr_stack+$npages+1));
 
 # Temporary filename for output
-     my (undef, $txt) = tempfile(DIR => $dir, SUFFIX => '.txt');
+     my (undef, $txt) = tempfile(DIR => $dir);
 
      my $cmd;
      if (defined($SETTING{'ocr engine'}) and $SETTING{'ocr engine'} eq 'gocr') {
@@ -4273,11 +4273,11 @@ sub ocr_page {
 # Temporary filename for new file
        (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
 
-       $cmd = "convert $file $pnm; gocr $pnm > $txt; rm $pnm";
+       $cmd = "convert $file $pnm; gocr $pnm > $txt.txt; rm $pnm";
       }
       else {
        $pnm = $slist -> {data}[$pagenum][2];
-       $cmd .= "gocr $pnm > $txt;";
+       $cmd .= "gocr $pnm > $txt.txt;";
       }
      }
      else {
@@ -4319,7 +4319,8 @@ sub ocr_page {
        $slist -> get_model -> signal_handler_block($slist -> {signalid});
 
 # Slurp the OCR output
-       $slist -> {data}[$pagenum][3] .= do { local( @ARGV, $/ ) = $txt ; <> } ;
+       $slist -> {data}[$pagenum][3] .= do { local( @ARGV, $/ ) = "$txt.txt" ; <> } ;
+       unlink <$txt.*>;
        $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
 # Update the buffer if current
