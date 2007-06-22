@@ -1667,21 +1667,7 @@ sub add_pdf_compression {
 
 # Set up quality spinbutton here so that it can be shown or hidden by callback
  my ($hboxq, $spinbuttonq) = add_quality_spinbutton($vbox);
-
-# Fill compression ComboBox
- my $i = 0;
- my $o;
- my $combobc = Gtk2::ComboBox->new_text;
- foreach ( @compression ) {
-  $combobc->append_text ($_->[1]);
-
-  $o = $i
-   if (defined($SETTING{'pdf compression'})
-       and $_->[0] eq $SETTING{'pdf compression'});
-  ++$i;
- }
- $o = 1 if (! defined $o);
- $combobc -> set_active ($o);
+ my $combobc =  combobox_from_array($SETTING{'pdf compression'}, @compression);
  $combobc -> signal_connect (changed => sub {
   if ($compression[$combobc->get_active][0] eq 'jpg') {
    $hboxq -> show_all;
@@ -1801,19 +1787,7 @@ sub save_image_dialog {
  my ($hboxq, $spinbuttonq) = add_quality_spinbutton($vbox);
 
 # Fill compression ComboBox
- my $i = 0;
- my $o;
- my $combobc = Gtk2::ComboBox->new_text;
- foreach my $option ( @compression ) {
-  $combobc->append_text ($option->[1]);
-
-  $o = $i
-   if (defined($SETTING{'tiff compression'})
-       and $option->[0] eq $SETTING{'tiff compression'});
-  ++$i;
- }
- $o = 1 if (! defined $o);
- $combobc -> set_active ($o);
+ my $combobc = combobox_from_array($SETTING{'tiff compression'}, @compression);
  $combobc -> signal_connect (changed => sub {
   if ($compression[$combobc->get_active][0] eq 'jpeg') {
    $hboxq -> show_all;
@@ -1825,19 +1799,7 @@ sub save_image_dialog {
  $hboxc -> pack_end ($combobc, FALSE, FALSE, 0);
 
 # Fill image type ComboBox
- $i = 0;
- undef($o);
- my $combobi = Gtk2::ComboBox->new_text;
- foreach my $option ( @type ) {
-  $combobi->append_text ($option->[1]);
-
-  $o = $i
-   if (defined($SETTING{'image type'})
-       and $option->[0] eq $SETTING{'image type'});
-  ++$i;
- }
- $o = 1 if (! defined $o);
- $combobi -> set_active ($o);
+ my $combobi = combobox_from_array($SETTING{'image type'}, @type);
  $combobi -> signal_connect (changed => sub {
   if ($type[$combobi->get_active][0] eq 'tif') {
    $hboxc -> show_all;
