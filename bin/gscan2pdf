@@ -2243,6 +2243,7 @@ sub scan_dialog {
   $combobd->append_text ($_);
  }
  $combobd -> signal_connect (changed => sub {
+  undef $SETTING{mode};
   rescan_options($vboxd, $device[$combobd -> get_active]);
   $vboxd -> show_all;
   hide_custom();
@@ -3047,7 +3048,7 @@ sub rescan_options {
 # Get output from scanimage or scanadf.
 # Inverted commas needed for strange characters in device name
   my $cmd = "$SETTING{'frontend'} --help --device-name='$device'";
-  $cmd .= " --mode $SETTING{mode}" if (defined $SETTING{mode});
+  $cmd .= " --mode=$SETTING{mode}" if (defined $SETTING{mode});
   warn "$cmd\n" if $debug;
 
 # Set up ProgressBar
