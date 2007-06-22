@@ -4709,7 +4709,7 @@ __END__
 
 =head1 Name
 
-gscan2pdf - A GUI to ease the process of producing a multipage PDF from a scan.
+gscan2pdf - A GUI to produce a multipage PDF from a scan.
 gscan2pdf should work on almost any Linux/BSD machine.
 
 =for html <p align="center">
@@ -4732,10 +4732,6 @@ Scanning is handled with SANE via scanimage.
 PDF conversion is done by PDF::API2.
 TIFF export is handled by libtiff (faster and smaller memory footprint for
 multipage files).
-
-Perl is used for portability and ease of programming, with gtk2-perl for the
-GUI. This should therefore work more or less out of the box on any system with
-Perl, gtk2-perl, scanimage and libtiff.
 
 =head1 Download
 
