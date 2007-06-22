@@ -96,7 +96,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.11rc3';
+my $version = '0.9.13';
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -2987,7 +2987,13 @@ sub delete_pages {
 # Select all scans
 
 sub select_all {
- $slist -> get_selection -> select_all;
+ if ($slist -> has_focus) {
+  $slist -> get_selection -> select_all;
+ }
+ elsif ($textview -> has_focus) {
+  my ($start, $end) = $textbuffer->get_bounds;
+  $textbuffer->select_range ($start, $end);
+ }
 }
 
 
