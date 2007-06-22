@@ -234,7 +234,7 @@ my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $frames, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
-    $scanwatch);
+    $scanwatch, @ocr_engine);
 
 my @action_items = (
  # Fields for each action item:
@@ -762,10 +762,19 @@ sub create_menu_bar {
  $dependencies{scanadf} = system("which scanadf >/dev/null 2>/dev/null");
  $dependencies{xdg} = system("which xdg-email >/dev/null 2>/dev/null");
  $dependencies{gocr} = system("which gocr >/dev/null 2>/dev/null");
+ $dependencies{tesseract} = system("which tesseract >/dev/null 2>/dev/null");
  $dependencies{djvu} = system("which cjb2 >/dev/null 2>/dev/null");
  $dependencies{unpaper} = system("which unpaper >/dev/null 2>/dev/null");
- my $msg = '';
 
+# OCR engine options
+ push @ocr_engine,
+  [ 'gocr', $d->get('GOCR'), $d->get('Process image with GOCR.') ]
+  if ($dependencies{gocr} == 0);
+ push @ocr_engine,
+  [ 'tesseract',  $d->get('Tesseract'),  $d->get('Process image with Tesseract.') ],
+  if ($dependencies{tesseract} == 0);
+
+ my $msg = '';
  $msg .= $d->get("PDF creation requires PDF::API2\n")
   if ($dependencies{pdfapi2});
 
@@ -839,23 +848,16 @@ sub create_menu_bar {
  }
 
 
-# Ghost gocr and unpaper if imagemagick not available
- if ($dependencies{imagemagick}) {
-  $uimanager->get_widget('/MenuBar/Tools/OCR') -> set_sensitive(FALSE);
-  $uimanager->get_widget('/MenuBar/Tools/unpaper') -> set_sensitive(FALSE);
-  $msg .= $d->get("OCR, unpaper support and the scanadf frontend require perlmagick\n");
- }
-
 # Ghost unpaper item if unpaper not available
  if ($dependencies{unpaper} != 0) {
   $uimanager->get_widget('/MenuBar/Tools/unpaper') -> set_sensitive(FALSE);
   $msg .= $d->get("unpaper missing\n");
  }
 
-# Ghost ocr item if gocr not available
- if ($dependencies{gocr} != 0) {
+# Ghost ocr item if gocr and tesseract not available
+ if ($dependencies{gocr} != 0 and $dependencies{tesseract}) {
   $uimanager->get_widget('/MenuBar/Tools/OCR') -> set_sensitive(FALSE);
-  $msg .= $d->get("OCR requires gocr\n");
+  $msg .= $d->get("OCR requires gocr or tesseract\n");
  }
 
 # Put up warning if needed
@@ -2400,15 +2402,19 @@ sub scan_dialog {
  $vbox -> pack_start($ubutton, TRUE, TRUE, 0);
 
 # Checkbox for OCR
+ my $hboxo = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxo, FALSE, FALSE, 0);
  my $obutton = Gtk2::CheckButton -> new($d->get('OCR scanned pages'));
- if ($dependencies{gocr} != 0) {
-  $obutton -> set_sensitive(FALSE);
+ if ($dependencies{gocr} != 0 and $dependencies{tesseract}) {
+  $hboxo -> set_sensitive(FALSE);
   $obutton -> set_active(FALSE);
  }
  elsif (defined($SETTING{'OCR on scan'}) and $SETTING{'OCR on scan'}) {
   $obutton -> set_active(TRUE);
  }
- $vbox -> pack_start($obutton, TRUE, TRUE, 0);
+ $hboxo -> pack_start($obutton, TRUE, TRUE, 0);
+ my $comboboxe = combobox_from_array($SETTING{'ocr engine'}, @ocr_engine);
+ $hboxo -> pack_end($comboboxe, TRUE, TRUE, 0);
 
 # Frame for device-dependent options
  my $framed = Gtk2::Frame -> new($d->get('Device-dependent options'));
@@ -2533,6 +2539,8 @@ sub scan_dialog {
 
   $SETTING{'unpaper on scan'} = $ubutton->get_active;
   $SETTING{'OCR on scan'} = $obutton->get_active;
+  $SETTING{'ocr engine'} = $ocr_engine[$comboboxe -> get_active]->[0]
+   if ($SETTING{'OCR on scan'});
   if ($SETTING{'frontend'} eq 'scanimage') {
    scanimage($SETTING{'device'}, $npages, $start-$step, $step,
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
@@ -2871,7 +2879,7 @@ sub import_scan {
  my %suffix = (
   'Portable Network Graphics'                    => '.png',
   'Joint Photographic Experts Group JFIF format' => '.jpg',
-  'Tagged Image File Format'                     => '.tiff',
+  'Tagged Image File Format'                     => '.tif',
   'Portable anymap'                              => '.pnm',
   'CompuServe graphics interchange format'       => '.gif',
  );
@@ -4290,32 +4298,52 @@ sub ocr_page {
      $pbar->set_text(sprintf($d->get("Page %i of %i"), $page, $#ocr_stack+$npages+1));
      $pbar->set_fraction (($page-1)/($#ocr_stack+$npages+1));
 
-     my ($cmd, $pnm);
-     if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
-      my $file = $slist -> {data}[$pagenum][2];
+# Temporary filename for output
+     my (undef, $txt) = tempfile(DIR => $dir, SUFFIX => '.txt');
+
+     my $cmd;
+     if (defined($SETTING{'ocr engine'}) and $SETTING{'ocr engine'} eq 'gocr') {
+      my $pnm;
+      if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
+       my $file = $slist -> {data}[$pagenum][2];
 
 # Temporary filename for new file
-      (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+       (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
 
-      $cmd = "convert $file $pnm; gocr $pnm; rm $pnm";
+       $cmd = "convert $file $pnm; gocr $pnm > $txt; rm $pnm";
+      }
+      else {
+       $pnm = $slist -> {data}[$pagenum][2];
+       $cmd .= "gocr $pnm > $txt;";
+      }
      }
      else {
-      $pnm = $slist -> {data}[$pagenum][2];
-      $cmd .= "gocr $pnm;";
+      my $tif;
+      if ($slist -> {data}[$pagenum][2] !~ /\.tif$/) {
+       my $file = $slist -> {data}[$pagenum][2];
+
+# Temporary filename for new file
+       (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+
+       $cmd = "convert $file $tif; tesseract $tif $txt; rm $tif";
+      }
+      else {
+       $tif = $slist -> {data}[$pagenum][2];
+       $cmd .= "tesseract $tif $txt;";
+      }
      }
      warn "$cmd\n" if ($debug);
 
-# Interface to gocr
+# Interface to ocr engine
      $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
      warn "Forked PID $pid\n" if ($debug);
-     my $page_buffer = '';
  
 # Update TextBuffer without blocking
      Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
       my ($fileno, $condition) = @_;
       if ($condition & 'in') { # bit field operation. >= would also work
        my $line;
-       $page_buffer .= $line while (sysread $read, $line, 1024);
+       while (sysread $read, $line, 1024) {};
       }
       if ($condition & 'hup') { # bit field operation. >= would also work
        close $read;
@@ -4326,7 +4354,9 @@ sub ocr_page {
 
 # Doing this once at the end to avoid firing the row-changed signal too often
        $slist -> get_model -> signal_handler_block($slist -> {signalid});
-       $slist -> {data}[$pagenum][3] .= $page_buffer;
+
+# Slurp the OCR output
+       $slist -> {data}[$pagenum][3] .= do { local( @ARGV, $/ ) = $txt ; <> } ;
        $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
 # Update the buffer if current
@@ -4359,6 +4389,28 @@ sub ocr_page {
 }
 
 
+# Create a combobox from an array and set the default
+
+sub combobox_from_array {
+ my ($default, @array) = @_;
+
+# Fill ComboBox
+ my $i = 0;
+ my $o;
+ my $combobox = Gtk2::ComboBox->new_text;
+ foreach ( @array ) {
+  $combobox->append_text ($_->[1]);
+
+  $o = $i if (defined($default) and $_->[0] eq $default);
+  ++$i;
+ }
+ $o = 1 if (! defined $o);
+ $combobox -> set_active ($o);
+ 
+ return $combobox;
+}
+
+
 # Run OCR on current page and display result
 
 sub OCR {
@@ -4370,8 +4422,16 @@ sub OCR {
 
  ($windowo, my $vbox) = create_window($window, $d->get('OCR'), FALSE);
 
+# OCR engine selection
+ my $hboxe = Gtk2::HBox -> new;
+ $vbox -> pack_start($hboxe, TRUE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('OCR Engine'));
+ $hboxe -> pack_start ($label, FALSE, FALSE, 0);
+ my $combobe = combobox_from_array($SETTING{'ocr engine'}, @ocr_engine);
+ $hboxe -> pack_end ($combobe, FALSE, FALSE, 0);
+
 # Frame for page range
-  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+ my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # HBox for buttons
  my $hbox = Gtk2::HBox -> new;
@@ -4381,6 +4441,8 @@ sub OCR {
  my $obutton = Gtk2::Button -> new($d->get('Start OCR'));
  $hbox -> pack_start( $obutton, TRUE, TRUE, 0 );
  $obutton -> signal_connect( clicked => sub {
+
+  $SETTING{'ocr engine'} = $ocr_engine[$combobe -> get_active]->[0];
 
 # fill $pagelist with filenames depending on which radiobutton is active
   my @pagelist = get_page_index();
@@ -4860,19 +4922,24 @@ website).
 
 =item unpaper
 
-post-processing tool for scanned pages
+post-processing tool for scanned pages. See L<http://unpaper.berlios.de/>.
 
 =item xdg-utils
 
 Desktop integration utilities from freedesktop.org. Required for Email as PDF.
+See L<http://portland.freedesktop.org/wiki/>
 
 =item djvulibre-bin
 
-Utilities for the DjVu image format
+Utilities for the DjVu image format. See L<http://djvu.sourceforge.net/>
 
 =item gocr
 
-A command line OCR
+A command line OCR. See L<http://jocr.sourceforge.net/>.
+
+=item tesseract
+
+A command line OCR. See L<http://code.google.com/p/tesseract-ocr/>
 
 =back
 
@@ -5098,7 +5165,7 @@ unpaper (see L<http://unpaper.berlios.de/>) is a utility for cleaning up a scan.
 
 =head3 OCR (Optical Character Recognition)
 
-The gocr utility is used to produce text from an image.
+The gocr or tesseract utilities are used to produce text from an image.
 
 There is an OCR output buffer for each page and is embedded both as an
 annotation (pop-up note) and as plain text behind the scanned image in the PDF

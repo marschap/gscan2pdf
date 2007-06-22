@@ -47,7 +47,7 @@ find $RPM_BUILD_ROOT -depth -type d -exec rmdir {} 2>/dev/null ';'
 rm -f $RPM_BUILD_ROOT/%{perl_archlib}/perllocal.pod
 chmod -R u+w $RPM_BUILD_ROOT/*
 
-desktop-file-install --delete-original \
+desktop-file-install --delete-original  --vendor="" \
   --dir=$RPM_BUILD_ROOT/%{_datadir}/applications         \
   $RPM_BUILD_ROOT/%{_datadir}/applications/%{name}.desktop
 
