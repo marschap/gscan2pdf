@@ -11,7 +11,6 @@
 #    default for no-black-filter in unpaper
 #    cover case where unpaper or ocr starts running on a page that has in the
 #     meantime been deleted
-#    in date metadata, add "today", but save offset, not date
 #    once --mode updates seem to be working ok, take out scan compression hacks.
 #    what has happened to the progressbar whilst getting scan options?
 #    handle corrupted images properly
@@ -20,11 +19,10 @@
 #    fix encoding problem with OCR output
 #    move locales to locale directory for build
 #    look at adding make clean to release procedure
-#    delete cvs repository on sourceforge
 #    add run script option
 #    check out freeze when gocr does not return properly
 #    for scan profiles, switch to Config::General (libconfig-general-perl)
-#    add tesseract, ocrad, ocre support
+#    add ocrad, ocre support
 #    for hidden text layer in DjVu:
 #     djvused set-txt
 #     DjVutoXML
@@ -97,7 +95,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.13rc1';
+my $version = '0.9.13rc2';
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -160,6 +158,7 @@ while (defined($ARGV[0])) {
  elsif ($ARGV[0] eq "--debug") {
   $debug = TRUE;
   shift @ARGV;
+  warn "$program $version\n";
  }
  else {
   warn sprintf($d->get("Unknown option %s.\n"), shift @ARGV); # xgettext hack
@@ -757,31 +756,49 @@ sub create_menu_bar {
  my $menubar = $uimanager->get_widget('/MenuBar');
 
 # Check for presence of various packages
- $dependencies{pdfapi2} = ! eval { require PDF::API2 };
- $dependencies{perlmagick} = ! eval { require Image::Magick };
- $dependencies{imagemagick} = system("which convert >/dev/null 2>/dev/null");
- $dependencies{scanadf} = system("which scanadf >/dev/null 2>/dev/null");
- $dependencies{xdg} = system("which xdg-email >/dev/null 2>/dev/null");
- $dependencies{gocr} = system("which gocr >/dev/null 2>/dev/null");
- $dependencies{tesseract} = system("which tesseract >/dev/null 2>/dev/null");
- $dependencies{djvu} = system("which cjb2 >/dev/null 2>/dev/null");
- $dependencies{unpaper} = system("which unpaper >/dev/null 2>/dev/null");
+ $dependencies{pdfapi2} = eval { require PDF::API2 };
+ $dependencies{perlmagick} = eval { require Image::Magick };
+ $dependencies{imagemagick} =
+  system("which convert >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
+ $dependencies{scanadf} =
+  system("which scanadf >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
+ $dependencies{xdg} =
+  system("which xdg-email >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
+ $dependencies{gocr} =
+  system("which gocr >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
+ $dependencies{tesseract} =
+  system("which tesseract >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
+ $dependencies{djvu} =
+  system("which cjb2 >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
+ $dependencies{unpaper} =
+  system("which unpaper >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
+ if ($debug) {
+  warn "Found PDF::API2\n" if ($dependencies{pdfapi2});
+  warn "Found Image::Magick\n" if ($dependencies{perlmagick});
+  warn "Found ImageMagick\n" if ($dependencies{imagemagick});
+  warn "Found scanadf\n" if ($dependencies{scanadf});
+  warn "Found xdg-email\n" if ($dependencies{xdg});
+  warn "Found gocr\n" if ($dependencies{gocr});
+  warn "Found tesseract\n" if ($dependencies{tesseract});
+  warn "Found cjb2 (djvu)\n" if ($dependencies{djvu});
+  warn "Found unpaper\n" if ($dependencies{unpaper});
+ }
 
 # OCR engine options
  push @ocr_engine,
   [ 'gocr', $d->get('GOCR'), $d->get('Process image with GOCR.') ]
-  if ($dependencies{gocr} == 0);
+  if ($dependencies{gocr});
  push @ocr_engine,
   [ 'tesseract',  $d->get('Tesseract'),  $d->get('Process image with Tesseract.') ],
-  if ($dependencies{tesseract} == 0);
+  if ($dependencies{tesseract});
 
  my $msg = '';
  $msg .= $d->get("PDF creation requires PDF::API2\n")
-  if ($dependencies{pdfapi2});
+  if (! $dependencies{pdfapi2});
 
 # Ghost scanadf item if scanadf or imagemagick not available
  my $item = $uimanager->get_widget('/MenuBar/Edit/Frontend/scanadf');
- if ($dependencies{scanadf} != 0) {
+ if (! $dependencies{scanadf}) {
   $item -> set_sensitive(FALSE);
   $SETTING{'frontend'} = 'scanimage';
   $msg .= $d->get("The scanadf frontend is not available\n")
@@ -802,11 +819,11 @@ sub create_menu_bar {
 
 # Ghost djvu item if cjb2 not available
  $msg .= $d->get("Save as DjVu requires djvulibre-bin\n")
-  if ($dependencies{djvu} != 0);
+  if (! $dependencies{djvu});
 
 # Ghost email item if xdg-email not available
  $msg .= $d->get("Email as PDF requires xdg-email\n")
-  if ($dependencies{xdg} != 0);
+  if (! $dependencies{xdg});
 
 # Undo/redo start off ghosted anyway-
  $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(FALSE);
@@ -831,7 +848,7 @@ sub create_menu_bar {
  $dependencies{pages} = -1;
 
 # Ghost rotations and unpaper if perlmagick not available
- if ($dependencies{perlmagick}) {
+ if (! $dependencies{perlmagick}) {
   $uimanager->get_widget('/MenuBar/View/Rotate 90') -> set_sensitive(FALSE);
   $uimanager->get_widget('/MenuBar/View/Rotate 180') -> set_sensitive(FALSE);
   $uimanager->get_widget('/MenuBar/View/Rotate 270') -> set_sensitive(FALSE);
@@ -849,13 +866,13 @@ sub create_menu_bar {
  }
 
 # Ghost unpaper item if unpaper not available
- if ($dependencies{unpaper} != 0) {
+ if (! $dependencies{unpaper}) {
   $uimanager->get_widget('/MenuBar/Tools/unpaper') -> set_sensitive(FALSE);
   $msg .= $d->get("unpaper missing\n");
  }
 
 # Ghost ocr item if gocr and tesseract not available
- if ($dependencies{gocr} != 0 and $dependencies{tesseract}) {
+ if (! $dependencies{gocr} and ! $dependencies{tesseract}) {
   $uimanager->get_widget('/MenuBar/Tools/OCR') -> set_sensitive(FALSE);
   $msg .= $d->get("OCR requires gocr or tesseract\n");
  }
@@ -934,11 +951,11 @@ sub update_uimanager {
  }
  if ($#{$slist -> {data}} > -1) {
   if ($dependencies{pages} == -1) {
-   if ($dependencies{djvu} == 0) {
+   if ($dependencies{djvu}) {
     $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(TRUE);
     $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(TRUE);
    }
-   if ($dependencies{xdg} == 0) {
+   if (! $dependencies{xdg}) {
     $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(TRUE);
     $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(TRUE);
     $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(TRUE);
@@ -955,12 +972,12 @@ sub update_uimanager {
  }
  else {
   if ($dependencies{pages} > -1) {
-   if ($dependencies{djvu} == 0) {
+   if ($dependencies{djvu}) {
     $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(FALSE);
     $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(FALSE);
     $windowv->hide if defined $windowv;
    }
-   if ($dependencies{xdg} == 0) {
+   if ($dependencies{xdg}) {
     $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(FALSE);
     $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(FALSE);
     $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
@@ -1569,10 +1586,13 @@ sub create_PDF {
    elsif ($format eq 'gif') {
     $imgobj = $pdf->image_gif($filename);
    }
-   else {
+   elsif ($format eq 'tif') {
     $imgobj = $pdf->image_tiff($filename);
    }
-   $gfx->image($imgobj,0,0,72/$resolution);
+   else {
+    warn "Error embedding file $filename in $format format to PDF\n";
+   }
+   $gfx->image($imgobj,0,0,72/$resolution) if (defined $imgobj);
   }
   $pdf->save;
   $pdf->end();
@@ -2355,7 +2375,7 @@ sub scan_dialog {
 
 # Checkbox for unpaper
  my $ubutton = Gtk2::CheckButton -> new($d->get('unpaper scanned pages'));
- if ($dependencies{unpaper} != 0) {
+ if (! $dependencies{unpaper}) {
   $ubutton -> set_sensitive(FALSE);
   $ubutton -> set_active(FALSE);
  }
@@ -2368,7 +2388,7 @@ sub scan_dialog {
  my $hboxo = Gtk2::HBox -> new;
  $vbox -> pack_start ($hboxo, FALSE, FALSE, 0);
  my $obutton = Gtk2::CheckButton -> new($d->get('OCR scanned pages'));
- if ($dependencies{gocr} != 0 and $dependencies{tesseract}) {
+ if (! $dependencies{gocr} and ! $dependencies{tesseract}) {
   $hboxo -> set_sensitive(FALSE);
   $obutton -> set_active(FALSE);
  }
@@ -5177,11 +5197,6 @@ Thunderbird.
 =item v0.9.13
 
 =over
-
-=item Tesseract support.
-
-Google's OCR engine is supposed to be very good - but at the moment only
-supports one-column text in English
 
 =item Option button for unpaper on scan.
 
