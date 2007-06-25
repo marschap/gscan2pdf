@@ -11,7 +11,7 @@
 #    default for no-black-filter in unpaper
 #    cover case where unpaper or ocr starts running on a page that has in the
 #     meantime been deleted
-#    once --mode updates seem to be working ok, take out scan compression hacks.
+#    switch main options parsing to options2hash
 #    what has happened to the progressbar whilst getting scan options?
 #    handle corrupted images properly
 #    move test tif and correct blank PDF with compression=none
@@ -2444,9 +2444,6 @@ sub scan_dialog {
    }
   }
 
-# Workaround for HP bug mode=lineart and compression!=none
-  $options{compression} = 'None' if (defined($ddo{compression}));
-
 # Get selected number of pages
   my $npages;
   if ($buttone -> get_active) {
@@ -3120,7 +3117,8 @@ sub rescan_options {
 
 # check if we have output for the mode
   my $filename = $test[$i];
-  $filename .= ".$SETTING{mode}" if (-e "$filename.$SETTING{mode}");
+  $filename .= ".$SETTING{mode}"
+   if (defined($SETTING{mode}) and -e "$filename.$SETTING{mode}");
 
 # Slurp it from file
   $output = do { local( @ARGV, $/ ) = $filename ; <> } ;
@@ -3309,17 +3307,10 @@ sub parse_options {
 # Remove everything on the description line and above.
    $output = $2;
   }
-  if (defined($pddo{$option})
-
-# This needed for psc1315, that only has one option for source.
-      and ($values =~ /(\d*\.?\d*)\.\.(\d*\.?\d*)/
-       or $values =~ /\|/)) {
+  if (defined($pddo{$option})) {
 
 # Dig out of possible options
    $ddo{$option}{string} = $pddo{$option}{string};
-
-# For HPs
-   next if ($option eq 'compression');
 
 # Set default from config
    $default = $SETTING{$option}
@@ -3482,7 +3473,7 @@ sub options2hash {
 
  my ($output) = @_;
  my %hash;
- while ($output =~ /--([a-z_-]*)(.*) \[(.*)\].*\n([\S\s]*)/) {
+ while ($output =~ /--([a-z_-]*) (.*) \[(.*)\].*\n([\S\s]*)/) {
   my $option = $1;
   my $values = $2;
   my $default = $3;
@@ -3492,7 +3483,10 @@ sub options2hash {
 
 # Set default from config
   $default = $SETTING{$option}
-   if ($default !~ /inactive/ and defined($SETTING{$option}));
+   if ($default !~ /inactive/ and defined($SETTING{$option})
+
+# only set the default if it is an option
+                              and $values =~ /$SETTING{$option}/);
 
 # Parse tooltips from option description based on an 8-character indent.
   my $tip = '';
