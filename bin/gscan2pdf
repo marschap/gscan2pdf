@@ -11,7 +11,6 @@
 #    default for no-black-filter in unpaper
 #    cover case where unpaper or ocr starts running on a page that has in the
 #     meantime been deleted
-#    switch main options parsing to options2hash
 #    what has happened to the progressbar whilst getting scan options?
 #    handle corrupted images properly
 #    move test tif and correct blank PDF with compression=none
@@ -3286,76 +3285,50 @@ sub parse_options {
         );
 
 # Add remaining options
- while ($output =~ /--([a-z_-]*)(.*) \[(.*)\].*\n([\S\s]*)/) {
-  my $option = $1;
-  my $values = $2;
-  my $default = $3;
-
-# Remove everything on the option line and above.
-  $output = $4;
-
-# Parse tooltips from option description based on an 8-character indent.
-  my $tip = '';
-  while ($output =~ /^\s{8,}(.*)\n([\S\s]*)/) {
-   if ($tip eq "") {
-    $tip = $1;
-   }
-   else {
-    $tip = "$tip $1";
-   }
-
-# Remove everything on the description line and above.
-   $output = $2;
-  }
+ my %hash = options2hash($output);
+ foreach my $option (keys %hash) {
   if (defined($pddo{$option})) {
 
 # Dig out of possible options
    $ddo{$option}{string} = $pddo{$option}{string};
 
-# Set default from config
-   $default = $SETTING{$option}
-    if ($default !~ /inactive/ and defined($SETTING{$option}));
-
 # HBox for option
    my $hbox = Gtk2::HBox -> new;
    $vboxd -> pack_start ($hbox, TRUE, TRUE, 0);
-   $hbox->set_sensitive(FALSE) if ($default =~ /inactive/);
+   $hbox->set_sensitive(FALSE) if ($hash{$option}{default} =~ /inactive/);
 
 # Label
    my $label = Gtk2::Label -> new ($ddo{$option}{string});
    $hbox -> pack_start ($label, FALSE, FALSE, 0);
 
+# SpinButton
+   if ($hash{$option}{values} =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)/) {
+    my $spin_button = Gtk2::SpinButton -> new_with_range($1, $2, 1);
+    $spin_button -> set_value($hash{$option}{default})
+     if ($hash{$option}{default} !~ /inactive/);
+    $hbox -> pack_end ($spin_button, FALSE, FALSE, 0);
+    $tooltips -> set_tip ($spin_button, $hash{$option}{tip});
+
+# Set the default
+    $spin_button -> set_value($hash{$option}{default})
+     if ($hash{$option}{default} !~ /inactive/);
+   }
+
 # ComboBox
-   if ($values =~ /\|/) {
+   else {
     my $ev = Gtk2::EventBox->new;
     my $combob = Gtk2::ComboBox -> new_text;
     $ev->add($combob);
 
-# Counters for defaults
-    my $i = -1;
-    my $o = 0;
-
-# Parse items from output
-    while ($values =~ /\|/) {
-     my $value = substr($values, 0, index($values, "|"));
-     $values = substr($values, index($values, "|")+1, length($values));
-     $value = substr($value, 1, length($value)) while ($value =~ /^ /);
-     $value = substr($value, 3, length($value)) while ($value =~ /^\[=\(/);
-     add_to_options($option, $value);
-
-# Create item
-     $combob -> append_text ($ddo{$option}{values}{$value});
-     $i++;
-     $o = $i if ($value eq $default);
+    my @array = options2array($hash{$option}{values});
+    my $index = default2index($hash{$option}{default}, @array);
+    foreach (@array) {
+     $combob->append_text($_);
+     add_to_options($option, $_);
     }
 
-# Do it all again for the last one
-    $values = substr($values, 0, length($values)-2) while ($values =~ /\)\]/);
-    add_to_options($option, $values);
-    $combob -> append_text ($ddo{$option}{values}{$values});
-    $i++;
-    $o = $i if ($values eq $default);
-    $combob -> set_active ($o);
+# Set the default
+    $combob -> set_active($index) if (defined $index);
 
 # callback for mode
     if ($option eq 'mode') {
@@ -3366,15 +3339,7 @@ sub parse_options {
     }
     
     $hbox -> pack_end ($ev, FALSE, FALSE, 0);
-    $tooltips -> set_tip ($ev, $tip);
-   }
-
-# SpinButton
-   elsif ($values =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)/) {
-    my $spin_button = Gtk2::SpinButton -> new_with_range($1, $2, 1);
-    $spin_button -> set_value($default) if ($default !~ /inactive/);
-    $hbox -> pack_end ($spin_button, FALSE, FALSE, 0);
-    $tooltips -> set_tip ($spin_button, $tip);
+    $tooltips -> set_tip ($ev, $hash{$option}{tip});
    }
   }
  }
