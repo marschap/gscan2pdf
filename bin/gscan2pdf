@@ -1153,6 +1153,7 @@ sub import {
 
 # Update cwd
    $SETTING{'cwd'} = dirname($filename);
+   warn "Importing $filename\n" if ($debug);
 
 # Get file type
    my $image = Image::Magick->new;
@@ -1160,6 +1161,7 @@ sub import {
    warn "$x" if "$x";
 
    my $format = $image->Get('format');
+   warn "Format $format\n" if ($debug);
    undef $image;
 
    if (! defined $format) {
@@ -2863,6 +2865,8 @@ sub import_scan {
   'CompuServe graphics interchange format'       => '.gif',
  );
 
+ warn "Importing $ofilename, format $format\n"; if ($debug);
+
  if (! defined($resolution)) {
   my $image = Image::Magick->new;
   my $x = $image->Read($ofilename);
@@ -2880,6 +2884,7 @@ sub import_scan {
 
 # Add to the page list
  $page = $#{$slist -> {data}}+2 if (! defined($page));
+ warn "Added $filename at page $page with resolution $resolution\n" if ($debug);
 
 # Block the row-changed signal whilst adding the scan (row) and sorting it.
  $slist -> get_model -> signal_handler_block($slist -> {signalid});
@@ -3739,7 +3744,7 @@ sub unpaper_page {
 
      if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
       (undef, $in) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-      $cmd .= "convert -compress zip ".$slist -> {data}[$pagenum][2]." $in;";
+      $cmd .= "convert $slist->{data}[$pagenum][2] $in;";
      }
      else {
       $in = $slist -> {data}[$pagenum][2];
