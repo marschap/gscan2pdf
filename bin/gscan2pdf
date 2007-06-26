@@ -67,6 +67,7 @@
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
 #    Make sure that file list in .spec and hg status reflects MANIFEST
 #    Download new translations
+#    Check a translation with LANGUAGE=de gscan2pdf --debug
 #    Make sure that changelog reflects History and hg log from bin/gscan2pdf
 # 2. make rpmdist debdist
 #    test dist sudo dpkg -i gscan2pdf-0....
@@ -174,6 +175,7 @@ if (check_utils()) {
 # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
 # scanimage
 setlocale(LC_NUMERIC, "C");
+warn "Using ", setlocale( LC_CTYPE ), " locale\n" if ($debug);
 
 # Read config file
 my $config = "$ENV{'HOME'}/.$program";
@@ -233,7 +235,7 @@ my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $frames, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
-    $scanwatch, @ocr_engine);
+    $scanwatch, @ocr_engine, $bscanall, $bscannum);
 
 my @action_items = (
  # Fields for each action item:
@@ -2286,8 +2288,6 @@ sub scan_dialog {
    $o = $i if ($SETTING{'device'} eq $device[$i]);
   }
  }
-# This then fires the callback, updating the options, so no need to do it further down.
- $combobd -> set_active($o);
    
 # Frame for # pages
  my $framen = Gtk2::Frame -> new($d->get('# Pages'));
@@ -2299,39 +2299,45 @@ sub scan_dialog {
 #the first radio button has to set the group,
 #which is undef for the first button
 # All button
- my $buttona = Gtk2::RadioButton -> new(undef, $d->get('All'));
- $tooltips -> set_tip ($buttona, $d->get('Scan all pages'));
- $vboxn -> pack_start($buttona, TRUE, TRUE, 0);
- my @groupn = $buttona -> get_group;
+ $bscanall = Gtk2::RadioButton -> new(undef, $d->get('All'));
+ $tooltips -> set_tip ($bscanall, $d->get('Scan all pages'));
+ $vboxn -> pack_start($bscanall, TRUE, TRUE, 0);
 
 # Entry button
  my $hboxn = Gtk2::HBox -> new;
  $vboxn -> pack_start($hboxn, TRUE, TRUE, 0);
- my $buttone = Gtk2::RadioButton -> new(@groupn, "#:");
- $tooltips -> set_tip ($buttone, $d->get('Set number of pages to scan'));
- $hboxn -> pack_start($buttone, FALSE, FALSE, 0);
+ $bscannum = Gtk2::RadioButton -> new($bscanall -> get_group, "#:");
+ $tooltips -> set_tip ($bscannum, $d->get('Set number of pages to scan'));
+ $hboxn -> pack_start($bscannum, FALSE, FALSE, 0);
 
 # Number of pages
  my $spin_button = Gtk2::SpinButton -> new_with_range(1, 99, 1);
  $tooltips -> set_tip ($spin_button, $d->get('Set number of pages to scan'));
  $spin_button -> signal_connect ('value-changed' => sub {
-  $buttone -> set_active(TRUE); # Set the radiobutton active
+  $bscannum -> set_active(TRUE); # Set the radiobutton active
  });
  $hboxn -> pack_end ($spin_button, FALSE, FALSE, 0);
 
 # Set default
  if (defined($SETTING{'pages to scan'})) {
   if ($SETTING{'pages to scan'} eq 'all') {
-   $buttona -> set_active(TRUE);
+   $bscanall -> set_active(TRUE);
+use Data::Dumper;
+print Dumper($bscanall);
   }
   else {
-   $buttone -> set_active(TRUE);
+   $bscannum -> set_active(TRUE);
    $spin_button -> set_value($SETTING{'pages to scan'});
   }
  }
  else {
-  $buttone -> set_active(TRUE);
+  $bscannum -> set_active(TRUE);
  }
+
+# Set the device dependent devices after the number of pages to scan so that
+#  the source button callback can ghost the all button
+# This then fires the callback, updating the options, so no need to do it further down.
+ $combobd -> set_active($o);
 
 # Frame for source document
  $frames = Gtk2::Frame -> new($d->get('Source document'));
@@ -2344,10 +2350,9 @@ sub scan_dialog {
  my $buttons = Gtk2::RadioButton -> new(undef, $d->get('Single sided'));
  $tooltips -> set_tip ($buttons, $d->get('Source document is single-sided'));
  $vboxs -> pack_start($buttons, TRUE, TRUE, 0);
- my @groups = $buttons -> get_group;
 
 # Double sided button
- my $buttond = Gtk2::RadioButton -> new(@groups, $d->get('Double sided'));
+ my $buttond = Gtk2::RadioButton -> new($buttons -> get_group, $d->get('Double sided'));
  $tooltips -> set_tip ($buttond, $d->get('Source document is double-sided'));
  $vboxs -> pack_start($buttond, FALSE, FALSE, 0);
 
@@ -2447,7 +2452,7 @@ sub scan_dialog {
 
 # Get selected number of pages
   my $npages;
-  if ($buttone -> get_active) {
+  if ($bscannum -> get_active) {
    $SETTING{'pages to scan'} = $spin_button -> get_value;
    $npages = $SETTING{'pages to scan'};
   }
@@ -2498,7 +2503,7 @@ sub scan_dialog {
       ++$i;
      }
     }
-    if ($buttone -> get_active) {
+    if ($bscannum -> get_active) {
      if (($spin_button -> get_value) > $i) {
       my $dialog = Gtk2::MessageDialog -> new ($windows,
        'destroy-with-parent',
@@ -2865,7 +2870,7 @@ sub import_scan {
   'CompuServe graphics interchange format'       => '.gif',
  );
 
- warn "Importing $ofilename, format $format\n"; if ($debug);
+ warn "Importing $ofilename, format $format\n" if ($debug);
 
  if (! defined($resolution)) {
   my $image = Image::Magick->new;
@@ -3332,9 +3337,26 @@ sub parse_options {
      add_to_options($option, $_);
     }
 
+# Doing this before the set_active call to make sure that it gets calls for the
+#  default setting
+# If an ADF isn't selected, then we don't want to scan all pages
+    if ($option eq 'source') {
+     $combob -> signal_connect (changed => sub {
+      if (get_value(\%ddo, $option, $combob -> get_active_text)
+                                                      =~ /(Flatbed)|(Normal)/) {
+       $bscanall->set_sensitive(FALSE);
+       $bscannum->set_active(TRUE);
+      }
+      else {
+       $bscanall->set_sensitive(TRUE);
+      }
+     });
+    }
+
 # Set the default
     $combob -> set_active($index) if (defined $index);
 
+# Doing this after the set_active call so that it doesn't get called twice.
 # callback for mode
     if ($option eq 'mode') {
      $combob -> signal_connect (changed => sub {
