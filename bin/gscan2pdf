@@ -7,6 +7,7 @@
 # To do
 # 0. option button for unpaper on scan
 #    check out scanbuttond
+#    doesn't seem to be respecting mode from SETTING
 #    rotating doesn't update detail view - sometimes (wait problem?)
 #    problem with wait after cancelling scan?
 #    default for no-black-filter in unpaper
@@ -205,6 +206,11 @@ if (-r $config) {
   $SETTING{$key} = $value;
  }
  close CONFIG;
+}
+
+if ($debug) {
+ use Data::Dumper;
+ print Dumper(\%SETTING);
 }
 
 # Just in case dependencies have changed, put put startup warning again
@@ -3707,6 +3713,22 @@ sub handle_clicks {
 }
 
 
+# guess from which window the sub was called
+
+sub get_parent {
+ my ($w1, $w2, $w3) = @_;
+ if (defined($w1) and $w1->visible) {
+  return $w1;
+ }
+ elsif (defined($w2) and $w2->visible) {
+  return $w2;
+ }
+ else {
+  return $w3;
+ }
+}
+
+
 # Add $page to the unpaper stack, setting it off if not running.
 
 sub unpaper_page {
@@ -3716,16 +3738,7 @@ sub unpaper_page {
  push @unpaper_stack, [ $_, $ocr ] foreach (@_);
 
 # guess where unpaper has been called from
- my $parent;
- if ($windowu->has_toplevel_focus) {
-  $parent = $windowu;
- }
- elsif ($windows->has_toplevel_focus) {
-  $parent = $windows;
- }
- else {
-  $parent = $window;
- }
+ my $parent = get_parent($windowu, $windows, $window);
 
 # don't run ocr and unpaper concurrently
  if (! defined($scanwatch) and ! defined($unpaper_timer) and ! defined($ocr_timer)) {
@@ -4235,16 +4248,7 @@ sub ocr_page {
  push @ocr_stack, @_;
 
 # guess where ocr has been called from
- my $parent;
- if ($windowo->has_toplevel_focus) {
-  $parent = $windowo;
- }
- elsif ($windows->has_toplevel_focus) {
-  $parent = $windows;
- }
- else {
-  $parent = $window;
- }
+ my $parent = get_parent($windowo, $windows, $window);
 
 # don't run ocr and unpaper concurrently
  if (! defined($scanwatch) and ! defined($unpaper_timer) and ! defined($ocr_timer)) {
