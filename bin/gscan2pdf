@@ -1228,6 +1228,7 @@ sub create_window {
   });
  }
  $window_new -> set_transient_for($window); # Assigns parent
+ $window_new->set_position ('center-on-parent');
 
 # VBox for window
  my $vbox = Gtk2::VBox -> new;
