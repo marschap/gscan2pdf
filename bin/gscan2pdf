@@ -6,6 +6,7 @@
 
 # To do
 # 0. option button for unpaper on scan
+#    check out scanbuttond
 #    rotating doesn't update detail view - sometimes (wait problem?)
 #    problem with wait after cancelling scan?
 #    default for no-black-filter in unpaper
@@ -44,7 +45,6 @@
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    Work out a good place to log error messages
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
-#    check out scanbuttond
 #    sort out "dpkg-source: warning: source directory `./gscan2pdf' is not <sourcepackage>-<upstreamversion> `gscan2pdf-0.9.0'" error
 #    Switch viewing widget as soon as packages are available for:
 #     http://giv.sourceforge.net/gtk-image-viewer/
@@ -3714,9 +3714,21 @@ sub unpaper_page {
  $options = '' if (! defined($options));
  push @unpaper_stack, [ $_, $ocr ] foreach (@_);
 
+# guess where unpaper has been called from
+ my $parent;
+ if ($windowu->has_toplevel_focus) {
+  $parent = $windowu;
+ }
+ elsif ($windows->has_toplevel_focus) {
+  $parent = $windows;
+ }
+ else {
+  $parent = $window;
+ }
+
 # don't run ocr and unpaper concurrently
  if (! defined($scanwatch) and ! defined($unpaper_timer) and ! defined($ocr_timer)) {
-  my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $windowo,
+  my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $parent,
                                     'destroy-with-parent',
                                     'gtk-cancel' => 'cancel');
   my $label = Gtk2::Label -> new ($d->get('Running unpaper')."...");
@@ -4221,9 +4233,21 @@ sub unpaper {
 sub ocr_page {
  push @ocr_stack, @_;
 
+# guess where ocr has been called from
+ my $parent;
+ if ($windowo->has_toplevel_focus) {
+  $parent = $windowo;
+ }
+ elsif ($windows->has_toplevel_focus) {
+  $parent = $windows;
+ }
+ else {
+  $parent = $window;
+ }
+
 # don't run ocr and unpaper concurrently
  if (! defined($scanwatch) and ! defined($unpaper_timer) and ! defined($ocr_timer)) {
-  my $dialog = Gtk2::Dialog -> new ($d->get('Running OCR')."...", $windowo,
+  my $dialog = Gtk2::Dialog -> new ($d->get('Running OCR')."...", $parent,
                                     'destroy-with-parent',
                                     'gtk-cancel' => 'cancel');
   my $label = Gtk2::Label -> new ($d->get('Running OCR')."...");
