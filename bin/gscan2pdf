@@ -2642,7 +2642,7 @@ sub scanimage {
        return FALSE;
       }
      }
-     elsif ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
+     elsif ($line =~ /^.* Scanner warming up - waiting \d* seconds/) {
       $label -> set_text($d->get('Scanner warming up'));
      }
      elsif ($line =~ /^Scanned page \d*\. \(scanner status = 7\)/) {
@@ -2660,14 +2660,23 @@ sub scanimage {
      elsif ($line =~ /^scanimage: rounded/) {
       warn substr($line, 0, index($line, "\n")+1);
      }
-     else {
+     elsif ($line =~ /^.* sane_start: Device busy/) {
       $dialog -> destroy;
+      $dialog = Gtk2::MessageDialog -> new ($windows,
+                                               'destroy-with-parent',
+                                               'error',
+                                               'close',
+                                               $d->get('Device busy'));
+      $dialog -> run;
+      $dialog -> destroy;
+     }
+     else {
       my $text = $d->get('Unknown message: ')
                                          . substr($line, 0, index($line, "\n"));
 warn "$text\n";
       $dialog = Gtk2::MessageDialog -> new ($windows,
                                                'destroy-with-parent',
-                                               'error',
+                                               'warning',
                                                'close',
                                                $text);
       $dialog -> run;
@@ -2770,7 +2779,7 @@ sub scanadf {
     $line .= $buffer;
 
     while ($line =~ /\n/) {
-     if ($line =~ /^\[snapscan\] Scanner warming up - waiting \d* seconds/) {
+     if ($line =~ /^.* Scanner warming up - waiting \d* seconds/) {
       $label -> set_text($d->get('Scanner warming up'));
      }
      elsif ($line =~ /^Scanned document out(\d*)\.pnm/) {
@@ -2794,14 +2803,23 @@ sub scanadf {
      elsif ($line =~ /^scanadf: rounded/) {
       warn substr($line, 0, index($line, "\n")+1);
      }
-     else {
+     elsif ($line =~ /^.* sane_start: Device busy/) {
       $dialog -> destroy;
+      $dialog = Gtk2::MessageDialog -> new ($windows,
+                                               'destroy-with-parent',
+                                               'error',
+                                               'close',
+                                               $d->get('Device busy'));
+      $dialog -> run;
+      $dialog -> destroy;
+     }
+     else {
       my $text = $d->get('Unknown message: ')
                                          . substr($line, 0, index($line, "\n"));
 warn "$text\n";
       $dialog = Gtk2::MessageDialog -> new ($windows,
                                                'destroy-with-parent',
-                                               'error',
+                                               'warning',
                                                'close',
                                                $text);
       $dialog -> run;
