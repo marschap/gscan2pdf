@@ -7,6 +7,9 @@
   Closes bug 1741598 (2 scanners with differing mode options).
 + ghost scan all pages RadioButton if Flatbed selected.
   Closes bug 1743059 (Endless scanning loop)
++ trap device busy error. Closes bug 1744451 (handle busy device)
++ Modify PDF metadata date format to conform to ISO-8601
+  Closes feature request 1744458 (change dates to ISO-8601)
 
 
 0.9.12 (19.06.2007):

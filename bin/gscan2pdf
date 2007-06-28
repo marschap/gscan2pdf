@@ -1376,7 +1376,7 @@ sub add_PDF_options {
  $year += 1900;
  $month += 1;
 
- my $button = Gtk2::Button -> new("$year/$month/$day");
+ my $button = Gtk2::Button -> new(sprintf("%04d-%02d-%02d", $year, $month, $day));
  $button -> signal_connect( clicked => sub {
   my ($window, $vbox) = create_window($windowp, $d->get('Select Date'), TRUE);
   $window->set_resizable(FALSE);
@@ -1387,7 +1387,7 @@ sub add_PDF_options {
   $calendar -> signal_connect(day_selected_double_click => sub {
    ($year, $month, $day) = $calendar -> get_date;
    $month += 1;
-   $button -> set_label ("$year/$month/$day");
+   $button -> set_label (sprintf("%04d-%02d-%02d", $year, $month, $day));
    use Time::Local;
    $SETTING{'date offset'} =
                int((timelocal(0, 0, 0, $day, $month-1, $year) - time)/60/60/24);
