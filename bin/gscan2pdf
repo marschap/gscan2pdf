@@ -96,7 +96,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.13rc2';
+my $version = '0.9.13rc3';
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter);
@@ -1173,13 +1173,9 @@ sub import {
    undef $image;
 
    if (! defined $format) {
-    my $dialog = Gtk2::MessageDialog -> new ($window,
-                                            'destroy-with-parent',
-                                            'error',
-                                            'close',
-                                            $d->get('Not a recognised file'));
-    $dialog -> run;
-    $dialog -> destroy;
+    show_message_dialog(
+     $window, 'error', 'close', $d->get('Not a recognised file')
+    );
    }
    elsif ($format eq 'Portable Document Format') {
 
@@ -1883,16 +1879,21 @@ sub save_image_dialog {
 }
 
 
+sub show_message_dialog {
+ my ($parent, $type, $buttons, $text) = @_;
+ my $dialog = Gtk2::MessageDialog ->
+  new ($parent, 'destroy-with-parent', $type, $buttons, $text);
+ my $response = $dialog -> run;
+ $dialog -> destroy;
+ return $response;
+}
+
+
 sub file_exists {
  my ($file_chooser, $filename) = @_;
  if (-e $filename) {
-  my $dialog = Gtk2::MessageDialog -> new ($file_chooser,
-   'destroy-with-parent',
-   'question', # message type
-   'ok-cancel', # which set of buttons?
-   sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
-  my $response = $dialog -> run;
-  $dialog -> destroy;
+  my $response = show_message_dialog($file_chooser, 'question', 'ok-cancel',
+             sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
   return TRUE if ($response ne 'ok');
  }
  return FALSE;
@@ -1997,13 +1998,7 @@ sub save_TIFF {
   }
   else {
    unlink $filename;
-   my $dialog = Gtk2::MessageDialog -> new ($windowi,
-                                           'destroy-with-parent',
-                                           'error',
-                                           'close',
-                                           $output);
-   $dialog -> run;
-   $dialog -> destroy;
+   show_message_dialog($windowi, 'error', 'close', $output);
   }
  }
 
@@ -2191,24 +2186,12 @@ sub scan_dialog {
   $output = `scanimage --formatted-device-list="'%i','%d','%v %m'
 " 2>/dev/null`;
   if ($? ne 0) {
-   my $dialog = Gtk2::MessageDialog -> new ($window,
-                                           'destroy-with-parent',
-                                           'error',
-                                           'close',
-                                           'scanimage '.$d->get('not found'));
-   $dialog -> run;
-   $dialog -> destroy;
+   show_message_dialog($window, 'error', 'close', 'scanimage '.$d->get('not found'));
    return FALSE;
   }
   else {
    if ($output eq "") {
-    my $dialog = Gtk2::MessageDialog -> new ($window,
-                                            'destroy-with-parent',
-                                            'error',
-                                            'close',
-                                            $d->get('No scanners found'));
-    $dialog -> run;
-    $dialog -> destroy;
+    show_message_dialog($window, 'error', 'close', $d->get('No scanners found'));
     return FALSE;
    }
   }
@@ -2485,13 +2468,7 @@ print Dumper($bscanall);
    }
    else { # reverse page
     if ($start == 1) {
-     my $dialog = Gtk2::MessageDialog -> new ($windows,
-      'destroy-with-parent',
-      'error', # message type
-      'cancel', # which set of buttons?
-      $d->get('Must scan facing pages first'));
-     $dialog -> run;
-     $dialog -> destroy;
+     show_message_dialog($windows, 'error', 'cancel', $d->get('Must scan facing pages first'));
      return TRUE;
     }
 
@@ -2512,13 +2489,10 @@ print Dumper($bscanall);
     }
     if ($bscannum -> get_active) {
      if (($spin_button -> get_value) > $i) {
-      my $dialog = Gtk2::MessageDialog -> new ($windows,
-       'destroy-with-parent',
-       'error', # message type
-       'cancel', # which set of buttons?
-       $d->get("Cannot scan more reverse pages\nthan facing pages"));
-      $dialog -> run;
-      $dialog -> destroy;
+      show_message_dialog(
+       $windows, 'error', 'cancel',
+       $d->get("Cannot scan more reverse pages\nthan facing pages")
+      );
       return TRUE;
      }
     }
@@ -2635,10 +2609,9 @@ sub scanimage {
       if (! import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap',
                                   $SETTING{resolution}, TRUE, $unpaper, $ocr)) {
        $dialog -> destroy;
-       $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
-                         'error', 'close', $d->get('Unable to load image'));
-       $dialog -> run;
-       $dialog -> destroy;
+       show_message_dialog(
+        $windows, 'error', 'close', $d->get('Unable to load image')
+       );
        return FALSE;
       }
      }
@@ -2662,25 +2635,13 @@ sub scanimage {
      }
      elsif ($line =~ /^.* sane_start: Device busy/) {
       $dialog -> destroy;
-      $dialog = Gtk2::MessageDialog -> new ($windows,
-                                               'destroy-with-parent',
-                                               'error',
-                                               'close',
-                                               $d->get('Device busy'));
-      $dialog -> run;
-      $dialog -> destroy;
+      show_message_dialog($windows, 'error', 'close', $d->get('Device busy'));
      }
      else {
       my $text = $d->get('Unknown message: ')
                                          . substr($line, 0, index($line, "\n"));
 warn "$text\n";
-      $dialog = Gtk2::MessageDialog -> new ($windows,
-                                               'destroy-with-parent',
-                                               'warning',
-                                               'close',
-                                               $text);
-      $dialog -> run;
-      $dialog -> destroy;
+      show_message_dialog($windows, 'warning', 'close', $text);
      }
      $line = substr($line, index($line, "\n")+1, length($line));
     }
@@ -2790,10 +2751,9 @@ sub scanadf {
       if (! import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap',
                                   $SETTING{resolution}, TRUE, $unpaper, $ocr)) {
        $dialog -> destroy;
-       $dialog = Gtk2::MessageDialog -> new ($windows, 'destroy-with-parent',
-                         'error', 'close', $d->get('Unable to load image'));
-       $dialog -> run;
-       $dialog -> destroy;
+       show_message_dialog(
+        $windows, 'error', 'close', $d->get('Unable to load image')
+       );
        return FALSE;
       }
      }
@@ -2805,25 +2765,13 @@ sub scanadf {
      }
      elsif ($line =~ /^.* sane_start: Device busy/) {
       $dialog -> destroy;
-      $dialog = Gtk2::MessageDialog -> new ($windows,
-                                               'destroy-with-parent',
-                                               'error',
-                                               'close',
-                                               $d->get('Device busy'));
-      $dialog -> run;
-      $dialog -> destroy;
+      show_message_dialog($windows, 'error', 'close', $d->get('Device busy'));
      }
      else {
       my $text = $d->get('Unknown message: ')
                                          . substr($line, 0, index($line, "\n"));
 warn "$text\n";
-      $dialog = Gtk2::MessageDialog -> new ($windows,
-                                               'destroy-with-parent',
-                                               'warning',
-                                               'close',
-                                               $text);
-      $dialog -> run;
-      $dialog -> destroy;
+      show_message_dialog($windows, 'warning', 'close', $text);
      }
      $line = substr($line, index($line, "\n")+1, length($line));
     }
@@ -4464,13 +4412,7 @@ sub OCR {
 # fill $pagelist with filenames depending on which radiobutton is active
   my @pagelist = get_page_index();
   if (! @pagelist) {
-   my $dialog = Gtk2::MessageDialog -> new ($windowo,
-                                           'destroy-with-parent',
-                                           'error',
-                                           'close',
-                                           $d->get('No page selected'));
-   $dialog -> run;
-   $dialog -> destroy;
+   show_message_dialog($windowo, 'error', 'close', $d->get('No page selected'));
    return;
   }
   ocr_page(@pagelist);
@@ -4528,14 +4470,10 @@ sub view_pod {
 
  eval {require Gtk2::Ex::PodViewer};
  if ($@) {
-  my $dialog = Gtk2::MessageDialog -> new ($window,
-                                          'destroy-with-parent',
-                                          'error',
-                                          'close',
-    sprintf($d->get("The help viewer requires module Gtk2::Ex::PodViewer\n"
-                        ."Alternatively, try: %s %s\n\n"), $program, "--help"));
-  $dialog -> run;
-  $dialog -> destroy;
+  show_message_dialog($window, 'error', 'close',
+   sprintf($d->get("The help viewer requires module Gtk2::Ex::PodViewer\n"
+                        ."Alternatively, try: %s %s\n\n"), $program, "--help")
+  );
   return;
  }
 
