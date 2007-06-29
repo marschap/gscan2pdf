@@ -2693,7 +2693,7 @@ sub scanadf {
  $device = "--device-name='$device'";
  my $end;
  if ($npages != 0) {
-  $end = "--end-count=".($npages+1);
+  $end = "--end-count=$npages";
  }
  else {
   $end = "";
