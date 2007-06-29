@@ -209,6 +209,10 @@ if (-r $config) {
 }
 
 if ($debug) {
+ print "Gtk2-Perl version $Gtk2::VERSION\n";
+ print "Built for ".join(".",Gtk2->GET_VERSION_INFO)."\n";
+ print "Running with ".join(".",Gtk2->get_version_info)."\n";
+
  use Data::Dumper;
  print Dumper(\%SETTING);
 }
@@ -1406,7 +1410,7 @@ sub add_PDF_options {
 
   $window -> show_all;
  } );
- $tooltips -> set_tip ($button, $d->get('Year/Month/Day'));
+ $tooltips -> set_tip ($button, $d->get('Year-Month-Day'));
  $hboxe -> pack_end( $button, TRUE, TRUE, 0 );
 
 # Document author
@@ -2312,8 +2316,6 @@ sub scan_dialog {
  if (defined($SETTING{'pages to scan'})) {
   if ($SETTING{'pages to scan'} eq 'all') {
    $bscanall -> set_active(TRUE);
-use Data::Dumper;
-print Dumper($bscanall);
   }
   else {
    $bscannum -> set_active(TRUE);
@@ -2438,6 +2440,10 @@ print Dumper($bscanall);
      }
     }
    }
+  }
+  if ($debug) {
+   use Data::Dumper;
+   print Dumper(\%options);
   }
 
 # Get selected number of pages
@@ -2819,7 +2825,7 @@ sub hash2options {
  }
 
  while (($key, $value) = each(%options)) {
-  if ($key eq 'x' or $key eq 'y' or $key eq 'l' or $key eq 't') {
+  if ($key =~ /^[xylt]$/) {
    push @options, "-$key $value";
   }
   else {
@@ -3142,8 +3148,8 @@ sub parse_options {
   $hboxc = Gtk2::HBox -> new;
   my $spin_buttonx = Gtk2::SpinButton -> new_with_range(0, $x, 1);
   my $spin_buttony = Gtk2::SpinButton -> new_with_range(0, $y, 1);
-  $tooltips -> set_tip ($spin_buttonx, $d->get('Width of scan-area'));
-  $tooltips -> set_tip ($spin_buttony, $d->get('Height of scan-area'));
+  $tooltips -> set_tip ($spin_buttonx, $d->get('Width of scan area'));
+  $tooltips -> set_tip ($spin_buttony, $d->get('Height of scan area'));
 
 # Add paper size to combobox if scanner large enough
 # can't use "for" because of the splices
