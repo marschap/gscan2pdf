@@ -99,9 +99,9 @@ my $program = 'gscan2pdf';
 my $version = '0.9.13rc3';
 
 # Standard paper sizes
-my @paperg = qw(A4 Letter);
-my @xg = ( 210, 215.9 );
-my @yg = ( 297, 279.4 );
+my @paperg = qw(A4 Letter Custom);
+my @xg = ( 210, 215.9, 0);
+my @yg = ( 297, 279.4, 0);
 my (@paper, @x, @y);
 my $tolerance = 1;
 
@@ -3156,7 +3156,7 @@ sub parse_options {
   my $i = 0;
   while ($i <= $#paper) {
    if ($x+$tolerance >= $x[$i] and $y+$tolerance >= $y[$i]) {
-    $combobp -> append_text ($paper[$i]);
+    $combobp -> append_text ($d->get($paper[$i]));
     ++$i;
    }
 
@@ -3169,7 +3169,6 @@ sub parse_options {
   }
 
 # Add custom option
-  $combobp -> append_text ($d->get('Custom'));
   $combobp -> signal_connect (changed => sub {
    if ($combobp -> get_active_text eq $d->get('Custom')) {
     $hboxc -> show_all;
@@ -3265,6 +3264,7 @@ sub parse_options {
                             values => {
                                       'A4' => $d->get('A4'),
                                       'Letter'  => $d->get('Letter'),
+                                      'Custom'  => $d->get('Custom'),
                                       } },
           'x'          => { string => 'x' },
           'y'          => { string => 'y' },
