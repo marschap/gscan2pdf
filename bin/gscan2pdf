@@ -2260,7 +2260,10 @@ sub scan_dialog {
   $combobd->append_text ($_);
  }
  $combobd -> signal_connect (changed => sub {
-  delete $SETTING{mode};
+
+# only delete the mode setting if switching devices, not on first run
+# has nothing to do with $bscanall, which is conveniently only defined afterwards
+  delete $SETTING{mode} if (defined $bscanall);
   rescan_options($vboxd, $device[$combobd -> get_active]);
   $vboxd -> show_all;
   hide_custom();
