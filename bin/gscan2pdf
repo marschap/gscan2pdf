@@ -91,7 +91,9 @@ use Cwd;                             # To obtain current working directory
 use File::Basename;                  # Split filename into dir, file, ext
 use File::Temp qw(tempfile tempdir); # To create temporary files
 use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
-use POSIX qw(locale_h);              # To sort out LC_NUMERIC
+
+# To sort out LC_NUMERIC and $SIG{CHLD}
+use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
@@ -1509,6 +1511,7 @@ sub create_PDF {
  });
  $dialog -> show_all;
 
+# Install a handler for child processes
  $SIG{CHLD} = \&sig_child;
 
  my $pid = start_process(sub {
@@ -2661,7 +2664,7 @@ warn "$text\n";
    if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
-    my $pid = wait; # So we don't leave zombies
+    my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
     warn "Reaped PID $pid\n" if ($debug);
 
 # Now finished scanning, set off unpaper or ocr if necessary
@@ -2791,7 +2794,7 @@ warn "$text\n";
    if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
-    my $pid = wait; # So we don't leave zombies
+    my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
     warn "Reaped PID $pid\n" if ($debug);
 
 # Now finished scanning, set off unpaper or ocr if necessary
@@ -3091,7 +3094,7 @@ sub rescan_options {
    if ($condition & 'hup') { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
-    my $pid = wait; # So we don't leave zombies
+    my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
     warn "Reaped PID $pid\n" if ($debug);
     $running = FALSE;
     $pbar -> destroy;
@@ -3410,7 +3413,7 @@ sub update_options {
    if ($condition & 'hup') { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
-    my $pid = wait; # So we don't leave zombies
+    my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
     warn "Reaped PID $pid\n" if ($debug);
     $running = FALSE;
     $pbar -> destroy;
@@ -3795,7 +3798,7 @@ sub unpaper_page {
        warn $page_buffer if ($debug);
        close $read;
        warn 'Waiting to reap process' if ($debug);
-       my $pid = wait;
+       my $pid = waitpid(-1, &WNOHANG);
        warn "Reaped PID $pid\n" if ($debug);
 
 # Note page selection
@@ -4322,7 +4325,7 @@ sub ocr_page {
       if ($condition & 'hup') { # bit field operation. >= would also work
        close $read;
        warn 'Waiting to reap process' if ($debug);
-       my $pid = wait; # So we don't leave zombies
+       my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
        warn "Reaped PID $pid\n" if ($debug);
        $running = FALSE;
 
@@ -4698,10 +4701,18 @@ sub register_icon {
 # to be reloaded when a child process exits.
 
 sub sig_child {
- warn 'Waiting to reap process' if ($debug);
- my $pid = wait; # So we don't leave zombies
- warn "Reaped PID $pid\n" if ($debug);
- delete $helperTag{$pid} if ($pid >= 0);
+ my $pid = waitpid(-1, &WNOHANG);
+
+ if ($pid == -1) {
+  # no child waiting.  Ignore it.
+ }
+ elsif (WIFEXITED($?)) {
+  print "Process $pid exited.\n";
+ }
+ else {
+  print "False alarm on $pid.\n";
+ }
+ $SIG{CHLD} = \&sig_child;                  # install *after* calling waitpid
 }
 
 sub start_process {
