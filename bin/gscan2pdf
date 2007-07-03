@@ -7,7 +7,6 @@
 # To do
 # 0. option button for unpaper on scan
 #    check out scanbuttond
-#    doesn't seem to be respecting mode from SETTING
 #    rotating doesn't update detail view - sometimes (wait problem?)
 #    problem with wait after cancelling scan?
 #    default for no-black-filter in unpaper
@@ -242,7 +241,7 @@ init_icons(
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
 my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
-    $windowu, $slist, $frames, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
+    $windowu, $slist, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
     $scanwatch, @ocr_engine, $bscanall, $bscannum);
@@ -2194,7 +2193,7 @@ sub scan_dialog {
    return FALSE;
   }
   else {
-   if ($output eq "") {
+   if ($output eq '') {
     show_message_dialog($window, 'error', 'close', $d->get('No scanners found'));
     return FALSE;
    }
@@ -2259,17 +2258,19 @@ sub scan_dialog {
  foreach (@model) {
   $combobd->append_text ($_);
  }
+
+# flags whether already run or not
+ my $run = FALSE;
  $combobd -> signal_connect (changed => sub {
 
 # only delete the mode setting if switching devices, not on first run
-# has nothing to do with $bscanall, which is conveniently only defined afterwards
-  delete $SETTING{mode} if (defined $bscanall);
+  delete $SETTING{mode} if ($run);
+  $run = TRUE;
   rescan_options($vboxd, $device[$combobd -> get_active]);
   $vboxd -> show_all;
   hide_custom();
  });
- $tooltips -> set_tip ($ev,
-                         $d->get('Sets the device to be used for the scan'));
+ $tooltips -> set_tip ($ev, $d->get('Sets the device to be used for the scan'));
  $hboxd -> pack_end ($ev, FALSE, FALSE, 0);
 
 # If device not set by config and there is a default device, then set it
@@ -2335,7 +2336,7 @@ sub scan_dialog {
  $combobd -> set_active($o);
 
 # Frame for source document
- $frames = Gtk2::Frame -> new($d->get('Source document'));
+ my $frames = Gtk2::Frame -> new($d->get('Source document'));
  $vbox -> pack_start ($frames, FALSE, FALSE, 0);
  my $vboxs = Gtk2::VBox -> new;
  $vboxs -> set_border_width($border_width);
@@ -3460,7 +3461,7 @@ sub options2hash {
    if ($default !~ /inactive/ and defined($SETTING{$option})
 
 # only set the default if it is an option
-                              and $values =~ /$SETTING{$option}/);
+                              and $values =~ /($SETTING{$option})|(\.\.)/);
 
 # Parse tooltips from option description based on an 8-character indent.
   my $tip = '';
