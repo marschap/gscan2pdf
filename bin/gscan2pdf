@@ -2999,25 +2999,25 @@ EOS
  $about->set_license ($d->get('Licensed under the GPLv2'));
  $about->set_website ('http://gscan2pdf.sf.net');
  my $translators = <<EOS;
-Jen Fraggle
-Hugo Pereira
-Alberto Boiti
 Petr Jelínek
+Hugo Pereira
+Jen Fraggle
+Alberto Boiti
 Alexandre Prokoudine
+Piotr Strebski
 Maddy67
 mecedesjorge
+Christoph Langner
 cwchien
 booxter
+Nicolas Stransky
 Daniel Nylander
 Tikkel
-Christoph Langner
-Nicolas Velin
 Mathieu Goeminne
+Nicolas Velin
 Simon Leblanc
 Eric Spierings
-codL
-florian
-Th3n3k
+Jacob Nielsen
 EOS
  $about->set_translator_credits ($translators);
  $about->set_artists ('lodp');
