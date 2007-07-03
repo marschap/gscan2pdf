@@ -96,7 +96,7 @@ use POSIX qw(locale_h);              # To sort out LC_NUMERIC
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.13rc3';
+my $version = '0.9.13';
 
 # Standard paper sizes
 my @paperg = qw(A4 Letter Custom);
@@ -5174,7 +5174,7 @@ Thunderbird.
 
 =over
 
-=item v0.9.13
+=item v0.9.14
 
 =over
 
