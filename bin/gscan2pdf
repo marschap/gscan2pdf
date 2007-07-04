@@ -3319,8 +3319,8 @@ sub parse_options {
     my @array = options2array($hash{$option}{values});
     my $index = default2index($hash{$option}{default}, @array);
     foreach (@array) {
-     $combob->append_text($_);
      add_to_options($option, $_);
+     $combob->append_text($ddo{$option}{values}{$_});
     }
 
 # Doing this before the set_active call to make sure that it gets calls for the
@@ -3451,7 +3451,7 @@ sub options2hash {
 
  my ($output) = @_;
  my %hash;
- while ($output =~ /--([a-z_-]*) (.*) \[(.*)\].*\n([\S\s]*)/) {
+ while ($output =~ /--([\w\-]*)[ \[=\(]*([\w\-\|\.]*)[\)\]]* \[(\w*)\] *\n([\S\s]*)/) {
   my $option = $1;
   my $values = $2;
   my $default = $3;
