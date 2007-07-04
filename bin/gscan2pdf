@@ -4708,6 +4708,7 @@ sub sig_child {
  }
  elsif (WIFEXITED($?)) {
   print "Process $pid exited.\n";
+  delete $helperTag{$pid};
  }
  else {
   print "False alarm on $pid.\n";
