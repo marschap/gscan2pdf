@@ -3515,6 +3515,9 @@ sub update_options_hash {
      my @array = options2array($hash{$key}{values});
      my $index = default2index($hash{$key}{default}, @array);
      foreach (@array) {
+
+# in case the option was new and therefore not in ddo before
+      add_to_options($key, $_);
       $widget->append_text($ddo{$key}{values}{$_});
      }
 
