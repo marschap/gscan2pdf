@@ -12,7 +12,6 @@
 #    default for no-black-filter in unpaper
 #    cover case where unpaper or ocr starts running on a page that has in the
 #     meantime been deleted
-#    what has happened to the progressbar whilst getting scan options?
 #    handle corrupted images properly
 #    move test tif and correct blank PDF with compression=none
 #    use -x option (first column 0-100) in gocr to give more detail to progressbar
@@ -2187,24 +2186,75 @@ sub scan_dialog {
   return;
  }
 
- my $output;
- if (! @test) {
-  $output = `scanimage --formatted-device-list="'%i','%d','%v %m'
-" 2>/dev/null`;
-  if ($? ne 0) {
-   show_message_dialog($window, 'error', 'close', 'scanimage '.$d->get('not found'));
-   return FALSE;
-  }
-  else {
-   if ($output eq '') {
-    show_message_dialog($window, 'error', 'close', $d->get('No scanners found'));
-    return FALSE;
-   }
-  }
- }
-
 # scan pop-up window
  ($windows, my $vbox) = create_window($window, $d->get('Scan Document'), FALSE);
+
+ my $output;
+ if (! @test) {
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $pbar -> set_pulse_step(.1);
+  $pbar->set_text ($d->get('Fetching list of devices'));
+  $vbox->pack_start ($pbar, FALSE, FALSE, 0);
+  $windows -> show_all;
+  my $running = TRUE;
+
+# Timer will run until callback returns false 
+  my $timer = Glib::Timeout->add (100, sub { if ($running) {
+                                              $pbar->pulse;
+                                              return TRUE;
+                                             }
+                                             else {
+                                              return FALSE;
+                                             } });
+
+  my $cmd = "scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
+
+# Interface to frontend
+  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+  warn "Forked PID $pid\n" if ($debug);
+ 
+# Read without blocking
+  Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+   my $line;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    sysread $read, $line, 1024;
+    $output .= $line;
+   }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+    close $read;
+    warn 'Waiting to reap process' if ($debug);
+    my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
+    warn "Reaped PID $pid\n" if ($debug);
+    $running = FALSE;
+    $pbar -> destroy;
+
+    if (! defined($output) or $output eq '') {
+     $windows->destroy;
+     undef $windows;
+     show_message_dialog($window, 'error', 'close', $d->get('No scanners found'));
+     return FALSE;
+    }
+
+    populate_scan_dialog($vbox, $output);
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # continue without uninstalling
+  });
+ }
+ else {
+  populate_scan_dialog($vbox, $output);
+ }
+}
+
+
+sub populate_scan_dialog {
+ my ($vbox, $output) = @_;
 
 # HBox for devices
  my $hboxd = Gtk2::HBox -> new;
@@ -2599,7 +2649,7 @@ sub scanimage {
   $dialog -> show_all;
  
   my $line;
-  $scanwatch = Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
+  $scanwatch = Glib::IO->add_watch(fileno($error), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
    my $buffer;
    if ($condition & 'in') { # bit field operation. >= would also work
@@ -2743,7 +2793,7 @@ sub scanadf {
   $dialog -> show_all;
  
   my $line;
-  $scanwatch = Glib::IO -> add_watch(fileno($error), ['in', 'hup'], sub {
+  $scanwatch = Glib::IO->add_watch(fileno($error), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
    my $buffer;
    if ($condition & 'in') { # bit field operation. >= would also work
