@@ -2659,9 +2659,9 @@ warn "$text\n";
      $line = substr($line, index($line, "\n")+1, length($line));
     }
    }
-# Because reading from stderr with sysread seems to cause problems, only
-# allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
+
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($buffer) or $buffer eq '')) { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
     my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
@@ -2789,9 +2789,9 @@ warn "$text\n";
      $line = substr($line, index($line, "\n")+1, length($line));
     }
    }
-# Because reading from stderr with sysread seems to cause problems, only
-# allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($buffer) or $buffer eq "")) { # bit field operation. >= would also work
+
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($buffer) or $buffer eq '')) { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
     my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
@@ -3087,11 +3087,15 @@ sub rescan_options {
 # Read without blocking
   Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
+   my $line;
    if ($condition & 'in') { # bit field operation. >= would also work
-    my $line;
-    $output .= $line while (sysread $read, $line, 1024);
+    sysread $read, $line, 1024;
+    $output .= $line;
    }
-   if ($condition & 'hup') { # bit field operation. >= would also work
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
     my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
@@ -3406,11 +3410,15 @@ sub update_options {
 # Read without blocking
   Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
+   my $line;
    if ($condition & 'in') { # bit field operation. >= would also work
-    my $line;
-    $output .= $line while (sysread $read, $line, 1024);
+    sysread $read, $line, 1024;
+    $output .= $line;
    }
-   if ($condition & 'hup') { # bit field operation. >= would also work
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
     my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
@@ -3793,11 +3801,15 @@ sub unpaper_page {
 # Update TextBuffer without blocking
      Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
       my ($fileno, $condition) = @_;
+      my $line;
       if ($condition & 'in') { # bit field operation. >= would also work
-       my $line;
-       $page_buffer .= $line while (sysread $read, $line, 1024);
+       sysread $read, $line, 1024;
+       $page_buffer .= $line;
       }
-      if ($condition & 'hup') { # bit field operation. >= would also work
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+      if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
        warn $page_buffer if ($debug);
        close $read;
        warn 'Waiting to reap process' if ($debug);
@@ -4321,11 +4333,14 @@ sub ocr_page {
 # Update TextBuffer without blocking
      Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
       my ($fileno, $condition) = @_;
+      my $line;
       if ($condition & 'in') { # bit field operation. >= would also work
-       my $line;
-       while (sysread $read, $line, 1024) {};
+       sysread $read, $line, 1024;
       }
-      if ($condition & 'hup') { # bit field operation. >= would also work
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+      if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
        close $read;
        warn 'Waiting to reap process' if ($debug);
        my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
