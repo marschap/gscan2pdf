@@ -81,7 +81,7 @@ rpmdist : $(NAME).spec tardist
 	cp $(NAME)-$(VERSION).tar.gz \
 	                             rpm/SOURCES/$(NAME)-$(VERSION).tar.gz
 	( cd rpm/SPECS; \
-	  rpmbuild --define='_topdir $(PWD)/rpm' -ba $(NAME).spec )
+	  rpmbuild --define='_topdir $(PWD)/rpm' -ba $(NAME).spec --target noarch)
 
 locale_install : locale
 	for file in $(PO); do \

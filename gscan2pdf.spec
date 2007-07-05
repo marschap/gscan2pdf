@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.13
+Version: 0.9.12
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -9,6 +9,7 @@ URL:       http://%{name}.sourceforge.net/
 Source0:   %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
+ExclusiveArch: noarch
 
 BuildRequires:  perl(ExtUtils::MakeMaker), gettext, desktop-file-utils
 Requires:       perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
@@ -77,11 +78,11 @@ fi
 %doc LICENCE
 %{_bindir}/*
 %{_datadir}/%{name}
-%{_datadir}/applications/%{name}.desktop
+%{_datadir}/applications/*-%{name}.desktop
 %{_mandir}/man1/*.1*
 
 %changelog
-* Fri Jul 06 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Tue Jun 19 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
   - no-grayfilter option
   - check for mode-dependent options.
   - note resolution info so that the resulting PDF has the correct paper size.
