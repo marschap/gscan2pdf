@@ -77,9 +77,11 @@ DEB_BUILD_ROOT = /var/tmp/$(NAME)-$(VERSION)
 rpmdist : $(NAME).spec tardist
 	mkdir --parents rpm rpm/SPECS rpm/SOURCES rpm/BUILD rpm/RPMS rpm/SRPMS \
                                                   rpm/RPMS/noarch || /bin/true
-	cp $(NAME).spec rpm/SPECS
-	cp $(NAME)-$(VERSION).tar.gz rpm/SOURCES
-	rpmbuild -ba $(NAME).spec
+	cp $(NAME).spec rpm/SPECS/$(NAME).spec
+	cp $(NAME)-$(VERSION).tar.gz \
+	                             rpm/SOURCES/$(NAME)-$(VERSION).tar.gz
+	( cd rpm/SPECS; \
+	  rpmbuild --define='_topdir $(PWD)/rpm' -ba $(NAME).spec )
 
 locale_install : locale
 	for file in $(PO); do \

@@ -77,7 +77,7 @@ fi
 %doc LICENCE
 %{_bindir}/*
 %{_datadir}/%{name}
-%{_datadir}/applications/*-%{name}.desktop
+%{_datadir}/applications/%{name}.desktop
 %{_mandir}/man1/*.1*
 
 %changelog
