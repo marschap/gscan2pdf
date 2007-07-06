@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.12
+Version: 0.9.13
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -9,7 +9,6 @@ URL:       http://%{name}.sourceforge.net/
 Source0:   %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
-ExclusiveArch: noarch
 
 BuildRequires:  perl(ExtUtils::MakeMaker), gettext, desktop-file-utils
 Requires:       perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
@@ -82,20 +81,20 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Tue Jun 19 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - no-grayfilter option
-  - check for mode-dependent options.
-  - note resolution info so that the resulting PDF has the correct paper size.
-    Closes bug 1736036 (page size is somehow a ratio of resolution)
-    and Debian bug 426525 (after unpaper, saving PDF causes magnified page)
-  - quality setting for JPG compression in save as PDF.
-    Closes feature request 1736043 (Compression setting)
-    and bug 1736582 (PDFs with embedded JPEGS are large)
-  - save image functionality supporting TIFF, PNG, JPEG, PNM & GIF.
-    Closes feature request 1709380 (Support PNG output equivalent to TIFF)
-  - save default dates as offset from current, closing bug 1736037
-    (pdf file->save dialog should automatically set the date to the current day)
-  - Update to Czech translation (thanks to Petr Jelínek)
-  - update to German translation (thanks to Florian)
-  - update to Portuguese translation (thanks to Hugo Pereira)
-  - Update to Spanish translation (thanks to Raúl González Duque)
+* Thu Jul 05 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - Select all or Ctrl-A works properly in thumbnails or OCR buffer, depending on
+    focus. Closes bug 1740131 (Ctrl-A (select all) in OCR window does not work).
+  - Tesseract support. Closes feature request 1725818 (tesseract for OCR?)
+  - unset mode if changing device.
+    Closes bug 1741598 (2 scanners with differing mode options).
+  - ghost scan all pages RadioButton if Flatbed selected.
+    Closes bug 1743059 (Endless scanning loop)
+  - trap device busy error. Closes bug 1744451 (handle busy device)
+  - Modify PDF metadata date format to conform to ISO-8601
+    Closes feature request 1744458 (change dates to ISO-8601)
+  - Fixed double scan bug with scanadf frontend
+  - Fixed bug where Custom paper size not set from default
+  - Update to Danish translation (thanks to Jacob Nielsen)
+  - Update to French translation (thanks to Pierre Slamich)
+  - Update to Polish translation (thanks to Piotr Strebski)
+  - Fixed blocking whilst setting up/updating scan dialog

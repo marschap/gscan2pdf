@@ -64,7 +64,7 @@
 # Release procedure:
 # 0. Test scan in lineart, greyscale and colour.
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
-#    Make sure that file list in .spec and hg status reflects MANIFEST
+#    Make sure that file list in .spec and hg manifest reflects MANIFEST
 #    Download new translations
 #    Check a translation with LANGUAGE=de gscan2pdf --debug
 #    Make sure that changelog reflects History and hg log from bin/gscan2pdf
