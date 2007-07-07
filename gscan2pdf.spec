@@ -15,7 +15,7 @@ Requires:       perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $versi
 Requires:  ImageMagick-perl, djvulibre, sane-backends, sane-frontends, xdg-utils
 Requires:  perl(Gtk2::Ex::PodViewer), perl(PDF::API2), unpaper, gocr
 
-Packager:  Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+Packager:  %packager
 
 %description
 Only two clicks are required to scan several pages and then save all or a
