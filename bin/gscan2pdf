@@ -6,6 +6,8 @@
 
 # To do
 # 0. option button for unpaper on scan
+#    get list of changes working in synaptic.
+#     simply a case of rename i386.changes to all.changes?
 #    check out scanbuttond
 #    saving PDF defaults to /tmp?
 #    for scan profiles, switch to Config::General (libconfig-general-perl)
@@ -4869,6 +4871,13 @@ From the command line:
 C<apt-get update>
 
 C<apt-get install gscan2pdf>
+
+If you add my key to your list of trusted keys, then you will no longer get
+the "not authenticated" warnings:
+
+C<gpg --keyserver www.keyserver.net --recv-keys 4DD7CC93>
+
+C<gpg --export --armor 4DD7CC93 | sudo apt-key add ->
 
 =head2 RPMs
 
