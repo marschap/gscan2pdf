@@ -89,6 +89,8 @@
 
 use warnings;
 use strict;
+use lib 'lib';
+use Gscan2pdf;
 use Gtk2 -init;
 use Gtk2::Ex::Simple::List;
 use Gtk2::Gdk::Keysyms;
@@ -2530,10 +2532,7 @@ sub populate_scan_dialog {
     }
    }
   }
-  if ($debug) {
-   use Data::Dumper;
-   print Dumper(\%options);
-  }
+  print Dumper(\%options) if ($debug);
 
 # Get selected number of pages
   my $npages;
@@ -3368,8 +3367,7 @@ sub parse_options {
 
 # Add remaining options
  my %hash = options2hash($output);
-use Data::Dumper;
-print Dumper(\%hash);
+ print Dumper(\%hash) if ($debug);
  foreach my $option (keys %hash) {
   if (defined($pddo{$option})) {
 
@@ -3546,42 +3544,15 @@ sub update_options {
 sub options2hash {
 
  my ($output) = @_;
- my %hash;
- while ($output =~ /--([\w\-]*) ?(.*) \[([\w ]*)\] *\n([\S\s]*)/) {
-  my $option = $1;
-  my $values = $2;
-  my $default = $3;
-
-# Remove everything on the option line and above.
-  $output = $4;
-
-# Strip out the extra characters by e.g. [=(yes|no)]
-  $values = $1 if ($values =~ /\[=\((.*)\)\]/);
+ my %hash = Gscan2pdf::options2hash($output);
+ foreach (keys %hash) {
 
 # Set default from config
-  $default = $SETTING{$option}
-   if ($default !~ /inactive/ and defined($SETTING{$option})
+  $hash{$_}{default} = $SETTING{$_}
+   if (defined($SETTING{$_} and $hash{$_}{default} !~ /inactive/)
 
 # only set the default if it is an option
-                              and $values =~ /($SETTING{$option})|(\.\.)/);
-
-# Parse tooltips from option description based on an 8-character indent.
-  my $tip = '';
-  while ($output =~ /^\s{8,}(.*)\n([\S\s]*)/) {
-   if ($tip eq "") {
-    $tip = $1;
-   }
-   else {
-    $tip = "$tip $1";
-   }
-
-# Remove everything on the description line and above.
-   $output = $2;
-  }
-
-  $hash{$option}{values} = $values;
-  $hash{$option}{default} = $default;
-  $hash{$option}{tip} = $tip;
+                            and $hash{$_}{values} =~ /($SETTING{$_})|(\.\.)/);
  }
  return %hash;
 }
