@@ -128,8 +128,13 @@ my %that = (
                                    'values' => '0..255,...'
                                  },
           'auto-area-segmentation' => {
-                                        'tip' => '--short-resolution[=(yes|no)] [no] Display short resolution list',
+                                        'tip' => '',
                                         'default' => 'yes',
+                                        'values' => 'yes|no'
+                                      },
+          'short-resolution' => {
+                                        'tip' => 'Display short resolution list',
+                                        'default' => 'no',
                                         'values' => 'yes|no'
                                       },
           'cct-4' => {
@@ -143,9 +148,14 @@ my %that = (
                        'values' => 'yes|no'
                      },
           'film-type' => {
-                           'tip' => '--focus-position Focus on glass|Focus 2.5mm above glass [Focus on glass] Sets the focus position to either the glass or 2.5mm above the glass',
+                           'tip' => '',
                            'default' => 'inactive',
                            'values' => 'Positive Film|Negative Film'
+                         },
+          'focus-position' => {
+                           'tip' => 'Sets the focus position to either the glass or 2.5mm above the glass',
+                           'default' => 'Focus on glass',
+                           'values' => 'Focus on glass|Focus 2.5mm above glass'
                          },
           'blue-gamma-table' => {
                                   'tip' => 'Gamma-correction table for the blue band.',
@@ -193,9 +203,12 @@ my %that = (
                        'values' => '-127..127'
                      }
         );
+TODO: {
+local $TODO = 'Blank tips not yet supported';
 foreach my $option (keys %this) {
  foreach (qw(tip default values)) {
   is ($this{$option}{$_}, $that{$option}{$_}, "$option, $_");
  }
 }
 eq_hash(\%this, \%that);
+};

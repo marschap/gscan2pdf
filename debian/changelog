@@ -1,20 +1,10 @@
-gscan2pdf (0.9.13) unstable; urgency=low
+gscan2pdf (0.9.14) unstable; urgency=low
 
-  * Select all or Ctrl-A works properly in thumbnails or OCR buffer, depending on
-    focus. Closes bug 1740131 (Ctrl-A (select all) in OCR window does not work).
-  * Tesseract support. Closes feature request 1725818 (tesseract for OCR?)
-  * unset mode if changing device.
-    Closes bug 1741598 (2 scanners with differing mode options).
-  * ghost scan all pages RadioButton if Flatbed selected.
-    Closes bug 1743059 (Endless scanning loop)
-  * trap device busy error. Closes bug 1744451 (handle busy device)
-  * Modify PDF metadata date format to conform to ISO-8601
-    Closes feature request 1744458 (change dates to ISO-8601)
-  * Fixed double scan bug with scanadf frontend
-  * Fixed bug where Custom paper size not set from default
-  * Update to Danish translation (thanks to Jacob Nielsen)
-  * Update to French translation (thanks to Pierre Slamich)
-  * Update to Polish translation (thanks to Piotr Strebski)
-  * Fixed blocking whilst setting up/updating scan dialog
+  * Fixed bug parsing device-dependent options.
+    Closes bug 1751125 (Some device-dependent options have gone)
+  * Update to French translation (thanks to Nicolas Stransky)
+  * Update to Italian translation (thanks to Andrea (pikkio))
+  * Update to Portugese translation (thanks to Hugo Pereira)
+  * Update to Russian translation (thanks to Alexandre Prokoudine)
 
- -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Sun, 08 Jul 2007 20:10:41 +0200
+ -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Wed, 11 Jul 2007 21:36:16 +0200

@@ -44,7 +44,7 @@ sub options2hash {
 # Parse tooltips from option description based on an 8-character indent.
   my $tip = '';
   while ($output =~ /^\s{8,}(.*)\n([\S\s]*)/) {
-   if ($tip eq "") {
+   if ($tip eq '') {
     $tip = $1;
    }
    else {

@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.13
+Version: 0.9.14
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -76,25 +76,16 @@ fi
 %defattr(-,root,root,-)
 %doc LICENCE
 %{_bindir}/*
+%{perl_vendorlib}/Gscan2pdf.pm
 %{_datadir}/%{name}
 %{_datadir}/applications/%{name}.desktop
 %{_mandir}/man1/*.1*
 
 %changelog
-* Thu Jul 05 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - Select all or Ctrl-A works properly in thumbnails or OCR buffer, depending on
-    focus. Closes bug 1740131 (Ctrl-A (select all) in OCR window does not work).
-  - Tesseract support. Closes feature request 1725818 (tesseract for OCR?)
-  - unset mode if changing device.
-    Closes bug 1741598 (2 scanners with differing mode options).
-  - ghost scan all pages RadioButton if Flatbed selected.
-    Closes bug 1743059 (Endless scanning loop)
-  - trap device busy error. Closes bug 1744451 (handle busy device)
-  - Modify PDF metadata date format to conform to ISO-8601
-    Closes feature request 1744458 (change dates to ISO-8601)
-  - Fixed double scan bug with scanadf frontend
-  - Fixed bug where Custom paper size not set from default
-  - Update to Danish translation (thanks to Jacob Nielsen)
-  - Update to French translation (thanks to Pierre Slamich)
-  - Update to Polish translation (thanks to Piotr Strebski)
-  - Fixed blocking whilst setting up/updating scan dialog
+* Wed Jul 11 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - Fixed bug parsing device-dependent options.
+    Closes bug 1751125 (Some device-dependent options have gone)
+  - Update to French translation (thanks to Nicolas Stransky)
+  - Update to Italian translation (thanks to Andrea (pikkio))
+  - Update to Portugese translation (thanks to Hugo Pereira)
+  - Update to Russian translation (thanks to Alexandre Prokoudine)

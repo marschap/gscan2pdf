@@ -13,6 +13,7 @@ debian/rules
 gscan2pdf.desktop
 gscan2pdf.png
 gscan2pdf.spec
+lib/Gscan2pdf.pm
 pdf.png
 po/be.po
 po/cs.po
@@ -58,4 +59,14 @@ scanners/xp450
 stock-rotate-180.svg
 stock-rotate-270.svg
 stock-rotate-90.svg
+t/Brother_MFC_5100c.t
+t/brother.t
+t/canonLiDE25.t
+t/canoscan_FB_630P.t
+t/epson1.t
+t/epson_3490.t
+t/fujitsu.t
+t/hp_scanjet5300c.t
+t/officejet_5500.t
+t/snapscan.t
 META.yml                                 Module meta-data (added by MakeMaker)

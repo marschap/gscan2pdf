@@ -6,6 +6,7 @@
 
 # To do
 # 0. option button for unpaper on scan
+#    fix epson1.t
 #    running unpaper on /caehome/ra28145/perl/gscan2pdf/image-0001.tif gives an
 #     error. Trap it.
 #    simplify code - only keep variables that are needed
@@ -72,6 +73,7 @@
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
 #    Make sure that file list in .spec and hg manifest reflects MANIFEST
 #    Download new translations
+#    Update translators in credits
 #    Check a translation with LANGUAGE=de gscan2pdf --debug
 #    Make sure that changelog reflects History and hg log from bin/gscan2pdf
 # 2. make rpmdist debdist
@@ -89,7 +91,6 @@
 
 use warnings;
 use strict;
-use lib 'lib';
 use Gscan2pdf;
 use Gtk2 -init;
 use Gtk2::Ex::Simple::List;
@@ -104,7 +105,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.13';
+my $version = '0.9.14';
 
 # Standard paper sizes
 my @paperg = ('A4', 'US Letter', 'US Legal', 'Custom');
@@ -3083,25 +3084,25 @@ EOS
  $about->set_license ($d->get('Licensed under the GPLv2'));
  $about->set_website ('http://gscan2pdf.sf.net');
  my $translators = <<EOS;
-Petr Jelínek
+Alexandre Prokoudine
 Hugo Pereira
+Petr Jelínek
 Jen Fraggle
 Alberto Boiti
-Alexandre Prokoudine
 Piotr Strebski
-Maddy67
+Dirk Tas
+Nicolas Stransky
 mecedesjorge
 Christoph Langner
 cwchien
 booxter
-Nicolas Stransky
 Daniel Nylander
 Tikkel
 Mathieu Goeminne
 Nicolas Velin
+Andrea (pikkio)
 Simon Leblanc
 Eric Spierings
-Jacob Nielsen
 EOS
  $about->set_translator_credits ($translators);
  $about->set_artists ('lodp');
