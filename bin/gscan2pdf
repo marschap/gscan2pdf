@@ -3368,6 +3368,8 @@ sub parse_options {
 
 # Add remaining options
  my %hash = options2hash($output);
+use Data::Dumper;
+print Dumper(\%hash);
  foreach my $option (keys %hash) {
   if (defined($pddo{$option})) {
 
@@ -3385,7 +3387,11 @@ sub parse_options {
 
 # SpinButton
    if ($hash{$option}{values} =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)/) {
-    my $spin_button = Gtk2::SpinButton -> new_with_range($1, $2, 1);
+    my $min = $1;
+    my $max = $2;
+    my $step = 1;
+    $step = $1 if ($hash{$option}{values} =~ /\(in steps of (\d+)\)/);
+    my $spin_button = Gtk2::SpinButton -> new_with_range($min, $max, $step);
     $spin_button -> set_value($hash{$option}{default})
      if ($hash{$option}{default} !~ /inactive/);
     $hbox -> pack_end ($spin_button, FALSE, FALSE, 0);
@@ -3541,13 +3547,16 @@ sub options2hash {
 
  my ($output) = @_;
  my %hash;
- while ($output =~ /--([\w\-]*)[ \[=\(]*([\w\-\|\.]*)[\)\]]* \[(\w*)\] *\n([\S\s]*)/) {
+ while ($output =~ /--([\w\-]*) ?(.*) \[([\w ]*)\] *\n([\S\s]*)/) {
   my $option = $1;
   my $values = $2;
   my $default = $3;
 
 # Remove everything on the option line and above.
   $output = $4;
+
+# Strip out the extra characters by e.g. [=(yes|no)]
+  $values = $1 if ($values =~ /\[=\((.*)\)\]/);
 
 # Set default from config
   $default = $SETTING{$option}
@@ -3643,17 +3652,17 @@ sub options2array {
 
  my ($options) = @_;
  my @array;
- while ($options =~ /\|/) {
-  my $value = substr($options, 0, index($options, "|"));
-  $options = substr($options, index($options, "|")+1, length($options));
-  $value = substr($value, 1, length($value)) while ($value =~ /^ /);
-  $value = substr($value, 3, length($value)) while ($value =~ /^\[=\(/);
-  push @array, $value;
+ while (defined $options) {
+  my $i = index($options, '|');
+  if ($i > -1) {
+   push @array, substr($options, 0, $i);
+   $options = substr($options, $i+1, length($options));
+  }
+  else {
+   push @array, $options;
+   undef $options;
+  }
  }
-
-# Do it all again for the last one
- $options = substr($options, 0, length($options)-2) while ($options =~ /\)\]/);
- push @array, $options;
  return @array;
 }
 
@@ -5345,7 +5354,7 @@ Thunderbird.
 
 =over
 
-=item v0.9.14
+=item v0.9.15
 
 =over
 
