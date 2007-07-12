@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 103;
+use Test::More tests => 112;
 BEGIN { use_ok('Gscan2pdf') };
 
 #########################
@@ -78,7 +78,7 @@ my %that = (
                          'values' => 'None|Red|Green|Blue'
                        },
           'preview-speed' => {
-                               'tip' => 'Geometry:',
+                               'tip' => '',
                                'default' => 'no',
                                'values' => 'yes|no'
                              },
@@ -188,7 +188,7 @@ my %that = (
                            'values' => 'Default|User defined|High density printing|Low density printing|High contrast printing'
                          },
           'quick-format' => {
-                              'tip' => 'Optional equipment:',
+                              'tip' => '',
                               'default' => 'Max',
                               'values' => 'CD|A5 portrait|A5 landscape|Letter|A4|Max'
                             },
@@ -203,12 +203,9 @@ my %that = (
                        'values' => '-127..127'
                      }
         );
-TODO: {
-local $TODO = 'Blank tips not yet supported';
 foreach my $option (keys %this) {
  foreach (qw(tip default values)) {
   is ($this{$option}{$_}, $that{$option}{$_}, "$option, $_");
  }
 }
 eq_hash(\%this, \%that);
-};

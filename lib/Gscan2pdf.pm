@@ -11,7 +11,7 @@ BEGIN {
  our ($VERSION, @ISA, @EXPORT, @EXPORT_OK, %EXPORT_TAGS);
 
  # set the version for version checking
- $VERSION     = 0.01;
+# $VERSION     = 0.01;
 
  @ISA         = qw(Exporter);
  @EXPORT      = qw();
@@ -43,7 +43,7 @@ sub options2hash {
 
 # Parse tooltips from option description based on an 8-character indent.
   my $tip = '';
-  while ($output =~ /^\s{8,}(.*)\n([\S\s]*)/) {
+  while ($output =~ /^ {8,}(.*)\n([\S\s]*)/) {
    if ($tip eq '') {
     $tip = $1;
    }
