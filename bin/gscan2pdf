@@ -2330,15 +2330,7 @@ sub populate_scan_dialog {
  $combobd -> signal_connect (changed => sub {
 
 # only delete the mode setting if switching devices, not on first run
-if ($run) {
-print "I've run before\n"
-}
-else {
-print "I've not run before\n"
-}
   delete $SETTING{mode} if ($run);
-use Data::Dumper;
-print Dumper(\%SETTING);
   $run = TRUE;
   rescan_options($vboxd, $device[$combobd -> get_active]);
   $vboxd -> show_all;
@@ -2348,16 +2340,16 @@ print Dumper(\%SETTING);
  $hboxd -> pack_end ($ev, FALSE, FALSE, 0);
 
 # If device not set by config and there is a default device, then set it
- if (! defined($SETTING{'device'})
+ if (! defined($SETTING{device})
       and defined($output) and $output =~ /default device is `(.*)'/) {
-  $SETTING{'device'} = $1;
+  $SETTING{device} = $1;
  }
 
 # If device in settings then set it
  my $o = 0;
- if (defined($SETTING{'device'})) {
+ if (defined $SETTING{device}) {
   for (my $i = 0; $i <= $#device; $i++) {
-   $o = $i if ($SETTING{'device'} eq $device[$i]);
+   $o = $i if ($SETTING{device} eq $device[$i]);
   }
  }
    
@@ -2520,7 +2512,7 @@ print Dumper(\%SETTING);
   take_snapshot();
 
 # Get selected device
-  $SETTING{'device'} = $device[$combobd -> get_active];
+  $SETTING{device} = $device[$combobd -> get_active];
 
 # Get device-specific options
   my %options;
@@ -2616,11 +2608,11 @@ print Dumper(\%SETTING);
   $SETTING{'ocr engine'} = $ocr_engine[$comboboxe -> get_active]->[0]
    if ($SETTING{'OCR on scan'});
   if ($SETTING{'frontend'} eq 'scanimage') {
-   scanimage($SETTING{'device'}, $npages, $start-$step, $step,
+   scanimage($SETTING{device}, $npages, $start-$step, $step,
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
   }
   else {
-   scanadf($SETTING{'device'}, $npages, $start-$step, $step,
+   scanadf($SETTING{device}, $npages, $start-$step, $step,
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
   }
  } );
@@ -3152,7 +3144,7 @@ sub rescan_options {
 # Get output from scanimage or scanadf.
 # Inverted commas needed for strange characters in device name
   my $cmd = "$SETTING{'frontend'} --help --device-name='$device'";
-  $cmd .= " --mode=$SETTING{mode}" if (defined $SETTING{mode});
+  $cmd .= " --mode='$SETTING{mode}'" if (defined $SETTING{mode});
   warn "$cmd\n" if $debug;
 
 # Set up ProgressBar
@@ -3302,12 +3294,12 @@ sub parse_options {
   $vboxd -> pack_start ($hboxc, FALSE, FALSE, 0);
 
 # custom paper y entry
-  my $labely = Gtk2::Label -> new ("y");
+  my $labely = Gtk2::Label -> new ('y');
   $hboxc -> pack_end ($spin_buttony, FALSE, FALSE, 0);
   $hboxc -> pack_end ($labely, FALSE, FALSE, 0);
 
 # custom paper x entry
-  my $labelx = Gtk2::Label -> new ("x");
+  my $labelx = Gtk2::Label -> new ('x');
   $hboxc -> pack_end ($spin_buttonx, FALSE, FALSE, 0);
   $hboxc -> pack_end ($labelx, FALSE, FALSE, 0);
 
@@ -3366,7 +3358,8 @@ sub parse_options {
           'Paper size' => { string => $d->get('Paper size'),
                             values => {
                                       'A4' => $d->get('A4'),
-                                      'Letter'  => $d->get('Letter'),
+                                      'US Letter'  => $d->get('US Letter'),
+                                      'US Legal'  => $d->get('US Legal'),
                                       'Custom'  => $d->get('Custom'),
                                       } },
           'x'          => { string => 'x' },
@@ -3378,7 +3371,6 @@ sub parse_options {
 
 # Add remaining options
  my %hash = options2hash($output);
- print Dumper(\%hash) if ($debug);
  foreach my $option (keys %hash) {
   if (defined($pddo{$option})) {
 
@@ -3556,14 +3548,22 @@ sub options2hash {
 
  my ($output) = @_;
  my %hash = Gscan2pdf::options2hash($output);
+ print Dumper(\%hash) if ($debug);
  foreach (keys %hash) {
 
 # Set default from config
-  $hash{$_}{default} = $SETTING{$_}
-   if (defined($SETTING{$_} and $hash{$_}{default} !~ /inactive/)
+  if (defined($SETTING{$_}) and $hash{$_}{default} ne 'inactive'
 
 # only set the default if it is an option
-                            and $hash{$_}{values} =~ /($SETTING{$_})|(\.\.)/);
+                           and $hash{$_}{values} =~ /($SETTING{$_})|(\.\.)/) {
+   $hash{$_}{default} = $SETTING{$_};
+  }
+
+# in the case that we've switched devices and the new device doesn't support
+# the new mode
+  elsif ($_ eq 'mode') {
+   delete $SETTING{$_};
+  }
  }
  return %hash;
 }
