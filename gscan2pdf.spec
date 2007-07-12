@@ -10,11 +10,12 @@ Source0:   %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
 
-BuildRequires:  perl(ExtUtils::MakeMaker), perl(Test::More)
-BuildRequires:  gettext, desktop-file-utils
-Requires:       perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
-Requires:  ImageMagick-perl, djvulibre, sane-backends, sane-frontends, xdg-utils
-Requires:  perl(Gtk2::Ex::PodViewer), perl(PDF::API2), unpaper, gocr
+BuildRequires: perl(ExtUtils::MakeMaker), perl(Test::More)
+BuildRequires: gettext, desktop-file-utils
+Requires: perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
+Requires: ImageMagick-perl, ImageMagick, djvulibre, sane-backends
+Requires: sane-frontends, xdg-utils, unpaper, gocr
+Requires: perl(Gtk2::Ex::PodViewer), perl(PDF::API2)
 
 %description
 Only two clicks are required to scan several pages and then save all or a
