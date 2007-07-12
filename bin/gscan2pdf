@@ -6,7 +6,6 @@
 
 # To do
 # 0. option button for unpaper on scan
-#    fix epson1.t
 #    running unpaper on /caehome/ra28145/perl/gscan2pdf/image-0001.tif gives an
 #     error. Trap it.
 #    simplify code - only keep variables that are needed
@@ -105,7 +104,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.14';
+my $version = '0.9.15rc1';
 
 # Standard paper sizes
 my @paperg = ('A4', 'US Letter', 'US Legal', 'Custom');
@@ -174,12 +173,6 @@ while (defined($ARGV[0])) {
   warn sprintf($d->get("Unknown option %s.\n"), shift @ARGV); # xgettext hack
   exit 1;
  }
-}
-
-if (check_utils()) {
- printf($d->get("%s requires the libtiff library.\nPlease install it.\n"),
-                                                                      $program);
- exit 1;
 }
 
 # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
@@ -778,20 +771,14 @@ sub create_menu_bar {
 # Check for presence of various packages
  $dependencies{pdfapi2} = eval { require PDF::API2 };
  $dependencies{perlmagick} = eval { require Image::Magick };
- $dependencies{imagemagick} =
-  system("which convert >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
- $dependencies{scanadf} =
-  system("which scanadf >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
- $dependencies{xdg} =
-  system("which xdg-email >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
- $dependencies{gocr} =
-  system("which gocr >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
- $dependencies{tesseract} =
-  system("which tesseract >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
- $dependencies{djvu} =
-  system("which cjb2 >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
- $dependencies{unpaper} =
-  system("which unpaper >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
+ $dependencies{imagemagick} = check_command('convert');
+ $dependencies{scanadf} = check_command('scanadf');
+ $dependencies{xdg} = check_command('xdg-email');
+ $dependencies{gocr} = check_command('gocr');
+ $dependencies{tesseract} = check_command('tesseract');
+ $dependencies{djvu} = check_command('cjb2');
+ $dependencies{unpaper} = check_command('unpaper');
+ $dependencies{libtiff} = check_command('tiffcp');
  if ($debug) {
   warn "Found PDF::API2\n" if ($dependencies{pdfapi2});
   warn "Found Image::Magick\n" if ($dependencies{perlmagick});
@@ -802,6 +789,7 @@ sub create_menu_bar {
   warn "Found tesseract\n" if ($dependencies{tesseract});
   warn "Found cjb2 (djvu)\n" if ($dependencies{djvu});
   warn "Found unpaper\n" if ($dependencies{unpaper});
+  warn "Found libtiff\n" if ($dependencies{libtiff});
  }
 
 # OCR engine options
@@ -836,6 +824,14 @@ sub create_menu_bar {
 # Disable options if necessary
  $uimanager->get_widget('/MenuBar/Edit/Options') -> set_active(FALSE)
   if (defined($SETTING{'enable options'}) and ! $SETTING{'enable options'});
+
+# Ghost save image item if imagemagick not available
+ $msg .= $d->get("Save image and Save as PDF both require imagemagick\n")
+  if (! $dependencies{imagemagick});
+
+# Ghost save image item if libtiff not available
+ $msg .= $d->get("Save image requires libtiff\n")
+  if (! $dependencies{libtiff});
 
 # Ghost djvu item if cjb2 not available
  $msg .= $d->get("Save as DjVu requires djvulibre-bin\n")
@@ -975,17 +971,21 @@ sub update_uimanager {
     $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(TRUE);
     $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(TRUE);
    }
-   if (! $dependencies{xdg}) {
+   if ($dependencies{xdg}) {
     $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(TRUE);
     $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(TRUE);
     $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(TRUE);
    }
-   $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(TRUE);
-   $uimanager->get_widget('/MenuBar/File/Save image') -> set_sensitive(TRUE);
-   $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(TRUE);
-   $uimanager->get_widget('/ToolBar/Save image') -> set_sensitive(TRUE);
-   $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(TRUE);
-   $uimanager->get_widget('/Thumb_Popup/Save image') -> set_sensitive(TRUE);
+   if ($dependencies{imagemagick}) {
+    $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(TRUE);
+    $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(TRUE);
+    $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(TRUE);
+    if ($dependencies{libtiff}) {
+     $uimanager->get_widget('/MenuBar/File/Save image') -> set_sensitive(TRUE);
+     $uimanager->get_widget('/ToolBar/Save image') -> set_sensitive(TRUE);
+     $uimanager->get_widget('/Thumb_Popup/Save image') -> set_sensitive(TRUE);
+    }
+   }
 
    $dependencies{pages} = $#{$slist -> {data}};
   }
@@ -1003,12 +1003,16 @@ sub update_uimanager {
     $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
     $windowe->hide if defined $windowe;
    }
-   $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(FALSE);
-   $uimanager->get_widget('/MenuBar/File/Save image') -> set_sensitive(FALSE);
-   $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(FALSE);
-   $uimanager->get_widget('/ToolBar/Save image') -> set_sensitive(FALSE);
-   $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(FALSE);
-   $uimanager->get_widget('/Thumb_Popup/Save image') -> set_sensitive(FALSE);
+   if ($dependencies{imagemagick}) {
+    $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(FALSE);
+    $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(FALSE);
+    $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(FALSE);
+    if ($dependencies{libtiff}) {
+     $uimanager->get_widget('/MenuBar/File/Save image') -> set_sensitive(FALSE);
+     $uimanager->get_widget('/ToolBar/Save image') -> set_sensitive(FALSE);
+     $uimanager->get_widget('/Thumb_Popup/Save image') -> set_sensitive(FALSE);
+    }
+   }
    $windowp->hide if defined $windowp;
    $windowi->hide if defined $windowi;
 
@@ -2326,7 +2330,15 @@ sub populate_scan_dialog {
  $combobd -> signal_connect (changed => sub {
 
 # only delete the mode setting if switching devices, not on first run
+if ($run) {
+print "I've run before\n"
+}
+else {
+print "I've not run before\n"
+}
   delete $SETTING{mode} if ($run);
+use Data::Dumper;
+print Dumper(\%SETTING);
   $run = TRUE;
   rescan_options($vboxd, $device[$combobd -> get_active]);
   $vboxd -> show_all;
@@ -3111,12 +3123,10 @@ EOS
 }
 
 
-# Check that tiffcp exists
+# Check that a command exists
 
-sub check_utils {
- system("which tiffcp >/dev/null 2>/dev/null");
- return $? if $? != 0;
- return FALSE;
+sub check_command {
+ return system("which $_[0] >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
 }
 
 
