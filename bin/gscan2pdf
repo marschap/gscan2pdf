@@ -5,8 +5,11 @@
 # see the included LICENCE file for details.
 
 # To do
-# 0. simplify code - only keep variables that are needed
+#    delete mode setting if device in settings not found
+#    unpaper scan options not respected
+#    simplify code - only keep variables that are needed
 #    - rename those like $hboxu to $hbox
+#    get it to work on the TV tuner
 #    get list of changes working in synaptic.
 #     simply a case of rename i386.changes to all.changes?
 #    check out scanbuttond
@@ -20,7 +23,7 @@
 #    handle corrupted images properly
 #    move test tif and correct blank PDF with compression=none
 #    use -x option (first column 0-100) in gocr to give more detail to progressbar
-#    fix encoding problem with OCR output
+#    fix encoding problem with GOCR output
 #    add run script option
 #    check out freeze when gocr does not return properly
 #    add ocrad, ocre support
@@ -71,7 +74,7 @@
 #    Check a translation with LANGUAGE=de gscan2pdf --debug
 #    Make sure that changelog reflects History and hg log from bin/gscan2pdf
 # 2. make rpmdist debdist
-#    test dist sudo dpkg -i gscan2pdf-0....
+#    test dist sudo dpkg -i gscan2pdf-x.x.x_all.deb
 # 3. hg status
 #    hg tag vx-x-x
 #    hg push ssh://ra28145@shell.sf.net//home/groups/g/gs/gscan2pdf/hg/gscan2pdf
@@ -101,7 +104,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.15rc1';
+my $version = '0.9.15rc2';
 
 # Standard paper sizes
 my @paperg = ('A4', 'US Letter', 'US Legal', 'Custom');
