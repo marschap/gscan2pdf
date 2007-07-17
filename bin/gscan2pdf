@@ -5,9 +5,7 @@
 # see the included LICENCE file for details.
 
 # To do
-# 0. running unpaper on /caehome/ra28145/perl/gscan2pdf/image-0001.tif gives an
-#     error. Trap it.
-#    simplify code - only keep variables that are needed
+# 0. simplify code - only keep variables that are needed
 #    - rename those like $hboxu to $hbox
 #    get list of changes working in synaptic.
 #     simply a case of rename i386.changes to all.changes?
@@ -40,7 +38,6 @@
 #      Importing (e.g. 12 page multi.tif)
 #      Rotating
 #      Saving tiff
-#    add information to pdf save dialog whilst saving
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    Option to throw up PDF viewer with newly created PDF file
@@ -96,6 +93,8 @@ use Cwd;                             # To obtain current working directory
 use File::Basename;                  # Split filename into dir, file, ext
 use File::Temp qw(tempfile tempdir); # To create temporary files
 use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
+use Socket;
+use FileHandle;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -245,7 +244,10 @@ my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
-    $scanwatch, @ocr_engine, $bscanall, $bscannum);
+    $scanwatch, @ocr_engine, $bscanall, $bscannum,
+
+# Variable for inter-process communication
+    $writer);
 
 my @action_items = (
  # Fields for each action item:
@@ -1668,12 +1670,9 @@ sub create_PDF {
  my $dialog = Gtk2::Dialog -> new ($d->get('Saving PDF')."...", $windowo,
                                    'destroy-with-parent',
                                    'gtk-cancel' => 'cancel');
- my $label = Gtk2::Label -> new ($d->get('Saving PDF')."...");
- $dialog -> vbox -> add($label);
 
 # Set up ProgressBar
  my $pbar = Gtk2::ProgressBar->new;
- $pbar -> set_pulse_step(.1);
  $dialog -> vbox -> add($pbar);
 
 # Ensure that the dialog box is destroyed when the user responds.
@@ -1686,16 +1685,26 @@ sub create_PDF {
 # Install a handler for child processes
  $SIG{CHLD} = \&sig_child;
 
- my $pid = start_process(sub {
+ my $pid = start_process($pbar, sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
   my @pagelist = get_page_index();
+  my $page = 0;
 
 # Create PDF with PDF::API2
+  $writer->write('0'.$d->get('Setting up PDF')."\n");
+  $writer->flush;
   my $pdf = PDF::API2->new(-file => $filename);
   $pdf->info(get_PDF_options());
 
   foreach (@pagelist) {
+   ++$page;
+   $writer->write(
+    $page/($#pagelist+2)
+    .sprintf($d->get("Saving page %i of %i"), $page, $#pagelist+1)."\n"
+   );
+   $writer->flush;
+
    my $page = $pdf->page;
 
    my $filename = $slist -> {data}[$_][2];
@@ -1778,13 +1787,14 @@ sub create_PDF {
    }
    $gfx->image($imgobj,0,0,72/$resolution) if (defined $imgobj);
   }
+  $writer->write('1'.$d->get('Closing PDF')."\n");
+  $writer->flush;
   $pdf->save;
   $pdf->end();
  });
 
 # Timer will run until callback returns false 
  Glib::Timeout->add (100, sub { if (defined $helperTag{$pid}) {
-                                 $pbar->pulse;
                                  return TRUE;
                                 }
                                 else {
@@ -4893,14 +4903,40 @@ sub sig_child {
 }
 
 sub start_process {
- my ( $process ) = @_;
+ my ($pbar, $process) = @_;
+
+ my $reader = FileHandle->new;
+ $writer = FileHandle->new;
+ socketpair($reader, $writer,  AF_UNIX, SOCK_STREAM, PF_UNSPEC);
 
  my $pid = fork();
  if ($pid) {
 
-# We're still in the parent; note pid
+# We're still in the parent; note pid and watch the streams:
+  shutdown($writer, 0);
 
-  $helperTag{$pid} = $pid;
+  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+
+   my $line;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    my $line = <$reader>;
+    if ($line =~ /(\d*\.?\d*)(.*)/) {
+     my $fraction=$1;
+     my $text=$2;
+     $pbar->set_fraction($fraction);
+     $pbar->set_text($text);
+    }
+   }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # continue without uninstalling
+  });
+
   warn "Forked PID $pid\n" if ($debug);
   return $pid;
  }
@@ -4911,6 +4947,7 @@ sub start_process {
 # "clean up" open file handles, including our display connection,
 # and merely returning from this subroutine in a separate process
 # would *really* confuse things.
+  shutdown($reader, 1);
   $process->();
   POSIX::_exit(0);
  }
@@ -5374,9 +5411,7 @@ Thunderbird.
 
 =over
 
-=item Option button for unpaper on scan.
-
-=item More information on save PDF progress bar
+=item Use the "hidden text" layer in DjVu documents.
 
 =back
 
@@ -5399,8 +5434,6 @@ Thunderbird.
 =over
 
 =item Crop function.
-
-=item Use the "hidden text" layer in DjVu documents.
 
 =back
 
