@@ -2393,6 +2393,7 @@ sub scan_dialog {
                                              } });
 
   my $cmd = "scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
+  print "$cmd\n" if ($debug);
 
 # Interface to frontend
   my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
@@ -2438,6 +2439,8 @@ sub scan_dialog {
 
 sub populate_scan_dialog {
  my ($vbox, $output) = @_;
+
+ print $output if ($debug);
 
 # HBox for devices
  my $hboxd = Gtk2::HBox -> new;
