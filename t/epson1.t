@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 112;
+use Test::More tests => 115;
 BEGIN { use_ok('Gscan2pdf') };
 
 #########################
@@ -42,6 +42,11 @@ my %that = (
                        'default' => 'inactive',
                        'values' => '-127..127'
                      },
+          'focus-position' => {
+                                'tip' => 'Sets the focus position to either the glass or 2.5mm above the glass',
+                                'default' => 'Focus on glass',
+                                'values' => 'Focus on glass|Focus 2.5mm above glass'
+                              },
           'cct-2' => {
                        'tip' => 'Adds to red based on green level',
                        'default' => 'inactive',
@@ -107,11 +112,21 @@ my %that = (
                        'default' => 'inactive',
                        'values' => '-127..127'
                      },
+          'halftoning' => {
+                            'tip' => 'Selects the halftone.',
+                            'default' => 'Halftone A (Hard Tone)',
+                            'values' => 'None|Halftone A (Hard Tone)|Halftone B (Soft Tone)|Halftone C (Net Screen)|Dither A (4x4 Bayer)|Dither B (4x4 Spiral)|Dither C (4x4 Net Screen)|Dither D (8x4 Net Screen)|Text Enhanced Technology|Download pattern A|Download pattern B'
+                          },
           'threshold' => {
                            'tip' => 'Select minimum-brightness to get a white point',
                            'default' => 'inactive',
                            'values' => '0..255'
                          },
+          'short-resolution' => {
+                                  'tip' => 'Display short resolution list',
+                                  'default' => 'no',
+                                  'values' => 'yes|no'
+                                },
           'mirror' => {
                         'tip' => 'Mirror the image.',
                         'default' => 'no',
@@ -132,11 +147,6 @@ my %that = (
                                         'default' => 'yes',
                                         'values' => 'yes|no'
                                       },
-          'short-resolution' => {
-                                        'tip' => 'Display short resolution list',
-                                        'default' => 'no',
-                                        'values' => 'yes|no'
-                                      },
           'cct-4' => {
                        'tip' => 'Adds to green based on red level',
                        'default' => 'inactive',
@@ -151,11 +161,6 @@ my %that = (
                            'tip' => '',
                            'default' => 'inactive',
                            'values' => 'Positive Film|Negative Film'
-                         },
-          'focus-position' => {
-                           'tip' => 'Sets the focus position to either the glass or 2.5mm above the glass',
-                           'default' => 'Focus on glass',
-                           'values' => 'Focus on glass|Focus 2.5mm above glass'
                          },
           'blue-gamma-table' => {
                                   'tip' => 'Gamma-correction table for the blue band.',
@@ -172,26 +177,26 @@ my %that = (
                       'default' => 'inactive',
                       'values' => '50..200'
                     },
+          'gamma-correction' => {
+                                  'tip' => 'Selects the gamma correction value from a list of pre-defined devices or the user defined table, which can be downloaded to the scanner',
+                                  'default' => 'Default',
+                                  'values' => 'Default|User defined|High density printing|Low density printing|High contrast printing'
+                                },
           'auto-eject' => {
                             'tip' => 'Eject document after scanning',
                             'default' => 'inactive',
                             'values' => 'yes|no'
                           },
-          'sharpness' => {
-                           'tip' => '',
-                           'default' => '0',
-                           'values' => '-2..2'
-                         },
-          'gamma-correction' => {
-                           'tip' => 'Selects the gamma correction value from a list of pre-defined devices or the user defined table, which can be downloaded to the scanner',
-                           'default' => 'Default',
-                           'values' => 'Default|User defined|High density printing|Low density printing|High contrast printing'
-                         },
           'quick-format' => {
                               'tip' => '',
                               'default' => 'Max',
                               'values' => 'CD|A5 portrait|A5 landscape|Letter|A4|Max'
                             },
+          'sharpness' => {
+                           'tip' => '',
+                           'default' => '0',
+                           'values' => '-2..2'
+                         },
           'cct-6' => {
                        'tip' => 'Adds to blue based on red level',
                        'default' => 'inactive',

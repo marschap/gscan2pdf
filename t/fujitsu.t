@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 22;
+use Test::More tests => 28;
 BEGIN { use_ok('Gscan2pdf') };
 
 #########################
@@ -32,16 +32,26 @@ my %that = (
                             'default' => '0',
                             'values' => '0..60 (in steps of 1)'
                           },
-          'y-resolution' => {
-                              'tip' => 'Sets the vertical resolution of the scanned image.',
-                              'default' => '600',
-                              'values' => '50..600dpi (in steps of 1)'
-                            },
           'mode' => {
                       'tip' => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
                       'default' => 'Gray',
                       'values' => 'Gray|Color'
                     },
+          'pageheight' => {
+                            'tip' => 'Must be set properly to eject pages',
+                            'default' => '279.364',
+                            'values' => '0..863.489mm (in steps of 0.0211639)'
+                          },
+          'pagewidth' => {
+                           'tip' => 'Must be set properly to align scanning window',
+                           'default' => '215.872',
+                           'values' => '0..224.846mm (in steps of 0.0211639)'
+                         },
+          'y-resolution' => {
+                              'tip' => 'Sets the vertical resolution of the scanned image.',
+                              'default' => '600',
+                              'values' => '50..600dpi (in steps of 1)'
+                            },
           'dropoutcolor' => {
                               'tip' => 'One-pass scanners use only one color during gray or binary scanning, useful for colored paper or ink',
                               'default' => 'Default',

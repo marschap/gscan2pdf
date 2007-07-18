@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 73;
+use Test::More tests => 82;
 BEGIN { use_ok('Gscan2pdf') };
 
 #########################
@@ -87,11 +87,21 @@ my %that = (
                                'default' => 'None',
                                'values' => 'None|6x4 (inch)|8x10 (inch)|8.5x11 (inch)'
                              },
+          'analog-gamma-b' => {
+                                'tip' => 'Analog gamma-correction for blue',
+                                'default' => '1.79999',
+                                'values' => '0..4'
+                              },
           'contrast' => {
                           'tip' => 'Controls the contrast of the acquired image.',
                           'default' => '0',
                           'values' => '-100..400% (in steps of 1)'
                         },
+          'analog-gamma-g' => {
+                                'tip' => 'Analog gamma-correction for green',
+                                'default' => '1.79999',
+                                'values' => '0..4'
+                              },
           'quality-cal' => {
                              'tip' => 'Do a quality white-calibration',
                              'default' => 'yes',
@@ -102,6 +112,11 @@ my %that = (
                        'default' => '8',
                        'values' => '8|16bit'
                      },
+          'analog-gamma-r' => {
+                                'tip' => 'Analog gamma-correction for red',
+                                'default' => '1.79999',
+                                'values' => '0..4'
+                              },
           'brightness' => {
                             'tip' => 'Controls the brightness of the acquired image.',
                             'default' => '0',

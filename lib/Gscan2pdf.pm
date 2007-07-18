@@ -30,7 +30,7 @@ sub options2hash {
 
  my ($output) = @_;
  my %hash;
- while ($output =~ /--([\w\-]*) ?(.*) \[([\w &]*)\] *\n([\S\s]*)/) {
+ while ($output =~ /--([\w\-]*) ?(.*) \[(.*)\] *\n([\S\s]*)/) {
   my $option = $1;
   my $values = $2;
   my $default = $3;

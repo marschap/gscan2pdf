@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 58;
+use Test::More tests => 85;
 BEGIN { use_ok('Gscan2pdf') };
 
 #########################
@@ -32,6 +32,16 @@ my %that = (
                              'default' => 'no',
                              'values' => 'yes|no'
                            },
+          'blue-offset' => {
+                             'tip' => 'Blue offset value of the AFE',
+                             'default' => '-1',
+                             'values' => '-1..63 (in steps of 1)'
+                           },
+          'redlamp-off' => {
+                             'tip' => 'Defines red lamp off parameter',
+                             'default' => '-1',
+                             'values' => '-1..16363 (in steps of 1)'
+                           },
           'mode' => {
                       'tip' => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
                       'default' => 'Color',
@@ -47,11 +57,46 @@ my %that = (
                                    'default' => 'inactive',
                                    'values' => '0..255,...'
                                  },
+          'custom-gamma' => {
+                              'tip' => 'Determines whether a builtin or a custom gamma-table should be used.',
+                              'default' => 'no',
+                              'values' => 'yes|no'
+                            },
+          'calibration-cache' => {
+                                   'tip' => 'Enables or disables calibration data cache.',
+                                   'default' => 'no',
+                                   'values' => 'yes|no'
+                                 },
+          'green-gain' => {
+                            'tip' => 'Green gain value of the AFE',
+                            'default' => '-1',
+                            'values' => '-1..63 (in steps of 1)'
+                          },
+          'blue-gamma-table' => {
+                                  'tip' => 'Gamma-correction table for the blue band.',
+                                  'default' => 'inactive',
+                                  'values' => '0..255,...'
+                                },
+          'red-gain' => {
+                          'tip' => 'Red gain value of the AFE',
+                          'default' => '-1',
+                          'values' => '-1..63 (in steps of 1)'
+                        },
+          'bluelamp-off' => {
+                              'tip' => 'Defines blue lamp off parameter',
+                              'default' => '-1',
+                              'values' => '-1..16363 (in steps of 1)'
+                            },
           'contrast' => {
                           'tip' => 'Controls the contrast of the acquired image.',
                           'default' => '0',
                           'values' => '-100..100% (in steps of 1)'
                         },
+          'greenlamp-off' => {
+                               'tip' => 'Defines green lamp off parameter',
+                               'default' => '-1',
+                               'values' => '-1..16363 (in steps of 1)'
+                             },
           'speedup-switch' => {
                                 'tip' => 'Enables or disables speeding up sensor movement.',
                                 'default' => 'inactive',
@@ -62,21 +107,16 @@ my %that = (
                              'default' => 'inactive',
                              'values' => '-1..999 (in steps of 1)'
                            },
-          'custom-gamma' => {
-                              'tip' => 'Determines whether a builtin or a custom gamma-table should be used.',
-                              'default' => 'no',
-                              'values' => 'yes|no'
-                            },
           'depth' => {
                        'tip' => 'Number of bits per sample, typical values are 1 for "line-art" and 8 for multibit scans.',
                        'default' => '8',
                        'values' => '8|16'
                      },
-          'calibration-cache' => {
-                                   'tip' => 'Enables or disables calibration data cache.',
-                                   'default' => 'no',
-                                   'values' => 'yes|no'
-                                 },
+          'red-offset' => {
+                            'tip' => 'Red offset value of the AFE',
+                            'default' => '-1',
+                            'values' => '-1..63 (in steps of 1)'
+                          },
           'lamp-off-at-exit' => {
                                   'tip' => 'Turn off lamp when program exits',
                                   'default' => 'yes',
@@ -87,6 +127,16 @@ my %that = (
                            'default' => 'inactive',
                            'values' => ''
                          },
+          'blue-gain' => {
+                           'tip' => 'Blue gain value of the AFE',
+                           'default' => '-1',
+                           'values' => '-1..63 (in steps of 1)'
+                         },
+          'green-offset' => {
+                              'tip' => 'Green offset value of the AFE',
+                              'default' => '-1',
+                              'values' => '-1..63 (in steps of 1)'
+                            },
           'brightness' => {
                             'tip' => 'Controls the brightness of the acquired image.',
                             'default' => '0',
@@ -106,12 +156,8 @@ my %that = (
                               'tip' => 'Lampoff-time in seconds.',
                               'default' => '300',
                               'values' => '0..999 (in steps of 1)'
-                            },
-          'blue-gamma-table' => {
-                                  'tip' => 'Gamma-correction table for the blue band.',
-                                  'default' => 'inactive',
-                                  'values' => '0..255,...'
-                                }
+                            }
+
         );
 foreach my $option (keys %this) {
  foreach (qw(tip default values)) {
