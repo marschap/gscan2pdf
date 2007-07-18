@@ -3977,7 +3977,7 @@ sub unpaper_page {
  my $ocr = shift;
  my $options = shift;
  $options = '' if (! defined($options));
- push @unpaper_stack, [ $_, $ocr ] foreach (@_);
+ push @unpaper_stack, [ $_, $ocr, $options ] foreach (@_);
 
 # guess where unpaper has been called from
  my $parent = get_parent($windowu, $windows, $window);
@@ -4024,7 +4024,7 @@ sub unpaper_page {
      $running = TRUE;
      $page++;
      $npages++;
-     my ($pagenum, $ocr) = @{shift @unpaper_stack};
+     my ($pagenum, $ocr, $options) = @{shift @unpaper_stack};
      $pbar->set_text(sprintf($d->get("Page %i of %i"), $page, $#unpaper_stack+$npages+1));
      $pbar->set_fraction (($page-1)/($#unpaper_stack+$npages+1));
 
@@ -4248,7 +4248,8 @@ sub options2unpaper {
  my @items;
  foreach my $option (keys %{$hashref}) {
   if ($hashref->{$option}{type} eq 'CheckButton') {
-   push @items, "--$option" if (defined $SETTING{$option});
+   push @items, "--$option"
+    if (defined $SETTING{$option} and $SETTING{$option});
   }
   else {
    push @items, "--$option $SETTING{$option}" if (defined $SETTING{$option});
@@ -4393,12 +4394,8 @@ sub unpaper {
 # Update $SETTING
   get_unpaper_options($unpaper_options);
 
-# build command
-  my $cmd = options2unpaper($unpaper_options);
-
-  my @pagelist = get_page_index();
-
-  unpaper_page(undef, $cmd, @pagelist);
+# run unpaper
+  unpaper_page(undef, options2unpaper($unpaper_options), get_page_index());
  } );
 
 # Cancel button
