@@ -13,7 +13,6 @@
 #    get list of changes working in synaptic.
 #     simply a case of rename i386.changes to all.changes?
 #    check out scanbuttond
-#    saving PDF defaults to /tmp?
 #    for scan profiles, switch to Config::General (libconfig-general-perl)
 #     then put paper sizes in config
 #    rotating doesn't update detail view - sometimes (wait problem?)
@@ -5036,11 +5035,6 @@ C<rpm -i gscan2pdf-version.rpm>
 The source is hosted in the files section of the gscan2pdf project on
 Sourceforge (L<http://sourceforge.net/project/showfiles.php?group_id=174140>).
 
-Having downloaded it, C<perl Makefile.PL>, will create the Makefile, C<make>
-will build the application and C<make install> will install it for you. Note
-there is no C<make test> step. To build the RPM and .deb packages, you will
-additionally need the rpm, devscripts, fakeroot, debhelper and gettext packages.
-
 =head2 From the repository
 
 gscan2pdf uses Mercurial for its Revision Control System. You can browse the
@@ -5049,6 +5043,23 @@ You can also download snapshots as .tar.gz, .zip, and .tar.bz2.
 
 Mercurial users can clone the complete tree with
 C<hg clone http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf>
+
+=head1 Building gscan2pdf from source
+
+Having downloaded the source either from a Sourceforge file release, or from the
+Mercurial repository, unpack it if necessary with
+C<tar xvfz gscan2pdf-x.x.x.tar.gz
+cd gscan2pdf-x.x.x>
+
+C<perl Makefile.PL>, will create the Makefile.
+There is a C<make test>, but this is not machine-dependent, and therefore really
+just for my benefit to make sure I haven't broken the device-dependent options
+parsing routine.
+
+You can install directly from the source with C<make install>, but building the
+appropriate package for your distribution should be as straightforward as
+C<make debdist> or C<make rpmdist>. However, you will
+additionally need the rpm, devscripts, fakeroot, debhelper and gettext packages.
 
 =head1 Dependencies
 
@@ -5173,7 +5184,7 @@ Before reporting bugs, please read the L<"FAQs"> section.
 Please report any bugs found to the bugs page of the gscan2pdf project on
 Sourceforge (L<https://sourceforge.net/tracker/?group_id=174140&atid=868098>).
 
-Please include the output of C<scanimage --help> with any new bug report.
+Please include the output of C<gscan2pdf --debug> with any new bug report.
 
 =head1 Translations
 
@@ -5408,6 +5419,11 @@ require imagemagick.
 
 Because xdg-email doesn't support creating new emails with attachments in
 Thunderbird.
+
+=head2 Why can I not scan from the flatbed of my HP scanner?
+
+Generally for HP scanners with an ADF, to scan from the flatbed, you should
+set "# Pages" to "1", and possibly "Batch scan" to "No".
 
 =head1 Roadmap
 
