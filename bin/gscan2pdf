@@ -6,7 +6,6 @@
 
 # To do
 #    delete mode setting if device in settings not found
-#    unpaper scan options not respected
 #    simplify code - only keep variables that are needed
 #    - rename those like $hboxu to $hbox
 #    get it to work on the TV tuner
@@ -1720,7 +1719,9 @@ sub create_PDF {
         and ($SETTING{'pdf compression'} ne 'none'
         and $SETTING{'pdf compression'} ne $format)
         or $SETTING{'pdf compression'} eq 'jpg') {
+    print "Converting $filename to " if ($debug);
     (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$SETTING{'pdf compression'});
+    print "$filename\n" if ($debug);
     $image->Set(quality => $SETTING{quality})
      if $SETTING{'pdf compression'} eq 'jpg';
     $x = $image->Write($filename);
