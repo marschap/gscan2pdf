@@ -5,7 +5,9 @@
 + store unpaper options in settings
 + fractional instead of pulsing ProgressBar & more info during PDF save
 + fixed bug where spaces in mode not escaped in shell
-+ fixed bug parsing device-dependent options.
++ fixed bug parsing device-dependent options (affecting some Brother scanners).
++ option not to restore window settings.
+  closes Debian bug 433497 (please don't remember window position)
 
 
 0.9.14 (11.07.2007):

@@ -332,6 +332,7 @@ my $ui = "<ui>
    </menu>
    <separator/>
    <menuitem action='Options'/>
+   <menuitem action='RestoreWindow'/>
   </menu>
   <menu action='View'> 
    <menuitem action='Zoom 100'/>
@@ -425,11 +426,12 @@ $window -> signal_connect(window_state_event => sub {
 });
 
 # If defined in the config file, set the window state, size and position
-$window -> set_default_size ($SETTING{'window_width'}, $SETTING{'window_height'});
-if (defined($SETTING{'window_x'}) and defined($SETTING{'window_y'})) {
- $window -> move ($SETTING{'window_x'}, $SETTING{'window_y'});
+if (! defined($SETTING{'restore window'}) or $SETTING{'restore window'}) {
+ $window -> set_default_size ($SETTING{'window_width'}, $SETTING{'window_height'});
+ $window -> move ($SETTING{'window_x'}, $SETTING{'window_y'})
+  if (defined($SETTING{'window_x'}) and defined($SETTING{'window_y'}));
+ $window -> maximize if ($SETTING{'window_maximize'});
 }
-$window -> maximize if ($SETTING{'window_maximize'});
 
 $window -> set_default_icon_from_file ("$path/gscan2pdf.png");
 
@@ -920,6 +922,7 @@ sub create_menu_bar {
  my $actions_options = Gtk2::ActionGroup->new ("options");
  $actions_options->add_toggle_actions ( [
   [ 'Options', 'gtk-preferences', $d->get('Enable Save _Options'), undef, $d->get('View options before saving'), undef, TRUE ],
+  [ 'RestoreWindow', 'gtk-preferences', $d->get('Restore _window settings on startup'), undef, $d->get('Restore window settings on startup'), undef, TRUE ],
  ] );
 
 # Add the actiongroup to the uimanager          
@@ -987,6 +990,10 @@ sub create_menu_bar {
 # Disable options if necessary
  $uimanager->get_widget('/MenuBar/Edit/Options') -> set_active(FALSE)
   if (defined($SETTING{'enable options'}) and ! $SETTING{'enable options'});
+
+# Disable restore window if necessary
+ $uimanager->get_widget('/MenuBar/Edit/RestoreWindow') -> set_active(FALSE)
+  if (defined($SETTING{'restore window'}) and ! $SETTING{'restore window'});
 
 # Ghost save image item if imagemagick not available
  $msg .= $d->get("Save image and Save as PDF both require imagemagick\n")
@@ -4647,6 +4654,10 @@ sub quit {
 # Save options setting
  $SETTING{'enable options'} =
   $uimanager->get_widget('/MenuBar/Edit/Options') -> get_active;
+
+# Save options setting
+ $SETTING{'restore window'} =
+  $uimanager->get_widget('/MenuBar/Edit/RestoreWindow') -> get_active;
 
 # delete $SETTING{'RMB'};
 
