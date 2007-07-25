@@ -1,10 +1,13 @@
-gscan2pdf (0.9.15rc2) unstable; urgency=low
+gscan2pdf (0.9.15) unstable; urgency=low
 
-  * Fixed bug parsing device-dependent options.
-    Closes bug 1751125 (Some device-dependent options have gone)
+  * Fixed bug setting defaults, also responsible for preventing the
+    device-dependent options being displayed in certain circumstances.
+  * store unpaper options in settings
+  * fractional instead of pulsing ProgressBar & more info during PDF save
+  * fixed bug where spaces in mode not escaped in shell
+  * fixed bug parsing device-dependent options (affecting some Brother scanners).
+  * option not to restore window settings.
+    closes Debian bug 433497 (please don't remember window position)
   * Update to French translation (thanks to Nicolas Stransky)
-  * Update to Italian translation (thanks to Andrea (pikkio))
-  * Update to Portugese translation (thanks to Hugo Pereira)
-  * Update to Russian translation (thanks to Alexandre Prokoudine)
 
- -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Tue, 17 Jul 2007 21:08:32 +0200
+ -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Sun, 22 Jul 2007 20:18:51 +0200

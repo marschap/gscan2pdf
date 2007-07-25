@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.14
+Version: 0.9.15
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -82,10 +82,13 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Wed Jul 11 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - Fixed bug parsing device-dependent options.
-    Closes bug 1751125 (Some device-dependent options have gone)
+* Sun Jul 22 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - Fixed bug setting defaults, also responsible for preventing the
+    device-dependent options being displayed in certain circumstances.
+  - store unpaper options in settings
+  - fractional instead of pulsing ProgressBar & more info during PDF save
+  - fixed bug where spaces in mode not escaped in shell
+  - fixed bug parsing device-dependent options (affecting some Brother scanners).
+  - option not to restore window settings.
+    closes Debian bug 433497 (please don't remember window position)
   - Update to French translation (thanks to Nicolas Stransky)
-  - Update to Italian translation (thanks to Andrea (pikkio))
-  - Update to Portugese translation (thanks to Hugo Pereira)
-  - Update to Russian translation (thanks to Alexandre Prokoudine)
