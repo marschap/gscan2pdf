@@ -1,4 +1,9 @@
-0.9.15 (01.08.2007):
+0.9.16 (10.09.2007):
+
++ do not restore mode setting if default device not found
+
+
+0.9.15 (22.08.2007):
 
 + Fixed bug setting defaults, also responsible for preventing the
   device-dependent options being displayed in certain circumstances.
@@ -8,6 +13,7 @@
 + fixed bug parsing device-dependent options (affecting some Brother scanners).
 + option not to restore window settings.
   closes Debian bug 433497 (please don't remember window position)
++ Update to French translation (thanks to Nicolas Stransky)
 
 
 0.9.14 (11.07.2007):

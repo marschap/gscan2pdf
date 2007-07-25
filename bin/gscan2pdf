@@ -5,7 +5,6 @@
 # see the included LICENCE file for details.
 
 # To do
-#    delete mode setting if device in settings not found
 #    simplify code - only keep variables that are needed
 #    - rename those like $hboxu to $hbox
 #    get it to work on the TV tuner
@@ -102,7 +101,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.15rc2';
+my $version = '0.9.16';
 
 # Standard paper sizes
 my @paperg = ('A4', 'US Letter', 'US Legal', 'Custom');
@@ -2529,11 +2528,15 @@ sub populate_scan_dialog {
  }
 
 # If device in settings then set it
- my $o = 0;
+ my $o;
  if (defined $SETTING{device}) {
   for (my $i = 0; $i <= $#device; $i++) {
    $o = $i if ($SETTING{device} eq $device[$i]);
   }
+ }
+ if (! defined ($o)) {
+  $o = 0;
+  delete $SETTING{mode};
  }
    
 # Frame for # pages
@@ -5438,7 +5441,7 @@ set "# Pages" to "1", and possibly "Batch scan" to "No".
 
 =over
 
-=item v0.9.15
+=item v0.9.16
 
 =over
 
