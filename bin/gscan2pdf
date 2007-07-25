@@ -5,6 +5,7 @@
 # see the included LICENCE file for details.
 
 # To do
+#    write hg2cl if necessary
 #    simplify code - only keep variables that are needed
 #    - rename those like $hboxu to $hbox
 #    get it to work on the TV tuner
@@ -43,7 +44,6 @@
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    Work out a good place to log error messages
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
-#    sort out "dpkg-source: warning: source directory `./gscan2pdf' is not <sourcepackage>-<upstreamversion> `gscan2pdf-0.9.0'" error
 #    Switch viewing widget as soon as packages are available for:
 #     http://giv.sourceforge.net/gtk-image-viewer/
 #    As soon as gtk+ 2.12 is available and released in Gutsy, remove the
@@ -1734,6 +1734,8 @@ sub create_PDF {
    my $h = $image->Get('height');
    my $resolution = $slist -> {data}[$_][4];
 
+   print "Defining page at ", $w*72/$resolution, " x ", $h*72/$resolution, "\n"
+    if $debug;
    $page->mediabox($w*72/$resolution, $h*72/$resolution);
 
 # Add OCR as annotation
@@ -1789,6 +1791,7 @@ sub create_PDF {
     warn "Error embedding file $filename in $format format to PDF\n";
    }
    $gfx->image($imgobj,0,0,72/$resolution) if (defined $imgobj);
+   print "Adding $format at $resolution dpi\n";
   }
   $writer->write('1'.$d->get('Closing PDF')."\n");
   $writer->flush;
@@ -3278,11 +3281,11 @@ Petr Jelínek
 Jen Fraggle
 Alberto Boiti
 Piotr Strebski
-Dirk Tas
 Nicolas Stransky
+Dirk Tas
 mecedesjorge
 Christoph Langner
-cwchien
+Chien Cheng Wei
 booxter
 Daniel Nylander
 Tikkel
@@ -3290,7 +3293,7 @@ Mathieu Goeminne
 Nicolas Velin
 Andrea (pikkio)
 Simon Leblanc
-Eric Spierings
+Jacob Nielsen
 EOS
  $about->set_translator_credits ($translators);
  $about->set_artists ('lodp');
@@ -5431,6 +5434,11 @@ Thunderbird.
 Generally for HP scanners with an ADF, to scan from the flatbed, you should
 set "# Pages" to "1", and possibly "Batch scan" to "No".
 
+=head2 When I update gscan2pdf using the Update Manager in Ubuntu, why is the list of changes never displayed?
+
+As far as I can tell, this is pulled from changelogs.ubuntu.com, and therefore
+only the changelogs from official Ubuntu builds are displayed.
+
 =head1 Roadmap
 
 =over
@@ -5441,15 +5449,15 @@ set "# Pages" to "1", and possibly "Batch scan" to "No".
 
 =item Use the "hidden text" layer in DjVu documents.
 
+=item Progress bars for import, scan & save as TIFF/DjVu
+
+=item Downsample option for PDF export.
+
 =back
 
 =item v1.0.0
 
 =over
-
-=item Progress bars for import, scan & save as TIFF/DjVu
-
-=item Downsample option for PDF export.
 
 =item Scan profiles.
 
