@@ -3915,9 +3915,13 @@ sub rotate {
   my $image = Image::Magick->new;
   my $x = $image->Read($slist -> {data}[$page[$i]][2]);
   warn "$x" if "$x";
+
+# workaround for those versions of imagemagick that produce 16bit output
+# with rotate
+  my $depth = $image->Get('depth');
   $x = $image->Rotate($degrees);
   warn "$x" if "$x";
-  $x = $image->Write(filename => $slist -> {data}[$page[$i]][2]);
+  $x = $image->Write(filename => $slist -> {data}[$page[$i]][2], depth => $depth);
   warn "$x" if "$x";
 
 # Use once I no longer have to develop with Gtk2 < 1.090!

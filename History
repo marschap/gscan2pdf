@@ -1,6 +1,10 @@
 0.9.16 (10.09.2007):
 
 + do not restore mode setting if default device not found
++ workaround for those versions of imagemagick that produce 16bit output
+  with rotate.
+  Patch 1760543 (rotate creates 16bit images that tesseract can't read)
+  from Chris Mayo
 
 
 0.9.15 (22.07.2007):
