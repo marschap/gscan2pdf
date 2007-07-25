@@ -8,8 +8,6 @@
 #    simplify code - only keep variables that are needed
 #    - rename those like $hboxu to $hbox
 #    get it to work on the TV tuner
-#    get list of changes working in synaptic.
-#     simply a case of rename i386.changes to all.changes?
 #    check out scanbuttond
 #    for scan profiles, switch to Config::General (libconfig-general-perl)
 #     then put paper sizes in config
@@ -185,6 +183,7 @@ my %SETTING = (
  'window_width'    => 800,
  'window_height'   => 600,
  'window_maximize' => TRUE,
+ 'thumb panel'     => 100,
  'Page range'      => 'all',
  'l'               => 0,
  't'               => 0,
@@ -434,30 +433,25 @@ if (! defined($SETTING{'restore window'}) or $SETTING{'restore window'}) {
 
 $window -> set_default_icon_from_file ("$path/gscan2pdf.png");
 
-my $main_vbox = Gtk2::VBox -> new;
-$window -> add ( $main_vbox );
+my $vbox = Gtk2::VBox -> new;
+$window -> add ( $vbox );
 
 # Create the menu bar
 my ($menubar, $toolbar) = create_menu_bar( $window );
-$main_vbox -> pack_start( $menubar, FALSE, TRUE, 0 );
-$main_vbox -> pack_start( $toolbar, FALSE, FALSE,0 );
+$vbox -> pack_start( $menubar, FALSE, TRUE, 0 );
+$vbox -> pack_start( $toolbar, FALSE, FALSE,0 );
 
 my $tooltips = Gtk2::Tooltips->new;
 $tooltips->enable;
 
 # HPaned for thumbnails and detail view
 my $hpaned = Gtk2::HPaned -> new;
-$main_vbox -> pack_start($hpaned, TRUE, TRUE, 0);
+$hpaned -> set_position ($SETTING{'thumb panel'});
+$vbox -> pack_start($hpaned, TRUE, TRUE, 0);
 
 # Thumbnail dimensions
 my $widtht = 100;
 my $heightt = 100;
-if (defined($SETTING{'thumb panel'})) {
- $hpaned -> set_position ($SETTING{'thumb panel'});
-}
-else {
- $hpaned -> set_position ($widtht);
-}
 
 # Scrolled window for thumbnails
 my $scwin_thumbs = Gtk2::ScrolledWindow -> new;
@@ -1545,11 +1539,11 @@ sub add_PDF_options {
  my ($vbox) = @_;
 
 # Frame for metadata
- my $framem = Gtk2::Frame -> new($d->get('Metadata'));
- $vbox -> pack_start ($framem, TRUE, TRUE, 0);
+ my $frame = Gtk2::Frame -> new($d->get('Metadata'));
+ $vbox -> pack_start ($frame, TRUE, TRUE, 0);
  my $vboxm = Gtk2::VBox -> new;
  $vboxm -> set_border_width($border_width);
- $framem -> add ($vboxm);
+ $frame -> add ($vboxm);
 
 # Date/time
  my $hboxe = Gtk2::HBox -> new;
@@ -1883,25 +1877,25 @@ sub add_pdf_compression {
  );
 
 # Compression ComboBox
- my $hboxc = Gtk2::HBox -> new;
- $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
+ my $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
  my $label = Gtk2::Label -> new ($d->get('Compression'));
- $hboxc -> pack_start ($label, FALSE, FALSE, 0);
+ $hbox -> pack_start ($label, FALSE, FALSE, 0);
 
 # Set up quality spinbutton here so that it can be shown or hidden by callback
  my ($hboxq, $spinbuttonq) = add_quality_spinbutton($vbox);
- my $combobc =  combobox_from_array($SETTING{'pdf compression'}, @compression);
- $combobc -> signal_connect (changed => sub {
-  if ($compression[$combobc->get_active][0] eq 'jpg') {
+ my $combob =  combobox_from_array($SETTING{'pdf compression'}, @compression);
+ $combob -> signal_connect (changed => sub {
+  if ($compression[$combob->get_active][0] eq 'jpg') {
    $hboxq -> show_all;
   }
   else {
    $hboxq -> hide_all;
   }
  });
- $hboxc -> pack_end ($combobc, FALSE, FALSE, 0);
+ $hbox -> pack_end ($combob, FALSE, FALSE, 0);
 
- return ($combobc, $hboxq, $spinbuttonq, @compression);
+ return ($combob, $hboxq, $spinbuttonq, @compression);
 }
 
 
@@ -1927,7 +1921,7 @@ sub save_PDF_dialog {
   my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # Compression options
-  my ($combobc, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
+  my ($combob, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
 
 # HBox for buttons
   my $hboxb = Gtk2::HBox -> new;
@@ -1939,7 +1933,7 @@ sub save_PDF_dialog {
   $sbutton -> signal_connect (clicked => sub {
 
 # dig out the compression
-   $SETTING{'pdf compression'} = $compression[$combobc->get_active][0];
+   $SETTING{'pdf compression'} = $compression[$combob->get_active][0];
    $SETTING{'quality'} = $spinbuttonq->get_value;
 
    update_PDF_settings($entrya, $entryt, $entrys, $entryk);
@@ -1952,7 +1946,7 @@ sub save_PDF_dialog {
   $cbutton -> signal_connect( clicked => sub { $windowp -> hide; } );
 
   $windowp -> show_all;
-  $hboxq -> hide_all if ($compression[$combobc->get_active][0] ne 'jpg');
+  $hboxq -> hide_all if ($compression[$combob->get_active][0] ne 'jpg');
  }
  else {
   save_PDF();
@@ -2223,11 +2217,11 @@ sub save_djvu_dialog {
   $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
   my $label = Gtk2::Label -> new ($d->get('Compression'));
   $hboxc -> pack_start ($label, FALSE, FALSE, 0);
-  my $combobc = Gtk2::ComboBox->new_text;
+  my $combob = Gtk2::ComboBox->new_text;
 
 # Fill compression ComboBox
-  $combobc->append_text ($d->get('Bitonal'));
-  $hboxc -> pack_end ($combobc, FALSE, FALSE, 0);
+  $combob->append_text ($d->get('Bitonal'));
+  $hboxc -> pack_end ($combob, FALSE, FALSE, 0);
 
 # Frame for page range
   my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
@@ -2327,7 +2321,7 @@ sub email {
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # Compression options
- my ($combobc, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
+ my ($combob, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
 
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
@@ -2345,7 +2339,7 @@ sub email {
   update_PDF_settings($entrya, $entryt, $entrys, $entryk);
 
 # dig out the compression
-  $SETTING{'pdf compression'} = $compression[$combobc->get_active][0];
+  $SETTING{'pdf compression'} = $compression[$combob->get_active][0];
   $SETTING{'quality'} = $spinbuttonq->get_value;
 
   my (undef, $pdf) = tempfile(DIR => $dir, SUFFIX => '.pdf');
@@ -2365,7 +2359,7 @@ sub email {
  $cbutton -> signal_connect( clicked => sub { $windowe -> hide; } );
 
  $windowe -> show_all;
- $hboxq -> hide_all if ($compression[$combobc->get_active][0] ne 'jpg');
+ $hboxq -> hide_all if ($compression[$combob->get_active][0] ne 'jpg');
 }
 
 
