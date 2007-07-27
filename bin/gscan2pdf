@@ -34,9 +34,8 @@
 #    On quit or delete if page not saved put up dialog
 #    Put windows up in centre of parent
 #    Fix blocking at:
-#      Importing (e.g. 12 page multi.tif)
-#      Rotating
 #      Saving tiff
+#      Rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    Option to throw up PDF viewer with newly created PDF file
@@ -93,6 +92,7 @@ use File::Temp qw(tempfile tempdir); # To create temporary files
 use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
 use Socket;
 use FileHandle;
+use Image::Magick;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -245,8 +245,8 @@ my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
     $scanwatch, @ocr_engine, $bscanall, $bscannum,
 
-# Variable for inter-process communication
-    $writer);
+# Variables for inter-process communication
+    $reader, $writer);
 
 my @action_items = (
  # Fields for each action item:
@@ -1298,7 +1298,7 @@ sub convert_to_tiff {
  $ratio = 1/$ratio if ($ratio < 1);
  my $density = 72;
  for (my $i = 0; $i <= $#paperg; ++$i) {
-  if (abs($ratio - $yg[$i]/$xg[$i]) < 0.01) {
+  if ($xg[$i] > 0 and abs($ratio - $yg[$i]/$xg[$i]) < 0.01) {
    $density = (($height > $width) ? $height : $width)/$yg[$i]*25.4;
   }
  }
@@ -1314,7 +1314,6 @@ sub convert_to_tiff {
 # Throw up file selector and import selected file
 
 sub import {
- require Image::Magick;
 
 # cd back to cwd to get filename
  chdir $SETTING{'cwd'};
@@ -1336,60 +1335,160 @@ sub import {
   take_snapshot();
 
   my @filename = $file_chooser -> get_filenames;
+  $file_chooser -> destroy;
 
-  foreach my $filename (@filename) {
+  my $dialog = Gtk2::Dialog -> new ($d->get('Importing')."...", $windowo,
+                                    'destroy-with-parent',
+                                    'gtk-cancel' => 'cancel');
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   kill_subs();
+  });
+  $dialog -> show_all;
+
+# Install a handler for child processes
+  $SIG{CHLD} = \&sig_child;
+
+  my $pid = start_process(sub {
+
+   foreach my $filename (@filename) {
 
 # Update cwd
-   $SETTING{'cwd'} = dirname($filename);
-   warn "Importing $filename\n" if ($debug);
+    $SETTING{'cwd'} = dirname($filename);
+    warn "Importing $filename\n" if ($debug);
 
 # Get file type
-   my $image = Image::Magick->new;
-   my $x = $image->Read($filename);
-   warn "$x" if "$x";
+    my $image = Image::Magick->new;
+    my $x = $image->Read($filename);
+    warn "$x" if "$x";
 
-   my $format = $image->Get('format');
-   warn "Format $format\n" if ($debug);
-   undef $image;
+    my $format = $image->Get('format');
+    warn "Format $format\n" if ($debug and defined($format));
+    undef $image;
 
-   if (! defined $format) {
-    show_message_dialog(
-     $window, 'error', 'close', $d->get('Not a recognised file')
-    );
-   }
-   elsif ($format eq 'Portable Document Format') {
+    if (! defined $format) {
+     $writer->write(
+      sprintf("%f %s %i ", -1, 0, 0)
+      .sprintf($d->get("%s is not a recognised image type"), $filename)."\n"
+     );
+     $writer->flush;
+    }
+    elsif ($format eq 'Portable Document Format') {
 
 # Extract images from PDF
-    system ("pdfimages \"$filename\" x");
+     $writer->write('0 0 0 '.$d->get('Extracting images from PDF')."\n");
+     $writer->flush;
+     system ("pdfimages \"$filename\" x");
 
 # Import each image
-    my @images = <x-???.???>;
-    import_scan($_, undef, 'Portable anymap', undef, TRUE) foreach (@images);
-   }
-   elsif ($format eq 'Tagged Image File Format') {
+     my @images = <x-???.???>;
+     my $i = 0;
+     foreach (@images) {
+      my ($filename, $resolution) = prepare_import($_, 'Portable anymap', undef, TRUE);
+      $writer->write(
+       sprintf("%f %s %i ", ++$i/($#images+1), $filename, $resolution)
+       .sprintf($d->get("Importing image %i of %i"), $i, $#images+1)."\n"
+      );
+      $writer->flush;
+     }
+    }
+    elsif ($format eq 'Tagged Image File Format') {
 
 # Split the tiff into its pages and import them individually
-    system("tiffsplit \"$filename\"");
-    my @pages = <x???.tif>;
-    import_scan($_, undef, $format, undef, TRUE) foreach (@pages);
+     $writer->write('0 0 0 '.$d->get('Extracting images from TIFF')."\n");
+     $writer->flush;
+     system("tiffsplit \"$filename\"");
+
+     my @images = <x???.tif>;
+     my $i = 0;
+     foreach (@images) {
+      my ($filename, $resolution) = prepare_import($_, $format, undef, TRUE);
+      $writer->write(
+       sprintf("%f %s %i ", ++$i/($#images+1), $filename, $resolution)
+       .sprintf($d->get("Importing image %i of %i"), $i, $#images+1)."\n"
+      );
+      $writer->flush;
+     }
+    }
+    elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
+     ($filename, my $resolution) = prepare_import($filename, $format);
+     $writer->write(
+      sprintf("%f %s %i ", 1, $filename, $resolution)
+      .sprintf($d->get("Importing %s"), $format)."\n"
+     );
+     $writer->flush;
+    }
+    else {
+     my $tiff = convert_to_tiff($filename);
+     $format = 'Tagged Image File Format';
+     my ($filename, $resolution) = prepare_import($tiff, $format, undef, TRUE);
+     $writer->write(
+      sprintf("%f %s %i ", 1, $filename, $resolution)
+      .sprintf($d->get("Importing %s"), $format)."\n"
+     );
+    }
+
    }
-   elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
-    import_scan($filename, undef, $format);
-   }
-   else {
-    my $tiff = convert_to_tiff($filename);
-    import_scan($tiff, undef, 'Tagged Image File Format', undef, TRUE);
+  });
+
+  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+
+   my $line;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    $line = <$reader>;
+    if (defined($line) and $line ne '') {
+     my ($fraction, $filename, $resolution, @text) = split ' ', $line;
+     if ($fraction == -1) {
+      show_message_dialog($window, 'error', 'close', join(' ', @text));
+     }
+     else {
+      $pbar->set_fraction($fraction);
+      $pbar->set_text(join ' ', @text);
+      add_image($filename, undef, $resolution) if ($filename ne '0');
+
+# if we have finished, blow the watch away
+print "$fraction, $filename, $resolution, @text\n";
+#     return FALSE if ($fraction == 1);
+      if ($fraction == 1) {
+print "uninstalling at 100%\n";
+       return FALSE;
+      }
+     }
+    }
    }
 
-  }
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+print "uninstalling at hup\n";
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # continue without uninstalling
+  });
 
-  update_uimanager();
+# Timer will run until callback returns false 
+  Glib::Timeout->add (100, sub { if (defined $helperTag{$pid}) {
+                                  return TRUE;
+                                 }
+                                 else {
+                                  $dialog -> destroy;
+                                  update_uimanager();
+                                  return FALSE;
+                                 } });
+ }
+ else {
+  $file_chooser -> destroy;
  }
 
 # cd back to tempdir
  chdir $dir;
-
- $file_chooser -> destroy;
 }
 
 
@@ -1686,7 +1785,7 @@ sub create_PDF {
 # Install a handler for child processes
  $SIG{CHLD} = \&sig_child;
 
- my $pid = start_process($pbar, sub {
+ my $pid = start_process(sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
   my @pagelist = get_page_index();
@@ -1797,6 +1896,28 @@ sub create_PDF {
   $writer->flush;
   $pdf->save;
   $pdf->end();
+ });
+
+ $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+  my ($fileno, $condition) = @_;
+
+  my $line;
+  if ($condition & 'in') { # bit field operation. >= would also work
+   $line = <$reader>;
+   if ($line =~ /(\d*\.?\d*)(.*)/) {
+    my $fraction=$1;
+    my $text=$2;
+    $pbar->set_fraction($fraction);
+    $pbar->set_text($text);
+   }
+  }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+  if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   return FALSE;  # uninstall
+  }
+  return TRUE;  # continue without uninstalling
  });
 
 # Timer will run until callback returns false 
@@ -3120,6 +3241,25 @@ sub hash2options {
 
 sub import_scan {
  my ($ofilename, $page, $format, $resolution, $delete, $unpaper, $ocr) = @_;
+ (my $filename, $resolution) = prepare_import($ofilename, $format, $resolution, $delete);
+
+ my @page = add_image($filename, $page, $resolution);
+
+ if ($unpaper) {
+  unpaper_page($ocr, options2unpaper($unpaper_options), @page);
+ }
+ else {
+  ocr_page(@page) if ($ocr);
+ }
+
+ return TRUE;
+}
+
+
+sub prepare_import {
+ my ($ofilename, $format, $resolution, $delete) = @_;
+
+ warn "Importing $ofilename, format $format\n" if ($debug);
 
  my %suffix = (
   'Portable Network Graphics'                    => '.png',
@@ -3128,8 +3268,6 @@ sub import_scan {
   'Portable anymap'                              => '.pnm',
   'CompuServe graphics interchange format'       => '.gif',
  );
-
- warn "Importing $ofilename, format $format\n" if ($debug);
 
  if (! defined($resolution)) {
   my $image = Image::Magick->new;
@@ -3145,6 +3283,15 @@ sub import_scan {
  else {
   system("cp $ofilename $filename");
  }
+
+ return $filename, $resolution;
+}
+
+
+# Take new scan and display it
+
+sub add_image {
+ my ($filename, $page, $resolution) = @_;
 
 # Add to the page list
  $page = $#{$slist -> {data}}+2 if (! defined($page));
@@ -3172,16 +3319,9 @@ sub import_scan {
 
  $slist -> select(@page);
  
- if ($unpaper) {
-  unpaper_page($ocr, options2unpaper($unpaper_options), @page);
- }
- else {
-  ocr_page(@page) if ($ocr);
- }
-
  update_uimanager();
 
- return TRUE;
+ return @page;
 }
 
 
@@ -3901,8 +4041,6 @@ sub renumber {
 
 sub rotate {
  my ($degrees) = @_;
-
- require Image::Magick;
 
 # Update undo/redo buffers
  take_snapshot();
@@ -4921,9 +5059,9 @@ sub sig_child {
 }
 
 sub start_process {
- my ($pbar, $process) = @_;
+ my ($process) = @_;
 
- my $reader = FileHandle->new;
+ $reader = FileHandle->new;
  $writer = FileHandle->new;
  socketpair($reader, $writer,  AF_UNIX, SOCK_STREAM, PF_UNSPEC);
 
@@ -4932,28 +5070,6 @@ sub start_process {
 
 # We're still in the parent; note pid and watch the streams:
   shutdown($writer, 0);
-
-  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
-   my ($fileno, $condition) = @_;
-
-   my $line;
-   if ($condition & 'in') { # bit field operation. >= would also work
-    my $line = <$reader>;
-    if ($line =~ /(\d*\.?\d*)(.*)/) {
-     my $fraction=$1;
-     my $text=$2;
-     $pbar->set_fraction($fraction);
-     $pbar->set_text($text);
-    }
-   }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
-    return FALSE;  # uninstall
-   }
-   return TRUE;  # continue without uninstalling
-  });
 
   warn "Forked PID $pid\n" if ($debug);
   return $pid;
