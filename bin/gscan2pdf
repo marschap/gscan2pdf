@@ -5082,6 +5082,12 @@ sub start_process {
 # and merely returning from this subroutine in a separate process
 # would *really* confuse things.
   shutdown($reader, 1);
+
+# reseed the randomiser to prevent
+# "Have exceeded the maximum number of attempts (10) to open temp file/dir"
+# errors from File::Temp
+  srand($$);
+
   $process->();
   POSIX::_exit(0);
  }
