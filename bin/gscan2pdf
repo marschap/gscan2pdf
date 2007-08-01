@@ -1357,6 +1357,7 @@ sub import {
 
   my $pid = start_process(sub {
 
+   my $j = 0;
    foreach my $filename (@filename) {
 
 # Update cwd
@@ -1379,7 +1380,8 @@ sub import {
     elsif ($format eq 'Portable Document Format') {
 
 # Extract images from PDF
-     send($writer, '0 0 0 '.$d->get('Extracting images from PDF'), 0);
+     send($writer, sprintf("%f %s %i ", $j/($#filename+1), 0, 0)
+      .$d->get('Extracting images from PDF'), 0);
      system ("pdfimages \"$filename\" x");
 
 # Import each image
@@ -1388,14 +1390,15 @@ sub import {
      foreach (@images) {
       my ($filename, $resolution) = prepare_import($_, 'Portable anymap', undef, TRUE);
       send($writer, 
-       sprintf("%f %s %i ", ++$i/($#images+1), $filename, $resolution)
+       sprintf("%f %s %i ", (++$i/($#images+1)+$j)/($#filename+1), $filename, $resolution)
        .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
      }
     }
     elsif ($format eq 'Tagged Image File Format') {
 
 # Split the tiff into its pages and import them individually
-     send($writer, '0 0 0 '.$d->get('Extracting images from TIFF'), 0);
+     send($writer, sprintf("%f %s %i ", $j/($#filename+1), 0, 0)
+      .$d->get('Extracting images from TIFF'), 0);
      system("tiffsplit \"$filename\"");
 
      my @images = <x???.tif>;
@@ -1403,23 +1406,24 @@ sub import {
      foreach (@images) {
       my ($filename, $resolution) = prepare_import($_, $format, undef, TRUE);
       send($writer, 
-       sprintf("%f %s %i ", ++$i/($#images+1), $filename, $resolution)
+       sprintf("%f %s %i ", (++$i/($#images+1)+$j)/($#filename+1), $filename, $resolution)
        .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
      }
     }
     elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
      ($filename, my $resolution) = prepare_import($filename, $format);
-     send($writer, sprintf("%f %s %i ", 1, $filename, $resolution)
+     send($writer, sprintf("%f %s %i ", $j/($#filename+1), $filename, $resolution)
       .sprintf($d->get("Importing %s"), $format), 0);
     }
     else {
      my $tiff = convert_to_tiff($filename);
      $format = 'Tagged Image File Format';
      my ($filename, $resolution) = prepare_import($tiff, $format, undef, TRUE);
-     send($writer, sprintf("%f %s %i ", 1, $filename, $resolution)
+     send($writer, sprintf("%f %s %i ", $j/($#filename+1), $filename, $resolution)
       .sprintf($d->get("Importing %s"), $format), 0);
     }
 
+    ++$j;
    }
    send($writer, 2, 0);
   });
