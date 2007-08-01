@@ -1373,17 +1373,13 @@ sub import {
     undef $image;
 
     if (! defined $format) {
-     $writer->write(
-      sprintf("%f %s %i ", -1, 0, 0)
-      .sprintf($d->get("%s is not a recognised image type"), $filename)."\n"
-     );
-     $writer->flush;
+     send($writer, sprintf("%f %s %i ", -1, 0, 0)
+      .sprintf($d->get("%s is not a recognised image type"), $filename), 0);
     }
     elsif ($format eq 'Portable Document Format') {
 
 # Extract images from PDF
-     $writer->write('0 0 0 '.$d->get('Extracting images from PDF')."\n");
-     $writer->flush;
+     send($writer, '0 0 0 '.$d->get('Extracting images from PDF'), 0);
      system ("pdfimages \"$filename\" x");
 
 # Import each image
@@ -1391,50 +1387,41 @@ sub import {
      my $i = 0;
      foreach (@images) {
       my ($filename, $resolution) = prepare_import($_, 'Portable anymap', undef, TRUE);
-      $writer->write(
+      send($writer, 
        sprintf("%f %s %i ", ++$i/($#images+1), $filename, $resolution)
-       .sprintf($d->get("Importing image %i of %i"), $i, $#images+1)."\n"
-      );
-      $writer->flush;
+       .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
      }
     }
     elsif ($format eq 'Tagged Image File Format') {
 
 # Split the tiff into its pages and import them individually
-     $writer->write('0 0 0 '.$d->get('Extracting images from TIFF')."\n");
-     $writer->flush;
+     send($writer, '0 0 0 '.$d->get('Extracting images from TIFF'), 0);
      system("tiffsplit \"$filename\"");
 
      my @images = <x???.tif>;
      my $i = 0;
      foreach (@images) {
       my ($filename, $resolution) = prepare_import($_, $format, undef, TRUE);
-      $writer->write(
+      send($writer, 
        sprintf("%f %s %i ", ++$i/($#images+1), $filename, $resolution)
-       .sprintf($d->get("Importing image %i of %i"), $i, $#images+1)."\n"
-      );
-      $writer->flush;
+       .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
      }
     }
     elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
      ($filename, my $resolution) = prepare_import($filename, $format);
-     $writer->write(
-      sprintf("%f %s %i ", 1, $filename, $resolution)
-      .sprintf($d->get("Importing %s"), $format)."\n"
-     );
-     $writer->flush;
+     send($writer, sprintf("%f %s %i ", 1, $filename, $resolution)
+      .sprintf($d->get("Importing %s"), $format), 0);
     }
     else {
      my $tiff = convert_to_tiff($filename);
      $format = 'Tagged Image File Format';
      my ($filename, $resolution) = prepare_import($tiff, $format, undef, TRUE);
-     $writer->write(
-      sprintf("%f %s %i ", 1, $filename, $resolution)
-      .sprintf($d->get("Importing %s"), $format)."\n"
-     );
+     send($writer, sprintf("%f %s %i ", 1, $filename, $resolution)
+      .sprintf($d->get("Importing %s"), $format), 0);
     }
 
    }
+   send($writer, 2, 0);
   });
 
   $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
@@ -1442,24 +1429,22 @@ sub import {
 
    my $line;
    if ($condition & 'in') { # bit field operation. >= would also work
-    $line = <$reader>;
+    recv($reader, $line, 1000, 0);
     if (defined($line) and $line ne '') {
      my ($fraction, $filename, $resolution, @text) = split ' ', $line;
      if ($fraction == -1) {
       show_message_dialog($window, 'error', 'close', join(' ', @text));
      }
+     elsif ($fraction > 1) {
+      $dialog -> destroy;
+      update_uimanager();
+      return FALSE;  # uninstall
+     }
      else {
       $pbar->set_fraction($fraction);
       $pbar->set_text(join ' ', @text);
+      Gtk2->main_iteration while Gtk2->events_pending;
       add_image($filename, undef, $resolution) if ($filename ne '0');
-
-# if we have finished, blow the watch away
-print "$fraction, $filename, $resolution, @text\n";
-#     return FALSE if ($fraction == 1);
-      if ($fraction == 1) {
-print "uninstalling at 100%\n";
-       return FALSE;
-      }
      }
     }
    }
@@ -1467,21 +1452,12 @@ print "uninstalling at 100%\n";
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
    if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
-print "uninstalling at hup\n";
+    $dialog -> destroy;
+    update_uimanager();
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
   });
-
-# Timer will run until callback returns false 
-  Glib::Timeout->add (100, sub { if (defined $helperTag{$pid}) {
-                                  return TRUE;
-                                 }
-                                 else {
-                                  $dialog -> destroy;
-                                  update_uimanager();
-                                  return FALSE;
-                                 } });
  }
  else {
   $file_chooser -> destroy;
@@ -1792,18 +1768,14 @@ sub create_PDF {
   my $page = 0;
 
 # Create PDF with PDF::API2
-  $writer->write('0'.$d->get('Setting up PDF')."\n");
-  $writer->flush;
+  send($writer, '0'.$d->get('Setting up PDF'), 0);
   my $pdf = PDF::API2->new(-file => $filename);
   $pdf->info(get_PDF_options());
 
   foreach (@pagelist) {
    ++$page;
-   $writer->write(
-    $page/($#pagelist+2)
-    .sprintf($d->get("Saving page %i of %i"), $page, $#pagelist+1)."\n"
-   );
-   $writer->flush;
+   send($writer, $page/($#pagelist+2)
+    .sprintf($d->get("Saving page %i of %i"), $page, $#pagelist+1), 0);
 
    my $page = $pdf->page;
 
@@ -1892,10 +1864,10 @@ sub create_PDF {
    $gfx->image($imgobj,0,0,72/$resolution) if (defined $imgobj);
    print "Adding $format at $resolution dpi\n";
   }
-  $writer->write('1'.$d->get('Closing PDF')."\n");
-  $writer->flush;
+  send($writer, '1'.$d->get('Closing PDF'), 0);
   $pdf->save;
   $pdf->end();
+  send($writer, '2', 0);
  });
 
  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
@@ -1903,10 +1875,14 @@ sub create_PDF {
 
   my $line;
   if ($condition & 'in') { # bit field operation. >= would also work
-   $line = <$reader>;
+   recv($reader, $line, 1000, 0);
    if ($line =~ /(\d*\.?\d*)(.*)/) {
     my $fraction=$1;
     my $text=$2;
+    if ($fraction > 1) {
+     $dialog -> destroy;
+     return FALSE;  # uninstall
+    }
     $pbar->set_fraction($fraction);
     $pbar->set_text($text);
    }
@@ -1915,19 +1891,12 @@ sub create_PDF {
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   $dialog -> destroy;
+   update_uimanager();
    return FALSE;  # uninstall
   }
   return TRUE;  # continue without uninstalling
  });
-
-# Timer will run until callback returns false 
- Glib::Timeout->add (100, sub { if (defined $helperTag{$pid}) {
-                                 return TRUE;
-                                }
-                                else {
-                                 $dialog -> destroy;
-                                 return FALSE;
-                                } });
 }
 
 
@@ -5063,7 +5032,7 @@ sub start_process {
 
  $reader = FileHandle->new;
  $writer = FileHandle->new;
- socketpair($reader, $writer,  AF_UNIX, SOCK_STREAM, PF_UNSPEC);
+ socketpair($reader, $writer,  AF_UNIX, SOCK_DGRAM, PF_UNSPEC);
 
  my $pid = fork();
  if ($pid) {
