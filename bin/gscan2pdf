@@ -41,7 +41,6 @@
 #    Option to throw up PDF viewer with newly created PDF file
 #    Translate documentation
 #    Right click save to PDF or TIFF should default to page range "selected"
-#    Work out a good place to log error messages
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
 #    Switch viewing widget as soon as packages are available for:
 #     http://giv.sourceforge.net/gtk-image-viewer/
@@ -188,6 +187,8 @@ my %SETTING = (
  'l'               => 0,
  't'               => 0,
  'layout'          => 'single',
+ 'downsample'      => FALSE,
+ 'downsample dpi'  => 150,
 );
 
 if (-r $config) {
@@ -1788,26 +1789,38 @@ sub create_PDF {
    my $x = $image->Read($filename);
    warn "$x" if "$x";
 
+# Get the size and resolution
+   my $w = $image->Get('width');
+   my $h = $image->Get('height');
+   my $resolution = $slist -> {data}[$_][4];
+
 # Convert file if necessary
    my $format = $1 if ($filename =~ /\.(\w*)$/);
    if (defined($SETTING{'pdf compression'})
         and ($SETTING{'pdf compression'} ne 'none'
         and $SETTING{'pdf compression'} ne $format)
+        or $SETTING{'downsample'}
         or $SETTING{'pdf compression'} eq 'jpg') {
     print "Converting $filename to " if ($debug);
-    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$SETTING{'pdf compression'});
+    (undef, $filename) = tempfile(DIR => $dir,
+                                  SUFFIX => '.'.$SETTING{'pdf compression'});
     print "$filename\n" if ($debug);
-    $image->Set(quality => $SETTING{quality})
+
+    my $depth = $image->Get('depth');
+    if ($SETTING{'downsample'}) {
+     $w = $w/$resolution*$SETTING{'downsample dpi'};
+     $h = $h/$resolution*$SETTING{'downsample dpi'};
+     $resolution = $SETTING{'downsample dpi'};
+     $x = $image->Resize(width => $w, height => $h);
+     warn "$x" if "$x";
+    }
+    $x = $image->Set(quality => $SETTING{quality})
      if $SETTING{'pdf compression'} eq 'jpg';
-    $x = $image->Write($filename);
+    warn "$x" if "$x";
+    $x = $image->Write(filename => $filename, depth => $depth);
     warn "$x" if "$x";
     $format = $1 if ($filename =~ /\.(\w*)$/);
    }
-
-# Get the size and resolution
-   my $w = $image->Get('width');
-   my $h = $image->Get('height');
-   my $resolution = $slist -> {data}[$_][4];
 
    print "Defining page at ", $w*72/$resolution, " x ", $h*72/$resolution, "\n"
     if $debug;
@@ -1966,6 +1979,27 @@ sub add_quality_spinbutton {
 sub add_pdf_compression {
  my ($vbox) = @_;
 
+# Downsample options
+ my $hboxd = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxd, FALSE, FALSE, 0);
+ my $button = Gtk2::CheckButton -> new($d->get('Downsample to'));
+ $button->set_active(TRUE);
+ $hboxd -> pack_start ($button, FALSE, FALSE, 0);
+ my $spinbutton = Gtk2::SpinButton -> new_with_range(9, 2400, 1);
+ $spinbutton->set_value($SETTING{'downsample dpi'});
+ my $label = Gtk2::Label -> new ($d->get('dpi'));
+ $hboxd -> pack_end ($label, FALSE, FALSE, 0);
+ $hboxd -> pack_end ($spinbutton, FALSE, FALSE, 0);
+ $button -> signal_connect (toggled => sub {
+  if ($button->get_active) {
+   $spinbutton->set_sensitive(TRUE);
+  }
+  else {
+   $spinbutton->set_sensitive(FALSE);
+  }
+ });
+ $button->set_active($SETTING{'downsample'});
+
 # Compression options
  my @compression = (
   [ 'jpg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
@@ -1976,7 +2010,7 @@ sub add_pdf_compression {
 # Compression ComboBox
  my $hbox = Gtk2::HBox -> new;
  $vbox -> pack_start($hbox, TRUE, TRUE, 0);
- my $label = Gtk2::Label -> new ($d->get('Compression'));
+ $label = Gtk2::Label -> new ($d->get('Compression'));
  $hbox -> pack_start ($label, FALSE, FALSE, 0);
 
 # Set up quality spinbutton here so that it can be shown or hidden by callback
@@ -1992,7 +2026,7 @@ sub add_pdf_compression {
  });
  $hbox -> pack_end ($combob, FALSE, FALSE, 0);
 
- return ($combob, $hboxq, $spinbuttonq, @compression);
+ return ($button, $spinbutton, $combob, $hboxq, $spinbuttonq, @compression);
 }
 
 
@@ -2018,7 +2052,7 @@ sub save_PDF_dialog {
   my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # Compression options
-  my ($combob, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
+  my ($buttond, $spinbuttond, $combob, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
 
 # HBox for buttons
   my $hboxb = Gtk2::HBox -> new;
@@ -2030,6 +2064,8 @@ sub save_PDF_dialog {
   $sbutton -> signal_connect (clicked => sub {
 
 # dig out the compression
+   $SETTING{'downsample'} = $buttond->get_active;
+   $SETTING{'downsample dpi'} = $spinbuttond->get_value;
    $SETTING{'pdf compression'} = $compression[$combob->get_active][0];
    $SETTING{'quality'} = $spinbuttonq->get_value;
 
@@ -2418,7 +2454,7 @@ sub email {
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
 # Compression options
- my ($combob, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
+ my ($buttond, $spinbuttond, $combob, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
 
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
@@ -2436,6 +2472,8 @@ sub email {
   update_PDF_settings($entrya, $entryt, $entrys, $entryk);
 
 # dig out the compression
+  $SETTING{'downsample'} = $buttond->get_active;
+  $SETTING{'downsample dpi'} = $spinbuttond->get_value;
   $SETTING{'pdf compression'} = $compression[$combob->get_active][0];
   $SETTING{'quality'} = $spinbuttonq->get_value;
 
@@ -5548,9 +5586,7 @@ only the changelogs from official Ubuntu builds are displayed.
 
 =item Use the "hidden text" layer in DjVu documents.
 
-=item Progress bars for import, scan & save as TIFF/DjVu
-
-=item Downsample option for PDF export.
+=item Progress bars for scan & save as TIFF/DjVu
 
 =back
 
