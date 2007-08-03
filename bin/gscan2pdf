@@ -23,10 +23,6 @@
 #    add run script option
 #    check out freeze when gocr does not return properly
 #    add ocrad, ocre support
-#    for hidden text layer in DjVu:
-#     djvused set-txt
-#     DjVutoXML
-#     http://djvu.org/resources/embedding_transcripts_in_handwritten_pages.php
 #    Add status line at bottom with messages like "filename saved"
 #    Rewrite in python with python-sane & pytiff
 #    Add KDE, Xfce menus
@@ -2413,19 +2409,47 @@ sub save_djvu {
   if ($n > 1) {
    my @pagelist = split / /, $pagelist;
    foreach (@pagelist) {
-
     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
 
 # Create the djvu
     system ("cjb2 $_ $djvu");
-
-    $_ = $djvu;
    }
-   $pagelist = "@pagelist";
    system ("djvm -c $filename $pagelist");
   }
   else {
    system ("cjb2 $pagelist $filename");
+  }
+  
+# Add OCR to text layer
+  my @pagelist = get_page_index();
+  for (my $i = 0; $i <= $#pagelist; $i++) {
+   my $j = $pagelist[$i];
+   if (defined($slist -> {data}[$j][3]) and $slist -> {data}[$j][3] ne '') {
+
+    my $image = Image::Magick->new;
+    my $x = $image->Read($slist -> {data}[$j][2]);
+    warn "$x" if "$x";
+
+# Get the size and resolution
+    my $w = $image->Get('width');
+    my $h = $image->Get('height');
+    my $resolution = $slist -> {data}[$j][4];
+
+# Write djvusedtxtfile
+    my $djvusedtxtfile = "djvusedtxtfile";
+    open (FILE, "> $djvusedtxtfile")
+     or die sprintf($d->get("Can't open file: %s"), $djvusedtxtfile);
+    print FILE "(page 0 0 ", $w*72/$resolution, " ", $h*72/$resolution, "\n";
+    print FILE "(line 0 0 ", $w*72/$resolution, " ", $h*72/$resolution, " \"";
+    print FILE $slist -> {data}[$j][3], "\"))";
+    close FILE;
+    unlink $djvusedtxtfile;
+
+# Write djvusedtxtfile
+    my $cmd = sprintf "djvused %s -e 'select %i; set-txt djvusedtxtfile' -s", $filename, $i+1;
+    print "$cmd\n" if $debug;
+    system ($cmd);
+   }
   }
 
   $windowv -> hide;
@@ -2464,9 +2488,6 @@ sub email {
  my $sbutton = Gtk2::Button -> new_from_stock('gtk-ok');
  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
  $sbutton -> signal_connect (clicked => sub {
-
-# fill $pagelist with filenames depending on which radiobutton is active
-  my ($pagelist, $n) = get_pagelist();
 
 # Set options
   update_PDF_settings($entrya, $entryt, $entrys, $entryk);
@@ -5583,8 +5604,6 @@ only the changelogs from official Ubuntu builds are displayed.
 =item v0.9.16
 
 =over
-
-=item Use the "hidden text" layer in DjVu documents.
 
 =item Progress bars for scan & save as TIFF/DjVu
 
