@@ -49,7 +49,7 @@
 #      to continue counting and into which direction (reverse counting stops working
 #      after the interruption).
 #
-# 1. Progress meter for scans and imports.
+# 1. Progress meter for scans.
 # 2. Crop and autocrop
 #     (see http://mail.gnome.org/archives/gtk-perl-list/2006-June/msg00002.html
 #       and ../../Gtk2-Perl-Demo-0.04/examples/scribble.pl)
@@ -2350,6 +2350,7 @@ sub save_djvu_dialog {
 
 # Fill compression ComboBox
   $combob->append_text ($d->get('Bitonal'));
+  $combob->set_active(0);
   $hboxc -> pack_end ($combob, FALSE, FALSE, 0);
 
 # Frame for page range
@@ -5553,6 +5554,9 @@ annotation (pop-up note) and as plain text behind the scanned image in the PDF
 produced. This way, Beagle can index (i.e. search) the plain text, and the
 contents of the annotations can be viewed in Acrobat Reader.
 
+In DjVu files, the OCR output buffer is embedded in the hidden text layer.
+Thus these can also be indexed by Beagle.
+
 There is an interesting review of OCR software at L<http://groundstate.ca/ocr>.
 An important conclusion was that 400dpi is necessary for decent results.
 
@@ -5624,6 +5628,8 @@ only the changelogs from official Ubuntu builds are displayed.
 =over
 
 =item Crop function.
+
+=item Support for non-bitonal compression in djvu.
 
 =back
 
