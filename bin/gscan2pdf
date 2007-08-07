@@ -2833,6 +2833,73 @@ sub populate_scan_dialog {
  $hboxo -> pack_start($obutton, TRUE, TRUE, 0);
  my $comboboxe = combobox_from_array($SETTING{'ocr engine'}, @ocr_engine);
  $hboxo -> pack_end($comboboxe, TRUE, TRUE, 0);
+ if ($dependencies{tesseract}) {
+  my $hboxl = Gtk2::HBox -> new;
+  $vbox -> pack_start ($hboxl, FALSE, FALSE, 0);
+  my $labell = Gtk2::Label -> new ($d->get('Language to recognise'));
+  $hboxl -> pack_start($labell, TRUE, TRUE, 0);
+
+# Tesseract language files
+  my %iso639 = (
+   deu => $d->get('German'),
+   eng => $d->get('English'),
+   fra => $d->get('French'),
+   ita => $d->get('Italian'),
+   nld => $d->get('Dutch'),
+   spa => $d->get('Spanish'),
+  );
+
+  my @tesslang;
+  if (defined $ENV{TESSDATA_PREFIX}) {
+   @tesslang = glob "$ENV{TESSDATA_PREFIX}tessdata/*.unicharset";
+  }
+  else {
+   @tesslang = glob "/usr/share/tessdata/*.unicharset";
+  }
+  
+# Weed out the empty language files
+  my $i = 0;
+  while ($i < @tesslang) {
+   if (-z $tesslang[$i]) {
+    splice @tesslang, $i, 1;
+   }
+   else {
+    my $code = $1 if ($tesslang[$i] =~ /(\w*)\.unicharset$/);
+    if (defined $iso639{$code}) {
+     $tesslang[$i] = [ $code, $iso639{$code} ];
+    }
+    else {
+     $tesslang[$i] = [ $code, $code ];
+    }
+    $i++;
+   }
+  }
+
+# If there are no language files, then we have tesseract-1.0, i.e. English
+  push @tesslang, [ undef, $d->get('English') ] if (! @tesslang);
+
+  my $comboboxl = combobox_from_array($SETTING{'tesseract language'}, @tesslang);
+  $hboxl->hide_all
+   if ($ocr_engine[$comboboxe -> get_active]->[0] ne 'tesseract');
+  $comboboxe -> signal_connect (changed => sub {
+   if ($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract') {
+    $hboxl->show_all;
+   }
+   else {
+    $hboxl->hide_all;
+   }
+  });
+  $hboxl->set_sensitive(FALSE) if (! ($obutton -> get_active));
+  $obutton -> signal_connect (toggled => sub {
+   if ($obutton -> get_active) {
+    $hboxl->set_sensitive(TRUE);
+   }
+   else {
+    $hboxl->set_sensitive(FALSE);
+   }
+  });
+  $hboxl -> pack_end($comboboxl, TRUE, TRUE, 0);
+ }
 
 # Frame for device-dependent options
  my $framed = Gtk2::Frame -> new($d->get('Device-dependent options'));
@@ -4751,7 +4818,7 @@ sub combobox_from_array {
  foreach ( @array ) {
   $combobox->append_text ($_->[1]);
 
-  $o = $i if (defined($default) and $_->[0] eq $default);
+  $o = $i if (defined($default) and defined($_->[0]) and $_->[0] eq $default);
   ++$i;
  }
  $o = 1 if (! defined $o);
@@ -5608,6 +5675,8 @@ only the changelogs from official Ubuntu builds are displayed.
 =item v0.9.16
 
 =over
+
+=item Support for tesseract-2: find tessdata, list *.unicharset that are not empty. Tranlate eng codes to something sensible
 
 =item Progress bars for scan & save as TIFF/DjVu
 
