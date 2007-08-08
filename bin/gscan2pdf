@@ -29,9 +29,7 @@
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
 #    Put windows up in centre of parent
-#    Fix blocking at:
-#      Saving tiff
-#      Rotating
+#    Fix blocking at: Saving tiff, Rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    Option to throw up PDF viewer with newly created PDF file
@@ -2600,7 +2598,7 @@ sub scan_dialog {
 sub populate_scan_dialog {
  my ($vbox, $output) = @_;
 
- print $output if ($debug);
+ print $output if ($debug and defined($output));
 
 # HBox for devices
  my $hboxd = Gtk2::HBox -> new;
@@ -2833,52 +2831,9 @@ sub populate_scan_dialog {
  $hboxo -> pack_start($obutton, TRUE, TRUE, 0);
  my $comboboxe = combobox_from_array($SETTING{'ocr engine'}, @ocr_engine);
  $hboxo -> pack_end($comboboxe, TRUE, TRUE, 0);
+ my ($comboboxl, @tesslang);
  if ($dependencies{tesseract}) {
-  my $hboxl = Gtk2::HBox -> new;
-  $vbox -> pack_start ($hboxl, FALSE, FALSE, 0);
-  my $labell = Gtk2::Label -> new ($d->get('Language to recognise'));
-  $hboxl -> pack_start($labell, TRUE, TRUE, 0);
-
-# Tesseract language files
-  my %iso639 = (
-   deu => $d->get('German'),
-   eng => $d->get('English'),
-   fra => $d->get('French'),
-   ita => $d->get('Italian'),
-   nld => $d->get('Dutch'),
-   spa => $d->get('Spanish'),
-  );
-
-  my @tesslang;
-  if (defined $ENV{TESSDATA_PREFIX}) {
-   @tesslang = glob "$ENV{TESSDATA_PREFIX}tessdata/*.unicharset";
-  }
-  else {
-   @tesslang = glob "/usr/share/tessdata/*.unicharset";
-  }
-  
-# Weed out the empty language files
-  my $i = 0;
-  while ($i < @tesslang) {
-   if (-z $tesslang[$i]) {
-    splice @tesslang, $i, 1;
-   }
-   else {
-    my $code = $1 if ($tesslang[$i] =~ /(\w*)\.unicharset$/);
-    if (defined $iso639{$code}) {
-     $tesslang[$i] = [ $code, $iso639{$code} ];
-    }
-    else {
-     $tesslang[$i] = [ $code, $code ];
-    }
-    $i++;
-   }
-  }
-
-# If there are no language files, then we have tesseract-1.0, i.e. English
-  push @tesslang, [ undef, $d->get('English') ] if (! @tesslang);
-
-  my $comboboxl = combobox_from_array($SETTING{'tesseract language'}, @tesslang);
+  (my $hboxl, $comboboxl, @tesslang) = add_ocr_languages($vbox);
   $hboxl->hide_all
    if ($ocr_engine[$comboboxe -> get_active]->[0] ne 'tesseract');
   $comboboxe -> signal_connect (changed => sub {
@@ -2898,7 +2853,6 @@ sub populate_scan_dialog {
     $hboxl->set_sensitive(FALSE);
    }
   });
-  $hboxl -> pack_end($comboboxl, TRUE, TRUE, 0);
  }
 
 # Frame for device-dependent options
@@ -3013,8 +2967,11 @@ sub populate_scan_dialog {
 
   $SETTING{'unpaper on scan'} = $ubutton->get_active;
   $SETTING{'OCR on scan'} = $obutton->get_active;
-  $SETTING{'ocr engine'} = $ocr_engine[$comboboxe -> get_active]->[0]
-   if ($SETTING{'OCR on scan'});
+  if ($SETTING{'OCR on scan'}) {
+   $SETTING{'ocr engine'} = $ocr_engine[$comboboxe -> get_active]->[0];
+   $SETTING{'ocr language'} = $tesslang[$comboboxl -> get_active]->[0]
+    if ($SETTING{'ocr engine'} eq 'tesseract');
+  }
   if ($SETTING{'frontend'} eq 'scanimage') {
    scanimage($SETTING{device}, $npages, $start-$step, $step,
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
@@ -3631,7 +3588,7 @@ sub rescan_options {
    if (defined($SETTING{mode}) and -e "$filename.$SETTING{mode}");
 
 # Slurp it from file
-  $output = do { local( @ARGV, $/ ) = $filename ; <> } ;
+  $output = slurp($filename);
   $vboxd -> hide_all; # merely here for consistency with normal operation
   parse_options($vboxd, $device, $output);
  }
@@ -3960,7 +3917,7 @@ sub update_options {
   $filename .= ".$SETTING{mode}" if (-e "$filename.$SETTING{mode}");
 
 # Slurp it from file
-  $output = do { local( @ARGV, $/ ) = $filename ; <> } ;
+  $output = slurp($filename);
   $vboxd -> hide_all; # merely here for consistency with normal operation
   update_options_hash($vboxd, options2hash($output));
   $vboxd -> show_all;
@@ -4731,18 +4688,26 @@ sub ocr_page {
       }
      }
      else {
-      my $tif;
+      my ($tif, $pre, $post);
       if ($slist -> {data}[$pagenum][2] !~ /\.tif$/) {
        my $file = $slist -> {data}[$pagenum][2];
 
 # Temporary filename for new file
        (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+       $pre = "convert $file $tif;";
+       $post = "; rm $tif";
 
-       $cmd = "convert $file $tif; tesseract $tif $txt; rm $tif";
       }
       else {
        $tif = $slist -> {data}[$pagenum][2];
-       $cmd .= "tesseract $tif $txt;";
+       $pre = '';
+       $post = '';
+      }
+      if (defined $SETTING{'ocr language'}) {
+       $cmd = "$pre tesseract $tif $txt -l $SETTING{'ocr language'}$post";
+      }
+      else {
+       $cmd = "$pre tesseract $tif $txt$post";
       }
      }
      warn "$cmd\n" if ($debug);
@@ -4772,8 +4737,8 @@ sub ocr_page {
        $slist -> get_model -> signal_handler_block($slist -> {signalid});
 
 # Slurp the OCR output
-       $slist -> {data}[$pagenum][3] .= do { local( @ARGV, $/ ) = "$txt.txt" ; <> } ;
-       unlink <$txt.*>;
+       $slist -> {data}[$pagenum][3] .= slurp("$txt.txt");
+       unlink <$txt*>;
        $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
 # Update the buffer if current
@@ -4806,6 +4771,18 @@ sub ocr_page {
 }
 
 
+# Have to roll my own slurp sub to support utf8
+
+sub slurp {
+ my ($file) = @_;
+
+ local( $/, *FH );
+ open( FH, "<:utf8", $file ) or die "Error: cannot open $file\n";
+ my $text = <FH>;
+ return $text;
+}
+
+
 # Create a combobox from an array and set the default
 
 sub combobox_from_array {
@@ -4828,6 +4805,61 @@ sub combobox_from_array {
 }
 
 
+# Add hbox for ocr languages
+
+sub add_ocr_languages {
+ my ($vbox) = @_;
+
+ my $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hbox, FALSE, FALSE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Language to recognise'));
+ $hbox -> pack_start($label, TRUE, TRUE, 0);
+
+# Tesseract language files
+ my %iso639 = (
+  deu => $d->get('German'),
+  eng => $d->get('English'),
+  fra => $d->get('French'),
+  ita => $d->get('Italian'),
+  nld => $d->get('Dutch'),
+  spa => $d->get('Spanish'),
+ );
+
+ my @tesslang;
+ if (defined $ENV{TESSDATA_PREFIX}) {
+  @tesslang = glob "$ENV{TESSDATA_PREFIX}tessdata/*.unicharset";
+ }
+ else {
+  @tesslang = glob "/usr/share/tessdata/*.unicharset";
+ }
+  
+# Weed out the empty language files
+ my $i = 0;
+ while ($i < @tesslang) {
+  if (-z $tesslang[$i]) {
+   splice @tesslang, $i, 1;
+  }
+  else {
+   my $code = $1 if ($tesslang[$i] =~ /(\w*)\.unicharset$/);
+   if (defined $iso639{$code}) {
+    $tesslang[$i] = [ $code, $iso639{$code} ];
+   }
+   else {
+    $tesslang[$i] = [ $code, $code ];
+   }
+   $i++;
+  }
+ }
+
+# If there are no language files, then we have tesseract-1.0, i.e. English
+ push @tesslang, [ undef, $d->get('English') ] if (! @tesslang);
+
+ my $combobox = combobox_from_array($SETTING{'ocr language'}, @tesslang);
+ $hbox -> pack_end($combobox, TRUE, TRUE, 0);
+ return $hbox, $combobox, @tesslang;
+}
+
+
 # Run OCR on current page and display result
 
 sub OCR {
@@ -4846,6 +4878,20 @@ sub OCR {
  $hboxe -> pack_start ($label, FALSE, FALSE, 0);
  my $combobe = combobox_from_array($SETTING{'ocr engine'}, @ocr_engine);
  $hboxe -> pack_end ($combobe, FALSE, FALSE, 0);
+ my ($comboboxl, @tesslang);
+ if ($dependencies{tesseract}) {
+  (my $hboxl, $comboboxl, @tesslang) = add_ocr_languages($vbox);
+  $hboxl->hide_all
+   if ($ocr_engine[$combobe -> get_active]->[0] ne 'tesseract');
+  $combobe -> signal_connect (changed => sub {
+   if ($ocr_engine[$combobe -> get_active]->[0] eq 'tesseract') {
+    $hboxl->show_all;
+   }
+   else {
+    $hboxl->hide_all;
+   }
+  });
+ }
 
 # Frame for page range
  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
@@ -4860,6 +4906,8 @@ sub OCR {
  $obutton -> signal_connect( clicked => sub {
 
   $SETTING{'ocr engine'} = $ocr_engine[$combobe -> get_active]->[0];
+  $SETTING{'ocr language'} = $tesslang[$comboboxl -> get_active]->[0]
+   if ($SETTING{'ocr engine'} eq 'tesseract');
 
 # fill $pagelist with filenames depending on which radiobutton is active
   my @pagelist = get_page_index();
