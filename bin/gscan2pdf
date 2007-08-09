@@ -3331,6 +3331,10 @@ sub prepare_import {
   my $x = $image->Read($ofilename);
   warn "$x" if "$x";
   $resolution = $image->Get('x-resolution');
+  if ($resolution == 0) {
+   $resolution = $image->Get('y-resolution');
+   $resolution = 72 if ($resolution == 0); 
+  }
  }
 
  my (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix{$format});
@@ -4798,7 +4802,7 @@ sub combobox_from_array {
   $o = $i if (defined($default) and defined($_->[0]) and $_->[0] eq $default);
   ++$i;
  }
- $o = 1 if (! defined $o);
+ $o = 0 if (! defined $o);
  $combobox -> set_active ($o);
  
  return $combobox;

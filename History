@@ -11,6 +11,8 @@
 + Hidden text layer from OCR in djvu output
 + Support for language options in tesseract-2.00
 + UTF-8 support in OCR output
++ Fixed bug caused by imagemagick giving resolution=0.
+  Closes bug 1770367 (Illegal division by zero)
 
 
 0.9.15 (22.07.2007):
