@@ -2470,12 +2470,19 @@ sub save_djvu {
     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
 
 # Create the djvu
-    system ("cjb2 $_ $djvu");
+    my $cmd = "cjb2 $_ $djvu";
+    print "$cmd\n" if $debug;
+    system ($cmd);
+    $_ = $djvu;
    }
-   system ("djvm -c $filename $pagelist");
+   my $cmd = "djvm -c $filename @pagelist";
+   print "$cmd\n" if $debug;
+   system ($cmd);
   }
   else {
-   system ("cjb2 $pagelist $filename");
+   my $cmd = "cjb2 $pagelist $filename";
+   print "$cmd\n" if $debug;
+   system ($cmd);
   }
   
 # Add OCR to text layer
@@ -5787,7 +5794,7 @@ only the changelogs from official Ubuntu builds are displayed.
 
 =over
 
-=item Progress bars for scan & save as TIFF/DjVu
+=item Progress bars for scan & save as DjVu
 
 =back
 
