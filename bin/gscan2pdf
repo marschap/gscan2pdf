@@ -24,7 +24,6 @@
 #    check out freeze when gocr does not return properly
 #    add ocrad, ocre support
 #    Add status line at bottom with messages like "filename saved"
-#    Rewrite in python with python-sane & pytiff
 #    Add KDE, Xfce menus
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
@@ -2289,38 +2288,98 @@ sub save_TIFF {
 # cd back to tempdir
   chdir $dir;
 
+  $file_chooser -> destroy;
+
+  my $dialog = Gtk2::Dialog -> new ($d->get('Importing')."...", $windowo,
+                                    'destroy-with-parent',
+                                    'gtk-cancel' => 'cancel');
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   kill_subs();
+  });
+  $dialog -> show_all;
+
+# Install a handler for child processes
+  $SIG{CHLD} = \&sig_child;
+
+  my $pid = start_process(sub {
+
 # fill $pagelist with filenames depending on which radiobutton is active
-  my ($pagelist, $n) = get_pagelist();
+   my ($pagelist, $n) = get_pagelist();
+   my $page = 0;
 
-  my @pagelist = split / /, $pagelist;
-  foreach (@pagelist) {
+   my @pagelist = split / /, $pagelist;
+   foreach (@pagelist) {
+    ++$page;
+    send($writer, ($page-1)/($#pagelist+2)
+     .sprintf($d->get("Converting image %i of %i to TIFF"), $page, $#pagelist+1), 0);
 
-   if ($_ !~ /\.tif/) {
-    my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+    if ($_ !~ /\.tif/) {
+     my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
 
 # Convert to tiff
-    system ("convert $_ $tif");
+     system ("convert $_ $tif");
 
-    $_ = $tif;
+     $_ = $tif;
+    }
    }
-  }
-  $pagelist = "@pagelist";
+   $pagelist = "@pagelist";
 
-  my $compression = $SETTING{'tiff compression'};
-  $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpeg');
+   my $compression = $SETTING{'tiff compression'};
+   $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpeg');
 
 # Create the tiff
-  my $output = `tiffcp -c $compression $pagelist "$filename" 2>&1`;
-  if ($output eq '') {
-   $windowi -> hide if defined $windowi;
-  }
-  else {
-   unlink $filename;
-   show_message_dialog($windowi, 'error', 'close', $output);
-  }
- }
+   send($writer, '1'.$d->get('Concatenating TIFFs'), 0);
+   my $cmd = "tiffcp -c $compression $pagelist \"$filename\" 2>&1";
+   print "$cmd\n" if $debug;
+   my $output = `$cmd`;
+   send($writer, "2$output", 0);
+  });
 
- $file_chooser -> destroy;
+  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+
+   my $line;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    recv($reader, $line, 1000, 0);
+    if ($line =~ /(\d*\.?\d*)(.*)/) {
+     my $fraction=$1;
+     my $text=$2;
+     if ($fraction > 1) {
+      $dialog -> destroy;
+      if ($text eq '') {
+       $windowi -> hide if defined $windowi;
+      }
+      else {
+       unlink $filename;
+       show_message_dialog($windowi, 'error', 'close', $text);
+      }
+      return FALSE;  # uninstall
+     }
+     $pbar->set_fraction($fraction);
+     $pbar->set_text($text);
+    }
+   }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+    $dialog -> destroy;
+    update_uimanager();
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # continue without uninstalling
+  });
+ }
+ else {
+  $file_chooser -> destroy;
+ }
 }
 
 
@@ -5728,8 +5787,6 @@ only the changelogs from official Ubuntu builds are displayed.
 
 =over
 
-=item Support for tesseract-2: find tessdata, list *.unicharset that are not empty. Tranlate eng codes to something sensible
-
 =item Progress bars for scan & save as TIFF/DjVu
 
 =back
@@ -5737,6 +5794,8 @@ only the changelogs from official Ubuntu builds are displayed.
 =item v1.0.0
 
 =over
+
+=item Correct positioning and size of OCR output behind scan.
 
 =item Scan profiles.
 
