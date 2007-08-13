@@ -4908,7 +4908,7 @@ sub add_ocr_languages {
   @tesslang = glob "$ENV{TESSDATA_PREFIX}tessdata/*.unicharset";
  }
  else {
-  @tesslang = glob "/usr/share/tessdata/*.unicharset";
+  @tesslang = glob "/usr/share/tesseract-ocr/tessdata/*.unicharset";
  }
   
 # Weed out the empty language files
