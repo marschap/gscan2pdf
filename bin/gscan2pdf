@@ -5,6 +5,8 @@
 # see the included LICENCE file for details.
 
 # To do
+#    stop unpaper and ocr if scan is cancelled
+#    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    write hg2cl if necessary
 #    simplify code - only keep variables that are needed
 #    - rename those like $hboxu to $hbox
@@ -1810,7 +1812,13 @@ sub create_PDF {
     $x = $image->Set(quality => $SETTING{quality})
      if $SETTING{'pdf compression'} eq 'jpg';
     warn "$x" if "$x";
-    $x = $image->Write(filename => $filename, depth => $depth);
+    if ($depth > 1) {
+     print "Maintaining image depth $depth\n" if $debug;
+     $x = $image->Write(filename => $filename, depth => $depth);
+    }
+    else {
+     $x = $image->Write(filename => $filename);
+    }
     warn "$x" if "$x";
     $format = $1 if ($filename =~ /\.(\w*)$/);
    }
@@ -2508,12 +2516,12 @@ sub save_djvu {
     print FILE "(line 0 0 ", $w*72/$resolution, " ", $h*72/$resolution, " \"";
     print FILE $slist -> {data}[$j][3], "\"))";
     close FILE;
-    unlink $djvusedtxtfile;
 
 # Write djvusedtxtfile
     my $cmd = sprintf "djvused %s -e 'select %i; set-txt djvusedtxtfile' -s", $filename, $i+1;
     print "$cmd\n" if $debug;
     system ($cmd);
+    unlink $djvusedtxtfile;
    }
   }
 
@@ -3530,9 +3538,9 @@ sub about {
  $about->set_version ($version);
  my $authors = <<EOS;
 John Goerzen
-Sascha Hunold
 Chris Mayo
 David Hampton
+Sascha Hunold
 EOS
  $about->set_authors ("Jeff Ratcliffe\n\n"
                       .$d->get('Patches gratefully received from:')
