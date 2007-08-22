@@ -5,6 +5,7 @@
 # see the included LICENCE file for details.
 
 # To do
+#    try a document with 250 pages
 #    stop unpaper and ocr if scan is cancelled
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    write hg2cl if necessary
@@ -1862,25 +1863,35 @@ sub create_PDF {
    my $gfx = $page->gfx;
    my $imgobj;
    if ($format eq 'png') {
-    $imgobj = $pdf->image_png($filename);
+    eval {$imgobj = $pdf->image_png($filename)};
    }
    elsif ($format eq 'jpg') {
-    $imgobj = $pdf->image_jpeg($filename);
+    eval {$imgobj = $pdf->image_jpeg($filename)};
    }
    elsif ($format eq 'pnm') {
-    $imgobj = $pdf->image_pnm($filename);
+    eval {$imgobj = $pdf->image_pnm($filename)};
    }
    elsif ($format eq 'gif') {
-    $imgobj = $pdf->image_gif($filename);
+    eval {$imgobj = $pdf->image_gif($filename)};
    }
    elsif ($format eq 'tif') {
-    $imgobj = $pdf->image_tiff($filename);
+    eval {$imgobj = $pdf->image_tiff($filename)};
    }
    else {
-    warn "Error embedding file $filename in $format format to PDF\n";
+    $@ = "Error embedding file $filename in $format format to PDF\n";
    }
-   $gfx->image($imgobj,0,0,72/$resolution) if (defined $imgobj);
-   print "Adding $format at $resolution dpi\n";
+   if ($@) {
+    warn $@;
+   }
+   else {
+    eval {$gfx->image($imgobj,0,0,72/$resolution)};
+    if ($@) {
+     warn $@;
+    }
+    else {
+     print "Adding $format at $resolution dpi\n";
+    }
+   }
   }
   send($writer, '1'.$d->get('Closing PDF'), 0);
   $pdf->save;
@@ -3552,7 +3563,7 @@ EOS
  my $translators = <<EOS;
 Alexandre Prokoudine
 Hugo Pereira
-Petr Jelínek
+Petr JelÃ­nek
 Jen Fraggle
 Alberto Boiti
 Piotr Strebski

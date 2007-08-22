@@ -1,4 +1,4 @@
-0.9.16 (10.08.2007):
+0.9.16 (23.08.2007):
 
 + do not restore mode setting if default device not found
 + workaround for those versions of imagemagick that produce 16bit output
@@ -14,6 +14,7 @@
 + Fixed bug caused by imagemagick giving resolution=0.
   Closes bug 1770367 (Illegal division by zero)
 + ProgressBar during TIFF save
++ better attempt at trapping errors whilst embedding scan in PDF
 
 
 0.9.15 (22.07.2007):
