@@ -2474,72 +2474,146 @@ sub save_djvu {
    return TRUE;
   }
 
+  $windowv -> hide;
+
 # Update cwd
   $SETTING{'cwd'} = dirname($filename);
 
 # cd back to tempdir
   chdir $dir;
 
+  $file_chooser -> destroy;
+
+  my $dialog = Gtk2::Dialog -> new ($d->get('Saving DjVu')."...", $windowo,
+                                    'destroy-with-parent',
+                                    'gtk-cancel' => 'cancel');
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   kill_subs();
+  });
+  $dialog -> show_all;
+
+# Install a handler for child processes
+  $SIG{CHLD} = \&sig_child;
+
+  my $pid = start_process(sub {
+
 # fill $pagelist with filenames depending on which radiobutton is active
-  my ($pagelist, $n) = get_pagelist();
+   my ($pagelist, $n) = get_pagelist();
    
-  if ($n > 1) {
-   my @pagelist = split / /, $pagelist;
-   foreach (@pagelist) {
-    my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
+   if ($n > 1) {
+    my @pagelist = split / /, $pagelist;
+    my $page = 0;
+    foreach (@pagelist) {
+     send($writer, $page/(($#pagelist+1)*2+1)
+      .sprintf($d->get("Embedding image %i of %i in DjVu"),
+                                                     $page+1, $#pagelist+1), 0);
+     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
 
 # Create the djvu
-    my $cmd = "cjb2 $_ $djvu";
+     my $cmd = "cjb2 $_ $djvu";
+     print "$cmd\n" if $debug;
+     system ($cmd);
+     $_ = $djvu;
+     ++$page;
+    }
+    send($writer, $page/(($#pagelist+1)*2+1).$d->get("Concatenating pages"), 0);
+    my $cmd = "djvm -c $filename @pagelist";
     print "$cmd\n" if $debug;
     system ($cmd);
-    $_ = $djvu;
    }
-   my $cmd = "djvm -c $filename @pagelist";
-   print "$cmd\n" if $debug;
-   system ($cmd);
-  }
-  else {
-   my $cmd = "cjb2 $pagelist $filename";
-   print "$cmd\n" if $debug;
-   system ($cmd);
-  }
+   else {
+    send($writer, '0'.sprintf($d->get("Embedding image %i of %i in DjVu"), 1, 1), 0);
+    my $cmd = "cjb2 $pagelist $filename";
+    print "$cmd\n" if $debug;
+    system ($cmd);
+   }
   
 # Add OCR to text layer
-  my @pagelist = get_page_index();
-  for (my $i = 0; $i <= $#pagelist; $i++) {
-   my $j = $pagelist[$i];
-   if (defined($slist -> {data}[$j][3]) and $slist -> {data}[$j][3] ne '') {
+   my @pagelist = get_page_index();
+   for (my $i = 0; $i <= $#pagelist; $i++) {
+    my $j = $pagelist[$i];
+    if (defined($slist -> {data}[$j][3]) and $slist -> {data}[$j][3] ne '') {
 
-    my $image = Image::Magick->new;
-    my $x = $image->Read($slist -> {data}[$j][2]);
-    warn "$x" if "$x";
+     send($writer, ($#pagelist+$i)/(($#pagelist+1)*2+1)
+      .sprintf($d->get("Embedding OCR output %i of %i in DjVu"),
+                                                        $i+1, $#pagelist+1), 0);
+
+     my $image = Image::Magick->new;
+     my $x = $image->Read($slist -> {data}[$j][2]);
+     warn "$x" if "$x";
 
 # Get the size and resolution
-    my $w = $image->Get('width');
-    my $h = $image->Get('height');
-    my $resolution = $slist -> {data}[$j][4];
+     my $w = $image->Get('width');
+     my $h = $image->Get('height');
+     my $resolution = $slist -> {data}[$j][4];
+
+# Escape any inverted commas
+     my $txt = $slist -> {data}[$j][3];
+     $txt =~ s/"/\\\"/g;
 
 # Write djvusedtxtfile
-    my $djvusedtxtfile = "djvusedtxtfile";
-    open (FILE, "> $djvusedtxtfile")
-     or die sprintf($d->get("Can't open file: %s"), $djvusedtxtfile);
-    print FILE "(page 0 0 ", $w*72/$resolution, " ", $h*72/$resolution, "\n";
-    print FILE "(line 0 0 ", $w*72/$resolution, " ", $h*72/$resolution, " \"";
-    print FILE $slist -> {data}[$j][3], "\"))";
-    close FILE;
+     my $djvusedtxtfile = "djvusedtxtfile";
+     open (FILE, "> $djvusedtxtfile")
+      or die sprintf($d->get("Can't open file: %s"), $djvusedtxtfile);
+     print FILE "(page 0 0 ", int($w*72/$resolution), " ", int($h*72/$resolution), "\n";
+     print FILE "(line 0 0 ", int($w*72/$resolution), " ", int($h*72/$resolution), " \"";
+     print FILE $txt, "\"))";
+     close FILE;
 
 # Write djvusedtxtfile
-    my $cmd = sprintf "djvused %s -e 'select %i; set-txt djvusedtxtfile' -s", $filename, $i+1;
-    print "$cmd\n" if $debug;
-    system ($cmd);
-    unlink $djvusedtxtfile;
+     my $cmd = sprintf "djvused %s -e 'select %i; set-txt djvusedtxtfile' -s", $filename, $i+1;
+     print "$cmd\n" if $debug;
+     system ($cmd);
+    }
    }
-  }
+   send($writer, "2", 0);
+  });
 
-  $windowv -> hide;
+  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+
+   my $line;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    recv($reader, $line, 1000, 0);
+    if ($line =~ /(\d*\.?\d*)(.*)/) {
+     my $fraction=$1;
+     my $text=$2;
+     if ($fraction > 1) {
+      $dialog -> destroy;
+      if ($text eq '') {
+       $windowi -> hide if defined $windowi;
+      }
+      else {
+       unlink $filename;
+       show_message_dialog($windowi, 'error', 'close', $text);
+      }
+      return FALSE;  # uninstall
+     }
+     $pbar->set_fraction($fraction);
+     $pbar->set_text($text);
+    }
+   }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+    $dialog -> destroy;
+    update_uimanager();
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # continue without uninstalling
+  });
  }
-
- $file_chooser -> destroy;
+ else {
+  $file_chooser -> destroy;
+ }
 }
 
 
@@ -5813,7 +5887,7 @@ only the changelogs from official Ubuntu builds are displayed.
 
 =over
 
-=item Progress bars for scan & save as DjVu
+=item Progress bar for scan
 
 =back
 
