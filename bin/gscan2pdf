@@ -2524,13 +2524,13 @@ sub save_djvu {
      ++$page;
     }
     send($writer, $page/(($#pagelist+1)*2+1).$d->get("Concatenating pages"), 0);
-    my $cmd = "djvm -c $filename @pagelist";
+    my $cmd = "djvm -c '$filename' @pagelist";
     print "$cmd\n" if $debug;
     system ($cmd);
    }
    else {
     send($writer, '0'.sprintf($d->get("Embedding image %i of %i in DjVu"), 1, 1), 0);
-    my $cmd = "cjb2 $pagelist $filename";
+    my $cmd = "cjb2 $pagelist '$filename'";
     print "$cmd\n" if $debug;
     system ($cmd);
    }
@@ -2568,7 +2568,7 @@ sub save_djvu {
      close FILE;
 
 # Write djvusedtxtfile
-     my $cmd = sprintf "djvused %s -e 'select %i; set-txt djvusedtxtfile' -s", $filename, $i+1;
+     my $cmd = sprintf "djvused '%s' -e 'select %i; set-txt djvusedtxtfile' -s", $filename, $i+1;
      print "$cmd\n" if $debug;
      system ($cmd);
     }
@@ -5883,11 +5883,15 @@ only the changelogs from official Ubuntu builds are displayed.
 
 =over
 
-=item v0.9.16
+=item v0.9.17
 
 =over
 
 =item Progress bar for scan
+
+=item Correct positioning and size of OCR output behind scan.
+
+=item More numbering control in scan dialog - useful if scanner jams.
 
 =back
 
@@ -5895,11 +5899,7 @@ only the changelogs from official Ubuntu builds are displayed.
 
 =over
 
-=item Correct positioning and size of OCR output behind scan.
-
 =item Scan profiles.
-
-=item More numbering control in scan dialog - useful if scanner jams.
 
 =back
 
@@ -5910,6 +5910,8 @@ only the changelogs from official Ubuntu builds are displayed.
 =item Crop function.
 
 =item Support for non-bitonal compression in djvu.
+
+=item Import DjVu (using decoders from DjVuLibre)
 
 =back
 
