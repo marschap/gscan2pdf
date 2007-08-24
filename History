@@ -1,4 +1,4 @@
-0.9.16 (23.08.2007):
+0.9.16 (24.08.2007):
 
 + do not restore mode setting if default device not found
 + workaround for those versions of imagemagick that produce 16bit output
@@ -16,6 +16,7 @@
 + ProgressBar during TIFF save
 + better attempt at trapping errors whilst embedding scan in PDF
 + ProgressBar during DjVu save
++ Stop unpaper and ocr if scan is cancelled
 
 
 0.9.15 (22.07.2007):

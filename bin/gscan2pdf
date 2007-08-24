@@ -6,7 +6,6 @@
 
 # To do
 #    try a document with 250 pages
-#    stop unpaper and ocr if scan is cancelled
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    write hg2cl if necessary
 #    simplify code - only keep variables that are needed
@@ -19,10 +18,7 @@
 #    problem with wait after cancelling scan?
 #    cover case where unpaper or ocr starts running on a page that has in the
 #     meantime been deleted
-#    handle corrupted images properly
-#    move test tif and correct blank PDF with compression=none
 #    use -x option (first column 0-100) in gocr to give more detail to progressbar
-#    fix encoding problem with GOCR output
 #    add run script option
 #    check out freeze when gocr does not return properly
 #    add ocrad, ocre support
@@ -3205,6 +3201,8 @@ sub scanimage {
    local $SIG{INT} = 'IGNORE';
    kill INT => $pid;
    $cancel = TRUE;
+   undef(@unpaper_stack);
+   undef(@ocr_stack);
   });
   $dialog -> show_all;
  
