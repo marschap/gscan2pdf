@@ -5,6 +5,7 @@
 # see the included LICENCE file for details.
 
 # To do
+#    sort out warning when page dropped on, say, detail view.
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    write hg2cl if necessary
@@ -485,21 +486,20 @@ $slist->signal_connect('drag-motion' => sub {
  my ($tree, $dnd, $x, $y, $t) = @_;
  my ($path, $how) = $tree->get_dest_row_at_pos($x, $y) or return;
  my $scroll = $tree->parent;
- my $rectangle = $scroll->allocation;
  $tree->set_drag_dest_row($path, $how);
 
  my $adj = $scroll->get_vadjustment;
  my ($value, $step) = ($adj->value, $adj->step_increment);
 
- if ($y > $value + $adj->page_size - $step/2) {
-   my $v = $value + $step;
-   my $m = $adj->upper - $adj->page_size;
-   $adj->set_value($v > $m ? $m : $v);
+ if ($y > $adj->page_size - $step/2) {
+  my $v = $value + $step;
+  my $m = $adj->upper - $adj->page_size;
+  $adj->set_value($v > $m ? $m : $v);
  }
- elsif ($y < $value + $step/2) {
-   my $v = $value - $step;
-   my $m = $adj->lower;
-   $adj->set_value($v < $m ? $m : $v);
+ elsif ($y < ($tree->get_headers_visible ? $step : $step/2)) {
+  my $v = $value - $step;
+  my $m = $adj->lower;
+  $adj->set_value($v < $m ? $m : $v);
  }
 
  return FALSE;
