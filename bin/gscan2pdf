@@ -27,8 +27,7 @@
 #    Add KDE, Xfce menus
 #    Add hidden flag whether a page has been saved
 #    On quit or delete if page not saved put up dialog
-#    Put windows up in centre of parent
-#    Fix blocking at: Saving tiff, Rotating
+#    Fix blocking while rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    Option to throw up PDF viewer with newly created PDF file
@@ -91,7 +90,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.16';
+my $version = '0.9.17';
 
 # Standard paper sizes
 my @paperg = ('A4', 'US Letter', 'US Legal', 'Custom');
@@ -237,7 +236,7 @@ my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
-    $scanwatch, @ocr_engine, $bscanall, $bscannum,
+    $scanwatch, @ocr_engine, $bscanall, $bscannum, @clipboard,
 
 # Variables for inter-process communication
     $reader, $writer);
@@ -261,6 +260,9 @@ my @action_items = (
  [ 'Edit', undef, $d->get('_Edit') ],
  [ 'Undo', 'gtk-undo', $d->get('_Undo'), '<control>z', $d->get('Undo'), \&undo ],
  [ 'Redo', 'gtk-redo', $d->get('_Redo'), '<shift><control>z', $d->get('Redo'), \&unundo ],
+ [ 'Cut', 'gtk-cut', $d->get('Cu_t'), '<control>x', $d->get('Cut selected pages'), \&cut_pages ],
+ [ 'Copy', 'gtk-copy', $d->get('_Copy'), '<control>c', $d->get('Copy selected pages'), \&copy_pages ],
+ [ 'Paste', 'gtk-paste', $d->get('_Paste'), '<control>v', $d->get('Paste selected pages'), \&paste_pages ],
  [ 'Delete', 'gtk-delete', $d->get('_Delete'), undef, $d->get('Delete selected pages'), \&delete_pages ],
  [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages from 1 to n'), sub { renumber($slist, 0, 1, 1); } ],
  [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
@@ -314,6 +316,9 @@ my $ui = "<ui>
    <menuitem action='Undo'/>
    <menuitem action='Redo'/>
    <separator/>
+   <menuitem action='Cut'/>
+   <menuitem action='Copy'/>
+   <menuitem action='Paste'/>
    <menuitem action='Delete'/>
    <menuitem action='Renumber'/>
    <menuitem action='Select All'/>
@@ -356,6 +361,9 @@ my $ui = "<ui>
   <toolitem action='Undo'/>
   <toolitem action='Redo'/>
   <separator/>
+  <toolitem action='Cut'/>
+  <toolitem action='Copy'/>
+  <toolitem action='Paste'/>
   <toolitem action='Delete'/>
   <toolitem action='Renumber'/>
   <toolitem action='Select All'/>
@@ -382,6 +390,9 @@ my $ui = "<ui>
   <menuitem action='Rotate 180'/>
   <menuitem action='Rotate 270'/>
   <separator/>
+  <menuitem action='Cut'/>
+  <menuitem action='Copy'/>
+  <menuitem action='Paste'/>
   <menuitem action='Delete'/>
  </popup>
  <popup name='Thumb_Popup'>
@@ -397,6 +408,9 @@ my $ui = "<ui>
   <menuitem action='Rotate 180'/>
   <menuitem action='Rotate 270'/>
   <separator/>
+  <menuitem action='Cut'/>
+  <menuitem action='Copy'/>
+  <menuitem action='Paste'/>
   <menuitem action='Delete'/>
  </popup>
 </ui>";
@@ -3571,6 +3585,96 @@ sub manual_sort_by_column {
 }
 
 
+# Cut the selected pages
+
+sub cut_pages {
+ copy_pages();
+ delete_pages();
+}
+
+
+# Copy the selected pages
+
+sub copy_pages {
+ undef @clipboard;
+ my @pages = $slist -> get_selected_indices;
+ for (@pages) {
+  push @clipboard, $slist->{data}[$_];
+  warn "Copied page $slist->{data}[$_][0] to clipboard\n" if ($debug);
+ }
+}
+
+
+# Paste the selected pages
+
+sub paste_pages {
+ my @page = $slist -> get_selected_indices;
+ my $page = $slist -> {data}[$page[0]][0];
+
+# Block the row-changed signal whilst adding the scan (row) and sorting it.
+ $slist -> get_model -> signal_handler_block($slist -> {signalid});
+
+use Data::Dumper;
+warn Dumper(\@clipboard);
+ for (@clipboard) {
+warn Dumper(\$_);
+  ++$page;
+warn "before push";
+#  push @{$slist -> {data}}, $_;
+warn $_->[2];
+ push @{$slist -> {data}}, [ 99,
+                             Gtk2::Gdk::Pixbuf->new_from_file('/caehome/ra28145/perl/gscan2pdf/pdf.png'),
+                             $_->[2], undef, 72 ];
+# push @{$slist -> {data}}, [ 99,
+#                             Gtk2::Gdk::Pixbuf->new_from_file('/caehome/ra28145/perl/gscan2pdf/pdf.png'),
+#                             '/caehome/ra28145/perl/gscan2pdf/pdf.png', undef, 72 ];
+warn "after push";
+  $slist -> {data}[$#{$slist -> {data}}][0] = $page;
+
+# Create a new image file
+  my $suffix = $1 if ($slist -> {data}[$#{$slist -> {data}}][2] =~ /(\.\w*)$/);
+  my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
+  system("cp ".$slist -> {data}[$#{$slist -> {data}}][2]." $new");
+  $slist -> {data}[$#{$slist -> {data}}][2] = $new;
+  warn "Pasted clipboard at page $page with filename $new\n" if ($debug);
+ }
+
+# Make sure that subsequent pages have subsequent numbers
+ for (my $i = $page[0]+1; $i < $#{$slist->{data}}-$#clipboard; ++$i) {
+  if ($slist -> {data}[$i][0] <= $page) {
+   ++$page;
+   warn "Renumbering page ".$slist -> {data}[$i][0]." as $page\n" if ($debug);
+   $slist -> {data}[$i][0] = $page;
+  }
+ }
+ $page = $slist -> {data}[$#{$slist -> {data}}][0];
+
+ manual_sort_by_column ($slist, 0);
+ $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+
+# Select new page, deselecting others. This fires the select callback,
+# displaying the page
+ $slist -> get_selection -> unselect_all;
+ my @page;
+
+# Due to the sort, must search for new page
+ $page[0] = 0;
+# $page[0] < $#{$slist -> {data}} needed to prevent infinite loop in case of
+# error importing.
+ ++$page[0] while ($page[0] < $#{$slist -> {data}}
+                    and $slist -> {data}[$page[0]][0] != $page);
+
+ $slist -> select(@page);
+ 
+ update_uimanager();
+
+ return @page;
+
+
+
+}
+
+
 # Delete the selected scans
 
 sub delete_pages {
@@ -5886,6 +5990,8 @@ only the changelogs from official Ubuntu builds are displayed.
 =over
 
 =item Progress bar for scan
+
+=item Multiple-item drag-and-drop
 
 =item Correct positioning and size of OCR output behind scan.
 
