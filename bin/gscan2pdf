@@ -467,6 +467,9 @@ $hpaned -> pack1($scwin_thumbs, TRUE, TRUE);
 $scwin_thumbs -> set_policy('automatic', 'automatic');
 $scwin_thumbs -> set_shadow_type('etched-in');
 
+# Create a temporary directory for scans
+my $dir = tempdir;
+
 # define hidden string column for filename and annotation buffer
 Gtk2::Ex::Simple::List -> add_column_type( 'hstring',
                                            type => 'Glib::String',
@@ -478,29 +481,105 @@ $slist = Gtk2::Ex::Simple::List -> new('#' => 'int',
                                        'Filename' => 'hstring',
                                        'Buffer' => 'hstring',
                                        'Resolution' => 'hstring');
+$slist -> get_selection -> set_mode ('multiple');
+$slist -> set_headers_visible(FALSE);
+$slist -> set_reorderable( TRUE );
 
-# Callback for dropped signal.
-$slist -> signal_connect('drag_drop' => sub {
-# Block row-changed signal so that the list can be renumbered before the sort
-# takes over.
- $slist -> get_model -> signal_handler_block($slist -> {signalid});
- return FALSE;
+my $target_entry = {
+ target => 'Glib::Scalar', # some string representing the drag type
+ flags => 'same-widget',   # Gtk2::TargetFlags
+ info => 1,                # some app-defined integer identifier
+};
+$slist->drag_source_set('button1-mask', ['copy', 'move'], $target_entry);
+$slist->drag_dest_set(['motion', 'highlight'], ['copy', 'move'], $target_entry);
+
+$slist->signal_connect('drag-data-get' => sub {
+ my ($tree, $context, $sel) = @_;
+ $sel->set($sel->target, 8, 'data');
 });
 
-# Now that drag_drop has returned,
-# check that the numbering is ascending and renumber if needed.
-$slist->signal_connect (drag_end => sub {
+$slist->signal_connect('drag-data-delete' => sub {
+ my ($tree, $context) = @_;
+ my $model = $tree->get_model;
+ my @data = $tree->get_selection->get_selected_rows;
+
+ for (reverse @data) {
+  my $iter = $model->get_iter($_);
+  my $info = $model->get($iter, 0);
+  $model->remove($iter);
+ }
+
+ $tree->get_selection->unselect_all;
+});
+
+$slist->signal_connect('drag-data-received' => sub {
+ my ($tree, $context, $x, $y, $sel) = @_;
+ my ($path, $how) = $tree->get_dest_row_at_pos($x, $y);
+ my $model = $tree->get_model;
+ my $data = $sel->data or return;
+ my $delete = $context->action == 'move';
+
+ my @rows = $tree->get_selection->get_selected_rows or return;
+ my @data;
+ for (@rows) {
+  my $iter = $model->get_iter($_);
+  my @info = $model->get($iter);
+  my $suffix = $1 if ($info[2] =~ /(\.\w*)$/);
+  my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
+  system("cp ".$info[2]." $new");
+  $info[2] = $new;
+  push @data, [ @info ];
+ }
+
+# Block row-changed signal so that the list can be updated before the sort
+# takes over.
+ $slist -> get_model -> signal_handler_block($slist -> {signalid});
+
+ if ($path) {
+  if ($how eq 'after' or $how eq 'into-or-after') {
+   splice @{ $slist->{data} }, $path->to_string+1, 0, @data;
+  }
+  else {
+   splice @{ $slist->{data} }, $path->to_string, 0, @data;
+  }
+ }
+ else {
+  push @{ $slist->{data} }, @data;
+ }
  renumber($slist, 0);
  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+
+ $context->finish(1, $delete, time);
+});
+
+# Callback for dropped signal.
+$slist -> signal_connect(drag_drop => sub {
+ my ($tree, $context, $x, $y, $when) = @_;
+ if (my $targ = $context->targets) {
+  $tree->drag_get_data($context, $targ, $when);
+  return TRUE;
+ }
  return FALSE;
 });
 
 # If dragged below the bottom of the window, scroll it.
 $slist->signal_connect('drag-motion' => sub {
- my ($tree, $dnd, $x, $y, $t) = @_;
+ my ($tree, $context, $x, $y, $t) = @_;
  my ($path, $how) = $tree->get_dest_row_at_pos($x, $y) or return;
  my $scroll = $tree->parent;
+
+# Add the marker showing the drop in the tree
  $tree->set_drag_dest_row($path, $how);
+
+# Make move the default
+ my @action;
+ if ($context->actions == 'copy') {
+  @action = ( 'copy' );
+ }
+ else {
+  @action = ( 'move' );
+ }
+ $context->status(@action, $t);
 
  my $adj = $scroll->get_vadjustment;
  my ($value, $step) = ($adj->value, $adj->step_increment);
@@ -510,7 +589,7 @@ $slist->signal_connect('drag-motion' => sub {
   my $m = $adj->upper - $adj->page_size;
   $adj->set_value($v > $m ? $m : $v);
  }
- elsif ($y < ($tree->get_headers_visible ? $step : $step/2)) {
+ elsif ($y < $step/2) {
   my $v = $value - $step;
   my $m = $adj->lower;
   $adj->set_value($v < $m ? $m : $v);
@@ -522,10 +601,6 @@ $slist->signal_connect('drag-motion' => sub {
 # Set up callback for right mouse clicks.
 $slist->signal_connect(button_press_event => \&handle_clicks);
 $slist->signal_connect(button_release_event => \&handle_clicks);
-
-$slist -> get_selection -> set_mode ('multiple');
-$slist -> set_headers_visible(FALSE);
-$slist -> set_reorderable( TRUE );
 
 # Set the page number to be editable
 $slist -> set_column_editable (0, TRUE);
@@ -642,9 +717,6 @@ $window -> signal_connect_after (key_press_event => sub {
 
 # If defined in the config file, set the current directory
 $SETTING{'cwd'} = getcwd if (! defined($SETTING{'cwd'}));
-
-# Create a temporary directory for scans
-my $dir = tempdir;
 
 # Set up the strings for the possible device-dependent options
 my %ddo;
@@ -5990,8 +6062,6 @@ only the changelogs from official Ubuntu builds are displayed.
 =over
 
 =item Progress bar for scan
-
-=item Multiple-item drag-and-drop
 
 =item Correct positioning and size of OCR output behind scan.
 
