@@ -58,7 +58,8 @@
 #    Update translators in credits
 #    Check a translation with LANGUAGE=de gscan2pdf --debug
 #    Make sure that changelog reflects History and hg log from bin/gscan2pdf
-# 2. make rpmdist debdist
+# 2. perl Makefile.PL
+#    make rpmdist debdist
 #    test dist sudo dpkg -i gscan2pdf-x.x.x_all.deb
 # 3. hg status
 #    hg tag vx-x-x

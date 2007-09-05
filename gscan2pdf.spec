@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.15
+Version: 0.9.16
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -82,13 +82,25 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sun Jul 22 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - Fixed bug setting defaults, also responsible for preventing the
-    device-dependent options being displayed in certain circumstances.
-  - store unpaper options in settings
-  - fractional instead of pulsing ProgressBar & more info during PDF save
-  - fixed bug where spaces in mode not escaped in shell
-  - fixed bug parsing device-dependent options (affecting some Brother scanners).
-  - option not to restore window settings.
-    closes Debian bug 433497 (please don't remember window position)
+* Fri Aug 24 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - do not restore mode setting if default device not found
+  - workaround for those versions of imagemagick that produce 16bit output
+    with rotate.
+    Patch 1760543 (rotate creates 16bit images that tesseract can't read)
+    from Chris Mayo
+  - ProgressBar during image import
+  - Downsample option.
+    Closes Feature Request 1722832 (setting the resolution before export)
+  - Hidden text layer from OCR in djvu output
+  - Support for language options in tesseract-2.00
+  - UTF-8 support in OCR output
+  - Fixed bug caused by imagemagick giving resolution=0.
+    Closes bug 1770367 (Illegal division by zero)
+  - ProgressBar during TIFF save
+  - better attempt at trapping errors whilst embedding scan in PDF
+  - ProgressBar during DjVu save
+  - Stop unpaper and ocr if scan is cancelled
+  - Fixed scrolling bug during drag and drop
+  - Update to Dutch translation (thanks to Eric Spierings)
   - Update to French translation (thanks to Nicolas Stransky)
+  - Update to Spanish translation (thanks to Rodrigo Donado)
