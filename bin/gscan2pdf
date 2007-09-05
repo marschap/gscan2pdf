@@ -5646,6 +5646,10 @@ C<gpg --keyserver www.keyserver.net --recv-keys 4DD7CC93>
 
 C<gpg --export --armor 4DD7CC93 | sudo apt-key add ->
 
+If your distribution doesn't have C<libgtk2-ex-simple-list-perl>, download it from the website and then install it with:
+
+C<sudo dpkg -i libgtk2-ex-simple-list-perl_0.50-1_all.deb>
+
 =head2 RPMs
 
 Download the rpm from Sourceforge, and then install it with
