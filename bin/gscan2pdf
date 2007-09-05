@@ -608,6 +608,7 @@ $slist -> set_column_editable (0, TRUE);
 # Set-up the callback when the page number has been edited.
 $slist -> {signalid} = $slist -> get_model ->
  signal_connect('row-changed' => sub {
+warn "row-changed\n";
   $slist -> get_model -> signal_handler_block($slist -> {signalid});
 
 # Sort pages
@@ -3670,9 +3671,9 @@ sub cut_pages {
 sub copy_pages {
  undef @clipboard;
  my @pages = $slist -> get_selected_indices;
- for (@pages) {
-  push @clipboard, $slist->{data}[$_];
-  warn "Copied page $slist->{data}[$_][0] to clipboard\n" if ($debug);
+ for my $page (@pages) {
+  my @copy = map { [ @$_ ] } $slist->{data}[$page];
+  push @clipboard, @copy;
  }
 }
 
@@ -3681,47 +3682,32 @@ sub copy_pages {
 
 sub paste_pages {
  my @page = $slist -> get_selected_indices;
- my $page = $slist -> {data}[$page[0]][0];
+ my $page;
+ if (@page) {
+  $page = $slist -> {data}[$page[0]][0];
+ }
+ else {
+  $page = 0;
+ }
 
 # Block the row-changed signal whilst adding the scan (row) and sorting it.
  $slist -> get_model -> signal_handler_block($slist -> {signalid});
 
-use Data::Dumper;
-warn Dumper(\@clipboard);
  for (@clipboard) {
-warn Dumper(\$_);
   ++$page;
-warn "before push";
-#  push @{$slist -> {data}}, $_;
-warn $_->[2];
- push @{$slist -> {data}}, [ 99,
-                             Gtk2::Gdk::Pixbuf->new_from_file('/caehome/ra28145/perl/gscan2pdf/pdf.png'),
-                             $_->[2], undef, 72 ];
-# push @{$slist -> {data}}, [ 99,
-#                             Gtk2::Gdk::Pixbuf->new_from_file('/caehome/ra28145/perl/gscan2pdf/pdf.png'),
-#                             '/caehome/ra28145/perl/gscan2pdf/pdf.png', undef, 72 ];
-warn "after push";
-  $slist -> {data}[$#{$slist -> {data}}][0] = $page;
+  $_->[0] = $page;
 
 # Create a new image file
-  my $suffix = $1 if ($slist -> {data}[$#{$slist -> {data}}][2] =~ /(\.\w*)$/);
+  my $suffix = $1 if ($_->[2] =~ /(\.\w*)$/);
   my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
-  system("cp ".$slist -> {data}[$#{$slist -> {data}}][2]." $new");
-  $slist -> {data}[$#{$slist -> {data}}][2] = $new;
+  system("cp ".$_->[2]." $new");
+  $_->[2] = $new;
+
+  push @{$slist -> {data}}, $_;
   warn "Pasted clipboard at page $page with filename $new\n" if ($debug);
  }
 
-# Make sure that subsequent pages have subsequent numbers
- for (my $i = $page[0]+1; $i < $#{$slist->{data}}-$#clipboard; ++$i) {
-  if ($slist -> {data}[$i][0] <= $page) {
-   ++$page;
-   warn "Renumbering page ".$slist -> {data}[$i][0]." as $page\n" if ($debug);
-   $slist -> {data}[$i][0] = $page;
-  }
- }
- $page = $slist -> {data}[$#{$slist -> {data}}][0];
-
- manual_sort_by_column ($slist, 0);
+ renumber ($slist, 0);
  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
 # Select new page, deselecting others. This fires the select callback,
@@ -3741,9 +3727,6 @@ warn "after push";
  update_uimanager();
 
  return @page;
-
-
-
 }
 
 
