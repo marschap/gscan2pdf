@@ -3690,29 +3690,25 @@ sub copy_pages {
 
 sub paste_pages {
  my @page = $slist -> get_selected_indices;
- my $page;
- if (@page) {
-  $page = $slist -> {data}[$page[0]][0];
- }
- else {
-  $page = 0;
+
+# Create a new image file
+ for (@clipboard) {
+  my $suffix = $1 if ($_->[2] =~ /(\.\w*)$/);
+  my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
+  system("cp ".$_->[2]." $new");
+  $_->[2] = $new;
  }
 
 # Block the row-changed signal whilst adding the scan (row) and sorting it.
  $slist -> get_model -> signal_handler_block($slist -> {signalid});
 
- for (@clipboard) {
-  ++$page;
-  $_->[0] = $page;
-
-# Create a new image file
-  my $suffix = $1 if ($_->[2] =~ /(\.\w*)$/);
-  my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
-  system("cp ".$_->[2]." $new");
-  $_->[2] = $new;
-
-  push @{$slist -> {data}}, $_;
-  warn "Pasted clipboard at page $page with filename $new\n" if ($debug);
+ if (@page) {
+  splice @{ $slist->{data} }, $page[0]+1, 0, @clipboard;
+  @page = ( $page[0]+1 );
+ }
+ else {
+  push @{$slist -> {data}}, @clipboard;
+  @page = ( $#{$slist -> {data}} - $#clipboard );
  }
 
  renumber ($slist, 0);
@@ -3721,19 +3717,9 @@ sub paste_pages {
 # Select new page, deselecting others. This fires the select callback,
 # displaying the page
  $slist -> get_selection -> unselect_all;
-
-# Due to the sort, must search for new page
- $page = ( 0 );
-# $page[0] < $#{$slist -> {data}} needed to prevent infinite loop in case of
-# error importing.
- ++$page[0] while ($page[0] < $#{$slist -> {data}}
-                    and $slist -> {data}[$page[0]][0] != $page);
-
  $slist -> select(@page);
  
  update_uimanager();
-
- return @page;
 }
 
 
@@ -3746,7 +3732,7 @@ sub delete_pages {
 
  my @pages = $slist -> get_selected_indices;
  my @page = @pages;
- while ($#pages > -1) {
+ while (@pages) {
   splice @{ $slist->{data} }, $pages[0], 1;
   @pages = $slist -> get_selected_indices;
  }
