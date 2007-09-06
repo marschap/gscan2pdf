@@ -3233,6 +3233,13 @@ sub populate_scan_dialog {
 # Show window
  $windows -> show_all;
  hide_custom();
+
+# Recentre the window if it off the bottom of the screen
+ my (undef, $h) = $windows -> get_size;
+ my (undef, $y) = $windows -> get_position;
+warn "h $h, y $y, screen ", Gtk2::Gdk->screen_height(), "\n";
+ $windows->set_position ('center-on-parent')
+  if ($h + $y > Gtk2::Gdk->screen_height());
 }
 
 
@@ -3714,10 +3721,9 @@ sub paste_pages {
 # Select new page, deselecting others. This fires the select callback,
 # displaying the page
  $slist -> get_selection -> unselect_all;
- my @page;
 
 # Due to the sort, must search for new page
- $page[0] = 0;
+ $page = ( 0 );
 # $page[0] < $#{$slist -> {data}} needed to prevent infinite loop in case of
 # error importing.
  ++$page[0] while ($page[0] < $#{$slist -> {data}}
@@ -6051,8 +6057,6 @@ only the changelogs from official Ubuntu builds are displayed.
 
 =item Progress bar for scan
 
-=item Correct positioning and size of OCR output behind scan.
-
 =item More numbering control in scan dialog - useful if scanner jams.
 
 =back
@@ -6068,6 +6072,10 @@ only the changelogs from official Ubuntu builds are displayed.
 =item When I've worked out how to do it
 
 =over
+
+=item Correct positioning and size of OCR output behind scan -
+      as soon as tesseract supports outputting the information in a sensible
+      manner.
 
 =item Crop function.
 
