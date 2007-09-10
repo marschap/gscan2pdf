@@ -85,6 +85,9 @@
 + note resolution info so that the resulting PDF has the correct paper size.
   Closes bug 1736036 (page size is somehow a ratio of resolution)
   and Debian bug 426525 (after unpaper, saving PDF causes magnified page)
++ no-grayfilter option. Closes Debian bug 426529 (more unpaper options)
++ produce error message if error on tiff export.
+  Closes Debian bug 426527 (tif/jpg export produces empty file)
 + quality setting for JPG compression in save as PDF.
   Closes feature request 1736043 (Compression setting)
   and bug 1736582 (PDFs with embedded JPEGS are large)

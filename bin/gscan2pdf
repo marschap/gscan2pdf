@@ -5,7 +5,6 @@
 # see the included LICENCE file for details.
 
 # To do
-#    sort out warning when page dropped on, say, detail view.
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    write hg2cl if necessary
@@ -139,7 +138,7 @@ while (defined($ARGV[0])) {
   }
  }
  elsif ($ARGV[0] eq "--help") {
-  system("perldoc $0");
+  system("perldoc $0") == 0 or warn $d->get("Error displaying help\n");
   exit;
  }
  elsif ($ARGV[0] eq "--locale") {
@@ -527,7 +526,8 @@ $slist->signal_connect('drag-data-received' => sub {
   my @info = $model->get($iter);
   my $suffix = $1 if ($info[2] =~ /(\.\w*)$/);
   my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
-  system("cp ".$info[2]." $new");
+  system("cp ".$info[2]." $new") == 0 or
+   show_message_dialog($window, 'error', 'close', $d->get('Error copying page'));
   $info[2] = $new;
   push @data, [ @info ];
  }
@@ -1463,7 +1463,8 @@ sub import {
 # Extract images from PDF
      send($writer, sprintf("%f %s %i ", $j/($#filename+1), 0, 0)
       .$d->get('Extracting images from PDF'), 0);
-     system ("pdfimages \"$filename\" x");
+     system ("pdfimages \"$filename\" x") == 0 or
+      send($writer, "2".$d->get('Error extracting images from PDF'), 0);
 
 # Import each image
      my @images = <x-???.???>;
@@ -1480,7 +1481,8 @@ sub import {
 # Split the tiff into its pages and import them individually
      send($writer, sprintf("%f %s %i ", $j/($#filename+1), 0, 0)
       .$d->get('Extracting images from TIFF'), 0);
-     system("tiffsplit \"$filename\"");
+     system("tiffsplit \"$filename\"") == 0 or
+      send($writer, "2".$d->get('Error extracting images from TIFF'), 0);
 
      my @images = <x???.tif>;
      my $i = 0;
@@ -2348,14 +2350,16 @@ sub save_image {
   if ($#pagelist == 0) {
    $filename = $filename.".$SETTING{'image type'}"
     if ($filename !~ /\.$SETTING{'image type'}$/i);
-   system ("convert $pagelist[0] $filename")
-    if (! file_exists($file_chooser, $filename));
+   system ("convert $pagelist[0] $filename") == 0 or
+    show_message_dialog($window, 'error', 'close', $d->get('Error saving image'))
+     if (! file_exists($file_chooser, $filename));
   }
   else {
    my $i = 1;
    foreach (@pagelist) {
-    system ("convert $_ \"$filename.$i.$SETTING{'image type'}\"")
-     if (! file_exists($file_chooser, "$filename.$i.$SETTING{'image type'}"));
+    system ("convert $_ \"$filename.$i.$SETTING{'image type'}\"") == 0 or
+     show_message_dialog($window, 'error', 'close', $d->get('Error saving image'))
+      if (! file_exists($file_chooser, "$filename.$i.$SETTING{'image type'}"));
     $i++;
    }
   }
@@ -2427,7 +2431,8 @@ sub save_TIFF {
      my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
 
 # Convert to tiff
-     system ("convert $_ $tif");
+     system ("convert $_ $tif") == 0 or
+      send($writer, "2".$d->get('Error writing TIFF'), 0);
 
      $_ = $tif;
     }
@@ -2603,20 +2608,20 @@ sub save_djvu {
 # Create the djvu
      my $cmd = "cjb2 $_ $djvu";
      print "$cmd\n" if $debug;
-     system ($cmd);
+     system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
      $_ = $djvu;
      ++$page;
     }
-    send($writer, $page/(($#pagelist+1)*2+1).$d->get("Concatenating pages"), 0);
+    send($writer, $page/(($#pagelist+1)*2+1).$d->get('Concatenating pages'), 0);
     my $cmd = "djvm -c '$filename' @pagelist";
     print "$cmd\n" if $debug;
-    system ($cmd);
+    system ($cmd) == 0 or send($writer, "2".$d->get('Error concatenating DjVu'), 0);
    }
    else {
     send($writer, '0'.sprintf($d->get("Embedding image %i of %i in DjVu"), 1, 1), 0);
     my $cmd = "cjb2 $pagelist '$filename'";
     print "$cmd\n" if $debug;
-    system ($cmd);
+    system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
    }
   
 # Add OCR to text layer
@@ -2654,7 +2659,7 @@ sub save_djvu {
 # Write djvusedtxtfile
      my $cmd = sprintf "djvused '%s' -e 'select %i; set-txt djvusedtxtfile' -s", $filename, $i+1;
      print "$cmd\n" if $debug;
-     system ($cmd);
+     system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
     }
    }
    send($writer, "2", 0);
@@ -2745,7 +2750,8 @@ sub email {
 # Create the PDF
   create_PDF($pdf);
 
-  system ("xdg-email --attach $pdf 'x\@y'");
+  system ("xdg-email --attach $pdf 'x\@y'") == 0 or
+   show_message_dialog($window, 'error', 'close', $d->get('Error creating email'));
 
   $windowe -> hide;
 
@@ -3233,13 +3239,6 @@ sub populate_scan_dialog {
 # Show window
  $windows -> show_all;
  hide_custom();
-
-# Recentre the window if it off the bottom of the screen
- my (undef, $h) = $windows -> get_size;
- my (undef, $y) = $windows -> get_position;
-warn "h $h, y $y, screen ", Gtk2::Gdk->screen_height(), "\n";
- $windows->set_position ('center-on-parent')
-  if ($h + $y > Gtk2::Gdk->screen_height());
 }
 
 
@@ -3591,10 +3590,12 @@ sub prepare_import {
 
  my (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix{$format});
  if (defined($delete) and $delete) {
-  system("mv $ofilename $filename");
+  system("mv $ofilename $filename") == 0 or
+   show_message_dialog($window, 'error', 'close', $d->get('Error importing image'));
  }
  else {
-  system("cp $ofilename $filename");
+  system("cp $ofilename $filename") == 0 or
+   show_message_dialog($window, 'error', 'close', $d->get('Error importing image'));
  }
 
  return $filename, $resolution;
@@ -3695,7 +3696,8 @@ sub paste_pages {
  for (@clipboard) {
   my $suffix = $1 if ($_->[2] =~ /(\.\w*)$/);
   my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
-  system("cp ".$_->[2]." $new");
+  system("cp ".$_->[2]." $new") == 0 or
+   show_message_dialog($window, 'error', 'close', $d->get('Error pasting image'));
   $_->[2] = $new;
  }
 
