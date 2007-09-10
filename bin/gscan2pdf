@@ -3265,6 +3265,7 @@ sub scanimage {
 
 # Add basic options
  push @options, '--batch';
+ push @options, '--progress';
 
 # Make sure we are in temp directory
  chdir $dir;
@@ -3287,8 +3288,9 @@ sub scanimage {
   my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
                                     'destroy-with-parent',
                                     'gtk-cancel' => 'cancel');
-  my $label = Gtk2::Label -> new ($d->get('Scanning')."...");
-  $dialog -> vbox -> add ($label);
+  my $pbar = Gtk2::ProgressBar->new;
+  $pbar->set_text ($d->get('Scanning'));
+  $dialog -> vbox -> add ($pbar);
 
 # Ensure that the dialog box is destroyed when the user responds.
   $dialog -> signal_connect (response => sub {
@@ -3311,12 +3313,19 @@ sub scanimage {
     sysread $error, $buffer, 1024;
     $line .= $buffer;
 
+    while ($line =~ /\r/) {
+     if ($line =~ /^Progress: (\d*\.\d*)%/) {
+      my $fraction = $1/100;
+      $pbar->set_fraction ($fraction);
+     }
+     $line = substr($line, index($line, "\r")+1, length($line))
+    }
     while ($line =~ /\n/) {
      if ($line =~ /^Scanning (-?\d*) pages/) {
-      $label -> set_text($d->get('Scanning')." $1 ".$d->get('pages')."...");
+      $pbar -> set_text($d->get('Scanning')." $1 ".$d->get('pages')."...");
      }
      elsif ($line =~ /^Scanning page (\d*)/) {
-      $label -> set_text(sprintf($d->get('Scanning page %i...'), $1*$step+$offset));
+      $pbar -> set_text(sprintf($d->get('Scanning page %i...'), $1*$step+$offset));
      }
      elsif ($line =~ /^Scanned page (\d*)\. \(scanner status = 5\)/) {
 
@@ -3332,7 +3341,7 @@ sub scanimage {
       }
      }
      elsif ($line =~ /^.* Scanner warming up - waiting \d* seconds/) {
-      $label -> set_text($d->get('Scanner warming up'));
+      $pbar -> set_text($d->get('Scanner warming up'));
      }
      elsif ($line =~ /^Scanned page \d*\. \(scanner status = 7\)/) {
       ;
@@ -6043,8 +6052,6 @@ only the changelogs from official Ubuntu builds are displayed.
 =item v0.9.17
 
 =over
-
-=item Progress bar for scan
 
 =item More numbering control in scan dialog - useful if scanner jams.
 
