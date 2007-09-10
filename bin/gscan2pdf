@@ -2596,7 +2596,7 @@ sub save_djvu {
 # fill $pagelist with filenames depending on which radiobutton is active
    my ($pagelist, $n) = get_pagelist();
    
-   if ($n > 1) {
+   if ($n > 0) {
     my @pagelist = split / /, $pagelist;
     my $page = 0;
     foreach (@pagelist) {
