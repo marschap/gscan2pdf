@@ -79,6 +79,7 @@ use Gtk2::Ex::Simple::List;
 use Gtk2::Gdk::Keysyms;
 use Cwd;                             # To obtain current working directory
 use File::Basename;                  # Split filename into dir, file, ext
+use File::Copy;
 use File::Temp qw(tempfile tempdir); # To create temporary files
 use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
 use Socket;
@@ -526,7 +527,7 @@ $slist->signal_connect('drag-data-received' => sub {
   my @info = $model->get($iter);
   my $suffix = $1 if ($info[2] =~ /(\.\w*)$/);
   my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
-  system("cp ".$info[2]." $new") == 0 or
+  copy($info[2], $new) or 
    show_message_dialog($window, 'error', 'close', $d->get('Error copying page'));
   $info[2] = $new;
   push @data, [ @info ];
@@ -3590,11 +3591,11 @@ sub prepare_import {
 
  my (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix{$format});
  if (defined($delete) and $delete) {
-  system("mv $ofilename $filename") == 0 or
+  move($ofilename, $filename) or 
    show_message_dialog($window, 'error', 'close', $d->get('Error importing image'));
  }
  else {
-  system("cp $ofilename $filename") == 0 or
+  copy($ofilename, $filename) or 
    show_message_dialog($window, 'error', 'close', $d->get('Error importing image'));
  }
 
@@ -3696,7 +3697,7 @@ sub paste_pages {
  for (@clipboard) {
   my $suffix = $1 if ($_->[2] =~ /(\.\w*)$/);
   my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
-  system("cp ".$_->[2]." $new") == 0 or
+  copy($_->[2], $new) or 
    show_message_dialog($window, 'error', 'close', $d->get('Error pasting image'));
   $_->[2] = $new;
  }
