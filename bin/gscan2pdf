@@ -38,12 +38,6 @@
 #    As soon as gtk+ 2.12 is available and released in Gutsy, remove the
 #     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
 #
-# From schmolch
-# 1.) If the scanning process gets interrupted the automatic numbering screws up.
-#      It would be very helpful to be able to tell the number at which it is supposed
-#      to continue counting and into which direction (reverse counting stops working
-#      after the interruption).
-#
 # 1. Crop and autocrop
 #     (see http://mail.gnome.org/archives/gtk-perl-list/2006-June/msg00002.html
 #       and ../../Gtk2-Perl-Demo-0.04/examples/scribble.pl)
@@ -237,6 +231,9 @@ my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
     $scanwatch, @ocr_engine, $bscanall, $bscannum, @clipboard,
+
+# Spin buttons on scan dialog
+    $spin_buttons, $start, $spin_buttoni,
 
 # Variables for inter-process communication
     $reader, $writer);
@@ -609,7 +606,6 @@ $slist -> set_column_editable (0, TRUE);
 # Set-up the callback when the page number has been edited.
 $slist -> {signalid} = $slist -> get_model ->
  signal_connect('row-changed' => sub {
-warn "row-changed\n";
   $slist -> get_model -> signal_handler_block($slist -> {signalid});
 
 # Sort pages
@@ -618,6 +614,9 @@ warn "row-changed\n";
 # And make sure there are no duplicates
   renumber ($slist, 0);
   $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+
+# Update the start spinbutton if necessary
+  update_start() if (defined $spin_buttons);
  });
 
 $scwin_thumbs -> add($slist);
@@ -2985,17 +2984,68 @@ sub populate_scan_dialog {
 # This then fires the callback, updating the options, so no need to do it further down.
  $combobd -> set_active($o);
 
-# Frame for source document
+# Toggle to switch between basic and extended modes
+ my $checkx = Gtk2::CheckButton -> new($d->get('Extended page numbering'));
+ $vbox -> pack_start ($checkx, FALSE, FALSE, 0);
+
+# Frame for extended mode
+ my $framex = Gtk2::Frame -> new($d->get('Page number'));
+ $vbox -> pack_start ($framex, FALSE, FALSE, 0);
+ my $vboxx = Gtk2::VBox -> new;
+ $vboxx -> set_border_width($border_width);
+ $framex -> add ($vboxx);
+
+# SpinButton for starting page number
+ my $hboxxs = Gtk2::HBox -> new;
+ $vboxx -> pack_start ($hboxxs, FALSE, FALSE, 0);
+ my $labelxs = Gtk2::Label -> new ($d->get('Start'));
+ $hboxxs -> pack_start($labelxs, FALSE, FALSE, 0);
+ $start = $#{$slist -> {data}}+2;
+ $spin_buttons = Gtk2::SpinButton -> new_with_range($start, 99999, 1);
+ $hboxxs -> pack_end($spin_buttons, FALSE, FALSE, 0);
+
+# SpinButton for page number increment
+ my $hboxi = Gtk2::HBox -> new;
+ $vboxx -> pack_start ($hboxi, FALSE, FALSE, 0);
+ my $labelxi = Gtk2::Label -> new ($d->get('Increment'));
+ $hboxi -> pack_start($labelxi, FALSE, FALSE, 0);
+ $spin_buttoni = Gtk2::SpinButton -> new_with_range(-99, 99, 1);
+ my $step = 1;
+ $spin_buttoni -> set_value($step);
+ $hboxi -> pack_end($spin_buttoni, FALSE, FALSE, 0);
+ $spin_buttoni -> signal_connect ('value-changed' => sub {
+  $spin_buttoni -> set_value(-$step) if ($spin_buttoni -> get_value == 0);
+  $step = $spin_buttoni -> get_value;
+ });
+
+# Check whether the start page exists
+ $spin_buttons -> signal_connect ('value-changed' => \&update_start);
+
+# Frame for standard mode
  my $frames = Gtk2::Frame -> new($d->get('Source document'));
  $vbox -> pack_start ($frames, FALSE, FALSE, 0);
  my $vboxs = Gtk2::VBox -> new;
  $vboxs -> set_border_width($border_width);
  $frames -> add ($vboxs);
 
+ $checkx -> signal_connect (toggled => sub {
+  if ($checkx -> get_active) {
+   $frames->hide_all;
+   $framex->show_all;
+  }
+  else {
+   $frames->show_all;
+   $framex->hide_all;
+  }
+ });
+
 # Single sided button
  my $buttons = Gtk2::RadioButton -> new(undef, $d->get('Single sided'));
  $tooltips -> set_tip ($buttons, $d->get('Source document is single-sided'));
  $vboxs -> pack_start($buttons, TRUE, TRUE, 0);
+ $buttons -> signal_connect (clicked => sub {
+  $spin_buttoni -> set_value(1);
+ });
 
 # Double sided button
  my $buttond = Gtk2::RadioButton -> new($buttons -> get_group, $d->get('Double sided'));
@@ -3017,6 +3067,12 @@ sub populate_scan_dialog {
  }
  $combobs -> signal_connect (changed => sub {
   $buttond -> set_active(TRUE); # Set the radiobutton active
+  if ($combobs -> get_active == 0) {
+   $spin_buttoni -> set_value(2);
+  }
+  else {
+   $spin_buttoni -> set_value(-2);
+  }
  });
  $tooltips -> set_tip ($ev,
               $d->get('Sets which side of a double-sided document is scanned'));
@@ -3024,6 +3080,16 @@ sub populate_scan_dialog {
 # Have to do this here because setting the facing combobox switches it
  $buttons -> set_active(TRUE);
  $hboxs -> pack_end ($ev, FALSE, FALSE, 0);
+
+# Have to put the double-sided callback here to reference page side
+ $buttond -> signal_connect (clicked => sub {
+  if ($combobs -> get_active == 0) {
+   $spin_buttoni -> set_value(2);
+  }
+  else {
+   $spin_buttoni -> set_value(-2);
+  }
+ });
 
 # CheckButton for unpaper
  my $hboxu = Gtk2::HBox -> new;
@@ -3238,9 +3304,35 @@ sub populate_scan_dialog {
 
 # Show window
  $windows -> show_all;
+ $framex->hide_all;
  hide_custom();
 }
 
+
+# Called either from changed-value signal of spinbutton,
+# or row-changed signal of simplelist
+
+sub update_start {
+ my $exists;
+ my $i = 0;
+ my $value = $spin_buttons->get_value;
+ while (! defined $exists) {
+  if ($i > $#{$slist -> {data}} or $slist -> {data}[$i][0] > $value) {
+   $exists = FALSE;
+  }
+  elsif ($slist -> {data}[$i][0] == $value) {
+   $exists = TRUE;
+  }
+  else {
+   $i++;
+  }
+ }
+ if ($exists) {
+  $start = $value - $spin_buttoni -> get_value if ($start == $value);
+  $spin_buttons -> set_value(2*$value-$start);
+ }
+ $start = $value;
+}
 
 # Carry out the scan with scanimage and the options passed.
 
@@ -3659,6 +3751,12 @@ sub add_image {
  $slist -> select(@page);
  
  update_uimanager();
+
+# If the scan dialog has already been drawn, update the start page spinbutton
+ if (defined $spin_buttons) {
+  $spin_buttons->set_value($spin_buttons->get_value + $spin_buttoni->get_value)
+   if ($spin_buttons->get_value == $page);
+ }
 
  return @page;
 }
@@ -6063,14 +6161,6 @@ only the changelogs from official Ubuntu builds are displayed.
 =head1 Roadmap
 
 =over
-
-=item v0.9.17
-
-=over
-
-=item More numbering control in scan dialog - useful if scanner jams.
-
-=back
 
 =item v1.0.0
 
