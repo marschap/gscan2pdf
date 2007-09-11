@@ -44,8 +44,7 @@
 #      to continue counting and into which direction (reverse counting stops working
 #      after the interruption).
 #
-# 1. Progress meter for scans.
-# 2. Crop and autocrop
+# 1. Crop and autocrop
 #     (see http://mail.gnome.org/archives/gtk-perl-list/2006-June/msg00002.html
 #       and ../../Gtk2-Perl-Demo-0.04/examples/scribble.pl)
 #
@@ -3443,14 +3442,27 @@ sub scanadf {
   my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
                                     'destroy-with-parent',
                                     'gtk-cancel' => 'cancel');
-  my $label = Gtk2::Label -> new ($d->get('Scanning')."...");
-  $dialog -> vbox -> add ($label);
+  my $pbar = Gtk2::ProgressBar->new;
+  $pbar -> set_text($d->get('Scanning')."...");
+  $pbar -> set_pulse_step(.1);
+  $dialog -> vbox -> add ($pbar);
+  my $running = TRUE;
+
+# Timer will run until callback returns false 
+  my $timer = Glib::Timeout->add (100, sub { if ($running) {
+                                              $pbar->pulse;
+                                              return TRUE;
+                                             }
+                                             else {
+                                              return FALSE;
+                                             } });
 
 # Ensure that the dialog box is destroyed when the user responds.
   $dialog -> signal_connect (response => sub {
    $_[0] -> destroy;
    local $SIG{HUP} = 'IGNORE';
    kill HUP => $pid;
+   $running = FALSE;
   });
   $dialog -> show_all;
  
@@ -3466,16 +3478,17 @@ sub scanadf {
 
     while ($line =~ /\n/) {
      if ($line =~ /^.* Scanner warming up - waiting \d* seconds/) {
-      $label -> set_text($d->get('Scanner warming up'));
+      $pbar -> set_text($d->get('Scanner warming up'));
      }
      elsif ($line =~ /^Scanned document out(\d*)\.pnm/) {
-      $label -> set_text(sprintf($d->get('Scanned page %i...'), $1*$step+$offset));
+      $pbar -> set_text(sprintf($d->get('Scanned page %i...'), $1*$step+$offset));
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
       if (! import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap',
                                   $SETTING{resolution}, TRUE, $unpaper, $ocr)) {
        $dialog -> destroy;
+       $running = FALSE;
        show_message_dialog(
         $windows, 'error', 'close', $d->get('Unable to load image')
        );
@@ -3490,6 +3503,7 @@ sub scanadf {
      }
      elsif ($line =~ /^.* sane_start: Device busy/) {
       $dialog -> destroy;
+      $running = FALSE;
       show_message_dialog($windows, 'error', 'close', $d->get('Device busy'));
      }
      else {
@@ -3519,6 +3533,7 @@ warn "$text\n";
     }
 
     $dialog -> destroy;
+    $running = FALSE;
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
