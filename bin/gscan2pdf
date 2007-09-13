@@ -5,6 +5,7 @@
 # see the included LICENCE file for details.
 
 # To do
+#    recode djvu save
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    write hg2cl if necessary
@@ -233,7 +234,7 @@ my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
     $scanwatch, @ocr_engine, $bscanall, $bscannum, @clipboard,
 
 # Spin buttons on scan dialog
-    $spin_buttons, $start, $spin_buttoni,
+    $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
 
 # Variables for inter-process communication
     $reader, $writer);
@@ -546,6 +547,8 @@ $slist->signal_connect('drag-data-received' => sub {
  }
  renumber($slist, 0);
  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+
+ update_start();
 
  $context->finish(1, $delete, time);
 });
@@ -2958,12 +2961,9 @@ sub populate_scan_dialog {
  $hboxn -> pack_start($bscannum, FALSE, FALSE, 0);
 
 # Number of pages
- my $spin_button = Gtk2::SpinButton -> new_with_range(1, 99, 1);
- $tooltips -> set_tip ($spin_button, $d->get('Set number of pages to scan'));
- $spin_button -> signal_connect ('value-changed' => sub {
-  $bscannum -> set_active(TRUE); # Set the radiobutton active
- });
- $hboxn -> pack_end ($spin_button, FALSE, FALSE, 0);
+ $spin_buttonn = Gtk2::SpinButton -> new_with_range(1, 99, 1);
+ $tooltips -> set_tip ($spin_buttonn, $d->get('Set number of pages to scan'));
+ $hboxn -> pack_end ($spin_buttonn, FALSE, FALSE, 0);
 
 # Set default
  if (defined($SETTING{'pages to scan'})) {
@@ -2972,7 +2972,7 @@ sub populate_scan_dialog {
   }
   else {
    $bscannum -> set_active(TRUE);
-   $spin_button -> set_value($SETTING{'pages to scan'});
+   $spin_buttonn -> set_value($SETTING{'pages to scan'});
   }
  }
  else {
@@ -3001,7 +3001,8 @@ sub populate_scan_dialog {
  my $labelxs = Gtk2::Label -> new ($d->get('Start'));
  $hboxxs -> pack_start($labelxs, FALSE, FALSE, 0);
  $start = $#{$slist -> {data}}+2;
- $spin_buttons = Gtk2::SpinButton -> new_with_range($start, 99999, 1);
+ $spin_buttons = Gtk2::SpinButton -> new_with_range(1, 99999, 1);
+ $spin_buttons->set_value($start);
  $hboxxs -> pack_end($spin_buttons, FALSE, FALSE, 0);
 
 # SpinButton for page number increment
@@ -3021,23 +3022,20 @@ sub populate_scan_dialog {
 # Check whether the start page exists
  $spin_buttons -> signal_connect ('value-changed' => \&update_start);
 
+# Callback on changing number of pages
+ $spin_buttonn -> signal_connect ('value-changed' => sub {
+  $bscannum -> set_active(TRUE); # Set the radiobutton active
+
+# Check that there is room in the list for the number of pages
+  update_number();
+ });
+
 # Frame for standard mode
  my $frames = Gtk2::Frame -> new($d->get('Source document'));
  $vbox -> pack_start ($frames, FALSE, FALSE, 0);
  my $vboxs = Gtk2::VBox -> new;
  $vboxs -> set_border_width($border_width);
  $frames -> add ($vboxs);
-
- $checkx -> signal_connect (toggled => sub {
-  if ($checkx -> get_active) {
-   $frames->hide_all;
-   $framex->show_all;
-  }
-  else {
-   $frames->show_all;
-   $framex->hide_all;
-  }
- });
 
 # Single sided button
  my $buttons = Gtk2::RadioButton -> new(undef, $d->get('Single sided'));
@@ -3088,6 +3086,35 @@ sub populate_scan_dialog {
   }
   else {
    $spin_buttoni -> set_value(-2);
+  }
+ });
+
+# Have to put the extended pagenumber checkbox here to reference simple controls
+ $checkx -> signal_connect (toggled => sub {
+  if ($checkx -> get_active) {
+   $frames->hide_all;
+   $framex->show_all;
+  }
+  else {
+   if ($#{$slist -> {data}} > -1) {
+    $spin_buttons->set_value($slist -> {data}[$#{$slist -> {data}}][0]+1);
+   }
+   else {
+    $spin_buttons->set_value(1);
+   }
+   if ($spin_buttoni -> get_value == 1) {
+    $buttons -> set_active(TRUE);
+   }
+   elsif ($spin_buttoni -> get_value > 0) {
+    $buttond -> set_active(TRUE);
+    $combobs -> set_active(0);
+   }
+   else {
+    $buttond -> set_active(TRUE);
+    $combobs -> set_active(1);
+   }
+   $frames->show_all;
+   $framex->hide_all;
   }
  });
 
@@ -3219,65 +3246,25 @@ sub populate_scan_dialog {
 # Get selected number of pages
   my $npages;
   if ($bscannum -> get_active) {
-   $SETTING{'pages to scan'} = $spin_button -> get_value;
+   $SETTING{'pages to scan'} = $spin_buttonn -> get_value;
    $npages = $SETTING{'pages to scan'};
   }
   else {
    $SETTING{'pages to scan'} = 'all';
-   $npages = 0;
-  }
-
-# Start from next available page
-  my $start;
-  if ($#{$slist -> {data}} > -1) {
-   $start = $slist -> {data}[$#{$slist -> {data}}][0] + 1;
-  }
-  else {
-   $start = 1;
-  }
-
-# Set step according to single/double sided, facing/reverse page
-  my $step = 1;
-  if ($buttond -> get_active) {
-   if (($combobs -> get_active) == 0) { # facing page
-    $step = 2;
+   if ($step < 0) {
+    $npages = pages_possible();
    }
-   else { # reverse page
-    if ($start == 1) {
-     show_message_dialog($windows, 'error', 'cancel', $d->get('Must scan facing pages first'));
-     return TRUE;
-    }
-
-    $step = -2;
-
-# Check that there is room in the list for the reverse pages
-    my $i = 1;
-    my $j = $#{$slist -> {data}};
-    while ($slist->{data}[$j][0] != $start+$i*$step
-           and $start+$i*$step > 0
-           and $j > -1) {
-     if ($slist->{data}[$j][0] > $start+$i*$step) {
-      --$j;
-     }
-     else {
-      ++$i;
-     }
-    }
-    if ($bscannum -> get_active) {
-     if (($spin_button -> get_value) > $i) {
-      show_message_dialog(
-       $windows, 'error', 'cancel',
-       $d->get("Cannot scan more reverse pages\nthan facing pages")
-      );
-      return TRUE;
-     }
-    }
-
-# If user hasn't specified number of pages, then set number that is possible
-    else {
-     $npages = $i;
-    }
+   else {
+    $npages = 0;
    }
+  }
+
+  my $start = $spin_buttons->get_value;
+  my $step = $spin_buttoni->get_value;
+
+  if (! $checkx -> get_active and $start == 1 and $step < 0) {
+   show_message_dialog($windows, 'error', 'cancel', $d->get('Must scan facing pages first'));
+   return TRUE;
   }
 
   $SETTING{'unpaper on scan'} = $ubutton->get_active;
@@ -3313,26 +3300,79 @@ sub populate_scan_dialog {
 # or row-changed signal of simplelist
 
 sub update_start {
- my $exists;
- my $i = 0;
+ my $exists = TRUE;
  my $value = $spin_buttons->get_value;
- while (! defined $exists) {
-  if ($i > $#{$slist -> {data}} or $slist -> {data}[$i][0] > $value) {
+ my $step = $value - $start;
+ $step = $spin_buttoni->get_value if ($step == 0);
+ my $i = $step > 0 ? 0 : $#{$slist -> {data}};
+ $start = $value;
+ while ($exists) {
+  if ($i < 0 or $i > $#{$slist -> {data}}
+      or ($slist -> {data}[$i][0] > $value and $step > 0)
+      or ($slist -> {data}[$i][0] < $value and $step < 0)) {
    $exists = FALSE;
   }
   elsif ($slist -> {data}[$i][0] == $value) {
-   $exists = TRUE;
+   $value += $step;
+   if ($value < 1) {
+    $value = 1;
+    $step = 1;
+   }
   }
   else {
-   $i++;
+   $i += $step > 0 ? 1 : -1;
   }
  }
- if ($exists) {
-  $start = $value - $spin_buttoni -> get_value if ($start == $value);
-  $spin_buttons -> set_value(2*$value-$start);
- }
+ $spin_buttons -> set_value($value) if ($start != $value);
  $start = $value;
+
+ update_number() if ($bscannum -> get_active);
 }
+
+
+# Check how many pages could be scanned
+
+sub pages_possible {
+ my $n = 1;
+ my $i = $#{$slist -> {data}};
+ my $start = $spin_buttons->get_value;
+ my $step = $spin_buttoni->get_value;
+ my $exists;
+ while (! defined $exists) {
+  if ($start+$n*$step < 1) {
+   $exists = TRUE;
+  }
+  elsif ($i < 0 and $step < 0) {
+   ++$n;
+  }
+  elsif ($i > $#{$slist -> {data}} or $i < 0) {
+   $exists = FALSE;
+   $n = -1
+  }
+  elsif ($slist->{data}[$i][0] == $start+$n*$step) {
+   $exists = TRUE;
+  }
+  elsif ($slist->{data}[$i][0] > $start+$n*$step and $step < 0) {
+   --$i;
+  }
+  elsif ($slist->{data}[$i][0] < $start+$n*$step and $step > 0) {
+   ++$i;
+  }
+  else {
+   ++$n;
+  }
+ }
+ return $n;
+}
+
+
+# Update the number of pages to scan spinbutton if necessary
+
+sub update_number {
+ my $n = pages_possible();
+ $spin_buttonn->set_value($n) if ($n > 0 and $n < $spin_buttonn->get_value);
+}
+
 
 # Carry out the scan with scanimage and the options passed.
 
@@ -3844,6 +3884,8 @@ sub paste_pages {
  $slist -> get_selection -> unselect_all;
  $slist -> select(@page);
  
+ update_start();
+
  update_uimanager();
 }
 
