@@ -49,8 +49,8 @@
 #    Make sure that file list in .spec and hg manifest reflects MANIFEST
 #    Download new translations
 #    Update translators in credits
-#    Check a translation with LANGUAGE=de gscan2pdf --debug
-#    Make sure that changelog reflects History and hg log from bin/gscan2pdf
+#    Check a translation with LANGUAGE=de bin/gscan2pdf --debug
+#    Make appropriate updates to debian/changelog
 # 2. perl Makefile.PL
 #    make rpmdist debdist
 #    test dist sudo dpkg -i gscan2pdf-x.x.x_all.deb
@@ -3952,25 +3952,25 @@ EOS
  $about->set_license ($d->get('Licensed under the GPLv2'));
  $about->set_website ('http://gscan2pdf.sf.net');
  my $translators = <<EOS;
-Alexandre Prokoudine
-Hugo Pereira
-Jen Fraggle
-Nicolas Stransky
 Petr Jelínek
+Alexandre Prokoudine
+Nicolas Stransky
+Hugo Pereira
 Piotr Strębski
-Alberto Boiti
+Jen Fraggle
 Dirk Tas
+Alberto Boiti
 mecedesjorge
+Yözen Hernández
 Christoph Langner
+Spartakus
+Matthias Gutjahr
+Jacob Nielsen
 Chien Cheng Wei
-booxter
 Rodrigo Donado
-Daniel Nylander
-Tikkel
+booxter
 Mathieu Goeminne
 Andrea (pikkio)
-Eric Spierings
-Nicolas Velin
 EOS
  $about->set_translator_credits ($translators);
  $about->set_artists ('lodp');

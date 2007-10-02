@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.16
+Version: 0.9.17
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -82,25 +82,17 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Fri Aug 24 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
-  - do not restore mode setting if default device not found
-  - workaround for those versions of imagemagick that produce 16bit output
-    with rotate.
-    Patch 1760543 (rotate creates 16bit images that tesseract can't read)
-    from Chris Mayo
-  - ProgressBar during image import
-  - Downsample option.
-    Closes Feature Request 1722832 (setting the resolution before export)
-  - Hidden text layer from OCR in djvu output
-  - Support for language options in tesseract-2.00
-  - UTF-8 support in OCR output
-  - Fixed bug caused by imagemagick giving resolution=0.
-    Closes bug 1770367 (Illegal division by zero)
-  - ProgressBar during TIFF save
-  - better attempt at trapping errors whilst embedding scan in PDF
-  - ProgressBar during DjVu save
-  - Stop unpaper and ocr if scan is cancelled
-  - Fixed scrolling bug during drag and drop
-  - Update to Dutch translation (thanks to Eric Spierings)
-  - Update to French translation (thanks to Nicolas Stransky)
-  - Update to Spanish translation (thanks to Rodrigo Donado)
+* Tue Oct 02 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release.
+  - New upstream release.  Closes: #433497, #426525, #440204.
+  - Thanks to Jeffrey Ratcliffe for contributing to this Debian release.
+  - Added Jeffrey Ratcliffe to Uploaders.
+  - New upstream release.
+  - New upstream release.
+  - Initial upload to Debian.  Closes: #420953.
+  - Added support for negative ranges on sliders. [516c47fb2f00]
+  - Added support for brightness slider.  Needed for Visioneer Strobe XP
+    450 scanners.  [516c47fb2f00]
+  - Added scanners/xp450 [b68d6a627700]
+  - Add .tif extension when saving TIFF and DjVu files, to match PDF
+    code.  Fix up PDF saving extension regexp. [a0354eeeb4bf, 06425ce40520]

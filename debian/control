@@ -3,8 +3,11 @@ Section: utils
 Priority: optional
 Build-Depends: debhelper (>= 4.0.2)
 Build-Depends-Indep: perl (>= 5.8.0-7)
-Maintainer: Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+Maintainer: John Goerzen <jgoerzen@complete.org>
+Uploaders: Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
 Standards-Version: 3.7.2
+XS-Vcs-hg: http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf/
+XS-Vcs-Browser: http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf/
 
 Package: gscan2pdf
 Architecture: all
@@ -22,3 +25,5 @@ Description: A GUI to produce PDFs from scanned documents
  PDF conversion is done by PDF::API2.
  .
  The resulting document may be saved as a PDF or a multipage TIFF file.
+ .
+ The gscan2pdf homepage is http://gscan2pdf.sourceforge.net/

@@ -1,25 +1,38 @@
-gscan2pdf (0.9.16) unstable; urgency=low
+gscan2pdf (0.9.17) unstable; urgency=low
 
-  * do not restore mode setting if default device not found
-  * workaround for those versions of imagemagick that produce 16bit output
-    with rotate.
-    Patch 1760543 (rotate creates 16bit images that tesseract can't read)
-    from Chris Mayo
-  * ProgressBar during image import
-  * Downsample option.
-    Closes Feature Request 1722832 (setting the resolution before export)
-  * Hidden text layer from OCR in djvu output
-  * Support for language options in tesseract-2.00
-  * UTF-8 support in OCR output
-  * Fixed bug caused by imagemagick giving resolution=0.
-    Closes bug 1770367 (Illegal division by zero)
-  * ProgressBar during TIFF save
-  * better attempt at trapping errors whilst embedding scan in PDF
-  * ProgressBar during DjVu save
-  * Stop unpaper and ocr if scan is cancelled
-  * Fixed scrolling bug during drag and drop
-  * Update to Dutch translation (thanks to Eric Spierings)
-  * Update to French translation (thanks to Nicolas Stransky)
-  * Update to Spanish translation (thanks to Rodrigo Donado)
+  * New upstream release.
 
- -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@bigfoot.com>  Fri, 24 Aug 2007 20:43:22 +0200
+ -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>  Tue, 02 Oct 2007 20:02:22 +0200
+
+gscan2pdf (0.9.16-1) unstable; urgency=low
+
+  * New upstream release.  Closes: #433497, #426525, #440204.
+  * Thanks to Jeffrey Ratcliffe for contributing to this Debian release.
+  * Added Jeffrey Ratcliffe to Uploaders.
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 06 Sep 2007 08:45:00 -0500
+
+gscan2pdf (0.9.10-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 06 Jun 2007 10:08:53 -0500
+
+gscan2pdf (0.9.9-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 01 Jun 2007 04:55:12 -0500
+
+gscan2pdf (0.9.7-1) unstable; urgency=low
+
+  * Initial upload to Debian.  Closes: #420953.
+  * Added support for negative ranges on sliders. [516c47fb2f00]
+  * Added support for brightness slider.  Needed for Visioneer Strobe XP
+    450 scanners.  [516c47fb2f00]
+  * Added scanners/xp450 [b68d6a627700]
+  * Add .tif extension when saving TIFF and DjVu files, to match PDF
+    code.  Fix up PDF saving extension regexp. [a0354eeeb4bf, 06425ce40520]
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 25 Apr 2007 09:31:38 -0500
+

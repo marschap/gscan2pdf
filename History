@@ -1,4 +1,4 @@
-0.9.17 (30.09.2007):
+0.9.17 (02.10.2007):
 
 + cut, copy and paste of pages
   Closes Feature Request 1780866 (Cut/copy/paste editing functions)
@@ -7,6 +7,16 @@
 + fixed bug saving DjVu with 2 pages
 + ProgressBar during scan
 + extended page numbering to scan dialog
++ Update to Czech translation (thanks to Petr JelÃ­nek)
++ Update to Danish translation (thanks to Jacob Nielsen)
++ Update to German translation (thanks to Matthias Gutjahr)
++ Added Greek translation (thanks to Spartakus)
++ Update to French translation (thanks to Nicolas Stransky)
++ Update to Italian translation (thanks to Andrea (pikkio))
++ Update to Polish translation (thanks to Piotr StrÄ™bski)
++ Update to Russian translation (thanks to Alexandre Prokoudine)
++ Update to Spanish translation (thanks to YÃ¶zen HernÃ¡ndez)
++ Relicensed under GPLv3
 
 
 0.9.16 (24.08.2007):
@@ -73,7 +83,7 @@
 + Fixed bug where Custom paper size not set from default
 + Update to Danish translation (thanks to Jacob Nielsen)
 + Update to French translation (thanks to Pierre Slamich)
-+ Update to Polish translation (thanks to Piotr Strebski)
++ Update to Polish translation (thanks to Piotr StrÄ™bski)
 + Fixed blocking whilst setting up/updating scan dialog
 + US Legal paper.
   Closes feature request 1748679 (RFE: add legal paper size as an option)
@@ -96,10 +106,10 @@
   Closes feature request 1709380 (Support PNG output equivalent to TIFF)
 + save default dates as offset from current, closing bug 1736037
   (pdf file->save dialog should automatically set the date to the current day)
-+ Update to Czech translation (thanks to Petr Jelínek)
++ Update to Czech translation (thanks to Petr JelÃ­nek)
 + update to German translation (thanks to Florian)
 + update to Portuguese translation (thanks to Hugo Pereira)
-+ Update to Spanish translation (thanks to Raúl González Duque)
++ Update to Spanish translation (thanks to RaÃºl GonzÃ¡lez Duque)
 
 
 0.9.10 (05.06.2007):
@@ -118,7 +128,7 @@
 + ProgressBar for PDF save, closing feature request 1712964
 + Portuguese translation (thanks to Hugo Pereira)
 + Danish translation (thanks to Jacob Nielsen)
-+ Update to Czech translation (thanks to Petr Jelínek)
++ Update to Czech translation (thanks to Petr JelÃ­nek)
 + Update to Dutch translation (thanks to Eric Spierings)
 + Update to French translation (thanks to codL)
 + remembers OCR on scan setting
@@ -134,7 +144,7 @@
 + Fixed bug where attempt to run gocr after scanning despite not being installed
 + Replaced about MessageDialog with AboutDialog
 + Update to Russian translation (thanks to Alexandre Prokoudine)
-+ Update to Czech translation (thanks to Petr Jelínek)
++ Update to Czech translation (thanks to Petr JelÃ­nek)
 + Update to Dutch translation (thanks to Eric Spierings)
 + Packed unpaper options into Gtk2::Notebook to make dialog shorter, closed bug
   1709379 ("unpaper-0.2 dialog too tall for 1024x768")
@@ -203,7 +213,7 @@
 + Seperated pdf, tiff and scan compression defaults
 + Save TIFF and DjVu respects enable options toggle
 + cancel on scan dialog sends ctrl-c to scanimage
-+ update to Czech translation (thanks to Petr Jelínek)
++ update to Czech translation (thanks to Petr JelÃ­nek)
 
 
 0.9.4 (25.02.2007):
@@ -212,7 +222,7 @@
 + enable PDF options toggle
 + compression scan option
 + closed bug 1656900 where hup condition not recognised under FreeBSD.
-+ update to Czech translation (thanks to Petr Jelínek)
++ update to Czech translation (thanks to Petr JelÃ­nek)
 + update to German translation (thanks to Florian)
 + update to Russian translation (thanks to Alexandre Prokoudine)
 
@@ -230,7 +240,7 @@
 
 0.9.2 (31.01.2007):
 
-+ Update to Czech translation (thanks to Petr Jelínek)
++ Update to Czech translation (thanks to Petr JelÃ­nek)
 + Spanish translation (thanks to mecedesjorge)
 + Passes image depth to imagemagick to ensure rotation produces a valid TIFF
 + DjVu support
@@ -256,7 +266,7 @@ Fixed bug where frontend not properly selected
 0.8.9 (11.01.2007):
 
 + Spanish translation (thanks to mecedesjorge)
-+ Update to Czech translation (thanks to Petr Jelínek)
++ Update to Czech translation (thanks to Petr JelÃ­nek)
 + Support for scanadf frontend
 + Email as PDF
 + Displays warm-up message if backend supports it
@@ -267,7 +277,7 @@ Fixed bug where frontend not properly selected
 
 + Belarusian translation (thanks to booxter)
 + Chinese (Taiwan) translation (thanks to cwchien)
-+ Czech translation (thanks to Petr Jelínek)
++ Czech translation (thanks to Petr JelÃ­nek)
 + Russian translation (thanks to Alexandre Prokoudine)
 + Update to Swedish translation (thanks to Daniel Nylander)
 - 2 scanimage calls (speedup).
