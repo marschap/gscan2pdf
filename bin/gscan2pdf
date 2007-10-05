@@ -5,7 +5,6 @@
 # see the included LICENCE file for details.
 
 # To do
-#    recode djvu save
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    write hg2cl if necessary
@@ -85,7 +84,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.17';
+my $version = '0.9.18';
 
 # Standard paper sizes
 my @paperg = ('A4', 'US Letter', 'US Legal', 'Custom');
@@ -2595,47 +2594,22 @@ sub save_djvu {
 
   my $pid = start_process(sub {
 
-# fill $pagelist with filenames depending on which radiobutton is active
-   my ($pagelist, $n) = get_pagelist();
-   
-   if ($n > 0) {
-    my @pagelist = split / /, $pagelist;
-    my $page = 0;
-    foreach (@pagelist) {
-     send($writer, $page/(($#pagelist+1)*2+1)
-      .sprintf($d->get("Embedding image %i of %i in DjVu"),
-                                                     $page+1, $#pagelist+1), 0);
-     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
-
-# Create the djvu
-     my $cmd = "cjb2 $_ $djvu";
-     print "$cmd\n" if $debug;
-     system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
-     $_ = $djvu;
-     ++$page;
-    }
-    send($writer, $page/(($#pagelist+1)*2+1).$d->get('Concatenating pages'), 0);
-    my $cmd = "djvm -c '$filename' @pagelist";
-    print "$cmd\n" if $debug;
-    system ($cmd) == 0 or send($writer, "2".$d->get('Error concatenating DjVu'), 0);
-   }
-   else {
-    send($writer, '0'.sprintf($d->get("Embedding image %i of %i in DjVu"), 1, 1), 0);
-    my $cmd = "cjb2 $pagelist '$filename'";
-    print "$cmd\n" if $debug;
-    system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
-   }
-  
-# Add OCR to text layer
    my @pagelist = get_page_index();
+   
    for (my $i = 0; $i <= $#pagelist; $i++) {
     my $j = $pagelist[$i];
+    send($writer, $i/($#pagelist+2)
+     .sprintf($d->get("Writing page %i of %i"), $i+1, $#pagelist+1), 0);
+    my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
+
+# Create the djvu
+    my $cmd = "cjb2 ".$slist -> {data}[$j][2]." $djvu";
+    print "$cmd\n" if $debug;
+    system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
+    $pagelist[$i] = $djvu;
+
+# Add OCR to text layer
     if (defined($slist -> {data}[$j][3]) and $slist -> {data}[$j][3] ne '') {
-
-     send($writer, ($#pagelist+$i)/(($#pagelist+1)*2+1)
-      .sprintf($d->get("Embedding OCR output %i of %i in DjVu"),
-                                                        $i+1, $#pagelist+1), 0);
-
      my $image = Image::Magick->new;
      my $x = $image->Read($slist -> {data}[$j][2]);
      warn "$x" if "$x";
@@ -2651,7 +2625,7 @@ sub save_djvu {
 
 # Write djvusedtxtfile
      my $djvusedtxtfile = "djvusedtxtfile";
-     open (FILE, "> $djvusedtxtfile")
+     open (FILE, ">:utf8", $djvusedtxtfile)
       or die sprintf($d->get("Can't open file: %s"), $djvusedtxtfile);
      print FILE "(page 0 0 ", int($w*72/$resolution), " ", int($h*72/$resolution), "\n";
      print FILE "(line 0 0 ", int($w*72/$resolution), " ", int($h*72/$resolution), " \"";
@@ -2659,11 +2633,16 @@ sub save_djvu {
      close FILE;
 
 # Write djvusedtxtfile
-     my $cmd = sprintf "djvused '%s' -e 'select %i; set-txt djvusedtxtfile' -s", $filename, $i+1;
+     my $cmd = "djvused '$djvu' -e 'select 1; set-txt djvusedtxtfile' -s";
      print "$cmd\n" if $debug;
      system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
     }
    }
+   send($writer, ($#pagelist+1)/($#pagelist+2).$d->get('Closing DjVu'), 0);
+   my $cmd = "djvm -c '$filename' @pagelist";
+   print "$cmd\n" if $debug;
+   system ($cmd) == 0 or send($writer, "2".$d->get('Error closing DjVu'), 0);
+  
    send($writer, "2", 0);
   });
 
@@ -6225,6 +6204,12 @@ only the changelogs from official Ubuntu builds are displayed.
 =item Support for non-bitonal compression in djvu.
 
 =item Import DjVu (using decoders from DjVuLibre)
+
+=item Save to PS (using pdf2ps).
+
+=item Print (using pdf2ps and lpr).
+
+=item Copier.
 
 =back
 
