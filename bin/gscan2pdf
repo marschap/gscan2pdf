@@ -2512,11 +2512,15 @@ sub save_djvu_dialog {
   $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
   my $label = Gtk2::Label -> new ($d->get('Compression'));
   $hboxc -> pack_start ($label, FALSE, FALSE, 0);
-  my $combob = Gtk2::ComboBox->new_text;
 
 # Fill compression ComboBox
-  $combob->append_text ($d->get('Bitonal'));
-  $combob->set_active(0);
+
+# Compression options
+  my @compression = (
+   [ 'cjb2', $d->get('Bitonal'), $d->get('Compress output with bitonal (cjb2) encoding.') ],
+   [ 'c44',  $d->get('Photo'),  $d->get('Compress output with photo (c44) encoding.') ],
+  );
+  my $combob =  combobox_from_array($SETTING{'djvu compression'}, @compression);
   $hboxc -> pack_end ($combob, FALSE, FALSE, 0);
 
 # Frame for page range
@@ -2529,7 +2533,10 @@ sub save_djvu_dialog {
 # Save button
   my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
   $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
-  $sbutton -> signal_connect (clicked => sub { save_djvu(); } );
+  $sbutton -> signal_connect (clicked => sub {
+   $SETTING{'djvu compression'} = $compression[$combob->get_active][0];
+   save_djvu();
+  });
 
 # Cancel button
   my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
@@ -2604,7 +2611,7 @@ sub save_djvu {
 
 # Create the djvu
     my $resolution = $slist -> {data}[$j][4];
-    my $cmd = "cjb2 -dpi $resolution $slist->{data}[$j][2] $djvu";
+    my $cmd = "$SETTING{'djvu compression'} -dpi $resolution $slist->{data}[$j][2] $djvu";
     print "$cmd\n" if $debug;
     system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
     $pagelist[$i] = $djvu;
@@ -6200,8 +6207,6 @@ only the changelogs from official Ubuntu builds are displayed.
       manner.
 
 =item Crop function.
-
-=item Support for non-bitonal compression in djvu.
 
 =item Import DjVu (using decoders from DjVuLibre)
 
