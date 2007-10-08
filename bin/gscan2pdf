@@ -2603,7 +2603,8 @@ sub save_djvu {
     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
 
 # Create the djvu
-    my $cmd = "cjb2 ".$slist -> {data}[$j][2]." $djvu";
+    my $resolution = $slist -> {data}[$j][4];
+    my $cmd = "cjb2 -dpi $resolution $slist->{data}[$j][2] $djvu";
     print "$cmd\n" if $debug;
     system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
     $pagelist[$i] = $djvu;
@@ -2614,10 +2615,9 @@ sub save_djvu {
      my $x = $image->Read($slist -> {data}[$j][2]);
      warn "$x" if "$x";
 
-# Get the size and resolution
+# Get the size
      my $w = $image->Get('width');
      my $h = $image->Get('height');
-     my $resolution = $slist -> {data}[$j][4];
 
 # Escape any inverted commas
      my $txt = $slist -> {data}[$j][3];
