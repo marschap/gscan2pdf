@@ -1446,6 +1446,16 @@ sub import {
     $SETTING{'cwd'} = dirname($filename);
     warn "Importing $filename\n" if ($debug);
 
+# Check if djvu
+    if (! system("grep -q AT\\&TFORM $filename")) {
+     send($writer, '0 0 0'.$d->get("Converting to TIFF"), 0);
+     my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+     my $cmd = "ddjvu -format=tiff $filename $tif";
+     warn "$cmd\n" if ($debug);
+     system($cmd);
+     $filename = $tif;
+    }
+
 # Get file type
     my $image = Image::Magick->new;
     my $x = $image->Read($filename);
@@ -1465,7 +1475,7 @@ sub import {
      send($writer, sprintf("%f %s %i ", $j/($#filename+1), 0, 0)
       .$d->get('Extracting images from PDF'), 0);
      system ("pdfimages \"$filename\" x") == 0 or
-      send($writer, "2".$d->get('Error extracting images from PDF'), 0);
+      send($writer, '2 0 0'.$d->get('Error extracting images from PDF'), 0);
 
 # Import each image
      my @images = <x-???.???>;
@@ -1483,7 +1493,7 @@ sub import {
      send($writer, sprintf("%f %s %i ", $j/($#filename+1), 0, 0)
       .$d->get('Extracting images from TIFF'), 0);
      system("tiffsplit \"$filename\"") == 0 or
-      send($writer, "2".$d->get('Error extracting images from TIFF'), 0);
+      send($writer, '2 0 0'.$d->get('Error extracting images from TIFF'), 0);
 
      my @images = <x???.tif>;
      my $i = 0;
@@ -6207,8 +6217,6 @@ only the changelogs from official Ubuntu builds are displayed.
       manner.
 
 =item Crop function.
-
-=item Import DjVu (using decoders from DjVuLibre)
 
 =item Save to PS (using pdf2ps).
 
