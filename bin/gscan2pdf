@@ -105,6 +105,7 @@ my $border = 1;
 
 # Set up domain for gettext (internationalisation)
 # Expects /usr/share/locale/LANGUAGE/LC_MESSAGES/$program.mo
+# or whatever is set by $d->dir([NEWDIR]);
 my $d = Locale::gettext->domain($program);
 
 my @test;
@@ -551,7 +552,8 @@ $slist->signal_connect('drag-data-received' => sub {
  renumber($slist, 0);
  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
- update_start();
+# Update the start spinbutton if necessary
+  update_start() if (defined $spin_buttons);
 
  $context->finish(1, $delete, time);
 });
@@ -3925,8 +3927,9 @@ sub paste_pages {
 # displaying the page
  $slist -> get_selection -> unselect_all;
  $slist -> select(@page);
- 
- update_start();
+
+# Update the start spinbutton if necessary
+  update_start() if (defined $spin_buttons);
 
  update_uimanager();
 }
