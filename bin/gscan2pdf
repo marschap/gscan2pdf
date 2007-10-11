@@ -37,6 +37,8 @@
 #     http://giv.sourceforge.net/gtk-image-viewer/
 #    As soon as gtk+ 2.12 is available and released in Gutsy, remove the
 #     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
+#    As soon as I have RHEL5, move print routines to Net::Cups
+#     (cups-config --version >= 1.2.2)
 #
 # 1. Crop and autocrop
 #     (see http://mail.gnome.org/archives/gtk-perl-list/2006-June/msg00002.html
@@ -1447,7 +1449,13 @@ sub import {
     warn "Importing $filename\n" if ($debug);
 
 # Check if djvu
-    if (! system("grep -q AT\\&TFORM $filename")) {
+    my $buffer;
+    open FILE, $filename or
+     show_message_dialog($window, 'error', 'close', "Can't open $filename: $!");
+    binmode FILE;
+    read (FILE, $buffer, 8);
+    close FILE;
+    if ($buffer eq 'AT&TFORM') {
      send($writer, '0 0 0'.$d->get("Converting to TIFF"), 0);
      my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
      my $cmd = "ddjvu -format=tiff $filename $tif";
