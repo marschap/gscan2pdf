@@ -37,8 +37,10 @@
 #     http://giv.sourceforge.net/gtk-image-viewer/
 #    As soon as gtk+ 2.12 is available and released in Gutsy, remove the
 #     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
-#    As soon as I have RHEL5, move print routines to Net::Cups
-#     (cups-config --version >= 1.2.2)
+#    As soon as I have cups-config --version >= 1.2.2, move print routines to
+#     Net::Cups
+#    Simplify all save menu items into one.
+#    Investigate using tiff2ps instead of pdf2ps
 #
 # 1. Crop and autocrop
 #     (see http://mail.gnome.org/archives/gtk-perl-list/2006-June/msg00002.html
@@ -1845,7 +1847,7 @@ sub get_PDF_options {
 # Create the PDF
 
 sub create_PDF {
- my ($filename) = @_;
+ my ($filename, $ps) = @_;
 
  require PDF::API2;
 
@@ -2001,6 +2003,12 @@ sub create_PDF {
   send($writer, '1'.$d->get('Closing PDF'), 0);
   $pdf->save;
   $pdf->end();
+  if (defined $ps) {
+   send($writer, '1'.$d->get('Converting to PS'), 0);
+   my $cmd = "pdf2ps $filename $ps";
+   print "$cmd\n" if $debug;
+   system($cmd);
+  }
   send($writer, '2', 0);
  });
 
@@ -2227,11 +2235,12 @@ sub save_image_dialog {
  $hboxi -> pack_start ($label, FALSE, FALSE, 0);
 
  my @type = (
-  [ 'tif', $d->get('TIFF'), $d->get('Tagged Image File Format') ],
-  [ 'png', $d->get('PNG'), $d->get('Portable Network Graphics') ],
-  [ 'jpg', $d->get('JPEG'), $d->get('Joint Photographic Experts Group JFIF format') ],
-  [ 'pnm', $d->get('PNM'), $d->get('Portable anymap') ],
   [ 'gif', $d->get('GIF'), $d->get('CompuServe graphics interchange format') ],
+  [ 'jpg', $d->get('JPEG'), $d->get('Joint Photographic Experts Group JFIF format') ],
+  [ 'png', $d->get('PNG'), $d->get('Portable Network Graphics') ],
+  [ 'pnm', $d->get('PNM'), $d->get('Portable anymap') ],
+  [ 'ps',  $d->get('PS'), $d->get('Postscript') ],
+  [ 'tif', $d->get('TIFF'), $d->get('Tagged Image File Format') ],
  );
 
  my @compression = (
@@ -2301,6 +2310,35 @@ sub save_image_dialog {
 
   if ($SETTING{'image type'} eq 'tif') {
    save_TIFF();
+  }
+  if ($SETTING{'image type'} eq 'ps') {
+
+# cd back to cwd to save
+   chdir $SETTING{'cwd'};
+
+# Set up file selector
+   my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('PS filename'),
+                                                      $windowp, 'save',
+                                                      'gtk-cancel' => 'cancel',
+                                                      'gtk-save' => 'ok');
+   $file_chooser -> set_default_response('ok');
+
+   if ('ok' eq $file_chooser->run) {
+    my $filename = $file_chooser -> get_filename;
+    $filename = $filename.".ps" if ($filename !~ /\.ps$/i);
+    if (file_exists($file_chooser, $filename)) {
+     $file_chooser -> destroy;
+     return TRUE;
+    }
+
+# Update cwd
+    $SETTING{'cwd'} = dirname($filename);
+
+# Create the PS
+    my (undef, $pdf) = tempfile(DIR => $dir, SUFFIX => '.pdf');
+    create_PDF($pdf, $filename);
+   }
+   $file_chooser -> destroy;
   }
   else {
    save_image();
@@ -6226,9 +6264,7 @@ only the changelogs from official Ubuntu builds are displayed.
 
 =item Crop function.
 
-=item Save to PS (using pdf2ps).
-
-=item Print (using pdf2ps and lpr).
+=item Print (using Net::Cups).
 
 =item Copier.
 
