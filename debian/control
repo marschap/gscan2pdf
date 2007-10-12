@@ -11,7 +11,7 @@ XS-Vcs-Browser: http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf/
 
 Package: gscan2pdf
 Architecture: all
-Depends: libgtk2-perl (>= 1:1.043-1), libgtk2-ex-simple-list-perl, libglib-perl (>= 1.100-1), liblocale-gettext-perl (>= 1.05), libsane, sane-utils, libtiff-tools, libpdf-api2-perl, perlmagick, imagemagick
+Depends: libgtk2-perl (>= 1:1.043-1), libgtk2-ex-simple-list-perl, libglib-perl (>= 1.100-1), liblocale-gettext-perl (>= 1.05), libsane, sane-utils, libtiff-tools, libpdf-api2-perl, libconfig-general-perl, perlmagick, imagemagick
 Recommends: libgtk2-ex-podviewer-perl, sane, xdg-utils, djvulibre-bin, unpaper, gocr, tesseract-ocr
 Description: A GUI to produce PDFs from scanned documents
  Only two clicks are required to scan several pages and then save all or a

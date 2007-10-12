@@ -5,6 +5,7 @@
 # see the included LICENCE file for details.
 
 # To do
+#    Update LICENCE!
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    write hg2cl if necessary
@@ -82,6 +83,7 @@ use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
 use Socket;
 use FileHandle;
 use Image::Magick;
+use Config::General;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -166,37 +168,26 @@ setlocale(LC_NUMERIC, "C");
 warn "Using ", setlocale( LC_CTYPE ), " locale\n" if ($debug);
 
 # Read config file
-my $config = "$ENV{'HOME'}/.$program";
-
-# Set some defaults
-my %SETTING = (
- 'window_width'    => 800,
- 'window_height'   => 600,
- 'window_maximize' => TRUE,
- 'thumb panel'     => 100,
- 'Page range'      => 'all',
- 'l'               => 0,
- 't'               => 0,
- 'layout'          => 'single',
- 'downsample'      => FALSE,
- 'downsample dpi'  => 150,
+my $rc = "$ENV{'HOME'}/.$program";
+system("touch $rc") if (! -r $rc);
+my $conf = Config::General->new(
+ -ConfigFile        => $rc,
+ -SplitPolicy       => 'equalsign',
+ -MergeDuplicateOptions => TRUE,
+ -DefaultConfig => {
+  'window_width'    => 800,
+  'window_height'   => 600,
+  'window_maximize' => TRUE,
+  'thumb panel'     => 100,
+  'Page range'      => 'all',
+  'l'               => 0,
+  't'               => 0,
+  'layout'          => 'single',
+  'downsample'      => FALSE,
+  'downsample dpi'  => 150,
+ },
 );
-
-if (-r $config) {
- open CONFIG, $config
-  or die sprintf($d->get("Can't open config file: %s\n"), $config);
-
- while (<CONFIG>) {
-  chomp;			# no newline
-  s/#.*//;			# no comments
-  s/^\s+//;			# no leading white
-  s/\s+$//;			# no trailing white
-  next unless length;		# anything left?
-  my ($key, $value) = split(/\s*=\s*/, $_, 2);
-  $SETTING{$key} = $value;
- }
- close CONFIG;
-}
+my %SETTING = $conf->getall;
 
 if ($debug) {
  print "Gtk2-Perl version $Gtk2::VERSION\n";
@@ -5477,12 +5468,7 @@ sub quit {
 # delete $SETTING{'RMB'};
 
 # Write config file
- open (CONFIG, "> $config")
-  or die sprintf($d->get("Can't open config file: %s"), $config); # xgettext hack
- while (my ($key, $value) = each %SETTING) {
-  print CONFIG "$key = $value\n";
- }
- close CONFIG;
+ $conf->save_file($rc, \%SETTING);
 
  kill_subs();
 }

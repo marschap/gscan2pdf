@@ -15,7 +15,7 @@ BuildRequires: gettext, desktop-file-utils
 Requires: perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
 Requires: ImageMagick-perl, ImageMagick, djvulibre, sane-backends
 Requires: sane-frontends, xdg-utils, unpaper, gocr
-Requires: perl(Gtk2::Ex::PodViewer), perl(PDF::API2)
+Requires: perl(Gtk2::Ex::PodViewer), perl(PDF::API2), perl(Config::General)
 
 %description
 Only two clicks are required to scan several pages and then save all or a

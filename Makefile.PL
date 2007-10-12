@@ -43,6 +43,7 @@ WriteMakefile(
                                    Gtk2::Ex::Simple::List => 0,
                                    Image::Magick          => 0,
                                    Locale::gettext        => 1.05,
+                                   Config::General        => 0,
               },
               ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
               (ABSTRACT_FROM  => "bin/$program", # retrieve abstract from module
