@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # Copyright (c) 2006--2007 by Jeff Ratcliffe (ra28145 at users dot sourceforge dot net)
-# This script is released under the GPL license.  Please
+# This script is released under the GPLv3 license.  Please
 # see the included LICENCE file for details.
 
 # To do
@@ -3985,7 +3985,7 @@ EOS
 		      ."\n$authors");
  $about->set_comments ($d->get('To aid the scan-to-PDF process'));
  $about->set_copyright ($d->get('Copyright 2006--2007 Jeffrey Ratcliffe'));
- $about->set_license ($d->get('Licensed under the GPLv2'));
+ $about->set_license ($d->get('Licensed under the GPLv3'));
  $about->set_website ('http://gscan2pdf.sf.net');
  my $translators = <<EOS;
 Petr Jelínek
