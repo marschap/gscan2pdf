@@ -38,7 +38,12 @@ WriteMakefile(
               NAME            => $program,
               VERSION         => $version,
               'EXE_FILES'     => [ "bin/$program" ],
-              PREREQ_PM       => {Gtk2 => 1.08}, # e.g., Module::Name => 1.1
+              PREREQ_PM       => {
+                                   Gtk2                   => 1.08,
+                                   Gtk2::Ex::Simple::List => 0,
+                                   Image::Magick          => 0,
+                                   Locale::gettext        => 1.05,
+              },
               ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
               (ABSTRACT_FROM  => "bin/$program", # retrieve abstract from module
               AUTHOR          => "$author <$email>") : ()),
