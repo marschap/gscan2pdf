@@ -5,7 +5,7 @@
 # see the included LICENCE file for details.
 
 # To do
-#    Update LICENCE!
+#    put paper sizes in config
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    write hg2cl if necessary
@@ -13,8 +13,6 @@
 #    - rename those like $hboxu to $hbox
 #    get it to work on the TV tuner
 #    check out scanbuttond
-#    for scan profiles, switch to Config::General (libconfig-general-perl)
-#     then put paper sizes in config
 #    rotating doesn't update detail view - sometimes (wait problem?)
 #    problem with wait after cancelling scan?
 #    cover case where unpaper or ocr starts running on a page that has in the
@@ -42,6 +40,7 @@
 #     Net::Cups
 #    Simplify all save menu items into one.
 #    Investigate using tiff2ps instead of pdf2ps
+#    Move contents of LICENCE into the licence button of the about dialog
 #
 # 1. Crop and autocrop
 #     (see http://mail.gnome.org/archives/gtk-perl-list/2006-June/msg00002.html
@@ -3153,9 +3152,16 @@ sub populate_scan_dialog {
   }
  });
 
+# Frame for post-processing
+ my $framep = Gtk2::Frame -> new($d->get('Post-processing'));
+ $vbox -> pack_start ($framep, FALSE, FALSE, 0);
+ my $vboxp = Gtk2::VBox -> new;
+ $vboxp -> set_border_width($border_width);
+ $framep -> add ($vboxp);
+
 # CheckButton for unpaper
  my $hboxu = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxu, FALSE, FALSE, 0);
+ $vboxp -> pack_start ($hboxu, FALSE, FALSE, 0);
  my $ubutton = Gtk2::CheckButton -> new($d->get('unpaper scanned pages'));
  $hboxu -> pack_start($ubutton, TRUE, TRUE, 0);
  if (! $dependencies{unpaper}) {
@@ -3196,7 +3202,7 @@ sub populate_scan_dialog {
 
 # CheckButton for OCR
  my $hboxo = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxo, FALSE, FALSE, 0);
+ $vboxp -> pack_start ($hboxo, FALSE, FALSE, 0);
  my $obutton = Gtk2::CheckButton -> new($d->get('OCR scanned pages'));
  if (! $dependencies{gocr} and ! $dependencies{tesseract}) {
   $hboxo -> set_sensitive(FALSE);
@@ -3210,7 +3216,7 @@ sub populate_scan_dialog {
  $hboxo -> pack_end($comboboxe, TRUE, TRUE, 0);
  my ($comboboxl, @tesslang);
  if ($dependencies{tesseract}) {
-  (my $hboxl, $comboboxl, @tesslang) = add_ocr_languages($vbox);
+  (my $hboxl, $comboboxl, @tesslang) = add_ocr_languages($vboxp);
   $hboxl->hide_all
    if ($ocr_engine[$comboboxe -> get_active]->[0] ne 'tesseract');
   $comboboxe -> signal_connect (changed => sub {
