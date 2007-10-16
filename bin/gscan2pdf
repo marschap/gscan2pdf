@@ -2973,21 +2973,21 @@ sub populate_scan_dialog {
   delete $SETTING{mode};
  }
 
-# HBox to hold 2-columns of VBoxes for remaining options
- my $hboxv = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxv, FALSE, FALSE, 0);
+# Notebook to collate options
+ my $notebook = Gtk2::Notebook->new;
+ $vbox->pack_start($notebook, TRUE, TRUE, 0);
 
-# VBox for LH options
- my $vboxl = Gtk2::VBox -> new;
- $hboxv -> pack_start ($vboxl, FALSE, FALSE, 0);
+# Notebook page 1
+ my $vbox1 = Gtk2::VBox->new;
+ $notebook->append_page($vbox1, $d->get('Page Options'));
 
-# VBox for RH options
- my $vboxr = Gtk2::VBox -> new;
- $hboxv -> pack_start ($vboxr, FALSE, FALSE, 0);
+# Notebook page 2
+ my $vbox2 = Gtk2::VBox->new;
+ $notebook->append_page($vbox2, $d->get('Scan Options'));
 
 # Frame for # pages
  my $framen = Gtk2::Frame -> new($d->get('# Pages'));
- $vboxl -> pack_start ($framen, FALSE, FALSE, 0);
+ $vbox1 -> pack_start ($framen, FALSE, FALSE, 0);
  my $vboxn = Gtk2::VBox -> new;
  $vboxn -> set_border_width($border_width);
  $framen -> add ($vboxn);
@@ -3032,11 +3032,11 @@ sub populate_scan_dialog {
 
 # Toggle to switch between basic and extended modes
  my $checkx = Gtk2::CheckButton -> new($d->get('Extended page numbering'));
- $vboxl -> pack_start ($checkx, FALSE, FALSE, 0);
+ $vbox1 -> pack_start ($checkx, FALSE, FALSE, 0);
 
 # Frame for extended mode
  my $framex = Gtk2::Frame -> new($d->get('Page number'));
- $vboxl -> pack_start ($framex, FALSE, FALSE, 0);
+ $vbox1 -> pack_start ($framex, FALSE, FALSE, 0);
  my $vboxx = Gtk2::VBox -> new;
  $vboxx -> set_border_width($border_width);
  $framex -> add ($vboxx);
@@ -3078,7 +3078,7 @@ sub populate_scan_dialog {
 
 # Frame for standard mode
  my $frames = Gtk2::Frame -> new($d->get('Source document'));
- $vboxl -> pack_start ($frames, FALSE, FALSE, 0);
+ $vbox1 -> pack_start ($frames, FALSE, FALSE, 0);
  my $vboxs = Gtk2::VBox -> new;
  $vboxs -> set_border_width($border_width);
  $frames -> add ($vboxs);
@@ -3166,7 +3166,7 @@ sub populate_scan_dialog {
 
 # Frame for post-processing
  my $framep = Gtk2::Frame -> new($d->get('Post-processing'));
- $vboxl -> pack_start ($framep, FALSE, FALSE, 0);
+ $vbox1 -> pack_start ($framep, FALSE, FALSE, 0);
  my $vboxp = Gtk2::VBox -> new;
  $vboxp -> set_border_width($border_width);
  $framep -> add ($vboxp);
@@ -3186,12 +3186,12 @@ sub populate_scan_dialog {
  my $button = Gtk2::Button -> new($d->get('Options'));
  $hboxu -> pack_end($button, TRUE, TRUE, 0);
  $button -> signal_connect (clicked => sub {
-  my ($windowo, $vboxl) = create_window($window, $d->get('unpaper options'), TRUE);
-  add_unpaper_options($vboxl);
+  my ($windowo, $vbox1) = create_window($window, $d->get('unpaper options'), TRUE);
+  add_unpaper_options($vbox1);
 
 # HBox for buttons
   my $hboxb = Gtk2::HBox -> new;
-  $vboxl -> pack_start ($hboxb, FALSE, TRUE, 0);
+  $vbox1 -> pack_start ($hboxb, FALSE, TRUE, 0);
 
 # OK button
   my $sbutton = Gtk2::Button -> new_from_stock('gtk-ok');
@@ -3252,7 +3252,7 @@ sub populate_scan_dialog {
 
 # Frame for device-dependent options
  my $framed = Gtk2::Frame -> new($d->get('Device-dependent options'));
- $vboxr -> pack_start ($framed, FALSE, FALSE, 0);
+ $vbox2 -> pack_start ($framed, FALSE, FALSE, 0);
  $vboxd -> set_border_width($border_width);
  $framed -> add ($vboxd);
 
