@@ -39,6 +39,8 @@
 #    As soon as I have cups-config --version >= 1.2.2, move print routines to
 #     Net::Cups
 #    Simplify all save menu items into one.
+#     Investigate using Gtk2::FileChooser instead of Gtk2::FileChooserDialog
+#     and putting save options on same dialog.
 #    Investigate using tiff2ps instead of pdf2ps
 #    Move contents of LICENCE into the licence button of the about dialog
 #
@@ -1382,10 +1384,11 @@ sub convert_to_tiff {
  }
 
 # Write the tif
+ my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
  $image->Write(units => 'PixelsPerInch',
                density => $density,
-               filename => "$filename.tif");
- return "$filename.tif";
+               filename => $tif);
+ return $tif;
 }
 
 
