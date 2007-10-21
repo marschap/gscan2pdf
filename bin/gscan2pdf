@@ -5,6 +5,8 @@
 # see the included LICENCE file for details.
 
 # To do
+#    update start page number after deleting a page
+#    djvu progress bar never reaches 100%
 #    put paper sizes in config
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
@@ -69,6 +71,7 @@
 # 8. http://www.gtkfiles.org/app.php/gscan2pdf
 # 9. Ubuntu forum
 #    gscan2pdf-announce
+#    debian-mentors (check contents with dpkg-deb --contents)
 
 use warnings;
 use strict;
@@ -1455,7 +1458,7 @@ sub import {
     if ($buffer eq 'AT&TFORM') {
      send($writer, '0 0 0'.$d->get("Converting to TIFF"), 0);
      my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
-     my $cmd = "ddjvu -format=tiff $filename $tif";
+     my $cmd = "ddjvu -format=tiff \"$filename\" $tif";
      warn "$cmd\n" if ($debug);
      system($cmd);
      $filename = $tif;
