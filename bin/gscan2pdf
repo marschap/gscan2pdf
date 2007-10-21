@@ -3123,6 +3123,12 @@ sub populate_scan_dialog {
   else {
    $spin_buttoni -> set_value(-2);
   }
+  if ($#{$slist -> {data}} > -1) {
+   $spin_buttons->set_value($slist -> {data}[$#{$slist -> {data}}][0]+1);
+  }
+  else {
+   $spin_buttons->set_value(1);
+  }
  });
  $tooltips -> set_tip ($ev,
               $d->get('Sets which side of a double-sided document is scanned'));
@@ -3139,6 +3145,12 @@ sub populate_scan_dialog {
   else {
    $spin_buttoni -> set_value(-2);
   }
+  if ($#{$slist -> {data}} > -1) {
+   $spin_buttons->set_value($slist -> {data}[$#{$slist -> {data}}][0]+1);
+  }
+  else {
+   $spin_buttons->set_value(1);
+  }
  });
 
 # Have to put the extended pagenumber checkbox here to reference simple controls
@@ -3148,12 +3160,6 @@ sub populate_scan_dialog {
    $framex->show_all;
   }
   else {
-   if ($#{$slist -> {data}} > -1) {
-    $spin_buttons->set_value($slist -> {data}[$#{$slist -> {data}}][0]+1);
-   }
-   else {
-    $spin_buttons->set_value(1);
-   }
    if ($spin_buttoni -> get_value == 1) {
     $buttons -> set_active(TRUE);
    }
@@ -3852,10 +3858,7 @@ sub add_image {
  update_uimanager();
 
 # If the scan dialog has already been drawn, update the start page spinbutton
- if (defined $spin_buttons) {
-  $spin_buttons->set_value($spin_buttons->get_value + $spin_buttoni->get_value)
-   if ($spin_buttons->get_value == $page);
- }
+ update_start() if (defined $spin_buttons);
 
  return @page;
 }
