@@ -4345,8 +4345,9 @@ sub parse_options {
 # If an ADF isn't selected, then we don't want to scan all pages
     if ($option eq 'source') {
      $combob -> signal_connect (changed => sub {
-      if (get_value(\%ddo, $option, $combob -> get_active_text)
-                                                      =~ /(Flatbed)|(Normal)/) {
+      my $text = $combob -> get_active_text;
+      if (defined($text) and
+          get_value(\%ddo, $option, $text) =~ /(Flatbed)|(Normal)/) {
        $bscanall->set_sensitive(FALSE);
        $bscannum->set_active(TRUE);
       }
@@ -5607,7 +5608,7 @@ sub get_key {
  foreach (keys %$options) {
   return $_ if ($options->{$_}{string} eq $value);
  }
- return FALSE;
+ return undef;
 }
 
 
@@ -5618,7 +5619,7 @@ sub get_value {
  foreach (keys %{$options->{$option}{values}}) {
   return $_ if ($options->{$option}{values}{$_} eq $value);
  }
- return FALSE;
+ return undef;
 }
 
 
