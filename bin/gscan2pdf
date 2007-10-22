@@ -5,7 +5,12 @@
 # see the included LICENCE file for details.
 
 # To do
-#    update start page number after deleting a page
+#    centre the window *after* the devices have been found and the rest
+#     of the window built for the first time
+#    make djvu compression automatic on image depth to allow multiple page
+#     files with different compression for each page
+#    fix error saving djvu with photo compression when imported from tif
+#     (or possibly anything other than jpeg and pnm)
 #    djvu progress bar never reaches 100%
 #    put paper sizes in config
 #    try a document with 250 pages
@@ -234,6 +239,9 @@ my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
+
+# Scan button on scan dialog
+    $sbutton,
 
 # Variables for inter-process communication
     $reader, $writer);
@@ -3273,7 +3281,7 @@ sub populate_scan_dialog {
  $vbox -> pack_end ($hboxb, FALSE, FALSE, 0);
 
 # Scan button
- my $sbutton = Gtk2::Button -> new($d->get('Scan'));
+ $sbutton = Gtk2::Button -> new($d->get('Scan'));
  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
  $sbutton -> signal_connect (clicked => sub {
 
@@ -4054,6 +4062,9 @@ sub check_command {
 sub rescan_options {
  my ($vboxd, $device) = @_;
 
+#  Ghost the scan button whilst options being updated
+ $sbutton->set_sensitive(FALSE) if (defined $sbutton);
+
 # Empty $vboxd first
  foreach ($vboxd -> get_children) {
   $_ -> destroy;
@@ -4381,6 +4392,9 @@ sub parse_options {
 # Show window, hiding the custom hbox and sizing if necessary
  $vboxd -> show_all;
  hide_custom();
+
+#  Unghost the scan button
+ $sbutton->set_sensitive(TRUE) if (defined $sbutton);
 }
 
 
