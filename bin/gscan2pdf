@@ -5,8 +5,6 @@
 # see the included LICENCE file for details.
 
 # To do
-#    centre the window *after* the devices have been found and the rest
-#     of the window built for the first time
 #    make djvu compression automatic on image depth to allow multiple page
 #     files with different compression for each page
 #    fix error saving djvu with photo compression when imported from tif
@@ -3204,7 +3202,6 @@ sub scan_dialog {
  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
  $cbutton -> signal_connect( clicked => sub { $windows -> hide; } );
 
-
  my $output;
  if (! @test) {
 
@@ -3212,7 +3209,7 @@ sub scan_dialog {
   my $pbar = Gtk2::ProgressBar->new;
   $pbar -> set_pulse_step(.1);
   $pbar->set_text ($d->get('Fetching list of devices'));
-  $hboxd->pack_start ($pbar, FALSE, FALSE, 0);
+  $hboxd->pack_start ($pbar, TRUE, TRUE, 0);
   my $running = TRUE;
 
 # Timer will run until callback returns false 
@@ -3271,6 +3268,9 @@ sub scan_dialog {
  $windows -> show_all;
  $framex->hide_all;
  hide_custom();
+
+# Has to be done after showing the window, otherwise the window doesn't get centred.
+ $sbutton -> set_sensitive(FALSE) if (! @test);
 }
 
 
@@ -3364,6 +3364,7 @@ sub populate_device_list {
 #  the source button callback can ghost the all button
 # This then fires the callback, updating the options, so no need to do it further down.
  $combobd -> set_active($o);
+ $hboxd -> show_all;
 }
 
 
