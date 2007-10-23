@@ -1599,7 +1599,7 @@ sub create_window {
   });
  }
  $window_new -> set_transient_for($window); # Assigns parent
- $window_new->set_position ('center-on-parent');
+ $window_new -> set_position('center-on-parent');
 
 # VBox for window
  my $vbox = Gtk2::VBox -> new;
@@ -2829,163 +2829,9 @@ sub scan_dialog {
 # scan pop-up window
  ($windows, my $vbox) = create_window($window, $d->get('Scan Document'), FALSE);
 
- my $output;
- if (! @test) {
-
-# Set up ProgressBar
-  my $pbar = Gtk2::ProgressBar->new;
-  $pbar -> set_pulse_step(.1);
-  $pbar->set_text ($d->get('Fetching list of devices'));
-  $vbox->pack_start ($pbar, FALSE, FALSE, 0);
-  $windows -> show_all;
-  my $running = TRUE;
-
-# Timer will run until callback returns false 
-  my $timer = Glib::Timeout->add (100, sub { if ($running) {
-                                              $pbar->pulse;
-                                              return TRUE;
-                                             }
-                                             else {
-                                              return FALSE;
-                                             } });
-
-  my $cmd = "scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
-  print "$cmd\n" if ($debug);
-
-# Interface to frontend
-  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-  warn "Forked PID $pid\n" if ($debug);
- 
-# Read without blocking
-  Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
-   my ($fileno, $condition) = @_;
-   my $line;
-   if ($condition & 'in') { # bit field operation. >= would also work
-    sysread $read, $line, 1024;
-    $output .= $line;
-   }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
-    close $read;
-    warn 'Waiting to reap process' if ($debug);
-    my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
-    warn "Reaped PID $pid\n" if ($debug);
-    $running = FALSE;
-    $pbar -> destroy;
-
-    if (! defined($output) or $output eq '') {
-     $windows->destroy;
-     undef $windows;
-     show_message_dialog($window, 'error', 'close', $d->get('No scanners found'));
-     return FALSE;
-    }
-
-    populate_scan_dialog($vbox, $output);
-    return FALSE;  # uninstall
-   }
-   return TRUE;  # continue without uninstalling
-  });
- }
- else {
-  populate_scan_dialog($vbox, $output);
- }
-}
-
-
-sub populate_scan_dialog {
- my ($vbox, $output) = @_;
-
- print $output if ($debug and defined($output));
-
 # HBox for devices
  my $hboxd = Gtk2::HBox -> new;
  $vbox -> pack_start ($hboxd, FALSE, FALSE, 0);
-
-# device list
- my $labeld = Gtk2::Label -> new ($d->get('Device'));
- $hboxd -> pack_start ($labeld, FALSE, FALSE, 0);
-
-# Need to define this here to reference it later.
- $vboxd = Gtk2::VBox -> new;
- my $ev = Gtk2::EventBox->new;
- $combobd = Gtk2::ComboBox->new_text;
- $ev->add($combobd);
-
-# parse out the device and model names
- if (! @test) {
-  my $device = substr($output, 0, index($output, "\n")+1);
-  $output = substr($output, index($output, "\n")+1, length($output));
-  while ($device =~ /'(\d*)','(.*)','(.*)'/) {
-   $device[$1] = $2;
-
-# Convert all underscores to spaces
-   ($model[$1] = $3) =~ s/_/ /g;
-   $device = substr($output, 0, index($output, "\n")+1);
-   $output = substr($output, index($output, "\n")+1, length($output));
-  }
- }
-
-# Note any duplicate device names and delete if necessary
- my %seen;
- my $i = 0;
- while ($i < @device) {
-  $seen{ $device[$i] }++;
-  if ($seen{$device[$i]} > 1) {
-   splice @device, $i, 1;
-   splice @model, $i, 1;
-  }
-  else {
-   $i++;
-  }
- }
-
-# Note any duplicate model names and add the device if necessary
- undef %seen;
- foreach ( @model ) {
-  $seen{ $_ }++;
- }
- for (my $i = 0; $i < @model; $i++) {
-  $model[$i] .= " on $device[$i]" if ($seen{$model[$i]} > 1);
- }
-
-# read the model names into the combobox
- foreach (@model) {
-  $combobd->append_text ($_);
- }
-
-# flags whether already run or not
- my $run = FALSE;
- $combobd -> signal_connect (changed => sub {
-
-# only delete the mode setting if switching devices, not on first run
-  delete $SETTING{mode} if ($run);
-  $run = TRUE;
-  rescan_options($vboxd, $device[$combobd -> get_active]);
-  $vboxd -> show_all;
-  hide_custom();
- });
- $tooltips -> set_tip ($ev, $d->get('Sets the device to be used for the scan'));
- $hboxd -> pack_end ($ev, FALSE, FALSE, 0);
-
-# If device not set by config and there is a default device, then set it
- if (! defined($SETTING{device})
-      and defined($output) and $output =~ /default device is `(.*)'/) {
-  $SETTING{device} = $1;
- }
-
-# If device in settings then set it
- my $o;
- if (defined $SETTING{device}) {
-  for (my $i = 0; $i <= $#device; $i++) {
-   $o = $i if ($SETTING{device} eq $device[$i]);
-  }
- }
- if (! defined ($o)) {
-  $o = 0;
-  delete $SETTING{mode};
- }
 
 # Notebook to collate options
  my $notebook = Gtk2::Notebook->new;
@@ -3038,11 +2884,6 @@ sub populate_scan_dialog {
  else {
   $bscannum -> set_active(TRUE);
  }
-
-# Set the device dependent devices after the number of pages to scan so that
-#  the source button callback can ghost the all button
-# This then fires the callback, updating the options, so no need to do it further down.
- $combobd -> set_active($o);
 
 # Toggle to switch between basic and extended modes
  my $checkx = Gtk2::CheckButton -> new($d->get('Extended page numbering'));
@@ -3116,7 +2957,7 @@ sub populate_scan_dialog {
  my $labels = Gtk2::Label -> new ($d->get('Side to scan'));
  $hboxs -> pack_start($labels, FALSE, FALSE, 0);
 
- $ev = Gtk2::EventBox->new;
+ my $ev = Gtk2::EventBox->new;
  my $combobs = Gtk2::ComboBox -> new_text;
  $ev->add($combobs);
  my @side = ($d->get('Facing'), $d->get('Reverse'));
@@ -3273,6 +3114,7 @@ sub populate_scan_dialog {
 # Frame for device-dependent options
  my $framed = Gtk2::Frame -> new($d->get('Device-dependent options'));
  $vbox2 -> pack_start ($framed, FALSE, FALSE, 0);
+ $vboxd = Gtk2::VBox -> new;
  $vboxd -> set_border_width($border_width);
  $framed -> add ($vboxd);
 
@@ -3362,10 +3204,166 @@ sub populate_scan_dialog {
  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
  $cbutton -> signal_connect( clicked => sub { $windows -> hide; } );
 
+
+ my $output;
+ if (! @test) {
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $pbar -> set_pulse_step(.1);
+  $pbar->set_text ($d->get('Fetching list of devices'));
+  $hboxd->pack_start ($pbar, FALSE, FALSE, 0);
+  my $running = TRUE;
+
+# Timer will run until callback returns false 
+  my $timer = Glib::Timeout->add (100, sub { if ($running) {
+                                              $pbar->pulse;
+                                              return TRUE;
+                                             }
+                                             else {
+                                              return FALSE;
+                                             } });
+
+  my $cmd = "scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
+  print "$cmd\n" if ($debug);
+
+# Interface to frontend
+  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+  warn "Forked PID $pid\n" if ($debug);
+ 
+# Read without blocking
+  Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+   my $line;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    sysread $read, $line, 1024;
+    $output .= $line;
+   }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+    close $read;
+    warn 'Waiting to reap process' if ($debug);
+    my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
+    warn "Reaped PID $pid\n" if ($debug);
+    $running = FALSE;
+    $pbar -> destroy;
+
+    if (! defined($output) or $output eq '') {
+     $windows->destroy;
+     undef $windows;
+     show_message_dialog($window, 'error', 'close', $d->get('No scanners found'));
+     return FALSE;
+    }
+
+    populate_device_list($hboxd, $output);
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # continue without uninstalling
+  });
+ }
+ else {
+  populate_device_list($hboxd, $output);
+ }
+
 # Show window
  $windows -> show_all;
  $framex->hide_all;
  hide_custom();
+}
+
+
+sub populate_device_list {
+ my ($hboxd, $output) = @_;
+
+ print $output if ($debug and defined($output));
+
+# device list
+ my $labeld = Gtk2::Label -> new ($d->get('Device'));
+ $hboxd -> pack_start ($labeld, FALSE, FALSE, 0);
+ my $ev = Gtk2::EventBox->new;
+ $combobd = Gtk2::ComboBox->new_text;
+ $ev->add($combobd);
+
+# parse out the device and model names
+ if (! @test) {
+  my $device = substr($output, 0, index($output, "\n")+1);
+  $output = substr($output, index($output, "\n")+1, length($output));
+  while ($device =~ /'(\d*)','(.*)','(.*)'/) {
+   $device[$1] = $2;
+
+# Convert all underscores to spaces
+   ($model[$1] = $3) =~ s/_/ /g;
+   $device = substr($output, 0, index($output, "\n")+1);
+   $output = substr($output, index($output, "\n")+1, length($output));
+  }
+ }
+
+# Note any duplicate device names and delete if necessary
+ my %seen;
+ my $i = 0;
+ while ($i < @device) {
+  $seen{ $device[$i] }++;
+  if ($seen{$device[$i]} > 1) {
+   splice @device, $i, 1;
+   splice @model, $i, 1;
+  }
+  else {
+   $i++;
+  }
+ }
+
+# Note any duplicate model names and add the device if necessary
+ undef %seen;
+ foreach ( @model ) {
+  $seen{ $_ }++;
+ }
+ for (my $i = 0; $i < @model; $i++) {
+  $model[$i] .= " on $device[$i]" if ($seen{$model[$i]} > 1);
+ }
+
+# read the model names into the combobox
+ foreach (@model) {
+  $combobd->append_text ($_);
+ }
+
+# flags whether already run or not
+ my $run = FALSE;
+ $combobd -> signal_connect (changed => sub {
+
+# only delete the mode setting if switching devices, not on first run
+  delete $SETTING{mode} if ($run);
+  $run = TRUE;
+  rescan_options($vboxd, $device[$combobd -> get_active]);
+  $vboxd -> show_all;
+  hide_custom();
+ });
+ $tooltips -> set_tip ($ev, $d->get('Sets the device to be used for the scan'));
+ $hboxd -> pack_end ($ev, FALSE, FALSE, 0);
+
+# If device not set by config and there is a default device, then set it
+ if (! defined($SETTING{device})
+      and defined($output) and $output =~ /default device is `(.*)'/) {
+  $SETTING{device} = $1;
+ }
+
+# If device in settings then set it
+ my $o;
+ if (defined $SETTING{device}) {
+  for (my $i = 0; $i <= $#device; $i++) {
+   $o = $i if ($SETTING{device} eq $device[$i]);
+  }
+ }
+ if (! defined ($o)) {
+  $o = 0;
+  delete $SETTING{mode};
+ }
+
+# Set the device dependent devices after the number of pages to scan so that
+#  the source button callback can ghost the all button
+# This then fires the callback, updating the options, so no need to do it further down.
+ $combobd -> set_active($o);
 }
 
 

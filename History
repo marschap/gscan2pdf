@@ -6,6 +6,9 @@
 + PS to save as image options
 + Split options in scan dialog into two tabs.
   Closes bug 1812030 (Dialog Box Too Big to fit on screen)
++ build scan window before scanning for devices in order to make sure that
+  it centres properly.
+  Closes Debian bug #440902: window placement of scan dialog
 
 
 0.9.17 (02.10.2007):
