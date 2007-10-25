@@ -5,8 +5,6 @@
 # see the included LICENCE file for details.
 
 # To do
-#    fix error saving djvu with photo compression when imported from
-#     anything other than jpeg or pnm
 #    djvu progress bar never reaches 100%
 #    put paper sizes in config
 #    try a document with 250 pages
@@ -2655,11 +2653,27 @@ sub save_djvu {
     warn "$x" if "$x";
     my $depth = $image->Get('depth');
     my $compression;
+
+# c44 can only use pnm and jpg
+    my $format = $1 if ($filename =~ /\.(\w*)$/);
     if ($depth > 1) {
      $compression = 'c44';
+     if ($format !~ /(pnm)|(jpg)/) {
+      my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+      $x = $image->Write(filename => $pnm);
+      warn "$x" if "$x";
+      $filename = $pnm;
+     }
     }
+# cjb2 can only use pnm and tif
     else {
      $compression = 'cjb2';
+     if ($format !~ /(pnm)|(tif)/) {
+      my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+      $x = $image->Write(filename => $pnm);
+      warn "$x" if "$x";
+      $filename = $pnm;
+     }
     }
 
 # Create the djvu
