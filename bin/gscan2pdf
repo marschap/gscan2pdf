@@ -5,10 +5,8 @@
 # see the included LICENCE file for details.
 
 # To do
-#    make djvu compression automatic on image depth to allow multiple page
-#     files with different compression for each page
-#    fix error saving djvu with photo compression when imported from tif
-#     (or possibly anything other than jpeg and pnm)
+#    fix error saving djvu with photo compression when imported from
+#     anything other than jpeg or pnm
 #    djvu progress bar never reaches 100%
 #    put paper sizes in config
 #    try a document with 250 pages
@@ -2567,22 +2565,6 @@ sub save_djvu_dialog {
 
   ($windowv, my $vbox) = create_window($window, $d->get('Save as DjVu'), FALSE);
 
-# Compression ComboBox
-  my $hboxc = Gtk2::HBox -> new;
-  $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
-  my $label = Gtk2::Label -> new ($d->get('Compression'));
-  $hboxc -> pack_start ($label, FALSE, FALSE, 0);
-
-# Fill compression ComboBox
-
-# Compression options
-  my @compression = (
-   [ 'cjb2', $d->get('Bitonal'), $d->get('Compress output with bitonal (cjb2) encoding.') ],
-   [ 'c44',  $d->get('Photo'),  $d->get('Compress output with photo (c44) encoding.') ],
-  );
-  my $combob =  combobox_from_array($SETTING{'djvu compression'}, @compression);
-  $hboxc -> pack_end ($combob, FALSE, FALSE, 0);
-
 # Frame for page range
   my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
 
@@ -2593,10 +2575,7 @@ sub save_djvu_dialog {
 # Save button
   my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
   $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
-  $sbutton -> signal_connect (clicked => sub {
-   $SETTING{'djvu compression'} = $compression[$combob->get_active][0];
-   save_djvu();
-  });
+  $sbutton -> signal_connect (clicked => sub { save_djvu(); });
 
 # Cancel button
   my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
@@ -2667,20 +2646,31 @@ sub save_djvu {
     my $j = $pagelist[$i];
     send($writer, $i/($#pagelist+2)
      .sprintf($d->get("Writing page %i of %i"), $i+1, $#pagelist+1), 0);
+    my $filename = $slist -> {data}[$j][2];
     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
+
+# Check the image depth to decide what sort of compression to use
+    my $image = Image::Magick->new;
+    my $x = $image->Read($filename);
+    warn "$x" if "$x";
+    my $depth = $image->Get('depth');
+    my $compression;
+    if ($depth > 1) {
+     $compression = 'c44';
+    }
+    else {
+     $compression = 'cjb2';
+    }
 
 # Create the djvu
     my $resolution = $slist -> {data}[$j][4];
-    my $cmd = "$SETTING{'djvu compression'} -dpi $resolution $slist->{data}[$j][2] $djvu";
+    my $cmd = "$compression -dpi $resolution $filename $djvu";
     print "$cmd\n" if $debug;
     system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
     $pagelist[$i] = $djvu;
 
 # Add OCR to text layer
     if (defined($slist -> {data}[$j][3]) and $slist -> {data}[$j][3] ne '') {
-     my $image = Image::Magick->new;
-     my $x = $image->Read($slist -> {data}[$j][2]);
-     warn "$x" if "$x";
 
 # Get the size
      my $w = $image->Get('width');
