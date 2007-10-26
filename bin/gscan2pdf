@@ -5,7 +5,6 @@
 # see the included LICENCE file for details.
 
 # To do
-#    djvu progress bar never reaches 100%
 #    put paper sizes in config
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
@@ -2642,7 +2641,7 @@ sub save_djvu {
    
    for (my $i = 0; $i <= $#pagelist; $i++) {
     my $j = $pagelist[$i];
-    send($writer, $i/($#pagelist+2)
+    send($writer, $i/($#pagelist+1)
      .sprintf($d->get("Writing page %i of %i"), $i+1, $#pagelist+1), 0);
     my $filename = $slist -> {data}[$j][2];
     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
@@ -2709,7 +2708,7 @@ sub save_djvu {
      system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
     }
    }
-   send($writer, ($#pagelist+1)/($#pagelist+2).$d->get('Closing DjVu'), 0);
+   send($writer, ($#pagelist+1)/($#pagelist+1).$d->get('Closing DjVu'), 0);
    my $cmd = "djvm -c '$filename' @pagelist";
    print "$cmd\n" if $debug;
    system ($cmd) == 0 or send($writer, "2".$d->get('Error closing DjVu'), 0);
