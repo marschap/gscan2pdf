@@ -45,8 +45,6 @@
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
 #    Switch viewing widget as soon as packages are available for:
 #     http://giv.sourceforge.net/gtk-image-viewer/
-#    As soon as gtk+ 2.12 is available and released in Gutsy, remove the
-#     EventBox wrappers from the ComboBoxes (check that the tooltips still work!)
 #    As soon as I have cups-config --version >= 1.2.2, move print routines to
 #     Net::Cups
 #    Simplify all save menu items into one.
@@ -2968,9 +2966,7 @@ sub scan_dialog {
  my $labels = Gtk2::Label -> new ($d->get('Side to scan'));
  $hboxs -> pack_start($labels, FALSE, FALSE, 0);
 
- my $ev = Gtk2::EventBox->new;
  my $combobs = Gtk2::ComboBox -> new_text;
- $ev->add($combobs);
  my @side = ($d->get('Facing'), $d->get('Reverse'));
  foreach (@side) {
   $combobs -> append_text ($_);
@@ -2990,12 +2986,12 @@ sub scan_dialog {
    $spin_buttons->set_value(1);
   }
  });
- $tooltips -> set_tip ($ev,
+ $tooltips -> set_tip ($combobs,
               $d->get('Sets which side of a double-sided document is scanned'));
  $combobs -> set_active(0);
 # Have to do this here because setting the facing combobox switches it
  $buttons -> set_active(TRUE);
- $hboxs -> pack_end ($ev, FALSE, FALSE, 0);
+ $hboxs -> pack_end ($combobs, FALSE, FALSE, 0);
 
 # Have to put the double-sided callback here to reference page side
  $buttond -> signal_connect (clicked => sub {
@@ -3295,9 +3291,7 @@ sub populate_device_list {
 # device list
  my $labeld = Gtk2::Label -> new ($d->get('Device'));
  $hboxd -> pack_start ($labeld, FALSE, FALSE, 0);
- my $ev = Gtk2::EventBox->new;
  $combobd = Gtk2::ComboBox->new_text;
- $ev->add($combobd);
 
 # parse out the device and model names
  if (! @test) {
@@ -3352,8 +3346,8 @@ sub populate_device_list {
   $vboxd -> show_all;
   hide_custom();
  });
- $tooltips -> set_tip ($ev, $d->get('Sets the device to be used for the scan'));
- $hboxd -> pack_end ($ev, FALSE, FALSE, 0);
+ $tooltips -> set_tip ($combobd, $d->get('Sets the device to be used for the scan'));
+ $hboxd -> pack_end ($combobd, FALSE, FALSE, 0);
 
 # If device not set by config and there is a default device, then set it
  if (! defined($SETTING{device})
@@ -4202,9 +4196,7 @@ sub parse_options {
   my $labelp = Gtk2::Label -> new ($d->get('Paper size'));
   $hboxp -> pack_start ($labelp, FALSE, FALSE, 0);
 
-  my $ev = Gtk2::EventBox->new;
   $combobp = Gtk2::ComboBox -> new_text;
-  $ev->add($combobp);
 
 # Define custom paper here to reference it in callback
   $hboxc = Gtk2::HBox -> new;
@@ -4243,9 +4235,9 @@ sub parse_options {
     $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
    }
   });
-  $tooltips -> set_tip ($ev,
+  $tooltips -> set_tip ($combobp,
                 $d->get('Selects the paper size, e.g. A4, Letter, or Custom'));
-  $hboxp -> pack_end ($ev, FALSE, FALSE, 0);
+  $hboxp -> pack_end ($combobp, FALSE, FALSE, 0);
 
 # Set default paper size from config
   my $o = 0;
@@ -4372,9 +4364,7 @@ sub parse_options {
 
 # ComboBox
    else {
-    my $ev = Gtk2::EventBox->new;
     my $combob = Gtk2::ComboBox -> new_text;
-    $ev->add($combob);
 
     my @array = options2array($hash{$option}{values});
     my $index = default2index($hash{$option}{default}, @array);
@@ -4412,8 +4402,8 @@ sub parse_options {
      });
     }
     
-    $hbox -> pack_end ($ev, FALSE, FALSE, 0);
-    $tooltips -> set_tip ($ev, $hash{$option}{tip});
+    $hbox -> pack_end ($combob, FALSE, FALSE, 0);
+    $tooltips -> set_tip ($combob, $hash{$option}{tip});
    }
   }
  }
