@@ -1,8 +1,19 @@
 #!/usr/bin/perl
 
-# Copyright (c) 2006--2007 by Jeff Ratcliffe (ra28145 at users dot sourceforge dot net)
-# This script is released under the GPLv3 license.  Please
-# see the included LICENCE file for details.
+# gscan2pdf --- to aid the scan to PDF or DjVu process
+# Copyright (C) 2006 -- 2007  Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the version 3 GNU General Public License as
+# published by the Free Software Foundation.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
 #    put paper sizes in config
@@ -42,7 +53,6 @@
 #     Investigate using Gtk2::FileChooser instead of Gtk2::FileChooserDialog
 #     and putting save options on same dialog.
 #    Investigate using tiff2ps instead of pdf2ps
-#    Move contents of LICENCE into the licence button of the about dialog
 #
 # 1. Crop and autocrop
 #     (see http://mail.gnome.org/archives/gtk-perl-list/2006-June/msg00002.html
@@ -4006,6 +4016,7 @@ sub select_all {
 # Display about dialog
 
 sub about {
+ use utf8;
  my $about = Gtk2::AboutDialog->new;
 # Gtk2::AboutDialog->set_url_hook ($func, $data=undef);
 # Gtk2::AboutDialog->set_email_hook ($func, $data=undef);
@@ -4022,7 +4033,23 @@ EOS
 		      ."\n$authors");
  $about->set_comments ($d->get('To aid the scan-to-PDF process'));
  $about->set_copyright ($d->get('Copyright 2006--2007 Jeffrey Ratcliffe'));
- $about->set_license ($d->get('Licensed under the GPLv3'));
+ my $licence = <<EOS;
+gscan2pdf --- to aid the scan to PDF or DjVu process
+Copyright (C) 2006 -- 2007  Jeffrey Ratcliffe <Jeffrey.Ratcliffe\@gmail.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the version 3 GNU General Public License as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+EOS
+ $about->set_license ($licence);
  $about->set_website ('http://gscan2pdf.sf.net');
  my $translators = <<EOS;
 Petr Jelínek
