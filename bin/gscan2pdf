@@ -3043,6 +3043,7 @@ sub scan_dialog {
  my $hboxu = Gtk2::HBox -> new;
  $vboxp -> pack_start ($hboxu, FALSE, FALSE, 0);
  my $ubutton = Gtk2::CheckButton -> new($d->get('unpaper scanned pages'));
+ $tooltips -> set_tip ($ubutton, $d->get('Process scanned image with unpaper'));
  $hboxu -> pack_start($ubutton, TRUE, TRUE, 0);
  if (! $dependencies{unpaper}) {
   $ubutton -> set_sensitive(FALSE);
@@ -3052,6 +3053,7 @@ sub scan_dialog {
   $ubutton -> set_active(TRUE);
  }
  my $button = Gtk2::Button -> new($d->get('Options'));
+ $tooltips -> set_tip ($button, $d->get('Set unpaper options'));
  $hboxu -> pack_end($button, TRUE, TRUE, 0);
  $button -> signal_connect (clicked => sub {
   my ($windowo, $vbox1) = create_window($window, $d->get('unpaper options'), TRUE);
@@ -3084,6 +3086,7 @@ sub scan_dialog {
  my $hboxo = Gtk2::HBox -> new;
  $vboxp -> pack_start ($hboxo, FALSE, FALSE, 0);
  my $obutton = Gtk2::CheckButton -> new($d->get('OCR scanned pages'));
+ $tooltips -> set_tip ($obutton, $d->get('OCR scanned pages'));
  if (! $dependencies{gocr} and ! $dependencies{tesseract}) {
   $hboxo -> set_sensitive(FALSE);
   $obutton -> set_active(FALSE);
@@ -3093,6 +3096,7 @@ sub scan_dialog {
  }
  $hboxo -> pack_start($obutton, TRUE, TRUE, 0);
  my $comboboxe = combobox_from_array($SETTING{'ocr engine'}, @ocr_engine);
+ $tooltips -> set_tip ($comboboxe, $d->get('Select OCR engine'));
  $hboxo -> pack_end($comboboxe, TRUE, TRUE, 0);
  my ($comboboxl, @tesslang);
  if ($dependencies{tesseract}) {
