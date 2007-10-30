@@ -13,7 +13,7 @@ BuildArch: noarch
 BuildRequires: perl(ExtUtils::MakeMaker), perl(Test::More)
 BuildRequires: gettext, desktop-file-utils
 Requires: perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
-Requires: ImageMagick-perl, ImageMagick, djvulibre, sane-backends
+Requires: ImageMagick-perl, ImageMagick, djvulibre, sane-backends (>= 1.0.17)
 Requires: sane-frontends, xdg-utils, unpaper, gocr
 Requires: perl(Gtk2::Ex::PodViewer), perl(PDF::API2), perl(Config::General)
 

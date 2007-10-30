@@ -39,7 +39,7 @@ WriteMakefile(
               VERSION         => $version,
               'EXE_FILES'     => [ "bin/$program" ],
               PREREQ_PM       => {
-                                   Gtk2                   => 1.08,
+                                   Gtk2                   => 1.090,
                                    Gtk2::Ex::Simple::List => 0,
                                    Image::Magick          => 0,
                                    Locale::gettext        => 1.05,
