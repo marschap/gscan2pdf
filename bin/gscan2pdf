@@ -50,7 +50,6 @@
 #    Simplify all save menu items into one.
 #     Investigate using Gtk2::FileChooser instead of Gtk2::FileChooserDialog
 #     and putting save options on same dialog.
-#    Investigate using tiff2ps instead of pdf2ps
 #
 # 1. Crop and autocrop
 #     (see http://mail.gnome.org/archives/gtk-perl-list/2006-June/msg00002.html
@@ -1855,7 +1854,7 @@ sub get_PDF_options {
 # Create the PDF
 
 sub create_PDF {
- my ($filename, $ps) = @_;
+ my ($filename) = @_;
 
  require PDF::API2;
 
@@ -2024,12 +2023,6 @@ sub create_PDF {
   send($writer, '1'.$d->get('Closing PDF'), 0);
   $pdf->save;
   $pdf->end();
-  if (defined $ps) {
-   send($writer, '1'.$d->get('Converting to PS'), 0);
-   my $cmd = "pdf2ps $filename $ps";
-   print "$cmd\n" if $debug;
-   system($cmd);
-  }
   send($writer, '2', 0);
  });
 
@@ -2335,7 +2328,35 @@ sub save_image_dialog {
   $SETTING{'quality'} = $spinbuttonq->get_value;
 
   if ($SETTING{'image type'} eq 'tif') {
-   save_TIFF();
+
+# cd back to cwd to save
+   chdir $SETTING{'cwd'};
+
+# Set up file selector
+   my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('TIFF filename'),
+                                                     $windowi, 'save',
+                                                     'gtk-cancel' => 'cancel',
+                                                     'gtk-save' => 'ok');
+   $file_chooser -> set_default_response('ok');
+
+   if ('ok' eq $file_chooser->run) {
+    my $filename = $file_chooser -> get_filename;
+    $filename = $filename.".tif" if ($filename !~ /\.tif$/i);
+    if (file_exists($file_chooser, $filename)) {
+     $file_chooser -> destroy;
+     return TRUE;
+    }
+
+# Update cwd
+    $SETTING{'cwd'} = dirname($filename);
+
+# cd back to tempdir
+    chdir $dir;
+
+    $file_chooser -> destroy;
+    save_TIFF($filename);
+   }
+   $file_chooser -> destroy;
   }
   elsif ($SETTING{'image type'} eq 'ps') {
 
@@ -2361,8 +2382,9 @@ sub save_image_dialog {
     $SETTING{'cwd'} = dirname($filename);
 
 # Create the PS
-    my (undef, $pdf) = tempfile(DIR => $dir, SUFFIX => '.pdf');
-    create_PDF($pdf, $filename);
+    my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+    save_TIFF($tif, $filename);
+    unlink $tif;
    }
    $file_chooser -> destroy;
   }
@@ -2453,124 +2475,100 @@ sub save_image {
 
 
 sub save_TIFF {
+ my ($filename, $ps) = @_;
 
-# cd back to cwd to save
- chdir $SETTING{'cwd'};
-
-# Set up file selector
- my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('TIFF filename'),
-                                                     $windowi, 'save',
-                                                     'gtk-cancel' => 'cancel',
-                                                     'gtk-save' => 'ok');
- $file_chooser -> set_default_response('ok');
-
- if ('ok' eq $file_chooser->run) {
-  my $filename = $file_chooser -> get_filename;
-  $filename = $filename.".tif" if ($filename !~ /\.tif$/i);
-  if (file_exists($file_chooser, $filename)) {
-   $file_chooser -> destroy;
-   return TRUE;
-  }
-
-# Update cwd
-  $SETTING{'cwd'} = dirname($filename);
-
-# cd back to tempdir
-  chdir $dir;
-
-  $file_chooser -> destroy;
-
-  my $dialog = Gtk2::Dialog -> new ($d->get('Importing')."...", $windowo,
-                                    'destroy-with-parent',
-                                    'gtk-cancel' => 'cancel');
+ my $dialog = Gtk2::Dialog -> new ($d->get('Saving TIFF')."...", $windowo,
+                                   'destroy-with-parent',
+                                   'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
-  my $pbar = Gtk2::ProgressBar->new;
-  $dialog -> vbox -> add($pbar);
+ my $pbar = Gtk2::ProgressBar->new;
+ $dialog -> vbox -> add($pbar);
 
 # Ensure that the dialog box is destroyed when the user responds.
-  $dialog -> signal_connect (response => sub {
-   $_[0] -> destroy;
-   kill_subs();
-  });
-  $dialog -> show_all;
+ $dialog -> signal_connect (response => sub {
+  $_[0] -> destroy;
+  kill_subs();
+ });
+ $dialog -> show_all;
 
 # Install a handler for child processes
-  $SIG{CHLD} = \&sig_child;
+ $SIG{CHLD} = \&sig_child;
 
-  my $pid = start_process(sub {
+ my $pid = start_process(sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
-   my ($pagelist, $n) = get_pagelist();
-   my $page = 0;
+  my ($pagelist, $n) = get_pagelist();
+  my $page = 0;
 
-   my @pagelist = split / /, $pagelist;
-   foreach (@pagelist) {
-    ++$page;
-    send($writer, ($page-1)/($#pagelist+2)
-     .sprintf($d->get("Converting image %i of %i to TIFF"), $page, $#pagelist+1), 0);
-
+  my @pagelist = split / /, $pagelist;
+  foreach (@pagelist) {
+   ++$page;
+   send($writer, ($page-1)/($#pagelist+2)
+    .sprintf($d->get("Converting image %i of %i to TIFF"), $page, $#pagelist+1), 0);
     if ($_ !~ /\.tif/) {
-     my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+    my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
 
 # Convert to tiff
-     system ("convert $_ $tif") == 0 or
-      send($writer, "2".$d->get('Error writing TIFF'), 0);
+    system ("convert $_ $tif") == 0 or
+     send($writer, "2".$d->get('Error writing TIFF'), 0);
 
-     $_ = $tif;
-    }
+    $_ = $tif;
    }
-   $pagelist = "@pagelist";
+  }
+  $pagelist = "@pagelist";
 
-   my $compression = $SETTING{'tiff compression'};
-   $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpeg');
+  my $compression = $SETTING{'tiff compression'};
+  $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpeg');
 
 # Create the tiff
-   send($writer, '1'.$d->get('Concatenating TIFFs'), 0);
-   my $cmd = "tiffcp -c $compression $pagelist \"$filename\" 2>&1";
+  send($writer, '1'.$d->get('Concatenating TIFFs'), 0);
+  my $cmd = "tiffcp -c $compression $pagelist \"$filename\" 2>&1";
+  print "$cmd\n" if $debug;
+  my $output = `$cmd`;
+  if (defined $ps) {
+   send($writer, '1'.$d->get('Converting to PS'), 0);
+   my $cmd = "tiff2ps $filename > $ps";
    print "$cmd\n" if $debug;
-   my $output = `$cmd`;
-   send($writer, "2$output", 0);
-  });
+   $output = `$cmd`;
+  }
+  send($writer, "2$output", 0);
+ });
 
-  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
-   my ($fileno, $condition) = @_;
+ $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+  my ($fileno, $condition) = @_;
 
-   my $line;
-   if ($condition & 'in') { # bit field operation. >= would also work
-    recv($reader, $line, 1000, 0);
-    if ($line =~ /(\d*\.?\d*)(.*)/) {
-     my $fraction=$1;
-     my $text=$2;
-     if ($fraction > 1) {
-      $dialog -> destroy;
-      if ($text eq '') {
-       $windowi -> hide if defined $windowi;
-      }
-      else {
-       unlink $filename;
-       show_message_dialog($windowi, 'error', 'close', $text);
-      }
-      return FALSE;  # uninstall
+  my $line;
+  if ($condition & 'in') { # bit field operation. >= would also work
+   recv($reader, $line, 1000, 0);
+   if ($line =~ /(\d*\.?\d*)(.*)/) {
+    my $fraction=$1;
+    my $text=$2;
+    if ($fraction > 1) {
+     $dialog -> destroy;
+     if ($text eq '') {
+      $windowi -> hide if defined $windowi;
      }
-     $pbar->set_fraction($fraction);
-     $pbar->set_text($text);
+     else {
+      unlink $filename;
+      show_message_dialog($windowi, 'error', 'close', $text);
+     }
+     return FALSE;  # uninstall
     }
+    $pbar->set_fraction($fraction);
+    $pbar->set_text($text);
    }
+  }
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
-    $dialog -> destroy;
-    update_uimanager();
-    return FALSE;  # uninstall
-   }
-   return TRUE;  # continue without uninstalling
-  });
- }
- else {
-  $file_chooser -> destroy;
- }
+  if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   $dialog -> destroy;
+   update_uimanager();
+   return FALSE;  # uninstall
+  }
+  return TRUE;  # continue without uninstalling
+ });
 }
 
 
