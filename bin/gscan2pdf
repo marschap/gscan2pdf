@@ -1913,8 +1913,13 @@ sub create_PDF {
         or $SETTING{'downsample'}
         or $SETTING{'pdf compression'} eq 'jpg') {
     print "Converting $filename to " if ($debug);
-    (undef, $filename) = tempfile(DIR => $dir,
-                                  SUFFIX => '.'.$SETTING{'pdf compression'});
+    if ($SETTING{'pdf compression'} !~ /(jpg)|(png)/) {
+     (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.tif');
+    }
+    else {
+     (undef, $filename) = tempfile(DIR => $dir,
+                                   SUFFIX => '.'.$SETTING{'pdf compression'});
+    }
     print "$filename\n" if ($debug);
 
     my $depth = $image->Get('depth');
@@ -1937,6 +1942,14 @@ sub create_PDF {
     }
     warn "$x" if "$x";
     $format = $1 if ($filename =~ /\.(\w*)$/);
+
+    if ($SETTING{'pdf compression'} !~ /(jpg)|(png)/) {
+     my (undef, $filename2) = tempfile(DIR => $dir, SUFFIX => '.tif');
+     my $cmd = "tiffcp -c $SETTING{'pdf compression'} $filename $filename2 2>&1";
+     print "$cmd\n" if $debug;
+     my $output = `$cmd`;
+     my $filename = $filename2;
+    }
    }
 
    print "Defining page at ", $w*72/$resolution, " x ", $h*72/$resolution, "\n"
@@ -2137,6 +2150,11 @@ sub add_pdf_compression {
  my @compression = (
   [ 'jpg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
   [ 'png',  $d->get('PNG'),  $d->get('Compress output with PNG encoding.') ],
+  [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
+  [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
+  [ 'packbits', $d->get('Packbits'), $d->get('Compress output with Packbits encoding.') ],
+  [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
+  [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
   [ 'none', $d->get('None'), $d->get('Use no compression algorithm on output.') ],
  );
 
@@ -2319,7 +2337,7 @@ sub save_image_dialog {
   if ($SETTING{'image type'} eq 'tif') {
    save_TIFF();
   }
-  if ($SETTING{'image type'} eq 'ps') {
+  elsif ($SETTING{'image type'} eq 'ps') {
 
 # cd back to cwd to save
    chdir $SETTING{'cwd'};
