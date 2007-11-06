@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Translate documentation (po4a?)
 #    put paper sizes in config
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
@@ -40,7 +41,6 @@
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    Option to throw up PDF viewer with newly created PDF file
-#    Translate documentation
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
 #    Switch viewing widget as soon as packages are available for:
@@ -3170,8 +3170,7 @@ sub scan_dialog {
      if ($widget -> isa('Gtk2::Label')) {
       $key = get_key(\%ddo, $widget -> get_label);
      }
-     elsif ($widget -> isa('Gtk2::EventBox')) {
-      $widget = $widget -> get_child;
+     elsif ($widget -> isa('Gtk2::ComboBox')) {
 
 # ignore artificial paper size option
       $SETTING{$key} = get_value(\%ddo, $key, $widget -> get_active_text);
@@ -3557,6 +3556,7 @@ sub scanimage {
      }
      elsif ($line =~ /^Scanning page (\d*)/) {
       $pbar -> set_text(sprintf($d->get('Scanning page %i...'), $1*$step+$offset));
+      $pbar->set_fraction (0);
      }
      elsif ($line =~ /^Scanned page (\d*)\. \(scanner status = 5\)/) {
 
@@ -4564,12 +4564,11 @@ sub update_options_hash {
     if ($widget -> isa('Gtk2::Label')) {
      $key = get_key(\%ddo, $widget -> get_label);
     }
-    elsif ($widget -> isa('Gtk2::EventBox')
+    elsif ($widget -> isa('Gtk2::ComboBox')
 # to prevent recursion
                                             and $key ne 'mode'
                                             and defined($hash{$key}{values})
                                             and $hash{$key}{values} !~ /\.\./) {
-     $widget = $widget -> get_child;
      
 # Empty the list
      $widget->get_model->clear;
@@ -4923,9 +4922,7 @@ sub add_widget {
   $vbox -> pack_start($hbox, TRUE, TRUE, 0);
   my $label = Gtk2::Label -> new ($hashref->{$option}{string});
   $hbox -> pack_start ($label, FALSE, FALSE, 0);
-  $widget = Gtk2::EventBox->new;
-  my $combobox = Gtk2::ComboBox->new_text;
-  $widget->add($combobox);
+  $widget = Gtk2::ComboBox->new_text;
   $hbox -> pack_end ($widget, FALSE, FALSE, 0);
 
 # Add text and tooltips
@@ -4933,18 +4930,18 @@ sub add_widget {
   my $i = -1;
   my $o = 0;
   foreach (keys %{$hashref->{$option}{options}}) {
-   $combobox -> append_text ($hashref->{$option}{options}{$_}{string});
+   $widget -> append_text ($hashref->{$option}{options}{$_}{string});
    push @tooltip, $hashref->{$option}{options}{$_}{tooltip};
    $hashref->{$option}{options}{$_}{index} = ++$i;
    $o = $i if ($_ eq $SETTING{$option});
   }
-  $combobox -> signal_connect (changed => sub {
-   $tooltips -> set_tip ($widget, $tooltip[$combobox->get_active])
-    if (defined $tooltip[$combobox->get_active]);
+  $widget -> signal_connect (changed => sub {
+   $tooltips -> set_tip ($widget, $tooltip[$widget->get_active])
+    if (defined $tooltip[$widget->get_active]);
   });
 
 # Set defaults
-  $combobox -> set_active ($o);
+  $widget -> set_active ($o);
   $tooltips -> set_tip ($widget, $tooltip[0]);
  }
 
