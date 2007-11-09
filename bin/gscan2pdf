@@ -273,7 +273,12 @@ my @action_items = (
  [ 'Copy', 'gtk-copy', $d->get('_Copy'), '<control>c', $d->get('Copy selected pages'), \&copy_pages ],
  [ 'Paste', 'gtk-paste', $d->get('_Paste'), '<control>v', $d->get('Paste selected pages'), \&paste_pages ],
  [ 'Delete', 'gtk-delete', $d->get('_Delete'), undef, $d->get('Delete selected pages'), \&delete_pages ],
- [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages from 1 to n'), sub { renumber($slist, 0, 1, 1); } ],
+ [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages from 1 to n'), sub {
+
+# Update undo/redo buffers
+    take_snapshot();
+    renumber($slist, 0, 1, 1);
+   } ],
  [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
  [ 'Frontend', undef, $d->get('_Frontend') ],
  
@@ -4666,9 +4671,6 @@ sub hide_custom {
 
 sub renumber {
  my ($slist, $column, $start, $step) = @_;
-
-# Update undo/redo buffers
- take_snapshot();
 
  $step = 1 if (! defined($step));
 
