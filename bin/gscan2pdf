@@ -5151,7 +5151,7 @@ sub get_unpaper_options {
 
  foreach my $option (keys %{$hashref}) {
   if ($hashref->{$option}{type} eq 'ComboBox') {
-   my $i = $hashref->{$option}{widget} -> get_child -> get_active;
+   my $i = $hashref->{$option}{widget} -> get_active;
    my $item;
    foreach (keys %{$hashref->{$option}{options}}) {
     $item = $_ if ($hashref->{$option}{options}{$_}{index} == $i);
