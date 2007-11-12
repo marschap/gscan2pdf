@@ -16,10 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    move paper sizes into TreeModel
 #    sort out progressbar text whilst importing djvu
 #    Deal with "Use once I no longer have to develop with Gtk2 < 1.090!"
 #    Translate documentation (po4a?)
-#    put paper sizes in config
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    write hg2cl if necessary
@@ -104,11 +104,6 @@ use Locale::gettext 1.05;            # For translations
 my $program = 'gscan2pdf';
 my $version = '0.9.18';
 
-# Standard paper sizes
-my @paperg = ('A4', 'US Letter', 'US Legal', 'Custom');
-my @xg = (210, 216, 216, 0);
-my @yg = (297, 279, 356, 0);
-my (@paper, @x, @y);
 my $tolerance = 1;
 
 # Window parameters
@@ -201,6 +196,26 @@ my $conf = Config::General->new(
  },
 );
 my %SETTING = $conf->getall;
+$SETTING{Paper} = {
+ $d->get('A4') => {
+  x => 210,
+  y => 297,
+  l => 0,
+  t => 0,
+ },
+ $d->get('US Letter') => {
+  x => 216,
+  y => 279,
+  l => 0,
+  t => 0,
+ },
+ $d->get('US Legal') => {
+  x => 216,
+  y => 356,
+  l => 0,
+  t => 0,
+ },
+} if (! defined $SETTING{Paper});
 
 if ($debug) {
  print "Gtk2-Perl version $Gtk2::VERSION\n";
@@ -1403,9 +1418,10 @@ sub convert_to_tiff {
  my $ratio = $height/$width;
  $ratio = 1/$ratio if ($ratio < 1);
  my $density = 72;
- for (my $i = 0; $i <= $#paperg; ++$i) {
-  if ($xg[$i] > 0 and abs($ratio - $yg[$i]/$xg[$i]) < 0.01) {
-   $density = (($height > $width) ? $height : $width)/$yg[$i]*25.4;
+ for (keys %{$SETTING{Paper}}) {
+  if ($SETTING{Paper}{$_}{x} > 0
+      and abs($ratio - $SETTING{Paper}{$_}{y}/$SETTING{Paper}{$_}{x}) < 0.01) {
+   $density = (($height > $width) ? $height : $width)/$SETTING{Paper}{$_}{y}*25.4;
   }
  }
 
@@ -3188,7 +3204,15 @@ sub scan_dialog {
 
 # ignore artificial paper size option
       $SETTING{$key} = get_value(\%ddo, $key, $widget -> get_active_text);
-      $options{$key} = $SETTING{$key} if ($key ne 'Paper size');
+      if ($key eq 'Paper size') {
+       $options{x} = $SETTING{Paper}{$SETTING{$key}}{x};
+       $options{y} = $SETTING{Paper}{$SETTING{$key}}{y};
+       $options{l} = $SETTING{Paper}{$SETTING{$key}}{l};
+       $options{t} = $SETTING{Paper}{$SETTING{$key}}{t};
+      }
+      else {
+       $options{$key} = $SETTING{$key};
+      }
      }
      elsif ($widget -> isa('Gtk2::SpinButton')) {
       $options{$key} = $widget -> get_value;
@@ -3310,7 +3334,6 @@ sub scan_dialog {
 # Show window
  $windows -> show_all;
  $framex->hide_all;
- hide_custom();
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
  $sbutton -> set_sensitive(FALSE) if (! @test);
@@ -3378,7 +3401,6 @@ sub populate_device_list {
   $run = TRUE;
   rescan_options($vboxd, $device[$combobd -> get_active]);
   $vboxd -> show_all;
-  hide_custom();
  });
  $tooltips -> set_tip ($combobd, $d->get('Sets the device to be used for the scan'));
  $hboxd -> pack_end ($combobd, FALSE, FALSE, 0);
@@ -4128,12 +4150,6 @@ sub rescan_options {
   $_ -> destroy;
  }
 
-# Stupidly, the different frontends also show different paper sizes, so
-# make a device-dependent paper size, starting from the global one
- @paper = @paperg;
- @x = @xg;
- @y = @yg;
-
  my $output = '';
  if (! @test) {
 
@@ -4232,118 +4248,135 @@ sub parse_options {
   $hboxp -> pack_start ($labelp, FALSE, FALSE, 0);
 
   $combobp = Gtk2::ComboBox -> new_text;
-
-# Define custom paper here to reference it in callback
-  $hboxc = Gtk2::HBox -> new;
-  my $spin_buttonx = Gtk2::SpinButton -> new_with_range(0, $x, 1);
-  my $spin_buttony = Gtk2::SpinButton -> new_with_range(0, $y, 1);
-  $tooltips -> set_tip ($spin_buttonx, $d->get('Width of scan area'));
-  $tooltips -> set_tip ($spin_buttony, $d->get('Height of scan area'));
-
-# Add paper size to combobox if scanner large enough
-# can't use "for" because of the splices
-  my $i = 0;
-  while ($i <= $#paper) {
-   if ($x+$tolerance >= $x[$i] and $y+$tolerance >= $y[$i]) {
-    $combobp -> append_text ($d->get($paper[$i]));
-    ++$i;
-   }
-
-# If the paper size isn't possible, remove it from the arrays
-   else {
-    splice @paper, $i, 1;
-    splice @x, $i, 1;
-    splice @y, $i, 1;
-   }
-  }
-
-# Add custom option
+  $combobp -> append_text ($d->get('Edit'));
+  add_paper($combobp, $x, $y, $l, $t);
   $combobp -> signal_connect (changed => sub {
-   if ($combobp -> get_active_text eq $d->get('Custom')) {
-    $hboxc -> show_all;
-   }
-   else {
-    my $i = $combobp -> get_active;
-    $spin_buttonx -> set_value($x[$i]);
-    $spin_buttony -> set_value($y[$i]);
-    $hboxc -> hide;
-    $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
+   my $text = $combobp -> get_active_text;
+   if (defined($text) and $text eq $d->get('Edit')) {
+    my ($windowp, $vbox) = create_window($windows, $d->get('Edit paper size'), TRUE);
+
+# Buttons for SimpleList
+    my $hboxl = Gtk2::HBox -> new;
+    $vbox -> pack_start ($hboxl, FALSE, FALSE, 0);
+    my $vboxb = Gtk2::VBox -> new;
+    $hboxl -> pack_start ($vboxb, FALSE, FALSE, 0);
+    my $dbutton = Gtk2::Button -> new_from_stock('gtk-add');
+    $vboxb -> pack_start ($dbutton, TRUE, FALSE, 0);
+    my $rbutton = Gtk2::Button -> new_from_stock('gtk-remove');
+    $vboxb -> pack_end ($rbutton, TRUE, FALSE, 0);
+    
+# Set up a SimpleList
+    my $slist = Gtk2::Ex::Simple::List -> new($d->get('Name') => 'text',
+                                              $d->get('Width') => 'int',
+                                              $d->get('Height') => 'int',
+                                              $d->get('Left') => 'int',
+                                              $d->get('Top') => 'int');
+    for (keys %{$SETTING{Paper}}) {
+     push @{ $slist->{data} }, [ $_,
+                                 $SETTING{Paper}{$_}{x},
+                                 $SETTING{Paper}{$_}{y},
+                                 $SETTING{Paper}{$_}{l},
+                                 $SETTING{Paper}{$_}{t} ];
+    }
+
+# Set everything to be editable
+    for (0..4) {
+     $slist -> set_column_editable($_, TRUE);
+    }
+    $slist->get_column(0)->set_sort_column_id(0);
+
+# Add button callback
+    $dbutton -> signal_connect (clicked => sub {
+     my @rows = $slist -> get_selected_indices;
+     $rows[0] = 0 if (! @rows);
+     my $name = $slist->{data}[$rows[0]][0];
+     my $version = 2;
+     my $i = 0;
+     while ($i <= $#{$slist->{data}}) {
+      if ($slist->{data}[$i][0] eq "$name ($version)") {
+       ++$version;
+       $i = 0;
+      }
+      else {
+       ++$i;
+      }
+     }
+     my @line = [ "$name ($version)",
+                  $slist->{data}[$rows[0]][1],
+                  $slist->{data}[$rows[0]][2],
+                  $slist->{data}[$rows[0]][3],
+                  $slist->{data}[$rows[0]][4] ];
+     splice @{ $slist->{data} }, $rows[0]+1, 0, @line;
+    });   
+
+# Remove button callback
+    $rbutton -> signal_connect (clicked => sub {
+     my @rows = $slist -> get_selected_indices;
+     if ($#rows == $#{$slist->{data}}) {
+      show_message_dialog($windowp, 'error', 'close', $d->get('Cannot delete all paper sizes'));
+     }
+     else {
+      while (@rows) {
+       splice @{ $slist->{data} }, shift(@rows), 1;
+      }
+     }
+    });   
+
+# Set-up the callback to check that no two Names are the same
+    $slist -> get_model -> signal_connect('row-changed' => sub {
+     my ($model, $path, $iter) = @_;
+     for (my $i = 0; $i <= $#{$slist->{data}}; $i++) {
+      if ($i != $path->to_string and
+           $slist->{data}[$path->to_string][0] eq $slist->{data}[$i][0]) {
+       my $name = $slist->{data}[$path->to_string][0];
+       my $version = 2;
+       if ($name =~ /(.*) \((\d+)\)/) {
+        $name = $1;
+        $version = $2+1;
+       }
+       $slist->{data}[$path->to_string][0] = "$name ($version)";
+       return;
+      }
+     }
+    });
+    $hboxl -> pack_end($slist, FALSE, FALSE, 0);
+
+# Buttons
+    my $hboxb = Gtk2::HBox -> new;
+    $vbox -> pack_start ($hboxb, FALSE, FALSE, 0);
+    my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
+    $abutton -> signal_connect( clicked => sub {
+     delete $SETTING{Paper};
+     for (my $i = 0; $i <= $#{$slist->{data}}; $i++) {
+      $SETTING{Paper}{$slist->{data}[$i][0]}{x} = $slist->{data}[$i][1];
+      $SETTING{Paper}{$slist->{data}[$i][0]}{y} = $slist->{data}[$i][2];
+      $SETTING{Paper}{$slist->{data}[$i][0]}{l} = $slist->{data}[$i][3];
+      $SETTING{Paper}{$slist->{data}[$i][0]}{t} = $slist->{data}[$i][4];
+     }
+     $combobp->remove_text(0) while ($combobp->get_active > 0);
+     add_paper($combobp, $x, $y, $l, $t);
+     my @rows = $slist -> get_selected_indices;
+     $rows[0] = 0 if (! @rows);
+     $SETTING{'Paper size'} = $slist->{data}[$rows[0]][0];
+     set_paper($combobp);
+     $windowp -> destroy;
+    });
+    $hboxb -> pack_start ($abutton, TRUE, FALSE, 0);
+    my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+    $cbutton -> signal_connect( clicked => sub {
+     my @rows = $slist -> get_selected_indices;
+     $rows[0] = 0 if (! @rows);
+     $SETTING{'Paper size'} = $slist->{data}[$rows[0]][0];
+     set_paper($combobp);
+     $windowp -> destroy;
+    });
+    $hboxb -> pack_end ($cbutton, TRUE, FALSE, 0);
+    $windowp->show_all;
    }
   });
-  $tooltips -> set_tip ($combobp,
-                $d->get('Selects the paper size, e.g. A4, Letter, or Custom'));
+  $tooltips -> set_tip ($combobp, $d->get('Selects or edits the paper size'));
   $hboxp -> pack_end ($combobp, FALSE, FALSE, 0);
-
-# Set default paper size from config
-  my $o = 0;
-  if (defined($SETTING{'Paper size'})) {
-   $i = 0;
-   while ($i <= $#paper) {
-    $o = $i if ($paper[$i] eq $SETTING{'Paper size'});
-    ++$i;
-   }
-  }
-  $combobp -> set_active($o);
-
-  $vboxd -> pack_start ($hboxc, FALSE, FALSE, 0);
-
-# custom paper y entry
-  my $labely = Gtk2::Label -> new ('y');
-  $hboxc -> pack_end ($spin_buttony, FALSE, FALSE, 0);
-  $hboxc -> pack_end ($labely, FALSE, FALSE, 0);
-
-# custom paper x entry
-  my $labelx = Gtk2::Label -> new ('x');
-  $hboxc -> pack_end ($spin_buttonx, FALSE, FALSE, 0);
-  $hboxc -> pack_end ($labelx, FALSE, FALSE, 0);
-
-# Origin
-  my $hboxo = Gtk2::HBox -> new;
-  my $hboxol = Gtk2::HBox -> new;
-  my $labelo = Gtk2::Label -> new ($d->get('Top-left position of scan area'));
-  $hboxol -> pack_start ($labelo, FALSE, FALSE, 0);
-  $vboxd -> pack_start ($hboxol, TRUE, TRUE, 0);
-  my $labell = Gtk2::Label -> new ('l');
-  my $spin_buttonl = Gtk2::SpinButton -> new_with_range(0, $l, 1);
-  $spin_buttonl -> set_value($SETTING{'l'});
-  my $labelt = Gtk2::Label -> new ('t');
-  my $spin_buttont = Gtk2::SpinButton -> new_with_range(0, $t, 1);
-  $spin_buttont -> set_value($SETTING{'t'});
-  $tooltips -> set_tip ($spin_buttonl, $d->get('Top-left x position of scan area'));
-  $tooltips -> set_tip ($spin_buttont, $d->get('Top-left y position of scan area'));
-  $hboxo -> pack_end ($spin_buttont, FALSE, FALSE, 0);
-  $hboxo -> pack_end ($labelt, FALSE, FALSE, 0);
-  $hboxo -> pack_end ($spin_buttonl, FALSE, FALSE, 0);
-  $hboxo -> pack_end ($labell, FALSE, FALSE, 0);
-  $vboxd -> pack_start ($hboxo, FALSE, FALSE, 0);
-
-  $spin_buttonx -> signal_connect ('value-changed' => sub {
-   my ($minx, $maxx) = $spin_buttonx -> get_range;
-   $spin_buttonl -> set_range(0, $maxx-$spin_buttonx->get_value);
-  });
-  $spin_buttony -> signal_connect ('value-changed' => sub {
-   my ($miny, $maxy) = $spin_buttony -> get_range;
-   $spin_buttont -> set_range(0, $maxy-$spin_buttony->get_value);
-  });
-
-# Set scan area from config if available, thus triggering updates for l & t
-  if (defined($SETTING{'x'}) and defined($SETTING{'y'})) {
-   $spin_buttonx -> set_value($SETTING{'x'});
-   $spin_buttony -> set_value($SETTING{'y'});
-  }
-
-# Otherwise set from paper size if available
-  elsif ($#paper > -1) {
-   $i = $combobp -> get_active;
-   $spin_buttonx -> set_value($x[$i]);
-   $spin_buttony -> set_value($y[$i]);
-  }
-
-# Or max available
-  else {
-   $spin_buttonx -> set_value($x);
-   $spin_buttony -> set_value($y);
-  }
+  set_paper($combobp);
  }
 
 # Set device-dependent options
@@ -4443,12 +4476,49 @@ sub parse_options {
   }
  }
 
-# Show window, hiding the custom hbox and sizing if necessary
+# Show window
  $vboxd -> show_all;
- hide_custom();
 
 #  Unghost the scan button
  $sbutton->set_sensitive(TRUE) if (defined $sbutton);
+}
+
+
+# Add paper size to combobox if scanner large enough
+
+sub add_paper {
+ my ($combobox, $x, $y, $l, $t) = @_;
+ for (keys %{$SETTING{Paper}}) {
+  if ($x+$tolerance >= $SETTING{Paper}{$_}{x}+$SETTING{Paper}{$_}{l}
+       and $y+$tolerance >= $SETTING{Paper}{$_}{y}+$SETTING{Paper}{$_}{t}
+       and $l+$tolerance >= $SETTING{Paper}{$_}{l}
+       and $t+$tolerance >= $SETTING{Paper}{$_}{t}) {
+   $combobox -> prepend_text ($_);
+  }
+ }
+}
+
+
+# Set default paper size from config
+
+sub set_paper {
+ my ($combobox) = @_;
+ my $o = 0;
+ if (defined($SETTING{'Paper size'})) {
+  my $i = 0;
+  $combobox->get_model->foreach (sub {
+   my ($model, $path, $iter) = @_;
+   if ($model->get($iter, 0) eq $SETTING{'Paper size'}) {
+    $o = $i;
+    return TRUE;
+   }
+   else {
+    ++$i;
+    return FALSE;
+   }
+  });
+ }
+ $combobox -> set_active($o);
 }
 
 
@@ -4514,7 +4584,6 @@ sub update_options {
     warn $output if $debug;
     update_options_hash($vboxd, options2hash($output));
     $vboxd -> show_all;
-    hide_custom();
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
@@ -4533,7 +4602,6 @@ sub update_options {
   $vboxd -> hide_all; # merely here for consistency with normal operation
   update_options_hash($vboxd, options2hash($output));
   $vboxd -> show_all;
-  hide_custom();
  }
 }
 
@@ -4653,17 +4721,6 @@ sub default2index {
   return $i if ($array[$i] eq $default);
  }
  return undef;
-}
-
-
-# Hides the custom paper size on scan dialog if not necessary
-
-sub hide_custom {
- if (! defined($combobp) or ($combobp->get_active_text ne $d->get('Custom'))) {
-# Not defined if scanner has no paper size (like my video grabber)
-  $hboxc -> hide if (defined $hboxc);
-  $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
- }
 }
 
 

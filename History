@@ -1,4 +1,4 @@
-0.9.18 (12.11.2007):
+0.9.18 (13.11.2007):
 
 + recoded DjVu save
 + Photo compression to DjVu output. Respect! Miles better than JPEG
@@ -12,8 +12,10 @@
 + djvu compression automatic on image depth to allow multiple pages with
   different compression for each page
 + TIFF compression options to PDF output
+  Closes bug 1803099 (created PDF files are huge)
 + threshold tool.
   Closes feature request 1750849 (RFE: support software controlled contrast)
++ paper size editor
 
 
 0.9.17 (02.10.2007):
