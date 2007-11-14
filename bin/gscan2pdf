@@ -18,7 +18,6 @@
 # To do
 #    move paper sizes into TreeModel
 #    sort out progressbar text whilst importing djvu
-#    Deal with "Use once I no longer have to develop with Gtk2 < 1.090!"
 #    Translate documentation (po4a?)
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
@@ -2448,7 +2447,12 @@ sub show_message_dialog {
 
 sub file_exists {
  my ($file_chooser, $filename) = @_;
- if (-e $filename) {
+ if (! -w dirname($filename)) {
+  show_message_dialog($file_chooser, 'error', 'close',
+                           sprintf($d->get("File %s is read-only"), $filename));
+  return TRUE;
+ }
+ elsif (-e $filename) {
   my $response = show_message_dialog($file_chooser, 'question', 'ok-cancel',
              sprintf($d->get("File %s exists.\nReally overwrite?"), $filename));
   return TRUE if ($response ne 'ok');
@@ -4251,8 +4255,7 @@ sub parse_options {
   $combobp -> append_text ($d->get('Edit'));
   add_paper($combobp, $x, $y, $l, $t);
   $combobp -> signal_connect (changed => sub {
-   my $text = $combobp -> get_active_text;
-   if (defined($text) and $text eq $d->get('Edit')) {
+   if ($combobp -> get_active_text eq $d->get('Edit')) {
     my ($windowp, $vbox) = create_window($windows, $d->get('Edit paper size'), TRUE);
 
 # Buttons for SimpleList
@@ -4784,9 +4787,6 @@ sub rotate {
   $x = $image->Write(filename => $slist -> {data}[$page[$i]][2], depth => $depth);
   warn "$x" if "$x";
 
-# Use once I no longer have to develop with Gtk2 < 1.090!
-#  $slist -> {data}[$page[$i]][1] =
-#                  $slist -> {data}[$page[$i]][1] -> rotate_simple ($degrees);
   $slist -> {data}[$page[$i]][1] =
                  get_pixbuf($slist -> {data}[$page[$i]][2], $heightt, $widtht);
   ++$i;

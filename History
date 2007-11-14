@@ -1,4 +1,4 @@
-0.9.18 (13.11.2007):
+0.9.18 (15.11.2007):
 
 + recoded DjVu save
 + Photo compression to DjVu output. Respect! Miles better than JPEG
@@ -16,6 +16,8 @@
 + threshold tool.
   Closes feature request 1750849 (RFE: support software controlled contrast)
 + paper size editor
++ detect if destination directory is read-only
+  Closes 1829961 (Crash saving .pdf in r/o subdirectory using v0.9.17)
 
 
 0.9.17 (02.10.2007):
