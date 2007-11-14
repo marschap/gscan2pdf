@@ -16,8 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    fix unnecessary conversion if tif compression used and image already tif
 #    move paper sizes into TreeModel
-#    sort out progressbar text whilst importing djvu
 #    Translate documentation (po4a?)
 #    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
@@ -1494,7 +1494,7 @@ sub import {
     read (FILE, $buffer, 8);
     close FILE;
     if ($buffer eq 'AT&TFORM') {
-     send($writer, '0 0 0'.$d->get("Converting to TIFF"), 0);
+     send($writer, '0 0 0 '.$d->get('Converting to TIFF'), 0);
      my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
      my $cmd = "ddjvu -format=tiff \"$filename\" $tif";
      warn "$cmd\n" if ($debug);
