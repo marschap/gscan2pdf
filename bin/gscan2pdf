@@ -582,7 +582,7 @@ $slist->signal_connect('drag-data-received' => sub {
  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
 # Update the start spinbutton if necessary
-  update_start() if (defined $spin_buttons);
+ update_start();
 
  $context->finish(1, $delete, time);
 });
@@ -653,7 +653,7 @@ $slist -> {signalid} = $slist -> get_model ->
   $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
 # Update the start spinbutton if necessary
-  update_start() if (defined $spin_buttons);
+  update_start();
  });
 
 $scwin_thumbs -> add($slist);
@@ -1302,6 +1302,9 @@ sub update_uimanager {
    $dependencies{pages} = $#{$slist -> {data}};
   }
  }
+
+# If the scan dialog has already been drawn, update the start page spinbutton
+ update_start();
 }
 
 
@@ -2961,9 +2964,8 @@ sub scan_dialog {
  $vboxx -> pack_start ($hboxxs, FALSE, FALSE, 0);
  my $labelxs = Gtk2::Label -> new ($d->get('Start'));
  $hboxxs -> pack_start($labelxs, FALSE, FALSE, 0);
- $start = $#{$slist -> {data}}+2;
+ $start = 1;
  $spin_buttons = Gtk2::SpinButton -> new_with_range(1, 99999, 1);
- $spin_buttons->set_value($start);
  $hboxxs -> pack_end($spin_buttons, FALSE, FALSE, 0);
 
 # SpinButton for page number increment
@@ -2982,6 +2984,9 @@ sub scan_dialog {
 
 # Check whether the start page exists
  $spin_buttons -> signal_connect ('value-changed' => \&update_start);
+
+# Setting this here to fire callback running update_start
+ $spin_buttons->set_value($start);
 
 # Callback on changing number of pages
  $spin_buttonn -> signal_connect ('value-changed' => sub {
@@ -3439,6 +3444,7 @@ sub populate_device_list {
 # or row-changed signal of simplelist
 
 sub update_start {
+ return if (! defined $spin_buttons);
  my $exists = TRUE;
  my $value = $spin_buttons->get_value;
  my $step = $value - $start;
@@ -3932,9 +3938,6 @@ sub add_image {
  
  update_uimanager();
 
-# If the scan dialog has already been drawn, update the start page spinbutton
- update_start() if (defined $spin_buttons);
-
  return @page;
 }
 
@@ -4021,9 +4024,6 @@ sub paste_pages {
  $slist -> get_selection -> unselect_all;
  $slist -> select(@page);
 
-# Update the start spinbutton if necessary
-  update_start() if (defined $spin_buttons);
-
  update_uimanager();
 }
 
@@ -4051,6 +4051,18 @@ sub delete_pages {
   $slist->select(@page);
  }
 
+# Reset start page in scan dialog
+ if (defined $spin_buttons) {
+  if ($#{$slist->{data}} > -1) {
+   my $start = $spin_buttons->get_value;
+   my $step = $spin_buttoni->get_value;
+   $spin_buttons->set_value($slist->{data}[$#{$slist->{data}}][0] + $step)
+    if ($start > $slist->{data}[$#{$slist->{data}}][0] + $step);
+  }
+  else {
+   $spin_buttons->set_value(1);
+  }
+ }
  update_uimanager();
 }
 
