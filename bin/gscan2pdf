@@ -1943,15 +1943,15 @@ sub create_PDF {
         and $SETTING{'pdf compression'} ne $format)
         or $SETTING{'downsample'}
         or $SETTING{'pdf compression'} eq 'jpg') {
-    print "Converting $filename to " if ($debug);
-    if ($SETTING{'pdf compression'} !~ /(jpg)|(png)/) {
+    if ($SETTING{'pdf compression'} !~ /(jpg)|(png)/ and $format ne 'tif') {
      (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.tif');
+     print "Converting $filename to $filename\n" if ($debug);
     }
-    else {
+    elsif ($SETTING{'pdf compression'} =~ /(jpg)|(png)/) {
      (undef, $filename) = tempfile(DIR => $dir,
                                    SUFFIX => '.'.$SETTING{'pdf compression'});
+     print "Converting $filename to $filename\n" if ($debug);
     }
-    print "$filename\n" if ($debug);
 
     my $depth = $image->Get('depth');
     if ($SETTING{'downsample'}) {
@@ -1962,17 +1962,22 @@ sub create_PDF {
      warn "$x" if "$x";
     }
     $x = $image->Set(quality => $SETTING{quality})
-     if $SETTING{'pdf compression'} eq 'jpg';
+     if ($SETTING{'pdf compression'} eq 'jpg');
     warn "$x" if "$x";
-    if ($depth > 1) {
-     print "Maintaining image depth $depth\n" if $debug;
-     $x = $image->Write(filename => $filename, depth => $depth);
+
+    if (($SETTING{'pdf compression'} !~ /(jpg)|(png)/ and $format ne 'tif')
+        or ($SETTING{'pdf compression'} =~ /(jpg)|(png)/)
+        or $SETTING{'downsample'}) {
+     if ($depth > 1) {
+      print "Maintaining image depth $depth\n" if $debug;
+      $x = $image->Write(filename => $filename, depth => $depth);
+     }
+     else {
+      $x = $image->Write(filename => $filename);
+     }
+     warn "$x" if "$x";
+     $format = $1 if ($filename =~ /\.(\w*)$/);
     }
-    else {
-     $x = $image->Write(filename => $filename);
-    }
-    warn "$x" if "$x";
-    $format = $1 if ($filename =~ /\.(\w*)$/);
 
     if ($SETTING{'pdf compression'} !~ /(jpg)|(png)/) {
      my (undef, $filename2) = tempfile(DIR => $dir, SUFFIX => '.tif');
