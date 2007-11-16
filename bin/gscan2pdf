@@ -16,7 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    fix unnecessary conversion if tif compression used and image already tif
+#    if anybody else complains about spending a long time "Closing PDF",
+#     see if $pdf->finishobjects does any good.
 #    move paper sizes into TreeModel
 #    Translate documentation (po4a?)
 #    try a document with 250 pages
@@ -26,7 +27,6 @@
 #    - rename those like $hboxu to $hbox
 #    get it to work on the TV tuner
 #    check out scanbuttond
-#    rotating doesn't update detail view - sometimes (wait problem?)
 #    problem with wait after cancelling scan?
 #    cover case where unpaper or ocr starts running on a page that has in the
 #     meantime been deleted
@@ -46,6 +46,7 @@
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
 #    Switch viewing widget as soon as packages are available for:
 #     http://giv.sourceforge.net/gtk-image-viewer/
+#     or http://trac.bjourne.webfactional.com/ (GtkImageView)
 #    As soon as I have cups-config --version >= 1.2.2, move print routines to
 #     Net::Cups
 #    Simplify all save menu items into one.
@@ -4126,21 +4127,21 @@ EOS
  my $translators = <<EOS;
 Petr Jelínek
 Alexandre Prokoudine
+Matthias Gutjahr
 Nicolas Stransky
 Hugo Pereira
 Piotr Strębski
-Jen Fraggle
+Jen Ockwell
 Dirk Tas
 Alberto Boiti
-mecedesjorge
 Yözen Hernández
-Christoph Langner
 Spartakus
-Matthias Gutjahr
 Jacob Nielsen
-Chien Cheng Wei
+Christoph Langner
+mecedesjorge
 Rodrigo Donado
-booxter
+Ioannis Koniaris
+Gérard Duteil
 Mathieu Goeminne
 Andrea (pikkio)
 EOS
