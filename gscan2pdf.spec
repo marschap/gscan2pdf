@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.17
+Version: 0.9.18
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -13,7 +13,7 @@ BuildArch: noarch
 BuildRequires: perl(ExtUtils::MakeMaker), perl(Test::More)
 BuildRequires: gettext, desktop-file-utils
 Requires: perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
-Requires: ImageMagick-perl, ImageMagick, djvulibre, sane-backends (>= 1.0.17)
+Requires: ImageMagick-perl, ImageMagick, djvulibre, sane-backends >= 1.0.17
 Requires: sane-frontends, xdg-utils, unpaper, gocr
 Requires: perl(Gtk2::Ex::PodViewer), perl(PDF::API2), perl(Config::General)
 
@@ -82,7 +82,9 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Tue Oct 02 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Fri Nov 16 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release.
+    Closes: #440902 (window placement of scan dialog)
   - New upstream release.
   - New upstream release.  Closes: #433497, #426525, #440204.
   - Thanks to Jeffrey Ratcliffe for contributing to this Debian release.

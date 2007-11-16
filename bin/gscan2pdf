@@ -16,6 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    why does junk get dumped to the terminal when deleting a page with a textbuffer?
+#    add a larger border inside notebook in scan dialog
+#    add (user-definable) metadata fields to DjVu save
+#     (e.g. http://www.kdedevelopers.org/node/2653,
+#      http://djvu.sourceforge.net/doc/man/djvused.html)
+#     test if they are indexed by Beagle and file a bug if not
 #    if anybody else complains about spending a long time "Closing PDF",
 #     see if $pdf->finishobjects does any good.
 #    move paper sizes into TreeModel

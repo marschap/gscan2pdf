@@ -122,13 +122,6 @@ locale : $(PO)
          mv messages.mo $${po%%.po}/LC_MESSAGES/$(NAME).mo; \
          done
 
-debian/changelog : bin/$(NAME)
-	cp debian/changelog debian/changelog_tmp
-	sed 's/^$(NAME) (.*)/$(NAME) ($(VERSION))/' < debian/changelog_tmp | \
-         sed '/^ --.*/d' > debian/changelog
-	rm debian/changelog_tmp
-	echo " -- $(AUTHOR) <Jeffrey.Ratcliffe@bigfoot.com>  "`date +'%a, %d %b %Y %H:%M:%S %z'` >> debian/changelog
-
 $(NAME).spec : bin/$(NAME) debian/changelog
 	cp $(NAME).spec $(NAME).spec_tmp
 	sed 's/^Version:.*/Version: $(VERSION)/' < $(NAME).spec_tmp | \
