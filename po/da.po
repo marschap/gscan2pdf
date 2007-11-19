@@ -1,8 +1,7 @@
 # Danish translation of gscan2pdf.
-# Copyright (C) 2007 Jeffrey Ratcliffe
+# Copyright (c) 2006 Rosetta Contributors and Canonical Ltd 2006
 # This file is distributed under the same license as the gscan2pdf package.
 # Jacob Nielsen <spammed@get2net.dk>, 2007.
-#
 #
 msgid ""
 msgstr ""
@@ -17,57 +16,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Launchpad-Export-Date: 2007-11-16 13:28+0000\n"
 "X-Generator: Launchpad (build Unknown)\n"
-
-#~ msgid "Not a recognised file"
-#~ msgstr "Filen blev ikke genkendt"
-
-#~ msgid ""
-#~ "Cannot scan more reverse pages\n"
-#~ "than facing pages"
-#~ msgstr ""
-#~ "Kan ikke scanne flere bagsider\n"
-#~ "end forsider"
-
-#, perl-format
-#~ msgid ""
-#~ "%s requires the libtiff library.\n"
-#~ "Please install it.\n"
-#~ msgstr ""
-#~ "%s kræver libtiff biblioteket.\n"
-#~ "Installer det venligst.\n"
-
-#~ msgid "Letter"
-#~ msgstr "Letter"
-
-#~ msgid "Margin"
-#~ msgstr "Margen"
-
-#~ msgid "Margin for aligned edges."
-#~ msgstr "Margen for oprettede kanter."
-
-#~ msgid "OCR, unpaper support and the scanadf frontend require perlmagick\n"
-#~ msgstr "OCR, samt brug af unpaper og scanadf, kræver perlmagick\n"
-
-#~ msgid "OCR requires gocr\n"
-#~ msgstr "OCR kræver gocr\n"
-
-#~ msgid "Year/Month/Day"
-#~ msgstr "År/måned/dag"
-
-#~ msgid "not found"
-#~ msgstr "ikke fundet"
-
-#~ msgid "Width of scan-area"
-#~ msgstr "Bredde af scanareal"
-
-#~ msgid "Height of scan-area"
-#~ msgstr "Højde af scanareal"
-
-#~ msgid "Save _TIFF"
-#~ msgstr "Gem _TIFF"
-
-#~ msgid "Save as TIFF"
-#~ msgstr "Gem som TIFF"
 
 #: bin/gscan2pdf:121
 #, perl-format
@@ -1029,9 +977,7 @@ msgstr ""
 #: bin/gscan2pdf:2636
 #, perl-format
 msgid "Embedding OCR output %i of %i in DjVu"
-msgstr ""
-"Copy text   \t\n"
-"Indsætter OCR-tekst %i af %i i DjVu"
+msgstr "Indsætter OCR-tekst %i af %i i DjVu"
 
 #: bin/gscan2pdf:2655
 #, perl-format
