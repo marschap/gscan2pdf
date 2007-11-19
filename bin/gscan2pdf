@@ -16,7 +16,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    why does junk get dumped to the terminal when deleting a page with a textbuffer?
+#    look at using potrace to convert images to vectors
+#    add option to overwrite textbuffer with OCR
+#    add an option selecting the number of processes to run simultaneously
+#    why does junk get dumped to the terminal when deleting a page with a
+#     textbuffer?
 #    add a larger border inside notebook in scan dialog
 #    add (user-definable) metadata fields to DjVu save
 #     (e.g. http://www.kdedevelopers.org/node/2653,
@@ -108,7 +112,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.18';
+my $version = '0.9.19';
 
 my $tolerance = 1;
 
@@ -202,26 +206,46 @@ my $conf = Config::General->new(
  },
 );
 my %SETTING = $conf->getall;
-$SETTING{Paper} = {
- $d->get('A4') => {
-  x => 210,
-  y => 297,
-  l => 0,
-  t => 0,
- },
- $d->get('US Letter') => {
-  x => 216,
-  y => 279,
-  l => 0,
-  t => 0,
- },
- $d->get('US Legal') => {
-  x => 216,
-  y => 356,
-  l => 0,
-  t => 0,
- },
-} if (! defined $SETTING{Paper});
+if (! defined $SETTING{Paper}) {
+ $SETTING{Paper} = {
+  $d->get('A4') => {
+   x => 210,
+   y => 297,
+   l => 0,
+   t => 0,
+  },
+  $d->get('US Letter') => {
+   x => 216,
+   y => 279,
+   l => 0,
+   t => 0,
+  },
+  $d->get('US Legal') => {
+   x => 216,
+   y => 356,
+   l => 0,
+   t => 0,
+  },
+ };
+}
+
+# Remove invalid paper sizes
+else {
+ for my $paper (keys %{$SETTING{Paper}}) {
+print ":$paper:\n";
+  if ($paper eq '<>' or $paper eq '</>') {
+   delete $SETTING{Paper}{$paper};
+  }
+  else {
+   for (qw(x y t l)) {
+    if (! defined $SETTING{Paper}{$paper}{$_}) {
+     delete $SETTING{Paper}{$paper};
+     last;
+    }
+   }
+  }
+ }
+}
 
 if ($debug) {
  print "Gtk2-Perl version $Gtk2::VERSION\n";
@@ -3226,6 +3250,7 @@ sub scan_dialog {
 # ignore artificial paper size option
       $SETTING{$key} = get_value(\%ddo, $key, $widget -> get_active_text);
       if ($key eq 'Paper size') {
+       $SETTING{$key} = $widget -> get_active_text;
        $options{x} = $SETTING{Paper}{$SETTING{$key}}{x};
        $options{y} = $SETTING{Paper}{$SETTING{$key}}{y};
        $options{l} = $SETTING{Paper}{$SETTING{$key}}{l};
@@ -4409,13 +4434,7 @@ sub parse_options {
 # Set device-dependent options
 # Dummy entries so that something is returned:
  %ddo = (
-          'Paper size' => { string => $d->get('Paper size'),
-                            values => {
-                                      'A4' => $d->get('A4'),
-                                      'US Letter'  => $d->get('US Letter'),
-                                      'US Legal'  => $d->get('US Legal'),
-                                      'Custom'  => $d->get('Custom'),
-                                      } },
+          'Paper size' => { string => $d->get('Paper size'), },
           'x'          => { string => 'x' },
           'y'          => { string => 'y' },
           'Origin'     => { string => $d->get('Top-left position of scan area'), },
