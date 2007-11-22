@@ -23,21 +23,29 @@ build: build-stamp
 build-stamp:
 	dh_testdir
 
-	# Add commands to compile the package here
-	$(PERL) Makefile.PL INSTALLDIRS=vendor
-	$(MAKE) OPTIMIZE="-Wall -O2 -g"
+	# As this is a architecture independent package, we are not
+	# supposed to install stuff to /usr/lib. MakeMaker creates
+	# the dirs, we prevent this by setting the INSTALLVENDORARCH
+	# and VENDORARCHEXP environment variables.
 
-	touch build-stamp
+	# Add commands to compile the package here
+	$(PERL) Makefile.PL INSTALLDIRS=vendor \
+		INSTALLVENDORARCH=/usr/share/perl5/ \
+		VENDORARCHEXP=/usr/share/perl5/
+	$(MAKE)
+	$(MAKE) test
+
+	touch $@
 
 clean:
 	dh_testdir
 	dh_testroot
 
+	dh_clean build-stamp install-stamp
+
 	# Add commands to clean up after the build process here
 	[ ! -f Makefile ] || $(MAKE) realclean
 	-rm -f */LC_MESSAGES/*.mo
-
-	dh_clean build-stamp install-stamp
 
 install: build install-stamp
 install-stamp:
@@ -46,30 +54,20 @@ install-stamp:
 	dh_clean -k
 
 	# Add commands to install the package into debian/$PACKAGE_NAME here
-	$(MAKE) test
 	$(MAKE) install DESTDIR=$(TMP) PREFIX=/usr
 
-	# As this is a architecture independent package, we are not
-	# supposed to install stuff to /usr/lib. MakeMaker creates
-	# the dirs, we delete them from the deb:
-	rmdir --ignore-fail-on-non-empty --parents $(TMP)/usr/lib/perl5
-
-	touch install-stamp
+	touch $@
 
 binary-arch:
-# We have nothing to do by default.
+# We have nothing to do here for an architecture-independent package
 
 binary-indep: build install
 	dh_testdir
 	dh_testroot
-#	dh_installcron
-#	dh_installmenu
 #	dh_installexamples
-	dh_installdocs 
+	dh_installdocs
 	dh_installchangelogs History
 	dh_perl
-	dh_link
-	dh_strip
 	dh_compress
 	dh_fixperms
 	dh_installdeb
@@ -77,7 +75,7 @@ binary-indep: build install
 	dh_md5sums
 	dh_builddeb
 
-source diff:                                                                  
+source diff:
 	@echo >&2 'source and diff are obsolete - use dpkg-source -b'; false
 
 binary: binary-indep binary-arch
