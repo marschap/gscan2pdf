@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    add rotate option before OCR/unpaper on scan dialog
 #    look at using potrace to convert images to vectors
 #    add option to overwrite textbuffer with OCR
 #    add an option selecting the number of processes to run simultaneously
@@ -2209,13 +2210,13 @@ sub add_pdf_compression {
 
 # Compression options
  my @compression = (
-  [ 'jpg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
-  [ 'png',  $d->get('PNG'),  $d->get('Compress output with PNG encoding.') ],
   [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
   [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
   [ 'packbits', $d->get('Packbits'), $d->get('Compress output with Packbits encoding.') ],
   [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
   [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
+  [ 'png',  $d->get('PNG'),  $d->get('Compress output with PNG encoding.') ],
+  [ 'jpg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
   [ 'none', $d->get('None'), $d->get('Use no compression algorithm on output.') ],
  );
 
