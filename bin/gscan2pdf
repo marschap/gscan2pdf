@@ -17,6 +17,14 @@
 
 # To do
 #    add rotate option before OCR/unpaper on scan dialog
+#    when too-large a scan size is allowed because of the tolerance, make sure
+#     that only the max poss is passed to the scanner.
+#    Put page size spinboxes back on the scan dialog and show them with "manual"
+#    query downsizing problems with the imagemagick team.
+#    stop users opening more than one paper size editor
+#    crop - 1. sort out redrawing after refresh
+#           2. zooming
+#           3. not allowing the box over the edge of the page
 #    look at using potrace to convert images to vectors
 #    add option to overwrite textbuffer with OCR
 #    add an option selecting the number of processes to run simultaneously
@@ -113,7 +121,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.19';
+my $version = '0.9.20';
 
 my $tolerance = 1;
 
@@ -233,7 +241,6 @@ if (! defined $SETTING{Paper}) {
 # Remove invalid paper sizes
 else {
  for my $paper (keys %{$SETTING{Paper}}) {
-print ":$paper:\n";
   if ($paper eq '<>' or $paper eq '</>') {
    delete $SETTING{Paper}{$paper};
   }
@@ -341,8 +348,9 @@ my @action_items = (
  # Tools menu
  [ 'Tools', undef, $d->get('_Tools') ],
  [ 'Threshold', undef, $d->get('_Threshold'), undef, $d->get('Change each pixel above this threshold to black'), \&threshold ],
- [ 'unpaper', undef, $d->get('_unpaper'), undef, $d->get('Clean up current page with unpaper'), \&unpaper ],
- [ 'OCR', undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition of current page'), \&OCR ],
+ [ 'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef, $d->get('Crop pages'), \&crop ],
+ [ 'unpaper', undef, $d->get('_unpaper'), undef, $d->get('Clean up pages with unpaper'), \&unpaper ],
+ [ 'OCR', undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition'), \&OCR ],
 
  # Help menu
  [ 'Help menu', undef, $d->get('_Help') ],
@@ -404,6 +412,7 @@ my $ui = "<ui>
   </menu>
   <menu action='Tools'> 
    <menuitem action='Threshold'/>
+   <menuitem action='Crop'/>
    <separator/>
    <menuitem action='unpaper'/>
    <menuitem action='OCR'/>
@@ -439,6 +448,8 @@ my $ui = "<ui>
   <toolitem action='Rotate 90'/>
   <toolitem action='Rotate 180'/>
   <toolitem action='Rotate 270'/>
+  <separator/>
+  <toolitem action='Crop'/>
   <separator/>
   <toolitem action='Help'/>
   <toolitem action='Quit'/>
@@ -705,8 +716,71 @@ my $image = Gtk2::Image -> new;
 # Need to pack the image in an eventbox to get it to respond to mouse clicks
 my $eventbox = Gtk2::EventBox -> new;
 $eventbox -> add ( $image );
-$eventbox->signal_connect(button_press_event => \&handle_clicks);
+$eventbox->signal_connect(button_press_event => sub {
+ my ($widget, $event) = @_;
+
+# Draw a rubber band if LHB and we have an image
+ if ($event->button == 1 and $slist->get_selected_indices) {
+
+# Erase...
+  draw_rubber_band_box ($widget) if ($widget->{draginfo});
+
+  $widget->{draginfo} = {
+   x1 => $event->x,
+   y1 => $event->y,
+   x2 => $event->x,
+   y2 => $event->y,
+  };
+
+# Draw...
+  draw_rubber_band_box ($widget);
+
+# allow event propagation
+ return FALSE;
+ }
+ else {
+  handle_clicks($widget, $event);
+ }
+});
 $eventbox->signal_connect(button_release_event => \&handle_clicks);
+$eventbox->signal_connect_after (realize => sub {
+ my ($widget) = @_;
+ $widget->{drag_gc} = Gtk2::Gdk::GC->new ($widget->window);
+ $widget->{drag_gc}->set_function ('xor');
+ $widget->{drag_gc}->set_foreground ($widget->style->white);
+});
+
+$eventbox->signal_connect_after (unrealize => sub {
+ my ($widget) = @_;
+ delete $widget->{drag_gc};
+});
+
+$eventbox->signal_connect (motion_notify_event => sub {
+ my ($widget, $event) = @_;
+
+ if ($widget->{draginfo}) {
+
+# Erase...
+  draw_rubber_band_box ($widget);
+
+  $widget->{draginfo}{x2} = $event->x;
+  $widget->{draginfo}{y2} = $event->y;
+
+# Draw new...
+  draw_rubber_band_box ($widget);
+ }
+
+ return FALSE;
+});
+
+# If we need to redraw the rubberband
+#$eventbox->signal_connect (expose_event => sub {
+# my ($widget, $event) = @_;
+#warn "redrawing...\n";
+
+# Let the event propagate
+# return FALSE;
+#});
 
 $scwin_detail -> add_with_viewport($eventbox);
 
@@ -750,9 +824,9 @@ $slist -> get_selection -> signal_connect(changed => sub {
   my $path = Gtk2::TreePath->new_from_indices($page[0]);
   $slist->scroll_to_cell($path);
 
-# Get dimensions for detail window
-  my $widthd = $scwin_detail -> allocation -> width;
-  my $heightd = $scwin_detail -> allocation -> height;
+# Get dimensions for eventbox wrapping pixbuf
+  my $widthd = $eventbox -> allocation -> width;
+  my $heightd = $eventbox -> allocation -> height;
 
   $image -> set_from_pixbuf(
                     get_pixbuf($slist->{data}[$page[0]][2], $heightd, $widthd));
@@ -1173,6 +1247,7 @@ sub create_menu_bar {
  $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
 
  $uimanager->get_widget('/MenuBar/Tools/Threshold') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/Tools/Crop') -> set_sensitive(FALSE);
 
 # a convenient place to put these
  $dependencies{pages} = -1;
@@ -1247,6 +1322,7 @@ sub update_uimanager {
                  '/MenuBar/View/Rotate 180',
                  '/MenuBar/View/Rotate 270',
                  '/MenuBar/Tools/Threshold',
+                 '/MenuBar/Tools/Crop',
                  '/MenuBar/Tools/unpaper',
                  '/MenuBar/Tools/OCR',
 
@@ -1355,8 +1431,8 @@ sub zoom_button {
  my ($button) = @_;
 
 # Get dimensions for detail window
- my $widthd = $scwin_detail -> allocation -> width;
- my $heightd = $scwin_detail -> allocation -> height;
+ my $widthd = $eventbox -> allocation -> width;
+ my $heightd = $eventbox -> allocation -> height;
  my $pixbuf;
 
  my @page = $slist -> get_selected_indices;
@@ -4849,25 +4925,27 @@ sub handle_clicks {
 # $SETTING{'RMB'} = ($event->button == 3);
 #warn "rmb $SETTING{'RMB'}\n";
 
-# let the event chain proceed if not right mouse button
- return FALSE if $event->button != 3;
+ if ($event->button == 3) {
+  my $popup_menu;
+  if ($widget->isa('Gtk2::EventBox'))  { # main image
+   $popup_menu = $uimanager->get_widget('/Detail_Popup');
+  }
+  else { # Thumbnail simplelist
+   $popup_menu = $uimanager->get_widget('/Thumb_Popup');
+  }
 
- my $popup_menu;
- if ($widget->isa('Gtk2::EventBox'))  { # main image
-  $popup_menu = $uimanager->get_widget('/Detail_Popup');
+  $popup_menu->show_all;
+  $popup_menu->popup(undef, undef,
+                     undef, undef,
+                     $event->button,
+                     $event->time);
+
+# block event propagation
+  return TRUE;
  }
- else { # Thumbnail simplelist
-  $popup_menu = $uimanager->get_widget('/Thumb_Popup');
- }
 
- $popup_menu->show_all;
- $popup_menu->popup(undef, undef,
-                    undef, undef,
-                    $event->button,
-                    $event->time);
-
- # block event propagation
- return TRUE;
+# allow event propagation
+ return FALSE;
 }
 
 
@@ -5003,6 +5081,183 @@ sub threshold {
  $cbutton -> signal_connect( clicked => sub { $windowt -> destroy } );
 
  $windowt -> show_all;
+}
+
+
+# Display page selector and on apply threshold accordingly
+
+sub crop {
+
+# $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
+
+ my ($windowc, $vbox) = create_window($window, $d->get('Crop'), TRUE);
+
+# Frame for page range
+ my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+
+# SpinButton for threshold
+ my $hboxt = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxt, FALSE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Crop'));
+ $hboxt -> pack_start ($label, FALSE, TRUE, 0);
+ my $labelp = Gtk2::Label -> new ($d->get('%'));
+ $hboxt -> pack_end ($labelp, FALSE, TRUE, 0);
+ my $spinbutton = Gtk2::SpinButton -> new_with_range(0, 100, 1);
+ $spinbutton->set_value ($SETTING{'threshold tool'});
+ $hboxt -> pack_end ($spinbutton, FALSE, TRUE, 0);
+
+# HBox for buttons
+ my $hboxb = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+
+# Apply button
+ my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
+ $hboxb -> pack_start( $abutton, TRUE, TRUE, 0 );
+ $abutton -> signal_connect (clicked => sub {
+
+  return if (! $eventbox->{draginfo});
+
+# Update undo/redo buffers
+  take_snapshot();
+
+  my $dialog = Gtk2::Dialog -> new ($d->get('Cropping')."...", $windowo,
+                                            'destroy-with-parent',
+                                            'gtk-cancel' => 'cancel');
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   kill_subs();
+  });
+  $dialog -> show_all;
+
+# Install a handler for child processes
+  $SIG{CHLD} = \&sig_child;
+
+  my @pagelist = get_page_index();
+  my $pid = start_process(sub {
+
+# fill $pagelist with filenames depending on which radiobutton is active
+   my $page = 0;
+
+# Erase box
+   draw_rubber_band_box ($eventbox);
+
+   foreach (@pagelist) {
+    send($writer, sprintf("%i %i", $page, $#pagelist+1), 0);
+
+    my $filename = $slist -> {data}[$_][2];
+    my $image = Image::Magick->new;
+    my $e = $image->Read($filename);
+    warn "$e" if "$e";
+
+# Image dimensions
+    my $height = $image->Get('height');
+    my $width = $image->Get('width');
+print "image $height x $width = ", $height/$width, "\n";
+
+# ScrolledWindow dimensions
+    my $widths = $scwin_detail -> allocation -> width;
+    my $heights = $scwin_detail -> allocation -> height;
+print "ScrolledW $heights x $widths = ", $heights/$widths, "\n";
+
+# Viewport (hence ->child) dimensions
+    my $widthv = $scwin_detail -> child -> allocation -> width;
+    my $heightv = $scwin_detail -> child -> allocation -> height;
+print "Viewport $heightv x $widthv = ", $heightv/$widthv, "\n";
+
+# Eventbox dimensions
+    my $widthe = $scwin_detail -> child -> child -> allocation -> width;
+    my $heighte = $scwin_detail -> child -> child -> allocation -> height;
+print "EventB $heighte x $widthe = ", $heighte/$widthe, "\n";
+
+    my $factor = ($height/$width > $heighte/$widthe)
+                                            ? $height/$heighte : $width/$widthe;
+
+# If we have scrollbars, measure from top left, otherwise measure from centre
+    my $xoffset = $heightv == $heights ? $width/2 - $widthe/2 * $factor : 0;
+    my $yoffset = $widthv == $widths ? $height/2 - $heighte/2 * $factor : 0;
+print "xoffset $xoffset, yoffset $yoffset, factor $factor\n";
+
+# Convert crop box from viewport to image coordinates
+    my $x1 = $eventbox->{draginfo}{x1};
+    my $x2 = $eventbox->{draginfo}{x2};
+    my $y1 = $eventbox->{draginfo}{y1};
+    my $y2 = $eventbox->{draginfo}{y2};
+    my $x = min($x1, $x2) * $factor + $xoffset;
+    my $y = min($y1, $y2) * $factor + $yoffset;
+    my $w = abs($x2 - $x1) * $factor;
+    my $h = abs($y2 - $y1) * $factor;
+
+# Crop the image
+    warn "Cropping $w x $h + $x + $y\n" if $debug;
+    $e = $image->Crop(width=>$w, height=>$h, x=>$x, y=>$y);
+    warn "$e" if "$e";
+
+# Write it
+    my $suffix = $1 if ($filename =~ /\.(\w*)$/);
+    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
+    warn " to $filename\n" if $debug;
+    $e = $image->Write(filename => $filename);
+    warn "$e" if "$e";
+
+    send($writer, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
+    ++$page;
+   }
+   send($writer, '2 1', 0);
+  });
+
+  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+
+   my $line;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    recv($reader, $line, 1000, 0);
+    if ($line =~ /(\d*) (\d*) ?(.*)/) {
+     my $page=$1;
+     my $total=$2;
+     my $filename=$3;
+     my $fraction = $page/$total;
+     if ($fraction > 1) {
+      $dialog -> destroy;
+
+# Reselect the pages to display the rotated image(s)
+      $slist->select(@pagelist);
+      return FALSE;  # uninstall
+     }
+     if (defined $filename and $filename ne '') {
+      $slist -> {data}[$pagelist[$page]][2] = $filename;
+      $slist -> {data}[$pagelist[$page]][1] =
+           get_pixbuf($slist -> {data}[$pagelist[$page]][2], $heightt, $widtht);
+     }
+     else {
+      $pbar->set_fraction($fraction);
+      $pbar->set_text(sprintf($d->get("Cropping page %i of %i"), $page+1, $total));
+     }
+    }
+   }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+    $dialog -> destroy;
+    update_uimanager();
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # continue without uninstalling
+  });
+ });
+
+# Cancel button
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $windowc -> destroy } );
+
+ $windowc -> show_all;
 }
 
 
@@ -6090,6 +6345,21 @@ sub kill_subs {
 }
 
 
+sub min { $_[0] < $_[1] ? $_[0] : $_[1] }
+
+
+# rubber band for crop tool
+
+sub draw_rubber_band_box {
+ my ($widget) = @_;
+ my $x = min ($widget->{draginfo}{x1}, $widget->{draginfo}{x2});
+ my $y = min ($widget->{draginfo}{y1}, $widget->{draginfo}{y2});
+ my $w = abs ($widget->{draginfo}{x2} - $widget->{draginfo}{x1});
+ my $h = abs ($widget->{draginfo}{y2} - $widget->{draginfo}{y1});
+ $widget->window->draw_rectangle($widget->{drag_gc}, FALSE, $x, $y, $w, $h);
+}
+
+
 __END__
 
 =head1 Name
@@ -6623,3 +6893,4 @@ Jeffrey Ratcliffe (ra28145 at users dot sf dot net)
  height="32" border="0" alt="Support This Project"></a>
 
 =cut
+
