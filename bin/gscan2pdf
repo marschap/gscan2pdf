@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    note sane-back and wipe scan settings if it changes
+#    reenable multiple scans from flatbed + delay and warning
 #    add rotate option before OCR/unpaper on scan dialog
 #    when too-large a scan size is allowed because of the tolerance, make sure
 #     that only the max poss is passed to the scanner.
@@ -2866,6 +2868,7 @@ sub save_djvu {
 
 # Escape any inverted commas
      my $txt = $slist -> {data}[$j][3];
+     $txt =~ s/\\/\\\\/g;
      $txt =~ s/"/\\\"/g;
 
 # Write djvusedtxtfile
