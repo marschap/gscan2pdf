@@ -294,7 +294,7 @@ my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
-    $scanwatch, @ocr_engine, $bscanall, $bscannum, @clipboard,
+    $scanwatch, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -4403,7 +4403,12 @@ sub parse_options {
   add_paper($combobp, $x, $y, $l, $t);
   $combobp -> signal_connect (changed => sub {
    if ($combobp -> get_active_text eq $d->get('Edit')) {
-    my ($windowp, $vbox) = create_window($windows, $d->get('Edit paper size'), TRUE);
+    if (defined $windowd) {
+     $windowd -> present;
+     return;
+    }
+
+    ($windowd, my $vbox) = create_window($windows, $d->get('Edit paper size'), TRUE);
 
 # Buttons for SimpleList
     my $hboxl = Gtk2::HBox -> new;
@@ -4463,7 +4468,7 @@ sub parse_options {
     $rbutton -> signal_connect (clicked => sub {
      my @rows = $slist -> get_selected_indices;
      if ($#rows == $#{$slist->{data}}) {
-      show_message_dialog($windowp, 'error', 'close', $d->get('Cannot delete all paper sizes'));
+      show_message_dialog($windowd, 'error', 'close', $d->get('Cannot delete all paper sizes'));
      }
      else {
       while (@rows) {
@@ -4509,7 +4514,7 @@ sub parse_options {
      $rows[0] = 0 if (! @rows);
      $SETTING{'Paper size'} = $slist->{data}[$rows[0]][0];
      set_paper($combobp);
-     $windowp -> destroy;
+     $windowd -> hide;
     });
     $hboxb -> pack_start ($abutton, TRUE, FALSE, 0);
     my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
@@ -4518,10 +4523,10 @@ sub parse_options {
      $rows[0] = 0 if (! @rows);
      $SETTING{'Paper size'} = $slist->{data}[$rows[0]][0];
      set_paper($combobp);
-     $windowp -> destroy;
+     $windowd -> hide;
     });
     $hboxb -> pack_end ($cbutton, TRUE, FALSE, 0);
-    $windowp->show_all;
+    $windowd->show_all;
    }
   });
   $tooltips -> set_tip ($combobp, $d->get('Selects or edits the paper size'));
