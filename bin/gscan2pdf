@@ -324,9 +324,9 @@ my @action_items = (
  [ 'Edit', undef, $d->get('_Edit') ],
  [ 'Undo', 'gtk-undo', $d->get('_Undo'), '<control>z', $d->get('Undo'), \&undo ],
  [ 'Redo', 'gtk-redo', $d->get('_Redo'), '<shift><control>z', $d->get('Redo'), \&unundo ],
- [ 'Cut', 'gtk-cut', $d->get('Cu_t'), '<control>x', $d->get('Cut selected pages'), \&cut_pages ],
- [ 'Copy', 'gtk-copy', $d->get('_Copy'), '<control>c', $d->get('Copy selected pages'), \&copy_pages ],
- [ 'Paste', 'gtk-paste', $d->get('_Paste'), '<control>v', $d->get('Paste selected pages'), \&paste_pages ],
+ [ 'Cut', 'gtk-cut', $d->get('Cu_t'), '<control>x', $d->get('Cut selection'), \&cut_selection ],
+ [ 'Copy', 'gtk-copy', $d->get('_Copy'), '<control>c', $d->get('Copy selection'), \&copy_selection ],
+ [ 'Paste', 'gtk-paste', $d->get('_Paste'), '<control>v', $d->get('Paste selection'), \&paste_selection ],
  [ 'Delete', 'gtk-delete', $d->get('_Delete'), undef, $d->get('Delete selected pages'), \&delete_pages ],
  [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages from 1 to n'), sub {
 
@@ -4087,61 +4087,79 @@ sub manual_sort_by_column {
 }
 
 
-# Cut the selected pages
+# Cut the selection
 
-sub cut_pages {
- copy_pages();
- delete_pages();
-}
-
-
-# Copy the selected pages
-
-sub copy_pages {
- undef @clipboard;
- my @pages = $slist -> get_selected_indices;
- for my $page (@pages) {
-  my @copy = map { [ @$_ ] } $slist->{data}[$page];
-  push @clipboard, @copy;
+sub cut_selection {
+ if ($slist -> has_focus) {
+  copy_selection();
+  delete_pages();
+ }
+ elsif ($textview -> has_focus) {
+  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
+  $textbuffer->cut_clipboard ($clipboard, TRUE)
  }
 }
 
 
-# Paste the selected pages
+# Copy the selection
 
-sub paste_pages {
- my @page = $slist -> get_selected_indices;
+sub copy_selection {
+ if ($slist -> has_focus) {
+  undef @clipboard;
+  my @pages = $slist -> get_selected_indices;
+  for my $page (@pages) {
+   my @copy = map { [ @$_ ] } $slist->{data}[$page];
+   push @clipboard, @copy;
+  }
+ }
+ elsif ($textview -> has_focus) {
+  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
+  $textbuffer->copy_clipboard ($clipboard)
+ }
+}
+
+
+# Paste the selection
+
+sub paste_selection {
+ if ($slist -> has_focus) {
+  my @page = $slist -> get_selected_indices;
 
 # Create a new image file
- for (@clipboard) {
-  my $suffix = $1 if ($_->[2] =~ /(\.\w*)$/);
-  my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
-  copy($_->[2], $new) or 
-   show_message_dialog($window, 'error', 'close', $d->get('Error pasting image'));
-  $_->[2] = $new;
- }
+  for (@clipboard) {
+   my $suffix = $1 if ($_->[2] =~ /(\.\w*)$/);
+   my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
+   copy($_->[2], $new) or 
+    show_message_dialog($window, 'error', 'close', $d->get('Error pasting image'));
+   $_->[2] = $new;
+  }
 
 # Block the row-changed signal whilst adding the scan (row) and sorting it.
- $slist -> get_model -> signal_handler_block($slist -> {signalid});
+  $slist -> get_model -> signal_handler_block($slist -> {signalid});
 
- if (@page) {
-  splice @{ $slist->{data} }, $page[0]+1, 0, @clipboard;
-  @page = ( $page[0]+1 );
- }
- else {
-  push @{$slist -> {data}}, @clipboard;
-  @page = ( $#{$slist -> {data}} - $#clipboard );
- }
+  if (@page) {
+   splice @{ $slist->{data} }, $page[0]+1, 0, @clipboard;
+   @page = ( $page[0]+1 );
+  }
+  else {
+   push @{$slist -> {data}}, @clipboard;
+   @page = ( $#{$slist -> {data}} - $#clipboard );
+  }
 
- renumber ($slist, 0);
- $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+  renumber ($slist, 0);
+  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 
 # Select new page, deselecting others. This fires the select callback,
 # displaying the page
- $slist -> get_selection -> unselect_all;
- $slist -> select(@page);
+  $slist -> get_selection -> unselect_all;
+  $slist -> select(@page);
 
- update_uimanager();
+  update_uimanager();
+ }
+ elsif ($textview -> has_focus) {
+  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
+  $textbuffer->paste_clipboard ($clipboard, undef, TRUE)
+ }
 }
 
 
