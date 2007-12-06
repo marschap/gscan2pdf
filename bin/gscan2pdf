@@ -291,7 +291,7 @@ init_icons(
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
 my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
-    $windowu, $slist, $vboxd, $combobd, $combobp, $hboxc, @undo_buffer,
+    $windowu, $slist, $vboxd, $combobd, $combobp, $vboxm, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
     $scanwatch, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
@@ -3318,7 +3318,7 @@ sub scan_dialog {
 
 # Get device-specific options
   my %options;
-  foreach my $hbox ($vboxd -> get_children) {
+  foreach my $hbox ($vboxd -> get_children, $vboxm -> get_children) {
    my $key;
    if ($hbox -> isa('Gtk2::HBox') and $hbox->sensitive) {
     foreach my $widget ($hbox -> get_children) {
@@ -3331,10 +3331,6 @@ sub scan_dialog {
       $SETTING{$key} = get_value(\%ddo, $key, $widget -> get_active_text);
       if ($key eq 'Paper size') {
        $SETTING{$key} = $widget -> get_active_text;
-       $options{x} = $SETTING{Paper}{$SETTING{$key}}{x};
-       $options{y} = $SETTING{Paper}{$SETTING{$key}}{y};
-       $options{l} = $SETTING{Paper}{$SETTING{$key}}{l};
-       $options{t} = $SETTING{Paper}{$SETTING{$key}}{t};
       }
       else {
        $options{$key} = $SETTING{$key};
@@ -3459,6 +3455,7 @@ sub scan_dialog {
 
 # Show window
  $windows -> show_all;
+ $vboxm -> hide if ($combobp -> get_active_text ne $d->get('Manual'));
  $framex->hide_all;
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
@@ -4399,138 +4396,49 @@ sub parse_options {
   $hboxp -> pack_start ($labelp, FALSE, FALSE, 0);
 
   $combobp = Gtk2::ComboBox -> new_text;
+  $combobp -> append_text ($d->get('Manual'));
   $combobp -> append_text ($d->get('Edit'));
   add_paper($combobp, $x, $y, $l, $t);
-  $combobp -> signal_connect (changed => sub {
-   if ($combobp -> get_active_text eq $d->get('Edit')) {
-    if (defined $windowd) {
-     $windowd -> present;
-     return;
-    }
-
-    ($windowd, my $vbox) = create_window($windows, $d->get('Edit paper size'), TRUE);
-
-# Buttons for SimpleList
-    my $hboxl = Gtk2::HBox -> new;
-    $vbox -> pack_start ($hboxl, FALSE, FALSE, 0);
-    my $vboxb = Gtk2::VBox -> new;
-    $hboxl -> pack_start ($vboxb, FALSE, FALSE, 0);
-    my $dbutton = Gtk2::Button -> new_from_stock('gtk-add');
-    $vboxb -> pack_start ($dbutton, TRUE, FALSE, 0);
-    my $rbutton = Gtk2::Button -> new_from_stock('gtk-remove');
-    $vboxb -> pack_end ($rbutton, TRUE, FALSE, 0);
-    
-# Set up a SimpleList
-    my $slist = Gtk2::Ex::Simple::List -> new($d->get('Name') => 'text',
-                                              $d->get('Width') => 'int',
-                                              $d->get('Height') => 'int',
-                                              $d->get('Left') => 'int',
-                                              $d->get('Top') => 'int');
-    for (keys %{$SETTING{Paper}}) {
-     push @{ $slist->{data} }, [ $_,
-                                 $SETTING{Paper}{$_}{x},
-                                 $SETTING{Paper}{$_}{y},
-                                 $SETTING{Paper}{$_}{l},
-                                 $SETTING{Paper}{$_}{t} ];
-    }
-
-# Set everything to be editable
-    for (0..4) {
-     $slist -> set_column_editable($_, TRUE);
-    }
-    $slist->get_column(0)->set_sort_column_id(0);
-
-# Add button callback
-    $dbutton -> signal_connect (clicked => sub {
-     my @rows = $slist -> get_selected_indices;
-     $rows[0] = 0 if (! @rows);
-     my $name = $slist->{data}[$rows[0]][0];
-     my $version = 2;
-     my $i = 0;
-     while ($i <= $#{$slist->{data}}) {
-      if ($slist->{data}[$i][0] eq "$name ($version)") {
-       ++$version;
-       $i = 0;
-      }
-      else {
-       ++$i;
-      }
-     }
-     my @line = [ "$name ($version)",
-                  $slist->{data}[$rows[0]][1],
-                  $slist->{data}[$rows[0]][2],
-                  $slist->{data}[$rows[0]][3],
-                  $slist->{data}[$rows[0]][4] ];
-     splice @{ $slist->{data} }, $rows[0]+1, 0, @line;
-    });   
-
-# Remove button callback
-    $rbutton -> signal_connect (clicked => sub {
-     my @rows = $slist -> get_selected_indices;
-     if ($#rows == $#{$slist->{data}}) {
-      show_message_dialog($windowd, 'error', 'close', $d->get('Cannot delete all paper sizes'));
-     }
-     else {
-      while (@rows) {
-       splice @{ $slist->{data} }, shift(@rows), 1;
-      }
-     }
-    });   
-
-# Set-up the callback to check that no two Names are the same
-    $slist -> get_model -> signal_connect('row-changed' => sub {
-     my ($model, $path, $iter) = @_;
-     for (my $i = 0; $i <= $#{$slist->{data}}; $i++) {
-      if ($i != $path->to_string and
-           $slist->{data}[$path->to_string][0] eq $slist->{data}[$i][0]) {
-       my $name = $slist->{data}[$path->to_string][0];
-       my $version = 2;
-       if ($name =~ /(.*) \((\d+)\)/) {
-        $name = $1;
-        $version = $2+1;
-       }
-       $slist->{data}[$path->to_string][0] = "$name ($version)";
-       return;
-      }
-     }
-    });
-    $hboxl -> pack_end($slist, FALSE, FALSE, 0);
-
-# Buttons
-    my $hboxb = Gtk2::HBox -> new;
-    $vbox -> pack_start ($hboxb, FALSE, FALSE, 0);
-    my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
-    $abutton -> signal_connect( clicked => sub {
-     delete $SETTING{Paper};
-     for (my $i = 0; $i <= $#{$slist->{data}}; $i++) {
-      $SETTING{Paper}{$slist->{data}[$i][0]}{x} = $slist->{data}[$i][1];
-      $SETTING{Paper}{$slist->{data}[$i][0]}{y} = $slist->{data}[$i][2];
-      $SETTING{Paper}{$slist->{data}[$i][0]}{l} = $slist->{data}[$i][3];
-      $SETTING{Paper}{$slist->{data}[$i][0]}{t} = $slist->{data}[$i][4];
-     }
-     $combobp->remove_text(0) while ($combobp->get_active > 0);
-     add_paper($combobp, $x, $y, $l, $t);
-     my @rows = $slist -> get_selected_indices;
-     $rows[0] = 0 if (! @rows);
-     $SETTING{'Paper size'} = $slist->{data}[$rows[0]][0];
-     set_paper($combobp);
-     $windowd -> hide;
-    });
-    $hboxb -> pack_start ($abutton, TRUE, FALSE, 0);
-    my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
-    $cbutton -> signal_connect( clicked => sub {
-     my @rows = $slist -> get_selected_indices;
-     $rows[0] = 0 if (! @rows);
-     $SETTING{'Paper size'} = $slist->{data}[$rows[0]][0];
-     set_paper($combobp);
-     $windowd -> hide;
-    });
-    $hboxb -> pack_end ($cbutton, TRUE, FALSE, 0);
-    $windowd->show_all;
-   }
-  });
   $tooltips -> set_tip ($combobp, $d->get('Selects or edits the paper size'));
   $hboxp -> pack_end ($combobp, FALSE, FALSE, 0);
+
+# Define manual paper here to reference it in callback
+  $vboxm = Gtk2::VBox -> new;
+  $vboxd -> pack_start ($vboxm, FALSE, FALSE, 0);
+  my @info = ( { label => $d->get('Width'),
+                 tooltip => $d->get('Width of scan area'),
+                 letter => 'x',
+                 dimension => $x },
+               { label => $d->get('Height'),
+                 tooltip => $d->get('Height of scan area'),
+                 letter => 'y',
+                 dimension => $y },
+               { label => $d->get('Left'),
+                 tooltip => $d->get('Top-left x position of scan area'),
+                 letter => 'l',
+                 dimension => $l },
+               { label => $d->get('Top'),
+                 tooltip => $d->get('Top-left y position of scan area'),
+                 letter => 't',
+                 dimension => $t } );
+  my ($spin_buttonx, $spin_buttony, $spin_buttonl, $spin_buttont) = add_spinbutton($vboxm, @info);
+  $combobp -> signal_connect (changed => sub {
+   if ($combobp -> get_active_text eq $d->get('Edit')) {
+    edit_paper($combobp, $x, $y, $l, $t);
+   }
+   elsif ($combobp -> get_active_text eq $d->get('Manual')) {
+    $vboxm -> show_all;
+   }
+   else {
+    my $paper = $combobp -> get_active_text;
+    $spin_buttonx -> set_value($SETTING{Paper}{$paper}{x});
+    $spin_buttony -> set_value($SETTING{Paper}{$paper}{y});
+    $spin_buttont -> set_value($SETTING{Paper}{$paper}{t});
+    $spin_buttonl -> set_value($SETTING{Paper}{$paper}{l});
+    $vboxm -> hide;
+    $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
+   }
+  });
   set_paper($combobp);
  }
 
@@ -4538,11 +4446,10 @@ sub parse_options {
 # Dummy entries so that something is returned:
  %ddo = (
           'Paper size' => { string => $d->get('Paper size'), },
-          'x'          => { string => 'x' },
-          'y'          => { string => 'y' },
-          'Origin'     => { string => $d->get('Top-left position of scan area'), },
-          'l'          => { string => 'l' },
-          't'          => { string => 't' },
+          'x'          => { string => $d->get('Width') },
+          'y'          => { string => $d->get('Height') },
+          'l'          => { string => $d->get('Left') },
+          't'          => { string => $d->get('Top') },
         );
 
 # Add remaining options
@@ -4627,9 +4534,160 @@ sub parse_options {
 
 # Show window
  $vboxd -> show_all;
+ $vboxm -> hide if ($combobp -> get_active_text ne $d->get('Manual'));
 
 #  Unghost the scan button
  $sbutton->set_sensitive(TRUE) if (defined $sbutton);
+}
+
+
+# Helper function to get manual paper size spinbuttons on dialog
+sub add_spinbutton {
+ my ($vbox, @info) = @_;
+ my @stack;
+ for (@info) {
+  my $hbox = Gtk2::HBox -> new;
+  $vbox -> pack_start ($hbox, FALSE, FALSE, 0);
+  my $label = Gtk2::Label -> new ($_->{label});
+  $hbox -> pack_start ($label, FALSE, FALSE, 0);
+  my $spinbutton = Gtk2::SpinButton -> new_with_range(0, $_->{dimension}, 1);
+  $spinbutton -> set_value($SETTING{$_->{letter}});
+  $tooltips -> set_tip ($spinbutton, $_->{tooltip});
+  $hbox -> pack_end ($spinbutton, FALSE, FALSE, 0);
+  push @stack, $spinbutton;
+ }
+ return @stack;
+}
+
+
+# Paper editor
+sub edit_paper {
+ my ($combobp, $x, $y, $l, $t) = @_;
+
+ if (defined $windowd) {
+  $windowd -> present;
+  return;
+ }
+
+ ($windowd, my $vbox) = create_window($windows, $d->get('Edit paper size'), TRUE);
+
+# Buttons for SimpleList
+ my $hboxl = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxl, FALSE, FALSE, 0);
+ my $vboxb = Gtk2::VBox -> new;
+ $hboxl -> pack_start ($vboxb, FALSE, FALSE, 0);
+ my $dbutton = Gtk2::Button -> new_from_stock('gtk-add');
+ $vboxb -> pack_start ($dbutton, TRUE, FALSE, 0);
+ my $rbutton = Gtk2::Button -> new_from_stock('gtk-remove');
+ $vboxb -> pack_end ($rbutton, TRUE, FALSE, 0);
+    
+# Set up a SimpleList
+ my $slist = Gtk2::Ex::Simple::List -> new($d->get('Name') => 'text',
+                                           $d->get('Width') => 'int',
+                                           $d->get('Height') => 'int',
+                                           $d->get('Left') => 'int',
+                                           $d->get('Top') => 'int');
+ for (keys %{$SETTING{Paper}}) {
+  push @{ $slist->{data} }, [ $_,
+                              $SETTING{Paper}{$_}{x},
+                              $SETTING{Paper}{$_}{y},
+                              $SETTING{Paper}{$_}{l},
+                              $SETTING{Paper}{$_}{t} ];
+ }
+
+# Set everything to be editable
+ for (0..4) {
+  $slist -> set_column_editable($_, TRUE);
+ }
+ $slist->get_column(0)->set_sort_column_id(0);
+
+# Add button callback
+ $dbutton -> signal_connect (clicked => sub {
+  my @rows = $slist -> get_selected_indices;
+  $rows[0] = 0 if (! @rows);
+  my $name = $slist->{data}[$rows[0]][0];
+  my $version = 2;
+  my $i = 0;
+  while ($i <= $#{$slist->{data}}) {
+   if ($slist->{data}[$i][0] eq "$name ($version)") {
+    ++$version;
+    $i = 0;
+   }
+   else {
+    ++$i;
+   }
+  }
+  my @line = [ "$name ($version)",
+               $slist->{data}[$rows[0]][1],
+               $slist->{data}[$rows[0]][2],
+               $slist->{data}[$rows[0]][3],
+               $slist->{data}[$rows[0]][4] ];
+  splice @{ $slist->{data} }, $rows[0]+1, 0, @line;
+ });   
+
+# Remove button callback
+ $rbutton -> signal_connect (clicked => sub {
+  my @rows = $slist -> get_selected_indices;
+  if ($#rows == $#{$slist->{data}}) {
+   show_message_dialog($windowd, 'error', 'close', $d->get('Cannot delete all paper sizes'));
+  }
+  else {
+   while (@rows) {
+    splice @{ $slist->{data} }, shift(@rows), 1;
+   }
+  }
+ });   
+
+# Set-up the callback to check that no two Names are the same
+ $slist -> get_model -> signal_connect('row-changed' => sub {
+  my ($model, $path, $iter) = @_;
+  for (my $i = 0; $i <= $#{$slist->{data}}; $i++) {
+   if ($i != $path->to_string and
+        $slist->{data}[$path->to_string][0] eq $slist->{data}[$i][0]) {
+    my $name = $slist->{data}[$path->to_string][0];
+    my $version = 2;
+    if ($name =~ /(.*) \((\d+)\)/) {
+     $name = $1;
+     $version = $2+1;
+    }
+    $slist->{data}[$path->to_string][0] = "$name ($version)";
+    return;
+   }
+  }
+ });
+ $hboxl -> pack_end($slist, FALSE, FALSE, 0);
+
+# Buttons
+ my $hboxb = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxb, FALSE, FALSE, 0);
+ my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
+ $abutton -> signal_connect( clicked => sub {
+  delete $SETTING{Paper};
+  for (my $i = 0; $i <= $#{$slist->{data}}; $i++) {
+   $SETTING{Paper}{$slist->{data}[$i][0]}{x} = $slist->{data}[$i][1];
+   $SETTING{Paper}{$slist->{data}[$i][0]}{y} = $slist->{data}[$i][2];
+   $SETTING{Paper}{$slist->{data}[$i][0]}{l} = $slist->{data}[$i][3];
+   $SETTING{Paper}{$slist->{data}[$i][0]}{t} = $slist->{data}[$i][4];
+  }
+  $combobp->remove_text(0) while ($combobp->get_active > 1);
+  add_paper($combobp, $x, $y, $l, $t);
+  my @rows = $slist -> get_selected_indices;
+  $rows[0] = 0 if (! @rows);
+  $SETTING{'Paper size'} = $slist->{data}[$rows[0]][0];
+  set_paper($combobp);
+  $windowd -> hide;
+ });
+ $hboxb -> pack_start ($abutton, TRUE, FALSE, 0);
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $cbutton -> signal_connect( clicked => sub {
+  my @rows = $slist -> get_selected_indices;
+  $rows[0] = 0 if (! @rows);
+  $SETTING{'Paper size'} = $slist->{data}[$rows[0]][0];
+  set_paper($combobp);
+  $windowd -> hide;
+ });
+ $hboxb -> pack_end ($cbutton, TRUE, FALSE, 0);
+ $windowd->show_all;
 }
 
 
@@ -4733,6 +4791,7 @@ sub update_options {
     warn $output if $debug;
     update_options_hash($vboxd, options2hash($output));
     $vboxd -> show_all;
+    $vboxm -> hide if ($combobp -> get_active_text ne $d->get('Manual'));
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
@@ -4751,6 +4810,7 @@ sub update_options {
   $vboxd -> hide_all; # merely here for consistency with normal operation
   update_options_hash($vboxd, options2hash($output));
   $vboxd -> show_all;
+  $vboxm -> hide if ($combobp -> get_active_text ne $d->get('Manual'));
  }
 }
 
