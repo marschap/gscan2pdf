@@ -19,19 +19,13 @@
 #    note sane-back and wipe scan settings if it changes
 #    reenable multiple scans from flatbed + delay and warning
 #    add rotate option before OCR/unpaper on scan dialog
-#    when too-large a scan size is allowed because of the tolerance, make sure
-#     that only the max poss is passed to the scanner.
-#    Put page size spinboxes back on the scan dialog and show them with "manual"
 #    query downsizing problems with the imagemagick team.
-#    stop users opening more than one paper size editor
 #    crop - 1. sort out redrawing after refresh
 #           2. zooming
 #           3. not allowing the box over the edge of the page
 #    look at using potrace to convert images to vectors
 #    add option to overwrite textbuffer with OCR
 #    add an option selecting the number of processes to run simultaneously
-#    why does junk get dumped to the terminal when deleting a page with a
-#     textbuffer?
 #    add a larger border inside notebook in scan dialog
 #    add (user-definable) metadata fields to DjVu save
 #     (e.g. http://www.kdedevelopers.org/node/2653,
@@ -4670,7 +4664,10 @@ sub edit_paper {
    $SETTING{Paper}{$slist->{data}[$i][0]}{t} = $slist->{data}[$i][4];
   }
   $combobp->remove_text(0) while ($combobp->get_active > 1);
-  add_paper($combobp, $x, $y, $l, $t);
+  my @ignored = add_paper($combobp, $x, $y, $l, $t);
+  show_message_dialog($windowd, 'warning', 'close',
+   $d->get('The following paper sizes are too big to be scanned by the selected device:')
+    .' '.join(', ', @ignored)) if (@ignored);
   my @rows = $slist -> get_selected_indices;
   $rows[0] = 0 if (! @rows);
   $SETTING{'Paper size'} = $slist->{data}[$rows[0]][0];
@@ -4695,6 +4692,7 @@ sub edit_paper {
 
 sub add_paper {
  my ($combobox, $x, $y, $l, $t) = @_;
+ my @ignored;
  for (keys %{$SETTING{Paper}}) {
   if ($x+$tolerance >= $SETTING{Paper}{$_}{x}+$SETTING{Paper}{$_}{l}
        and $y+$tolerance >= $SETTING{Paper}{$_}{y}+$SETTING{Paper}{$_}{t}
@@ -4702,7 +4700,11 @@ sub add_paper {
        and $t+$tolerance >= $SETTING{Paper}{$_}{t}) {
    $combobox -> prepend_text ($_);
   }
+  else {
+   push @ignored, $_;
+  }
  }
+ return @ignored;
 }
 
 
