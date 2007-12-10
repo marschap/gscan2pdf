@@ -16,6 +16,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    add option for number of background processes
+#    test what happens when all paper sizes are bigger than scanner
+#    add warning message for paper sizes that are bigger than scanner
+#    add possibility to have multiple scans from a flatbed with delay between
+#    if downgrading, don't read remaining options.
+#    note options like source before rescan due to mode change
+#    cache options except between versions of SANE and gscan2pdf
 #    note sane-back and wipe scan settings if it changes
 #    reenable multiple scans from flatbed + delay and warning
 #    add rotate option before OCR/unpaper on scan dialog
