@@ -3725,7 +3725,7 @@ sub scanimage {
        return FALSE;
       }
      }
-     elsif ($line =~ /^.* Scanner warming up - waiting \d* seconds/) {
+     elsif ($line =~ /Scanner warming up - waiting \d* seconds|wait for lamp warm-up/) {
       $pbar -> set_text($d->get('Scanner warming up'));
      }
      elsif ($line =~ /^Scanned page \d*\. \(scanner status = 7\)/) {
@@ -3863,7 +3863,7 @@ sub scanadf {
     $line .= $buffer;
 
     while ($line =~ /\n/) {
-     if ($line =~ /^.* Scanner warming up - waiting \d* seconds/) {
+     if ($line =~ /Scanner warming up - waiting \d* seconds|wait for lamp warm-up/) {
       $pbar -> set_text($d->get('Scanner warming up'));
      }
      elsif ($line =~ /^Scanned document out(\d*)\.pnm/) {
