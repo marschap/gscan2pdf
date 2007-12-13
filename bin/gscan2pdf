@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    why doesn't cancel kill the process when running Tess?
 #    add option for number of background processes
 #    test what happens when all paper sizes are bigger than scanner
 #    add warning message for paper sizes that are bigger than scanner
@@ -3456,7 +3457,10 @@ sub scan_dialog {
 
 # Show window
  $windows -> show_all;
- $vboxm -> hide if ($combobp -> get_active_text ne $d->get('Manual'));
+ $vboxm -> hide
+  if (defined $vboxm
+   and (! defined $combobp or
+        ! $combobp -> get_active_text ne $d->get('Manual')));
  $framex->hide_all;
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
