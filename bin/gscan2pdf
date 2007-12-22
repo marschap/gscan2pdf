@@ -2609,7 +2609,7 @@ sub save_image {
   if ($#pagelist == 0) {
    $filename = $filename.".$SETTING{'image type'}"
     if ($filename !~ /\.$SETTING{'image type'}$/i);
-   system ("convert $pagelist[0] $filename") == 0 or
+   system ("convert $pagelist[0] '$filename'") == 0 or
     show_message_dialog($window, 'error', 'close', $d->get('Error saving image'))
      if (! file_exists($file_chooser, $filename));
   }
