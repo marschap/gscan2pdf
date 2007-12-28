@@ -6013,21 +6013,24 @@ sub add_ocr_languages {
 
 # Tesseract language files
  my %iso639 = (
-  deu => $d->get('German'),
-  eng => $d->get('English'),
-  fra => $d->get('French'),
-  ita => $d->get('Italian'),
-  nld => $d->get('Dutch'),
-  spa => $d->get('Spanish'),
+  deu     => $d->get('German'),
+  'deu-f' => $d->get('Fraktur'),
+  eng     => $d->get('English'),
+  fra     => $d->get('French'),
+  ita     => $d->get('Italian'),
+  nld     => $d->get('Dutch'),
+  por     => $d->get('Portuguese'),
+  spa     => $d->get('Spanish'),
  );
 
- my @tesslang;
+ my $tessdata_prefix = '/usr/share/tessdata';
  if (defined $ENV{TESSDATA_PREFIX}) {
-  @tesslang = glob "$ENV{TESSDATA_PREFIX}tessdata/*.unicharset";
+  $tessdata_prefix = $ENV{TESSDATA_PREFIX};
  }
- else {
-  @tesslang = glob "/usr/share/tesseract-ocr/tessdata/*.unicharset";
+ elsif (-d '/usr/share/tesseract-ocr/tessdata') {
+  $tessdata_prefix = '/usr/share/tesseract-ocr';
  }
+ my @tesslang = glob "$tessdata_prefix/tessdata/*.unicharset";
   
 # Weed out the empty language files
  my $i = 0;
