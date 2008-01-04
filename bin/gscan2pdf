@@ -352,7 +352,7 @@ my @action_items = (
  # Tools menu
  [ 'Tools', undef, $d->get('_Tools') ],
  [ 'Threshold', undef, $d->get('_Threshold'), undef, $d->get('Change each pixel above this threshold to black'), \&threshold ],
- [ 'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef, $d->get('Crop pages'), \&crop ],
+# [ 'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef, $d->get('Crop pages'), \&crop ],
  [ 'unpaper', undef, $d->get('_unpaper'), undef, $d->get('Clean up pages with unpaper'), \&unpaper ],
  [ 'OCR', undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition'), \&OCR ],
 
@@ -416,7 +416,6 @@ my $ui = "<ui>
   </menu>
   <menu action='Tools'> 
    <menuitem action='Threshold'/>
-   <menuitem action='Crop'/>
    <separator/>
    <menuitem action='unpaper'/>
    <menuitem action='OCR'/>
@@ -452,8 +451,6 @@ my $ui = "<ui>
   <toolitem action='Rotate 90'/>
   <toolitem action='Rotate 180'/>
   <toolitem action='Rotate 270'/>
-  <separator/>
-  <toolitem action='Crop'/>
   <separator/>
   <toolitem action='Help'/>
   <toolitem action='Quit'/>
@@ -724,27 +721,27 @@ $eventbox->signal_connect(button_press_event => sub {
  my ($widget, $event) = @_;
 
 # Draw a rubber band if LHB and we have an image
- if ($event->button == 1 and $slist->get_selected_indices) {
+# if ($event->button == 1 and $slist->get_selected_indices) {
 
 # Erase...
-  draw_rubber_band_box ($widget) if ($widget->{draginfo});
+#  draw_rubber_band_box ($widget) if ($widget->{draginfo});
 
-  $widget->{draginfo} = {
-   x1 => $event->x,
-   y1 => $event->y,
-   x2 => $event->x,
-   y2 => $event->y,
-  };
+#  $widget->{draginfo} = {
+#   x1 => $event->x,
+#   y1 => $event->y,
+#   x2 => $event->x,
+#   y2 => $event->y,
+#  };
 
 # Draw...
-  draw_rubber_band_box ($widget);
+#  draw_rubber_band_box ($widget);
 
 # allow event propagation
- return FALSE;
- }
- else {
+# return FALSE;
+# }
+# else {
   handle_clicks($widget, $event);
- }
+# }
 });
 $eventbox->signal_connect(button_release_event => \&handle_clicks);
 $eventbox->signal_connect_after (realize => sub {
@@ -759,23 +756,23 @@ $eventbox->signal_connect_after (unrealize => sub {
  delete $widget->{drag_gc};
 });
 
-$eventbox->signal_connect (motion_notify_event => sub {
- my ($widget, $event) = @_;
+#$eventbox->signal_connect (motion_notify_event => sub {
+# my ($widget, $event) = @_;
 
- if ($widget->{draginfo}) {
+# if ($widget->{draginfo}) {
 
 # Erase...
-  draw_rubber_band_box ($widget);
+#  draw_rubber_band_box ($widget);
 
-  $widget->{draginfo}{x2} = $event->x;
-  $widget->{draginfo}{y2} = $event->y;
+#  $widget->{draginfo}{x2} = $event->x;
+#  $widget->{draginfo}{y2} = $event->y;
 
 # Draw new...
-  draw_rubber_band_box ($widget);
- }
+#  draw_rubber_band_box ($widget);
+# }
 
- return FALSE;
-});
+# return FALSE;
+#});
 
 # If we need to redraw the rubberband
 #$eventbox->signal_connect (expose_event => sub {
@@ -1251,7 +1248,7 @@ sub create_menu_bar {
  $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
 
  $uimanager->get_widget('/MenuBar/Tools/Threshold') -> set_sensitive(FALSE);
- $uimanager->get_widget('/MenuBar/Tools/Crop') -> set_sensitive(FALSE);
+# $uimanager->get_widget('/MenuBar/Tools/Crop') -> set_sensitive(FALSE);
 
 # a convenient place to put these
  $dependencies{pages} = -1;
@@ -1326,7 +1323,6 @@ sub update_uimanager {
                  '/MenuBar/View/Rotate 180',
                  '/MenuBar/View/Rotate 270',
                  '/MenuBar/Tools/Threshold',
-                 '/MenuBar/Tools/Crop',
                  '/MenuBar/Tools/unpaper',
                  '/MenuBar/Tools/OCR',
 
@@ -6955,7 +6951,7 @@ only the changelogs from official Ubuntu builds are displayed.
       as soon as tesseract supports outputting the information in a sensible
       manner.
 
-=item Crop function.
+=item Crop function (As soon as I have finished the Perl bindings for gtkimageview).
 
 =item Print (using Net::Cups).
 
