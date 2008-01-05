@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
 #    why doesn't cancel kill the process when running Tess?
 #    add option for number of background processes
 #    test what happens when all paper sizes are bigger than scanner
@@ -933,6 +934,8 @@ my %pddo = (
                                      'Transparency Unit' => $d->get('Transparency Unit'),
                                    },
                                  },
+            'pagewidth'       => { string => $d->get('Page Width') },
+            'pageheight'      => { string => $d->get('Page Height') },
           );
 
 # Set up hash for unpaper options
@@ -4380,7 +4383,7 @@ sub parse_options {
  $output = substr($output, index($output, "\n")+1, length($output));
 
 # Dig out the paper sizes
- my ($x, $y, $l, $t);
+ my ($x, $y, $l, $t, $h, $w, $spin_buttonx, $spin_buttony, $spin_buttonl, $spin_buttont, $spin_buttonh, $spin_buttonw);
  $x = $2 if ($output =~ /-x (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
  $y = $2 if ($output =~ /-y (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
  $l = $2 if ($output =~ /-l (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
@@ -4399,48 +4402,12 @@ sub parse_options {
   $combobp = Gtk2::ComboBox -> new_text;
   $combobp -> append_text ($d->get('Manual'));
   $combobp -> append_text ($d->get('Edit'));
-  add_paper($combobp, $x, $y, $l, $t);
   $tooltips -> set_tip ($combobp, $d->get('Selects or edits the paper size'));
   $hboxp -> pack_end ($combobp, FALSE, FALSE, 0);
 
 # Define manual paper here to reference it in callback
   $vboxm = Gtk2::VBox -> new;
   $vboxd -> pack_start ($vboxm, FALSE, FALSE, 0);
-  my @info = ( { label => $d->get('Width'),
-                 tooltip => $d->get('Width of scan area'),
-                 letter => 'x',
-                 dimension => $x },
-               { label => $d->get('Height'),
-                 tooltip => $d->get('Height of scan area'),
-                 letter => 'y',
-                 dimension => $y },
-               { label => $d->get('Left'),
-                 tooltip => $d->get('Top-left x position of scan area'),
-                 letter => 'l',
-                 dimension => $l },
-               { label => $d->get('Top'),
-                 tooltip => $d->get('Top-left y position of scan area'),
-                 letter => 't',
-                 dimension => $t } );
-  my ($spin_buttonx, $spin_buttony, $spin_buttonl, $spin_buttont) = add_spinbutton($vboxm, @info);
-  $combobp -> signal_connect (changed => sub {
-   if ($combobp -> get_active_text eq $d->get('Edit')) {
-    edit_paper($combobp, $x, $y, $l, $t);
-   }
-   elsif ($combobp -> get_active_text eq $d->get('Manual')) {
-    $vboxm -> show_all;
-   }
-   else {
-    my $paper = $combobp -> get_active_text;
-    $spin_buttonx -> set_value($SETTING{Paper}{$paper}{x});
-    $spin_buttony -> set_value($SETTING{Paper}{$paper}{y});
-    $spin_buttont -> set_value($SETTING{Paper}{$paper}{t});
-    $spin_buttonl -> set_value($SETTING{Paper}{$paper}{l});
-    $vboxm -> hide;
-    $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
-   }
-  });
-  set_paper($combobp);
  }
 
 # Set device-dependent options
@@ -4463,7 +4430,12 @@ sub parse_options {
 
 # HBox for option
    my $hbox = Gtk2::HBox -> new;
-   $vboxd -> pack_start ($hbox, TRUE, TRUE, 0);
+   if ($option =~ /^page(width)|(height)/) {
+    $vboxm -> pack_start ($hbox, TRUE, TRUE, 0);
+   }
+   else {
+    $vboxd -> pack_start ($hbox, TRUE, TRUE, 0);
+   }
    $hbox->set_sensitive(FALSE) if ($hash{$option}{default} =~ /inactive/);
 
 # Label
@@ -4485,6 +4457,15 @@ sub parse_options {
 # Set the default
     $spin_button -> set_value($hash{$option}{default})
      if ($hash{$option}{default} !~ /inactive/);
+
+    if ($option eq 'pagewidth') {
+     $w = $max;
+     $spin_buttonw = $spin_button;
+    }
+    if ($option eq 'pageheight') {
+     $h = $max;
+     $spin_buttonh = $spin_button;
+    }
    }
 
 # ComboBox
@@ -4533,6 +4514,52 @@ sub parse_options {
   }
  }
 
+# Add paper size after rest of options in case of pagewidth|height
+ if (defined($x) and defined($y)) {
+  $x = $w if (defined $w);
+  $y = $h if (defined $h);
+  my @info = ( { label => $d->get('Width'),
+                 tooltip => $d->get('Width of scan area'),
+                 letter => 'x',
+                 dimension => $x },
+               { label => $d->get('Height'),
+                 tooltip => $d->get('Height of scan area'),
+                 letter => 'y',
+                 dimension => $y },
+               { label => $d->get('Left'),
+                 tooltip => $d->get('Top-left x position of scan area'),
+                 letter => 'l',
+                 dimension => $l },
+               { label => $d->get('Top'),
+                 tooltip => $d->get('Top-left y position of scan area'),
+                 letter => 't',
+                 dimension => $t } );
+  ($spin_buttonx, $spin_buttony, $spin_buttonl, $spin_buttont) = add_spinbutton($vboxm, @info);
+  $combobp -> signal_connect (changed => sub {
+   if ($combobp -> get_active_text eq $d->get('Edit')) {
+    edit_paper($combobp, $x, $y, $l, $t, $h, $w);
+   }
+   elsif ($combobp -> get_active_text eq $d->get('Manual')) {
+    $vboxm -> show_all;
+   }
+   else {
+    my $paper = $combobp -> get_active_text;
+    $spin_buttonx -> set_value($SETTING{Paper}{$paper}{x});
+    $spin_buttony -> set_value($SETTING{Paper}{$paper}{y});
+    $spin_buttont -> set_value($SETTING{Paper}{$paper}{t});
+    $spin_buttonl -> set_value($SETTING{Paper}{$paper}{l});
+    if (defined($spin_buttonh) and defined($spin_buttonw)) {
+     $spin_buttonw -> set_value($SETTING{Paper}{$paper}{x});
+     $spin_buttonh -> set_value($SETTING{Paper}{$paper}{y});
+    }
+    $vboxm -> hide;
+    $windows -> resize(200, 200); # Doesn't matter that 200x200 is too small
+   }
+  });
+  add_paper($combobp, $x, $y, $l, $t, $h, $w);
+  set_paper($combobp);
+ }
+
 # Show window
  $vboxd -> show_all;
  $vboxm -> hide if ($combobp -> get_active_text ne $d->get('Manual'));
@@ -4563,7 +4590,7 @@ sub add_spinbutton {
 
 # Paper editor
 sub edit_paper {
- my ($combobp, $x, $y, $l, $t) = @_;
+ my ($combobp, $x, $y, $l, $t, $h, $w) = @_;
 
  if (defined $windowd) {
   $windowd -> present;
@@ -4671,7 +4698,7 @@ sub edit_paper {
    $SETTING{Paper}{$slist->{data}[$i][0]}{t} = $slist->{data}[$i][4];
   }
   $combobp->remove_text(0) while ($combobp->get_active > 1);
-  my @ignored = add_paper($combobp, $x, $y, $l, $t);
+  my @ignored = add_paper($combobp, $x, $y, $l, $t, $h, $w);
   show_message_dialog($windowd, 'warning', 'close',
    $d->get('The following paper sizes are too big to be scanned by the selected device:')
     .' '.join(', ', @ignored)) if (@ignored);
@@ -4698,10 +4725,15 @@ sub edit_paper {
 # Add paper size to combobox if scanner large enough
 
 sub add_paper {
- my ($combobox, $x, $y, $l, $t) = @_;
+ my ($combobox, $x, $y, $l, $t, $h, $w) = @_;
  my @ignored;
  for (keys %{$SETTING{Paper}}) {
-  if ($x+$tolerance >= $SETTING{Paper}{$_}{x}+$SETTING{Paper}{$_}{l}
+  if (defined($h) and defined($w)
+      and $h >= $SETTING{Paper}{$_}{y}+$SETTING{Paper}{$_}{t}
+      and $w >= $SETTING{Paper}{$_}{x}+$SETTING{Paper}{$_}{l}) {
+   $combobox -> prepend_text ($_);
+  }
+  elsif ($x+$tolerance >= $SETTING{Paper}{$_}{x}+$SETTING{Paper}{$_}{l}
        and $y+$tolerance >= $SETTING{Paper}{$_}{y}+$SETTING{Paper}{$_}{t}
        and $l+$tolerance >= $SETTING{Paper}{$_}{l}
        and $t+$tolerance >= $SETTING{Paper}{$_}{t}) {
