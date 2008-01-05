@@ -3702,6 +3702,7 @@ sub scanimage {
 
 # Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
     sysread $error, $buffer, 1024;
+    warn $buffer if ($debug and $buffer and $buffer !~ /\r/);
     $line .= $buffer;
 
     while ($line =~ /\r/) {
@@ -3757,7 +3758,6 @@ sub scanimage {
      else {
       my $text = $d->get('Unknown message: ')
                                          . substr($line, 0, index($line, "\n"));
-warn "$text\n";
       show_message_dialog($windows, 'warning', 'close', $text);
      }
      $line = substr($line, index($line, "\n")+1, length($line));
@@ -3867,6 +3867,7 @@ sub scanadf {
 
 # Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
     sysread $error, $buffer, 1024;
+    warn $buffer if ($debug and $buffer);
     $line .= $buffer;
 
     while ($line =~ /\n/) {
@@ -3902,7 +3903,6 @@ sub scanadf {
      else {
       my $text = $d->get('Unknown message: ')
                                          . substr($line, 0, index($line, "\n"));
-warn "$text\n";
       show_message_dialog($windows, 'warning', 'close', $text);
      }
      $line = substr($line, index($line, "\n")+1, length($line));
