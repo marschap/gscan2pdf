@@ -18,12 +18,12 @@ my $shareinstdir;
 
 @ARGV=();
 foreach (@argv) {
-    if (m!PREFIX=(.+)!) {
+    if (m!PREFIX=(.+)!i) {
         $prefixdir = $1;
         push @ARGV, $_;
-    } elsif (m!SHAREINSTDIR=(.+)!) {
+    } elsif (m!SHAREINSTDIR=(.+)!i) {
         $shareinstdir = $1;
-    } elsif (m!SHAREDIR=(.+)!) {
+    } elsif (m!SHAREDIR=(.+)!i) {
         $sharedir = $1;
     } else {
         push @ARGV, $_;
@@ -59,11 +59,11 @@ sub MY::macro {
     $string .= "EMAIL=$email\n";
     $string .= "YEAR=$year\n";
 
-    $string .= "SITEPREFIX=/usr\n";
-    $string .= "INSTALLMAN1DIR=/usr/share/man/man1\n";
-    $string .= "INSTALLSITEMAN1DIR=/usr/share/man/man1\n";
-    $string .= "INSTALLMAN3DIR=/usr/share/man/man3\n";
-    $string .= "INSTALLSITEMAN3DIR=/usr/share/man/man3\n";
+    $string .= "SITEPREFIX=$prefixdir\n";
+    $string .= "INSTALLMAN1DIR=$sharedir/man/man1\n";
+    $string .= "INSTALLSITEMAN1DIR=$sharedir/man/man1\n";
+    $string .= "INSTALLMAN3DIR=$sharedir/man/man3\n";
+    $string .= "INSTALLSITEMAN3DIR=$sharedir/man/man3\n";
     $string .= "MAN1EXT=1p\n";
     return $string;
 }
@@ -81,28 +81,29 @@ PO = $(wildcard po/*.po)
 DEB_BUILD_ROOT = /var/tmp/$(NAME)-$(VERSION)
 
 rpmdist : $(NAME).spec tardist
-	mkdir --parents rpm rpm/SPECS rpm/SOURCES rpm/BUILD rpm/RPMS rpm/SRPMS \
+	$(MKPATH) rpm rpm/SPECS rpm/SOURCES rpm/BUILD rpm/RPMS rpm/SRPMS \
                                                   rpm/RPMS/noarch || /bin/true
-	cp $(NAME).spec rpm/SPECS/$(NAME).spec
-	cp $(NAME)-$(VERSION).tar.gz rpm/SOURCES/$(NAME)-$(VERSION).tar.gz
+	$(CP) $(NAME).spec rpm/SPECS/$(NAME).spec
+	$(CP) $(NAME)-$(VERSION).tar.gz rpm/SOURCES/$(NAME)-$(VERSION).tar.gz
 	( cd rpm/SPECS; \
 	  rpmbuild --nodeps --define='_topdir $(PWD)/rpm' -ba $(NAME).spec )
 
 locale_install : locale
 	for file in $(PO); do \
          po=$${file#*/}; \
-         mkdir --parents $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
-         cp $${po%%.po}/LC_MESSAGES/$(NAME).mo \
+         $(MKPATH) $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
+         $(CP) $${po%%.po}/LC_MESSAGES/$(NAME).mo \
                               $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
+         $(CHMOD) 644 $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
          done
 
 $(DESTDIR)$(SHAREDIR)/$(NAME) :
-	mkdir --parents $(DESTDIR)$(SHAREDIR)/$(NAME)
+	$(MKPATH) $(DESTDIR)$(SHAREDIR)/$(NAME)
 
 icon_install : $(DESTDIR)$(SHAREDIR)/$(NAME)
-	mkdir --parents $(DESTDIR)$(SHAREDIR)/applications
-	cp $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
-	cp $(NAME).png stock-rotate-90.svg stock-rotate-180.svg stock-rotate-270.svg scanner.png pdf.png $(DESTDIR)$(SHAREDIR)/$(NAME)
+	$(MKPATH) $(DESTDIR)$(SHAREDIR)/applications
+	$(CP) $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
+	$(CP) $(NAME).png stock-rotate-90.svg stock-rotate-180.svg stock-rotate-270.svg scanner.png pdf.png $(DESTDIR)$(SHAREDIR)/$(NAME)
 
 debdist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb
 
@@ -118,12 +119,12 @@ locale : $(PO)
 	for file in $(PO); do \
          msgfmt -c $$file; \
          po=$${file#*/}; \
-         mkdir --parents $${po%%.po}/LC_MESSAGES; \
+         $(MKPATH) $${po%%.po}/LC_MESSAGES; \
          mv messages.mo $${po%%.po}/LC_MESSAGES/$(NAME).mo; \
          done
 
 $(NAME).spec : bin/$(NAME) debian/changelog
-	cp $(NAME).spec $(NAME).spec_tmp
+	$(CP) $(NAME).spec $(NAME).spec_tmp
 	sed 's/^Version:.*/Version: $(VERSION)/' < $(NAME).spec_tmp | \
          sed '/^%changelog/q' > $(NAME).spec
 	rm $(NAME).spec_tmp
@@ -132,12 +133,12 @@ $(NAME).spec : bin/$(NAME) debian/changelog
          sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $(NAME).spec
 
 htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb : bin/$(NAME) debian/control debian/changelog tardist | htdocs/download/debian/binary
-	rm -rf /tmp/$(NAME)
-	mkdir /tmp/$(NAME)
+	$(RM_F) /tmp/$(NAME)
+	$(MKPATH) /tmp/$(NAME)
 	cd /tmp/$(NAME) && tar xvfz $(PWD)/$(NAME)-$(VERSION).tar.gz
 	cd /tmp/$(NAME)/$(NAME)-$(VERSION) && perl Makefile.PL \
 	 && make locale && debuild && cd .. \
-	 && cp $(NAME)_$(VERSION)_all.deb \
+	 && $(CP) $(NAME)_$(VERSION)_all.deb \
 	       $(NAME)_$(VERSION).dsc \
 	       $(NAME)_$(VERSION)_i386.changes \
 	       $(NAME)_$(VERSION).tar.gz $(PWD)/htdocs/download/debian/binary
@@ -165,7 +166,7 @@ htdocs/download/debian/binary/Release : htdocs/download/debian/binary/Packages.g
 	 mv Release.tmp Release
 
 htdocs/download/debian/binary :
-	mkdir --parents htdocs/download/debian/binary
+	$(MKPATH) htdocs/download/debian/binary
 
 remote-dist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb htdocs/download/debian/binary/Release.gpg
 	scp htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb \
