@@ -1,0 +1,83 @@
+Usage: scanimage [OPTION]...
+
+Start image acquisition on a scanner device and write PNM image data to
+standard output.
+
+Parameters are separated by a blank from single-character options (e.g.
+-d epson) and by a "=" from multi-character options (e.g. --device-name=epson).
+-d, --device-name=DEVICE   use a given scanner device (e.g. hp:/dev/scanner)
+    --format=pnm|tiff      file format of output file
+-i, --icc-profile=PROFILE  include this ICC profile into TIFF file
+-L, --list-devices         show available scanner devices
+-f, --formatted-device-list=FORMAT similar to -L, but the FORMAT of the output
+                           can be specified: %d (device name), %v (vendor),
+                           %m (model), %t (type), and %i (index number)
+-b, --batch[=FORMAT]       working in batch mode, FORMAT is `out%d.pnm' or
+                           `out%d.tif' by default depending on --format
+    --batch-start=#        page number to start naming files with
+    --batch-count=#        how many pages to scan in batch mode
+    --batch-increment=#    increase number in filename by an amount of #
+    --batch-double         increment page number by two for 2sided originals
+                           being scanned in a single sided scanner
+    --batch-prompt         ask for pressing a key before scanning a page
+    --accept-md5-only      only accept authorization requests using md5
+-p, --progress             print progress messages
+-n, --dont-scan            only set options, don't actually scan
+-T, --test                 test backend thoroughly
+-h, --help                 display this help message and exit
+-v, --verbose              give even more status messages
+-B, --buffer-size          change default input buffersize
+-V, --version              print version information
+
+Options specific to device `fujitsu:libusb:007:032':
+  Scan Mode:
+    --source ADF Front|ADF Back|ADF Duplex [ADF Front]
+        Selects the scan source (such as a document-feeder).
+    --mode Lineart|Halftone|Gray|Color [Color]
+        Selects the scan mode (e.g., lineart, monochrome, or color).
+    --resolution 50..600dpi (in steps of 1) [600]
+        Sets the horizontal resolution of the scanned image.
+    --y-resolution 50..600dpi (in steps of 1) [600]
+        Sets the vertical resolution of the scanned image.
+  Geometry:
+    -l 0..215.872mm (in steps of 0.0211639) [0]
+        Top-left x position of scan area.
+    -t 0..279.364mm (in steps of 0.0211639) [0]
+        Top-left y position of scan area.
+    -x 0..215.872mm (in steps of 0.0211639) [215.872]
+        Width of scan-area.
+    -y 0..279.364mm (in steps of 0.0211639) [279.364]
+        Height of scan-area.
+    --pagewidth 0..221.121mm (in steps of 0.0211639) [215.872]
+        Must be set properly to align scanning window
+    --pageheight 0..863.489mm (in steps of 0.0211639) [279.364]
+        Must be set properly to eject pages
+  Enhancement:
+    --brightness -127..127 (in steps of 1) [0]
+        Controls the brightness of the acquired image.
+    --contrast -127..127 (in steps of 1) [0]
+        Controls the contrast of the acquired image.
+    --rif[=(yes|no)] [no]
+        Reverse image format
+  Advanced:
+    --compression None|JPEG [None]
+        Enable compressed data. May crash your front-end program
+    --compression-arg 0..7 (in steps of 1) [0]
+        Level of JPEG compression. 1 is small file, 7 is large file. 0
+        (default) is same as 4
+    --dfdetect Default|None|Thickness|Length|Both [Default]
+        Enable double feed sensors
+    --dfdiff Default|10mm|15mm|20mm [Default]
+        Difference in page length to trigger double feed sensor
+    --overscan Default|Off|On [Default]
+        Collect a few mm of background on top side of scan, before paper
+        enters ADF, and increase maximum scan area beyond paper size, to allow
+        collection on remaining sides. May conflict with bgcolor option
+    --sleeptimer 0..60 (in steps of 1) [0]
+        Time in minutes until the internal power supply switches to sleep mode
+  Sensors and Buttons:
+
+Type ``scanimage --help -d DEVICE'' to get list of all options for DEVICE.
+
+List of available devices:
+    v4l:/dev/video0 fujitsu:libusb:007:032
