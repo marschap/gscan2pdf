@@ -102,7 +102,7 @@ $(DESTDIR)$(SHAREDIR)/$(NAME) :
 icon_install : $(DESTDIR)$(SHAREDIR)/$(NAME)
 	mkdir --parents $(DESTDIR)$(SHAREDIR)/applications
 	cp $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
-	cp $(NAME).png stock-rotate-90.svg stock-rotate-180.svg stock-rotate-270.svg scanner.png pdf.png $(DESTDIR)$(SHAREDIR)/$(NAME)
+	cp $(NAME).svg stock-rotate-90.svg stock-rotate-180.svg stock-rotate-270.svg scanner.svg pdf.svg $(DESTDIR)$(SHAREDIR)/$(NAME)
 
 debdist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb
 
