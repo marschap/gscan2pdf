@@ -3708,7 +3708,7 @@ sub scanimage {
 
 # Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
     sysread $error, $buffer, 1024;
-    warn $buffer if ($debug and $buffer and $buffer !~ /\r/);
+    warn $buffer if ($debug and $buffer);
     $line .= $buffer;
 
     while ($line =~ /\r/) {
