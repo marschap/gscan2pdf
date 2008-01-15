@@ -290,8 +290,8 @@ init_icons(
  [ 'rotate90',  "$path/stock-rotate-90.svg" ], 
  [ 'rotate180', "$path/stock-rotate-180.svg" ], 
  [ 'rotate270', "$path/stock-rotate-270.svg" ],
- [ 'scanner',	"$path/scanner.png" ],
- [ 'pdf',	"$path/pdf.png" ],
+ [ 'scanner',	"$path/scanner.svg" ],
+ [ 'pdf',	"$path/pdf.svg" ],
 );
 
 # Define application-wide variables here so that they can be referenced
@@ -518,7 +518,7 @@ if (! defined($SETTING{'restore window'}) or $SETTING{'restore window'}) {
  $window -> maximize if ($SETTING{'window_maximize'});
 }
 
-$window -> set_default_icon_from_file ("$path/gscan2pdf.png");
+$window -> set_default_icon_from_file ("$path/gscan2pdf.svg");
 
 my $vbox = Gtk2::VBox -> new;
 $window -> add ( $vbox );
