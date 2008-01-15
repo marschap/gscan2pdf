@@ -13,6 +13,10 @@
 + improve tesseract language file search
 + implement --pagewidth|height properly [2348533a4a6a]
   Closes Debian bug #457376 (gscan2pdf: Some paper sizes not available)
++ account for options that completely disappear or appear between modes
+  Closes 1868985 (can't disable invalid options (e.g. threshold))
+  Closes Debian bug #457249
+   (gscan2pdf: Tries to set threshold option for color scans)
 
 
 0.9.19 (19.11.2007):

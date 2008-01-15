@@ -16,6 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    update_options should hide all widgets in device-dependent frame,
+#     go through options, showing and ghosting as necessary, adding new ones.
+#    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
 #    why doesn't cancel kill the process when running Tess?
 #    add option for number of background processes
@@ -25,7 +28,7 @@
 #    if downgrading, don't read remaining options.
 #    note options like source before rescan due to mode change
 #    cache options except between versions of SANE and gscan2pdf
-#    note sane-back and wipe scan settings if it changes
+#    note sane-backend and wipe scan settings if it changes
 #    reenable multiple scans from flatbed + delay and warning
 #    add rotate option before OCR/unpaper on scan dialog
 #    query downsizing problems with the imagemagick team.
@@ -4424,92 +4427,43 @@ sub parse_options {
  my %hash = options2hash($output);
  foreach my $option (keys %hash) {
   if (defined($pddo{$option})) {
+   my ($widget, $hbox) = add_widget_from_hash($option, %hash);
 
-# Dig out of possible options
-   $ddo{$option}{string} = $pddo{$option}{string};
-
-# HBox for option
-   my $hbox = Gtk2::HBox -> new;
-   if ($option =~ /^page(width)|(height)/) {
+   if ($option eq 'pagewidth') {
+    $w = $hash{$option}{max};
+    $spin_buttonw = $widget;
+    $vboxm -> pack_start ($hbox, TRUE, TRUE, 0);
+   }
+   elsif ($option eq 'pageheight') {
+    $h = $hash{$option}{max};
+    $spin_buttonh = $widget;
     $vboxm -> pack_start ($hbox, TRUE, TRUE, 0);
    }
    else {
     $vboxd -> pack_start ($hbox, TRUE, TRUE, 0);
    }
-   $hbox->set_sensitive(FALSE) if ($hash{$option}{default} =~ /inactive/);
 
-# Label
-   my $label = Gtk2::Label -> new ($ddo{$option}{string});
-   $hbox -> pack_start ($label, FALSE, FALSE, 0);
-
-# SpinButton
-   if ($hash{$option}{values} =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)/) {
-    my $min = $1;
-    my $max = $2;
-    my $step = 1;
-    $step = $1 if ($hash{$option}{values} =~ /\(in steps of (\d+)\)/);
-    my $spin_button = Gtk2::SpinButton -> new_with_range($min, $max, $step);
-    $spin_button -> set_value($hash{$option}{default})
-     if ($hash{$option}{default} !~ /inactive/);
-    $hbox -> pack_end ($spin_button, FALSE, FALSE, 0);
-    $tooltips -> set_tip ($spin_button, $hash{$option}{tip});
-
-# Set the default
-    $spin_button -> set_value($hash{$option}{default})
-     if ($hash{$option}{default} !~ /inactive/);
-
-    if ($option eq 'pagewidth') {
-     $w = $max;
-     $spin_buttonw = $spin_button;
-    }
-    if ($option eq 'pageheight') {
-     $h = $max;
-     $spin_buttonh = $spin_button;
-    }
+# If an ADF isn't selected, then we don't want to scan all pages
+   if ($option eq 'source') {
+    $widget -> signal_connect (changed => sub {
+     my $text = $widget -> get_active_text;
+     if (defined($text) and
+                     get_value(\%ddo, $option, $text) =~ /(Flatbed)|(Normal)/) {
+      $bscanall->set_sensitive(FALSE);
+      $bscannum->set_active(TRUE);
+     }
+     else {
+      $bscanall->set_sensitive(TRUE);
+     }
+    });
    }
 
-# ComboBox
-   else {
-    my $combob = Gtk2::ComboBox -> new_text;
-
-    my @array = options2array($hash{$option}{values});
-    my $index = default2index($hash{$option}{default}, @array);
-    foreach (@array) {
-     add_to_options($option, $_);
-     $combob->append_text($ddo{$option}{values}{$_});
-    }
-
-# Doing this before the set_active call to make sure that it gets calls for the
-#  default setting
-# If an ADF isn't selected, then we don't want to scan all pages
-    if ($option eq 'source') {
-     $combob -> signal_connect (changed => sub {
-      my $text = $combob -> get_active_text;
-      if (defined($text) and
-          get_value(\%ddo, $option, $text) =~ /(Flatbed)|(Normal)/) {
-       $bscanall->set_sensitive(FALSE);
-       $bscannum->set_active(TRUE);
-      }
-      else {
-       $bscanall->set_sensitive(TRUE);
-      }
-     });
-    }
-
-# Set the default
-    $combob -> set_active($index) if (defined $index);
-
-# Doing this after the set_active call so that it doesn't get called twice.
-# callback for mode
-    if ($option eq 'mode') {
-     $combob -> signal_connect (changed => sub {
-      $SETTING{$option} = get_value(\%ddo, $option, $combob -> get_active_text);
-      update_options($vboxd, $device);
-     });
-    }
-    
-    $hbox -> pack_end ($combob, FALSE, FALSE, 0);
-    $tooltips -> set_tip ($combob, $hash{$option}{tip});
+# If the mode is changed, update the options
+   if ($option eq 'mode') {
+    $widget -> signal_connect (changed => sub {
+     $SETTING{$option} = get_value(\%ddo, $option, $widget -> get_active_text);
+     update_options($vboxd, $device);
+    });
    }
   }
  }
@@ -4569,7 +4523,59 @@ sub parse_options {
 }
 
 
+# take an option from the options hash and create the appropriate widget
+
+sub add_widget_from_hash {
+ my ($option, %hash) = @_;
+
+# Dig out of possible options
+ $ddo{$option}{string} = $pddo{$option}{string};
+
+# HBox for option
+ my $hbox = Gtk2::HBox -> new;
+ $hbox->set_sensitive(FALSE) if ($hash{$option}{default} =~ /inactive/);
+
+# Label
+ my $label = Gtk2::Label -> new ($ddo{$option}{string});
+ $hbox -> pack_start ($label, FALSE, FALSE, 0);
+
+# Widget
+ my $widget;
+
+# SpinButton
+ if (defined $hash{$option}{max}) {
+  my $step = 1;
+  $step = $hash{$option}{step} if (defined $hash{$option}{step});
+  $widget = Gtk2::SpinButton -> new_with_range($hash{$option}{min},
+                                                    $hash{$option}{max}, $step);
+
+# Set the default
+  $widget -> set_value($hash{$option}{default})
+   if ($hash{$option}{default} !~ /inactive/);
+ }
+
+# ComboBox
+ else {
+  $widget = Gtk2::ComboBox -> new_text;
+
+  my $index = default2index($hash{$option}{default}, @{$hash{$option}{values}});
+  foreach (@{$hash{$option}{values}}) {
+   add_to_options($option, $_);
+   $widget->append_text($ddo{$option}{values}{$_});
+  }
+
+# Set the default
+  $widget -> set_active($index) if (defined $index);
+ }
+
+ $hbox -> pack_end ($widget, FALSE, FALSE, 0);
+ $tooltips -> set_tip ($widget, $hash{$option}{tip});
+ return ($widget, $hbox);
+}
+
+
 # Helper function to get manual paper size spinbuttons on dialog
+
 sub add_spinbutton {
  my ($vbox, @info) = @_;
  my @stack;
@@ -4831,8 +4837,6 @@ sub update_options {
     $vboxd -> hide_all;
     warn $output if $debug;
     update_options_hash($vboxd, options2hash($output));
-    $vboxd -> show_all;
-    $vboxm -> hide if ($combobp -> get_active_text ne $d->get('Manual'));
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
@@ -4850,8 +4854,6 @@ sub update_options {
   $output = slurp($filename);
   $vboxd -> hide_all; # merely here for consistency with normal operation
   update_options_hash($vboxd, options2hash($output));
-  $vboxd -> show_all;
-  $vboxm -> hide if ($combobp -> get_active_text ne $d->get('Manual'));
  }
 }
 
@@ -4869,7 +4871,8 @@ sub options2hash {
   if (defined($SETTING{$_}) and $hash{$_}{default} ne 'inactive'
 
 # only set the default if it is an option
-                           and $hash{$_}{values} =~ /($SETTING{$_})|(\.\.)/) {
+                      and (defined($hash{$_}{max})
+                        or default2index($SETTING{$_}, @{$hash{$_}{values}}))) {
    $hash{$_}{default} = $SETTING{$_};
   }
 
@@ -4888,6 +4891,7 @@ sub options2hash {
 sub update_options_hash {
 
  my ($vboxd, %hash) = @_;
+ my ($hboxm, $hboxp);
 
  foreach my $hbox ($vboxd -> get_children) {
   my $key;
@@ -4899,16 +4903,14 @@ sub update_options_hash {
     elsif ($widget -> isa('Gtk2::ComboBox')
 # to prevent recursion
                                             and $key ne 'mode'
-                                            and defined($hash{$key}{values})
-                                            and $hash{$key}{values} !~ /\.\./) {
+                                            and defined($hash{$key}{values})) {
      
 # Empty the list
      $widget->get_model->clear;
 
 # Fill it again
-     my @array = options2array($hash{$key}{values});
-     my $index = default2index($hash{$key}{default}, @array);
-     foreach (@array) {
+     my $index = default2index($hash{$key}{default}, @{$hash{$key}{values}});
+     foreach (@{$hash{$key}{values}}) {
 
 # in case the option was new and therefore not in ddo before
       add_to_options($key, $_);
@@ -4917,48 +4919,62 @@ sub update_options_hash {
 
 # Set the default
      $widget -> set_active($index) if (defined $index);
+
+# Set the ghosting
+     if ($hash{$key}{default} =~ /inactive/) {
+      $hbox->set_sensitive(FALSE);
+     }
+     else {
+      $hbox->set_sensitive(TRUE);
+     }
+
+     $hbox -> show_all;
     }
-    elsif ($widget -> isa('Gtk2::SpinButton') and defined($hash{$key}{values})
-                                            and $hash{$key}{values} =~ /\.\./) {
-     $widget->set_range($1, $2)
-      if ($hash{$key}{values} =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)/);
+    elsif ($key eq 'mode') {
+     $hboxm = $hbox;
+    }
+    elsif ($key eq 'Paper size') {
+     $hboxp = $hbox;
+    }
+    elsif ($widget -> isa('Gtk2::SpinButton') and defined($hash{$key}{max})) {
+     $widget->set_range($hash{$key}{min}, $hash{$key}{max});
 
 # Set the default
-     $widget -> set_value($hash{$key}{default})
-      if ($hash{$key}{default} !~ /inactive/);
+     if ($hash{$key}{default} =~ /inactive/) {
+      $hbox->set_sensitive(FALSE);
+     }
+     else {
+      $widget->set_value($hash{$key}{default});
+      $hbox->set_sensitive(TRUE);
+     }
+     $hbox -> show_all;
+    }
+
+# If an option no longer available, make it insensitive so that it doesn't
+# get passed to scanimage or scanadf
+    else {
+     $hbox->set_sensitive(FALSE);
     }
    }
 
-# Update ghosting
-   if (defined($hash{$key}{default}) and $hash{$key}{default} =~ /inactive/) {
-    $hbox->set_sensitive(FALSE);
-   }
-   else {
-    $hbox->set_sensitive(TRUE);
-   }    
+# Delete option from hash to see at the end which are left
+   delete $hash{$key} if (defined $hash{$key});
   }
  }
-}
 
-
-# take a list of |-seperated options and return an array
-
-sub options2array {
-
- my ($options) = @_;
- my @array;
- while (defined $options) {
-  my $i = index($options, '|');
-  if ($i > -1) {
-   push @array, substr($options, 0, $i);
-   $options = substr($options, $i+1, length($options));
-  }
-  else {
-   push @array, $options;
-   undef $options;
+# Add any new options
+ foreach my $option (keys %hash) {
+  if (defined($pddo{$option}) and $option !~ /^page(width)|(height)/) {
+   my ($widget, $hbox) = add_widget_from_hash($option, %hash);
+   $vboxd -> pack_start ($hbox, TRUE, TRUE, 0);
+   $hbox -> show_all;
   }
  }
- return @array;
+
+ $vboxm -> show_all if ($combobp -> get_active_text eq $d->get('Manual'));
+ $hboxm -> show_all if (defined $hboxm);
+ $hboxp -> show_all if (defined $hboxp);
+ $vboxd -> show;
 }
 
 
