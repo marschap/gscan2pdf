@@ -54,7 +54,6 @@ my %that = (
           'lamp-on' => {
                          'tip' => 'Turn on scanner lamp',
                          'default' => 'inactive',
-                         'values' => []
                        },
           'lens-calibration-in-doc-position' => {
                                                   'tip' => 'Calibrate lens focus in document position',
@@ -274,7 +273,6 @@ my %that = (
           'lamp-off' => {
                           'tip' => 'Turn off scanner lamp',
                           'default' => 'inactive',
-                          'values' => []
                         },
           'cal-exposure-time-g' => {
                                      'tip' => 'Define exposure-time for green calibration',

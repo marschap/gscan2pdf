@@ -94,7 +94,7 @@ locale_install : locale
          $(MKPATH) $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
          $(CP) $${po%%.po}/LC_MESSAGES/$(NAME).mo \
                               $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
-         $(CHMOD) 644 $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
+         $(CHMOD) 755 $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
          done
 
 $(DESTDIR)$(SHAREDIR)/$(NAME) :
@@ -103,7 +103,7 @@ $(DESTDIR)$(SHAREDIR)/$(NAME) :
 icon_install : $(DESTDIR)$(SHAREDIR)/$(NAME)
 	$(MKPATH) $(DESTDIR)$(SHAREDIR)/applications
 	$(CP) $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
-	$(CP) $(NAME).png stock-rotate-90.svg stock-rotate-180.svg stock-rotate-270.svg scanner.png pdf.png $(DESTDIR)$(SHAREDIR)/$(NAME)
+	$(CP) $(NAME).svg stock-rotate-90.svg stock-rotate-180.svg stock-rotate-270.svg scanner.svg pdf.svg $(DESTDIR)$(SHAREDIR)/$(NAME)
 
 debdist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb
 

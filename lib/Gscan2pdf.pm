@@ -62,7 +62,7 @@ sub options2hash {
     }
     push @array, $value if ($value ne '');
    }
-   $hash{$option}{values} = [ @array ];
+   $hash{$option}{values} = [ @array ] if (@array);
   }
 
 # Parse tooltips from option description based on an 8-character indent.
