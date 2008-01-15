@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 82;
+use Test::More tests => 2;
 BEGIN { use_ok('Gscan2pdf') };
 
 #########################
@@ -20,142 +20,159 @@ my %that = (
           'source' => {
                         'tip' => 'Selects the scan source (such as a document-feeder).',
                         'default' => 'inactive',
-                        'values' => 'auto|Flatbed'
+                        'values' => ['auto','Flatbed']
                       },
           'gamma-table' => {
                              'tip' => 'Gamma-correction table.  In color mode this option equally affects the red, green, and blue channels simultaneously (i.e., it is an intensity gamma table).',
                              'default' => 'inactive',
-                             'values' => '0..65535,... (in steps of 1)'
+                                   'min' => 0,
+                            'max' => 65535,
+                            'step' => 1,
                            },
           'halftoning' => {
                             'tip' => 'Selects whether the acquired image should be halftoned (dithered).',
                             'default' => 'inactive',
-                            'values' => 'yes|no'
+                            'values' => ['yes','no']
                           },
           'threshold' => {
                            'tip' => 'Select minimum-brightness to get a white point',
                            'default' => 'inactive',
-                           'values' => '0..100% (in steps of 1)'
+                                   'min' => 0,
+                            'max' => 100,
+                            'step' => 1,
                          },
           'mode' => {
                       'tip' => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
                       'default' => 'Color',
-                      'values' => 'auto|Color|Halftone|Gray|Lineart'
+                      'values' => ['auto','Color','Halftone','Gray','Lineart']
                     },
           'analog-gamma-bind' => {
                                    'tip' => 'In RGB-mode use same values for each color',
                                    'default' => 'no',
-                                   'values' => 'yes|no'
+                                   'values' => ['yes','no']
                                  },
           'red-gamma-table' => {
                                  'tip' => 'Gamma-correction table for the red band.',
                                  'default' => 'inactive',
-                                 'values' => '0..65535,... (in steps of 1)'
+                                 'min' => 0,
+                            'max' => 65535,
+                            'step' => 1,
                                },
           'green-gamma-table' => {
                                    'tip' => 'Gamma-correction table for the green band.',
                                    'default' => 'inactive',
-                                   'values' => '0..65535,... (in steps of 1)'
+                                   'min' => 0,
+                            'max' => 65535,
+                            'step' => 1,
                                  },
           'custom-gamma' => {
                               'tip' => 'Determines whether a builtin or a custom gamma-table should be used.',
                               'default' => 'no',
-                              'values' => 'yes|no'
+                              'values' => ['yes','no']
                             },
           'rgb-lpr' => {
                          'tip' => 'Number of scan lines to request in a SCSI read. Changing this parameter allows you to tune the speed at which data is read from the scanner during scans. If this is set too low, the scanner will have to stop periodically in the middle of a scan; if it\'s set too high, X-based frontends may stop responding to X events and your system could bog down.',
                          'default' => '4',
-                         'values' => 'auto|1..50 (in steps of 1)'
+                                   'min' => 1,
+                            'max' => 50,
+                            'step' => 1,
                        },
           'analog-gamma' => {
                               'tip' => 'Analog gamma-correction',
                               'default' => 'inactive',
-                              'values' => '0..4'
+                                   'min' => 0,
+                            'max' => 4,
                             },
           'blue-gamma-table' => {
                                   'tip' => 'Gamma-correction table for the blue band.',
                                   'default' => 'inactive',
-                                  'values' => '0..65535,... (in steps of 1)'
+                                  'min' => 0,
+                            'max' => 65535,
+                            'step' => 1,
                                 },
           'gs-lpr' => {
                         'tip' => 'Number of scan lines to request in a SCSI read. Changing this parameter allows you to tune the speed at which data is read from the scanner during scans. If this is set too low, the scanner will have to stop periodically in the middle of a scan; if it\'s set too high, X-based frontends may stop responding to X events and your system could bog down.',
                         'default' => 'inactive',
-                        'values' => 'auto|1..50 (in steps of 1)'
+                        'min' => 1,
+                            'max' => 50,
+                            'step' => 1,
                       },
           'predef-window' => {
                                'tip' => 'Provides standard scanning areas for photographs, printed pages and the like.',
                                'default' => 'None',
-                               'values' => 'None|6x4 (inch)|8x10 (inch)|8.5x11 (inch)'
+                               'values' => ['None','6x4 (inch)','8x10 (inch)','8.5x11 (inch)']
                              },
           'analog-gamma-b' => {
                                 'tip' => 'Analog gamma-correction for blue',
                                 'default' => '1.79999',
-                                'values' => '0..4'
+                                'min' => 0,
+                            'max' => 4,
                               },
           'contrast' => {
                           'tip' => 'Controls the contrast of the acquired image.',
                           'default' => '0',
-                          'values' => '-100..400% (in steps of 1)'
+                                  'min' => -100,
+                            'max' => 400,
+                            'step' => 1,
                         },
           'analog-gamma-g' => {
                                 'tip' => 'Analog gamma-correction for green',
                                 'default' => '1.79999',
-                                'values' => '0..4'
+                                'min' => 0,
+                            'max' => 4,
                               },
           'quality-cal' => {
                              'tip' => 'Do a quality white-calibration',
                              'default' => 'yes',
-                             'values' => 'yes|no'
+                             'values' => ['yes','no']
                            },
           'depth' => {
                        'tip' => 'Number of bits per sample, typical values are 1 for "line-art" and 8 for multibit scans.',
                        'default' => 'inactive',
-                       'values' => '8bit'
+                       'values' => ['8bit']
                      },
           'analog-gamma-r' => {
                                 'tip' => 'Analog gamma-correction for red',
                                 'default' => '1.79999',
-                                'values' => '0..4'
+                                'min' => 0,
+                            'max' => 4,
                               },
           'brightness' => {
                             'tip' => 'Controls the brightness of the acquired image.',
                             'default' => '0',
-                            'values' => '-400..400% (in steps of 1)'
+                                  'min' => -400,
+                            'max' => 400,
+                            'step' => 1,
                           },
           'preview-mode' => {
                               'tip' => 'Select the mode for previews. Greyscale previews usually give the best combination of speed and detail.',
                               'default' => 'Auto',
-                              'values' => 'auto|Auto|Color|Halftone|Gray|Lineart'
+                              'values' => ['auto','Auto','Color','Halftone','Gray','Lineart']
                             },
           'high-quality' => {
                               'tip' => 'Highest quality but lower speed',
                               'default' => 'no',
-                              'values' => 'auto|yes|no'
+                              'values' => ['auto','yes','no']
                             },
           'preview' => {
                          'tip' => 'Request a preview-quality scan.',
                          'default' => 'no',
-                         'values' => 'auto|yes|no'
+                         'values' => ['auto','yes','no']
                        },
           'resolution' => {
                             'tip' => 'Sets the resolution of the scanned image.',
                             'default' => '300',
-                            'values' => 'auto||50|75|100|150|200|300|450|600dpi'
+                            'values' => ['auto','50','75','100','150','200','300','450','600dpi']
                           },
           'negative' => {
                           'tip' => 'Swap black and white',
                           'default' => 'inactive',
-                          'values' => 'auto|yes|no'
+                          'values' => ['auto','yes','no']
                         },
           'halftone-pattern' => {
                                   'tip' => 'Defines the halftoning (dithering) pattern for scanning halftoned images.',
                                   'default' => 'inactive',
-                                  'values' => 'DispersedDot8x8|DispersedDot16x16'
+                                  'values' => ['DispersedDot8x8','DispersedDot16x16']
                                 }
         );
-foreach my $option (keys %this) {
- foreach (qw(tip default values)) {
-  is ($this{$option}{$_}, $that{$option}{$_}, "$option, $_");
- }
-}
-eq_hash(\%this, \%that);
+is_deeply(\%this, \%that, 'snapscan');

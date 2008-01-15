@@ -41,6 +41,30 @@ sub options2hash {
 # Strip out the extra characters by e.g. [=(yes|no)]
   $values = $1 if ($values =~ /\[=\((.*)\)\]/);
 
+  if ($values =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)/) {
+   $hash{$option}{min} = $1;
+   $hash{$option}{max} = $2;
+   $hash{$option}{step} = $1
+    if ($values =~ /\(in steps of (\d*\.?\d+)\)/);
+  }
+  else {
+   my @array;
+   while (defined $values) {
+    my $i = index($values, '|');
+    my $value;
+    if ($i > -1) {
+     $value = substr($values, 0, $i);
+     $values = substr($values, $i+1, length($values));
+    }
+    else {
+     $value = $values;
+     undef $values;
+    }
+    push @array, $value if ($value ne '');
+   }
+   $hash{$option}{values} = [ @array ];
+  }
+
 # Parse tooltips from option description based on an 8-character indent.
   my $tip = '';
   while ($output =~ /^ {8,}(.*)\n([\S\s]*)/) {
@@ -55,7 +79,6 @@ sub options2hash {
    $output = $2;
   }
 
-  $hash{$option}{values} = $values;
   $hash{$option}{default} = $default;
   $hash{$option}{tip} = $tip;
  }
