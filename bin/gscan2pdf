@@ -3711,11 +3711,9 @@ sub scanimage {
     warn $buffer if ($debug and $buffer);
     $line .= $buffer;
 
-    while ($line =~ /\r/) {
-     if ($line =~ /^Progress: (\d*\.\d*)%/) {
-      my $fraction = $1/100;
-      $pbar->set_fraction ($fraction);
-     }
+    while ($line =~ /^Progress: (\d*\.\d*)%\r/) {
+     my $fraction = $1/100;
+     $pbar->set_fraction ($fraction);
      $line = substr($line, index($line, "\r")+1, length($line))
     }
     while ($line =~ /\n/) {
