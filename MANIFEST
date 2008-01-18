@@ -11,8 +11,8 @@ debian/control
 debian/copyright
 debian/rules
 gscan2pdf.desktop
-gscan2pdf.svg
 gscan2pdf.spec
+gscan2pdf.svg
 lib/Gscan2pdf.pm
 pdf.svg
 po/be.po
@@ -27,12 +27,16 @@ po/it.po
 po/nl.po
 po/pl.po
 po/pt.po
+po/pt_BR.po
 po/ru.po
 po/sv.po
 po/zh_TW.po
 scanner.svg
 scanners/Brother_DCP-7025
 scanners/Brother_MFC_5100c
+scanners/FujitsuS510
+scanners/FujitsuS510.Color
+scanners/FujitsuS510.Lineart
 scanners/brother
 scanners/canonLiDE25
 scanners/canoscan_FB_630P
@@ -42,9 +46,6 @@ scanners/epson1200
 scanners/epson_3490
 scanners/epson_3490.Lineart
 scanners/fujitsu
-scanners/FujitsuS510
-scanners/FujitsuS510.Lineart
-scanners/FujitsuS510.Color
 scanners/hp_6200
 scanners/hp_scanjet5300c
 scanners/hp_scanjet5470c
@@ -54,6 +55,7 @@ scanners/hp_scanjet6390c.scanadf
 scanners/hp_v40
 scanners/hpangua
 scanners/laserjet_3020
+scanners/mustek
 scanners/niash
 scanners/officejet_5500
 scanners/officejet_5500.scanadf

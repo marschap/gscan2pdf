@@ -16,14 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    update_options should hide all widgets in device-dependent frame,
-#     go through options, showing and ghosting as necessary, adding new ones.
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
 #    why doesn't cancel kill the process when running Tess?
 #    add option for number of background processes
-#    test what happens when all paper sizes are bigger than scanner
-#    add warning message for paper sizes that are bigger than scanner
 #    add possibility to have multiple scans from a flatbed with delay between
 #    if downgrading, don't read remaining options.
 #    note options like source before rescan due to mode change
@@ -4251,10 +4247,10 @@ EOS
                       .$d->get('Patches gratefully received from:')
 		      ."\n$authors");
  $about->set_comments ($d->get('To aid the scan-to-PDF process'));
- $about->set_copyright ($d->get('Copyright 2006--2007 Jeffrey Ratcliffe'));
+ $about->set_copyright ($d->get('Copyright 2006--2008 Jeffrey Ratcliffe'));
  my $licence = <<EOS;
 gscan2pdf --- to aid the scan to PDF or DjVu process
-Copyright (C) 2006 -- 2007  Jeffrey Ratcliffe <Jeffrey.Ratcliffe\@gmail.com>
+Copyright (C) 2006 -- 2008  Jeffrey Ratcliffe <Jeffrey.Ratcliffe\@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the version 3 GNU General Public License as
@@ -4277,19 +4273,19 @@ Matthias Gutjahr
 Nicolas Stransky
 Hugo Pereira
 Piotr Strębski
-Jen Ockwell
+Daniel Frank
 Dirk Tas
-Alberto Boiti
+Matthias Mailänder
+Jen Ockwell
 Yözen Hernández
+Christoph Langner
+Alberto Boiti
 Spartakus
 Jacob Nielsen
-Christoph Langner
-mecedesjorge
-Rodrigo Donado
+Yves MATHIEU
 Ioannis Koniaris
+Rodrigo Donado
 Gérard Duteil
-Mathieu Goeminne
-Andrea (pikkio)
 EOS
  $about->set_translator_credits ($translators);
  $about->set_artists ('lodp');
