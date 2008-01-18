@@ -64,7 +64,6 @@
 #    Add status line at bottom with messages like "filename saved"
 #    Add KDE, Xfce menus
 #    Add hidden flag whether a page has been saved
-#    On quit or delete if page not saved put up dialog
 #    Fix blocking while rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
@@ -324,7 +323,7 @@ my @action_items = (
  [ 'Save image', 'gtk-save', $d->get('Save _Image'), '<control>s', $d->get('Save image'), \&save_image_dialog ],
  [ 'Save DjVu', undef, $d->get('Save _DjVu'), undef, $d->get('Save as DjVu'), \&save_djvu_dialog ],
  [ 'Email as PDF', 'gtk-edit', $d->get('_Email as PDF'), '<control>e', $d->get('Attach as PDF to a new email'), \&email ],
- [ 'Quit', 'gtk-quit', $d->get('_Quit'), '<control>q', $d->get('Quit'), sub { quit(); Gtk2 -> main_quit; } ],
+ [ 'Quit', 'gtk-quit', $d->get('_Quit'), '<control>q', $d->get('Quit'), sub { Gtk2 -> main_quit if quit(); } ],
  
  # Edit menu
  [ 'Edit', undef, $d->get('_Edit') ],
@@ -497,7 +496,7 @@ my $ui = "<ui>
 # Create the window
 my $window = Gtk2::Window -> new;
 $window -> set_title ( "$program v$version" );
-$window -> signal_connect ( 'delete-event' => sub { quit(); Gtk2 -> main_quit; } );
+$window -> signal_connect ( 'delete-event' => sub { Gtk2 -> main_quit if quit(); } );
 
 # Note when the window is maximised or not.
 $window -> signal_connect(window_state_event => sub {
@@ -6193,7 +6192,7 @@ sub quit {
   if (! $slist -> {data}[$i][5]) {
    my $response = show_message_dialog($window, 'question', 'ok-cancel',
        $d->get("Some pages have not been saved.\nDo you really want to quit?"));
-   return if ($response ne 'ok');
+   return FALSE if ($response ne 'ok');
   }
  }
 
@@ -6221,6 +6220,7 @@ sub quit {
  $conf->save_file($rc, \%SETTING);
 
  kill_subs();
+ return TRUE;
 }
 
 
