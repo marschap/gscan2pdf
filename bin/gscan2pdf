@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # gscan2pdf --- to aid the scan to PDF or DjVu process
-# Copyright (C) 2006 -- 2007  Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
+# Copyright (C) 2006 -- 2008  Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the version 3 GNU General Public License as
@@ -559,7 +559,8 @@ $slist = Gtk2::Ex::Simple::List -> new('#' => 'int',
                                        $d->get('Thumbnails') => 'pixbuf',
                                        'Filename' => 'hstring',
                                        'Buffer' => 'hstring',
-                                       'Resolution' => 'hstring');
+                                       'Resolution' => 'hstring',
+                                       'Saved' => 'hstring');
 $slist -> get_selection -> set_mode ('multiple');
 $slist -> set_headers_visible(FALSE);
 $slist -> set_reorderable( TRUE );
@@ -2022,10 +2023,10 @@ sub create_PDF {
 # Install a handler for child processes
  $SIG{CHLD} = \&sig_child;
 
- my $pid = start_process(sub {
-
 # fill $pagelist with filenames depending on which radiobutton is active
-  my @pagelist = get_page_index();
+ my @pagelist = get_page_index();
+
+ my $pid = start_process(sub {
   my $page = 0;
 
 # Create PDF with PDF::API2
@@ -2188,6 +2189,7 @@ sub create_PDF {
     my $text=$2;
     if ($fraction > 1) {
      $dialog -> destroy;
+     mark_pages(@pagelist);
      return FALSE;  # uninstall
     }
     $pbar->set_fraction($fraction);
@@ -2606,21 +2608,32 @@ sub save_image {
 
 # fill $pagelist with filenames depending on which radiobutton is active
   my ($pagelist, $n) = get_pagelist();
+  my @pagelist = get_page_index();
 
-  my @pagelist = split / /, $pagelist;
-  if ($#pagelist == 0) {
+  my @filelist = split / /, $pagelist;
+  if ($#filelist == 0) {
    $filename = $filename.".$SETTING{'image type'}"
     if ($filename !~ /\.$SETTING{'image type'}$/i);
-   system ("convert $pagelist[0] '$filename'") == 0 or
-    show_message_dialog($window, 'error', 'close', $d->get('Error saving image'))
-     if (! file_exists($file_chooser, $filename));
+   if (! file_exists($file_chooser, $filename)) {
+    if (system ("convert $filelist[0] '$filename'")) {
+     mark_pages(@pagelist);
+    }
+    else {
+     show_message_dialog($window, 'error', 'close', $d->get('Error saving image'));
+    }
+   }
   }
   else {
    my $i = 1;
-   foreach (@pagelist) {
-    system ("convert $_ \"$filename.$i.$SETTING{'image type'}\"") == 0 or
-     show_message_dialog($window, 'error', 'close', $d->get('Error saving image'))
-      if (! file_exists($file_chooser, "$filename.$i.$SETTING{'image type'}"));
+   foreach (@filelist) {
+    if (! file_exists($file_chooser, "$filename.$i.$SETTING{'image type'}")) {
+     if (system ("convert $_ \"$filename.$i.$SETTING{'image type'}\"")) {
+      show_message_dialog($window, 'error', 'close', $d->get('Error saving image'));
+     }
+     else {
+      mark_pages(@pagelist);
+     }
+    }
     $i++;
    }
   }
@@ -2704,6 +2717,7 @@ sub save_TIFF {
      $dialog -> destroy;
      if ($text eq '') {
       $windowi -> hide if defined $windowi;
+      mark_pages(get_page_index());
      }
      else {
       unlink $filename;
@@ -2816,9 +2830,10 @@ sub save_djvu {
 # Install a handler for child processes
   $SIG{CHLD} = \&sig_child;
 
+  my @pagelist = get_page_index();
   my $pid = start_process(sub {
 
-   my @pagelist = get_page_index();
+   my @filelist;
    
    for (my $i = 0; $i <= $#pagelist; $i++) {
     my $j = $pagelist[$i];
@@ -2861,7 +2876,7 @@ sub save_djvu {
     my $cmd = "$compression -dpi $resolution $filename $djvu";
     print "$cmd\n" if $debug;
     system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
-    $pagelist[$i] = $djvu;
+    $filelist[$i] = $djvu;
 
 # Add OCR to text layer
     if (defined($slist -> {data}[$j][3]) and $slist -> {data}[$j][3] ne '') {
@@ -2890,8 +2905,8 @@ sub save_djvu {
      system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
     }
    }
-   send($writer, ($#pagelist+1)/($#pagelist+1).$d->get('Closing DjVu'), 0);
-   my $cmd = "djvm -c '$filename' @pagelist";
+   send($writer, '1'.$d->get('Closing DjVu'), 0);
+   my $cmd = "djvm -c '$filename' @filelist";
    print "$cmd\n" if $debug;
    system ($cmd) == 0 or send($writer, "2".$d->get('Error closing DjVu'), 0);
   
@@ -2911,6 +2926,7 @@ sub save_djvu {
       $dialog -> destroy;
       if ($text eq '') {
        $windowi -> hide if defined $windowi;
+       mark_pages(@pagelist);
       }
       else {
        unlink $filename;
@@ -6172,6 +6188,15 @@ sub OCR {
 
 sub quit {
 
+# Check that all pages have been saved
+ for (my $i = 0; $i <= $#{$slist -> {data}}; $i++) {
+  if (! $slist -> {data}[$i][5]) {
+   my $response = show_message_dialog($window, 'question', 'ok-cancel',
+       $d->get("Some pages have not been saved.\nDo you really want to quit?"));
+   return if ($response ne 'ok');
+  }
+ }
+
 # Remove temporary files (for some reason File::Temp wasn't doing its job here)
  unlink <$dir/*>;
  rmdir $dir;
@@ -6501,6 +6526,15 @@ sub draw_rubber_band_box {
  my $w = abs ($widget->{draginfo}{x2} - $widget->{draginfo}{x1});
  my $h = abs ($widget->{draginfo}{y2} - $widget->{draginfo}{y1});
  $widget->window->draw_rectangle($widget->{drag_gc}, FALSE, $x, $y, $w, $h);
+}
+
+
+# marked page list as saved
+
+sub mark_pages {
+ foreach (@_) {
+  $slist -> {data}[$_][5] = TRUE;
+ }
 }
 
 

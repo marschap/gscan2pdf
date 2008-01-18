@@ -1,4 +1,4 @@
-0.9.20 (06.01.2008):
+0.9.20 (19.01.2008):
 
 + fixed bug where backslashes in text layer in djvu files not escaped.
 + made ctrl-x, ctrl-c, ctrl-v work in text buffer
@@ -22,6 +22,8 @@
   Closes bug 1836312 (Tangoify Icons)
 + fixed bug parsing scanimage progress output
   Closes Debian bug #457375 (gscan2pdf: Nondeterministic duplex scanning)
++ ask when quitting if not all pages have been saved.
+  Closes Debian bug #461058 (does not ask when quitting without saving the PDF)
 
 
 0.9.19 (19.11.2007):
