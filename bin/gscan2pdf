@@ -6078,11 +6078,15 @@ sub add_ocr_languages {
   nld     => $d->get('Dutch'),
   por     => $d->get('Portuguese'),
   spa     => $d->get('Spanish'),
+  vie     => $d->get('Vietnamese'),
  );
 
  my $tessdata_prefix = '/usr/share/tessdata';
  if (defined $ENV{TESSDATA_PREFIX}) {
   $tessdata_prefix = $ENV{TESSDATA_PREFIX};
+ }
+ elsif (-d '/usr/local/share/tessdata') {
+  $tessdata_prefix = '/usr/local/share';
  }
  elsif (-d '/usr/share/tesseract-ocr/tessdata') {
   $tessdata_prefix = '/usr/share/tesseract-ocr';
