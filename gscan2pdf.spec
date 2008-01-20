@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.19
+Version: 0.9.20
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -82,7 +82,16 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Mon Nov 19 2007 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sat Jan 19 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release.
+    Closes: #449421 (Recognise warm-up message from gt68xx driver)
+    Closes: #457377 (Can't save files with spaces in names)
+    Closes: #457376 (gscan2pdf: Some paper sizes not available)
+    Closes: #457249 (gscan2pdf: Tries to set threshold option for color scans)
+    Closes: #457375 (gscan2pdf: Nondeterministic duplex scanning)
+    Closes: #461058 (does not ask when quitting without saving the PDF)
+  - Updated rules to dh-make-perl 0.35
+  - Bumped Standards-Version
   - New upstream release.
     Closes: #440902 (window placement of scan dialog)
   - New upstream release.
