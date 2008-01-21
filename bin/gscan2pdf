@@ -6192,7 +6192,12 @@ sub quit {
   if (! $slist -> {data}[$i][5]) {
    my $response = show_message_dialog($window, 'question', 'ok-cancel',
        $d->get("Some pages have not been saved.\nDo you really want to quit?"));
-   return FALSE if ($response ne 'ok');
+   if ($response ne 'ok') {
+    return FALSE;
+   }
+   else {
+    last;
+   }
   }
  }
 
