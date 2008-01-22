@@ -1,3 +1,8 @@
+0.9.21 (18.02.2008):
+
++ ensure quit question only displayed once, rather than once per not-saved page
+
+
 0.9.20 (18.01.2008):
 
 + fixed bug where backslashes in text layer in djvu files not escaped.
@@ -24,6 +29,12 @@
   Closes Debian bug #457375 (gscan2pdf: Nondeterministic duplex scanning)
 + ask when quitting if not all pages have been saved.
   Closes Debian bug #461058 (does not ask when quitting without saving the PDF)
++ Initial Brazilian Portuguese translation (thanks to Daniel Frank)
++ Update to Russian translation (thanks to Alexandre Prokoudine)
++ Update to German translation (thanks to Matthias Mailänder)
++ Update to French translation (thanks to Nicolas Stransky)
++ Update to Czech translation (thanks to Petr Jelínek)
++ Update to Danish translation (thanks to Jacob Nielsen)
 
 
 0.9.19 (19.11.2007):
