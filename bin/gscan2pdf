@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Remove instances of 'if (defined($SETTING' and put them in default
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
 #    why doesn't cancel kill the process when running Tess?
@@ -204,17 +205,18 @@ my $conf = Config::General->new(
  -SplitPolicy       => 'equalsign',
  -MergeDuplicateOptions => TRUE,
  -DefaultConfig => {
-  'window_width'    => 800,
-  'window_height'   => 600,
-  'window_maximize' => TRUE,
-  'thumb panel'     => 100,
-  'Page range'      => 'all',
-  'l'               => 0,
-  't'               => 0,
-  'layout'          => 'single',
-  'downsample'      => FALSE,
-  'downsample dpi'  => 150,
-  'threshold tool'  => 80,
+  'window_width'       => 800,
+  'window_height'      => 600,
+  'window_maximize'    => TRUE,
+  'thumb panel'        => 100,
+  'Page range'         => 'all',
+  'Page range default' => 'all',
+  'l'                  => 0,
+  't'                  => 0,
+  'layout'             => 'single',
+  'downsample'         => FALSE,
+  'downsample dpi'     => 150,
+  'threshold tool'     => 80,
  },
 );
 my %SETTING = $conf->getall;
@@ -302,6 +304,9 @@ my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
 
 # Scan button on scan dialog
     $sbutton,
+
+# List of PageRange widgets
+    @prlist,
 
 # Variables for inter-process communication
     $reader, $writer);
@@ -846,6 +851,24 @@ $slist -> get_selection -> signal_connect(changed => sub {
   $image -> clear;
   $textview -> set_sensitive(FALSE);
   $textbuffer -> set_text('');
+ }
+
+# If one page is selected, PageRange widgets default to either current or all
+ if ($#page == 0) {
+  $SETTING{'Page range'} = $SETTING{'Page range default'};
+ }
+
+# If more than one page is selected, PageRange widgets default to selected
+ elsif ($#page > 0) {
+  $SETTING{'Page range'} = 'selected';
+ }
+
+# No pages is selected, but some exist, PageRange widgets default to all
+ elsif ($#{$slist -> {data}} > -1) {
+  $SETTING{'Page range'} = 'all';
+ }
+ foreach (@prlist) {
+  $_->set_active($SETTING{'Page range'});
  }
 });
 
@@ -1753,59 +1776,21 @@ sub create_window {
 
 
 # Add a frame and radio buttons to $vbox,
-# returning $buttona, $buttonc, $buttons
-
 sub add_page_range {
  my ($vbox) = @_;
+ my $frame = Gtk2::Frame->new($d->get('Page Range'));
+ $vbox -> add ($frame);
 
-# Frame for page range
- my $frame = Gtk2::Frame -> new($d->get('Page range'));
- $vbox -> pack_start ($frame, TRUE, TRUE, 0);
- my $vboxp = Gtk2::VBox -> new;
- $vboxp -> set_border_width($border_width);
- $frame -> add ($vboxp);
-
-#the first radio button has to set the group,
-#which is undef for the first button
-# All button
- my $buttona = Gtk2::RadioButton -> new(undef, $d->get('All'));
- $buttona -> signal_connect ('toggled' => sub {
-  $SETTING{'Page range'} = 'all' if ($buttona -> get_active);
+ my $pr = Gscan2pdf::PageRange->new;
+ $pr -> set_active($SETTING{'Page range'})
+  if (defined $SETTING{'Page range'});
+ $pr -> signal_connect (changed => sub {
+  $SETTING{'Page range'} = $pr->get_active;
+  $SETTING{'Page range default'} = $SETTING{'Page range'}
+   if ($SETTING{'Page range'} ne 'selected');
  });
- $vboxp -> pack_start($buttona, TRUE, TRUE, 0);
- my @group = $buttona -> get_group;
-
-# Current button
- my $buttonc = Gtk2::RadioButton -> new(@group, $d->get('Current'));
- $buttonc -> signal_connect ('toggled' => sub {
-  $SETTING{'Page range'} = 'current' if ($buttonc -> get_active);
- });
- $vboxp -> pack_start($buttonc, TRUE, TRUE, 0);
-
-# Selected button
- my $buttons = Gtk2::RadioButton -> new(@group, $d->get('Selected'));
- $buttons -> signal_connect ('toggled' => sub {
-  $SETTING{'Page range'} = 'selected' if ($buttons -> get_active);
- });
- $vboxp -> pack_start($buttons, TRUE, TRUE, 0);
-
-# Set default
- if (defined($SETTING{'Page range'})) {
-  if ($SETTING{'Page range'} eq 'current') {
-   $buttonc -> set_active(TRUE);
-  }
-  elsif ($SETTING{'Page range'} eq 'selected') {
-   $buttons -> set_active(TRUE);
-  }
-  else {
-   $buttona -> set_active(TRUE);
-  }
- }
- else {
-  $buttona -> set_active(TRUE);
- }
- 
- return ($buttona, $buttonc, $buttons);
+ $frame->add ($pr);
+ push @prlist, $pr;
 }
 
 
@@ -2341,7 +2326,7 @@ sub save_PDF_dialog {
   my ($entrya, $entryt, $entrys, $entryk) = add_PDF_options ($vbox);
 
 # Frame for page range
-  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+  add_page_range($vbox);
 
 # Compression options
   my ($buttond, $spinbuttond, $combob, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
@@ -2393,7 +2378,7 @@ sub save_image_dialog {
  ($windowi, my $vbox) = create_window($window, $d->get('Save image'), FALSE);
 
 # Frame for page range
- my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+ add_page_range($vbox);
 
 # Image type ComboBox
  my $hboxi = Gtk2::HBox -> new;
@@ -2753,7 +2738,7 @@ sub save_djvu_dialog {
   ($windowv, my $vbox) = create_window($window, $d->get('Save as DjVu'), FALSE);
 
 # Frame for page range
-  my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+  add_page_range($vbox);
 
 # HBox for buttons
   my $hboxb = Gtk2::HBox -> new;
@@ -2966,7 +2951,7 @@ sub email {
  my ($entrya, $entryt, $entrys, $entryk) = add_PDF_options ($vbox);
 
 # Frame for page range
- my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+ add_page_range($vbox);
 
 # Compression options
  my ($buttond, $spinbuttond, $combob, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
@@ -5110,7 +5095,7 @@ sub threshold {
  my ($windowt, $vbox) = create_window($window, $d->get('Threshold'), TRUE);
 
 # Frame for page range
- my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+ add_page_range($vbox);
 
 # SpinButton for threshold
  my $hboxt = Gtk2::HBox -> new;
@@ -5245,7 +5230,7 @@ sub crop {
  my ($windowc, $vbox) = create_window($window, $d->get('Crop'), TRUE);
 
 # Frame for page range
- my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+ add_page_range($vbox);
 
 # SpinButton for threshold
  my $hboxt = Gtk2::HBox -> new;
@@ -5833,7 +5818,7 @@ sub unpaper {
  add_unpaper_options($vbox);
 
 # Frame for page range
- my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+ add_page_range($vbox);
 
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
@@ -6150,7 +6135,7 @@ sub OCR {
  }
 
 # Frame for page range
- my ($buttona, $buttonc, $buttons) = add_page_range($vbox);
+ add_page_range($vbox);
 
 # HBox for buttons
  my $hbox = Gtk2::HBox -> new;
@@ -6539,6 +6524,83 @@ sub draw_rubber_band_box {
 sub mark_pages {
  foreach (@_) {
   $slist -> {data}[$_][5] = TRUE;
+ }
+}
+
+
+package Gscan2pdf::PageRange;
+
+use strict;
+use warnings;
+use Gtk2;
+use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
+
+# Note: in a BEGIN block to ensure that the registration is complete
+#       by the time the use Subclass goes to look for it.
+BEGIN {
+   Glib::Type->register_enum ('Gscan2pdf::PageRange::Range',
+                               qw(current selected all));
+}
+
+# this big hairy statement registers our Glib::Object-derived class
+# and sets up all the signals and properties for it.
+use Glib::Object::Subclass
+    Gtk2::VBox::,
+    signals => {
+        changed => {},
+    },
+    properties => [
+        Glib::ParamSpec->enum (
+               'active', # name
+               'active', # nickname
+               'Either current, selected, or all', #blurb
+               'Gscan2pdf::PageRange::Range',
+               'selected', # default
+               [qw/readable writable/] #flags
+        ),
+    ]
+    ;
+
+
+sub INIT_INSTANCE {
+ my $self = shift;
+ my %buttons = (
+  'current' => $d->get('Current'),
+  'selected' => $d->get('Selected'),
+  'all' => $d->get('All'),
+ );
+ my $vbox = Gtk2::VBox -> new;
+ $self->add ($vbox);
+
+#the first radio button has to set the group,
+#which is undef for the first button
+ my $group;
+ foreach my $nick (keys %buttons) {
+  $self->{button}{$nick} = Gtk2::RadioButton -> new($group, $buttons{$nick});
+  $self->{button}{$nick} -> signal_connect ('toggled' => sub {
+   $self->set_active($nick) if ($self->{button}{$nick} -> get_active);
+  });
+  $vbox -> pack_start($self->{button}{$nick}, TRUE, TRUE, 0);
+  $group = $self->{button}{$nick} -> get_group if (! $group);
+  $self->{active} = $nick if (! $self->{active});
+ }
+}
+
+
+sub get_active {
+ my ($self) = @_;
+ return $self->get ('active');
+}
+
+
+sub set_active {
+ my ($self, $active) = @_;
+ $self->{active} = $active;
+ foreach my $nick (keys %{$self->{button}}) {
+  if ($self->{active} eq $nick) {
+   $self->{button}{$nick} -> set_active(TRUE);
+   $self->signal_emit ('changed');
+  }
  }
 }
 
