@@ -3,6 +3,8 @@
 + ensure quit question only displayed once, rather than once per not-saved page
 + update selected/current/all heuristic
   Closes Debian bug #461859 (better selected/current/all heuristic)
++ reset start page in scan dialog after File/New selected
+  Closes 1879331 (Choosing New file does not zero page count)
 
 
 0.9.20 (18.01.2008):

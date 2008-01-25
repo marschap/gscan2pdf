@@ -1537,6 +1537,9 @@ sub new {
 # Depopulate the thumbnail list
  @{$slist -> {data}} = ();
 
+# Reset start page in scan dialog
+ reset_start();
+
  update_uimanager();
 }
 
@@ -4185,6 +4188,15 @@ sub delete_pages {
  }
 
 # Reset start page in scan dialog
+ reset_start();
+
+ update_uimanager();
+}
+
+
+# Reset start page number after delete or new
+
+sub reset_start {
  if (defined $spin_buttons) {
   if ($#{$slist->{data}} > -1) {
    my $start = $spin_buttons->get_value;
@@ -4196,7 +4208,6 @@ sub delete_pages {
    $spin_buttons->set_value(1);
   }
  }
- update_uimanager();
 }
 
 
