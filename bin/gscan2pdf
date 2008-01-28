@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    add option File/Compress working files to convert all /tmp files to
+#      lzw tiff and rm all non-used files
 #    Remove instances of 'if (defined($SETTING' and put them in default
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
@@ -1656,20 +1658,45 @@ sub import {
     }
     elsif ($format eq 'Portable Document Format') {
 
+# Extract # of pages
+     my $info = `pdfinfo \"$filename\"`;
+     if ($info =~ /Pages:\s+(\d+)/) {
+      my $last = $1;
+      my $first = 1;
+      if ($last > 1) {
+       send($writer, "-2 0 $last", 0);
+
+# Now block until the GUI passes the range back
+       my $rin = '';
+       my $rout = '';
+       vec($rin, $reader->fileno(), 1) = 1;
+       if (select($rout=$rin,undef,undef,undef)) {
+        my $line;
+        recv($reader, $line, 1000, 0);
+        ($first, $last) = split ' ', $line;
+       }
+      }
+
 # Extract images from PDF
-     send($writer, sprintf("%f %s %i ", $j/($#filename+1), 0, 0)
-      .$d->get('Extracting images from PDF'), 0);
-     system ("pdfimages \"$filename\" x") == 0 or
-      send($writer, '2 0 0'.$d->get('Error extracting images from PDF'), 0);
+      if ($last > 0) {
+       send($writer, sprintf("%f %s %i ", $j/($#filename+1), 0, 0)
+        .$d->get('Extracting images from PDF'), 0);
+       system ("pdfimages -f $first -l $last \"$filename\" x") == 0 or
+        send($writer, '-1 0 0'.$d->get('Error extracting images from PDF'), 0);
 
 # Import each image
-     my @images = <x-???.???>;
-     my $i = 0;
-     foreach (@images) {
-      my ($filename, $resolution) = prepare_import($_, 'Portable anymap', undef, TRUE);
-      send($writer, 
-       sprintf("%f %s %i ", (++$i/($#images+1)+$j)/($#filename+1), $filename, $resolution)
-       .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
+       my @images = <x-???.???>;
+       my $i = 0;
+       foreach (@images) {
+        my ($filename, $resolution) = prepare_import($_, 'Portable anymap', undef, TRUE);
+        send($writer, 
+         sprintf("%f %s %i ", (++$i/($#images+1)+$j)/($#filename+1), $filename, $resolution)
+         .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
+       }
+      }
+     }
+     else {
+      send($writer, '-1 0 0'.$d->get('Error extracting PDF infomation'), 0);
      }
     }
     elsif ($format eq 'Tagged Image File Format') {
@@ -1678,7 +1705,7 @@ sub import {
      send($writer, sprintf("%f %s %i ", $j/($#filename+1), 0, 0)
       .$d->get('Extracting images from TIFF'), 0);
      system("tiffsplit \"$filename\"") == 0 or
-      send($writer, '2 0 0'.$d->get('Error extracting images from TIFF'), 0);
+      send($writer, '-1 0 0'.$d->get('Error extracting images from TIFF'), 0);
 
      my @images = <x???.tif>;
      my $i = 0;
@@ -1717,6 +1744,46 @@ sub import {
      my ($fraction, $filename, $resolution, @text) = split ' ', $line;
      if ($fraction == -1) {
       show_message_dialog($window, 'error', 'close', join(' ', @text));
+     }
+     if ($fraction == -2) {
+      my ($windowq, $vbox) =
+       create_window($window, $d->get('Pages to extract'), TRUE);
+      my $hbox = Gtk2::HBox -> new;
+      $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+      my $label = Gtk2::Label -> new ($d->get('First page to extract'));
+      $hbox -> pack_start ($label, FALSE, FALSE, 0);
+      my $spinbuttonf = Gtk2::SpinButton -> new_with_range(1, $resolution, 1);
+      $hbox -> pack_end ($spinbuttonf, FALSE, FALSE, 0);
+      $hbox = Gtk2::HBox -> new;
+      $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+      $label = Gtk2::Label -> new ($d->get('Last page to extract'));
+      $hbox -> pack_start ($label, FALSE, FALSE, 0);
+      my $spinbuttonl = Gtk2::SpinButton -> new_with_range(1, $resolution, 1);
+      $spinbuttonl->set_value($resolution);
+      $hbox -> pack_end ($spinbuttonl, FALSE, FALSE, 0);
+
+# HBox for buttons
+      my $hboxb = Gtk2::HBox -> new;
+      $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+
+# OK button
+      my $obutton = Gtk2::Button -> new_from_stock('gtk-ok');
+      $hboxb -> pack_start( $obutton, TRUE, TRUE, 0 );
+      $obutton -> signal_connect (clicked => sub {
+       my $first = $spinbuttonf->get_value;
+       my $last = $spinbuttonl->get_value;
+       $windowq -> destroy;
+       send($writer, "$first $last", 0);
+      });
+
+# Cancel button
+      my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+      $hboxb -> pack_start( $cbutton, TRUE, TRUE, 0 );
+      $cbutton -> signal_connect (clicked => sub {
+       $windowq -> destroy;
+       send($writer, '0 0', 0);
+      });
+      $windowq -> show_all;
      }
      elsif ($fraction > 1) {
       $dialog -> destroy;

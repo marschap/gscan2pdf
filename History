@@ -5,6 +5,8 @@
   Closes Debian bug #461859 (better selected/current/all heuristic)
 + reset start page in scan dialog after File/New selected
   Closes 1879331 (Choosing New file does not zero page count)
++ request page range when importing a PDF with more than one page
+  Closes Debian bug #461076 (importing PDFs causes /tmp/ overflow)
 
 
 0.9.20 (18.01.2008):
