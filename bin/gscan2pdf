@@ -128,7 +128,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.20';
+my $version = '0.9.21';
 
 my $tolerance = 1;
 
@@ -4951,7 +4951,7 @@ sub options2hash {
 
 # only set the default if it is an option
                       and (defined($hash{$_}{max})
-                        or default2index($SETTING{$_}, @{$hash{$_}{values}}))) {
+              or defined(default2index($SETTING{$_}, @{$hash{$_}{values}})))) {
    $hash{$_}{default} = $SETTING{$_};
   }
 
