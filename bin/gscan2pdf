@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    add preferences option to change temp dir.
 #    add option File/Compress working files to convert all /tmp files to
 #      lzw tiff and rm all non-used files
 #    Remove instances of 'if (defined($SETTING' and put them in default
@@ -326,6 +327,7 @@ my @action_items = (
  [ 'Save image', 'gtk-save', $d->get('Save _Image'), '<control>s', $d->get('Save image'), \&save_image_dialog ],
  [ 'Save DjVu', undef, $d->get('Save _DjVu'), undef, $d->get('Save as DjVu'), \&save_djvu_dialog ],
  [ 'Email as PDF', 'gtk-edit', $d->get('_Email as PDF'), '<control>e', $d->get('Attach as PDF to a new email'), \&email ],
+ [ 'Compress', undef, $d->get('_Compress temporary files'), undef, $d->get('Compress temporary files'), \&compress_temp ],
  [ 'Quit', 'gtk-quit', $d->get('_Quit'), '<control>q', $d->get('Quit'), sub { Gtk2 -> main_quit if quit(); } ],
  
  # Edit menu
@@ -388,6 +390,8 @@ my $ui = "<ui>
    <menuitem action='Save image'/>
    <menuitem action='Save DjVu'/>
    <menuitem action='Email as PDF'/>
+   <separator/>
+   <menuitem action='Compress'/>
    <separator/>
    <menuitem action='Quit'/>
   </menu>
@@ -751,17 +755,17 @@ $eventbox->signal_connect(button_press_event => sub {
 # }
 });
 $eventbox->signal_connect(button_release_event => \&handle_clicks);
-$eventbox->signal_connect_after (realize => sub {
- my ($widget) = @_;
- $widget->{drag_gc} = Gtk2::Gdk::GC->new ($widget->window);
- $widget->{drag_gc}->set_function ('xor');
- $widget->{drag_gc}->set_foreground ($widget->style->white);
-});
+#$eventbox->signal_connect_after (realize => sub {
+# my ($widget) = @_;
+# $widget->{drag_gc} = Gtk2::Gdk::GC->new ($widget->window);
+# $widget->{drag_gc}->set_function ('xor');
+# $widget->{drag_gc}->set_foreground ($widget->style->white);
+#});
 
-$eventbox->signal_connect_after (unrealize => sub {
- my ($widget) = @_;
- delete $widget->{drag_gc};
-});
+#$eventbox->signal_connect_after (unrealize => sub {
+# my ($widget) = @_;
+# delete $widget->{drag_gc};
+#});
 
 #$eventbox->signal_connect (motion_notify_event => sub {
 # my ($widget, $event) = @_;
@@ -1547,7 +1551,7 @@ sub new {
 
 
 sub convert_to_tiff {
- my ($filename) = @_;
+ my ($filename, $delete) = @_;
  my $image = Image::Magick->new;
  my $x = $image->Read($filename);
  warn "$x" if "$x";
@@ -1568,8 +1572,10 @@ sub convert_to_tiff {
 # Write the tif
  my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
  $image->Write(units => 'PixelsPerInch',
+               compression => 'lzw',
                density => $density,
                filename => $tif);
+ unlink $filename if $delete;
  return $tif;
 }
 
@@ -1630,7 +1636,8 @@ sub import {
 # Check if djvu
     my $buffer;
     open FILE, $filename or
-     show_message_dialog($window, 'error', 'close', "Can't open $filename: $!");
+     show_message_dialog($window, 'error', 'close',
+                          sprintf($d->get("Can't open %s: %s"), $filename, $!));
     binmode FILE;
     read (FILE, $buffer, 8);
     close FILE;
@@ -5360,7 +5367,7 @@ sub crop {
    my $page = 0;
 
 # Erase box
-   draw_rubber_band_box ($eventbox);
+#   draw_rubber_band_box ($eventbox);
 
    foreach (@pagelist) {
     send($writer, sprintf("%i %i", $page, $#pagelist+1), 0);
@@ -6582,19 +6589,19 @@ sub kill_subs {
 }
 
 
-sub min { $_[0] < $_[1] ? $_[0] : $_[1] }
+#sub min { $_[0] < $_[1] ? $_[0] : $_[1] }
 
 
 # rubber band for crop tool
 
-sub draw_rubber_band_box {
- my ($widget) = @_;
- my $x = min ($widget->{draginfo}{x1}, $widget->{draginfo}{x2});
- my $y = min ($widget->{draginfo}{y1}, $widget->{draginfo}{y2});
- my $w = abs ($widget->{draginfo}{x2} - $widget->{draginfo}{x1});
- my $h = abs ($widget->{draginfo}{y2} - $widget->{draginfo}{y1});
- $widget->window->draw_rectangle($widget->{drag_gc}, FALSE, $x, $y, $w, $h);
-}
+#sub draw_rubber_band_box {
+# my ($widget) = @_;
+# my $x = min ($widget->{draginfo}{x1}, $widget->{draginfo}{x2});
+# my $y = min ($widget->{draginfo}{y1}, $widget->{draginfo}{y2});
+# my $w = abs ($widget->{draginfo}{x2} - $widget->{draginfo}{x1});
+# my $h = abs ($widget->{draginfo}{y2} - $widget->{draginfo}{y1});
+# $widget->window->draw_rectangle($widget->{drag_gc}, FALSE, $x, $y, $w, $h);
+#}
 
 
 # marked page list as saved
@@ -6602,6 +6609,41 @@ sub draw_rubber_band_box {
 sub mark_pages {
  foreach (@_) {
   $slist -> {data}[$_][5] = TRUE;
+ }
+}
+
+
+# Convert all files in temp that are not jpg, png, tiff to tiff,
+# deleting those no longer needed
+
+sub compress_temp {
+ return
+  if (show_message_dialog($window, 'question', 'ok-cancel',
+   $d->get('This operation cannot be undone. Are you sure?')) ne 'ok');
+ @undo_buffer = ();
+ @undo_selection = ();
+ $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(FALSE);
+
+# get this working blocking, then fork the convert process
+ $slist -> get_model -> signal_handler_block($slist -> {signalid});
+ for (my $i = 0; $i <= $#{$slist -> {data}}; $i++) {
+  $slist -> {data}[$i][2] = convert_to_tiff($slist -> {data}[$i][2], TRUE);
+ }
+ $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+
+# make a hash with a list of the files in temp
+ my %files;
+ foreach (<$dir/*>) {
+  $files{$_} = TRUE;
+ }
+ for (my $i = 0; $i <= $#{$slist -> {data}}; $i++) {
+  delete $files{$slist -> {data}[$i][2]}
+   if (defined $files{$slist -> {data}[$i][2]});
+ }
+ foreach (keys %files) {
+  print "Deleting $_\n" if $debug;
+  unlink $_;
  }
 }
 
