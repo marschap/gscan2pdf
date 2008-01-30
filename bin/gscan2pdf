@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    look for $#array and simplify $#array+1 to @array and =< $#array to < @array
 #    add preferences option to change temp dir.
 #    add option File/Compress working files to convert all /tmp files to
 #      lzw tiff and rm all non-used files
@@ -1551,7 +1552,7 @@ sub new {
 
 
 sub convert_to_tiff {
- my ($filename, $delete) = @_;
+ my ($filename) = @_;
  my $image = Image::Magick->new;
  my $x = $image->Read($filename);
  warn "$x" if "$x";
@@ -1575,7 +1576,6 @@ sub convert_to_tiff {
                compression => 'lzw',
                density => $density,
                filename => $tif);
- unlink $filename if $delete;
  return $tif;
 }
 
@@ -6524,9 +6524,7 @@ sub register_icon {
 }
 
 
-# Process the exit of the child. If you were doing something useful,
-# you might keep things like information about what data needs
-# to be reloaded when a child process exits.
+# Process the exit of the child.
 
 sub sig_child {
  my $pid = waitpid(-1, &WNOHANG);
@@ -6535,14 +6533,17 @@ sub sig_child {
   # no child waiting.  Ignore it.
  }
  elsif (WIFEXITED($?)) {
-  print "Process $pid exited.\n";
+  print "Process $pid exited.\n" if ($debug);
   delete $helperTag{$pid};
  }
  else {
-  print "False alarm on $pid.\n";
+  print "False alarm on $pid.\n" if ($debug);
  }
  $SIG{CHLD} = \&sig_child;                  # install *after* calling waitpid
 }
+
+
+# Fork the passed sub
 
 sub start_process {
  my ($process) = @_;
@@ -6625,26 +6626,95 @@ sub compress_temp {
  $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(FALSE);
 
-# get this working blocking, then fork the convert process
- $slist -> get_model -> signal_handler_block($slist -> {signalid});
+ my $dialog = Gtk2::Dialog -> new ($d->get('Compressing working files')."...",
+                                    $window,
+                                    'destroy-with-parent',
+                                    'gtk-cancel' => 'cancel');
+
+# Set up ProgressBar
+ my $pbar = Gtk2::ProgressBar->new;
+ $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+ $dialog -> signal_connect (response => sub {
+  $_[0] -> destroy;
+  kill_subs();
+ });
+ $dialog -> show_all;
+
+# Install a handler for child processes
+ $SIG{CHLD} = \&sig_child;
+
+ my @filename;
  for (my $i = 0; $i <= $#{$slist -> {data}}; $i++) {
-  $slist -> {data}[$i][2] = convert_to_tiff($slist -> {data}[$i][2], TRUE);
+  $filename[$i] = $slist -> {data}[$i][2];
  }
- $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+
+ my $pid = start_process(sub {
+  for (my $i = 0; $i < @filename; $i++) {
+
+# Update the list in the fork
+   $filename[$i] = convert_to_tiff($filename[$i]);
+
+# Pass the new filename back to the GUI
+   send($writer, $i/@filename." $i $filename[$i] "
+                                             .$d->get('Compressing images'), 0);
+  }
 
 # make a hash with a list of the files in temp
- my %files;
- foreach (<$dir/*>) {
-  $files{$_} = TRUE;
- }
- for (my $i = 0; $i <= $#{$slist -> {data}}; $i++) {
-  delete $files{$slist -> {data}[$i][2]}
-   if (defined $files{$slist -> {data}[$i][2]});
- }
- foreach (keys %files) {
-  print "Deleting $_\n" if $debug;
-  unlink $_;
- }
+  my %files;
+  send($writer, "0 -1 x ".$d->get('Clearing up'), 0);
+  foreach (<$dir/*>) {
+   $files{$_} = TRUE;
+  }
+  foreach (@filename) {
+   delete $files{$_} if (defined $files{$_});
+  }
+  my @files = keys %files;
+  my $i = 1;
+  foreach (@files) {
+   send($writer, $i++/@files." -1 $_ ".$d->get('Clearing up'), 0);
+   print "Deleting $_\n" if $debug;
+   unlink $_;
+  }
+  send($writer, '2', 0);
+ });
+
+ $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+  my ($fileno, $condition) = @_;
+
+  my $line;
+  if ($condition & 'in') { # bit field operation. >= would also work
+   recv($reader, $line, 100, 0);
+   if (defined($line) and $line ne '') {
+    my ($fraction, $page, $filename, @text) = split ' ', $line;
+    if ($fraction > 1) {
+     $dialog -> destroy;
+     return FALSE;  # uninstall
+    }
+    else {
+     $pbar->set_fraction($fraction);
+     $pbar->set_text(join ' ', @text);
+     Gtk2->main_iteration while Gtk2->events_pending;
+     if ($page > -1) {
+      $slist -> get_model -> signal_handler_block($slist -> {signalid});
+      unlink $slist -> {data}[$page][2];
+      $slist -> {data}[$page][2] = $filename;
+      $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+     }
+    }
+   }
+  }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+  if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   $dialog -> destroy;
+   return FALSE;  # uninstall
+  }
+  return TRUE;  # continue without uninstalling
+ });
+
 }
 
 
