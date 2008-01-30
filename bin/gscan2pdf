@@ -106,7 +106,7 @@
 # 8. http://www.gtkfiles.org/app.php/gscan2pdf
 # 9. Ubuntu forum
 #    gscan2pdf-announce
-#    debian-mentors (check contents with dpkg-deb --contents)
+#    ftp-master (check contents with dpkg-deb --contents)
 
 use warnings;
 use strict;
@@ -6608,9 +6608,11 @@ sub kill_subs {
 # marked page list as saved
 
 sub mark_pages {
+ $slist -> get_model -> signal_handler_block($slist -> {signalid});
  foreach (@_) {
   $slist -> {data}[$_][5] = TRUE;
  }
+ $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
 }
 
 
