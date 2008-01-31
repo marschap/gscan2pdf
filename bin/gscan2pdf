@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    look for $#array and simplify $#array+1 to @array and =< $#array to < @array
 #    add preferences option to change temp dir.
 #    add option File/Compress working files to convert all /tmp files to
 #      lzw tiff and rm all non-used files
@@ -1880,7 +1879,7 @@ sub get_pagelist {
   $n = $#{$slist -> {data}};
   $pagelist = $slist -> {data}[0][2];
   my $i = 1;
-  while ($i <= $#{$slist -> {data}}) {
+  while ($i < @{$slist -> {data}}) {
    $pagelist = $pagelist." ".$slist -> {data}[$i][2];
    ++$i;
   }
@@ -1895,7 +1894,7 @@ sub get_pagelist {
   $n = $#page;
   $pagelist = $slist -> {data}[$page[0]][2];
   my $i = 1;
-  while ($i <= $#page) {
+  while ($i < @page) {
    $pagelist = $pagelist." ".$slist -> {data}[$page[$i]][2];
    ++$i;
   }
@@ -1911,7 +1910,7 @@ sub get_page_index {
  my @page;
  if ($SETTING{'Page range'} eq 'all') {
   my $i = 0;
-  while ($i <= $#{$slist -> {data}}) {
+  while ($i < @{$slist -> {data}}) {
    push @page, $i;
    ++$i;
   }
@@ -2892,7 +2891,7 @@ sub save_djvu {
 
    my @filelist;
    
-   for (my $i = 0; $i <= $#pagelist; $i++) {
+   for (my $i = 0; $i < @pagelist; $i++) {
     my $j = $pagelist[$i];
     send($writer, $i/($#pagelist+1)
      .sprintf($d->get("Writing page %i of %i"), $i+1, $#pagelist+1), 0);
@@ -3617,7 +3616,7 @@ sub populate_device_list {
 # If device in settings then set it
  my $o;
  if (defined $SETTING{device}) {
-  for (my $i = 0; $i <= $#device; $i++) {
+  for (my $i = 0; $i < @device; $i++) {
    $o = $i if ($SETTING{device} eq $device[$i]);
   }
  }
@@ -4721,7 +4720,7 @@ sub edit_paper {
   my $name = $slist->{data}[$rows[0]][0];
   my $version = 2;
   my $i = 0;
-  while ($i <= $#{$slist->{data}}) {
+  while ($i < @{$slist->{data}}) {
    if ($slist->{data}[$i][0] eq "$name ($version)") {
     ++$version;
     $i = 0;
@@ -4754,7 +4753,7 @@ sub edit_paper {
 # Set-up the callback to check that no two Names are the same
  $slist -> get_model -> signal_connect('row-changed' => sub {
   my ($model, $path, $iter) = @_;
-  for (my $i = 0; $i <= $#{$slist->{data}}; $i++) {
+  for (my $i = 0; $i < @{$slist->{data}}; $i++) {
    if ($i != $path->to_string and
         $slist->{data}[$path->to_string][0] eq $slist->{data}[$i][0]) {
     my $name = $slist->{data}[$path->to_string][0];
@@ -4776,7 +4775,7 @@ sub edit_paper {
  my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
  $abutton -> signal_connect( clicked => sub {
   delete $SETTING{Paper};
-  for (my $i = 0; $i <= $#{$slist->{data}}; $i++) {
+  for (my $i = 0; $i < @{$slist->{data}}; $i++) {
    $SETTING{Paper}{$slist->{data}[$i][0]}{x} = $slist->{data}[$i][1];
    $SETTING{Paper}{$slist->{data}[$i][0]}{y} = $slist->{data}[$i][2];
    $SETTING{Paper}{$slist->{data}[$i][0]}{l} = $slist->{data}[$i][3];
@@ -5062,7 +5061,7 @@ sub update_options_hash {
 sub default2index {
 
  my ($default, @array) = @_;
- for (my $i = 0; $i <= $#array; $i++) {
+ for (my $i = 0; $i < @array; $i++) {
   return $i if ($array[$i] eq $default);
  }
  return undef;
@@ -5114,7 +5113,7 @@ sub rotate {
 
  my @page = $slist -> get_selected_indices;
  my $i = 0;
- while ($i <= $#page) {
+ while ($i < @page) {
 
 # Rotate the tiff with imagemagick
   my $image = Image::Magick->new;
@@ -6258,7 +6257,7 @@ sub OCR {
 sub quit {
 
 # Check that all pages have been saved
- for (my $i = 0; $i <= $#{$slist -> {data}}; $i++) {
+ for (my $i = 0; $i < @{$slist -> {data}}; $i++) {
   if (! $slist -> {data}[$i][5]) {
    my $response = show_message_dialog($window, 'question', 'ok-cancel',
        $d->get("Some pages have not been saved.\nDo you really want to quit?"));
@@ -6648,7 +6647,7 @@ sub compress_temp {
  $SIG{CHLD} = \&sig_child;
 
  my @filename;
- for (my $i = 0; $i <= $#{$slist -> {data}}; $i++) {
+ for (my $i = 0; $i < @{$slist -> {data}}; $i++) {
   $filename[$i] = $slist -> {data}[$i][2];
  }
 
