@@ -7,26 +7,26 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2007-11-16 22:27+0100\n"
-"PO-Revision-Date: 2007-10-23 08:45+0000\n"
+"POT-Creation-Date: 2008-01-19 12:00+0100\n"
+"PO-Revision-Date: 2008-01-20 18:45+0000\n"
 "Last-Translator: Ioannis Koniaris <EMAIL@ADDRESS>\n"
 "Language-Team: Greek <el@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2008-01-18 10:24+0000\n"
+"X-Launchpad-Export-Date: 2008-02-01 17:20+0000\n"
 "X-Generator: Launchpad (build Unknown)\n"
 
 #, perl-format
 #~ msgid "Can't open config file: %s\n"
 #~ msgstr "Δε μπορώ να ανοίξω το αρχείο ρυθμίσεων: %s\n"
 
-#: bin/gscan2pdf:140
+#: bin/gscan2pdf:156
 #, perl-format
 msgid "Error: cannot read file: %s\n"
 msgstr "Λάθος: δε μπορώ να διαβάσω το αρχείο %s\n"
 
-#: bin/gscan2pdf:150
+#: bin/gscan2pdf:166
 #, perl-format
 msgid ""
 "Usage:\n"
@@ -35,1312 +35,1412 @@ msgstr ""
 "Χρήση:\n"
 "%s --test <file>=<model>\n"
 
-#: bin/gscan2pdf:155
+#: bin/gscan2pdf:171
 msgid "Error displaying help\n"
 msgstr "Σφάλμα κατά την προβολή βοήθειας\n"
 
-#: bin/gscan2pdf:173
+#: bin/gscan2pdf:189
 #, perl-format
 msgid "Unknown option %s.\n"
 msgstr "Άγνωστη επιλογή %s.\n"
 
-#: bin/gscan2pdf:206 bin/gscan2pdf:4414
+#: bin/gscan2pdf:223
 msgid "A4"
-msgstr ""
+msgstr "A4"
 
-#: bin/gscan2pdf:212 bin/gscan2pdf:4415
+#: bin/gscan2pdf:229
 msgid "US Letter"
-msgstr ""
+msgstr "US Letter"
 
-#: bin/gscan2pdf:218 bin/gscan2pdf:4416
+#: bin/gscan2pdf:235
 msgid "US Legal"
-msgstr ""
+msgstr "US Legal"
 
-#: bin/gscan2pdf:279
+#: bin/gscan2pdf:314
 msgid "_File"
 msgstr "_Αρχείο"
 
-#: bin/gscan2pdf:280
+#: bin/gscan2pdf:315
 msgid "_New"
 msgstr "_Νέο"
 
-#: bin/gscan2pdf:280
+#: bin/gscan2pdf:315
 msgid "Clears all pages"
 msgstr "Καθαρισμός όλων των σελίδων"
 
-#: bin/gscan2pdf:281
+#: bin/gscan2pdf:316
 msgid "_Import"
 msgstr "_Εισαγωγή"
 
-#: bin/gscan2pdf:281
+#: bin/gscan2pdf:316
 msgid "Import image file(s)"
 msgstr "Εισαγωγή αρχείων εικόνας"
 
-#: bin/gscan2pdf:282
+#: bin/gscan2pdf:317
 msgid "S_can"
 msgstr "Σ_άρωση"
 
-#: bin/gscan2pdf:282
+#: bin/gscan2pdf:317
 msgid "Scan document"
 msgstr "Σάρωση εγγράφου"
 
-#: bin/gscan2pdf:283
+#: bin/gscan2pdf:318
 msgid "_Save PDF"
 msgstr "_Αποθήκευση PDF"
 
-#: bin/gscan2pdf:283 bin/gscan2pdf:2234
+#: bin/gscan2pdf:318 bin/gscan2pdf:2338
 msgid "Save as PDF"
 msgstr "Αποθήκευση σαν PDF"
 
-#: bin/gscan2pdf:284
+#: bin/gscan2pdf:319
 msgid "Save _Image"
 msgstr "Αποθήκευση _Εικόνας"
 
-#: bin/gscan2pdf:284 bin/gscan2pdf:2289
+#: bin/gscan2pdf:319 bin/gscan2pdf:2393
 msgid "Save image"
 msgstr "Αποθήκευση εικόνας"
 
-#: bin/gscan2pdf:285
+#: bin/gscan2pdf:320
 msgid "Save _DjVu"
 msgstr "Αποθήκευση _DjVu"
 
-#: bin/gscan2pdf:285 bin/gscan2pdf:2637
+#: bin/gscan2pdf:320 bin/gscan2pdf:2753
 msgid "Save as DjVu"
 msgstr "Αποθήκευση ως DjVu"
 
-#: bin/gscan2pdf:286
+#: bin/gscan2pdf:321
 msgid "_Email as PDF"
 msgstr "_Email ως PDF"
 
-#: bin/gscan2pdf:286
+#: bin/gscan2pdf:321
 msgid "Attach as PDF to a new email"
 msgstr "Επισύναψη σαν PDF σε νέο email"
 
-#: bin/gscan2pdf:287
+#: bin/gscan2pdf:322
 msgid "_Quit"
 msgstr "_'Εξοδος"
 
-#: bin/gscan2pdf:287
+#: bin/gscan2pdf:322
 msgid "Quit"
 msgstr "'Εξοδος"
 
-#: bin/gscan2pdf:290
+#: bin/gscan2pdf:325
 msgid "_Edit"
 msgstr "_Επεξεργασία"
 
-#: bin/gscan2pdf:291
+#: bin/gscan2pdf:326
 msgid "_Undo"
 msgstr "_Αναίρεση"
 
-#: bin/gscan2pdf:291
+#: bin/gscan2pdf:326
 msgid "Undo"
 msgstr "Αναίρεση"
 
-#: bin/gscan2pdf:292
+#: bin/gscan2pdf:327
 msgid "_Redo"
 msgstr "_Ακύρωση Αναίρεσης"
 
-#: bin/gscan2pdf:292
+#: bin/gscan2pdf:327
 msgid "Redo"
 msgstr "Ακύρωση Αναίρεσης"
 
-#: bin/gscan2pdf:293
+#: bin/gscan2pdf:328
 msgid "Cu_t"
 msgstr "Απο_κοπή"
 
-#: bin/gscan2pdf:293
-msgid "Cut selected pages"
-msgstr "Αποκοπή επιλεγμένων σελίδων"
+#: bin/gscan2pdf:328
+msgid "Cut selection"
+msgstr "Αποκοπή επιλογής"
 
-#: bin/gscan2pdf:294
+#: bin/gscan2pdf:329
 msgid "_Copy"
 msgstr "Αντι_γραφή"
 
-#: bin/gscan2pdf:294
-msgid "Copy selected pages"
-msgstr "Αντιγραφή επιλεγμένων σελίδων"
+#: bin/gscan2pdf:329
+msgid "Copy selection"
+msgstr "Αντιγραφή επιλογής"
 
-#: bin/gscan2pdf:295
+#: bin/gscan2pdf:330
 msgid "_Paste"
 msgstr "Ε_πικόλληση"
 
-#: bin/gscan2pdf:295
-msgid "Paste selected pages"
-msgstr "Επικόλληση επιλεγμένων σελίδων"
+#: bin/gscan2pdf:330
+msgid "Paste selection"
+msgstr "Επικόλληση επιλογής"
 
-#: bin/gscan2pdf:296
+#: bin/gscan2pdf:331
 msgid "_Delete"
 msgstr "_Διαγραφή"
 
-#: bin/gscan2pdf:296
+#: bin/gscan2pdf:331
 msgid "Delete selected pages"
 msgstr "Διαγραφή επιλεγμένων σελίδων"
 
-#: bin/gscan2pdf:297
+#: bin/gscan2pdf:332
 msgid "_Renumber"
 msgstr "_Επαναρίθμηση"
 
-#: bin/gscan2pdf:297
+#: bin/gscan2pdf:332
 msgid "Renumber pages from 1 to n"
 msgstr "Επαναρίθμιση σελίδω από 1 έως n"
 
-#: bin/gscan2pdf:303
+#: bin/gscan2pdf:338
 msgid "Select _All"
 msgstr "Επιλογή _όλων"
 
-#: bin/gscan2pdf:303
+#: bin/gscan2pdf:338
 msgid "Select all pages"
 msgstr "Επιλογή όλων των σελίδων"
 
-#: bin/gscan2pdf:304
+#: bin/gscan2pdf:339
 msgid "_Frontend"
 msgstr ""
 
-#: bin/gscan2pdf:307
+#: bin/gscan2pdf:342
 msgid "_View"
 msgstr "_Προβολή"
 
-#: bin/gscan2pdf:308
+#: bin/gscan2pdf:343
 msgid "Zoom _100%"
 msgstr "Μεγέθυνση _100%"
 
-#: bin/gscan2pdf:308
+#: bin/gscan2pdf:343
 msgid "Zoom to 100%"
 msgstr "Κλίμακα στο 100%"
 
-#: bin/gscan2pdf:309
+#: bin/gscan2pdf:344
 msgid "Zoom to _fit"
 msgstr "Αλλαγή κλίμακας για _ταίριασμα"
 
-#: bin/gscan2pdf:309
+#: bin/gscan2pdf:344
 msgid "Zoom to fit"
 msgstr "Αλλαγή κλίμακας για ταίριασμα"
 
-#: bin/gscan2pdf:310
+#: bin/gscan2pdf:345
 msgid "Zoom _in"
 msgstr "_Μεγέθυνση"
 
-#: bin/gscan2pdf:310
+#: bin/gscan2pdf:345
 msgid "Zoom in"
 msgstr "Μεγέθυνση"
 
-#: bin/gscan2pdf:311
+#: bin/gscan2pdf:346
 msgid "Zoom _out"
 msgstr "Σ_μίκρυνση"
 
-#: bin/gscan2pdf:311
+#: bin/gscan2pdf:346
 msgid "Zoom out"
 msgstr "Σμίκρυνση"
 
-#: bin/gscan2pdf:312
+#: bin/gscan2pdf:347
 msgid "Rotate 90 clockwise"
 msgstr "Περιστροφή 90 δεξιόστροφα"
 
-#: bin/gscan2pdf:313
+#: bin/gscan2pdf:348
 msgid "Rotate 180"
 msgstr "Περιστροφή 180"
 
-#: bin/gscan2pdf:314
+#: bin/gscan2pdf:349
 msgid "Rotate 90 anticlockwise"
 msgstr "Περιστροφή 90 αριστερόστροφα"
 
-#: bin/gscan2pdf:317
+#: bin/gscan2pdf:352
 msgid "_Tools"
 msgstr "_Εργαλεία"
 
-#: bin/gscan2pdf:318
+#: bin/gscan2pdf:353
+#, fuzzy
 msgid "_Threshold"
-msgstr ""
+msgstr "_Ανοχή"
 
-#: bin/gscan2pdf:318
+#: bin/gscan2pdf:353
 msgid "Change each pixel above this threshold to black"
-msgstr ""
+msgstr "Πάνω από την ανοχή, αλλαγή κάθε εικονοστοιχείου σε μαύρο"
 
-#: bin/gscan2pdf:319
+#: bin/gscan2pdf:355
+#, fuzzy
 msgid "_unpaper"
-msgstr ""
+msgstr "_αποχάρτιση"
 
-#: bin/gscan2pdf:319
-msgid "Clean up current page with unpaper"
-msgstr ""
+#: bin/gscan2pdf:355
+msgid "Clean up pages with unpaper"
+msgstr "Καθαρισμός σελίδων με αποχάρτιση"
 
-#: bin/gscan2pdf:320
+#: bin/gscan2pdf:356
 msgid "_OCR"
-msgstr ""
+msgstr "_OCR"
 
-#: bin/gscan2pdf:320
-msgid "Optical Character Recognition of current page"
-msgstr ""
+#: bin/gscan2pdf:356
+msgid "Optical Character Recognition"
+msgstr "Οπτική Αναγνώριση Χαρακτήρων"
 
-#: bin/gscan2pdf:323 bin/gscan2pdf:324
+#: bin/gscan2pdf:359 bin/gscan2pdf:360
 msgid "_Help"
 msgstr "_Βοήθεια"
 
-#: bin/gscan2pdf:324
+#: bin/gscan2pdf:360
 msgid "Help"
 msgstr "Βοήθεια"
 
-#: bin/gscan2pdf:325
+#: bin/gscan2pdf:361
 msgid "_About"
 msgstr "_Σχετικά"
 
-#: bin/gscan2pdf:518
+#: bin/gscan2pdf:554
 msgid "Thumbnails"
 msgstr "Μικρογραφίες"
 
-#: bin/gscan2pdf:568
+#: bin/gscan2pdf:605
 msgid "Error copying page"
 msgstr "Σφάλμα κατά την αντιγραφή σελίδας"
 
-#: bin/gscan2pdf:769
+#: bin/gscan2pdf:869
 msgid "Mode"
 msgstr "Λειτουργία"
 
-#: bin/gscan2pdf:771
+#: bin/gscan2pdf:871
 msgid "Lineart"
-msgstr ""
+msgstr "Γραμμικό"
 
-#: bin/gscan2pdf:772
+#: bin/gscan2pdf:872
 msgid "Grayscale"
 msgstr "Διαβαθμίσεις του γκρι"
 
-#: bin/gscan2pdf:773
+#: bin/gscan2pdf:873
 msgid "Gray"
 msgstr "Γκρι"
 
-#: bin/gscan2pdf:774
+#: bin/gscan2pdf:874
 msgid "Color"
 msgstr "Έγχρωμο"
 
-#: bin/gscan2pdf:775
+#: bin/gscan2pdf:875
 msgid "Black & White"
 msgstr "Άσπρο & Μαύρο"
 
-#: bin/gscan2pdf:776
+#: bin/gscan2pdf:876
 msgid "True Gray"
-msgstr ""
+msgstr "Πραγματικό Γκρί"
 
-#: bin/gscan2pdf:777
+#: bin/gscan2pdf:877
 msgid "Binary"
 msgstr "Δυαδικό"
 
-#: bin/gscan2pdf:778 bin/gscan2pdf:829 bin/gscan2pdf:830
+#: bin/gscan2pdf:878 bin/gscan2pdf:929 bin/gscan2pdf:930
 msgid "Auto"
 msgstr "Αυτόματο"
 
-#: bin/gscan2pdf:779
+#: bin/gscan2pdf:879
 msgid "Halftone"
 msgstr "Ενδιάμεσοι τόνοι"
 
-#: bin/gscan2pdf:780
+#: bin/gscan2pdf:880
 msgid "24bit Color"
-msgstr ""
+msgstr "Χρώμα 24bit"
 
-#: bin/gscan2pdf:783 bin/gscan2pdf:2201 bin/gscan2pdf:2322
+#: bin/gscan2pdf:883 bin/gscan2pdf:2305 bin/gscan2pdf:2426
 msgid "Compression"
 msgstr "Συμπίεση"
 
-#: bin/gscan2pdf:785 bin/gscan2pdf:2195 bin/gscan2pdf:2316
+#: bin/gscan2pdf:885 bin/gscan2pdf:2299 bin/gscan2pdf:2420
 msgid "None"
 msgstr "Τίποτα"
 
-#: bin/gscan2pdf:786 bin/gscan2pdf:2188 bin/gscan2pdf:2302 bin/gscan2pdf:2312
+#: bin/gscan2pdf:886 bin/gscan2pdf:2298 bin/gscan2pdf:2406 bin/gscan2pdf:2416
 msgid "JPEG"
 msgstr "JPEG"
 
-#: bin/gscan2pdf:789
+#: bin/gscan2pdf:889
 msgid "Resolution"
 msgstr "Ανάλυση"
 
-#: bin/gscan2pdf:790
+#: bin/gscan2pdf:890
 msgid "Brightness"
-msgstr ""
+msgstr "Φωτεινότητα"
 
-#: bin/gscan2pdf:791
+#: bin/gscan2pdf:891
 msgid "Contrast"
-msgstr ""
+msgstr "Αντίθεση"
 
-#: bin/gscan2pdf:792 bin/gscan2pdf:4860 bin/gscan2pdf:4868
+#: bin/gscan2pdf:892 bin/gscan2pdf:5110 bin/gscan2pdf:5118
 msgid "Threshold"
-msgstr ""
+msgstr "Ανοχή"
 
-#: bin/gscan2pdf:793
+#: bin/gscan2pdf:893
 msgid "Speed"
-msgstr ""
+msgstr "Ταχύτητα"
 
-#: bin/gscan2pdf:795 bin/gscan2pdf:801 bin/gscan2pdf:807 bin/gscan2pdf:813
-#: bin/gscan2pdf:819
+#: bin/gscan2pdf:895 bin/gscan2pdf:901 bin/gscan2pdf:907 bin/gscan2pdf:913
+#: bin/gscan2pdf:919
 msgid "Yes"
-msgstr ""
+msgstr "Ναί"
 
-#: bin/gscan2pdf:796 bin/gscan2pdf:802 bin/gscan2pdf:808 bin/gscan2pdf:814
-#: bin/gscan2pdf:820
+#: bin/gscan2pdf:896 bin/gscan2pdf:902 bin/gscan2pdf:908 bin/gscan2pdf:914
+#: bin/gscan2pdf:920
 msgid "No"
-msgstr ""
+msgstr "Όχι"
 
-#: bin/gscan2pdf:799
+#: bin/gscan2pdf:899
 msgid "Batch scan"
-msgstr ""
+msgstr "Μαζική σάρωση"
 
-#: bin/gscan2pdf:805 bin/gscan2pdf:811
+#: bin/gscan2pdf:905 bin/gscan2pdf:911
 msgid "Wait for button"
 msgstr ""
 
-#: bin/gscan2pdf:817
+#: bin/gscan2pdf:917
 msgid "Cache calibration"
-msgstr ""
+msgstr "Ρύθμιση κρυφού αποθέματος"
 
-#: bin/gscan2pdf:823
+#: bin/gscan2pdf:923
 msgid "Source"
-msgstr ""
+msgstr "Προέλευση"
 
-#: bin/gscan2pdf:825
+#: bin/gscan2pdf:925
 msgid "Normal"
-msgstr ""
+msgstr "Κανονικό"
 
-#: bin/gscan2pdf:826
+#: bin/gscan2pdf:926
 msgid "ADF"
-msgstr ""
+msgstr "ADF"
 
-#: bin/gscan2pdf:827
+#: bin/gscan2pdf:927
 msgid "Automatic Document Feeder"
-msgstr ""
+msgstr "Αυτόματος Τροφοδότης Εγγράφων"
 
-#: bin/gscan2pdf:828
+#: bin/gscan2pdf:928
 msgid "XPA"
-msgstr ""
+msgstr "XPA"
 
-#: bin/gscan2pdf:831
+#: bin/gscan2pdf:931
 msgid "Flatbed"
-msgstr ""
+msgstr "Οριζόντιος"
 
-#: bin/gscan2pdf:832
+#: bin/gscan2pdf:932
 msgid "Transparency Adapter"
-msgstr ""
+msgstr "Προσαρμογέας Διαφανειών"
 
-#: bin/gscan2pdf:833
+#: bin/gscan2pdf:933
 msgid "Transparency Unit"
-msgstr ""
+msgstr "Μονάδα Διαφανειών"
 
-#: bin/gscan2pdf:842
+#: bin/gscan2pdf:936
+msgid "Page Width"
+msgstr "Πλάτος Σελίδας"
+
+#: bin/gscan2pdf:937
+msgid "Page Height"
+msgstr "Ύψος Σελίδας"
+
+#: bin/gscan2pdf:944
 msgid "Layout"
-msgstr ""
+msgstr "Διάταξη"
 
-#: bin/gscan2pdf:845
+#: bin/gscan2pdf:947
 msgid "Single"
-msgstr ""
+msgstr "Μονό"
 
-#: bin/gscan2pdf:846
+#: bin/gscan2pdf:948
 msgid "One page per sheet, oriented upwards without rotation."
-msgstr ""
+msgstr "Μία σελίδα ανά φύλλο, προσανατολισμός προς τα επάνω χωρίς περιστροφή"
 
-#: bin/gscan2pdf:849
+#: bin/gscan2pdf:951
+#, fuzzy
 msgid "Double"
-msgstr ""
+msgstr "Διπλό"
 
-#: bin/gscan2pdf:850
+#: bin/gscan2pdf:952
 msgid ""
 "Two pages per sheet, landscape orientation (one page on the left half, one "
 "page on the right half)."
 msgstr ""
+"Δύο σελίδες σε κάθε φύλο, οριζόντιος προσανατολισμός (μία σελίδα στο "
+"αριστερό μισό, μία σελίδα στο δεξί μισό)."
 
-#: bin/gscan2pdf:857
+#: bin/gscan2pdf:959
+#, fuzzy
 msgid "No deskew"
-msgstr ""
+msgstr "Χωρίς αντιστρέβλωση"
 
-#: bin/gscan2pdf:858
+#: bin/gscan2pdf:960
+#, fuzzy
 msgid "Disable deskewing."
-msgstr ""
+msgstr "Απενεργοποίηση αντιστρέβλωσης"
 
-#: bin/gscan2pdf:863
+#: bin/gscan2pdf:965
+#, fuzzy
 msgid "No mask scan"
-msgstr ""
+msgstr "Χωρίς μάσκα σάρωσης"
 
-#: bin/gscan2pdf:864
+#: bin/gscan2pdf:966
+#, fuzzy
 msgid "Disable mask detection."
-msgstr ""
+msgstr "Άρση ανίχνευσης μάσκας"
 
-#: bin/gscan2pdf:869
+#: bin/gscan2pdf:971
 msgid "No black filter"
-msgstr ""
+msgstr "Χωρίς φίλτρο μαύρου"
 
-#: bin/gscan2pdf:870
+#: bin/gscan2pdf:972
 msgid "Disable black area scan."
-msgstr ""
+msgstr "Άρση σάρωσης μαύρων περιοχών"
 
-#: bin/gscan2pdf:875
+#: bin/gscan2pdf:977
 msgid "No gray filter"
-msgstr ""
+msgstr "Χωρίς φίλτρο γρί"
 
-#: bin/gscan2pdf:876
+#: bin/gscan2pdf:978
 msgid "Disable gray area scan."
-msgstr ""
+msgstr "Άρση σάρωσης γκρι περιοχών"
 
-#: bin/gscan2pdf:881
+#: bin/gscan2pdf:983
 msgid "No noise filter"
-msgstr ""
+msgstr "Χωρίς φίλτρο θορύβου"
 
-#: bin/gscan2pdf:882
+#: bin/gscan2pdf:984
 msgid "Disable noise filter."
-msgstr ""
+msgstr "Άρση φίλτρου θορύβου"
 
-#: bin/gscan2pdf:887
+#: bin/gscan2pdf:989
 msgid "No blur filter"
-msgstr ""
+msgstr "Χωρίς φίλτρο θαμπώματος"
 
-#: bin/gscan2pdf:888
+#: bin/gscan2pdf:990
 msgid "Disable blur filter."
-msgstr ""
+msgstr "Άρση φίλτρου θαμπώματος"
 
-#: bin/gscan2pdf:893
+#: bin/gscan2pdf:995
 msgid "No border scan"
-msgstr ""
+msgstr "Χωρίς σάρωση περιθωρίων"
 
-#: bin/gscan2pdf:894
+#: bin/gscan2pdf:996
 msgid "Disable border scanning."
-msgstr ""
+msgstr "Απενεργοποίηση σάρωσης περιθορίων"
 
-#: bin/gscan2pdf:899
+#: bin/gscan2pdf:1001
+#, fuzzy
 msgid "No border align"
-msgstr ""
+msgstr "Χωρίς ευθυγράμμιση περιθωρίου"
 
-#: bin/gscan2pdf:900
+#: bin/gscan2pdf:1002
 msgid "Disable aligning of the area detected by border scanning."
-msgstr ""
+msgstr "Απενεργοποίηση ευθυγράμμισης"
 
-#: bin/gscan2pdf:905
+#: bin/gscan2pdf:1007
+#, fuzzy
 msgid "Deskew to edge"
-msgstr ""
+msgstr "Αντιστρέβλωση στο άκρο"
 
-#: bin/gscan2pdf:906
+#: bin/gscan2pdf:1008
 msgid ""
 "Edges from which to scan for rotation. Each edge of a mask can be used to "
 "detect the mask's rotation. If multiple edges are specified, the average "
 "value will be used, unless the statistical deviation exceeds --deskew-scan-"
 "deviation."
 msgstr ""
+"Ακμές από τις οποίες θα γίνει σάρωση για περιστροφή. Κάθε ακμή μάσκας μπορεί "
+"να χρησιμοποιηθεί για εντοπισμό περιστροφής της μάσκας. Αν οριστούν πολλές "
+"ακμές, θα χρησιμοποιηθεί ο μέσος όρος, εκτός αν η στατιστική απόκλιση "
+"υπερβαίνει την απόκλιση --αντιστρέβλωσης-σάρωσης"
 
-#: bin/gscan2pdf:910 bin/gscan2pdf:938 bin/gscan2pdf:4299
+#: bin/gscan2pdf:1012 bin/gscan2pdf:1040 bin/gscan2pdf:4431 bin/gscan2pdf:4492
+#: bin/gscan2pdf:4631
 msgid "Left"
-msgstr ""
+msgstr "Αριστερά"
 
-#: bin/gscan2pdf:911
+#: bin/gscan2pdf:1013
 msgid "Use 'left' for scanning from the left edge."
-msgstr ""
+msgstr "Χρησιμοποίησε το \"αριστερά\" για σάρωση από αριστερά"
 
-#: bin/gscan2pdf:915 bin/gscan2pdf:943 bin/gscan2pdf:4300
+#: bin/gscan2pdf:1017 bin/gscan2pdf:1045 bin/gscan2pdf:4432 bin/gscan2pdf:4496
+#: bin/gscan2pdf:4632
 msgid "Top"
-msgstr ""
+msgstr "Κορυφή"
 
-#: bin/gscan2pdf:916
+#: bin/gscan2pdf:1018
 msgid "Use 'top' for scanning from the top edge."
-msgstr ""
+msgstr "Χρησιμοποίησε το \"κορυφή\" για σάρωση από την κορυφή"
 
-#: bin/gscan2pdf:920 bin/gscan2pdf:948
+#: bin/gscan2pdf:1022 bin/gscan2pdf:1050
 msgid "Right"
-msgstr ""
+msgstr "Δεξιά"
 
-#: bin/gscan2pdf:921
+#: bin/gscan2pdf:1023
 msgid "Use 'right' for scanning from the right edge."
-msgstr ""
+msgstr "Χρησιμοποίησε το \"δεξιά\" για σάρωση από δεξιά"
 
-#: bin/gscan2pdf:925 bin/gscan2pdf:953
+#: bin/gscan2pdf:1027 bin/gscan2pdf:1055
 msgid "Bottom"
-msgstr ""
+msgstr "Βάση"
 
-#: bin/gscan2pdf:926
+#: bin/gscan2pdf:1028
 msgid "Use 'bottom' for scanning from the bottom."
-msgstr ""
+msgstr "Χρησιμοποίησε το \"βάση\" για σάρωση από την βάση"
 
-#: bin/gscan2pdf:933
+#: bin/gscan2pdf:1035
 msgid "Align to edge"
-msgstr ""
+msgstr "Ευθυγράμμιση στην ακμή"
 
-#: bin/gscan2pdf:934
+#: bin/gscan2pdf:1036
 msgid "Edge to which to align the page."
-msgstr ""
+msgstr "Ακμή που θα ευθυγραμιστεί η σελίδα"
 
-#: bin/gscan2pdf:939
+#: bin/gscan2pdf:1041
 msgid "Use 'left' to align to the left edge."
-msgstr ""
+msgstr "Χρησιμοποίησε το \"αριστερά\" για ευθυγράμμιση αριστερά"
 
-#: bin/gscan2pdf:944
+#: bin/gscan2pdf:1046
 msgid "Use 'top' to align to the top edge."
 msgstr ""
 
-#: bin/gscan2pdf:949
+#: bin/gscan2pdf:1051
 msgid "Use 'right' to align to the right edge."
 msgstr ""
 
-#: bin/gscan2pdf:954
+#: bin/gscan2pdf:1056
 msgid "Use 'bottom' to align to the bottom."
 msgstr ""
 
-#: bin/gscan2pdf:960
+#: bin/gscan2pdf:1062
 msgid "Border margin"
-msgstr ""
+msgstr "περίγραμμα περιθορίου"
 
-#: bin/gscan2pdf:964
+#: bin/gscan2pdf:1066
 msgid "Vertical margin"
-msgstr ""
+msgstr "Κατακόρυφο περιθόριο"
 
-#: bin/gscan2pdf:965
+#: bin/gscan2pdf:1067
+#, fuzzy
 msgid ""
 "Vertical distance to keep from the sheet edge when aligning a border area."
 msgstr ""
+"Κατακόρυφη απόσταση από την ακμή του φύλλου για ευθυγράμμιση στο περιθόριο"
 
-#: bin/gscan2pdf:972
+#: bin/gscan2pdf:1074
 msgid "Horizontal margin"
-msgstr ""
+msgstr "Οριζόντιο περιθόριο"
 
-#: bin/gscan2pdf:973
+#: bin/gscan2pdf:1075
 msgid ""
 "Horizontal distance to keep from the sheet edge when aligning a border area."
 msgstr ""
+"Οριζόντια απόσταση από την ακμή του φύλλου για ευθυγράμμιση στο περιθόριο"
 
-#: bin/gscan2pdf:982
+#: bin/gscan2pdf:1084
+#, fuzzy
 msgid "White threshold"
-msgstr ""
+msgstr "Ανοχή άσπρου"
 
-#: bin/gscan2pdf:983
+#: bin/gscan2pdf:1085
+#, fuzzy
 msgid "Brightness ratio above which a pixel is considered white."
-msgstr ""
+msgstr "Ανοχή άσπρου"
 
-#: bin/gscan2pdf:991
+#: bin/gscan2pdf:1093
 msgid "Black threshold"
-msgstr ""
+msgstr "Ανοχή μαύρου"
 
-#: bin/gscan2pdf:992
+#: bin/gscan2pdf:1094
 msgid ""
 "Brightness ratio below which a pixel is considered black (non-gray). This is "
 "used by the gray-filter. This value is also used when converting a grayscale "
 "image to black-and-white mode."
 msgstr ""
+"Αναλογία φωτεινότητας κάτω από την οποία ένα εικονοστοιχείο θεωρείται μαύρο "
+"(όχι γκρι). Αυτό χρησιμοποιείται από το φίλτρο γκρι. Η ποσότητα αυτή επίσης "
+"χρησιμοποιείται στη μετατροπή μίας εικόνας από τόνους γκρι σε μαυρόασπρη."
 
-#: bin/gscan2pdf:1041
+#: bin/gscan2pdf:1143
 msgid "Enable Save _Options"
-msgstr ""
+msgstr "Ενεργοποίηση _επιλογών αποθήκευσης"
 
-#: bin/gscan2pdf:1041
+#: bin/gscan2pdf:1143
 msgid "View options before saving"
-msgstr ""
+msgstr "Προβολή επιλογών πρίν την αποθήκευση"
 
-#: bin/gscan2pdf:1042
+#: bin/gscan2pdf:1144
 msgid "Restore _window settings on startup"
-msgstr ""
+msgstr "Επαναφορά _ρυθμίσεων παραθύρου κατά την εκκίνηση"
 
-#: bin/gscan2pdf:1042
+#: bin/gscan2pdf:1144
 msgid "Restore window settings on startup"
-msgstr ""
+msgstr "Επαναφορά ρυθμίσεων παραθύρου κατά την εκκίνηση"
 
-#: bin/gscan2pdf:1080
+#: bin/gscan2pdf:1182
 msgid "GOCR"
-msgstr ""
+msgstr "GOCR"
 
-#: bin/gscan2pdf:1080
+#: bin/gscan2pdf:1182
 msgid "Process image with GOCR."
-msgstr ""
+msgstr "Επεξεργασία εικόνας με GOCR."
 
-#: bin/gscan2pdf:1083
+#: bin/gscan2pdf:1185
+#, fuzzy
 msgid "Tesseract"
-msgstr ""
+msgstr "Υπερκυβισμός"
 
-#: bin/gscan2pdf:1083
+#: bin/gscan2pdf:1185
+#, fuzzy
 msgid "Process image with Tesseract."
-msgstr ""
+msgstr "Επεξεργασία εικόνας με Υπερκυβισμό."
 
-#: bin/gscan2pdf:1087
+#: bin/gscan2pdf:1189
 msgid "PDF creation requires PDF::API2\n"
-msgstr ""
+msgstr "η δημιουργία PDF προαπαιτεί το PDF::API2\n"
 
-#: bin/gscan2pdf:1095
+#: bin/gscan2pdf:1197
 msgid "The scanadf frontend is not available\n"
 msgstr ""
 
-#: bin/gscan2pdf:1116
+#: bin/gscan2pdf:1218
 msgid "Save image and Save as PDF both require imagemagick\n"
 msgstr ""
+"Η αποθήκευση εικόνας και η αποθήκευση ώς PDF απαιτέι το imagemagick\n"
 
-#: bin/gscan2pdf:1120
+#: bin/gscan2pdf:1222
 msgid "Save image requires libtiff\n"
-msgstr ""
+msgstr "Η αποθήκευση εικονας απαιτεί το libtiff\n"
 
-#: bin/gscan2pdf:1124
+#: bin/gscan2pdf:1226
 msgid "Save as DjVu requires djvulibre-bin\n"
-msgstr ""
+msgstr "Η αποθήκευση ως DjVu απαιτεί το djvulibre-bin\n"
 
-#: bin/gscan2pdf:1128
+#: bin/gscan2pdf:1230
 msgid "Email as PDF requires xdg-email\n"
-msgstr ""
+msgstr "Η αποστολή email ως PDF απαιτεί xdg-email\n"
 
-#: bin/gscan2pdf:1170
+#: bin/gscan2pdf:1273
 msgid ""
 "The rotating options, unpaper support and the scanadf frontend require "
 "perlmagick\n"
 msgstr ""
 
-#: bin/gscan2pdf:1176
+#: bin/gscan2pdf:1279
 msgid "unpaper missing\n"
-msgstr ""
+msgstr "Η αποχάρτιση λείπει\n"
 
-#: bin/gscan2pdf:1182
+#: bin/gscan2pdf:1285
 msgid "OCR requires gocr or tesseract\n"
-msgstr ""
+msgstr "Το OCR απαιτεί το gocr ή tesseract\n"
 
-#: bin/gscan2pdf:1188
+#: bin/gscan2pdf:1291
 msgid "Warning: missing packages"
-msgstr ""
+msgstr "Προσοχή: έλλειψη πακέτων"
 
-#: bin/gscan2pdf:1194
+#: bin/gscan2pdf:1297
 msgid "Don't show this message again"
-msgstr ""
+msgstr "Να μην προβληθεί ξανά αυτό το μύνημα"
 
-#: bin/gscan2pdf:1385
+#: bin/gscan2pdf:1488
 msgid "Warning: "
-msgstr ""
+msgstr "Προειδοποίηση: "
 
-#: bin/gscan2pdf:1392
-#, perl-format
+#: bin/gscan2pdf:1495
+#, fuzzy, perl-format
 msgid "Information: got %s on second attempt\n"
-msgstr ""
+msgstr "Πληροφορία: έχεις %s στη δεύτερη προσπάθεια\n"
 
-#: bin/gscan2pdf:1454
+#: bin/gscan2pdf:1557
 msgid "Import image from file"
-msgstr ""
+msgstr "Εισαγωγή εικόνας από αρχείο"
 
-#: bin/gscan2pdf:1472
+#: bin/gscan2pdf:1575
 msgid "Importing"
-msgstr ""
+msgstr "Γίνεται Εισαγωγή"
 
-#: bin/gscan2pdf:1507
+#: bin/gscan2pdf:1610
 msgid "Converting to TIFF"
-msgstr ""
+msgstr "Μετατροπή σε TIFF"
 
-#: bin/gscan2pdf:1526
+#: bin/gscan2pdf:1629
 #, perl-format
 msgid "%s is not a recognised image type"
-msgstr ""
+msgstr "%s δεν είναι αναγνωρίσιμος τύπος αρχείου εικόνας"
 
-#: bin/gscan2pdf:1532
+#: bin/gscan2pdf:1635
 msgid "Extracting images from PDF"
-msgstr ""
+msgstr "Γίνεται εξαγωγή εικόνων από PDF"
 
-#: bin/gscan2pdf:1534
+#: bin/gscan2pdf:1637
 msgid "Error extracting images from PDF"
-msgstr ""
+msgstr "Σφάλμα στην εξαγωγή εικόνων από PDF"
 
-#: bin/gscan2pdf:1543 bin/gscan2pdf:1560
+#: bin/gscan2pdf:1646 bin/gscan2pdf:1663
 #, perl-format
 msgid "Importing image %i of %i"
-msgstr ""
+msgstr "Εισαγωγή εικόνας %i από %i"
 
-#: bin/gscan2pdf:1550
+#: bin/gscan2pdf:1653
 msgid "Extracting images from TIFF"
-msgstr ""
+msgstr "Εξαγωγή εικόνων από TIFF"
 
-#: bin/gscan2pdf:1552
+#: bin/gscan2pdf:1655
 msgid "Error extracting images from TIFF"
-msgstr ""
+msgstr "Σφάλμα στην εξαγωγή εικόνας από TIFF"
 
-#: bin/gscan2pdf:1566 bin/gscan2pdf:1573
+#: bin/gscan2pdf:1669 bin/gscan2pdf:1676
 #, perl-format
 msgid "Importing %s"
-msgstr ""
+msgstr "Εισαγωγή %s"
 
-#: bin/gscan2pdf:1659
+#: bin/gscan2pdf:1762
 msgid "Page range"
-msgstr ""
+msgstr "Εύρος σελίδων"
 
-#: bin/gscan2pdf:1668 bin/gscan2pdf:2933
+#: bin/gscan2pdf:1771 bin/gscan2pdf:3052
 msgid "All"
-msgstr ""
+msgstr "Όλα"
 
-#: bin/gscan2pdf:1676
+#: bin/gscan2pdf:1779
 msgid "Current"
-msgstr ""
+msgstr "Τρέχων"
 
-#: bin/gscan2pdf:1683
+#: bin/gscan2pdf:1786
 msgid "Selected"
-msgstr ""
+msgstr "Επιλεγμένο"
 
-#: bin/gscan2pdf:1771
+#: bin/gscan2pdf:1874
 msgid "Metadata"
-msgstr ""
+msgstr "Μεταδεδομένα"
 
-#: bin/gscan2pdf:1780
+#: bin/gscan2pdf:1883
 msgid "Date"
-msgstr ""
+msgstr "Ημερομηνία"
 
-#: bin/gscan2pdf:1790
+#: bin/gscan2pdf:1893
 msgid "Select Date"
-msgstr ""
+msgstr "Επιλογή Ημερομηνίας"
 
-#: bin/gscan2pdf:1807
+#: bin/gscan2pdf:1910
 msgid "Today"
-msgstr ""
+msgstr "Σήμερα"
 
-#: bin/gscan2pdf:1818
+#: bin/gscan2pdf:1921
 msgid "Year-Month-Day"
-msgstr ""
+msgstr "Έτος-Μήνας-Μέρα"
 
-#: bin/gscan2pdf:1824
+#: bin/gscan2pdf:1927
 msgid "Document author"
-msgstr ""
+msgstr "Συγγραφέας κειμένου"
 
-#: bin/gscan2pdf:1833
+#: bin/gscan2pdf:1936
 msgid "Title"
-msgstr ""
+msgstr "Τίτλος"
 
-#: bin/gscan2pdf:1842
+#: bin/gscan2pdf:1945
 msgid "Subject"
-msgstr ""
+msgstr "Θέμα"
 
-#: bin/gscan2pdf:1851
+#: bin/gscan2pdf:1954
 msgid "Keywords"
-msgstr ""
+msgstr "Λέξεις κλεδιά"
 
-#: bin/gscan2pdf:1900
+#: bin/gscan2pdf:2003
 msgid "Saving PDF"
-msgstr ""
+msgstr "Αποθήκευση PDF"
 
-#: bin/gscan2pdf:1925
+#: bin/gscan2pdf:2028
 msgid "Setting up PDF"
-msgstr ""
+msgstr "Διαμόρφωση PDF"
 
-#: bin/gscan2pdf:1932
+#: bin/gscan2pdf:2035
 #, perl-format
 msgid "Saving page %i of %i"
-msgstr ""
+msgstr "Αποθήκευση σελίδας %i από %i"
 
-#: bin/gscan2pdf:2067
+#: bin/gscan2pdf:2170
 msgid "Closing PDF"
-msgstr ""
+msgstr "Κλείσιμο PDF"
 
-#: bin/gscan2pdf:2111
+#: bin/gscan2pdf:2215
 msgid "PDF filename"
-msgstr ""
+msgstr "Όνομα PDF αρχείου"
 
-#: bin/gscan2pdf:2148
+#: bin/gscan2pdf:2252
 msgid "JPEG Quality"
-msgstr ""
+msgstr "Ποιότητα JPEG"
 
-#: bin/gscan2pdf:2168
+#: bin/gscan2pdf:2272
 msgid "Downsample to"
 msgstr ""
 
-#: bin/gscan2pdf:2173
+#: bin/gscan2pdf:2277
 msgid "dpi"
-msgstr ""
+msgstr "dpi"
 
-#: bin/gscan2pdf:2188 bin/gscan2pdf:2312
-msgid "Compress output with JPEG encoding."
-msgstr ""
-
-#: bin/gscan2pdf:2189 bin/gscan2pdf:2303
-msgid "PNG"
-msgstr ""
-
-#: bin/gscan2pdf:2189
-msgid "Compress output with PNG encoding."
-msgstr ""
-
-#: bin/gscan2pdf:2190 bin/gscan2pdf:2310
+#: bin/gscan2pdf:2292 bin/gscan2pdf:2414
 msgid "LZW"
-msgstr ""
+msgstr "LZW"
 
-#: bin/gscan2pdf:2190 bin/gscan2pdf:2310
+#: bin/gscan2pdf:2292 bin/gscan2pdf:2414
 msgid "Compress output with Lempel-Ziv & Welch encoding."
-msgstr ""
+msgstr "Συμπίεση εξαγώγιμου με κωδικοποίηση with Lempel-Ziv & Welch"
 
-#: bin/gscan2pdf:2191 bin/gscan2pdf:2311
+#: bin/gscan2pdf:2293 bin/gscan2pdf:2415
 msgid "Zip"
-msgstr ""
+msgstr "Zip"
 
-#: bin/gscan2pdf:2191 bin/gscan2pdf:2311
+#: bin/gscan2pdf:2293 bin/gscan2pdf:2415
 msgid "Compress output with deflate encoding."
-msgstr ""
+msgstr "Συμπίεση εξαγώγιμου με κωδικοποίηση deflate"
 
-#: bin/gscan2pdf:2192 bin/gscan2pdf:2313
+#: bin/gscan2pdf:2294 bin/gscan2pdf:2417
 msgid "Packbits"
 msgstr ""
 
-#: bin/gscan2pdf:2192 bin/gscan2pdf:2313
+#: bin/gscan2pdf:2294 bin/gscan2pdf:2417
 msgid "Compress output with Packbits encoding."
-msgstr ""
+msgstr "Συμπίεση εξαγώγιμου με κωδικοποίηση Packbits"
 
-#: bin/gscan2pdf:2193 bin/gscan2pdf:2314
+#: bin/gscan2pdf:2295 bin/gscan2pdf:2418
 msgid "G3"
-msgstr ""
+msgstr "G3"
 
-#: bin/gscan2pdf:2193 bin/gscan2pdf:2314
+#: bin/gscan2pdf:2295 bin/gscan2pdf:2418
 msgid "Compress output with CCITT Group 3 encoding."
-msgstr ""
+msgstr "Συμπίεση εξαγώγιμου με κωδικοποίηση CCITT Group 3"
 
-#: bin/gscan2pdf:2194 bin/gscan2pdf:2315
+#: bin/gscan2pdf:2296 bin/gscan2pdf:2419
 msgid "G4"
-msgstr ""
+msgstr "G4"
 
-#: bin/gscan2pdf:2194 bin/gscan2pdf:2315
+#: bin/gscan2pdf:2296 bin/gscan2pdf:2419
 msgid "Compress output with CCITT Group 4 encoding."
-msgstr ""
+msgstr "Συμπίεση εξαγώγιμου με κωδικοποίηση CCITT Group 4"
 
-#: bin/gscan2pdf:2195 bin/gscan2pdf:2316
-msgid "Use no compression algorithm on output."
-msgstr ""
+#: bin/gscan2pdf:2297 bin/gscan2pdf:2407
+msgid "PNG"
+msgstr "PNG"
 
 #: bin/gscan2pdf:2297
+msgid "Compress output with PNG encoding."
+msgstr "Συμπίεση εξαγώγιμου με κωδικοποίηση PNG"
+
+#: bin/gscan2pdf:2298 bin/gscan2pdf:2416
+msgid "Compress output with JPEG encoding."
+msgstr "Συμπίεση εξαγώγιμου με κωδικοποίηση JPEG"
+
+#: bin/gscan2pdf:2299 bin/gscan2pdf:2420
+msgid "Use no compression algorithm on output."
+msgstr "Κανένας αλγόριθμος συμπίεσης στο εξαγώγιμο"
+
+#: bin/gscan2pdf:2401
 msgid "Image type"
-msgstr ""
+msgstr "Τύπος εικόνας"
 
-#: bin/gscan2pdf:2301
+#: bin/gscan2pdf:2405
 msgid "GIF"
-msgstr ""
+msgstr "GIF"
 
-#: bin/gscan2pdf:2301
+#: bin/gscan2pdf:2405
 msgid "CompuServe graphics interchange format"
 msgstr ""
 
-#: bin/gscan2pdf:2302
+#: bin/gscan2pdf:2406
+#, fuzzy
 msgid "Joint Photographic Experts Group JFIF format"
-msgstr ""
+msgstr "Μορφοποίηση Joint Photographic Experts Group JFIF"
 
-#: bin/gscan2pdf:2303
+#: bin/gscan2pdf:2407
 msgid "Portable Network Graphics"
-msgstr ""
+msgstr "Φορητά Δικτυακά Γραφικά (PNG)"
 
-#: bin/gscan2pdf:2304
+#: bin/gscan2pdf:2408
 msgid "PNM"
-msgstr ""
+msgstr "PNM"
 
-#: bin/gscan2pdf:2304
+#: bin/gscan2pdf:2408
 msgid "Portable anymap"
 msgstr ""
 
-#: bin/gscan2pdf:2305
+#: bin/gscan2pdf:2409
 msgid "PS"
-msgstr ""
+msgstr "PS"
 
-#: bin/gscan2pdf:2305
+#: bin/gscan2pdf:2409
 msgid "Postscript"
-msgstr ""
+msgstr "Postscript"
 
-#: bin/gscan2pdf:2306
+#: bin/gscan2pdf:2410
 msgid "TIFF"
-msgstr ""
+msgstr "TIFF"
 
-#: bin/gscan2pdf:2306
+#: bin/gscan2pdf:2410
 msgid "Tagged Image File Format"
 msgstr ""
 
-#: bin/gscan2pdf:2380
+#: bin/gscan2pdf:2484
 msgid "TIFF filename"
-msgstr ""
+msgstr "Όνομα αρχείου TIFF"
 
-#: bin/gscan2pdf:2411
+#: bin/gscan2pdf:2515
 msgid "PS filename"
-msgstr ""
+msgstr "Όνομα PS αρχείου"
 
-#: bin/gscan2pdf:2467
+#: bin/gscan2pdf:2571
 #, perl-format
 msgid "File %s is read-only"
-msgstr ""
+msgstr "Το αχρείο %s είναι μόνο για ανάγνωση"
 
-#: bin/gscan2pdf:2472
+#: bin/gscan2pdf:2576
 #, perl-format
 msgid ""
 "File %s exists.\n"
 "Really overwrite?"
 msgstr ""
+"Το αρχείο %s υπάρχει.\n"
+"Να γίνει αντικατάσταση;"
 
-#: bin/gscan2pdf:2485
+#: bin/gscan2pdf:2589
 msgid "Image filename"
-msgstr ""
+msgstr "Όνομα αρχείου εικόνας"
 
-#: bin/gscan2pdf:2508 bin/gscan2pdf:2515
+#: bin/gscan2pdf:2617 bin/gscan2pdf:2626
 msgid "Error saving image"
-msgstr ""
+msgstr "Σφάλμα στην αποθήκευση εικόνας"
 
-#: bin/gscan2pdf:2529
+#: bin/gscan2pdf:2644
 msgid "Saving TIFF"
-msgstr ""
+msgstr "Αποθηκεύεται TIFF"
 
-#: bin/gscan2pdf:2557
+#: bin/gscan2pdf:2672
 #, perl-format
 msgid "Converting image %i of %i to TIFF"
-msgstr ""
+msgstr "Μετατρέπεται εικόνα %i από %i σε TIFF"
 
-#: bin/gscan2pdf:2563
+#: bin/gscan2pdf:2678
 msgid "Error writing TIFF"
-msgstr ""
+msgstr "Σφάλμα στην εγγραφή TIFF"
 
-#: bin/gscan2pdf:2574
+#: bin/gscan2pdf:2689
+#, fuzzy
 msgid "Concatenating TIFFs"
-msgstr ""
-
-#: bin/gscan2pdf:2579
-msgid "Converting to PS"
-msgstr ""
-
-#: bin/gscan2pdf:2670
-msgid "DjVu filename"
-msgstr ""
+msgstr "αλληλουχία TIFFs"
 
 #: bin/gscan2pdf:2694
-msgid "Saving DjVu"
-msgstr ""
+msgid "Converting to PS"
+msgstr "Μετατροπή σε PS"
 
-#: bin/gscan2pdf:2719
+#: bin/gscan2pdf:2786
+msgid "DjVu filename"
+msgstr "Όνομα αρχείου DjVu"
+
+#: bin/gscan2pdf:2810
+msgid "Saving DjVu"
+msgstr "Αποθήκευση DjVu"
+
+#: bin/gscan2pdf:2836
 #, perl-format
 msgid "Writing page %i of %i"
-msgstr ""
+msgstr "Εγγραφή σελίδας %i από %i"
 
-#: bin/gscan2pdf:2756 bin/gscan2pdf:2782
+#: bin/gscan2pdf:2873 bin/gscan2pdf:2900
 msgid "Error writing DjVu"
-msgstr ""
+msgstr "Σφάλμα εγγραφής DjVu"
 
-#: bin/gscan2pdf:2773
+#: bin/gscan2pdf:2891
 #, perl-format
 msgid "Can't open file: %s"
-msgstr ""
+msgstr "Δεν μπορεί να ανοίξει το αρχείο: %s"
 
-#: bin/gscan2pdf:2785
+#: bin/gscan2pdf:2903
 msgid "Closing DjVu"
-msgstr ""
+msgstr "Κλείσιμο DjVu"
 
-#: bin/gscan2pdf:2788
+#: bin/gscan2pdf:2906
 msgid "Error closing DjVu"
-msgstr ""
+msgstr "Σφάλμα κλεισίματος DjVu"
 
-#: bin/gscan2pdf:2844
+#: bin/gscan2pdf:2963
 msgid "Email as PDF"
-msgstr ""
+msgstr "Ηλεκτρονική ταχυδρόμιση ως PDF"
 
-#: bin/gscan2pdf:2879
+#: bin/gscan2pdf:2998
 msgid "Error creating email"
-msgstr ""
+msgstr "Σφάλμα δημιουργίας ηλεκτρονικού ταχυδρομείου"
 
-#: bin/gscan2pdf:2905
+#: bin/gscan2pdf:3024
 msgid "Scan Document"
-msgstr ""
+msgstr "Σάρωση εγγράφου"
 
-#: bin/gscan2pdf:2917
+#: bin/gscan2pdf:3036
 msgid "Page Options"
-msgstr ""
+msgstr "Επιλογές σελίδας"
 
-#: bin/gscan2pdf:2921
+#: bin/gscan2pdf:3040
 msgid "Scan Options"
-msgstr ""
+msgstr "Επιλογές σάρωσης"
 
-#: bin/gscan2pdf:2924
+#: bin/gscan2pdf:3043
 msgid "# Pages"
-msgstr ""
+msgstr "# Σελίδων"
 
-#: bin/gscan2pdf:2934
+#: bin/gscan2pdf:3053
 msgid "Scan all pages"
-msgstr ""
+msgstr "Σάρωση όλων των σελίδων"
 
-#: bin/gscan2pdf:2941 bin/gscan2pdf:2946
+#: bin/gscan2pdf:3060 bin/gscan2pdf:3065
 msgid "Set number of pages to scan"
-msgstr ""
+msgstr "Αριθμός σελίδων για σάρωση"
 
-#: bin/gscan2pdf:2964
+#: bin/gscan2pdf:3083
 msgid "Extended page numbering"
-msgstr ""
+msgstr "Εκτεταμένη αρίθμηση σελίδων"
 
-#: bin/gscan2pdf:2968
+#: bin/gscan2pdf:3087
 msgid "Page number"
-msgstr ""
+msgstr "Αριθμός σελίδας"
 
-#: bin/gscan2pdf:2977
+#: bin/gscan2pdf:3096
 msgid "Start"
-msgstr ""
+msgstr "Έναρξη"
 
-#: bin/gscan2pdf:2986
+#: bin/gscan2pdf:3105
 msgid "Increment"
-msgstr ""
+msgstr "Βήμα"
 
-#: bin/gscan2pdf:3012
+#: bin/gscan2pdf:3131
 msgid "Source document"
-msgstr ""
+msgstr "Αρχείο προέλευσης"
 
-#: bin/gscan2pdf:3019
+#: bin/gscan2pdf:3138
 msgid "Single sided"
-msgstr ""
+msgstr "Μονής όψης"
 
-#: bin/gscan2pdf:3020
+#: bin/gscan2pdf:3139
 msgid "Source document is single-sided"
-msgstr ""
+msgstr "Το αρχείο προέλευσης είναι μονής όψης"
 
-#: bin/gscan2pdf:3027
+#: bin/gscan2pdf:3146
 msgid "Double sided"
-msgstr ""
+msgstr "Διπλής όψης"
 
-#: bin/gscan2pdf:3028
+#: bin/gscan2pdf:3147
 msgid "Source document is double-sided"
-msgstr ""
+msgstr "Το αρχείο προέλευσης είναι διπλής όψης"
 
-#: bin/gscan2pdf:3034
+#: bin/gscan2pdf:3153
 msgid "Side to scan"
-msgstr ""
+msgstr "Πλευρά για σάρωση"
 
-#: bin/gscan2pdf:3038
+#: bin/gscan2pdf:3157
+#, fuzzy
 msgid "Facing"
-msgstr ""
+msgstr "Προσανατολισμός"
 
-#: bin/gscan2pdf:3038
+#: bin/gscan2pdf:3157
 msgid "Reverse"
-msgstr ""
+msgstr "Αναστροφή"
 
-#: bin/gscan2pdf:3058
+#: bin/gscan2pdf:3177
 msgid "Sets which side of a double-sided document is scanned"
-msgstr ""
+msgstr "Ορίζει ποια πλευρά ενός διπλής όψης εγγράφου θα σαρωθεί"
 
-#: bin/gscan2pdf:3104
+#: bin/gscan2pdf:3223
+#, fuzzy
 msgid "Post-processing"
-msgstr ""
+msgstr "Ύστερη επεξεργασία"
 
-#: bin/gscan2pdf:3113
+#: bin/gscan2pdf:3232
+#, fuzzy
 msgid "unpaper scanned pages"
-msgstr ""
+msgstr "Αποχάρτιση σαρωμένων σελίδων"
 
-#: bin/gscan2pdf:3114
+#: bin/gscan2pdf:3233
 msgid "Process scanned image with unpaper"
-msgstr ""
+msgstr "Επεξεργασία σαρωμένων εικόνων με αποχάρτιση"
 
-#: bin/gscan2pdf:3123
+#: bin/gscan2pdf:3242
 msgid "Options"
-msgstr ""
+msgstr "Επιλογές"
 
-#: bin/gscan2pdf:3124
+#: bin/gscan2pdf:3243
 msgid "Set unpaper options"
-msgstr ""
+msgstr "Ορισμός επιλογών αποχάρτισης"
 
-#: bin/gscan2pdf:3127
+#: bin/gscan2pdf:3246
 msgid "unpaper options"
-msgstr ""
+msgstr "Επιλογές αποχάρτισης"
 
-#: bin/gscan2pdf:3156 bin/gscan2pdf:3157
+#: bin/gscan2pdf:3275 bin/gscan2pdf:3276
 msgid "OCR scanned pages"
-msgstr ""
+msgstr "OCR σαρωμένων σελίδων"
 
-#: bin/gscan2pdf:3167
+#: bin/gscan2pdf:3286
 msgid "Select OCR engine"
-msgstr ""
+msgstr "Επιλογή μηχανής OCR"
 
-#: bin/gscan2pdf:3194
+#: bin/gscan2pdf:3313
+#, fuzzy
 msgid "Device-dependent options"
-msgstr ""
+msgstr "Επιλογές εξαρτόμενες από συσκευές"
 
-#: bin/gscan2pdf:3205
+#: bin/gscan2pdf:3324
 msgid "Scan"
-msgstr ""
+msgstr "Σάρωση"
 
-#: bin/gscan2pdf:3267
+#: bin/gscan2pdf:3383
+#, fuzzy
 msgid "Must scan facing pages first"
-msgstr ""
+msgstr "Πρέπει να σαρωθούν πρώτα οι προσανατολισμένες σελίδες"
 
-#: bin/gscan2pdf:3299
+#: bin/gscan2pdf:3415
+#, fuzzy
 msgid "Fetching list of devices"
-msgstr ""
+msgstr "Δημιουργείτια λίστα συσκευών"
 
-#: bin/gscan2pdf:3341
+#: bin/gscan2pdf:3457
 msgid "No scanners found"
+msgstr "Δεν βρέθηκαν σαρωτές"
+
+#: bin/gscan2pdf:3476 bin/gscan2pdf:4415 bin/gscan2pdf:4505 bin/gscan2pdf:4528
+#: bin/gscan2pdf:4983
+msgid "Manual"
 msgstr ""
 
-#: bin/gscan2pdf:3370
+#: bin/gscan2pdf:3490
 msgid "Device"
-msgstr ""
+msgstr "Συσκευή"
 
-#: bin/gscan2pdf:3426
+#: bin/gscan2pdf:3546
 msgid "Sets the device to be used for the scan"
-msgstr ""
+msgstr "Ορίζεται η συσκευή σάρωσης που θα χρησιμοποιηθεί"
 
-#: bin/gscan2pdf:3576 bin/gscan2pdf:3580 bin/gscan2pdf:3613 bin/gscan2pdf:3732
-#: bin/gscan2pdf:3736
+#: bin/gscan2pdf:3696 bin/gscan2pdf:3700 bin/gscan2pdf:3732 bin/gscan2pdf:3850
+#: bin/gscan2pdf:3854
 msgid "Scanning"
-msgstr ""
+msgstr "Σάρωση"
 
-#: bin/gscan2pdf:3613
+#: bin/gscan2pdf:3732
 msgid "pages"
-msgstr ""
+msgstr "σελίδες"
 
-#: bin/gscan2pdf:3616
+#: bin/gscan2pdf:3735
 #, perl-format
 msgid "Scanning page %i..."
-msgstr ""
+msgstr "Σάρωση σελίδας %i..."
 
-#: bin/gscan2pdf:3627 bin/gscan2pdf:3783
+#: bin/gscan2pdf:3746 bin/gscan2pdf:3902
 msgid "Unable to load image"
-msgstr ""
+msgstr "Δεν είναι δυνατή η φόρτωση της εικόνας"
 
-#: bin/gscan2pdf:3633 bin/gscan2pdf:3771
+#: bin/gscan2pdf:3752 bin/gscan2pdf:3890
 msgid "Scanner warming up"
-msgstr ""
+msgstr "Προθέρμανση σαρωτή"
 
-#: bin/gscan2pdf:3652 bin/gscan2pdf:3797
+#: bin/gscan2pdf:3771 bin/gscan2pdf:3916
 msgid "Device busy"
-msgstr ""
+msgstr "Η συσκευέυή είναι απασχολημένη"
 
-#: bin/gscan2pdf:3655 bin/gscan2pdf:3800
+#: bin/gscan2pdf:3774 bin/gscan2pdf:3919
 msgid "Unknown message: "
-msgstr ""
+msgstr "Άγνωστο μύνημα: "
 
-#: bin/gscan2pdf:3774
+#: bin/gscan2pdf:3893
 #, perl-format
 msgid "Scanned page %i..."
-msgstr ""
+msgstr "Σαρώθηκε σελίδα %i..."
 
-#: bin/gscan2pdf:3909 bin/gscan2pdf:3913
+#: bin/gscan2pdf:4027 bin/gscan2pdf:4031
 msgid "Error importing image"
-msgstr ""
+msgstr "Σφάλμε εισαγωγής εικόνας"
 
-#: bin/gscan2pdf:4015
+#: bin/gscan2pdf:4146
 msgid "Error pasting image"
-msgstr ""
+msgstr "Σφάλμα επικόλλησης εικόνας"
 
-#: bin/gscan2pdf:4111
+#: bin/gscan2pdf:4247
 msgid "Patches gratefully received from:"
 msgstr ""
 
-#: bin/gscan2pdf:4113
+#: bin/gscan2pdf:4249
 msgid "To aid the scan-to-PDF process"
-msgstr ""
+msgstr "Για βοήθεια στην εξέλιξη του scan-to-PDF"
 
-#: bin/gscan2pdf:4114
-msgid "Copyright 2006--2007 Jeffrey Ratcliffe"
-msgstr ""
+#: bin/gscan2pdf:4250
+msgid "Copyright 2006--2008 Jeffrey Ratcliffe"
+msgstr "Πνευματική ιδιοκτησία 2006--2008 Jeffrey Ratcliffe"
 
-#: bin/gscan2pdf:4193 bin/gscan2pdf:4574
+#: bin/gscan2pdf:4329 bin/gscan2pdf:4810
 msgid "Updating options"
-msgstr ""
+msgstr "Ενημέρωση επιλογών"
 
-#: bin/gscan2pdf:4275 bin/gscan2pdf:4412
+#: bin/gscan2pdf:4411 bin/gscan2pdf:4428
 msgid "Paper size"
-msgstr ""
+msgstr "Μέγεθος σελίδας"
 
-#: bin/gscan2pdf:4279 bin/gscan2pdf:4282
+#: bin/gscan2pdf:4416 bin/gscan2pdf:4502
 msgid "Edit"
-msgstr ""
-
-#: bin/gscan2pdf:4283
-msgid "Edit paper size"
-msgstr ""
-
-#: bin/gscan2pdf:4296
-msgid "Name"
-msgstr ""
-
-#: bin/gscan2pdf:4297
-msgid "Width"
-msgstr ""
-
-#: bin/gscan2pdf:4298
-msgid "Height"
-msgstr ""
-
-#: bin/gscan2pdf:4343
-msgid "Cannot delete all paper sizes"
-msgstr ""
-
-#: bin/gscan2pdf:4404
-msgid "Selects or edits the paper size"
-msgstr ""
+msgstr "Επεξεργασία"
 
 #: bin/gscan2pdf:4417
-msgid "Custom"
-msgstr ""
+msgid "Selects or edits the paper size"
+msgstr "Επιλέγει ή επεξεργάζεται το μέγεθος σελίδας"
 
-#: bin/gscan2pdf:4421
-msgid "Top-left position of scan area"
-msgstr ""
+#: bin/gscan2pdf:4429 bin/gscan2pdf:4484 bin/gscan2pdf:4629
+msgid "Width"
+msgstr "Πλάτος"
 
-#: bin/gscan2pdf:4870
+#: bin/gscan2pdf:4430 bin/gscan2pdf:4488 bin/gscan2pdf:4630
+msgid "Height"
+msgstr "Ύψος"
+
+#: bin/gscan2pdf:4485
+msgid "Width of scan area"
+msgstr "Πλάτος περιοχής σάρωσης"
+
+#: bin/gscan2pdf:4489
+msgid "Height of scan area"
+msgstr "Ύψος περιοχής σάρωσης"
+
+#: bin/gscan2pdf:4493
+msgid "Top-left x position of scan area"
+msgstr "Επάνω-αριστερά σημείο χ περιοχής σάρωσης"
+
+#: bin/gscan2pdf:4497
+msgid "Top-left y position of scan area"
+msgstr "Επάνω-αριστερά σημείο ψ περιοχής σάρωσης"
+
+#: bin/gscan2pdf:4615
+msgid "Edit paper size"
+msgstr "Επεξεργασία μεγέθους σελίδας"
+
+#: bin/gscan2pdf:4628
+msgid "Name"
+msgstr "Όνομα"
+
+#: bin/gscan2pdf:4675
+msgid "Cannot delete all paper sizes"
+msgstr "Αδύνατη η διαγραφή όλων των μεγεθών σελίδας"
+
+#: bin/gscan2pdf:4718
+msgid ""
+"The following paper sizes are too big to be scanned by the selected device:"
+msgstr ""
+"Τα ακόλουθα μεγέθη σελίδας είναι πολύ μεγάλα για σάρωση από την επιλεγμένη "
+"συσκευή:"
+
+#: bin/gscan2pdf:5120 bin/gscan2pdf:5255
 msgid "%"
-msgstr ""
+msgstr "%"
 
-#: bin/gscan2pdf:4889
+#: bin/gscan2pdf:5139
+#, fuzzy
 msgid "Applying threshold"
-msgstr ""
+msgstr "Εφαρμογή ανοχής"
 
-#: bin/gscan2pdf:4963
+#: bin/gscan2pdf:5213
 #, perl-format
 msgid "Applying threshold to page %i of %i"
-msgstr ""
+msgstr "Εφαρμογή ανοχής στη σελίδα %i of %i"
 
-#: bin/gscan2pdf:5018 bin/gscan2pdf:5021
+#: bin/gscan2pdf:5245 bin/gscan2pdf:5253
+msgid "Crop"
+msgstr "Κόψιμο"
+
+#: bin/gscan2pdf:5275
+msgid "Cropping"
+msgstr "Κοπή"
+
+#: bin/gscan2pdf:5391
+#, perl-format
+msgid "Cropping page %i of %i"
+msgstr "Κοπή σελίδας %i από %i"
+
+#: bin/gscan2pdf:5445 bin/gscan2pdf:5448
 msgid "Running unpaper"
 msgstr ""
 
-#: bin/gscan2pdf:5059 bin/gscan2pdf:5490
+#: bin/gscan2pdf:5486 bin/gscan2pdf:5917
 #, perl-format
 msgid "Page %i of %i"
-msgstr ""
+msgstr "Σελίδα %i από %i"
 
-#: bin/gscan2pdf:5303
+#: bin/gscan2pdf:5730
 msgid "Deskew"
 msgstr ""
 
-#: bin/gscan2pdf:5333
+#: bin/gscan2pdf:5760
 msgid "Border"
-msgstr ""
+msgstr "Περίγραμμα"
 
-#: bin/gscan2pdf:5384
+#: bin/gscan2pdf:5811
 msgid "Filters"
-msgstr ""
+msgstr "Φίλτρα"
 
-#: bin/gscan2pdf:5405
+#: bin/gscan2pdf:5832
 msgid "unpaper"
 msgstr ""
 
-#: bin/gscan2pdf:5449 bin/gscan2pdf:5452
+#: bin/gscan2pdf:5876 bin/gscan2pdf:5879
 msgid "Running OCR"
-msgstr ""
+msgstr "Εκτέλεση OCR"
 
-#: bin/gscan2pdf:5637
+#: bin/gscan2pdf:6064
 msgid "Language to recognise"
-msgstr ""
+msgstr "Γλώσσα προς αναγνώριση"
 
-#: bin/gscan2pdf:5642
+#: bin/gscan2pdf:6069
 msgid "German"
+msgstr "Γερμανικά"
+
+#: bin/gscan2pdf:6070
+msgid "Fraktur"
 msgstr ""
 
-#: bin/gscan2pdf:5643 bin/gscan2pdf:5677
+#: bin/gscan2pdf:6071 bin/gscan2pdf:6111
 msgid "English"
-msgstr ""
+msgstr "Αγγλικά"
 
-#: bin/gscan2pdf:5644
+#: bin/gscan2pdf:6072
 msgid "French"
-msgstr ""
+msgstr "Γαλλικά"
 
-#: bin/gscan2pdf:5645
+#: bin/gscan2pdf:6073
 msgid "Italian"
 msgstr ""
 
-#: bin/gscan2pdf:5646
+#: bin/gscan2pdf:6074
 msgid "Dutch"
-msgstr ""
+msgstr "Ολλανδικά"
 
-#: bin/gscan2pdf:5647
+#: bin/gscan2pdf:6075
+msgid "Portuguese"
+msgstr "Πορτογαλικά"
+
+#: bin/gscan2pdf:6076
 msgid "Spanish"
-msgstr ""
+msgstr "Ισπανικά"
 
-#: bin/gscan2pdf:5694
+#: bin/gscan2pdf:6077
+msgid "Vietnamese"
+msgstr "Βιετναμέζικα"
+
+#: bin/gscan2pdf:6128
 msgid "OCR"
-msgstr ""
+msgstr "OCR"
 
-#: bin/gscan2pdf:5699
+#: bin/gscan2pdf:6133
 msgid "OCR Engine"
-msgstr ""
+msgstr "Μηχανή OCR"
 
-#: bin/gscan2pdf:5726
+#: bin/gscan2pdf:6160
 msgid "Start OCR"
-msgstr ""
+msgstr "Εκκίνηση OCR"
 
-#: bin/gscan2pdf:5737
+#: bin/gscan2pdf:6171
 msgid "No page selected"
-msgstr ""
+msgstr "Δεν επιλέχθηκε σελίδα"
 
-#: bin/gscan2pdf:5795
+#: bin/gscan2pdf:6194
+msgid ""
+"Some pages have not been saved.\n"
+"Do you really want to quit?"
+msgstr ""
+"Κάποιες σελίδες δεν έχουν αποθηκευτεί.\n"
+"Θέλετε πράγματι να εγκαταλείψετε;"
+
+#: bin/gscan2pdf:6239
 #, perl-format
 msgid ""
 "The help viewer requires module Gtk2::Ex::PodViewer\n"
