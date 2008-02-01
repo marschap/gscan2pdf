@@ -7146,8 +7146,7 @@ Saves the current, selected or all pages as a TIFF, PNG, JPEG, PNM or GIF.
 =head3 Save DjVu
 
 Saves the current, selected or all pages as a DjVu.
-Currently, only bitonal compression is available.
-This is best suited to black and white scans and as such, produces better
+Both black and white, and colour images produce better
 compression than PDF. See L<http://www.djvuzone.org/> for more details.
 
 =head3 Email as PDF
@@ -7155,6 +7154,12 @@ compression than PDF. See L<http://www.djvuzone.org/> for more details.
 Attaches the current, selected or all pages as a PDF to a blank email.
 This requires xdg-email, which is in the xdg-utils package.
 If this is not present, the option is ghosted out.
+
+=head3 Compress temporary files
+
+If your temporary ($TMPDIR) directory is getting full, this function can be useful -
+compressing all images at LZW-compressed TIFFs. These require much less space than
+the PNM files that are typically produced by SANE or by importing a PDF.
 
 =head2 Edit
 
