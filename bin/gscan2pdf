@@ -16,9 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    add Imagemagick/unsharp mask option
 #    add preferences option to change temp dir.
-#    add option File/Compress working files to convert all /tmp files to
-#      lzw tiff and rm all non-used files
 #    Remove instances of 'if (defined($SETTING' and put them in default
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
@@ -4336,25 +4335,25 @@ EOS
  $about->set_license ($licence);
  $about->set_website ('http://gscan2pdf.sf.net');
  my $translators = <<EOS;
-Petr Jelínek
-Alexandre Prokoudine
+jimpap
+Petr Jelinek
 Matthias Gutjahr
+Alexandre Prokoudine
 Nicolas Stransky
-Hugo Pereira
 Piotr Strębski
+Hugo Pereira
 Daniel Frank
 Dirk Tas
 Matthias Mailänder
 Jen Ockwell
 Yözen Hernández
 Christoph Langner
-Alberto Boiti
 Spartakus
 Jacob Nielsen
+Alberto Boiti
 Yves MATHIEU
+luther-x
 Ioannis Koniaris
-Rodrigo Donado
-Gérard Duteil
 EOS
  $about->set_translator_credits ($translators);
  $about->set_artists ('lodp');
