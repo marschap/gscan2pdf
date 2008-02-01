@@ -6550,6 +6550,8 @@ sub start_process {
  $reader = FileHandle->new;
  $writer = FileHandle->new;
  socketpair($reader, $writer,  AF_UNIX, SOCK_DGRAM, PF_UNSPEC);
+ binmode $reader, ':utf8';
+ binmode $writer, ':utf8';
 
  my $pid = fork();
  if ($pid) {
