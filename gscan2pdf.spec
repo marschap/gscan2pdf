@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.20
+Version: 0.9.21
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -82,7 +82,10 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sat Jan 19 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Fri Feb 01 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release.
+    Closes: #461859 (better selected/current/all heuristic)
+    Closes: #461076 (importing PDFs causes /tmp/ overflow)
   - New upstream release.
     Closes: #449421 (Recognise warm-up message from gt68xx driver)
     Closes: #457377 (Can't save files with spaces in names)
@@ -92,6 +95,7 @@ fi
     Closes: #461058 (does not ask when quitting without saving the PDF)
   - Updated rules to dh-make-perl 0.35
   - Bumped Standards-Version
+  - + watch file
   - New upstream release.
     Closes: #440902 (window placement of scan dialog)
   - New upstream release.
