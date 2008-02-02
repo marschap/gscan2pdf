@@ -2670,7 +2670,7 @@ sub save_image {
    $filename = $filename.".$SETTING{'image type'}"
     if ($filename !~ /\.$SETTING{'image type'}$/i);
    if (! file_exists($file_chooser, $filename)) {
-    if (system ("convert $filelist[0] '$filename'")) {
+    if (! system ("convert $filelist[0] '$filename'")) {
      mark_pages(@pagelist);
     }
     else {
