@@ -17,7 +17,7 @@
 
 # To do
 #    add Imagemagick/unsharp mask option
-#    add preferences option to change temp dir.
+#    move other Edit/options to preferences.
 #    Remove instances of 'if (defined($SETTING' and put them in default
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
@@ -300,6 +300,7 @@ my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
     $scanwatch, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
+    $windowr,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -345,6 +346,7 @@ my @action_items = (
    } ],
  [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
  [ 'Frontend', undef, $d->get('_Frontend') ],
+ [ 'Preferences', 'gtk-preferences', $d->get('Prefere_nces'), undef, $d->get('Edit preferences'), \&preferences ],
  
  # View menu
  [ 'View', undef, $d->get('_View') ],
@@ -412,6 +414,7 @@ my $ui = "<ui>
    <separator/>
    <menuitem action='Options'/>
    <menuitem action='RestoreWindow'/>
+   <menuitem action='Preferences'/>
   </menu>
   <menu action='View'> 
    <menuitem action='Zoom 100'/>
@@ -552,7 +555,18 @@ $scwin_thumbs -> set_policy('automatic', 'automatic');
 $scwin_thumbs -> set_shadow_type('etched-in');
 
 # Create a temporary directory for scans
-my $dir = tempdir;
+my $dir;
+if (defined($SETTING{TMPDIR}) and $SETTING{TMPDIR} ne '') {
+ if (! eval {$dir = tempdir(DIR => $SETTING{TMPDIR})}) {
+  $dir = tempdir;
+  warn sprintf($d->get("Warning: unable to use %s for temporary storage. Defaulting to %s instead.\n"),
+                                               $SETTING{TMPDIR}, dirname($dir));
+ }
+}
+else {
+ $dir = tempdir;
+}
+print "Using $dir for temporary files\n" if $debug;
 
 # define hidden string column for filename and annotation buffer
 Gtk2::Ex::Simple::List -> add_column_type( 'hstring',
@@ -6717,6 +6731,63 @@ sub compress_temp {
   return TRUE;  # continue without uninstalling
  });
 
+}
+
+
+# Preferences dialog
+
+sub preferences {
+
+ if (defined $windowr) {
+  $windowr -> present;
+  return;
+ }
+
+ ($windowr, my $vbox) = create_window($window, $d->get('Preferences'), FALSE);
+
+ my $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Temporary directory'));
+ $hbox -> pack_start ($label, FALSE, FALSE, 0);
+ my $entry = Gtk2::Entry -> new;
+ $hbox -> add($entry);
+ $entry -> set_text(dirname($dir));
+ my $button = Gtk2::Button -> new($d->get('Browse'));
+ $button -> signal_connect( clicked => sub {
+  my $file_chooser = Gtk2::FileChooserDialog -> new(
+                                       $d->get('Select temporary directory'),
+                                       $windowr, 'select-folder',
+                                       'gtk-cancel' => 'cancel',
+                                       'gtk-ok' => 'ok');
+  $file_chooser->set_current_folder ($entry -> get_text);
+  if ('ok' eq $file_chooser->run) {
+   $entry -> set_text($file_chooser -> get_filename);
+  }
+  $file_chooser -> destroy;
+ });
+ $hbox -> pack_end( $button, TRUE, TRUE, 0 );
+
+ $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+
+# Apply button
+ $button = Gtk2::Button -> new_from_stock('gtk-apply');
+ $hbox -> pack_start( $button, TRUE, TRUE, 0 );
+ $button -> signal_connect (clicked => sub {
+  $windowr -> hide;
+  if ($entry -> get_text ne $SETTING{TMPDIR}) {
+   $SETTING{TMPDIR} = $entry -> get_text;
+   show_message_dialog($window, 'warning', 'close', $d->get('You will have to restart gscanp2df for changes to the temporary directory to take effect.'));   
+  }
+ });
+
+# Cancel button
+ $button = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hbox -> pack_end( $button, TRUE, TRUE, 0 );
+ $button -> signal_connect (clicked => sub {
+  $windowr -> hide;
+ });
+ $windowr -> show_all;
 }
 
 
