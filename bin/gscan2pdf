@@ -218,6 +218,8 @@ my $conf = Config::General->new(
   'downsample'         => FALSE,
   'downsample dpi'     => 150,
   'threshold tool'     => 80,
+  'enable options'     => TRUE,
+  'restore window'     => TRUE,
  },
 );
 my %SETTING = $conf->getall;
@@ -502,7 +504,7 @@ $window -> signal_connect(window_state_event => sub {
 });
 
 # If defined in the config file, set the window state, size and position
-if (! defined($SETTING{'restore window'}) or $SETTING{'restore window'}) {
+if ($SETTING{'restore window'}) {
  $window -> set_default_size ($SETTING{'window_width'}, $SETTING{'window_height'});
  $window -> move ($SETTING{'window_x'}, $SETTING{'window_y'})
   if (defined($SETTING{'window_x'}) and defined($SETTING{'window_y'}));
@@ -2337,8 +2339,8 @@ sub save_PDF_dialog {
 # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 #warn "rmb pdf $SETTING{'RMB'} $SETTING{'Page range'}\n";
 
- if ($uimanager->get_widget('/MenuBar/Edit/Options') -> get_active) {
-
+ if ($SETTING{'enable options'}) {
+ 
   if (defined $windowp) {
    $windowp -> present;
    return;
@@ -2753,7 +2755,7 @@ sub save_djvu_dialog {
 
 # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
- if ($uimanager->get_widget('/MenuBar/Edit/Options') -> get_active) {
+ if ($SETTING{'enable options'}) {
 
   if (defined $windowv) {
    $windowv -> present;
@@ -6689,15 +6691,13 @@ sub preferences {
 
 # Save options setting
  my $cbs = Gtk2::CheckButton->new_with_label ($d->get('Enable save options'));
- $cbs->set_active (TRUE)
-  unless (defined($SETTING{'enable options'}) and !$SETTING{'enable options'});
+ $cbs->set_active (TRUE) if ($SETTING{'enable options'});
  $vbox -> pack_start($cbs, TRUE, TRUE, 0);
 
 # Restore window setting
  my $cbw = Gtk2::CheckButton->new_with_label (
                                  $d->get('Restore window settings on startup'));
- $cbw->set_active (TRUE)
-  unless (defined($SETTING{'restore window'}) and !$SETTING{'restore window'});
+ $cbw->set_active (TRUE) if ($SETTING{'restore window'});
  $vbox -> pack_start($cbw, TRUE, TRUE, 0);
 
 # Temporary directory settings
