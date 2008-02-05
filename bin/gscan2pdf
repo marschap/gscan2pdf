@@ -2167,15 +2167,17 @@ sub create_PDF {
     $@ = "Error embedding file $filename in $format format to PDF\n";
    }
    if ($@) {
-    warn $@;
+    warn $@ if $debug;
+    send($writer, '-1'.sprintf($d->get("Error embedding file image in %s format to PDF: %s"), $format, $@), 0);
    }
    else {
     eval {$gfx->image($imgobj,0,0,72/$resolution)};
     if ($@) {
-     warn $@;
+     warn $@ if $debug;
+     send($writer, '-1'.sprintf($d->get("Error embedding file image in %s format to PDF: %s"), $format, $@), 0);
     }
     else {
-     print "Adding $format at $resolution dpi\n";
+     print "Adding $format at $resolution dpi\n" if $debug;
     }
    }
   }
@@ -2191,16 +2193,21 @@ sub create_PDF {
   my $line;
   if ($condition & 'in') { # bit field operation. >= would also work
    recv($reader, $line, 1000, 0);
-   if ($line =~ /(\d*\.?\d*)(.*)/) {
+   if ($line =~ /(-?\d*\.?\d*)(.*)/) {
     my $fraction=$1;
     my $text=$2;
-    if ($fraction > 1) {
+    if ($fraction == -1) {
+     show_message_dialog($window, 'error', 'close', $text);
+    }
+    elsif ($fraction > 1) {
      $dialog -> destroy;
      mark_pages(@pagelist);
      return FALSE;  # uninstall
     }
-    $pbar->set_fraction($fraction);
-    $pbar->set_text($text);
+    else {
+     $pbar->set_fraction($fraction);
+     $pbar->set_text($text);
+    }
    }
   }
 
