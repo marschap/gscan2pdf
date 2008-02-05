@@ -17,7 +17,7 @@
 
 # To do
 #    add Imagemagick/unsharp mask option
-#    move other Edit/options to preferences.
+#    move other Edit/frontend to preferences.
 #    Remove instances of 'if (defined($SETTING' and put them in default
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
@@ -127,7 +127,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.21';
+my $version = '0.9.22';
 
 my $tolerance = 1;
 
@@ -412,8 +412,6 @@ my $ui = "<ui>
     <menuitem action='scanadf'/>
    </menu>
    <separator/>
-   <menuitem action='Options'/>
-   <menuitem action='RestoreWindow'/>
    <menuitem action='Preferences'/>
   </menu>
   <menu action='View'> 
@@ -1178,17 +1176,6 @@ sub create_menu_bar {
 # Add the actiongroup to the uimanager          
  $uimanager->insert_action_group($actions_frontends, 0);
 
-# Create the options Gtk2::ActionGroup instance
-# and fill it with Gtk2::ToggleAction instances
- my $actions_options = Gtk2::ActionGroup->new ("options");
- $actions_options->add_toggle_actions ( [
-  [ 'Options', 'gtk-preferences', $d->get('Enable Save _Options'), undef, $d->get('View options before saving'), undef, TRUE ],
-  [ 'RestoreWindow', 'gtk-preferences', $d->get('Restore _window settings on startup'), undef, $d->get('Restore window settings on startup'), undef, TRUE ],
- ] );
-
-# Add the actiongroup to the uimanager          
- $uimanager->insert_action_group($actions_options, 0);
-
 # add the basic XML description of the GUI
  $uimanager->add_ui_from_string ($ui);
 
@@ -1247,14 +1234,6 @@ sub create_menu_bar {
  else {
   $SETTING{'frontend'} = 'scanimage';
  }
-
-# Disable options if necessary
- $uimanager->get_widget('/MenuBar/Edit/Options') -> set_active(FALSE)
-  if (defined($SETTING{'enable options'}) and ! $SETTING{'enable options'});
-
-# Disable restore window if necessary
- $uimanager->get_widget('/MenuBar/Edit/RestoreWindow') -> set_active(FALSE)
-  if (defined($SETTING{'restore window'}) and ! $SETTING{'restore window'});
 
 # Ghost save image item if imagemagick not available
  $msg .= $d->get("Save image and Save as PDF both require imagemagick\n")
@@ -6293,14 +6272,6 @@ sub quit {
  $SETTING{'thumb panel'} = $hpaned -> get_position;
  $SETTING{'ocr panel'} = $vpaned -> get_position;
 
-# Save options setting
- $SETTING{'enable options'} =
-  $uimanager->get_widget('/MenuBar/Edit/Options') -> get_active;
-
-# Save options setting
- $SETTING{'restore window'} =
-  $uimanager->get_widget('/MenuBar/Edit/RestoreWindow') -> get_active;
-
 # delete $SETTING{'RMB'};
 
 # Write config file
@@ -6745,6 +6716,20 @@ sub preferences {
 
  ($windowr, my $vbox) = create_window($window, $d->get('Preferences'), FALSE);
 
+# Save options setting
+ my $cbs = Gtk2::CheckButton->new_with_label ($d->get('Enable save options'));
+ $cbs->set_active (TRUE)
+  unless (defined($SETTING{'enable options'}) and !$SETTING{'enable options'});
+
+# Restore window setting
+ $vbox -> pack_start($cbs, TRUE, TRUE, 0);
+ my $cbw = Gtk2::CheckButton->new_with_label (
+                                 $d->get('Restore window settings on startup'));
+ $cbw->set_active (TRUE)
+  unless (defined($SETTING{'restore window'}) and !$SETTING{'restore window'});
+ $vbox -> pack_start($cbw, TRUE, TRUE, 0);
+
+# Temporary directory settings
  my $hbox = Gtk2::HBox -> new;
  $vbox -> pack_start($hbox, TRUE, TRUE, 0);
  my $label = Gtk2::Label -> new ($d->get('Temporary directory'));
@@ -6775,6 +6760,8 @@ sub preferences {
  $hbox -> pack_start( $button, TRUE, TRUE, 0 );
  $button -> signal_connect (clicked => sub {
   $windowr -> hide;
+  $SETTING{'enable options'} = $cbs->get_active;
+  $SETTING{'restore window'} = $cbw->get_active;
   if ($entry -> get_text ne $SETTING{TMPDIR}) {
    $SETTING{TMPDIR} = $entry -> get_text;
    show_message_dialog($window, 'warning', 'close', $d->get('You will have to restart gscanp2df for changes to the temporary directory to take effect.'));   

@@ -82,7 +82,9 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Fri Feb 01 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Tue Feb 05 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release.
+    Closes: #463708 (gscan2pdf: Error when saving as PNG)
   - New upstream release.
     Closes: #461859 (better selected/current/all heuristic)
     Closes: #461076 (importing PDFs causes /tmp/ overflow)
