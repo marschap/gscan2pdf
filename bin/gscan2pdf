@@ -17,7 +17,6 @@
 
 # To do
 #    add Imagemagick/unsharp mask option
-#    move other Edit/frontend to preferences.
 #    Remove instances of 'if (defined($SETTING' and put them in default
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
@@ -345,7 +344,6 @@ my @action_items = (
     renumber($slist, 0, 1, 1);
    } ],
  [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
- [ 'Frontend', undef, $d->get('_Frontend') ],
  [ 'Preferences', 'gtk-preferences', $d->get('Prefere_nces'), undef, $d->get('Edit preferences'), \&preferences ],
  
  # View menu
@@ -369,14 +367,6 @@ my @action_items = (
  [ 'Help menu', undef, $d->get('_Help') ],
  [ 'Help', 'gtk-help', $d->get('_Help'), '<control>h', $d->get('Help'), \&view_pod ],
  [ 'About', 'gtk-about', $d->get('_About'), undef, $d->get('_About'), \&about ],
-);
-
-my @frontends = (
-  #Fields for each radio-action item:
-  #[name, stock_id, value, label, accelerator, tooltip, value]
-
- [ 'scanimage', undef, 'scan_image', undef, 'scanimage', 0 ],
- [ 'scanadf',  undef, 'scan_adf', undef, 'scanadf', 1 ],
 );
 
 # Declare the XML structure
@@ -406,11 +396,6 @@ my $ui = "<ui>
    <menuitem action='Delete'/>
    <menuitem action='Renumber'/>
    <menuitem action='Select All'/>
-   <separator/>
-   <menu action='Frontend'>
-    <menuitem action='scanimage'/>
-    <menuitem action='scanadf'/>
-   </menu>
    <separator/>
    <menuitem action='Preferences'/>
   </menu>
@@ -1168,14 +1153,6 @@ sub create_menu_bar {
 # Add the actiongroup to the uimanager  
  $uimanager->insert_action_group($actions_basic, 0);
 
-# Create the frontend Gtk2::ActionGroup instance
-# and fill it with Gtk2::RadioAction instances
- my $actions_frontends = Gtk2::ActionGroup->new ("frontends");
- $actions_frontends->add_radio_actions(\@frontends, 0, \&change_frontend);
-
-# Add the actiongroup to the uimanager          
- $uimanager->insert_action_group($actions_frontends, 0);
-
 # add the basic XML description of the GUI
  $uimanager->add_ui_from_string ($ui);
 
@@ -1218,21 +1195,10 @@ sub create_menu_bar {
  $msg .= $d->get("PDF creation requires PDF::API2\n")
   if (! $dependencies{pdfapi2});
 
-# Ghost scanadf item if scanadf or imagemagick not available
- my $item = $uimanager->get_widget('/MenuBar/Edit/Frontend/scanadf');
+# Set frontend to scanimage if scanadf not available
  if (! $dependencies{scanadf}) {
-  $item -> set_sensitive(FALSE);
   $SETTING{'frontend'} = 'scanimage';
   $msg .= $d->get("The scanadf frontend is not available\n")
- }
-
-# Set scanadf active if in config
- elsif (defined($SETTING{'frontend'}) and $SETTING{'frontend'} eq 'scanadf') {
-  $item -> set_active(TRUE);
- }
-# if scanadf isn't set, make sure that scanimage is
- else {
-  $SETTING{'frontend'} = 'scanimage';
  }
 
 # Ghost save image item if imagemagick not available
@@ -1436,15 +1402,6 @@ sub update_uimanager {
 
 # If the scan dialog has already been drawn, update the start page spinbutton
  update_start();
-}
-
-
-# Callback from RadioItem Edit/Frontend
-
-sub change_frontend {
- my ($action, $current) = @_;
- $SETTING{'frontend'} = $current->get_name;
- rescan_options($vboxd, $device[$combobd -> get_active]) if (defined $windows);
 }
 
 
@@ -6716,13 +6673,27 @@ sub preferences {
 
  ($windowr, my $vbox) = create_window($window, $d->get('Preferences'), FALSE);
 
+# Frontends
+ my $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Frontend'));
+ $hbox -> pack_start($label, FALSE, FALSE, 0);
+ my @frontends = (
+  [ 'scanimage', $d->get('scanimage'), $d->get('Scan using the scanimage frontend.') ],
+ );
+ push @frontends,
+  [ 'scanadf', $d->get('scanadf'), $d->get('Scan using the scanadf frontend.') ],
+  if ($dependencies{scanadf});
+ my $combob =  combobox_from_array($SETTING{'frontend'}, @frontends);
+ $hbox -> pack_end($combob, TRUE, TRUE, 0);
+
 # Save options setting
  my $cbs = Gtk2::CheckButton->new_with_label ($d->get('Enable save options'));
  $cbs->set_active (TRUE)
   unless (defined($SETTING{'enable options'}) and !$SETTING{'enable options'});
+ $vbox -> pack_start($cbs, TRUE, TRUE, 0);
 
 # Restore window setting
- $vbox -> pack_start($cbs, TRUE, TRUE, 0);
  my $cbw = Gtk2::CheckButton->new_with_label (
                                  $d->get('Restore window settings on startup'));
  $cbw->set_active (TRUE)
@@ -6730,9 +6701,9 @@ sub preferences {
  $vbox -> pack_start($cbw, TRUE, TRUE, 0);
 
 # Temporary directory settings
- my $hbox = Gtk2::HBox -> new;
+ $hbox = Gtk2::HBox -> new;
  $vbox -> pack_start($hbox, TRUE, TRUE, 0);
- my $label = Gtk2::Label -> new ($d->get('Temporary directory'));
+ $label = Gtk2::Label -> new ($d->get('Temporary directory'));
  $hbox -> pack_start ($label, FALSE, FALSE, 0);
  my $entry = Gtk2::Entry -> new;
  $hbox -> add($entry);
@@ -6760,6 +6731,10 @@ sub preferences {
  $hbox -> pack_start( $button, TRUE, TRUE, 0 );
  $button -> signal_connect (clicked => sub {
   $windowr -> hide;
+  if ($SETTING{'frontend'} ne $frontends[$combob->get_active][0]) {
+   $SETTING{'frontend'} = $frontends[$combob->get_active][0];
+   rescan_options($vboxd, $device[$combobd -> get_active]) if (defined $windows);
+  }
   $SETTING{'enable options'} = $cbs->get_active;
   $SETTING{'restore window'} = $cbw->get_active;
   if ($entry -> get_text ne $SETTING{TMPDIR}) {
