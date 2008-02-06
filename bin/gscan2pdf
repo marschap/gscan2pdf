@@ -218,6 +218,10 @@ my $conf = Config::General->new(
   'downsample'         => FALSE,
   'downsample dpi'     => 150,
   'threshold tool'     => 80,
+  'unsharp radius'     => 0,
+  'unsharp sigma'      => 1,
+  'unsharp amount'     => 1,
+  'unsharp threshold'  => 0.05,
   'enable options'     => TRUE,
   'restore window'     => TRUE,
  },
@@ -361,6 +365,7 @@ my @action_items = (
  # Tools menu
  [ 'Tools', undef, $d->get('_Tools') ],
  [ 'Threshold', undef, $d->get('_Threshold'), undef, $d->get('Change each pixel above this threshold to black'), \&threshold ],
+ [ 'Unsharp', undef, $d->get('_Unsharp Mask'), undef, $d->get('Apply an unsharp mask'), \&unsharp ],
 # [ 'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef, $d->get('Crop pages'), \&crop ],
  [ 'unpaper', undef, $d->get('_unpaper'), undef, $d->get('Clean up pages with unpaper'), \&unpaper ],
  [ 'OCR', undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition'), \&OCR ],
@@ -413,6 +418,7 @@ my $ui = "<ui>
   </menu>
   <menu action='Tools'> 
    <menuitem action='Threshold'/>
+   <menuitem action='Unsharp'/>
    <separator/>
    <menuitem action='unpaper'/>
    <menuitem action='OCR'/>
@@ -1239,6 +1245,7 @@ sub create_menu_bar {
  $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
 
  $uimanager->get_widget('/MenuBar/Tools/Threshold') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/Tools/Unsharp') -> set_sensitive(FALSE);
 # $uimanager->get_widget('/MenuBar/Tools/Crop') -> set_sensitive(FALSE);
 
 # a convenient place to put these
@@ -1314,6 +1321,7 @@ sub update_uimanager {
                  '/MenuBar/View/Rotate 180',
                  '/MenuBar/View/Rotate 270',
                  '/MenuBar/Tools/Threshold',
+                 '/MenuBar/Tools/Unsharp',
                  '/MenuBar/Tools/unpaper',
                  '/MenuBar/Tools/OCR',
 
@@ -5263,6 +5271,182 @@ sub threshold {
 }
 
 
+# Display page selector and on apply unsharp accordingly
+
+sub unsharp {
+
+# $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
+
+ my ($windowum, $vbox) = create_window($window, $d->get('Unsharp mask'), TRUE);
+
+# Frame for page range
+ add_page_range($vbox);
+
+# SpinButton for radius
+ my $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hbox, FALSE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Radius'));
+ $hbox -> pack_start ($label, FALSE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('pixels'));
+ $hbox -> pack_end ($label, FALSE, TRUE, 0);
+ my $spinbuttonr = Gtk2::SpinButton -> new_with_range(0, 100, 1);
+ $spinbuttonr->set_value ($SETTING{'unsharp radius'});
+ $tooltips -> set_tip ($spinbuttonr, $d->get('The radius of the Gaussian, in pixels, not counting the center pixel (0 = automatic).'));
+ $hbox -> pack_end ($spinbuttonr, FALSE, TRUE, 0);
+
+# SpinButton for sigma
+ $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hbox, FALSE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('Sigma'));
+ $hbox -> pack_start ($label, FALSE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('pixels'));
+ $hbox -> pack_end ($label, FALSE, TRUE, 0);
+ my $spinbuttons = Gtk2::SpinButton -> new_with_range(0, 5, .1);
+ $spinbuttons->set_value ($SETTING{'unsharp sigma'});
+ $tooltips -> set_tip ($spinbuttons, $d->get('The standard deviation of the Gaussian.'));
+ $hbox -> pack_end ($spinbuttons, FALSE, TRUE, 0);
+
+# SpinButton for amount
+ $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hbox, FALSE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('Amount'));
+ $hbox -> pack_start ($label, FALSE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('%'));
+ $hbox -> pack_end ($label, FALSE, TRUE, 0);
+ my $spinbuttona = Gtk2::SpinButton -> new_with_range(0, 100, 1);
+ $spinbuttona->set_value ($SETTING{'unsharp amount'});
+ $tooltips -> set_tip ($spinbuttona, $d->get('The percentage of the difference between the original and the blur image that is added back into the original.'));
+ $hbox -> pack_end ($spinbuttona, FALSE, TRUE, 0);
+
+# SpinButton for threshold
+ $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hbox, FALSE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('Threshold'));
+ $hbox -> pack_start ($label, FALSE, TRUE, 0);
+ my $spinbuttont = Gtk2::SpinButton -> new_with_range(0, 1, 0.01);
+ $spinbuttont->set_value ($SETTING{'unsharp threshold'});
+ $tooltips -> set_tip ($spinbuttont, $d->get('The threshold, as a fraction of QuantumRange, needed to apply the difference amount.'));
+ $hbox -> pack_end ($spinbuttont, FALSE, TRUE, 0);
+
+# HBox for buttons
+ my $hboxb = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+
+# Apply button
+ my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
+ $hboxb -> pack_start( $abutton, TRUE, TRUE, 0 );
+ $abutton -> signal_connect (clicked => sub {
+
+# Update undo/redo buffers
+  take_snapshot();
+
+  $SETTING{'unsharp radius'} = $spinbuttonr->get_value;
+  $SETTING{'unsharp sigma'} = $spinbuttons->get_value;
+  $SETTING{'unsharp amount'} = $spinbuttona->get_value;
+  $SETTING{'unsharp threshold'} = $spinbuttont->get_value;
+  my $dialog = Gtk2::Dialog -> new ($d->get('Applying unsharp mask')."...", $windowo,
+                                            'destroy-with-parent',
+                                            'gtk-cancel' => 'cancel');
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   kill_subs();
+  });
+  $dialog -> show_all;
+
+# Install a handler for child processes
+  $SIG{CHLD} = \&sig_child;
+
+  my @pagelist = get_page_index();
+  my $pid = start_process(sub {
+
+# fill $pagelist with filenames depending on which radiobutton is active
+   my $page = 0;
+
+   foreach (@pagelist) {
+    send($writer, sprintf("%i %i", $page, $#pagelist+1), 0);
+
+    my $filename = $slist -> {data}[$_][2];
+    my $image = Image::Magick->new;
+    my $x = $image->Read($filename);
+    warn "$x" if "$x";
+
+# Unsharp the image
+    $image->UnsharpMask(radius=>$SETTING{'unsharp radius'},
+                        sigma=>$SETTING{'unsharp sigma'},
+                        amount=>$SETTING{'unsharp amount'},
+                        threshold=>$SETTING{'unsharp threshold'});
+
+# Write it
+    my $suffix = $1 if ($filename =~ /\.(\w*)$/);
+    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
+    $x = $image->Write(filename => $filename);
+    warn "$x" if "$x";
+    warn "Applying unsharp mask with r=$SETTING{'unsharp radius'}, s=$SETTING{'unsharp sigma'}, a=$SETTING{'unsharp amount'}, t=$SETTING{'unsharp threshold'} to $filename\n"
+     if $debug;
+
+    send($writer, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
+    ++$page;
+   }
+   send($writer, '2 1', 0);
+  });
+
+  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+
+   my $line;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    recv($reader, $line, 1000, 0);
+    if ($line =~ /(\d*) (\d*) ?(.*)/) {
+     my $page=$1;
+     my $total=$2;
+     my $filename=$3;
+     my $fraction = $page/$total;
+     if ($fraction > 1) {
+      $dialog -> destroy;
+
+# Reselect the pages to display the rotated image(s)
+      $slist->select(@pagelist);
+      return FALSE;  # uninstall
+     }
+     if (defined $filename and $filename ne '') {
+      $slist -> {data}[$pagelist[$page]][2] = $filename;
+      $slist -> {data}[$pagelist[$page]][1] =
+           get_pixbuf($slist -> {data}[$pagelist[$page]][2], $heightt, $widtht);
+     }
+     else {
+      $pbar->set_fraction($fraction);
+      $pbar->set_text(sprintf($d->get("Applying unsharp mask to page %i of %i"),
+                                                              $page+1, $total));
+     }
+    }
+   }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+    $dialog -> destroy;
+    update_uimanager();
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # continue without uninstalling
+  });
+ });
+
+# Cancel button
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $windowum -> destroy } );
+
+ $windowum -> show_all;
+}
+
+
 # Display page selector and on apply threshold accordingly
 
 sub crop {
@@ -7253,7 +7437,15 @@ are ghosted out.
 
 =head3 Threshold
 
-Changes all pixels darker than the given value to black; all others become white.
+Changes all pixels darker than the given value to black; all others become
+white.
+
+=head3 Unsharp mask
+
+The unsharp option sharpens an image. The image is convolved with a Gaussian
+operator of the given radius and standard deviation (sigma). For reasonable
+results, radius should be larger than sigma. Use a radius of 0 to have the
+method select a suitable radius.
 
 =head3 unpaper
 
