@@ -333,9 +333,7 @@ my @action_items = (
  [ 'New', 'gtk-new', $d->get('_New'), '<control>n', $d->get('Clears all pages'), \&new ],
  [ 'Import', 'gtk-open', $d->get('_Import'), '<control>i', $d->get('Import image file(s)'), \&import ],
  [ 'Scan', 'scanner', $d->get('S_can'), undef, $d->get('Scan document'), \&scan_dialog ],
- [ 'Save PDF', 'pdf', $d->get('_Save PDF'), '<shift><control>s', $d->get('Save as PDF'), \&save_PDF_dialog ],
- [ 'Save image', 'gtk-save', $d->get('Save _Image'), '<control>s', $d->get('Save image'), \&save_image_dialog ],
- [ 'Save DjVu', undef, $d->get('Save _DjVu'), undef, $d->get('Save as DjVu'), \&save_djvu_dialog ],
+ [ 'Save', 'gtk-save', $d->get('Save'), '<control>s', $d->get('Save'), \&save_dialog ],
  [ 'Email as PDF', 'gtk-edit', $d->get('_Email as PDF'), '<control>e', $d->get('Attach as PDF to a new email'), \&email ],
  [ 'Compress', undef, $d->get('_Compress temporary files'), undef, $d->get('Compress temporary files'), \&compress_temp ],
  [ 'Quit', 'gtk-quit', $d->get('_Quit'), '<control>q', $d->get('Quit'), sub { Gtk2 -> main_quit if quit(); } ],
@@ -389,9 +387,7 @@ my $ui = "<ui>
    <menuitem action='New'/>
    <menuitem action='Import'/>
    <menuitem action='Scan'/>
-   <menuitem action='Save PDF'/>
-   <menuitem action='Save image'/>
-   <menuitem action='Save DjVu'/>
+   <menuitem action='Save'/>
    <menuitem action='Email as PDF'/>
    <separator/>
    <menuitem action='Compress'/>
@@ -437,8 +433,7 @@ my $ui = "<ui>
   <toolitem action='New'/>
   <toolitem action='Import'/>
   <toolitem action='Scan'/>
-  <toolitem action='Save PDF'/>
-  <toolitem action='Save image'/>
+  <toolitem action='Save'/>
   <toolitem action='Email as PDF'/>
   <separator/>
   <toolitem action='Undo'/>
@@ -479,9 +474,7 @@ my $ui = "<ui>
   <menuitem action='Delete'/>
  </popup>
  <popup name='Thumb_Popup'>
-  <menuitem action='Save PDF'/>
-  <menuitem action='Save image'/>
-  <menuitem action='Save DjVu'/>
+  <menuitem action='Save'/>
   <menuitem action='Email as PDF'/>
   <separator/>
   <menuitem action='Renumber'/>
@@ -1237,16 +1230,11 @@ sub create_menu_bar {
  $uimanager->get_widget('/ToolBar/Redo') -> set_sensitive(FALSE);
 
 # save * start off ghosted anyway-
- $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(FALSE);
- $uimanager->get_widget('/MenuBar/File/Save image') -> set_sensitive(FALSE);
- $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/File/Save') -> set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(FALSE);
- $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(FALSE);
- $uimanager->get_widget('/ToolBar/Save image') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/ToolBar/Save') -> set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(FALSE);
- $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(FALSE);
- $uimanager->get_widget('/Thumb_Popup/Save image') -> set_sensitive(FALSE);
- $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/Thumb_Popup/Save') -> set_sensitive(FALSE);
  $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
 
  $uimanager->get_widget('/MenuBar/Tools/Threshold') -> set_sensitive(FALSE);
@@ -1361,24 +1349,15 @@ sub update_uimanager {
  }
  if ($#{$slist -> {data}} > -1) {
   if ($dependencies{pages} == -1) {
-   if ($dependencies{djvu}) {
-    $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(TRUE);
-    $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(TRUE);
-   }
    if ($dependencies{xdg}) {
     $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(TRUE);
     $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(TRUE);
     $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(TRUE);
    }
-   if ($dependencies{imagemagick}) {
-    $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(TRUE);
-    $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(TRUE);
-    $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(TRUE);
-    if ($dependencies{libtiff}) {
-     $uimanager->get_widget('/MenuBar/File/Save image') -> set_sensitive(TRUE);
-     $uimanager->get_widget('/ToolBar/Save image') -> set_sensitive(TRUE);
-     $uimanager->get_widget('/Thumb_Popup/Save image') -> set_sensitive(TRUE);
-    }
+   if ($dependencies{imagemagick} and $dependencies{libtiff}) {
+    $uimanager->get_widget('/MenuBar/File/Save') -> set_sensitive(TRUE);
+    $uimanager->get_widget('/ToolBar/Save') -> set_sensitive(TRUE);
+    $uimanager->get_widget('/Thumb_Popup/Save') -> set_sensitive(TRUE);
    }
 
    $dependencies{pages} = $#{$slist -> {data}};
@@ -1386,26 +1365,16 @@ sub update_uimanager {
  }
  else {
   if ($dependencies{pages} > -1) {
-   if ($dependencies{djvu}) {
-    $uimanager->get_widget('/MenuBar/File/Save DjVu') -> set_sensitive(FALSE);
-    $uimanager->get_widget('/Thumb_Popup/Save DjVu') -> set_sensitive(FALSE);
-    $windowv->hide if defined $windowv;
-   }
    if ($dependencies{xdg}) {
     $uimanager->get_widget('/MenuBar/File/Email as PDF') -> set_sensitive(FALSE);
     $uimanager->get_widget('/ToolBar/Email as PDF') -> set_sensitive(FALSE);
     $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
     $windowe->hide if defined $windowe;
    }
-   if ($dependencies{imagemagick}) {
-    $uimanager->get_widget('/MenuBar/File/Save PDF') -> set_sensitive(FALSE);
-    $uimanager->get_widget('/ToolBar/Save PDF') -> set_sensitive(FALSE);
-    $uimanager->get_widget('/Thumb_Popup/Save PDF') -> set_sensitive(FALSE);
-    if ($dependencies{libtiff}) {
-     $uimanager->get_widget('/MenuBar/File/Save image') -> set_sensitive(FALSE);
-     $uimanager->get_widget('/ToolBar/Save image') -> set_sensitive(FALSE);
-     $uimanager->get_widget('/Thumb_Popup/Save image') -> set_sensitive(FALSE);
-    }
+   if ($dependencies{imagemagick} and $dependencies{libtiff}) {
+    $uimanager->get_widget('/MenuBar/File/Save') -> set_sensitive(FALSE);
+    $uimanager->get_widget('/ToolBar/Save') -> set_sensitive(FALSE);
+    $uimanager->get_widget('/Thumb_Popup/Save') -> set_sensitive(FALSE);
    }
    $windowp->hide if defined $windowp;
    $windowi->hide if defined $windowi;
@@ -1818,7 +1787,7 @@ sub create_window {
 sub add_page_range {
  my ($vbox) = @_;
  my $frame = Gtk2::Frame->new($d->get('Page Range'));
- $vbox -> add ($frame);
+ $vbox -> pack_start ($frame, FALSE, FALSE, 0);
 
  my $pr = Gscan2pdf::PageRange->new;
  $pr -> set_active($SETTING{'Page range'})
@@ -2344,66 +2313,9 @@ sub add_pdf_compression {
 }
 
 
-sub save_PDF_dialog {
-
-# $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
-#warn "rmb pdf $SETTING{'RMB'} $SETTING{'Page range'}\n";
-
- if ($SETTING{'enable options'}) {
- 
-  if (defined $windowp) {
-   $windowp -> present;
-   return;
-  }
-
-# PDF pop-up window
-  ($windowp, my $vbox) = create_window($window, $d->get('Save as PDF'), FALSE);
-
-# PDF options
-  my ($entrya, $entryt, $entrys, $entryk) = add_PDF_options ($vbox);
-
-# Frame for page range
-  add_page_range($vbox);
-
-# Compression options
-  my ($buttond, $spinbuttond, $combob, $hboxq, $spinbuttonq, @compression) = add_pdf_compression($vbox);
-
-# HBox for buttons
-  my $hboxb = Gtk2::HBox -> new;
-  $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
-
-# Save button
-  my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
-  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
-  $sbutton -> signal_connect (clicked => sub {
-
-# dig out the compression
-   $SETTING{'downsample'} = $buttond->get_active;
-   $SETTING{'downsample dpi'} = $spinbuttond->get_value;
-   $SETTING{'pdf compression'} = $compression[$combob->get_active][0];
-   $SETTING{'quality'} = $spinbuttonq->get_value;
-
-   update_PDF_settings($entrya, $entryt, $entrys, $entryk);
-   save_PDF();
-  } );
-
-# Cancel button
-  my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
-  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
-  $cbutton -> signal_connect( clicked => sub { $windowp -> hide; } );
-
-  $windowp -> show_all;
-  $hboxq -> hide_all if ($compression[$combob->get_active][0] ne 'jpg');
- }
- else {
-  save_PDF();
- }
-}
-
-
 # Display page selector and on save a fileselector.
 
-sub save_image_dialog {
+sub save_dialog {
 
 # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
@@ -2412,7 +2324,7 @@ sub save_image_dialog {
   return;
  }
 
- ($windowi, my $vbox) = create_window($window, $d->get('Save image'), FALSE);
+ ($windowi, my $vbox) = create_window($window, $d->get('Save'), FALSE);
 
 # Frame for page range
  add_page_range($vbox);
@@ -2424,6 +2336,7 @@ sub save_image_dialog {
  $hboxi -> pack_start ($label, FALSE, FALSE, 0);
 
  my @type = (
+  [ 'pdf', $d->get('PDF'), $d->get('Portable Document Format') ],
   [ 'gif', $d->get('GIF'), $d->get('CompuServe graphics interchange format') ],
   [ 'jpg', $d->get('JPEG'), $d->get('Joint Photographic Experts Group JFIF format') ],
   [ 'png', $d->get('PNG'), $d->get('Portable Network Graphics') ],
@@ -2431,8 +2344,10 @@ sub save_image_dialog {
   [ 'ps',  $d->get('PS'), $d->get('Postscript') ],
   [ 'tif', $d->get('TIFF'), $d->get('Tagged Image File Format') ],
  );
+ push @type, [ 'djvu', $d->get('DjVu'), $d->get('Deja Vu') ]
+  if $dependencies{djvu};
 
- my @compression = (
+ my @tiff_compression = (
   [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
   [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
   [ 'jpeg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
@@ -2444,28 +2359,48 @@ sub save_image_dialog {
 
 # Compression ComboBox
  my $hboxc = Gtk2::HBox -> new;
- $vbox -> pack_start($hboxc, TRUE, TRUE, 0);
+ $vbox -> pack_start($hboxc, FALSE, FALSE, 0);
  $label = Gtk2::Label -> new ($d->get('Compression'));
  $hboxc -> pack_start ($label, FALSE, FALSE, 0);
 
 # Set up quality spinbutton here so that it can be shown or hidden by callback
- my ($hboxq, $spinbuttonq) = add_quality_spinbutton($vbox);
+ my ($hboxtq, $spinbuttontq) = add_quality_spinbutton($vbox);
 
 # Fill compression ComboBox
- my $combobc = combobox_from_array($SETTING{'tiff compression'}, @compression);
- $combobc -> signal_connect (changed => sub {
-  if ($compression[$combobc->get_active][0] eq 'jpeg') {
-   $hboxq -> show_all;
+ my $combobtc = combobox_from_array($SETTING{'tiff compression'}, @tiff_compression);
+ $combobtc -> signal_connect (changed => sub {
+  if ($tiff_compression[$combobtc->get_active][0] eq 'jpeg') {
+   $hboxtq -> show_all;
   }
   else {
-   $hboxq -> hide_all;
+   $hboxtq -> hide_all;
   }
  });
- $hboxc -> pack_end ($combobc, FALSE, FALSE, 0);
+ $hboxc -> pack_end ($combobtc, FALSE, FALSE, 0);
+
+# PDF options
+ my $vboxp = Gtk2::VBox -> new;
+ $vbox -> pack_start($vboxp, FALSE, FALSE, 0);
+ my ($entrya, $entryt, $entrys, $entryk) = add_PDF_options ($vboxp);
+
+# Compression options
+ my ($buttond, $spinbuttond, $combob, $hboxpq, $spinbuttonpq, @pdf_compression) = add_pdf_compression($vboxp);
 
 # Fill image type ComboBox
  my $combobi = combobox_from_array($SETTING{'image type'}, @type);
  $combobi -> signal_connect (changed => sub {
+  if ($type[$combobi->get_active][0] eq 'pdf') {
+   $vboxp -> show_all;
+   if ($pdf_compression[$combob->get_active][0] eq 'jpeg') {
+    $hboxpq -> show_all;
+   }
+   else {
+    $hboxpq -> hide_all;
+   }
+  }
+  else {
+   $vboxp -> hide_all;
+  }
   if ($type[$combobi->get_active][0] eq 'tif') {
    $hboxc -> show_all;
   }
@@ -2474,11 +2409,11 @@ sub save_image_dialog {
   }
   if ($type[$combobi->get_active][0] eq 'jpg'
       or ($type[$combobi->get_active][0] eq 'tif'
-          and $compression[$combobc->get_active][0] eq 'jpeg')) {
-   $hboxq -> show_all;
+          and $tiff_compression[$combobtc->get_active][0] eq 'jpeg')) {
+   $hboxtq -> show_all;
   }
   else {
-   $hboxq -> hide_all;
+   $hboxtq -> hide_all;
   }
  });
  $hboxi -> pack_end ($combobi, FALSE, FALSE, 0);
@@ -2494,10 +2429,24 @@ sub save_image_dialog {
 
 # dig out the image type, compression and quality
   $SETTING{'image type'} = $type[$combobi->get_active][0];
-  $SETTING{'tiff compression'} = $compression[$combobc->get_active][0];
-  $SETTING{'quality'} = $spinbuttonq->get_value;
 
-  if ($SETTING{'image type'} eq 'tif') {
+  if ($SETTING{'image type'} eq 'pdf') {
+
+# dig out the compression
+   $SETTING{'downsample'} = $buttond->get_active;
+   $SETTING{'downsample dpi'} = $spinbuttond->get_value;
+   $SETTING{'pdf compression'} = $pdf_compression[$combob->get_active][0];
+   $SETTING{'quality'} = $spinbuttonpq->get_value;
+
+   update_PDF_settings($entrya, $entryt, $entrys, $entryk);
+   save_PDF();
+  }
+  elsif ($SETTING{'image type'} eq 'djvu') {
+   save_djvu();
+  }
+  elsif ($SETTING{'image type'} eq 'tif') {
+   $SETTING{'tiff compression'} = $tiff_compression[$combobtc->get_active][0];
+   $SETTING{'quality'} = $spinbuttontq->get_value;
 
 # cd back to cwd to save
    chdir $SETTING{'cwd'};
@@ -2569,10 +2518,12 @@ sub save_image_dialog {
  $cbutton -> signal_connect( clicked => sub { $windowi -> hide; } );
 
  $windowi -> show_all;
- $hboxq -> hide_all if ($type[$combobi->get_active][0] ne 'jpg'
+ $hboxtq -> hide_all if ($type[$combobi->get_active][0] ne 'jpg'
                         or ($type[$combobi->get_active][0] eq 'tif'
-                          and $compression[$combobc->get_active][0] ne 'jpeg'));
+                     and $tiff_compression[$combobtc->get_active][0] ne 'jpeg'));
  $hboxc -> hide_all if ($type[$combobi->get_active][0] ne 'tif');
+ $vboxp -> hide_all if ($type[$combobi->get_active][0] ne 'pdf');
+ $windowi -> resize(200, 200); # Doesn't matter that 200x200 is too small
 }
 
 
@@ -2759,46 +2710,6 @@ sub save_TIFF {
 }
 
 
-# Display page selector and on save a fileselector.
-
-sub save_djvu_dialog {
-
-# $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
-
- if ($SETTING{'enable options'}) {
-
-  if (defined $windowv) {
-   $windowv -> present;
-   return;
-  }
-
-  ($windowv, my $vbox) = create_window($window, $d->get('Save as DjVu'), FALSE);
-
-# Frame for page range
-  add_page_range($vbox);
-
-# HBox for buttons
-  my $hboxb = Gtk2::HBox -> new;
-  $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
-
-# Save button
-  my $sbutton = Gtk2::Button -> new_from_stock('gtk-save');
-  $hboxb -> pack_start( $sbutton, TRUE, TRUE, 0 );
-  $sbutton -> signal_connect (clicked => sub { save_djvu(); });
-
-# Cancel button
-  my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
-  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
-  $cbutton -> signal_connect( clicked => sub { $windowv -> hide; } );
-
-  $windowv -> show_all;
- }
- else {
-  save_djvu();
- }
-}
-
-
 sub save_djvu {
 
 # cd back to cwd to save
@@ -2806,7 +2717,7 @@ sub save_djvu {
 
 # Set up file selector
  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('DjVu filename'),
-                                                     $windowv, 'save',
+                                                     $windowi, 'save',
                                                      'gtk-cancel' => 'cancel',
                                                      'gtk-save' => 'ok');
  $file_chooser -> set_default_response('ok');
@@ -2818,8 +2729,6 @@ sub save_djvu {
    $file_chooser -> destroy;
    return TRUE;
   }
-
-  $windowv -> hide;
 
 # Update cwd
   $SETTING{'cwd'} = dirname($filename);
@@ -7028,7 +6937,7 @@ gscan2pdf should work on almost any Linux/BSD machine.
 
 =item 1. Scan one or several pages in with File/Scan
 
-=item 2. Create PDF of selected pages with File/Save PDF
+=item 2. Create PDF of selected pages with File/Save
 
 =back
 
@@ -7341,11 +7250,12 @@ On some scanners, this is the only way of generating an out-of-documents signal.
 
 =back
 
-=head3 Save PDF
+=head3 Save
 
-Saves the current, selected or all pages as a PDF.
+Saves the current, selected or all pages as a PDF, DjVu, TIFF, PNG, JPEG, PNM or
+GIF.
 
-=head4 Metadata
+=head4 PDF Metadata
 
 Metadata are information that are not visible when viewing the PDF, but are
 embedded in the file and so searchable and can be examined, typically with the
@@ -7353,13 +7263,8 @@ embedded in the file and so searchable and can be examined, typically with the
 
 The metadata are completely optional.
 
-=head3 Save image
+=head4 DjVu
 
-Saves the current, selected or all pages as a TIFF, PNG, JPEG, PNM or GIF.
-
-=head3 Save DjVu
-
-Saves the current, selected or all pages as a DjVu.
 Both black and white, and colour images produce better
 compression than PDF. See L<http://www.djvuzone.org/> for more details.
 
