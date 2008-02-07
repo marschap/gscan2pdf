@@ -16,8 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    add Imagemagick/unsharp mask option
-#    Remove instances of 'if (defined($SETTING' and put them in default
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
 #    why doesn't cancel kill the process when running Tess?
@@ -224,6 +222,13 @@ my $conf = Config::General->new(
   'unsharp threshold'  => 0.05,
   'enable options'     => TRUE,
   'restore window'     => TRUE,
+  'startup warning'    => FALSE,
+  'date offset'        => 0,
+  'pdf compression'    => 'png',
+  'quality'            => 75,
+  'pages to scan'      => 1,
+  'unpaper on scan'    => TRUE,
+  'OCR on scan'        => TRUE,
  },
 );
 my %SETTING = $conf->getall;
@@ -1282,8 +1287,7 @@ sub create_menu_bar {
  }
 
 # Put up warning if needed
- if ((! defined($SETTING{'startup warning'})
-      or $SETTING{'startup warning'} eq TRUE) and ($msg ne '')) {
+ if ($SETTING{'startup warning'} and $msg ne '') {
   my $dialog = Gtk2::Dialog -> new ($d->get('Warning: missing packages'),
                                     $window, 'destroy-with-parent',
                                     'gtk-ok' => 'none');
@@ -1902,7 +1906,6 @@ sub add_PDF_options {
  $vboxm -> pack_start($hboxe, TRUE, TRUE, 0);
  my $labele = Gtk2::Label -> new ($d->get('Date'));
  $hboxe -> pack_start ($labele, FALSE, FALSE, 0);
- $SETTING{'date offset'} = 0 if (! (defined($SETTING{'date offset'})));
  my ($day, $month, $year) =
                     (localtime(time+$SETTING{'date offset'}*24*60*60))[3, 4, 5];
  $year += 1900;
@@ -1995,15 +1998,13 @@ sub update_PDF_settings {
 sub get_PDF_options {
  my %h;
  $h{'Author'} = $SETTING{'author'} if defined $SETTING{'author'};
- if (defined $SETTING{'date offset'}) {
-  my ($day, $month, $year) =
+ my ($day, $month, $year) =
                     (localtime(time+$SETTING{'date offset'}*24*60*60))[3, 4, 5];
-  $year += 1900;
-  $month += 1;
-  $h{'CreationDate'} = sprintf ("D:%4i%02i%02i000000+00'00'",
+ $year += 1900;
+ $month += 1;
+ $h{'CreationDate'} = sprintf ("D:%4i%02i%02i000000+00'00'",
                                                            $year, $month, $day);
-  $h{'ModDate'} = sprintf ("D:%4i%02i%02i000000+00'00'", $year, $month, $day);
- }
+ $h{'ModDate'} = sprintf ("D:%4i%02i%02i000000+00'00'", $year, $month, $day);
  $h{'Creator'} = "$program v$version";
  $h{'Producer'} = "PDF::API2";
  $h{'Title'} = $SETTING{'title'} if defined $SETTING{'title'};
@@ -2068,8 +2069,7 @@ sub create_PDF {
 
 # Convert file if necessary
    my $format = $1 if ($filename =~ /\.(\w*)$/);
-   if (defined($SETTING{'pdf compression'})
-        and ($SETTING{'pdf compression'} ne 'none'
+   if (($SETTING{'pdf compression'} ne 'none'
         and $SETTING{'pdf compression'} ne $format)
         or $SETTING{'downsample'}
         or $SETTING{'pdf compression'} eq 'jpg') {
@@ -2279,12 +2279,7 @@ sub add_quality_spinbutton {
  my $label = Gtk2::Label -> new ($d->get('JPEG Quality'));
  $hbox -> pack_start ($label, FALSE, FALSE, 0);
  my $spinbutton = Gtk2::SpinButton -> new_with_range(1, 100, 1);
- if (defined($SETTING{'quality'})) {
-  $spinbutton->set_value($SETTING{'quality'});
- }
- else {
-  $spinbutton->set_value(75);
- }
+ $spinbutton->set_value($SETTING{'quality'});
  $hbox -> pack_end ($spinbutton, FALSE, FALSE, 0);
  return ($hbox, $spinbutton);
 }
@@ -3093,17 +3088,12 @@ sub scan_dialog {
  $hboxn -> pack_end ($spin_buttonn, FALSE, FALSE, 0);
 
 # Set default
- if (defined($SETTING{'pages to scan'})) {
-  if ($SETTING{'pages to scan'} eq 'all') {
-   $bscanall -> set_active(TRUE);
-  }
-  else {
-   $bscannum -> set_active(TRUE);
-   $spin_buttonn -> set_value($SETTING{'pages to scan'});
-  }
+ if ($SETTING{'pages to scan'} eq 'all') {
+  $bscanall -> set_active(TRUE);
  }
  else {
   $bscannum -> set_active(TRUE);
+  $spin_buttonn -> set_value($SETTING{'pages to scan'});
  }
 
 # Toggle to switch between basic and extended modes
@@ -3263,7 +3253,7 @@ sub scan_dialog {
   $ubutton -> set_sensitive(FALSE);
   $ubutton -> set_active(FALSE);
  }
- elsif (defined($SETTING{'unpaper on scan'}) and $SETTING{'unpaper on scan'}) {
+ elsif ($SETTING{'unpaper on scan'}) {
   $ubutton -> set_active(TRUE);
  }
  my $button = Gtk2::Button -> new($d->get('Options'));
@@ -3305,7 +3295,7 @@ sub scan_dialog {
   $hboxo -> set_sensitive(FALSE);
   $obutton -> set_active(FALSE);
  }
- elsif (defined($SETTING{'OCR on scan'}) and $SETTING{'OCR on scan'}) {
+ elsif ($SETTING{'OCR on scan'}) {
   $obutton -> set_active(TRUE);
  }
  $hboxo -> pack_start($obutton, TRUE, TRUE, 0);
