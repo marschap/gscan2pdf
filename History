@@ -7,6 +7,9 @@
 + improve error messages saving PDF
 + unsharp mask tool
 + merged Save PDF, Save Image & Save DjVu dialogs
++ request page range when importing a DjVu with more than one page, and extract
+  the pages singly
+  Closes Debian bug #462171 (importing DjVu files fails, hogs memory)
 
 
 0.9.21 (01.02.2008):

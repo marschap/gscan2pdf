@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Investigate using Gtk2::FileChooser instead of Gtk2::FileChooserDialog
+#     and putting save options on same dialog.
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
 #    why doesn't cancel kill the process when running Tess?
@@ -71,9 +73,6 @@
 #     or http://trac.bjourne.webfactional.com/ (GtkImageView)
 #    As soon as I have cups-config --version >= 1.2.2, move print routines to
 #     Net::Cups
-#    Simplify all save menu items into one.
-#     Investigate using Gtk2::FileChooser instead of Gtk2::FileChooserDialog
-#     and putting save options on same dialog.
 #
 # 1. Crop and autocrop
 #     (see http://mail.gnome.org/archives/gtk-perl-list/2006-June/msg00002.html
@@ -331,7 +330,7 @@ my @action_items = (
  # File menu
  [ 'File', undef, $d->get('_File') ],
  [ 'New', 'gtk-new', $d->get('_New'), '<control>n', $d->get('Clears all pages'), \&new ],
- [ 'Import', 'gtk-open', $d->get('_Import'), '<control>i', $d->get('Import image file(s)'), \&import ],
+ [ 'Import', 'gtk-open', $d->get('_Import'), '<control>i', $d->get('Import image file(s)'), \&import_dialog ],
  [ 'Scan', 'scanner', $d->get('S_can'), undef, $d->get('Scan document'), \&scan_dialog ],
  [ 'Save', 'gtk-save', $d->get('Save'), '<control>s', $d->get('Save'), \&save_dialog ],
  [ 'Email as PDF', 'gtk-edit', $d->get('_Email as PDF'), '<control>e', $d->get('Attach as PDF to a new email'), \&email ],
@@ -1513,7 +1512,7 @@ sub convert_to_tiff {
 
 # Throw up file selector and import selected file
 
-sub import {
+sub import_dialog {
 
 # cd back to cwd to get filename
  chdir $SETTING{'cwd'};
@@ -1558,116 +1557,8 @@ sub import {
   my $pid = start_process(sub {
 
    my $j = 0;
-   foreach my $filename (@filename) {
-
-# Update cwd
-    $SETTING{'cwd'} = dirname($filename);
-    warn "Importing $filename\n" if ($debug);
-
-# Check if djvu
-    my $buffer;
-    open FILE, $filename or
-     show_message_dialog($window, 'error', 'close',
-                          sprintf($d->get("Can't open %s: %s"), $filename, $!));
-    binmode FILE;
-    read (FILE, $buffer, 8);
-    close FILE;
-    if ($buffer eq 'AT&TFORM') {
-     send($writer, '0 0 0 '.$d->get('Converting to TIFF'), 0);
-     my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
-     my $cmd = "ddjvu -format=tiff \"$filename\" $tif";
-     warn "$cmd\n" if ($debug);
-     system($cmd);
-     $filename = $tif;
-    }
-
-# Get file type
-    my $image = Image::Magick->new;
-    my $x = $image->Read($filename);
-    warn "$x" if "$x";
-
-    my $format = $image->Get('format');
-    warn "Format $format\n" if ($debug and defined($format));
-    undef $image;
-
-    if (! defined $format) {
-     send($writer, sprintf("%f %s %i ", -1, 0, 0)
-      .sprintf($d->get("%s is not a recognised image type"), $filename), 0);
-    }
-    elsif ($format eq 'Portable Document Format') {
-
-# Extract # of pages
-     my $info = `pdfinfo \"$filename\"`;
-     if ($info =~ /Pages:\s+(\d+)/) {
-      my $last = $1;
-      my $first = 1;
-      if ($last > 1) {
-       send($writer, "-2 0 $last", 0);
-
-# Now block until the GUI passes the range back
-       my $rin = '';
-       my $rout = '';
-       vec($rin, $reader->fileno(), 1) = 1;
-       if (select($rout=$rin,undef,undef,undef)) {
-        my $line;
-        recv($reader, $line, 1000, 0);
-        ($first, $last) = split ' ', $line;
-       }
-      }
-
-# Extract images from PDF
-      if ($last > 0) {
-       send($writer, sprintf("%f %s %i ", $j/($#filename+1), 0, 0)
-        .$d->get('Extracting images from PDF'), 0);
-       system ("pdfimages -f $first -l $last \"$filename\" x") == 0 or
-        send($writer, '-1 0 0'.$d->get('Error extracting images from PDF'), 0);
-
-# Import each image
-       my @images = <x-???.???>;
-       my $i = 0;
-       foreach (@images) {
-        my ($filename, $resolution) = prepare_import($_, 'Portable anymap', undef, TRUE);
-        send($writer, 
-         sprintf("%f %s %i ", (++$i/($#images+1)+$j)/($#filename+1), $filename, $resolution)
-         .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
-       }
-      }
-     }
-     else {
-      send($writer, '-1 0 0'.$d->get('Error extracting PDF infomation'), 0);
-     }
-    }
-    elsif ($format eq 'Tagged Image File Format') {
-
-# Split the tiff into its pages and import them individually
-     send($writer, sprintf("%f %s %i ", $j/($#filename+1), 0, 0)
-      .$d->get('Extracting images from TIFF'), 0);
-     system("tiffsplit \"$filename\"") == 0 or
-      send($writer, '-1 0 0'.$d->get('Error extracting images from TIFF'), 0);
-
-     my @images = <x???.tif>;
-     my $i = 0;
-     foreach (@images) {
-      my ($filename, $resolution) = prepare_import($_, $format, undef, TRUE);
-      send($writer, 
-       sprintf("%f %s %i ", (++$i/($#images+1)+$j)/($#filename+1), $filename, $resolution)
-       .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
-     }
-    }
-    elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
-     ($filename, my $resolution) = prepare_import($filename, $format);
-     send($writer, sprintf("%f %s %i ", $j/($#filename+1), $filename, $resolution)
-      .sprintf($d->get("Importing %s"), $format), 0);
-    }
-    else {
-     my $tiff = convert_to_tiff($filename);
-     $format = 'Tagged Image File Format';
-     my ($filename, $resolution) = prepare_import($tiff, $format, undef, TRUE);
-     send($writer, sprintf("%f %s %i ", $j/($#filename+1), $filename, $resolution)
-      .sprintf($d->get("Importing %s"), $format), 0);
-    }
-
-    ++$j;
+   foreach (@filename) {
+    import_file($_, $j, $#filename+1);
    }
    send($writer, 2, 0);
   });
@@ -1753,6 +1644,178 @@ sub import {
 
 # cd back to tempdir
  chdir $dir;
+}
+
+
+# import file
+
+sub import_file {
+ my ($filename, $j, $n) = @_;
+
+# Update cwd
+ $SETTING{'cwd'} = dirname($filename);
+ warn "Importing $filename\n" if ($debug);
+
+# Check if djvu
+ my $buffer;
+ open FILE, $filename or
+  send($writer, sprintf("%f %s %i ", -1, 0, 0).
+                       sprintf($d->get("Can't open %s: %s"), $filename, $!), 0);
+ binmode FILE;
+ read (FILE, $buffer, 8);
+ close FILE;
+ if ($buffer eq 'AT&TFORM') {
+
+# Dig out the number of pages
+  my $cmd = "djvudump \"$filename\"";
+  warn "$cmd\n" if ($debug);
+  my $info = `$cmd`;
+  print $info if ($debug);
+
+  my $first = 1;
+  my $last = 1;
+  $last = $1 if ($info =~ /\s(\d+)\s+page/);
+
+# Dig out and the resolution of each page
+  my @dpi;
+  while ($info =~ /\s(\d+)\s+dpi/) {
+   push @dpi, $1;
+   warn "Page $#dpi is $dpi[$#dpi] dpi\n" if ($debug);
+   $info = substr($info, index($info, " dpi")+4, length($info));  
+  }
+  if ($last != @dpi) {
+   send($writer, sprintf("%f %s %i ", -1, 0, 0)
+   .$d->get('Unknown DjVu file structure. Please contact the author.'), 0);
+  }
+  else {
+   if ($last > 1) {
+    send($writer, "-2 0 $last", 0);
+
+# Now block until the GUI passes the range back
+    my $rin = '';
+    my $rout = '';
+    vec($rin, $reader->fileno(), 1) = 1;
+    if (select($rout=$rin,undef,undef,undef)) {
+     my $line;
+     recv($reader, $line, 1000, 0);
+     ($first, $last) = split ' ', $line;
+    }
+   }
+
+# Extract images from DjVu
+   if ($last >= $first and $first > 0) {
+    for (my $i = $first; $i <= $last; $i++) {
+     my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+     my $cmd = "ddjvu -format=tiff -page=$i \"$filename\" $tif";
+     warn "$cmd\n" if ($debug);
+     system($cmd);
+     send($writer, 
+      sprintf("%f %s %i ", ($i/$last+$j)/$n, $tif, $dpi[$i-1])
+                    .sprintf($d->get("Importing image %i of %i"), $i, $last), 0);
+    }
+   }
+   else {
+    send($writer, sprintf("%f %s %i ", -1, 0, 0)
+     .sprintf($d->get("Error in range of pages to import - first: %s, last: %s"), $first, $last), 0);
+   }
+  }
+  ++$j;
+  return;
+ }
+
+# Get file type
+ my $image = Image::Magick->new;
+ my $x = $image->Read($filename);
+ warn "$x" if "$x";
+
+ my $format = $image->Get('format');
+ warn "Format $format\n" if ($debug and defined($format));
+ undef $image;
+
+ if (! defined $format) {
+  send($writer, sprintf("%f %s %i ", -1, 0, 0)
+   .sprintf($d->get("%s is not a recognised image type"), $filename), 0);
+ }
+ elsif ($format eq 'Portable Document Format') {
+
+# Extract # of pages
+  my $info = `pdfinfo \"$filename\"`;
+  print $info if ($debug);
+  if ($info =~ /Pages:\s+(\d+)/) {
+   my $last = $1;
+   print "$last pages\n" if ($debug);
+   my $first = 1;
+   if ($last > 1) {
+    send($writer, "-2 0 $last", 0);
+
+# Now block until the GUI passes the range back
+    my $rin = '';
+    my $rout = '';
+    vec($rin, $reader->fileno(), 1) = 1;
+    if (select($rout=$rin,undef,undef,undef)) {
+     my $line;
+     recv($reader, $line, 1000, 0);
+     ($first, $last) = split ' ', $line;
+    }
+   }
+
+# Extract images from PDF
+   if ($last >= $first and $first > 0) {
+    send($writer, sprintf("%f %s %i ", $j/$n, 0, 0)
+     .$d->get('Extracting images from PDF'), 0);
+    system ("pdfimages -f $first -l $last \"$filename\" x") == 0 or
+     send($writer, '-1 0 0'.$d->get('Error extracting images from PDF'), 0);
+
+# Import each image
+    my @images = <x-???.???>;
+    my $i = 0;
+    foreach (@images) {
+     my ($filename, $resolution) = prepare_import($_, 'Portable anymap', undef, TRUE);
+     send($writer, 
+      sprintf("%f %s %i ", (++$i/($#images+1)+$j)/$n, $filename, $resolution)
+      .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
+    }
+   }
+   else {
+    send($writer, sprintf("%f %s %i ", -1, 0, 0)
+     .sprintf($d->get("Error in range of pages to import - first: %s, last: %s"), $first, $last), 0);
+   }
+  }
+  else {
+   send($writer, '-1 0 0'.$d->get('Error extracting PDF infomation'), 0);
+  }
+ }
+ elsif ($format eq 'Tagged Image File Format') {
+
+# Split the tiff into its pages and import them individually
+  send($writer, sprintf("%f %s %i ", $j/$n, 0, 0)
+   .$d->get('Extracting images from TIFF'), 0);
+  system("tiffsplit \"$filename\"") == 0 or
+   send($writer, '-1 0 0'.$d->get('Error extracting images from TIFF'), 0);
+
+  my @images = <x???.tif>;
+  my $i = 0;
+  foreach (@images) {
+   my ($filename, $resolution) = prepare_import($_, $format, undef, TRUE);
+   send($writer, 
+    sprintf("%f %s %i ", (++$i/($#images+1)+$j)/$n, $filename, $resolution)
+    .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
+  }
+ }
+ elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
+  ($filename, my $resolution) = prepare_import($filename, $format);
+  send($writer, sprintf("%f %s %i ", $j/$n, $filename, $resolution)
+   .sprintf($d->get("Importing %s"), $format), 0);
+ }
+ else {
+  my $tiff = convert_to_tiff($filename);
+  $format = 'Tagged Image File Format';
+  my ($filename, $resolution) = prepare_import($tiff, $format, undef, TRUE);
+  send($writer, sprintf("%f %s %i ", $j/$n, $filename, $resolution)
+   .sprintf($d->get("Importing %s"), $format), 0);
+ }
+
+ ++$j;
 }
 
 
