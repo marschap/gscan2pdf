@@ -305,7 +305,7 @@ init_icons(
 
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
-my ($windowp, $windowi, $windowv, $windowe, $windows, $windowh, $windowo,
+my ($windowi, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $vboxd, $combobd, $combobp, $vboxm, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
@@ -1376,7 +1376,6 @@ sub update_uimanager {
     $uimanager->get_widget('/ToolBar/Save') -> set_sensitive(FALSE);
     $uimanager->get_widget('/Thumb_Popup/Save') -> set_sensitive(FALSE);
    }
-   $windowp->hide if defined $windowp;
    $windowi->hide if defined $windowi;
 
    $dependencies{pages} = $#{$slist -> {data}};
@@ -1946,7 +1945,7 @@ sub add_PDF_options {
 
  my $button = Gtk2::Button -> new(sprintf("%04d-%02d-%02d", $year, $month, $day));
  $button -> signal_connect( clicked => sub {
-  my ($window, $vbox) = create_window($windowp, $d->get('Select Date'), TRUE);
+  my ($window, $vbox) = create_window($windowi, $d->get('Select Date'), TRUE);
   $window->set_resizable(FALSE);
 
   my $calendar = Gtk2::Calendar -> new;
@@ -2273,9 +2272,11 @@ sub save_PDF {
 
 # Set up file selector
  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('PDF filename'),
-                                                    $windowp, 'save',
+                                                    $windowi, 'save',
                                                     'gtk-cancel' => 'cancel',
                                                     'gtk-save' => 'ok');
+ $file_chooser->set_current_name ($SETTING{'title'})
+  if (defined($SETTING{'title'}) and $SETTING{'title'} ne '');
  $file_chooser -> set_default_response('ok');
 
  if ('ok' eq $file_chooser->run) {
@@ -2292,7 +2293,7 @@ sub save_PDF {
 # Create the PDF
   create_PDF($filename);
   
-  $windowp -> hide if defined $windowp;
+  $windowi -> hide if defined $windowi;
  }
 
  $file_chooser -> destroy;
@@ -2548,7 +2549,7 @@ sub save_dialog {
 
 # Set up file selector
    my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('PS filename'),
-                                                      $windowp, 'save',
+                                                      $windowi, 'save',
                                                       'gtk-cancel' => 'cancel',
                                                       'gtk-save' => 'ok');
    $file_chooser -> set_default_response('ok');
