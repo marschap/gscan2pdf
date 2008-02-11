@@ -3057,7 +3057,7 @@ sub scan_dialog {
  $hboxn -> pack_start($bscannum, FALSE, FALSE, 0);
 
 # Number of pages
- $spin_buttonn = Gtk2::SpinButton -> new_with_range(1, 99, 1);
+ $spin_buttonn = Gtk2::SpinButton -> new_with_range(1, 999, 1);
  $tooltips -> set_tip ($spin_buttonn, $d->get('Set number of pages to scan'));
  $hboxn -> pack_end ($spin_buttonn, FALSE, FALSE, 0);
 
