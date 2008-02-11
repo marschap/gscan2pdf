@@ -370,7 +370,7 @@ my @action_items = (
  [ 'Threshold', undef, $d->get('_Threshold'), undef, $d->get('Change each pixel above this threshold to black'), \&threshold ],
  [ 'Unsharp', undef, $d->get('_Unsharp Mask'), undef, $d->get('Apply an unsharp mask'), \&unsharp ],
 # [ 'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef, $d->get('Crop pages'), \&crop ],
- [ 'unpaper', undef, $d->get('_unpaper'), undef, $d->get('Clean up pages with unpaper'), \&unpaper ],
+ [ 'unpaper', undef, $d->get('_Clean up'), undef, $d->get('Clean up scanned images with unpaper'), \&unpaper ],
  [ 'OCR', undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition'), \&OCR ],
 
  # Help menu
@@ -3219,8 +3219,8 @@ sub scan_dialog {
 # CheckButton for unpaper
  my $hboxu = Gtk2::HBox -> new;
  $vboxp -> pack_start ($hboxu, FALSE, FALSE, 0);
- my $ubutton = Gtk2::CheckButton -> new($d->get('unpaper scanned pages'));
- $tooltips -> set_tip ($ubutton, $d->get('Process scanned image with unpaper'));
+ my $ubutton = Gtk2::CheckButton -> new($d->get('Clean up images'));
+ $tooltips -> set_tip ($ubutton, $d->get('Clean up scanned images with unpaper'));
  $hboxu -> pack_start($ubutton, TRUE, TRUE, 0);
  if (! $dependencies{unpaper}) {
   $ubutton -> set_sensitive(FALSE);
