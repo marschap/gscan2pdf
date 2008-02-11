@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.21
+Version: 0.9.22
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -82,9 +82,10 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Tue Feb 05 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Mon Feb 11 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
   - New upstream release.
     Closes: #463708 (gscan2pdf: Error when saving as PNG)
+    Closes: #462171 (importing DjVu files fails, hogs memory)
   - New upstream release.
     Closes: #461859 (better selected/current/all heuristic)
     Closes: #461076 (importing PDFs causes /tmp/ overflow)
