@@ -2275,28 +2275,36 @@ sub save_PDF {
                                                     $windowi, 'save',
                                                     'gtk-cancel' => 'cancel',
                                                     'gtk-save' => 'ok');
- $file_chooser->set_current_name ($SETTING{'title'})
+ $file_chooser -> set_current_name ($SETTING{'title'})
   if (defined($SETTING{'title'}) and $SETTING{'title'} ne '');
  $file_chooser -> set_default_response('ok');
-
- if ('ok' eq $file_chooser->run) {
-  my $filename = $file_chooser -> get_filename;
-  $filename = $filename.".pdf" if ($filename !~ /\.pdf$/i);
-  if (file_exists($file_chooser, $filename)) {
-   $file_chooser -> destroy;
-   return TRUE;
-  }
+ $file_chooser -> set_do_overwrite_confirmation (TRUE);
+ $file_chooser -> signal_connect (response => sub {
+  my ($dialog, $response) = @_;
+  if ($response eq 'ok') {
+   my $filename = $file_chooser -> get_filename;
+   if ($filename !~ /\.pdf$/i) {
+    $filename = $filename.'.pdf';
+    if (-f $filename) {
+# File exists; get the file chooser to ask the user to confirm.
+     $file_chooser -> set_filename($filename);
+# Give the name change time to take effect.
+     Glib::Idle->add (sub { $file_chooser->response('ok'); });
+     return;
+    }
+   }
 
 # Update cwd
-  $SETTING{'cwd'} = dirname($filename);
+   $SETTING{'cwd'} = dirname($filename);
 
 # Create the PDF
-  create_PDF($filename);
+   create_PDF($filename);
   
-  $windowi -> hide if defined $windowi;
- }
-
- $file_chooser -> destroy;
+   $windowi -> hide if defined $windowi;
+  }
+  $file_chooser -> destroy;
+ });
+ $file_chooser -> show;
 
 # cd back to tempdir
  chdir $dir;
@@ -2522,25 +2530,33 @@ sub save_dialog {
                                                      'gtk-cancel' => 'cancel',
                                                      'gtk-save' => 'ok');
    $file_chooser -> set_default_response('ok');
-
-   if ('ok' eq $file_chooser->run) {
-    my $filename = $file_chooser -> get_filename;
-    $filename = $filename.".tif" if ($filename !~ /\.tif$/i);
-    if (file_exists($file_chooser, $filename)) {
-     $file_chooser -> destroy;
-     return TRUE;
-    }
+   $file_chooser -> set_do_overwrite_confirmation (TRUE);
+   $file_chooser -> signal_connect (response => sub {
+    my ($dialog, $response) = @_;
+    if ($response eq 'ok') {
+     my $filename = $file_chooser -> get_filename;
+     if ($filename !~ /\.tif$/i) {
+      $filename = $filename.'.tif';
+      if (-f $filename) {
+# File exists; get the file chooser to ask the user to confirm.
+       $file_chooser -> set_filename($filename);
+# Give the name change time to take effect.
+       Glib::Idle->add (sub { $file_chooser->response('ok'); });
+       return;
+      }
+     }
 
 # Update cwd
-    $SETTING{'cwd'} = dirname($filename);
+     $SETTING{'cwd'} = dirname($filename);
+
+     save_TIFF($filename);
+    }
+    $file_chooser -> destroy;
+   });
+   $file_chooser -> show;
 
 # cd back to tempdir
-    chdir $dir;
-
-    $file_chooser -> destroy;
-    save_TIFF($filename);
-   }
-   $file_chooser -> destroy;
+   chdir $dir;
   }
   elsif ($SETTING{'image type'} eq 'ps') {
 
@@ -2553,24 +2569,36 @@ sub save_dialog {
                                                       'gtk-cancel' => 'cancel',
                                                       'gtk-save' => 'ok');
    $file_chooser -> set_default_response('ok');
-
-   if ('ok' eq $file_chooser->run) {
-    my $filename = $file_chooser -> get_filename;
-    $filename = $filename.".ps" if ($filename !~ /\.ps$/i);
-    if (file_exists($file_chooser, $filename)) {
-     $file_chooser -> destroy;
-     return TRUE;
-    }
+   $file_chooser -> set_do_overwrite_confirmation (TRUE);
+   $file_chooser -> signal_connect (response => sub {
+    my ($dialog, $response) = @_;
+    if ($response eq 'ok') {
+     my $filename = $file_chooser -> get_filename;
+     if ($filename !~ /\.ps$/i) {
+      $filename = $filename.'.ps';
+      if (-f $filename) {
+# File exists; get the file chooser to ask the user to confirm.
+       $file_chooser -> set_filename($filename);
+# Give the name change time to take effect.
+       Glib::Idle->add (sub { $file_chooser->response('ok'); });
+       return;
+      }
+     }
 
 # Update cwd
-    $SETTING{'cwd'} = dirname($filename);
+     $SETTING{'cwd'} = dirname($filename);
 
 # Create the PS
-    my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
-    save_TIFF($tif, $filename);
-    unlink $tif;
-   }
-   $file_chooser -> destroy;
+     my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+     save_TIFF($tif, $filename);
+     unlink $tif;
+    }
+    $file_chooser -> destroy;
+   });
+   $file_chooser -> show;
+
+# cd back to tempdir
+   chdir $dir;
   }
   else {
    save_image();
