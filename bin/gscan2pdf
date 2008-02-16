@@ -4226,8 +4226,15 @@ sub delete_pages {
  }
 
 # Select nothing
- else {
+ elsif (@{$slist->{data}}) {
   $slist->select;
+ }
+
+# No pages left, and having blocked the selection_changed_signal, we've got to clear the image
+ else {
+  $image -> clear;
+  $textview -> set_sensitive(FALSE);
+  $textbuffer -> set_text('');
  }
 
 # Reset start page in scan dialog
