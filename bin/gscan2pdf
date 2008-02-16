@@ -229,6 +229,7 @@ my $conf = Config::General->new(
   'pages to scan'      => 1,
   'unpaper on scan'    => TRUE,
   'OCR on scan'        => TRUE,
+  'frontend'           => 'scanimage',
  },
 );
 my %SETTING = $conf->getall;
