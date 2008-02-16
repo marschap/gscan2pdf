@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Remember sort on FileChooser
 #    Investigate using Gtk2::FileChooser instead of Gtk2::FileChooserDialog
 #     and putting save options on same dialog.
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
@@ -621,7 +622,7 @@ $slist->signal_connect('drag-data-received' => sub {
 
 # Block row-changed signal so that the list can be updated before the sort
 # takes over.
- $slist -> get_model -> signal_handler_block($slist -> {signalid});
+ $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
 
  if ($path) {
   if ($how eq 'after' or $how eq 'into-or-after') {
@@ -635,7 +636,7 @@ $slist->signal_connect('drag-data-received' => sub {
   push @{ $slist->{data} }, @data;
  }
  renumber($slist, 0);
- $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+ $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Update the start spinbutton if necessary
  update_start();
@@ -697,16 +698,16 @@ $slist->signal_connect(button_release_event => \&handle_clicks);
 $slist -> set_column_editable (0, TRUE);
 
 # Set-up the callback when the page number has been edited.
-$slist -> {signalid} = $slist -> get_model ->
+$slist -> {row_changed_signal} = $slist -> get_model ->
  signal_connect('row-changed' => sub {
-  $slist -> get_model -> signal_handler_block($slist -> {signalid});
+  $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
 
 # Sort pages
   manual_sort_by_column ($slist, 0);
 
 # And make sure there are no duplicates
   renumber ($slist, 0);
-  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+  $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Update the start spinbutton if necessary
   update_start();
@@ -819,16 +820,16 @@ else {
 
 # Keep the simple list buffer up to date
 $textbuffer -> {signalid} = $textbuffer -> signal_connect( changed => sub {
- $slist -> get_model -> signal_handler_block($slist -> {signalid});
+ $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
  my @page = $slist -> get_selected_indices;
  $slist -> {data}[$page[0]][3] =
   $textbuffer->get_text ($textbuffer->get_start_iter, $textbuffer->get_end_iter, FALSE)
    if ($#page > -1);
- $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+ $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 } );
 
 # Set up call back for list selection to update detail view
-$slist -> get_selection -> signal_connect(changed => sub {
+$slist -> {selection_changed_signal} = $slist -> get_selection -> signal_connect(changed => sub {
  my @page = $slist -> get_selected_indices;
 
 # Display the new image
@@ -4068,12 +4069,12 @@ sub add_image {
  warn "Added $filename at page $page with resolution $resolution\n" if ($debug);
 
 # Block the row-changed signal whilst adding the scan (row) and sorting it.
- $slist -> get_model -> signal_handler_block($slist -> {signalid});
+ $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
  push @{$slist -> {data}}, [ $page, 
                              get_pixbuf($filename, $heightt, $widtht),
                              $filename, undef, $resolution ];
  manual_sort_by_column ($slist, 0);
- $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+ $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Select new page, deselecting others. This fires the select callback,
 # displaying the page
@@ -4171,7 +4172,7 @@ sub paste_selection {
   }
 
 # Block the row-changed signal whilst adding the scan (row) and sorting it.
-  $slist -> get_model -> signal_handler_block($slist -> {signalid});
+  $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
 
   if (@page) {
    splice @{ $slist->{data} }, $page[0]+1, 0, @clipboard;
@@ -4183,7 +4184,7 @@ sub paste_selection {
   }
 
   renumber ($slist, 0);
-  $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+  $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Select new page, deselecting others. This fires the select callback,
 # displaying the page
@@ -4208,18 +4209,25 @@ sub delete_pages {
 
  my @pages = $slist -> get_selected_indices;
  my @page = @pages;
+ $slist -> get_selection -> signal_handler_block($slist -> {selection_changed_signal});
  while (@pages) {
   splice @{ $slist->{data} }, $pages[0], 1;
   @pages = $slist -> get_selected_indices;
  }
+ $slist -> get_selection -> signal_handler_unblock($slist -> {selection_changed_signal});
 
 # Select nearest page to last current page
- if ($#{$slist->{data}} > -1 and @page) {
+ if (@{$slist->{data}} and @page) {
 
 # Select just the first one
   @page = ($page[0]);
   $page[0] = $#{$slist->{data}} if ($page[0] > $#{$slist->{data}});
   $slist->select(@page);
+ }
+
+# Select nothing
+ else {
+  $slist->select;
  }
 
 # Reset start page in scan dialog
@@ -5736,10 +5744,10 @@ sub unpaper_page {
 # Note page selection
        my @selection = $slist -> get_selected_indices;
 
-       $slist -> get_model -> signal_handler_block($slist -> {signalid});
+       $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
        $slist -> {data}[$pagenum][2] = $out;
        $slist -> {data}[$pagenum][1] = get_pixbuf($out, $heightt, $widtht);
-       $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+       $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Reselect selected pages, firing the display callback
        $slist -> get_selection -> unselect_all;
@@ -6190,12 +6198,12 @@ sub ocr_page {
        $running = FALSE;
 
 # Doing this once at the end to avoid firing the row-changed signal too often
-       $slist -> get_model -> signal_handler_block($slist -> {signalid});
+       $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
 
 # Slurp the OCR output
        $slist -> {data}[$pagenum][3] .= slurp("$txt.txt");
        unlink <$txt*>;
-       $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+       $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Update the buffer if current
        my @page = $slist -> get_selected_indices;
@@ -6577,11 +6585,11 @@ sub undo {
  warn Dumper(\@redo_buffer, \@undo_buffer) if $debug;
 
 # Block slist signals whilst updating
- $slist -> get_model -> signal_handler_block($slist -> {signalid});
+ $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
  @{$slist->{data}} = @undo_buffer;
 
 # Unblock slist signals now finished
- $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+ $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Reselect the pages to display the detail view
  $slist->select(@undo_selection);
@@ -6603,11 +6611,11 @@ sub unundo {
  @undo_selection = $slist -> get_selected_indices;
 
 # Block slist signals whilst updating
- $slist -> get_model -> signal_handler_block($slist -> {signalid});
+ $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
  @{$slist->{data}} = @redo_buffer;
 
 # Unblock slist signals now finished
- $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+ $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Reselect the pages to display the detail view
  $slist->select(@redo_selection);
@@ -6739,11 +6747,11 @@ sub kill_subs {
 # marked page list as saved
 
 sub mark_pages {
- $slist -> get_model -> signal_handler_block($slist -> {signalid});
+ $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
  foreach (@_) {
   $slist -> {data}[$_][5] = TRUE;
  }
- $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+ $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 }
 
 
@@ -6830,10 +6838,10 @@ sub compress_temp {
      $pbar->set_text(join ' ', @text);
      Gtk2->main_iteration while Gtk2->events_pending;
      if ($page > -1) {
-      $slist -> get_model -> signal_handler_block($slist -> {signalid});
+      $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
       unlink $slist -> {data}[$page][2];
       $slist -> {data}[$page][2] = $filename;
-      $slist -> get_model -> signal_handler_unblock($slist -> {signalid});
+      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
      }
     }
    }
