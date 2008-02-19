@@ -14,8 +14,7 @@ BuildRequires: perl(ExtUtils::MakeMaker), perl(Test::More)
 BuildRequires: gettext, desktop-file-utils
 Requires: perl-PerlMagick, ImageMagick, djvulibre, sane-backends
 Requires: sane-frontends, xdg-utils, unpaper, gocr, tiff
-Requires: perl(Gtk2::Ex::PodViewer), perl(PDF::API2)
-Requires: perl(Gtk2::Ex::Simple::List), perl(Config::General)
+Requires: perl(Gtk2::Ex::PodViewer), perl(PDF::API2), perl(Config::General)
 
 %description
 Only two clicks are required to scan several pages and then save all or a
