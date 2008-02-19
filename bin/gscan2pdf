@@ -17,6 +17,7 @@
 
 # To do
 #    Remember sort on FileChooser
+#    pass array reference to combobox_from_array, and optionally the default.
 #    Investigate using Gtk2::FileChooser instead of Gtk2::FileChooserDialog
 #     and putting save options on same dialog.
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
@@ -29,7 +30,6 @@
 #    cache options except between versions of SANE and gscan2pdf
 #    note sane-backend and wipe scan settings if it changes
 #    reenable multiple scans from flatbed + delay and warning
-#    add rotate option before OCR/unpaper on scan dialog
 #    query downsizing problems with the imagemagick team.
 #    crop - 1. sort out redrawing after refresh
 #           2. zooming
@@ -229,6 +229,8 @@ my $conf = Config::General->new(
   'pages to scan'      => 1,
   'unpaper on scan'    => TRUE,
   'OCR on scan'        => TRUE,
+  'rotate facing'      => 0,
+  'rotate reverse'     => 0,
  },
 );
 my %SETTING = $conf->getall;
@@ -319,10 +321,7 @@ my ($windowi, $windowe, $windows, $windowh, $windowo,
     $sbutton,
 
 # List of PageRange widgets
-    @prlist,
-
-# Variables for inter-process communication
-    $reader, $writer);
+    @prlist);
 
 my @action_items = (
  # Fields for each action item:
@@ -837,14 +836,7 @@ $slist -> {selection_changed_signal} = $slist -> get_selection -> signal_connect
 
   my $path = Gtk2::TreePath->new_from_indices($page[0]);
   $slist->scroll_to_cell($path);
-
-# Get dimensions for eventbox wrapping pixbuf
-  my $widthd = $eventbox -> allocation -> width;
-  my $heightd = $eventbox -> allocation -> height;
-
-  $image -> set_from_pixbuf(
-                    get_pixbuf($slist->{data}[$page[0]][2], $heightd, $widthd));
-  $image -> show;
+  display_image($slist->{data}[$page[0]][2]);
 
 # Update the buffer, if created
   $textview -> set_sensitive(TRUE) if (! $textview -> is_sensitive);
@@ -1433,6 +1425,18 @@ sub zoom_button {
 }
 
 
+sub display_image {
+ my ($filename) = @_;
+
+# Get dimensions for eventbox wrapping pixbuf
+ my $widthd = $eventbox -> allocation -> width;
+ my $heightd = $eventbox -> allocation -> height;
+
+ $image -> set_from_pixbuf(get_pixbuf($filename, $heightd, $widthd));
+ $image -> show;
+}
+
+
 # Returns the pixbuf scaled to fit in the given box
 
 sub get_pixbuf {
@@ -1554,21 +1558,22 @@ sub import_dialog {
 # Install a handler for child processes
   $SIG{CHLD} = \&sig_child;
 
+  my ($child, $parent) = open_socketpair();
   my $pid = start_process(sub {
 
    my $j = 0;
    foreach (@filename) {
-    import_file($_, $j, $#filename+1);
+    import_file($_, $j, $#filename+1, $parent);
    }
-   send($writer, 2, 0);
+   send($parent, 2, 0);
   });
 
-  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
 
    my $line;
    if ($condition & 'in') { # bit field operation. >= would also work
-    recv($reader, $line, 1000, 0);
+    recv($child, $line, 1000, 0);
     if (defined($line) and $line ne '') {
      my ($fraction, $filename, $resolution, @text) = split ' ', $line;
      if ($fraction == -1) {
@@ -1602,7 +1607,7 @@ sub import_dialog {
        my $first = $spinbuttonf->get_value;
        my $last = $spinbuttonl->get_value;
        $windowq -> destroy;
-       send($writer, "$first $last", 0);
+       send($child, "$first $last", 0);
       });
 
 # Cancel button
@@ -1610,7 +1615,7 @@ sub import_dialog {
       $hboxb -> pack_start( $cbutton, TRUE, TRUE, 0 );
       $cbutton -> signal_connect (clicked => sub {
        $windowq -> destroy;
-       send($writer, '0 0', 0);
+       send($child, '0 0', 0);
       });
       $windowq -> show_all;
      }
@@ -1650,7 +1655,7 @@ sub import_dialog {
 # import file
 
 sub import_file {
- my ($filename, $j, $n) = @_;
+ my ($filename, $j, $n, $parent) = @_;
 
 # Update cwd
  $SETTING{'cwd'} = dirname($filename);
@@ -1659,7 +1664,7 @@ sub import_file {
 # Check if djvu
  my $buffer;
  open FILE, $filename or
-  send($writer, sprintf("%f %s %i ", -1, 0, 0).
+  send($parent, sprintf("%f %s %i ", -1, 0, 0).
                        sprintf($d->get("Can't open %s: %s"), $filename, $!), 0);
  binmode FILE;
  read (FILE, $buffer, 8);
@@ -1684,20 +1689,20 @@ sub import_file {
    $info = substr($info, index($info, " dpi")+4, length($info));  
   }
   if ($last != @dpi) {
-   send($writer, sprintf("%f %s %i ", -1, 0, 0)
+   send($parent, sprintf("%f %s %i ", -1, 0, 0)
    .$d->get('Unknown DjVu file structure. Please contact the author.'), 0);
   }
   else {
    if ($last > 1) {
-    send($writer, "-2 0 $last", 0);
+    send($parent, "-2 0 $last", 0);
 
 # Now block until the GUI passes the range back
     my $rin = '';
     my $rout = '';
-    vec($rin, $reader->fileno(), 1) = 1;
+    vec($rin, $parent->fileno(), 1) = 1;
     if (select($rout=$rin,undef,undef,undef)) {
      my $line;
-     recv($reader, $line, 1000, 0);
+     recv($parent, $line, 1000, 0);
      ($first, $last) = split ' ', $line;
     }
    }
@@ -1709,13 +1714,13 @@ sub import_file {
      my $cmd = "ddjvu -format=tiff -page=$i \"$filename\" $tif";
      warn "$cmd\n" if ($debug);
      system($cmd);
-     send($writer, 
+     send($parent, 
       sprintf("%f %s %i ", ($i/$last+$j)/$n, $tif, $dpi[$i-1])
                     .sprintf($d->get("Importing image %i of %i"), $i, $last), 0);
     }
    }
    else {
-    send($writer, sprintf("%f %s %i ", -1, 0, 0)
+    send($parent, sprintf("%f %s %i ", -1, 0, 0)
      .sprintf($d->get("Error in range of pages to import - first: %s, last: %s"), $first, $last), 0);
    }
   }
@@ -1733,7 +1738,7 @@ sub import_file {
  undef $image;
 
  if (! defined $format) {
-  send($writer, sprintf("%f %s %i ", -1, 0, 0)
+  send($parent, sprintf("%f %s %i ", -1, 0, 0)
    .sprintf($d->get("%s is not a recognised image type"), $filename), 0);
  }
  elsif ($format eq 'Portable Document Format') {
@@ -1746,72 +1751,72 @@ sub import_file {
    print "$last pages\n" if ($debug);
    my $first = 1;
    if ($last > 1) {
-    send($writer, "-2 0 $last", 0);
+    send($parent, "-2 0 $last", 0);
 
 # Now block until the GUI passes the range back
     my $rin = '';
     my $rout = '';
-    vec($rin, $reader->fileno(), 1) = 1;
+    vec($rin, $parent->fileno(), 1) = 1;
     if (select($rout=$rin,undef,undef,undef)) {
      my $line;
-     recv($reader, $line, 1000, 0);
+     recv($parent, $line, 1000, 0);
      ($first, $last) = split ' ', $line;
     }
    }
 
 # Extract images from PDF
    if ($last >= $first and $first > 0) {
-    send($writer, sprintf("%f %s %i ", $j/$n, 0, 0)
+    send($parent, sprintf("%f %s %i ", $j/$n, 0, 0)
      .$d->get('Extracting images from PDF'), 0);
     system ("pdfimages -f $first -l $last \"$filename\" x") == 0 or
-     send($writer, '-1 0 0'.$d->get('Error extracting images from PDF'), 0);
+     send($parent, '-1 0 0'.$d->get('Error extracting images from PDF'), 0);
 
 # Import each image
     my @images = <x-???.???>;
     my $i = 0;
     foreach (@images) {
      my ($filename, $resolution) = prepare_import($_, 'Portable anymap', undef, TRUE);
-     send($writer, 
+     send($parent, 
       sprintf("%f %s %i ", (++$i/($#images+1)+$j)/$n, $filename, $resolution)
       .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
     }
    }
    else {
-    send($writer, sprintf("%f %s %i ", -1, 0, 0)
+    send($parent, sprintf("%f %s %i ", -1, 0, 0)
      .sprintf($d->get("Error in range of pages to import - first: %s, last: %s"), $first, $last), 0);
    }
   }
   else {
-   send($writer, '-1 0 0'.$d->get('Error extracting PDF infomation'), 0);
+   send($parent, '-1 0 0'.$d->get('Error extracting PDF infomation'), 0);
   }
  }
  elsif ($format eq 'Tagged Image File Format') {
 
 # Split the tiff into its pages and import them individually
-  send($writer, sprintf("%f %s %i ", $j/$n, 0, 0)
+  send($parent, sprintf("%f %s %i ", $j/$n, 0, 0)
    .$d->get('Extracting images from TIFF'), 0);
   system("tiffsplit \"$filename\"") == 0 or
-   send($writer, '-1 0 0'.$d->get('Error extracting images from TIFF'), 0);
+   send($parent, '-1 0 0'.$d->get('Error extracting images from TIFF'), 0);
 
   my @images = <x???.tif>;
   my $i = 0;
   foreach (@images) {
    my ($filename, $resolution) = prepare_import($_, $format, undef, TRUE);
-   send($writer, 
+   send($parent, 
     sprintf("%f %s %i ", (++$i/($#images+1)+$j)/$n, $filename, $resolution)
     .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
   }
  }
  elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
   ($filename, my $resolution) = prepare_import($filename, $format);
-  send($writer, sprintf("%f %s %i ", $j/$n, $filename, $resolution)
+  send($parent, sprintf("%f %s %i ", $j/$n, $filename, $resolution)
    .sprintf($d->get("Importing %s"), $format), 0);
  }
  else {
   my $tiff = convert_to_tiff($filename);
   $format = 'Tagged Image File Format';
   my ($filename, $resolution) = prepare_import($tiff, $format, undef, TRUE);
-  send($writer, sprintf("%f %s %i ", $j/$n, $filename, $resolution)
+  send($parent, sprintf("%f %s %i ", $j/$n, $filename, $resolution)
    .sprintf($d->get("Importing %s"), $format), 0);
  }
 
@@ -2074,17 +2079,18 @@ sub create_PDF {
 # fill $pagelist with filenames depending on which radiobutton is active
  my @pagelist = get_page_index();
 
+ my ($child, $parent) = open_socketpair();
  my $pid = start_process(sub {
   my $page = 0;
 
 # Create PDF with PDF::API2
-  send($writer, '0'.$d->get('Setting up PDF'), 0);
+  send($parent, '0'.$d->get('Setting up PDF'), 0);
   my $pdf = PDF::API2->new(-file => $filename);
   $pdf->info(get_PDF_options());
 
   foreach (@pagelist) {
    ++$page;
-   send($writer, $page/($#pagelist+2)
+   send($parent, $page/($#pagelist+2)
     .sprintf($d->get("Saving page %i of %i"), $page, $#pagelist+1), 0);
 
    my $page = $pdf->page;
@@ -2208,31 +2214,31 @@ sub create_PDF {
    }
    if ($@) {
     warn $@ if $debug;
-    send($writer, '-1'.sprintf($d->get("Error embedding file image in %s format to PDF: %s"), $format, $@), 0);
+    send($parent, '-1'.sprintf($d->get("Error embedding file image in %s format to PDF: %s"), $format, $@), 0);
    }
    else {
     eval {$gfx->image($imgobj,0,0,72/$resolution)};
     if ($@) {
      warn $@ if $debug;
-     send($writer, '-1'.sprintf($d->get("Error embedding file image in %s format to PDF: %s"), $format, $@), 0);
+     send($parent, '-1'.sprintf($d->get("Error embedding file image in %s format to PDF: %s"), $format, $@), 0);
     }
     else {
      print "Adding $format at $resolution dpi\n" if $debug;
     }
    }
   }
-  send($writer, '1'.$d->get('Closing PDF'), 0);
+  send($parent, '1'.$d->get('Closing PDF'), 0);
   $pdf->save;
   $pdf->end();
-  send($writer, '2', 0);
+  send($parent, '2', 0);
  });
 
- $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+ $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
   my ($fileno, $condition) = @_;
 
   my $line;
   if ($condition & 'in') { # bit field operation. >= would also work
-   recv($reader, $line, 1000, 0);
+   recv($child, $line, 1000, 0);
    if ($line =~ /(-?\d*\.?\d*)(.*)/) {
     my $fraction=$1;
     my $text=$2;
@@ -2371,7 +2377,7 @@ sub add_pdf_compression {
 
 # Set up quality spinbutton here so that it can be shown or hidden by callback
  my ($hboxq, $spinbuttonq) = add_quality_spinbutton($vbox);
- my $combob =  combobox_from_array($SETTING{'pdf compression'}, @compression);
+ my $combob =  combobox_from_array(@compression);
  $combob -> signal_connect (changed => sub {
   if ($compression[$combob->get_active][0] eq 'jpg') {
    $hboxq -> show_all;
@@ -2380,6 +2386,7 @@ sub add_pdf_compression {
    $hboxq -> hide_all;
   }
  });
+ combobox_set_active($combob, $SETTING{'pdf compression'}, @compression);
  $hbox -> pack_end ($combob, FALSE, FALSE, 0);
 
  return ($button, $spinbutton, $combob, $hboxq, $spinbuttonq, @compression);
@@ -2440,7 +2447,7 @@ sub save_dialog {
  my ($hboxtq, $spinbuttontq) = add_quality_spinbutton($vbox);
 
 # Fill compression ComboBox
- my $combobtc = combobox_from_array($SETTING{'tiff compression'}, @tiff_compression);
+ my $combobtc = combobox_from_array(@tiff_compression);
  $combobtc -> signal_connect (changed => sub {
   if ($tiff_compression[$combobtc->get_active][0] eq 'jpeg') {
    $hboxtq -> show_all;
@@ -2450,6 +2457,7 @@ sub save_dialog {
    $windowi -> resize(100, 100); # Doesn't matter that 200x200 is too small
   }
  });
+ combobox_set_active($combobtc, $SETTING{'tiff compression'}, @tiff_compression);
  $hboxc -> pack_end ($combobtc, FALSE, FALSE, 0);
 
 # PDF options
@@ -2461,7 +2469,7 @@ sub save_dialog {
  my ($buttond, $spinbuttond, $combob, $hboxpq, $spinbuttonpq, @pdf_compression) = add_pdf_compression($vboxp);
 
 # Fill image type ComboBox
- my $combobi = combobox_from_array($SETTING{'image type'}, @type);
+ my $combobi = combobox_from_array(@type);
  $combobi -> signal_connect (changed => sub {
   if ($type[$combobi->get_active][0] eq 'pdf') {
    $vboxp -> show_all;
@@ -2494,6 +2502,7 @@ sub save_dialog {
    $windowi -> resize(100, 100); # Doesn't matter that 200x200 is too small
   }
  });
+ combobox_set_active($combobi, $SETTING{'image type'}, @type);
  $hboxi -> pack_end ($combobi, FALSE, FALSE, 0);
 
 # HBox for buttons
@@ -2730,6 +2739,7 @@ sub save_TIFF {
 # Install a handler for child processes
  $SIG{CHLD} = \&sig_child;
 
+ my ($child, $parent) = open_socketpair();
  my $pid = start_process(sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
@@ -2739,14 +2749,14 @@ sub save_TIFF {
   my @pagelist = split / /, $pagelist;
   foreach (@pagelist) {
    ++$page;
-   send($writer, ($page-1)/($#pagelist+2)
+   send($parent, ($page-1)/($#pagelist+2)
     .sprintf($d->get("Converting image %i of %i to TIFF"), $page, $#pagelist+1), 0);
     if ($_ !~ /\.tif/) {
     my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
 
 # Convert to tiff
     system ("convert $_ $tif") == 0 or
-     send($writer, "2".$d->get('Error writing TIFF'), 0);
+     send($parent, "2".$d->get('Error writing TIFF'), 0);
 
     $_ = $tif;
    }
@@ -2757,25 +2767,25 @@ sub save_TIFF {
   $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpeg');
 
 # Create the tiff
-  send($writer, '1'.$d->get('Concatenating TIFFs'), 0);
+  send($parent, '1'.$d->get('Concatenating TIFFs'), 0);
   my $cmd = "tiffcp -c $compression $pagelist \"$filename\" 2>&1";
   print "$cmd\n" if $debug;
   my $output = `$cmd`;
   if (defined $ps) {
-   send($writer, '1'.$d->get('Converting to PS'), 0);
+   send($parent, '1'.$d->get('Converting to PS'), 0);
    my $cmd = "tiff2ps $filename > $ps";
    print "$cmd\n" if $debug;
    $output = `$cmd`;
   }
-  send($writer, "2$output", 0);
+  send($parent, "2$output", 0);
  });
 
- $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+ $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
   my ($fileno, $condition) = @_;
 
   my $line;
   if ($condition & 'in') { # bit field operation. >= would also work
-   recv($reader, $line, 1000, 0);
+   recv($child, $line, 1000, 0);
    if ($line =~ /(\d*\.?\d*)(.*)/) {
     my $fraction=$1;
     my $text=$2;
@@ -2855,13 +2865,14 @@ sub save_djvu {
   $SIG{CHLD} = \&sig_child;
 
   my @pagelist = get_page_index();
+  my ($child, $parent) = open_socketpair();
   my $pid = start_process(sub {
 
    my @filelist;
    
    for (my $i = 0; $i < @pagelist; $i++) {
     my $j = $pagelist[$i];
-    send($writer, $i/($#pagelist+1)
+    send($parent, $i/($#pagelist+1)
      .sprintf($d->get("Writing page %i of %i"), $i+1, $#pagelist+1), 0);
     my $filename = $slist -> {data}[$j][2];
     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
@@ -2899,7 +2910,7 @@ sub save_djvu {
     my $resolution = $slist -> {data}[$j][4];
     my $cmd = "$compression -dpi $resolution $filename $djvu";
     print "$cmd\n" if $debug;
-    system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
+    system ($cmd) == 0 or send($parent, "2".$d->get('Error writing DjVu'), 0);
     $filelist[$i] = $djvu;
 
 # Add OCR to text layer
@@ -2926,23 +2937,23 @@ sub save_djvu {
 # Write djvusedtxtfile
      my $cmd = "djvused '$djvu' -e 'select 1; set-txt djvusedtxtfile' -s";
      print "$cmd\n" if $debug;
-     system ($cmd) == 0 or send($writer, "2".$d->get('Error writing DjVu'), 0);
+     system ($cmd) == 0 or send($parent, "2".$d->get('Error writing DjVu'), 0);
     }
    }
-   send($writer, '1'.$d->get('Closing DjVu'), 0);
+   send($parent, '1'.$d->get('Closing DjVu'), 0);
    my $cmd = "djvm -c '$filename' @filelist";
    print "$cmd\n" if $debug;
-   system ($cmd) == 0 or send($writer, "2".$d->get('Error closing DjVu'), 0);
+   system ($cmd) == 0 or send($parent, "2".$d->get('Error closing DjVu'), 0);
   
-   send($writer, "2", 0);
+   send($parent, "2", 0);
   });
 
-  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
 
    my $line;
    if ($condition & 'in') { # bit field operation. >= would also work
-    recv($reader, $line, 1000, 0);
+    recv($child, $line, 1000, 0);
     if ($line =~ /(\d*\.?\d*)(.*)/) {
      my $fraction=$1;
      my $text=$2;
@@ -3250,6 +3261,95 @@ sub scan_dialog {
  $vboxp -> set_border_width($border_width);
  $framep -> add ($vboxp);
 
+# Rotate
+ my $hboxr = Gtk2::HBox -> new;
+ $vboxp -> pack_start ($hboxr, FALSE, FALSE, 0);
+ my $rbutton = Gtk2::CheckButton -> new($d->get('Rotate'));
+ $tooltips -> set_tip ($rbutton, $d->get('Rotate image after scanning'));
+ $hboxr -> pack_start($rbutton, TRUE, TRUE, 0);
+ @side = (
+  [ 'both', $d->get('Both sides'), $d->get('Both sides.') ],
+  [ 'facing', $d->get('Facing side'), $d->get('Facing side.') ],
+  [ 'reverse', $d->get('Reverse side'), $d->get('Reverse side.') ],
+ );
+ my $comboboxs = combobox_from_array(@side);
+ $tooltips -> set_tip ($comboboxs, $d->get('Select side to rotate'));
+ $hboxr -> pack_start($comboboxs, TRUE, TRUE, 0);
+ my @rotate = (
+  [ 90, $d->get('90'), $d->get('Rotate image 90 degrees clockwise.') ],
+  [ 180, $d->get('180'), $d->get('Rotate image 180 degrees clockwise.') ],
+  [ 270, $d->get('270'), $d->get('Rotate image 90 degrees anticlockwise.') ],
+ );
+ my $comboboxr = combobox_from_array(@rotate);
+ $tooltips -> set_tip ($comboboxr, $d->get('Select direction of rotation'));
+ $hboxr -> pack_end($comboboxr, TRUE, TRUE, 0);
+
+ $hboxr = Gtk2::HBox -> new;
+ $vboxp -> pack_start ($hboxr, FALSE, FALSE, 0);
+ my $r2button = Gtk2::CheckButton -> new($d->get('Rotate'));
+ $tooltips -> set_tip ($r2button, $d->get('Rotate image after scanning'));
+ $hboxr -> pack_start($r2button, TRUE, TRUE, 0);
+ my @side2;
+ my $comboboxs2 = Gtk2::ComboBox->new_text;
+ $tooltips -> set_tip ($comboboxs2, $d->get('Select side to rotate'));
+ $hboxr -> pack_start($comboboxs2, TRUE, TRUE, 0);
+ my $comboboxr2 = combobox_from_array(@rotate);
+ $tooltips -> set_tip ($comboboxr2, $d->get('Select direction of rotation'));
+ $hboxr -> pack_end($comboboxr2, TRUE, TRUE, 0);
+
+ $rbutton -> signal_connect (toggled => sub {
+  if ($rbutton -> get_active) {
+   $hboxr->set_sensitive(TRUE)
+    if ($side[$comboboxs -> get_active]->[0] ne 'both');
+  }
+  else {
+   $hboxr->set_sensitive(FALSE);
+  }
+ });
+ $comboboxs -> signal_connect (changed => sub {
+  if ($side[$comboboxs -> get_active]->[0] eq 'both') {
+   $hboxr->set_sensitive(FALSE);
+   $r2button->set_active(FALSE);
+  }
+  else {
+   $hboxr->set_sensitive(TRUE) if ($rbutton -> get_active);
+
+# Empty combobox
+   while ($comboboxs2->get_active > -1) {
+    $comboboxs2->remove_text(0);
+    $comboboxs2->set_active(0);
+   }
+   @side2 = ();
+   foreach (@side) {
+    push @side2, $_
+     unless ($_->[0] eq 'both'
+                            or $_->[0] eq $side[$comboboxs -> get_active]->[0]);
+   }
+   $comboboxs2->append_text ($side2[0]->[1]);
+   $comboboxs2->set_active(0);
+  }
+ });
+ if ($SETTING{'rotate facing'} or $SETTING{'rotate reverse'}) {
+  $rbutton->set_active(TRUE);
+  if ($SETTING{'rotate facing'} == $SETTING{'rotate reverse'}) {
+   combobox_set_active($comboboxs, 'both', @side);
+   combobox_set_active($comboboxr, $SETTING{'rotate facing'}, @rotate);
+  }
+  elsif ($SETTING{'rotate facing'}) {
+   combobox_set_active($comboboxs, 'facing', @side);
+   combobox_set_active($comboboxr, $SETTING{'rotate facing'}, @rotate);
+   if ($SETTING{'rotate reverse'}) {
+    $r2button->set_active(TRUE);
+    combobox_set_active($comboboxs2, 'reverse', @side2);
+    combobox_set_active($comboboxr2, $SETTING{'rotate reverse'}, @rotate);
+   }
+  }
+  else {
+   combobox_set_active($comboboxs, 'reverse', @side);
+   combobox_set_active($comboboxr, $SETTING{'rotate reverse'}, @rotate);
+  }
+ }
+
 # CheckButton for unpaper
  my $hboxu = Gtk2::HBox -> new;
  $vboxp -> pack_start ($hboxu, FALSE, FALSE, 0);
@@ -3306,7 +3406,7 @@ sub scan_dialog {
   $obutton -> set_active(TRUE);
  }
  $hboxo -> pack_start($obutton, TRUE, TRUE, 0);
- my $comboboxe = combobox_from_array($SETTING{'ocr engine'}, @ocr_engine);
+ my $comboboxe = combobox_from_array(@ocr_engine);
  $tooltips -> set_tip ($comboboxe, $d->get('Select OCR engine'));
  $hboxo -> pack_end($comboboxe, TRUE, TRUE, 0);
  my ($comboboxl, @tesslang);
@@ -3332,6 +3432,7 @@ sub scan_dialog {
    }
   });
  }
+ combobox_set_active($comboboxe, $SETTING{'ocr engine'}, @ocr_engine);
 
 # Frame for device-dependent options
  my $framed = Gtk2::Frame -> new($d->get('Device-dependent options'));
@@ -3408,8 +3509,35 @@ sub scan_dialog {
    return TRUE;
   }
 
+  $SETTING{'rotate facing'} = 0;
+  $SETTING{'rotate reverse'} = 0;
+  if ($rbutton->get_active) {
+   if ($side[$comboboxs -> get_active]->[0] eq 'both') {
+    $SETTING{'rotate facing'} = $rotate[$comboboxr -> get_active]->[0];
+    $SETTING{'rotate reverse'} = $SETTING{'rotate facing'};
+   }
+   elsif ($side[$comboboxs -> get_active]->[0] eq 'facing') {
+    $SETTING{'rotate facing'} = $rotate[$comboboxr -> get_active]->[0];
+   }
+   else {
+    $SETTING{'rotate reverse'} = $rotate[$comboboxr -> get_active]->[0];
+   }
+   if ($r2button->get_active) {
+    if ($side2[$comboboxs2 -> get_active]->[0] eq 'facing') {
+     $SETTING{'rotate facing'} = $rotate[$comboboxr2 -> get_active]->[0];
+    }
+    else {
+     $SETTING{'rotate reverse'} = $rotate[$comboboxr2 -> get_active]->[0];
+    }
+   }
+  }
+  print "rotate facing $SETTING{'rotate facing'}\n" if $debug;
+  print "rotate reverse $SETTING{'rotate reverse'}\n" if $debug;
+
   $SETTING{'unpaper on scan'} = $ubutton->get_active;
+  print "unpaper $SETTING{'unpaper on scan'}\n" if $debug;
   $SETTING{'OCR on scan'} = $obutton->get_active;
+  print "OCR $SETTING{'OCR on scan'}\n" if $debug;
   if ($SETTING{'OCR on scan'}) {
    $SETTING{'ocr engine'} = $ocr_engine[$comboboxe -> get_active]->[0];
    $SETTING{'ocr language'} = $tesslang[$comboboxl -> get_active]->[0]
@@ -3417,10 +3545,12 @@ sub scan_dialog {
   }
   if ($SETTING{'frontend'} eq 'scanimage') {
    scanimage($SETTING{device}, $npages, $start-$step, $step,
+                $SETTING{'rotate facing'}, $SETTING{'rotate reverse'},
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
   }
   else {
    scanadf($SETTING{device}, $npages, $start-$step, $step,
+                $SETTING{'rotate facing'}, $SETTING{'rotate reverse'},
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
   }
  } );
@@ -3678,7 +3808,7 @@ sub update_number {
 # Carry out the scan with scanimage and the options passed.
 
 sub scanimage {
- my ($device, $npages, $offset, $step, $unpaper, $ocr, %options) = @_;
+ my ($device, $npages, $offset, $step, $rfacing, $rreverse, $unpaper, $ocr, %options) = @_;
 
  require IPC::Open3;
  require IO::Handle;
@@ -3834,7 +3964,7 @@ sub scanimage {
 # Carry out the scan with scanadf and the options passed.
 
 sub scanadf {
- my ($device, $npages, $offset, $step, $unpaper, $ocr, %options) = @_;
+ my ($device, $npages, $offset, $step, $rfacing, $rreverse, $unpaper, $ocr, %options) = @_;
 
  require IPC::Open3;
  require IO::Handle;
@@ -5087,31 +5217,86 @@ sub rotate {
 
 # Update undo/redo buffers
  take_snapshot();
-
  my @page = $slist -> get_selected_indices;
- my $i = 0;
- while ($i < @page) {
 
-# Rotate the tiff with imagemagick
-  my $image = Image::Magick->new;
-  my $x = $image->Read($slist -> {data}[$page[$i]][2]);
-  warn "$x" if "$x";
+ my $dialog = Gtk2::Dialog -> new ($d->get('Rotating')."...", $window,
+                                           'destroy-with-parent',
+                                           'gtk-cancel' => 'cancel');
+
+# Set up ProgressBar
+ my $pbar = Gtk2::ProgressBar->new;
+ $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+ $dialog -> signal_connect (response => sub {
+  $_[0] -> destroy;
+  kill_subs();
+ });
+ $dialog -> show_all;
+
+# Install a handler for child processes
+ $SIG{CHLD} = \&sig_child;
+
+ my @pagelist = get_page_index();
+ my ($child, $parent) = open_socketpair();
+ my $pid = start_process(sub {
+
+  my $i = 0;
+  while ($i < @page) {
+
+# Rotate with imagemagick
+   my $filename = $slist -> {data}[$page[$i]][2];
+   my $image = Image::Magick->new;
+   my $x = $image->Read($filename);
+   warn "$x" if "$x";
 
 # workaround for those versions of imagemagick that produce 16bit output
 # with rotate
-  my $depth = $image->Get('depth');
-  $x = $image->Rotate($degrees);
-  warn "$x" if "$x";
-  $x = $image->Write(filename => $slist -> {data}[$page[$i]][2], depth => $depth);
-  warn "$x" if "$x";
+   my $depth = $image->Get('depth');
+   $x = $image->Rotate($degrees);
+   warn "$x" if "$x";
+   my $suffix = $1 if ($filename =~ /\.(\w*)$/);
+   (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
+   $x = $image->Write(filename => $filename, depth => $depth);
+   warn "$x" if "$x";
+   send($parent, sprintf("%i %i %s", $i, $#pagelist+1, $filename), 0);
+   ++$i;
+  }
+  send($parent, '2 1', 0);
+ });
 
-  $slist -> {data}[$page[$i]][1] =
-                 get_pixbuf($slist -> {data}[$page[$i]][2], $heightt, $widtht);
-  ++$i;
- }
+ $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
+  my ($fileno, $condition) = @_;
 
-# Reselect the pages to display the rotated image(s)
- $slist->select(@page);
+  my $line;
+  if ($condition & 'in') { # bit field operation. >= would also work
+   recv($child, $line, 1000, 0);
+   my ($page, $total, $filename) = split ' ', $line;
+   my $fraction = $page/$total;
+   if ($fraction > 1) {
+    $dialog -> destroy;
+    return FALSE;  # uninstall
+   }
+   $pbar->set_fraction($fraction);
+   $pbar->set_text(sprintf($d->get("Rotating page %i of %i"), $page+1, $total));
+   if (defined $filename and $filename ne '') {
+    $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+    $slist -> {data}[$pagelist[$page]][2] = $filename;
+    $slist -> {data}[$pagelist[$page]][1] =
+                                       get_pixbuf($filename, $heightt, $widtht);
+    $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+    display_image($filename) if (! $page);
+   }
+  }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+  if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   $dialog -> destroy;
+   return FALSE;  # uninstall
+  }
+  return TRUE;  # continue without uninstalling
+ });
 }
 
 
@@ -5201,13 +5386,14 @@ sub threshold {
   $SIG{CHLD} = \&sig_child;
 
   my @pagelist = get_page_index();
+  my ($child, $parent) = open_socketpair();
   my $pid = start_process(sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
    my $page = 0;
 
    foreach (@pagelist) {
-    send($writer, sprintf("%i %i", $page, $#pagelist+1), 0);
+    send($parent, sprintf("%i %i", $page, $#pagelist+1), 0);
 
     my $filename = $slist -> {data}[$_][2];
     my $image = Image::Magick->new;
@@ -5225,48 +5411,45 @@ sub threshold {
     warn "$x" if "$x";
     warn "Thresholding at $SETTING{'threshold tool'} to $filename\n" if $debug;
 
-    send($writer, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
+    send($parent, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
     ++$page;
    }
-   send($writer, '2 1', 0);
+   send($parent, '2 1', 0);
   });
 
-  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
 
    my $line;
    if ($condition & 'in') { # bit field operation. >= would also work
-    recv($reader, $line, 1000, 0);
-    if ($line =~ /(\d*) (\d*) ?(.*)/) {
-     my $page=$1;
-     my $total=$2;
-     my $filename=$3;
-     my $fraction = $page/$total;
-     if ($fraction > 1) {
-      $dialog -> destroy;
+    recv($child, $line, 1000, 0);
+    my ($page, $total, $filename) = split ' ', $line;
+    my $fraction = $page/$total;
+    if ($fraction > 1) {
+     $dialog -> destroy;
 
-# Reselect the pages to display the rotated image(s)
-      $slist->select(@pagelist);
-      return FALSE;  # uninstall
-     }
-     if (defined $filename and $filename ne '') {
-      $slist -> {data}[$pagelist[$page]][2] = $filename;
-      $slist -> {data}[$pagelist[$page]][1] =
-           get_pixbuf($slist -> {data}[$pagelist[$page]][2], $heightt, $widtht);
-     }
-     else {
-      $pbar->set_fraction($fraction);
-      $pbar->set_text(sprintf($d->get("Applying threshold to page %i of %i"),
-                                                              $page+1, $total));
-     }
+# Reselect the pages to display the thresholded image(s)
+     $slist->select(@pagelist);
+     return FALSE;  # uninstall
     }
+    $pbar->set_fraction($fraction);
+    $pbar->set_text(sprintf($d->get("Applying threshold to page %i of %i"),
+                                                              $page+1, $total));
+    if (defined $filename and $filename ne '') {
+     $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+     $slist -> {data}[$pagelist[$page]][2] = $filename;
+     $slist -> {data}[$pagelist[$page]][1] =
+                                       get_pixbuf($filename, $heightt, $widtht);
+     $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+    }
+    display_image($filename) if (! $page);
    }
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
    if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
     $dialog -> destroy;
-    update_uimanager();
+    $slist->select(@pagelist);
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
@@ -5374,13 +5557,14 @@ sub unsharp {
   $SIG{CHLD} = \&sig_child;
 
   my @pagelist = get_page_index();
+  my ($child, $parent) = open_socketpair();
   my $pid = start_process(sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
    my $page = 0;
 
    foreach (@pagelist) {
-    send($writer, sprintf("%i %i", $page, $#pagelist+1), 0);
+    send($parent, sprintf("%i %i", $page, $#pagelist+1), 0);
 
     my $filename = $slist -> {data}[$_][2];
     my $image = Image::Magick->new;
@@ -5401,18 +5585,18 @@ sub unsharp {
     warn "Applying unsharp mask with r=$SETTING{'unsharp radius'}, s=$SETTING{'unsharp sigma'}, a=$SETTING{'unsharp amount'}, t=$SETTING{'unsharp threshold'} to $filename\n"
      if $debug;
 
-    send($writer, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
+    send($parent, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
     ++$page;
    }
-   send($writer, '2 1', 0);
+   send($parent, '2 1', 0);
   });
 
-  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
 
    my $line;
    if ($condition & 'in') { # bit field operation. >= would also work
-    recv($reader, $line, 1000, 0);
+    recv($child, $line, 1000, 0);
     if ($line =~ /(\d*) (\d*) ?(.*)/) {
      my $page=$1;
      my $total=$2;
@@ -5425,16 +5609,17 @@ sub unsharp {
       $slist->select(@pagelist);
       return FALSE;  # uninstall
      }
+     $pbar->set_fraction($fraction);
+     $pbar->set_text(sprintf($d->get("Applying unsharp mask to page %i of %i"),
+                                                              $page+1, $total));
      if (defined $filename and $filename ne '') {
+      $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
       $slist -> {data}[$pagelist[$page]][2] = $filename;
       $slist -> {data}[$pagelist[$page]][1] =
-           get_pixbuf($slist -> {data}[$pagelist[$page]][2], $heightt, $widtht);
+                                       get_pixbuf($filename, $heightt, $widtht);
+      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
      }
-     else {
-      $pbar->set_fraction($fraction);
-      $pbar->set_text(sprintf($d->get("Applying unsharp mask to page %i of %i"),
-                                                              $page+1, $total));
-     }
+     display_image($filename) if (! $page);
     }
    }
 
@@ -5513,6 +5698,7 @@ sub crop {
   $SIG{CHLD} = \&sig_child;
 
   my @pagelist = get_page_index();
+  my ($child, $parent) = open_socketpair();
   my $pid = start_process(sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
@@ -5522,7 +5708,7 @@ sub crop {
 #   draw_rubber_band_box ($eventbox);
 
    foreach (@pagelist) {
-    send($writer, sprintf("%i %i", $page, $#pagelist+1), 0);
+    send($parent, sprintf("%i %i", $page, $#pagelist+1), 0);
 
     my $filename = $slist -> {data}[$_][2];
     my $image = Image::Magick->new;
@@ -5579,18 +5765,18 @@ print "xoffset $xoffset, yoffset $yoffset, factor $factor\n";
     $e = $image->Write(filename => $filename);
     warn "$e" if "$e";
 
-    send($writer, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
+    send($parent, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
     ++$page;
    }
-   send($writer, '2 1', 0);
+   send($parent, '2 1', 0);
   });
 
-  $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
 
    my $line;
    if ($condition & 'in') { # bit field operation. >= would also work
-    recv($reader, $line, 1000, 0);
+    recv($child, $line, 1000, 0);
     if ($line =~ /(\d*) (\d*) ?(.*)/) {
      my $page=$1;
      my $total=$2;
@@ -5603,15 +5789,16 @@ print "xoffset $xoffset, yoffset $yoffset, factor $factor\n";
       $slist->select(@pagelist);
       return FALSE;  # uninstall
      }
+     $pbar->set_fraction($fraction);
+     $pbar->set_text(sprintf($d->get("Cropping page %i of %i"), $page+1, $total));
      if (defined $filename and $filename ne '') {
+      $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
       $slist -> {data}[$pagelist[$page]][2] = $filename;
       $slist -> {data}[$pagelist[$page]][1] =
-           get_pixbuf($slist -> {data}[$pagelist[$page]][2], $heightt, $widtht);
+                                       get_pixbuf($filename, $heightt, $widtht);
+      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
      }
-     else {
-      $pbar->set_fraction($fraction);
-      $pbar->set_text(sprintf($d->get("Cropping page %i of %i"), $page+1, $total));
-     }
+     display_image($filename) if (! $page);
     }
    }
 
@@ -6257,22 +6444,33 @@ sub slurp {
 # Create a combobox from an array and set the default
 
 sub combobox_from_array {
- my ($default, @array) = @_;
+ my (@array) = @_;
 
 # Fill ComboBox
- my $i = 0;
- my $o;
  my $combobox = Gtk2::ComboBox->new_text;
  foreach ( @array ) {
   $combobox->append_text ($_->[1]);
+ }
+ return $combobox;
+}
 
-  $o = $i if (defined($default) and defined($_->[0]) and $_->[0] eq $default);
-  ++$i;
+
+# Create a combobox from an array and set the default
+
+sub combobox_set_active {
+ my ($combobox, $default, @array) = @_;
+ 
+# Fill ComboBox
+ my $i = 0;
+ my $o;
+ if (defined($default)) {
+  foreach ( @array ) {
+   $o = $i if (defined($_->[0]) and $_->[0] eq $default);
+   ++$i;
+  }
  }
  $o = 0 if (! defined $o);
  $combobox -> set_active ($o);
- 
- return $combobox;
 }
 
 
@@ -6332,7 +6530,8 @@ sub add_ocr_languages {
 # If there are no language files, then we have tesseract-1.0, i.e. English
  push @tesslang, [ undef, $d->get('English') ] if (! @tesslang);
 
- my $combobox = combobox_from_array($SETTING{'ocr language'}, @tesslang);
+ my $combobox = combobox_from_array(@tesslang);
+ combobox_set_active($combobox, $SETTING{'ocr language'}, @tesslang);
  $hbox -> pack_end($combobox, TRUE, TRUE, 0);
  return $hbox, $combobox, @tesslang;
 }
@@ -6354,7 +6553,8 @@ sub OCR {
  $vbox -> pack_start($hboxe, TRUE, TRUE, 0);
  my $label = Gtk2::Label -> new ($d->get('OCR Engine'));
  $hboxe -> pack_start ($label, FALSE, FALSE, 0);
- my $combobe = combobox_from_array($SETTING{'ocr engine'}, @ocr_engine);
+ my $combobe = combobox_from_array(@ocr_engine);
+ combobox_set_active($combobe, $SETTING{'ocr engine'}, @ocr_engine);
  $hboxe -> pack_end ($combobe, FALSE, FALSE, 0);
  my ($comboboxl, @tesslang);
  if ($dependencies{tesseract}) {
@@ -6687,23 +6887,25 @@ sub sig_child {
 }
 
 
+sub open_socketpair {
+ my $child = FileHandle->new;
+ my $parent = FileHandle->new;
+ socketpair($child, $parent,  AF_UNIX, SOCK_DGRAM, PF_UNSPEC);
+ binmode $child, ':utf8';
+ binmode $parent, ':utf8';
+ return ($child, $parent);
+}
+
+
 # Fork the passed sub
 
 sub start_process {
  my ($process) = @_;
 
- $reader = FileHandle->new;
- $writer = FileHandle->new;
- socketpair($reader, $writer,  AF_UNIX, SOCK_DGRAM, PF_UNSPEC);
- binmode $reader, ':utf8';
- binmode $writer, ':utf8';
-
  my $pid = fork();
  if ($pid) {
 
 # We're still in the parent; note pid and watch the streams:
-  shutdown($writer, 0);
-
   warn "Forked PID $pid\n" if ($debug);
   return $pid;
  }
@@ -6714,7 +6916,6 @@ sub start_process {
 # "clean up" open file handles, including our display connection,
 # and merely returning from this subroutine in a separate process
 # would *really* confuse things.
-  shutdown($reader, 1);
 
 # reseed the randomiser to prevent
 # "Have exceeded the maximum number of attempts (10) to open temp file/dir"
@@ -6798,6 +6999,7 @@ sub compress_temp {
   $filename[$i] = $slist -> {data}[$i][2];
  }
 
+ my ($child, $parent) = open_socketpair();
  my $pid = start_process(sub {
   for (my $i = 0; $i < @filename; $i++) {
 
@@ -6805,13 +7007,13 @@ sub compress_temp {
    $filename[$i] = convert_to_tiff($filename[$i]);
 
 # Pass the new filename back to the GUI
-   send($writer, $i/@filename." $i $filename[$i] "
+   send($parent, $i/@filename." $i $filename[$i] "
                                              .$d->get('Compressing images'), 0);
   }
 
 # make a hash with a list of the files in temp
   my %files;
-  send($writer, "0 -1 x ".$d->get('Clearing up'), 0);
+  send($parent, "0 -1 x ".$d->get('Clearing up'), 0);
   foreach (<$dir/*>) {
    $files{$_} = TRUE;
   }
@@ -6821,19 +7023,19 @@ sub compress_temp {
   my @files = keys %files;
   my $i = 1;
   foreach (@files) {
-   send($writer, $i++/@files." -1 $_ ".$d->get('Clearing up'), 0);
+   send($parent, $i++/@files." -1 $_ ".$d->get('Clearing up'), 0);
    print "Deleting $_\n" if $debug;
    unlink $_;
   }
-  send($writer, '2', 0);
+  send($parent, '2', 0);
  });
 
- $helperTag{$pid} = Glib::IO->add_watch($reader->fileno(), ['in', 'hup'], sub {
+ $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
   my ($fileno, $condition) = @_;
 
   my $line;
   if ($condition & 'in') { # bit field operation. >= would also work
-   recv($reader, $line, 100, 0);
+   recv($child, $line, 100, 0);
    if (defined($line) and $line ne '') {
     my ($fraction, $page, $filename, @text) = split ' ', $line;
     if ($fraction > 1) {
@@ -6888,7 +7090,8 @@ sub preferences {
  push @frontends,
   [ 'scanadf', $d->get('scanadf'), $d->get('Scan using the scanadf frontend.') ],
   if ($dependencies{scanadf});
- my $combob =  combobox_from_array($SETTING{'frontend'}, @frontends);
+ my $combob =  combobox_from_array(@frontends);
+ combobox_set_active($combob, $SETTING{'frontend'}, @frontends);
  $hbox -> pack_end($combob, TRUE, TRUE, 0);
 
 # Save options setting
