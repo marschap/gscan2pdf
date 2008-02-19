@@ -229,6 +229,7 @@ my $conf = Config::General->new(
   'pages to scan'      => 1,
   'unpaper on scan'    => TRUE,
   'OCR on scan'        => TRUE,
+  'frontend'           => 'scanimage',
   'rotate facing'      => 0,
   'rotate reverse'     => 0,
  },
@@ -3260,7 +3261,7 @@ sub scan_dialog {
  my $vboxp = Gtk2::VBox -> new;
  $vboxp -> set_border_width($border_width);
  $framep -> add ($vboxp);
-
+ 
 # Rotate
  my $hboxr = Gtk2::HBox -> new;
  $vboxp -> pack_start ($hboxr, FALSE, FALSE, 0);
@@ -5427,9 +5428,6 @@ sub threshold {
     my $fraction = $page/$total;
     if ($fraction > 1) {
      $dialog -> destroy;
-
-# Reselect the pages to display the thresholded image(s)
-     $slist->select(@pagelist);
      return FALSE;  # uninstall
     }
     $pbar->set_fraction($fraction);
@@ -5449,7 +5447,6 @@ sub threshold {
 # Only allow the hup if sure an empty buffer has been read.
    if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
     $dialog -> destroy;
-    $slist->select(@pagelist);
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
@@ -5604,9 +5601,6 @@ sub unsharp {
      my $fraction = $page/$total;
      if ($fraction > 1) {
       $dialog -> destroy;
-
-# Reselect the pages to display the rotated image(s)
-      $slist->select(@pagelist);
       return FALSE;  # uninstall
      }
      $pbar->set_fraction($fraction);
@@ -5784,9 +5778,6 @@ print "xoffset $xoffset, yoffset $yoffset, factor $factor\n";
      my $fraction = $page/$total;
      if ($fraction > 1) {
       $dialog -> destroy;
-
-# Reselect the pages to display the rotated image(s)
-      $slist->select(@pagelist);
       return FALSE;  # uninstall
      }
      $pbar->set_fraction($fraction);
