@@ -313,7 +313,7 @@ my ($windowi, $windowe, $windows, $windowh, $windowo,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
     $scanwatch, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
-    $windowr,
+    $windowr, @rotate_queue,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -361,9 +361,9 @@ my @action_items = (
  [ 'Zoom to fit', 'gtk-zoom-fit', $d->get('Zoom to _fit'), undef, $d->get('Zoom to fit'), sub { zoom_button('fit'); } ],
  [ 'Zoom in', 'gtk-zoom-in', $d->get('Zoom _in'), 'plus', $d->get('Zoom in'), sub { zoom_button('in'); } ],
  [ 'Zoom out', 'gtk-zoom-out', $d->get('Zoom _out'), 'minus', $d->get('Zoom out'), sub { zoom_button('out'); } ],
- [ 'Rotate 90', 'rotate90', $d->get('Rotate 90 clockwise'), undef, $d->get('Rotate 90 clockwise'), sub { rotate(90); } ],
- [ 'Rotate 180', 'rotate180', $d->get('Rotate 180'), undef, $d->get('Rotate 180'), sub { rotate(180); } ],
- [ 'Rotate 270', 'rotate270', $d->get('Rotate 90 anticlockwise'), undef, $d->get('Rotate 90 anticlockwise'), sub { rotate(270); } ],
+ [ 'Rotate 90', 'rotate90', $d->get('Rotate 90 clockwise'), undef, $d->get('Rotate 90 clockwise'), sub { rotate_selected(90); } ],
+ [ 'Rotate 180', 'rotate180', $d->get('Rotate 180'), undef, $d->get('Rotate 180'), sub { rotate_selected(180); } ],
+ [ 'Rotate 270', 'rotate270', $d->get('Rotate 90 anticlockwise'), undef, $d->get('Rotate 90 anticlockwise'), sub { rotate_selected(270); } ],
  
  # Tools menu
  [ 'Tools', undef, $d->get('_Tools') ],
@@ -3261,7 +3261,7 @@ sub scan_dialog {
  my $vboxp = Gtk2::VBox -> new;
  $vboxp -> set_border_width($border_width);
  $framep -> add ($vboxp);
- 
+
 # Rotate
  my $hboxr = Gtk2::HBox -> new;
  $vboxp -> pack_start ($hboxr, FALSE, FALSE, 0);
@@ -4133,6 +4133,18 @@ sub hash2options {
 }
 
 
+sub post_process_scan {
+ my ($page, $rotate, $unpaper, $ocr) = @_;
+ push @rotate_queue, [ $page, $rotate ] if $rotate;
+ push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper;
+ push @ocr_stack, $page if $ocr;
+
+ rotate();
+ unpaper_page();
+ ocr_page();
+}
+
+
 # Take new scan and display it
 
 sub import_scan {
@@ -4148,7 +4160,7 @@ sub import_scan {
   ocr_page(@page) if ($ocr);
  }
 
- return TRUE;
+ return @page;
 }
 
 
@@ -5211,15 +5223,26 @@ sub renumber {
 }
 
 
-# Rotate image
+# Rotate selected images
 
-sub rotate {
+sub rotate_selected {
  my ($degrees) = @_;
+ my @page = $slist -> get_selected_indices;
+ my @list;
+ push @rotate_queue, [ $_, $degrees ] foreach (@page);
 
 # Update undo/redo buffers
  take_snapshot();
- my @page = $slist -> get_selected_indices;
 
+ rotate();
+}
+
+
+# Rotate images in @rotate_queue ($index, $degrees)
+
+sub rotate {
+ my $page = 0;
+ my $npages = 0;
  my $dialog = Gtk2::Dialog -> new ($d->get('Rotating')."...", $window,
                                            'destroy-with-parent',
                                            'gtk-cancel' => 'cancel');
@@ -5238,15 +5261,25 @@ sub rotate {
 # Install a handler for child processes
  $SIG{CHLD} = \&sig_child;
 
- my @pagelist = get_page_index();
  my ($child, $parent) = open_socketpair();
  my $pid = start_process(sub {
+  send($parent, 'ready', 0);
 
-  my $i = 0;
-  while ($i < @page) {
+  while (TRUE) {
+
+# Now block until the GUI passes the filename and direction
+   my $rin = '';
+   my $rout = '';
+   my ($index, $filename, $degrees);
+   vec($rin, $parent->fileno(), 1) = 1;
+   if (select($rout=$rin,undef,undef,undef)) {
+    my $line;
+    recv($parent, $line, 1000, 0);
+    return if ($line eq 'finished');
+    ($index, $filename, $degrees) = split ' ', $line;
+   }
 
 # Rotate with imagemagick
-   my $filename = $slist -> {data}[$page[$i]][2];
    my $image = Image::Magick->new;
    my $x = $image->Read($filename);
    warn "$x" if "$x";
@@ -5260,10 +5293,8 @@ sub rotate {
    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
    $x = $image->Write(filename => $filename, depth => $depth);
    warn "$x" if "$x";
-   send($parent, sprintf("%i %i %s", $i, $#pagelist+1, $filename), 0);
-   ++$i;
+   send($parent, "$index $filename", 0);
   }
-  send($parent, '2 1', 0);
  });
 
  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
@@ -5272,21 +5303,27 @@ sub rotate {
   my $line;
   if ($condition & 'in') { # bit field operation. >= would also work
    recv($child, $line, 1000, 0);
-   my ($page, $total, $filename) = split ' ', $line;
-   my $fraction = $page/$total;
-   if ($fraction > 1) {
+   my ($index, $filename) = split ' ', $line;
+   if (defined $filename and $filename ne '' and $index ne 'ready') {
+    $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+    $slist -> {data}[$index][2] = $filename;
+    $slist -> {data}[$index][1] = get_pixbuf($filename, $heightt, $widtht);
+    $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+    display_image($filename) if ($page == 1);
+   }
+   if (@rotate_queue) {
+    $page++;
+    $npages++;
+    my ($index, $degrees) = @{shift @rotate_queue};
+    my $filename = $slist -> {data}[$index][2];
+    send($child, "$index $filename $degrees", 0);
+    $pbar->set_text(sprintf($d->get("Rotating page %i of %i"), $page, $#rotate_queue+$npages+1));
+    $pbar->set_fraction (($page-1)/($#rotate_queue+$npages+1));
+   }
+   else {
+    send($child, 'finished', 0);
     $dialog -> destroy;
     return FALSE;  # uninstall
-   }
-   $pbar->set_fraction($fraction);
-   $pbar->set_text(sprintf($d->get("Rotating page %i of %i"), $page+1, $total));
-   if (defined $filename and $filename ne '') {
-    $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
-    $slist -> {data}[$pagelist[$page]][2] = $filename;
-    $slist -> {data}[$pagelist[$page]][1] =
-                                       get_pixbuf($filename, $heightt, $widtht);
-    $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
-    display_image($filename) if (! $page);
    }
   }
 
@@ -5837,130 +5874,130 @@ sub unpaper_page {
  $options = '' if (! defined($options));
  push @unpaper_stack, [ $_, $ocr, $options ] foreach (@_);
 
+# don't run ocr and unpaper concurrently
+ return
+  if (defined($scanwatch) or defined($unpaper_timer) or defined($ocr_timer));
+
 # guess where unpaper has been called from
  my $parent = get_parent($windowu, $windows, $window);
-
-# don't run ocr and unpaper concurrently
- if (! defined($scanwatch) and ! defined($unpaper_timer) and ! defined($ocr_timer)) {
-  my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $parent,
-                                    'destroy-with-parent',
-                                    'gtk-cancel' => 'cancel');
-  my $label = Gtk2::Label -> new ($d->get('Running unpaper')."...");
-  $dialog -> vbox -> add($label);
+ my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $parent,
+                                   'destroy-with-parent',
+                                   'gtk-cancel' => 'cancel');
+ my $label = Gtk2::Label -> new ($d->get('Running unpaper')."...");
+ $dialog -> vbox -> add($label);
 
 # Set up ProgressBar
-  my $pbar = Gtk2::ProgressBar->new;
-  $dialog -> vbox -> add($pbar);
+ my $pbar = Gtk2::ProgressBar->new;
+ $dialog -> vbox -> add($pbar);
 
 # Flag set if unpaper is running
-  my $running = FALSE;
-  my $cancelled = FALSE;
-  my $page = 0;
-  my $npages = 0;
+ my $running = FALSE;
+ my $cancelled = FALSE;
+ my $page = 0;
+ my $npages = 0;
 
 # Ensure that the dialog box is destroyed when the user responds.
-  my $pid;
-  $dialog -> signal_connect (response => sub {
-   $_[0] -> destroy;
-   local $SIG{HUP} = 'IGNORE';
-   kill HUP => $pid;
-   $cancelled = TRUE;
-   undef(@unpaper_stack);
-  });
-  $dialog -> show_all;
+ my $pid;
+ $dialog -> signal_connect (response => sub {
+  $_[0] -> destroy;
+  local $SIG{HUP} = 'IGNORE';
+  kill HUP => $pid;
+  $cancelled = TRUE;
+  undef(@unpaper_stack);
+ });
+ $dialog -> show_all;
 
 # Timer will run until callback returns false 
-  $unpaper_timer = Glib::Timeout->add (100, sub {
+ $unpaper_timer = Glib::Timeout->add (100, sub {
 
 # To prevent any further pages being processed
-   if ($cancelled) {
-    undef $unpaper_timer;
-    return FALSE;  # uninstall
-   }
-   elsif (@unpaper_stack) {
-    if (! $running) {
-     $running = TRUE;
-     $page++;
-     $npages++;
-     my ($pagenum, $ocr, $options) = @{shift @unpaper_stack};
-     $pbar->set_text(sprintf($d->get("Page %i of %i"), $page, $#unpaper_stack+$npages+1));
-     $pbar->set_fraction (($page-1)/($#unpaper_stack+$npages+1));
+  if ($cancelled) {
+   undef $unpaper_timer;
+   return FALSE;  # uninstall
+  }
+  elsif (@unpaper_stack) {
+   if (! $running) {
+    $running = TRUE;
+    $page++;
+    $npages++;
+    my ($pagenum, $ocr, $options) = @{shift @unpaper_stack};
+    $pbar->set_text(sprintf($d->get("Page %i of %i"), $page, $#unpaper_stack+$npages+1));
+    $pbar->set_fraction (($page-1)/($#unpaper_stack+$npages+1));
 
-     my $cmd = '';
-     my $in;
-     my (undef, $out) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+    my $cmd = '';
+    my $in;
+    my (undef, $out) = tempfile(DIR => $dir, SUFFIX => '.pnm');
 
-     if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
-      (undef, $in) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-      $cmd .= "convert -compress Zip $slist->{data}[$pagenum][2] $in;";
-     }
-     else {
-      $in = $slist -> {data}[$pagenum][2];
-     }
+    if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
+     (undef, $in) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+     $cmd .= "convert -compress Zip $slist->{data}[$pagenum][2] $in;";
+    }
+    else {
+     $in = $slist -> {data}[$pagenum][2];
+    }
 
 # --overwrite needed because $out exists with 0 size
-     $cmd .= "unpaper $options --overwrite $in $out;";
-     $cmd .= "rm $in" if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/);
-     warn "$cmd\n" if ($debug);
+    $cmd .= "unpaper $options --overwrite $in $out;";
+    $cmd .= "rm $in" if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/);
+    warn "$cmd\n" if ($debug);
 
 # Interface to unpaper
-     $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-     warn "Forked PID $pid\n" if ($debug);
-     my $page_buffer = '';
+    $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+    warn "Forked PID $pid\n" if ($debug);
+    my $page_buffer = '';
  
 # Update TextBuffer without blocking
-     Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
-      my ($fileno, $condition) = @_;
-      my $line;
-      if ($condition & 'in') { # bit field operation. >= would also work
-       sysread $read, $line, 1024;
-       $page_buffer .= $line;
-      }
+    Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+     my ($fileno, $condition) = @_;
+     my $line;
+     if ($condition & 'in') { # bit field operation. >= would also work
+      sysread $read, $line, 1024;
+      $page_buffer .= $line;
+     }
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-      if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
-       warn $page_buffer if ($debug);
-       close $read;
-       warn 'Waiting to reap process' if ($debug);
-       my $pid = waitpid(-1, &WNOHANG);
-       warn "Reaped PID $pid\n" if ($debug);
+     if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+      warn $page_buffer if ($debug);
+      close $read;
+      warn 'Waiting to reap process' if ($debug);
+      my $pid = waitpid(-1, &WNOHANG);
+      warn "Reaped PID $pid\n" if ($debug);
 
 # Note page selection
-       my @selection = $slist -> get_selected_indices;
+      my @selection = $slist -> get_selected_indices;
 
-       $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
-       $slist -> {data}[$pagenum][2] = $out;
-       $slist -> {data}[$pagenum][1] = get_pixbuf($out, $heightt, $widtht);
-       $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+      $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+      $slist -> {data}[$pagenum][2] = $out;
+      $slist -> {data}[$pagenum][1] = get_pixbuf($out, $heightt, $widtht);
+      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Reselect selected pages, firing the display callback
-       $slist -> get_selection -> unselect_all;
-       $slist -> select(@selection);
+      $slist -> get_selection -> unselect_all;
+      $slist -> select(@selection);
 
-       $running = FALSE;
-       ocr_page($pagenum) if ($ocr);
+      $running = FALSE;
+      ocr_page($pagenum) if ($ocr);
 
-       return FALSE;  # uninstall
-      }
-      return TRUE;  # continue without uninstalling
-     });
-    }
-    return TRUE;  # continue without uninstalling
+      return FALSE;  # uninstall
+     }
+     return TRUE;  # continue without uninstalling
+    });
    }
-   elsif (! $running) {
-    $dialog -> destroy;
-    undef $unpaper_timer;
+   return TRUE;  # continue without uninstalling
+  }
+  elsif (! $running) {
+   $dialog -> destroy;
+   undef $unpaper_timer;
 
 # set off ocr if necessary now that unpaper has finished
-    ocr_page() if (@ocr_stack);
-    return FALSE;  # uninstall
-   }
-   else {
-    return TRUE;  # continue without uninstalling
-   }
-  });
- }
+   ocr_page() if (@ocr_stack);
+   return FALSE;  # uninstall
+  }
+  else {
+   return TRUE;  # continue without uninstalling
+  }
+ });
 }
 
 
@@ -6268,155 +6305,155 @@ sub unpaper {
 sub ocr_page {
  push @ocr_stack, @_;
 
+# don't run ocr and unpaper concurrently
+ return
+  if (defined($scanwatch) or defined($unpaper_timer) or defined($ocr_timer));
+
 # guess where ocr has been called from
  my $parent = get_parent($windowo, $windows, $window);
-
-# don't run ocr and unpaper concurrently
- if (! defined($scanwatch) and ! defined($unpaper_timer) and ! defined($ocr_timer)) {
-  my $dialog = Gtk2::Dialog -> new ($d->get('Running OCR')."...", $parent,
-                                    'destroy-with-parent',
-                                    'gtk-cancel' => 'cancel');
-  my $label = Gtk2::Label -> new ($d->get('Running OCR')."...");
-  $dialog -> vbox -> add($label);
+ my $dialog = Gtk2::Dialog -> new ($d->get('Running OCR')."...", $parent,
+                                   'destroy-with-parent',
+                                   'gtk-cancel' => 'cancel');
+ my $label = Gtk2::Label -> new ($d->get('Running OCR')."...");
+ $dialog -> vbox -> add($label);
 
 # Set up ProgressBar
-  my $pbar = Gtk2::ProgressBar->new;
-  $dialog -> vbox -> add($pbar);
+ my $pbar = Gtk2::ProgressBar->new;
+ $dialog -> vbox -> add($pbar);
 
 # Flag set if ocr is running
-  my $running = FALSE;
-  my $cancelled = FALSE;
-  my $page = 0;
-  my $npages = 0;
+ my $running = FALSE;
+ my $cancelled = FALSE;
+ my $page = 0;
+ my $npages = 0;
 
 # Ensure that the dialog box is destroyed when the user responds.
-  my $pid;
-  $dialog -> signal_connect (response => sub {
-   $_[0] -> destroy;
-   local $SIG{HUP} = 'IGNORE';
-   kill HUP => $pid;
-   $cancelled = TRUE;
-   undef(@ocr_stack);
-  });
-  $dialog -> show_all;
+ my $pid;
+ $dialog -> signal_connect (response => sub {
+  $_[0] -> destroy;
+  local $SIG{HUP} = 'IGNORE';
+  kill HUP => $pid;
+  $cancelled = TRUE;
+  undef(@ocr_stack);
+ });
+ $dialog -> show_all;
 
 # Timer will run until callback returns false 
-  $ocr_timer = Glib::Timeout->add (100, sub {
+ $ocr_timer = Glib::Timeout->add (100, sub {
 
 # To prevent any further pages being processed
-   if ($cancelled) {
-    undef $ocr_timer;
-    return FALSE;  # uninstall
-   }
-   elsif (@ocr_stack) {
-    if (! $running) {
-     $running = TRUE;
-     $page++;
-     $npages++;
-     my $pagenum = shift @ocr_stack;
-     $pbar->set_text(sprintf($d->get("Page %i of %i"), $page, $#ocr_stack+$npages+1));
-     $pbar->set_fraction (($page-1)/($#ocr_stack+$npages+1));
+  if ($cancelled) {
+   undef $ocr_timer;
+   return FALSE;  # uninstall
+  }
+  elsif (@ocr_stack) {
+   if (! $running) {
+    $running = TRUE;
+    $page++;
+    $npages++;
+    my $pagenum = shift @ocr_stack;
+    $pbar->set_text(sprintf($d->get("Page %i of %i"), $page, $#ocr_stack+$npages+1));
+    $pbar->set_fraction (($page-1)/($#ocr_stack+$npages+1));
 
 # Temporary filename for output
-     my (undef, $txt) = tempfile(DIR => $dir);
+    my (undef, $txt) = tempfile(DIR => $dir);
 
-     my $cmd;
-     if (defined($SETTING{'ocr engine'}) and $SETTING{'ocr engine'} eq 'gocr') {
-      my $pnm;
-      if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
-       my $file = $slist -> {data}[$pagenum][2];
+    my $cmd;
+    if (defined($SETTING{'ocr engine'}) and $SETTING{'ocr engine'} eq 'gocr') {
+     my $pnm;
+     if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
+      my $file = $slist -> {data}[$pagenum][2];
 
 # Temporary filename for new file
-       (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+      (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
 
-       $cmd = "convert $file $pnm; gocr $pnm > $txt.txt; rm $pnm";
-      }
-      else {
-       $pnm = $slist -> {data}[$pagenum][2];
-       $cmd .= "gocr $pnm > $txt.txt;";
-      }
+      $cmd = "convert $file $pnm; gocr $pnm > $txt.txt; rm $pnm";
      }
      else {
-      my ($tif, $pre, $post);
-      if ($slist -> {data}[$pagenum][2] !~ /\.tif$/) {
-       my $file = $slist -> {data}[$pagenum][2];
+      $pnm = $slist -> {data}[$pagenum][2];
+      $cmd .= "gocr $pnm > $txt.txt;";
+     }
+    }
+    else {
+     my ($tif, $pre, $post);
+     if ($slist -> {data}[$pagenum][2] !~ /\.tif$/) {
+      my $file = $slist -> {data}[$pagenum][2];
 
 # Temporary filename for new file
-       (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
-       $pre = "convert $file $tif;";
-       $post = "; rm $tif";
+      (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+      $pre = "convert $file $tif;";
+      $post = "; rm $tif";
 
-      }
-      else {
-       $tif = $slist -> {data}[$pagenum][2];
-       $pre = '';
-       $post = '';
-      }
-      if (defined $SETTING{'ocr language'}) {
-       $cmd = "$pre tesseract $tif $txt -l $SETTING{'ocr language'}$post";
-      }
-      else {
-       $cmd = "$pre tesseract $tif $txt$post";
-      }
      }
-     warn "$cmd\n" if ($debug);
+     else {
+      $tif = $slist -> {data}[$pagenum][2];
+      $pre = '';
+      $post = '';
+     }
+     if (defined $SETTING{'ocr language'}) {
+      $cmd = "$pre tesseract $tif $txt -l $SETTING{'ocr language'}$post";
+     }
+     else {
+      $cmd = "$pre tesseract $tif $txt$post";
+     }
+    }
+    warn "$cmd\n" if ($debug);
 
 # Interface to ocr engine
-     $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-     warn "Forked PID $pid\n" if ($debug);
+    $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+    warn "Forked PID $pid\n" if ($debug);
  
 # Update TextBuffer without blocking
-     Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
-      my ($fileno, $condition) = @_;
-      my $line;
-      if ($condition & 'in') { # bit field operation. >= would also work
-       sysread $read, $line, 1024;
-      }
+    Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+     my ($fileno, $condition) = @_;
+     my $line;
+     if ($condition & 'in') { # bit field operation. >= would also work
+      sysread $read, $line, 1024;
+     }
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-      if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
-       close $read;
-       warn 'Waiting to reap process' if ($debug);
-       my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
-       warn "Reaped PID $pid\n" if ($debug);
-       $running = FALSE;
+     if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+      close $read;
+      warn 'Waiting to reap process' if ($debug);
+      my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
+      warn "Reaped PID $pid\n" if ($debug);
+      $running = FALSE;
 
 # Doing this once at the end to avoid firing the row-changed signal too often
-       $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+      $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
 
 # Slurp the OCR output
-       $slist -> {data}[$pagenum][3] .= slurp("$txt.txt");
-       unlink <$txt*>;
-       $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+      $slist -> {data}[$pagenum][3] .= slurp("$txt.txt");
+      unlink <$txt*>;
+      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Update the buffer if current
-       my @page = $slist -> get_selected_indices;
-       if ($page[0] == $pagenum) {
-        $textbuffer -> signal_handler_block($textbuffer -> {signalid});
-        $textbuffer -> set_text ($slist -> {data}[$pagenum][3]);
-        $textbuffer -> signal_handler_unblock($textbuffer -> {signalid});
-       }
-       return FALSE;  # uninstall
+      my @page = $slist -> get_selected_indices;
+      if ($page[0] == $pagenum) {
+       $textbuffer -> signal_handler_block($textbuffer -> {signalid});
+       $textbuffer -> set_text ($slist -> {data}[$pagenum][3]);
+       $textbuffer -> signal_handler_unblock($textbuffer -> {signalid});
       }
-      return TRUE;  # continue without uninstalling
-     });
-    }
-    return TRUE;  # continue without uninstalling
+      return FALSE;  # uninstall
+     }
+     return TRUE;  # continue without uninstalling
+    });
    }
-   elsif (! $running) {
-    $dialog -> destroy;
-    undef $ocr_timer;
+   return TRUE;  # continue without uninstalling
+  }
+  elsif (! $running) {
+   $dialog -> destroy;
+   undef $ocr_timer;
 
 # start unpaper if necessary now that ocr has finished
-    unpaper_page() if (@unpaper_stack);
-    return FALSE;  # uninstall
-   }
-   else {
-    return TRUE;  # continue without uninstalling
-   }
-  });
- }
+   unpaper_page() if (@unpaper_stack);
+   return FALSE;  # uninstall
+  }
+  else {
+   return TRUE;  # continue without uninstalling
+  }
+ });
 }
 
 
