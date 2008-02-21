@@ -311,9 +311,9 @@ init_icons(
 my ($windowi, $windowe, $windows, $windowh, $windowo,
     $windowu, $slist, $vboxd, $combobd, $combobp, $vboxm, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
-    @ocr_stack, $ocr_timer, %helperTag, @unpaper_stack, $unpaper_timer,
-    $scanwatch, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
-    $windowr, @rotate_queue,
+    @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
+    $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
+    $windowr, @rotate_queue, $rotating,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -3867,7 +3867,7 @@ sub scanimage {
   $dialog -> show_all;
  
   my $line;
-  $scanwatch = Glib::IO->add_watch(fileno($error), ['in', 'hup'], sub {
+  Glib::IO->add_watch(fileno($error), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
    my $buffer;
    if ($condition & 'in') { # bit field operation. >= would also work
@@ -3894,13 +3894,19 @@ sub scanimage {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap',
-                                  $SETTING{resolution}, TRUE, $unpaper, $ocr)) {
+      my $index = import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap',
+                                                    $SETTING{resolution}, TRUE);
+      if ($index == -1) {
        $dialog -> destroy;
        show_message_dialog(
         $windows, 'error', 'close', $d->get('Unable to load image')
        );
        return FALSE;
+      }
+      else {
+       my $rotate = $1 % 2 ? $rfacing : $rreverse;
+print $1 % 2 ? "facing page\n" : "reverse page\n";
+       post_process_scan($index, $rotate, $unpaper, $ocr);
       }
      }
      elsif ($line =~ /Scanner warming up - waiting \d* seconds|wait for lamp warm-up/) {
@@ -3941,20 +3947,16 @@ sub scanimage {
     my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
     warn "Reaped PID $pid\n" if ($debug);
 
-# Now finished scanning, set off unpaper or ocr if necessary
-    undef $scanwatch;
-    if ($unpaper) {
-     unpaper_page();
-    }
-    else {
-     ocr_page() if ($ocr);
-    }
+# Now finished scanning, get on with post-processing
+    $scanning = FALSE;
+    post_process_scan();
 
     $dialog -> destroy;
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
   });
+  $scanning = TRUE;
  }
  else {
   warn "$cmd\n";
@@ -4030,7 +4032,7 @@ sub scanadf {
   $dialog -> show_all;
  
   my $line;
-  $scanwatch = Glib::IO->add_watch(fileno($error), ['in', 'hup'], sub {
+  Glib::IO->add_watch(fileno($error), ['in', 'hup'], sub {
    my ($fileno, $condition) = @_;
    my $buffer;
    if ($condition & 'in') { # bit field operation. >= would also work
@@ -4049,14 +4051,20 @@ sub scanadf {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      if (! import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap',
-                                  $SETTING{resolution}, TRUE, $unpaper, $ocr)) {
+      my $index = import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap',
+                                                    $SETTING{resolution}, TRUE);
+      if ($index == -1) {
        $dialog -> destroy;
        $running = FALSE;
        show_message_dialog(
         $windows, 'error', 'close', $d->get('Unable to load image')
        );
        return FALSE;
+      }
+      else {
+       my $rotate = $1 % 2 ? $rfacing : $rreverse;
+print $1 % 2 ? "facing page\n" : "reverse page\n";
+       post_process_scan($index, $rotate, $unpaper, $ocr);
       }
      }
      elsif ($line =~ /^Scanned \d* pages/) {
@@ -4087,13 +4095,8 @@ sub scanadf {
     warn "Reaped PID $pid\n" if ($debug);
 
 # Now finished scanning, set off unpaper or ocr if necessary
-    undef $scanwatch;
-    if ($unpaper) {
-     unpaper_page();
-    }
-    else {
-     ocr_page() if ($ocr);
-    }
+    $scanning = FALSE;
+    post_process_scan();
 
     $dialog -> destroy;
     $running = FALSE;
@@ -4101,6 +4104,7 @@ sub scanadf {
    }
    return TRUE;  # continue without uninstalling
   });
+  $scanning = TRUE;
  }
  else {
   warn "$cmd\n";
@@ -4139,9 +4143,12 @@ sub post_process_scan {
  push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper;
  push @ocr_stack, $page if $ocr;
 
- rotate();
- unpaper_page();
- ocr_page();
+ rotate()
+  if (@rotate_queue and !($scanning or $running_unpaper or $running_ocr));
+ unpaper_page()
+  if (@unpaper_stack and !($scanning or $rotating or $running_ocr));
+ ocr_page()
+  if (@ocr_stack and !($scanning or $rotating or $running_unpaper));
 }
 
 
@@ -4151,16 +4158,7 @@ sub import_scan {
  my ($ofilename, $page, $format, $resolution, $delete, $unpaper, $ocr) = @_;
  (my $filename, $resolution) = prepare_import($ofilename, $format, $resolution, $delete);
 
- my @page = add_image($filename, $page, $resolution);
-
- if ($unpaper) {
-  unpaper_page($ocr, options2unpaper($unpaper_options), @page);
- }
- else {
-  ocr_page(@page) if ($ocr);
- }
-
- return @page;
+ return add_image($filename, $page, $resolution);
 }
 
 
@@ -5254,6 +5252,7 @@ sub rotate {
 # Ensure that the dialog box is destroyed when the user responds.
  $dialog -> signal_connect (response => sub {
   $_[0] -> destroy;
+  $rotating = FALSE;
   kill_subs();
  });
  $dialog -> show_all;
@@ -5323,6 +5322,8 @@ sub rotate {
    else {
     send($child, 'finished', 0);
     $dialog -> destroy;
+    $rotating = FALSE;
+    post_process_scan();
     return FALSE;  # uninstall
    }
   }
@@ -5331,10 +5332,13 @@ sub rotate {
 # Only allow the hup if sure an empty buffer has been read.
   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
    $dialog -> destroy;
+   $rotating = FALSE;
+   post_process_scan();
    return FALSE;  # uninstall
   }
   return TRUE;  # continue without uninstalling
  });
+ $rotating = TRUE;
 }
 
 
@@ -5874,10 +5878,6 @@ sub unpaper_page {
  $options = '' if (! defined($options));
  push @unpaper_stack, [ $_, $ocr, $options ] foreach (@_);
 
-# don't run ocr and unpaper concurrently
- return
-  if (defined($scanwatch) or defined($unpaper_timer) or defined($ocr_timer));
-
 # guess where unpaper has been called from
  my $parent = get_parent($windowu, $windows, $window);
  my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $parent,
@@ -5891,7 +5891,7 @@ sub unpaper_page {
  $dialog -> vbox -> add($pbar);
 
 # Flag set if unpaper is running
- my $running = FALSE;
+ $running_unpaper = FALSE;
  my $cancelled = FALSE;
  my $page = 0;
  my $npages = 0;
@@ -5908,16 +5908,16 @@ sub unpaper_page {
  $dialog -> show_all;
 
 # Timer will run until callback returns false 
- $unpaper_timer = Glib::Timeout->add (100, sub {
+ Glib::Timeout->add (100, sub {
 
 # To prevent any further pages being processed
   if ($cancelled) {
-   undef $unpaper_timer;
+   $running_unpaper = FALSE;
    return FALSE;  # uninstall
   }
   elsif (@unpaper_stack) {
-   if (! $running) {
-    $running = TRUE;
+   if (! $running_unpaper) {
+    $running_unpaper = TRUE;
     $page++;
     $npages++;
     my ($pagenum, $ocr, $options) = @{shift @unpaper_stack};
@@ -5976,8 +5976,8 @@ sub unpaper_page {
       $slist -> get_selection -> unselect_all;
       $slist -> select(@selection);
 
-      $running = FALSE;
-      ocr_page($pagenum) if ($ocr);
+      $running_unpaper = FALSE;
+      post_process_scan();
 
       return FALSE;  # uninstall
      }
@@ -5986,12 +5986,11 @@ sub unpaper_page {
    }
    return TRUE;  # continue without uninstalling
   }
-  elsif (! $running) {
+  elsif (! $running_unpaper) {
    $dialog -> destroy;
-   undef $unpaper_timer;
 
 # set off ocr if necessary now that unpaper has finished
-   ocr_page() if (@ocr_stack);
+   post_process_scan();
    return FALSE;  # uninstall
   }
   else {
@@ -6307,7 +6306,7 @@ sub ocr_page {
 
 # don't run ocr and unpaper concurrently
  return
-  if (defined($scanwatch) or defined($unpaper_timer) or defined($ocr_timer));
+  if ($scanning or $running_unpaper or $running_ocr);
 
 # guess where ocr has been called from
  my $parent = get_parent($windowo, $windows, $window);
@@ -6322,7 +6321,7 @@ sub ocr_page {
  $dialog -> vbox -> add($pbar);
 
 # Flag set if ocr is running
- my $running = FALSE;
+ $running_ocr = FALSE;
  my $cancelled = FALSE;
  my $page = 0;
  my $npages = 0;
@@ -6339,16 +6338,16 @@ sub ocr_page {
  $dialog -> show_all;
 
 # Timer will run until callback returns false 
- $ocr_timer = Glib::Timeout->add (100, sub {
+ Glib::Timeout->add (100, sub {
 
 # To prevent any further pages being processed
   if ($cancelled) {
-   undef $ocr_timer;
+   $running_ocr = FALSE;
    return FALSE;  # uninstall
   }
   elsif (@ocr_stack) {
-   if (! $running) {
-    $running = TRUE;
+   if (! $running_ocr) {
+    $running_ocr = TRUE;
     $page++;
     $npages++;
     my $pagenum = shift @ocr_stack;
@@ -6418,7 +6417,7 @@ sub ocr_page {
       warn 'Waiting to reap process' if ($debug);
       my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
       warn "Reaped PID $pid\n" if ($debug);
-      $running = FALSE;
+      $running_ocr = FALSE;
 
 # Doing this once at the end to avoid firing the row-changed signal too often
       $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
@@ -6442,12 +6441,9 @@ sub ocr_page {
    }
    return TRUE;  # continue without uninstalling
   }
-  elsif (! $running) {
+  elsif (! $running_ocr) {
    $dialog -> destroy;
-   undef $ocr_timer;
-
-# start unpaper if necessary now that ocr has finished
-   unpaper_page() if (@unpaper_stack);
+   post_process_scan();
    return FALSE;  # uninstall
   }
   else {
