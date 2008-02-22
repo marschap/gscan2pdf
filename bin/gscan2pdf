@@ -3909,7 +3909,7 @@ sub scanimage {
       }
       else {
        my $rotate = $1 % 2 ? $rfacing : $rreverse;
-print $1 % 2 ? "facing page\n" : "reverse page\n";
+print "added image at $index. is ", $1 % 2 ? "facing page\n" : "reverse page\n";
        post_process_scan($index, $rotate, $unpaper, $ocr);
       }
      }
@@ -4067,7 +4067,7 @@ sub scanadf {
       }
       else {
        my $rotate = $1 % 2 ? $rfacing : $rreverse;
-print $1 % 2 ? "facing page\n" : "reverse page\n";
+print "added image at $index. is ", $1 % 2 ? "facing page\n" : "reverse page\n";
        post_process_scan($index, $rotate, $unpaper, $ocr);
       }
      }
