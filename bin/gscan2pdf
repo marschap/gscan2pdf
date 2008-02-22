@@ -4781,6 +4781,8 @@ sub add_spinbutton {
   my $label = Gtk2::Label -> new ($_->{label});
   $hbox -> pack_start ($label, FALSE, FALSE, 0);
   my $spinbutton = Gtk2::SpinButton -> new_with_range(0, $_->{dimension}, 1);
+  $SETTING{$_->{letter}} = $_->{dimension}
+   if (! defined($SETTING{$_->{letter}}));
   $spinbutton -> set_value($SETTING{$_->{letter}});
   $tooltips -> set_tip ($spinbutton, $_->{tooltip});
   $hbox -> pack_end ($spinbutton, FALSE, FALSE, 0);
