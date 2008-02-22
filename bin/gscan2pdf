@@ -3330,25 +3330,29 @@ sub scan_dialog {
    $comboboxs2->set_active(0);
   }
  });
+
+# In case it isn't set elsewhere
+ combobox_set_active($comboboxr2, 90, @rotate);
+
  if ($SETTING{'rotate facing'} or $SETTING{'rotate reverse'}) {
   $rbutton->set_active(TRUE);
-  if ($SETTING{'rotate facing'} == $SETTING{'rotate reverse'}) {
-   combobox_set_active($comboboxs, 'both', @side);
-   combobox_set_active($comboboxr, $SETTING{'rotate facing'}, @rotate);
+ }
+ if ($SETTING{'rotate facing'} == $SETTING{'rotate reverse'}) {
+  combobox_set_active($comboboxs, 'both', @side);
+  combobox_set_active($comboboxr, $SETTING{'rotate facing'}, @rotate);
+ }
+ elsif ($SETTING{'rotate facing'}) {
+  combobox_set_active($comboboxs, 'facing', @side);
+  combobox_set_active($comboboxr, $SETTING{'rotate facing'}, @rotate);
+  if ($SETTING{'rotate reverse'}) {
+   $r2button->set_active(TRUE);
+   combobox_set_active($comboboxs2, 'reverse', @side2);
+   combobox_set_active($comboboxr2, $SETTING{'rotate reverse'}, @rotate);
   }
-  elsif ($SETTING{'rotate facing'}) {
-   combobox_set_active($comboboxs, 'facing', @side);
-   combobox_set_active($comboboxr, $SETTING{'rotate facing'}, @rotate);
-   if ($SETTING{'rotate reverse'}) {
-    $r2button->set_active(TRUE);
-    combobox_set_active($comboboxs2, 'reverse', @side2);
-    combobox_set_active($comboboxr2, $SETTING{'rotate reverse'}, @rotate);
-   }
-  }
-  else {
-   combobox_set_active($comboboxs, 'reverse', @side);
-   combobox_set_active($comboboxr, $SETTING{'rotate reverse'}, @rotate);
-  }
+ }
+ else {
+  combobox_set_active($comboboxs, 'reverse', @side);
+  combobox_set_active($comboboxr, $SETTING{'rotate reverse'}, @rotate);
  }
 
 # CheckButton for unpaper
