@@ -4424,7 +4424,7 @@ sub about {
  my $about = Gtk2::AboutDialog->new;
 # Gtk2::AboutDialog->set_url_hook ($func, $data=undef);
 # Gtk2::AboutDialog->set_email_hook ($func, $data=undef);
- $about->set_program_name ($program);
+ $about->set_name ($program);
  $about->set_version ($version);
  my $authors = <<EOS;
 John Goerzen
