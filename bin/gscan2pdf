@@ -5247,8 +5247,8 @@ sub rotate {
  my $npages = 0;
 
 # guess where unpaper has been called from
- my $parent = get_parent($windows, $window);
- my $dialog = Gtk2::Dialog -> new ($d->get('Rotating')."...", $parent,
+ my $window = get_parent($windows, $window);
+ my $dialog = Gtk2::Dialog -> new ($d->get('Rotating')."...", $window,
                                            'destroy-with-parent',
                                            'gtk-cancel' => 'cancel');
 
