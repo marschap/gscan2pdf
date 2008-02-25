@@ -3935,7 +3935,6 @@ sub scanimage {
       }
       else {
        my $rotate = $1 % 2 ? $rfacing : $rreverse;
-print "added image at $index. is ", $1 % 2 ? "facing page\n" : "reverse page\n";
        post_process_scan($index, $rotate, $unpaper, $ocr);
       }
      }
@@ -4093,7 +4092,6 @@ sub scanadf {
       }
       else {
        my $rotate = $1 % 2 ? $rfacing : $rreverse;
-print "added image at $index. is ", $1 % 2 ? "facing page\n" : "reverse page\n";
        post_process_scan($index, $rotate, $unpaper, $ocr);
       }
      }
@@ -4263,7 +4261,7 @@ sub add_image {
  
  update_uimanager();
 
- return @page;
+ return $page[0];
 }
 
 
@@ -4452,7 +4450,7 @@ sub about {
  my $about = Gtk2::AboutDialog->new;
 # Gtk2::AboutDialog->set_url_hook ($func, $data=undef);
 # Gtk2::AboutDialog->set_email_hook ($func, $data=undef);
- $about->set_program_name ($program);
+ $about->set_name ($program);
  $about->set_version ($version);
  my $authors = <<EOS;
 John Goerzen
@@ -5273,6 +5271,9 @@ sub rotate_selected {
 sub rotate {
  my $page = 0;
  my $npages = 0;
+
+# guess where unpaper has been called from
+ my $window = get_parent($windows, $window);
  my $dialog = Gtk2::Dialog -> new ($d->get('Rotating')."...", $window,
                                            'destroy-with-parent',
                                            'gtk-cancel' => 'cancel');
@@ -5340,7 +5341,8 @@ sub rotate {
     $slist -> {data}[$index][2] = $filename;
     $slist -> {data}[$index][1] = get_pixbuf($filename, $heightt, $widtht);
     $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
-    display_image($filename) if ($page == 1);
+    my @selected = $slist -> get_selected_indices;
+    display_image($filename) if ($index == $selected[0]);
    }
    if (@rotate_queue) {
     $page++;
