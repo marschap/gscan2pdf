@@ -1792,20 +1792,46 @@ sub import_file {
   }
  }
  elsif ($format eq 'Tagged Image File Format') {
+  send($parent, '0 0 0'.$d->get('Extracting TIFF infomation'), 0);
+  my $cmd = "tiffinfo \"$filename\"";
+  warn "$cmd\n" if ($debug);
+  my $info = `$cmd`;
+  print $info if ($debug);
+
+# Count number of pages and their resolutions
+  my @dpi;
+  while ($info =~ /Resolution: (\d*)/) {
+   push @dpi, $1;
+   $info = substr($info, index($info,'Resolution')+10, length($info));
+  }
+  my $last = @dpi;
+  print "$last pages\n" if ($debug);
+  my $first = 1;
+  if ($last > 1) {
+   send($parent, "-2 0 $last", 0);
+
+# Now block until the GUI passes the range back
+   my $rin = '';
+   my $rout = '';
+   vec($rin, $parent->fileno(), 1) = 1;
+   if (select($rout=$rin,undef,undef,undef)) {
+    my $line;
+    recv($parent, $line, 1000, 0);
+    ($first, $last) = split ' ', $line;
+   }
+  }
 
 # Split the tiff into its pages and import them individually
-  send($parent, sprintf("%f %s %i ", $j/$n, 0, 0)
-   .$d->get('Extracting images from TIFF'), 0);
-  system("tiffsplit \"$filename\"") == 0 or
-   send($parent, '-1 0 0'.$d->get('Error extracting images from TIFF'), 0);
-
-  my @images = <x???.tif>;
-  my $i = 0;
-  foreach (@images) {
-   my ($filename, $resolution) = prepare_import($_, $format, undef, TRUE);
-   send($parent, 
-    sprintf("%f %s %i ", (++$i/($#images+1)+$j)/$n, $filename, $resolution)
-    .sprintf($d->get("Importing image %i of %i"), $i, $#images+1), 0);
+  if ($last >= $first and $first > 0) {
+   for (my $i = $first-1; $i < $last; $i++) {
+    my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+    my $cmd = "tiffcp \"$filename\",$i $tif";
+    warn "$cmd\n" if ($debug);
+    system($cmd);
+    send($parent, 
+     sprintf("%f %s %i ", (($i-$first+1)/($last-$first+1)+$j)/$n, $tif, $dpi[$i])
+     .sprintf($d->get("Importing image %i of %i"), $i-$first, $last-$first+1), 0);
+   }
   }
  }
  elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
