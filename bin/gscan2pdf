@@ -4171,12 +4171,15 @@ sub post_process_scan {
  push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper;
  push @ocr_stack, $page if $ocr;
 
- rotate()
-  if (@rotate_queue and !($scanning or $running_unpaper or $running_ocr));
- unpaper_page()
-  if (@unpaper_stack and !($scanning or $rotating or $running_ocr));
- ocr_page()
-  if (@ocr_stack and !($scanning or $rotating or $running_unpaper));
+ if (@rotate_queue and !($scanning or $running_unpaper or $running_ocr)) {
+  rotate();
+ }
+ elsif (@unpaper_stack and !($scanning or $rotating or $running_ocr)) {
+  unpaper_page();
+ }
+ elsif (@ocr_stack and !($scanning or $rotating or $running_unpaper)) {
+  ocr_page();
+ }
 }
 
 
@@ -6337,10 +6340,6 @@ sub unpaper {
 sub ocr_page {
  push @ocr_stack, @_;
 
-# don't run ocr and unpaper concurrently
- return
-  if ($scanning or $running_unpaper or $running_ocr);
-
 # guess where ocr has been called from
  my $parent = get_parent($windowo, $windows, $window);
  my $dialog = Gtk2::Dialog -> new ($d->get('Running OCR')."...", $parent,
@@ -6476,7 +6475,6 @@ sub ocr_page {
   }
   elsif (! $running_ocr) {
    $dialog -> destroy;
-   post_process_scan();
    return FALSE;  # uninstall
   }
   else {
