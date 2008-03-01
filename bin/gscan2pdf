@@ -4171,14 +4171,16 @@ sub post_process_scan {
  push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper;
  push @ocr_stack, $page if $ocr;
 
- if (@rotate_queue and !($scanning or $running_unpaper or $running_ocr)) {
-  rotate();
- }
- elsif (@unpaper_stack and !($scanning or $rotating or $running_ocr)) {
-  unpaper_page();
- }
- elsif (@ocr_stack and !($scanning or $rotating or $running_unpaper)) {
-  ocr_page();
+ if (!($rotating or $scanning or $running_unpaper or $running_ocr)) {
+  if (@rotate_queue) {
+   rotate();
+  }
+  elsif (@unpaper_stack) {
+   unpaper_page();
+  }
+  elsif (@ocr_stack) {
+   ocr_page();
+  }
  }
 }
 
@@ -6013,7 +6015,6 @@ sub unpaper_page {
       $slist -> select(@selection);
 
       $running_unpaper = FALSE;
-      post_process_scan();
 
       return FALSE;  # uninstall
      }
