@@ -81,7 +81,10 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Fri Feb 01 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Tue Mar 04 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release.
+    Closes: #463708 (gscan2pdf: Error when saving as PNG)
+    Closes: #462171 (importing DjVu files fails, hogs memory)
   - New upstream release.
     Closes: #461859 (better selected/current/all heuristic)
     Closes: #461076 (importing PDFs causes /tmp/ overflow)

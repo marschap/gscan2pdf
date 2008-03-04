@@ -80,13 +80,14 @@ sub MY::postamble {
 PO = $(wildcard po/*.po)
 DEB_BUILD_ROOT = /var/tmp/$(NAME)-$(VERSION)
 
-rpmdist : $(NAME).spec tardist
+rpmdist : $(NAME).spec $(NAME).Suse.spec tardist
 	$(MKPATH) rpm rpm/SPECS rpm/SOURCES rpm/BUILD rpm/RPMS rpm/SRPMS \
                                                   rpm/RPMS/noarch || /bin/true
-	$(CP) $(NAME).spec rpm/SPECS/$(NAME).spec
+	$(CP) $(NAME).spec $(NAME).Suse.spec rpm/SPECS/
 	$(CP) $(NAME)-$(VERSION).tar.gz rpm/SOURCES/$(NAME)-$(VERSION).tar.gz
 	( cd rpm/SPECS; \
-	  rpmbuild --nodeps --define='_topdir $(PWD)/rpm' -ba $(NAME).spec )
+	  rpmbuild --nodeps --define='_topdir $(PWD)/rpm' -ba $(NAME).spec; \
+	  rpmbuild --nodeps --define='_topdir $(PWD)/rpm' --define 'dist .Suse' -ba $(NAME).Suse.spec )
 
 locale_install : locale
 	for file in $(PO); do \
@@ -131,6 +132,15 @@ $(NAME).spec : bin/$(NAME) debian/changelog
 	echo "*" `date +'%a %b %d %Y'` "$(AUTHOR) <$(EMAIL)>" >> $(NAME).spec
 	sed 's/^$(NAME).*//' < debian/changelog | \
          sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $(NAME).spec
+
+$(NAME).Suse.spec : bin/$(NAME) debian/changelog
+	$(CP) $(NAME).Suse.spec $(NAME).spec_tmp
+	sed 's/^Version:.*/Version: $(VERSION)/' < $(NAME).spec_tmp | \
+         sed '/^%changelog/q' > $(NAME).Suse.spec
+	rm $(NAME).spec_tmp
+	echo "*" `date +'%a %b %d %Y'` "$(AUTHOR) <$(EMAIL)>" >> $(NAME).Suse.spec
+	sed 's/^$(NAME).*//' < debian/changelog | \
+         sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $(NAME).Suse.spec
 
 htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb : bin/$(NAME) debian/control debian/changelog tardist | htdocs/download/debian/binary
 	$(RM_F) /tmp/$(NAME)
