@@ -4487,25 +4487,25 @@ EOS
  $about->set_license ($licence);
  $about->set_website ('http://gscan2pdf.sf.net');
  my $translators = <<EOS;
+Manuel Rennecke
+Poppe
 jimpap
-Petr Jelinek
+Dirk Tas
 Matthias Gutjahr
+saabaero
+Petr Jelinek
+Robert Hrovat
+Christoph Langner
 Alexandre Prokoudine
 Nicolas Stransky
-Piotr Strębski
-Hugo Pereira
-Daniel Frank
-Dirk Tas
 Matthias Mailänder
-Jen Ockwell
+Piotr Strębski
+Daniel Frank
+Hugo Pereira
 Yözen Hernández
-Christoph Langner
 Spartakus
+florian
 Jacob Nielsen
-Alberto Boiti
-Yves MATHIEU
-luther-x
-Ioannis Koniaris
 EOS
  $about->set_translator_credits ($translators);
  $about->set_artists ('lodp');
