@@ -6324,7 +6324,7 @@ sub unpaper {
   get_unpaper_options($unpaper_options);
 
 # run unpaper
-  unpaper_page(undef, options2unpaper($unpaper_options), get_page_index());
+  unpaper_page(options2unpaper($unpaper_options), get_page_index());
  } );
 
 # Cancel button
