@@ -143,7 +143,7 @@ $(NAME).Suse.spec : bin/$(NAME) debian/changelog
          sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $(NAME).Suse.spec
 
 htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb : bin/$(NAME) debian/control debian/changelog tardist | htdocs/download/debian/binary
-	$(RM_F) /tmp/$(NAME)
+	$(RM_RF) /tmp/$(NAME)
 	$(MKPATH) /tmp/$(NAME)
 	cd /tmp/$(NAME) && tar xvfz $(PWD)/$(NAME)-$(VERSION).tar.gz
 	cd /tmp/$(NAME)/$(NAME)-$(VERSION) && perl Makefile.PL \
