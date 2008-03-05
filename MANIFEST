@@ -10,9 +10,10 @@ debian/compat
 debian/control
 debian/copyright
 debian/rules
+debian/watch
+gscan2pdf.Suse.spec
 gscan2pdf.desktop
 gscan2pdf.spec
-gscan2pdf.Suse.spec
 gscan2pdf.svg
 lib/Gscan2pdf.pm
 pdf.svg
@@ -30,11 +31,13 @@ po/pl.po
 po/pt.po
 po/pt_BR.po
 po/ru.po
+po/sl.po
 po/sv.po
 po/tr.po
 po/zh_TW.po
 scanner.svg
 scanners/Brother_DCP-7025
+scanners/Brother_MFC-8860DN
 scanners/Brother_MFC_5100c
 scanners/FujitsuS510
 scanners/FujitsuS510.Color
@@ -60,10 +63,16 @@ scanners/laserjet_3020
 scanners/mustek
 scanners/niash
 scanners/officejet_5500
+scanners/officejet_5500.color
+scanners/officejet_5500.gray
+scanners/officejet_5500.lineart
 scanners/officejet_5500.scanadf
 scanners/psc1200
 scanners/psc1315
 scanners/snapscan
+scanners/snapscanS510
+scanners/snapscanS510.Color
+scanners/snapscanS510.Lineart
 scanners/umax
 scanners/xp450
 stock-rotate-180.svg
@@ -81,4 +90,3 @@ t/hp_scanjet5300c.t
 t/officejet_5500.t
 t/snapscan.t
 t/umax.t
-META.yml                                 Module meta-data (added by MakeMaker)
