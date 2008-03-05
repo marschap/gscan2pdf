@@ -124,7 +124,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.22';
+my $version = '0.9.23';
 
 my $tolerance = 1;
 
@@ -1581,6 +1581,7 @@ sub import_dialog {
       show_message_dialog($window, 'error', 'close', join(' ', @text));
      }
      if ($fraction == -2) {
+      $dialog -> hide;
       my ($windowq, $vbox) =
        create_window($window, $d->get('Pages to extract'), TRUE);
       my $hbox = Gtk2::HBox -> new;
@@ -1609,6 +1610,7 @@ sub import_dialog {
        my $last = $spinbuttonl->get_value;
        $windowq -> destroy;
        send($child, "$first $last", 0);
+       $dialog -> show;
       });
 
 # Cancel button
@@ -1721,8 +1723,7 @@ sub import_file {
     }
    }
    else {
-    send($parent, sprintf("%f %s %i ", -1, 0, 0)
-     .sprintf($d->get("Error in range of pages to import - first: %s, last: %s"), $first, $last), 0);
+    send($parent, '2 0 0', 0);
    }
   }
   ++$j;
@@ -1783,8 +1784,7 @@ sub import_file {
     }
    }
    else {
-    send($parent, sprintf("%f %s %i ", -1, 0, 0)
-     .sprintf($d->get("Error in range of pages to import - first: %s, last: %s"), $first, $last), 0);
+    send($parent, '2 0 0', 0);
    }
   }
   else {
@@ -1832,6 +1832,9 @@ sub import_file {
      sprintf("%f %s %i ", (($i-$first+1)/($last-$first+1)+$j)/$n, $tif, $dpi[$i])
      .sprintf($d->get("Importing image %i of %i"), $i-$first, $last-$first+1), 0);
    }
+  }
+  else {
+   send($parent, '2 0 0', 0);
   }
  }
  elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
