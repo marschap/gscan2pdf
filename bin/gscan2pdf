@@ -124,7 +124,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.23';
+my $version = '0.9.24';
 
 my $tolerance = 1;
 
@@ -2328,6 +2328,13 @@ sub save_PDF {
      Glib::Idle->add (sub { $file_chooser->response('ok'); });
      return;
     }
+   }
+
+# Check that the file can be written
+   if (! -w $filename) {
+    show_message_dialog($file_chooser, 'error', 'close',
+                           sprintf($d->get("File %s is read-only"), $filename));
+    return;
    }
 
 # Update cwd
