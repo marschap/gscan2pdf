@@ -2876,168 +2876,184 @@ sub save_djvu {
 
 # Set up file selector
  my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('DjVu filename'),
-                                                     $windowi, 'save',
-                                                     'gtk-cancel' => 'cancel',
-                                                     'gtk-save' => 'ok');
+                                                      $windowi, 'save',
+                                                      'gtk-cancel' => 'cancel',
+                                                      'gtk-save' => 'ok');
  $file_chooser -> set_default_response('ok');
+ $file_chooser -> set_do_overwrite_confirmation (TRUE);
+ $file_chooser -> signal_connect (response => sub {
+  my ($dialog, $response) = @_;
+  if ($response eq 'ok') {
+   my $filename = $file_chooser -> get_filename;
+   if ($filename !~ /\.djvu$/i) {
+    $filename = $filename.'.djvu';
+    if (-f $filename) {
+# File exists; get the file chooser to ask the user to confirm.
+     $file_chooser -> set_filename($filename);
+# Give the name change time to take effect.
+     Glib::Idle->add (sub { $file_chooser->response('ok'); });
+     return;
+    }
+   }
 
- if ('ok' eq $file_chooser->run) {
-  my $filename = $file_chooser -> get_filename;
-  $filename = $filename.".djvu" if ($filename !~ /\.djvu$/i);
-  if (file_exists($file_chooser, $filename)) {
-   $file_chooser -> destroy;
-   return TRUE;
-  }
+# Check that the file can be written
+   if (! -w $filename) {
+    show_message_dialog($file_chooser, 'error', 'close',
+                           sprintf($d->get("File %s is read-only"), $filename));
+    return;
+   }
 
 # Update cwd
-  $SETTING{'cwd'} = dirname($filename);
+   $SETTING{'cwd'} = dirname($filename);
 
 # cd back to tempdir
-  chdir $dir;
+   chdir $dir;
 
-  $file_chooser -> destroy;
-
-  my $dialog = Gtk2::Dialog -> new ($d->get('Saving DjVu')."...", $windowo,
-                                    'destroy-with-parent',
-                                    'gtk-cancel' => 'cancel');
+   my $dialog = Gtk2::Dialog -> new ($d->get('Saving DjVu')."...", $windowo,
+                                     'destroy-with-parent',
+                                     'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
-  my $pbar = Gtk2::ProgressBar->new;
-  $dialog -> vbox -> add($pbar);
+   my $pbar = Gtk2::ProgressBar->new;
+   $dialog -> vbox -> add($pbar);
 
 # Ensure that the dialog box is destroyed when the user responds.
-  $dialog -> signal_connect (response => sub {
-   $_[0] -> destroy;
-   kill_subs();
-  });
-  $dialog -> show_all;
+   $dialog -> signal_connect (response => sub {
+    $_[0] -> destroy;
+    kill_subs();
+   });
+   $dialog -> show_all;
 
 # Install a handler for child processes
-  $SIG{CHLD} = \&sig_child;
+   $SIG{CHLD} = \&sig_child;
 
-  my @pagelist = get_page_index();
-  my ($child, $parent) = open_socketpair();
-  my $pid = start_process(sub {
+   my @pagelist = get_page_index();
+   my ($child, $parent) = open_socketpair();
+   my $pid = start_process(sub {
 
-   my @filelist;
+    my @filelist;
    
-   for (my $i = 0; $i < @pagelist; $i++) {
-    my $j = $pagelist[$i];
-    send($parent, $i/($#pagelist+1)
-     .sprintf($d->get("Writing page %i of %i"), $i+1, $#pagelist+1), 0);
-    my $filename = $slist -> {data}[$j][2];
-    my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
+    for (my $i = 0; $i < @pagelist; $i++) {
+     my $j = $pagelist[$i];
+     send($parent, $i/($#pagelist+1)
+      .sprintf($d->get("Writing page %i of %i"), $i+1, $#pagelist+1), 0);
+     my $filename = $slist -> {data}[$j][2];
+     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
 
 # Check the image depth to decide what sort of compression to use
-    my $image = Image::Magick->new;
-    my $x = $image->Read($filename);
-    warn "$x" if "$x";
-    my $depth = $image->Get('depth');
-    my $compression;
+     my $image = Image::Magick->new;
+     my $x = $image->Read($filename);
+     warn "$x" if "$x";
+     my $depth = $image->Get('depth');
+     my $compression;
 
 # c44 can only use pnm and jpg
-    my $format = $1 if ($filename =~ /\.(\w*)$/);
-    if ($depth > 1) {
-     $compression = 'c44';
-     if ($format !~ /(pnm)|(jpg)/) {
-      my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-      $x = $image->Write(filename => $pnm);
-      warn "$x" if "$x";
-      $filename = $pnm;
+     my $format = $1 if ($filename =~ /\.(\w*)$/);
+     if ($depth > 1) {
+      $compression = 'c44';
+      if ($format !~ /(pnm)|(jpg)/) {
+       my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+       $x = $image->Write(filename => $pnm);
+       warn "$x" if "$x";
+       $filename = $pnm;
+      }
      }
-    }
 # cjb2 can only use pnm and tif
-    else {
-     $compression = 'cjb2';
-     if ($format !~ /(pnm)|(tif)/) {
-      my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-      $x = $image->Write(filename => $pnm);
-      warn "$x" if "$x";
-      $filename = $pnm;
+     else {
+      $compression = 'cjb2';
+      if ($format !~ /(pnm)|(tif)/) {
+       my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+       $x = $image->Write(filename => $pnm);
+       warn "$x" if "$x";
+       $filename = $pnm;
+      }
      }
-    }
 
 # Create the djvu
-    my $resolution = $slist -> {data}[$j][4];
-    my $cmd = "$compression -dpi $resolution $filename $djvu";
-    print "$cmd\n" if $debug;
-    system ($cmd) == 0 or send($parent, "2".$d->get('Error writing DjVu'), 0);
-    $filelist[$i] = $djvu;
-
-# Add OCR to text layer
-    if (defined($slist -> {data}[$j][3]) and $slist -> {data}[$j][3] ne '') {
-
-# Get the size
-     my $w = $image->Get('width');
-     my $h = $image->Get('height');
-
-# Escape any inverted commas
-     my $txt = $slist -> {data}[$j][3];
-     $txt =~ s/\\/\\\\/g;
-     $txt =~ s/"/\\\"/g;
-
-# Write djvusedtxtfile
-     my $djvusedtxtfile = "djvusedtxtfile";
-     open (FILE, ">:utf8", $djvusedtxtfile)
-      or die sprintf($d->get("Can't open file: %s"), $djvusedtxtfile);
-     print FILE "(page 0 0 ", int($w*72/$resolution), " ", int($h*72/$resolution), "\n";
-     print FILE "(line 0 0 ", int($w*72/$resolution), " ", int($h*72/$resolution), " \"";
-     print FILE $txt, "\"))";
-     close FILE;
-
-# Write djvusedtxtfile
-     my $cmd = "djvused '$djvu' -e 'select 1; set-txt djvusedtxtfile' -s";
+     my $resolution = $slist -> {data}[$j][4];
+     my $cmd = "$compression -dpi $resolution $filename $djvu";
      print "$cmd\n" if $debug;
      system ($cmd) == 0 or send($parent, "2".$d->get('Error writing DjVu'), 0);
-    }
-   }
-   send($parent, '1'.$d->get('Closing DjVu'), 0);
-   my $cmd = "djvm -c '$filename' @filelist";
-   print "$cmd\n" if $debug;
-   system ($cmd) == 0 or send($parent, "2".$d->get('Error closing DjVu'), 0);
-  
-   send($parent, "2", 0);
-  });
+     $filelist[$i] = $djvu;
 
-  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
-   my ($fileno, $condition) = @_;
+# Add OCR to text layer
+     if (defined($slist -> {data}[$j][3]) and $slist -> {data}[$j][3] ne '') {
 
-   my $line;
-   if ($condition & 'in') { # bit field operation. >= would also work
-    recv($child, $line, 1000, 0);
-    if ($line =~ /(\d*\.?\d*)(.*)/) {
-     my $fraction=$1;
-     my $text=$2;
-     if ($fraction > 1) {
-      $dialog -> destroy;
-      if ($text eq '') {
-       $windowi -> hide if defined $windowi;
-       mark_pages(@pagelist);
-      }
-      else {
-       unlink $filename;
-       show_message_dialog($windowi, 'error', 'close', $text);
-      }
-      return FALSE;  # uninstall
+# Get the size
+      my $w = $image->Get('width');
+      my $h = $image->Get('height');
+
+# Escape any inverted commas
+      my $txt = $slist -> {data}[$j][3];
+      $txt =~ s/\\/\\\\/g;
+      $txt =~ s/"/\\\"/g;
+
+# Write djvusedtxtfile
+      my $djvusedtxtfile = "djvusedtxtfile";
+      open (FILE, ">:utf8", $djvusedtxtfile)
+       or die sprintf($d->get("Can't open file: %s"), $djvusedtxtfile);
+      print FILE "(page 0 0 ", int($w*72/$resolution), " ", int($h*72/$resolution), "\n";
+      print FILE "(line 0 0 ", int($w*72/$resolution), " ", int($h*72/$resolution), " \"";
+      print FILE $txt, "\"))";
+      close FILE;
+
+# Write djvusedtxtfile
+      my $cmd = "djvused '$djvu' -e 'select 1; set-txt djvusedtxtfile' -s";
+      print "$cmd\n" if $debug;
+      system ($cmd) == 0 or send($parent, "2".$d->get('Error writing DjVu'), 0);
      }
-     $pbar->set_fraction($fraction);
-     $pbar->set_text($text);
     }
-   }
+    send($parent, '1'.$d->get('Closing DjVu'), 0);
+    my $cmd = "djvm -c '$filename' @filelist";
+    print "$cmd\n" if $debug;
+    system ($cmd) == 0 or send($parent, "2".$d->get('Error closing DjVu'), 0);
+   
+    send($parent, "2", 0);
+   });
+
+   $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
+    my ($fileno, $condition) = @_;
+
+    my $line;
+    if ($condition & 'in') { # bit field operation. >= would also work
+     recv($child, $line, 1000, 0);
+     if ($line =~ /(\d*\.?\d*)(.*)/) {
+      my $fraction=$1;
+      my $text=$2;
+      if ($fraction > 1) {
+       $dialog -> destroy;
+       if ($text eq '') {
+        $windowi -> hide if defined $windowi;
+        mark_pages(@pagelist);
+       }
+       else {
+        unlink $filename;
+        show_message_dialog($windowi, 'error', 'close', $text);
+       }
+       return FALSE;  # uninstall
+      }
+      $pbar->set_fraction($fraction);
+      $pbar->set_text($text);
+     }
+    }
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
-    $dialog -> destroy;
-    update_uimanager();
-    return FALSE;  # uninstall
-   }
-   return TRUE;  # continue without uninstalling
-  });
- }
- else {
+    if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+     $dialog -> destroy;
+     update_uimanager();
+     return FALSE;  # uninstall
+    }
+    return TRUE;  # continue without uninstalling
+   });
+  }
   $file_chooser -> destroy;
- }
+
+ });
+ $file_chooser -> show;
+
+# cd back to tempdir
+ chdir $dir;
 }
 
 
