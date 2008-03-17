@@ -2597,6 +2597,13 @@ sub save_dialog {
       }
      }
 
+# Check that the file can be written
+     if (! -w $filename) {
+      show_message_dialog($file_chooser, 'error', 'close',
+                           sprintf($d->get("File %s is read-only"), $filename));
+      return;
+     }
+
 # Update cwd
      $SETTING{'cwd'} = dirname($filename);
 
@@ -2634,6 +2641,13 @@ sub save_dialog {
        Glib::Idle->add (sub { $file_chooser->response('ok'); });
        return;
       }
+     }
+
+# Check that the file can be written
+     if (! -w $filename) {
+      show_message_dialog($file_chooser, 'error', 'close',
+                           sprintf($d->get("File %s is read-only"), $filename));
+      return;
      }
 
 # Update cwd
