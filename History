@@ -3,6 +3,8 @@
 + check that the file can be written before saving PDF, TIFF or PS.
   Closes 1915008 (crash when trying to save in non-writable directory)
 + use gtk+ set_do_overwrite_confirmation for save as DjVu.
++ detect thunderbird mail client and attach PDF appropriately.
+  Closes LP 202709 ("Email as PDF" option does not work with Thunderbird)
 
 
 0.9.23 (05.03.2008):

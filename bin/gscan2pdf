@@ -3101,8 +3101,22 @@ sub email {
 # Create the PDF
   create_PDF($pdf);
 
-  system ("xdg-email --attach $pdf 'x\@y'") == 0 or
-   show_message_dialog($window, 'error', 'close', $d->get('Error creating email'));
+# Check for thunderbird
+  my ($client, $status);
+  if ($ENV{KDE_FULL_SESSION} eq 'true') {
+   $client=`kreadconfig --file emaildefaults --group PROFILE_Default --key EmailClient| cut -d ' ' -f 1`;
+  }
+  elsif ($ENV{GNOME_DESKTOP_SESSION_ID} ne '') {
+   $client=`gconftool --get /desktop/gnome/url-handlers/mailto/command | cut -d ' ' -f 1`;
+  }
+  if ($client =~ /thunderbird/) {
+   $status = system("thunderbird -compose attachment=file://$pdf");
+  }
+  else {
+   $status = system("xdg-email --attach $pdf 'x\@y'");
+  }
+  show_message_dialog($window, 'error', 'close', $d->get('Error creating email'))
+   if ($status);
 
   $windowe -> hide;
 
