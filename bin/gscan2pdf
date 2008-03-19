@@ -3103,10 +3103,10 @@ sub email {
 
 # Check for thunderbird
   my ($client, $status);
-  if ($ENV{KDE_FULL_SESSION} eq 'true') {
+  if (defined($ENV{KDE_FULL_SESSION}) and $ENV{KDE_FULL_SESSION} eq 'true') {
    $client=`kreadconfig --file emaildefaults --group PROFILE_Default --key EmailClient| cut -d ' ' -f 1`;
   }
-  elsif ($ENV{GNOME_DESKTOP_SESSION_ID} ne '') {
+  elsif (defined($ENV{GNOME_DESKTOP_SESSION_ID}) and $ENV{GNOME_DESKTOP_SESSION_ID} ne '') {
    $client=`gconftool --get /desktop/gnome/url-handlers/mailto/command | cut -d ' ' -f 1`;
   }
   if ($client =~ /thunderbird/) {
@@ -7811,11 +7811,6 @@ button on the scan window for each page.
 Probably because the package required for that option is not installed.
 Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options
 require imagemagick.
-
-=head2 Why doesn't Email to PDF work with Thunderbird?
-
-Because xdg-email doesn't support creating new emails with attachments in
-Thunderbird.
 
 =head2 Why can I not scan from the flatbed of my HP scanner?
 
