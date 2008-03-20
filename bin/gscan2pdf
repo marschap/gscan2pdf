@@ -118,6 +118,7 @@ use Socket;
 use FileHandle;
 use Image::Magick;
 use Config::General;
+use Text::ParseWords;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -139,7 +140,7 @@ my $border = 1;
 # or whatever is set by $d->dir([NEWDIR]);
 my $d = Locale::gettext->domain($program);
 
-my @test;
+my $test;
 my @device;
 my @model;
 my $debug = FALSE;
@@ -147,20 +148,22 @@ while (defined($ARGV[0])) {
 # Set up test mode and make sure file has absolute path and is readable
  if ($ARGV[0] eq "--test") {
   shift @ARGV;
-  my $test = shift @ARGV;
-  if ($test =~ /(.*)=(.*)/) {
-   push @device, $2;
-   $test = $1;
-   $test = getcwd."/$test" if ($test !~ /^\//);
-   if (! -r $test) {
-    warn sprintf($d->get("Error: cannot read file: %s\n"), $test);
+  my $arg = shift @ARGV;
+  if ($arg =~ /(.*)=(.*)/) {
+   my $file = $1;
+   my $device = $2;
+
+# Find a way of emulating the nonsense \n that some people seem to get
+   $device =~ s/\\n/\n/g;
+   print "'$file','$device'\n";
+   $file = getcwd."/$file" if ($file !~ /^\//);
+   if (! -r $file) {
+    warn sprintf($d->get("Error: cannot read file: %s\n"), $file);
     exit 1;
    }
-   push @test, $test;
-
-# Convert all underscores to spaces
-   $test =~ s/_/ /g;
-   push @model, basename($test);
+   push @{$test->{file}}, $file;
+   $test->{output} = '' if (! defined($test->{output}));
+   $test->{output} .= "'$#{$test->{file}}','$device','".basename($file)."'\n";
   }
   else {
    warn sprintf($d->get("Usage:\n%s --test <file>=<model>\n"), $0); # better xgettext hack
@@ -3646,7 +3649,7 @@ sub scan_dialog {
  $cbutton -> signal_connect( clicked => sub { $windows -> hide; } );
 
  my $output;
- if (! @test) {
+ if (! $test) {
 
 # Set up ProgressBar
   my $pbar = Gtk2::ProgressBar->new;
@@ -3716,32 +3719,30 @@ sub scan_dialog {
  $framex->hide_all;
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
- $sbutton -> set_sensitive(FALSE) if (! @test);
+ $sbutton -> set_sensitive(FALSE) if (! $test);
 }
 
 
 sub populate_device_list {
  my ($hboxd, $output) = @_;
 
- print $output if ($debug and defined($output));
-
 # device list
  my $labeld = Gtk2::Label -> new ($d->get('Device'));
  $hboxd -> pack_start ($labeld, FALSE, FALSE, 0);
  $combobd = Gtk2::ComboBox->new_text;
 
+ $output = $test->{output} if ($test);
+ print $output if ($debug and defined($output));
+
 # parse out the device and model names
- if (! @test) {
-  my $device = substr($output, 0, index($output, "\n")+1);
-  $output = substr($output, index($output, "\n")+1, length($output));
-  while ($device =~ /'(\d*)','(.*)','(.*)'/) {
-   $device[$1] = $2;
+ my @words = &parse_line(',', 0, substr($output, 0, index($output, "'\n")+1));
+ while (@words == 3) {
+  $output = substr($output, index($output, "'\n")+2, length($output));
+  $device[$words[0]] = $words[1];
 
 # Convert all underscores to spaces
-   ($model[$1] = $3) =~ s/_/ /g;
-   $device = substr($output, 0, index($output, "\n")+1);
-   $output = substr($output, index($output, "\n")+1, length($output));
-  }
+  ($model[$words[0]] = $words[2]) =~ s/_/ /g;
+  @words = &parse_line(',', 0, substr($output, 0, index($output, "'\n")+1));
  }
 
 # Note any duplicate device names and delete if necessary
@@ -3921,7 +3922,7 @@ sub scanimage {
  my $cmd = "scanimage $device @options $npages";
  warn "$cmd\n" if $debug;
 
- if (! @test) {
+ if (! $test) {
 
 # flag to ignore error messages after cancelling scan
   my $cancel = FALSE;
@@ -4079,7 +4080,7 @@ sub scanadf {
  my $cmd = "scanadf $device @options $start $end > /dev/stderr";
  warn "$cmd\n" if $debug;
 
- if (! @test) {
+ if (! $test) {
 
 # Interface to frontend
   my ($write, $read);
@@ -4589,7 +4590,7 @@ sub rescan_options {
  }
 
  my $output = '';
- if (! @test) {
+ if (! $test) {
 
 # Get output from scanimage or scanadf.
 # Inverted commas needed for strange characters in device name
@@ -4649,7 +4650,7 @@ sub rescan_options {
   $i++ while ($device[$i] ne $device);
 
 # check if we have output for the mode
-  my $filename = $test[$i];
+  my $filename = $test->{file}[$i];
   $filename .= ".$SETTING{mode}"
    if (defined($SETTING{mode}) and -e "$filename.$SETTING{mode}");
 
@@ -5072,7 +5073,7 @@ sub update_options {
  }
 
  my $output = '';
- if (! @test) {
+ if (! $test) {
 
 # Get output from scanimage or scanadf.
 # Inverted commas needed for strange characters in device name
@@ -5132,7 +5133,7 @@ sub update_options {
   $i++ while ($device[$i] ne $device);
 
 # check if we have output for the new mode
-  my $filename = $test[$i];
+  my $filename = $test->{file}[$i];
   $filename .= ".$SETTING{mode}" if (-e "$filename.$SETTING{mode}");
 
 # Slurp it from file
