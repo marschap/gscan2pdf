@@ -915,6 +915,7 @@ my %pddo = (
 				 },
             'resolution'      => { string => $d->get('Resolution') },
             'brightness'      => { string => $d->get('Brightness') },
+            'gain'            => { string => $d->get('Gain') },
             'contrast'        => { string => $d->get('Contrast') },
             'threshold'       => { string => $d->get('Threshold') },
             'speed'           => { string => $d->get('Speed'),
