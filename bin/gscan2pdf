@@ -2170,13 +2170,8 @@ sub create_PDF {
     if (($SETTING{'pdf compression'} !~ /(jpg)|(png)/ and $format ne 'tif')
         or ($SETTING{'pdf compression'} =~ /(jpg)|(png)/)
         or $SETTING{'downsample'}) {
-     if ($depth > 1) {
-      print "Maintaining image depth $depth\n" if $debug;
-      $x = $image->Write(filename => $filename, depth => $depth);
-     }
-     else {
-      $x = $image->Write(filename => $filename);
-     }
+# depth required because resize otherwise increases depth to maintain information
+     $x = $image->Write(filename => $filename, depth => $depth);
      warn "$x" if "$x";
      $format = $1 if ($filename =~ /\.(\w*)$/);
     }

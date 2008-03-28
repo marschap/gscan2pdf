@@ -7,6 +7,8 @@
   Closes LP 202709 ("Email as PDF" option does not work with Thunderbird)
 + deal correctly with newline character in device name
 + gain option from scanners/canonFB630u
++ always force depth before embedding image in PDF
+  Closes LP 204988 (gscan2pdf generates blank pages in the .pdf output)
 
 
 0.9.23 (05.03.2008):
