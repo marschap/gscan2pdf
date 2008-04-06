@@ -2330,7 +2330,7 @@ sub save_PDF {
    }
 
 # Check that the file can be written
-   if (! -w $filename) {
+   if (! -w dirname($filename)) {
     show_message_dialog($file_chooser, 'error', 'close',
                            sprintf($d->get("File %s is read-only"), $filename));
     return;
@@ -2597,7 +2597,7 @@ sub save_dialog {
      }
 
 # Check that the file can be written
-     if (! -w $filename) {
+     if (! -w dirname($filename)) {
       show_message_dialog($file_chooser, 'error', 'close',
                            sprintf($d->get("File %s is read-only"), $filename));
       return;
@@ -2643,7 +2643,7 @@ sub save_dialog {
      }
 
 # Check that the file can be written
-     if (! -w $filename) {
+     if (! -w dirname($filename)) {
       show_message_dialog($file_chooser, 'error', 'close',
                            sprintf($d->get("File %s is read-only"), $filename));
       return;
@@ -2896,7 +2896,7 @@ sub save_djvu {
    }
 
 # Check that the file can be written
-   if (! -w $filename) {
+   if (! -w dirname($filename)) {
     show_message_dialog($file_chooser, 'error', 'close',
                            sprintf($d->get("File %s is read-only"), $filename));
     return;
@@ -3105,7 +3105,8 @@ sub email {
   if (defined($ENV{KDE_FULL_SESSION}) and $ENV{KDE_FULL_SESSION} eq 'true') {
    $client=`kreadconfig --file emaildefaults --group PROFILE_Default --key EmailClient| cut -d ' ' -f 1`;
   }
-  elsif (defined($ENV{GNOME_DESKTOP_SESSION_ID}) and $ENV{GNOME_DESKTOP_SESSION_ID} ne '') {
+  elsif (defined($ENV{GNOME_DESKTOP_SESSION_ID})
+   and $ENV{GNOME_DESKTOP_SESSION_ID} ne '') {
    $client=`gconftool --get /desktop/gnome/url-handlers/mailto/command | cut -d ' ' -f 1`;
   }
   if ($client =~ /thunderbird/) {
