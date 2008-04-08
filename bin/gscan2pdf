@@ -5526,8 +5526,6 @@ sub threshold {
    my $page = 0;
 
    foreach (@pagelist) {
-    send($parent, sprintf("%i %i", $page, $#pagelist+1), 0);
-
     my $filename = $slist -> {data}[$_][2];
     my $image = Image::Magick->new;
     my $x = $image->Read($filename);
@@ -5538,14 +5536,12 @@ sub threshold {
     $image->WhiteThreshold(threshold=>$SETTING{'threshold tool'}.'%');
 
 # Write it
-    my $suffix = $1 if ($filename =~ /\.(\w*)$/);
-    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
+    my $suffix = $1 if ($filename =~ /(\.\w*)$/);
+    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix);
     $x = $image->Write(filename => $filename);
     warn "$x" if "$x";
     warn "Thresholding at $SETTING{'threshold tool'} to $filename\n" if $debug;
-
-    send($parent, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
-    ++$page;
+    send($parent, sprintf("%i %i %s", $page++, $#pagelist+1, $filename), 0);
    }
    send($parent, '2 1', 0);
   });
