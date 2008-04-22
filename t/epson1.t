@@ -221,6 +221,30 @@ my %that = (
                        'default' => 'inactive',
                        'min' => -127,
                             'max' => 127,
-                     }
+                     },
+          'l' => {
+                   'tip' => 'Top-left x position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 215.9,
+                 },
+          't' => {
+                   'tip' => 'Top-left y position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 297.18,
+                 },
+          'x' => {
+                   'tip' => 'Width of scan-area.',
+                   'default' => 215.9,
+                   'min' => 0,
+                   'max' => 215.9,
+                 },
+          'y' => {
+                   'tip' => 'Height of scan-area.',
+                   'default' => 297.18,
+                   'min' => 0,
+                   'max' => 297.18,
+                 }
         );
 is_deeply(\%this, \%that, 'epson1');

@@ -71,6 +71,34 @@ my %that = (
                                    'min' => 100,
                             'max' => 600,
                             'step' => 1,
-                          }
+                          },
+          'l' => {
+                   'tip' => 'Top-left x position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 224.846,
+                   'step' => 0.0211639,
+                 },
+          't' => {
+                   'tip' => 'Top-left y position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 863.489,
+                   'step' => 0.0211639,
+                 },
+          'x' => {
+                   'tip' => 'Width of scan-area.',
+                   'default' => 215.872,
+                   'min' => 0,
+                   'max' => 224.846,
+                   'step' => 0.0211639,
+                 },
+          'y' => {
+                   'tip' => 'Height of scan-area.',
+                   'default' => 279.364,
+                   'min' => 0,
+                   'max' => 863.489,
+                   'step' => 0.0211639,
+                 }
         );
 is_deeply(\%this, \%that, 'fujitsu');

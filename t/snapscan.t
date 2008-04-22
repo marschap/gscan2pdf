@@ -173,6 +173,30 @@ my %that = (
                                   'tip' => 'Defines the halftoning (dithering) pattern for scanning halftoned images.',
                                   'default' => 'inactive',
                                   'values' => ['DispersedDot8x8','DispersedDot16x16']
-                                }
+                                },
+          'l' => {
+                   'tip' => 'Top-left x position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 216,
+                 },
+          't' => {
+                   'tip' => 'Top-left y position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 297,
+                 },
+          'x' => {
+                   'tip' => 'Width of scan-area.',
+                   'default' => 216,
+                   'min' => 0,
+                   'max' => 216,
+                 },
+          'y' => {
+                   'tip' => 'Height of scan-area.',
+                   'default' => 297,
+                   'min' => 0,
+                   'max' => 297,
+                 }
         );
 is_deeply(\%this, \%that, 'snapscan');

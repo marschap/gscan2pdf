@@ -45,6 +45,34 @@ my %that = (
                             'min' => -50,
                             'max' => 50,
                             'step' => 1,
-                        }
+                        },
+          'l' => {
+                   'tip' => 'Top-left x position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 208,
+                   'step' => 0.0999908,
+                 },
+          't' => {
+                   'tip' => 'Top-left y position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 355.6,
+                   'step' => 0.0999908,
+                 },
+          'x' => {
+                   'tip' => 'Width of scan-area.',
+                   'default' => 207.981,
+                   'min' => 0,
+                   'max' => 208,
+                   'step' => 0.0999908,
+                 },
+          'y' => {
+                   'tip' => 'Height of scan-area.',
+                   'default' => 296.973,
+                   'min' => 0,
+                   'max' => 355.6,
+                   'step' => 0.0999908,
+                 }
         );
 is_deeply(\%this, \%that, 'Brother_MFC_5100c');

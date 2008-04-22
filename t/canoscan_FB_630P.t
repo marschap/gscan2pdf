@@ -35,6 +35,33 @@ my %that = (
                        'tip' => 'Number of bits per sample, typical values are 1 for "line-art" and 8 for multibit scans.',
                        'default' => '8',
                        'values' => ['8','12']
-                     }
+                     },
+          'l' => {
+                   'tip' => 'Top-left x position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 215,
+                   'step' => 1869504867,
+                 },
+          't' => {
+                   'tip' => 'Top-left y position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 296,
+                   'step' => 1852795252,
+                 },
+          'x' => {
+                   'tip' => 'Width of scan-area.',
+                   'default' => 100,
+                   'min' => 3,
+                   'max' => 216,
+                   'step' => 16,
+                 },
+          'y' => {
+                   'tip' => 'Height of scan-area.',
+                   'default' => 100,
+                   'min' => 1,
+                   'max' => 297,
+                 }
         );
 is_deeply(\%this, \%that, 'canoscan_FB_630P');

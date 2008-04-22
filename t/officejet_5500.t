@@ -64,6 +64,30 @@ my %that = (
                             'tip' => 'Guarantees that a "no documents" condition will be returned after the last scanned page, to prevent endless flatbed scans after a batch scan. For some models, option changes in the middle of a batch scan don\'t take effect until after the last page.',
                             'default' => 'no',
                             'values' => ['yes','no']
-                          }
+                          },
+          'l' => {
+                   'tip' => 'Top-left x position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 215.9,
+                 },
+          't' => {
+                   'tip' => 'Top-left y position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 381,
+                 },
+          'x' => {
+                   'tip' => 'Width of scan-area.',
+                   'default' => 215.9,
+                   'min' => 0,
+                   'max' => 215.9,
+                 },
+          'y' => {
+                   'tip' => 'Height of scan-area.',
+                   'default' => 381,
+                   'min' => 0,
+                   'max' => 381,
+                 }
         );
 is_deeply(\%this, \%that, 'officejet_5500');

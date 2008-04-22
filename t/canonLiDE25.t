@@ -184,10 +184,34 @@ my %that = (
           'lampoff-time' => {
                               'tip' => 'Lampoff-time in seconds.',
                               'default' => '300',
-                            'min' => 0,
-                            'max' => 999,
-                            'step' => 1,
-                            }
+                              'min' => 0,
+                              'max' => 999,
+                              'step' => 1,
+                            },
+          'l' => {
+                   'tip' => 'Top-left x position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 215,
+                 },
+          't' => {
+                   'tip' => 'Top-left y position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 297,
+                 },
+          'x' => {
+                   'tip' => 'Width of scan-area.',
+                   'default' => 103,
+                   'min' => 0,
+                   'max' => 215,
+                 },
+          'y' => {
+                   'tip' => 'Height of scan-area.',
+                   'default' => 76.21,
+                   'min' => 0,
+                   'max' => 297,
+                 }
 
         );
 is_deeply(\%this, \%that, 'canonLiDE25');

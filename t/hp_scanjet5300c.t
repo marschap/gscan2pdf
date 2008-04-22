@@ -98,6 +98,30 @@ my %that = (
                                   'default' => 'inactive',
                                   'min' => 0,
                             'max' => 255,
-                                }
+                                },
+          'l' => {
+                   'tip' => 'Top-left x position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 216,
+                 },
+          't' => {
+                   'tip' => 'Top-left y position of scan area.',
+                   'default' => 0,
+                   'min' => 0,
+                   'max' => 296,
+                 },
+          'x' => {
+                   'tip' => 'Width of scan-area.',
+                   'default' => 216,
+                   'min' => 0,
+                   'max' => 216,
+                 },
+          'y' => {
+                   'tip' => 'Height of scan-area.',
+                   'default' => 296,
+                   'min' => 0,
+                   'max' => 296,
+                 }
         );
 is_deeply(\%this, \%that, 'hp_scanjet5300c');
