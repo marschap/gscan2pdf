@@ -27,7 +27,6 @@
 #    add possibility to have multiple scans from a flatbed with delay between
 #    if downgrading, don't read remaining options.
 #    note options like source before rescan due to mode change
-#    cache options except between versions of SANE and gscan2pdf
 #    note sane-backend and wipe scan settings if it changes
 #    reenable multiple scans from flatbed + delay and warning
 #    query downsizing problems with the imagemagick team.
@@ -278,6 +277,15 @@ else {
  }
 }
 
+# Delete the options cache if there is a new version of SANE
+my $sane_version=`scanimage --version`;
+chomp $sane_version;
+if (defined($SETTING{'SANE version'})
+     and $SETTING{'SANE version'} ne $sane_version) {
+ delete $SETTING{cache} if (defined $SETTING{cache});
+}
+$SETTING{'SANE version'} = $sane_version;
+
 if ($debug) {
  print "Gtk2-Perl version $Gtk2::VERSION\n";
  print "Built for ".join(".",Gtk2->GET_VERSION_INFO)."\n";
@@ -288,8 +296,10 @@ if ($debug) {
 }
 
 # Just in case dependencies have changed, put put startup warning again
-$SETTING{'startup warning'} = TRUE
- if (! defined($SETTING{version}) or $SETTING{version} ne $version);
+if (! defined($SETTING{version}) or $SETTING{version} ne $version) {
+ $SETTING{'startup warning'} = TRUE;
+ delete $SETTING{cache} if (defined $SETTING{cache});
+}
 $SETTING{version} = $version;
 
 # Create icons for rotate buttons
@@ -4586,6 +4596,19 @@ sub rescan_options {
   $_ -> destroy;
  }
 
+# Get the options from the cache if defined
+ my $mode;
+ if (defined $SETTING{mode}) {
+  $mode = $SETTING{mode};
+ }
+ else {
+  $mode = 'default';
+ }
+ if (defined $SETTING{cache}{$device}{$mode}) {
+  parse_options($vboxd, $device, options2hash($SETTING{cache}{$device}{$mode}));
+  return;
+ }
+
  my $output = '';
  if (! $test) {
 
@@ -4636,7 +4659,7 @@ sub rescan_options {
     $pbar -> destroy;
     $vboxd -> hide_all;
     warn $output if $debug;
-    parse_options($vboxd, $device, $output);
+    parse_options($vboxd, $device, options2hash($output));
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
@@ -4654,24 +4677,20 @@ sub rescan_options {
 # Slurp it from file
   $output = slurp($filename);
   $vboxd -> hide_all; # merely here for consistency with normal operation
-  parse_options($vboxd, $device, $output);
+  parse_options($vboxd, $device, options2hash($output));
  }
 }
 
 
 sub parse_options {
- my ($vboxd, $device, $output) = @_;
-
-# Skip to the device-specific options
- $output = substr($output, index($output, "Options specific to device"), length($output));
- $output = substr($output, index($output, "\n")+1, length($output));
+ my ($vboxd, $device, %hash) = @_;
 
 # Dig out the paper sizes
  my ($x, $y, $l, $t, $h, $w, $spin_buttonx, $spin_buttony, $spin_buttonl, $spin_buttont, $spin_buttonh, $spin_buttonw);
- $x = $2 if ($output =~ /-x (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
- $y = $2 if ($output =~ /-y (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
- $l = $2 if ($output =~ /-l (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
- $t = $2 if ($output =~ /-t (auto\|)?\d*\.?\d*\.\.(\d*\.?\d*)/);
+ $x = $hash{x}{max} if (defined $hash{x}{max});
+ $y = $hash{y}{max} if (defined $hash{y}{max});
+ $l = $hash{l}{max} if (defined $hash{l}{max});
+ $t = $hash{t}{max} if (defined $hash{t}{max});
 
  if (defined($x) and defined($y)) {
 
@@ -4705,7 +4724,6 @@ sub parse_options {
         );
 
 # Add remaining options
- my %hash = options2hash($output);
  foreach my $option (keys %hash) {
   if (defined($pddo{$option})) {
    my ($widget, $hbox) = add_widget_from_hash($option, %hash);
@@ -5069,6 +5087,18 @@ sub update_options {
   $_ -> hide;
  }
 
+ my $mode;
+ if (defined $SETTING{mode}) {
+  $mode = $SETTING{mode};
+ }
+ else {
+  $mode = 'default';
+ }
+ if (defined $SETTING{cache}{$device}{$mode}) {
+  update_options_hash($vboxd, options2hash($SETTING{cache}{$device}{$mode}));
+  return;
+ }
+
  my $output = '';
  if (! $test) {
 
@@ -5165,6 +5195,18 @@ sub options2hash {
    delete $SETTING{$_};
   }
  }
+
+# Cache options
+ my $mode;
+ if (defined $SETTING{mode}) {
+  $mode = $SETTING{mode};
+ }
+ else {
+  $mode = 'default';
+ }
+# We could cache the hash, but we'd have to turn off MergeDuplicateOptions
+ $SETTING{cache}{$SETTING{device}}{$mode} = $output;
+
  return %hash;
 }
 
