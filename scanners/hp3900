@@ -1,0 +1,52 @@
+Usage: scanadf [OPTION]...
+
+Start image acquisition on a scanner device and write image data to
+output files.
+
+   [ -d | --device-name <device> ]   use a given scanner device.
+   [ -h | --help ]                   display this help message and exit.
+   [ -L | --list-devices ]           show available scanner devices.
+   [ -v | --verbose ]                give even more status messages.
+   [ -V | --version ]                print version information.
+   [ -N | --no-overwrite ]           don't overwrite existing files.
+
+   [ -o | --output-file <name> ]     name of file to write image data
+                                     (%d replacement in output file name).
+   [ -S | --scan-script <name> ]     name of script to run after every scan.
+   [ --script-wait ]                 wait for scripts to finish before exit
+   [ -s | --start-count <num> ]      page count of first scanned image.
+   [ -e | --end-count <num> ]        last page number to scan.
+   [ -r | --raw ]                    write raw image data to file.
+
+Options specific to device `hp3900:libusb:005:002':
+    -l 0..220mm (in steps of 1) [220]
+        Top-left x position of scan area.
+    -t 0..300mm (in steps of 1) [300]
+        Top-left y position of scan area.
+    -x 0..220mm (in steps of 1) [220]
+        Width of scan-area.
+    -y 0..300mm (in steps of 1) [300]
+        Height of scan-area.
+    --resolution 75|100|150|200|300|600|1200|2400dpi [75]
+        Sets the resolution of the scanned image.
+    --red-gamma-table 0..65535,... [0]
+        Gamma-correction table for the red band.
+    --green-gamma-table 0..65535,... [0]
+        Gamma-correction table for the green band.
+    --blue-gamma-table 0..65535,... [0]
+        Gamma-correction table for the blue band.
+    --source Flatbed|Slide|Negative [Flatbed]
+        Selects the scan source (such as a document-feeder).
+    --mode Color|Gray|Lineart [Gray]
+        Selects the scan mode (e.g., lineart, monochrome, or color).
+    --depth 8|16bit [8]
+        Number of bits per sample, typical values are 1 for "line-art" and 8
+        for multibit scans.
+    --threshold 0..255 [inactive]
+        Select minimum-brightness to get a white point
+
+Type ``scanadf --help -d DEVICE'' to get list of all options for DEVICE.
+
+List of available devices:
+    v4l:/dev/video0 hp3900:libusb:005:002
+
