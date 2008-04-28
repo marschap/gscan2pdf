@@ -3719,10 +3719,6 @@ sub scan_dialog {
 
 # Show window
  $windows -> show_all;
- $vboxm -> hide
-  if (defined $vboxm
-   and (! defined $combobp or
-        ! $combobp -> get_active_text ne $d->get('Manual')));
  $framex->hide_all;
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
@@ -4805,7 +4801,7 @@ sub parse_options {
      $spin_buttonw -> set_value($SETTING{Paper}{$paper}{x});
      $spin_buttonh -> set_value($SETTING{Paper}{$paper}{y});
     }
-    $vboxm -> hide;
+    Glib::Idle->add (sub { $vboxm -> hide; });
    }
   });
   add_paper($combobp, $x, $y, $l, $t, $h, $w);
