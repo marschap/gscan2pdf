@@ -4806,16 +4806,16 @@ sub parse_options {
      $spin_buttonh -> set_value($SETTING{Paper}{$paper}{y});
     }
     $vboxm -> hide;
-    $windows -> resize(100, 100); # Doesn't matter that 200x200 is too small
    }
   });
   add_paper($combobp, $x, $y, $l, $t, $h, $w);
-  set_paper($combobp);
  }
 
 # Show window
  $vboxd -> show_all;
- $vboxm -> hide if ($combobp -> get_active_text ne $d->get('Manual'));
+# Give the GUI a chance to catch up before resizing.
+ Glib::Idle->add (sub { $windows -> resize(100, 100); });
+ set_paper($combobp);
 
 #  Unghost the scan button
  $sbutton->set_sensitive(TRUE) if (defined $sbutton);
@@ -5073,7 +5073,7 @@ sub set_paper {
    }
   });
  }
- $combobox -> set_active($o);
+ $combobox -> set_active($o) if (defined $combobox);
 }
 
 
