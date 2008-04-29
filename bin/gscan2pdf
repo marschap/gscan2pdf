@@ -106,6 +106,7 @@ use warnings;
 use strict;
 use Gscan2pdf;
 use Gtk2 -init;
+use Gtk2::ImageView;
 use Gtk2::Ex::Simple::List;
 use Gtk2::Gdk::Keysyms;
 use Cwd;                             # To obtain current working directory
@@ -290,6 +291,8 @@ if ($debug) {
  print "Gtk2-Perl version $Gtk2::VERSION\n";
  print "Built for ".join(".",Gtk2->GET_VERSION_INFO)."\n";
  print "Running with ".join(".",Gtk2->get_version_info)."\n";
+ print "Using GtkImageView version ", Gtk2::ImageView->library_version, "\n";
+ print "Using Gtk2::ImageView version ", $Gtk2::ImageView::VERSION, "\n";
 
  use Data::Dumper;
  print Dumper(\%SETTING);
@@ -326,7 +329,7 @@ my ($windowi, $windowe, $windows, $windowh, $windowo,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
     $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
-    $windowr, @rotate_queue, $rotating,
+    $windowr, @rotate_queue, $rotating, $view,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -370,10 +373,10 @@ my @action_items = (
  
  # View menu
  [ 'View', undef, $d->get('_View') ],
- [ 'Zoom 100', 'gtk-zoom-100', $d->get('Zoom _100%'), undef, $d->get('Zoom to 100%'), sub { zoom_button('100%'); } ],
- [ 'Zoom to fit', 'gtk-zoom-fit', $d->get('Zoom to _fit'), undef, $d->get('Zoom to fit'), sub { zoom_button('fit'); } ],
- [ 'Zoom in', 'gtk-zoom-in', $d->get('Zoom _in'), 'plus', $d->get('Zoom in'), sub { zoom_button('in'); } ],
- [ 'Zoom out', 'gtk-zoom-out', $d->get('Zoom _out'), 'minus', $d->get('Zoom out'), sub { zoom_button('out'); } ],
+ [ 'Zoom 100', 'gtk-zoom-100', $d->get('Zoom _100%'), undef, $d->get('Zoom to 100%'), sub { $view->set_zoom(1.0); } ],
+ [ 'Zoom to fit', 'gtk-zoom-fit', $d->get('Zoom to _fit'), undef, $d->get('Zoom to fit'), sub { $view->set_fitting(TRUE); } ],
+ [ 'Zoom in', 'gtk-zoom-in', $d->get('Zoom _in'), 'plus', $d->get('Zoom in'), sub { $view->zoom_in; } ],
+ [ 'Zoom out', 'gtk-zoom-out', $d->get('Zoom _out'), 'minus', $d->get('Zoom out'), sub { $view->zoom_out; } ],
  [ 'Rotate 90', 'rotate90', $d->get('Rotate 90 clockwise'), undef, $d->get('Rotate 90 clockwise'), sub { rotate_selected(90); } ],
  [ 'Rotate 180', 'rotate180', $d->get('Rotate 180'), undef, $d->get('Rotate 180'), sub { rotate_selected(180); } ],
  [ 'Rotate 270', 'rotate270', $d->get('Rotate 90 anticlockwise'), undef, $d->get('Rotate 90 anticlockwise'), sub { rotate_selected(270); } ],
@@ -732,18 +735,11 @@ $scwin_thumbs -> add($slist);
 my $vpaned = Gtk2::VPaned -> new;
 $hpaned -> pack2 ($vpaned, TRUE, TRUE);
 
-# Scrolled window for detail view
-my $scwin_detail = Gtk2::ScrolledWindow -> new;
-$vpaned -> pack1 ($scwin_detail, TRUE, TRUE);
-$scwin_detail -> set_policy ('automatic', 'automatic');
+# ImageView for detail view
+$view = Gtk2::ImageView->new ();
+$vpaned -> pack1 ($view, TRUE, TRUE);
 
-my $scale;
-my $image = Gtk2::Image -> new;
-
-# Need to pack the image in an eventbox to get it to respond to mouse clicks
-my $eventbox = Gtk2::EventBox -> new;
-$eventbox -> add ( $image );
-$eventbox->signal_connect(button_press_event => sub {
+$view->signal_connect(button_press_event => sub {
  my ($widget, $event) = @_;
 
 # Draw a rubber band if LHB and we have an image
@@ -769,7 +765,7 @@ $eventbox->signal_connect(button_press_event => sub {
   handle_clicks($widget, $event);
 # }
 });
-$eventbox->signal_connect(button_release_event => \&handle_clicks);
+$view->signal_connect(button_release_event => \&handle_clicks);
 #$eventbox->signal_connect_after (realize => sub {
 # my ($widget) = @_;
 # $widget->{drag_gc} = Gtk2::Gdk::GC->new ($widget->window);
@@ -808,8 +804,6 @@ $eventbox->signal_connect(button_release_event => \&handle_clicks);
 # Let the event propagate
 # return FALSE;
 #});
-
-$scwin_detail -> add_with_viewport($eventbox);
 
 # OCR buffer
 my $scwin_buffer = Gtk2::ScrolledWindow->new;
@@ -862,7 +856,7 @@ $slist -> {selection_changed_signal} = $slist -> get_selection -> signal_connect
   }
  }
  else {
-  $image -> clear;
+  $view->set_pixbuf(undef);
   $textview -> set_sensitive(FALSE);
   $textbuffer -> set_text('');
  }
@@ -1394,61 +1388,11 @@ sub update_uimanager {
 }
 
 
-# Zoom the detail window
-
-sub zoom_button {
- my ($button) = @_;
-
-# Get dimensions for detail window
- my $widthd = $eventbox -> allocation -> width;
- my $heightd = $eventbox -> allocation -> height;
- my $pixbuf;
-
- my @page = $slist -> get_selected_indices;
- my $filename = $slist->{data}[$page[0]][2];
-
- if ($button eq '100%') {
-  $pixbuf = Gtk2::Gdk::Pixbuf -> new_from_file ($filename);
-  my $widthi = $pixbuf->get_width;
-  my $heighti =  $pixbuf->get_height;
-  if ($widthd > $border) {
-   $scale = $widthi/($widthd-$border) > $heighti/($heightd-$border)
-                     ? $widthi/($widthd-$border) : $heighti/($heightd-$border);
-  }
-  else {
-   return ($heightd-$border)/$heighti;
-  }
- }
- elsif ($button eq 'in') {
-  $scale *= 1.2;
-  $pixbuf = Gtk2::Gdk::Pixbuf ->
-     new_from_file_at_scale ($filename, $widthd*$scale, $heightd*$scale, TRUE);
- }
- elsif ($button eq 'out') {
-  $scale /= 1.2;
-  $pixbuf = Gtk2::Gdk::Pixbuf ->
-     new_from_file_at_scale ($filename, $widthd*$scale, $heightd*$scale, TRUE);
- }
- else {
-  $scale = 1;
-  $pixbuf = Gtk2::Gdk::Pixbuf ->
-                   new_from_file_at_scale ($filename, $widthd, $heightd, TRUE);
- }
-
- $image -> set_from_pixbuf($pixbuf);
- $image -> show;
-}
-
-
 sub display_image {
  my ($filename) = @_;
 
-# Get dimensions for eventbox wrapping pixbuf
- my $widthd = $eventbox -> allocation -> width;
- my $heightd = $eventbox -> allocation -> height;
-
- $image -> set_from_pixbuf(get_pixbuf($filename, $heightd, $widthd));
- $image -> show;
+ my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file ($filename);
+ $view->set_pixbuf($pixbuf);
 }
 
 
@@ -1475,7 +1419,6 @@ sub get_pixbuf {
   }
  }
 
- $scale = 1;
  return $pixbuf;
 }
 
@@ -4464,7 +4407,7 @@ sub delete_pages {
 
 # No pages left, and having blocked the selection_changed_signal, we've got to clear the image
  else {
-  $image -> clear;
+  $view -> set_pixbuf(undef);
   $textview -> set_sensitive(FALSE);
   $textbuffer -> set_text('');
  }
@@ -5805,178 +5748,178 @@ sub unsharp {
 
 # Display page selector and on apply threshold accordingly
 
-sub crop {
+#sub crop {
 
 # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
- my ($windowc, $vbox) = create_window($window, $d->get('Crop'), TRUE);
+# my ($windowc, $vbox) = create_window($window, $d->get('Crop'), TRUE);
 
 # Frame for page range
- add_page_range($vbox);
+# add_page_range($vbox);
 
 # SpinButton for threshold
- my $hboxt = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxt, FALSE, TRUE, 0);
- my $label = Gtk2::Label -> new ($d->get('Crop'));
- $hboxt -> pack_start ($label, FALSE, TRUE, 0);
- my $labelp = Gtk2::Label -> new ($d->get('%'));
- $hboxt -> pack_end ($labelp, FALSE, TRUE, 0);
- my $spinbutton = Gtk2::SpinButton -> new_with_range(0, 100, 1);
- $spinbutton->set_value ($SETTING{'threshold tool'});
- $hboxt -> pack_end ($spinbutton, FALSE, TRUE, 0);
+# my $hboxt = Gtk2::HBox -> new;
+# $vbox -> pack_start ($hboxt, FALSE, TRUE, 0);
+# my $label = Gtk2::Label -> new ($d->get('Crop'));
+# $hboxt -> pack_start ($label, FALSE, TRUE, 0);
+# my $labelp = Gtk2::Label -> new ($d->get('%'));
+# $hboxt -> pack_end ($labelp, FALSE, TRUE, 0);
+# my $spinbutton = Gtk2::SpinButton -> new_with_range(0, 100, 1);
+# $spinbutton->set_value ($SETTING{'threshold tool'});
+# $hboxt -> pack_end ($spinbutton, FALSE, TRUE, 0);
 
 # HBox for buttons
- my $hboxb = Gtk2::HBox -> new;
- $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+# my $hboxb = Gtk2::HBox -> new;
+# $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
 
 # Apply button
- my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
- $hboxb -> pack_start( $abutton, TRUE, TRUE, 0 );
- $abutton -> signal_connect (clicked => sub {
+# my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
+# $hboxb -> pack_start( $abutton, TRUE, TRUE, 0 );
+# $abutton -> signal_connect (clicked => sub {
 
-  return if (! $eventbox->{draginfo});
+#  return if (! $eventbox->{draginfo});
 
 # Update undo/redo buffers
-  take_snapshot();
+#  take_snapshot();
 
-  my $dialog = Gtk2::Dialog -> new ($d->get('Cropping')."...", $windowo,
-                                            'destroy-with-parent',
-                                            'gtk-cancel' => 'cancel');
+#  my $dialog = Gtk2::Dialog -> new ($d->get('Cropping')."...", $windowo,
+#                                            'destroy-with-parent',
+#                                            'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
-  my $pbar = Gtk2::ProgressBar->new;
-  $dialog -> vbox -> add($pbar);
+#  my $pbar = Gtk2::ProgressBar->new;
+#  $dialog -> vbox -> add($pbar);
 
 # Ensure that the dialog box is destroyed when the user responds.
-  $dialog -> signal_connect (response => sub {
-   $_[0] -> destroy;
-   kill_subs();
-  });
-  $dialog -> show_all;
+#  $dialog -> signal_connect (response => sub {
+#   $_[0] -> destroy;
+#   kill_subs();
+#  });
+#  $dialog -> show_all;
 
 # Install a handler for child processes
-  $SIG{CHLD} = \&sig_child;
+#  $SIG{CHLD} = \&sig_child;
 
-  my @pagelist = get_page_index();
-  my ($child, $parent) = open_socketpair();
-  my $pid = start_process(sub {
+#  my @pagelist = get_page_index();
+#  my ($child, $parent) = open_socketpair();
+#  my $pid = start_process(sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
-   my $page = 0;
+#   my $page = 0;
 
 # Erase box
 #   draw_rubber_band_box ($eventbox);
 
-   foreach (@pagelist) {
-    send($parent, sprintf("%i %i", $page, $#pagelist+1), 0);
+#   foreach (@pagelist) {
+#    send($parent, sprintf("%i %i", $page, $#pagelist+1), 0);
 
-    my $filename = $slist -> {data}[$_][2];
-    my $image = Image::Magick->new;
-    my $e = $image->Read($filename);
-    warn "$e" if "$e";
+#    my $filename = $slist -> {data}[$_][2];
+#    my $image = Image::Magick->new;
+#    my $e = $image->Read($filename);
+#    warn "$e" if "$e";
 
 # Image dimensions
-    my $height = $image->Get('height');
-    my $width = $image->Get('width');
-print "image $height x $width = ", $height/$width, "\n";
+#    my $height = $image->Get('height');
+#    my $width = $image->Get('width');
+#print "image $height x $width = ", $height/$width, "\n";
 
 # ScrolledWindow dimensions
-    my $widths = $scwin_detail -> allocation -> width;
-    my $heights = $scwin_detail -> allocation -> height;
-print "ScrolledW $heights x $widths = ", $heights/$widths, "\n";
+#    my $widths = $scwin_detail -> allocation -> width;
+#    my $heights = $scwin_detail -> allocation -> height;
+#print "ScrolledW $heights x $widths = ", $heights/$widths, "\n";
 
 # Viewport (hence ->child) dimensions
-    my $widthv = $scwin_detail -> child -> allocation -> width;
-    my $heightv = $scwin_detail -> child -> allocation -> height;
-print "Viewport $heightv x $widthv = ", $heightv/$widthv, "\n";
+#    my $widthv = $scwin_detail -> child -> allocation -> width;
+#    my $heightv = $scwin_detail -> child -> allocation -> height;
+#print "Viewport $heightv x $widthv = ", $heightv/$widthv, "\n";
 
 # Eventbox dimensions
-    my $widthe = $scwin_detail -> child -> child -> allocation -> width;
-    my $heighte = $scwin_detail -> child -> child -> allocation -> height;
-print "EventB $heighte x $widthe = ", $heighte/$widthe, "\n";
+#    my $widthe = $scwin_detail -> child -> child -> allocation -> width;
+#    my $heighte = $scwin_detail -> child -> child -> allocation -> height;
+#print "EventB $heighte x $widthe = ", $heighte/$widthe, "\n";
 
-    my $factor = ($height/$width > $heighte/$widthe)
-                                            ? $height/$heighte : $width/$widthe;
+#    my $factor = ($height/$width > $heighte/$widthe)
+#                                            ? $height/$heighte : $width/$widthe;
 
 # If we have scrollbars, measure from top left, otherwise measure from centre
-    my $xoffset = $heightv == $heights ? $width/2 - $widthe/2 * $factor : 0;
-    my $yoffset = $widthv == $widths ? $height/2 - $heighte/2 * $factor : 0;
-print "xoffset $xoffset, yoffset $yoffset, factor $factor\n";
+#    my $xoffset = $heightv == $heights ? $width/2 - $widthe/2 * $factor : 0;
+#    my $yoffset = $widthv == $widths ? $height/2 - $heighte/2 * $factor : 0;
+#print "xoffset $xoffset, yoffset $yoffset, factor $factor\n";
 
 # Convert crop box from viewport to image coordinates
-    my $x1 = $eventbox->{draginfo}{x1};
-    my $x2 = $eventbox->{draginfo}{x2};
-    my $y1 = $eventbox->{draginfo}{y1};
-    my $y2 = $eventbox->{draginfo}{y2};
-    my $x = min($x1, $x2) * $factor + $xoffset;
-    my $y = min($y1, $y2) * $factor + $yoffset;
-    my $w = abs($x2 - $x1) * $factor;
-    my $h = abs($y2 - $y1) * $factor;
+#    my $x1 = $eventbox->{draginfo}{x1};
+#    my $x2 = $eventbox->{draginfo}{x2};
+#    my $y1 = $eventbox->{draginfo}{y1};
+#    my $y2 = $eventbox->{draginfo}{y2};
+#    my $x = min($x1, $x2) * $factor + $xoffset;
+#    my $y = min($y1, $y2) * $factor + $yoffset;
+#    my $w = abs($x2 - $x1) * $factor;
+#    my $h = abs($y2 - $y1) * $factor;
 
 # Crop the image
-    warn "Cropping $w x $h + $x + $y\n" if $debug;
-    $e = $image->Crop(width=>$w, height=>$h, x=>$x, y=>$y);
-    warn "$e" if "$e";
+#    warn "Cropping $w x $h + $x + $y\n" if $debug;
+#    $e = $image->Crop(width=>$w, height=>$h, x=>$x, y=>$y);
+#    warn "$e" if "$e";
 
 # Write it
-    my $suffix = $1 if ($filename =~ /\.(\w*)$/);
-    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
-    warn " to $filename\n" if $debug;
-    $e = $image->Write(filename => $filename);
-    warn "$e" if "$e";
+#    my $suffix = $1 if ($filename =~ /\.(\w*)$/);
+#    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
+#    warn " to $filename\n" if $debug;
+#    $e = $image->Write(filename => $filename);
+#    warn "$e" if "$e";
 
-    send($parent, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
-    ++$page;
-   }
-   send($parent, '2 1', 0);
-  });
+#    send($parent, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
+#    ++$page;
+#   }
+#   send($parent, '2 1', 0);
+#  });
 
-  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
-   my ($fileno, $condition) = @_;
+#  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
+#   my ($fileno, $condition) = @_;
 
-   my $line;
-   if ($condition & 'in') { # bit field operation. >= would also work
-    recv($child, $line, 1000, 0);
-    if ($line =~ /(\d*) (\d*) ?(.*)/) {
-     my $page=$1;
-     my $total=$2;
-     my $filename=$3;
-     my $fraction = $page/$total;
-     if ($fraction > 1) {
-      $dialog -> destroy;
-      return FALSE;  # uninstall
-     }
-     $pbar->set_fraction($fraction);
-     $pbar->set_text(sprintf($d->get("Cropping page %i of %i"), $page+1, $total));
-     if (defined $filename and $filename ne '') {
-      $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
-      $slist -> {data}[$pagelist[$page]][2] = $filename;
-      $slist -> {data}[$pagelist[$page]][1] =
-                                       get_pixbuf($filename, $heightt, $widtht);
-      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
-     }
-     display_image($filename) if (! $page);
-    }
-   }
+#   my $line;
+#   if ($condition & 'in') { # bit field operation. >= would also work
+#    recv($child, $line, 1000, 0);
+#    if ($line =~ /(\d*) (\d*) ?(.*)/) {
+#     my $page=$1;
+#     my $total=$2;
+#     my $filename=$3;
+#     my $fraction = $page/$total;
+#     if ($fraction > 1) {
+#      $dialog -> destroy;
+#      return FALSE;  # uninstall
+#     }
+#     $pbar->set_fraction($fraction);
+#     $pbar->set_text(sprintf($d->get("Cropping page %i of %i"), $page+1, $total));
+#     if (defined $filename and $filename ne '') {
+#      $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+#      $slist -> {data}[$pagelist[$page]][2] = $filename;
+#      $slist -> {data}[$pagelist[$page]][1] =
+#                                       get_pixbuf($filename, $heightt, $widtht);
+#      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+#     }
+#     display_image($filename) if (! $page);
+#    }
+#   }
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
-    $dialog -> destroy;
-    update_uimanager();
-    return FALSE;  # uninstall
-   }
-   return TRUE;  # continue without uninstalling
-  });
- });
+#   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+#    $dialog -> destroy;
+#    update_uimanager();
+#    return FALSE;  # uninstall
+#   }
+#   return TRUE;  # continue without uninstalling
+#  });
+# });
 
 # Cancel button
- my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
- $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton -> signal_connect( clicked => sub { $windowc -> destroy } );
+# my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+# $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+# $cbutton -> signal_connect( clicked => sub { $windowc -> destroy } );
 
- $windowc -> show_all;
-}
+# $windowc -> show_all;
+#}
 
 
 # guess from which window the sub was called
@@ -7864,6 +7807,8 @@ only the changelogs from official Ubuntu builds are displayed.
 
 =item Scan profiles.
 
+=item Crop function.
+
 =back
 
 =item When I've worked out how to do it
@@ -7873,8 +7818,6 @@ only the changelogs from official Ubuntu builds are displayed.
 =item Correct positioning and size of OCR output behind scan -
       as soon as tesseract supports outputting the information in a sensible
       manner.
-
-=item Crop function (As soon as I have finished the Perl bindings for gtkimageview).
 
 =item Print (using Net::Cups).
 
@@ -7901,6 +7844,8 @@ Jeffrey Ratcliffe (ra28145 at users dot sf dot net)
 =item the GTK2 project for a most excellent graphics toolkit.
 
 =item the Gtk2-Perl project for their superb Perl bindings for GTK2.
+
+=item Björn Lindqvist for the gtkimageview widget
 
 =item Sourceforge for hosting the project.
 
