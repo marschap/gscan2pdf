@@ -30,9 +30,6 @@
 #    note sane-backend and wipe scan settings if it changes
 #    reenable multiple scans from flatbed + delay and warning
 #    query downsizing problems with the imagemagick team.
-#    crop - 1. sort out redrawing after refresh
-#           2. zooming
-#           3. not allowing the box over the edge of the page
 #    look at using potrace to convert images to vectors
 #    add option to overwrite textbuffer with OCR
 #    add an option selecting the number of processes to run simultaneously
@@ -68,16 +65,8 @@
 #    Option to throw up PDF viewer with newly created PDF file
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
-#    Switch viewing widget as soon as packages are available for:
-#     http://giv.sourceforge.net/gtk-image-viewer/
-#     or http://trac.bjourne.webfactional.com/ (GtkImageView)
 #    As soon as I have cups-config --version >= 1.2.2, move print routines to
 #     Net::Cups
-#
-# 1. Crop and autocrop
-#     (see http://mail.gnome.org/archives/gtk-perl-list/2006-June/msg00002.html
-#       and ../../Gtk2-Perl-Demo-0.04/examples/scribble.pl
-#       and ../histogramplot.pl)
 #
 # Release procedure:
 # 0. Test scan in lineart, greyscale and colour.
@@ -320,6 +309,7 @@ init_icons(
  [ 'rotate270', "$path/stock-rotate-270.svg" ],
  [ 'scanner',	"$path/scanner.svg" ],
  [ 'pdf',	"$path/pdf.svg" ],
+ [ 'selection',	"$path/stock-selection-all-16.png" ],
 );
 
 # Define application-wide variables here so that they can be referenced
@@ -385,7 +375,7 @@ my @action_items = (
  [ 'Tools', undef, $d->get('_Tools') ],
  [ 'Threshold', undef, $d->get('_Threshold'), undef, $d->get('Change each pixel above this threshold to black'), \&threshold ],
  [ 'Unsharp', undef, $d->get('_Unsharp Mask'), undef, $d->get('Apply an unsharp mask'), \&unsharp ],
-# [ 'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef, $d->get('Crop pages'), \&crop ],
+ [ 'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef, $d->get('Crop pages'), \&crop ],
  [ 'unpaper', undef, $d->get('_Clean up'), undef, $d->get('Clean up scanned images with unpaper'), \&unpaper ],
  [ 'OCR', undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition'), \&OCR ],
 
@@ -394,6 +384,13 @@ my @action_items = (
  [ 'Help', 'gtk-help', $d->get('_Help'), '<control>h', $d->get('Help'), \&view_pod ],
  [ 'About', 'gtk-about', $d->get('_About'), undef, $d->get('_About'), \&about ],
 );
+
+my @image_tools = (
+ [ 'DraggerTool', 'gtk-refresh', $d->get('_Drag'), undef, $d->get('Use the hand tool'), 10 ],
+ [ 'SelectorTool', 'selection', $d->get('_Select'), undef, $d->get('Use the rectangular selection tool'), 20 ],
+ [ 'PainterTool', 'gtk-media-play', $d->get('_Paint'), undef, $d->get('Use the painter tool'), 30 ]
+);
+
 
 # Declare the XML structure
 my $uimanager;
@@ -424,6 +421,9 @@ my $ui = "<ui>
    <menuitem action='Preferences'/>
   </menu>
   <menu action='View'> 
+   <menuitem action = 'DraggerTool'/>
+   <menuitem action = 'SelectorTool'/>
+   <separator/>
    <menuitem action='Zoom 100'/>
    <menuitem action='Zoom to fit'/>
    <menuitem action='Zoom in'/>
@@ -436,6 +436,7 @@ my $ui = "<ui>
   <menu action='Tools'> 
    <menuitem action='Threshold'/>
    <menuitem action='Unsharp'/>
+   <menuitem action='Crop'/>
    <separator/>
    <menuitem action='unpaper'/>
    <menuitem action='OCR'/>
@@ -462,6 +463,9 @@ my $ui = "<ui>
   <toolitem action='Renumber'/>
   <toolitem action='Select All'/>
   <separator/>
+  <toolitem action = 'DraggerTool'/>
+  <toolitem action = 'SelectorTool'/>
+  <separator/>
   <toolitem action='Zoom 100'/>
   <toolitem action='Zoom to fit'/>
   <toolitem action='Zoom in'/>
@@ -475,6 +479,9 @@ my $ui = "<ui>
   <toolitem action='Quit'/>
  </toolbar>
  <popup name='Detail_Popup'>
+  <menuitem action = 'DraggerTool'/>
+  <menuitem action = 'SelectorTool'/>
+  <separator/>
   <menuitem action='Zoom 100'/>
   <menuitem action='Zoom to fit'/>
   <menuitem action='Zoom in'/>
@@ -736,7 +743,10 @@ my $vpaned = Gtk2::VPaned -> new;
 $hpaned -> pack2 ($vpaned, TRUE, TRUE);
 
 # ImageView for detail view
-$view = Gtk2::ImageView->new ();
+$view = Gtk2::ImageView->new;
+my $dragger = Gtk2::ImageView::Tool::Dragger->new ($view);
+my $selector = Gtk2::ImageView::Tool::Selector->new ($view);
+my $painter = Gtk2::ImageView::Tool::Painter->new ($view);
 $vpaned -> pack1 ($view, TRUE, TRUE);
 
 $view->signal_connect(button_press_event => sub {
@@ -1156,7 +1166,10 @@ sub create_menu_bar {
 # and fill it with Gtk2::Action instances
  my $actions_basic = Gtk2::ActionGroup->new ("actions_basic");
  $actions_basic->add_actions (\@action_items, undef);
-	
+ $actions_basic->add_radio_actions (\@image_tools,
+                                       10,
+                                       \&change_image_tool_cb);
+
 # Add the actiongroup to the uimanager  
  $uimanager->insert_action_group($actions_basic, 0);
 
@@ -1240,7 +1253,7 @@ sub create_menu_bar {
 
  $uimanager->get_widget('/MenuBar/Tools/Threshold') -> set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Tools/Unsharp') -> set_sensitive(FALSE);
-# $uimanager->get_widget('/MenuBar/Tools/Crop') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/Tools/Crop') -> set_sensitive(FALSE);
 
 # a convenient place to put these
  $dependencies{pages} = -1;
@@ -1306,7 +1319,9 @@ sub create_menu_bar {
 # ghost or unghost as necessary as # pages > 0 or not.
 
 sub update_uimanager {
- my @widgets = ( '/MenuBar/View/Zoom 100',
+ my @widgets = ( '/MenuBar/View/DraggerTool',
+                 '/MenuBar/View/SelectorTool',
+                 '/MenuBar/View/Zoom 100',
                  '/MenuBar/View/Zoom to fit',
                  '/MenuBar/View/Zoom in',
                  '/MenuBar/View/Zoom out',
@@ -1315,9 +1330,12 @@ sub update_uimanager {
                  '/MenuBar/View/Rotate 270',
                  '/MenuBar/Tools/Threshold',
                  '/MenuBar/Tools/Unsharp',
+                 '/MenuBar/Tools/Crop',
                  '/MenuBar/Tools/unpaper',
                  '/MenuBar/Tools/OCR',
 
+                 '/ToolBar/DraggerTool',
+                 '/ToolBar/SelectorTool',
                  '/ToolBar/Zoom 100',
                  '/ToolBar/Zoom to fit',
                  '/ToolBar/Zoom in',
@@ -1326,6 +1344,8 @@ sub update_uimanager {
                  '/ToolBar/Rotate 180',
                  '/ToolBar/Rotate 270',
 
+                 '/Detail_Popup/DraggerTool',
+                 '/Detail_Popup/SelectorTool',
                  '/Detail_Popup/Zoom 100',
                  '/Detail_Popup/Zoom to fit',
                  '/Detail_Popup/Zoom in',
@@ -5746,16 +5766,38 @@ sub unsharp {
 }
 
 
-# Display page selector and on apply threshold accordingly
+# Callback for change Gtk2::ImageView::Tool
 
-#sub crop {
+sub change_image_tool_cb {
+ my ($action, $current) = @_;
+ my $value = $current->get_current_value ();
+ my $tool = $selector;
+ if ($value == 10) {
+  $tool = $dragger;
+ }
+ elsif ($value == 30) {
+  $tool = $painter;
+ }
+ $view->set_tool ($tool);
+# if ($value == 20) {
+#  sel_changed_cb ($selector, $sel_info_label);
+# }
+# else {
+#  $sel_info_label->set_text ("");
+# }
+}
+
+
+# Display page selector and on apply crop accordingly
+
+sub crop {
 
 # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
-# my ($windowc, $vbox) = create_window($window, $d->get('Crop'), TRUE);
+ my ($windowc, $vbox) = create_window($window, $d->get('Crop'), TRUE);
 
 # Frame for page range
-# add_page_range($vbox);
+ add_page_range($vbox);
 
 # SpinButton for threshold
 # my $hboxt = Gtk2::HBox -> new;
@@ -5769,157 +5811,119 @@ sub unsharp {
 # $hboxt -> pack_end ($spinbutton, FALSE, TRUE, 0);
 
 # HBox for buttons
-# my $hboxb = Gtk2::HBox -> new;
-# $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+ my $hboxb = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
 
 # Apply button
-# my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
-# $hboxb -> pack_start( $abutton, TRUE, TRUE, 0 );
-# $abutton -> signal_connect (clicked => sub {
+ my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
+ $hboxb -> pack_start( $abutton, TRUE, TRUE, 0 );
+ $abutton -> signal_connect (clicked => sub {
 
-#  return if (! $eventbox->{draginfo});
+  my $sel = $selector->get_selection;
+  return if (! defined $sel);
 
 # Update undo/redo buffers
-#  take_snapshot();
+  take_snapshot();
 
-#  my $dialog = Gtk2::Dialog -> new ($d->get('Cropping')."...", $windowo,
-#                                            'destroy-with-parent',
-#                                            'gtk-cancel' => 'cancel');
+  my $dialog = Gtk2::Dialog -> new ($d->get('Cropping')."...", $windowo,
+                                            'destroy-with-parent',
+                                            'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
-#  my $pbar = Gtk2::ProgressBar->new;
-#  $dialog -> vbox -> add($pbar);
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog -> vbox -> add($pbar);
 
 # Ensure that the dialog box is destroyed when the user responds.
-#  $dialog -> signal_connect (response => sub {
-#   $_[0] -> destroy;
-#   kill_subs();
-#  });
-#  $dialog -> show_all;
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   kill_subs();
+  });
+  $dialog -> show_all;
 
 # Install a handler for child processes
-#  $SIG{CHLD} = \&sig_child;
+  $SIG{CHLD} = \&sig_child;
 
-#  my @pagelist = get_page_index();
-#  my ($child, $parent) = open_socketpair();
-#  my $pid = start_process(sub {
+  my @pagelist = get_page_index();
+  my ($child, $parent) = open_socketpair();
+  my $pid = start_process(sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
-#   my $page = 0;
+   my $page = 0;
 
-# Erase box
-#   draw_rubber_band_box ($eventbox);
+   foreach (@pagelist) {
+    send($parent, sprintf("%i %i", $page, $#pagelist+1), 0);
 
-#   foreach (@pagelist) {
-#    send($parent, sprintf("%i %i", $page, $#pagelist+1), 0);
+    my $filename = $slist -> {data}[$_][2];
+    my $image = Image::Magick->new;
+    my $e = $image->Read($filename);
+    warn "$e" if "$e";
 
-#    my $filename = $slist -> {data}[$_][2];
-#    my $image = Image::Magick->new;
-#    my $e = $image->Read($filename);
-#    warn "$e" if "$e";
-
-# Image dimensions
-#    my $height = $image->Get('height');
-#    my $width = $image->Get('width');
-#print "image $height x $width = ", $height/$width, "\n";
-
-# ScrolledWindow dimensions
-#    my $widths = $scwin_detail -> allocation -> width;
-#    my $heights = $scwin_detail -> allocation -> height;
-#print "ScrolledW $heights x $widths = ", $heights/$widths, "\n";
-
-# Viewport (hence ->child) dimensions
-#    my $widthv = $scwin_detail -> child -> allocation -> width;
-#    my $heightv = $scwin_detail -> child -> allocation -> height;
-#print "Viewport $heightv x $widthv = ", $heightv/$widthv, "\n";
-
-# Eventbox dimensions
-#    my $widthe = $scwin_detail -> child -> child -> allocation -> width;
-#    my $heighte = $scwin_detail -> child -> child -> allocation -> height;
-#print "EventB $heighte x $widthe = ", $heighte/$widthe, "\n";
-
-#    my $factor = ($height/$width > $heighte/$widthe)
-#                                            ? $height/$heighte : $width/$widthe;
-
-# If we have scrollbars, measure from top left, otherwise measure from centre
-#    my $xoffset = $heightv == $heights ? $width/2 - $widthe/2 * $factor : 0;
-#    my $yoffset = $widthv == $widths ? $height/2 - $heighte/2 * $factor : 0;
-#print "xoffset $xoffset, yoffset $yoffset, factor $factor\n";
-
-# Convert crop box from viewport to image coordinates
-#    my $x1 = $eventbox->{draginfo}{x1};
-#    my $x2 = $eventbox->{draginfo}{x2};
-#    my $y1 = $eventbox->{draginfo}{y1};
-#    my $y2 = $eventbox->{draginfo}{y2};
-#    my $x = min($x1, $x2) * $factor + $xoffset;
-#    my $y = min($y1, $y2) * $factor + $yoffset;
-#    my $w = abs($x2 - $x1) * $factor;
-#    my $h = abs($y2 - $y1) * $factor;
+    my ($x, $y, $w, $h) = $sel->values;
 
 # Crop the image
-#    warn "Cropping $w x $h + $x + $y\n" if $debug;
-#    $e = $image->Crop(width=>$w, height=>$h, x=>$x, y=>$y);
-#    warn "$e" if "$e";
+    warn "Cropping $w x $h + $x + $y\n" if $debug;
+    $e = $image->Crop(width=>$w, height=>$h, x=>$x, y=>$y);
+    warn "$e" if "$e";
 
 # Write it
-#    my $suffix = $1 if ($filename =~ /\.(\w*)$/);
-#    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
-#    warn " to $filename\n" if $debug;
-#    $e = $image->Write(filename => $filename);
-#    warn "$e" if "$e";
+    my $suffix = $1 if ($filename =~ /\.(\w*)$/);
+    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
+    warn " to $filename\n" if $debug;
+    $e = $image->Write(filename => $filename);
+    warn "$e" if "$e";
 
-#    send($parent, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
-#    ++$page;
-#   }
-#   send($parent, '2 1', 0);
-#  });
+    send($parent, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
+    ++$page;
+   }
+   send($parent, '2 1', 0);
+  });
 
-#  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
-#   my ($fileno, $condition) = @_;
+  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
 
-#   my $line;
-#   if ($condition & 'in') { # bit field operation. >= would also work
-#    recv($child, $line, 1000, 0);
-#    if ($line =~ /(\d*) (\d*) ?(.*)/) {
-#     my $page=$1;
-#     my $total=$2;
-#     my $filename=$3;
-#     my $fraction = $page/$total;
-#     if ($fraction > 1) {
-#      $dialog -> destroy;
-#      return FALSE;  # uninstall
-#     }
-#     $pbar->set_fraction($fraction);
-#     $pbar->set_text(sprintf($d->get("Cropping page %i of %i"), $page+1, $total));
-#     if (defined $filename and $filename ne '') {
-#      $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
-#      $slist -> {data}[$pagelist[$page]][2] = $filename;
-#      $slist -> {data}[$pagelist[$page]][1] =
-#                                       get_pixbuf($filename, $heightt, $widtht);
-#      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
-#     }
-#     display_image($filename) if (! $page);
-#    }
-#   }
+   my $line;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    recv($child, $line, 1000, 0);
+    if ($line =~ /(\d*) (\d*) ?(.*)/) {
+     my $page=$1;
+     my $total=$2;
+     my $filename=$3;
+     my $fraction = $page/$total;
+     if ($fraction > 1) {
+      $dialog -> destroy;
+      return FALSE;  # uninstall
+     }
+     $pbar->set_fraction($fraction);
+     $pbar->set_text(sprintf($d->get("Cropping page %i of %i"), $page+1, $total));
+     if (defined $filename and $filename ne '') {
+      $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+      $slist -> {data}[$pagelist[$page]][2] = $filename;
+      $slist -> {data}[$pagelist[$page]][1] =
+                                       get_pixbuf($filename, $heightt, $widtht);
+      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+      display_image($filename) if (! $page);
+     }
+    }
+   }
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-#   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
-#    $dialog -> destroy;
-#    update_uimanager();
-#    return FALSE;  # uninstall
-#   }
-#   return TRUE;  # continue without uninstalling
-#  });
-# });
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+    $dialog -> destroy;
+    update_uimanager();
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # continue without uninstalling
+  });
+ });
 
 # Cancel button
-# my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
-# $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
-# $cbutton -> signal_connect( clicked => sub { $windowc -> destroy } );
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $windowc -> destroy } );
 
-# $windowc -> show_all;
-#}
+ $windowc -> show_all;
+}
 
 
 # guess from which window the sub was called
@@ -7022,21 +7026,6 @@ sub kill_subs {
 }
 
 
-#sub min { $_[0] < $_[1] ? $_[0] : $_[1] }
-
-
-# rubber band for crop tool
-
-#sub draw_rubber_band_box {
-# my ($widget) = @_;
-# my $x = min ($widget->{draginfo}{x1}, $widget->{draginfo}{x2});
-# my $y = min ($widget->{draginfo}{y1}, $widget->{draginfo}{y2});
-# my $w = abs ($widget->{draginfo}{x2} - $widget->{draginfo}{x1});
-# my $h = abs ($widget->{draginfo}{y2} - $widget->{draginfo}{y1});
-# $widget->window->draw_rectangle($widget->{drag_gc}, FALSE, $x, $y, $w, $h);
-#}
-
-
 # marked page list as saved
 
 sub mark_pages {
@@ -7438,13 +7427,17 @@ The GTK+ graphical user interface library.
 
 Perl interface to the GLib and GObject libraries
 
-=item libgtk2-ex-simple-list-perl
-
-A simple interface to Gtk2's complex MVC list widget
-
 =item libgtk2-perl (>= 1:1.043-1)
 
 Perl interface to the 2.x series of the Gimp Toolkit library
+
+=item libgtk2-imageview-perl
+
+Perl bindings to the gtkimageview widget
+
+=item libgtk2-ex-simple-list-perl
+
+A simple interface to Gtk2's complex MVC list widget
 
 =item liblocale-gettext-perl (>= 1.05)
 
@@ -7806,8 +7799,6 @@ only the changelogs from official Ubuntu builds are displayed.
 =over
 
 =item Scan profiles.
-
-=item Crop function.
 
 =back
 

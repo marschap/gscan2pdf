@@ -1,4 +1,4 @@
-0.9.24 (24.04.2008):
+0.9.24 (02.05.2008):
 
 + check that the file can be written before saving PDF, TIFF or PS.
   Closes 1915008 (crash when trying to save in non-writable directory)
@@ -12,6 +12,7 @@
 + fixed erroneous read-only error writing file
 + fixed threshold tool. Closes 1936561 (Threshold tool fails)
 + Cache options
++ crop tool
 
 
 0.9.23 (05.03.2008):
