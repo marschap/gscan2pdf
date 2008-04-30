@@ -977,6 +977,12 @@ my %pddo = (
                                  },
             'pagewidth'       => { string => $d->get('Page Width') },
             'pageheight'      => { string => $d->get('Page Height') },
+            'adf_mode'        => { string => $d->get('ADF Mode'),
+                                   values => {
+                                             'Simplex' => $d->get('Simplex'),
+                                             'Duplex'  => $d->get('Duplex'),
+                                             },
+                                 },
           );
 
 # Set up hash for unpaper options
@@ -7360,9 +7366,15 @@ C<apt-get update>
 C<apt-get install gscan2pdf>
 
 If you add my key to your list of trusted keys, then you will no longer get
-the "not authenticated" warnings:
+the "not authenticated" warnings. Fetch the key:
 
 C<gpg --keyserver www.keyserver.net --recv-keys 4DD7CC93>
+
+Occasionally, that server is down. In that case, try:
+
+C<gpg --keyserver http://keyring.debian.org --recv-keys 4DD7CC93>
+
+Then add it to the apt keyring:
 
 C<gpg --export --armor 4DD7CC93 | sudo apt-key add ->
 
