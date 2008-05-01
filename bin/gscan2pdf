@@ -177,6 +177,19 @@ while (defined($ARGV[0])) {
   shift @ARGV;
   warn "$program $version\n";
  }
+ elsif ($ARGV[0] eq "--device") {
+  shift @ARGV;
+  if (@ARGV) {
+   my $device = shift @ARGV;
+   warn "Using $device\n";
+   push @device, $device;
+   push @model, $device;
+  }
+  else {
+   warn sprintf($d->get("Usage:\n%s --device <device>\n"), $0); # better xgettext hack
+   exit 1;
+  }
+ }
  else {
   warn sprintf($d->get("Unknown option %s.\n"), shift @ARGV); # xgettext hack
   exit 1;
@@ -3625,7 +3638,10 @@ sub scan_dialog {
  $cbutton -> signal_connect( clicked => sub { $windows -> hide; } );
 
  my $output;
- if (! $test) {
+ if ($test) {
+  parse_device_list($output);
+ }
+ elsif (! @device) {
 
 # Set up ProgressBar
   my $pbar = Gtk2::ProgressBar->new;
@@ -3676,15 +3692,13 @@ sub scan_dialog {
      return FALSE;
     }
 
-    populate_device_list($hboxd, $output);
+    parse_device_list($output);
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
   });
  }
- else {
-  populate_device_list($hboxd, $output);
- }
+ populate_device_list($hboxd);
 
 # Show window
  $windows -> show_all;
@@ -3695,13 +3709,8 @@ sub scan_dialog {
 }
 
 
-sub populate_device_list {
- my ($hboxd, $output) = @_;
-
-# device list
- my $labeld = Gtk2::Label -> new ($d->get('Device'));
- $hboxd -> pack_start ($labeld, FALSE, FALSE, 0);
- $combobd = Gtk2::ComboBox->new_text;
+sub parse_device_list {
+ my ($output) = @_;
 
  $output = $test->{output} if ($test);
  print $output if ($debug and defined($output));
@@ -3740,6 +3749,22 @@ sub populate_device_list {
   $model[$i] .= " on $device[$i]" if ($seen{$model[$i]} > 1);
  }
 
+# If device not set by config and there is a default device, then set it
+ if (! defined($SETTING{device})
+      and defined($output) and $output =~ /default device is `(.*)'/) {
+  $SETTING{device} = $1;
+ }
+}
+
+
+sub populate_device_list {
+ my ($hboxd) = @_;
+
+# device list
+ my $labeld = Gtk2::Label -> new ($d->get('Device'));
+ $hboxd -> pack_start ($labeld, FALSE, FALSE, 0);
+ $combobd = Gtk2::ComboBox->new_text;
+
 # read the model names into the combobox
  foreach (@model) {
   $combobd->append_text ($_);
@@ -3757,12 +3782,6 @@ sub populate_device_list {
  });
  $tooltips -> set_tip ($combobd, $d->get('Sets the device to be used for the scan'));
  $hboxd -> pack_end ($combobd, FALSE, FALSE, 0);
-
-# If device not set by config and there is a default device, then set it
- if (! defined($SETTING{device})
-      and defined($output) and $output =~ /default device is `(.*)'/) {
-  $SETTING{device} = $1;
- }
 
 # If device in settings then set it
  my $o;
@@ -7320,7 +7339,6 @@ __END__
 =head1 Name
 
 gscan2pdf - A GUI to produce a multipage PDF from a scan.
-gscan2pdf should work on almost any Linux/BSD machine.
 
 =for html <p align="center">
  <img src="https://sourceforge.net/dbimage.php?id=121788" border="1" width="632"
@@ -7801,6 +7819,15 @@ set "# Pages" to "1", and possibly "Batch scan" to "No".
 
 As far as I can tell, this is pulled from changelogs.ubuntu.com, and therefore
 only the changelogs from official Ubuntu builds are displayed.
+
+=head2 Why can gscan2pdf not find my scanner?
+
+If your scanner is not connected directly to the machine on which you are
+running gscan2pdf and you have not installed the SANE daemon, saned,
+gscan2pdf cannot automatically find it. In this case, you can specify the
+scanner device on the command line:
+
+C<gscan2pdf --device <device>>
 
 =head1 Roadmap
 
