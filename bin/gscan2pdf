@@ -387,6 +387,7 @@ my @action_items = (
  # Tools menu
  [ 'Tools', undef, $d->get('_Tools') ],
  [ 'Threshold', undef, $d->get('_Threshold'), undef, $d->get('Change each pixel above this threshold to black'), \&threshold ],
+ [ 'Negate', undef, $d->get('_Negate'), undef, $d->get('Converts black to white and vice versa'), \&negate ],
  [ 'Unsharp', undef, $d->get('_Unsharp Mask'), undef, $d->get('Apply an unsharp mask'), \&unsharp ],
  [ 'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef, $d->get('Crop pages'), \&crop ],
  [ 'unpaper', undef, $d->get('_Clean up'), undef, $d->get('Clean up scanned images with unpaper'), \&unpaper ],
@@ -448,6 +449,7 @@ my $ui = "<ui>
   </menu>
   <menu action='Tools'> 
    <menuitem action='Threshold'/>
+   <menuitem action='Negate'/>
    <menuitem action='Unsharp'/>
    <menuitem action='Crop'/>
    <separator/>
@@ -1271,6 +1273,7 @@ sub create_menu_bar {
  $uimanager->get_widget('/Thumb_Popup/Email as PDF') -> set_sensitive(FALSE);
 
  $uimanager->get_widget('/MenuBar/Tools/Threshold') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/Tools/Negate') -> set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Tools/Unsharp') -> set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Tools/Crop') -> set_sensitive(FALSE);
 
@@ -1348,6 +1351,7 @@ sub update_uimanager {
                  '/MenuBar/View/Rotate 180',
                  '/MenuBar/View/Rotate 270',
                  '/MenuBar/Tools/Threshold',
+                 '/MenuBar/Tools/Negate',
                  '/MenuBar/Tools/Unsharp',
                  '/MenuBar/Tools/Crop',
                  '/MenuBar/Tools/unpaper',
@@ -5586,6 +5590,120 @@ sub threshold {
     }
     $pbar->set_fraction($fraction);
     $pbar->set_text(sprintf($d->get("Applying threshold to page %i of %i"),
+                                                              $page+1, $total));
+    if (defined $filename and $filename ne '') {
+     $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+     $slist -> {data}[$pagelist[$page]][2] = $filename;
+     $slist -> {data}[$pagelist[$page]][1] =
+                                       get_pixbuf($filename, $heightt, $widtht);
+     $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+    }
+    display_image($filename) if (! $page);
+   }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+    $dialog -> destroy;
+    return FALSE;  # uninstall
+   }
+   return TRUE;  # continue without uninstalling
+  });
+ });
+
+# Cancel button
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $windowt -> destroy } );
+
+ $windowt -> show_all;
+}
+
+
+# Display page selector and on apply negate accordingly
+
+sub negate {
+
+# $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
+
+ my ($windowt, $vbox) = create_window($window, $d->get('Negate'), TRUE);
+
+# Frame for page range
+ add_page_range($vbox);
+
+# HBox for buttons
+ my $hboxb = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hboxb, FALSE, TRUE, 0);
+
+# Apply button
+ my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
+ $hboxb -> pack_start( $abutton, TRUE, TRUE, 0 );
+ $abutton -> signal_connect (clicked => sub {
+
+# Update undo/redo buffers
+  take_snapshot();
+
+  my $dialog = Gtk2::Dialog -> new ($d->get('Applying negate')."...", $windowo,
+                                            'destroy-with-parent',
+                                            'gtk-cancel' => 'cancel');
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   kill_subs();
+  });
+  $dialog -> show_all;
+
+# Install a handler for child processes
+  $SIG{CHLD} = \&sig_child;
+
+  my @pagelist = get_page_index();
+  my ($child, $parent) = open_socketpair();
+  my $pid = start_process(sub {
+
+# fill $pagelist with filenames depending on which radiobutton is active
+   my $page = 0;
+
+   foreach (@pagelist) {
+    my $filename = $slist -> {data}[$_][2];
+    my $image = Image::Magick->new;
+    my $x = $image->Read($filename);
+    warn "$x" if "$x";
+
+    my $depth = $image->Get('depth');
+
+# Negate the image
+    $image->Negate;
+
+# Write it
+    my $suffix = $1 if ($filename =~ /(\.\w*)$/);
+    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix);
+    $x = $image->Write(depth => $depth, filename => $filename);
+    warn "$x" if "$x";
+    warn "Negating to $filename\n" if $debug;
+    send($parent, sprintf("%i %i %s", $page++, $#pagelist+1, $filename), 0);
+   }
+   send($parent, '2 1', 0);
+  });
+
+  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
+   my ($fileno, $condition) = @_;
+
+   my $line;
+   if ($condition & 'in') { # bit field operation. >= would also work
+    recv($child, $line, 1000, 0);
+    my ($page, $total, $filename) = split ' ', $line;
+    my $fraction = $page/$total;
+    if ($fraction > 1) {
+     $dialog -> destroy;
+     return FALSE;  # uninstall
+    }
+    $pbar->set_fraction($fraction);
+    $pbar->set_text(sprintf($d->get("Applying negate to page %i of %i"),
                                                               $page+1, $total));
     if (defined $filename and $filename ne '') {
      $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
