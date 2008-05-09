@@ -3539,27 +3539,29 @@ sub scan_dialog {
 
 # Get device-specific options
   my %options;
-  foreach my $hbox ($vboxd -> get_children, $vboxm -> get_children) {
-   my $key;
-   if ($hbox -> isa('Gtk2::HBox') and $hbox->sensitive) {
-    foreach my $widget ($hbox -> get_children) {
-     if ($widget -> isa('Gtk2::Label')) {
-      $key = get_key(\%ddo, $widget -> get_label);
-     }
-     elsif ($widget -> isa('Gtk2::ComboBox')) {
+  if (defined $vboxm) {
+   foreach my $hbox ($vboxd -> get_children, $vboxm -> get_children) {
+    my $key;
+    if ($hbox -> isa('Gtk2::HBox') and $hbox->sensitive) {
+     foreach my $widget ($hbox -> get_children) {
+      if ($widget -> isa('Gtk2::Label')) {
+       $key = get_key(\%ddo, $widget -> get_label);
+      }
+      elsif ($widget -> isa('Gtk2::ComboBox')) {
 
 # ignore artificial paper size option
-      $SETTING{$key} = get_value(\%ddo, $key, $widget -> get_active_text);
-      if ($key eq 'Paper size') {
-       $SETTING{$key} = $widget -> get_active_text;
+       $SETTING{$key} = get_value(\%ddo, $key, $widget -> get_active_text);
+       if ($key eq 'Paper size') {
+        $SETTING{$key} = $widget -> get_active_text;
+       }
+       else {
+        $options{$key} = $SETTING{$key};
+       }
       }
-      else {
-       $options{$key} = $SETTING{$key};
+      elsif ($widget -> isa('Gtk2::SpinButton')) {
+       $options{$key} = $widget -> get_value;
+       $SETTING{$key} = $options{$key};
       }
-     }
-     elsif ($widget -> isa('Gtk2::SpinButton')) {
-      $options{$key} = $widget -> get_value;
-      $SETTING{$key} = $options{$key};
      }
     }
    }
@@ -5046,6 +5048,7 @@ sub add_paper {
 
 sub set_paper {
  my ($combobox) = @_;
+ return if (! defined $combobox);
  my $o = 0;
  if (defined($SETTING{'Paper size'})) {
   my $i = 0;
