@@ -3646,6 +3646,7 @@ sub scan_dialog {
  my $output;
  if ($test) {
   parse_device_list($output);
+  populate_device_list($hboxd);
  }
  elsif (! @device) {
 
@@ -3699,12 +3700,15 @@ sub scan_dialog {
     }
 
     parse_device_list($output);
+    populate_device_list($hboxd);
     return FALSE;  # uninstall
    }
    return TRUE;  # continue without uninstalling
   });
  }
- populate_device_list($hboxd);
+ else {
+  populate_device_list($hboxd);
+ }
 
 # Show window
  $windows -> show_all;
