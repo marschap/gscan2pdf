@@ -7322,6 +7322,13 @@ sub preferences {
  $cbw->set_active (TRUE) if ($SETTING{'restore window'});
  $vbox -> pack_start($cbw, TRUE, TRUE, 0);
 
+# Clear options cache
+ my $button = Gtk2::Button -> new($d->get('Clear device-dependent options cache'));
+ $vbox -> pack_start($button, TRUE, TRUE, 0);
+ $button -> signal_connect( clicked => sub {
+  delete $SETTING{cache} if (defined $SETTING{cache});
+ });
+
 # Temporary directory settings
  $hbox = Gtk2::HBox -> new;
  $vbox -> pack_start($hbox, TRUE, TRUE, 0);
@@ -7330,7 +7337,7 @@ sub preferences {
  my $entry = Gtk2::Entry -> new;
  $hbox -> add($entry);
  $entry -> set_text(dirname($dir));
- my $button = Gtk2::Button -> new($d->get('Browse'));
+ $button = Gtk2::Button -> new($d->get('Browse'));
  $button -> signal_connect( clicked => sub {
   my $file_chooser = Gtk2::FileChooserDialog -> new(
                                        $d->get('Select temporary directory'),
@@ -7882,6 +7889,8 @@ The unsharp option sharpens an image. The image is convolved with a Gaussian
 operator of the given radius and standard deviation (sigma). For reasonable
 results, radius should be larger than sigma. Use a radius of 0 to have the
 method select a suitable radius.
+
+=head3 Crop
 
 =head3 unpaper
 
