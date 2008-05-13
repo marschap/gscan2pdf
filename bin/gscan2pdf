@@ -7506,10 +7506,11 @@ packaged.
 If you are using a Ubuntu-based system, just add the following line to your
 "F</etc/apt/sources.list>" file:
 
-C<deb http://ppa.launchpad.net/jeffreyratcliffe/ubuntu <release> main
-deb-src http://ppa.launchpad.net/jeffreyratcliffe/ubuntu <release> main>
+C<deb http://ppa.launchpad.net/jeffreyratcliffe/ubuntu E<lt>releaseE<gt> main>
 
-where <release> is the version of Ubuntu you are using. hardy & gutsy are
+C<deb-src http://ppa.launchpad.net/jeffreyratcliffe/ubuntu E<lt>releaseE<gt> main>
+
+where C<E<lt>releaseE<gt>> is the version of Ubuntu you are using. hardy & gutsy are
 supported at the time of writing. intrepid, feisty and dapper will follow as
 soon as I get gtkimageview to build against those distro.
 
@@ -7974,25 +7975,37 @@ C<gscan2pdf --device <device>>
 
 =over
 
-=item v1.0.0
+=item *
+
+v1.0.0
 
 =over
 
-=item Scan profiles.
+=item *
+
+Scan profiles.
 
 =back
 
-=item When I've worked out how to do it
+=item *
+
+When I've worked out how to do it
 
 =over
 
-=item Correct positioning and size of OCR output behind scan -
+=item *
+
+Correct positioning and size of OCR output behind scan -
       as soon as tesseract supports outputting the information in a sensible
       manner.
 
-=item Print (using Net::Cups).
+=item *
 
-=item Copier.
+Print (using Net::Cups).
+
+=item *
+
+Copier.
 
 =back
 

@@ -161,6 +161,9 @@ htdocs/index.html : bin/$(NAME)
 	if [ ! -d htdocs ] ; then mkdir htdocs ; fi
 	pod2html --noindex --title=$(NAME)-$(VERSION) bin/$(NAME) > htdocs/index.html
 
+remote-html : htdocs/index.html
+	scp htdocs/index.html ra28145@shell.sf.net:/home/groups/g/gs/$(NAME)/htdocs/
+
 incoming : 
 	wput --no-directories $(NAME)-$(VERSION).tar.gz \
          rpm/RPMS/noarch/$(NAME)-$(VERSION)* \
