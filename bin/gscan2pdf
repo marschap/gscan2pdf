@@ -4544,24 +4544,24 @@ EOS
  $about->set_website ('http://gscan2pdf.sf.net');
  my $translators = <<EOS;
 Manuel Rennecke
+Mikal Krogstad
+Robert Hrovat
+Matthias Gutjahr
 Poppe
 jimpap
-Dirk Tas
-Matthias Gutjahr
-saabaero
-Petr Jelinek
-Robert Hrovat
-Christoph Langner
-Alexandre Prokoudine
-Nicolas Stransky
-Matthias MailÃ¤nder
-Piotr StrÄ™bski
-Daniel Frank
-Hugo Pereira
-YÃ¶zen HernÃ¡ndez
-Spartakus
-florian
 Jacob Nielsen
+Christoph Langner
+starmaker
+Petr Jelinek
+saabaero
+Dirk Tas
+Emil Pavlov
+Alberto
+Szenográdi Norbert Péter
+Matthias Mailänder
+Alexandre Prokoudine
+Kecsi
+Jan Klopper
 EOS
  $about->set_translator_credits ($translators);
  $about->set_artists ('lodp');
@@ -7473,8 +7473,8 @@ __END__
 gscan2pdf - A GUI to produce a multipage PDF from a scan.
 
 =for html <p align="center">
- <img src="https://sourceforge.net/dbimage.php?id=121788" border="1" width="632"
- height="480" alt="Screenshot" /><br/>Screenshot: Main page v0.9.9</p>
+ <img src="http://sourceforge.net/dbimage.php?id=171868" border="1" width="632"
+ height="480" alt="Screenshot" /><br/>Screenshot: Main page v0.9.24</p>
 
 =head1 Synopsis
 
@@ -7500,10 +7500,18 @@ gscan2pdf is available on Sourceforge
 
 =head2 Debian-based
 
-If you are using a Debian-based system, just add the following line to your
+If you are using Debian, you should find that sid has the latest version already
+packaged.
+
+If you are using a Ubuntu-based system, just add the following line to your
 "F</etc/apt/sources.list>" file:
 
-C<deb http://gscan2pdf.sourceforge.net/download/debian binary/>
+C<deb http://ppa.launchpad.net/jeffreyratcliffe/ubuntu <release> main
+deb-src http://ppa.launchpad.net/jeffreyratcliffe/ubuntu <release> main>
+
+where <release> is the version of Ubuntu you are using. hardy & gutsy are
+supported at the time of writing. intrepid, feisty and dapper will follow as
+soon as I get gtkimageview to build against those distro.
 
 If you are you are using Synaptic, then use menu
 I<Edit/Reload Package Information>, search for gscan2pdf in the package list,
@@ -7520,9 +7528,7 @@ the "not authenticated" warnings. Fetch the key:
 
 C<gpg --keyserver www.keyserver.net --recv-keys 4DD7CC93>
 
-Occasionally, that server is down. In that case, try:
-
-C<gpg --keyserver http://keyring.debian.org --recv-keys 4DD7CC93>
+Occasionally, that server is down. In that case, try keyring.debian.org or gpg subkeys.pgp.net
 
 Then add it to the apt keyring:
 
@@ -7595,7 +7601,8 @@ Perl interface to the 2.x series of the Gimp Toolkit library
 
 =item libgtk2-imageview-perl
 
-Perl bindings to the gtkimageview widget
+Perl bindings to the gtkimageview widget.
+See L<http://trac.bjourne.webfactional.com/>
 
 =item libgtk2-ex-simple-list-perl
 

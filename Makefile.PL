@@ -104,9 +104,9 @@ $(DESTDIR)$(SHAREDIR)/$(NAME) :
 icon_install : $(DESTDIR)$(SHAREDIR)/$(NAME)
 	$(MKPATH) $(DESTDIR)$(SHAREDIR)/applications
 	$(CP) $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
-	$(CP) $(NAME).svg stock-rotate-90.svg stock-rotate-180.svg stock-rotate-270.svg scanner.svg pdf.svg $(DESTDIR)$(SHAREDIR)/$(NAME)
-
-debdist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb
+	$(CP) $(NAME).svg stock-rotate-90.svg stock-rotate-180.svg \
+	      stock-rotate-270.svg scanner.svg pdf.svg \
+	      stock-selection-all-16.png $(DESTDIR)$(SHAREDIR)/$(NAME)
 
 html : htdocs/index.html
 
@@ -142,59 +142,31 @@ $(NAME).Suse.spec : bin/$(NAME) debian/changelog
 	sed 's/^$(NAME).*//' < debian/changelog | \
          sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $(NAME).Suse.spec
 
-htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb : bin/$(NAME) debian/control debian/changelog tardist | htdocs/download/debian/binary
+ppa : tardist
 	$(RM_RF) /tmp/$(NAME)
 	$(MKPATH) /tmp/$(NAME)
-	cd /tmp/$(NAME) && tar xvfz $(PWD)/$(NAME)-$(VERSION).tar.gz
-	cd /tmp/$(NAME)/$(NAME)-$(VERSION) && perl Makefile.PL \
-	 && make locale && debuild && cd .. \
-	 && $(CP) $(NAME)_$(VERSION)_all.deb \
-	       $(NAME)_$(VERSION).dsc \
-	       $(NAME)_$(VERSION)_i386.changes \
-	       $(NAME)_$(VERSION).tar.gz $(PWD)/htdocs/download/debian/binary
+	cp $(NAME)-$(VERSION).tar.gz /tmp/$(NAME)/$(NAME)_$(VERSION).orig.tar.gz
+	cd /tmp/$(NAME) && tar xvfz $(NAME)_$(VERSION).orig.tar.gz
+	cd /tmp/$(NAME)/$(NAME)-$(VERSION) && debuild -S -sa
+	dput $(NAME)-ppa /tmp/$(NAME)/$(NAME)_$(VERSION)_source.changes
 
-htdocs/download/debian/binary/Packages.gz : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb | htdocs/download/debian/binary
-	cd htdocs/download/debian ; \
-	 dpkg-scanpackages binary /dev/null > binary/Packages ; \
-	 bzip2 -k binary/Packages ; \
-	 gzip -9c binary/Packages > binary/Packages.gz
-
-htdocs/download/debian/binary/Release.gpg : htdocs/download/debian/binary/Release
-	gpg --sign -ba -o htdocs/download/debian/binary/Release.gpg htdocs/download/debian/binary/Release
-
-htdocs/download/debian/binary/Release : htdocs/download/debian/binary/Packages.gz
-	cd htdocs/download/debian/binary ; \
-	 rm Release* ; \
-	 apt-ftparchive release . \
-          -o APT::FTPArchive::Release::Origin="Jeffrey Ratcliffe" \
-          -o APT::FTPArchive::Release::Label="Jeff's gscan2pdf repository" \
-          -o APT::FTPArchive::Release::Codename="binary" \
-          -o APT::FTPArchive::Release::Architectures="noarch" \
-          -o APT::FTPArchive::Release::Components="gscan2pdf" \
-          -o APT::FTPArchive::Release::Description="gscan2pdf Debian packages" \
-	  > Release.tmp ; \
-	 mv Release.tmp Release
-
-htdocs/download/debian/binary :
-	$(MKPATH) htdocs/download/debian/binary
-
-remote-dist : htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb htdocs/download/debian/binary/Release.gpg
-	scp htdocs/download/debian/binary/$(NAME)_$(VERSION)_all.deb \
-            htdocs/download/debian/binary/$(NAME)_$(VERSION).dsc \
-            htdocs/download/debian/binary/$(NAME)_$(VERSION)_i386.changes \
-	    htdocs/download/debian/binary/$(NAME)_$(VERSION).tar.gz \
-            htdocs/download/debian/binary/Packages \
-            htdocs/download/debian/binary/Packages.gz \
-	    htdocs/download/debian/binary/Release \
-	    htdocs/download/debian/binary/Release.gpg \
-	    ra28145@shell.sf.net:/home/groups/g/gs/$(NAME)/htdocs/download/debian/binary
+debdist : tardist
+	$(RM_RF) /tmp/$(NAME)
+	$(MKPATH) /tmp/$(NAME)
+	cp $(NAME)-$(VERSION).tar.gz /tmp/$(NAME)/$(NAME)_$(VERSION).orig.tar.gz
+	cd /tmp/$(NAME) && tar xvfz $(NAME)_$(VERSION).orig.tar.gz
+	cd /tmp/$(NAME)/$(NAME)-$(VERSION) && debuild
 
 htdocs/index.html : bin/$(NAME)
 	if [ ! -d htdocs ] ; then mkdir htdocs ; fi
 	pod2html --noindex --title=$(NAME)-$(VERSION) bin/$(NAME) > htdocs/index.html
 
-remote-html : htdocs/index.html
-	scp htdocs/index.html ra28145@shell.sf.net:/home/groups/g/gs/$(NAME)/htdocs/
+incoming : 
+	wput --no-directories $(NAME)-$(VERSION).tar.gz \
+         rpm/RPMS/noarch/$(NAME)-$(VERSION)* \
+         rpm/SRPMS/$(NAME)-$(VERSION)* \
+         htdocs/download/debian/binary/$(NAME)_$(VERSION)*.deb \
+	  ftp://upload.sf.net/incoming
 
 po/$(NAME).pot : bin/$(NAME)
 	xgettext -L perl --keyword=get --from-code=UTF-8 -o - bin/$(NAME) | \
