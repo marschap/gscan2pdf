@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.23
+Version: 0.9.24
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -13,7 +13,7 @@ BuildArch: noarch
 BuildRequires: perl(ExtUtils::MakeMaker), perl(Test::More)
 BuildRequires: gettext, desktop-file-utils
 Requires: perl-PerlMagick, ImageMagick, djvulibre, sane-backends
-Requires: sane-frontends, xdg-utils, unpaper, gocr, tiff
+Requires: sane-frontends, xdg-utils, unpaper, gocr, tiff, perl(Gtk2::ImageView)
 Requires: perl(Gtk2::Ex::PodViewer), perl(PDF::API2), perl(Config::General)
 
 %description
@@ -81,7 +81,8 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Wed Mar 05 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Tue May 13 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release.
   - New upstream release.
     Closes: #463708 (gscan2pdf: Error when saving as PNG)
     Closes: #462171 (importing DjVu files fails, hogs memory)
