@@ -114,7 +114,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.24';
+my $version = '0.9.25';
 
 my $tolerance = 1;
 
@@ -826,18 +826,8 @@ $slist -> {selection_changed_signal} = $slist -> get_selection -> signal_connect
   $textbuffer -> set_text('');
  }
 
-# If one page is selected, PageRange widgets default to either current or all
- if ($#page == 0) {
-  $SETTING{'Page range'} = $SETTING{'Page range default'};
- }
-
-# If more than one page is selected, PageRange widgets default to selected
- elsif ($#page > 0) {
-  $SETTING{'Page range'} = 'selected';
- }
-
-# No pages is selected, but some exist, PageRange widgets default to all
- elsif ($#{$slist -> {data}} > -1) {
+# If no pages are selected, but some exist, PageRange widgets default to all
+ if ($#page == -1 and $#{$slist -> {data}} > -1) {
   $SETTING{'Page range'} = 'all';
  }
  foreach (@prlist) {
@@ -1854,11 +1844,6 @@ sub get_pagelist {
    ++$i;
   }
  }
- elsif ($SETTING{'Page range'} eq 'current') {
-  $n = 1;
-  my @page = $slist -> get_selected_indices;
-  $pagelist = $slist -> {data}[$page[0]][2];
- }
  elsif ($SETTING{'Page range'} eq 'selected') {
   my @page = $slist -> get_selected_indices;
   $n = $#page;
@@ -1884,9 +1869,6 @@ sub get_page_index {
    push @page, $i;
    ++$i;
   }
- }
- elsif ($SETTING{'Page range'} eq 'current') {
-  push @page, ($slist -> get_selected_indices)[0];
  }
  elsif ($SETTING{'Page range'} eq 'selected') {
   @page = $slist -> get_selected_indices;
@@ -7340,7 +7322,7 @@ use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
 #       by the time the use Subclass goes to look for it.
 BEGIN {
    Glib::Type->register_enum ('Gscan2pdf::PageRange::Range',
-                               qw(current selected all));
+                               qw(selected all));
 }
 
 # this big hairy statement registers our Glib::Object-derived class
@@ -7354,7 +7336,7 @@ use Glib::Object::Subclass
         Glib::ParamSpec->enum (
                'active', # name
                'active', # nickname
-               'Either current, selected, or all', #blurb
+               'Either selected or all', #blurb
                'Gscan2pdf::PageRange::Range',
                'selected', # default
                [qw/readable writable/] #flags
@@ -7366,7 +7348,6 @@ use Glib::Object::Subclass
 sub INIT_INSTANCE {
  my $self = shift;
  my %buttons = (
-  'current' => $d->get('Current'),
   'selected' => $d->get('Selected'),
   'all' => $d->get('All'),
  );
@@ -7755,7 +7736,7 @@ On some scanners, this is the only way of generating an out-of-documents signal.
 
 =head3 Save
 
-Saves the current, selected or all pages as a PDF, DjVu, TIFF, PNG, JPEG, PNM or
+Saves the selected or all pages as a PDF, DjVu, TIFF, PNG, JPEG, PNM or
 GIF.
 
 =head4 PDF Metadata
@@ -7773,7 +7754,7 @@ compression than PDF. See L<http://www.djvuzone.org/> for more details.
 
 =head3 Email as PDF
 
-Attaches the current, selected or all pages as a PDF to a blank email.
+Attaches the selected or all pages as a PDF to a blank email.
 This requires xdg-email, which is in the xdg-utils package.
 If this is not present, the option is ghosted out.
 
