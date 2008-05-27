@@ -766,69 +766,9 @@ $vpaned -> pack1 ($view, TRUE, TRUE);
 
 $view->signal_connect(button_press_event => sub {
  my ($widget, $event) = @_;
-
-# Draw a rubber band if LHB and we have an image
-# if ($event->button == 1 and $slist->get_selected_indices) {
-
-# Erase...
-#  draw_rubber_band_box ($widget) if ($widget->{draginfo});
-
-#  $widget->{draginfo} = {
-#   x1 => $event->x,
-#   y1 => $event->y,
-#   x2 => $event->x,
-#   y2 => $event->y,
-#  };
-
-# Draw...
-#  draw_rubber_band_box ($widget);
-
-# allow event propagation
-# return FALSE;
-# }
-# else {
-  handle_clicks($widget, $event);
-# }
+ handle_clicks($widget, $event);
 });
 $view->signal_connect(button_release_event => \&handle_clicks);
-#$eventbox->signal_connect_after (realize => sub {
-# my ($widget) = @_;
-# $widget->{drag_gc} = Gtk2::Gdk::GC->new ($widget->window);
-# $widget->{drag_gc}->set_function ('xor');
-# $widget->{drag_gc}->set_foreground ($widget->style->white);
-#});
-
-#$eventbox->signal_connect_after (unrealize => sub {
-# my ($widget) = @_;
-# delete $widget->{drag_gc};
-#});
-
-#$eventbox->signal_connect (motion_notify_event => sub {
-# my ($widget, $event) = @_;
-
-# if ($widget->{draginfo}) {
-
-# Erase...
-#  draw_rubber_band_box ($widget);
-
-#  $widget->{draginfo}{x2} = $event->x;
-#  $widget->{draginfo}{y2} = $event->y;
-
-# Draw new...
-#  draw_rubber_band_box ($widget);
-# }
-
-# return FALSE;
-#});
-
-# If we need to redraw the rubberband
-#$eventbox->signal_connect (expose_event => sub {
-# my ($widget, $event) = @_;
-#warn "redrawing...\n";
-
-# Let the event propagate
-# return FALSE;
-#});
 
 # OCR buffer
 my $scwin_buffer = Gtk2::ScrolledWindow->new;
@@ -7512,7 +7452,7 @@ C<deb-src http://ppa.launchpad.net/jeffreyratcliffe/ubuntu E<lt>releaseE<gt> mai
 
 where C<E<lt>releaseE<gt>> is the version of Ubuntu you are using. hardy & gutsy are
 supported at the time of writing. intrepid, feisty and dapper will follow as
-soon as I get gtkimageview to build against those distro.
+soon as I get gtkimageview to build against those distros.
 
 If you are you are using Synaptic, then use menu
 I<Edit/Reload Package Information>, search for gscan2pdf in the package list,
