@@ -947,6 +947,15 @@ my $unpaper_options = {
   },
   default => 'single',
  },
+ 'output-pages' => {
+  type => 'SpinButton',
+  string => $d->get('# Output pages'),
+  tooltip => $d->get('Number of pages to output.'),
+  min => 1,
+  max => 2,
+  step => 1,
+  default => 1,
+ },
  'no-deskew' => {
   type => 'CheckButton',
   string => $d->get('No deskew'),
@@ -6070,6 +6079,9 @@ sub unpaper_page {
     my $cmd = '';
     my $in;
     my (undef, $out) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+    my $out2 = '';
+    (undef, $out2) = tempfile(DIR => $dir, SUFFIX => '.pnm')
+     if ($options =~ /--output-pages 2 /);
 
     if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
      (undef, $in) = tempfile(DIR => $dir, SUFFIX => '.pnm');
@@ -6080,7 +6092,7 @@ sub unpaper_page {
     }
 
 # --overwrite needed because $out exists with 0 size
-    $cmd .= "unpaper $options --overwrite $in $out;";
+    $cmd .= "unpaper $options --overwrite --input-file-sequence $in --output-file-sequence $out $out2;";
     $cmd .= "rm $in" if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/);
     warn "$cmd\n" if ($debug);
 
@@ -6113,8 +6125,41 @@ sub unpaper_page {
       $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
       $slist -> {data}[$pagenum][2] = $out;
       $slist -> {data}[$pagenum][1] = get_pixbuf($out, $heightt, $widtht);
-      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+ 
+      if ($options =~ /--output-pages 2 /) {
 
+# Update stacks as we have inserted a page
+       for (my $i = 0; $i < @unpaper_stack; ++$i) {
+        ++$unpaper_stack[$i][0] if ($unpaper_stack[$i][0] > $pagenum);
+       }
+       my $ocr = FALSE;
+       for (@ocr_stack) {
+        if ($_ > $pagenum) {
+         ++$_;
+        }
+        elsif ($_ == $pagenum) {
+         $ocr = TRUE;
+        }
+       }
+       my $selected = FALSE;
+       for (@selection) {
+        if ($_ > $pagenum) {
+         ++$_;
+        }
+        elsif ($_ == $pagenum) {
+         $selected = TRUE;
+        }
+       }
+       push @selection, $pagenum+1 if $selected;
+
+       import_scan($out2, $slist -> {data}[$pagenum][0], 'Portable anymap',
+                    $slist -> {data}[$pagenum][4], TRUE, FALSE, $ocr);
+
+# Sort out numbering as now we have duplicates
+       renumber($slist, 0);
+      }
+      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+      
 # Reselect selected pages, firing the display callback
       $slist -> get_selection -> unselect_all;
       $slist -> select(@selection);
@@ -6297,7 +6342,16 @@ sub add_unpaper_options {
  my ($vbox) = @_;
 
 # Layout ComboBox
- my $combobl = add_widget($vbox, $unpaper_options, 'layout') -> get_child;
+ my $combobl = add_widget($vbox, $unpaper_options, 'layout');
+ my $outpages = add_widget($vbox, $unpaper_options, 'output-pages');
+ $combobl -> signal_connect (changed => sub {
+  if ($combobl -> get_active == 0) {
+   $outpages->set_range(1, 2);
+  }
+  else {
+   $outpages->set_range(1, 1);
+  }
+ });
 
 # Notebook to collate options
  my $notebook = Gtk2::Notebook->new;
