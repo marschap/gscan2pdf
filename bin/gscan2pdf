@@ -7502,9 +7502,7 @@ C<apt-get install gscan2pdf>
 If you add my key to your list of trusted keys, then you will no longer get
 the "not authenticated" warnings. Fetch the key:
 
-C<gpg --keyserver www.keyserver.net --recv-keys 4DD7CC93>
-
-Occasionally, that server is down. In that case, try keyring.debian.org or gpg subkeys.pgp.net
+C<gpg --keyserver subkeys.pgp.net --recv-keys 4DD7CC93>
 
 Then add it to the apt keyring:
 
