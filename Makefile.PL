@@ -158,7 +158,7 @@ debdist : tardist
 	cd /tmp/$(NAME)/$(NAME)-$(VERSION) && debuild
 
 htdocs/index.html : bin/$(NAME)
-	if [ ! -d htdocs ] ; then mkdir htdocs ; fi
+	[ -d htdocs ] || mkdir htdocs
 	pod2html --noindex --title=$(NAME)-$(VERSION) bin/$(NAME) > htdocs/index.html
 
 remote-html : htdocs/index.html
