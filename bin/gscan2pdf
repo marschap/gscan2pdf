@@ -7354,7 +7354,7 @@ sub preferences {
   delete $SETTING{cache}
    if (defined $SETTING{cache} and ! $SETTING{'cache options'});
   $SETTING{'restore window'} = $cbw->get_active;
-  if ($entry -> get_text ne $SETTING{TMPDIR}) {
+  if (defined($SETTING{TMPDIR}) and $entry -> get_text ne $SETTING{TMPDIR}) {
    $SETTING{TMPDIR} = $entry -> get_text;
    show_message_dialog($window, 'warning', 'close', $d->get('You will have to restart gscanp2df for changes to the temporary directory to take effect.'));   
   }
