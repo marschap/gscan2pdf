@@ -70,6 +70,7 @@
 #
 # Release procedure:
 # 0. Test scan in lineart, greyscale and colour.
+#    Check with Perl::Critic http://perlcritic.com/
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
 #    Make sure that file list in .spec and hg manifest reflects MANIFEST
 #    Download new translations
@@ -114,7 +115,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.25~rc1';
+my $version = '0.9.25~rc2';
 
 my $tolerance = 1;
 
@@ -225,7 +226,7 @@ my $conf = Config::General->new(
   'unsharp sigma'      => 1,
   'unsharp amount'     => 1,
   'unsharp threshold'  => 0.05,
-  'enable options'     => TRUE,
+  'cache options'      => TRUE,
   'restore window'     => TRUE,
   'startup warning'    => FALSE,
   'date offset'        => 0,
@@ -297,7 +298,7 @@ if ($debug) {
  print "Using Gtk2::ImageView version ", $Gtk2::ImageView::VERSION, "\n";
 
  use Data::Dumper;
- print Dumper(\%SETTING);
+ warn Dumper(\%SETTING);
 }
 
 # Just in case dependencies have changed, put put startup warning again
@@ -650,7 +651,8 @@ $slist->signal_connect('drag-data-received' => sub {
  for (@rows) {
   my $iter = $model->get_iter($_);
   my @info = $model->get($iter);
-  my $suffix = $1 if ($info[2] =~ /(\.\w*)$/);
+  my $suffix;
+  $suffix = $1 if ($info[2] =~ /(\.\w*)$/);
   my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
   copy($info[2], $new) or 
    show_message_dialog($window, 'error', 'close', $d->get('Error copying page'));
@@ -1605,12 +1607,12 @@ sub import_file {
 
 # Check if djvu
  my $buffer;
- open FILE, $filename or
+ open my $fh, '<', $filename or
   send($parent, sprintf("%f %s %i ", -1, 0, 0).
                        sprintf($d->get("Can't open %s: %s"), $filename, $!), 0);
- binmode FILE;
- read (FILE, $buffer, 8);
- close FILE;
+ binmode $fh;
+ read ($fh, $buffer, 8);
+ close $fh;
  if ($buffer eq 'AT&TFORM') {
 
 # Dig out the number of pages
@@ -1713,7 +1715,7 @@ sub import_file {
      send($parent, '-1 0 0'.$d->get('Error extracting images from PDF'), 0);
 
 # Import each image
-    my @images = <x-???.???>;
+    my @images = glob('x-???.???');
     my $i = 0;
     foreach (@images) {
      my ($filename, $resolution) = prepare_import($_, 'Portable anymap', undef, TRUE);
@@ -3497,7 +3499,7 @@ sub scan_dialog {
     }
    }
   }
-  print Dumper(\%options) if ($debug);
+  warn Dumper(\%options) if ($debug);
 
 # Get selected number of pages
   my $npages;
@@ -4529,7 +4531,7 @@ sub rescan_options {
  else {
   $mode = 'default';
  }
- if (defined $SETTING{cache}{$device}{$mode}) {
+ if ($SETTING{'cache options'} and defined $SETTING{cache}{$device}{$mode}) {
   parse_options($vboxd, $device, options2hash($SETTING{cache}{$device}{$mode}));
   return;
  }
@@ -5020,7 +5022,7 @@ sub update_options {
  else {
   $mode = 'default';
  }
- if (defined $SETTING{cache}{$device}{$mode}) {
+ if ($SETTING{'cache options'} and defined $SETTING{cache}{$device}{$mode}) {
   update_options_hash($vboxd, options2hash($SETTING{cache}{$device}{$mode}));
   return;
  }
@@ -5103,7 +5105,7 @@ sub options2hash {
 
  my ($output) = @_;
  my %hash = Gscan2pdf::options2hash($output);
- print Dumper(\%hash) if ($debug);
+ warn Dumper(\%hash) if ($debug);
  foreach (keys %hash) {
 
 # Set default from config
@@ -5131,7 +5133,8 @@ sub options2hash {
   $mode = 'default';
  }
 # We could cache the hash, but we'd have to turn off MergeDuplicateOptions
- $SETTING{cache}{$SETTING{device}}{$mode} = $output if (defined $SETTING{device});
+ $SETTING{cache}{$SETTING{device}}{$mode} = $output
+  if ($SETTING{'cache options'} and defined $SETTING{device});
 
  return %hash;
 }
@@ -7294,16 +7297,16 @@ sub preferences {
  combobox_set_active($combob, $SETTING{'frontend'}, @frontends);
  $hbox -> pack_end($combob, TRUE, TRUE, 0);
 
-# Save options setting
- my $cbs = Gtk2::CheckButton->new_with_label ($d->get('Enable save options'));
- $cbs->set_active (TRUE) if ($SETTING{'enable options'});
- $vbox -> pack_start($cbs, TRUE, TRUE, 0);
-
 # Restore window setting
- my $cbw = Gtk2::CheckButton->new_with_label (
+ my $cbw = Gtk2::CheckButton->new_with_label(
                                  $d->get('Restore window settings on startup'));
  $cbw->set_active (TRUE) if ($SETTING{'restore window'});
  $vbox -> pack_start($cbw, TRUE, TRUE, 0);
+
+# Cache options?
+ my $cbc = Gtk2::CheckButton -> new_with_label($d->get('Cache device-dependent options'));
+ $cbc->set_active (TRUE) if ($SETTING{'cache options'});
+ $vbox -> pack_start($cbc, TRUE, TRUE, 0);
 
 # Clear options cache
  my $button = Gtk2::Button -> new($d->get('Clear device-dependent options cache'));
@@ -7347,7 +7350,9 @@ sub preferences {
    $SETTING{'frontend'} = $frontends[$combob->get_active][0];
    rescan_options($vboxd, $device[$combobd -> get_active]) if (defined $windows);
   }
-  $SETTING{'enable options'} = $cbs->get_active;
+  $SETTING{'cache options'} = $cbc->get_active;
+  delete $SETTING{cache}
+   if (defined $SETTING{cache} and ! $SETTING{'cache options'});
   $SETTING{'restore window'} = $cbw->get_active;
   if ($entry -> get_text ne $SETTING{TMPDIR}) {
    $SETTING{TMPDIR} = $entry -> get_text;
@@ -7445,7 +7450,7 @@ __END__
 
 =head1 Name
 
-gscan2pdf - A GUI to produce a multipage PDF from a scan.
+gscan2pdf - A GUI to produce a multipage PDF or DjVu from a scan.
 
 =for html <p align="center">
  <img src="http://sourceforge.net/dbimage.php?id=171868" border="1" width="632"
