@@ -2873,6 +2873,7 @@ sub save_djvu {
      my $x = $image->Read($filename);
      warn "$x" if "$x";
      my $depth = $image->Get('depth');
+     my $class = $image->Get('class');
      my $compression;
 
 # c44 can only use pnm and jpg
@@ -2889,11 +2890,11 @@ sub save_djvu {
 # cjb2 can only use pnm and tif
      else {
       $compression = 'cjb2';
-      if ($format !~ /(pnm)|(tif)/) {
-       my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
-       $x = $image->Write(filename => $pnm);
+      if ($format !~ /(pnm)|(tif)/ or ($format eq 'pnm' and $class ne 'PseudoClass')) {
+       my (undef, $pbm) = tempfile(DIR => $dir, SUFFIX => '.pbm');
+       $x = $image->Write(filename => $pbm);
        warn "$x" if "$x";
-       $filename = $pnm;
+       $filename = $pbm;
       }
      }
 

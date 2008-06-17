@@ -9,6 +9,8 @@
 + Check for device before caching.
 + Checkbox to disable option cache
   Closes 1980762 (Second Start Failure)
++ Check {Pseudo|Direct}Class for pnm and convert to pbm in necessary for djvu
+  Closes Debian bug #486553 (gscan2pdf: unable to save as DjVu)
 
 
 0.9.24 (07.05.2008):
