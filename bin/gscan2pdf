@@ -2921,8 +2921,8 @@ sub save_djvu {
       my $djvusedtxtfile = "djvusedtxtfile";
       open (FILE, ">:utf8", $djvusedtxtfile)
        or die sprintf($d->get("Can't open file: %s"), $djvusedtxtfile);
-      print FILE "(page 0 0 ", int($w*72/$resolution), " ", int($h*72/$resolution), "\n";
-      print FILE "(line 0 0 ", int($w*72/$resolution), " ", int($h*72/$resolution), " \"";
+      print FILE "(page 0 0 $w $h\n";
+      print FILE "(line 0 0 $w $h \"";
       print FILE $txt, "\"))";
       close FILE;
 
@@ -4452,6 +4452,7 @@ John Goerzen
 Chris Mayo
 David Hampton
 Sascha Hunold
+Jakub Wilk
 EOS
  $about->set_authors ("Jeff Ratcliffe\n\n"
                       .$d->get('Patches gratefully received from:')
