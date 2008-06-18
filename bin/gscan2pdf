@@ -2722,25 +2722,28 @@ sub save_TIFF {
  my $pid = start_process(sub {
 
 # fill $pagelist with filenames depending on which radiobutton is active
-  my ($pagelist, $n) = get_pagelist();
+  my @pagelist = get_page_index();
+  my $pagelist = '';
   my $page = 0;
+  for (my $i = 0; $i < @pagelist; $i++) {
+   my $j = $pagelist[$i];
 
-  my @pagelist = split / /, $pagelist;
-  foreach (@pagelist) {
    ++$page;
    send($parent, ($page-1)/($#pagelist+2)
     .sprintf($d->get("Converting image %i of %i to TIFF"), $page, $#pagelist+1), 0);
-    if ($_ !~ /\.tif/) {
+    my $filename = $slist -> {data}[$j][2];
+    if ($filename !~ /\.tif/) {
     my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+    my $resolution = $slist -> {data}[$j][4];
 
 # Convert to tiff
-    system ("convert $_ $tif") == 0 or
+    system ("convert -units PixelsPerInch -density $resolution $filename $tif") == 0 or
      send($parent, "2".$d->get('Error writing TIFF'), 0);
 
-    $_ = $tif;
+    $filename = $tif;
    }
+   $pagelist .= " $filename";
   }
-  $pagelist = "@pagelist";
 
   my $compression = $SETTING{'tiff compression'};
   $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpeg');
