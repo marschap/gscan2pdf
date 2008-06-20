@@ -13,7 +13,7 @@ Homepage: http://gscan2pdf.sourceforge.net/
 
 Package: gscan2pdf
 Architecture: all
-Depends: libgtk2-imageview-perl, libgtk2-ex-simple-list-perl, liblocale-gettext-perl (>= 1.05), libsane (>= 1.0.17), sane-utils, libtiff-tools, libpdf-api2-perl, libconfig-general-perl, perlmagick, imagemagick, librsvg2-common
+Depends: libgtk2-imageview-perl, libgtk2-ex-simple-list-perl, liblocale-gettext-perl (>= 1.05), libsane (>= 1.0.17), sane-utils, libtiff-tools, libpdf-api2-perl, libconfig-general-perl (>= 2.40), perlmagick, imagemagick, librsvg2-common
 Recommends: libgtk2-ex-podviewer-perl, sane, xdg-utils, djvulibre-bin, unpaper, gocr, tesseract-ocr
 Description: A GUI to produce PDFs from scanned documents
  Only two clicks are required to scan several pages and then save all or a

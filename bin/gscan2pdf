@@ -107,7 +107,7 @@ use Glib qw(TRUE FALSE);             # To get TRUE and FALSE
 use Socket;
 use FileHandle;
 use Image::Magick;
-use Config::General;
+use Config::General 2.40;
 use Text::ParseWords;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
