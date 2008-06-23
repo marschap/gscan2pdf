@@ -5797,7 +5797,7 @@ sub unsharp {
     (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
     $x = $image->Write(filename => $filename);
     warn "$x" if "$x";
-    warn "Applying unsharp mask with r=$SETTING{'unsharp radius'}, s=$SETTING{'unsharp sigma'}, a=$SETTING{'unsharp amount'}, t=$SETTING{'unsharp threshold'} to $filename\n"
+    warn "Written $filename with unsharp mask: r=$SETTING{'unsharp radius'}, s=$SETTING{'unsharp sigma'}, a=$SETTING{'unsharp amount'}, t=$SETTING{'unsharp threshold'}\n"
      if $debug;
 
     send($parent, sprintf("%i %i %s", $page, $#pagelist+1, $filename), 0);
@@ -5830,8 +5830,8 @@ sub unsharp {
       $slist -> {data}[$pagelist[$page]][1] =
                                        get_pixbuf($filename, $heightt, $widtht);
       $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+      display_image($filename) if (! $page);
      }
-     display_image($filename) if (! $page);
     }
    }
 
