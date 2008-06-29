@@ -115,7 +115,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.25~rc2';
+my $version = '0.9.25~rc4';
 
 my $tolerance = 1;
 
@@ -238,6 +238,7 @@ my $conf = Config::General->new(
   'frontend'           => 'scanimage',
   'rotate facing'      => 0,
   'rotate reverse'     => 0,
+  'scan prefix'        => '',
  },
 );
 my %SETTING = $conf->getall;
@@ -282,7 +283,7 @@ else {
 }
 
 # Delete the options cache if there is a new version of SANE
-my $sane_version=`scanimage --version`;
+my $sane_version=`$SETTING{'scan prefix'} scanimage --version`;
 chomp $sane_version;
 if (defined($SETTING{'SANE version'})
      and $SETTING{'SANE version'} ne $sane_version) {
@@ -1179,7 +1180,7 @@ sub create_menu_bar {
 
 # Set frontend to scanimage if scanadf not available
  if (! $dependencies{scanadf}) {
-  $SETTING{'frontend'} = 'scanimage';
+  $SETTING{frontend} = 'scanimage';
   $msg .= $d->get("The scanadf frontend is not available\n")
  }
 
@@ -3563,7 +3564,7 @@ sub scan_dialog {
    $SETTING{'ocr language'} = $tesslang[$comboboxl -> get_active]->[0]
     if ($SETTING{'ocr engine'} eq 'tesseract');
   }
-  if ($SETTING{'frontend'} eq 'scanimage') {
+  if ($SETTING{frontend} eq 'scanimage') {
    scanimage($SETTING{device}, $npages, $start-$step, $step,
                 $SETTING{'rotate facing'}, $SETTING{'rotate reverse'},
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
@@ -3603,7 +3604,7 @@ sub scan_dialog {
                                               return FALSE;
                                              } });
 
-  my $cmd = "scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
+  my $cmd = "$SETTING{'scan prefix'} scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
   print "$cmd\n" if ($debug);
 
 # Interface to frontend
@@ -3857,7 +3858,7 @@ sub scanimage {
  chdir $dir;
 
 # Create command
- my $cmd = "scanimage $device @options $npages";
+ my $cmd = "$SETTING{'scan prefix'} scanimage $device @options $npages";
  warn "$cmd\n" if $debug;
 
  if (! $test) {
@@ -4015,7 +4016,7 @@ sub scanadf {
  chdir $dir;
 
 # Create command
- my $cmd = "scanadf $device @options $start $end > /dev/stderr";
+ my $cmd = "$SETTING{'scan prefix'} scanadf $device @options $start $end > /dev/stderr";
  warn "$cmd\n" if $debug;
 
  if (! $test) {
@@ -4546,7 +4547,7 @@ sub rescan_options {
 
 # Get output from scanimage or scanadf.
 # Inverted commas needed for strange characters in device name
-  my $cmd = "$SETTING{'frontend'} --help --device-name='$device'";
+  my $cmd = "$SETTING{'scan prefix'} $SETTING{frontend} --help --device-name='$device'";
   $cmd .= " --mode='$SETTING{mode}'" if (defined $SETTING{mode});
   warn "$cmd\n" if $debug;
 
@@ -5037,7 +5038,7 @@ sub update_options {
 
 # Get output from scanimage or scanadf.
 # Inverted commas needed for strange characters in device name
-  my $cmd = "$SETTING{'frontend'} --help --device-name='$device'";
+  my $cmd = "$SETTING{'scan prefix'} $SETTING{frontend} --help --device-name='$device'";
   $cmd .= " --mode='$SETTING{mode}'" if (defined $SETTING{mode});
   warn "$cmd\n" if $debug;
 
@@ -7299,8 +7300,17 @@ sub preferences {
   [ 'scanadf', $d->get('scanadf'), $d->get('Scan using the scanadf frontend.') ],
   if ($dependencies{scanadf});
  my $combob =  combobox_from_array(@frontends);
- combobox_set_active($combob, $SETTING{'frontend'}, @frontends);
+ combobox_set_active($combob, $SETTING{frontend}, @frontends);
  $hbox -> pack_end($combob, TRUE, TRUE, 0);
+
+# scan command prefix
+ $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('Scan command prefix'));
+ $hbox -> pack_start ($label, FALSE, FALSE, 0);
+ my $preentry = Gtk2::Entry -> new;
+ $hbox -> add($preentry);
+ $preentry -> set_text($SETTING{'scan prefix'}) if defined($SETTING{'scan prefix'});
 
 # Restore window setting
  my $cbw = Gtk2::CheckButton->new_with_label(
@@ -7325,9 +7335,9 @@ sub preferences {
  $vbox -> pack_start($hbox, TRUE, TRUE, 0);
  $label = Gtk2::Label -> new ($d->get('Temporary directory'));
  $hbox -> pack_start ($label, FALSE, FALSE, 0);
- my $entry = Gtk2::Entry -> new;
- $hbox -> add($entry);
- $entry -> set_text(dirname($dir));
+ my $tmpentry = Gtk2::Entry -> new;
+ $hbox -> add($tmpentry);
+ $tmpentry -> set_text(dirname($dir));
  $button = Gtk2::Button -> new($d->get('Browse'));
  $button -> signal_connect( clicked => sub {
   my $file_chooser = Gtk2::FileChooserDialog -> new(
@@ -7335,9 +7345,9 @@ sub preferences {
                                        $windowr, 'select-folder',
                                        'gtk-cancel' => 'cancel',
                                        'gtk-ok' => 'ok');
-  $file_chooser->set_current_folder ($entry -> get_text);
+  $file_chooser->set_current_folder ($tmpentry -> get_text);
   if ('ok' eq $file_chooser->run) {
-   $entry -> set_text($file_chooser -> get_filename);
+   $tmpentry -> set_text($file_chooser -> get_filename);
   }
   $file_chooser -> destroy;
  });
@@ -7351,16 +7361,17 @@ sub preferences {
  $hbox -> pack_start( $button, TRUE, TRUE, 0 );
  $button -> signal_connect (clicked => sub {
   $windowr -> hide;
-  if ($SETTING{'frontend'} ne $frontends[$combob->get_active][0]) {
-   $SETTING{'frontend'} = $frontends[$combob->get_active][0];
+  if ($SETTING{frontend} ne $frontends[$combob->get_active][0]) {
+   $SETTING{frontend} = $frontends[$combob->get_active][0];
    rescan_options($vboxd, $device[$combobd -> get_active]) if (defined $windows);
   }
+  $SETTING{'scan prefix'} = $preentry -> get_text;
   $SETTING{'cache options'} = $cbc->get_active;
   delete $SETTING{cache}
    if (defined $SETTING{cache} and ! $SETTING{'cache options'});
   $SETTING{'restore window'} = $cbw->get_active;
-  if (defined($SETTING{TMPDIR}) and $entry -> get_text ne $SETTING{TMPDIR}) {
-   $SETTING{TMPDIR} = $entry -> get_text;
+  if (defined($SETTING{TMPDIR}) and $tmpentry -> get_text ne $SETTING{TMPDIR}) {
+   $SETTING{TMPDIR} = $tmpentry -> get_text;
    show_message_dialog($window, 'warning', 'close', $d->get('You will have to restart gscanp2df for changes to the temporary directory to take effect.'));   
   }
  });
