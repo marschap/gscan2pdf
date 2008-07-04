@@ -76,6 +76,7 @@
 #    Download new translations
 #    Update translators in credits
 #    Check a translation with LANGUAGE=de bin/gscan2pdf --debug
+#    Check $version
 #    Make appropriate updates to debian/changelog
 # 2. perl Makefile.PL
 #    make rpmdist debdist
@@ -115,7 +116,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.25~rc4';
+my $version = '0.9.25';
 
 my $tolerance = 1;
 
