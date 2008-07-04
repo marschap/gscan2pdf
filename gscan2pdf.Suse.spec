@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.24
+Version: 0.9.25
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -81,8 +81,18 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Tue May 13 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Fri Jul 04 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
   - New upstream release.
+    Now Depends: libconfig-general-perl (>= 2.40) to avoid heredoc bug
+    Closes: #480947 (gscan2pdf: Defaults for pages are weird now)
+    Closes: #486553 (gscan2pdf: unable to save as DjVu)
+    Closes: #486680 (gscan2pdf: bizarre DjVu text zones)
+    Closes: #485641 (gscan2pdf: No longer saves resolution in TIFF files)
+    Closes: #484641 (gscan2pdf: prefix option for scanimage command)
+  - New upstream release.
+    New Depends: libgtk2-imageview-perl
+  - Updated Homepage and Vcs* sections
+  - Bumped compat 4->5
   - New upstream release.
     Closes: #463708 (gscan2pdf: Error when saving as PNG)
     Closes: #462171 (importing DjVu files fails, hogs memory)
