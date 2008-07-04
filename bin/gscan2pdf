@@ -2070,7 +2070,8 @@ sub create_PDF {
    my $resolution = $slist -> {data}[$_][4];
 
 # Convert file if necessary
-   my $format = $1 if ($filename =~ /\.(\w*)$/);
+   my $format;
+   $format = $1 if ($filename =~ /\.(\w*)$/);
    if (($SETTING{'pdf compression'} ne 'none'
         and $SETTING{'pdf compression'} ne $format)
         or $SETTING{'downsample'}
@@ -2881,7 +2882,8 @@ sub save_djvu {
      my $compression;
 
 # c44 can only use pnm and jpg
-     my $format = $1 if ($filename =~ /\.(\w*)$/);
+     my $format;
+     $format = $1 if ($filename =~ /\.(\w*)$/);
      if ($depth > 1) {
       $compression = 'c44';
       if ($format !~ /(pnm)|(jpg)/) {
@@ -2923,12 +2925,12 @@ sub save_djvu {
 
 # Write djvusedtxtfile
       my $djvusedtxtfile = "djvusedtxtfile";
-      open (FILE, ">:utf8", $djvusedtxtfile)
+      open my $fh, ">:utf8", $djvusedtxtfile
        or die sprintf($d->get("Can't open file: %s"), $djvusedtxtfile);
-      print FILE "(page 0 0 $w $h\n";
-      print FILE "(line 0 0 $w $h \"";
-      print FILE $txt, "\"))";
-      close FILE;
+      print $fh "(page 0 0 $w $h\n";
+      print $fh "(line 0 0 $w $h \"";
+      print $fh $txt, "\"))";
+      close $fh;
 
 # Write djvusedtxtfile
       my $cmd = "djvused '$djvu' -e 'select 1; set-txt djvusedtxtfile' -s";
@@ -4332,7 +4334,8 @@ sub paste_selection {
 
 # Create a new image file
   for (@clipboard) {
-   my $suffix = $1 if ($_->[2] =~ /(\.\w*)$/);
+   my $suffix;
+   $suffix = $1 if ($_->[2] =~ /(\.\w*)$/);
    my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
    copy($_->[2], $new) or 
     show_message_dialog($window, 'error', 'close', $d->get('Error pasting image'));
@@ -5246,7 +5249,7 @@ sub default2index {
  for (my $i = 0; $i < @array; $i++) {
   return $i if ($array[$i] eq $default);
  }
- return undef;
+ return;
 }
 
 
@@ -5355,7 +5358,8 @@ sub rotate {
    my $depth = $image->Get('depth');
    $x = $image->Rotate($degrees);
    warn "$x" if "$x";
-   my $suffix = $1 if ($filename =~ /\.(\w*)$/);
+   my $suffix;
+   $suffix = $1 if ($filename =~ /\.(\w*)$/);
    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
    $x = $image->Write(filename => $filename, depth => $depth);
    warn "$x" if "$x";
@@ -5513,7 +5517,8 @@ sub threshold {
     $image->WhiteThreshold(threshold=>$SETTING{'threshold tool'}.'%');
 
 # Write it
-    my $suffix = $1 if ($filename =~ /(\.\w*)$/);
+    my $suffix;
+    $suffix = $1 if ($filename =~ /(\.\w*)$/);
     (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix);
     $x = $image->Write(filename => $filename);
     warn "$x" if "$x";
@@ -5627,7 +5632,8 @@ sub negate {
     $image->Negate;
 
 # Write it
-    my $suffix = $1 if ($filename =~ /(\.\w*)$/);
+    my $suffix;
+    $suffix = $1 if ($filename =~ /(\.\w*)$/);
     (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix);
     $x = $image->Write(depth => $depth, filename => $filename);
     warn "$x" if "$x";
@@ -5794,7 +5800,8 @@ sub unsharp {
                         threshold=>$SETTING{'unsharp threshold'});
 
 # Write it
-    my $suffix = $1 if ($filename =~ /\.(\w*)$/);
+    my $suffix;
+    $suffix = $1 if ($filename =~ /\.(\w*)$/);
     (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
     $x = $image->Write(filename => $filename);
     warn "$x" if "$x";
@@ -5956,7 +5963,8 @@ sub crop {
     warn "$e" if "$e";
 
 # Write it
-    my $suffix = $1 if ($filename =~ /\.(\w*)$/);
+    my $suffix;
+    $suffix = $1 if ($filename =~ /\.(\w*)$/);
     (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
     warn " to $filename\n" if $debug;
     $e = $image->Write(filename => $filename);
@@ -6274,7 +6282,8 @@ sub add_widget {
   my $vboxf = Gtk2::VBox -> new;
   $vboxf -> set_border_width($border_width);
   $widget -> add ($vboxf);
-  my @default = split /,/, $SETTING{$option} if (defined $SETTING{$option});
+  my @default;
+  @default = split /,/, $SETTING{$option} if (defined $SETTING{$option});
   foreach (keys %{$hashref->{$option}{options}}) {
    my $button = add_widget($vboxf, $hashref->{$option}{options}, $_);
    $button->set_value (shift @default) if (@default);
@@ -6658,9 +6667,10 @@ sub ocr_page {
 sub slurp {
  my ($file) = @_;
 
- local( $/, *FH );
- open( FH, "<:utf8", $file ) or die "Error: cannot open $file\n";
- my $text = <FH>;
+ local($/);
+ open my $fh, "<:utf8", $file or die "Error: cannot open $file\n";
+ my $text = <$fh>;
+ close $fh;
  return $text;
 }
 
@@ -6740,7 +6750,8 @@ sub add_ocr_languages {
    splice @tesslang, $i, 1;
   }
   else {
-   my $code = $1 if ($tesslang[$i] =~ /(\w*)\.unicharset$/);
+   my $code;
+   $code = $1 if ($tesslang[$i] =~ /(\w*)\.unicharset$/);
    if (defined $iso639{$code}) {
     $tesslang[$i] = [ $code, $iso639{$code} ];
    }
@@ -6976,7 +6987,7 @@ sub get_key {
  foreach (keys %$options) {
   return $_ if ($options->{$_}{string} eq $value);
  }
- return undef;
+ return;
 }
 
 
@@ -6987,7 +6998,7 @@ sub get_value {
  foreach (keys %{$options->{$option}{values}}) {
   return $_ if ($options->{$option}{values}{$_} eq $value);
  }
- return undef;
+ return;
 }
 
 
@@ -7223,7 +7234,7 @@ sub compress_temp {
 # make a hash with a list of the files in temp
   my %files;
   send($parent, "0 -1 x ".$d->get('Clearing up'), 0);
-  foreach (<$dir/*>) {
+  foreach (glob("$dir/*")) {
    $files{$_} = TRUE;
   }
   foreach (@filename) {
