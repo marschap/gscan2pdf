@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    check for error loading setting and drop back to defaults if necessary.
 #    Remember sort on FileChooser
 #    pass array reference to combobox_from_array, and optionally the default.
 #    Investigate using Gtk2::FileChooser instead of Gtk2::FileChooserDialog
@@ -84,12 +85,15 @@
 # 3. hg status
 #    hg tag vx-x-x
 #    hg push ssh://ra28145@shell.sf.net//home/groups/g/gs/gscan2pdf/hg/gscan2pdf
-# 4. make remote-dist remote-html 
-# 5. Upload to sourceforge and release files
+# 4. make remote-html 
+# 5. Upload to sourceforge (https://frs.sourceforge.net/webupload) and release files
 # 6. Freshmeat
 # 7. Launchpad, upload .pot if necessary
 # 8. http://www.gtkfiles.org/app.php/gscan2pdf
-# 9. Ubuntu forum
+# 9. debuild -S -sa
+#    dput gscan2pdf-ppa gscan2pdf_x.x.x_i386.changes
+#    https://launchpad.net/~jeffreyratcliffe/+archive
+#    Ubuntu forum
 #    gscan2pdf-announce
 #    ftp-master (check contents with dpkg-deb --contents)
 
