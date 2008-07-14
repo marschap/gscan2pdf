@@ -1374,6 +1374,7 @@ sub update_uimanager {
 
 # If the scan dialog has already been drawn, update the start page spinbutton
  update_start();
+ return;
 }
 
 
@@ -1382,6 +1383,7 @@ sub display_image {
 
  my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file ($filename);
  $view->set_pixbuf($pixbuf);
+ return;
 }
 
 
@@ -1429,6 +1431,7 @@ sub new {
  reset_start();
 
  update_uimanager();
+ return;
 }
 
 
@@ -1598,6 +1601,7 @@ sub import_dialog {
 
 # cd back to tempdir
  chdir $dir;
+ return;
 }
 
 
@@ -1797,6 +1801,7 @@ sub import_file {
  }
 
  ++$j;
+ return;
 }
 
 
@@ -1843,6 +1848,7 @@ sub add_page_range {
  });
  $frame->add ($pr);
  push @prlist, $pr;
+ return;
 }
 
 
@@ -1997,6 +2003,7 @@ sub update_PDF_settings {
  $SETTING{'title'} = $entryt -> get_text;
  $SETTING{'subject'} = $entrys -> get_text;
  $SETTING{'keywords'} = $entryk -> get_text;
+ return;
 }
 
 
@@ -2230,6 +2237,7 @@ sub create_PDF {
   }
   return TRUE;  # continue without uninstalling
  });
+ return;
 }
 
 
@@ -2285,6 +2293,7 @@ sub save_PDF {
 
 # cd back to tempdir
  chdir $dir;
+ return;
 }
 
 
@@ -2616,6 +2625,7 @@ sub save_dialog {
  $hboxc -> hide_all if ($type[$combobi->get_active][0] ne 'tif');
  $vboxp -> hide_all if ($type[$combobi->get_active][0] ne 'pdf');
  $windowi -> resize(100, 100); # Doesn't matter that 200x200 is too small
+ return;
 }
 
 
@@ -2700,6 +2710,7 @@ sub save_image {
  }
 
  $file_chooser -> destroy;
+ return;
 }
 
 
@@ -2803,6 +2814,7 @@ sub save_TIFF {
   }
   return TRUE;  # continue without uninstalling
  });
+ return;
 }
 
 
@@ -2993,6 +3005,7 @@ sub save_djvu {
 
 # cd back to tempdir
  chdir $dir;
+ return;
 }
 
 
@@ -3069,6 +3082,7 @@ sub email {
 
  $windowe -> show_all;
  $hboxq -> hide_all if ($compression[$combob->get_active][0] ne 'jpg');
+ return;
 }
 
 
@@ -3660,6 +3674,7 @@ sub scan_dialog {
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
  $sbutton -> set_sensitive(FALSE) if (! $test);
+ return;
 }
 
 
@@ -3708,6 +3723,7 @@ sub parse_device_list {
       and defined($output) and $output =~ /default device is `(.*)'/) {
   $SETTING{device} = $1;
  }
+ return;
 }
 
 
@@ -3754,6 +3770,7 @@ sub populate_device_list {
 # This then fires the callback, updating the options, so no need to do it further down.
  $combobd -> set_active($o);
  $hboxd -> show_all;
+ return;
 }
 
 
@@ -3789,6 +3806,7 @@ sub update_start {
  $start = $value;
 
  update_number() if ($bscannum -> get_active);
+ return;
 }
 
 
@@ -3833,6 +3851,7 @@ sub pages_possible {
 sub update_number {
  my $n = pages_possible();
  $spin_buttonn->set_value($n) if ($n > 0 and $n < $spin_buttonn->get_value);
+ return;
 }
 
 
@@ -3970,7 +3989,7 @@ sub scanimage {
    }
 
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($buffer) or $buffer eq '')) { # bit field operation. >= would also work
+   if (($condition & 'hup') and (not defined($buffer) or $buffer eq '')) { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
     my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
@@ -3990,6 +4009,7 @@ sub scanimage {
  else {
   warn "$cmd\n";
  }
+ return;
 }
 
 
@@ -4137,6 +4157,7 @@ sub scanadf {
  else {
   warn "$cmd\n";
  }
+ return;
 }
 
 
@@ -4182,6 +4203,7 @@ sub post_process_scan {
    ocr_page();
   }
  }
+ return;
 }
 
 
@@ -4295,6 +4317,7 @@ sub manual_sort_by_column {
  @data = sort { $sortfunc->($a->[$sortcol], $b->[$sortcol]) } @data;
 
  @{$slist->{data}} = @data;
+ return;
 }
 
 
@@ -4309,6 +4332,7 @@ sub cut_selection {
   my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
   $textbuffer->cut_clipboard ($clipboard, TRUE)
  }
+ return;
 }
 
 
@@ -4327,6 +4351,7 @@ sub copy_selection {
   my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
   $textbuffer->copy_clipboard ($clipboard)
  }
+ return;
 }
 
 
@@ -4372,6 +4397,7 @@ sub paste_selection {
   my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
   $textbuffer->paste_clipboard ($clipboard, undef, TRUE)
  }
+ return;
 }
 
 
@@ -4416,6 +4442,7 @@ sub delete_pages {
  reset_start();
 
  update_uimanager();
+ return;
 }
 
 
@@ -4433,6 +4460,7 @@ sub reset_start {
    $spin_buttons->set_value(1);
   }
  }
+ return;
 }
 
 
@@ -4446,6 +4474,7 @@ sub select_all {
   my ($start, $end) = $textbuffer->get_bounds;
   $textbuffer->select_range ($start, $end);
  }
+ return;
 }
 
 
@@ -4513,6 +4542,7 @@ EOS
  $about->set_artists ('lodp');
  $about->run;
  $about->destroy;
+ return;
 }
 
 
@@ -4619,6 +4649,7 @@ sub rescan_options {
   $vboxd -> hide_all; # merely here for consistency with normal operation
   parse_options($vboxd, $device, options2hash($output));
  }
+ return;
 }
 
 
@@ -4759,6 +4790,7 @@ sub parse_options {
 
 #  Unghost the scan button
  $sbutton->set_sensitive(TRUE) if (defined $sbutton);
+ return;
 }
 
 
@@ -4966,6 +4998,7 @@ sub edit_paper {
  });
  $hboxb -> pack_end ($cbutton, TRUE, FALSE, 0);
  $windowd->show_all;
+ return;
 }
 
 
@@ -5015,6 +5048,7 @@ sub set_paper {
   });
  }
  $combobox -> set_active($o) if (defined $combobox);
+ return;
 }
 
 
@@ -5109,6 +5143,7 @@ sub update_options {
   $vboxd -> hide_all; # merely here for consistency with normal operation
   update_options_hash($vboxd, options2hash($output));
  }
+ return;
 }
 
 
@@ -5242,6 +5277,7 @@ sub update_options_hash {
  $hboxm -> show_all if (defined $hboxm);
  $hboxp -> show_all if (defined $hboxp);
  $vboxd -> show;
+ return;
 }
 
 
@@ -5289,6 +5325,7 @@ sub renumber {
    }
   }
  }
+ return;
 }
 
 
@@ -5304,6 +5341,7 @@ sub rotate_selected {
  take_snapshot();
 
  rotate();
+ return;
 }
 
 
@@ -5415,6 +5453,7 @@ sub rotate {
   return TRUE;  # continue without uninstalling
  });
  $rotating = TRUE;
+ return;
 }
 
 
@@ -5573,6 +5612,7 @@ sub threshold {
  $cbutton -> signal_connect( clicked => sub { $windowt -> destroy } );
 
  $windowt -> show_all;
+ return;
 }
 
 
@@ -5688,6 +5728,7 @@ sub negate {
  $cbutton -> signal_connect( clicked => sub { $windowt -> destroy } );
 
  $windowt -> show_all;
+ return;
 }
 
 
@@ -5864,6 +5905,7 @@ sub unsharp {
  $cbutton -> signal_connect( clicked => sub { $windowum -> destroy } );
 
  $windowum -> show_all;
+ return;
 }
 
 
@@ -5886,6 +5928,7 @@ sub change_image_tool_cb {
 # else {
 #  $sel_info_label->set_text ("");
 # }
+ return;
 }
 
 
@@ -6025,6 +6068,7 @@ sub crop {
  $cbutton -> signal_connect( clicked => sub { $windowc -> destroy } );
 
  $windowc -> show_all;
+ return;
 }
 
 
@@ -6041,6 +6085,7 @@ sub get_parent {
  else {
   return $w3;
  }
+ return;
 }
 
 
@@ -6205,6 +6250,7 @@ sub unpaper_page {
    return TRUE;  # continue without uninstalling
   }
  });
+ return;
 }
 
 
@@ -6340,6 +6386,7 @@ sub get_unpaper_options {
    }
   }
  }
+ return;
 }
 
 
@@ -6471,6 +6518,7 @@ sub add_unpaper_options {
  my $gfbutton = add_widget($vbox3, $unpaper_options, 'no-grayfilter');
  my $nfbutton = add_widget($vbox3, $unpaper_options, 'no-noisefilter');
  my $blbutton = add_widget($vbox3, $unpaper_options, 'no-blurfilter');
+ return;
 }
 
 
@@ -6514,6 +6562,7 @@ sub unpaper {
  $cbutton -> signal_connect( clicked => sub { $windowu -> hide; } );
 
  $windowu -> show_all;
+ return;
 }
 
 
@@ -6663,6 +6712,7 @@ sub ocr_page {
    return TRUE;  # continue without uninstalling
   }
  });
+ return;
 }
 
 
@@ -6709,6 +6759,7 @@ sub combobox_set_active {
  }
  $o = 0 if (! defined $o);
  $combobox -> set_active ($o);
+ return;
 }
 
 
@@ -6841,6 +6892,7 @@ sub OCR {
  $cbutton -> signal_connect( clicked => sub { $windowo -> hide; } );
 
  $windowo -> show_all;
+ return;
 }
 
 
@@ -6955,6 +7007,7 @@ sub view_pod {
                                                              $viewer->get_marks;
 
  $windowh -> show_all;
+ return;
 }
 
 
@@ -6964,7 +7017,7 @@ sub strippod {
  my $text = shift;
  $text =~ s/B<([^<]*)>/$1/g;
  $text =~ s/E<gt>/>/g;
- $text
+ return $text;
 }
 
 
@@ -6981,6 +7034,7 @@ sub add_to_options {
  else {
   $ddo{$option}{values}{$value} = $value;
  }
+ return;
 }
 
 
@@ -7018,6 +7072,7 @@ sub take_snapshot {
 # Unghost Undo/redo
  $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(TRUE);
  $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(TRUE);
+ return;
 }
 
 
@@ -7045,6 +7100,7 @@ sub undo {
  $uimanager->get_widget('/MenuBar/Edit/Redo') -> set_sensitive(TRUE);
  $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Redo') -> set_sensitive(TRUE);
+ return;
 }
 
 
@@ -7071,6 +7127,7 @@ sub unundo {
  $uimanager->get_widget('/MenuBar/Edit/Redo') -> set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(TRUE);
  $uimanager->get_widget('/ToolBar/Redo') -> set_sensitive(FALSE);
+ return;
 }
 
 
@@ -7085,6 +7142,7 @@ sub init_icons {
  foreach ( @_ ) {
   register_icon($_->[0], $_->[1]);
  }
+ return;
 }
 
 
@@ -7104,6 +7162,7 @@ sub register_icon {
   my $set = Gtk2::IconSet->new_from_pixbuf($icon);
   $IconFactory->add($stock_id, $set);
  }
+ return;
 }
 
 
@@ -7123,6 +7182,7 @@ sub sig_child {
   print "False alarm on $pid.\n" if ($debug);
  }
  $SIG{CHLD} = \&sig_child;                  # install *after* calling waitpid
+ return;
 }
 
 
@@ -7164,6 +7224,7 @@ sub start_process {
   $process->();
   POSIX::_exit(0);
  }
+ return;
 }
 
 
@@ -7173,6 +7234,7 @@ sub kill_subs {
 
 # 15 = SIGTERM
  kill 15, $_ foreach (keys %helperTag);
+ return;
 }
 
 
@@ -7184,6 +7246,7 @@ sub mark_pages {
   $slist -> {data}[$_][5] = TRUE;
  }
  $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+ return;
 }
 
 
@@ -7288,7 +7351,7 @@ sub compress_temp {
   }
   return TRUE;  # continue without uninstalling
  });
-
+ return;
 }
 
 
@@ -7398,6 +7461,7 @@ sub preferences {
   $windowr -> hide;
  });
  $windowr -> show_all;
+ return;
 }
 
 
@@ -7456,6 +7520,7 @@ sub INIT_INSTANCE {
   $group = $self->{button}{$nick} -> get_group if (! $group);
   $self->{active} = $nick if (! $self->{active});
  }
+ return;
 }
 
 
@@ -7474,6 +7539,7 @@ sub set_active {
    $self->signal_emit ('changed');
   }
  }
+ return;
 }
 
 
