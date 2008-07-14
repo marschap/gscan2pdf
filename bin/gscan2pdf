@@ -43,7 +43,6 @@
 #     see if $pdf->finishobjects does any good.
 #    move paper sizes into TreeModel
 #    Translate documentation (po4a?)
-#    try a document with 250 pages
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    write hg2cl if necessary
 #    simplify code - only keep variables that are needed
@@ -308,7 +307,7 @@ if ($debug) {
 }
 
 # Just in case dependencies have changed, put put startup warning again
-if (! defined($SETTING{version}) or $SETTING{version} ne $version) {
+if (not defined($SETTING{version}) or $SETTING{version} ne $version) {
  $SETTING{'startup warning'} = TRUE;
  delete $SETTING{cache} if (defined $SETTING{cache});
 }
@@ -1252,7 +1251,7 @@ sub create_menu_bar {
  }
 
 # Ghost ocr item if gocr and tesseract not available
- if (! $dependencies{gocr} and ! $dependencies{tesseract}) {
+ if (not $dependencies{gocr} and not $dependencies{tesseract}) {
   $uimanager->get_widget('/MenuBar/Tools/OCR') -> set_sensitive(FALSE);
   $msg .= $d->get("OCR requires gocr or tesseract\n");
  }
@@ -1585,7 +1584,7 @@ sub import_dialog {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
     $dialog -> destroy;
     update_uimanager();
     return FALSE;  # uninstall
@@ -2224,7 +2223,7 @@ sub create_PDF {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-  if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+  if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
    $dialog -> destroy;
    update_uimanager();
    return FALSE;  # uninstall
@@ -2797,7 +2796,7 @@ sub save_TIFF {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-  if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+  if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
    $dialog -> destroy;
    update_uimanager();
    return FALSE;  # uninstall
@@ -2979,7 +2978,7 @@ sub save_djvu {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-    if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+    if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
      $dialog -> destroy;
      update_uimanager();
      return FALSE;  # uninstall
@@ -3424,7 +3423,7 @@ sub scan_dialog {
  $vboxp -> pack_start ($hboxo, FALSE, FALSE, 0);
  my $obutton = Gtk2::CheckButton -> new($d->get('OCR scanned pages'));
  $tooltips -> set_tip ($obutton, $d->get('OCR scanned pages'));
- if (! $dependencies{gocr} and ! $dependencies{tesseract}) {
+ if (not $dependencies{gocr} and not $dependencies{tesseract}) {
   $hboxo -> set_sensitive(FALSE);
   $obutton -> set_active(FALSE);
  }
@@ -3532,7 +3531,7 @@ sub scan_dialog {
   my $start = $spin_buttons->get_value;
   my $step = $spin_buttoni->get_value;
 
-  if (! $checkx -> get_active and $start == 1 and $step < 0) {
+  if (not $checkx -> get_active and $start == 1 and $step < 0) {
    show_message_dialog($windows, 'error', 'cancel', $d->get('Must scan facing pages first'));
    return TRUE;
   }
@@ -3629,7 +3628,7 @@ sub scan_dialog {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
     my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
@@ -3637,7 +3636,7 @@ sub scan_dialog {
     $running = FALSE;
     $pbar -> destroy;
 
-    if (! defined($output) or $output eq '') {
+    if (not defined($output) or $output eq '') {
      $windows->destroy;
      undef $windows;
      show_message_dialog($window, 'error', 'close', $d->get('No scanners found'));
@@ -3705,7 +3704,7 @@ sub parse_device_list {
  }
 
 # If device not set by config and there is a default device, then set it
- if (! defined($SETTING{device})
+ if (not defined($SETTING{device})
       and defined($output) and $output =~ /default device is `(.*)'/) {
   $SETTING{device} = $1;
  }
@@ -4117,7 +4116,7 @@ sub scanadf {
    }
 
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($buffer) or $buffer eq '')) { # bit field operation. >= would also work
+   if (($condition & 'hup') and (not defined($buffer) or $buffer eq '')) { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
     my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
@@ -4172,7 +4171,7 @@ sub post_process_scan {
  push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper;
  push @ocr_stack, $page if $ocr;
 
- if (!($rotating or $scanning or $running_unpaper or $running_ocr)) {
+ if (not($rotating or $scanning or $running_unpaper or $running_ocr)) {
   if (@rotate_queue) {
    rotate();
   }
@@ -4591,7 +4590,7 @@ sub rescan_options {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
     my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
@@ -5082,7 +5081,7 @@ sub update_options {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
     close $read;
     warn 'Waiting to reap process' if ($debug);
     my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
@@ -5407,7 +5406,7 @@ sub rotate {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-  if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+  if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
    $dialog -> destroy;
    $rotating = FALSE;
    post_process_scan();
@@ -5560,7 +5559,7 @@ sub threshold {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
     $dialog -> destroy;
     return FALSE;  # uninstall
    }
@@ -5675,7 +5674,7 @@ sub negate {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
     $dialog -> destroy;
     return FALSE;  # uninstall
    }
@@ -5850,7 +5849,7 @@ sub unsharp {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
     $dialog -> destroy;
     update_uimanager();
     return FALSE;  # uninstall
@@ -6011,7 +6010,7 @@ sub crop {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+   if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
     $dialog -> destroy;
     update_uimanager();
     return FALSE;  # uninstall
@@ -6134,7 +6133,7 @@ sub unpaper_page {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-     if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+     if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
       warn $page_buffer if ($debug);
       close $read;
       warn 'Waiting to reap process' if ($debug);
@@ -6214,7 +6213,7 @@ sub add_widget {
 
  my $widget;
  $SETTING{$option} = $hashref->{$option}{default}
-  if (defined($hashref->{$option}{default}) and ! defined($SETTING{$option}));
+  if (defined($hashref->{$option}{default}) and not defined($SETTING{$option}));
 
  if ($hashref->{$option}{type} eq 'ComboBox') {
   my $hbox = Gtk2::HBox -> new;
@@ -6627,7 +6626,7 @@ sub ocr_page {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-     if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+     if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
       close $read;
       warn 'Waiting to reap process' if ($debug);
       my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
@@ -7283,7 +7282,7 @@ sub compress_temp {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
-  if (($condition & 'hup') and (! defined($line) or $line eq '')) { # bit field operation. >= would also work
+  if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
    $dialog -> destroy;
    return FALSE;  # uninstall
   }
@@ -7384,7 +7383,7 @@ sub preferences {
   $SETTING{'scan prefix'} = $preentry -> get_text;
   $SETTING{'cache options'} = $cbc->get_active;
   delete $SETTING{cache}
-   if (defined $SETTING{cache} and ! $SETTING{'cache options'});
+   if (defined $SETTING{cache} and not $SETTING{'cache options'});
   $SETTING{'restore window'} = $cbw->get_active;
   if (defined($SETTING{TMPDIR}) and $tmpentry -> get_text ne $SETTING{TMPDIR}) {
    $SETTING{TMPDIR} = $tmpentry -> get_text;
