@@ -119,7 +119,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.25';
+my $version = '0.9.26~rc1';
 
 my $tolerance = 1;
 
@@ -590,6 +590,7 @@ $scwin_thumbs -> set_shadow_type('etched-in');
 # Create a temporary directory for scans
 my $dir;
 if (defined($SETTING{TMPDIR}) and $SETTING{TMPDIR} ne '') {
+ mkdir($SETTING{TMPDIR}) if (not -d $SETTING{TMPDIR});
  if (! eval {$dir = tempdir(DIR => $SETTING{TMPDIR})}) {
   $dir = tempdir;
   warn sprintf($d->get("Warning: unable to use %s for temporary storage. Defaulting to %s instead.\n"),
@@ -7448,9 +7449,20 @@ sub preferences {
   delete $SETTING{cache}
    if (defined $SETTING{cache} and not $SETTING{'cache options'});
   $SETTING{'restore window'} = $cbw->get_active;
-  if (defined($SETTING{TMPDIR}) and $tmpentry -> get_text ne $SETTING{TMPDIR}) {
-   $SETTING{TMPDIR} = $tmpentry -> get_text;
-   show_message_dialog($window, 'warning', 'close', $d->get('You will have to restart gscanp2df for changes to the temporary directory to take effect.'));   
+
+  my @tmpdirs = File::Spec->splitdir($dir);
+  pop @tmpdirs; # Remove the top level
+  my $tmp = File::Spec->catdir(@tmpdirs);
+
+# Expand tildes in the filename
+  my $newdir = $tmpentry -> get_text;
+  $newdir =~ s{ ^ ~ ( [^/]* ) } {
+   $1 ? (getpwnam($1))[7] : ( $ENV{HOME} || $ENV{LOGDIR} || (getpwuid($>))[7] )
+  }ex;
+
+  if ($newdir ne $tmp) {
+   $SETTING{TMPDIR} = $newdir;
+   show_message_dialog($window, 'warning', 'close', $d->get('You will have to restart gscanp2df for changes to the temporary directory to take effect.'));
   }
  });
 
