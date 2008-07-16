@@ -2,6 +2,7 @@
 
 + Various fixes causing TMPDIR not to work, including ~ expansion and creation
   of TMPDIR if necessary.
++ Scan profiles. Closes 1700803 (RFE: support scan profiles)
 
 
 0.9.25 (04.07.2008):

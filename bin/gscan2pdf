@@ -3481,6 +3481,69 @@ sub scan_dialog {
  $vboxd -> set_border_width($border_width);
  $framed -> add ($vboxd);
 
+# Scan profiles
+ my $framesp = Gtk2::Frame -> new($d->get('Scan profiles'));
+ $vbox2 -> pack_start ($framesp, FALSE, FALSE, 0);
+ my $vboxsp = Gtk2::VBox -> new;
+ $vboxsp -> set_border_width($border_width);
+ $framesp -> add ($vboxsp);
+ my $combobsp = Gtk2::ComboBox -> new_text;
+ foreach my $profile (keys %{$SETTING{profile}}) {
+  $combobsp->append_text($profile);
+ }
+ $combobsp -> signal_connect (changed => sub {
+  my $profile = $combobsp->get_active_text;
+  if (defined $profile) {
+   foreach my $key (keys %{$SETTING{profile}{$profile}}) {
+    $SETTING{$key} = $SETTING{profile}{$profile}{$key};
+   }
+   rescan_options($vboxd, $device[$combobd -> get_active]) if (defined $combobd);
+  }
+ });
+ $combobsp->set_active(num_rows_combobox($combobsp));
+ $vboxsp -> pack_start ($combobsp, FALSE, FALSE, 0);
+ my $hboxsp = Gtk2::HBox -> new;
+ $vboxsp -> pack_end ($hboxsp, FALSE, FALSE, 0);
+
+# Save button
+ my $vbutton = Gtk2::Button -> new_from_stock('gtk-save');
+ $vbutton -> signal_connect (clicked => sub {
+  my $dialog = Gtk2::Dialog->new ($d->get('Name of scan profile'), $windows,
+                                          'destroy-with-parent',
+                                          'gtk-save' => 'ok',
+                                          'gtk-cancel' => 'cancel');
+  my $hbox = Gtk2::HBox -> new;
+  my $label = Gtk2::Label->new ($d->get('Name of scan profile'));
+  $hbox -> pack_start( $label, FALSE, FALSE, 0 );
+  my $entry = Gtk2::Entry -> new;
+  $entry->set_activates_default(TRUE);
+  $hbox -> pack_end( $entry, TRUE, TRUE, 0 );
+  $dialog->vbox->add($hbox);
+  $dialog->set_default_response ('ok');
+  $dialog->show_all;
+  if ($dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/) {
+   my $profile = $entry->get_text;
+   my %options = walk_options_tree();
+   $combobsp->append_text($profile);
+   $SETTING{profile}{$profile} = \%options;
+   $combobsp->set_active(num_rows_combobox($combobsp));
+  }
+  $dialog->destroy;
+ });
+ $hboxsp -> pack_start( $vbutton, TRUE, TRUE, 0 );
+
+# Delete button
+ my $dbutton = Gtk2::Button -> new_from_stock('gtk-delete');
+ $dbutton -> signal_connect (clicked => sub {
+  my $i = $combobsp->get_active;
+  if ($i > -1) {
+   delete $SETTING{profile}{$combobsp->get_active_text};
+   $combobsp->remove_text($i);
+   $combobsp->set_active($i) if (num_rows_combobox($combobsp) > -1);
+  }
+ });
+ $hboxsp -> pack_start( $dbutton, FALSE, FALSE, 0 );
+
 # HBox for buttons
  my $hboxb = Gtk2::HBox -> new;
  $vbox -> pack_end ($hboxb, FALSE, FALSE, 0);
@@ -3496,36 +3559,9 @@ sub scan_dialog {
 # Get selected device
   $SETTING{device} = $device[$combobd -> get_active];
 
-# Get device-specific options
-  my %options;
-  if (defined $vboxm) {
-   foreach my $hbox ($vboxd -> get_children, $vboxm -> get_children) {
-    my $key;
-    if ($hbox -> isa('Gtk2::HBox') and $hbox->sensitive) {
-     foreach my $widget ($hbox -> get_children) {
-      if ($widget -> isa('Gtk2::Label')) {
-       $key = get_key(\%ddo, $widget -> get_label);
-      }
-      elsif ($widget -> isa('Gtk2::ComboBox')) {
-
 # ignore artificial paper size option
-       $SETTING{$key} = get_value(\%ddo, $key, $widget -> get_active_text);
-       if ($key eq 'Paper size') {
-        $SETTING{$key} = $widget -> get_active_text;
-       }
-       else {
-        $options{$key} = $SETTING{$key};
-       }
-      }
-      elsif ($widget -> isa('Gtk2::SpinButton')) {
-       $options{$key} = $widget -> get_value;
-       $SETTING{$key} = $options{$key};
-      }
-     }
-    }
-   }
-  }
-  warn Dumper(\%options) if ($debug);
+  my %options = walk_options_tree();
+  delete$options{'Paper size'} if (defined $options{'Paper size'});
 
 # Get selected number of pages
   my $npages;
@@ -3676,6 +3712,49 @@ sub scan_dialog {
 # Has to be done after showing the window, otherwise the window doesn't get centred.
  $sbutton -> set_sensitive(FALSE) if (! $test);
  return;
+}
+
+
+sub walk_options_tree {
+
+# Get device-specific options
+ my %options;
+ if (defined $vboxm) {
+  foreach my $hbox ($vboxd -> get_children, $vboxm -> get_children) {
+   my $key;
+   if ($hbox -> isa('Gtk2::HBox') and $hbox->sensitive) {
+    foreach my $widget ($hbox -> get_children) {
+     if ($widget -> isa('Gtk2::Label')) {
+      $key = get_key(\%ddo, $widget -> get_label);
+     }
+     elsif ($widget -> isa('Gtk2::ComboBox')) {
+      if ($key eq 'Paper size') {
+       $SETTING{$key} = $widget -> get_active_text;
+      }
+      else {
+       $SETTING{$key} = get_value(\%ddo, $key, $widget -> get_active_text);
+      }
+      $options{$key} = $SETTING{$key};
+     }
+     elsif ($widget -> isa('Gtk2::SpinButton')) {
+      $options{$key} = $widget -> get_value;
+      $SETTING{$key} = $options{$key};
+     }
+    }
+   }
+  }
+ }
+ warn Dumper(\%options) if ($debug);
+ return %options;
+}
+
+
+# Get number of rows in combobox
+sub num_rows_combobox {
+ my ($combobox) = @_;
+ my $i = -1;
+ $combobox->get_model->foreach(sub {$i++;return FALSE});
+ return $i;
 }
 
 
@@ -8058,27 +8137,7 @@ scanner device on the command line:
 
 C<gscan2pdf --device <device>>
 
-=head1 Roadmap
-
-=over
-
-=item *
-
-v1.0.0
-
-=over
-
-=item *
-
-Scan profiles.
-
-=back
-
-=item *
-
-When I've worked out how to do it
-
-=over
+=head1 To Do
 
 =item *
 
@@ -8093,10 +8152,6 @@ Print (using Net::Cups).
 =item *
 
 Copier.
-
-=back
-
-=back
 
 =head1 See Also
 
