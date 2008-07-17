@@ -1491,6 +1491,9 @@ sub import_dialog {
   my @filename = $file_chooser -> get_filenames;
   $file_chooser -> destroy;
 
+# Update cwd
+  $SETTING{'cwd'} = dirname($filename[0]);
+
   my $dialog = Gtk2::Dialog -> new ($d->get('Importing')."...", $windowo,
                                     'destroy-with-parent',
                                     'gtk-cancel' => 'cancel');
@@ -1611,8 +1614,6 @@ sub import_dialog {
 sub import_file {
  my ($filename, $j, $n, $parent) = @_;
 
-# Update cwd
- $SETTING{'cwd'} = dirname($filename);
  warn "Importing $filename\n" if ($debug);
 
 # Check if djvu
