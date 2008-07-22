@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    check for error loading setting and drop back to defaults if necessary.
 #    Remember sort on FileChooser
 #    pass array reference to combobox_from_array, and optionally the default.
 #    Investigate using Gtk2::FileChooser instead of Gtk2::FileChooserDialog
@@ -209,42 +208,13 @@ warn "Using ", setlocale( LC_CTYPE ), " locale\n" if ($debug);
 # Read config file
 my $rc = "$ENV{'HOME'}/.$program";
 system("touch $rc") if (! -r $rc);
-my $conf = Config::General->new(
- -ConfigFile        => $rc,
- -SplitPolicy       => 'equalsign',
- -MergeDuplicateOptions => TRUE,
- -DefaultConfig => {
-  'window_width'       => 800,
-  'window_height'      => 600,
-  'window_maximize'    => TRUE,
-  'thumb panel'        => 100,
-  'Page range'         => 'all',
-  'Page range default' => 'all',
-  'l'                  => 0,
-  't'                  => 0,
-  'layout'             => 'single',
-  'downsample'         => FALSE,
-  'downsample dpi'     => 150,
-  'threshold tool'     => 80,
-  'unsharp radius'     => 0,
-  'unsharp sigma'      => 1,
-  'unsharp amount'     => 1,
-  'unsharp threshold'  => 0.05,
-  'cache options'      => TRUE,
-  'restore window'     => TRUE,
-  'startup warning'    => FALSE,
-  'date offset'        => 0,
-  'pdf compression'    => 'png',
-  'quality'            => 75,
-  'pages to scan'      => 1,
-  'unpaper on scan'    => TRUE,
-  'OCR on scan'        => TRUE,
-  'frontend'           => 'scanimage',
-  'rotate facing'      => 0,
-  'rotate reverse'     => 0,
-  'scan prefix'        => '',
- },
-);
+my $conf;
+if (! eval {$conf = load_config()}) {
+ print $d->get("Error: unable to load settings.\nBacking up settings\nReverting to defaults"), "\n";
+ move($rc, "$rc.old");
+ system("touch $rc");
+ $conf = load_config();
+}
 my %SETTING = $conf->getall;
 if (! defined $SETTING{Paper}) {
  $SETTING{Paper} = {
@@ -1117,6 +1087,45 @@ Gtk2 -> main;
 
 
 ### Subroutines
+
+sub load_config {
+ return Config::General->new(
+ -ConfigFile        => $rc,
+ -SplitPolicy       => 'equalsign',
+ -MergeDuplicateOptions => TRUE,
+ -DefaultConfig => {
+  'window_width'       => 800,
+  'window_height'      => 600,
+  'window_maximize'    => TRUE,
+  'thumb panel'        => 100,
+  'Page range'         => 'all',
+  'Page range default' => 'all',
+  'l'                  => 0,
+  't'                  => 0,
+  'layout'             => 'single',
+  'downsample'         => FALSE,
+  'downsample dpi'     => 150,
+  'threshold tool'     => 80,
+  'unsharp radius'     => 0,
+  'unsharp sigma'      => 1,
+  'unsharp amount'     => 1,
+  'unsharp threshold'  => 0.05,
+  'cache options'      => TRUE,
+  'restore window'     => TRUE,
+  'startup warning'    => FALSE,
+  'date offset'        => 0,
+  'pdf compression'    => 'png',
+  'quality'            => 75,
+  'pages to scan'      => 1,
+  'unpaper on scan'    => TRUE,
+  'OCR on scan'        => TRUE,
+  'frontend'           => 'scanimage',
+  'rotate facing'      => 0,
+  'rotate reverse'     => 0,
+  'scan prefix'        => '',
+ },
+ );
+}
 
 # Create the menu bar, initialize its menus, and return the menu bar.
 
