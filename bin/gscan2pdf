@@ -557,21 +557,6 @@ $hpaned -> pack1($scwin_thumbs, TRUE, TRUE);
 $scwin_thumbs -> set_policy('automatic', 'automatic');
 $scwin_thumbs -> set_shadow_type('etched-in');
 
-# Create a temporary directory for scans
-my $dir;
-if (defined($SETTING{TMPDIR}) and $SETTING{TMPDIR} ne '') {
- mkdir($SETTING{TMPDIR}) if (not -d $SETTING{TMPDIR});
- if (! eval {$dir = tempdir(DIR => $SETTING{TMPDIR})}) {
-  $dir = tempdir;
-  warn sprintf($d->get("Warning: unable to use %s for temporary storage. Defaulting to %s instead.\n"),
-                                               $SETTING{TMPDIR}, dirname($dir));
- }
-}
-else {
- $dir = tempdir;
-}
-print "Using $dir for temporary files\n" if $debug;
-
 # define hidden string column for filename and annotation buffer
 Gtk2::Ex::Simple::List -> add_column_type( 'hstring',
                                            type => 'Glib::String',
@@ -629,7 +614,7 @@ $slist->signal_connect('drag-data-received' => sub {
   my @info = $model->get($iter);
   my $suffix;
   $suffix = $1 if ($info[2] =~ /(\.\w*)$/);
-  my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
+  my (undef, $new) = tempfile(DIR => $SETTING{session}, SUFFIX => $suffix);
   copy($info[2], $new) or 
    show_message_dialog($window, 'error', 'close', $d->get('Error copying page'));
   $info[2] = $new;
@@ -1081,6 +1066,47 @@ my $unpaper_options = {
 
 update_uimanager();
 
+# Look for crashed session
+if (defined $SETTING{session}) {
+ print "Restoring session $SETTING{session}\n" if $debug;
+ my $sessionfile = "$SETTING{session}/session";
+ my $session = Config::General->new(-ConfigFile => $sessionfile);
+ my %session = $session->getall;
+
+# Block the row-changed signal whilst adding the scan (row) and sorting it.
+ $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+ my @selection = $session{selection};
+ delete $session{selection};
+ foreach my $page (sort {$a <=> $b} (keys(%session))) {
+  push @{ $slist->{data} }, [ $page,
+                              get_pixbuf($session{$page}{filename}, $heightt, $widtht),
+                              $session{$page}{filename},
+                              $session{$page}{buffer},
+                              $session{$page}{resolution} ];
+ }
+ $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+ $slist -> select(@selection);
+}
+else {
+
+# Create a temporary directory for scans
+ if (defined($SETTING{TMPDIR}) and $SETTING{TMPDIR} ne '') {
+  mkdir($SETTING{TMPDIR}) if (not -d $SETTING{TMPDIR});
+  if (! eval {$SETTING{session} = tempdir(DIR => $SETTING{TMPDIR})}) {
+   $SETTING{session} = tempdir;
+   warn sprintf($d->get("Warning: unable to use %s for temporary storage. Defaulting to %s instead.\n"),
+                                  $SETTING{TMPDIR}, dirname($SETTING{session}));
+  }
+ }
+ else {
+  $SETTING{session} = tempdir;
+ }
+ print "Using $SETTING{session} for temporary files\n" if $debug;
+
+# Save session data to settings
+ $conf->save_file($rc, \%SETTING);
+}
+
 $window -> show_all;
 Gtk2 -> main;
 
@@ -1465,7 +1491,7 @@ sub convert_to_tiff {
  }
 
 # Write the tif
- my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+ my (undef, $tif) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
  $image->Write(units => 'PixelsPerInch',
                compression => 'lzw',
                density => $density,
@@ -1492,7 +1518,7 @@ sub import_dialog {
  if ('ok' eq $file_chooser->run) {
 
 # cd back to tempdir to import
-  chdir $dir;
+  chdir $SETTING{session};
 
 # Update undo/redo buffers
   take_snapshot();
@@ -1613,7 +1639,7 @@ sub import_dialog {
  }
 
 # cd back to tempdir
- chdir $dir;
+ chdir $SETTING{session};
  return;
 }
 
@@ -1674,7 +1700,7 @@ sub import_file {
 # Extract images from DjVu
    if ($last >= $first and $first > 0) {
     for (my $i = $first; $i <= $last; $i++) {
-     my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+     my (undef, $tif) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
      my $cmd = "ddjvu -format=tiff -page=$i \"$filename\" $tif";
      warn "$cmd\n" if ($debug);
      system($cmd);
@@ -1785,7 +1811,7 @@ sub import_file {
 # Split the tiff into its pages and import them individually
   if ($last >= $first and $first > 0) {
    for (my $i = $first-1; $i < $last; $i++) {
-    my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+    my (undef, $tif) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
     my $cmd = "tiffcp \"$filename\",$i $tif";
     warn "$cmd\n" if ($debug);
     system($cmd);
@@ -2099,11 +2125,11 @@ sub create_PDF {
         or $SETTING{'downsample'}
         or $SETTING{'pdf compression'} eq 'jpg') {
     if ($SETTING{'pdf compression'} !~ /(jpg)|(png)/ and $format ne 'tif') {
-     (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.tif');
+     (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
      print "Converting $filename to $filename\n" if ($debug);
     }
     elsif ($SETTING{'pdf compression'} =~ /(jpg)|(png)/) {
-     (undef, $filename) = tempfile(DIR => $dir,
+     (undef, $filename) = tempfile(DIR => $SETTING{session},
                                    SUFFIX => '.'.$SETTING{'pdf compression'});
      print "Converting $filename to $filename\n" if ($debug);
     }
@@ -2130,7 +2156,7 @@ sub create_PDF {
     }
 
     if ($SETTING{'pdf compression'} !~ /(jpg)|(png)/) {
-     my (undef, $filename2) = tempfile(DIR => $dir, SUFFIX => '.tif');
+     my (undef, $filename2) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
      my $cmd = "tiffcp -c $SETTING{'pdf compression'} $filename $filename2 2>&1";
      print "$cmd\n" if $debug;
      my $output = `$cmd`;
@@ -2303,7 +2329,7 @@ sub save_PDF {
  $file_chooser -> show;
 
 # cd back to tempdir
- chdir $dir;
+ chdir $SETTING{session};
  return;
 }
 
@@ -2568,7 +2594,7 @@ sub save_dialog {
    $file_chooser -> show;
 
 # cd back to tempdir
-   chdir $dir;
+   chdir $SETTING{session};
   }
   elsif ($SETTING{'image type'} eq 'ps') {
 
@@ -2608,7 +2634,7 @@ sub save_dialog {
      $SETTING{'cwd'} = dirname($filename);
 
 # Create the PS
-     my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+     my (undef, $tif) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
      save_TIFF($tif, $filename);
      unlink $tif;
     }
@@ -2617,7 +2643,7 @@ sub save_dialog {
    $file_chooser -> show;
 
 # cd back to tempdir
-   chdir $dir;
+   chdir $SETTING{session};
   }
   else {
    save_image();
@@ -2685,7 +2711,7 @@ sub save_image {
   $SETTING{'cwd'} = dirname($filename);
 
 # cd back to tempdir
-  chdir $dir;
+  chdir $SETTING{session};
 
 # fill $pagelist with filenames depending on which radiobutton is active
   my ($pagelist, $n) = get_pagelist();
@@ -2761,7 +2787,7 @@ sub save_TIFF {
     .sprintf($d->get("Converting image %i of %i to TIFF"), $page, $#pagelist+1), 0);
     my $filename = $slist -> {data}[$j][2];
     if ($filename !~ /\.tif/) {
-    my (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+    my (undef, $tif) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
     my $resolution = $slist -> {data}[$j][4];
 
 # Convert to tiff
@@ -2867,7 +2893,7 @@ sub save_djvu {
    $SETTING{'cwd'} = dirname($filename);
 
 # cd back to tempdir
-   chdir $dir;
+   chdir $SETTING{session};
 
    my $dialog = Gtk2::Dialog -> new ($d->get('Saving DjVu')."...", $windowo,
                                      'destroy-with-parent',
@@ -2898,7 +2924,7 @@ sub save_djvu {
      send($parent, $i/($#pagelist+1)
       .sprintf($d->get("Writing page %i of %i"), $i+1, $#pagelist+1), 0);
      my $filename = $slist -> {data}[$j][2];
-     my (undef, $djvu) = tempfile(DIR => $dir, SUFFIX => '.djvu');
+     my (undef, $djvu) = tempfile(DIR => $SETTING{session}, SUFFIX => '.djvu');
 
 # Check the image depth to decide what sort of compression to use
      my $image = Image::Magick->new;
@@ -2914,7 +2940,7 @@ sub save_djvu {
      if ($depth > 1) {
       $compression = 'c44';
       if ($format !~ /(pnm)|(jpg)/) {
-       my (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+       my (undef, $pnm) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pnm');
        $x = $image->Write(filename => $pnm);
        warn "$x" if "$x";
        $filename = $pnm;
@@ -2924,7 +2950,7 @@ sub save_djvu {
      else {
       $compression = 'cjb2';
       if ($format !~ /(pnm)|(tif)/ or ($format eq 'pnm' and $class ne 'PseudoClass')) {
-       my (undef, $pbm) = tempfile(DIR => $dir, SUFFIX => '.pbm');
+       my (undef, $pbm) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pbm');
        $x = $image->Write(filename => $pbm);
        warn "$x" if "$x";
        $filename = $pbm;
@@ -3015,7 +3041,7 @@ sub save_djvu {
  $file_chooser -> show;
 
 # cd back to tempdir
- chdir $dir;
+ chdir $SETTING{session};
  return;
 }
 
@@ -3059,7 +3085,7 @@ sub email {
   $SETTING{'pdf compression'} = $compression[$combob->get_active][0];
   $SETTING{'quality'} = $spinbuttonq->get_value;
 
-  my (undef, $pdf) = tempfile(DIR => $dir, SUFFIX => '.pdf');
+  my (undef, $pdf) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pdf');
 
 # Create the PDF
   create_PDF($pdf);
@@ -3970,7 +3996,7 @@ sub scanimage {
  push @options, '--progress';
 
 # Make sure we are in temp directory
- chdir $dir;
+ chdir $SETTING{session};
 
 # Create command
  my $cmd = "$SETTING{'scan prefix'} scanimage $device @options $npages";
@@ -4129,7 +4155,7 @@ sub scanadf {
  push @options, '-o out%d.pnm';
 
 # Make sure we are in temp directory
- chdir $dir;
+ chdir $SETTING{session};
 
 # Create command
  my $cmd = "$SETTING{'scan prefix'} scanadf $device @options $start $end > /dev/stderr";
@@ -4331,7 +4357,7 @@ sub prepare_import {
   }
  }
 
- my (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix{$format});
+ my (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => $suffix{$format});
  if (defined($delete) and $delete) {
   move($ofilename, $filename) or 
    show_message_dialog($window, 'error', 'close', $d->get('Error importing image'));
@@ -4455,7 +4481,7 @@ sub paste_selection {
   for (@clipboard) {
    my $suffix;
    $suffix = $1 if ($_->[2] =~ /(\.\w*)$/);
-   my (undef, $new) = tempfile(DIR => $dir, SUFFIX => $suffix);
+   my (undef, $new) = tempfile(DIR => $SETTING{session}, SUFFIX => $suffix);
    copy($_->[2], $new) or 
     show_message_dialog($window, 'error', 'close', $d->get('Error pasting image'));
    $_->[2] = $new;
@@ -5492,7 +5518,7 @@ sub rotate {
    warn "$x" if "$x";
    my $suffix;
    $suffix = $1 if ($filename =~ /\.(\w*)$/);
-   (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
+   (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => '.'.$suffix);
    $x = $image->Write(filename => $filename, depth => $depth);
    warn "$x" if "$x";
    send($parent, "$index $filename", 0);
@@ -5652,7 +5678,7 @@ sub threshold {
 # Write it
     my $suffix;
     $suffix = $1 if ($filename =~ /(\.\w*)$/);
-    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix);
+    (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => $suffix);
     $x = $image->Write(filename => $filename);
     warn "$x" if "$x";
     warn "Thresholding at $SETTING{'threshold tool'} to $filename\n" if $debug;
@@ -5768,7 +5794,7 @@ sub negate {
 # Write it
     my $suffix;
     $suffix = $1 if ($filename =~ /(\.\w*)$/);
-    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => $suffix);
+    (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => $suffix);
     $x = $image->Write(depth => $depth, filename => $filename);
     warn "$x" if "$x";
     warn "Negating to $filename\n" if $debug;
@@ -5937,7 +5963,7 @@ sub unsharp {
 # Write it
     my $suffix;
     $suffix = $1 if ($filename =~ /\.(\w*)$/);
-    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
+    (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => '.'.$suffix);
     $x = $image->Write(filename => $filename);
     warn "$x" if "$x";
     warn "Written $filename with unsharp mask: r=$SETTING{'unsharp radius'}, s=$SETTING{'unsharp sigma'}, a=$SETTING{'unsharp amount'}, t=$SETTING{'unsharp threshold'}\n"
@@ -6102,7 +6128,7 @@ sub crop {
 # Write it
     my $suffix;
     $suffix = $1 if ($filename =~ /\.(\w*)$/);
-    (undef, $filename) = tempfile(DIR => $dir, SUFFIX => '.'.$suffix);
+    (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => '.'.$suffix);
     warn " to $filename\n" if $debug;
     $e = $image->Write(filename => $filename);
     warn "$e" if "$e";
@@ -6234,13 +6260,13 @@ sub unpaper_page {
 
     my $cmd = '';
     my $in;
-    my (undef, $out) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+    my (undef, $out) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pnm');
     my $out2 = '';
-    (undef, $out2) = tempfile(DIR => $dir, SUFFIX => '.pnm')
+    (undef, $out2) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pnm')
      if ($options =~ /--output-pages 2 /);
 
     if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
-     (undef, $in) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+     (undef, $in) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pnm');
      $cmd .= "convert -compress Zip $slist->{data}[$pagenum][2] $in;";
     }
     else {
@@ -6708,7 +6734,7 @@ sub ocr_page {
     $pbar->set_fraction (($page-1)/($#ocr_stack+$npages+1));
 
 # Temporary filename for output
-    my (undef, $txt) = tempfile(DIR => $dir);
+    my (undef, $txt) = tempfile(DIR => $SETTING{session});
 
     my $cmd;
     if (defined($SETTING{'ocr engine'}) and $SETTING{'ocr engine'} eq 'gocr') {
@@ -6717,7 +6743,7 @@ sub ocr_page {
       my $file = $slist -> {data}[$pagenum][2];
 
 # Temporary filename for new file
-      (undef, $pnm) = tempfile(DIR => $dir, SUFFIX => '.pnm');
+      (undef, $pnm) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pnm');
 
       $cmd = "convert $file $pnm; gocr $pnm > $txt.txt; rm $pnm";
      }
@@ -6732,7 +6758,7 @@ sub ocr_page {
       my $file = $slist -> {data}[$pagenum][2];
 
 # Temporary filename for new file
-      (undef, $tif) = tempfile(DIR => $dir, SUFFIX => '.tif');
+      (undef, $tif) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
       $pre = "convert $file $tif;";
       $post = "; rm $tif";
 
@@ -7005,8 +7031,9 @@ sub quit {
  }
 
 # Remove temporary files (for some reason File::Temp wasn't doing its job here)
- unlink <$dir/*>;
- rmdir $dir;
+ unlink <$SETTING{session}/*>;
+ rmdir $SETTING{session};
+ delete $SETTING{session};
 
 # Write window state to settings
  ($SETTING{'window_width'}, $SETTING{'window_height'}) = $window -> get_size;
@@ -7162,6 +7189,20 @@ sub take_snapshot {
 # Unghost Undo/redo
  $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(TRUE);
  $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(TRUE);
+
+# Save session
+ my %session;
+ for (my $i = 0; $i < $#{$slist->{data}}; $i++) {
+  $session{$slist->{data}[$i][0]}{filename}   = $slist->{data}[$i][2];
+  $session{$slist->{data}[$i][0]}{buffer}     = $slist->{data}[$i][3]
+   if (defined $slist->{data}[$i][3]);
+  $session{$slist->{data}[$i][0]}{resolution} = $slist->{data}[$i][4];
+ }
+ $session{selection} = @undo_selection;
+ my $sessionfile = "$SETTING{session}/session";
+ system("touch $sessionfile");
+ my $session = Config::General->new(-ConfigFile => $sessionfile);
+ $session->save_file($sessionfile, \%session);
  return;
 }
 
@@ -7391,7 +7432,7 @@ sub compress_temp {
 # make a hash with a list of the files in temp
   my %files;
   send($parent, "0 -1 x ".$d->get('Clearing up'), 0);
-  foreach (glob("$dir/*")) {
+  foreach (glob("$SETTING{session}/*")) {
    $files{$_} = TRUE;
   }
   foreach (@filename) {
@@ -7505,7 +7546,7 @@ sub preferences {
  $hbox -> pack_start ($label, FALSE, FALSE, 0);
  my $tmpentry = Gtk2::Entry -> new;
  $hbox -> add($tmpentry);
- $tmpentry -> set_text(dirname($dir));
+ $tmpentry -> set_text(dirname($SETTING{session}));
  $button = Gtk2::Button -> new($d->get('Browse'));
  $button -> signal_connect( clicked => sub {
   my $file_chooser = Gtk2::FileChooserDialog -> new(
@@ -7539,7 +7580,7 @@ sub preferences {
    if (defined $SETTING{cache} and not $SETTING{'cache options'});
   $SETTING{'restore window'} = $cbw->get_active;
 
-  my @tmpdirs = File::Spec->splitdir($dir);
+  my @tmpdirs = File::Spec->splitdir($SETTING{session});
   pop @tmpdirs; # Remove the top level
   my $tmp = File::Spec->catdir(@tmpdirs);
 
