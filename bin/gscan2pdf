@@ -29,7 +29,6 @@
 #    note options like source before rescan due to mode change
 #    note sane-backend and wipe scan settings if it changes
 #    reenable multiple scans from flatbed + delay and warning
-#    query downsizing problems with the imagemagick team.
 #    look at using potrace to convert images to vectors
 #    add option to overwrite textbuffer with OCR
 #    add an option selecting the number of processes to run simultaneously
@@ -54,10 +53,7 @@
 #    use -x option (first column 0-100) in gocr to give more detail to progressbar
 #    add run script option
 #    check out freeze when gocr does not return properly
-#    add ocrad, ocre support
 #    Add status line at bottom with messages like "filename saved"
-#    Add KDE, Xfce menus
-#    Add hidden flag whether a page has been saved
 #    Fix blocking while rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
@@ -1140,7 +1136,7 @@ sub load_config {
   'restore window'     => TRUE,
   'startup warning'    => FALSE,
   'date offset'        => 0,
-  'pdf compression'    => 'png',
+  'pdf compression'    => 'auto',
   'quality'            => 75,
   'pages to scan'      => 1,
   'unpaper on scan'    => TRUE,
@@ -2117,24 +2113,50 @@ sub create_PDF {
    my $h = $image->Get('height');
    my $resolution = $slist -> {data}[$_][4];
 
+# Automatic mode
+   my $depth;
+   my $compression;
+   my $type;
+   if ($SETTING{'pdf compression'} eq 'auto') {
+    $depth = $image->Get('depth');
+    print "Depth of $filename is $depth\n" if ($debug);
+    if ($depth == 1) {
+     $compression = 'lzw';
+    }
+    else {
+     $type = $image->Get('type');
+     print "Type of $filename is $type\n" if ($debug);
+     if ($type =~ /TrueColor/) {
+      $compression = 'jpg';
+     }
+     else {
+      $compression = 'png';
+     }
+    }
+    print "Selecting $compression compression\n" if ($debug);
+   }
+   else {
+    $compression = $SETTING{'pdf compression'};
+   }
+
 # Convert file if necessary
    my $format;
    $format = $1 if ($filename =~ /\.(\w*)$/);
-   if (($SETTING{'pdf compression'} ne 'none'
-        and $SETTING{'pdf compression'} ne $format)
-        or $SETTING{'downsample'}
-        or $SETTING{'pdf compression'} eq 'jpg') {
-    if ($SETTING{'pdf compression'} !~ /(jpg)|(png)/ and $format ne 'tif') {
+   if (($compression ne 'none' and $compression ne $format)
+       or $SETTING{'downsample'} or $compression eq 'jpg') {
+    if ($compression !~ /(jpg)|(png)/ and $format ne 'tif') {
+     print "Converting $filename to " if ($debug);
      (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
-     print "Converting $filename to $filename\n" if ($debug);
+     print "$filename\n" if ($debug);
     }
-    elsif ($SETTING{'pdf compression'} =~ /(jpg)|(png)/) {
+    elsif ($compression =~ /(jpg)|(png)/) {
+     print "Converting $filename to " if ($debug);
      (undef, $filename) = tempfile(DIR => $SETTING{session},
-                                   SUFFIX => '.'.$SETTING{'pdf compression'});
-     print "Converting $filename to $filename\n" if ($debug);
+                                   SUFFIX => ".$compression");
+     print "$filename\n" if ($debug);
     }
 
-    my $depth = $image->Get('depth');
+    $depth = $image->Get('depth') if (! defined $depth);
     if ($SETTING{'downsample'}) {
      $w = $w/$resolution*$SETTING{'downsample dpi'};
      $h = $h/$resolution*$SETTING{'downsample dpi'};
@@ -2143,21 +2165,20 @@ sub create_PDF {
      warn "$x" if "$x";
     }
     $x = $image->Set(quality => $SETTING{quality})
-     if ($SETTING{'pdf compression'} eq 'jpg');
+     if ($compression eq 'jpg');
     warn "$x" if "$x";
 
-    if (($SETTING{'pdf compression'} !~ /(jpg)|(png)/ and $format ne 'tif')
-        or ($SETTING{'pdf compression'} =~ /(jpg)|(png)/)
-        or $SETTING{'downsample'}) {
+    if (($compression !~ /(jpg)|(png)/ and $format ne 'tif')
+        or ($compression =~ /(jpg)|(png)/) or $SETTING{'downsample'}) {
 # depth required because resize otherwise increases depth to maintain information
      $x = $image->Write(filename => $filename, depth => $depth);
      warn "$x" if "$x";
      $format = $1 if ($filename =~ /\.(\w*)$/);
     }
 
-    if ($SETTING{'pdf compression'} !~ /(jpg)|(png)/) {
+    if ($compression !~ /(jpg)|(png)/) {
      my (undef, $filename2) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
-     my $cmd = "tiffcp -c $SETTING{'pdf compression'} $filename $filename2 2>&1";
+     my $cmd = "tiffcp -c $compression $filename $filename2 2>&1";
      print "$cmd\n" if $debug;
      my $output = `$cmd`;
      my $filename = $filename2;
@@ -2376,6 +2397,7 @@ sub add_pdf_compression {
 
 # Compression options
  my @compression = (
+  [ 'auto', $d->get('Automatic'), $d->get('Let gscan2pdf which type of compression to use.') ],
   [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
   [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
   [ 'packbits', $d->get('Packbits'), $d->get('Compress output with Packbits encoding.') ],
