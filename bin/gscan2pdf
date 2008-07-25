@@ -362,6 +362,7 @@ my @action_items = (
  [ 'Negate', undef, $d->get('_Negate'), undef, $d->get('Converts black to white and vice versa'), \&negate ],
  [ 'Unsharp', undef, $d->get('_Unsharp Mask'), undef, $d->get('Apply an unsharp mask'), \&unsharp ],
  [ 'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef, $d->get('Crop pages'), \&crop ],
+ [ 'GIMP', undef, $d->get('_GIMP'), undef, $d->get('Edit current page with GIMP'), \&gimp ],
  [ 'unpaper', undef, $d->get('_Clean up'), undef, $d->get('Clean up scanned images with unpaper'), \&unpaper ],
  [ 'OCR', undef, $d->get('_OCR'), undef, $d->get('Optical Character Recognition'), \&OCR ],
 
@@ -424,6 +425,7 @@ my $ui = "<ui>
    <menuitem action='Negate'/>
    <menuitem action='Unsharp'/>
    <menuitem action='Crop'/>
+   <menuitem action='GIMP'/>
    <separator/>
    <menuitem action='unpaper'/>
    <menuitem action='OCR'/>
@@ -1254,6 +1256,7 @@ sub create_menu_bar {
  $uimanager->get_widget('/MenuBar/Tools/Negate') -> set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Tools/Unsharp') -> set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Tools/Crop') -> set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/Tools/GIMP') -> set_sensitive(FALSE);
 
 # a convenient place to put these
  $dependencies{pages} = -1;
@@ -1332,6 +1335,7 @@ sub update_uimanager {
                  '/MenuBar/Tools/Negate',
                  '/MenuBar/Tools/Unsharp',
                  '/MenuBar/Tools/Crop',
+                 '/MenuBar/Tools/GIMP',
                  '/MenuBar/Tools/unpaper',
                  '/MenuBar/Tools/OCR',
 
@@ -6207,6 +6211,25 @@ sub crop {
 
  $windowc -> show_all;
  return;
+}
+
+
+# Minimise gscan2pdf, feed GIMP with the current page, restore gscan2pdf when
+# GIMP finishes
+
+sub gimp {
+ my @pages = $slist -> get_selected_indices;
+ $window->iconify;
+ Gtk2->main_iteration while Gtk2->events_pending;
+ $slist -> get_selection -> unselect_all;
+ my $filename = $slist->{data}[$pages[0]][2];
+ system("gimp $filename");
+
+# Update thumbnail
+ $slist->{data}[$pages[0]][1] = get_pixbuf($filename, $heightt, $widtht);
+ $window->deiconify;
+ Gtk2->main_iteration while Gtk2->events_pending;
+ $slist -> select(@pages);
 }
 
 
