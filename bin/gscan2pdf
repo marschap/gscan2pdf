@@ -108,6 +108,7 @@ use FileHandle;
 use Image::Magick;
 use Config::General 2.40;
 use Text::ParseWords;
+use Archive::Tar;                    # For session files
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -322,6 +323,7 @@ my @action_items = (
  # File menu
  [ 'File', undef, $d->get('_File') ],
  [ 'New', 'gtk-new', $d->get('_New'), '<control>n', $d->get('Clears all pages'), \&new ],
+ [ 'Open', 'gtk-revert-to-saved', $d->get('_Open'), '<control>o', $d->get('Open gscan2pdf session file'), \&open_dialog ],
  [ 'Import', 'gtk-open', $d->get('_Import'), '<control>i', $d->get('Import image file(s)'), \&import_dialog ],
  [ 'Scan', 'scanner', $d->get('S_can'), undef, $d->get('Scan document'), \&scan_dialog ],
  [ 'Save', 'gtk-save', $d->get('Save'), '<control>s', $d->get('Save'), \&save_dialog ],
@@ -385,6 +387,7 @@ my $ui = "<ui>
  <menubar name='MenuBar'>
   <menu action='File'> 
    <menuitem action='New'/>
+   <menuitem action='Open'/>
    <menuitem action='Import'/>
    <menuitem action='Scan'/>
    <menuitem action='Save'/>
@@ -437,6 +440,7 @@ my $ui = "<ui>
  </menubar>
  <toolbar name='ToolBar'>
   <toolitem action='New'/>
+  <toolitem action='Open'/>
   <toolitem action='Import'/>
   <toolitem action='Scan'/>
   <toolitem action='Save'/>
@@ -1066,24 +1070,7 @@ update_uimanager();
 
 # Look for crashed session
 if (defined $SETTING{session}) {
- print "Restoring session $SETTING{session}\n" if $debug;
- my $sessionfile = "$SETTING{session}/session";
- my $session = Config::General->new(-ConfigFile => $sessionfile);
- my %session = $session->getall;
-
-# Block the row-changed signal whilst adding the scan (row) and sorting it.
- $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
- my @selection = $session{selection};
- delete $session{selection};
- foreach my $page (sort {$a <=> $b} (keys(%session))) {
-  push @{ $slist->{data} }, [ $page,
-                              get_pixbuf($session{$page}{filename}, $heightt, $widtht),
-                              $session{$page}{filename},
-                              $session{$page}{buffer},
-                              $session{$page}{resolution} ];
- }
- $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
- $slist -> select(@selection);
+ open_session();
 }
 else {
 
@@ -1497,6 +1484,117 @@ sub convert_to_tiff {
                density => $density,
                filename => $tif);
  return $tif;
+}
+
+
+# Throw up file selector and open session file
+
+sub open_dialog {
+
+# cd back to cwd to get filename
+ chdir $SETTING{'cwd'};
+
+ my $file_chooser = Gtk2::FileChooserDialog -> new(
+                                      $d->get('Open session file'),
+                                      $window, 'open',
+                                      'gtk-cancel' => 'cancel',
+                                      'gtk-ok' => 'ok');
+ $file_chooser -> set_default_response('ok');
+
+ if ('ok' eq $file_chooser->run) {
+
+# cd back to tempdir to import
+  chdir $SETTING{session};
+
+# Update undo/redo buffers
+  take_snapshot();
+
+  my $filename = $file_chooser -> get_filename;
+  $file_chooser -> destroy;
+
+# Update cwd
+  $SETTING{'cwd'} = dirname($filename);
+
+  my $dialog = Gtk2::Dialog -> new ($d->get('Opening')."...", $windowo,
+                                    'destroy-with-parent',
+                                    'gtk-cancel' => 'cancel');
+
+# Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+  $dialog -> signal_connect (response => sub {
+   $_[0] -> destroy;
+   kill_subs();
+  });
+  $dialog -> show_all;
+
+  open_session($filename);
+
+# Install a handler for child processes
+#  $SIG{CHLD} = \&sig_child;
+
+#  my ($child, $parent) = open_socketpair();
+#  my $pid = start_process(sub {
+#  });
+
+#  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
+#   my ($fileno, $condition) = @_;
+
+#   my $line;
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+#   if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
+    $dialog -> destroy;
+    update_uimanager();
+#    return FALSE;  # uninstall
+#   }
+#   return TRUE;  # continue without uninstalling
+#  });
+ }
+ else {
+  $file_chooser -> destroy;
+ }
+
+# cd back to tempdir
+ chdir $SETTING{session};
+ return;
+}
+
+
+sub open_session {
+ my ($filename) = @_;
+ print "Restoring session in $SETTING{session}\n" if $debug;
+ if (defined $filename) {
+  new(); # clear the page list
+  my $tar = Archive::Tar->new($filename, TRUE);
+  my @filenamelist = $tar->list_files;
+print Dumper(\@filenamelist);
+  $tar->extract;
+ }
+ my $sessionfile = "$SETTING{session}/session";
+ my $session = Config::General->new(-ConfigFile => $sessionfile);
+ my %session = $session->getall;
+
+# Block the row-changed signal whilst adding the scan (row) and sorting it.
+ $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+ my @selection = $session{selection};
+ delete $session{selection};
+ foreach my $page (sort {$a <=> $b} (keys(%session))) {
+  $session{$page}{filename} = File::Spec->catfile($SETTING{session},
+                                            basename($session{$page}{filename}))
+   if (dirname($session{$page}{filename}) ne $SETTING{session});
+  push @{ $slist->{data} }, [ $page,
+                              get_pixbuf($session{$page}{filename}, $heightt, $widtht),
+                              $session{$page}{filename},
+                              $session{$page}{buffer},
+                              $session{$page}{resolution} ];
+ }
+ $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+ $slist -> select(@selection);
+ return;
 }
 
 
@@ -2466,6 +2564,7 @@ sub save_dialog {
   [ 'pnm', $d->get('PNM'), $d->get('Portable anymap') ],
   [ 'ps',  $d->get('PS'), $d->get('Postscript') ],
   [ 'tif', $d->get('TIFF'), $d->get('Tagged Image File Format') ],
+  [ 'session', $d->get('Session'), $d->get('gscan2pdf session file') ],
  );
  push @type, [ 'djvu', $d->get('DjVu'), $d->get('Deja Vu') ]
   if $dependencies{djvu};
@@ -2663,6 +2762,51 @@ sub save_dialog {
      my (undef, $tif) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
      save_TIFF($tif, $filename);
      unlink $tif;
+    }
+    $file_chooser -> destroy;
+   });
+   $file_chooser -> show;
+
+# cd back to tempdir
+   chdir $SETTING{session};
+  }
+  elsif ($SETTING{'image type'} eq 'session') {
+
+# cd back to cwd to save
+   chdir $SETTING{'cwd'};
+
+# Set up file selector
+   my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('gscan2pdf session filename'),
+                                                      $windowi, 'save',
+                                                      'gtk-cancel' => 'cancel',
+                                                      'gtk-save' => 'ok');
+   $file_chooser -> set_default_response('ok');
+   $file_chooser -> set_do_overwrite_confirmation (TRUE);
+   $file_chooser -> signal_connect (response => sub {
+    my ($dialog, $response) = @_;
+    if ($response eq 'ok') {
+     my $filename = $file_chooser -> get_filename;
+     if ($filename !~ /\.gs2p$/i) {
+      $filename = $filename.'.gs2p';
+      if (-f $filename) {
+# File exists; get the file chooser to ask the user to confirm.
+       $file_chooser -> set_filename($filename);
+# Give the name change time to take effect.
+       Glib::Idle->add (sub { $file_chooser->response('ok'); });
+       return;
+      }
+     }
+
+# Check that the file can be written
+     if (! -w dirname($filename)) {
+      show_message_dialog($file_chooser, 'error', 'close',
+                           sprintf($d->get("File %s is read-only"), $filename));
+      return;
+     }
+
+# Update cwd
+     $SETTING{'cwd'} = dirname($filename);
+     save_session($filename);
     }
     $file_chooser -> destroy;
    });
@@ -7236,18 +7380,36 @@ sub take_snapshot {
  $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(TRUE);
 
 # Save session
+ save_session();
+ return;
+}
+
+
+# Dump $slist to a text file.
+# If a filename is given, zip it up as a session file
+
+sub save_session {
+ my ($filename) = @_;
+
  my %session;
- for (my $i = 0; $i < $#{$slist->{data}}; $i++) {
+ for (my $i = 0; $i <= $#{$slist->{data}}; $i++) {
   $session{$slist->{data}[$i][0]}{filename}   = $slist->{data}[$i][2];
   $session{$slist->{data}[$i][0]}{buffer}     = $slist->{data}[$i][3]
    if (defined $slist->{data}[$i][3]);
   $session{$slist->{data}[$i][0]}{resolution} = $slist->{data}[$i][4];
  }
- $session{selection} = @undo_selection;
+ $session{selection} = $slist -> get_selected_indices;
  my $sessionfile = "$SETTING{session}/session";
  system("touch $sessionfile");
  my $session = Config::General->new(-ConfigFile => $sessionfile);
  $session->save_file($sessionfile, \%session);
+ if (defined $filename) {
+  my $tar = Archive::Tar->new;
+  my @filenamelist = glob("*");
+  print Dumper(\@filenamelist) if $debug;
+  $tar->add_files(@filenamelist);
+  $tar->write($filename, TRUE, '');
+ }
  return;
 }
 

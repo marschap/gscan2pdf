@@ -5,7 +5,9 @@
 + Scan profiles. Closes 1700803 (RFE: support scan profiles)
 + Fixed remembering directory on import
 + Look for error loading config and revert to defaults if necessary
-+ Save session, to allow restore after crash
++ Save and restore sessions,
+   a. to allow restore after crash
+   b. to be able to save your work, shutdown, and go back afterwards
 + Automatic PDF compression option
 + Tools/GIMP
   Closes 1823585 (Edit in Gimp)
