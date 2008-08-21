@@ -7,25 +7,25 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2008-05-14 08:17+0200\n"
+"POT-Creation-Date: 2008-07-05 15:17+0200\n"
 "PO-Revision-Date: 2008-03-28 11:33+0000\n"
 "Last-Translator: Robert Hrovat <robi@hipnos.net>\n"
 "Language-Team: Slovenian <sl@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2008-07-04 16:56+0000\n"
+"X-Launchpad-Export-Date: 2008-08-18 12:28+0000\n"
 "X-Generator: Launchpad (build Unknown)\n"
 "X-Poedit-Country: SLOVENIA\n"
 "X-Poedit-Language: Slovenian\n"
 "X-Poedit-SourceCharset: utf-8\n"
 
-#: bin/gscan2pdf:150
+#: bin/gscan2pdf:153
 #, perl-format
 msgid "Error: cannot read file: %s\n"
 msgstr "Napaka: ne morem prebrati datoteke: %s\n"
 
-#: bin/gscan2pdf:158
+#: bin/gscan2pdf:161
 #, perl-format
 msgid ""
 "Usage:\n"
@@ -34,303 +34,303 @@ msgstr ""
 "Uporaba:\n"
 "%s --test <datoteka>=<model>\n"
 
-#: bin/gscan2pdf:163
+#: bin/gscan2pdf:166
 msgid "Error displaying help\n"
 msgstr "Ne morem prikazati pomoči\n"
 
-#: bin/gscan2pdf:189
+#: bin/gscan2pdf:192
 #, perl-format
 msgid ""
 "Usage:\n"
 "%s --device <device>\n"
 msgstr ""
 
-#: bin/gscan2pdf:194
+#: bin/gscan2pdf:197
 #, perl-format
 msgid "Unknown option %s.\n"
 msgstr "Neznana izbira %s.\n"
 
-#: bin/gscan2pdf:245
+#: bin/gscan2pdf:249
 msgid "A4"
 msgstr "A4"
 
-#: bin/gscan2pdf:251
+#: bin/gscan2pdf:255
 msgid "US Letter"
 msgstr "US Letter"
 
-#: bin/gscan2pdf:257
+#: bin/gscan2pdf:261
 msgid "US Legal"
 msgstr "US Legal"
 
-#: bin/gscan2pdf:351
+#: bin/gscan2pdf:355
 msgid "_File"
 msgstr "_Datoteka"
 
-#: bin/gscan2pdf:352
+#: bin/gscan2pdf:356
 msgid "_New"
 msgstr "_Nov"
 
-#: bin/gscan2pdf:352
+#: bin/gscan2pdf:356
 msgid "Clears all pages"
 msgstr "Počisti vse strani"
 
-#: bin/gscan2pdf:353
+#: bin/gscan2pdf:357
 msgid "_Import"
 msgstr "_Uvozi"
 
-#: bin/gscan2pdf:353
+#: bin/gscan2pdf:357
 msgid "Import image file(s)"
 msgstr "Uvozi slikovne datoteke"
 
-#: bin/gscan2pdf:354
+#: bin/gscan2pdf:358
 msgid "S_can"
 msgstr "S_keniraj"
 
-#: bin/gscan2pdf:354
+#: bin/gscan2pdf:358
 msgid "Scan document"
 msgstr "Skeniraj dokument"
 
-#: bin/gscan2pdf:355 bin/gscan2pdf:2439
+#: bin/gscan2pdf:359 bin/gscan2pdf:2376
 msgid "Save"
 msgstr "Shrani"
 
-#: bin/gscan2pdf:356
+#: bin/gscan2pdf:360
 msgid "_Email as PDF"
 msgstr "_Pošlji PDF po e-pošti"
 
-#: bin/gscan2pdf:356
+#: bin/gscan2pdf:360
 msgid "Attach as PDF to a new email"
 msgstr "Pripni kot PDF novemu sporočilu"
 
-#: bin/gscan2pdf:357
+#: bin/gscan2pdf:361
 msgid "_Compress temporary files"
 msgstr "_Stisni začasne datoteke"
 
-#: bin/gscan2pdf:357
+#: bin/gscan2pdf:361
 msgid "Compress temporary files"
 msgstr "Stisne začasne datoteke"
 
-#: bin/gscan2pdf:358
+#: bin/gscan2pdf:362
 msgid "_Quit"
 msgstr "_Izhod"
 
-#: bin/gscan2pdf:358
+#: bin/gscan2pdf:362
 msgid "Quit"
 msgstr "Končaj"
 
-#: bin/gscan2pdf:361
+#: bin/gscan2pdf:365
 msgid "_Edit"
 msgstr "_Uredi"
 
-#: bin/gscan2pdf:362
+#: bin/gscan2pdf:366
 msgid "_Undo"
 msgstr "_Razveljavi"
 
-#: bin/gscan2pdf:362
+#: bin/gscan2pdf:366
 msgid "Undo"
 msgstr "Razveljavi"
 
-#: bin/gscan2pdf:363
+#: bin/gscan2pdf:367
 msgid "_Redo"
 msgstr "_Ponovi"
 
-#: bin/gscan2pdf:363
+#: bin/gscan2pdf:367
 msgid "Redo"
 msgstr "Ponovi"
 
-#: bin/gscan2pdf:364
+#: bin/gscan2pdf:368
 msgid "Cu_t"
 msgstr "I_zreži"
 
-#: bin/gscan2pdf:364
+#: bin/gscan2pdf:368
 msgid "Cut selection"
 msgstr "Izreži izbrano"
 
-#: bin/gscan2pdf:365
+#: bin/gscan2pdf:369
 msgid "_Copy"
 msgstr "_Kopiraj"
 
-#: bin/gscan2pdf:365
+#: bin/gscan2pdf:369
 msgid "Copy selection"
 msgstr "Kopiraj izbor"
 
-#: bin/gscan2pdf:366
+#: bin/gscan2pdf:370
 msgid "_Paste"
 msgstr "_Prilepi"
 
-#: bin/gscan2pdf:366
+#: bin/gscan2pdf:370
 msgid "Paste selection"
 msgstr "Prilepi izbor"
 
-#: bin/gscan2pdf:367
+#: bin/gscan2pdf:371
 msgid "_Delete"
 msgstr "_Izbriši"
 
-#: bin/gscan2pdf:367
+#: bin/gscan2pdf:371
 msgid "Delete selected pages"
 msgstr "Izbriši izbrane strani"
 
-#: bin/gscan2pdf:368
+#: bin/gscan2pdf:372
 msgid "_Renumber"
 msgstr "_Preštevilči"
 
-#: bin/gscan2pdf:368
+#: bin/gscan2pdf:372
 msgid "Renumber pages from 1 to n"
 msgstr "Preštevilči strani od 1 do n"
 
-#: bin/gscan2pdf:374
+#: bin/gscan2pdf:378
 msgid "Select _All"
 msgstr "Izberi _vse"
 
-#: bin/gscan2pdf:374
+#: bin/gscan2pdf:378
 msgid "Select all pages"
 msgstr "Izberi vse strani"
 
-#: bin/gscan2pdf:375
+#: bin/gscan2pdf:379
 msgid "Prefere_nces"
 msgstr "_Nastavitve"
 
-#: bin/gscan2pdf:375
+#: bin/gscan2pdf:379
 msgid "Edit preferences"
 msgstr "Uredi nastavitve"
 
-#: bin/gscan2pdf:378
+#: bin/gscan2pdf:382
 msgid "_View"
 msgstr "_Pogled"
 
-#: bin/gscan2pdf:379
+#: bin/gscan2pdf:383
 msgid "Zoom _100%"
 msgstr "Povečava _100%"
 
-#: bin/gscan2pdf:379
+#: bin/gscan2pdf:383
 msgid "Zoom to 100%"
 msgstr "Povečaj na 100 %"
 
-#: bin/gscan2pdf:380
+#: bin/gscan2pdf:384
 msgid "Zoom to _fit"
 msgstr "Povečaj na velikost stran"
 
-#: bin/gscan2pdf:380
+#: bin/gscan2pdf:384
 msgid "Zoom to fit"
 msgstr "Prilagodi velikosti, da ustreza"
 
-#: bin/gscan2pdf:381
+#: bin/gscan2pdf:385
 msgid "Zoom _in"
 msgstr "P_ovečaj"
 
-#: bin/gscan2pdf:381
+#: bin/gscan2pdf:385
 msgid "Zoom in"
 msgstr "Povečaj"
 
-#: bin/gscan2pdf:382
+#: bin/gscan2pdf:386
 msgid "Zoom _out"
 msgstr "Po_manjšaj"
 
-#: bin/gscan2pdf:382
+#: bin/gscan2pdf:386
 msgid "Zoom out"
 msgstr "Pomanjšaj"
 
-#: bin/gscan2pdf:383
+#: bin/gscan2pdf:387
 msgid "Rotate 90 clockwise"
 msgstr "Obrni za 90˚ v smeri urinega kazalca"
 
-#: bin/gscan2pdf:384
+#: bin/gscan2pdf:388
 msgid "Rotate 180"
 msgstr "Obrni za 180˚"
 
-#: bin/gscan2pdf:385
+#: bin/gscan2pdf:389
 msgid "Rotate 90 anticlockwise"
 msgstr "Obrni za 90˚ v nasprotni smeri urinega kazalca"
 
-#: bin/gscan2pdf:388
+#: bin/gscan2pdf:392
 msgid "_Tools"
 msgstr "_Orodja"
 
-#: bin/gscan2pdf:389
+#: bin/gscan2pdf:393
 msgid "_Threshold"
 msgstr "Pra_g"
 
-#: bin/gscan2pdf:389
+#: bin/gscan2pdf:393
 msgid "Change each pixel above this threshold to black"
 msgstr "Spremeni vsak piksel nad vrednost tega praga v črno"
 
-#: bin/gscan2pdf:390
+#: bin/gscan2pdf:394
 msgid "_Negate"
 msgstr ""
 
-#: bin/gscan2pdf:390
+#: bin/gscan2pdf:394
 msgid "Converts black to white and vice versa"
 msgstr ""
 
-#: bin/gscan2pdf:391
+#: bin/gscan2pdf:395
 msgid "_Unsharp Mask"
 msgstr "_Maska ostrine"
 
-#: bin/gscan2pdf:391
+#: bin/gscan2pdf:395
 msgid "Apply an unsharp mask"
 msgstr "Določam masko ostrine"
 
-#: bin/gscan2pdf:392
+#: bin/gscan2pdf:396
 msgid "_Crop"
 msgstr ""
 
-#: bin/gscan2pdf:392
+#: bin/gscan2pdf:396
 msgid "Crop pages"
 msgstr ""
 
-#: bin/gscan2pdf:393
+#: bin/gscan2pdf:397
 msgid "_Clean up"
 msgstr "_Počisti"
 
-#: bin/gscan2pdf:393 bin/gscan2pdf:3438
+#: bin/gscan2pdf:397 bin/gscan2pdf:3380
 msgid "Clean up scanned images with unpaper"
 msgstr "Počisti skeniranje strani s programom unpaper"
 
-#: bin/gscan2pdf:394
+#: bin/gscan2pdf:398
 msgid "_OCR"
 msgstr "_OCR"
 
-#: bin/gscan2pdf:394
+#: bin/gscan2pdf:398
 msgid "Optical Character Recognition"
 msgstr "optično prepoznavanje znakov"
 
-#: bin/gscan2pdf:397 bin/gscan2pdf:398
+#: bin/gscan2pdf:401 bin/gscan2pdf:402
 msgid "_Help"
 msgstr "_Pomoč"
 
-#: bin/gscan2pdf:398
+#: bin/gscan2pdf:402
 msgid "Help"
 msgstr "Pomoč"
 
-#: bin/gscan2pdf:399
+#: bin/gscan2pdf:403
 msgid "_About"
 msgstr "_O Programu"
 
-#: bin/gscan2pdf:403
+#: bin/gscan2pdf:407
 msgid "_Drag"
 msgstr ""
 
-#: bin/gscan2pdf:403
+#: bin/gscan2pdf:407
 msgid "Use the hand tool"
 msgstr ""
 
-#: bin/gscan2pdf:404
+#: bin/gscan2pdf:408
 msgid "_Select"
 msgstr ""
 
-#: bin/gscan2pdf:404
+#: bin/gscan2pdf:408
 msgid "Use the rectangular selection tool"
 msgstr ""
 
-#: bin/gscan2pdf:405
+#: bin/gscan2pdf:409
 msgid "_Paint"
 msgstr ""
 
-#: bin/gscan2pdf:405
+#: bin/gscan2pdf:409
 msgid "Use the painter tool"
 msgstr ""
 
-#: bin/gscan2pdf:589
+#: bin/gscan2pdf:593
 #, perl-format
 msgid ""
 "Warning: unable to use %s for temporary storage. Defaulting to %s instead.\n"
@@ -338,260 +338,268 @@ msgstr ""
 "Opozorilo: ne morem uporabiti %s za začasno shranjevanje. Namesto tega bom "
 "uporabil %s.\n"
 
-#: bin/gscan2pdf:605
+#: bin/gscan2pdf:609
 msgid "Thumbnails"
 msgstr "Sličice"
 
-#: bin/gscan2pdf:656
+#: bin/gscan2pdf:661
 msgid "Error copying page"
 msgstr "Napaka pri kopiranju strani"
 
-#: bin/gscan2pdf:925
+#: bin/gscan2pdf:860
 msgid "Mode"
 msgstr "Način"
 
-#: bin/gscan2pdf:927
+#: bin/gscan2pdf:862
 msgid "Lineart"
 msgstr "S črtami"
 
-#: bin/gscan2pdf:928
+#: bin/gscan2pdf:863
 msgid "Grayscale"
 msgstr "Sivine"
 
-#: bin/gscan2pdf:929
+#: bin/gscan2pdf:864
 msgid "Gray"
 msgstr "Sivinsko"
 
-#: bin/gscan2pdf:930
+#: bin/gscan2pdf:865
 msgid "Color"
 msgstr "Barvno"
 
-#: bin/gscan2pdf:931
+#: bin/gscan2pdf:866
 msgid "Black & White"
 msgstr "Črno belo"
 
-#: bin/gscan2pdf:932
+#: bin/gscan2pdf:867
 msgid "True Gray"
 msgstr "Prave sivine"
 
-#: bin/gscan2pdf:933
+#: bin/gscan2pdf:868
 msgid "Binary"
 msgstr "Dvojiško"
 
-#: bin/gscan2pdf:934 bin/gscan2pdf:986 bin/gscan2pdf:987
+#: bin/gscan2pdf:869 bin/gscan2pdf:921 bin/gscan2pdf:922
 msgid "Auto"
 msgstr "Samodejno"
 
-#: bin/gscan2pdf:935
+#: bin/gscan2pdf:870
 msgid "Halftone"
 msgstr "Polton"
 
-#: bin/gscan2pdf:936
+#: bin/gscan2pdf:871
 msgid "24bit Color"
 msgstr "24 bitne barve"
 
-#: bin/gscan2pdf:939 bin/gscan2pdf:2407 bin/gscan2pdf:2475
+#: bin/gscan2pdf:874 bin/gscan2pdf:2344 bin/gscan2pdf:2412
 msgid "Compression"
 msgstr "Stiskanje"
 
-#: bin/gscan2pdf:941 bin/gscan2pdf:2401 bin/gscan2pdf:2469
+#: bin/gscan2pdf:876 bin/gscan2pdf:2338 bin/gscan2pdf:2406
 msgid "None"
 msgstr "Noben"
 
-#: bin/gscan2pdf:942 bin/gscan2pdf:2400 bin/gscan2pdf:2453 bin/gscan2pdf:2465
+#: bin/gscan2pdf:877 bin/gscan2pdf:2337 bin/gscan2pdf:2390 bin/gscan2pdf:2402
 msgid "JPEG"
 msgstr "JPEG"
 
-#: bin/gscan2pdf:945
+#: bin/gscan2pdf:880
 msgid "Resolution"
 msgstr "Ločljivost"
 
-#: bin/gscan2pdf:946
+#: bin/gscan2pdf:881
 msgid "Brightness"
 msgstr "Svetlost"
 
-#: bin/gscan2pdf:947
+#: bin/gscan2pdf:882
 msgid "Gain"
 msgstr ""
 
-#: bin/gscan2pdf:948
+#: bin/gscan2pdf:883
 msgid "Contrast"
 msgstr "Kontrast"
 
-#: bin/gscan2pdf:949 bin/gscan2pdf:5511 bin/gscan2pdf:5519 bin/gscan2pdf:5794
+#: bin/gscan2pdf:884 bin/gscan2pdf:5457 bin/gscan2pdf:5465 bin/gscan2pdf:5742
 msgid "Threshold"
 msgstr "Prag"
 
-#: bin/gscan2pdf:950
+#: bin/gscan2pdf:885
 msgid "Speed"
 msgstr "Hitrost"
 
-#: bin/gscan2pdf:952 bin/gscan2pdf:958 bin/gscan2pdf:964 bin/gscan2pdf:970
-#: bin/gscan2pdf:976
+#: bin/gscan2pdf:887 bin/gscan2pdf:893 bin/gscan2pdf:899 bin/gscan2pdf:905
+#: bin/gscan2pdf:911
 msgid "Yes"
 msgstr "Da"
 
-#: bin/gscan2pdf:953 bin/gscan2pdf:959 bin/gscan2pdf:965 bin/gscan2pdf:971
-#: bin/gscan2pdf:977
+#: bin/gscan2pdf:888 bin/gscan2pdf:894 bin/gscan2pdf:900 bin/gscan2pdf:906
+#: bin/gscan2pdf:912
 msgid "No"
 msgstr "Ne"
 
-#: bin/gscan2pdf:956
+#: bin/gscan2pdf:891
 msgid "Batch scan"
 msgstr "Paketno skeniranje"
 
-#: bin/gscan2pdf:962 bin/gscan2pdf:968
+#: bin/gscan2pdf:897 bin/gscan2pdf:903
 msgid "Wait for button"
 msgstr "Počakaj na gumb"
 
-#: bin/gscan2pdf:974
+#: bin/gscan2pdf:909
 msgid "Cache calibration"
 msgstr "Predpomni kalibracijo"
 
-#: bin/gscan2pdf:980
+#: bin/gscan2pdf:915
 msgid "Source"
 msgstr "Vir"
 
-#: bin/gscan2pdf:982
+#: bin/gscan2pdf:917
 msgid "Normal"
 msgstr "Običajno"
 
-#: bin/gscan2pdf:983
+#: bin/gscan2pdf:918
 msgid "ADF"
 msgstr "ADF"
 
-#: bin/gscan2pdf:984
+#: bin/gscan2pdf:919
 msgid "Automatic Document Feeder"
 msgstr "Samodejni podajalec dokumentov"
 
-#: bin/gscan2pdf:985
+#: bin/gscan2pdf:920
 msgid "XPA"
 msgstr "XPA"
 
-#: bin/gscan2pdf:988
+#: bin/gscan2pdf:923
 msgid "Flatbed"
 msgstr "Ploski"
 
-#: bin/gscan2pdf:989
+#: bin/gscan2pdf:924
 msgid "Transparency Adapter"
 msgstr "Prilagojevalnik za prosojnost"
 
-#: bin/gscan2pdf:990
+#: bin/gscan2pdf:925
 msgid "Transparency Unit"
 msgstr "Enota prosojnosti"
 
-#: bin/gscan2pdf:993
+#: bin/gscan2pdf:928
 msgid "Page Width"
 msgstr "Širina strani"
 
-#: bin/gscan2pdf:994
+#: bin/gscan2pdf:929
 msgid "Page Height"
 msgstr "Višina strani"
 
-#: bin/gscan2pdf:995
+#: bin/gscan2pdf:930
 msgid "ADF Mode"
 msgstr ""
 
-#: bin/gscan2pdf:997
+#: bin/gscan2pdf:932
 msgid "Simplex"
 msgstr ""
 
-#: bin/gscan2pdf:998
+#: bin/gscan2pdf:933
 msgid "Duplex"
 msgstr ""
 
-#: bin/gscan2pdf:1007
+#: bin/gscan2pdf:942
 msgid "Layout"
 msgstr "Postavitev"
 
-#: bin/gscan2pdf:1010
+#: bin/gscan2pdf:945
 msgid "Single"
 msgstr "Enojno"
 
-#: bin/gscan2pdf:1011
+#: bin/gscan2pdf:946
 msgid "One page per sheet, oriented upwards without rotation."
 msgstr "Ena stran na list, pokončna brez rotacije"
 
-#: bin/gscan2pdf:1014
+#: bin/gscan2pdf:949
 msgid "Double"
 msgstr "Dvojno"
 
-#: bin/gscan2pdf:1015
+#: bin/gscan2pdf:950
 msgid ""
 "Two pages per sheet, landscape orientation (one page on the left half, one "
 "page on the right half)."
 msgstr ""
 "Dve strani na stran, ležeče (ena stran na levi polovici, druga na desni)"
 
-#: bin/gscan2pdf:1022
+#: bin/gscan2pdf:957
+msgid "# Output pages"
+msgstr ""
+
+#: bin/gscan2pdf:958
+msgid "Number of pages to output."
+msgstr ""
+
+#: bin/gscan2pdf:966
 msgid "No deskew"
 msgstr "Brez odstranjevanja nagiba"
 
-#: bin/gscan2pdf:1023
+#: bin/gscan2pdf:967
 msgid "Disable deskewing."
 msgstr "Onemogoči odstranjevanje nagiba"
 
-#: bin/gscan2pdf:1028
+#: bin/gscan2pdf:972
 msgid "No mask scan"
 msgstr "Brez maske skeniranja"
 
-#: bin/gscan2pdf:1029
+#: bin/gscan2pdf:973
 msgid "Disable mask detection."
 msgstr "Onemogoči zaznavanje maske."
 
-#: bin/gscan2pdf:1034
+#: bin/gscan2pdf:978
 msgid "No black filter"
 msgstr "Brez črnega filtra"
 
-#: bin/gscan2pdf:1035
+#: bin/gscan2pdf:979
 msgid "Disable black area scan."
 msgstr "Onemogoči skeniranje črne površine."
 
-#: bin/gscan2pdf:1040
+#: bin/gscan2pdf:984
 msgid "No gray filter"
 msgstr "Brez sivinskega filtra"
 
-#: bin/gscan2pdf:1041
+#: bin/gscan2pdf:985
 msgid "Disable gray area scan."
 msgstr "Onemogoči skerniranje sive površine."
 
-#: bin/gscan2pdf:1046
+#: bin/gscan2pdf:990
 msgid "No noise filter"
 msgstr "Brez filtra za šum"
 
-#: bin/gscan2pdf:1047
+#: bin/gscan2pdf:991
 msgid "Disable noise filter."
 msgstr "Onemogoči filter za šum."
 
-#: bin/gscan2pdf:1052
+#: bin/gscan2pdf:996
 msgid "No blur filter"
 msgstr "Brez filtra zamegljenosti"
 
-#: bin/gscan2pdf:1053
+#: bin/gscan2pdf:997
 msgid "Disable blur filter."
 msgstr "Onemogoči filter zamegljenosti"
 
-#: bin/gscan2pdf:1058
+#: bin/gscan2pdf:1002
 msgid "No border scan"
 msgstr "Brez skeniranja robov"
 
-#: bin/gscan2pdf:1059
+#: bin/gscan2pdf:1003
 msgid "Disable border scanning."
 msgstr "Onemogoči skeniranje robov."
 
-#: bin/gscan2pdf:1064
+#: bin/gscan2pdf:1008
 msgid "No border align"
 msgstr "Brez poravnave robov"
 
-#: bin/gscan2pdf:1065
+#: bin/gscan2pdf:1009
 msgid "Disable aligning of the area detected by border scanning."
 msgstr "Onemogoči poravnavo površine, ki jo zazna skeniranje robov."
 
-#: bin/gscan2pdf:1070
+#: bin/gscan2pdf:1014
 msgid "Deskew to edge"
 msgstr ""
 
-#: bin/gscan2pdf:1071
+#: bin/gscan2pdf:1015
 msgid ""
 "Edges from which to scan for rotation. Each edge of a mask can be used to "
 "detect the mask's rotation. If multiple edges are specified, the average "
@@ -602,99 +610,99 @@ msgstr ""
 "zaznavanje zasuka. Če je določenih več robov, bo uporabljena povprečna "
 "vrednost, razen če bo statistični odklon prekoračil --deskew-scan-deviation."
 
-#: bin/gscan2pdf:1075 bin/gscan2pdf:1103 bin/gscan2pdf:4716 bin/gscan2pdf:4776
-#: bin/gscan2pdf:4917
+#: bin/gscan2pdf:1019 bin/gscan2pdf:1047 bin/gscan2pdf:4660 bin/gscan2pdf:4720
+#: bin/gscan2pdf:4861
 msgid "Left"
 msgstr "Levo"
 
-#: bin/gscan2pdf:1076
+#: bin/gscan2pdf:1020
 msgid "Use 'left' for scanning from the left edge."
 msgstr "Uporabi 'levo' za skeniranje z levega robu."
 
-#: bin/gscan2pdf:1080 bin/gscan2pdf:1108 bin/gscan2pdf:4717 bin/gscan2pdf:4780
-#: bin/gscan2pdf:4918
+#: bin/gscan2pdf:1024 bin/gscan2pdf:1052 bin/gscan2pdf:4661 bin/gscan2pdf:4724
+#: bin/gscan2pdf:4862
 msgid "Top"
 msgstr "Vrh"
 
-#: bin/gscan2pdf:1081
+#: bin/gscan2pdf:1025
 msgid "Use 'top' for scanning from the top edge."
 msgstr "Uporabi 'vrh'  za skeniranje z zgornjega robu."
 
-#: bin/gscan2pdf:1085 bin/gscan2pdf:1113
+#: bin/gscan2pdf:1029 bin/gscan2pdf:1057
 msgid "Right"
 msgstr "Desno"
 
-#: bin/gscan2pdf:1086
+#: bin/gscan2pdf:1030
 msgid "Use 'right' for scanning from the right edge."
 msgstr "Uporabi 'desno' za skeniranje z desnega robu."
 
-#: bin/gscan2pdf:1090 bin/gscan2pdf:1118
+#: bin/gscan2pdf:1034 bin/gscan2pdf:1062
 msgid "Bottom"
 msgstr "Dno"
 
-#: bin/gscan2pdf:1091
+#: bin/gscan2pdf:1035
 msgid "Use 'bottom' for scanning from the bottom."
 msgstr "Uporabi 'dno' za skeniranje s spodnjega robu."
 
-#: bin/gscan2pdf:1098
+#: bin/gscan2pdf:1042
 msgid "Align to edge"
 msgstr "Poravnaj to roba"
 
-#: bin/gscan2pdf:1099
+#: bin/gscan2pdf:1043
 msgid "Edge to which to align the page."
 msgstr "Rob do katerega bo stran poravnana."
 
-#: bin/gscan2pdf:1104
+#: bin/gscan2pdf:1048
 msgid "Use 'left' to align to the left edge."
 msgstr "Uporabi 'levo' za poravnavo ob desnem robu."
 
-#: bin/gscan2pdf:1109
+#: bin/gscan2pdf:1053
 msgid "Use 'top' to align to the top edge."
 msgstr "Uporabi 'vrh' za poravnavno ob zgornjem robu"
 
-#: bin/gscan2pdf:1114
+#: bin/gscan2pdf:1058
 msgid "Use 'right' to align to the right edge."
 msgstr "Uporabi 'desno' za poravnavo ob desne robu."
 
-#: bin/gscan2pdf:1119
+#: bin/gscan2pdf:1063
 msgid "Use 'bottom' to align to the bottom."
 msgstr "Uporabi 'dno' za poravnavo ob spodnjem robu."
 
-#: bin/gscan2pdf:1125
+#: bin/gscan2pdf:1069
 msgid "Border margin"
 msgstr "Odmik roba"
 
-#: bin/gscan2pdf:1129
+#: bin/gscan2pdf:1073
 msgid "Vertical margin"
 msgstr "Vertikalni odmik"
 
-#: bin/gscan2pdf:1130
+#: bin/gscan2pdf:1074
 msgid ""
 "Vertical distance to keep from the sheet edge when aligning a border area."
 msgstr "Vertikalna razdalja, ki naj ohrani rob lista ob poravnavi površine."
 
-#: bin/gscan2pdf:1137
+#: bin/gscan2pdf:1081
 msgid "Horizontal margin"
 msgstr "Horizontalni odmik"
 
-#: bin/gscan2pdf:1138
+#: bin/gscan2pdf:1082
 msgid ""
 "Horizontal distance to keep from the sheet edge when aligning a border area."
 msgstr "Horizontalna razdalja, ki ohrani rob lista ob poravnavi površine."
 
-#: bin/gscan2pdf:1147
+#: bin/gscan2pdf:1091
 msgid "White threshold"
 msgstr "Prag beline"
 
-#: bin/gscan2pdf:1148
+#: bin/gscan2pdf:1092
 msgid "Brightness ratio above which a pixel is considered white."
 msgstr "Razmerje svetlosti nad katerim se točka smatra za belega."
 
-#: bin/gscan2pdf:1156
+#: bin/gscan2pdf:1100
 msgid "Black threshold"
 msgstr "Prag črnine"
 
-#: bin/gscan2pdf:1157
+#: bin/gscan2pdf:1101
 msgid ""
 "Brightness ratio below which a pixel is considered black (non-gray). This is "
 "used by the gray-filter. This value is also used when converting a grayscale "
@@ -704,47 +712,47 @@ msgstr ""
 "se za sivinski filter. Ta vrednost se uporablja tudi ob pretvorbi sivinske "
 "slike v črno-beli način."
 
-#: bin/gscan2pdf:1229
+#: bin/gscan2pdf:1173
 msgid "GOCR"
 msgstr "GOCR"
 
-#: bin/gscan2pdf:1229
+#: bin/gscan2pdf:1173
 msgid "Process image with GOCR."
 msgstr "Procesiraj sliko z GOCR"
 
-#: bin/gscan2pdf:1232
+#: bin/gscan2pdf:1176
 msgid "Tesseract"
 msgstr ""
 
-#: bin/gscan2pdf:1232
+#: bin/gscan2pdf:1176
 msgid "Process image with Tesseract."
 msgstr "Obdelovanje slike s programom Tesseract"
 
-#: bin/gscan2pdf:1236
+#: bin/gscan2pdf:1180
 msgid "PDF creation requires PDF::API2\n"
 msgstr "Ustvarjanje PDF zahteva PDF::API2\n"
 
-#: bin/gscan2pdf:1242
+#: bin/gscan2pdf:1186
 msgid "The scanadf frontend is not available\n"
 msgstr "Scanadf ni na voljo\n"
 
-#: bin/gscan2pdf:1246
+#: bin/gscan2pdf:1190
 msgid "Save image and Save as PDF both require imagemagick\n"
 msgstr "Shranjevanje slike in PDF formata zahteva nameščen imagemagick\n"
 
-#: bin/gscan2pdf:1250
+#: bin/gscan2pdf:1194
 msgid "Save image requires libtiff\n"
 msgstr "Shranjevanje slike zahteva nameščen libtiff\n"
 
-#: bin/gscan2pdf:1254
+#: bin/gscan2pdf:1198
 msgid "Save as DjVu requires djvulibre-bin\n"
 msgstr "Shranjevanje kot DjVu zahteva nameščen djvulibre-bin\n"
 
-#: bin/gscan2pdf:1258
+#: bin/gscan2pdf:1202
 msgid "Email as PDF requires xdg-email\n"
 msgstr "Pošiljanje PDF po elektronski pošti zahteva nameščen xdg-email\n"
 
-#: bin/gscan2pdf:1298
+#: bin/gscan2pdf:1242
 msgid ""
 "The rotating options, unpaper support and the scanadf frontend require "
 "perlmagick\n"
@@ -752,300 +760,300 @@ msgstr ""
 "Možnosti sukanja, obdelave z unpaper in scanadf zahtevajo nameščen "
 "perlmagick\n"
 
-#: bin/gscan2pdf:1304
+#: bin/gscan2pdf:1248
 msgid "unpaper missing\n"
 msgstr "manjkajoči program unpaper\n"
 
-#: bin/gscan2pdf:1310
+#: bin/gscan2pdf:1254
 msgid "OCR requires gocr or tesseract\n"
 msgstr "OCR zahteva nameščen gocr ali tesseract\n"
 
-#: bin/gscan2pdf:1315
+#: bin/gscan2pdf:1259
 msgid "Warning: missing packages"
 msgstr "Pozor: manjkajoči paketi"
 
-#: bin/gscan2pdf:1321
+#: bin/gscan2pdf:1265
 msgid "Don't show this message again"
 msgstr "Tega sporočila ne prikaži več"
 
-#: bin/gscan2pdf:1454
+#: bin/gscan2pdf:1398
 msgid "Warning: "
 msgstr "Opozorilo: "
 
-#: bin/gscan2pdf:1461
+#: bin/gscan2pdf:1405
 #, perl-format
 msgid "Information: got %s on second attempt\n"
 msgstr "Obvestilo: dobil %s v drugem poskusu\n"
 
-#: bin/gscan2pdf:1526
+#: bin/gscan2pdf:1470
 msgid "Import image from file"
 msgstr "Uvozi sliko iz datoteke"
 
-#: bin/gscan2pdf:1544
+#: bin/gscan2pdf:1488
 msgid "Importing"
 msgstr "Uvažam"
 
-#: bin/gscan2pdf:1586
+#: bin/gscan2pdf:1530
 msgid "Pages to extract"
 msgstr "Strani za izvleko"
 
-#: bin/gscan2pdf:1589
+#: bin/gscan2pdf:1533
 msgid "First page to extract"
 msgstr "Prva stran za izvleko"
 
-#: bin/gscan2pdf:1595
+#: bin/gscan2pdf:1539
 msgid "Last page to extract"
 msgstr "Zadnja stran za izvleko"
 
-#: bin/gscan2pdf:1671
+#: bin/gscan2pdf:1615
 #, perl-format
 msgid "Can't open %s: %s"
 msgstr "Ne morem odpreti %s: %s"
 
-#: bin/gscan2pdf:1696
+#: bin/gscan2pdf:1640
 msgid "Unknown DjVu file structure. Please contact the author."
 msgstr "Neznana struktura DjVu datoteke. Prosim obrnite se na avtorja."
 
-#: bin/gscan2pdf:1722 bin/gscan2pdf:1783 bin/gscan2pdf:1833
+#: bin/gscan2pdf:1666 bin/gscan2pdf:1727 bin/gscan2pdf:1777
 #, perl-format
 msgid "Importing image %i of %i"
 msgstr "Uvažam sliko %i od %i"
 
-#: bin/gscan2pdf:1744
+#: bin/gscan2pdf:1688
 #, perl-format
 msgid "%s is not a recognised image type"
 msgstr "%s ne prepoznam kot datoteko s sliko"
 
-#: bin/gscan2pdf:1772
+#: bin/gscan2pdf:1716
 msgid "Extracting images from PDF"
 msgstr "Izvlečenje slike iz PDF"
 
-#: bin/gscan2pdf:1774
+#: bin/gscan2pdf:1718
 msgid "Error extracting images from PDF"
 msgstr "Napaka pri izvlečenju slik iz PDF"
 
-#: bin/gscan2pdf:1791
+#: bin/gscan2pdf:1735
 msgid "Error extracting PDF infomation"
 msgstr "Napaka pri izvlečenju PDF informacije"
 
-#: bin/gscan2pdf:1795
+#: bin/gscan2pdf:1739
 msgid "Extracting TIFF infomation"
 msgstr "Izvlečenje TIFF informacije"
 
-#: bin/gscan2pdf:1843 bin/gscan2pdf:1850
+#: bin/gscan2pdf:1787 bin/gscan2pdf:1794
 #, perl-format
 msgid "Importing %s"
 msgstr "Uvažam %s"
 
-#: bin/gscan2pdf:1887
+#: bin/gscan2pdf:1831
 msgid "Page Range"
 msgstr "Niz strani"
 
-#: bin/gscan2pdf:1965
+#: bin/gscan2pdf:1901
 msgid "Metadata"
 msgstr "Metapodatki"
 
-#: bin/gscan2pdf:1974
+#: bin/gscan2pdf:1910
 msgid "Date"
 msgstr "Datum"
 
-#: bin/gscan2pdf:1983
+#: bin/gscan2pdf:1919
 msgid "Select Date"
 msgstr "Izberi datum"
 
-#: bin/gscan2pdf:2000
+#: bin/gscan2pdf:1936
 msgid "Today"
 msgstr "Danes"
 
-#: bin/gscan2pdf:2011
+#: bin/gscan2pdf:1947
 msgid "Year-Month-Day"
 msgstr "Leto-mesec-dan"
 
-#: bin/gscan2pdf:2017
+#: bin/gscan2pdf:1953
 msgid "Document author"
 msgstr "Avtor dokumenta"
 
-#: bin/gscan2pdf:2026
+#: bin/gscan2pdf:1962
 msgid "Title"
 msgstr "Naslov"
 
-#: bin/gscan2pdf:2035
+#: bin/gscan2pdf:1971
 msgid "Subject"
 msgstr "Zadeva"
 
-#: bin/gscan2pdf:2044
+#: bin/gscan2pdf:1980
 msgid "Keywords"
 msgstr "Ključne besede"
 
-#: bin/gscan2pdf:2091
+#: bin/gscan2pdf:2027
 msgid "Saving PDF"
 msgstr "Shranjujem PDF"
 
-#: bin/gscan2pdf:2117
+#: bin/gscan2pdf:2053
 msgid "Setting up PDF"
 msgstr "Nastavljam PDF"
 
-#: bin/gscan2pdf:2124
+#: bin/gscan2pdf:2060
 #, perl-format
 msgid "Saving page %i of %i"
 msgstr "Shranjujem stran %i od %i"
 
-#: bin/gscan2pdf:2242 bin/gscan2pdf:2248
+#: bin/gscan2pdf:2179 bin/gscan2pdf:2185
 #, perl-format
 msgid "Error embedding file image in %s format to PDF: %s"
 msgstr "Napaka pri vdelanju datoteke s sliko %s v PDF format: %s"
 
-#: bin/gscan2pdf:2255
+#: bin/gscan2pdf:2192
 msgid "Closing PDF"
 msgstr "Zapiram PDF"
 
-#: bin/gscan2pdf:2305
+#: bin/gscan2pdf:2242
 msgid "PDF filename"
 msgstr "Ime PDF datoteke"
 
-#: bin/gscan2pdf:2331 bin/gscan2pdf:2598 bin/gscan2pdf:2644 bin/gscan2pdf:2697
-#: bin/gscan2pdf:2897
+#: bin/gscan2pdf:2268 bin/gscan2pdf:2535 bin/gscan2pdf:2581 bin/gscan2pdf:2634
+#: bin/gscan2pdf:2837
 #, perl-format
 msgid "File %s is read-only"
 msgstr "Datoteka %s je samo za branje"
 
-#: bin/gscan2pdf:2359
+#: bin/gscan2pdf:2296
 msgid "JPEG Quality"
 msgstr "Kakovost JPEG"
 
-#: bin/gscan2pdf:2374
+#: bin/gscan2pdf:2311
 msgid "Downsample to"
 msgstr ""
 
-#: bin/gscan2pdf:2379
+#: bin/gscan2pdf:2316
 msgid "dpi"
 msgstr "dpi"
 
-#: bin/gscan2pdf:2394 bin/gscan2pdf:2463
+#: bin/gscan2pdf:2331 bin/gscan2pdf:2400
 msgid "LZW"
 msgstr "LZW"
 
-#: bin/gscan2pdf:2394 bin/gscan2pdf:2463
+#: bin/gscan2pdf:2331 bin/gscan2pdf:2400
 msgid "Compress output with Lempel-Ziv & Welch encoding."
 msgstr "Stisni izhodne podatke z Lempel-Ziv & Welch kodiranjem."
 
-#: bin/gscan2pdf:2395 bin/gscan2pdf:2464
+#: bin/gscan2pdf:2332 bin/gscan2pdf:2401
 msgid "Zip"
 msgstr "Zip"
 
-#: bin/gscan2pdf:2395 bin/gscan2pdf:2464
+#: bin/gscan2pdf:2332 bin/gscan2pdf:2401
 msgid "Compress output with deflate encoding."
 msgstr "Stisni izhodne podatke s spuščenim kodiranjem."
 
-#: bin/gscan2pdf:2396 bin/gscan2pdf:2466
+#: bin/gscan2pdf:2333 bin/gscan2pdf:2403
 msgid "Packbits"
 msgstr "Paketni biti"
 
-#: bin/gscan2pdf:2396 bin/gscan2pdf:2466
+#: bin/gscan2pdf:2333 bin/gscan2pdf:2403
 msgid "Compress output with Packbits encoding."
 msgstr "Stisni izhodne podatke s kodiranjem s paketnimi biti."
 
-#: bin/gscan2pdf:2397 bin/gscan2pdf:2467
+#: bin/gscan2pdf:2334 bin/gscan2pdf:2404
 msgid "G3"
 msgstr "G3"
 
-#: bin/gscan2pdf:2397 bin/gscan2pdf:2467
+#: bin/gscan2pdf:2334 bin/gscan2pdf:2404
 msgid "Compress output with CCITT Group 3 encoding."
 msgstr "Stisni izhodne podatke s CCITT skupine 3 kodiranjem."
 
-#: bin/gscan2pdf:2398 bin/gscan2pdf:2468
+#: bin/gscan2pdf:2335 bin/gscan2pdf:2405
 msgid "G4"
 msgstr "G4"
 
-#: bin/gscan2pdf:2398 bin/gscan2pdf:2468
+#: bin/gscan2pdf:2335 bin/gscan2pdf:2405
 msgid "Compress output with CCITT Group 4 encoding."
 msgstr "Stisni izhodne podatke s CCITT skupine 4 kodiranjem."
 
-#: bin/gscan2pdf:2399 bin/gscan2pdf:2454
+#: bin/gscan2pdf:2336 bin/gscan2pdf:2391
 msgid "PNG"
 msgstr "PNG"
 
-#: bin/gscan2pdf:2399
+#: bin/gscan2pdf:2336
 msgid "Compress output with PNG encoding."
 msgstr "Stisni izhodne podatke s PNG kodiranjem."
 
-#: bin/gscan2pdf:2400 bin/gscan2pdf:2465
+#: bin/gscan2pdf:2337 bin/gscan2pdf:2402
 msgid "Compress output with JPEG encoding."
 msgstr "Stisni izhodne podatke z JPEG kodiranjem."
 
-#: bin/gscan2pdf:2401 bin/gscan2pdf:2469
+#: bin/gscan2pdf:2338 bin/gscan2pdf:2406
 msgid "Use no compression algorithm on output."
 msgstr "Pri izhodnih podatkih ne uporabi algoritma za stiskanje."
 
-#: bin/gscan2pdf:2447
+#: bin/gscan2pdf:2384
 msgid "Image type"
 msgstr "Vrsta slike"
 
-#: bin/gscan2pdf:2451
+#: bin/gscan2pdf:2388
 msgid "PDF"
 msgstr "PDF"
 
-#: bin/gscan2pdf:2451
+#: bin/gscan2pdf:2388
 msgid "Portable Document Format"
 msgstr "PDF (Portable Document Format)"
 
-#: bin/gscan2pdf:2452
+#: bin/gscan2pdf:2389
 msgid "GIF"
 msgstr "GIF"
 
-#: bin/gscan2pdf:2452
+#: bin/gscan2pdf:2389
 msgid "CompuServe graphics interchange format"
 msgstr "CompuServe grafična oblika"
 
-#: bin/gscan2pdf:2453
+#: bin/gscan2pdf:2390
 msgid "Joint Photographic Experts Group JFIF format"
 msgstr "Joint Photographic Experts Group JFIF oblika"
 
-#: bin/gscan2pdf:2454
+#: bin/gscan2pdf:2391
 msgid "Portable Network Graphics"
 msgstr "Portable Network Graphics oblika"
 
-#: bin/gscan2pdf:2455
+#: bin/gscan2pdf:2392
 msgid "PNM"
 msgstr "PNM"
 
-#: bin/gscan2pdf:2455
+#: bin/gscan2pdf:2392
 msgid "Portable anymap"
 msgstr ""
 
-#: bin/gscan2pdf:2456
+#: bin/gscan2pdf:2393
 msgid "PS"
 msgstr "PS"
 
-#: bin/gscan2pdf:2456
+#: bin/gscan2pdf:2393
 msgid "Postscript"
 msgstr "Postscript"
 
-#: bin/gscan2pdf:2457
+#: bin/gscan2pdf:2394
 msgid "TIFF"
 msgstr "TIFF"
 
-#: bin/gscan2pdf:2457
+#: bin/gscan2pdf:2394
 msgid "Tagged Image File Format"
 msgstr "Tagged Image File oblika"
 
-#: bin/gscan2pdf:2459
+#: bin/gscan2pdf:2396
 msgid "DjVu"
 msgstr "DjVu"
 
-#: bin/gscan2pdf:2459
+#: bin/gscan2pdf:2396
 msgid "Deja Vu"
 msgstr "Deja Vu"
 
-#: bin/gscan2pdf:2574
+#: bin/gscan2pdf:2511
 msgid "TIFF filename"
 msgstr "Ime datoteke TIFF"
 
-#: bin/gscan2pdf:2620
+#: bin/gscan2pdf:2557
 msgid "PS filename"
 msgstr "Ime datoteke PS"
 
-#: bin/gscan2pdf:2702
+#: bin/gscan2pdf:2639
 #, perl-format
 msgid ""
 "File %s exists.\n"
@@ -1054,457 +1062,457 @@ msgstr ""
 "Datoteka %s že obstaja.\n"
 "Jo želite prepisati?"
 
-#: bin/gscan2pdf:2715
+#: bin/gscan2pdf:2652
 msgid "Image filename"
 msgstr "Ime datoteke slike"
 
-#: bin/gscan2pdf:2743 bin/gscan2pdf:2752
+#: bin/gscan2pdf:2680 bin/gscan2pdf:2689
 msgid "Error saving image"
 msgstr "Napaka pri shranjevanju slike"
 
-#: bin/gscan2pdf:2770
+#: bin/gscan2pdf:2707
 msgid "Saving TIFF"
 msgstr "Shranjevanje TIFF"
 
-#: bin/gscan2pdf:2799
+#: bin/gscan2pdf:2737
 #, perl-format
 msgid "Converting image %i of %i to TIFF"
 msgstr "Preoblikujem sliko %i od %i v TIFF"
 
-#: bin/gscan2pdf:2805
+#: bin/gscan2pdf:2745
 msgid "Error writing TIFF"
 msgstr "Napaka pri zapisovanju datoteke TIFF"
 
-#: bin/gscan2pdf:2816
+#: bin/gscan2pdf:2756
 msgid "Concatenating TIFFs"
 msgstr "Povezujem datoteke TIFF"
 
-#: bin/gscan2pdf:2821
+#: bin/gscan2pdf:2761
 msgid "Converting to PS"
 msgstr "Preoblikujem v PS"
 
-#: bin/gscan2pdf:2873
+#: bin/gscan2pdf:2813
 msgid "DjVu filename"
 msgstr "Ime DjVu datoteke"
 
-#: bin/gscan2pdf:2907
+#: bin/gscan2pdf:2847
 msgid "Saving DjVu"
 msgstr "Shranjujem DjVU datoteko"
 
-#: bin/gscan2pdf:2934
+#: bin/gscan2pdf:2874
 #, perl-format
 msgid "Writing page %i of %i"
 msgstr "Zapisujem stran %i od %i"
 
-#: bin/gscan2pdf:2971 bin/gscan2pdf:2998
+#: bin/gscan2pdf:2913 bin/gscan2pdf:2940
 msgid "Error writing DjVu"
 msgstr "Napaka pri zapisovanju DjVu datoteke"
 
-#: bin/gscan2pdf:2989
+#: bin/gscan2pdf:2931
 #, perl-format
 msgid "Can't open file: %s"
 msgstr "Ne morem odpreti datoteke %s"
 
-#: bin/gscan2pdf:3001
+#: bin/gscan2pdf:2943
 msgid "Closing DjVu"
 msgstr "Zapiram DjVu"
 
-#: bin/gscan2pdf:3004
+#: bin/gscan2pdf:2946
 msgid "Error closing DjVu"
 msgstr "Napaka pri zapiranju DjVU datoteke"
 
-#: bin/gscan2pdf:3065
+#: bin/gscan2pdf:3007
 msgid "Email as PDF"
 msgstr "Pošlji po e-pošti kot PDF"
 
-#: bin/gscan2pdf:3114
+#: bin/gscan2pdf:3056
 msgid "Error creating email"
 msgstr "Napaka pri ustvarjanju e-pošte"
 
-#: bin/gscan2pdf:3141
+#: bin/gscan2pdf:3083
 msgid "Scan Document"
 msgstr "Skaniraj dokument"
 
-#: bin/gscan2pdf:3153
+#: bin/gscan2pdf:3095
 msgid "Page Options"
 msgstr "Možnosti strani"
 
-#: bin/gscan2pdf:3157
+#: bin/gscan2pdf:3099
 msgid "Scan Options"
 msgstr "Možnosti skaniranja"
 
-#: bin/gscan2pdf:3160
+#: bin/gscan2pdf:3102
 msgid "# Pages"
 msgstr "# strani"
 
-#: bin/gscan2pdf:3169 bin/gscan2pdf:7431
+#: bin/gscan2pdf:3111 bin/gscan2pdf:7440
 msgid "All"
 msgstr "Vse"
 
-#: bin/gscan2pdf:3170
+#: bin/gscan2pdf:3112
 msgid "Scan all pages"
 msgstr "Skaniraj vse strani"
 
-#: bin/gscan2pdf:3177 bin/gscan2pdf:3182
+#: bin/gscan2pdf:3119 bin/gscan2pdf:3124
 msgid "Set number of pages to scan"
 msgstr "Določi število strani za skeniranje"
 
-#: bin/gscan2pdf:3195
+#: bin/gscan2pdf:3137
 msgid "Extended page numbering"
 msgstr "Razširjeno številčenje strani"
 
-#: bin/gscan2pdf:3199
+#: bin/gscan2pdf:3141
 msgid "Page number"
 msgstr "Številka strani"
 
-#: bin/gscan2pdf:3208
+#: bin/gscan2pdf:3150
 msgid "Start"
 msgstr "Začetek"
 
-#: bin/gscan2pdf:3217
+#: bin/gscan2pdf:3159
 msgid "Increment"
 msgstr "Prirastek"
 
-#: bin/gscan2pdf:3243
+#: bin/gscan2pdf:3185
 msgid "Source document"
 msgstr "Izvirni dokument"
 
-#: bin/gscan2pdf:3250
+#: bin/gscan2pdf:3192
 msgid "Single sided"
 msgstr "Enostransko"
 
-#: bin/gscan2pdf:3251
+#: bin/gscan2pdf:3193
 msgid "Source document is single-sided"
 msgstr "Izvirni dokument je enostranski"
 
-#: bin/gscan2pdf:3258
+#: bin/gscan2pdf:3200
 msgid "Double sided"
 msgstr "Obojestranski"
 
-#: bin/gscan2pdf:3259
+#: bin/gscan2pdf:3201
 msgid "Source document is double-sided"
 msgstr "Izvirni dokument je obojestranski"
 
-#: bin/gscan2pdf:3265
+#: bin/gscan2pdf:3207
 msgid "Side to scan"
 msgstr "Stran za skeniranje"
 
-#: bin/gscan2pdf:3269
+#: bin/gscan2pdf:3211
 msgid "Facing"
 msgstr "Sprednja"
 
-#: bin/gscan2pdf:3269
+#: bin/gscan2pdf:3211
 msgid "Reverse"
 msgstr "Obrnjena"
 
-#: bin/gscan2pdf:3289
+#: bin/gscan2pdf:3231
 msgid "Sets which side of a double-sided document is scanned"
 msgstr "Določi katero stran obojestranskega dokumenta skeniramo"
 
-#: bin/gscan2pdf:3335
+#: bin/gscan2pdf:3277
 msgid "Post-processing"
 msgstr ""
 
-#: bin/gscan2pdf:3344 bin/gscan2pdf:3366
+#: bin/gscan2pdf:3286 bin/gscan2pdf:3308
 msgid "Rotate"
 msgstr "Zasukaj"
 
-#: bin/gscan2pdf:3345 bin/gscan2pdf:3367
+#: bin/gscan2pdf:3287 bin/gscan2pdf:3309
 msgid "Rotate image after scanning"
 msgstr "Zasukaj sliko po skeniranju"
 
-#: bin/gscan2pdf:3348
+#: bin/gscan2pdf:3290
 msgid "Both sides"
 msgstr "Obe strani"
 
-#: bin/gscan2pdf:3348
+#: bin/gscan2pdf:3290
 msgid "Both sides."
 msgstr "Obe strani."
 
-#: bin/gscan2pdf:3349
+#: bin/gscan2pdf:3291
 msgid "Facing side"
 msgstr "Sprednjo stran"
 
-#: bin/gscan2pdf:3349
+#: bin/gscan2pdf:3291
 msgid "Facing side."
 msgstr "Sprednjo stran."
 
-#: bin/gscan2pdf:3350
+#: bin/gscan2pdf:3292
 msgid "Reverse side"
 msgstr "Zadnjo stran"
 
-#: bin/gscan2pdf:3350
+#: bin/gscan2pdf:3292
 msgid "Reverse side."
 msgstr "Zadnjo stran."
 
-#: bin/gscan2pdf:3353 bin/gscan2pdf:3371
+#: bin/gscan2pdf:3295 bin/gscan2pdf:3313
 msgid "Select side to rotate"
 msgstr "Izberi stran za zasuk"
 
-#: bin/gscan2pdf:3356
+#: bin/gscan2pdf:3298
 msgid "90"
 msgstr "90"
 
-#: bin/gscan2pdf:3356
+#: bin/gscan2pdf:3298
 msgid "Rotate image 90 degrees clockwise."
 msgstr "Zasukaj sliko za 90 stopinj v smeri urinega kazalca"
 
-#: bin/gscan2pdf:3357
+#: bin/gscan2pdf:3299
 msgid "180"
 msgstr "180"
 
-#: bin/gscan2pdf:3357
+#: bin/gscan2pdf:3299
 msgid "Rotate image 180 degrees clockwise."
 msgstr "Zasukaj sliko za 180 stopinj v smeri urinega kazalca"
 
-#: bin/gscan2pdf:3358
+#: bin/gscan2pdf:3300
 msgid "270"
 msgstr "270"
 
-#: bin/gscan2pdf:3358
+#: bin/gscan2pdf:3300
 msgid "Rotate image 90 degrees anticlockwise."
 msgstr "Zasukaj sliko za 90 stopinj v nasprotni smeri urinega kazalca"
 
-#: bin/gscan2pdf:3361 bin/gscan2pdf:3374
+#: bin/gscan2pdf:3303 bin/gscan2pdf:3316
 msgid "Select direction of rotation"
 msgstr "Izberi smer zasuka"
 
-#: bin/gscan2pdf:3437
+#: bin/gscan2pdf:3379
 msgid "Clean up images"
 msgstr "Počisti slike"
 
-#: bin/gscan2pdf:3447
+#: bin/gscan2pdf:3389
 msgid "Options"
 msgstr "Možnosti"
 
-#: bin/gscan2pdf:3448
+#: bin/gscan2pdf:3390
 msgid "Set unpaper options"
 msgstr "Nastavi možnosti programa unpaper"
 
-#: bin/gscan2pdf:3451
+#: bin/gscan2pdf:3393
 msgid "unpaper options"
 msgstr "možnosti programa unpaper"
 
-#: bin/gscan2pdf:3480 bin/gscan2pdf:3481
+#: bin/gscan2pdf:3422 bin/gscan2pdf:3423
 msgid "OCR scanned pages"
 msgstr "Skerirane strani pošlji skozi OCR"
 
-#: bin/gscan2pdf:3491
+#: bin/gscan2pdf:3433
 msgid "Select OCR engine"
 msgstr "Izberi OCR program"
 
-#: bin/gscan2pdf:3519
+#: bin/gscan2pdf:3461
 msgid "Device-dependent options"
 msgstr "Možnosti, ki so odvisne od naprave"
 
-#: bin/gscan2pdf:3530
+#: bin/gscan2pdf:3472
 msgid "Scan"
 msgstr "Skeniraj"
 
-#: bin/gscan2pdf:3591
+#: bin/gscan2pdf:3533
 msgid "Must scan facing pages first"
 msgstr "Najprej moramo skenirati sprednje strani"
 
-#: bin/gscan2pdf:3656
+#: bin/gscan2pdf:3598
 msgid "Fetching list of devices"
 msgstr "Iščem naprave"
 
-#: bin/gscan2pdf:3698
+#: bin/gscan2pdf:3640
 msgid "No scanners found"
 msgstr "Ne najdem nobenega skenerja"
 
-#: bin/gscan2pdf:3774
+#: bin/gscan2pdf:3716
 msgid "Device"
 msgstr "Naprava"
 
-#: bin/gscan2pdf:3793
+#: bin/gscan2pdf:3735
 msgid "Sets the device to be used for the scan"
 msgstr "Določi napravo, ki jo bomo uporabljali za skeniranje"
 
-#: bin/gscan2pdf:3937 bin/gscan2pdf:3941 bin/gscan2pdf:3973 bin/gscan2pdf:4092
-#: bin/gscan2pdf:4096
+#: bin/gscan2pdf:3879 bin/gscan2pdf:3883 bin/gscan2pdf:3915 bin/gscan2pdf:4034
+#: bin/gscan2pdf:4038
 msgid "Scanning"
 msgstr "Skeniranje"
 
-#: bin/gscan2pdf:3973
+#: bin/gscan2pdf:3915
 msgid "pages"
 msgstr "strani"
 
-#: bin/gscan2pdf:3976
+#: bin/gscan2pdf:3918
 #, perl-format
 msgid "Scanning page %i..."
 msgstr "Skeniram stran %i..."
 
-#: bin/gscan2pdf:3988 bin/gscan2pdf:4145
+#: bin/gscan2pdf:3930 bin/gscan2pdf:4087
 msgid "Unable to load image"
 msgstr "Ne morem naložiti slike"
 
-#: bin/gscan2pdf:3998 bin/gscan2pdf:4132
+#: bin/gscan2pdf:3940 bin/gscan2pdf:4074
 msgid "Scanner warming up"
 msgstr "Ogrevanje skenerja"
 
-#: bin/gscan2pdf:4017 bin/gscan2pdf:4163
+#: bin/gscan2pdf:3959 bin/gscan2pdf:4105
 msgid "Device busy"
 msgstr "Naprava je zasedena"
 
-#: bin/gscan2pdf:4020 bin/gscan2pdf:4166
+#: bin/gscan2pdf:3962 bin/gscan2pdf:4108
 msgid "Unknown message: "
 msgstr "Neznano sporočilo: "
 
-#: bin/gscan2pdf:4135
+#: bin/gscan2pdf:4077
 #, perl-format
 msgid "Scanned page %i..."
 msgstr "Skenirana stran %i..."
 
-#: bin/gscan2pdf:4281 bin/gscan2pdf:4285
+#: bin/gscan2pdf:4223 bin/gscan2pdf:4227
 msgid "Error importing image"
 msgstr "Napaka pri uvozu slike"
 
-#: bin/gscan2pdf:4400
+#: bin/gscan2pdf:4343
 msgid "Error pasting image"
 msgstr "Napaka pri lepljenju slike"
 
-#: bin/gscan2pdf:4523
+#: bin/gscan2pdf:4467
 msgid "Patches gratefully received from:"
 msgstr "Popravki velikodušno sprejeti od:"
 
-#: bin/gscan2pdf:4525
+#: bin/gscan2pdf:4469
 msgid "To aid the scan-to-PDF process"
 msgstr ""
 
-#: bin/gscan2pdf:4526
+#: bin/gscan2pdf:4470
 msgid "Copyright 2006--2008 Jeffrey Ratcliffe"
 msgstr "Avtorske pravice 2006--2008 Jeffrey Ratcliffe"
 
-#: bin/gscan2pdf:4618 bin/gscan2pdf:5109
+#: bin/gscan2pdf:4562 bin/gscan2pdf:5053
 msgid "Updating options"
 msgstr "Možnosti posodabljanja"
 
-#: bin/gscan2pdf:4696 bin/gscan2pdf:4713
+#: bin/gscan2pdf:4640 bin/gscan2pdf:4657
 msgid "Paper size"
 msgstr "Velikost papirja"
 
-#: bin/gscan2pdf:4700 bin/gscan2pdf:4789 bin/gscan2pdf:5294
+#: bin/gscan2pdf:4644 bin/gscan2pdf:4733 bin/gscan2pdf:5239
 msgid "Manual"
 msgstr "Ročno"
 
-#: bin/gscan2pdf:4701 bin/gscan2pdf:4786
+#: bin/gscan2pdf:4645 bin/gscan2pdf:4730
 msgid "Edit"
 msgstr "Uredi"
 
-#: bin/gscan2pdf:4702
+#: bin/gscan2pdf:4646
 msgid "Selects or edits the paper size"
 msgstr "Izbere ali uredi velikost papirja"
 
-#: bin/gscan2pdf:4714 bin/gscan2pdf:4768 bin/gscan2pdf:4915
+#: bin/gscan2pdf:4658 bin/gscan2pdf:4712 bin/gscan2pdf:4859
 msgid "Width"
 msgstr "Širina"
 
-#: bin/gscan2pdf:4715 bin/gscan2pdf:4772 bin/gscan2pdf:4916
+#: bin/gscan2pdf:4659 bin/gscan2pdf:4716 bin/gscan2pdf:4860
 msgid "Height"
 msgstr "Višina"
 
-#: bin/gscan2pdf:4769
+#: bin/gscan2pdf:4713
 msgid "Width of scan area"
 msgstr "Širina skeniranega območja"
 
-#: bin/gscan2pdf:4773
+#: bin/gscan2pdf:4717
 msgid "Height of scan area"
 msgstr "Višina skeniranega območja"
 
-#: bin/gscan2pdf:4777
+#: bin/gscan2pdf:4721
 msgid "Top-left x position of scan area"
 msgstr "Zgornja leva X pozicija skeniranega območja"
 
-#: bin/gscan2pdf:4781
+#: bin/gscan2pdf:4725
 msgid "Top-left y position of scan area"
 msgstr "Zgornja leva Y pozicija skeniranega območja"
 
-#: bin/gscan2pdf:4901
+#: bin/gscan2pdf:4845
 msgid "Edit paper size"
 msgstr "Uredi velikost papirja"
 
-#: bin/gscan2pdf:4914
+#: bin/gscan2pdf:4858
 msgid "Name"
 msgstr "Ime"
 
-#: bin/gscan2pdf:4961
+#: bin/gscan2pdf:4905
 msgid "Cannot delete all paper sizes"
 msgstr "Ne morem izbrisate vseh velikosti papirja"
 
-#: bin/gscan2pdf:5004
+#: bin/gscan2pdf:4948
 msgid ""
 "The following paper sizes are too big to be scanned by the selected device:"
 msgstr ""
 "Naslednje velikosti papirja so prevelike za skeniranje z izbrano napravo:"
 
-#: bin/gscan2pdf:5371
+#: bin/gscan2pdf:5316
 msgid "Rotating"
 msgstr "Sukanje"
 
-#: bin/gscan2pdf:5447
+#: bin/gscan2pdf:5393
 #, perl-format
 msgid "Rotating page %i of %i"
 msgstr "Sukanje strani %i od %i"
 
-#: bin/gscan2pdf:5521 bin/gscan2pdf:5784
+#: bin/gscan2pdf:5467 bin/gscan2pdf:5732
 msgid "%"
 msgstr "%"
 
-#: bin/gscan2pdf:5540
+#: bin/gscan2pdf:5486
 msgid "Applying threshold"
 msgstr "Določam prag"
 
-#: bin/gscan2pdf:5599
+#: bin/gscan2pdf:5546
 #, perl-format
 msgid "Applying threshold to page %i of %i"
 msgstr "Določam prag strani %i od %i"
 
-#: bin/gscan2pdf:5636
+#: bin/gscan2pdf:5583
 msgid "Negate"
 msgstr ""
 
-#: bin/gscan2pdf:5653
+#: bin/gscan2pdf:5600
 msgid "Applying negate"
 msgstr ""
 
-#: bin/gscan2pdf:5713
+#: bin/gscan2pdf:5661
 #, perl-format
 msgid "Applying negate to page %i of %i"
 msgstr ""
 
-#: bin/gscan2pdf:5750
+#: bin/gscan2pdf:5698
 msgid "Unsharp mask"
 msgstr "Maska ostrine"
 
-#: bin/gscan2pdf:5758
+#: bin/gscan2pdf:5706
 msgid "Radius"
 msgstr "Radij"
 
-#: bin/gscan2pdf:5760 bin/gscan2pdf:5772
+#: bin/gscan2pdf:5708 bin/gscan2pdf:5720
 msgid "pixels"
 msgstr "točk"
 
-#: bin/gscan2pdf:5764
+#: bin/gscan2pdf:5712
 msgid ""
 "The radius of the Gaussian, in pixels, not counting the center pixel (0 = "
 "automatic)."
 msgstr ""
 "Radij po Gaussu v točkah brez upoštevanja sredinske točke (0 = samodejno)"
 
-#: bin/gscan2pdf:5770
+#: bin/gscan2pdf:5718
 msgid "Sigma"
 msgstr "Sigma"
 
-#: bin/gscan2pdf:5776
+#: bin/gscan2pdf:5724
 msgid "The standard deviation of the Gaussian."
 msgstr "Standardni odklon po Gaussu"
 
-#: bin/gscan2pdf:5782
+#: bin/gscan2pdf:5730
 msgid "Amount"
 msgstr "Količina"
 
-#: bin/gscan2pdf:5788
+#: bin/gscan2pdf:5736
 msgid ""
 "The percentage of the difference between the original and the blur image "
 "that is added back into the original."
@@ -1512,121 +1520,121 @@ msgstr ""
 "Odstotek razlike med izvirno in zamegljeno sliko, ki je dodana nazaj na "
 "izvirno sliko."
 
-#: bin/gscan2pdf:5798
+#: bin/gscan2pdf:5746
 msgid ""
 "The threshold, as a fraction of QuantumRange, needed to apply the difference "
 "amount."
 msgstr ""
 "Prag, kot delec kvantnega območja, potreben za določanje velikosti razlike."
 
-#: bin/gscan2pdf:5817
+#: bin/gscan2pdf:5765
 msgid "Applying unsharp mask"
 msgstr "Določam obdelovalno masko"
 
-#: bin/gscan2pdf:5886
+#: bin/gscan2pdf:5835
 #, perl-format
 msgid "Applying unsharp mask to page %i of %i"
 msgstr "Določam obdelovalno masko strani %i od %i"
 
-#: bin/gscan2pdf:5947
+#: bin/gscan2pdf:5896
 msgid "Crop"
 msgstr "Obreži"
 
-#: bin/gscan2pdf:5978
+#: bin/gscan2pdf:5927
 msgid "Cropping"
 msgstr "Obrezovanje"
 
-#: bin/gscan2pdf:6047
+#: bin/gscan2pdf:5997
 #, perl-format
 msgid "Cropping page %i of %i"
 msgstr "Obrezujem stran %i od %i"
 
-#: bin/gscan2pdf:6104 bin/gscan2pdf:6107
+#: bin/gscan2pdf:6054 bin/gscan2pdf:6057
 msgid "Running unpaper"
 msgstr "Poganjam unpaper"
 
-#: bin/gscan2pdf:6145 bin/gscan2pdf:6570
+#: bin/gscan2pdf:6095 bin/gscan2pdf:6566
 #, perl-format
 msgid "Page %i of %i"
 msgstr "Stran %i od %i"
 
-#: bin/gscan2pdf:6386
+#: bin/gscan2pdf:6382
 msgid "Deskew"
 msgstr "Odstranjevanje poševnosti"
 
-#: bin/gscan2pdf:6416
+#: bin/gscan2pdf:6412
 msgid "Border"
 msgstr "Rob"
 
-#: bin/gscan2pdf:6467
+#: bin/gscan2pdf:6463
 msgid "Filters"
 msgstr "Filtri"
 
-#: bin/gscan2pdf:6488
+#: bin/gscan2pdf:6484
 msgid "unpaper"
 msgstr "unpaper"
 
-#: bin/gscan2pdf:6529 bin/gscan2pdf:6532
+#: bin/gscan2pdf:6525 bin/gscan2pdf:6528
 msgid "Running OCR"
 msgstr "Zaganjam OCR"
 
-#: bin/gscan2pdf:6723
+#: bin/gscan2pdf:6720
 msgid "Language to recognise"
 msgstr "Jezik za prepoznavanje"
 
-#: bin/gscan2pdf:6728
+#: bin/gscan2pdf:6725
 msgid "German"
 msgstr "Nemški"
 
-#: bin/gscan2pdf:6729
+#: bin/gscan2pdf:6726
 msgid "Fraktur"
 msgstr "Fraktura"
 
-#: bin/gscan2pdf:6730 bin/gscan2pdf:6770
+#: bin/gscan2pdf:6727 bin/gscan2pdf:6768
 msgid "English"
 msgstr "Angleški"
 
-#: bin/gscan2pdf:6731
+#: bin/gscan2pdf:6728
 msgid "French"
 msgstr "Francoski"
 
-#: bin/gscan2pdf:6732
+#: bin/gscan2pdf:6729
 msgid "Italian"
 msgstr "Italjanski"
 
-#: bin/gscan2pdf:6733
+#: bin/gscan2pdf:6730
 msgid "Dutch"
 msgstr "Nizozemski"
 
-#: bin/gscan2pdf:6734
+#: bin/gscan2pdf:6731
 msgid "Portuguese"
 msgstr "Portugalski"
 
-#: bin/gscan2pdf:6735
+#: bin/gscan2pdf:6732
 msgid "Spanish"
 msgstr "Španski"
 
-#: bin/gscan2pdf:6736
+#: bin/gscan2pdf:6733
 msgid "Vietnamese"
 msgstr "Vietnamski"
 
-#: bin/gscan2pdf:6788
+#: bin/gscan2pdf:6786
 msgid "OCR"
 msgstr "OCR"
 
-#: bin/gscan2pdf:6793
+#: bin/gscan2pdf:6791
 msgid "OCR Engine"
 msgstr "OCR program"
 
-#: bin/gscan2pdf:6821
+#: bin/gscan2pdf:6819
 msgid "Start OCR"
 msgstr "Zaženii OCR"
 
-#: bin/gscan2pdf:6832
+#: bin/gscan2pdf:6830
 msgid "No page selected"
 msgstr "Ni izbranih strani"
 
-#: bin/gscan2pdf:6855
+#: bin/gscan2pdf:6853
 msgid ""
 "Some pages have not been saved.\n"
 "Do you really want to quit?"
@@ -1634,7 +1642,7 @@ msgstr ""
 "Nekatere strani niso bile shranjene.\n"
 "Res želite zapreti program?"
 
-#: bin/gscan2pdf:6897
+#: bin/gscan2pdf:6895
 #, perl-format
 msgid ""
 "The help viewer requires module Gtk2::Ex::PodViewer\n"
@@ -1645,30 +1653,26 @@ msgstr ""
 "Kot alternativo poskusite: %s %s\n"
 "\n"
 
-#: bin/gscan2pdf:7196
+#: bin/gscan2pdf:7194
 msgid "This operation cannot be undone. Are you sure?"
 msgstr "Te operacije ni mogoče razveljaviti. Ste prepričani?"
 
-#: bin/gscan2pdf:7202
+#: bin/gscan2pdf:7200
 msgid "Compressing working files"
 msgstr "Stiskam delovne datoteke"
 
-#: bin/gscan2pdf:7235
+#: bin/gscan2pdf:7233
 msgid "Compressing images"
 msgstr "Stiskanje slik"
 
-#: bin/gscan2pdf:7240
+#: bin/gscan2pdf:7238
 msgid "Clearing up"
 msgstr "Čiščenje"
 
-#: bin/gscan2pdf:7429
-msgid "Current"
-msgstr "Trenutna"
-
-#: bin/gscan2pdf:7430
+#: bin/gscan2pdf:7439
 msgid "Selected"
 msgstr "Izbrano"
 
-#: bin/gscan2pdf:7453
+#: bin/gscan2pdf:7462
 msgid "active"
 msgstr "dejaven"
