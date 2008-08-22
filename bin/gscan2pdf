@@ -2564,6 +2564,7 @@ sub save_dialog {
   [ 'pnm', $d->get('PNM'), $d->get('Portable anymap') ],
   [ 'ps',  $d->get('PS'), $d->get('Postscript') ],
   [ 'tif', $d->get('TIFF'), $d->get('Tagged Image File Format') ],
+  [ 'txt', $d->get('Text'), $d->get('Plain text') ],
   [ 'session', $d->get('Session'), $d->get('gscan2pdf session file') ],
  );
  push @type, [ 'djvu', $d->get('DjVu'), $d->get('Deja Vu') ]
@@ -2713,6 +2714,58 @@ sub save_dialog {
      $SETTING{'cwd'} = dirname($filename);
 
      save_TIFF($filename);
+    }
+    $file_chooser -> destroy;
+   });
+   $file_chooser -> show;
+
+# cd back to tempdir
+   chdir $SETTING{session};
+  }
+  elsif ($SETTING{'image type'} eq 'txt') {
+
+# cd back to cwd to save
+   chdir $SETTING{'cwd'};
+
+# Set up file selector
+   my $file_chooser = Gtk2::FileChooserDialog -> new($d->get('Text filename'),
+                                                     $windowi, 'save',
+                                                     'gtk-cancel' => 'cancel',
+                                                     'gtk-save' => 'ok');
+   $file_chooser -> set_default_response('ok');
+   $file_chooser -> set_do_overwrite_confirmation (TRUE);
+   $file_chooser -> signal_connect (response => sub {
+    my ($dialog, $response) = @_;
+    if ($response eq 'ok') {
+     my $filename = $file_chooser -> get_filename;
+     if ($filename !~ /\.txt$/i) {
+      $filename = $filename.'.txt';
+      if (-f $filename) {
+# File exists; get the file chooser to ask the user to confirm.
+       $file_chooser -> set_filename($filename);
+# Give the name change time to take effect.
+       Glib::Idle->add (sub { $file_chooser->response('ok'); });
+       return;
+      }
+     }
+
+# Check that the file can be written
+     if (! -w dirname($filename)) {
+      show_message_dialog($file_chooser, 'error', 'close',
+                           sprintf($d->get("File %s is read-only"), $filename));
+      return;
+     }
+
+# Update cwd
+     $SETTING{'cwd'} = dirname($filename);
+
+     open my $fh, ">:utf8", $filename
+                      or die sprintf($d->get("Can't open file: %s"), $filename);
+     my @pagelist = get_page_index();
+     for (my $i = 0; $i < @pagelist; $i++) {
+      print $fh $slist -> {data}[$pagelist[$i]][3];
+     }
+     close $fh;
     }
     $file_chooser -> destroy;
    });
