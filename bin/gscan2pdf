@@ -75,8 +75,8 @@
 #    Make appropriate updates to debian/changelog
 # 2. perl Makefile.PL
 #    make rpmdist debdist
-#    test dist sudo dpkg -i gscan2pdf-x.x.x_all.deb
-# 3. hg status
+#    test dist sudo dpkg -i /tmp/gscan2pdf/gscan2pdf-x.x.x_all.deb
+# 3. hg status -ma
 #    hg tag vx-x-x
 #    hg push ssh://ra28145@shell.sf.net//home/groups/g/gs/gscan2pdf/hg/gscan2pdf
 # 4. make remote-html 
@@ -115,7 +115,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.26~rc1';
+my $version = '0.9.26';
 
 my $tolerance = 1;
 
