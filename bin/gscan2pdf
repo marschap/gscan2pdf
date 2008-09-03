@@ -87,7 +87,6 @@
 # 9. debuild -S -sa
 #    dput gscan2pdf-ppa gscan2pdf_x.x.x_i386.changes
 #    https://launchpad.net/~jeffreyratcliffe/+archive
-#    Ubuntu forum
 #    gscan2pdf-announce
 #    ftp-master (check contents with dpkg-deb --contents)
 
@@ -8177,7 +8176,18 @@ L<http://lists.sourceforge.net/lists/listinfo/gscan2pdf-help>
 
 Before reporting bugs, please read the L<"FAQs"> section.
 
-Please report any bugs found to the bugs page of the gscan2pdf project on
+Please report any bugs found, preferably against the Debian package[1][2].
+You do not need to be a Debian user, or set up an account to do this.
+
+=over
+
+=item 1. http://packages.debian.org/sid/gscan2pdf
+
+=item 2. http://www.debian.org/Bugs/
+
+=back
+
+Alternatively, there is a bug tracker for the gscan2pdf project on
 Sourceforge (L<https://sourceforge.net/tracker/?group_id=174140&atid=868098>).
 
 Please include the output of C<gscan2pdf --debug> with any new bug report.
