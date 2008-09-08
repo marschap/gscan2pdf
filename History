@@ -1,3 +1,9 @@
+0.9.27 (24.09.2008):
+
++ Check whether crashed session exists before trying to open it.
+  Closes 2099857 (Program does not start, as long as file session is missing)
+
+
 0.9.26 (24.08.2008):
 
 + Various fixes causing TMPDIR not to work, including ~ expansion and creation

@@ -114,7 +114,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.26';
+my $version = '0.9.27rc1';
 
 my $tolerance = 1;
 
@@ -1069,7 +1069,12 @@ update_uimanager();
 
 # Look for crashed session
 if (defined $SETTING{session}) {
- open_session();
+ if (-r "$SETTING{session}/session") {
+  open_session();
+ }
+ else {
+  warn "gscan2pdf detected a crashed session, but was unable to restore it as it has been deleted.\n";
+ }
 }
 else {
 
