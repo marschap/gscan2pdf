@@ -1,4 +1,12 @@
-gscan2pdf (0.9.26) hardy; urgency=low
+gscan2pdf (0.9.27) hardy; urgency=low
+
+  * New upstream release.
+    Closes: #500547 (fails to save PDF files)
+    New Depends: libsane-perl
+
+ -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>  Sun, 24 Aug 2008 10:21:14 +0200
+
+gscan2pdf (0.9.26-1) unstable; urgency=low
 
   * New upstream release.
     Closes: #490356 (gscan2pdf: It is impossible to save current session)

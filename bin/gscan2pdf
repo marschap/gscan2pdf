@@ -1285,7 +1285,7 @@ sub create_menu_bar {
 # Put up warning if needed
  if ($SETTING{'startup warning'} and $msg ne '') {
   my $dialog = Gtk2::Dialog -> new ($d->get('Warning: missing packages'),
-                                    $window, 'destroy-with-parent',
+                                    $window, 'modal',
                                     'gtk-ok' => 'none');
   my $label = Gtk2::Label->new ($msg);
   $dialog->vbox->add ($label);
@@ -1519,8 +1519,8 @@ sub open_dialog {
 # Update cwd
   $SETTING{'cwd'} = dirname($filename);
 
-  my $dialog = Gtk2::Dialog -> new ($d->get('Opening')."...", $windowo,
-                                    'destroy-with-parent',
+  my $dialog = Gtk2::Dialog -> new ($d->get('Opening')."...", $window,
+                                    'modal',
                                     'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
@@ -1631,8 +1631,8 @@ sub import_dialog {
 # Update cwd
   $SETTING{'cwd'} = dirname($filename[0]);
 
-  my $dialog = Gtk2::Dialog -> new ($d->get('Importing')."...", $windowo,
-                                    'destroy-with-parent',
+  my $dialog = Gtk2::Dialog -> new ($d->get('Importing')."...", $window,
+                                    'modal',
                                     'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
@@ -2172,8 +2172,8 @@ sub create_PDF {
 
  require PDF::API2;
 
- my $dialog = Gtk2::Dialog -> new ($d->get('Saving PDF')."...", $windowo,
-                                   'destroy-with-parent',
+ my $dialog = Gtk2::Dialog -> new ($d->get('Saving PDF')."...", $window,
+                                   'modal',
                                    'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
@@ -2981,8 +2981,8 @@ sub save_image {
 sub save_TIFF {
  my ($filename, $ps) = @_;
 
- my $dialog = Gtk2::Dialog -> new ($d->get('Saving TIFF')."...", $windowo,
-                                   'destroy-with-parent',
+ my $dialog = Gtk2::Dialog -> new ($d->get('Saving TIFF')."...", $window,
+                                   'modal',
                                    'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
@@ -3122,8 +3122,8 @@ sub save_djvu {
 # cd back to tempdir
    chdir $SETTING{session};
 
-   my $dialog = Gtk2::Dialog -> new ($d->get('Saving DjVu')."...", $windowo,
-                                     'destroy-with-parent',
+   my $dialog = Gtk2::Dialog -> new ($d->get('Saving DjVu')."...", $window,
+                                     'modal',
                                      'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
@@ -4241,7 +4241,7 @@ sub scanimage {
   warn "Forked PID $pid\n" if ($debug);
   
   my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
-                                    'destroy-with-parent',
+                                    'modal',
                                     'gtk-cancel' => 'cancel');
   my $pbar = Gtk2::ProgressBar->new;
   $pbar->set_text ($d->get('Scanning'));
@@ -4397,7 +4397,7 @@ sub scanadf {
   warn "Forked PID $pid\n" if ($debug);
   
   my $dialog = Gtk2::Dialog -> new ($d->get('Scanning')."...", $windows,
-                                    'destroy-with-parent',
+                                    'modal',
                                     'gtk-cancel' => 'cancel');
   my $pbar = Gtk2::ProgressBar->new;
   $pbar -> set_text($d->get('Scanning')."...");
@@ -5697,7 +5697,7 @@ sub rotate {
 # guess where unpaper has been called from
  my $window = get_parent($windows, $window);
  my $dialog = Gtk2::Dialog -> new ($d->get('Rotating')."...", $window,
-                                           'destroy-with-parent',
+                                           'modal',
                                            'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
@@ -5867,8 +5867,8 @@ sub threshold {
   take_snapshot();
 
   $SETTING{'threshold tool'} = $spinbutton->get_value;
-  my $dialog = Gtk2::Dialog -> new ($d->get('Applying threshold')."...", $windowo,
-                                            'destroy-with-parent',
+  my $dialog = Gtk2::Dialog -> new ($d->get('Applying threshold')."...", $window,
+                                            'modal',
                                             'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
@@ -5982,8 +5982,8 @@ sub negate {
 # Update undo/redo buffers
   take_snapshot();
 
-  my $dialog = Gtk2::Dialog -> new ($d->get('Applying negate')."...", $windowo,
-                                            'destroy-with-parent',
+  my $dialog = Gtk2::Dialog -> new ($d->get('Applying negate')."...", $window,
+                                            'modal',
                                             'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
@@ -6148,8 +6148,8 @@ sub unsharp {
   $SETTING{'unsharp sigma'} = $spinbuttons->get_value;
   $SETTING{'unsharp amount'} = $spinbuttona->get_value;
   $SETTING{'unsharp threshold'} = $spinbuttont->get_value;
-  my $dialog = Gtk2::Dialog -> new ($d->get('Applying unsharp mask')."...", $windowo,
-                                            'destroy-with-parent',
+  my $dialog = Gtk2::Dialog -> new ($d->get('Applying unsharp mask')."...", $window,
+                                            'modal',
                                             'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
@@ -6312,8 +6312,8 @@ sub crop {
 # Update undo/redo buffers
   take_snapshot();
 
-  my $dialog = Gtk2::Dialog -> new ($d->get('Cropping')."...", $windowo,
-                                            'destroy-with-parent',
+  my $dialog = Gtk2::Dialog -> new ($d->get('Cropping')."...", $window,
+                                            'modal',
                                             'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
@@ -6461,7 +6461,7 @@ sub unpaper_page {
 # guess where unpaper has been called from
  my $parent = get_parent($windowu, $windows, $window);
  my $dialog = Gtk2::Dialog -> new ($d->get('Running unpaper')."...", $parent,
-                                   'destroy-with-parent',
+                                   'modal',
                                    'gtk-cancel' => 'cancel');
  my $label = Gtk2::Label -> new ($d->get('Running unpaper')."...");
  $dialog -> vbox -> add($label);
@@ -6936,7 +6936,7 @@ sub ocr_page {
 # guess where ocr has been called from
  my $parent = get_parent($windowo, $windows, $window);
  my $dialog = Gtk2::Dialog -> new ($d->get('Running OCR')."...", $parent,
-                                   'destroy-with-parent',
+                                   'modal',
                                    'gtk-cancel' => 'cancel');
  my $label = Gtk2::Label -> new ($d->get('Running OCR')."...");
  $dialog -> vbox -> add($label);
@@ -7659,7 +7659,7 @@ sub compress_temp {
 
  my $dialog = Gtk2::Dialog -> new ($d->get('Compressing working files')."...",
                                     $window,
-                                    'destroy-with-parent',
+                                    'modal',
                                     'gtk-cancel' => 'cancel');
 
 # Set up ProgressBar
