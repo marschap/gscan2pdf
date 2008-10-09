@@ -108,6 +108,7 @@ use Image::Magick;
 use Config::General 2.40;
 use Text::ParseWords;
 use Archive::Tar;                    # For session files
+use SANE;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -135,7 +136,7 @@ my @model;
 my $debug = FALSE;
 while (defined($ARGV[0])) {
 # Set up test mode and make sure file has absolute path and is readable
- if ($ARGV[0] eq "--test") {
+ if ($ARGV[0] eq '--test') {
   shift @ARGV;
   my $arg = shift @ARGV;
   if ($arg =~ /(.*)=(.*)/) {
@@ -159,11 +160,11 @@ while (defined($ARGV[0])) {
    exit 1;
   }
  }
- elsif ($ARGV[0] eq "--help") {
+ elsif ($ARGV[0] eq '--help') {
   system("perldoc $0") == 0 or warn $d->get("Error displaying help\n");
   exit;
  }
- elsif ($ARGV[0] eq "--locale") {
+ elsif ($ARGV[0] eq '--locale') {
   shift @ARGV;
   if ($ARGV[0] !~ /^\//) {
    $d->dir(getcwd."/".shift @ARGV);
@@ -172,12 +173,12 @@ while (defined($ARGV[0])) {
    $d->dir(shift @ARGV);
   }
  }
- elsif ($ARGV[0] eq "--debug") {
+ elsif ($ARGV[0] eq '--debug') {
   $debug = TRUE;
   shift @ARGV;
   warn "$program $version\n";
  }
- elsif ($ARGV[0] eq "--device") {
+ elsif ($ARGV[0] eq '--device') {
   shift @ARGV;
   if (@ARGV) {
    my $device = shift @ARGV;
@@ -253,18 +254,19 @@ else {
 }
 
 # Delete the options cache if there is a new version of SANE
-my $sane_version=`$SETTING{'scan prefix'} scanimage --version`;
-chomp $sane_version;
-if (defined($SETTING{'SANE version'})
-     and $SETTING{'SANE version'} ne $sane_version) {
+if ((defined($SETTING{'SANE version'})
+     and $SETTING{'SANE version'} ne join('.',SANE->get_version))
+    or (defined($SETTING{'libsane-perl version'})
+     and $SETTING{'libsane-perl version'} ne $SANE::VERSION)) {
  delete $SETTING{cache} if (defined $SETTING{cache});
 }
-$SETTING{'SANE version'} = $sane_version;
+$SETTING{'SANE version'} = join('.',SANE->get_version);
+$SETTING{'libsane-perl version'} = $SANE::VERSION;
 
 if ($debug) {
  print "Gtk2-Perl version $Gtk2::VERSION\n";
- print "Built for ".join(".",Gtk2->GET_VERSION_INFO)."\n";
- print "Running with ".join(".",Gtk2->get_version_info)."\n";
+ print "Built for ".join('.',Gtk2->GET_VERSION_INFO)."\n";
+ print "Running with ".join('.',Gtk2->get_version_info)."\n";
  print "Using GtkImageView version ", Gtk2::ImageView->library_version, "\n";
  print "Using Gtk2::ImageView version ", $Gtk2::ImageView::VERSION, "\n";
 
@@ -1134,7 +1136,7 @@ sub load_config {
   'pages to scan'      => 1,
   'unpaper on scan'    => TRUE,
   'OCR on scan'        => TRUE,
-  'frontend'           => 'scanimage',
+  'frontend'           => 'scanimage.pl',
   'rotate facing'      => 0,
   'rotate reverse'     => 0,
   'scan prefix'        => '',
@@ -1208,8 +1210,8 @@ sub create_menu_bar {
   if (! $dependencies{pdfapi2});
 
 # Set frontend to scanimage if scanadf not available
- if (! $dependencies{scanadf}) {
-  $SETTING{frontend} = 'scanimage';
+ if ($SETTING{frontend} eq 'scanadf' and ! $dependencies{scanadf}) {
+  $SETTING{frontend} = 'scanimage.pl';
   $msg .= $d->get("The scanadf frontend is not available\n")
  }
 
@@ -1267,7 +1269,7 @@ sub create_menu_bar {
   $uimanager->get_widget('/Thumb_Popup/Rotate 180') -> set_sensitive(FALSE);
   $uimanager->get_widget('/Thumb_Popup/Rotate 270') -> set_sensitive(FALSE);
   $uimanager->get_widget('/MenuBar/Tools/unpaper') -> set_sensitive(FALSE);
-  $msg .= $d->get("The rotating options, unpaper support and the scanadf frontend require perlmagick\n");
+  $msg .= $d->get("The rotating options and unpaper support require perlmagick\n");
  }
 
 # Ghost unpaper item if unpaper not available
@@ -3884,7 +3886,7 @@ sub scan_dialog {
    $SETTING{'ocr language'} = $tesslang[$comboboxl -> get_active]->[0]
     if ($SETTING{'ocr engine'} eq 'tesseract');
   }
-  if ($SETTING{frontend} eq 'scanimage') {
+  if ($SETTING{frontend} eq 'scanimage' or $SETTING{frontend} eq 'scanimage.pl') {
    scanimage($SETTING{device}, $npages, $start-$step, $step,
                 $SETTING{'rotate facing'}, $SETTING{'rotate reverse'},
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
@@ -4226,7 +4228,7 @@ sub scanimage {
  chdir $SETTING{session};
 
 # Create command
- my $cmd = "$SETTING{'scan prefix'} scanimage $device @options $npages";
+ my $cmd = "$SETTING{'scan prefix'} $SETTING{frontend} $device @options $npages";
  warn "$cmd\n" if $debug;
 
  if (! $test) {
@@ -4306,16 +4308,16 @@ sub scanimage {
      elsif ($line =~ /^Scanned page \d*\. \(scanner status = 7\)/) {
       ;
      }
-     elsif ($line =~ /^scanimage: sane_start: Document feeder out of documents/) {
+     elsif ($line =~ /^$SETTING{frontend}: sane_start: Document feeder out of documents/) {
       ;
      }
      elsif ($cancel
-             and ($line =~ /^scanimage: sane_start: Error during device I\/O/
-                  or $line =~ /^scanimage: received signal 2/
-                  or $line =~ /^scanimage: trying to stop scanner/)) {
+             and ($line =~ /^$SETTING{frontend}: sane_start: Error during device I\/O/
+                  or $line =~ /^$SETTING{frontend}: received signal 2/
+                  or $line =~ /^$SETTING{frontend}: trying to stop scanner/)) {
       ;
      }
-     elsif ($line =~ /^scanimage: rounded/) {
+     elsif ($line =~ /^$SETTING{frontend}: rounded/) {
       warn substr($line, 0, index($line, "\n")+1);
      }
      elsif ($line =~ /^.* sane_start: Device busy/) {
@@ -7768,6 +7770,7 @@ sub preferences {
  $hbox -> pack_start($label, FALSE, FALSE, 0);
  my @frontends = (
   [ 'scanimage', $d->get('scanimage'), $d->get('Scan using the scanimage frontend.') ],
+  [ 'scanimage.pl', $d->get('scanimage.pl'), $d->get('Scan using the scanimage.pl frontend.') ],
  );
  push @frontends,
   [ 'scanadf', $d->get('scanadf'), $d->get('Scan using the scanadf frontend.') ],
@@ -8360,6 +8363,9 @@ some scanners than scanimage. On Ubuntu Edgy, scanadf is in the sane package,
 not, like scanimage, in sane-utils. If scanadf is not present, the option is
 obviously ghosted out.
 
+In 0.9.27, Perl bindings for SANE were introduced and a further frontend,
+scanimage.pl (scanimage transliterated from c into Perl) was added.
+
 =head2 View
 
 =head3 Zoom 100%
@@ -8441,7 +8447,7 @@ button on the scan window for each page.
 =head2 Why is option xyz ghosted out?
 
 Probably because the package required for that option is not installed.
-Email as PDF requires xdg-email (xdg-utils), scanadf and the rotate options
+Email as PDF requires xdg-email (xdg-utils), unpaper and the rotate options
 require imagemagick.
 
 =head2 Why can I not scan from the flatbed of my HP scanner?
