@@ -108,7 +108,7 @@ use Image::Magick;
 use Config::General 2.40;
 use Text::ParseWords;
 use Archive::Tar;                    # For session files
-use SANE;
+use Sane;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -255,13 +255,13 @@ else {
 
 # Delete the options cache if there is a new version of SANE
 if ((defined($SETTING{'SANE version'})
-     and $SETTING{'SANE version'} ne join('.',SANE->get_version))
+     and $SETTING{'SANE version'} ne join('.',Sane->get_version))
     or (defined($SETTING{'libsane-perl version'})
-     and $SETTING{'libsane-perl version'} ne $SANE::VERSION)) {
+     and $SETTING{'libsane-perl version'} ne $Sane::VERSION)) {
  delete $SETTING{cache} if (defined $SETTING{cache});
 }
-$SETTING{'SANE version'} = join('.',SANE->get_version);
-$SETTING{'libsane-perl version'} = $SANE::VERSION;
+$SETTING{'SANE version'} = join('.',Sane->get_version);
+$SETTING{'libsane-perl version'} = $Sane::VERSION;
 
 if ($debug) {
  print "Gtk2-Perl version $Gtk2::VERSION\n";

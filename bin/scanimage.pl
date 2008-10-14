@@ -2,13 +2,13 @@
 
 use warnings;
 use strict;
-use SANE;
+use Sane;
 use Data::Dumper;
 use Getopt::Long qw(:config no_ignore_case pass_through);
 use File::Basename;
 use IO::Handle;
 
-#$SANE::DEBUG = 1;
+#$Sane::DEBUG = 1;
 
 my (%options, @window_val_user, @window_option, @window_val,
     @window, $num_dev_options, $device, $format, $devname, %option_number);
@@ -384,7 +384,7 @@ sub fetch_options {
 
 # We got a device, find out how many options it has:
  $num_dev_options = $device->get_option(0);
- if ($SANE::STATUS != SANE_STATUS_GOOD) {
+ if ($Sane::STATUS != SANE_STATUS_GOOD) {
   print STDERR "$prog_name: unable to determine option count\n";
   exit (1);
  }
@@ -469,9 +469,9 @@ sub set_option {
  }
 
  my $info = $device->set_option($optnum, $value);
- if ($SANE::STATUS != SANE_STATUS_GOOD) {
+ if ($Sane::STATUS != SANE_STATUS_GOOD) {
   print STDERR
-            "$prog_name: setting of option --$opt->{name} failed ($SANE::STATUS)\n";
+            "$prog_name: setting of option --$opt->{name} failed ($Sane::STATUS)\n";
   exit (1);
  }
 
@@ -503,8 +503,8 @@ sub process_backend_option {
 
  if (($opt->{cap} & SANE_CAP_AUTOMATIC) and $optarg and $optarg =~ /^auto$/i) {
   $device->set_auto($optnum);
-  if ($SANE::STATUS != SANE_STATUS_GOOD) {
-   printf STDERR "$prog_name: failed to set option --$opt->{name} to automatic ($SANE::STATUS)\n";
+  if ($Sane::STATUS != SANE_STATUS_GOOD) {
+   printf STDERR "$prog_name: failed to set option --$opt->{name} to automatic ($Sane::STATUS)\n";
    exit (1);
   }
   return;
@@ -585,15 +585,15 @@ sub scan_it {
  {do { # extra braces to get last to work.
   if (!$first_frame) {
    $device->start;
-   if ($SANE::STATUS != SANE_STATUS_GOOD) {
-    printf STDERR "$prog_name: sane_start: $SANE::STATUS\n";
+   if ($Sane::STATUS != SANE_STATUS_GOOD) {
+    printf STDERR "$prog_name: sane_start: $Sane::STATUS\n";
     goto cleanup;
    }
   }
 
   $parm = $device->get_parameters;
-  if ($SANE::STATUS != SANE_STATUS_GOOD) {
-   printf STDERR "$prog_name: sane_get_parameters: $SANE::STATUS\n";
+  if ($Sane::STATUS != SANE_STATUS_GOOD) {
+   printf STDERR "$prog_name: sane_get_parameters: $Sane::STATUS\n";
    goto cleanup;
   }
 
@@ -684,12 +684,12 @@ sub scan_it {
    $progr = 100. if ($progr > 100.);
    printf STDERR "Progress: %3.1f%%\r", $progr if (defined $options{p});
 
-   if ($SANE::STATUS != SANE_STATUS_GOOD) {
+   if ($Sane::STATUS != SANE_STATUS_GOOD) {
     printf STDERR "$prog_name: min/max graylevel value = %d/%d\n", $min, $max
      if ($verbose && $parm->{depth} == 8);
-    if ($SANE::STATUS != SANE_STATUS_EOF) {
-     print STDERR "$prog_name: sane_read: $SANE::STATUS\n";
-     return $SANE::STATUS;
+    if ($Sane::STATUS != SANE_STATUS_EOF) {
+     print STDERR "$prog_name: sane_read: $Sane::STATUS\n";
+     return $Sane::STATUS;
     }
     last;
    }
@@ -808,15 +808,15 @@ cleanup:
   printf STDERR "%s: read %u bytes in total\n", $prog_name, $total_bytes;
  }
 
- return $SANE::STATUS;
+ return $Sane::STATUS;
 }
 
 
 sub pass_fail {
  my ($max, $len, $buffer) = @_;
 
- if ($SANE::STATUS != SANE_STATUS_GOOD) {
-  print STDERR "FAIL Error: $SANE::STATUS\n";
+ if ($Sane::STATUS != SANE_STATUS_GOOD) {
+  print STDERR "FAIL Error: $Sane::STATUS\n";
  }
  elsif ($len < length($buffer)) {
   printf STDERR "FAIL Cheat: %d bytes\n", length($buffer);
@@ -840,14 +840,14 @@ sub test_it {
  );
 
  $device->start;
- if ($SANE::STATUS != SANE_STATUS_GOOD) {
-  print STDERR "$prog_name: sane_start: $SANE::STATUS\n";
+ if ($Sane::STATUS != SANE_STATUS_GOOD) {
+  print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
   goto cleanup;
  }
 
  my $parm = $device->get_parameters;
- if ($SANE::STATUS != SANE_STATUS_GOOD) {
-  print STDERR "$prog_name: sane_get_parameters: $SANE::STATUS\n";
+ if ($Sane::STATUS != SANE_STATUS_GOOD) {
+  print STDERR "$prog_name: sane_get_parameters: $Sane::STATUS\n";
   goto cleanup;
  }
 
@@ -869,40 +869,40 @@ sub test_it {
           $parm->{bytes_per_line};
  ($image{data}, my $len) = $device->read ($parm->{bytes_per_line});
  pass_fail ($parm->{bytes_per_line}, $len, $image{data});
- goto cleanup if ($SANE::STATUS != SANE_STATUS_GOOD);
+ goto cleanup if ($Sane::STATUS != SANE_STATUS_GOOD);
 
  print STDERR "$prog_name: reading one byte...\t\t";
  ($image{data}, $len) = $device->read (1);
  pass_fail (1, $len, $image{data});
- goto cleanup if ($SANE::STATUS != SANE_STATUS_GOOD);
+ goto cleanup if ($Sane::STATUS != SANE_STATUS_GOOD);
 
  my $i;
  for ($i = 2; $i < $parm->{bytes_per_line} * 2; $i *= 2) {
   printf STDERR "$prog_name: stepped read, %d bytes... \t", $i;
   ($image{data}, $len) = $device->read ($i);
   pass_fail ($i, $len, $image{data});
-  goto cleanup if ($SANE::STATUS != SANE_STATUS_GOOD);
+  goto cleanup if ($Sane::STATUS != SANE_STATUS_GOOD);
  }
 
  for ($i /= 2; $i > 2; $i /= 2) {
   printf STDERR "$prog_name: stepped read, %d bytes... \t", $i - 1;
   ($image{data}, $len) = $device->read ($i - 1);
   pass_fail ($i - 1, $len, $image{data});
-  goto cleanup if ($SANE::STATUS != SANE_STATUS_GOOD);
+  goto cleanup if ($Sane::STATUS != SANE_STATUS_GOOD);
  }
 
 cleanup:
  $device->cancel;
- return $SANE::STATUS;
+ return $Sane::STATUS;
 }
 
 
 GetOptions (@args);
 
 if (defined($options{L}) or defined($options{f})) {
- my @device_list = SANE->get_devices;
- if ($SANE::STATUS != SANE_STATUS_GOOD) {
-  print STDERR "$prog_name: sane_get_devices() failed: $SANE::STATUS\n";
+ my @device_list = Sane->get_devices;
+ if ($Sane::STATUS != SANE_STATUS_GOOD) {
+  print STDERR "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
   exit (1);
  }
  if (defined($options{L})) {
@@ -935,7 +935,7 @@ if (defined($options{L}) or defined($options{f})) {
 
 if (defined($options{V})) {
  printf "%s %s; backend version %d.%d.%d\n", $prog_name,
-	  $SANE::VERSION, SANE->get_version;
+	  $Sane::VERSION, Sane->get_version;
  exit (0);
 }
 
@@ -983,9 +983,9 @@ if (! $devname) {
   $devname = $ENV{'SANE_DEFAULT_DEVICE'};
  }
  else {
-  my @device_list = SANE->get_devices;
-  if ($SANE::STATUS != SANE_STATUS_GOOD) {
-   print STDERR "$prog_name: sane_get_devices() failed: $SANE::STATUS\n";
+  my @device_list = Sane->get_devices;
+  if ($Sane::STATUS != SANE_STATUS_GOOD) {
+   print STDERR "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
    exit (1);
   }
   if ($#device_list == -1) {
@@ -996,9 +996,9 @@ if (! $devname) {
  }
 }
 
-$device = SANE::Device->open($devname);
-if ($SANE::STATUS != SANE_STATUS_GOOD) {
- print STDERR "$prog_name: open of device $devname failed: $SANE::STATUS\n";
+$device = Sane::Device->open($devname);
+if ($Sane::STATUS != SANE_STATUS_GOOD) {
+ print STDERR "$prog_name: open of device $devname failed: $Sane::STATUS\n";
  print STDERR "\nYou seem to have specified a UNIX device name, "
             ."or filename instead of selecting\nthe SANE scanner or "
             ."image acquisition device you want to use. As an example,\n"
@@ -1079,11 +1079,9 @@ if (defined($device)) {
 }
 
 if ($help) {
- printf "
-Type ``%s --help -d DEVICE'' to get list of all options for DEVICE.\n
-List of available devices:", $prog_name;
- my @device_list = SANE->get_devices;
- if ($SANE::STATUS != SANE_STATUS_GOOD) {
+ printf "\nType ``$prog_name --help -d DEVICE'' to get list of all options for DEVICE.\n\nList of available devices:";
+ my @device_list = Sane->get_devices;
+ if ($Sane::STATUS == SANE_STATUS_GOOD) {
   my $column = 80;
 
   foreach (@device_list) {
@@ -1150,8 +1148,8 @@ if ($test == 0) {
   }
 
   $device->start;
-  if ($SANE::STATUS != SANE_STATUS_GOOD) {
-   print STDERR "$prog_name: sane_start: $SANE::STATUS\n";
+  if ($Sane::STATUS != SANE_STATUS_GOOD) {
+   print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
    last;
   }
 
@@ -1161,15 +1159,15 @@ if ($test == 0) {
    exit SANE_STATUS_ACCESS_DENIED;
   }
 
-  $SANE::_status = scan_it ();
+  $Sane::_status = scan_it ();
   if ($batch) {
    print STDERR "Scanned page %d.", $n;
-   print STDERR " (scanner status = %d)\n", $SANE::STATUS;
+   print STDERR " (scanner status = %d)\n", $Sane::STATUS;
   }
 
-  if ($SANE::STATUS == SANE_STATUS_GOOD) {}
-  elsif ($SANE::STATUS == SANE_STATUS_EOF) {
-   $SANE::_status = SANE_STATUS_GOOD;
+  if ($Sane::STATUS == SANE_STATUS_GOOD) {}
+  elsif ($Sane::STATUS == SANE_STATUS_EOF) {
+   $Sane::_status = SANE_STATUS_GOOD;
   }
   else {
    if ($batch) {
@@ -1182,12 +1180,12 @@ if ($test == 0) {
  }
  while (($batch
          && ($batch_count == -1 || --$batch_count))
-         && SANE_STATUS_GOOD == $SANE::STATUS);}
+         && SANE_STATUS_GOOD == $Sane::STATUS);}
 
  $device->cancel;
 }
 else {
- $SANE::_status = test_it ();
+ $Sane::_status = test_it ();
 }
 
-exit $SANE::STATUS;
+exit $Sane::STATUS;
