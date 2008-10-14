@@ -477,7 +477,7 @@ sub set_option {
 
  if ($info & SANE_INFO_INEXACT) {
   my $orig = $value;
-  $value = $device->set_option($optnum);
+  $value = $device->get_option($optnum);
   if (opt->type == SANE_TYPE_INT) {
    printf STDERR
      "$prog_name: rounded value of $opt->{name} from %d to %d\n", $orig, $value;
