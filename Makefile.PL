@@ -37,13 +37,13 @@ $localedir = $sharedir."/locale" unless ($localedir);
 WriteMakefile(
               NAME            => $program,
               VERSION         => $version,
-              'EXE_FILES'     => [ "bin/$program" ],
+              EXE_FILES       => [ "bin/$program", 'bin/scanimage.pl' ],
               PREREQ_PM       => {
                                    Gtk2                   => 1.090,
                                    Gtk2::Ex::Simple::List => 0,
                                    Image::Magick          => 0,
                                    Locale::gettext        => 1.05,
-                                   Config::General        => 0,
+                                   Config::General        => 2.40,
               },
               ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
               (ABSTRACT_FROM  => "bin/$program", # retrieve abstract from module
