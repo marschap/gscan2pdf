@@ -150,7 +150,7 @@ sub print_option {
                                       and $opt->{type} != SANE_TYPE_FIXED
                                       and $opt->{type} != SANE_TYPE_BOOL);
    print " (in steps of $opt->{constraint}{quant})"
-    if (defined $opt->{constraint}{quant});
+    if ($opt->{constraint}{quant});
   }
   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
                       or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
