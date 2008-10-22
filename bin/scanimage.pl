@@ -545,7 +545,7 @@ sub process_backend_option {
 
 
 sub write_pnm_header {
- my  ($format, $width, $height, $depth) = @_;
+ my ($format, $width, $height, $depth) = @_;
 
 # The netpbm-package does not define raw image data with maxval > 255.
 # But writing maxval 65535 for 16bit data gives at least a chance
@@ -896,7 +896,12 @@ cleanup:
  return $Sane::STATUS;
 }
 
-
+# There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
+# l is not in @args. Therefore the workaround is to rename l to m for the first
+# scan and back to l for the second.
+for (@ARGV) {
+ $_ = '-m' if ($_ eq '-l');
+}
 GetOptions (@args);
 
 if (defined($options{L}) or defined($options{f})) {
@@ -1018,8 +1023,13 @@ if ($Sane::STATUS != SANE_STATUS_GOOD) {
 if (defined($device)) {
  fetch_options($device);
  Getopt::Long::Configure('no_pass_through');
+# There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
+# l is not in @args. Therefore the workaround is to rename l to m for the first
+# scan and back to l for the second.
+ for (@ARGV) {
+  $_ = '-l' if ($_ eq '-m');
+ }
  GetOptions (@args);
-#print STDERR Dumper(\%options);
 
  for my $ch (keys %options) {
   if ($ch eq 'x') {
