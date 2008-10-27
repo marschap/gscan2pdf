@@ -1211,7 +1211,7 @@ sub create_menu_bar {
 
 # Set frontend to scanimage if scanadf not available
  if ($SETTING{frontend} eq 'scanadf' and ! $dependencies{scanadf}) {
-  $SETTING{frontend} = 'scanimage.pl';
+  $SETTING{frontend} = 'scanadf.pl';
   $msg .= $d->get("The scanadf frontend is not available\n")
  }
 
@@ -3926,7 +3926,7 @@ sub scan_dialog {
                                               return FALSE;
                                              } });
 
-  my $cmd = "$SETTING{'scan prefix'} scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
+  my $cmd = "$SETTING{'scan prefix'} $SETTING{frontend} --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
   print "$cmd\n" if ($debug);
 
 # Interface to frontend
@@ -4387,7 +4387,7 @@ sub scanadf {
  chdir $SETTING{session};
 
 # Create command
- my $cmd = "$SETTING{'scan prefix'} scanadf $device @options $start $end > /dev/stderr";
+ my $cmd = "$SETTING{'scan prefix'} $SETTING{frontend} $device @options $start $end > /dev/stderr";
  warn "$cmd\n" if $debug;
 
  if (! $test) {
@@ -4463,7 +4463,7 @@ sub scanadf {
      elsif ($line =~ /^Scanned \d* pages/) {
       ;
      }
-     elsif ($line =~ /^scanadf: rounded/) {
+     elsif ($line =~ /^$SETTING{frontend}: rounded/) {
       warn substr($line, 0, index($line, "\n")+1);
      }
      elsif ($line =~ /^.* sane_start: Device busy/) {
@@ -7771,6 +7771,7 @@ sub preferences {
  my @frontends = (
   [ 'scanimage', $d->get('scanimage'), $d->get('Scan using the scanimage frontend.') ],
   [ 'scanimage.pl', $d->get('scanimage.pl'), $d->get('Scan using the scanimage.pl frontend.') ],
+  [ 'scanadf.pl', $d->get('scanadf.pl'), $d->get('Scan using the scanadf.pl frontend.') ],
  );
  push @frontends,
   [ 'scanadf', $d->get('scanadf'), $d->get('Scan using the scanadf frontend.') ],
@@ -8204,7 +8205,7 @@ Please include the output of C<gscan2pdf --debug> with any new bug report.
 
 gscan2pdf has already been partly translated several languages.
 If you would like to contribute to an existing or new translation, please check
-out Rosetta: L<https://launchpad.net/products/gscan2pdf/trunk/+pots/gscan2pdf>
+out Rosetta: L<https://translations.launchpad.net/gscan2pdf>
 
 =head1 Menus
 
@@ -8358,13 +8359,14 @@ Selects all pages.
 =head3 Frontend
 
 gscan2pdf supports two frontends, scanimage and scanadf.
-scanadf support was added when it was realised that scanadf works better with
-some scanners than scanimage. On Ubuntu Edgy, scanadf is in the sane package,
+scanadf support was added when it was realised that scanadf works better than
+scanimage with some scanners. On Ubuntu Edgy, scanadf is in the sane package,
 not, like scanimage, in sane-utils. If scanadf is not present, the option is
 obviously ghosted out.
 
-In 0.9.27, Perl bindings for SANE were introduced and a further frontend,
-scanimage.pl (scanimage transliterated from c into Perl) was added.
+In 0.9.27, Perl bindings for SANE were introduced and two further frontends,
+scanimage.pl and scanadf.pl (scanimage and scanadf transliterated from C into
+Perl) was added.
 
 =head2 View
 
@@ -8472,17 +8474,14 @@ C<gscan2pdf --device <device>>
 =head1 To Do
 
 =item *
-
 Correct positioning and size of OCR output behind scan -
 as soon as tesseract supports outputting the information in a sensible
 manner.
 
 =item *
-
 Print (using Net::Cups).
 
 =item *
-
 Copier.
 
 =head1 See Also
@@ -8498,23 +8497,21 @@ Jeffrey Ratcliffe (ra28145 at users dot sf dot net)
 =over
 
 =item *
-
 all the people who have sent patches, translations, bugs and feedback.
 
 =item *
-
 the GTK2 project for a most excellent graphics toolkit.
 
 =item *
-
 the Gtk2-Perl project for their superb Perl bindings for GTK2.
 
 =item *
+The SANE project for scanner access
 
+=item *
 Björn Lindqvist for the gtkimageview widget
 
 =item *
-
 Sourceforge for hosting the project.
 
 =back
@@ -8529,4 +8526,3 @@ Sourceforge for hosting the project.
  <img src="http://sourceforge.net/awards/cca/badge_img.php?project_name=gscan2pdf&project_url=http%3A//gscan2pdf.sourceforge.net/&style=4" border="0" /></a>
 
 =cut
-

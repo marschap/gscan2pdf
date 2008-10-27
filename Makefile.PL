@@ -37,7 +37,8 @@ $localedir = $sharedir."/locale" unless ($localedir);
 WriteMakefile(
               NAME            => $program,
               VERSION         => $version,
-              EXE_FILES       => [ "bin/$program", 'bin/scanimage.pl' ],
+              EXE_FILES       => [ "bin/$program",
+                                   'bin/scanimage.pl', 'bin/scanadf.pl' ],
               PREREQ_PM       => {
                                    Gtk2                   => 1.090,
                                    Gtk2::Ex::Simple::List => 0,
