@@ -127,9 +127,7 @@ sub print_option {
    elsif ($opt->{type} == SANE_TYPE_STRING) {
     print "<string>";
    }
-   print ",..." if ($opt->{type} != SANE_TYPE_STRING and $opt->{type} != SANE_TYPE_INT
-                                      and $opt->{type} != SANE_TYPE_FIXED
-                                      and $opt->{type} != SANE_TYPE_BOOL);
+   print ",..." if ($opt->{max_values} > 1);
   }
   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
    my $format = "%g..%g";
@@ -146,9 +144,7 @@ sub print_option {
     printf $format, $opt->{constraint}{min}, $opt->{constraint}{max};
    }
    print_unit ($opt->{unit});
-   print ",..." if ($opt->{type} != SANE_TYPE_INT
-                                      and $opt->{type} != SANE_TYPE_FIXED
-                                      and $opt->{type} != SANE_TYPE_BOOL);
+   print ",..." if ($opt->{max_values} > 1);
    print " (in steps of $opt->{constraint}{quant})"
     if ($opt->{constraint}{quant});
   }
@@ -161,15 +157,11 @@ sub print_option {
    }
    if ($opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
     print_unit ($opt->{unit});
-    print ",..." if ($opt->{type} != SANE_TYPE_INT
-                                       and $opt->{type} != SANE_TYPE_FIXED
-                                       and $opt->{type} != SANE_TYPE_BOOL);
+    print ",..." if ($opt->{max_values} > 1);
    }
   }
  }
- if ($opt->{type} == SANE_TYPE_STRING or $opt->{type} == SANE_TYPE_INT
-                                      or $opt->{type} == SANE_TYPE_FIXED
-                                      or $opt->{type} == SANE_TYPE_BOOL) {
+ if ($opt->{max_values} == 1) {
   # print current option value
   if (! ($opt->{cap} & SANE_CAP_INACTIVE)) {
    my $val = $device->get_option ($opt_num);
@@ -264,9 +256,10 @@ sub parse_scalar {
  my ($opt, $str) = @_;
 
  my ($v, $unit);
- if ($str =~ /^(\d*\.?\d*)(cm|mm|in|\"|b|B|dpi|%|us)$/) {
+ if ($str =~ /^(\d*\.?\d*)(cm|mm|in|\"|b|B|dpi|%|us)?/) {
   $v = $1;
   $unit = $2;
+  $unit = '' if not defined $unit;
  }
  else {
   print STDERR
@@ -285,7 +278,7 @@ sub parse_scalar {
    $v *= 25.4;
   }
  }
- return $v;
+ return $v, substr($str, length($v) + length($unit), length($str));
 }
 
 
@@ -316,7 +309,7 @@ sub parse_vector {
  my $prev_value = 0;
  my $prev_index = 0;
  my $separator = '';
- my @vector;
+ my (@vector, $value);
  do {
   if ($str =~ /^\[/) {
    if ($str =~ /^\[(\d*\.?\d*)\]/) {
@@ -341,10 +334,9 @@ sub parse_vector {
   }
 
   # read value
-  my $value = parse_scalar ($opt, $str);
-  exit (1) if (!$value);
+  ($value, $str) = parse_scalar ($opt, $str);
 
-  if (defined($str) and $str !~ /^[-,]/) {
+  if ($str ne '' and $str !~ /^[-,]/) {
    print STDERR
              "$prog_name: option --$opt->{name}: illegal separator (rest of option: $str)\n";
    exit (1);
@@ -352,7 +344,7 @@ sub parse_vector {
 
   # store value:
   $vector[$index] = $value;
-  if ($separator == '-') {
+  if ($separator eq '-') {
    # interpolate
    my $v = $prev_value;
    my $slope = ($value - $v) / ($index - $prev_index);
@@ -367,7 +359,7 @@ sub parse_vector {
   $prev_value = $value;
   $separator = substr($str, 0, 1);
  }
- while ($separator == ',' || $separator == '-');
+ while ($separator eq ',' || $separator eq '-');
 
  if ($verbose > 2) {
   print STDERR "$prog_name: value for --$opt->{name} is: ";
@@ -376,6 +368,8 @@ sub parse_vector {
   }
   print STDERR "\n";
  }
+ 
+ return @vector;
 }
 
 
@@ -475,14 +469,14 @@ sub set_option {
   exit (1);
  }
 
- if ($info & SANE_INFO_INEXACT) {
+ if (($info & SANE_INFO_INEXACT) and $opt->{max_values} == 1) {
   my $orig = $value;
   $value = $device->get_option($optnum);
-  if (opt->type == SANE_TYPE_INT) {
+  if ($opt->{type} == SANE_TYPE_INT) {
    printf STDERR
      "$prog_name: rounded value of $opt->{name} from %d to %d\n", $orig, $value;
   }
-  elsif (opt->type == SANE_TYPE_FIXED) {
+  elsif ($opt->{type} == SANE_TYPE_FIXED) {
    printf STDERR
      "$prog_name: rounded value of $opt->{name} from %g to %g\n", $orig, $value;
   }
@@ -649,11 +643,11 @@ sub scan_it {
    }
 
    if ($must_buffer) {
-     # We're either scanning a multi-frame image or the
-     # scanner doesn't know what the eventual image height
-     # will be (common for hand-held scanners).  In either
-     # case, we need to buffer all data before we can write
-     # the image.
+    # We're either scanning a multi-frame image or the
+    # scanner doesn't know what the eventual image height
+    # will be (common for hand-held scanners).  In either
+    # case, we need to buffer all data before we can write
+    # the image
     $image{width} = $parm->{pixels_per_line};
     if ($parm->{lines} >= 0) {
      $image{height} = $parm->{lines} - $STRIP_HEIGHT + 1;
@@ -902,6 +896,8 @@ cleanup:
 for (@ARGV) {
  $_ = '-m' if ($_ eq '-l');
 }
+# make a first pass through the options with error printing and argument
+# permutation disabled:
 GetOptions (@args);
 
 if (defined($options{L}) or defined($options{f})) {
@@ -1022,6 +1018,7 @@ if ($Sane::STATUS != SANE_STATUS_GOOD) {
 
 if (defined($device)) {
  fetch_options($device);
+# re-enable error printing and arg permutation
  Getopt::Long::Configure('no_pass_through');
 # There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
 # l is not in @args. Therefore the workaround is to rename l to m for the first
@@ -1089,7 +1086,7 @@ if (defined($device)) {
 }
 
 if ($help) {
- printf "\nType ``$prog_name --help -d DEVICE'' to get list of all options for DEVICE.\n\nList of available devices:";
+ printf "Type ``$prog_name --help -d DEVICE'' to get list of all options for DEVICE.\n\nList of available devices:";
  my @device_list = Sane->get_devices;
  if ($Sane::STATUS == SANE_STATUS_GOOD) {
   my $column = 80;
