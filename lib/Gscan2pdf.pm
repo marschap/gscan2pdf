@@ -40,9 +40,10 @@ sub options2hash {
 # Strip out the extra characters by e.g. [=(yes|no)]
   $values = $1 if ($values =~ /\[=\((.*)\)\]/);
 
-  if ($values =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)/) {
+  if ($values =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)(pel|bit|mm|dpi|%|us)?/) {
    $hash{$option}{min} = $1;
    $hash{$option}{max} = $2;
+   $hash{$option}{unit} = $3 if (defined $3);
    $hash{$option}{step} = $1
     if ($values =~ /\(in steps of (\d*\.?\d+)\)/);
   }
@@ -56,6 +57,10 @@ sub options2hash {
      $values = substr($values, $i+1, length($values));
     }
     else {
+     if ($values =~ /(pel|bit|mm|dpi|%|us)$/) {
+      $hash{$option}{unit} = $1;
+      $values = substr($values, 0, index($values, $hash{$option}{unit}));
+     }
      $value = $values;
      undef $values;
     }

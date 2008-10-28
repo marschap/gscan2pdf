@@ -27,6 +27,7 @@ my %that = (
                                   'default' => 'inactive',
                                   'min' => 0,
                                   'max' => 100,
+                        'unit' => '%',
                                 },
           'mode' => {
                       'tip' => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
@@ -38,18 +39,21 @@ my %that = (
                           'default' => 'inactive',
                           'min' => 0,
                           'max' => 100,
+                        'unit' => '%',
                         },
           'scan-exposure-time-g' => {
                                       'tip' => 'Define exposure-time for green scan',
                                       'default' => 'inactive',
                                       'min' => 0,
                                       'max' => 0,
+                        'unit' => 'us',
                                     },
           'scan-exposure-time-r' => {
                                       'tip' => 'Define exposure-time for red scan',
                                       'default' => 'inactive',
                                       'min' => 0,
                                       'max' => 0,
+                        'unit' => 'us',
                                     },
           'lamp-on' => {
                          'tip' => 'Turn on scanner lamp',
@@ -82,6 +86,7 @@ my %that = (
                                       'default' => 'inactive',
                                       'min' => 0,
                                       'max' => 0,
+                        'unit' => 'us',
                                     },
           'analog-gamma-b' => {
                                 'tip' => 'Analog gamma-correction for blue',
@@ -95,11 +100,13 @@ my %that = (
                         'default' => 'inactive',
                         'min' => 0,
                         'max' => 100,
+                        'unit' => '%',
                       },
           'halftone-size' => {
                                'tip' => 'Sets the size of the halftoning (dithering) pattern used when scanning halftoned images.',
                                'default' => 'inactive',
-                               'values' => ['2','4','6','8','12pel']
+                               'values' => ['2','4','6','8','12'],
+                        'unit' => 'pel',
                              },
           'quality-cal' => {
                              'tip' => 'Do a quality white-calibration',
@@ -111,11 +118,13 @@ my %that = (
                                      'default' => 'inactive',
                                      'min' => 0,
                                       'max' => 0,
+                        'unit' => 'us',
                                    },
           'depth' => {
                        'tip' => 'Number of bits per sample, typical values are 1 for "line-art" and 8 for multibit scans.',
                        'default' => '8',
-                       'values' => ['8bit']
+                       'values' => ['8'],
+                        'unit' => 'bit',
                      },
           'warmup' => {
                         'tip' => 'Warmup lamp before scanning',
@@ -133,12 +142,14 @@ my %that = (
                                    'min' => -100,
                             'max' => 100,
                             'step' => 1,
+                        'unit' => '%',
                           },
           'highlight-g' => {
                              'tip' => 'Selects what green radiance level should be considered "full green".',
                              'default' => '100',
                              'min' => 0,
                              'max' => 100,
+                        'unit' => '%',
                            },
           'analog-gamma-r' => {
                                 'tip' => 'Analog gamma-correction for red',
@@ -153,6 +164,7 @@ my %that = (
                                 'min' => 5,
                             'max' => 600,
                             'step' => 5,
+                        'unit' => 'dpi',
                             },
           'preview' => {
                          'tip' => 'Request a preview-quality scan.',
@@ -165,6 +177,7 @@ my %that = (
                                 'min' => 5,
                             'max' => 300,
                             'step' => 5,
+                        'unit' => 'dpi',
                           },
           'negative' => {
                           'tip' => 'Swap black and white',
@@ -186,18 +199,21 @@ my %that = (
                                     'default' => 'inactive',
                                     'min' => 0,
                                       'max' => 0,
+                        'unit' => 'us',
                                   },
           'threshold' => {
                            'tip' => 'Select minimum-brightness to get a white point',
                            'default' => 'inactive',
                            'min' => 0,
                            'max' => 100,
+                        'unit' => '%',
                          },
           'highlight-r' => {
                              'tip' => 'Selects what red radiance level should be considered "full red".',
                              'default' => '100',
                              'min' => 0,
                              'max' => 100,
+                        'unit' => '%',
                            },
           'batch-scan-loop' => {
                                  'tip' => 'set for middle scans of batch',
@@ -214,6 +230,7 @@ my %that = (
                           'default' => 'inactive',
                           'min' => 0,
                           'max' => 100,
+                        'unit' => '%',
                         },
           'batch-scan-start' => {
                                   'tip' => 'set for first scan of batch',
@@ -225,6 +242,7 @@ my %that = (
                                       'default' => 'inactive',
                           'min' => 0,
                           'max' => 297.18,
+                        'unit' => 'mm',
                                     },
           'resolution-bind' => {
                                  'tip' => 'Use same values for X and Y resolution',
@@ -236,12 +254,14 @@ my %that = (
                                      'default' => 'inactive',
                                      'min' => 0,
                                      'max' => 0,
+                        'unit' => 'us',
                                    },
           'highlight-b' => {
                              'tip' => 'Selects what blue radiance level should be considered "full blue".',
                              'default' => '100',
                              'min' => 0,
                              'max' => 100,
+                        'unit' => '%',
                            },
           'disable-pre-focus' => {
                                    'tip' => 'Do not calibrate focus',
@@ -253,6 +273,7 @@ my %that = (
                            'default' => 'inactive',
                            'min' => 0,
                            'max' => 100,
+                        'unit' => '%',
                          },
           'double-res' => {
                             'tip' => 'Use lens that doubles optical resolution',
@@ -269,6 +290,7 @@ my %that = (
                           'default' => 'inactive',
                           'min' => 0,
                           'max' => 100,
+                        'unit' => '%',
                         },
           'lamp-off' => {
                           'tip' => 'Turn off scanner lamp',
@@ -279,12 +301,14 @@ my %that = (
                                      'default' => 'inactive',
                                      'min' => 0,
                                      'max' => 0,
+                        'unit' => 'us',
                                    },
           'scan-lamp-density' => {
                                    'tip' => 'Define lamp density for scan',
                                    'default' => 'inactive',
                                    'min' => 0,
                                    'max' => 100,
+                        'unit' => '%',
                                  },
           'analog-gamma-g' => {
                                 'tip' => 'Analog gamma-correction for green',
@@ -299,12 +323,14 @@ my %that = (
                           'min' => -100,
                             'max' => 100,
                             'step' => 1,
+                        'unit' => '%',
                         },
           'cal-exposure-time' => {
                                    'tip' => 'Define exposure-time for calibration',
                                    'default' => 'inactive',
                                    'min' => 0,
                                       'max' => 0,
+                        'unit' => 'us',
                                  },
           'lamp-off-at-exit' => {
                                   'tip' => 'Turn off lamp when program exits',
@@ -332,24 +358,28 @@ my %that = (
                    'default' => 0,
                    'min' => 0,
                    'max' => 215.9,
+                        'unit' => 'mm',
                  },
           't' => {
                    'tip' => 'Top-left y position of scan area.',
                    'default' => 0,
                    'min' => 0,
                    'max' => 297.18,
+                        'unit' => 'mm',
                  },
           'x' => {
                    'tip' => 'Width of scan-area.',
                    'default' => 215.9,
                    'min' => 0,
                    'max' => 215.9,
+                        'unit' => 'mm',
                  },
           'y' => {
                    'tip' => 'Height of scan-area.',
                    'default' => 297.18,
                    'min' => 0,
                    'max' => 297.18,
+                        'unit' => 'mm',
                  }
         );
 is_deeply(\%this, \%that, 'umax');

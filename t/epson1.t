@@ -100,7 +100,8 @@ my %that = (
           'resolution' => {
                             'tip' => 'Sets the resolution of the scanned image.',
                             'default' => '50',
-                            'values' => ['50','60','72','75','80','90','100','120','133','144','150','160','175','180','200','216','240','266','300','320','350','360','400','480','600','720','800','900','1200','1600','1800','2400','3200dpi']
+                            'values' => ['50','60','72','75','80','90','100','120','133','144','150','160','175','180','200','216','240','266','300','320','350','360','400','480','600','720','800','900','1200','1600','1800','2400','3200'],
+                   'unit' => 'dpi',
                           },
           'wait-for-button' => {
                                  'tip' => 'After sending the scan command, wait until the button on the scanner is pressed to actually start the scan process.',
@@ -227,24 +228,28 @@ my %that = (
                    'default' => 0,
                    'min' => 0,
                    'max' => 215.9,
+                   'unit' => 'mm',
                  },
           't' => {
                    'tip' => 'Top-left y position of scan area.',
                    'default' => 0,
                    'min' => 0,
                    'max' => 297.18,
+                   'unit' => 'mm',
                  },
           'x' => {
                    'tip' => 'Width of scan-area.',
                    'default' => 215.9,
                    'min' => 0,
                    'max' => 215.9,
+                   'unit' => 'mm',
                  },
           'y' => {
                    'tip' => 'Height of scan-area.',
                    'default' => 297.18,
                    'min' => 0,
                    'max' => 297.18,
+                   'unit' => 'mm',
                  }
         );
 is_deeply(\%this, \%that, 'epson1');

@@ -45,6 +45,7 @@ my %that = (
                                    'min' => -100,
                             'max' => 100,
                             'step' => 1,
+                   'unit' => '%',
                         },
           'quality-cal' => {
                              'tip' => 'Do a quality white-calibration',
@@ -63,6 +64,7 @@ my %that = (
                             'min' => -100,
                             'max' => 100,
                             'step' => 1,
+                   'unit' => '%',
                           },
           'preview' => {
                          'tip' => 'Request a preview-quality scan.',
@@ -82,6 +84,7 @@ my %that = (
                                    'min' => 100,
                             'max' => 1200,
                             'step' => 5,
+                   'unit' => 'dpi',
                           },
           'power-save-time' => {
                                  'tip' => 'Allows control of the scanner\'s power save timer, dimming or turning off the light.',
@@ -104,24 +107,28 @@ my %that = (
                    'default' => 0,
                    'min' => 0,
                    'max' => 216,
+                   'unit' => 'mm',
                  },
           't' => {
                    'tip' => 'Top-left y position of scan area.',
                    'default' => 0,
                    'min' => 0,
                    'max' => 296,
+                   'unit' => 'mm',
                  },
           'x' => {
                    'tip' => 'Width of scan-area.',
                    'default' => 216,
                    'min' => 0,
                    'max' => 216,
+                   'unit' => 'mm',
                  },
           'y' => {
                    'tip' => 'Height of scan-area.',
                    'default' => 296,
                    'min' => 0,
                    'max' => 296,
+                   'unit' => 'mm',
                  }
         );
 is_deeply(\%this, \%that, 'hp_scanjet5300c');

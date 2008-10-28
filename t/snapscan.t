@@ -40,6 +40,7 @@ my %that = (
                                    'min' => 0,
                             'max' => 100,
                             'step' => 1,
+                        'unit' => '%',
                          },
           'mode' => {
                       'tip' => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
@@ -114,6 +115,7 @@ my %that = (
                                   'min' => -100,
                             'max' => 400,
                             'step' => 1,
+                        'unit' => '%',
                         },
           'analog-gamma-g' => {
                                 'tip' => 'Analog gamma-correction for green',
@@ -129,7 +131,8 @@ my %that = (
           'depth' => {
                        'tip' => 'Number of bits per sample, typical values are 1 for "line-art" and 8 for multibit scans.',
                        'default' => 'inactive',
-                       'values' => ['8bit']
+                       'values' => ['8'],
+                        'unit' => 'bit',
                      },
           'analog-gamma-r' => {
                                 'tip' => 'Analog gamma-correction for red',
@@ -143,6 +146,7 @@ my %that = (
                                   'min' => -400,
                             'max' => 400,
                             'step' => 1,
+                        'unit' => '%',
                           },
           'preview-mode' => {
                               'tip' => 'Select the mode for previews. Greyscale previews usually give the best combination of speed and detail.',
@@ -162,7 +166,8 @@ my %that = (
           'resolution' => {
                             'tip' => 'Sets the resolution of the scanned image.',
                             'default' => '300',
-                            'values' => ['auto','50','75','100','150','200','300','450','600dpi']
+                            'values' => ['auto','50','75','100','150','200','300','450','600'],
+                        'unit' => 'dpi',
                           },
           'negative' => {
                           'tip' => 'Swap black and white',
@@ -179,24 +184,28 @@ my %that = (
                    'default' => 0,
                    'min' => 0,
                    'max' => 216,
+                        'unit' => 'mm',
                  },
           't' => {
                    'tip' => 'Top-left y position of scan area.',
                    'default' => 0,
                    'min' => 0,
                    'max' => 297,
+                        'unit' => 'mm',
                  },
           'x' => {
                    'tip' => 'Width of scan-area.',
                    'default' => 216,
                    'min' => 0,
                    'max' => 216,
+                        'unit' => 'mm',
                  },
           'y' => {
                    'tip' => 'Height of scan-area.',
                    'default' => 297,
                    'min' => 0,
                    'max' => 297,
+                        'unit' => 'mm',
                  }
         );
 is_deeply(\%this, \%that, 'snapscan');

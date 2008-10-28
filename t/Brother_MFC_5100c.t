@@ -28,6 +28,7 @@ my %that = (
                             'min' => -50,
                             'max' => 50,
                             'step' => 1,
+                   'unit' => '%',
                           },
           'mode' => {
                       'tip' => 'Select the scan mode',
@@ -37,7 +38,8 @@ my %that = (
           'resolution' => {
                             'tip' => 'Sets the resolution of the scanned image.',
                             'default' => '200',
-                            'values' => ['100','150','200','300','400','600','1200','2400','4800','9600dpi']
+                            'values' => ['100','150','200','300','400','600','1200','2400','4800','9600'],
+                   'unit' => 'dpi',
                           },
           'contrast' => {
                           'tip' => 'Controls the contrast of the acquired image.',
@@ -45,6 +47,7 @@ my %that = (
                             'min' => -50,
                             'max' => 50,
                             'step' => 1,
+                   'unit' => '%',
                         },
           'l' => {
                    'tip' => 'Top-left x position of scan area.',
@@ -52,6 +55,7 @@ my %that = (
                    'min' => 0,
                    'max' => 208,
                    'step' => 0.0999908,
+                   'unit' => 'mm',
                  },
           't' => {
                    'tip' => 'Top-left y position of scan area.',
@@ -59,6 +63,7 @@ my %that = (
                    'min' => 0,
                    'max' => 355.6,
                    'step' => 0.0999908,
+                   'unit' => 'mm',
                  },
           'x' => {
                    'tip' => 'Width of scan-area.',
@@ -66,6 +71,7 @@ my %that = (
                    'min' => 0,
                    'max' => 208,
                    'step' => 0.0999908,
+                   'unit' => 'mm',
                  },
           'y' => {
                    'tip' => 'Height of scan-area.',
@@ -73,6 +79,7 @@ my %that = (
                    'min' => 0,
                    'max' => 355.6,
                    'step' => 0.0999908,
+                   'unit' => 'mm',
                  }
         );
 is_deeply(\%this, \%that, 'Brother_MFC_5100c');

@@ -25,7 +25,8 @@ my %that = (
           'resolution' => {
                             'tip' => 'Sets the resolution of the scanned image.',
                             'default' => '75',
-                            'values' => ['75','150','300','600dpi']
+                            'values' => ['75','150','300','600'],
+                   'unit' => 'dpi',
                           },
           'quality-cal' => {
                              'tip' => 'Do a quality white-calibration',
@@ -42,6 +43,7 @@ my %that = (
                    'min' => 0,
                    'max' => 215,
                    'step' => 1869504867,
+                   'unit' => 'mm',
                  },
           't' => {
                    'tip' => 'Top-left y position of scan area.',
@@ -49,6 +51,7 @@ my %that = (
                    'min' => 0,
                    'max' => 296,
                    'step' => 1852795252,
+                   'unit' => 'mm',
                  },
           'x' => {
                    'tip' => 'Width of scan-area.',
@@ -56,12 +59,14 @@ my %that = (
                    'min' => 3,
                    'max' => 216,
                    'step' => 16,
+                   'unit' => 'mm',
                  },
           'y' => {
                    'tip' => 'Height of scan-area.',
                    'default' => 100,
                    'min' => 1,
                    'max' => 297,
+                   'unit' => 'mm',
                  }
         );
 is_deeply(\%this, \%that, 'canoscan_FB_630P');

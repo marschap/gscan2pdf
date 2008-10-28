@@ -45,6 +45,7 @@ my %that = (
                                    'min' => 0,
                             'max' => 863.489,
                             'step' => 0.0211639,
+                   'unit' => 'mm',
                           },
           'pagewidth' => {
                            'tip' => 'Must be set properly to align scanning window',
@@ -52,6 +53,7 @@ my %that = (
                                    'min' => 0,
                             'max' => 224.846,
                             'step' => 0.0211639,
+                   'unit' => 'mm',
                          },
           'y-resolution' => {
                               'tip' => 'Sets the vertical resolution of the scanned image.',
@@ -59,6 +61,7 @@ my %that = (
                                    'min' => 50,
                             'max' => 600,
                             'step' => 1,
+                   'unit' => 'dpi',
                             },
           'dropoutcolor' => {
                               'tip' => 'One-pass scanners use only one color during gray or binary scanning, useful for colored paper or ink',
@@ -71,6 +74,7 @@ my %that = (
                                    'min' => 100,
                             'max' => 600,
                             'step' => 1,
+                   'unit' => 'dpi',
                           },
           'l' => {
                    'tip' => 'Top-left x position of scan area.',
@@ -78,6 +82,7 @@ my %that = (
                    'min' => 0,
                    'max' => 224.846,
                    'step' => 0.0211639,
+                   'unit' => 'mm',
                  },
           't' => {
                    'tip' => 'Top-left y position of scan area.',
@@ -85,6 +90,7 @@ my %that = (
                    'min' => 0,
                    'max' => 863.489,
                    'step' => 0.0211639,
+                   'unit' => 'mm',
                  },
           'x' => {
                    'tip' => 'Width of scan-area.',
@@ -92,6 +98,7 @@ my %that = (
                    'min' => 0,
                    'max' => 224.846,
                    'step' => 0.0211639,
+                   'unit' => 'mm',
                  },
           'y' => {
                    'tip' => 'Height of scan-area.',
@@ -99,6 +106,7 @@ my %that = (
                    'min' => 0,
                    'max' => 863.489,
                    'step' => 0.0211639,
+                   'unit' => 'mm',
                  }
         );
 is_deeply(\%this, \%that, 'fujitsu');

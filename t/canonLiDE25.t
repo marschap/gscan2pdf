@@ -107,6 +107,7 @@ my %that = (
                             'min' => -100,
                             'max' => 100,
                             'step' => 1,
+                   'unit' => '%',
                         },
           'greenlamp-off' => {
                                'tip' => 'Defines green lamp off parameter',
@@ -168,7 +169,7 @@ my %that = (
                             'min' => -100,
                             'max' => 100,
                             'step' => 1,
-
+                   'unit' => '%',
                           },
           'preview' => {
                          'tip' => 'Request a preview-quality scan.',
@@ -180,6 +181,7 @@ my %that = (
                             'default' => '50',
                             'min' => 50,
                             'max' => 2400,
+                   'unit' => 'dpi',
                           },
           'lampoff-time' => {
                               'tip' => 'Lampoff-time in seconds.',
@@ -193,24 +195,28 @@ my %that = (
                    'default' => 0,
                    'min' => 0,
                    'max' => 215,
+                   'unit' => 'mm',
                  },
           't' => {
                    'tip' => 'Top-left y position of scan area.',
                    'default' => 0,
                    'min' => 0,
                    'max' => 297,
+                   'unit' => 'mm',
                  },
           'x' => {
                    'tip' => 'Width of scan-area.',
                    'default' => 103,
                    'min' => 0,
                    'max' => 215,
+                   'unit' => 'mm',
                  },
           'y' => {
                    'tip' => 'Height of scan-area.',
                    'default' => 76.21,
                    'min' => 0,
                    'max' => 297,
+                   'unit' => 'mm',
                  }
 
         );
