@@ -687,7 +687,7 @@ sub scan_it {
      if ($verbose && $parm->{depth} == 8);
     if ($Sane::STATUS != SANE_STATUS_EOF) {
      print STDERR "$prog_name: sane_read: $Sane::STATUS\n";
-     return $Sane::STATUS;
+     return;
     }
     last;
    }
@@ -805,8 +805,7 @@ cleanup:
  elsif ($verbose) {
   printf STDERR "%s: read %u bytes in total\n", $prog_name, $total_bytes;
  }
-
- return $Sane::STATUS;
+ return;
 }
 
 
@@ -891,7 +890,7 @@ sub test_it {
 
 cleanup:
  $device->cancel;
- return $Sane::STATUS;
+ return;
 }
 
 # There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
@@ -1172,10 +1171,10 @@ if ($test == 0) {
    exit SANE_STATUS_ACCESS_DENIED;
   }
 
-  $Sane::_status = scan_it ();
+  scan_it();
   if ($batch) {
-   print STDERR "Scanned page %d.", $n;
-   print STDERR " (scanner status = %d)\n", $Sane::STATUS;
+   printf STDERR "Scanned page %d.", $n;
+   printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
   }
 
   if ($Sane::STATUS == SANE_STATUS_GOOD) {}
