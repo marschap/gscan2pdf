@@ -27,6 +27,10 @@ my $w_x = 0;
 my $h_y = 0;
 my $resolution_optind = -1;
 my $resolution_value = 0;
+my $progress = 0;
+my $batch_double = 0;
+my $batch_prompt = 0;
+my $dont_scan = 0;
 my $prog_name = basename($0);
 my $STRIP_HEIGHT = 256; # lines we increment image height
 my @args = (\%options, 'd|device-name=s' => \$devname,
@@ -36,10 +40,10 @@ my @args = (\%options, 'd|device-name=s' => \$devname,
                        'batch-start=i' => \$batch_start_at,
                        'batch-count=i' => \$batch_count,
                        'batch-increment=i' => \$batch_increment,
-                       'batch-double',
-                       'batch-prompt',
-                       'p|progress',
-                       'n|dont-scan',
+                       'batch-double' => \$batch_double,
+                       'batch-prompt' => \$batch_prompt,
+                       'p|progress' => \$progress,
+                       'n|dont-scan' => \$dont_scan,
                        'T|test' => \$test,
                        'h|help' => \$help,
                        'v|verbose' => \$verbose,
@@ -676,7 +680,7 @@ sub scan_it {
    $total_bytes += $len;
    my $progr = (($total_bytes * 100.) / $hundred_percent);
    $progr = 100. if ($progr > 100.);
-   printf STDERR "Progress: %3.1f%%\r", $progr if (defined $options{p});
+   printf STDERR "Progress: %3.1f%%\r", $progr if ($progress);
 
    if ($Sane::STATUS != SANE_STATUS_GOOD) {
     printf STDERR "$prog_name: min/max graylevel value = %d/%d\n", $min, $max
@@ -895,6 +899,7 @@ cleanup:
 # scan and back to l for the second.
 for (@ARGV) {
  $_ = '-m' if ($_ eq '-l');
+ $_ = '-s' if ($_ eq '-t');
 }
 # make a first pass through the options with error printing and argument
 # permutation disabled:
@@ -1025,6 +1030,7 @@ if (defined($device)) {
 # scan and back to l for the second.
  for (@ARGV) {
   $_ = '-l' if ($_ eq '-m');
+  $_ = '-t' if ($_ eq '-s');
  }
  GetOptions (@args);
 
@@ -1108,14 +1114,14 @@ if ($help) {
  exit (0);
 }
 
-exit (0) if (defined($options{n}));
+exit (0) if ($dont_scan);
 
 $SIG{HUP} = \&sighandler;
 $SIG{INT} = \&sighandler;
 $SIG{PIPE} = \&sighandler;
 $SIG{TERM} = \&sighandler;
 
-$batch_increment = 2 if (defined($options{'batch-double'}));
+$batch_increment = 2 if ($batch_double);
 
 if ($test == 0) {
  my $n = $batch_start_at;
@@ -1140,7 +1146,7 @@ if ($test == 0) {
   $path = sprintf $format, $n if ($batch);    # format is NULL unless batch mode
 
   if ($batch) {
-   if (defined $options{'batch-prompt'}) {
+   if ($batch_prompt) {
     printf STDERR "Place document no. %d on the scanner.\n", $n;
     printf STDERR "Press <RETURN> to continue.\n";
     printf STDERR "Press Ctrl + D to terminate.\n";

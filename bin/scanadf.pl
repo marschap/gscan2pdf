@@ -867,7 +867,13 @@ sub scan_docs {
  return;
 }
 
-
+# There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
+# l is not in @args. Therefore the workaround is to rename l to m for the first
+# scan and back to l for the second.
+for (@ARGV) {
+ $_ = '-m' if ($_ eq '-l');
+ $_ = '-s' if ($_ eq '-t');
+}
 # make a first pass through the options with error printing and argument
 # permutation disabled:
 GetOptions (@args);
@@ -947,6 +953,13 @@ if (defined($device)) {
  fetch_options($device);
 # re-enable error printing and arg permutation
  Getopt::Long::Configure('no_pass_through');
+# There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
+# l is not in @args. Therefore the workaround is to rename l to m for the first
+# scan and back to l for the second.
+ for (@ARGV) {
+  $_ = '-l' if ($_ eq '-m');
+  $_ = '-t' if ($_ eq '-s');
+ }
  GetOptions (@args);
 
  for my $ch (keys %options) {
