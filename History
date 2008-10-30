@@ -7,7 +7,9 @@
 + scanimage.pl and scanadf.pl frontends
 + Parse units from --help output. Closes LP #283847
   (Saving a djvu file with a resolution of 600dpi fails in gscan2pdf v0.9.26)
-
+* Corrected logic for auto-rotating manual double-sided scans.
+  Closes Debian bug #497629
+  (Rotation of pages does work on manual double sided scanning)
 
 0.9.26 (24.08.2008):
 

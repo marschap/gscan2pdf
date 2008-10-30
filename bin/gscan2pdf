@@ -306,7 +306,7 @@ my ($windowi, $windowe, $windows, $windowh, $windowo,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
     $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
-    $windowr, @rotate_queue, $rotating, $view,
+    $windowr, @rotate_queue, $rotating, $view, $frames, $duplex,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -3464,7 +3464,7 @@ sub scan_dialog {
  });
 
 # Frame for standard mode
- my $frames = Gtk2::Frame -> new($d->get('Source document'));
+ $frames = Gtk2::Frame -> new($d->get('Source document'));
  $vbox1 -> pack_start ($frames, FALSE, FALSE, 0);
  my $vboxs = Gtk2::VBox -> new;
  $vboxs -> set_border_width($border_width);
@@ -3876,6 +3876,19 @@ sub scan_dialog {
   }
   print "rotate facing $SETTING{'rotate facing'}\n" if $debug;
   print "rotate reverse $SETTING{'rotate reverse'}\n" if $debug;
+  my $rotate_facing = $SETTING{'rotate facing'};
+  my $rotate_reverse = $SETTING{'rotate reverse'};
+  print $duplex ? "" : "non-", "duplex mode\n" if $debug;
+  if (! $duplex) {
+   if ($step > 0) {
+    $rotate_reverse = $SETTING{'rotate facing'};
+   }
+   else {
+    $rotate_facing = $SETTING{'rotate reverse'};
+   }
+  }
+  print "rotate_facing $rotate_facing\n" if $debug;
+  print "rotate_reverse $rotate_reverse\n" if $debug;
 
   $SETTING{'unpaper on scan'} = $ubutton->get_active;
   print "unpaper $SETTING{'unpaper on scan'}\n" if $debug;
@@ -3888,12 +3901,12 @@ sub scan_dialog {
   }
   if ($SETTING{frontend} eq 'scanimage' or $SETTING{frontend} eq 'scanimage.pl') {
    scanimage($SETTING{device}, $npages, $start-$step, $step,
-                $SETTING{'rotate facing'}, $SETTING{'rotate reverse'},
+                $rotate_facing, $rotate_reverse,
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
   }
   else {
    scanadf($SETTING{device}, $npages, $start-$step, $step,
-                $SETTING{'rotate facing'}, $SETTING{'rotate reverse'},
+                $rotate_facing, $rotate_reverse,
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
   }
  } );
@@ -5063,12 +5076,21 @@ sub parse_options {
     $widget -> signal_connect (changed => sub {
      my $text = $widget -> get_active_text;
      if (defined($text) and
-                     get_value(\%ddo, $option, $text) =~ /(Flatbed)|(Normal)/) {
+                     get_value(\%ddo, $option, $text) =~ /(flatbed)|(normal)/i) {
       $bscanall->set_sensitive(FALSE);
       $bscannum->set_active(TRUE);
      }
      else {
       $bscanall->set_sensitive(TRUE);
+     }
+     if (defined($text) and
+                     get_value(\%ddo, $option, $text) =~ /duplex/i) {
+      $duplex = TRUE;
+      $frames->set_sensitive(FALSE);
+     }
+     else {
+      $duplex = FALSE;
+      $frames->set_sensitive(TRUE);
      }
     });
    }
