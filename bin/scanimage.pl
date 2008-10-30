@@ -15,6 +15,7 @@ my (%options, @window_val_user, @window_option, @window_val,
 my $verbose = 0;
 my $help = 0;
 my $test = 0;
+my $batch = 0;
 my $batch_start_at = 1;
 my $batch_count = -1;
 my $batch_increment = 1;
@@ -761,8 +762,9 @@ sub scan_it {
      }
     }
    }
+
   }
-  $first_frame = 0; 
+  $first_frame = 0;
  }
  while (!$parm->{last_frame});}
 
@@ -1121,13 +1123,13 @@ $SIG{PIPE} = \&sighandler;
 $SIG{TERM} = \&sighandler;
 
 $batch_increment = 2 if ($batch_double);
+$batch = 1 if ($batch_count);
 
 if ($test == 0) {
  my $n = $batch_start_at;
- my $batch = 0;
  $batch = 1 if (defined $format);
 
- if ($batch && $format eq '') {
+ if ($batch && ! defined $format) {
 #  if ($output_format == OUTPUT_TIFF) {
 #   $format = "out%d.tif";
 #  }
@@ -1165,7 +1167,7 @@ if ($test == 0) {
    last;
   }
 
-  if ($batch && ! open $fh, '>', $path) {
+  if ($batch && ! (open($fh, '>', $path) && STDOUT->fdopen($fh, '>'))) {
    print STDERR "cannot open %s\n", $path;
    $device->cancel;
    exit SANE_STATUS_ACCESS_DENIED;

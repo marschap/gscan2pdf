@@ -744,7 +744,7 @@ sub scan_it_raw {
      if ($verbose && $parm->{depth} == 8);
     if ($Sane::STATUS != SANE_STATUS_EOF) {
      print STDERR "$prog_name: sane_read: $Sane::STATUS\n";
-     return $Sane::STATUS;
+     return;
     }
     last;
    }
@@ -818,7 +818,7 @@ sub scan_it_raw {
 
 cleanup:
  close $fp if ($fp);
- return $Sane::STATUS;
+ return;
 }
 
 
