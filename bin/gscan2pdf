@@ -347,6 +347,8 @@ my @action_items = (
     renumber($slist, 0, 1, 1);
    } ],
  [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
+ [ 'Select Odd', undef, $d->get('Select _Odd'), '<control>1', $d->get('Select all odd-numbered pages'), sub { select_odd_even(0); } ],
+ [ 'Select Even', undef, $d->get('Select _Even'), '<control>2', $d->get('Select all evenly-numbered pages'), sub { select_odd_even(1); } ],
  [ 'Preferences', 'gtk-preferences', $d->get('Prefere_nces'), undef, $d->get('Edit preferences'), \&preferences ],
  
  # View menu
@@ -406,8 +408,11 @@ my $ui = "<ui>
    <menuitem action='Copy'/>
    <menuitem action='Paste'/>
    <menuitem action='Delete'/>
+   <separator/>
    <menuitem action='Renumber'/>
    <menuitem action='Select All'/>
+   <menuitem action='Select Odd'/>
+   <menuitem action='Select Even'/>
    <separator/>
    <menuitem action='Preferences'/>
   </menu>
@@ -454,6 +459,7 @@ my $ui = "<ui>
   <toolitem action='Copy'/>
   <toolitem action='Paste'/>
   <toolitem action='Delete'/>
+  <separator/>
   <toolitem action='Renumber'/>
   <toolitem action='Select All'/>
   <separator/>
@@ -496,6 +502,8 @@ my $ui = "<ui>
   <separator/>
   <menuitem action='Renumber'/>
   <menuitem action='Select All'/>
+  <menuitem action='Select Odd'/>
+  <menuitem action='Select Even'/>
   <separator/>
   <menuitem action='Rotate 90'/>
   <menuitem action='Rotate 180'/>
@@ -4829,13 +4837,28 @@ sub reset_start {
 # Select all scans
 
 sub select_all {
- if ($slist -> has_focus) {
-  $slist -> get_selection -> select_all;
- }
- elsif ($textview -> has_focus) {
+ if ($textview -> has_focus) {
   my ($start, $end) = $textbuffer->get_bounds;
   $textbuffer->select_range ($start, $end);
  }
+ else {
+  $slist -> get_selection -> select_all;
+ }
+ return;
+}
+
+
+# Select all odd(0) or even(1) scans
+
+sub select_odd_even {
+ my $odd = shift;
+ my @selection;
+ for (0 .. $#{$slist -> {data}}) {
+  push @selection, $_ if ($slist -> {data}[$_][0] % 2 xor $odd);
+ }
+ 
+ $slist -> get_selection -> unselect_all;
+ $slist -> select(@selection);
  return;
 }
 
