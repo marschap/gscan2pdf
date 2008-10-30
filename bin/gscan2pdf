@@ -3014,13 +3014,15 @@ sub save_TIFF {
    ++$page;
    send($parent, ($page-1)/($#pagelist+2)
     .sprintf($d->get("Converting image %i of %i to TIFF"), $page, $#pagelist+1), 0);
-    my $filename = $slist -> {data}[$j][2];
-    if ($filename !~ /\.tif/) {
+   my $filename = $slist -> {data}[$j][2];
+   if ($filename !~ /\.tif/ or $SETTING{'tiff compression'} eq 'jpeg') {
     my (undef, $tif) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
     my $resolution = $slist -> {data}[$j][4];
 
 # Convert to tiff
-    system ("convert -units PixelsPerInch -density $resolution $filename $tif") == 0 or
+    my $depth = '';
+    $depth = '-depth 8' if ($SETTING{'tiff compression'} eq 'jpeg');
+    system ("convert -units PixelsPerInch -density $resolution $depth $filename $tif") == 0 or
      send($parent, "2".$d->get('Error writing TIFF'), 0);
 
     $filename = $tif;
@@ -3033,7 +3035,9 @@ sub save_TIFF {
 
 # Create the tiff
   send($parent, '1'.$d->get('Concatenating TIFFs'), 0);
-  my $cmd = "tiffcp -c $compression $pagelist \"$filename\" 2>&1";
+  my $rows = '';
+  $rows = '-r 16' if ($SETTING{'tiff compression'} eq 'jpeg');
+  my $cmd = "tiffcp $rows -c $compression $pagelist \"$filename\" 2>&1";
   print "$cmd\n" if $debug;
   my $output = `$cmd`;
   if (defined $ps) {

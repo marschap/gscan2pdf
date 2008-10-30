@@ -10,6 +10,9 @@
 * Corrected logic for auto-rotating manual double-sided scans.
   Closes Debian bug #497629
   (Rotation of pages does work on manual double sided scanning)
+* Force -depth 8 and -r 16 for TIFF JPEG compression to prevent error messages
+  from tiffcp
+
 
 0.9.26 (24.08.2008):
 
