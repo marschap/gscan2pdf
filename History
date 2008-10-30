@@ -1,11 +1,11 @@
 0.9.27 (24.10.2008):
 
-+ Check whether crashed session exists before trying to open it.
+* Check whether crashed session exists before trying to open it.
   Closes 2099857 (Program does not start, as long as file session is missing)
-+ Switched many dialogs to modal.
+* Switched many dialogs to modal.
   Closes Debian bug #500547 (fails to save PDF files)
-+ scanimage.pl and scanadf.pl frontends
-+ Parse units from --help output. Closes LP #283847
+* + scanimage.pl and scanadf.pl frontends
+* Parse units from --help output. Closes LP #283847
   (Saving a djvu file with a resolution of 600dpi fails in gscan2pdf v0.9.26)
 * Corrected logic for auto-rotating manual double-sided scans.
   Closes Debian bug #497629
@@ -13,480 +13,479 @@
 
 0.9.26 (24.08.2008):
 
-+ Various fixes causing TMPDIR not to work, including ~ expansion and creation
+* Various fixes causing TMPDIR not to work, including ~ expansion and creation
   of TMPDIR if necessary.
-+ Scan profiles. Closes 1700803 (RFE: support scan profiles)
-+ Fixed remembering directory on import
-+ Look for error loading config and revert to defaults if necessary
-+ Save and restore sessions,
+* + Scan profiles. Closes 1700803 (RFE: support scan profiles)
+* Fixed remembering directory on import
+* Look for error loading config and revert to defaults if necessary
+* Save and restore sessions,
    a. to allow restore after crash
    b. to be able to save your work, shutdown, and go back afterwards
-+ Automatic PDF compression option
-+ Tools/GIMP
+* + Automatic PDF compression option
+* + Tools/GIMP
   Closes 1823585 (Edit in Gimp)
-+ Save as text.
+* + Save as text.
   Closes Debian bug #494074 (Select All Text; Save all OCRed text)
-+ Ukranian translation (thanks to Serhey Kusyumoff)
-+ Update to Dutch translation (thanks to Hans Spaans)
-+ Update to German translation (thanks to Kim Linoh)
-+ Update to Russian translation (thanks to Alexandre Prokoudine)
-+ Update to Spanish translation (thanks to Yözen Hernández)
-+ Update to Swedish translation (thanks to ChalkyGBG)
+* + Ukranian translation (thanks to Serhey Kusyumoff)
+* Update to Dutch translation (thanks to Hans Spaans)
+* Update to German translation (thanks to Kim Linoh)
+* Update to Russian translation (thanks to Alexandre Prokoudine)
+* Update to Spanish translation (thanks to Yözen Hernández)
+* Update to Swedish translation (thanks to ChalkyGBG)
 
 
 0.9.25 (04.07.2008):
 
-- current page selection as not intuitive for some people, and anyway not
+* - current page selection as not intuitive for some people, and anyway not
   strictly necessary.
   Closes Debian bug #480947 (Defaults for pages are weird now)
-+ support for unpaper option --output-pages
+* + support for unpaper option --output-pages
   Closes Launchpad bug #215683
    (gscan2pdf should offer an option to split a scanned page)
-+ Check for device before caching.
-+ Checkbox to disable option cache
+* Check for device before caching.
+* + Checkbox to disable option cache
   Closes 1980762 (Second Start Failure)
-+ Check {Pseudo|Direct}Class for pnm and convert to pbm in necessary for djvu
+* Check {Pseudo|Direct}Class for pnm and convert to pbm in necessary for djvu
   Closes Debian bug #486553 (gscan2pdf: unable to save as DjVu)
-+ Correct DjVu text zones
+* Correct DjVu text zones
   Closes Debian bug #486680 (gscan2pdf: bizarre DjVu text zones)
-+ Save resolution information with TIFF. Closes Debian bug #485641:
+* Save resolution information with TIFF. Closes Debian bug #485641:
   (gscan2pdf: No longer saves resolution in TIFF files)
-+ fixed unsharp mask tool
-+ prefix option to preferences
+* fixed unsharp mask tool
+* + prefix option to preferences
   Closes Debian bug #484641 (gscan2pdf: prefix option for scanimage command)
-+ Bulgarian translation (thanks to Emil Pavlov)
-+ Update to Danish translation (thanks to Jacob Nielsen)
-+ Update to Dutch translation (thanks to Lodder)
-+ Update to French translation (thanks to Simon Leblanc)
-+ Update to German translation (thanks to Kim Linoh)
-+ Update to Italian translation (thanks to Milo Casagrande)
-+ Update to Polish translation (thanks to Wojtek Jamrozy)
-+ Update to Russian translation (thanks to Igor Zubarev)
-+ Update to Spanish translation (thanks to Alejandro Rochette)
+* + Bulgarian translation (thanks to Emil Pavlov)
+* Update to Danish translation (thanks to Jacob Nielsen)
+* Update to Dutch translation (thanks to Lodder)
+* Update to French translation (thanks to Simon Leblanc)
+* Update to German translation (thanks to Kim Linoh)
+* Update to Italian translation (thanks to Milo Casagrande)
+* Update to Polish translation (thanks to Wojtek Jamrozy)
+* Update to Russian translation (thanks to Igor Zubarev)
+* Update to Spanish translation (thanks to Alejandro Rochette)
 
 
 0.9.24 (07.05.2008):
 
-+ check that the file can be written before saving PDF, TIFF or PS.
+* + check that the file can be written before saving PDF, TIFF or PS.
   Closes 1915008 (crash when trying to save in non-writable directory)
-+ use gtk+ set_do_overwrite_confirmation for save as DjVu.
-+ detect thunderbird mail client and attach PDF appropriately.
+* use gtk+ set_do_overwrite_confirmation for save as DjVu.
+* detect thunderbird mail client and attach PDF appropriately.
   Closes LP 202709 ("Email as PDF" option does not work with Thunderbird)
-+ deal correctly with newline character in device name
-+ gain option from scanners/canonFB630u
-+ always force depth before embedding image in PDF
+* deal correctly with newline character in device name
+* + gain option from scanners/canonFB630u
+* always force depth before embedding image in PDF
   Closes LP 204988 (gscan2pdf generates blank pages in the .pdf output)
-+ fixed erroneous read-only error writing file
-+ fixed threshold tool. Closes 1936561 (Threshold tool fails)
-+ Cache options
-+ crop tool
-+ adf_mode option from Epson GT-2500
-+ --device option
-+ negate tool
-+ fixed bug preventing scanning when no device-dependent options reported
-+ Norwegian Bokmal translation (thanks to Mikal Krogstad)
-+ Persian translation (thanks to Artin)
-+ Hungarian translation (thanks to Szenogr�di Norbert P�ter)
-+ Japanese translation (thanks to John M)
-+ Update to Czech translation (thanks to Petr Jelínek)
-+ Update to Dutch translation (thanks to Jan Klopper)
-+ Update to French translation (thanks to Simon Leblanc)
-+ Update to German translation (thanks to Manuel Rennecke)
-+ Update to Italian translation (thanks to Alberto)
-+ Update to Slovenian translation (thanks to Robert Hrovat)
-+ Update to Spanish translation (thanks to starmaker)
+* fixed erroneous read-only error writing file
+* fixed threshold tool. Closes 1936561 (Threshold tool fails)
+* + Cache options
+* + crop tool
+* + adf_mode option from Epson GT-2500
+* + --device option
+* + negate tool
+* fixed bug preventing scanning when no device-dependent options reported
+* + Norwegian Bokmal translation (thanks to Mikal Krogstad)
+* + Persian translation (thanks to Artin)
+* + Hungarian translation (thanks to Szenogr�di Norbert P�ter)
+* + Japanese translation (thanks to John M)
+* Update to Czech translation (thanks to Petr Jelínek)
+* Update to Dutch translation (thanks to Jan Klopper)
+* Update to French translation (thanks to Simon Leblanc)
+* Update to German translation (thanks to Manuel Rennecke)
+* Update to Italian translation (thanks to Alberto)
+* Update to Slovenian translation (thanks to Robert Hrovat)
+* Update to Spanish translation (thanks to starmaker)
 
 
 0.9.23 (05.03.2008):
 
-+ fixed bug running unpaper
-+ hide progress bar when asking for page range to import
+* fixed bug running unpaper
+* hide progress bar when asking for page range to import
 
 
 0.9.22 (04.03.2008):
 
-+ fixed incorrect error message when saving image
+* fixed incorrect error message when saving image
   Closes Debian bug #463708 (gscan2pdf: Error when saving as PNG)
-+ Edit/Preferences to choose TMPDIR
-+ moved Frontends, Save options and Restore window settings to Edit/Preferences
-+ improve error messages saving PDF
-+ unsharp mask tool
-+ merged Save PDF, Save Image & Save DjVu dialogs
-+ request page range when importing a DjVu with more than one page, and extract
+* + Edit/Preferences to choose TMPDIR
+* moved Frontends, Save options and Restore window settings to Edit/Preferences
+* improve error messages saving PDF
+* + unsharp mask tool
+* merged Save PDF, Save Image & Save DjVu dialogs
+* request page range when importing a DjVu with more than one page, and extract
   the pages singly
   Closes Debian bug #462171 (importing DjVu files fails, hogs memory)
-+ replace some unpaper references with 'Clean up'
+* replace some unpaper references with 'Clean up'
   Closes 1889896 ('unpaper' should be called something more clear)
-+ prepopulate PDF filename with title
+* prepopulate PDF filename with title
   Closes 1889901 (Use PDF 'Title' as the default file name in the save dialog)
-+ change max number of pages to scan to 999
+* change max number of pages to scan to 999
   Closes 1803801 (page # in document scan dialog show only number till 99)
-+ use gtk+ set_do_overwrite_confirmation
-+ prevent page range widget switching to all when deleting a page
-+ progress bar whilst rotating
+* use gtk+ set_do_overwrite_confirmation
+* prevent page range widget switching to all when deleting a page
+* + progress bar whilst rotating
   Closes 1895947 (Show progress bar when rotating pages)
-+ rotate options to scan dialog
+* + rotate options to scan dialog
   Closes 1889674 (Patch for Duplex Scanning)
-+ fixed about dialog
+* fixed about dialog
   Closes 1900576 (About dialog does not function on FC8)
-+ use tiffcp rather than tiffsplit to import TIFFs
+* use tiffcp rather than tiffsplit to import TIFFs
   Closes Debian bug #462171 (importing DjVu files fails, hogs memory)
-+ Initial Slovenian translation (thanks to Robert Hrovat)
-+ Update to Brazilian Portuguese translation (thanks to Manuel Rennecke)
-+ Update to Czech translation (thanks to Petr Jelínek)
-+ Update to Danish translation (thanks to Jacob Nielsen)
-+ Update to Dutch translation (thanks to saabaero)
-+ Update to French translation (thanks to Manuel Rennecke)
-+ Update to German translation (thanks to Matthias Gutjahr)
-+ Update to Portuguese translation (thanks to Manuel Rennecke)
-+ Update to Russian translation (thanks to Alexandre Prokoudine)
-+ Update to Spanish translation (thanks to Manuel Rennecke)
-+ Update to Swedish translation (thanks to Poppe)
-+ Update to Belarusian translation (thanks to booxter)
-+ Update to Italian translation (thanks to Andrea (pikkio))
-+ Update to Polish translation (thanks to Piotr Strębski)
-+ Update to Traditional Chinese translation (thanks to Chien Cheng Wei)
+* + Initial Slovenian translation (thanks to Robert Hrovat)
+* Update to Brazilian Portuguese translation (thanks to Manuel Rennecke)
+* Update to Czech translation (thanks to Petr Jelínek)
+* Update to Danish translation (thanks to Jacob Nielsen)
+* Update to Dutch translation (thanks to saabaero)
+* Update to French translation (thanks to Manuel Rennecke)
+* Update to German translation (thanks to Matthias Gutjahr)
+* Update to Portuguese translation (thanks to Manuel Rennecke)
+* Update to Russian translation (thanks to Alexandre Prokoudine)
+* Update to Spanish translation (thanks to Manuel Rennecke)
+* Update to Swedish translation (thanks to Poppe)
+* Update to Belarusian translation (thanks to booxter)
+* Update to Italian translation (thanks to Andrea (pikkio))
+* Update to Polish translation (thanks to Piotr Strębski)
+* Update to Traditional Chinese translation (thanks to Chien Cheng Wei)
 
 
 0.9.21 (01.02.2008):
 
-+ ensure quit question only displayed once, rather than once per not-saved page
-+ update selected/current/all heuristic
+* ensure quit question only displayed once, rather than once per not-saved page
+* update selected/current/all heuristic
   Closes Debian bug #461859 (better selected/current/all heuristic)
-+ reset start page in scan dialog after File/New selected
+* reset start page in scan dialog after File/New selected
   Closes 1879331 (Choosing New file does not zero page count)
-+ request page range when importing a PDF with more than one page
+* request page range when importing a PDF with more than one page
   Closes Debian bug #461076 (importing PDFs causes /tmp/ overflow)
-+ File/Compress working files
-+ fixed bug remembering setting where setting is first in a list
-+ fixed bug where thumbs get unselected after saving
-+ fixed wide character crash caused by translations containing utf8.
-+ Initial Turkish translation (thanks to denz)
-+ Update to Brazilian Portuguese translation (thanks to luther-x)
-+ Update to Czech translation (thanks to Petr Jelínek)
-+ Update to Greek translation (thanks to jimpap)
-+ Update to Polish translation (thanks to nikt_taki)
+* File/Compress working files
+* fixed bug remembering setting where setting is first in a list
+* fixed bug where thumbs get unselected after saving
+* fixed wide character crash caused by translations containing utf8.
+* + Initial Turkish translation (thanks to denz)
+* Update to Brazilian Portuguese translation (thanks to luther-x)
+* Update to Czech translation (thanks to Petr Jelínek)
+* Update to Greek translation (thanks to jimpap)
+* Update to Polish translation (thanks to nikt_taki)
 
 
 0.9.20 (18.01.2008):
 
-+ fixed bug where backslashes in text layer in djvu files not escaped.
-+ made ctrl-x, ctrl-c, ctrl-v work in text buffer
-+ suppressed multiple paper size editor windows
-+ manual paper size
-+ fixed bug trying to scan large paper size than scanner allows
-+ warning message when paper sizes too big for scanner
-+ recognise warm-up message from gt68xx driver
+* fixed bug where backslashes in text layer in djvu files not escaped.
+* made ctrl-x, ctrl-c, ctrl-v work in text buffer
+* suppressed multiple paper size editor windows
+* + manual paper size
+* fixed bug trying to scan large paper size than scanner allows
+* + warning message when paper sizes too big for scanner
+* recognise warm-up message from gt68xx driver
   Closes Debian bug #449421
-+ cope with spaces in filename of image to save
+* cope with spaces in filename of image to save
   Closes Debian bug #457377
-+ improve tesseract language file search
-+ implement --pagewidth|height properly [2348533a4a6a]
+* improve tesseract language file search
+* implement --pagewidth|height properly [2348533a4a6a]
   Closes Debian bug #457376 (gscan2pdf: Some paper sizes not available)
-+ account for options that completely disappear or appear between modes
+* account for options that completely disappear or appear between modes
   Closes 1868985 (can't disable invalid options (e.g. threshold))
   Closes Debian bug #457249
    (gscan2pdf: Tries to set threshold option for color scans)
-+ scanner.svg, pdf.svg, gscan2pdf.svg
-- scanner.png, pdf.png, gscan2pdf.png
+* + scanner.svg, pdf.svg, gscan2pdf.svg
+  - scanner.png, pdf.png, gscan2pdf.png
   Closes bug 1836312 (Tangoify Icons)
-+ fixed bug parsing scanimage progress output
+* fixed bug parsing scanimage progress output
   Closes Debian bug #457375 (gscan2pdf: Nondeterministic duplex scanning)
-+ ask when quitting if not all pages have been saved.
+* ask when quitting if not all pages have been saved.
   Closes Debian bug #461058 (does not ask when quitting without saving the PDF)
-+ Initial Brazilian Portuguese translation (thanks to Daniel Frank)
-+ Update to Russian translation (thanks to Alexandre Prokoudine)
-+ Update to German translation (thanks to Matthias Mailänder)
-+ Update to French translation (thanks to Nicolas Stransky)
-+ Update to Czech translation (thanks to Petr Jelínek)
-+ Update to Danish translation (thanks to Jacob Nielsen)
+* + Initial Brazilian Portuguese translation (thanks to Daniel Frank)
+* Update to Russian translation (thanks to Alexandre Prokoudine)
+* Update to German translation (thanks to Matthias Mailänder)
+* Update to French translation (thanks to Nicolas Stransky)
+* Update to Czech translation (thanks to Petr Jelínek)
+* Update to Danish translation (thanks to Jacob Nielsen)
 
 
 0.9.19 (19.11.2007):
 
-+ fixed bug creating user-defined paper sizes
+* fixed bug creating user-defined paper sizes
 
 
 0.9.18 (16.11.2007):
 
-+ recoded DjVu save
-+ Photo compression to DjVu output. Respect! Miles better than JPEG
-+ DjVu import
-+ PS to save as image options
-+ Split options in scan dialog into two tabs.
+* recoded DjVu save
+* + Photo compression to DjVu output. Respect! Miles better than JPEG
+* + DjVu import
+* + PS to save as image options
+* Split options in scan dialog into two tabs.
   Closes bug 1812030 (Dialog Box Too Big to fit on screen)
-+ build scan window before scanning for devices in order to make sure that
+* build scan window before scanning for devices in order to make sure that
   it centres properly.
   Closes Debian bug #440902: window placement of scan dialog
-+ djvu compression automatic on image depth to allow multiple pages with
+* djvu compression automatic on image depth to allow multiple pages with
   different compression for each page
-+ TIFF compression options to PDF output
+* + TIFF compression options to PDF output
   Closes bug 1803099 (created PDF files are huge)
-+ threshold tool.
+* + threshold tool.
   Closes feature request 1750849 (RFE: support software controlled contrast)
-+ paper size editor
-+ detect if destination directory is read-only
+* + paper size editor
+* detect if destination directory is read-only
   Closes 1829961 (Crash saving .pdf in r/o subdirectory using v0.9.17)
-+ reset start page number in scan dialog after deleting a page
-+ Update to Czech translation (thanks to Petr Jelínek)
-+ Update to French translation (thanks to Nicolas Stransky)
-+ Update to German translation (thanks to Matthias Gutjahr)
-+ Update to Greek translation (thanks to Ioannis Koniaris)
-+ Update to Polish translation (thanks to Brech)
-+ Update to Russian translation (thanks to Alexandre Prokoudine)
+* reset start page number in scan dialog after deleting a page
+* Update to Czech translation (thanks to Petr Jelínek)
+* Update to French translation (thanks to Nicolas Stransky)
+* Update to German translation (thanks to Matthias Gutjahr)
+* Update to Greek translation (thanks to Ioannis Koniaris)
+* Update to Polish translation (thanks to Brech)
+* Update to Russian translation (thanks to Alexandre Prokoudine)
 
 
 0.9.17 (02.10.2007):
 
-+ cut, copy and paste of pages
+* + cut, copy and paste of pages
   Closes Feature Request 1780866 (Cut/copy/paste editing functions)
-+ multiple-item drag-and-drop, including copy.
+* + multiple-item drag-and-drop, including copy.
   Closes Feature Request 1743098 (Improved drag'n'drop reordering of pages)
-+ fixed bug saving DjVu with 2 pages
-+ ProgressBar during scan
-+ extended page numbering to scan dialog
-+ Update to Czech translation (thanks to Petr Jelínek)
-+ Update to Danish translation (thanks to Jacob Nielsen)
-+ Update to German translation (thanks to Matthias Gutjahr)
-+ Added Greek translation (thanks to Spartakus)
-+ Update to French translation (thanks to Nicolas Stransky)
-+ Update to Italian translation (thanks to Andrea (pikkio))
-+ Update to Polish translation (thanks to Piotr Strębski)
-+ Update to Russian translation (thanks to Alexandre Prokoudine)
-+ Update to Spanish translation (thanks to Yözen Hernández)
-+ Relicensed under GPLv3
+* fixed bug saving DjVu with 2 pages
+* + ProgressBar during scan
+* + extended page numbering to scan dialog
+* Update to Czech translation (thanks to Petr Jelínek)
+* Update to Danish translation (thanks to Jacob Nielsen)
+* Update to German translation (thanks to Matthias Gutjahr)
+* + Greek translation (thanks to Spartakus)
+* Update to French translation (thanks to Nicolas Stransky)
+* Update to Italian translation (thanks to Andrea (pikkio))
+* Update to Polish translation (thanks to Piotr Strębski)
+* Update to Russian translation (thanks to Alexandre Prokoudine)
+* Update to Spanish translation (thanks to Yözen Hernández)
+* Relicensed under GPLv3
 
 
 0.9.16 (24.08.2007):
 
-+ do not restore mode setting if default device not found
-+ workaround for those versions of imagemagick that produce 16bit output
+* do not restore mode setting if default device not found
+* + workaround for those versions of imagemagick that produce 16bit output
   with rotate.
   Patch 1760543 (rotate creates 16bit images that tesseract can't read)
   from Chris Mayo
-+ ProgressBar during image import
-+ Downsample option.
+* + ProgressBar during image import
+* + Downsample option.
   Closes Feature Request 1722832 (setting the resolution before export)
-+ Hidden text layer from OCR in djvu output
-+ Support for language options in tesseract-2.00
-+ UTF-8 support in OCR output
-+ Fixed bug caused by imagemagick giving resolution=0.
+* + Hidden text layer from OCR in djvu output
+* + Support for language options in tesseract-2.00
+* + UTF-8 support in OCR output
+* Fixed bug caused by imagemagick giving resolution=0.
   Closes bug 1770367 (Illegal division by zero)
-+ ProgressBar during TIFF save
-+ better attempt at trapping errors whilst embedding scan in PDF
-+ ProgressBar during DjVu save
-+ Stop unpaper and ocr if scan is cancelled
-+ Fixed scrolling bug during drag and drop
-+ Update to Dutch translation (thanks to Eric Spierings)
-+ Update to French translation (thanks to Nicolas Stransky)
-+ Update to Spanish translation (thanks to Rodrigo Donado)
+* + ProgressBar during TIFF save
+* better attempt at trapping errors whilst embedding scan in PDF
+* + ProgressBar during DjVu save
+* Stop unpaper and ocr if scan is cancelled
+* Fixed scrolling bug during drag and drop
+* Update to Dutch translation (thanks to Eric Spierings)
+* Update to French translation (thanks to Nicolas Stransky)
+* Update to Spanish translation (thanks to Rodrigo Donado)
 
 
 0.9.15 (22.07.2007):
 
-+ Fixed bug setting defaults, also responsible for preventing the
+* Fixed bug setting defaults, also responsible for preventing the
   device-dependent options being displayed in certain circumstances.
-+ store unpaper options in settings
-+ fractional instead of pulsing ProgressBar & more info during PDF save
-+ fixed bug where spaces in mode not escaped in shell
-+ fixed bug parsing device-dependent options (affecting some Brother scanners).
-+ option not to restore window settings.
+* store unpaper options in settings
+* fractional instead of pulsing ProgressBar & more info during PDF save
+* fixed bug where spaces in mode not escaped in shell
+* fixed bug parsing device-dependent options (affecting some Brother scanners).
+* + option not to restore window settings.
   closes Debian bug 433497 (please don't remember window position)
-+ Update to French translation (thanks to Nicolas Stransky)
+* Update to French translation (thanks to Nicolas Stransky)
 
 
 0.9.14 (11.07.2007):
 
-+ Fixed bug parsing device-dependent options.
+* Fixed bug parsing device-dependent options.
   Closes bug 1751125 (Some device-dependent options have gone)
-+ Update to French translation (thanks to Nicolas Stransky)
-+ Update to Italian translation (thanks to Andrea (pikkio))
-+ Update to Portugese translation (thanks to Hugo Pereira)
-+ Update to Russian translation (thanks to Alexandre Prokoudine)
+* Update to French translation (thanks to Nicolas Stransky)
+* Update to Italian translation (thanks to Andrea (pikkio))
+* Update to Portugese translation (thanks to Hugo Pereira)
+* Update to Russian translation (thanks to Alexandre Prokoudine)
 
 
 0.9.13 (08.07.2007):
 
-+ Select all or Ctrl-A works properly in thumbnails or OCR buffer, depending on
+* Select all or Ctrl-A works properly in thumbnails or OCR buffer, depending on
   focus. Closes bug 1740131 (Ctrl-A (select all) in OCR window does not work).
-+ Tesseract support. Closes feature request 1725818 (tesseract for OCR?)
-+ unset mode if changing device.
+* + Tesseract support. Closes feature request 1725818 (tesseract for OCR?)
+* unset mode if changing device.
   Closes bug 1741598 (2 scanners with differing mode options).
-+ ghost scan all pages RadioButton if Flatbed selected.
+* ghost scan all pages RadioButton if Flatbed selected.
   Closes bug 1743059 (Endless scanning loop)
-+ trap device busy error. Closes bug 1744451 (handle busy device)
-+ Modify PDF metadata date format to conform to ISO-8601
+* trap device busy error. Closes bug 1744451 (handle busy device)
+* Modify PDF metadata date format to conform to ISO-8601
   Closes feature request 1744458 (change dates to ISO-8601)
-+ Fixed double scan bug with scanadf frontend
-+ Fixed bug where Custom paper size not set from default
-+ Update to Danish translation (thanks to Jacob Nielsen)
-+ Update to French translation (thanks to Pierre Slamich)
-+ Update to Polish translation (thanks to Piotr Strębski)
-+ Fixed blocking whilst setting up/updating scan dialog
-+ US Legal paper.
+* Fixed double scan bug with scanadf frontend
+* Fixed bug where Custom paper size not set from default
+* Update to Danish translation (thanks to Jacob Nielsen)
+* Update to French translation (thanks to Pierre Slamich)
+* Update to Polish translation (thanks to Piotr Strębski)
+* Fixed blocking whilst setting up/updating scan dialog
+* + US Legal paper.
   Closes feature request 1748679 (RFE: add legal paper size as an option)
 
 
 0.9.12 (19.06.2007):
 
-+ no-grayfilter option
-+ check for mode-dependent options.
-+ note resolution info so that the resulting PDF has the correct paper size.
+* + check for mode-dependent options.
+* note resolution info so that the resulting PDF has the correct paper size.
   Closes bug 1736036 (page size is somehow a ratio of resolution)
   and Debian bug 426525 (after unpaper, saving PDF causes magnified page)
-+ no-grayfilter option. Closes Debian bug 426529 (more unpaper options)
-+ produce error message if error on tiff export.
+* + no-grayfilter option. Closes Debian bug 426529 (more unpaper options)
+* + error message if error on tiff export.
   Closes Debian bug 426527 (tif/jpg export produces empty file)
-+ quality setting for JPG compression in save as PDF.
+* + quality setting for JPG compression in save as PDF.
   Closes feature request 1736043 (Compression setting)
   and bug 1736582 (PDFs with embedded JPEGS are large)
-+ save image functionality supporting TIFF, PNG, JPEG, PNM & GIF.
+* save image functionality supporting TIFF, PNG, JPEG, PNM & GIF.
   Closes feature request 1709380 (Support PNG output equivalent to TIFF)
-+ save default dates as offset from current, closing bug 1736037
+* save default dates as offset from current, closing bug 1736037
   (pdf file->save dialog should automatically set the date to the current day)
-+ Update to Czech translation (thanks to Petr Jelínek)
-+ update to German translation (thanks to Florian)
-+ update to Portuguese translation (thanks to Hugo Pereira)
-+ Update to Spanish translation (thanks to Raúl González Duque)
+* Update to Czech translation (thanks to Petr Jelínek)
+* update to German translation (thanks to Florian)
+* update to Portuguese translation (thanks to Hugo Pereira)
+* Update to Spanish translation (thanks to Raúl González Duque)
 
 
 0.9.10 (05.06.2007):
 
-+ patch credits
-+ Switched rotate icons from Crystal (KDE) to those stolen from Eye of Gnome
-+ Closed bug 1712967
+* patch credits
+* Switched rotate icons from Crystal (KDE) to those stolen from Eye of Gnome
+* Closed bug 1712967
   (long lines in ocr output resized document display off screen)
-+ contrast and threshold controls
-+ handle PNG, JPEG, GIF, PNM natively,
+* + contrast and threshold controls
+* handle PNG, JPEG, GIF, PNM natively,
    closing feature request 1708448 (JPG to PDF)
    and bugs 1714874 (import b/w pdf problem)
    and 1669413 (Problem with "callback")
-+ PDF compression options (JPEG, PNG), closing feature request 1708036
-+ --speed option (Epson 1200)
-+ ProgressBar for PDF save, closing feature request 1712964
-+ Portuguese translation (thanks to Hugo Pereira)
-+ Danish translation (thanks to Jacob Nielsen)
-+ Update to Czech translation (thanks to Petr Jelínek)
-+ Update to Dutch translation (thanks to Eric Spierings)
-+ Update to French translation (thanks to codL)
-+ remembers OCR on scan setting
-+ unpaper on scan
-+ calibration-cache option for Canon LiDE25
-+ roadmap to website/help
+* + PDF compression options (JPEG, PNG), closing feature request 1708036
+* + --speed option (Epson 1200)
+* + ProgressBar for PDF save, closing feature request 1712964
+* + Portuguese translation (thanks to Hugo Pereira)
+* + Danish translation (thanks to Jacob Nielsen)
+* Update to Czech translation (thanks to Petr Jelínek)
+* Update to Dutch translation (thanks to Eric Spierings)
+* Update to French translation (thanks to codL)
+* remembers OCR on scan setting
+* + unpaper on scan
+* + calibration-cache option for Canon LiDE25
+* + roadmap to website/help
 
 
 0.9.9 (30.04.2007):
 
-+ Closed bug 1709377
+* Closed bug 1709377
    ("Unknwn msg: scanimage: unrec'd option --compression=None'")
-+ Fixed bug where attempt to run gocr after scanning despite not being installed
-+ Replaced about MessageDialog with AboutDialog
-+ Update to Russian translation (thanks to Alexandre Prokoudine)
-+ Update to Czech translation (thanks to Petr Jelínek)
-+ Update to Dutch translation (thanks to Eric Spierings)
-+ Packed unpaper options into Gtk2::Notebook to make dialog shorter, closed bug
+* Fixed bug where attempt to run gocr after scanning despite not being installed
+* Replaced about MessageDialog with AboutDialog
+* Update to Russian translation (thanks to Alexandre Prokoudine)
+* Update to Czech translation (thanks to Petr Jelínek)
+* Update to Dutch translation (thanks to Eric Spierings)
+* Packed unpaper options into Gtk2::Notebook to make dialog shorter, closed bug
   1709379 ("unpaper-0.2 dialog too tall for 1024x768")
 
 
 0.9.8 (28.04.2007):
 
-- compression option from scan dialog.
-+ Explicitly sets compression=None if mode=Lineart
-+ Check for PDF::API2
-+ Forces startup check on new version
-+ Runs unpaper sequencially on pages instead of in parallel
-+ Enabled double sided scanning for scanadf frontend
-+ no-deskew, no-border-scan, no-border-align, no-mask-scan, no-blackfilter
+* - compression option from scan dialog.
+* Explicitly sets compression=None if mode=Lineart
+* + Check for PDF::API2
+* Forces startup check on new version
+* Runs unpaper sequencially on pages instead of in parallel
+* Enabled double sided scanning for scanadf frontend
+* + no-deskew, no-border-scan, no-border-align, no-mask-scan, no-blackfilter
   no-noisefilter, no-blurfilter, black-threshold, white-threshold options to
   unpaper
-+ Stock icon for about
-+ Scrolls thumb list to selected page
-+ Embeds OCR output in white on white hidden behind scan. pdftotext can extract
+* + Stock icon for about
+* Scrolls thumb list to selected page
+* Embeds OCR output in white on white hidden behind scan. pdftotext can extract
   contents, and can be indexed by Beagle.
-+ Update to Spanish translation (thanks to Th3n3k)
-+ Moved OCR buffer to main window
-+ Patch from John Goerzen to adjust brightness
+* Update to Spanish translation (thanks to Th3n3k)
+* Moved OCR buffer to main window
+* Patch from John Goerzen to adjust brightness
   and add negative support for SpinBoxes
-+ Patches from John Goerzen to add .tif and .djvu endings if necessary,
+* Patches from John Goerzen to add .tif and .djvu endings if necessary,
   plus fixed bug adding .pdf ending.
-+ Separated perlmagick and imagemagick dependencies
-+ Updated French translation (thanks to Mathieu Goeminne)
+* Separated perlmagick and imagemagick dependencies
+* Updated French translation (thanks to Mathieu Goeminne)
 
 
 0.9.7 (04.04.2007):
 
-+ Fixed bug calling help
-+ Fixed error message caused by update_options sub being called twice.
-+ Streamlined image creation (speedup)
-+ Adjusted widget justification in scan dialog
-+ Suppressed rounded messages from scanadf frontend
-+ Remembers scan area
-+ Ghosts zoom and rotate buttons if no page selected
-+ Fixed bug where custom scan area not hidden when A4 or Letter selected
-+ Help update
+* Fixed bug calling help
+* Fixed error message caused by update_options sub being called twice.
+* Streamlined image creation (speedup)
+* Adjusted widget justification in scan dialog
+* Suppressed rounded messages from scanadf frontend
+* Remembers scan area
+* Ghosts zoom and rotate buttons if no page selected
+* Fixed bug where custom scan area not hidden when A4 or Letter selected
+* Help update
 
 
 0.9.6 (31.03.2007):
 
-+ Replaced "Enable Options" with "Enable Save Options"
-+ After cancelling scan, I/O error ignored.
-+ tiff2pdf replaced with PDF::API2,
+* Replaced "Enable Options" with "Enable Save Options"
+* After cancelling scan, I/O error ignored.
+* tiff2pdf replaced with PDF::API2,
   fixing character encoding bug in metadata
-+ OCR result buffer embedded as annotation in PDF
-+ PDF import
-+ Loads modules when needed, rather than at start to speed up start-up.
-+ Can import any format that imagemagick recognises
-+ Makes use of new_from_file_at_scale (speedup)
-+ OptionMenus swapped for ComboBoxes (+EventBoxes to wrap ToolTips)
-+ Fixed bug caused by trying to hide save_TIFF dialog although not created
-+ SpinButtons to adjust top left corner of scan area
-+ Ghosts save options when no pages to save
-+ Italian translation (thanks to Alberto Boiti)
-+ Update to Dutch translation (thanks to Eric Spierings)
+* OCR result buffer embedded as annotation in PDF
+* + PDF import
+* Loads modules when needed, rather than at start to speed up start-up.
+* Can import any format that imagemagick recognises
+* Makes use of new_from_file_at_scale (speedup)
+* OptionMenus swapped for ComboBoxes (+EventBoxes to wrap ToolTips)
+* Fixed bug caused by trying to hide save_TIFF dialog although not created
+* + SpinButtons to adjust top left corner of scan area
+* Ghosts save options when no pages to save
+* + Italian translation (thanks to Alberto Boiti)
+* Update to Dutch translation (thanks to Eric Spierings)
 
 
 0.9.5 (08.03.2007):
 
-+ Fixed bug where nothing saved if no default for page rage
-+ Seperated pdf, tiff and scan compression defaults
-+ Save TIFF and DjVu respects enable options toggle
-+ cancel on scan dialog sends ctrl-c to scanimage
-+ update to Czech translation (thanks to Petr Jelínek)
+* Fixed bug where nothing saved if no default for page rage
+* Seperated pdf, tiff and scan compression defaults
+* Save TIFF and DjVu respects enable options toggle
+* + cancel on scan dialog sends ctrl-c to scanimage
+* update to Czech translation (thanks to Petr Jelínek)
 
 
 0.9.4 (25.02.2007):
 
-+ Using the top right hand close button to quit saves the settings properly.
-+ enable PDF options toggle
-+ compression scan option
-+ closed bug 1656900 where hup condition not recognised under FreeBSD.
-+ update to Czech translation (thanks to Petr Jelínek)
-+ update to German translation (thanks to Florian)
-+ update to Russian translation (thanks to Alexandre Prokoudine)
+* Using the top right hand close button to quit saves the settings properly.
+* enable PDF options toggle
+* + compression scan option
+* closed bug 1656900 where hup condition not recognised under FreeBSD.
+* update to Czech translation (thanks to Petr Jelínek)
+* update to German translation (thanks to Florian)
+* update to Russian translation (thanks to Alexandre Prokoudine)
 
 
 0.9.3 (08.02.2007):
 
-+ Switched the deprecated Gtk2::SimpleList to Gtk2::Ex::Simple::List.
-+ Fixed bug where thumbnail lost after undo/redo
-+ Deleting pages selects nearest page
-+ unpaper --border-align and --border-margin support
-+ compression options for save TIFF
-+ unpaper ghosted if imagemagick not present
-+ updated scan and PDF icons (thanks to lodp)
+* Switched the deprecated Gtk2::SimpleList to Gtk2::Ex::Simple::List.
+* Fixed bug where thumbnail lost after undo/redo
+* Deleting pages selects nearest page
+* + unpaper --border-align and --border-margin support
+* + compression options for save TIFF
+* unpaper ghosted if imagemagick not present
+* updated scan and PDF icons (thanks to lodp)
 
 
 0.9.2 (31.01.2007):
 
-+ Update to Czech translation (thanks to Petr Jelínek)
-+ Spanish translation (thanks to mecedesjorge)
-+ Passes image depth to imagemagick to ensure rotation produces a valid TIFF
-+ DjVu support
+* Update to Czech translation (thanks to Petr Jelínek)
+* + Spanish translation (thanks to mecedesjorge)
+* Passes image depth to imagemagick to ensure rotation produces a valid TIFF
+* + DjVu support
 Fixed bug where device-dependent options disappear if frontend changed whilst
   scan dialog hidden.
-+ Progress bar whilst updating device-dependent options
-+ unpaper support
-+ Undo/redo
+* + Progress bar whilst updating device-dependent options
+* + unpaper support
+* + Undo/redo
 
 
 0.9.1 (23.01.2007):
@@ -496,190 +495,190 @@ Fixed bug where frontend not properly selected
 
 0.9.0 (19.01.2007):
 
-+ OCR support
-+ scanadf frontend uses own device-dependent options
-+ Displays start-up message if optional packages missing
+* + OCR support
+* scanadf frontend uses own device-dependent options
+* Displays start-up message if optional packages missing
 
 
 0.8.9 (11.01.2007):
 
-+ Spanish translation (thanks to mecedesjorge)
-+ Update to Czech translation (thanks to Petr Jelínek)
-+ Support for scanadf frontend
-+ Email as PDF
-+ Displays warm-up message if backend supports it
-+ Ghosts out the rotate menus and buttons if imagemagick not installed
+* + Spanish translation (thanks to mecedesjorge)
+* Update to Czech translation (thanks to Petr Jelínek)
+* + Support for scanadf frontend
+* + Email as PDF
+* Displays warm-up message if backend supports it
+* Ghosts out the rotate menus and buttons if imagemagick not installed
 
 
 0.8.7 (31.12.2006):
 
-+ Belarusian translation (thanks to booxter)
-+ Chinese (Taiwan) translation (thanks to cwchien)
-+ Czech translation (thanks to Petr Jelínek)
-+ Russian translation (thanks to Alexandre Prokoudine)
-+ Update to Swedish translation (thanks to Daniel Nylander)
-- 2 scanimage calls (speedup).
-Adds the device to the model name if the same model present more than once.
-+ Drag-n-drop autoscrolls the thumbnail list.
-+ Error thrown if Locale::gettext version < 1.05.
-+ New icons for application and rotate buttons (thanks to lodp)
+* + Belarusian translation (thanks to booxter)
+* + Chinese (Taiwan) translation (thanks to cwchien)
+* + Czech translation (thanks to Petr Jelínek)
+* + Russian translation (thanks to Alexandre Prokoudine)
+* + Update to Swedish translation (thanks to Daniel Nylander)
+* - 2 scanimage calls (speedup).
+* Adds the device to the model name if the same model present more than once.
+* + Drag-n-drop autoscrolls the thumbnail list.
+* Error thrown if Locale::gettext version < 1.05.
+* + New icons for application and rotate buttons (thanks to lodp)
 
 
 0.8.4 (11.12.2006):
 
-+ Polish translation (thanks to Wojciech Myrda)
-+ Update to French translation (thanks to Nicolas Velin)
-+ Support for HP ScanJet 6390c.
-+ Fixed bug caused by moving thumbnail/detail window divider so that detail
+* + Polish translation (thanks to Wojciech Myrda)
+* Update to French translation (thanks to Nicolas Velin)
+* + Support for HP ScanJet 6390c.
+* Fixed bug caused by moving thumbnail/detail window divider so that detail
   window disappears.
-+ Fixed missing translations in scanimage commandline options
-+ Set open or save buttons as default on all FileChooserDialogs
-+ Added 1mm tolerance to paper size check
+* Fixed missing translations in scanimage commandline options
+* Set open or save buttons as default on all FileChooserDialogs
+* + 1mm tolerance to paper size check
 
 
 0.8.3 (25.11.2006):
 
-Stickier right mouse button
-+ Dutch translation (thanks to Tikkel)
-+ Update to German translation (thanks to Christoph Langner)
-+ Update to French translation (thanks to Simon Leblanc)
-Rewrote Makefile with MakeMaker
+* Stickier right mouse button
+* + Dutch translation (thanks to Tikkel)
+* Update to German translation (thanks to Christoph Langner)
+* Update to French translation (thanks to Simon Leblanc)
+* Rewrote Makefile with MakeMaker
 Corrected .deb to all instead of i386 architecture
-+ code to allow translation of scanimage commandline options
-+ .rpm build
+* + code to allow translation of scanimage commandline options
+* + .rpm build
 
 
 0.8.2 (10.11.2006):
 
-+ Partial Swedish translation (thanks to Daniel Nylander)
-+ Partial French translation (thanks to Nicolas Velin)
-+ Update to German translation (thanks to joeb)
-Fixed bug in arguments passed to scanimage in non-English locale
-+ liblocale-gettext-perl (>= 1.05) dependency in .deb
-+ Support for epson_3490 and canoscan_FB_630P scanners
-+ chmod a+rw for executable in deb
+* + Partial Swedish translation (thanks to Daniel Nylander)
+* + Partial French translation (thanks to Nicolas Velin)
+* Update to German translation (thanks to joeb)
+* Fixed bug in arguments passed to scanimage in non-English locale
+* + liblocale-gettext-perl (>= 1.05) dependency in .deb
+* + Support for epson_3490 and canoscan_FB_630P scanners
+* chmod a+rw for executable in deb
 
 
 0.8.1 (01.11.2006):
 
-+ Gnome menu
-Fixed zoom bug
-+ German translation (thanks to Christoph Langner)
+* + Gnome menu
+* Fixed zoom bug
+* + German translation (thanks to Christoph Langner)
 
 
 0.8.0 (28.10.2006):
 
-+ Rotate options
-+ Automatically adds .pdf extension if not already there
-Renamed Import menu to Import TIFF
-Changed the scan toolbar button from print to print-preview
-Made Zip compression default if not in settings
-+ Fixed lack of shortcut for File menu
-+ Start of German translation
+* + Rotate options
+* Automatically adds .pdf extension if not already there
+* Renamed Import menu to Import TIFF
+* Changed the scan toolbar button from print to print-preview
+* Made Zip compression default if not in settings
+* Fixed lack of shortcut for File menu
+* + German translation
 
 
 0.7.12 (22.10.2006):
 
-Fixed bug displaying detail view in multipage scans
+* Fixed bug displaying detail view in multipage scans
 
 
 0.7.11 (19.10.2006):
 
-Fixed bug importing from temp
-Fixed bug no PDF file created if JPEG compression selected (thanks Thomas for the patch)
-+ FAQ
-+ more tooltips
-+ Support for niash scanner
-+ Right mouse button menus
-Wrapped all strings in gettext calls for internationalisation
-+ Ignores "rounded br-" warnings from scanimage
-Update to help to improve html look
-Copes with spaces in device-dependent options
-Copes with strange characters in device names
-+ Uses new FileChooser instead of old FileSelection
+* Fixed bug importing from temp
+* Fixed bug no PDF file created if JPEG compression selected (thanks Thomas for the patch)
+* + FAQ
+* + more tooltips
+* + Support for niash scanner
+* + Right mouse button menus
+* Wrapped all strings in gettext calls for internationalisation
+* Ignores "rounded br-" warnings from scanimage
+* Update to help to improve html look
+* Copes with spaces in device-dependent options
+* Copes with strange characters in device names
+* Uses new FileChooser instead of old FileSelection
 
 
 0.7.2 (05.10.2006):
 
-+ button-wait scan option
-+ source scan option
-Fixed locale problem, forcing LC_NUMERIC=C
-Tidied up drag and drop routine
+* + button-wait scan option
+* + source scan option
+* Fixed locale problem, forcing LC_NUMERIC=C
+* Tidied up drag and drop routine
 
 
 0.7 (23.09.2006):
 
-+ Drag and drop page reordering
-+ Toolbar buttons
-+ Tool tips
-+ View menu
-+ Some documentation
-+ Help viewer
-+ Improved window handling
-+ PDF compression options
-Fixed libpixbuf-tiff Read error
-Fixed dialog after unknown scan warning
+* + Drag and drop page reordering
+* + Toolbar buttons
+* + Tool tips
+* + View menu
+* + Some documentation
+* + Help viewer
+* Improved window handling
+* + PDF compression options
+* Fixed libpixbuf-tiff Read error
+* Fixed dialog after unknown scan warning
 
 
 0.6.3 (08.09.2006):
 
-Fixed "scanimage: option --br-y: bad option value" bug
-+ Child windows hidden rather than destroyed to improve speed and prevent multiple instances.
-Added # pages to scan to config file
-+ Renumber menu item
-+ Config save for PDF, scan and window settings
-+ Added config file support for window maximize state
-Changed order of options in tiff2pdf call for FreeBSD compatibility
-Moved test output to external file
-+ Parses paper size from device-dependent options
+* Fixed "scanimage: option --br-y: bad option value" bug
+* Child windows hidden rather than destroyed to improve speed and prevent multiple instances.
+* + # pages to scan to config file
+* + Renumber menu item
+* + Config save for PDF, scan and window settings
+* + Added config file support for window maximize state
+* Changed order of options in tiff2pdf call for FreeBSD compatibility
+* Moved test output to external file
+* Parses paper size from device-dependent options
 
 
 0.6.2 (04.09.2006):
 
-Fixed bug in Letter size scans
+* Fixed bug in Letter size scans
 
 
 0.6.1 (01.09.2006):
 
-+ Renumber by editing page number
-+ Destroy window after pdf write
-+ Read options from --help --device-name=<dev>
-+ Test mode
-+ Hides Custom paper sizes when not needed
+* Renumber by editing page number
+* Destroy window after pdf write
+* Read options from --help --device-name=<dev>
+* + Test mode
+* Hides Custom paper sizes when not needed
 
 
 0.6 (22.08.2006):
 
-+ Error checking for import
-+ Import multiselect
-+ Save as TIFF
-+ Import multipage TIFFs
+* Error checking for import
+* Import multiselect
+* + Save as TIFF
+* + Import multipage TIFFs
 
 
 0.5 (21.08.2006):
 
-+ Support for PDF Metadata
-+ Doublesided scan options
-+ deb packaging
+* + Support for PDF Metadata
+* + Doublesided scan options
+* + deb packaging
 
 
 0.4 (16.08.2006):
 
-+ Thumbnails
-+ Edit menu
-+ Install script
+* + Thumbnails
+* + Edit menu
+* + Install script
 
 
 0.3 (08.08.2006):
 
-+ Resizing widgets and more scan options.
+* Resizing widgets and more scan options.
 
 
 0.2 (07.08.2006):
 
-+ Scan options
+* + Scan options
 
 
 0.1 (06.08.2006):
 
-Initial release
+* Initial release
