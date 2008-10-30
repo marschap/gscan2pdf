@@ -1129,7 +1129,7 @@ if ($test == 0) {
  my $n = $batch_start_at;
  $batch = 1 if (defined $format);
 
- if ($batch && ! defined $format) {
+ if ($batch && (! defined($format) || $format eq '')) {
 #  if ($output_format == OUTPUT_TIFF) {
 #   $format = "out%d.tif";
 #  }
@@ -1168,7 +1168,7 @@ if ($test == 0) {
   }
 
   if ($batch && ! (open($fh, '>', $path) && STDOUT->fdopen($fh, '>'))) {
-   print STDERR "cannot open %s\n", $path;
+   print STDERR "cannot open $path\n";
    $device->cancel;
    exit SANE_STATUS_ACCESS_DENIED;
   }
