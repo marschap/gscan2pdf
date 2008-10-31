@@ -43,7 +43,7 @@ my $startNum = 1, my $endNum = -1;                # start/end numbers of pages t
 my @args = (\%options, 'd|device-name=s' => \$devname,
                        'L|list-devices',
                        'h|help' => \$help,
-                       'v|verbose' => \$verbose,
+                       'v|verbose+' => \$verbose,
                        'N|no-overwrite' => \$no_overwrite,
 
                        'o|output-file:s' => \$outputFile,
@@ -391,8 +391,8 @@ sub parse_vector {
 
  if ($verbose > 2) {
   print STDERR "$prog_name: value for --$opt->{name} is: ";
-  for (my $i = 0; $i < length($str); ++$i) {
-   print STDERR "$vector[$i] ";
+  for (@vector) {
+   print STDERR "$_ ";
   }
   print STDERR "\n";
  }
@@ -839,8 +839,7 @@ sub scan_docs {
   }
   
   # Scan the document
-  $Sane::_status = scan_it_raw($fname, $raw, $script)
-   if ($Sane::STATUS == SANE_STATUS_GOOD);
+  scan_it_raw($fname, $raw, $script) if ($Sane::STATUS == SANE_STATUS_GOOD);
 
   # Any scan errors?
   if ($Sane::STATUS == SANE_STATUS_NO_DOCS) {
@@ -872,7 +871,7 @@ sub scan_docs {
 # scan and back to l for the second.
 for (@ARGV) {
  $_ = '-m' if ($_ eq '-l');
- $_ = '-s' if ($_ eq '-t');
+ $_ = '-u' if ($_ eq '-t');
 }
 # make a first pass through the options with error printing and argument
 # permutation disabled:
@@ -958,18 +957,18 @@ if (defined($device)) {
 # scan and back to l for the second.
  for (@ARGV) {
   $_ = '-l' if ($_ eq '-m');
-  $_ = '-t' if ($_ eq '-s');
+  $_ = '-t' if ($_ eq '-u');
  }
  GetOptions (@args);
 
  for my $ch (keys %options) {
   if ($ch eq 'x') {
    $window_val_user[0] = 1;
-   $window_val[0] = parse_vector ($window_option[0], $options{x});
+   ($window_val[0]) = parse_vector ($window_option[0], $options{x});
   }
   elsif ($ch eq 'y') {
    $window_val_user[1] = 1;
-   $window_val[1] = parse_vector ($window_option[1], $options{y});
+   ($window_val[1]) = parse_vector ($window_option[1], $options{y});
   }
   elsif ($ch eq 'l') { # tl-x
    process_backend_option ($device, $window[2], $options{l});
@@ -984,12 +983,10 @@ if (defined($device)) {
 
  for (my $index = 0; $index < 2; ++$index) {
   if ($window[$index]) {
-   my $pos = 0;
-
    my $val = $window_val[$index] - 1;
    if ($window[$index + 2]) {
-    $pos = $device->get_option ($window[$index + 2]);
-    $val = $pos + $window_val[$index] - 1;
+    my $pos = $device->get_option ($window[$index + 2]);
+    $val = $pos + $window_val[$index];
    }
    set_option ($device, $window[$index], $val);
   }
