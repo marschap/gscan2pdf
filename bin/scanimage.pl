@@ -794,6 +794,9 @@ sub scan_it {
 #  }
  }
 
+ # flush the output buffer
+ STDOUT->flush;
+
 cleanup:
  my $expected_bytes = $parm->{bytes_per_line} * $parm->{lines} *
    (($parm->{format} == SANE_FRAME_RGB
