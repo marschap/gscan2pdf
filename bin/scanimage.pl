@@ -1079,7 +1079,7 @@ if (defined($device)) {
    my $val = $window_val[$index] - 1;
    if ($window[$index + 2]) {
     my $pos = $device->get_option ($window[$index + 2]);
-    $val = $pos + $window_val[$index];
+    $val = $pos + $window_val[$index] - 1;
    }
    set_option ($device, $window[$index], $val);
   }
