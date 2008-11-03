@@ -1036,25 +1036,41 @@ if (defined($device)) {
   $_ = '-l' if ($_ eq '-m');
   $_ = '-t' if ($_ eq '-u');
  }
+ my @ARGV_old = @ARGV;
  GetOptions (@args);
-
- for my $ch (keys %options) {
-  if ($ch eq 'x') {
-   $window_val_user[0] = 1;
-   ($window_val[0]) = parse_vector ($window_option[0], $options{x});
+# As it isn't possible to get the argument order from Getopt::Long 2.37, do
+# this myself
+ for (@ARGV_old) {
+  my $ch;
+  if (/--(.*)/) {
+   $ch = $1;
+   my $i = index($ch, '=');
+   $ch = substr($ch, 0, $i) if ($i > -1);
   }
-  elsif ($ch eq 'y') {
-   $window_val_user[1] = 1;
-   ($window_val[1]) = parse_vector ($window_option[1], $options{y});
-  }
-  elsif ($ch eq 'l') { # tl-x
-   process_backend_option ($device, $window[2], $options{l});
-  }
-  elsif ($ch eq 't') { # tl-y
-   process_backend_option ($device, $window[3], $options{t});
+  elsif (/-(.)/) {
+   $ch = $1;
   }
   else {
-   process_backend_option ($device, $option_number{$ch}, $options{$ch});
+   next;
+  }
+  if (defined $options{$ch}) {
+   if ($ch eq 'x') {
+    $window_val_user[0] = 1;
+    ($window_val[0]) = parse_vector ($window_option[0], $options{x});
+   }
+   elsif ($ch eq 'y') {
+    $window_val_user[1] = 1;
+    ($window_val[1]) = parse_vector ($window_option[1], $options{y});
+   }
+   elsif ($ch eq 'l') { # tl-x
+    process_backend_option ($device, $window[2], $options{l});
+   }
+   elsif ($ch eq 't') { # tl-y
+    process_backend_option ($device, $window[3], $options{t});
+   }
+   else {
+    process_backend_option ($device, $option_number{$ch}, $options{$ch});
+   }
   }
  }
 
