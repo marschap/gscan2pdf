@@ -3951,7 +3951,7 @@ sub scan_dialog {
                                               return FALSE;
                                              } });
 
-  my $cmd = "$SETTING{'scan prefix'} $SETTING{frontend} --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
+  my $cmd = "$SETTING{'scan prefix'} scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
   print "$cmd\n" if ($debug);
 
 # Interface to frontend
