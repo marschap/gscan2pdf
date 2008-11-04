@@ -1037,7 +1037,7 @@ if (defined($device)) {
   $_ = '-t' if ($_ eq '-u');
  }
  my @ARGV_old = @ARGV;
- GetOptions (@args);
+ exit 1 if (! GetOptions (@args));
 # As it isn't possible to get the argument order from Getopt::Long 2.37, do
 # this myself
  for (@ARGV_old) {
