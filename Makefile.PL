@@ -41,7 +41,9 @@ WriteMakefile(
                                    'bin/scanimage.pl', 'bin/scanadf.pl' ],
               PREREQ_PM       => {
                                    Gtk2                   => 1.090,
+                                   Sane                   => 0,
                                    Gtk2::Ex::Simple::List => 0,
+                                   Gtk2::ImageView        => 0,
                                    Image::Magick          => 0,
                                    Locale::gettext        => 1.05,
                                    Config::General        => 2.40,
