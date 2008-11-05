@@ -896,6 +896,8 @@ my %pddo = (
                                  },
             'pagewidth'       => { string => $d->get('Page Width') },
             'pageheight'      => { string => $d->get('Page Height') },
+            'page-width'       => { string => $d->get('Page Width') },
+            'page-height'      => { string => $d->get('Page Height') },
             'adf_mode'        => { string => $d->get('ADF Mode'),
                                    values => {
                                              'Simplex' => $d->get('Simplex'),
@@ -5084,12 +5086,12 @@ sub parse_options {
   if (defined($pddo{$option})) {
    my ($widget, $hbox) = add_widget_from_hash($option, %hash);
 
-   if ($option eq 'pagewidth') {
+   if ($option =~ /^page-?width$/) {
     $w = $hash{$option}{max};
     $spin_buttonw = $widget;
     $vboxm -> pack_start ($hbox, TRUE, TRUE, 0);
    }
-   elsif ($option eq 'pageheight') {
+   elsif ($option =~ /^page-?height$/) {
     $h = $hash{$option}{max};
     $spin_buttonh = $widget;
     $vboxm -> pack_start ($hbox, TRUE, TRUE, 0);
