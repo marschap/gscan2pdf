@@ -29,7 +29,6 @@ my $h_y = 0;
 my $resolution_optind = -1;
 my $resolution_value = 0;
 my $prog_name = basename($0);
-my $STRIP_HEIGHT = 256; # lines we increment image height
 my $SANE_FRAME_TEXT = 10;
 my $SANE_FRAME_JPEG = 11;
 my $SANE_FRAME_G31D = 12;
@@ -473,7 +472,7 @@ sub fetch_options {
  for (my $i = 0; $i < 2; ++$i) {
   if ($window[$i] and $window[$i + 2] and !$window_val_user[$i]) {
    my $pos = $device->get_option ($window[$i + 2]);
-   $window_val[$i] = $window_val[$i] - $pos;
+   $window_val[$i] = $window_val[$i] - $pos if (defined $pos);
   }
  }
 }
@@ -708,27 +707,6 @@ sub scan_it_raw {
      goto cleanup;
     }
    }
-
-   if ($must_buffer) {
-    # We're either scanning a multi-frame image or the
-    # scanner doesn't know what the eventual image height
-    # will be (common for hand-held scanners).  In either
-    # case, we need to buffer all data before we can write
-    # the image
-    $image{width} = $parm->{pixels_per_line};
-    if ($parm->{lines} >= 0) {
-     $image{height} = $parm->{lines} - $STRIP_HEIGHT + 1;
-    }
-    else {
-     $image{height} = 0;
-    }
-    $image{Bpp} = 3;
-    $image{Bpp} = 1
-     if ($parm->{format} == SANE_FRAME_GRAY || 
-        !sane_isbasicframe($parm->{format}));
-    $image{x} = $image{width} - 1;
-    $image{y} = -1;
-   }
   }
   else {
    die unless ($parm->{format} >= SANE_FRAME_RED
@@ -750,6 +728,11 @@ sub scan_it_raw {
    }
 
    if ($must_buffer) {
+    # We're either scanning a multi-frame image or the
+    # scanner doesn't know what the eventual image height
+    # will be (common for hand-held scanners).  In either
+    # case, we need to buffer all data before we can write
+    # the image
     if ($parm->{format} == SANE_FRAME_RED
         or $parm->{format} == SANE_FRAME_GREEN
         or $parm->{format} == SANE_FRAME_BLUE) {
@@ -793,11 +776,19 @@ sub scan_it_raw {
  while (!$parm->{last_frame});}
 
  if ($must_buffer) {
-  $image{height} = $image{y};
+  if ($parm->{lines} > 0) {
+   $image{height} = $parm->{lines};
+  }
+  else {
+   $image{height} = @{$image{data}}/$parm->{pixels_per_line};
+   $image{height} /= 3 if ($parm->{format} == SANE_FRAME_RED
+                         or $parm->{format} == SANE_FRAME_GREEN
+                         or $parm->{format} == SANE_FRAME_BLUE);
+  }
   if ($raw == SANE_FALSE) {
    # if we're writing raw, we skip the header
    write_pnm_header_to_file ($fp, $parm->{format}, $parm->{pixels_per_line},
-                                                $parm->{lines}, $parm->{depth});
+                                                $image{height}, $parm->{depth});
   }
   for (@{$image{data}}) {print $fp $_;}
  }
@@ -989,11 +980,11 @@ if (defined($device)) {
  }
 
  for (my $index = 0; $index < 2; ++$index) {
-  if ($window[$index]) {
+  if ($window[$index] and defined($window_val[$index])) {
    my $val = $window_val[$index] - 1;
    if ($window[$index + 2]) {
     my $pos = $device->get_option ($window[$index + 2]);
-    $val = $pos + $window_val[$index];
+    $val = $pos + $window_val[$index] if (defined $pos);
    }
    set_option ($device, $window[$index], $val);
   }
