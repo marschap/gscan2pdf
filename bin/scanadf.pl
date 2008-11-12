@@ -757,27 +757,18 @@ sub scan_it_raw {
       $image{data}[$offset + 3 * $i] = substr($buffer, $i, 1);
      }
      $offset += 3 * $len;
-     last;
     }
-    elsif ($parm->{format} == SANE_FRAME_RGB) {
+    elsif ($parm->{format} == SANE_FRAME_RGB
+           or $parm->{format} == SANE_FRAME_GRAY) {
      for (my $i = 0; $i < $len; ++$i) {
       $image{data}[$offset + $i] = substr($buffer, $i, 1);
      }
      $offset += $len;
-     last;
-    }
-    elsif ($parm->{format} == SANE_FRAME_GRAY) {
-     for (my $i = 0; $i < $len; ++$i) {
-      $image{data}[$offset + $i] = substr($buffer, $i, 1);
-     }
-     $offset += $len;
-     last;
     }
     else {
      # optional frametypes are never buffered
      printf STDERR "$prog_name: ERROR: trying to buffer %s frametype\n",
              sane_strframe($parm->{format});
-     last;
     }
    }
    else {
@@ -805,10 +796,10 @@ sub scan_it_raw {
   $image{height} = $image{y};
   if ($raw == SANE_FALSE) {
    # if we're writing raw, we skip the header
-   write_pnm_header_to_file ($fp, $parm->{format}, $image{width},
-                                                $image{height}, $parm->{depth});
+   write_pnm_header_to_file ($fp, $parm->{format}, $parm->{pixels_per_line},
+                                                $parm->{lines}, $parm->{depth});
   }
-  print $image{data};
+  for (@{$image{data}}) {print $fp $_;}
  }
 
  if ($fp) {

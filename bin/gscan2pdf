@@ -306,7 +306,7 @@ my ($windowi, $windowe, $windows, $windowh, $windowo,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
     $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
-    $windowr, @rotate_queue, $rotating, $view, $frames, $duplex,
+    $windowr, @rotate_queue, $rotating, $view, $frames, $duplex, $windowp,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -349,8 +349,9 @@ my @action_items = (
  [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
  [ 'Select Odd', undef, $d->get('Select _Odd'), '<control>1', $d->get('Select all odd-numbered pages'), sub { select_odd_even(0); } ],
  [ 'Select Even', undef, $d->get('Select _Even'), '<control>2', $d->get('Select all evenly-numbered pages'), sub { select_odd_even(1); } ],
+ [ 'Properties', 'gtk-properties', $d->get('Propert_ies'), undef, $d->get('Edit image properties'), \&properties ],
  [ 'Preferences', 'gtk-preferences', $d->get('Prefere_nces'), undef, $d->get('Edit preferences'), \&preferences ],
- 
+
  # View menu
  [ 'View', undef, $d->get('_View') ],
  [ 'Zoom 100', 'gtk-zoom-100', $d->get('Zoom _100%'), undef, $d->get('Zoom to 100%'), sub { $view->set_zoom(1.0); } ],
@@ -413,6 +414,8 @@ my $ui = "<ui>
    <menuitem action='Select All'/>
    <menuitem action='Select Odd'/>
    <menuitem action='Select Even'/>
+   <separator/>
+   <menuitem action='Properties'/>
    <separator/>
    <menuitem action='Preferences'/>
   </menu>
@@ -495,6 +498,8 @@ my $ui = "<ui>
   <menuitem action='Copy'/>
   <menuitem action='Paste'/>
   <menuitem action='Delete'/>
+  <separator/>
+  <menuitem action='Properties'/>
  </popup>
  <popup name='Thumb_Popup'>
   <menuitem action='Save'/>
@@ -513,6 +518,8 @@ my $ui = "<ui>
   <menuitem action='Copy'/>
   <menuitem action='Paste'/>
   <menuitem action='Delete'/>
+  <separator/>
+  <menuitem action='Properties'/>
  </popup>
 </ui>";
 
@@ -7923,6 +7930,78 @@ sub preferences {
  });
  $windowr -> show_all;
  return;
+}
+
+
+sub properties {
+
+ if (defined $windowp) {
+  $windowp -> present;
+  return;
+ }
+
+ ($windowp, my $vbox) = create_window($window, $d->get('Properties'), FALSE);
+
+ my $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+ my $label = Gtk2::Label -> new ($d->get('Resolution'));
+ $hbox -> pack_start($label, FALSE, FALSE, 0);
+ my $spinbutton = Gtk2::SpinButton -> new_with_range(1, 9999, 1);
+# if ($resolution) {
+#  $spinbutton->set_value($resolution);
+  $spinbutton->set_numeric (FALSE);
+  $spinbutton->set_value(get_selected_properties());
+#  $spinbutton->set_numeric (TRUE);
+# }
+# else {
+#  $spinbutton->set_value('');
+# }
+ $slist -> get_selection -> signal_connect(changed => sub {
+  $spinbutton->set_numeric (FALSE);
+  $spinbutton->set_value(get_selected_properties());
+#  $spinbutton->set_numeric (TRUE);
+ });
+ $hbox -> pack_end($spinbutton, TRUE, TRUE, 0);
+
+ $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+
+# Apply button
+ my $button = Gtk2::Button -> new_from_stock('gtk-apply');
+ $hbox -> pack_start( $button, TRUE, TRUE, 0 );
+ $button -> signal_connect (clicked => sub {
+  $windowp -> hide;
+  my $resolution = $spinbutton->get_value;
+  $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+  for ($slist -> get_selected_indices) {
+   $slist -> {data}[$_][4] = $resolution;
+  }
+  $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+ });
+
+# Cancel button
+ $button = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hbox -> pack_end( $button, TRUE, TRUE, 0 );
+ $button -> signal_connect (clicked => sub {
+  $windowr -> hide;
+ });
+ $windowp -> show_all;
+ return;
+}
+
+
+# Helper function for properties()
+sub get_selected_properties {
+ my @page = $slist -> get_selected_indices;
+ my $resolution = '';
+ $resolution = $slist -> {data}[shift @page][4] if (@page > 0);
+ for (@page) {
+  if ($slist -> {data}[$_][4] != $resolution) {
+   $resolution = '';
+   last;
+  }
+ }
+ return $resolution;
 }
 
 

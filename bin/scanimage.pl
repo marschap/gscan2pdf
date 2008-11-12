@@ -701,24 +701,13 @@ sub scan_it {
       $image{data}[$offset + 3 * $i] = substr($buffer, $i, 1);
      }
      $offset += 3 * $len;
-     last;
     }
-    elsif ($parm->{format} == SANE_FRAME_RGB) {
+    elsif ($parm->{format} == SANE_FRAME_RGB
+           or $parm->{format} == SANE_FRAME_GRAY) {
      for (my $i = 0; $i < $len; ++$i) {
       $image{data}[$offset + $i] = substr($buffer, $i, 1);
      }
      $offset += $len;
-     last;
-    }
-    elsif ($parm->{format} == SANE_FRAME_GRAY) {
-     for (my $i = 0; $i < $len; ++$i) {
-      $image{data}[$offset + $i] = substr($buffer, $i, 1);
-     }
-     $offset += $len;
-     last;
-    }
-    else {
-     last;
     }
    }
    else { # ! must_buffer
@@ -776,7 +765,7 @@ sub scan_it {
 #                             icc_profile);
 #  }
 #  else {
-   write_pnm_header ($parm->{format}, $image{width}, $image{height}, $parm->{depth});
+   write_pnm_header ($parm->{format}, $parm->{pixels_per_line}, $parm->{lines}, $parm->{depth});
 #  }
 #  if (($output_format == OUTPUT_TIFF) || ($image{Bpp} == 1)
 #      || ($image{Bpp} == 3)) {
@@ -790,7 +779,7 @@ sub scan_it {
 #    $image{data}[$i + 1] = $LSB;
 #   }
 ##endif
-   print $image{data};
+   for (@{$image{data}}) {print;}
 #  }
  }
 
