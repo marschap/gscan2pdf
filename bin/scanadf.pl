@@ -473,7 +473,7 @@ sub fetch_options {
  for (my $i = 0; $i < 2; ++$i) {
   if ($window[$i] and $window[$i + 2] and !$window_val_user[$i]) {
    my $pos = $device->get_option ($window[$i + 2]);
-   $window_val[$i] = $window_val[$i] - $pos + 1;
+   $window_val[$i] = $window_val[$i] - $pos;
   }
  }
 }
@@ -1002,7 +1002,7 @@ if (defined($device)) {
    my $val = $window_val[$index] - 1;
    if ($window[$index + 2]) {
     my $pos = $device->get_option ($window[$index + 2]);
-    $val = $pos + $window_val[$index] - 1;
+    $val = $pos + $window_val[$index];
    }
    set_option ($device, $window[$index], $val);
   }
