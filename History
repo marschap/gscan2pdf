@@ -1,4 +1,4 @@
-0.9.27 (24.10.2008):
+0.9.27 (24.11.2008):
 
 * Check whether crashed session exists before trying to open it.
   Closes 2099857 (Program does not start, as long as file session is missing)
@@ -17,6 +17,7 @@
 * + support for the renamed pagewidth and pageheight options to
   page-width and page-height in SANE 1.1.0 in CVS.
   Closes 2217511 (determining supported paper sizes fails with fujitsu adf)
+* + Properties dialog to show and change resolution of image
 
 
 0.9.26 (24.08.2008):

@@ -7946,32 +7946,38 @@ sub properties {
  $vbox -> pack_start($hbox, TRUE, TRUE, 0);
  my $label = Gtk2::Label -> new ($d->get('Resolution'));
  $hbox -> pack_start($label, FALSE, FALSE, 0);
- my $spinbutton = Gtk2::SpinButton -> new_with_range(1, 9999, 1);
-# if ($resolution) {
-#  $spinbutton->set_value($resolution);
-  $spinbutton->set_numeric (FALSE);
-  $spinbutton->set_value(get_selected_properties());
-#  $spinbutton->set_numeric (TRUE);
-# }
-# else {
-#  $spinbutton->set_value('');
-# }
- $slist -> get_selection -> signal_connect(changed => sub {
-  $spinbutton->set_numeric (FALSE);
-  $spinbutton->set_value(get_selected_properties());
-#  $spinbutton->set_numeric (TRUE);
+ my $entry = Gtk2::Entry->new;
+ $entry->set_width_chars (4);
+ $entry->set_activates_default (TRUE);
+ $entry->signal_connect ('insert-text' => sub {
+  my ($widget, $string, $len, $position) = @_;
+  # just can't insert these.
+  for (split '', $string) {
+   if ($_ lt 0 or $_ gt 9) {
+    $entry->signal_stop_emission_by_name('insert-text');
+    last;
+   }
+  }
+  () # this callback must return either 2 or 0 items.
  });
- $hbox -> pack_end($spinbutton, TRUE, TRUE, 0);
+
+ $entry->set_text(get_selected_properties());
+ $slist -> get_selection -> signal_connect(changed => sub {
+  $entry->set_text(get_selected_properties());
+ });
+ $hbox -> pack_end($entry, TRUE, TRUE, 0);
 
  $hbox = Gtk2::HBox -> new;
  $vbox -> pack_start($hbox, TRUE, TRUE, 0);
 
 # Apply button
  my $button = Gtk2::Button -> new_from_stock('gtk-apply');
+ $button->can_default (TRUE);
+ $windowp->set_default ($button);
  $hbox -> pack_start( $button, TRUE, TRUE, 0 );
  $button -> signal_connect (clicked => sub {
   $windowp -> hide;
-  my $resolution = $spinbutton->get_value;
+  my $resolution = $entry->get_text;
   $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
   for ($slist -> get_selected_indices) {
    $slist -> {data}[$_][4] = $resolution;
@@ -7983,7 +7989,7 @@ sub properties {
  $button = Gtk2::Button -> new_from_stock('gtk-cancel');
  $hbox -> pack_end( $button, TRUE, TRUE, 0 );
  $button -> signal_connect (clicked => sub {
-  $windowr -> hide;
+  $windowp -> hide;
  });
  $windowp -> show_all;
  return;
