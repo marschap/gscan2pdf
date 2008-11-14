@@ -21,6 +21,8 @@
 * Write images including resolution information
 * Guess resolution of PNMs from shape of image
   Closes Debian bug #504543 (gscan2pdf: Resolution strangeness)
+* Convert PNMs to TIFF before giving them to GIMP
+  Closes Debian bug #504546 (gscan2pdf: Resolution not sent to gimp)
 
 
 0.9.26 (24.08.2008):

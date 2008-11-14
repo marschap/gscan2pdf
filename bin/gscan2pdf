@@ -6499,8 +6499,25 @@ sub gimp {
  my @pages = $slist -> get_selected_indices;
  $window->iconify;
  Gtk2->main_iteration while Gtk2->events_pending;
+
+# Update undo/redo buffers
+ take_snapshot();
+
  $slist -> get_selection -> unselect_all;
+
+ my $format;
  my $filename = $slist->{data}[$pages[0]][2];
+ $format = $1 if ($filename =~ /\.(\w*)$/);
+
+# PNMs don't store the resolution, so GIMP doesn't get it. Convert to TIFF
+ if ($format eq 'pnm') {
+  (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
+  system("convert $slist->{data}[$pages[0]][2] -density $slist->{data}[$pages[0]][4] -units PixelsPerInch $filename");
+ }
+ else {
+  (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => ".$format");
+ }
+ $slist->{data}[$pages[0]][2] = $filename;
  system("gimp $filename");
 
 # Update thumbnail
