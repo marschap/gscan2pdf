@@ -18,6 +18,9 @@
   page-width and page-height in SANE 1.1.0 in CVS.
   Closes 2217511 (determining supported paper sizes fails with fujitsu adf)
 * + Properties dialog to show and change resolution of image
+* Write images including resolution information
+* Guess resolution of PNMs from shape of image
+  Closes Debian bug #504543 (gscan2pdf: Resolution strangeness)
 
 
 0.9.26 (24.08.2008):

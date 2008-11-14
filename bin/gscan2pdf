@@ -1481,24 +1481,42 @@ sub new {
 }
 
 
+sub get_resolution {
+ my $image = shift;
+ my $resolution;
+ my $format = $image->Get('format');
+
+ # Imagemagick always reports PNMs as 72dpi
+ if ($format ne 'Portable anymap') {
+  $resolution = $image->Get('x-resolution');
+  return $resolution if ($resolution);
+
+  $resolution = $image->Get('y-resolution');
+  return $resolution if ($resolution);
+ }
+
+# Guess the resolution from the shape
+ my $height = $image->Get('height');
+ my $width = $image->Get('width');
+ my $ratio = $height/$width;
+ $ratio = 1/$ratio if ($ratio < 1);
+ $resolution = 72;
+ for (keys %{$SETTING{Paper}}) {
+  if ($SETTING{Paper}{$_}{x} > 0
+      and abs($ratio - $SETTING{Paper}{$_}{y}/$SETTING{Paper}{$_}{x}) < 0.02) {
+   $resolution = int((($height > $width) ? $height : $width)/$SETTING{Paper}{$_}{y}*25.4 + 0.5);
+  }
+ }
+ return $resolution;
+}
+
+
 sub convert_to_tiff {
  my ($filename) = @_;
  my $image = Image::Magick->new;
  my $x = $image->Read($filename);
  warn "$x" if "$x";
-
-# Calculate the resolution
- my $height = $image->Get('height');
- my $width = $image->Get('width');
- my $ratio = $height/$width;
- $ratio = 1/$ratio if ($ratio < 1);
- my $density = 72;
- for (keys %{$SETTING{Paper}}) {
-  if ($SETTING{Paper}{$_}{x} > 0
-      and abs($ratio - $SETTING{Paper}{$_}{y}/$SETTING{Paper}{$_}{x}) < 0.01) {
-   $density = (($height > $width) ? $height : $width)/$SETTING{Paper}{$_}{y}*25.4;
-  }
- }
+ my $density = get_resolution($image);
 
 # Write the tif
  my (undef, $tif) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
@@ -1685,11 +1703,12 @@ sub import_dialog {
    if ($condition & 'in') { # bit field operation. >= would also work
     recv($child, $line, 1000, 0);
     if (defined($line) and $line ne '') {
-     my ($fraction, $filename, $pages, @text) = split ' ', $line;
+     my ($fraction, $filename, $resolution, @text) = split ' ', $line;
      if ($fraction == -1) {
       show_message_dialog($window, 'error', 'close', join(' ', @text));
      }
      if ($fraction == -2) {
+      my $pages = $resolution;
       $dialog -> hide;
       my ($windowq, $vbox) =
        create_window($window, $d->get('Pages to extract'), TRUE);
@@ -1740,7 +1759,7 @@ sub import_dialog {
       $pbar->set_fraction($fraction);
       $pbar->set_text(join ' ', @text);
       Gtk2->main_iteration while Gtk2->events_pending;
-      add_image($filename, undef, undef) if ($filename ne '0');
+      add_image($filename, undef, $resolution) if ($filename ne '0');
      }
     }
    }
@@ -2968,7 +2987,7 @@ sub save_image {
    $filename = $filename.".$SETTING{'image type'}"
     if ($filename !~ /\.$SETTING{'image type'}$/i);
    if (! file_exists($file_chooser, $filename)) {
-    if (! system ("convert $filelist[0] '$filename'")) {
+    if (! system ("convert $filelist[0] -density $slist->{data}[$pagelist[0]][4] '$filename'")) {
      mark_pages(@pagelist);
     }
     else {
@@ -2980,7 +2999,9 @@ sub save_image {
    my $i = 1;
    foreach (@filelist) {
     if (! file_exists($file_chooser, "$filename.$i.$SETTING{'image type'}")) {
-     if (system ("convert $_ \"$filename.$i.$SETTING{'image type'}\"")) {
+     my $cmd = sprintf "convert %s -density %d \"%s\"",
+      $_, $slist->{data}[$pagelist[$i-1]][4], "$filename.$i.$SETTING{'image type'}";
+     if (system ($cmd)) {
       show_message_dialog($window, 'error', 'close', $d->get('Error saving image'));
      }
      else {
@@ -4609,15 +4630,11 @@ sub prepare_import {
   'CompuServe graphics interchange format'       => '.gif',
  );
 
- if (! defined($resolution)) {
+ if (! $resolution) {
   my $image = Image::Magick->new;
   my $x = $image->Read($ofilename);
   warn "$x" if "$x";
-  $resolution = $image->Get('x-resolution');
-  if ($resolution == 0) {
-   $resolution = $image->Get('y-resolution');
-   $resolution = 72 if ($resolution == 0); 
-  }
+  $resolution = get_resolution($image);
  }
 
  my (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => $suffix{$format});
