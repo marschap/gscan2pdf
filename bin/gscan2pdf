@@ -1685,7 +1685,7 @@ sub import_dialog {
    if ($condition & 'in') { # bit field operation. >= would also work
     recv($child, $line, 1000, 0);
     if (defined($line) and $line ne '') {
-     my ($fraction, $filename, $resolution, @text) = split ' ', $line;
+     my ($fraction, $filename, $pages, @text) = split ' ', $line;
      if ($fraction == -1) {
       show_message_dialog($window, 'error', 'close', join(' ', @text));
      }
@@ -1697,14 +1697,14 @@ sub import_dialog {
       $vbox -> pack_start($hbox, TRUE, TRUE, 0);
       my $label = Gtk2::Label -> new ($d->get('First page to extract'));
       $hbox -> pack_start ($label, FALSE, FALSE, 0);
-      my $spinbuttonf = Gtk2::SpinButton -> new_with_range(1, $resolution, 1);
+      my $spinbuttonf = Gtk2::SpinButton -> new_with_range(1, $pages, 1);
       $hbox -> pack_end ($spinbuttonf, FALSE, FALSE, 0);
       $hbox = Gtk2::HBox -> new;
       $vbox -> pack_start($hbox, TRUE, TRUE, 0);
       $label = Gtk2::Label -> new ($d->get('Last page to extract'));
       $hbox -> pack_start ($label, FALSE, FALSE, 0);
-      my $spinbuttonl = Gtk2::SpinButton -> new_with_range(1, $resolution, 1);
-      $spinbuttonl->set_value($resolution);
+      my $spinbuttonl = Gtk2::SpinButton -> new_with_range(1, $pages, 1);
+      $spinbuttonl->set_value($pages);
       $hbox -> pack_end ($spinbuttonl, FALSE, FALSE, 0);
 
 # HBox for buttons
@@ -1740,7 +1740,7 @@ sub import_dialog {
       $pbar->set_fraction($fraction);
       $pbar->set_text(join ' ', @text);
       Gtk2->main_iteration while Gtk2->events_pending;
-      add_image($filename, undef, $resolution) if ($filename ne '0');
+      add_image($filename, undef, undef) if ($filename ne '0');
      }
     }
    }
