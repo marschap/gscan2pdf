@@ -1045,3 +1045,285 @@ $SIG{TERM} = \&sighandler;
 scan_docs ($startNum, $endNum, $no_overwrite, $raw, $outputFile, $scanScript);
 
 exit $Sane::STATUS;
+
+__END__
+
+=head1 NAME
+
+scanadf - acquire multiple images from a scanner equipped with an ADF
+
+=head1 SYNOPSIS
+
+B<scanadf>
+B<[ -d | --device-name>
+I<dev ]>
+B<[ -h | --help ]>
+B<[ -L | --list-devices ]>
+B<[ -v | --verbose ]>
+B<[ -V | --version ]>
+B<[ -o | --output-file>
+I<name ]>
+B<[ -N | --no-overwrite ]>
+B<[ -S | --scan-script>
+I<name ]>
+B<[ --script-wait ] >
+B<[ -s | --start-count>
+I<num ]>
+B<[ -e | --end-count>
+I<num ]>
+B<[ -r | --raw ]>
+I<[ device-specific-options ]>
+
+=head1 DESCRIPTION
+
+B<scanadf>
+is a command-line interface to control image acquisition devices which
+are capable of returning a series of images (e.g. a scanner with an
+automatic document feeder (ADF)).  The device is controlled via
+command-line options.  After command-line processing,
+B<scanadf>
+normally proceeds to acquire a series of images until the device returns
+the
+B<SANE_STATUS_NO_DOCS>
+status code.  
+
+The images are written to output files, specified by the
+B<--output-file>
+option.  These files are typically written in one of the PNM (portable aNyMaP) 
+formats (PBM for black-and-white images, PGM for grayscale images, 
+and PPM for color images).  Several optional frame formats (SANE_FRAME_JPEG, 
+SANE_FRAME_G31D, SANE_FRAME_G32D, SANE_FRAME_G42D, and SANE_FRAME_TEXT)
+are supported.  In each case, the data is written out to the output file
+as-is without a header.  Unrecognized frame formats are handled in
+the same way, although a warning message is printed in verbose mode.
+
+Typically, the optional frame formats are used in conjunction with a scan 
+script (specified by the 
+B<--scanscript>
+option) which is invoked for each acquired image.  The script is provided
+with a series of environment variables which describe the parameters
+and format of the image file.
+
+B<scanadf>
+accesses image acquisition devices through the SANE (Scanner Access
+Now Easy) interface and can thus support any device for which there
+exists a SANE backend (try "apropos sane\-" to get a list of available
+backends).
+
+=head1 OPTIONS
+
+The
+B<-d>
+or
+B<--device-name>
+options must be followed by a SANE device-name.  A (partial) list of
+available devices can be obtained with the
+B<--list-devices>
+option (see below).  If no device-name is specified explicitly,
+B<scanadf>
+will attempt to open the first available device.
+
+The
+B<-h>
+or
+B<--help>
+options request help information.  The information is printed on
+standard output and in this case, no attempt will be made to acquire
+an image.
+
+The
+B<-L>
+or
+B<--list-devices>
+option requests a (partial) list of devices that are available.  The
+list is not complete since some devices may be available, but are not
+listed in any of the configuration files (which are typically stored
+in directory /usr/etc/sane.d).  This is particularly the case when
+accessing scanners through the network.  If a device is not listed in
+a configuration file, the only way to access it is by its full device
+name.  You may need to consult your system administrator to find out
+the names of such devices.
+
+The
+B<-v>
+or
+B<--verbose>
+options increase the verbosity of the operation of
+B<scanadf.>
+The option may be specified repeatedly, each time increasing the verbosity
+level.
+
+The
+B<-V>
+or
+B<--version>
+option requests that
+B<scanadf>
+print the program and package name, as well as the version number of
+the SANE distribution that it came with.
+
+The
+B<-o>
+or
+B<--output-file>
+option specifies a format string used to generate the name of file to 
+write the image data to.  You can use %d replacement in the output file
+name; this will be replaced with the current page number.  The default
+format string is image-%04d.
+
+The
+B<-N>
+or
+B<--no-overwrite>
+option prevents
+B<scanadf >
+from overwriting existing image files. 
+
+The
+B<-S>
+or
+B<--scan-script>
+option specifies the name of script to run after each scanned image
+is acquired.  The script receives the name of the image output file
+as its first and only command line argument.  Additionally the scan
+script can reference the following environment variables to get 
+information about the parameters of the image.
+
+=over
+
+=item B<SCAN_RES>
+
+- the image resolution (in DPI)
+
+=item B<SCAN_WIDTH>
+
+- the image width (in pixels) 
+
+=item B<SCAN_HEIGHT>
+
+- the image height (in pixels)
+
+=item B<SCAN_DEPTH>
+
+- the image bit-depth (in bits)
+
+=item B<SCAN_FORMAT>
+
+- a string representing the image format (e.g. gray, g42d, text, etc)
+
+=item B<SCAN_FORMAT_ID>
+
+- the numeric image format identifier
+
+=back
+
+If the
+B<--scipt-wait>
+option is given, scanadf will wait until all scan-scripts have been finished before
+exiting. That will be useful if scanadf is used in conjunction with tools to modify
+the scanned images.
+
+The
+B<-s>
+or
+B<--start-count>
+option specifies the page number of first scanned image.
+
+The
+B<-e>
+or
+B<--end-count>
+option specifies the last page number to scan.  Using this option,
+you can request a specific number of pages to be scanned, rather than
+scanning until there are no more images available.
+
+The
+B<-r>
+or
+B<--raw>
+option specifies that the raw image data be written to the output file
+as-is without interpretation.  This disables the writing of the PNM
+header for basic frame types.  This feature is usually used in 
+conjunction with the
+B<--scan-script>
+option where the scan script uses the environment variables to
+understand the format and parameters of the image and converts
+the file to a more useful format.  NOTE: With support for the
+optional frame types and the default handling of unrecognized
+frametypes, this option becomes less and less useful.
+
+As you might imagine, much of the power of
+B<scanadf>
+comes from the fact that it can control any SANE backend.  Thus, the
+exact set of command-line options depends on the capabilities of the
+selected device.  To see the options for a device named
+I<dev ,>
+invoke
+B<scanadf>
+via a command-line of the form:
+
+=over
+
+scanadf --help --device
+I<dev>
+
+=back
+
+The documentation for the device-specific options printed by
+B<--help>
+is explained in the manual page for
+B<scanimage.>
+
+=head1 FILES
+
+=over
+
+=item I</usr/etc/sane.d>
+
+This directory holds various configuration files.  For details, please
+refer to the manual pages listed below.
+
+=back
+
+=head1 "SEE ALSO"
+
+scanimage(1), xscanimage(1), sane(7)
+
+=head1 AUTHOR
+
+Transliterated from the C original by Jeffrey Ratcliffe.
+
+=head1 BUGS
+
+All the bugs of scanadf and much, much more.
+
+This program relies on the backend to return the 
+B<SANE_STATUS_NO_DOCS>
+status code when the automatic document feeder is out of paper.  Use of
+this program with backends that do not support ADFs (e.g. flatbed scanners) 
+will likely result in repeated scans of the same document.  In this
+case, it is essential to use the start-count and end-count to
+control the number of images acquired.
+
+Only a subset of the SANE backends support feeders and return
+SANE_STATUS_NO_DOCS appropriately.  Backends which are known to
+work at this time are:
+
+=over
+
+=item B<sane-bh>
+
+- Bell+Howell Copiscan II series scanners.
+
+=item B<sane-hp>
+
+- Hewlett Packard scanners.  A patch to the sane-hp backend 
+is necessary.  The --scantype=ADF option must be specified (earlier
+versions of the backend used the --scan-from-adf option, instead).
+
+=item B<sane-umax>
+
+- UMAX scanners.  Support exists in build 12 and later.
+The --source="Automatic Document Feeder" option must be specified.
+
+=back
