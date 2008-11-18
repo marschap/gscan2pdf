@@ -1955,7 +1955,7 @@ sub import_file {
    send($parent, '2 0 0', 0);
   }
  }
- elsif ($format =~ /(Portable anymap)|(Portable Network Graphics)|(Joint Photographic Experts Group JFIF format)|(CompuServe graphics interchange format)/) {
+ elsif ($format =~ /(Portable anymap|Portable Network Graphics|Joint Photographic Experts Group JFIF format|CompuServe graphics interchange format)/) {
   ($filename, my $resolution) = prepare_import($filename, $format);
   send($parent, sprintf("%f %s %i ", $j/$n, $filename, $resolution)
    .sprintf($d->get("Importing %s"), $format), 0);
@@ -2275,12 +2275,12 @@ sub create_PDF {
    $format = $1 if ($filename =~ /\.(\w*)$/);
    if (($compression ne 'none' and $compression ne $format)
        or $SETTING{'downsample'} or $compression eq 'jpg') {
-    if ($compression !~ /(jpg)|(png)/ and $format ne 'tif') {
+    if ($compression !~ /(jpg|png)/ and $format ne 'tif') {
      print "Converting $filename to " if ($debug);
      (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
      print "$filename\n" if ($debug);
     }
-    elsif ($compression =~ /(jpg)|(png)/) {
+    elsif ($compression =~ /(jpg|png)/) {
      print "Converting $filename to " if ($debug);
      (undef, $filename) = tempfile(DIR => $SETTING{session},
                                    SUFFIX => ".$compression");
@@ -2300,15 +2300,15 @@ sub create_PDF {
      if ($compression eq 'jpg');
     warn "$x" if "$x";
 
-    if (($compression !~ /(jpg)|(png)/ and $format ne 'tif')
-        or ($compression =~ /(jpg)|(png)/) or $SETTING{'downsample'}) {
+    if (($compression !~ /(jpg|png)/ and $format ne 'tif')
+        or ($compression =~ /(jpg|png)/) or $SETTING{'downsample'}) {
 # depth required because resize otherwise increases depth to maintain information
      $x = $image->Write(filename => $filename, depth => $depth);
      warn "$x" if "$x";
      $format = $1 if ($filename =~ /\.(\w*)$/);
     }
 
-    if ($compression !~ /(jpg)|(png)/) {
+    if ($compression !~ /(jpg|png)/) {
      my (undef, $filename2) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
      my $cmd = "tiffcp -c $compression $filename $filename2 2>&1";
      print "$cmd\n" if $debug;
@@ -3204,7 +3204,7 @@ sub save_djvu {
      $format = $1 if ($filename =~ /\.(\w*)$/);
      if ($depth > 1) {
       $compression = 'c44';
-      if ($format !~ /(pnm)|(jpg)/) {
+      if ($format !~ /(pnm|jpg)/) {
        my (undef, $pnm) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pnm');
        $x = $image->Write(filename => $pnm);
        warn "$x" if "$x";
@@ -3214,7 +3214,7 @@ sub save_djvu {
 # cjb2 can only use pnm and tif
      else {
       $compression = 'cjb2';
-      if ($format !~ /(pnm)|(tif)/ or ($format eq 'pnm' and $class ne 'PseudoClass')) {
+      if ($format !~ /(pnm|tif)/ or ($format eq 'pnm' and $class ne 'PseudoClass')) {
        my (undef, $pbm) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pbm');
        $x = $image->Write(filename => $pbm);
        warn "$x" if "$x";
@@ -5123,7 +5123,7 @@ sub parse_options {
     $widget -> signal_connect (changed => sub {
      my $text = $widget -> get_active_text;
      if (defined($text) and
-                     get_value(\%ddo, $option, $text) =~ /(flatbed)|(normal)/i) {
+                     get_value(\%ddo, $option, $text) =~ /(flatbed|normal)/i) {
       $bscanall->set_sensitive(FALSE);
       $bscannum->set_active(TRUE);
      }
@@ -5680,7 +5680,7 @@ sub update_options_hash {
 
 # Add any new options
  foreach my $option (keys %hash) {
-  if (defined($pddo{$option}) and $option !~ /^page(width)|(height)/) {
+  if (defined($pddo{$option}) and $option !~ /^page-?(width|height)/) {
    my ($widget, $hbox) = add_widget_from_hash($option, %hash);
    $vboxd -> pack_start ($hbox, TRUE, TRUE, 0);
    $hbox -> show_all;
