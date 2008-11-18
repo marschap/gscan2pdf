@@ -109,6 +109,7 @@ use Config::General 2.40;
 use Text::ParseWords;
 use Archive::Tar;                    # For session files
 use Sane;
+use PDF::API2;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -269,6 +270,7 @@ if ($debug) {
  print "Running with ".join('.',Gtk2->get_version_info)."\n";
  print "Using GtkImageView version ", Gtk2::ImageView->library_version, "\n";
  print "Using Gtk2::ImageView version ", $Gtk2::ImageView::VERSION, "\n";
+ print "Using PDF::API2 version ", $PDF::API2::Version::CVersion{vShort}, "\n";
 
  use Data::Dumper;
  warn Dumper(\%SETTING);
@@ -1191,7 +1193,6 @@ sub create_menu_bar {
  my $menubar = $uimanager->get_widget('/MenuBar');
 
 # Check for presence of various packages
- $dependencies{pdfapi2} = eval { require PDF::API2 };
  $dependencies{perlmagick} = eval { require Image::Magick };
  $dependencies{imagemagick} = check_command('convert');
  $dependencies{scanadf} = check_command('scanadf');
@@ -1202,7 +1203,6 @@ sub create_menu_bar {
  $dependencies{unpaper} = check_command('unpaper');
  $dependencies{libtiff} = check_command('tiffcp');
  if ($debug) {
-  warn "Found PDF::API2\n" if ($dependencies{pdfapi2});
   warn "Found Image::Magick\n" if ($dependencies{perlmagick});
   warn "Found ImageMagick\n" if ($dependencies{imagemagick});
   warn "Found scanadf\n" if ($dependencies{scanadf});
@@ -1222,17 +1222,8 @@ sub create_menu_bar {
   [ 'tesseract',  $d->get('Tesseract'),  $d->get('Process image with Tesseract.') ],
   if ($dependencies{tesseract});
 
- my $msg = '';
- $msg .= $d->get("PDF creation requires PDF::API2\n")
-  if (! $dependencies{pdfapi2});
-
-# Set frontend to scanimage if scanadf not available
- if ($SETTING{frontend} eq 'scanadf' and ! $dependencies{scanadf}) {
-  $SETTING{frontend} = 'scanadf.pl';
-  $msg .= $d->get("The scanadf frontend is not available\n")
- }
-
 # Ghost save image item if imagemagick not available
+ my $msg = '';
  $msg .= $d->get("Save image and Save as PDF both require imagemagick\n")
   if (! $dependencies{imagemagick});
 
@@ -2208,8 +2199,6 @@ sub get_PDF_options {
 sub create_PDF {
  my ($filename) = @_;
 
- require PDF::API2;
-
  my $dialog = Gtk2::Dialog -> new ($d->get('Saving PDF')."...", $window,
                                    'modal',
                                    'gtk-cancel' => 'cancel');
@@ -2244,8 +2233,6 @@ sub create_PDF {
    ++$page;
    send($parent, $page/($#pagelist+2)
     .sprintf($d->get("Saving page %i of %i"), $page, $#pagelist+1), 0);
-
-   my $page = $pdf->page;
 
    my $filename = $slist -> {data}[$_][2];
    my $image = Image::Magick->new;
@@ -2305,6 +2292,7 @@ sub create_PDF {
      $w = $w/$resolution*$SETTING{'downsample dpi'};
      $h = $h/$resolution*$SETTING{'downsample dpi'};
      $resolution = $SETTING{'downsample dpi'};
+     print "Resizing $filename to $w x $h\n" if ($debug);
      $x = $image->Resize(width => $w, height => $h);
      warn "$x" if "$x";
     }
@@ -2331,6 +2319,7 @@ sub create_PDF {
 
    print "Defining page at ", $w*72/$resolution, " x ", $h*72/$resolution, "\n"
     if $debug;
+   my $page = $pdf->page;
    $page->mediabox($w*72/$resolution, $h*72/$resolution);
 
 # Add OCR as annotation
@@ -2402,7 +2391,7 @@ sub create_PDF {
   }
   send($parent, '1'.$d->get('Closing PDF'), 0);
   $pdf->save;
-  $pdf->end();
+  $pdf->end;
   send($parent, '2', 0);
  });
 
@@ -2615,7 +2604,7 @@ sub save_dialog {
  my @tiff_compression = (
   [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
   [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
-  [ 'jpeg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
+  [ 'jpg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
   [ 'packbits', $d->get('Packbits'), $d->get('Compress output with Packbits encoding.') ],
   [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
   [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
@@ -2630,11 +2619,13 @@ sub save_dialog {
 
 # Set up quality spinbutton here so that it can be shown or hidden by callback
  my ($hboxtq, $spinbuttontq) = add_quality_spinbutton($vbox);
+$label = Gtk2::Label -> new ($d->get('tiff'));
+$hboxtq -> pack_start ($label, FALSE, FALSE, 0);
 
 # Fill compression ComboBox
  my $combobtc = combobox_from_array(@tiff_compression);
  $combobtc -> signal_connect (changed => sub {
-  if ($tiff_compression[$combobtc->get_active][0] eq 'jpeg') {
+  if ($tiff_compression[$combobtc->get_active][0] eq 'jpg') {
    $hboxtq -> show_all;
   }
   else {
@@ -2658,7 +2649,7 @@ sub save_dialog {
  $combobi -> signal_connect (changed => sub {
   if ($type[$combobi->get_active][0] eq 'pdf') {
    $vboxp -> show_all;
-   if ($pdf_compression[$combob->get_active][0] eq 'jpeg') {
+   if ($pdf_compression[$combob->get_active][0] eq 'jpg') {
     $hboxpq -> show_all;
    }
    else {
@@ -2679,7 +2670,7 @@ sub save_dialog {
   }
   if ($type[$combobi->get_active][0] eq 'jpg'
       or ($type[$combobi->get_active][0] eq 'tif'
-          and $tiff_compression[$combobtc->get_active][0] eq 'jpeg')) {
+          and $tiff_compression[$combobtc->get_active][0] eq 'jpg')) {
    $hboxtq -> show_all;
   }
   else {
@@ -2921,9 +2912,10 @@ sub save_dialog {
  $cbutton -> signal_connect( clicked => sub { $windowi -> hide; } );
 
  $windowi -> show_all;
+ $hboxpq -> hide_all if ($pdf_compression[$combob->get_active][0] ne 'jpg');
  $hboxtq -> hide_all if ($type[$combobi->get_active][0] ne 'jpg'
                         or ($type[$combobi->get_active][0] eq 'tif'
-                     and $tiff_compression[$combobtc->get_active][0] ne 'jpeg'));
+                     and $tiff_compression[$combobtc->get_active][0] ne 'jpg'));
  $hboxc -> hide_all if ($type[$combobi->get_active][0] ne 'tif');
  $vboxp -> hide_all if ($type[$combobi->get_active][0] ne 'pdf');
  $windowi -> resize(100, 100); # Doesn't matter that 200x200 is too small
@@ -2987,7 +2979,9 @@ sub save_image {
    $filename = $filename.".$SETTING{'image type'}"
     if ($filename !~ /\.$SETTING{'image type'}$/i);
    if (! file_exists($file_chooser, $filename)) {
-    if (! system ("convert $filelist[0] -density $slist->{data}[$pagelist[0]][4] '$filename'")) {
+    my $cmd = "convert $filelist[0] -density $slist->{data}[$pagelist[0]][4] '$filename'";
+    print "$cmd\n" if $debug;
+    if (! system ($cmd)) {
      mark_pages(@pagelist);
     }
     else {
@@ -3053,13 +3047,13 @@ sub save_TIFF {
    send($parent, ($page-1)/($#pagelist+2)
     .sprintf($d->get("Converting image %i of %i to TIFF"), $page, $#pagelist+1), 0);
    my $filename = $slist -> {data}[$j][2];
-   if ($filename !~ /\.tif/ or $SETTING{'tiff compression'} eq 'jpeg') {
+   if ($filename !~ /\.tif/ or $SETTING{'tiff compression'} eq 'jpg') {
     my (undef, $tif) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
     my $resolution = $slist -> {data}[$j][4];
 
 # Convert to tiff
     my $depth = '';
-    $depth = '-depth 8' if ($SETTING{'tiff compression'} eq 'jpeg');
+    $depth = '-depth 8' if ($SETTING{'tiff compression'} eq 'jpg');
     system ("convert -units PixelsPerInch -density $resolution $depth $filename $tif") == 0 or
      send($parent, "2".$d->get('Error writing TIFF'), 0);
 
@@ -3069,12 +3063,12 @@ sub save_TIFF {
   }
 
   my $compression = $SETTING{'tiff compression'};
-  $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpeg');
+  $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpg');
 
 # Create the tiff
   send($parent, '1'.$d->get('Concatenating TIFFs'), 0);
   my $rows = '';
-  $rows = '-r 16' if ($SETTING{'tiff compression'} eq 'jpeg');
+  $rows = '-r 16' if ($SETTING{'tiff compression'} eq 'jpg');
   my $cmd = "tiffcp $rows -c $compression $pagelist \"$filename\" 2>&1";
   print "$cmd\n" if $debug;
   my $output = `$cmd`;
