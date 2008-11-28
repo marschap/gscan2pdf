@@ -50,9 +50,7 @@
 #    problem with wait after cancelling scan?
 #    cover case where unpaper or ocr starts running on a page that has in the
 #     meantime been deleted
-#    use -x option (first column 0-100) in gocr to give more detail to progressbar
 #    add run script option
-#    check out freeze when gocr does not return properly
 #    Add status line at bottom with messages like "filename saved"
 #    Fix blocking while rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
@@ -573,7 +571,8 @@ my $heightt = 100;
 
 # Scrolled window for thumbnails
 my $scwin_thumbs = Gtk2::ScrolledWindow -> new;
-$hpaned -> pack1($scwin_thumbs, TRUE, TRUE);
+# resize = FALSE to stop the panel expanding on being resized (Debian #507032)
+$hpaned -> pack1($scwin_thumbs, FALSE, TRUE);
 $scwin_thumbs -> set_policy('automatic', 'automatic');
 $scwin_thumbs -> set_shadow_type('etched-in');
 
