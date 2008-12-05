@@ -6599,7 +6599,15 @@ sub unpaper_page {
      if ($options =~ /--output-pages 2 /);
 
     if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
-     (undef, $in) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pnm');
+     my $image = Image::Magick->new;
+     my $x = $image->Read($slist -> {data}[$pagenum][2]);
+     warn "$x" if "$x";
+     my $depth = $image->Get('depth');
+
+# Unforunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
+     my $suffix = ".pbm";
+     $suffix = ".pnm" if ($depth > 1);
+     (undef, $in) = tempfile(DIR => $SETTING{session}, SUFFIX => $suffix);
      $cmd .= "convert -compress Zip $slist->{data}[$pagenum][2] $in;";
     }
     else {
