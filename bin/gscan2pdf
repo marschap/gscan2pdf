@@ -114,7 +114,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.27rc1';
+my $version = '0.9.27';
 
 my $tolerance = 1;
 
@@ -4897,6 +4897,7 @@ Chris Mayo
 David Hampton
 Sascha Hunold
 Jakub Wilk
+freedo
 EOS
  $about->set_authors ("Jeff Ratcliffe\n\n"
                       .$d->get('Patches gratefully received from:')
