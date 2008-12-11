@@ -1,0 +1,1852 @@
+# Swedish translation for gscan2pdf
+# Copyright (c) 2006 Rosetta Contributors and Canonical Ltd 2006
+# This file is distributed under the same license as the gscan2pdf package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2006.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: gscan2pdf\n"
+"Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
+"POT-Creation-Date: 2008-08-25 12:39+0200\n"
+"PO-Revision-Date: 2008-09-21 18:04+0000\n"
+"Last-Translator: Mattias Ohlsson <mattias_oh@hotmail.com>\n"
+"Language-Team: Swedish <sv@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Launchpad-Export-Date: 2008-12-10 21:42+0000\n"
+"X-Generator: Launchpad (build Unknown)\n"
+
+#: bin/gscan2pdf:151
+#, perl-format
+msgid "Error: cannot read file: %s\n"
+msgstr "Fel: kan inte läsa fil %s\n"
+
+#: bin/gscan2pdf:159
+#, perl-format
+msgid ""
+"Usage:\n"
+"%s --test <file>=<model>\n"
+msgstr ""
+"Användning:\n"
+"%s --test <file>=<model>\n"
+
+#: bin/gscan2pdf:164
+msgid "Error displaying help\n"
+msgstr "Kan inte vis Hjälp\n"
+
+#: bin/gscan2pdf:190
+#, perl-format
+msgid ""
+"Usage:\n"
+"%s --device <device>\n"
+msgstr ""
+"Användning:\n"
+"%s --device <scannerutrustning>\n"
+
+#: bin/gscan2pdf:195
+#, perl-format
+msgid "Unknown option %s.\n"
+msgstr "Okänt val %s.\n"
+
+#: bin/gscan2pdf:210
+msgid ""
+"Error: unable to load settings.\n"
+"Backing up settings\n"
+"Reverting to defaults"
+msgstr ""
+"Fel: Kan inte ladda inställningarna.\n"
+"Sparar undan de nuvarande inställningarna och återgår till standardvärden."
+
+#: bin/gscan2pdf:218
+msgid "A4"
+msgstr "A4"
+
+#: bin/gscan2pdf:224
+msgid "US Letter"
+msgstr "US Letter"
+
+#: bin/gscan2pdf:230
+msgid "US Legal"
+msgstr "US Legal"
+
+#: bin/gscan2pdf:324
+msgid "_File"
+msgstr "_Arkiv"
+
+#: bin/gscan2pdf:325
+msgid "_New"
+msgstr "_Ny"
+
+#: bin/gscan2pdf:325
+msgid "Clears all pages"
+msgstr "Tömmer alla sidor"
+
+#: bin/gscan2pdf:326
+msgid "_Open"
+msgstr "_Öppna"
+
+#: bin/gscan2pdf:326
+msgid "Open gscan2pdf session file"
+msgstr "Öppna gscan2pdfs sessionsfil."
+
+#: bin/gscan2pdf:327
+msgid "_Import"
+msgstr "_Importera"
+
+#: bin/gscan2pdf:327
+msgid "Import image file(s)"
+msgstr "Importera bildfil(er)"
+
+#: bin/gscan2pdf:328
+msgid "S_can"
+msgstr "S_can"
+
+#: bin/gscan2pdf:328
+msgid "Scan document"
+msgstr "Läs in dokument"
+
+#: bin/gscan2pdf:329 bin/gscan2pdf:2548
+msgid "Save"
+msgstr "Spara"
+
+#: bin/gscan2pdf:330
+msgid "_Email as PDF"
+msgstr "_E-posta som PDF fil"
+
+#: bin/gscan2pdf:330
+msgid "Attach as PDF to a new email"
+msgstr "Lägg som PDF-bilaga till nytt e-postmeddelande"
+
+#: bin/gscan2pdf:331
+msgid "_Compress temporary files"
+msgstr "_Komprimera temporära filer"
+
+#: bin/gscan2pdf:331
+msgid "Compress temporary files"
+msgstr "Komprimera temporära filer"
+
+#: bin/gscan2pdf:332
+msgid "_Quit"
+msgstr "_Avsluta"
+
+#: bin/gscan2pdf:332
+msgid "Quit"
+msgstr "Avsluta"
+
+#: bin/gscan2pdf:335
+msgid "_Edit"
+msgstr "_Redigera"
+
+#: bin/gscan2pdf:336
+msgid "_Undo"
+msgstr "_Ångra"
+
+#: bin/gscan2pdf:336
+msgid "Undo"
+msgstr "Ångra"
+
+#: bin/gscan2pdf:337
+msgid "_Redo"
+msgstr "_Återställ"
+
+#: bin/gscan2pdf:337
+msgid "Redo"
+msgstr "Återställ"
+
+#: bin/gscan2pdf:338
+msgid "Cu_t"
+msgstr "Klipp _ut"
+
+#: bin/gscan2pdf:338
+msgid "Cut selection"
+msgstr "Klipp ut markering"
+
+#: bin/gscan2pdf:339
+msgid "_Copy"
+msgstr "_Kopiera"
+
+#: bin/gscan2pdf:339
+msgid "Copy selection"
+msgstr "Kopiera markering"
+
+#: bin/gscan2pdf:340
+msgid "_Paste"
+msgstr "_Klistra in"
+
+#: bin/gscan2pdf:340
+msgid "Paste selection"
+msgstr "Klistra in markeringen"
+
+#: bin/gscan2pdf:341
+msgid "_Delete"
+msgstr "_Ta bort"
+
+#: bin/gscan2pdf:341
+msgid "Delete selected pages"
+msgstr "Ta bort markerade sidor"
+
+#: bin/gscan2pdf:342
+msgid "_Renumber"
+msgstr "_Numrera om"
+
+#: bin/gscan2pdf:342
+msgid "Renumber pages from 1 to n"
+msgstr "Numrera om sidorna 1 till n"
+
+#: bin/gscan2pdf:348
+msgid "Select _All"
+msgstr "Markera _allt"
+
+#: bin/gscan2pdf:348
+msgid "Select all pages"
+msgstr "Markera alla sidor"
+
+#: bin/gscan2pdf:349
+msgid "Prefere_nces"
+msgstr "Inställ_ningar"
+
+#: bin/gscan2pdf:349
+msgid "Edit preferences"
+msgstr "Redigera inställningar"
+
+#: bin/gscan2pdf:352
+msgid "_View"
+msgstr "_Visa"
+
+#: bin/gscan2pdf:353
+msgid "Zoom _100%"
+msgstr "Zooma _100%"
+
+#: bin/gscan2pdf:353
+msgid "Zoom to 100%"
+msgstr "Zooma till 100%"
+
+#: bin/gscan2pdf:354
+msgid "Zoom to _fit"
+msgstr "Anpassa till _fönstret"
+
+#: bin/gscan2pdf:354
+msgid "Zoom to fit"
+msgstr "Zooma för att passa"
+
+#: bin/gscan2pdf:355
+msgid "Zoom _in"
+msgstr "Zooma _in"
+
+#: bin/gscan2pdf:355
+msgid "Zoom in"
+msgstr "Zooma in"
+
+#: bin/gscan2pdf:356
+msgid "Zoom _out"
+msgstr "Zooma _ut"
+
+#: bin/gscan2pdf:356
+msgid "Zoom out"
+msgstr "Zooma ut"
+
+#: bin/gscan2pdf:357
+msgid "Rotate 90 clockwise"
+msgstr "Rotera 90° medsols"
+
+#: bin/gscan2pdf:358
+msgid "Rotate 180"
+msgstr "Rotera 180°"
+
+#: bin/gscan2pdf:359
+msgid "Rotate 90 anticlockwise"
+msgstr "Rotera 90° motsols"
+
+#: bin/gscan2pdf:362
+msgid "_Tools"
+msgstr "_Verktyg"
+
+#: bin/gscan2pdf:363
+msgid "_Threshold"
+msgstr "_Tröskelvärde"
+
+#: bin/gscan2pdf:363
+msgid "Change each pixel above this threshold to black"
+msgstr "Ändra varje pixel ovan tröskelvärdet till svart"
+
+#: bin/gscan2pdf:364
+msgid "_Negate"
+msgstr "_Invertera"
+
+#: bin/gscan2pdf:364
+msgid "Converts black to white and vice versa"
+msgstr "Gör om svart till vitt och vice versa"
+
+#: bin/gscan2pdf:365
+msgid "_Unsharp Mask"
+msgstr "_Oskarp masakning"
+
+#: bin/gscan2pdf:365
+msgid "Apply an unsharp mask"
+msgstr "Använd en oskarp maskning"
+
+#: bin/gscan2pdf:366
+msgid "_Crop"
+msgstr "_Beskär"
+
+#: bin/gscan2pdf:366
+msgid "Crop pages"
+msgstr "Beskär en bild"
+
+#: bin/gscan2pdf:367
+msgid "_GIMP"
+msgstr "_GIMP"
+
+#: bin/gscan2pdf:367
+msgid "Edit current page with GIMP"
+msgstr "Redigera nuvarande sida med GIMP"
+
+#: bin/gscan2pdf:368
+msgid "_Clean up"
+msgstr "_Rensa upp"
+
+#: bin/gscan2pdf:368 bin/gscan2pdf:3656
+msgid "Clean up scanned images with unpaper"
+msgstr "Rensa scannade filer från fula kanter med unpaper"
+
+#: bin/gscan2pdf:369
+msgid "_OCR"
+msgstr "_OCR"
+
+#: bin/gscan2pdf:369
+msgid "Optical Character Recognition"
+msgstr "Optisk teckenläsning"
+
+#: bin/gscan2pdf:372 bin/gscan2pdf:373
+msgid "_Help"
+msgstr "_Hjälp"
+
+#: bin/gscan2pdf:373
+msgid "Help"
+msgstr "Hjälp"
+
+#: bin/gscan2pdf:374
+msgid "_About"
+msgstr "_Om"
+
+#: bin/gscan2pdf:378
+msgid "_Drag"
+msgstr "_Dra"
+
+#: bin/gscan2pdf:378
+msgid "Use the hand tool"
+msgstr "Använd handverktyget"
+
+#: bin/gscan2pdf:379
+msgid "_Select"
+msgstr "_Markera"
+
+#: bin/gscan2pdf:379
+msgid "Use the rectangular selection tool"
+msgstr "Använd det rektangulära markeringsverktyget"
+
+#: bin/gscan2pdf:380
+msgid "_Paint"
+msgstr "_Fyll"
+
+#: bin/gscan2pdf:380
+msgid "Use the painter tool"
+msgstr "Använd fyllverktyget"
+
+#: bin/gscan2pdf:569
+msgid "Thumbnails"
+msgstr "Miniatyrbilder"
+
+#: bin/gscan2pdf:621
+msgid "Error copying page"
+msgstr "Fel vid kopiering av sida"
+
+#: bin/gscan2pdf:820
+msgid "Mode"
+msgstr "Läge"
+
+#: bin/gscan2pdf:822
+msgid "Lineart"
+msgstr "Streckteckning"
+
+#: bin/gscan2pdf:823
+msgid "Grayscale"
+msgstr "Gråskala"
+
+#: bin/gscan2pdf:824
+msgid "Gray"
+msgstr "Grå"
+
+#: bin/gscan2pdf:825
+msgid "Color"
+msgstr "Färg"
+
+#: bin/gscan2pdf:826
+msgid "Black & White"
+msgstr "Svart och vit"
+
+#: bin/gscan2pdf:827
+msgid "True Gray"
+msgstr "Sann Grå"
+
+#: bin/gscan2pdf:828
+msgid "Binary"
+msgstr "Binär"
+
+#: bin/gscan2pdf:829 bin/gscan2pdf:881 bin/gscan2pdf:882
+msgid "Auto"
+msgstr "Auto"
+
+#: bin/gscan2pdf:830
+msgid "Halftone"
+msgstr "Halvton"
+
+#: bin/gscan2pdf:831
+msgid "24bit Color"
+msgstr "24 bitars färg"
+
+#: bin/gscan2pdf:834 bin/gscan2pdf:2516 bin/gscan2pdf:2586
+msgid "Compression"
+msgstr "Komprimering"
+
+#: bin/gscan2pdf:836 bin/gscan2pdf:2510 bin/gscan2pdf:2580
+msgid "None"
+msgstr "Inget"
+
+#: bin/gscan2pdf:837 bin/gscan2pdf:2509 bin/gscan2pdf:2562 bin/gscan2pdf:2576
+msgid "JPEG"
+msgstr "JPEG"
+
+#: bin/gscan2pdf:840
+msgid "Resolution"
+msgstr "Upplösning"
+
+#: bin/gscan2pdf:841
+msgid "Brightness"
+msgstr "Ljusstyrka"
+
+#: bin/gscan2pdf:842
+msgid "Gain"
+msgstr "Förstärk"
+
+#: bin/gscan2pdf:843
+msgid "Contrast"
+msgstr "Kontrast"
+
+#: bin/gscan2pdf:844 bin/gscan2pdf:5837 bin/gscan2pdf:5845 bin/gscan2pdf:6124
+msgid "Threshold"
+msgstr "Tröskelvärde"
+
+#: bin/gscan2pdf:845
+msgid "Speed"
+msgstr "Hastighet"
+
+#: bin/gscan2pdf:847 bin/gscan2pdf:853 bin/gscan2pdf:859 bin/gscan2pdf:865
+#: bin/gscan2pdf:871
+msgid "Yes"
+msgstr "Ja"
+
+#: bin/gscan2pdf:848 bin/gscan2pdf:854 bin/gscan2pdf:860 bin/gscan2pdf:866
+#: bin/gscan2pdf:872
+msgid "No"
+msgstr "Nej"
+
+#: bin/gscan2pdf:851
+msgid "Batch scan"
+msgstr "Batchskanning"
+
+#: bin/gscan2pdf:857 bin/gscan2pdf:863
+msgid "Wait for button"
+msgstr "Vänta på knapp"
+
+#: bin/gscan2pdf:869
+msgid "Cache calibration"
+msgstr "Cache kallibration"
+
+#: bin/gscan2pdf:875
+msgid "Source"
+msgstr "Källa"
+
+#: bin/gscan2pdf:877
+msgid "Normal"
+msgstr "Normal"
+
+#: bin/gscan2pdf:878
+msgid "ADF"
+msgstr "ADF"
+
+#: bin/gscan2pdf:879
+msgid "Automatic Document Feeder"
+msgstr "Automatisk dokumentmatare"
+
+#: bin/gscan2pdf:880
+msgid "XPA"
+msgstr "XPA"
+
+#: bin/gscan2pdf:883
+msgid "Flatbed"
+msgstr "Flatbädd"
+
+#: bin/gscan2pdf:884
+msgid "Transparency Adapter"
+msgstr "Adapter för transparens"
+
+#: bin/gscan2pdf:885
+msgid "Transparency Unit"
+msgstr "Transperensenhet"
+
+#: bin/gscan2pdf:888
+msgid "Page Width"
+msgstr "Sidbredd"
+
+#: bin/gscan2pdf:889
+msgid "Page Height"
+msgstr "Sidhöjd"
+
+#: bin/gscan2pdf:890
+msgid "ADF Mode"
+msgstr "Dokumentmatarläge"
+
+#: bin/gscan2pdf:892
+msgid "Simplex"
+msgstr "Enkelsidig"
+
+#: bin/gscan2pdf:893
+msgid "Duplex"
+msgstr "Dubbelsidig"
+
+#: bin/gscan2pdf:902
+msgid "Layout"
+msgstr "Utseende"
+
+#: bin/gscan2pdf:905
+msgid "Single"
+msgstr "Enkel"
+
+#: bin/gscan2pdf:906
+msgid "One page per sheet, oriented upwards without rotation."
+msgstr "En sida per ark, orienterad uppåt utan rotation."
+
+#: bin/gscan2pdf:909
+msgid "Double"
+msgstr "Dubbel"
+
+#: bin/gscan2pdf:910
+msgid ""
+"Two pages per sheet, landscape orientation (one page on the left half, one "
+"page on the right half)."
+msgstr ""
+"Två sidor per ark, landskapsorienterade (en sida till vänster, en till höger)"
+
+#: bin/gscan2pdf:917
+msgid "# Output pages"
+msgstr "# Blad"
+
+#: bin/gscan2pdf:918
+msgid "Number of pages to output."
+msgstr "Antal blad som kommer att skrivas ut."
+
+#: bin/gscan2pdf:926
+msgid "No deskew"
+msgstr "Ingen avskevning"
+
+#: bin/gscan2pdf:927
+msgid "Disable deskewing."
+msgstr "Stäng av avskevning"
+
+#: bin/gscan2pdf:932
+msgid "No mask scan"
+msgstr "Ingen skanningsmask"
+
+#: bin/gscan2pdf:933
+msgid "Disable mask detection."
+msgstr "Stäng av maskavkänning"
+
+#: bin/gscan2pdf:938
+msgid "No black filter"
+msgstr "Inget filter för svart"
+
+#: bin/gscan2pdf:939
+msgid "Disable black area scan."
+msgstr "Stäng av skanning av svart yta"
+
+#: bin/gscan2pdf:944
+msgid "No gray filter"
+msgstr "Inget filter för grått"
+
+#: bin/gscan2pdf:945
+msgid "Disable gray area scan."
+msgstr "Stäng av skanning av grå yta"
+
+#: bin/gscan2pdf:950
+msgid "No noise filter"
+msgstr "Inget skräpfilter"
+
+#: bin/gscan2pdf:951
+msgid "Disable noise filter."
+msgstr "Stäng av skräpfilter"
+
+#: bin/gscan2pdf:956
+msgid "No blur filter"
+msgstr "Inget oskärpefilter"
+
+#: bin/gscan2pdf:957
+msgid "Disable blur filter."
+msgstr "Stäng av oskärpefilter"
+
+#: bin/gscan2pdf:962
+msgid "No border scan"
+msgstr "Ingen ramskanning"
+
+#: bin/gscan2pdf:963
+msgid "Disable border scanning."
+msgstr "Stäng av ramskanning"
+
+#: bin/gscan2pdf:968
+msgid "No border align"
+msgstr "Ingen ramlinjering"
+
+#: bin/gscan2pdf:969
+msgid "Disable aligning of the area detected by border scanning."
+msgstr "Stäng av linjering av yta detekterad med ramskanning"
+
+#: bin/gscan2pdf:974
+msgid "Deskew to edge"
+msgstr "Avskeva till kant"
+
+#: bin/gscan2pdf:975
+msgid ""
+"Edges from which to scan for rotation. Each edge of a mask can be used to "
+"detect the mask's rotation. If multiple edges are specified, the average "
+"value will be used, unless the statistical deviation exceeds --deskew-scan-"
+"deviation."
+msgstr ""
+"Kant som bestämmer det skannades rotation. Varje kant av masken kan användas "
+"för att bestämma maskens rotation. Om flera kanter anges används ett "
+"genomsnittligt värde, om inte värdet är högre än --avskevning-skanning-"
+"avvikelse."
+
+#: bin/gscan2pdf:979 bin/gscan2pdf:1007 bin/gscan2pdf:5032 bin/gscan2pdf:5092
+#: bin/gscan2pdf:5234
+msgid "Left"
+msgstr "Vänster"
+
+#: bin/gscan2pdf:980
+msgid "Use 'left' for scanning from the left edge."
+msgstr "Använd \"vänster\" för att skanna från vänster kant."
+
+#: bin/gscan2pdf:984 bin/gscan2pdf:1012 bin/gscan2pdf:5033 bin/gscan2pdf:5096
+#: bin/gscan2pdf:5235
+msgid "Top"
+msgstr "Överkant"
+
+#: bin/gscan2pdf:985
+msgid "Use 'top' for scanning from the top edge."
+msgstr "Använd \"Överkant\" för att skanna från överkanten."
+
+#: bin/gscan2pdf:989 bin/gscan2pdf:1017
+msgid "Right"
+msgstr "Höger"
+
+#: bin/gscan2pdf:990
+msgid "Use 'right' for scanning from the right edge."
+msgstr "Använd \"höger\" för att skanna från höger kant."
+
+#: bin/gscan2pdf:994 bin/gscan2pdf:1022
+msgid "Bottom"
+msgstr "Nederkant"
+
+#: bin/gscan2pdf:995
+msgid "Use 'bottom' for scanning from the bottom."
+msgstr "Använd \"Nederkant\" för att skanna från nedre kanten."
+
+#: bin/gscan2pdf:1002
+msgid "Align to edge"
+msgstr "Linjera till kant"
+
+#: bin/gscan2pdf:1003
+msgid "Edge to which to align the page."
+msgstr "Kant som sidan skall linjeras till."
+
+#: bin/gscan2pdf:1008
+msgid "Use 'left' to align to the left edge."
+msgstr "Använd \"vänster\" för att skanna från vänster kant."
+
+#: bin/gscan2pdf:1013
+msgid "Use 'top' to align to the top edge."
+msgstr "Använd \"Överst\" för att skanna från övre kanten."
+
+#: bin/gscan2pdf:1018
+msgid "Use 'right' to align to the right edge."
+msgstr "Använd \"höger\" för att skanna från högra kanten."
+
+#: bin/gscan2pdf:1023
+msgid "Use 'bottom' to align to the bottom."
+msgstr "Använd \"Nederkant\" för att skanna från nedre kanten."
+
+#: bin/gscan2pdf:1029
+msgid "Border margin"
+msgstr "Kantmarginal"
+
+#: bin/gscan2pdf:1033
+msgid "Vertical margin"
+msgstr "Vertikal marginal"
+
+#: bin/gscan2pdf:1034
+msgid ""
+"Vertical distance to keep from the sheet edge when aligning a border area."
+msgstr "Marginal från den vertikala kanten vid linjering av kantyta."
+
+#: bin/gscan2pdf:1041
+msgid "Horizontal margin"
+msgstr "Horisontell marginal"
+
+#: bin/gscan2pdf:1042
+msgid ""
+"Horizontal distance to keep from the sheet edge when aligning a border area."
+msgstr "Marginal från den horisontala kanten vid linjering av kantyta."
+
+#: bin/gscan2pdf:1051
+msgid "White threshold"
+msgstr "Tröskelvärde för vitt"
+
+#: bin/gscan2pdf:1052
+msgid "Brightness ratio above which a pixel is considered white."
+msgstr "Ovanför detta tröskelvärde anses en pixel vara vit."
+
+#: bin/gscan2pdf:1060
+msgid "Black threshold"
+msgstr "Tröskelvärde för svart"
+
+#: bin/gscan2pdf:1061
+msgid ""
+"Brightness ratio below which a pixel is considered black (non-gray). This is "
+"used by the gray-filter. This value is also used when converting a grayscale "
+"image to black-and-white mode."
+msgstr ""
+"Nedanför detta tröskelvärde anses en pixel vara svart, ej grå). Detta värde "
+"används av gråskalefiltret. Värdet används också när en gråskalebild "
+"konverteras till svart-vit."
+
+#: bin/gscan2pdf:1082
+#, perl-format
+msgid ""
+"Warning: unable to use %s for temporary storage. Defaulting to %s instead.\n"
+msgstr ""
+"Varning: Kan inte lagra de tillfälliga filerna i %s. Använder %s istället.\n"
+
+#: bin/gscan2pdf:1196
+msgid "GOCR"
+msgstr "Optisk teckentydning GOCR"
+
+#: bin/gscan2pdf:1196
+msgid "Process image with GOCR."
+msgstr "Använd optisk teckentydning GOCR"
+
+#: bin/gscan2pdf:1199
+msgid "Tesseract"
+msgstr "Tesseract"
+
+#: bin/gscan2pdf:1199
+msgid "Process image with Tesseract."
+msgstr "Använd optisk teckentydning Tesseract"
+
+#: bin/gscan2pdf:1203
+msgid "PDF creation requires PDF::API2\n"
+msgstr "Skapa PDF kräver PDF::API2\n"
+
+#: bin/gscan2pdf:1209
+msgid "The scanadf frontend is not available\n"
+msgstr "Scanadf frontend är ej tillgänglig\n"
+
+#: bin/gscan2pdf:1213
+msgid "Save image and Save as PDF both require imagemagick\n"
+msgstr "Spara bild och Spara som PDF kräver Imagemagic\n"
+
+#: bin/gscan2pdf:1217
+msgid "Save image requires libtiff\n"
+msgstr "Spara bild kräver Libtitt\n"
+
+#: bin/gscan2pdf:1221
+msgid "Save as DjVu requires djvulibre-bin\n"
+msgstr "Spara som DJVu kräve DjVulibre-bin\n"
+
+#: bin/gscan2pdf:1225
+msgid "Email as PDF requires xdg-email\n"
+msgstr "e-posta som PDF kräver xdg-email\n"
+
+#: bin/gscan2pdf:1266
+msgid ""
+"The rotating options, unpaper support and the scanadf frontend require "
+"perlmagick\n"
+msgstr "Valen rotation, unpaper och scanadf kräver perlmagick\n"
+
+#: bin/gscan2pdf:1272
+msgid "unpaper missing\n"
+msgstr "unpaper saknas\n"
+
+#: bin/gscan2pdf:1278
+msgid "OCR requires gocr or tesseract\n"
+msgstr "OCR kräver GOCR eller Tesseract\n"
+
+#: bin/gscan2pdf:1283
+msgid "Warning: missing packages"
+msgstr "Varning: paket saknas"
+
+#: bin/gscan2pdf:1289
+msgid "Don't show this message again"
+msgstr "Visa inte detta meddelande igen"
+
+#: bin/gscan2pdf:1425
+msgid "Warning: "
+msgstr "Varning: "
+
+#: bin/gscan2pdf:1432
+#, perl-format
+msgid "Information: got %s on second attempt\n"
+msgstr "Information: fick %s på andra försöket\n"
+
+#: bin/gscan2pdf:1498
+msgid "Open session file"
+msgstr "Öppna sessionsfil"
+
+#: bin/gscan2pdf:1518
+msgid "Opening"
+msgstr "Öppnar"
+
+#: bin/gscan2pdf:1609
+msgid "Import image from file"
+msgstr "Importera bild från fil"
+
+#: bin/gscan2pdf:1630
+msgid "Importing"
+msgstr "Importerar"
+
+#: bin/gscan2pdf:1672
+msgid "Pages to extract"
+msgstr "Sidor att extrahera"
+
+#: bin/gscan2pdf:1675
+msgid "First page to extract"
+msgstr "Första sida att extrahera"
+
+#: bin/gscan2pdf:1681
+msgid "Last page to extract"
+msgstr "Sista sida att extrahera"
+
+#: bin/gscan2pdf:1756
+#, perl-format
+msgid "Can't open %s: %s"
+msgstr "Kan inte öppna %s: %s"
+
+#: bin/gscan2pdf:1781
+msgid "Unknown DjVu file structure. Please contact the author."
+msgstr ""
+"Kan inte läsa DjVu-filen. Strukturen på filen känns inte igen av programmet. "
+"Var vänlig och kontakta författaren."
+
+#: bin/gscan2pdf:1807 bin/gscan2pdf:1868 bin/gscan2pdf:1918
+#, perl-format
+msgid "Importing image %i of %i"
+msgstr "Importerar bild %i av %i"
+
+#: bin/gscan2pdf:1829
+#, perl-format
+msgid "%s is not a recognised image type"
+msgstr "%s är inte en känd bildtyp"
+
+#: bin/gscan2pdf:1857
+msgid "Extracting images from PDF"
+msgstr "Extraherar bilder från PDF"
+
+#: bin/gscan2pdf:1859
+msgid "Error extracting images from PDF"
+msgstr "Fel vid extrahering av bilder från PDF"
+
+#: bin/gscan2pdf:1876
+msgid "Error extracting PDF infomation"
+msgstr "Fel vid utläsning av PDF infromation"
+
+#: bin/gscan2pdf:1880
+msgid "Extracting TIFF infomation"
+msgstr "Utvinner TIFF-informationen"
+
+#: bin/gscan2pdf:1928 bin/gscan2pdf:1935
+#, perl-format
+msgid "Importing %s"
+msgstr "Importerar %s"
+
+#: bin/gscan2pdf:1973
+msgid "Page Range"
+msgstr "Spann av sidor"
+
+#: bin/gscan2pdf:2044
+msgid "Metadata"
+msgstr "Metadata"
+
+#: bin/gscan2pdf:2053
+msgid "Date"
+msgstr "Datum"
+
+#: bin/gscan2pdf:2062
+msgid "Select Date"
+msgstr "Välj datum"
+
+#: bin/gscan2pdf:2079
+msgid "Today"
+msgstr "Idag"
+
+#: bin/gscan2pdf:2090
+msgid "Year-Month-Day"
+msgstr "År-Månad-Dag"
+
+#: bin/gscan2pdf:2096
+msgid "Document author"
+msgstr "Upphovsman"
+
+#: bin/gscan2pdf:2105
+msgid "Title"
+msgstr "Titel"
+
+#: bin/gscan2pdf:2114
+msgid "Subject"
+msgstr "Ämne"
+
+#: bin/gscan2pdf:2123
+msgid "Keywords"
+msgstr "Nyckelord"
+
+#: bin/gscan2pdf:2171
+msgid "Saving PDF"
+msgstr "Sparar PDF"
+
+#: bin/gscan2pdf:2197
+msgid "Setting up PDF"
+msgstr "Förbereder PDF"
+
+#: bin/gscan2pdf:2204
+#, perl-format
+msgid "Saving page %i of %i"
+msgstr "Sparar sida %i av %i"
+
+#: bin/gscan2pdf:2348 bin/gscan2pdf:2354
+#, perl-format
+msgid "Error embedding file image in %s format to PDF: %s"
+msgstr "Fel: Kunde in lägga till bilden med format %s till PDF-filen: %s"
+
+#: bin/gscan2pdf:2361
+msgid "Closing PDF"
+msgstr "Stänger PDF"
+
+#: bin/gscan2pdf:2412
+msgid "PDF filename"
+msgstr "PDF-filnamn"
+
+#: bin/gscan2pdf:2438 bin/gscan2pdf:2709 bin/gscan2pdf:2755 bin/gscan2pdf:2807
+#: bin/gscan2pdf:2856 bin/gscan2pdf:2906 bin/gscan2pdf:3111
+#, perl-format
+msgid "File %s is read-only"
+msgstr "File %s är skrivskyddad"
+
+#: bin/gscan2pdf:2467
+msgid "JPEG Quality"
+msgstr "JPEG-kvalitet"
+
+#: bin/gscan2pdf:2482
+msgid "Downsample to"
+msgstr "Nedsampla till"
+
+#: bin/gscan2pdf:2487
+msgid "dpi"
+msgstr "dpi"
+
+#: bin/gscan2pdf:2502
+msgid "Automatic"
+msgstr "Automatiskt"
+
+#: bin/gscan2pdf:2502
+msgid "Let gscan2pdf which type of compression to use."
+msgstr "Låt gscan2pdf bestämma vilken typ av komprimering som ska användas."
+
+#: bin/gscan2pdf:2503 bin/gscan2pdf:2574
+msgid "LZW"
+msgstr "LZW"
+
+#: bin/gscan2pdf:2503 bin/gscan2pdf:2574
+msgid "Compress output with Lempel-Ziv & Welch encoding."
+msgstr "Komprimera resultatet med Lempel-Ziv & Welch encoding"
+
+#: bin/gscan2pdf:2504 bin/gscan2pdf:2575
+msgid "Zip"
+msgstr "Zip"
+
+#: bin/gscan2pdf:2504 bin/gscan2pdf:2575
+msgid "Compress output with deflate encoding."
+msgstr "Komprimera resultatet med deflate encoding"
+
+#: bin/gscan2pdf:2505 bin/gscan2pdf:2577
+msgid "Packbits"
+msgstr "Packa bitar"
+
+#: bin/gscan2pdf:2505 bin/gscan2pdf:2577
+msgid "Compress output with Packbits encoding."
+msgstr "Komprimerar resultatet med Packbits encoding"
+
+#: bin/gscan2pdf:2506 bin/gscan2pdf:2578
+msgid "G3"
+msgstr "G3"
+
+#: bin/gscan2pdf:2506 bin/gscan2pdf:2578
+msgid "Compress output with CCITT Group 3 encoding."
+msgstr "Komprimera resultatet med CCITT Grupp 3 encoding"
+
+#: bin/gscan2pdf:2507 bin/gscan2pdf:2579
+msgid "G4"
+msgstr "G4"
+
+#: bin/gscan2pdf:2507 bin/gscan2pdf:2579
+msgid "Compress output with CCITT Group 4 encoding."
+msgstr "Komprimera resultatet med CCITT Grupp 4 encoding"
+
+#: bin/gscan2pdf:2508 bin/gscan2pdf:2563
+msgid "PNG"
+msgstr "PNG"
+
+#: bin/gscan2pdf:2508
+msgid "Compress output with PNG encoding."
+msgstr "Komprimera resultatet med PNG encoding"
+
+#: bin/gscan2pdf:2509 bin/gscan2pdf:2576
+msgid "Compress output with JPEG encoding."
+msgstr "Komprimera resultatet med JPEG encoding"
+
+#: bin/gscan2pdf:2510 bin/gscan2pdf:2580
+msgid "Use no compression algorithm on output."
+msgstr "Använd ingen komprimering av resultatet."
+
+#: bin/gscan2pdf:2556
+msgid "Image type"
+msgstr "Bildtyp"
+
+#: bin/gscan2pdf:2560
+msgid "PDF"
+msgstr "PDF"
+
+#: bin/gscan2pdf:2560
+msgid "Portable Document Format"
+msgstr "Portable Document Format"
+
+#: bin/gscan2pdf:2561
+msgid "GIF"
+msgstr "GIF"
+
+#: bin/gscan2pdf:2561
+msgid "CompuServe graphics interchange format"
+msgstr "CompuServe graphics interchange format"
+
+#: bin/gscan2pdf:2562
+msgid "Joint Photographic Experts Group JFIF format"
+msgstr "Joint Photographic Experts Group JFIF format"
+
+#: bin/gscan2pdf:2563
+msgid "Portable Network Graphics"
+msgstr "Portable Network Graphics"
+
+#: bin/gscan2pdf:2564
+msgid "PNM"
+msgstr "PNM"
+
+#: bin/gscan2pdf:2564
+msgid "Portable anymap"
+msgstr "Portable anymap"
+
+#: bin/gscan2pdf:2565
+msgid "PS"
+msgstr "PS"
+
+#: bin/gscan2pdf:2565
+msgid "Postscript"
+msgstr "Postscript"
+
+#: bin/gscan2pdf:2566
+msgid "TIFF"
+msgstr "TIFF"
+
+#: bin/gscan2pdf:2566
+msgid "Tagged Image File Format"
+msgstr "Tagged Image File Format"
+
+#: bin/gscan2pdf:2567
+msgid "Text"
+msgstr "Text"
+
+#: bin/gscan2pdf:2567
+msgid "Plain text"
+msgstr "Vanlig text"
+
+#: bin/gscan2pdf:2568
+msgid "Session"
+msgstr "Session"
+
+#: bin/gscan2pdf:2568
+msgid "gscan2pdf session file"
+msgstr "gscan2pdfs sessionsfil"
+
+#: bin/gscan2pdf:2570
+msgid "DjVu"
+msgstr "DjVu"
+
+#: bin/gscan2pdf:2570
+msgid "Deja Vu"
+msgstr "Deja Vu"
+
+#: bin/gscan2pdf:2685
+msgid "TIFF filename"
+msgstr "TIFF-filnamn"
+
+#: bin/gscan2pdf:2731
+msgid "Text filename"
+msgstr "Textfilnamn"
+
+#: bin/gscan2pdf:2763 bin/gscan2pdf:3205
+#, perl-format
+msgid "Can't open file: %s"
+msgstr "Kan ej öppna dil %s"
+
+#: bin/gscan2pdf:2783
+msgid "PS filename"
+msgstr "PS filnamn"
+
+#: bin/gscan2pdf:2832
+msgid "gscan2pdf session filename"
+msgstr "filnamnet på gscan2pdfs session"
+
+#: bin/gscan2pdf:2911
+#, perl-format
+msgid ""
+"File %s exists.\n"
+"Really overwrite?"
+msgstr ""
+"Filen %s finns redan\n"
+"Skriv över?"
+
+#: bin/gscan2pdf:2924
+msgid "Image filename"
+msgstr "Bildfilnamn"
+
+#: bin/gscan2pdf:2952 bin/gscan2pdf:2961
+msgid "Error saving image"
+msgstr "Bilden sparades ej"
+
+#: bin/gscan2pdf:2980
+msgid "Saving TIFF"
+msgstr "Sparar TIFF"
+
+#: bin/gscan2pdf:3010
+#, perl-format
+msgid "Converting image %i of %i to TIFF"
+msgstr "Konverterar bild %i av %i till TIFF"
+
+#: bin/gscan2pdf:3018
+msgid "Error writing TIFF"
+msgstr "TIFF-bilden sparades ej"
+
+#: bin/gscan2pdf:3029
+msgid "Concatenating TIFFs"
+msgstr "Bearbetar TIFF-bilder"
+
+#: bin/gscan2pdf:3034
+msgid "Converting to PS"
+msgstr "Konverterar till PS"
+
+#: bin/gscan2pdf:3087
+msgid "DjVu filename"
+msgstr "DjVu filnamn"
+
+#: bin/gscan2pdf:3121
+msgid "Saving DjVu"
+msgstr "Sparar DjVu"
+
+#: bin/gscan2pdf:3148
+#, perl-format
+msgid "Writing page %i of %i"
+msgstr "Skriver sid %i av %i"
+
+#: bin/gscan2pdf:3187 bin/gscan2pdf:3214
+msgid "Error writing DjVu"
+msgstr "DjVu skapades ej"
+
+#: bin/gscan2pdf:3217
+msgid "Closing DjVu"
+msgstr "Stänger DjVu"
+
+#: bin/gscan2pdf:3220
+msgid "Error closing DjVu"
+msgstr "Fel, kan ej stänga DjVu"
+
+#: bin/gscan2pdf:3282
+msgid "Email as PDF"
+msgstr "E-posta som PDF"
+
+#: bin/gscan2pdf:3331
+msgid "Error creating email"
+msgstr "Fel, skapade ej e-postmeddelande"
+
+#: bin/gscan2pdf:3359
+msgid "Scan Document"
+msgstr "Läs in dokument"
+
+#: bin/gscan2pdf:3371
+msgid "Page Options"
+msgstr "Inställningar för sida"
+
+#: bin/gscan2pdf:3375
+msgid "Scan Options"
+msgstr "Skanninställningar"
+
+#: bin/gscan2pdf:3378
+msgid "# Pages"
+msgstr "# Sidor"
+
+#: bin/gscan2pdf:3387 bin/gscan2pdf:7908
+msgid "All"
+msgstr "Alla"
+
+#: bin/gscan2pdf:3388
+msgid "Scan all pages"
+msgstr "Läs in alla sidor"
+
+#: bin/gscan2pdf:3395 bin/gscan2pdf:3400
+msgid "Set number of pages to scan"
+msgstr "Ställ in antalet sidor att läsa in"
+
+#: bin/gscan2pdf:3413
+msgid "Extended page numbering"
+msgstr "Utökad sidnumrering"
+
+#: bin/gscan2pdf:3417
+msgid "Page number"
+msgstr "Sidnummer"
+
+#: bin/gscan2pdf:3426
+msgid "Start"
+msgstr "Start"
+
+#: bin/gscan2pdf:3435
+msgid "Increment"
+msgstr "Steglängd"
+
+#: bin/gscan2pdf:3461
+msgid "Source document"
+msgstr "Källdokument"
+
+#: bin/gscan2pdf:3468
+msgid "Single sided"
+msgstr "Ensidigt"
+
+#: bin/gscan2pdf:3469
+msgid "Source document is single-sided"
+msgstr "Källdokumentet är enkelsidigt"
+
+#: bin/gscan2pdf:3476
+msgid "Double sided"
+msgstr "Dubbelsidigt"
+
+#: bin/gscan2pdf:3477
+msgid "Source document is double-sided"
+msgstr "Källdokumentet är dubbelsidigt"
+
+#: bin/gscan2pdf:3483
+msgid "Side to scan"
+msgstr "Sida att läsa in"
+
+#: bin/gscan2pdf:3487
+msgid "Facing"
+msgstr "Belägna"
+
+#: bin/gscan2pdf:3487
+msgid "Reverse"
+msgstr "Omvänd"
+
+#: bin/gscan2pdf:3507
+msgid "Sets which side of a double-sided document is scanned"
+msgstr "Bestämmer vilken sida av dubbelsidigt dokument som skannas"
+
+#: bin/gscan2pdf:3553
+msgid "Post-processing"
+msgstr "Efterhantering"
+
+#: bin/gscan2pdf:3562 bin/gscan2pdf:3584
+msgid "Rotate"
+msgstr "Rotera"
+
+#: bin/gscan2pdf:3563 bin/gscan2pdf:3585
+msgid "Rotate image after scanning"
+msgstr "Rotera bilden efter inskanning"
+
+#: bin/gscan2pdf:3566
+msgid "Both sides"
+msgstr "Båda sidor"
+
+#: bin/gscan2pdf:3566
+msgid "Both sides."
+msgstr "Båda sidor"
+
+#: bin/gscan2pdf:3567
+msgid "Facing side"
+msgstr "Framsidan"
+
+#: bin/gscan2pdf:3567
+msgid "Facing side."
+msgstr "Framsidan"
+
+#: bin/gscan2pdf:3568
+msgid "Reverse side"
+msgstr "Baksidan"
+
+#: bin/gscan2pdf:3568
+msgid "Reverse side."
+msgstr "Baksidan"
+
+#: bin/gscan2pdf:3571 bin/gscan2pdf:3589
+msgid "Select side to rotate"
+msgstr "Välj vilken sida som du vill rotera"
+
+#: bin/gscan2pdf:3574
+msgid "90"
+msgstr "90"
+
+#: bin/gscan2pdf:3574
+msgid "Rotate image 90 degrees clockwise."
+msgstr "Rotera bilden 90 grader medurs"
+
+#: bin/gscan2pdf:3575
+msgid "180"
+msgstr "180"
+
+#: bin/gscan2pdf:3575
+msgid "Rotate image 180 degrees clockwise."
+msgstr "Rotera bilden 180 grader medurs."
+
+#: bin/gscan2pdf:3576
+msgid "270"
+msgstr "270"
+
+#: bin/gscan2pdf:3576
+msgid "Rotate image 90 degrees anticlockwise."
+msgstr "Rotera bilden 180 grader moturs"
+
+#: bin/gscan2pdf:3579 bin/gscan2pdf:3592
+msgid "Select direction of rotation"
+msgstr "Välj riktning på rotationen"
+
+#: bin/gscan2pdf:3655
+msgid "Clean up images"
+msgstr "Rensa upp bilder"
+
+#: bin/gscan2pdf:3665
+msgid "Options"
+msgstr "Inställningar"
+
+#: bin/gscan2pdf:3666
+msgid "Set unpaper options"
+msgstr "Gör inställningar för unpaper"
+
+#: bin/gscan2pdf:3669
+msgid "unpaper options"
+msgstr "Inställningar för unpaper"
+
+#: bin/gscan2pdf:3698 bin/gscan2pdf:3699
+msgid "OCR scanned pages"
+msgstr "Sidor skannade med OCR"
+
+#: bin/gscan2pdf:3709
+msgid "Select OCR engine"
+msgstr "Välj OCR-motor"
+
+#: bin/gscan2pdf:3737
+msgid "Device-dependent options"
+msgstr "Inställningar beroende på utrustning"
+
+#: bin/gscan2pdf:3744
+msgid "Scan profiles"
+msgstr "Skannerprofil"
+
+#: bin/gscan2pdf:3770 bin/gscan2pdf:3775
+msgid "Name of scan profile"
+msgstr "Namn på skannerprofil"
+
+#: bin/gscan2pdf:3811
+msgid "Scan"
+msgstr "Läs in"
+
+#: bin/gscan2pdf:3845
+msgid "Must scan facing pages first"
+msgstr "Framsidor skannas först"
+
+#: bin/gscan2pdf:3910
+msgid "Fetching list of devices"
+msgstr "Hämtar enhetsnamn"
+
+#: bin/gscan2pdf:3952
+msgid "No scanners found"
+msgstr "Inga bildläsare hittades"
+
+#: bin/gscan2pdf:4073
+msgid "Device"
+msgstr "Enhet"
+
+#: bin/gscan2pdf:4092
+msgid "Sets the device to be used for the scan"
+msgstr "Ställer in enheten som används för inläsningen"
+
+#: bin/gscan2pdf:4239 bin/gscan2pdf:4243 bin/gscan2pdf:4275 bin/gscan2pdf:4395
+#: bin/gscan2pdf:4399
+msgid "Scanning"
+msgstr "Läser in"
+
+#: bin/gscan2pdf:4275
+msgid "pages"
+msgstr "sidor"
+
+#: bin/gscan2pdf:4278
+#, perl-format
+msgid "Scanning page %i..."
+msgstr "Skannar sida %i"
+
+#: bin/gscan2pdf:4290 bin/gscan2pdf:4448
+msgid "Unable to load image"
+msgstr "Kunde inte läsa in bild"
+
+#: bin/gscan2pdf:4300 bin/gscan2pdf:4435
+msgid "Scanner warming up"
+msgstr "Skanner värms upp"
+
+#: bin/gscan2pdf:4319 bin/gscan2pdf:4466
+msgid "Device busy"
+msgstr "Enheten upptagen"
+
+#: bin/gscan2pdf:4322 bin/gscan2pdf:4469
+msgid "Unknown message: "
+msgstr "Okänt meddelande: "
+
+#: bin/gscan2pdf:4438
+#, perl-format
+msgid "Scanned page %i..."
+msgstr "Skannat sida %i.."
+
+#: bin/gscan2pdf:4586 bin/gscan2pdf:4590
+msgid "Error importing image"
+msgstr "Fel vid bildimport"
+
+#: bin/gscan2pdf:4709
+msgid "Error pasting image"
+msgstr "Fel vid inklipp av bild"
+
+#: bin/gscan2pdf:4837
+msgid "Patches gratefully received from:"
+msgstr "Uppdateringar tacksamt mottaget från:"
+
+#: bin/gscan2pdf:4839
+msgid "To aid the scan-to-PDF process"
+msgstr "För att hjälpa till att läsa-in-till-PDF"
+
+#: bin/gscan2pdf:4840
+msgid "Copyright 2006--2008 Jeffrey Ratcliffe"
+msgstr "Copyright 2006--2008 Jeffrey Ratcliffe"
+
+#: bin/gscan2pdf:4933 bin/gscan2pdf:5428
+msgid "Updating options"
+msgstr "Uppdaterar inställningar"
+
+#: bin/gscan2pdf:5012 bin/gscan2pdf:5029
+msgid "Paper size"
+msgstr "Pappersstorlek"
+
+#: bin/gscan2pdf:5016 bin/gscan2pdf:5105 bin/gscan2pdf:5615
+msgid "Manual"
+msgstr "Manuell"
+
+#: bin/gscan2pdf:5017 bin/gscan2pdf:5102
+msgid "Edit"
+msgstr "Redigera"
+
+#: bin/gscan2pdf:5018
+msgid "Selects or edits the paper size"
+msgstr "Väljer eller uppdaterar pappersstorlek"
+
+#: bin/gscan2pdf:5030 bin/gscan2pdf:5084 bin/gscan2pdf:5232
+msgid "Width"
+msgstr "Bredd"
+
+#: bin/gscan2pdf:5031 bin/gscan2pdf:5088 bin/gscan2pdf:5233
+msgid "Height"
+msgstr "Höjd"
+
+#: bin/gscan2pdf:5085
+msgid "Width of scan area"
+msgstr "Skannade ytans bredd"
+
+#: bin/gscan2pdf:5089
+msgid "Height of scan area"
+msgstr "Skannade ytans höjd"
+
+#: bin/gscan2pdf:5093
+msgid "Top-left x position of scan area"
+msgstr "Skannade ytans övre vänstra x-position"
+
+#: bin/gscan2pdf:5097
+msgid "Top-left y position of scan area"
+msgstr "Skannade ytans övre vänstra y-position"
+
+#: bin/gscan2pdf:5218
+msgid "Edit paper size"
+msgstr "Ändra papperstorlek"
+
+#: bin/gscan2pdf:5231
+msgid "Name"
+msgstr "Namn"
+
+#: bin/gscan2pdf:5278
+msgid "Cannot delete all paper sizes"
+msgstr "Kan ej radera alla pappersstorlekar"
+
+#: bin/gscan2pdf:5321
+msgid ""
+"The following paper sizes are too big to be scanned by the selected device:"
+msgstr "Följande pappersstorlekar är för stora att skannas av vald enhet."
+
+#: bin/gscan2pdf:5695
+msgid "Rotating"
+msgstr "Roterar"
+
+#: bin/gscan2pdf:5772
+#, perl-format
+msgid "Rotating page %i of %i"
+msgstr "Roterar sida %i av totalt %i"
+
+#: bin/gscan2pdf:5847 bin/gscan2pdf:6114
+msgid "%"
+msgstr "%"
+
+#: bin/gscan2pdf:5866
+msgid "Applying threshold"
+msgstr "Påför tröskelvärde"
+
+#: bin/gscan2pdf:5926
+#, perl-format
+msgid "Applying threshold to page %i of %i"
+msgstr "Påför tröskelvärde på sida %i av %i"
+
+#: bin/gscan2pdf:5964
+msgid "Negate"
+msgstr "Invertera färger"
+
+#: bin/gscan2pdf:5981
+msgid "Applying negate"
+msgstr "Verkställ inverering av färger"
+
+#: bin/gscan2pdf:6042
+#, perl-format
+msgid "Applying negate to page %i of %i"
+msgstr "Inverterar färgerna på sida %i av totalt %i"
+
+#: bin/gscan2pdf:6080
+msgid "Unsharp mask"
+msgstr "Oskarp mask"
+
+#: bin/gscan2pdf:6088
+msgid "Radius"
+msgstr "Radie"
+
+#: bin/gscan2pdf:6090 bin/gscan2pdf:6102
+msgid "pixels"
+msgstr "bildpunkter"
+
+#: bin/gscan2pdf:6094
+msgid ""
+"The radius of the Gaussian, in pixels, not counting the center pixel (0 = "
+"automatic)."
+msgstr "radien på normalfördelningskurvan, i pixlar."
+
+#: bin/gscan2pdf:6100
+msgid "Sigma"
+msgstr "standardavvikelsen"
+
+#: bin/gscan2pdf:6106
+msgid "The standard deviation of the Gaussian."
+msgstr "Standardavvikelsen på normalfördelningskurvan"
+
+#: bin/gscan2pdf:6112
+msgid "Amount"
+msgstr "Belopp"
+
+#: bin/gscan2pdf:6118
+msgid ""
+"The percentage of the difference between the original and the blur image "
+"that is added back into the original."
+msgstr ""
+
+#: bin/gscan2pdf:6128
+msgid ""
+"The threshold, as a fraction of QuantumRange, needed to apply the difference "
+"amount."
+msgstr ""
+
+#: bin/gscan2pdf:6147
+msgid "Applying unsharp mask"
+msgstr "Verkställ oskarp maskning"
+
+#: bin/gscan2pdf:6217
+#, perl-format
+msgid "Applying unsharp mask to page %i of %i"
+msgstr "Verkställer oskarp maskning på sida %i av totalt %i."
+
+#: bin/gscan2pdf:6280
+msgid "Crop"
+msgstr "Beskär"
+
+#: bin/gscan2pdf:6311
+msgid "Cropping"
+msgstr "Beskärning"
+
+#: bin/gscan2pdf:6381
+#, perl-format
+msgid "Cropping page %i of %i"
+msgstr "Beskär sida %i av %i"
+
+#: bin/gscan2pdf:6459 bin/gscan2pdf:6462
+msgid "Running unpaper"
+msgstr "Kör unpaper"
+
+#: bin/gscan2pdf:6500 bin/gscan2pdf:6975
+#, perl-format
+msgid "Page %i of %i"
+msgstr "Sida %i av %i"
+
+#: bin/gscan2pdf:6789
+msgid "Deskew"
+msgstr "Avskeva"
+
+#: bin/gscan2pdf:6819
+msgid "Border"
+msgstr "Marginal"
+
+#: bin/gscan2pdf:6870
+msgid "Filters"
+msgstr "Filter"
+
+#: bin/gscan2pdf:6892
+msgid "unpaper"
+msgstr "unpaper"
+
+#: bin/gscan2pdf:6934 bin/gscan2pdf:6937
+msgid "Running OCR"
+msgstr "Kör OCR"
+
+#: bin/gscan2pdf:7131
+msgid "Language to recognise"
+msgstr "Språk att känna igen"
+
+#: bin/gscan2pdf:7136
+msgid "German"
+msgstr "Tyska"
+
+#: bin/gscan2pdf:7137
+msgid "Fraktur"
+msgstr "Frakturstil"
+
+#: bin/gscan2pdf:7138 bin/gscan2pdf:7179
+msgid "English"
+msgstr "Engelska"
+
+#: bin/gscan2pdf:7139
+msgid "French"
+msgstr "Franska"
+
+#: bin/gscan2pdf:7140
+msgid "Italian"
+msgstr "Italienska"
+
+#: bin/gscan2pdf:7141
+msgid "Dutch"
+msgstr "Holländska"
+
+#: bin/gscan2pdf:7142
+msgid "Portuguese"
+msgstr "Portugisiska"
+
+#: bin/gscan2pdf:7143
+msgid "Spanish"
+msgstr "Spanska"
+
+#: bin/gscan2pdf:7144
+msgid "Vietnamese"
+msgstr "Vietnamesiska"
+
+#: bin/gscan2pdf:7197
+msgid "OCR"
+msgstr "Optisk teckentydning"
+
+#: bin/gscan2pdf:7202
+msgid "OCR Engine"
+msgstr "OCR motor"
+
+#: bin/gscan2pdf:7230
+msgid "Start OCR"
+msgstr "Starta optisk teckentydning"
+
+#: bin/gscan2pdf:7241
+msgid "No page selected"
+msgstr "Ingen sida är vald"
+
+#: bin/gscan2pdf:7265
+msgid ""
+"Some pages have not been saved.\n"
+"Do you really want to quit?"
+msgstr ""
+"Det finns osparade sidor\n"
+"Vill du verkligen stänga programmet?"
+
+#: bin/gscan2pdf:7308
+#, perl-format
+msgid ""
+"The help viewer requires module Gtk2::Ex::PodViewer\n"
+"Alternatively, try: %s %s\n"
+"\n"
+msgstr ""
+"Hjälpavsnittet kräver Gtk2::Ex::PodViewer\n"
+"Alternativt, pröva: %s %s\n"
+"\n"
+
+#: bin/gscan2pdf:7650
+msgid "This operation cannot be undone. Are you sure?"
+msgstr "Kan ej ångras. Är du säker?"
+
+#: bin/gscan2pdf:7656
+msgid "Compressing working files"
+msgstr "Komprimerar arbetsfiler"
+
+#: bin/gscan2pdf:7689
+msgid "Compressing images"
+msgstr "Komprimerar bilder"
+
+#: bin/gscan2pdf:7694
+msgid "Clearing up"
+msgstr "Rensar"
+
+#: bin/gscan2pdf:7855
+msgid ""
+"You will have to restart gscanp2df for changes to the temporary directory to "
+"take effect."
+msgstr ""
+"Du måste starta om gscan2pdf för att programmet ska använda den nya temprära "
+"lagringsplatsen."
+
+#: bin/gscan2pdf:7907
+msgid "Selected"
+msgstr "Markerade"
+
+#: bin/gscan2pdf:7931
+msgid "active"
+msgstr "aktiv"
+
+#~ msgid "Unknown option"
+#~ msgstr "Okänd flagga"
+
+#~ msgid "Can't open config file"
+#~ msgstr "Kan inte öppna konfigurationsfilen"
+
+#~ msgid "File"
+#~ msgstr "Arkiv"
+
+#~ msgid "Sca_n"
+#~ msgstr "Läs i_n"
+
+#~ msgid "_Save PDF"
+#~ msgstr "_Spara PDF"
+
+#~ msgid "Save _TIFF"
+#~ msgstr "Spara _TIFF"
+
+#~ msgid "Import TIFF file"
+#~ msgstr "Importera TIFF-fil"
+
+#~ msgid "Save as PDF"
+#~ msgstr "Spara som PDF"
+
+#~ msgid "Save as TIFF"
+#~ msgstr "Spara som TIFF"
+
+#~ msgid "Import scan from file"
+#~ msgstr "Importera inläst bild från fil"
+
+#~ msgid "Not a TIFF file"
+#~ msgstr "Inte en TIFF-fil"
+
+#~ msgid "Year/Month/Day"
+#~ msgstr "År/Månad/Dag"
+
+#~ msgid "Page range"
+#~ msgstr "Sidintervall"
+
+#~ msgid "Current"
+#~ msgstr "Aktuellt"
+
+#~ msgid "Custom"
+#~ msgstr "Anpassad"
+
+#~ msgid "Copyright"
+#~ msgstr "Copyright"
+
+#~ msgid "Licensed under the GPLv2"
+#~ msgstr "Licensierad under GPLv2"
+
+#~ msgid "Height of scan-area"
+#~ msgstr "Höjd på inläsningsområde"
+
+#~ msgid ""
+#~ "The help viewer requires module Gtk2::Ex::PodViewer\n"
+#~ "Alternatively, try"
+#~ msgstr ""
+#~ "Hjälpvisaren lräver modulen Gtk2::Ex::PodViewer\n"
+#~ "Alternativt, prova"
+
+#~ msgid "Go to"
+#~ msgstr "Gå till"
+
+#~ msgid ""
+#~ "requires the libtiff library.\n"
+#~ "Please install it."
+#~ msgstr ""
+#~ "kräver libtiff-biblioteket.\n"
+#~ "Installera det."
+
+#~ msgid ""
+#~ "exists.\n"
+#~ "Really overwrite?"
+#~ msgstr ""
+#~ "finns.\n"
+#~ "Verkligen skriva över?"
+
+#~ msgid "not found"
+#~ msgstr "hittades inte"
+
+#~ msgid "Scanning page"
+#~ msgstr "Läser in sida"
+
+#~ msgid "Information: got"
+#~ msgstr "Information: fick"
+
+#~ msgid "on second attempt\n"
+#~ msgstr "på andra försöket\n"
+
+#~ msgid "Width of scan-area"
+#~ msgstr "Bredd på inläsningsområde"
+
+#~ msgid "_Import TIFF"
+#~ msgstr "_Importera TIFF"
+
+#~ msgid "Error: cannot read"
+#~ msgstr "Fel: kan inte läsa"
