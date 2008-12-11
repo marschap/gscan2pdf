@@ -41,7 +41,7 @@ WriteMakefile(
                                    'bin/scanimage.pl', 'bin/scanadf.pl' ],
               PREREQ_PM       => {
                                    Gtk2                   => 1.090,
-                                   Sane                   => 0,
+                                   Sane                   => 0.02,
                                    Gtk2::Ex::Simple::List => 0,
                                    Gtk2::ImageView        => 0,
                                    Image::Magick          => 0,
@@ -94,11 +94,13 @@ rpmdist : $(NAME).spec $(NAME).Suse.spec tardist
 
 locale_install : locale
 	for file in $(PO); do \
-         po=$${file#*/}; \
-         $(MKPATH) $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
-         $(CP) $${po%%.po}/LC_MESSAGES/$(NAME).mo \
-                              $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
-         $(CHMOD) 755 $(DESTDIR)$(LOCALEDIR)/$${po%%.po}/LC_MESSAGES; \
+         dummy=$${file#*/}; \
+         dummy2=$${dummy#*-}; \
+         lang=$${dummy2%%.po}; \
+         $(MKPATH) $(DESTDIR)$(LOCALEDIR)/$$lang/LC_MESSAGES; \
+         $(CP) $$lang/LC_MESSAGES/$(NAME).mo \
+                              $(DESTDIR)$(LOCALEDIR)/$$lang/LC_MESSAGES; \
+         $(CHMOD) 755 $(DESTDIR)$(LOCALEDIR)/$$lang/LC_MESSAGES; \
          done
 
 $(DESTDIR)$(SHAREDIR)/$(NAME) :
@@ -122,9 +124,11 @@ po.tar.gz : po/$(NAME).pot $(PO)
 locale : $(PO)
 	for file in $(PO); do \
          msgfmt -c $$file; \
-         po=$${file#*/}; \
-         $(MKPATH) $${po%%.po}/LC_MESSAGES; \
-         mv messages.mo $${po%%.po}/LC_MESSAGES/$(NAME).mo; \
+         dummy=$${file#*/}; \
+         dummy2=$${dummy#*-}; \
+         lang=$${dummy2%%.po}; \
+         $(MKPATH) $$lang/LC_MESSAGES; \
+         mv messages.mo $$lang/LC_MESSAGES/$(NAME).mo; \
          done
 
 $(NAME).spec : bin/$(NAME) debian/changelog
