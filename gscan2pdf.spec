@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.26
+Version: 0.9.27
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -82,7 +82,15 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sun Aug 24 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Fri Dec 12 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release.
+    Closes: #500547 (fails to save PDF files)
+    Closes: #497629 (Rotation of pages does work on manual double sided scanning)
+    Closes: #497630 (Selection of all odd pages or all even pages)
+    Closes: #504543 (gscan2pdf: Resolution strangeness)
+    Closes: #504546 (gscan2pdf: Resolution not sent to gimp)
+    Closes: #507032 (improper window split between page list and preview pane)
+    New Depends: libsane-perl
   - New upstream release.
     Closes: #490356 (gscan2pdf: It is impossible to save current session)
     Closes: #486115 (PDF files from gscan2pdf are huge)
