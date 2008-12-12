@@ -1138,7 +1138,7 @@ B<--list-devices>
 option requests a (partial) list of devices that are available.  The
 list is not complete since some devices may be available, but are not
 listed in any of the configuration files (which are typically stored
-in directory /usr/etc/sane.d).  This is particularly the case when
+in directory /etc/sane.d).  This is particularly the case when
 accessing scanners through the network.  If a device is not listed in
 a configuration file, the only way to access it is by its full device
 name.  You may need to consult your system administrator to find out
@@ -1278,7 +1278,7 @@ B<scanimage.>
 
 =over
 
-=item I</usr/etc/sane.d>
+=item I</etc/sane.d>
 
 This directory holds various configuration files.  For details, please
 refer to the manual pages listed below.

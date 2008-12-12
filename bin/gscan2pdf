@@ -65,7 +65,7 @@
 # 0. Test scan in lineart, greyscale and colour.
 #    Check with Perl::Critic http://perlcritic.com/
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
-#    Make sure that file list in .spec and hg manifest reflects MANIFEST
+#    Make sure that file list in hg manifest reflects MANIFEST
 #    Download new translations
 #    Update translators in credits
 #    Check a translation with LANGUAGE=de bin/gscan2pdf --debug
@@ -4923,25 +4923,25 @@ EOS
  $about->set_license ($licence);
  $about->set_website ('http://gscan2pdf.sf.net');
  my $translators = <<EOS;
+You Hyun Jo
 Manuel Rennecke
 Mikal Krogstad
 Robert Hrovat
-Poppe
-Dirk Tas
+rmare
 Jacob Nielsen
-Matthias Gutjahr
-jimpap
+Mattias Ohlsson
+Dirk Tas
+albertotomaduz
 starmaker
-Alberto
-Christoph Langner
-saabaero
-Serhey Kusyumoff
+Serhey Kusyumoff (Сергій Кусюмов)
+Jan Klopper
 Emil Pavlov
-Petr Jelinek
-Szenogradi Norbert Peter
-Matthias Mailaender
+Poppe
+saabaero
 Alexandre Prokoudine
-Tikkel
+Matthias Gutjahr
+Christoph Langner
+Szenográdi Norbert Péter
 EOS
  $about->set_translator_credits ($translators);
  $about->set_artists ('lodp');
@@ -8645,6 +8645,8 @@ C<gscan2pdf --device <device>>
 
 =head1 To Do
 
+=over
+
 =item *
 Correct positioning and size of OCR output behind scan -
 as soon as tesseract supports outputting the information in a sensible
@@ -8655,6 +8657,8 @@ Print (using Net::Cups).
 
 =item *
 Copier.
+
+=back
 
 =head1 See Also
 
@@ -8681,7 +8685,7 @@ the Gtk2-Perl project for their superb Perl bindings for GTK2.
 The SANE project for scanner access
 
 =item *
-Bj�rn Lindqvist for the gtkimageview widget
+Björn Lindqvist for the gtkimageview widget
 
 =item *
 Sourceforge for hosting the project.

@@ -1206,7 +1206,7 @@ __END__
 
 =head1 NAME
 
-scanimage \- scan an image
+scanimage - scan an image
 
 =head1 SYNOPSIS
 
@@ -1612,8 +1612,6 @@ I<color>
 would print the option settings that are in effect when the color-mode
 is selected.
 
-=back
-
  --gamma-table 0..255,...
     Gamma-correction table.  In color mode this option
     equally affects the red, green, and blue channels
@@ -1685,7 +1683,7 @@ to 127 characters.
 
 =back
 
-=head1 "SEE ALSO"
+=head1 SEE ALSO
 
 B<sane (7),>
 B<gamma4scanimage (1),>
