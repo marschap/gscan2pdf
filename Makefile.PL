@@ -47,6 +47,7 @@ WriteMakefile(
                                    Image::Magick          => 0,
                                    Locale::gettext        => 1.05,
                                    Config::General        => 2.40,
+                                   Test::Perl::Critic     => 0,
               },
               ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
               (ABSTRACT_FROM  => "bin/$program", # retrieve abstract from module
