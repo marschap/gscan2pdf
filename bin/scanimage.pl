@@ -1158,7 +1158,7 @@ if ($test == 0) {
     printf STDERR "Press <RETURN> to continue.\n";
     printf STDERR "Press Ctrl + D to terminate.\n";
 
-    if (! defined(<STDIN>)) {
+    if (! defined(<>)) {
      printf STDERR "Batch terminated, %d pages scanned\n",
               ($n - $batch_increment);
      last;    # get out of this loop
