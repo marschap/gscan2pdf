@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Use Test::Pod
 #    Remember sort on FileChooser
 #    pass array reference to combobox_from_array, and optionally the default.
 #    Investigate using Gtk2::FileChooser instead of Gtk2::FileChooserDialog
@@ -2354,27 +2355,33 @@ sub create_PDF {
 # Add scan
    my $gfx = $page->gfx;
    my $imgobj;
+   my $msg;
    if ($format eq 'png') {
     eval {$imgobj = $pdf->image_png($filename)};
+    $msg = "$@";
    }
    elsif ($format eq 'jpg') {
     eval {$imgobj = $pdf->image_jpeg($filename)};
+    $msg = "$@";
    }
    elsif ($format eq 'pnm') {
     eval {$imgobj = $pdf->image_pnm($filename)};
+    $msg = "$@";
    }
    elsif ($format eq 'gif') {
     eval {$imgobj = $pdf->image_gif($filename)};
+    $msg = "$@";
    }
    elsif ($format eq 'tif') {
     eval {$imgobj = $pdf->image_tiff($filename)};
+    $msg = "$@";
    }
    else {
-    $@ = "Error embedding file $filename in $format format to PDF\n";
+    $msg = "Error embedding file $filename in $format format to PDF\n";
    }
-   if ($@) {
-    warn $@ if $debug;
-    send($parent, '-1'.sprintf($d->get("Error embedding file image in %s format to PDF: %s"), $format, $@), 0);
+   if ($msg) {
+    warn $msg if $debug;
+    send($parent, '-1'.sprintf($d->get("Error embedding file image in %s format to PDF: %s"), $format, $msg), 0);
    }
    else {
     eval {$gfx->image($imgobj,0,0,72/$resolution)};
