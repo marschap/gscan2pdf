@@ -6525,6 +6525,7 @@ sub gimp {
  $window->deiconify;
  Gtk2->main_iteration while Gtk2->events_pending;
  $slist -> select(@pages);
+ return;
 }
 
 
@@ -6548,9 +6549,9 @@ sub get_parent {
 # Add $page to the unpaper stack, setting it off if not running.
 
 sub unpaper_page {
- my $options = shift;
+ my ($options, @pages) = shift;
  $options = '' if (! defined($options));
- push @unpaper_stack, [ $_, $options ] foreach (@_);
+ push @unpaper_stack, [ $_, $options ] foreach (@pages);
 
 # guess where unpaper has been called from
  my $parent = get_parent($windowu, $windows, $window);
@@ -7033,7 +7034,8 @@ sub unpaper {
 # Add $page to the OCR stack, setting it off if not running.
 
 sub ocr_page {
- push @ocr_stack, @_;
+ my @pages = @_;
+ push @ocr_stack, @pages;
 
 # guess where ocr has been called from
  my $parent = get_parent($windowo, $windows, $window);
@@ -7631,12 +7633,13 @@ sub unundo {
 # Initialise IconFactory
 
 sub init_icons {
+ my @icons = @_;
  return if defined $IconFactory;
 
  $IconFactory = Gtk2::IconFactory->new();
  $IconFactory->add_default();
 
- foreach ( @_ ) {
+ foreach ( @icons ) {
   register_icon($_->[0], $_->[1]);
  }
  return;
@@ -7738,8 +7741,9 @@ sub kill_subs {
 # marked page list as saved
 
 sub mark_pages {
+ my @pages = @_;
  $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
- foreach (@_) {
+ foreach (@pages) {
   $slist -> {data}[$_][5] = TRUE;
  }
  $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
