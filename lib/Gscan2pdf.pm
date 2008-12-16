@@ -7,13 +7,12 @@ use Carp;
 
 BEGIN {
  use Exporter ();
- our ($VERSION, @ISA, @EXPORT, @EXPORT_OK, %EXPORT_TAGS);
+ our ($VERSION, @ISA, @EXPORT_OK, %EXPORT_TAGS);
 
  # set the version for version checking
 # $VERSION     = 0.01;
 
  @ISA         = qw(Exporter);
- @EXPORT      = qw();
  %EXPORT_TAGS = ( );     # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,
