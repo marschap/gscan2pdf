@@ -91,6 +91,7 @@ sub sighandler {
   print STDERR "$prog_name: stopping scanner...\n";
   $device->cancel;
  }
+ return;
 }
 
 
