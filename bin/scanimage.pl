@@ -450,7 +450,7 @@ sub fetch_options {
 # Initialize width & height options based on backend default
 # values for top-left x/y and bottom-right x/y:
  for (my $i = 0; $i < 2; ++$i) {
-  if ($window[$i] and $window[$i + 2] and !$window_val_user[$i]) {
+  if ($window[$i] and $window[$i + 2] and not $window_val_user[$i]) {
    my $pos = $device->get_option ($window[$i + 2]);
    $window_val[$i] = $window_val[$i] - $pos if (defined $pos);
   }
