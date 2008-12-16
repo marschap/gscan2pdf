@@ -68,6 +68,7 @@ sub sighandler {
    _exit (0);
   }
  }
+ return;
 }
 
 
