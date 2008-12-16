@@ -115,6 +115,7 @@ sub print_unit {
  elsif ($unit == SANE_UNIT_MICROSECOND) {
   print "us";
  }
+ return;
 }
 
 
@@ -255,6 +256,7 @@ sub print_option {
   print substr($opt->{desc}, $start++, 1) while ($start < length($opt->{desc}));
  }
  print "\n";
+ return;
 }
 
 
@@ -475,6 +477,7 @@ sub fetch_options {
    $window_val[$i] = $window_val[$i] - $pos if (defined $pos);
   }
  }
+ return;
 }
 
 
@@ -509,6 +512,7 @@ sub set_option {
   }
  }
  fetch_options ($device) if ($info & SANE_INFO_RELOAD_OPTIONS);
+ return;
 }
 
 
@@ -562,6 +566,7 @@ sub process_backend_option {
   return;
  }
  set_option ($device, $optnum, $value);
+ return;
 }
 
 
@@ -586,6 +591,7 @@ sub write_pnm_header_to_file {
 		($depth <= 8) ? 255 : 65535;
   }
  }
+ return;
 }
 
 
