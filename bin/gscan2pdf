@@ -108,13 +108,14 @@ use Text::ParseWords;
 use Archive::Tar;                    # For session files
 use Sane;
 use PDF::API2;
+use Getopt::Long;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $program = 'gscan2pdf';
-my $version = '0.9.27';
+my $version = '0.9.28~rc1';
 
 my $tolerance = 1;
 
@@ -129,72 +130,57 @@ my $border = 1;
 # or whatever is set by $d->dir([NEWDIR]);
 my $d = Locale::gettext->domain($program);
 
-my $test;
-my @device;
-my @model;
 my $debug = FALSE;
-while (defined($ARGV[0])) {
+my ($test, $help, @device, @model, $locale);
+my @args = ('device=s' => \@device,
+            'test=s%' => \$test,
+            'locale=s' => \$locale,
+            'help' => \$help,
+            'debug' => \$debug,
+            'version' => sub {warn "$program $version\n";exit 0});
+GetOptions (@args);
+
+if (defined $help) {
+ system("perldoc $0") == 0 or warn $d->get("Error displaying help\n");
+ exit;
+}
+
+warn "$program $version\n" if (defined $debug);
+
 # Set up test mode and make sure file has absolute path and is readable
- if ($ARGV[0] eq '--test') {
-  shift @ARGV;
-  my $arg = shift @ARGV;
-  if ($arg =~ /(.*)=(.*)/) {
-   my $file = $1;
-   my $device = $2;
+if (keys %{$test}) {
+ for my $file (keys %{$test}) {
+  my $device = $test->{$file};
+  delete $test->{$file};
 
 # Find a way of emulating the nonsense \n that some people seem to get
-   $device =~ s/\\n/\n/g;
-   print "'$file','$device'\n";
-   $file = getcwd."/$file" if ($file !~ /^\//);
-   if (! -r $file) {
-    warn sprintf($d->get("Error: cannot read file: %s\n"), $file);
-    exit 1;
-   }
-   push @{$test->{file}}, $file;
-   $test->{output} = '' if (! defined($test->{output}));
-   $test->{output} .= "'$#{$test->{file}}','$device','".basename($file)."'\n";
-  }
-  else {
-   warn sprintf($d->get("Usage:\n%s --test <file>=<model>\n"), $0); # better xgettext hack
+  $device =~ s/\\n/\n/g;
+  print "'$file','$device'\n";
+  $file = getcwd."/$file" if ($file !~ /^\//);
+  if (! -r $file) {
+   warn sprintf($d->get("Error: cannot read file: %s\n"), $file);
    exit 1;
   }
- }
- elsif ($ARGV[0] eq '--help') {
-  system("perldoc $0") == 0 or warn $d->get("Error displaying help\n");
-  exit;
- }
- elsif ($ARGV[0] eq '--locale') {
-  shift @ARGV;
-  if ($ARGV[0] !~ /^\//) {
-   $d->dir(getcwd."/".shift @ARGV);
-  }
-  else {
-   $d->dir(shift @ARGV);
-  }
- }
- elsif ($ARGV[0] eq '--debug') {
-  $debug = TRUE;
-  shift @ARGV;
-  warn "$program $version\n";
- }
- elsif ($ARGV[0] eq '--device') {
-  shift @ARGV;
-  if (@ARGV) {
-   my $device = shift @ARGV;
-   warn "Using $device\n";
-   push @device, $device;
-   push @model, $device;
-  }
-  else {
-   warn sprintf($d->get("Usage:\n%s --device <device>\n"), $0); # better xgettext hack
-   exit 1;
-  }
- }
- else {
-  warn sprintf($d->get("Unknown option %s.\n"), shift @ARGV); # xgettext hack
-  exit 1;
+  push @{$test->{file}}, $file;
+  $test->{output} = '' if (! defined($test->{output}));
+  $test->{output} .= "'$#{$test->{file}}','$device','".basename($file)."'\n";
  }
 }
+# GetOptions leaves $test as a reference to an empty hash.
+else {
+ undef $test;
+}
+
+if (defined $locale) {
+ if ($locale !~ /^\//) {
+  $d->dir(getcwd."/$locale");
+ }
+ else {
+  $d->dir($locale);
+ }
+}
+
+@model = @device if (@device);
 
 # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
 # scanimage
