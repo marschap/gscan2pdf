@@ -63,6 +63,8 @@
 #     Net::Cups
 #
 # Release procedure:
+#    Use perltidy immediately before release so as not to affect any patches
+#    in between, and then consistently before each commit afterwards.
 # 0. Test scan in lineart, greyscale and colour.
 #    Check with Perl::Critic http://perlcritic.com/
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
@@ -138,7 +140,7 @@ my @args = ('device=s' => \@device,
             'help' => \$help,
             'debug' => \$debug,
             'version' => sub {warn "$program $version\n";exit 0});
-GetOptions (@args);
+exit 1 if (! GetOptions (@args));
 
 if (defined $help) {
  system("perldoc $0") == 0 or warn $d->get("Error displaying help\n");
@@ -288,7 +290,7 @@ init_icons(
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
 my ($windowi, $windowe, $windows, $windowh, $windowo,
-    $windowu, $slist, $vboxd, $combobd, $combobp, $vboxm, @undo_buffer,
+    $windowu, $slist, $vboxd, $labeld, $combobd, $combobp, $vboxm, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
     $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
@@ -3949,62 +3951,7 @@ sub scan_dialog {
   populate_device_list($hboxd);
  }
  elsif (! @device) {
-
-# Set up ProgressBar
-  my $pbar = Gtk2::ProgressBar->new;
-  $pbar -> set_pulse_step(.1);
-  $pbar->set_text ($d->get('Fetching list of devices'));
-  $hboxd->pack_start ($pbar, TRUE, TRUE, 0);
-  my $running = TRUE;
-
-# Timer will run until callback returns false 
-  my $timer = Glib::Timeout->add (100, sub { if ($running) {
-                                              $pbar->pulse;
-                                              return TRUE;
-                                             }
-                                             else {
-                                              return FALSE;
-                                             } });
-
-  my $cmd = "$SETTING{'scan prefix'} scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
-  print "$cmd\n" if ($debug);
-
-# Interface to frontend
-  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-  warn "Forked PID $pid\n" if ($debug);
- 
-# Read without blocking
-  Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
-   my ($fileno, $condition) = @_;
-   my $line;
-   if ($condition & 'in') { # bit field operation. >= would also work
-    sysread $read, $line, 1024;
-    $output .= $line;
-   }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-   if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
-    close $read;
-    warn 'Waiting to reap process' if ($debug);
-    my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
-    warn "Reaped PID $pid\n" if ($debug);
-    $running = FALSE;
-    $pbar -> destroy;
-
-    if (not defined($output) or $output eq '') {
-     $windows->destroy;
-     undef $windows;
-     show_message_dialog($window, 'error', 'close', $d->get('No scanners found'));
-     return FALSE;
-    }
-
-    parse_device_list($output);
-    populate_device_list($hboxd);
-    return FALSE;  # uninstall
-   }
-   return TRUE;  # continue without uninstalling
-  });
+  get_devices($hboxd);
  }
  else {
   populate_device_list($hboxd);
@@ -4016,6 +3963,89 @@ sub scan_dialog {
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
  $sbutton -> set_sensitive(FALSE) if (! $test);
+ return;
+}
+
+
+# Run scanimage --formatted-device-list
+
+sub get_devices {
+ my $hboxd = shift;
+
+# Set up ProgressBar
+ my $pbar = Gtk2::ProgressBar->new;
+ $pbar -> set_pulse_step(.1);
+ $pbar->set_text ($d->get('Fetching list of devices'));
+ $hboxd->pack_start ($pbar, TRUE, TRUE, 0);
+ $pbar->show;
+ my $running = TRUE;
+
+# Timer will run until callback returns false 
+ my $timer = Glib::Timeout->add (100, sub { if ($running) {
+                                             $pbar->pulse;
+                                             return TRUE;
+                                            }
+                                            else {
+                                             return FALSE;
+                                            } });
+
+ my $cmd = "$SETTING{'scan prefix'} scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
+ print "$cmd\n" if ($debug);
+
+# Interface to frontend
+ my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+ warn "Forked PID $pid\n" if ($debug);
+ 
+# Read without blocking
+ Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
+  my ($fileno, $condition) = @_;
+  my ($line, $output);
+  if ($condition & 'in') { # bit field operation. >= would also work
+   sysread $read, $line, 1024;
+   $output .= $line;
+  }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+  if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
+   close $read;
+   warn 'Waiting to reap process' if ($debug);
+   my $pid = waitpid(-1, &WNOHANG); # So we don't leave zombies
+   warn "Reaped PID $pid\n" if ($debug);
+   $running = FALSE;
+   $pbar -> destroy;
+
+   if (not defined($output) or $output eq '') {
+    $windows->destroy;
+    undef $windows;
+    show_message_dialog($window, 'error', 'close', $d->get('No devices found'));
+    return FALSE;
+   }
+
+   my @oldmodel = @model;
+   parse_device_list($output);
+   if (@oldmodel) {
+print "output:$output\n";
+    my $i = 0;
+    while ($i < @oldmodel) {
+     if (@model and $i < @model and $oldmodel[$i] ne $model[$i]) {
+      $combobd->insert_text($i, $model[$i]);
+      $combobd->remove_text(++$i);
+     }
+    }
+    while ($i < @device) {
+     $combobd->append_text($i++);
+    }
+    $combobd->show;
+    $labeld->show;
+   }
+   else {
+    populate_device_list($hboxd);
+   }
+   return FALSE;  # uninstall
+  }
+  return TRUE;  # continue without uninstalling
+ });
  return;
 }
 
@@ -4065,6 +4095,9 @@ sub num_rows_combobox {
 
 sub parse_device_list {
  my ($output) = @_;
+
+# clear lists
+ undef @device, @model;
 
  $output = $test->{output} if ($test);
  print $output if ($debug and defined($output));
@@ -4116,7 +4149,7 @@ sub populate_device_list {
  my ($hboxd) = @_;
 
 # device list
- my $labeld = Gtk2::Label -> new ($d->get('Device'));
+ $labeld = Gtk2::Label -> new ($d->get('Device'));
  $hboxd -> pack_start ($labeld, FALSE, FALSE, 0);
  $combobd = Gtk2::ComboBox->new_text;
 
@@ -4124,16 +4157,25 @@ sub populate_device_list {
  foreach (@model) {
   $combobd->append_text ($_);
  }
+ $combobd->append_text ($d->get('Rescan for devices')) if (! $test);
 
 # flags whether already run or not
  my $run = FALSE;
  $combobd -> signal_connect (changed => sub {
+  my $index = $combobd -> get_active;
+  if ($index > $#device) {
+   $combobd->hide;
+   $labeld->hide;
+   get_devices($hboxd);
+  }
+  else {
 
 # only delete the mode setting if switching devices, not on first run
-  delete $SETTING{mode} if ($run);
-  $run = TRUE;
-  rescan_options($vboxd, $device[$combobd -> get_active]);
-  $vboxd -> show_all;
+   delete $SETTING{mode} if ($run);
+   $run = TRUE;
+   rescan_options($vboxd, $device[$combobd -> get_active]);
+   $vboxd -> show_all;
+  }
  });
  $tooltips -> set_tip ($combobd, $d->get('Sets the device to be used for the scan'));
  $hboxd -> pack_end ($combobd, FALSE, FALSE, 0);
