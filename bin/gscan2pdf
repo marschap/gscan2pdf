@@ -3940,9 +3940,8 @@ sub scan_dialog {
  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
  $cbutton -> signal_connect( clicked => sub { $windows -> hide; } );
 
- my $output;
  if ($test) {
-  parse_device_list($output);
+  parse_device_list($test->{output});
   populate_device_list($hboxd);
  }
  elsif (! @device) {
@@ -3992,9 +3991,10 @@ sub get_devices {
  warn "Forked PID $pid\n" if ($debug);
  
 # Read without blocking
+ my $output = '';
  Glib::IO->add_watch ( fileno($read), ['in', 'hup'], sub {
   my ($fileno, $condition) = @_;
-  my ($line, $output);
+  my ($line);
   if ($condition & 'in') { # bit field operation. >= would also work
    sysread $read, $line, 1024;
    $output .= $line;
@@ -4010,7 +4010,7 @@ sub get_devices {
    $running = FALSE;
    $pbar -> destroy;
 
-   if (not defined($output) or $output eq '') {
+   if ($output eq '') {
     $windows->destroy;
     undef $windows;
     show_message_dialog($window, 'error', 'close', $d->get('No devices found'));
@@ -4019,22 +4019,23 @@ sub get_devices {
 
    my @oldmodel = @model;
    parse_device_list($output);
-   if (@oldmodel) {
-print "output:$output\n";
+   if (@oldmodel) { # Update combobox
     my $i = 0;
     while ($i < @oldmodel) {
      if (@model and $i < @model and $oldmodel[$i] ne $model[$i]) {
       $combobd->insert_text($i, $model[$i]);
-      $combobd->remove_text(++$i);
+      $combobd->remove_text($i);
      }
+     $i++
     }
-    while ($i < @device) {
+    while ($i < @model) {
      $combobd->append_text($i++);
     }
+    set_device();
     $combobd->show;
     $labeld->show;
    }
-   else {
+   else { # New combobox
     populate_device_list($hboxd);
    }
    return FALSE;  # uninstall
@@ -4092,9 +4093,9 @@ sub parse_device_list {
  my ($output) = @_;
 
 # clear lists
- undef @device, @model;
+ @device = ();
+ @model = ();
 
- $output = $test->{output} if ($test);
  print $output if ($debug and defined($output));
 
 # parse out the device and model names
@@ -4176,6 +4177,13 @@ sub populate_device_list {
  $hboxd -> pack_end ($combobd, FALSE, FALSE, 0);
 
 # If device in settings then set it
+ set_device();
+ $hboxd -> show_all;
+ return;
+}
+
+
+sub set_device {
  my $o;
  if (defined $SETTING{device}) {
   for (my $i = 0; $i < @device; $i++) {
@@ -4191,8 +4199,6 @@ sub populate_device_list {
 #  the source button callback can ghost the all button
 # This then fires the callback, updating the options, so no need to do it further down.
  $combobd -> set_active($o);
- $hboxd -> show_all;
- return;
 }
 
 
