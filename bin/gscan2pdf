@@ -2592,7 +2592,8 @@ sub save_dialog {
  my @tiff_compression = (
   [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
   [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
-  [ 'jpg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
+# jpeg rather than jpg needed here because tiffcp uses -c jpeg
+  [ 'jpeg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
   [ 'packbits', $d->get('Packbits'), $d->get('Compress output with Packbits encoding.') ],
   [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
   [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
@@ -2613,7 +2614,7 @@ $hboxtq -> pack_start ($label, FALSE, FALSE, 0);
 # Fill compression ComboBox
  my $combobtc = combobox_from_array(@tiff_compression);
  $combobtc -> signal_connect (changed => sub {
-  if ($tiff_compression[$combobtc->get_active][0] eq 'jpg') {
+  if ($tiff_compression[$combobtc->get_active][0] eq 'jpeg') {
    $hboxtq -> show_all;
   }
   else {
@@ -2658,7 +2659,7 @@ $hboxtq -> pack_start ($label, FALSE, FALSE, 0);
   }
   if ($type[$combobi->get_active][0] eq 'jpg'
       or ($type[$combobi->get_active][0] eq 'tif'
-          and $tiff_compression[$combobtc->get_active][0] eq 'jpg')) {
+          and $tiff_compression[$combobtc->get_active][0] eq 'jpeg')) {
    $hboxtq -> show_all;
   }
   else {
@@ -3035,13 +3036,13 @@ sub save_TIFF {
    send($parent, ($page-1)/($#pagelist+2)
     .sprintf($d->get("Converting image %i of %i to TIFF"), $page, $#pagelist+1), 0);
    my $filename = $slist -> {data}[$j][2];
-   if ($filename !~ /\.tif/ or $SETTING{'tiff compression'} eq 'jpg') {
+   if ($filename !~ /\.tif/ or $SETTING{'tiff compression'} eq 'jpeg') {
     my (undef, $tif) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
     my $resolution = $slist -> {data}[$j][4];
 
 # Convert to tiff
     my $depth = '';
-    $depth = '-depth 8' if ($SETTING{'tiff compression'} eq 'jpg');
+    $depth = '-depth 8' if ($SETTING{'tiff compression'} eq 'jpeg');
     system ("convert -units PixelsPerInch -density $resolution $depth $filename $tif") == 0 or
      send($parent, "2".$d->get('Error writing TIFF'), 0);
 
@@ -3051,12 +3052,12 @@ sub save_TIFF {
   }
 
   my $compression = $SETTING{'tiff compression'};
-  $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpg');
+  $compression .= ':'.$SETTING{'quality'} if ($compression eq 'jpeg');
 
 # Create the tiff
   send($parent, '1'.$d->get('Concatenating TIFFs'), 0);
   my $rows = '';
-  $rows = '-r 16' if ($SETTING{'tiff compression'} eq 'jpg');
+  $rows = '-r 16' if ($SETTING{'tiff compression'} eq 'jpeg');
   my $cmd = "tiffcp $rows -c $compression $pagelist \"$filename\" 2>&1";
   print "$cmd\n" if $debug;
   my $output = `$cmd`;
