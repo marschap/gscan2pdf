@@ -2292,9 +2292,14 @@ sub create_PDF {
 
     if ($compression !~ /(jpg|png)/) {
      my (undef, $filename2) = tempfile(DIR => $SETTING{session}, SUFFIX => '.tif');
-     my $cmd = "tiffcp -c $compression $filename $filename2 2>&1";
+     my $cmd = "tiffcp -c $compression $filename $filename2";
      print "$cmd\n" if $debug;
-     my $output = `$cmd`;
+     my $status = system("$cmd 2>$SETTING{session}/tiffcp.stdout");
+     if ($status != 0) {
+      my $output = slurp("$SETTING{session}/tiffcp.stdout");
+      print $output if $debug;
+      send($parent, '-1'.sprintf($d->get("Error compressing image: %s"), $output), 0);
+     }
      my $filename = $filename2;
     }
    }
@@ -3060,7 +3065,13 @@ sub save_TIFF {
   $rows = '-r 16' if ($SETTING{'tiff compression'} eq 'jpeg');
   my $cmd = "tiffcp $rows -c $compression $pagelist \"$filename\" 2>&1";
   print "$cmd\n" if $debug;
-  my $output = `$cmd`;
+  my $status = system("$cmd 2>$SETTING{session}/tiffcp.stdout");
+  my $output = '';
+  if ($status != 0) {
+   $output = slurp("$SETTING{session}/tiffcp.stdout");
+   print $output if $debug;
+   send($parent, '-1'.sprintf($d->get("Error compressing image: %s"), $output), 0);
+  }
   if (defined $ps) {
    send($parent, '1'.$d->get('Converting to PS'), 0);
    my $cmd = "tiff2ps $filename > $ps";
@@ -3076,7 +3087,7 @@ sub save_TIFF {
   my $line;
   if ($condition & 'in') { # bit field operation. >= would also work
    recv($child, $line, 1000, 0);
-   if ($line =~ /(\d*\.?\d*)(.*)/) {
+   if ($line =~ /(-?\d*\.?\d*)(.*)/) {
     my $fraction=$1;
     my $text=$2;
     if ($fraction > 1) {
@@ -3091,8 +3102,10 @@ sub save_TIFF {
      }
      return FALSE;  # uninstall
     }
-    $pbar->set_fraction($fraction);
-    $pbar->set_text($text);
+    if ($fraction > -1) {
+     $pbar->set_fraction($fraction);
+     $pbar->set_text($text);
+    }
    }
   }
 
