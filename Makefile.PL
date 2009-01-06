@@ -109,10 +109,13 @@ $(DESTDIR)$(SHAREDIR)/$(NAME) :
 
 icon_install : $(DESTDIR)$(SHAREDIR)/$(NAME)
 	$(MKPATH) $(DESTDIR)$(SHAREDIR)/applications
+	$(MKPATH) $(DESTDIR)$(SHAREDIR)/pixmaps
 	$(CP) $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
 	$(CP) $(NAME).svg stock-rotate-90.svg stock-rotate-180.svg \
 	      stock-rotate-270.svg scanner.svg pdf.svg \
 	      stock-selection-all-16.png $(DESTDIR)$(SHAREDIR)/$(NAME)
+	$(CP) $(NAME).svg $(DESTDIR)$(SHAREDIR)/pixmaps
+
 
 html : htdocs/index.html
 
