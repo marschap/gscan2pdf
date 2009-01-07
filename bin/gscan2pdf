@@ -2039,19 +2039,13 @@ sub get_pagelist {
 # return array index of filenames depending on which radiobutton is active
 
 sub get_page_index {
- my @page;
  if ($SETTING{'Page range'} eq 'all') {
-  my $i = 0;
-  while ($i < @{$slist -> {data}}) {
-   push @page, $i;
-   ++$i;
-  }
+  return 0..$#{$slist -> {data}};
  }
  elsif ($SETTING{'Page range'} eq 'selected') {
-  @page = $slist -> get_selected_indices;
+  return $slist -> get_selected_indices;
  }
- 
- return @page;
+ return;
 }
 
 
@@ -6577,7 +6571,7 @@ sub get_parent {
 # Add $page to the unpaper stack, setting it off if not running.
 
 sub unpaper_page {
- my ($options, @pages) = shift;
+ my ($options, @pages) = @_;
  $options = '' if (! defined($options));
  push @unpaper_stack, [ $_, $options ] foreach (@pages);
 
