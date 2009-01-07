@@ -2300,7 +2300,7 @@ sub create_PDF {
       print $output if $debug;
       send($parent, '-1'.sprintf($d->get("Error compressing image: %s"), $output), 0);
      }
-     my $filename = $filename2;
+     $filename = $filename2;
     }
    }
 
