@@ -2284,6 +2284,7 @@ sub create_PDF {
     if (($compression !~ /(jpg|png)/ and $format ne 'tif')
         or ($compression =~ /(jpg|png)/) or $SETTING{'downsample'}) {
 # depth required because resize otherwise increases depth to maintain information
+     print "Writing temporary image $filename with depth $depth\n" if ($debug);
      $x = $image->Write(filename => $filename, depth => $depth);
      warn "$x" if "$x";
      $format = $1 if ($filename =~ /\.(\w*)$/);
@@ -2372,7 +2373,7 @@ sub create_PDF {
      send($parent, '-1'.sprintf($d->get("Error embedding file image in %s format to PDF: %s"), $format, $@), 0);
     }
     else {
-     print "Adding $format at $resolution dpi\n" if $debug;
+     print "Adding $filename at $resolution dpi\n" if $debug;
     }
    }
   }
