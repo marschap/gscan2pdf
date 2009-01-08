@@ -6,6 +6,8 @@
 * Display any errors from tiffcp
 * Fix TIFF compression in PDF
   Closes Debian bug #506150 (gscan2pdf: pdf creation failes when using LZW compression)
+* Rename scanimage.pl and scanadf.pl to scanimage-perl and scanadf-perl
+  to fix lintian warnings about .pl suffices.
 
 
 0.9.27 (11.12.2008):

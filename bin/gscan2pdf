@@ -1142,7 +1142,7 @@ sub load_config {
   'pages to scan'      => 1,
   'unpaper on scan'    => TRUE,
   'OCR on scan'        => TRUE,
-  'frontend'           => 'scanimage.pl',
+  'frontend'           => 'scanimage-perl',
   'rotate facing'      => 0,
   'rotate reverse'     => 0,
   'scan prefix'        => '',
@@ -3937,7 +3937,7 @@ sub scan_dialog {
    $SETTING{'ocr language'} = $tesslang[$comboboxl -> get_active]->[0]
     if ($SETTING{'ocr engine'} eq 'tesseract');
   }
-  if ($SETTING{frontend} eq 'scanimage' or $SETTING{frontend} eq 'scanimage.pl') {
+  if ($SETTING{frontend} eq 'scanimage' or $SETTING{frontend} eq 'scanimage-perl') {
    scanimage($SETTING{device}, $npages, $start-$step, $step,
                 $rotate_facing, $rotate_reverse,
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'}, %options);
@@ -7917,8 +7917,8 @@ sub preferences {
  $hbox -> pack_start($label, FALSE, FALSE, 0);
  my @frontends = (
   [ 'scanimage', $d->get('scanimage'), $d->get('Scan using the scanimage frontend.') ],
-  [ 'scanimage.pl', $d->get('scanimage.pl'), $d->get('Scan using the scanimage.pl frontend.') ],
-  [ 'scanadf.pl', $d->get('scanadf.pl'), $d->get('Scan using the scanadf.pl frontend.') ],
+  [ 'scanimage-perl', $d->get('scanimage-perl'), $d->get('Scan using the scanimage-perl frontend.') ],
+  [ 'scanadf-perl', $d->get('scanadf-perl'), $d->get('Scan using the scanadf-perl frontend.') ],
  );
  push @frontends,
   [ 'scanadf', $d->get('scanadf'), $d->get('Scan using the scanadf frontend.') ],
@@ -8585,12 +8585,12 @@ Selects all pages.
 
 gscan2pdf supports two frontends, scanimage and scanadf.
 scanadf support was added when it was realised that scanadf works better than
-scanimage with some scanners. On Ubuntu Edgy, scanadf is in the sane package,
+scanimage with some scanners. On Debian-based systems, scanadf is in the sane package,
 not, like scanimage, in sane-utils. If scanadf is not present, the option is
 obviously ghosted out.
 
 In 0.9.27, Perl bindings for SANE were introduced and two further frontends,
-scanimage.pl and scanadf.pl (scanimage and scanadf transliterated from C into
+scanimage-perl and scanadf-perl (scanimage and scanadf transliterated from C into
 Perl) was added.
 
 =head2 View
