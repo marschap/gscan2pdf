@@ -4505,13 +4505,27 @@ sub scanadf {
   my $running = TRUE;
 
 # Timer will run until callback returns false 
+  my ($size, $id);
   my $timer = Glib::Timeout->add (100, sub { if ($running) {
-                                              $pbar->pulse;
-                                              return TRUE;
-                                             }
-                                             else {
-                                              return FALSE;
-                                             } });
+                      if (defined $size) {
+                       if ($size) {
+                        $pbar->set_fraction((-s "out$id.pnm")/$size);
+                       }
+                       else {
+                        $pbar->pulse;
+                       }
+                      }
+                      elsif ($id and -s "out$id.pnm" > 50) {
+                       $size = get_size_from_PNM("out$id.pnm")
+                      }
+                      else {
+                       $pbar->pulse;
+                      }
+                      return TRUE;
+                     }
+                     else {
+                      return FALSE;
+                     } });
 
 # Ensure that the dialog box is destroyed when the user responds.
   $dialog -> signal_connect (response => sub {
@@ -4538,11 +4552,12 @@ sub scanadf {
       $pbar -> set_text($d->get('Scanner warming up'));
      }
      elsif ($line =~ /^Scanned document out(\d*)\.pnm/) {
-      $pbar -> set_text(sprintf($d->get('Scanned page %i...'), $1*$step+$offset));
+      $id = $1;
+      $pbar -> set_text(sprintf($d->get('Scanned page %i...'), $id*$step+$offset));
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      my $index = import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap',
+      my $index = import_scan ("out$id.pnm", $id*$step+$offset, 'Portable anymap',
                                                     $SETTING{resolution}, TRUE);
       if ($index == -1) {
        $dialog -> destroy;
@@ -4553,7 +4568,7 @@ sub scanadf {
        return FALSE;
       }
       else {
-       my $rotate = $1 % 2 ? $rfacing : $rreverse;
+       my $rotate = $id % 2 ? $rfacing : $rreverse;
        post_process_scan($index, $rotate, $unpaper, $ocr);
       }
      }
@@ -8097,6 +8112,48 @@ sub get_selected_properties {
   }
  }
  return $resolution;
+}
+
+
+# Return file size expected by PNM header
+sub get_size_from_PNM {
+ my $filename = shift;
+
+ open my $fh, '<', $filename or return 0;
+ my $header = <$fh>;
+ my $magic_value;
+ if ($header =~ /^P(\d*)\n/) {
+  $magic_value = $1;
+ }
+ else {
+  close $fh;
+  return 0;
+ }
+ if ($magic_value < 4) {
+  close $fh;
+  return 0;
+ }
+ my $line = <$fh>;
+ $header .= $line;
+ while ($line =~ /^(#|\s*\n)/) {
+  $line = <$fh>;
+  $header .= $line;
+ }
+ if ($line =~ /(\d*) (\d*)\n/) {
+  my ($width, $height) = ($1, $2);
+  my $hundred_percent = $width * $height
+                      * ($magic_value == 4 ? 1/8 : ($magic_value == 5 ? 1 : 3));
+  if ($magic_value > 4) {
+   $line = <$fh>;
+   $header .= $line;
+  }
+  close $fh;
+  return length($header)+$hundred_percent;
+ }
+ else {
+  close $fh;
+  return 0;
+ }
 }
 
 
