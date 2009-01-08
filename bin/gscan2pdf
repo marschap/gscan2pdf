@@ -3063,7 +3063,7 @@ sub save_TIFF {
   send($parent, '1'.$d->get('Concatenating TIFFs'), 0);
   my $rows = '';
   $rows = '-r 16' if ($SETTING{'tiff compression'} eq 'jpeg');
-  my $cmd = "tiffcp $rows -c $compression $pagelist \"$filename\" 2>&1";
+  my $cmd = "tiffcp $rows -c $compression $pagelist \"$filename\"";
   print "$cmd\n" if $debug;
   my $status = system("$cmd 2>$SETTING{session}/tiffcp.stdout");
   my $output = '';
@@ -4499,13 +4499,14 @@ sub scanadf {
                                     'modal',
                                     'gtk-cancel' => 'cancel');
   my $pbar = Gtk2::ProgressBar->new;
-  $pbar -> set_text($d->get('Scanning')."...");
   $pbar -> set_pulse_step(.1);
   $dialog -> vbox -> add ($pbar);
   my $running = TRUE;
 
 # Timer will run until callback returns false 
-  my ($size, $id);
+  my $size;
+  my $id = 1;
+  $pbar -> set_text(sprintf($d->get('Scanning page %i...'), $id*$step+$offset));
   my $timer = Glib::Timeout->add (100, sub { if ($running) {
                       if (defined $size) {
                        if ($size) {
@@ -4515,7 +4516,7 @@ sub scanadf {
                         $pbar->pulse;
                        }
                       }
-                      elsif ($id and -s "out$id.pnm" > 50) {
+                      elsif (-e "out$id.pnm" and (-s "out$id.pnm") > 50) {
                        $size = get_size_from_PNM("out$id.pnm")
                       }
                       else {
@@ -4553,7 +4554,10 @@ sub scanadf {
      }
      elsif ($line =~ /^Scanned document out(\d*)\.pnm/) {
       $id = $1;
-      $pbar -> set_text(sprintf($d->get('Scanned page %i...'), $id*$step+$offset));
+
+# Prevent the Glib::Timeout from checking the size of the file when it is
+# about to be renamed
+      undef $size;
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
@@ -4571,6 +4575,8 @@ sub scanadf {
        my $rotate = $id % 2 ? $rfacing : $rreverse;
        post_process_scan($index, $rotate, $unpaper, $ocr);
       }
+      $id++;
+      $pbar -> set_text(sprintf($d->get('Scanning page %i...'), $id*$step+$offset));
      }
      elsif ($line =~ /^Scanned \d* pages/) {
       ;
