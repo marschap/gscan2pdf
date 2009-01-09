@@ -111,6 +111,7 @@ use Archive::Tar;                    # For session files
 use Sane;
 use PDF::API2;
 use Getopt::Long;
+use Set::IntSpan;                    # For page numbering issues
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -289,7 +290,7 @@ init_icons(
 
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
-my ($windowi, $windowe, $windows, $windowh, $windowo,
+my ($windowi, $windowe, $windows, $windowh, $windowo, $windowrn,
     $windowu, $slist, $vboxd, $labeld, $combobd, $combobp, $vboxm, @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
@@ -328,12 +329,7 @@ my @action_items = (
  [ 'Copy', 'gtk-copy', $d->get('_Copy'), '<control>c', $d->get('Copy selection'), \&copy_selection ],
  [ 'Paste', 'gtk-paste', $d->get('_Paste'), '<control>v', $d->get('Paste selection'), \&paste_selection ],
  [ 'Delete', 'gtk-delete', $d->get('_Delete'), undef, $d->get('Delete selected pages'), \&delete_pages ],
- [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages from 1 to n'), sub {
-
-# Update undo/redo buffers
-    take_snapshot();
-    renumber($slist, 0, 1, 1);
-   } ],
+ [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages'), \&renumber_dialog ],
  [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
  [ 'Select Odd', undef, $d->get('Select _Odd'), '<control>1', $d->get('Select all odd-numbered pages'), sub { select_odd_even(0); } ],
  [ 'Select Even', undef, $d->get('Select _Even'), '<control>2', $d->get('Select all evenly-numbered pages'), sub { select_odd_even(1); } ],
@@ -2036,7 +2032,7 @@ sub get_pagelist {
 }
 
 
-# return array index of filenames depending on which radiobutton is active
+# return array index of pages depending on which radiobutton is active
 
 sub get_page_index {
  if ($SETTING{'Page range'} eq 'all') {
@@ -5774,6 +5770,146 @@ sub default2index {
   return $i if ($array[$i] eq $default);
  }
  return;
+}
+
+
+# Dialog for renumber
+
+sub renumber_dialog {
+ if (defined $windowrn) {
+  $windowrn -> present;
+  return;
+ }
+
+ ($windowrn, my $vbox) = create_window($window, $d->get('Renumber'), FALSE);
+
+# Frame for page range
+ my $frame = Gtk2::Frame->new($d->get('Page Range'));
+ $vbox -> pack_start ($frame, FALSE, FALSE, 0);
+ my $pr = Gscan2pdf::PageRange->new;
+ $pr -> set_active($SETTING{'Page range'})
+  if (defined $SETTING{'Page range'});
+ $pr -> signal_connect (changed => sub {
+  $SETTING{'Page range'} = $pr->get_active;
+  $SETTING{'Page range default'} = $SETTING{'Page range'}
+   if ($SETTING{'Page range'} ne 'selected');
+ });
+ $frame->add ($pr);
+ push @prlist, $pr;
+
+# Frame for page numbering
+ my $framex = Gtk2::Frame -> new($d->get('Page numbering'));
+ $vbox -> pack_start ($framex, FALSE, FALSE, 0);
+ my $vboxx = Gtk2::VBox -> new;
+ $vboxx -> set_border_width($border_width);
+ $framex -> add ($vboxx);
+
+# SpinButton for starting page number
+ my $hboxxs = Gtk2::HBox -> new;
+ $vboxx -> pack_start ($hboxxs, FALSE, FALSE, 0);
+ my $labelxs = Gtk2::Label -> new ($d->get('Start'));
+ $hboxxs -> pack_start($labelxs, FALSE, FALSE, 0);
+ my $start = 1;
+ $spin_buttons = Gtk2::SpinButton -> new_with_range(1, 99999, 1);
+ $hboxxs -> pack_end($spin_buttons, FALSE, FALSE, 0);
+
+# SpinButton for page number increment
+ my $hboxi = Gtk2::HBox -> new;
+ $vboxx -> pack_start ($hboxi, FALSE, FALSE, 0);
+ my $labelxi = Gtk2::Label -> new ($d->get('Increment'));
+ $hboxi -> pack_start($labelxi, FALSE, FALSE, 0);
+ my $spin_buttoni = Gtk2::SpinButton -> new_with_range(-99, 99, 1);
+ my $step = 1;
+ $spin_buttoni -> set_value($step);
+ $hboxi -> pack_end($spin_buttoni, FALSE, FALSE, 0);
+ $spin_buttoni -> signal_connect ('value-changed' => sub {
+  $spin_buttoni -> set_value(-$step) if ($spin_buttoni -> get_value == 0);
+  $step = $spin_buttoni -> get_value;
+ });
+
+# Check whether the start page exists
+ $spin_buttons -> signal_connect ('value-changed' => sub {
+  if ($SETTING{'Page range'} eq 'selected') {
+
+# Get list of pages not in selection
+   my @selected = get_page_index();
+   my @all = (0..$#{$slist -> {data}});
+
+# Convert the indices to sets of page numbers
+   @selected = index2page_number(@selected);
+   @all = index2page_number(@all);
+   my $selected = Set::IntSpan->new(\@selected);
+   my $all = Set::IntSpan->new(\@all);
+   my $not_selected = $all->diff($selected);
+
+# Create a set from the current settings
+   my $value = $spin_buttons->get_value;
+   my $d = $value - $start;
+   my $step = $spin_buttoni->get_value;
+   my $current = Set::IntSpan->new;
+   $current->insert($value+$step*$_) for (0..$#selected);
+
+# Check for clash with non_selected
+   while($current->min < 1 or $current->intersect($not_selected)->size) {
+    if ($current->min < 1) {
+     $d = 1;
+     $value += $d;
+    }
+    else {
+     $value += $d;
+    }
+    $current->copy;
+    $current->insert($value+$step*$_) for (0..$#selected);
+   }
+
+   $spin_buttons -> set_value($value);
+   $start = $value;
+  }
+ });
+
+# Setting this here to fire callback running update_start
+ $spin_buttons->set_value($start);
+
+# HBox for buttons
+ my $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hbox, FALSE, TRUE, 0);
+
+# Start button
+ my $obutton = Gtk2::Button -> new($d->get('Renumber'));
+ $hbox -> pack_start( $obutton, TRUE, TRUE, 0 );
+ $obutton -> signal_connect( clicked => sub {
+
+# Update undo/redo buffers
+  take_snapshot();
+  renumber($slist, 0, 1, 1);
+
+# fill $pagelist with filenames depending on which radiobutton is active
+  my @pagelist = get_page_index();
+  if (! @pagelist) {
+   show_message_dialog($windowrn, 'error', 'close', $d->get('No page selected'));
+   return;
+  }
+  ocr_page(@pagelist);
+ } );
+
+# Close button
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-close');
+ $hbox -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $windowrn -> hide; } );
+
+ $windowrn -> show_all;
+ return;
+}
+
+
+# helper function to return an array of page numbers given an array of page indices
+
+sub index2page_number {
+ my @index = @_;
+ for (@index) {
+  $_ = ${$slist -> {data}}[$_][0];
+ }
+ return @index;
 }
 
 
