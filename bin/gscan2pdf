@@ -1101,7 +1101,6 @@ else {
 }
 
 $window -> show_all;
-Gtk2 -> main;
 
 
 
@@ -5773,6 +5772,11 @@ sub default2index {
 }
 
 
+{
+ my $start = 1;
+ my $step = 1;
+ my ($spin_buttons, $spin_buttoni);
+
 # Dialog for renumber
 
 sub renumber_dialog {
@@ -5809,7 +5813,6 @@ sub renumber_dialog {
  $vboxx -> pack_start ($hboxxs, FALSE, FALSE, 0);
  my $labelxs = Gtk2::Label -> new ($d->get('Start'));
  $hboxxs -> pack_start($labelxs, FALSE, FALSE, 0);
- my $start = 1;
  $spin_buttons = Gtk2::SpinButton -> new_with_range(1, 99999, 1);
  $hboxxs -> pack_end($spin_buttons, FALSE, FALSE, 0);
 
@@ -5818,8 +5821,7 @@ sub renumber_dialog {
  $vboxx -> pack_start ($hboxi, FALSE, FALSE, 0);
  my $labelxi = Gtk2::Label -> new ($d->get('Increment'));
  $hboxi -> pack_start($labelxi, FALSE, FALSE, 0);
- my $spin_buttoni = Gtk2::SpinButton -> new_with_range(-99, 99, 1);
- my $step = 1;
+ $spin_buttoni = Gtk2::SpinButton -> new_with_range(-99, 99, 1);
  $spin_buttoni -> set_value($step);
  $hboxi -> pack_end($spin_buttoni, FALSE, FALSE, 0);
  $spin_buttoni -> signal_connect ('value-changed' => sub {
@@ -5828,47 +5830,10 @@ sub renumber_dialog {
  });
 
 # Check whether the start page exists
- $spin_buttons -> signal_connect ('value-changed' => sub {
-  if ($SETTING{'Page range'} eq 'selected') {
-
-# Get list of pages not in selection
-   my @selected = get_page_index();
-   my @all = (0..$#{$slist -> {data}});
-
-# Convert the indices to sets of page numbers
-   @selected = index2page_number(@selected);
-   @all = index2page_number(@all);
-   my $selected = Set::IntSpan->new(\@selected);
-   my $all = Set::IntSpan->new(\@all);
-   my $not_selected = $all->diff($selected);
-
-# Create a set from the current settings
-   my $value = $spin_buttons->get_value;
-   my $d = $value - $start;
-   my $step = $spin_buttoni->get_value;
-   my $current = Set::IntSpan->new;
-   $current->insert($value+$step*$_) for (0..$#selected);
-
-# Check for clash with non_selected
-   while($current->min < 1 or $current->intersect($not_selected)->size) {
-    if ($current->min < 1) {
-     $d = 1;
-     $value += $d;
-    }
-    else {
-     $value += $d;
-    }
-    $current->copy;
-    $current->insert($value+$step*$_) for (0..$#selected);
-   }
-
-   $spin_buttons -> set_value($value);
-   $start = $value;
-  }
- });
+ $spin_buttons -> signal_connect ('value-changed' => \&update_renumber_start);
 
 # Setting this here to fire callback running update_start
- $spin_buttons->set_value($start);
+ update_renumber_start();
 
 # HBox for buttons
  my $hbox = Gtk2::HBox -> new;
@@ -5889,7 +5854,6 @@ sub renumber_dialog {
    show_message_dialog($windowrn, 'error', 'close', $d->get('No page selected'));
    return;
   }
-  ocr_page(@pagelist);
  } );
 
 # Close button
@@ -5899,6 +5863,51 @@ sub renumber_dialog {
 
  $windowrn -> show_all;
  return;
+}
+
+
+# Helper function to prevent impossible settings in renumber dialog
+
+sub update_renumber_start {
+ if ($SETTING{'Page range'} eq 'selected') {
+
+# Get list of pages not in selection
+  my @selected = get_page_index();
+  my @all = (0..$#{$slist -> {data}});
+
+# Convert the indices to sets of page numbers
+  @selected = index2page_number(@selected);
+  @all = index2page_number(@all);
+  my $selected = Set::IntSpan->new(\@selected);
+  my $all = Set::IntSpan->new(\@all);
+  my $not_selected = $all->diff($selected);
+
+# Create a set from the current settings
+  my $value = $spin_buttons->get_value;
+  my $d = $value - $start;
+  $d = 1 if (not $d);
+  my $step = $spin_buttoni->get_value;
+  my $current = Set::IntSpan->new;
+  $current->insert($value+$step*$_) for (0..$#selected);
+
+# Check for clash with non_selected
+  while($current->min < 1 or $current->intersect($not_selected)->size) {
+   if ($current->min < 1) {
+    $d = 1;
+    $value += $d;
+   }
+   else {
+    $value += $d;
+   }
+   $current->copy;
+   $current->insert($value+$step*$_) for (0..$#selected);
+  }
+
+  $spin_buttons -> set_value($value);
+  $start = $value;
+ }
+}
+
 }
 
 
@@ -8297,6 +8306,9 @@ sub get_size_from_PNM {
   return 0;
  }
 }
+
+
+Gtk2 -> main;
 
 
 package Gscan2pdf::PageRange;
