@@ -1117,7 +1117,6 @@ sub load_config {
   'window_maximize'    => TRUE,
   'thumb panel'        => 100,
   'Page range'         => 'all',
-  'Page range default' => 'all',
   'l'                  => 0,
   't'                  => 0,
   'layout'             => 'single',
@@ -1993,8 +1992,6 @@ sub add_page_range {
   if (defined $SETTING{'Page range'});
  $pr -> signal_connect (changed => sub {
   $SETTING{'Page range'} = $pr->get_active;
-  $SETTING{'Page range default'} = $SETTING{'Page range'}
-   if ($SETTING{'Page range'} ne 'selected');
  });
  $frame->add ($pr);
  push @prlist, $pr;
@@ -5795,8 +5792,7 @@ sub renumber_dialog {
   if (defined $SETTING{'Page range'});
  $pr -> signal_connect (changed => sub {
   $SETTING{'Page range'} = $pr->get_active;
-  $SETTING{'Page range default'} = $SETTING{'Page range'}
-   if ($SETTING{'Page range'} ne 'selected');
+  update_renumber() if ($SETTING{'Page range'} eq 'selected');
  });
  $frame->add ($pr);
  push @prlist, $pr;
@@ -5824,16 +5820,11 @@ sub renumber_dialog {
  $spin_buttoni = Gtk2::SpinButton -> new_with_range(-99, 99, 1);
  $spin_buttoni -> set_value($step);
  $hboxi -> pack_end($spin_buttoni, FALSE, FALSE, 0);
- $spin_buttoni -> signal_connect ('value-changed' => sub {
-  $spin_buttoni -> set_value(-$step) if ($spin_buttoni -> get_value == 0);
-  $step = $spin_buttoni -> get_value;
- });
 
-# Check whether the start page exists
- $spin_buttons -> signal_connect ('value-changed' => \&update_renumber_start);
-
-# Setting this here to fire callback running update_start
- update_renumber_start();
+# Check whether the settings are possible
+ $spin_buttoni -> signal_connect ('value-changed' => \&update_renumber);
+ $spin_buttons -> signal_connect ('value-changed' => \&update_renumber);
+ update_renumber();
 
 # HBox for buttons
  my $hbox = Gtk2::HBox -> new;
@@ -5868,7 +5859,7 @@ sub renumber_dialog {
 
 # Helper function to prevent impossible settings in renumber dialog
 
-sub update_renumber_start {
+sub update_renumber {
  if ($SETTING{'Page range'} eq 'selected') {
 
 # Get list of pages not in selection
@@ -5883,28 +5874,36 @@ sub update_renumber_start {
   my $not_selected = $all->diff($selected);
 
 # Create a set from the current settings
-  my $value = $spin_buttons->get_value;
-  my $d = $value - $start;
-  $d = 1 if (not $d);
-  my $step = $spin_buttoni->get_value;
+  my $start_new = $spin_buttons->get_value;
+  my $step_new = $spin_buttoni->get_value;
+  my $dstart = $start_new - $start;
+  my $dstep = $step_new - $step;
+  $dstart = 1 if ($dstart == 0 and $dstep == 0);
+  $step_new += $dstep if ($step_new == 0);
   my $current = Set::IntSpan->new;
-  $current->insert($value+$step*$_) for (0..$#selected);
+  $current->insert($start_new+$step_new*$_) for (0..$#selected);
 
 # Check for clash with non_selected
   while($current->min < 1 or $current->intersect($not_selected)->size) {
    if ($current->min < 1) {
-    $d = 1;
-    $value += $d;
+    if ($dstart < 0) {
+     $dstart = 1;
+    }
+    else {
+     $dstep = 1;
+    }
    }
-   else {
-    $value += $d;
-   }
+   $start_new += $dstart;
+   $step_new += $dstep;
+   $step_new += $dstep if ($step_new == 0);
    $current->copy;
-   $current->insert($value+$step*$_) for (0..$#selected);
+   $current->insert($start_new+$step_new*$_) for (0..$#selected);
   }
 
-  $spin_buttons -> set_value($value);
-  $start = $value;
+  $spin_buttons -> set_value($start_new);
+  $spin_buttoni -> set_value($step_new);
+  $start = $start_new;
+  $step = $step_new;
  }
 }
 
