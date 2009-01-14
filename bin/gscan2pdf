@@ -795,9 +795,9 @@ $slist -> {selection_changed_signal} = $slist -> get_selection -> signal_connect
 # If no pages are selected, but some exist, PageRange widgets default to all
  if ($#page == -1 and $#{$slist -> {data}} > -1) {
   $SETTING{'Page range'} = 'all';
- }
- foreach (@prlist) {
-  $_->set_active($SETTING{'Page range'});
+  foreach (@prlist) {
+   $_->set_active($SETTING{'Page range'});
+  }
  }
 });
 
@@ -5774,6 +5774,7 @@ sub default2index {
  my $step = 1;
  my ($spin_buttons, $spin_buttoni);
 
+
 # Dialog for renumber
 
 sub renumber_dialog {
@@ -5834,18 +5835,21 @@ sub renumber_dialog {
  my $obutton = Gtk2::Button -> new($d->get('Renumber'));
  $hbox -> pack_start( $obutton, TRUE, TRUE, 0 );
  $obutton -> signal_connect( clicked => sub {
+  my ($start_new, $step_new, $current, $not_selected, $n) = build_lists();
+  if ($n > -1 and
+              ($current->min < 1 or $current->intersect($not_selected)->size)) {
+   show_message_dialog($windowo, 'error', 'close', $d->get('The current settings would result in duplicate page numbers. Please select new start and increment values.'));
+  }
+  else {
 
 # Update undo/redo buffers
-  take_snapshot();
-  renumber($slist, 0, 1, 1);
-
-# fill $pagelist with filenames depending on which radiobutton is active
-  my @pagelist = get_page_index();
-  if (! @pagelist) {
-   show_message_dialog($windowrn, 'error', 'close', $d->get('No page selected'));
-   return;
+   take_snapshot();
+   $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+   renumber($slist, 0, $start_new, $step_new, $SETTING{'Page range'});
+   manual_sort_by_column ($slist, 0);
+   $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
   }
- } );
+ });
 
 # Close button
  my $cbutton = Gtk2::Button -> new_from_stock('gtk-close');
@@ -5861,30 +5865,15 @@ sub renumber_dialog {
 
 sub update_renumber {
  if ($SETTING{'Page range'} eq 'selected') {
+  my ($start_new, $step_new, $current, $not_selected, $n) = build_lists();
 
-# Get list of pages not in selection
-  my @selected = get_page_index();
-  my @all = (0..$#{$slist -> {data}});
-
-# Convert the indices to sets of page numbers
-  @selected = index2page_number(@selected);
-  @all = index2page_number(@all);
-  my $selected = Set::IntSpan->new(\@selected);
-  my $all = Set::IntSpan->new(\@all);
-  my $not_selected = $all->diff($selected);
-
-# Create a set from the current settings
-  my $start_new = $spin_buttons->get_value;
-  my $step_new = $spin_buttoni->get_value;
   my $dstart = $start_new - $start;
   my $dstep = $step_new - $step;
   $dstart = 1 if ($dstart == 0 and $dstep == 0);
-  $step_new += $dstep if ($step_new == 0);
-  my $current = Set::IntSpan->new;
-  $current->insert($start_new+$step_new*$_) for (0..$#selected);
 
 # Check for clash with non_selected
-  while($current->min < 1 or $current->intersect($not_selected)->size) {
+  while($n > -1 and
+              ($current->min < 1 or $current->intersect($not_selected)->size)) {
    if ($current->min < 1) {
     if ($dstart < 0) {
      $dstart = 1;
@@ -5897,7 +5886,7 @@ sub update_renumber {
    $step_new += $dstep;
    $step_new += $dstep if ($step_new == 0);
    $current->copy;
-   $current->insert($start_new+$step_new*$_) for (0..$#selected);
+   $current->insert($start_new+$step_new*$_) for (0..$n);
   }
 
   $spin_buttons -> set_value($start_new);
@@ -5905,6 +5894,36 @@ sub update_renumber {
   $start = $start_new;
   $step = $step_new;
  }
+ return;
+}
+
+
+# Helper function to build page lists
+
+sub build_lists {
+
+# Get list of pages not in selection
+ my @selected = get_page_index();
+ my @all = (0..$#{$slist -> {data}});
+
+# Convert the indices to sets of page numbers
+ @selected = index2page_number(@selected);
+ @all = index2page_number(@all);
+ my $selected = Set::IntSpan->new(\@selected);
+ my $all = Set::IntSpan->new(\@all);
+ my $not_selected = $all->diff($selected);
+
+# Create a set from the current settings
+ my $start_new = $spin_buttons->get_value;
+ my $step_new = $spin_buttoni->get_value;
+ my $dstart = $start_new - $start;
+ my $dstep = $step_new - $step;
+ $dstart = 1 if ($dstart == 0 and $dstep == 0);
+ $step_new += $dstep if ($step_new == 0);
+ my $current = Set::IntSpan->new;
+ $current->insert($start_new+$step_new*$_) for (0..$#selected);
+
+ return ($start_new, $step_new, $current, $not_selected, $#selected);
 }
 
 }
@@ -5924,33 +5943,32 @@ sub index2page_number {
 # Renumber pages
 
 sub renumber {
- my ($slist, $column, $start, $step) = @_;
-
- $step = 1 if (! defined($step));
+ my ($slist, $column, $start, $step, $selection) = @_;
 
  if (defined($start)) {
-  for (0 .. $#{$slist -> {data}}) {
-   $slist -> {data}[$_][$column] = $_*$step + $start;
+  $step = 1 if (! defined($step));
+  $selection = 'all' if (! defined($selection));
+
+  my @selection;
+  if ($selection eq 'selected') {
+   @selection = $slist -> get_selected_indices;
+  }
+  else {
+   @selection =  0..$#{$slist -> {data}};
+  }
+
+  for (@selection) {
+   $slist -> {data}[$_][$column] = $start;
+   $start += $step;
   }
  }
 
 # If $start and $step are undefined, just make sure that the numbering is
 # ascending.
  else {
-  for (0 .. $#{$slist -> {data}}-1) {
-   if ($slist -> {data}[$_+1][$column] <= $slist -> {data}[$_][$column]) {
-
-# If at the beginning of the list, start from 1.
-    if ($_ == 0) {
-     $slist -> {data}[0][$column] = 1;
-     $slist -> {data}[1][$column] = 2;
-    }
-    else {
-     $slist -> {data}[$_][$column] = $slist -> {data}[$_-1][$column] + 1;
-     $slist -> {data}[$_+1][$column] = $slist -> {data}[$_][$column] + 1
-      if ($slist -> {data}[$_+1][$column] <= $slist -> {data}[$_][$column]);
-    }
-   }
+  for (1 .. $#{$slist -> {data}}) {
+   $slist -> {data}[$_][$column] = $slist -> {data}[$_-1][$column] + 1
+    if ($slist -> {data}[$_][$column] <= $slist -> {data}[$_-1][$column]);
   }
  }
  return;
