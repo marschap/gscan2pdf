@@ -5846,8 +5846,37 @@ sub renumber_dialog {
    take_snapshot();
    $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
    renumber($slist, 0, $start_new, $step_new, $SETTING{'Page range'});
+
+# Note selection before sorting
+   my @page = $slist -> get_selected_indices;
+
+# Convert to page numbers
+   for (@page) {
+    $_ = $slist -> {data}[$_][0];
+   }
+
+# Block selection_changed_signal to prevent its firing changing pagerange to all
+   $slist -> get_selection -> signal_handler_block($slist -> {selection_changed_signal});
+
+# Select new page, deselecting others. This fires the select callback,
+# displaying the page
+   $slist -> get_selection -> unselect_all;
    manual_sort_by_column ($slist, 0);
+   $slist -> get_selection -> signal_handler_unblock($slist -> {selection_changed_signal});
    $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+
+# Convert back to indices
+   for (@page) {
+
+# Due to the sort, must search for new page
+    my $page = 0;
+    ++$page while ($page < $#{$slist -> {data}}
+                                    and $slist -> {data}[$page][0] != $_);
+    $_ = $page;
+   }
+
+# Reselect pages
+   $slist -> select(@page);
   }
  });
 
