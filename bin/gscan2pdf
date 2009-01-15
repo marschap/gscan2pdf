@@ -4720,12 +4720,14 @@ sub add_image {
  push @{$slist -> {data}}, [ $page, 
                              get_pixbuf($filename, $heightt, $widtht),
                              $filename, undef, $resolution ];
+
+# Block selection_changed_signal to prevent its firing changing pagerange to all
+ $slist -> get_selection -> signal_handler_block($slist -> {selection_changed_signal});
+ $slist -> get_selection -> unselect_all;
  manual_sort_by_column ($slist, 0);
+ $slist -> get_selection -> signal_handler_unblock($slist -> {selection_changed_signal});
  $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
-# Select new page, deselecting others. This fires the select callback,
-# displaying the page
- $slist -> get_selection -> unselect_all;
  my @page;
 
 # Due to the sort, must search for new page
