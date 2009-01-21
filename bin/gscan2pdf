@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Move the English comment in the .desktop file to the template,
+#     and write the translations on the fly back to the desktop file.
 #    Use Test::Pod
 #    Remember sort on FileChooser
 #    pass array reference to combobox_from_array, and optionally the default.
@@ -3406,10 +3408,6 @@ sub scan_dialog {
  my $vbox1 = Gtk2::VBox->new;
  $notebook->append_page($vbox1, $d->get('Page Options'));
 
-# Notebook page 2
- my $vbox2 = Gtk2::VBox->new;
- $notebook->append_page($vbox2, $d->get('Scan Options'));
-
 # Frame for # pages
  my $framen = Gtk2::Frame -> new($d->get('# Pages'));
  $vbox1 -> pack_start ($framen, FALSE, FALSE, 0);
@@ -3768,6 +3766,10 @@ sub scan_dialog {
   });
  }
  combobox_set_active($comboboxe, $SETTING{'ocr engine'}, @ocr_engine);
+
+# Notebook page 2
+ my $vbox2 = Gtk2::VBox->new;
+ $notebook->append_page($vbox2, $d->get('Scan Options'));
 
 # Frame for device-dependent options
  my $framed = Gtk2::Frame -> new($d->get('Device-dependent options'));
@@ -8130,6 +8132,7 @@ sub preferences {
  my $label = Gtk2::Label -> new ($d->get('Frontend'));
  $hbox -> pack_start($label, FALSE, FALSE, 0);
  my @frontends = (
+#  [ 'libsane-perl', $d->get('libsane-perl'), $d->get('Scan using the perl bindings for SANE.') ],
   [ 'scanimage', $d->get('scanimage'), $d->get('Scan using the scanimage frontend.') ],
   [ 'scanimage-perl', $d->get('scanimage-perl'), $d->get('Scan using the scanimage-perl frontend.') ],
   [ 'scanadf-perl', $d->get('scanadf-perl'), $d->get('Scan using the scanadf-perl frontend.') ],
