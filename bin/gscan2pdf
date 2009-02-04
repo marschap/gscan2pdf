@@ -533,7 +533,10 @@ if ($SETTING{'restore window'}) {
  $window -> maximize if ($SETTING{'window_maximize'});
 }
 
-$window -> set_default_icon_from_file ("$path/gscan2pdf.svg");
+eval { $window -> set_default_icon_from_file ("$path/gscan2pdf.svg"); };
+if ($@) {
+ warn("Unable to load icon `$path/gscan2pdf.svg': $@");
+}
 
 my $vbox = Gtk2::VBox -> new;
 $window -> add ( $vbox );
@@ -7915,7 +7918,7 @@ sub register_icon {
  my $icon;
  eval { $icon = Gtk2::Gdk::Pixbuf->new_from_file($path); };
  if ($@) {
-  warn("Unable to load icon at `$path': $@");
+  warn("Unable to load icon `$path': $@");
  }
  else {
   my $set = Gtk2::IconSet->new_from_pixbuf($icon);
