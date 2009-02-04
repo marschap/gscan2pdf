@@ -901,6 +901,12 @@ my %pddo = (
                                              'Duplex'  => $d->get('Duplex'),
                                              },
                                  },
+            'adf-mode'        => { string => $d->get('ADF Mode'),
+                                   values => {
+                                             'Simplex' => $d->get('Simplex'),
+                                             'Duplex'  => $d->get('Duplex'),
+                                             },
+                                 },
           );
 
 # Set up hash for unpaper options
