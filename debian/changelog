@@ -2,6 +2,7 @@ gscan2pdf (0.9.28) intrepid; urgency=low
 
   * New upstream release.
     Closes: #506150 (gscan2pdf: pdf creation failes when using LZW compression)
+    Closes: #512758 (Error handling: 'Unknown message: "scanimage: sane_read: Operation was cancelled"')
     New Depends: libset-intspan-perl
 
  -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>  Thu, 11 Feb 2009 21:18:04 +0100

@@ -4420,9 +4420,13 @@ sub scanimage {
      elsif ($line =~ /^$SETTING{frontend}: rounded/) {
       warn substr($line, 0, index($line, "\n")+1);
      }
-     elsif ($line =~ /^.* sane_start: Device busy/) {
+     elsif ($line =~ /^$SETTING{frontend}: sane_start: Device busy/) {
       $dialog -> destroy;
       show_message_dialog($windows, 'error', 'close', $d->get('Device busy'));
+     }
+     elsif ($line =~ /^$SETTING{frontend}: sane_read: Operation was cancelled/) {
+      $dialog -> destroy;
+      show_message_dialog($windows, 'info', 'close', $d->get('Operation cancelled'));
      }
      else {
       my $text = $d->get('Unknown message: ')
@@ -4587,10 +4591,15 @@ sub scanadf {
      elsif ($line =~ /^$SETTING{frontend}: rounded/) {
       warn substr($line, 0, index($line, "\n")+1);
      }
-     elsif ($line =~ /^.* sane_start: Device busy/) {
+     elsif ($line =~ /^$SETTING{frontend}: sane_start: Device busy/) {
       $dialog -> destroy;
       $running = FALSE;
       show_message_dialog($windows, 'error', 'close', $d->get('Device busy'));
+     }
+     elsif ($line =~ /^$SETTING{frontend}: sane_read: Operation was cancelled/) {
+      $dialog -> destroy;
+      $running = FALSE;
+      show_message_dialog($windows, 'info', 'close', $d->get('Operation cancelled'));
      }
      else {
       my $text = $d->get('Unknown message: ')

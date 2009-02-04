@@ -11,6 +11,8 @@
 * + Progress bar for scanadf frontend
 * + Renumber selected pages
 * + adf-mode. Closes 2533708 (Duplex ability not recognized)
+* Catch "sane_read: Operation was cancelled" message
+  Closes Debian bug #512758 (Error handling: 'Unknown message: "scanimage: sane_read: Operation was cancelled"')
 
 
 0.9.27 (11.12.2008):
