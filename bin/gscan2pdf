@@ -4409,7 +4409,8 @@ sub scanimage {
       ;
      }
      elsif ($line =~ /^$SETTING{frontend}: sane_start: Document feeder out of documents/) {
-      ;
+      $dialog -> destroy;
+      show_message_dialog($windows, 'info', 'close', $d->get('Document feeder out of documents'));
      }
      elsif ($cancel
              and ($line =~ /^$SETTING{frontend}: sane_start: Error during device I\/O/
