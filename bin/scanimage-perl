@@ -8,7 +8,7 @@ use Getopt::Long qw(:config no_ignore_case pass_through);
 use File::Basename;
 use IO::Handle;
 
-#$Sane::DEBUG = 1;
+$Sane::DEBUG = 1;
 
 my (%options, @window_val_user, @window_option, @window_val,
     @window, $num_dev_options, $device, $format, $devname, %option_number);
@@ -584,7 +584,7 @@ sub scan_it {
    "gray", "RGB", "red", "green", "blue"
  );
  my $total_bytes = 0;
- my $hang_over = -1;
+# my $hang_over = -1;
 
  my $parm;
  {do { # extra braces to get last to work.
