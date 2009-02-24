@@ -5331,7 +5331,7 @@ sub scan_pages {
    return FALSE;
   }
 #  else {
-#   my $rotate = $1 % 2 ? $rfacing : $rreverse;
+#   my $rotate = $n % 2 ? $rfacing : $rreverse;
 #   post_process_scan($index, $rotate, $unpaper, $ocr);
 #  }
 
@@ -6761,7 +6761,7 @@ sub scan_options {
   }
 
 # Worry about the multiple value options later
-if ($opt->{max_values} == 1) {
+if ($opt->{max_values} < 2) {
 
 # HBox for option
   my $hbox = Gtk2::HBox -> new;
@@ -6769,20 +6769,32 @@ if ($opt->{max_values} == 1) {
   $hbox->set_sensitive(FALSE) if ($opt->{cap} & SANE_CAP_INACTIVE);
 
 # Label
-  my $label = Gtk2::Label -> new ($opt->{title});
-  $hbox -> pack_start ($label, FALSE, FALSE, 0);
+  if ($opt->{type} != SANE_TYPE_BUTTON) {
+   my $label = Gtk2::Label -> new ($opt->{title});
+   $hbox -> pack_start ($label, FALSE, FALSE, 0);
+  }
 
 # Widget
-  my $widget;
-  my $val = $device->get_option ($i);
+  my ($widget, $val);
+  $val = $device->get_option ($i) if ($opt->{type} != SANE_TYPE_BUTTON);
 
 # CheckButton
   if ($opt->{type} == SANE_TYPE_BOOL) {
    $widget = Gtk2::CheckButton -> new;
    $widget->set_active(TRUE) if ($val);
    $widget->{option_number} = $i;
-   $widget -> signal_connect (toggled => sub {
+   $widget -> {signal} = $widget -> signal_connect (toggled => sub {
     my $val = $widget -> get_active;
+    my $info = $device->set_option ($widget->{option_number}, $val);
+    update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+   });
+  }
+
+# Button
+  elsif ($opt->{type} == SANE_TYPE_BUTTON) {
+   $widget = Gtk2::Button -> new($opt->{title});
+   $widget->{option_number} = $i;
+   $widget -> {signal} = $widget -> signal_connect (clicked => sub {
     my $info = $device->set_option ($widget->{option_number}, $val);
     update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
    });
@@ -6794,16 +6806,23 @@ if ($opt->{max_values} == 1) {
    $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
    $widget = Gtk2::SpinButton -> new_with_range($opt->{constraint}{min},
                                                     $opt->{constraint}{max}, $step);
+   $widget->{option_number} = $i;
 
 # Set the default
    $widget -> set_value($val)
     if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+   $widget -> {signal} = $widget -> signal_connect ('value-changed' => sub {
+    my $val = $widget -> get_value;
+    my $info = $device->set_option ($widget->{option_number}, $val);
+    update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+   });
   }
 
 # ComboBox
   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
                       or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
    $widget = Gtk2::ComboBox -> new_text;
+   $widget->{option_number} = $i;
    my $index = 0;
    foreach (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
     $widget->append_text($opt->{constraint}[$i]);
@@ -6812,20 +6831,36 @@ if ($opt->{max_values} == 1) {
 
 # Set the default
    $widget -> set_active($index) if (defined $index);
+   $widget -> {signal} = $widget -> signal_connect (changed => sub {
+    my $val = $widget -> get_active_text;
+    my $info = $device->set_option ($widget->{option_number}, $val);
+    update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+   });
   }
 
 # Entry
   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
    $widget = Gtk2::Entry -> new;
+   $widget->{option_number} = $i;
 
 # Set the default
-   $widget -> set_value($val)
+   $widget -> set_text($val)
     if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+   $widget -> {signal} = $widget->signal_connect (activate => sub {
+    my $val = $widget -> get_text;
+    my $info = $device->set_option ($widget->{option_number}, $val);
+    update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+   });
   }
 
 if (defined $widget) {
   $options[$i] = $widget;
-  $hbox -> pack_end ($widget, FALSE, FALSE, 0);
+  if ($opt->{type} == SANE_TYPE_BUTTON) {
+   $hbox -> pack_end ($widget, TRUE, TRUE, 0);
+  }
+  else {
+   $hbox -> pack_end ($widget, FALSE, FALSE, 0);
+  }
   $tooltips -> set_tip ($widget, $opt->{desc});
 }
 else {
@@ -6856,6 +6891,8 @@ sub update_options2 {
   my $opt = $device->get_option_descriptor ($i);
   my $val = $device->get_option ($i);
   my $widget = $options[$i];
+
+  $widget -> signal_handler_block($widget -> {signal}) if (defined $widget);
 
 # Worry about the multiple value options later
 if ($opt->{max_values} == 1) {
@@ -6895,11 +6932,12 @@ if ($opt->{max_values} == 1) {
 
 # Entry
   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
-   $widget -> set_value($val)
+   $widget -> set_text($val)
     if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
   }
 
 }
+  $widget -> signal_handler_unblock($widget -> {signal}) if (defined $widget);
  }
  return;
 }
