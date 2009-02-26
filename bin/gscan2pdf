@@ -3433,6 +3433,7 @@ sub scan_dialog {
 
 # Notebook to collate options
  my $notebook = Gtk2::Notebook->new;
+ $notebook->set_scrollable (TRUE);
  $vbox->pack_start($notebook, TRUE, TRUE, 0);
 
 # Notebook page 1
@@ -6750,8 +6751,6 @@ sub scan_options {
  for (my $i = 1; $i < $num_dev_options; ++$i) {
   my $opt = $device->get_option_descriptor ($i);
 
-#  next if (! ($opt->{cap} & SANE_CAP_SOFT_SELECT));
-
 # Notebook page for group
   if ($opt->{type} == SANE_TYPE_GROUP or not defined($vbox)) {
    $vbox = Gtk2::VBox->new;
@@ -6760,13 +6759,16 @@ sub scan_options {
    next;
   }
 
+  next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
+
 # Worry about the multiple value options later
 if ($opt->{max_values} < 2) {
 
 # HBox for option
   my $hbox = Gtk2::HBox -> new;
-  $vbox -> pack_start ($hbox, TRUE, TRUE, 0);
-  $hbox->set_sensitive(FALSE) if ($opt->{cap} & SANE_CAP_INACTIVE);
+  $vbox -> pack_start ($hbox, FALSE, TRUE, 0);
+  $hbox->set_sensitive(FALSE)
+   if ($opt->{cap} & SANE_CAP_INACTIVE or not $opt->{cap} & SANE_CAP_SOFT_SELECT);
 
 # Label
   if ($opt->{type} != SANE_TYPE_BUTTON) {
@@ -6888,56 +6890,59 @@ sub update_options2 {
  }
 
  for (my $i = 1; $i < $num_dev_options; ++$i) {
-  my $opt = $device->get_option_descriptor ($i);
-  my $val = $device->get_option ($i);
   my $widget = $options[$i];
-
-  $widget -> signal_handler_block($widget -> {signal}) if (defined $widget);
+  
+  if (defined $widget) { # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
+   my $opt = $device->get_option_descriptor ($i);
+   my $val = $device->get_option ($i);
+   $widget -> signal_handler_block($widget -> {signal});
 
 # Worry about the multiple value options later
-if ($opt->{max_values} == 1) {
+if ($opt->{max_values} < 2) {
 
 # HBox for option
-  my $hbox = $widget->parent;
-  $hbox->set_sensitive(not $opt->{cap} & SANE_CAP_INACTIVE);
+   my $hbox = $widget->parent;
+   $hbox->set_sensitive((not $opt->{cap} & SANE_CAP_INACTIVE)
+                         and $opt->{cap} & SANE_CAP_SOFT_SELECT);
 
 # CheckButton
-  if ($opt->{type} == SANE_TYPE_BOOL) {
-   $widget->set_active($val)
-    if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-  }
+   if ($opt->{type} == SANE_TYPE_BOOL) {
+    $widget->set_active($val)
+     if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+   }
 
 # SpinButton
-  elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
-   my ($step, $page) = $widget->get_increments;
-   $step = 1;
-   $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
-   $widget->set_range($opt->{constraint}{min}, $opt->{constraint}{max});
-   $widget->set_increments($step, $page);
-   $widget -> set_value($val)
-    if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-  }
+   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
+    my ($step, $page) = $widget->get_increments;
+    $step = 1;
+    $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
+    $widget->set_range($opt->{constraint}{min}, $opt->{constraint}{max});
+    $widget->set_increments($step, $page);
+    $widget -> set_value($val)
+     if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+   }
 
 # ComboBox
-  elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
-                      or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
-   $widget->get_model->clear;
-   my $index = 0;
-   foreach (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
-    $widget->append_text($opt->{constraint}[$i]);
-    $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
+   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+                       or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
+    $widget->get_model->clear;
+    my $index = 0;
+    foreach (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
+     $widget->append_text($opt->{constraint}[$i]);
+     $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
+    }
+    $widget -> set_active($index) if (defined $index);
    }
-   $widget -> set_active($index) if (defined $index);
-  }
 
 # Entry
-  elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
-   $widget -> set_text($val)
-    if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-  }
+   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
+    $widget -> set_text($val)
+     if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+   }
 
 }
-  $widget -> signal_handler_unblock($widget -> {signal}) if (defined $widget);
+   $widget -> signal_handler_unblock($widget -> {signal});
+  }
  }
  return;
 }
