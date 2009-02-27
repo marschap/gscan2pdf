@@ -18,6 +18,7 @@
 # To do
 #    Move the English comment in the .desktop file to the template,
 #     and write the translations on the fly back to the desktop file.
+#    look at scan insert before/after page/start/end
 #    Use Test::Pod
 #    Remember sort on FileChooser
 #    pass array reference to combobox_from_array, and optionally the default.
@@ -9431,7 +9432,13 @@ sub preferences {
   $windowr -> hide;
   if ($SETTING{frontend} ne $frontends[$combob->get_active][0]) {
    $SETTING{frontend} = $frontends[$combob->get_active][0];
-   rescan_options($vboxd, $device[$combobd -> get_active]) if (defined $windows);
+   if ($SETTING{frontend} eq 'libsane-perl') {
+    $windows->destroy if (defined $windows);
+   }
+   else {
+    $windows2->destroy if (defined $windows2);
+    rescan_options($vboxd, $device[$combobd -> get_active]) if (defined $windows);
+   }
   }
   $SETTING{'scan prefix'} = $preentry -> get_text;
   $SETTING{'cache options'} = $cbc->get_active;
