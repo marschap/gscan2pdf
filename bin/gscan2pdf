@@ -191,7 +191,7 @@ if (defined $locale) {
 
 @model = @device if (@device);
 for (@device) {
- push @device_list, {name => $_, vendor => $_, model => ''};
+ push @device_list, {name => $_, label => $_};
 }
 
 # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
@@ -4610,26 +4610,28 @@ sub get_devices2 {
   else {
    my @old_device_list = @device_list;
    @device_list = $thread{$sane_thread}{thread}->join;
-   print "Sane->get_devices returned: ", Dumper(\@device_list);
+   print "Sane->get_devices returned: ", Dumper(\@device_list) if $debug;
    if (@device_list == 0) {
     $windows2->destroy;
     undef $windows2;
     show_message_dialog($window, 'error', 'close', $d->get('No devices found'));
     return FALSE;
    }
+   parse_device_list2();
    if (@old_device_list) { # Update combobox
     my $i = 0;
     while ($i < @old_device_list) {
-     if (@device_list and $i < @device_list and $old_device_list[$i]->{model} ne $device_list[$i]->{model}) {
-      $combobd->insert_text($i, "$device_list[$i]->{vendor} $device_list[$i]->{model}");
+     if (@device_list and $i < @device_list and $old_device_list[$i]->{label} ne $device_list[$i]->{label}) {
       $combobd->remove_text($i);
+      $combobd->insert_text($i, $device_list[$i]->{label});
      }
      $i++
     }
     while ($i < @device_list) {
-     $combobd->append_text("$device_list[$i]->{vendor} $device_list[$i]->{model}");
+     $combobd->insert_text($i, $device_list[$i]->{label});
      $i++;
     }
+    $pbar -> destroy;
     set_device2();
     $combobd->show;
     $labeld->show;
@@ -4738,6 +4740,38 @@ sub parse_device_list {
 }
 
 
+sub parse_device_list2 {
+
+# Note any duplicate device names and delete if necessary
+ my %seen;
+ my $i = 0;
+ while ($i < @device_list) {
+  $seen{ $device_list[$i]->{name} }++;
+  if ($seen{$device_list[$i]->{name}} > 1) {
+   splice @device_list, $i, 1;
+  }
+  else {
+   $i++;
+  }
+ }
+
+# Note any duplicate model names and add the device if necessary
+ undef %seen;
+ for ( @device_list ) {
+  $seen{ $_->{model} }++;
+ }
+ for ( @device_list ) {
+  $_->{label} = "$_->{vendor} $_->{model}";
+  $_->{label} .= " on $_->{name}" if ($seen{$_->{model}} > 1);
+ }
+
+# If device not set by config and there is a default device, then set it
+ $SETTING{device} = $ENV{'SANE_DEFAULT_DEVICE'}
+  if (not defined($SETTING{device}) and defined($ENV{'SANE_DEFAULT_DEVICE'}));
+ return;
+}
+
+
 sub populate_device_list {
  my ($hboxd) = @_;
 
@@ -4808,8 +4842,8 @@ sub populate_device_list2 {
  $combobd = Gtk2::ComboBox->new_text;
 
 # read the model names into the combobox
- foreach (@device_list) {
-  $combobd->append_text ("$_->{vendor} $_->{model}");
+ for (@device_list) {
+  $combobd->append_text ($_->{label});
  }
  $combobd->append_text ($d->get('Rescan for devices')) if (! $test);
 
