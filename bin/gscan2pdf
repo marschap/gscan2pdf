@@ -3002,6 +3002,7 @@ sub save_image {
     my $cmd = "convert $filelist[0] -density $slist->{data}[$pagelist[0]][4] '$filename'";
     print "$cmd\n" if $debug;
     if (! system ($cmd)) {
+     $windowi -> hide if defined $windowi;
      mark_pages(@pagelist);
     }
     else {
@@ -3019,6 +3020,7 @@ sub save_image {
       show_message_dialog($window, 'error', 'close', $d->get('Error saving image'));
      }
      else {
+      $windowi -> hide if defined $windowi;
       mark_pages(@pagelist);
      }
     }
