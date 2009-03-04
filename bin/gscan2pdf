@@ -7981,6 +7981,8 @@ sub gimp {
  }
  else {
   (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => ".$format");
+  copy($slist->{data}[$pages[0]][2], $filename) or 
+   show_message_dialog($window, 'error', 'close', $d->get('Error copying page'));
  }
  $slist->{data}[$pages[0]][2] = $filename;
  system("gimp $filename");
