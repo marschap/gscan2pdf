@@ -97,6 +97,7 @@ use warnings;
 use strict;
 use forks;
 use forks::shared;
+use Thread::Semaphore;
 use Gscan2pdf;
 use Gtk2 -init;
 use Gtk2::ImageView;
@@ -117,6 +118,7 @@ use Sane;
 use PDF::API2;
 use Getopt::Long;
 use Set::IntSpan;                    # For page numbering issues
+use Storable qw(freeze thaw);        # to pass big data structures between threads
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -282,13 +284,26 @@ $SETTING{version} = $version;
 
 
 # Initialise threads
-my (%shash, %thread);
+my (%shash, %thread, $sdevice);
 #share(%shash); #will work only for first level keys 
-my $numworkers = 1;
+my $numthreads = 1;
 my $sane_thread = 1; # Always use thread 1 for SANE
-foreach my $thread (1..$numworkers){
- share ($shash{$thread}{go});
- share ($shash{$thread}{data});
+share($sdevice);
+foreach (1..$numthreads) {
+ $shash{$_}{semaphore} = Thread::Semaphore->new(0);
+ share ($shash{$_}{semaphore});
+ share ($shash{$_}{go});
+ share ($shash{$_}{process});
+ share ($shash{$_}{data});
+ share ($shash{$_}{die});
+ $thread{$_} = threads->new(sub {
+  while (TRUE) {
+   $shash{$_}{semaphore}->down;
+   last if $shash{$_}{die};
+   eval $shash{$_}{process};
+   warn("Error running process: $@") if ($@);
+  }
+ });
 }
 
 
@@ -557,9 +572,7 @@ if ($SETTING{'restore window'}) {
 }
 
 eval { $window -> set_default_icon_from_file ("$path/gscan2pdf.svg"); };
-if ($@) {
- warn("Unable to load icon `$path/gscan2pdf.svg': $@");
-}
+warn("Unable to load icon `$path/gscan2pdf.svg': $@") if ($@);
 
 my $vbox = Gtk2::VBox -> new;
 $window -> add ( $vbox );
@@ -4597,12 +4610,12 @@ sub get_devices2 {
  $hboxd->pack_start ($pbar, TRUE, TRUE, 0);
  $pbar->show;
 
- $shash{$sane_thread}{go} = 1;
- $thread{$sane_thread}{thread} = threads->new({'context' => 'list'}, sub {
-  my @device_list = Sane->get_devices;
+ $shash{$sane_thread}{process} = '
+  $shash{$sane_thread}{data} = Sane->get_devices;
   $shash{$sane_thread}{go} = 0;
-  return (@device_list);
- });
+ ';
+ $shash{$sane_thread}{go} = 1;
+ $shash{$sane_thread}{semaphore}->up;
 
 # Timer will run until callback returns false 
  my $timer = Glib::Timeout->add (100, sub {
@@ -4612,7 +4625,7 @@ sub get_devices2 {
   }
   else {
    my @old_device_list = @device_list;
-   @device_list = $thread{$sane_thread}{thread}->join;
+   @device_list = $shash{$sane_thread}{data};
    print "Sane->get_devices returned: ", Dumper(\@device_list) if $debug;
    if (@device_list == 0) {
     $windows2->destroy;
@@ -4865,16 +4878,7 @@ sub populate_device_list2 {
    delete $SETTING{mode} if ($run);
    $run = TRUE;
    
-   $device_list[$combobd -> get_active]->{object} = Sane::Device->open($device_list[$combobd -> get_active]->{name});
-   if ($Sane::STATUS != SANE_STATUS_GOOD) {
-    show_message_dialog(
-     $windows2, 'error', 'close', sprintf($d->get("Error opening device: %s"), $Sane::STATUS)
-    );
-    warn "Error opening device: $Sane::STATUS\n";
-   }
-   else {
-    scan_options($notebook, $device_list[$combobd -> get_active]->{object});
-   }
+   scan_options($notebook, $device_list[$combobd -> get_active]);
   }
  });
  $tooltips -> set_tip ($combobd, $d->get('Sets the device to be used for the scan'));
@@ -6757,158 +6761,202 @@ sub scan_options {
 # Ghost the scan button whilst options being updated
  $sbutton->set_sensitive(FALSE) if (defined $sbutton);
 
+# guess where unpaper has been called from
+ my $dialog = Gtk2::Dialog -> new ($d->get('Updating options')."...", $windows2,
+                                           'modal',
+                                           'gtk-cancel' => 'cancel');
+
 # Set up ProgressBar
-# my $pbar = Gtk2::ProgressBar->new;
-# $pbar -> set_pulse_step(.1);
-# $pbar->set_text ($d->get('Updating options'));
-# $vboxd->pack_start ($pbar, FALSE, FALSE, 0);
-# $vboxd -> show_all;
-# my $running = TRUE;
+ my $pbar = Gtk2::ProgressBar->new;
+ $pbar -> set_pulse_step(.1);
+ $pbar->set_text ($d->get('Updating options'));
+ $dialog -> vbox -> add($pbar);
 
-# Timer will run until callback returns false 
-# my $timer = Glib::Timeout->add (100, sub { if ($running) {
-#                                             $pbar->pulse;
-#                                             return TRUE;
-#                                            }
-#                                            else {
-#                                             return FALSE;
-#                                            } });
+# Ensure that the dialog box is destroyed when the user responds.
+ $dialog -> signal_connect (response => sub {
+  $_[0] -> destroy;
+  $rotating = FALSE;
+  kill_subs();
+ });
+ $dialog -> show_all;
 
-# Array of widgets
- my @options;
+ $sdevice = $device;
+ $shash{$sane_thread}{process} = '
+  if (not defined($sdevice->{object})) {
 
-# We got a device, find out how many options it has:
- my $num_dev_options = $device->get_option(0);
- if ($Sane::STATUS != SANE_STATUS_GOOD) {
-  warn "Error: unable to determine option count\n";
-  exit (1);
- }
+# open the device in the sane thread
+   $sdevice->{object} = Sane::Device->open($sdevice->{name});
 
- my ($group, $vbox);
- for (my $i = 1; $i < $num_dev_options; ++$i) {
-  my $opt = $device->get_option_descriptor ($i);
-
-# Notebook page for group
-  if ($opt->{type} == SANE_TYPE_GROUP or not defined($vbox)) {
-   $vbox = Gtk2::VBox->new;
-   $group = $opt->{type} == SANE_TYPE_GROUP ? $d->get($opt->{title}) : $d->get('Scan Options');
-   $notebook->append_page($vbox, $group);
-   next;
+   if ($Sane::STATUS != SANE_STATUS_GOOD) {
+    warn "Error opening device: $Sane::STATUS\n";
+    return;
+   }
   }
 
-  next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
+  my $device = $sdevice->{object};
+
+# Array of widgets
+  my @options;
+
+# We got a device, find out how many options it has:
+  my $num_dev_options = $device->get_option(0);
+  if ($Sane::STATUS != SANE_STATUS_GOOD) {
+   warn "Error: unable to determine option count\n";
+   return;
+  }
+  for (my $i = 1; $i < $num_dev_options; ++$i) {
+   my $opt = $device->get_option_descriptor ($i);
+   $options[$i] = $opt;
+   next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
+
+   $opt->{val} = $device->get_option ($i) if ($opt->{type} != SANE_TYPE_BUTTON);
+  }
+  $shash{$sane_thread}{data} = freeze(\@options);
+  $shash{$sane_thread}{go} = 0;
+ ';
+ $shash{$sane_thread}{go} = 1;
+ $shash{$sane_thread}{semaphore}->up;
+
+# Timer will run until callback returns false 
+ my $timer = Glib::Timeout->add (100, sub {
+  if ($shash{$sane_thread}{go}) {
+   $pbar->pulse;
+   return TRUE;
+  }
+  else {
+   my @options = @{thaw($shash{$sane_thread}{data})};
+   print "Sane->get_option_descriptor returned: ", Dumper(\@options) if $debug;
+
+   my ($group, $vbox);
+   my $num_dev_options = $#options+1;
+   for (my $i = 1; $i < $num_dev_options; ++$i) {
+    my $opt = $options[$i];
+
+# Notebook page for group
+    if ($opt->{type} == SANE_TYPE_GROUP or not defined($vbox)) {
+     $vbox = Gtk2::VBox->new;
+     $group = $opt->{type} == SANE_TYPE_GROUP ? $d->get($opt->{title}) : $d->get('Scan Options');
+     $notebook->append_page($vbox, $group);
+     next;
+    }
+
+    next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
 
 # Worry about the multiple value options later
 if ($opt->{max_values} < 2) {
 
 # HBox for option
-  my $hbox = Gtk2::HBox -> new;
-  $vbox -> pack_start ($hbox, FALSE, TRUE, 0);
-  $hbox->set_sensitive(FALSE)
-   if ($opt->{cap} & SANE_CAP_INACTIVE or not $opt->{cap} & SANE_CAP_SOFT_SELECT);
+    my $hbox = Gtk2::HBox -> new;
+    $vbox -> pack_start ($hbox, FALSE, TRUE, 0);
+    $hbox->set_sensitive(FALSE)
+     if ($opt->{cap} & SANE_CAP_INACTIVE or not $opt->{cap} & SANE_CAP_SOFT_SELECT);
 
 # Label
-  if ($opt->{type} != SANE_TYPE_BUTTON) {
-   my $label = Gtk2::Label -> new ($opt->{title});
-   $hbox -> pack_start ($label, FALSE, FALSE, 0);
-  }
+    if ($opt->{type} != SANE_TYPE_BUTTON) {
+     my $label = Gtk2::Label -> new ($opt->{title});
+     $hbox -> pack_start ($label, FALSE, FALSE, 0);
+    }
 
 # Widget
-  my ($widget, $val);
-  $val = $device->get_option ($i) if ($opt->{type} != SANE_TYPE_BUTTON);
+    my ($widget, $val);
+    $val = $opt->{val};
 
 # CheckButton
-  if ($opt->{type} == SANE_TYPE_BOOL) {
-   $widget = Gtk2::CheckButton -> new;
-   $widget->set_active(TRUE) if ($val);
-   $widget->{option_number} = $i;
-   $widget -> {signal} = $widget -> signal_connect (toggled => sub {
-    my $val = $widget -> get_active;
-    my $info = $device->set_option ($widget->{option_number}, $val);
-    update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
-   });
-  }
+    if ($opt->{type} == SANE_TYPE_BOOL) {
+     $widget = Gtk2::CheckButton -> new;
+     $widget->set_active(TRUE) if ($val);
+     $widget->{option_number} = $i;
+     $widget -> {signal} = $widget -> signal_connect (toggled => sub {
+      my $val = $widget -> get_active;
+      my $info = $device->set_option ($widget->{option_number}, $val);
+      update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+     });
+    }
 
 # Button
-  elsif ($opt->{type} == SANE_TYPE_BUTTON) {
-   $widget = Gtk2::Button -> new($opt->{title});
-   $widget->{option_number} = $i;
-   $widget -> {signal} = $widget -> signal_connect (clicked => sub {
-    my $info = $device->set_option ($widget->{option_number}, $val);
-    update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
-   });
-  }
+    elsif ($opt->{type} == SANE_TYPE_BUTTON) {
+     $widget = Gtk2::Button -> new($opt->{title});
+     $widget->{option_number} = $i;
+     $widget -> {signal} = $widget -> signal_connect (clicked => sub {
+      my $info = $device->set_option ($widget->{option_number}, $val);
+      update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+     });
+    }
 
 # SpinButton
-  elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
-   my $step = 1;
-   $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
-   $widget = Gtk2::SpinButton -> new_with_range($opt->{constraint}{min},
-                                                    $opt->{constraint}{max}, $step);
-   $widget->{option_number} = $i;
+    elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
+     my $step = 1;
+     $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
+     $widget = Gtk2::SpinButton -> new_with_range($opt->{constraint}{min},
+                                                  $opt->{constraint}{max}, $step);
+     $widget->{option_number} = $i;
 
 # Set the default
-   $widget -> set_value($val)
-    if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-   $widget -> {signal} = $widget -> signal_connect ('value-changed' => sub {
-    my $val = $widget -> get_value;
-    my $info = $device->set_option ($widget->{option_number}, $val);
-    update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
-   });
-  }
+     $widget -> set_value($val)
+      if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+     $widget -> {signal} = $widget -> signal_connect ('value-changed' => sub {
+      my $val = $widget -> get_value;
+      my $info = $device->set_option ($widget->{option_number}, $val);
+      update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+     });
+    }
 
 # ComboBox
-  elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+    elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
                       or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
-   $widget = Gtk2::ComboBox -> new_text;
-   $widget->{option_number} = $i;
-   my $index = 0;
-   foreach (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
-    $widget->append_text($opt->{constraint}[$i]);
-    $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
-   }
+     $widget = Gtk2::ComboBox -> new_text;
+     $widget->{option_number} = $i;
+     my $index = 0;
+     foreach (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
+      $widget->append_text($opt->{constraint}[$i]);
+      $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
+     }
 
 # Set the default
-   $widget -> set_active($index) if (defined $index);
-   $widget -> {signal} = $widget -> signal_connect (changed => sub {
-    my $val = $widget -> get_active_text;
-    my $info = $device->set_option ($widget->{option_number}, $val);
-    update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
-   });
-  }
+     $widget -> set_active($index) if (defined $index);
+     $widget -> {signal} = $widget -> signal_connect (changed => sub {
+      my $val = $widget -> get_active_text;
+      my $info = $device->set_option ($widget->{option_number}, $val);
+      update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+     });
+    }
 
 # Entry
-  elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
-   $widget = Gtk2::Entry -> new;
-   $widget->{option_number} = $i;
+    elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
+     $widget = Gtk2::Entry -> new;
+     $widget->{option_number} = $i;
 
 # Set the default
-   $widget -> set_text($val)
-    if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-   $widget -> {signal} = $widget->signal_connect (activate => sub {
-    my $val = $widget -> get_text;
-    my $info = $device->set_option ($widget->{option_number}, $val);
-    update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
-   });
-  }
+     $widget -> set_text($val)
+      if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+     $widget -> {signal} = $widget->signal_connect (activate => sub {
+      my $val = $widget -> get_text;
+      my $info = $device->set_option ($widget->{option_number}, $val);
+      update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+     });
+    }
 
 if (defined $widget) {
-  $options[$i] = $widget;
-  if ($opt->{type} == SANE_TYPE_BUTTON) {
-   $hbox -> pack_end ($widget, TRUE, TRUE, 0);
-  }
-  else {
-   $hbox -> pack_end ($widget, FALSE, FALSE, 0);
-  }
-  $tooltips -> set_tip ($widget, $opt->{desc});
+    $options[$i] = $widget;
+    if ($opt->{type} == SANE_TYPE_BUTTON) {
+     $hbox -> pack_end ($widget, TRUE, TRUE, 0);
+    }
+    else {
+     $hbox -> pack_end ($widget, FALSE, FALSE, 0);
+    }
+    $tooltips -> set_tip ($widget, $opt->{desc});
 }
 else {
 print "Unknown type $opt->{type}\n";
 }
 }
- }
+   }
+   $windows2 -> show_all;
+   $sbutton->set_sensitive(TRUE);
+   $dialog -> destroy;
+  }
+ });
 
- $sbutton->set_sensitive(TRUE);
  return;
 }
 
@@ -8864,10 +8912,11 @@ sub quit {
  $conf->save_file($rc, \%SETTING);
 
 # kill all threads
-# foreach my $thread (1..$numworkers){
-#  $shash{$thread}{die} = 1;
-#  $thread{$thread}{thread}->join;
-# }
+ for (1..$numthreads) {
+  $shash{$_}{die} = 1;
+  $shash{$_}{semaphore}->up;
+  $thread{$_}->join;
+ }
 
  kill_subs();
  return TRUE;
@@ -9207,24 +9256,6 @@ sub kill_subs {
 
 # 15 = SIGTERM
  kill 15, $_ foreach (keys %helperTag);
- return;
-}
-
-
-# Worker thread for fork
-
-sub work {
- my $thread = shift;
-
- while (not $shash{$thread}{die}) {
-  if ($shash{$thread}{go}) {
-   $shash{$thread}{process}->();
-   $shash{$thread}{go} = 0; #turn off self before returning       
-  }
-  else {
-   sleep 1;
-  }
- }
  return;
 }
 
