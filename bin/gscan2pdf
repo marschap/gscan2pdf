@@ -6761,12 +6761,10 @@ sub scan_options {
 # Ghost the scan button whilst options being updated
  $sbutton->set_sensitive(FALSE) if (defined $sbutton);
 
-# guess where unpaper has been called from
+# Set up ProgressBar
  my $dialog = Gtk2::Dialog -> new ($d->get('Updating options')."...", $windows2,
                                            'modal',
                                            'gtk-cancel' => 'cancel');
-
-# Set up ProgressBar
  my $pbar = Gtk2::ProgressBar->new;
  $pbar -> set_pulse_step(.1);
  $pbar->set_text ($d->get('Updating options'));
@@ -6794,8 +6792,6 @@ sub scan_options {
   }
 
   my $device = $sdevice->{object};
-
-# Array of widgets
   my @options;
 
 # We got a device, find out how many options it has:
@@ -6827,7 +6823,7 @@ sub scan_options {
    my @options = @{thaw($shash{$sane_thread}{data})};
    print "Sane->get_option_descriptor returned: ", Dumper(\@options) if $debug;
 
-   my ($group, $vbox);
+   my ($group, $vbox, @widgets);
    my $num_dev_options = $#options+1;
    for (my $i = 1; $i < $num_dev_options; ++$i) {
     my $opt = $options[$i];
@@ -6868,8 +6864,7 @@ if ($opt->{max_values} < 2) {
      $widget->{option_number} = $i;
      $widget -> {signal} = $widget -> signal_connect (toggled => sub {
       my $val = $widget -> get_active;
-      my $info = $device->set_option ($widget->{option_number}, $val);
-      update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+      set_option ($device, $widget->{option_number}, $val, @widgets);
      });
     }
 
@@ -6878,8 +6873,7 @@ if ($opt->{max_values} < 2) {
      $widget = Gtk2::Button -> new($opt->{title});
      $widget->{option_number} = $i;
      $widget -> {signal} = $widget -> signal_connect (clicked => sub {
-      my $info = $device->set_option ($widget->{option_number}, $val);
-      update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+      set_option ($device, $widget->{option_number}, $val, @widgets);
      });
     }
 
@@ -6896,8 +6890,7 @@ if ($opt->{max_values} < 2) {
       if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
      $widget -> {signal} = $widget -> signal_connect ('value-changed' => sub {
       my $val = $widget -> get_value;
-      my $info = $device->set_option ($widget->{option_number}, $val);
-      update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+      set_option ($device, $widget->{option_number}, $val, @widgets);
      });
     }
 
@@ -6916,8 +6909,7 @@ if ($opt->{max_values} < 2) {
      $widget -> set_active($index) if (defined $index);
      $widget -> {signal} = $widget -> signal_connect (changed => sub {
       my $val = $widget -> get_active_text;
-      my $info = $device->set_option ($widget->{option_number}, $val);
-      update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+      set_option ($device, $widget->{option_number}, $val, @widgets);
      });
     }
 
@@ -6931,13 +6923,12 @@ if ($opt->{max_values} < 2) {
       if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
      $widget -> {signal} = $widget->signal_connect (activate => sub {
       my $val = $widget -> get_text;
-      my $info = $device->set_option ($widget->{option_number}, $val);
-      update_options2($device, @options) if ($info & SANE_INFO_RELOAD_OPTIONS);
+      set_option ($device, $widget->{option_number}, $val, @widgets);
      });
     }
 
 if (defined $widget) {
-    $options[$i] = $widget;
+    $widgets[$i] = $widget;
     if ($opt->{type} == SANE_TYPE_BUTTON) {
      $hbox -> pack_end ($widget, TRUE, TRUE, 0);
     }
@@ -6961,74 +6952,138 @@ print "Unknown type $opt->{type}\n";
 }
 
 
-# walk the widget tree and update them from the hash
+# Update the sane option in the thread
+# If necessary, reload the options,
+# and walking the widget tree, update the widgets
 
-sub update_options2 {
+sub set_option {
+ my ($device, $i, $val, @widgets) = @_;
 
- my ($device, @options) = @_;
+print "widgets ", Dumper(\@widgets);
+
+# Set up ProgressBar
+ my $dialog = Gtk2::Dialog -> new ($d->get('Updating options')."...", $windows2,
+                                           'modal',
+                                           'gtk-cancel' => 'cancel');
+ my $pbar = Gtk2::ProgressBar->new;
+ $pbar -> set_pulse_step(.1);
+ $pbar->set_text ($d->get('Updating options'));
+ $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+ $dialog -> signal_connect (response => sub {
+  $_[0] -> destroy;
+  $rotating = FALSE;
+  kill_subs();
+ });
+ $dialog -> show_all;
+
+ $sdevice = $device;
+ my @data = ($i, $val);
+ $shash{$sane_thread}{data} = freeze(\@data);
+ $shash{$sane_thread}{process} = '
+  my $device = $sdevice->{object};
+  my ($i, $val) = @{thaw($shash{$sane_thread}{data})};
+  undef $shash{$sane_thread}{data};
+  my $info = $device->set_option ($i, $val);
+  if ($info & SANE_INFO_RELOAD_OPTIONS) {
+   my @options;
 
 # We got a device, find out how many options it has:
- my $num_dev_options = $device->get_option(0);
- if ($Sane::STATUS != SANE_STATUS_GOOD) {
-  warn "Error: unable to determine option count\n";
-  exit (1);
- }
+   my $num_dev_options = $device->get_option(0);
+   if ($Sane::STATUS != SANE_STATUS_GOOD) {
+    warn "Error: unable to determine option count\n";
+    return;
+   }
+   for (my $i = 1; $i < $num_dev_options; ++$i) {
+    my $opt = $device->get_option_descriptor ($i);
+    $options[$i] = $opt;
+    next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
 
- for (my $i = 1; $i < $num_dev_options; ++$i) {
-  my $widget = $options[$i];
+    $opt->{val} = $device->get_option ($i) if ($opt->{type} != SANE_TYPE_BUTTON);
+   }
+   $shash{$sane_thread}{data} = freeze(\@options);
+  }
+  $shash{$sane_thread}{go} = 0;
+ ';
+ $shash{$sane_thread}{go} = 1;
+ $shash{$sane_thread}{semaphore}->up;
+
+# Timer will run until callback returns false 
+ my $timer = Glib::Timeout->add (100, sub {
+  if ($shash{$sane_thread}{go}) {
+   $pbar->pulse;
+   return TRUE;
+  }
+  else {
+   if (defined $shash{$sane_thread}{data}) {
+
+# walk the widget tree and update them from the hash
+    my @options = @{thaw($shash{$sane_thread}{data})};
+    print "Sane->get_option_descriptor returned: ", Dumper(\@options) if $debug;
+
+    my ($group, $vbox);
+    my $num_dev_options = $#options+1;
+    for (my $i = 1; $i < $num_dev_options; ++$i) {
+     my $widget = $widgets[$i];
   
-  if (defined $widget) { # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
-   my $opt = $device->get_option_descriptor ($i);
-   my $val = $device->get_option ($i);
-   $widget -> signal_handler_block($widget -> {signal});
+     if (defined $widget) { # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
+      my $opt = $options[$i];
+      my $val = $opt->{val};
+      $widget -> signal_handler_block($widget -> {signal});
 
 # Worry about the multiple value options later
 if ($opt->{max_values} < 2) {
 
 # HBox for option
-   my $hbox = $widget->parent;
-   $hbox->set_sensitive((not $opt->{cap} & SANE_CAP_INACTIVE)
-                         and $opt->{cap} & SANE_CAP_SOFT_SELECT);
+      my $hbox = $widget->parent;
+      $hbox->set_sensitive((not $opt->{cap} & SANE_CAP_INACTIVE)
+                            and $opt->{cap} & SANE_CAP_SOFT_SELECT);
+printf "$opt->{name} SANE_CAP_INACTIVE %d SANE_CAP_SOFT_SELECT %d\n", $opt->{cap} & SANE_CAP_INACTIVE, $opt->{cap} & SANE_CAP_SOFT_SELECT;
 
 # CheckButton
-   if ($opt->{type} == SANE_TYPE_BOOL) {
-    $widget->set_active($val)
-     if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-   }
+      if ($opt->{type} == SANE_TYPE_BOOL) {
+       $widget->set_active($val)
+        if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+      }
 
 # SpinButton
-   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
-    my ($step, $page) = $widget->get_increments;
-    $step = 1;
-    $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
-    $widget->set_range($opt->{constraint}{min}, $opt->{constraint}{max});
-    $widget->set_increments($step, $page);
-    $widget -> set_value($val)
-     if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-   }
+      elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
+       my ($step, $page) = $widget->get_increments;
+       $step = 1;
+       $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
+       $widget->set_range($opt->{constraint}{min}, $opt->{constraint}{max});
+       $widget->set_increments($step, $page);
+       $widget -> set_value($val)
+        if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+      }
 
 # ComboBox
-   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
-                       or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
-    $widget->get_model->clear;
-    my $index = 0;
-    foreach (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
-     $widget->append_text($opt->{constraint}[$i]);
-     $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
-    }
-    $widget -> set_active($index) if (defined $index);
-   }
+      elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+                          or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
+       $widget->get_model->clear;
+       my $index = 0;
+       foreach (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
+        $widget->append_text($opt->{constraint}[$i]);
+        $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
+       }
+       $widget -> set_active($index) if (defined $index);
+      }
 
 # Entry
-   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
-    $widget -> set_text($val)
-     if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-   }
+      elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
+       $widget -> set_text($val)
+        if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+      }
 
 }
-   $widget -> signal_handler_unblock($widget -> {signal});
+      $widget -> signal_handler_unblock($widget -> {signal});
+     }
+    }
+   }
+   $dialog -> destroy;
   }
- }
+ });
  return;
 }
 
