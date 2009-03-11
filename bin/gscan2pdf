@@ -4611,7 +4611,8 @@ sub get_devices2 {
  $pbar->show;
 
  $shash{$sane_thread}{process} = '
-  $shash{$sane_thread}{data} = Sane->get_devices;
+  my @devices = Sane->get_devices;
+  $shash{$sane_thread}{data} = freeze(\@devices);
   $shash{$sane_thread}{go} = 0;
  ';
  $shash{$sane_thread}{go} = 1;
@@ -4625,7 +4626,7 @@ sub get_devices2 {
   }
   else {
    my @old_device_list = @device_list;
-   @device_list = $shash{$sane_thread}{data};
+   @device_list = @{thaw($shash{$sane_thread}{data})};
    print "Sane->get_devices returned: ", Dumper(\@device_list) if $debug;
    if (@device_list == 0) {
     $windows2->destroy;
@@ -4873,11 +4874,6 @@ sub populate_device_list2 {
    get_devices2($hboxd);
   }
   else {
-
-# only delete the mode setting if switching devices, not on first run
-   delete $SETTING{mode} if ($run);
-   $run = TRUE;
-   
    scan_options($notebook, $device_list[$combobd -> get_active]);
   }
  });
@@ -6758,6 +6754,11 @@ sub default2index {
 sub scan_options {
  my ($notebook, $device) = @_;
 
+# Remove any existing pages
+ while ($notebook->get_n_pages > 1) {
+  $notebook->remove_page (-1);
+ }
+
 # Ghost the scan button whilst options being updated
  $sbutton->set_sensitive(FALSE) if (defined $sbutton);
 
@@ -6958,8 +6959,6 @@ print "Unknown type $opt->{type}\n";
 
 sub set_option {
  my ($device, $i, $val, @widgets) = @_;
-
-print "widgets ", Dumper(\@widgets);
 
 # Set up ProgressBar
  my $dialog = Gtk2::Dialog -> new ($d->get('Updating options')."...", $windows2,
