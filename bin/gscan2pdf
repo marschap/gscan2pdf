@@ -284,19 +284,22 @@ $SETTING{version} = $version;
 
 
 # Initialise threads
-my (%shash, %thread, $sdevice);
+my (%shash, %thread);
 #share(%shash); #will work only for first level keys 
 my $numthreads = 1;
 my $sane_thread = 1; # Always use thread 1 for SANE
-share($sdevice);
 foreach (1..$numthreads) {
  $shash{$_}{semaphore} = Thread::Semaphore->new(0);
  share ($shash{$_}{semaphore});
+ share ($shash{$_}{device});
+ share ($shash{$_}{status});
  share ($shash{$_}{go});
  share ($shash{$_}{process});
  share ($shash{$_}{data});
  share ($shash{$_}{die});
  $thread{$_} = threads->new(sub {
+  my $device; # variable local to thread for storing sane device object
+  my $fh;     # variable local to thread for storing file handle
   while (TRUE) {
    $shash{$_}{semaphore}->down;
    last if $shash{$_}{die};
@@ -4571,8 +4574,7 @@ sub scan_dialog2 {
    $SETTING{'ocr language'} = $tesslang[$comboboxl -> get_active]->[0]
     if ($SETTING{'ocr engine'} eq 'tesseract');
   }
-  scan_pages($device_list[$combobd -> get_active]->{object}, $npages, $start, $step,
-                $rotate_facing, $rotate_reverse,
+  scan_pages($npages, $start, $step, $rotate_facing, $rotate_reverse,
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'});
  } );
 
@@ -5325,68 +5327,110 @@ sub scanadf {
 
 
 sub scan_pages {
- my ($device, $npages, $start, $step,
+ my ($npages, $start, $step,
                           $rotate_facing, $rotate_reverse, $unpaper, $ocr) = @_;
  my $n = $start;
  my $format = "out%d.pnm";
 
- printf STDERR
-            "Scanning %d pages, incrementing by %d, numbering from %d\n",
-            $npages, $step, $start;
+# Set up ProgressBar
+ my $dialog = Gtk2::Dialog -> new ($d->get('Scanning...'), $windows2,
+                                           'modal',
+                                           'gtk-cancel' => 'cancel');
+ my $pbar = Gtk2::ProgressBar->new;
+ $dialog -> vbox -> add($pbar);
 
- {do { # extra braces to get last to work.
-  my ($path, $fh);
-  $path = sprintf $format, $n;
+# Ensure that the dialog box is destroyed when the user responds.
+ $dialog -> signal_connect (response => sub {
+  $_[0] -> destroy;
+  $rotating = FALSE;
+  kill_subs();
+ });
+ $dialog -> show_all;
 
-  printf STDERR "Scanning page %d\n", $n;
+# Timer will run until callback returns false 
+ $shash{$sane_thread}{go} = 0;
+ my $timer = Glib::Timeout->add (100, sub {
+  if ($shash{$sane_thread}{go} == 0) {
+   my $path = sprintf $format, $n;
+   $shash{$sane_thread}{data} = $path;
+   $shash{$sane_thread}{process} = '
+    $device->start;
+    $shash{$sane_thread}{status} = $Sane::STATUS+0;
+    if ($Sane::STATUS != SANE_STATUS_GOOD) {
+#print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
+     last;
+    }
 
-  $device->start;
-  if ($Sane::STATUS != SANE_STATUS_GOOD) {
-   print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
-   last;
+    my $path = $shash{$sane_thread}{data};
+    if (not open($fh, ">", $path)) {
+print STDERR "cannot open $path\n";
+     $device->cancel;
+     $shash{$sane_thread}{status} = SANE_STATUS_ACCESS_DENIED;
+     last;
+    }
+    scan_page($device, $fh);
+    $shash{$sane_thread}{status} = $Sane::STATUS+0;
+    close $fh;
+#printf STDERR "Scanned page %d.", $n;
+printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
+    $shash{$sane_thread}{status} = $Sane::STATUS+0;
+    $shash{$sane_thread}{go} = 2;
+   ';
+   $shash{$sane_thread}{semaphore}->up;
+   return TRUE;
   }
-
-  if (not open($fh, '>', $path)) {
-   print STDERR "cannot open $path\n";
-   $device->cancel;
-   exit SANE_STATUS_ACCESS_DENIED;
-  }
-
-  scan_page($device, $fh);
-  close $fh;
-  printf STDERR "Scanned page %d.", $n;
-  printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
-
-# If the scan can't be loaded then blow the scanning dialog away and
-# show an error
-  my $index = import_scan ("out$n.pnm", $n, 'Portable anymap',
-                                                    $SETTING{resolution}, TRUE);
-  if ($index == -1) {
-#   $dialog -> destroy;
-   show_message_dialog(
-    $windows, 'error', 'close', $d->get('Unable to load image')
-   );
-   return FALSE;
-  }
-#  else {
-#   my $rotate = $n % 2 ? $rfacing : $rreverse;
-#   post_process_scan($index, $rotate, $unpaper, $ocr);
-#  }
-
-  if ($Sane::STATUS == SANE_STATUS_GOOD) {}
-  elsif ($Sane::STATUS == SANE_STATUS_EOF) {
-   $Sane::_status = SANE_STATUS_GOOD;
+  elsif ($shash{$sane_thread}{go} == 1) {
+   $pbar->set_text (printf $d->get("Scanning page %d of %d\n"), $n, $npages);
+   $pbar->set_fraction (($n-1)/$npages);
+   return TRUE;
   }
   else {
-   close ($fh);
-   unlink ($path);
-   last;
-  }
-  $n += $step;
- }
- while ((($npages == -1 or --$npages)) and SANE_STATUS_GOOD == $Sane::STATUS);}
+  
+# If the scan can't be loaded then blow the scanning dialog away and
+# show an error
+   my $index = import_scan ("out$n.pnm", $n, 'Portable anymap',
+                                                    $SETTING{resolution}, TRUE);
+   if ($index == -1) {
+    $dialog -> destroy;
+    show_message_dialog(
+     $windows, 'error', 'close', $d->get('Unable to load image')
+    );
+    return FALSE;
+   }
+#   else {
+#    my $rotate = $n % 2 ? $rfacing : $rreverse;
+#    post_process_scan($index, $rotate, $unpaper, $ocr);
+#   }
 
- $device->cancel;
+   if ($shash{$sane_thread}{status} == SANE_STATUS_GOOD) {}
+   elsif ($shash{$sane_thread}{status} == SANE_STATUS_EOF) {
+    $shash{$sane_thread}{status} = SANE_STATUS_GOOD;
+   }
+   else {
+    $shash{$sane_thread}{data} = $path;
+    $shash{$sane_thread}{process} = '
+     my $path = $shash{$sane_thread}{data};
+     close ($fh);
+     unlink ($path);
+     $shash{$sane_thread}{go} = 0;
+    ';
+    $shash{$sane_thread}{go} = 1;
+    $shash{$sane_thread}{semaphore}->up;
+   }
+   $n += $step;
+
+   unless ((($npages == -1 or --$npages)) and SANE_STATUS_GOOD == $shash{$sane_thread}{status}) {
+    $shash{$sane_thread}{process} = '
+     $device->cancel;
+     $shash{$sane_thread}{go} = 0;
+    ';
+    $shash{$sane_thread}{go} = 1;
+    $shash{$sane_thread}{semaphore}->up;
+    $dialog -> destroy;
+    return FALSE;
+   }
+  }
+ });
 }
 
 
@@ -6779,12 +6823,12 @@ sub scan_options {
  });
  $dialog -> show_all;
 
- $sdevice = $device;
+ $shash{$sane_thread}{device} = $device->{name};
  $shash{$sane_thread}{process} = '
-  if (not defined($sdevice->{object})) {
+  if (not defined($device)) {
 
 # open the device in the sane thread
-   $sdevice->{object} = Sane::Device->open($sdevice->{name});
+   $device = Sane::Device->open($shash{$sane_thread}{device});
 
    if ($Sane::STATUS != SANE_STATUS_GOOD) {
     warn "Error opening device: $Sane::STATUS\n";
@@ -6792,7 +6836,6 @@ sub scan_options {
    }
   }
 
-  my $device = $sdevice->{object};
   my @options;
 
 # We got a device, find out how many options it has:
@@ -6977,11 +7020,9 @@ sub set_option {
  });
  $dialog -> show_all;
 
- $sdevice = $device;
  my @data = ($i, $val);
  $shash{$sane_thread}{data} = freeze(\@data);
  $shash{$sane_thread}{process} = '
-  my $device = $sdevice->{object};
   my ($i, $val) = @{thaw($shash{$sane_thread}{data})};
   undef $shash{$sane_thread}{data};
   my $info = $device->set_option ($i, $val);
@@ -7038,7 +7079,6 @@ if ($opt->{max_values} < 2) {
       my $hbox = $widget->parent;
       $hbox->set_sensitive((not $opt->{cap} & SANE_CAP_INACTIVE)
                             and $opt->{cap} & SANE_CAP_SOFT_SELECT);
-printf "$opt->{name} SANE_CAP_INACTIVE %d SANE_CAP_SOFT_SELECT %d\n", $opt->{cap} & SANE_CAP_INACTIVE, $opt->{cap} & SANE_CAP_SOFT_SELECT;
 
 # CheckButton
       if ($opt->{type} == SANE_TYPE_BOOL) {
