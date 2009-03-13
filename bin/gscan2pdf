@@ -16,6 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    window too tall after options have been found
+#    progress bar not working at all during scan
+#    extended page numbering active by default?
+#    move scan messages to only on debug
+#    add page sizes
+#    add profiles
 #    Move the English comment in the .desktop file to the template,
 #     and write the translations on the fly back to the desktop file.
 #    look at scan insert before/after page/start/end
@@ -4650,7 +4656,6 @@ sub get_devices2 {
      $combobd->insert_text($i, $device_list[$i]->{label});
      $i++;
     }
-    $pbar -> destroy;
     set_device2();
     $combobd->show;
     $labeld->show;
@@ -4658,6 +4663,7 @@ sub get_devices2 {
    else { # New combobox
     populate_device_list2($hboxd);
    }
+   $pbar -> destroy;
   }
  });
  return;
