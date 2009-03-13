@@ -16,11 +16,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    window too tall after options have been found
+#    fix order of pager size widget in manual mode
+#    scanning doesn't work after fork()
 #    progress bar not working at all during scan
+#    window too tall after options have been found
 #    move scan messages to only on debug
-#    add page sizes
 #    add profiles
+#    support multiple value options
+#    add units
 #    Move the English comment in the .desktop file to the template,
 #     and write the translations on the fly back to the desktop file.
 #    look at scan insert before/after page/start/end
@@ -6150,6 +6153,16 @@ sub parse_options {
  $l = $hash{l}{max} if (defined $hash{l}{max});
  $t = $hash{t}{max} if (defined $hash{t}{max});
 
+# Set device-dependent options
+# Dummy entries so that something is returned:
+ %ddo = (
+          'Paper size' => { string => $d->get('Paper size'), },
+          'x'          => { string => $d->get('Width') },
+          'y'          => { string => $d->get('Height') },
+          'l'          => { string => $d->get('Left') },
+          't'          => { string => $d->get('Top') },
+        );
+
  if (defined($x) and defined($y)) {
 
 # HBox for paper size
@@ -6157,7 +6170,7 @@ sub parse_options {
   $vboxd -> pack_start ($hboxp, FALSE, FALSE, 0);
 
 # Paper list
-  my $labelp = Gtk2::Label -> new ($d->get('Paper size'));
+  my $labelp = Gtk2::Label -> new ($ddo{'Paper size'}{string});
   $hboxp -> pack_start ($labelp, FALSE, FALSE, 0);
 
   $combobp = Gtk2::ComboBox -> new_text;
@@ -6170,16 +6183,6 @@ sub parse_options {
   $vboxm = Gtk2::VBox -> new;
   $vboxd -> pack_start ($vboxm, FALSE, FALSE, 0);
  }
-
-# Set device-dependent options
-# Dummy entries so that something is returned:
- %ddo = (
-          'Paper size' => { string => $d->get('Paper size'), },
-          'x'          => { string => $d->get('Width') },
-          'y'          => { string => $d->get('Height') },
-          'l'          => { string => $d->get('Left') },
-          't'          => { string => $d->get('Top') },
-        );
 
 # Add remaining options
  foreach my $option (keys %hash) {
@@ -6871,6 +6874,7 @@ sub scan_options {
 
    my ($group, $vbox, @widgets);
    my $num_dev_options = $#options+1;
+   my %geometry;
    for (my $i = 1; $i < $num_dev_options; ++$i) {
     my $opt = $options[$i];
 
@@ -6886,6 +6890,23 @@ sub scan_options {
 
 # Worry about the multiple value options later
 if ($opt->{max_values} < 2) {
+
+    my $hboxp;
+    if (($opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT)
+       and ($opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL)
+       and (($opt->{name} eq SANE_NAME_SCAN_TL_X) or 
+            ($opt->{name} eq SANE_NAME_SCAN_TL_Y) or
+            ($opt->{name} eq SANE_NAME_SCAN_BR_X) or
+            ($opt->{name} eq SANE_NAME_SCAN_BR_Y))) {
+     $geometry{$opt->{name}}{i} = $i;
+
+# Define HBox for paper size here
+# so that it can be put before first geometry option
+     if (not defined($hboxp)) {
+      $hboxp = Gtk2::HBox -> new;
+      $vbox -> pack_start ($hboxp, FALSE, FALSE, 0);
+     }
+    }
 
 # HBox for option
     my $hbox = Gtk2::HBox -> new;
@@ -6938,6 +6959,10 @@ if ($opt->{max_values} < 2) {
       my $val = $widget -> get_value;
       set_option ($device, $widget->{option_number}, $val, @widgets);
      });
+
+# Note the max if geometry
+     $geometry{$opt->{name}}{max} = $opt->{constraint}{max}
+      if (defined($geometry{$opt->{name}}));
     }
 
 # ComboBox
@@ -6982,6 +7007,73 @@ if (defined $widget) {
      $hbox -> pack_end ($widget, FALSE, FALSE, 0);
     }
     $tooltips -> set_tip ($widget, $opt->{desc});
+
+# Look-up to hide/show the box if necessary
+    $geometry{$opt->{name}}{box} = $hbox
+     if (defined($geometry{$opt->{name}}));
+
+    if (defined($geometry{scalar(SANE_NAME_SCAN_BR_X)})
+        and defined($geometry{scalar(SANE_NAME_SCAN_BR_Y)})
+        and defined($geometry{scalar(SANE_NAME_SCAN_TL_X)})
+        and defined($geometry{scalar(SANE_NAME_SCAN_TL_Y)})
+        and not defined($combobp)) {
+
+# Paper list
+     my $label = Gtk2::Label -> new ($d->get('Paper size'));
+     $hboxp -> pack_start ($label, FALSE, FALSE, 0);
+
+     $combobp = Gtk2::ComboBox -> new_text;
+     $combobp -> append_text ($d->get('Manual'));
+     $combobp -> append_text ($d->get('Edit'));
+     $tooltips -> set_tip ($combobp, $d->get('Selects or edits the paper size'));
+     $hboxp -> pack_end ($combobp, FALSE, FALSE, 0);
+     $combobp -> signal_connect (changed => sub {
+      if ($combobp -> get_active_text eq $d->get('Edit')) {
+       edit_paper($combobp, $geometry{scalar(SANE_NAME_SCAN_BR_X)}{max},
+                            $geometry{scalar(SANE_NAME_SCAN_BR_Y)}{max},
+                            $geometry{scalar(SANE_NAME_SCAN_TL_X)}{max},
+#                            $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max}, $h, $w);
+                            $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max});
+      }
+      elsif ($combobp -> get_active_text eq $d->get('Manual')) {
+       for (( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+              SANE_NAME_SCAN_BR_X, SANE_NAME_SCAN_BR_Y )) {
+        $geometry{$_}{box}->show_all if (defined $geometry{$_});
+       }
+      }
+      else {
+       my $paper = $combobp -> get_active_text;
+       $widgets[$geometry{scalar(SANE_NAME_SCAN_TL_X)}{i}]->set_value(
+        $SETTING{Paper}{$paper}{l}
+       ) if (defined $geometry{scalar(SANE_NAME_SCAN_TL_X)});
+       $widgets[$geometry{scalar(SANE_NAME_SCAN_TL_Y)}{i}]->set_value(
+        $SETTING{Paper}{$paper}{t}
+       ) if (defined $geometry{scalar(SANE_NAME_SCAN_TL_Y)});
+       $widgets[$geometry{scalar(SANE_NAME_SCAN_BR_X)}{i}]->set_value(
+        $SETTING{Paper}{$paper}{x}+$SETTING{Paper}{$paper}{l}
+       );
+       $widgets[$geometry{scalar(SANE_NAME_SCAN_BR_Y)}{i}]->set_value(
+        $SETTING{Paper}{$paper}{y}+$SETTING{Paper}{$paper}{t}
+       );
+#       if (defined($spin_buttonh) and defined($spin_buttonw)) {
+#        $spin_buttonw -> set_value($SETTING{Paper}{$paper}{x});
+#        $spin_buttonh -> set_value($SETTING{Paper}{$paper}{y});
+#       }
+       Glib::Idle->add (sub {
+        for (( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+               SANE_NAME_SCAN_BR_X, SANE_NAME_SCAN_BR_Y )) {
+         $geometry{$_}{box}->hide_all if (defined $geometry{$_});
+        }
+       });
+      }
+     });
+     add_paper($combobp, $geometry{scalar(SANE_NAME_SCAN_BR_X)}{max},
+                         $geometry{scalar(SANE_NAME_SCAN_BR_Y)}{max},
+                         $geometry{scalar(SANE_NAME_SCAN_TL_X)}{max},
+#                         $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max}, $h, $w);
+                         $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max});
+    }
+
 }
 else {
 print "Unknown type $opt->{type}\n";
@@ -6991,6 +7083,11 @@ print "Unknown type $opt->{type}\n";
    for (my $i = 1; $i < $notebook->get_n_pages; $i++) {
     $notebook->get_nth_page ($i)->show_all;
    }
+
+# Give the GUI a chance to catch up before resizing.
+   Glib::Idle->add (sub { $windows2 -> resize(100, 100); });
+   set_paper($combobp);
+
    $sbutton->set_sensitive(TRUE);
    $dialog -> destroy;
   }
@@ -7106,7 +7203,7 @@ if ($opt->{max_values} < 2) {
                           or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
        $widget->get_model->clear;
        my $index = 0;
-       foreach (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
+       for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
         $widget->append_text($opt->{constraint}[$i]);
         $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
        }
@@ -7257,7 +7354,7 @@ sub update_renumber {
   $dstart = 1 if ($dstart == 0 and $dstep == 0);
 
 # Check for clash with non_selected
-  while($n > -1 and
+  while ($n > -1 and
               ($current->min < 1 or $current->intersect($not_selected)->size)) {
    if ($current->min < 1) {
     if ($dstart < 0) {
