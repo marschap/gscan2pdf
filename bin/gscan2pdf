@@ -313,6 +313,7 @@ foreach (1..$numthreads) {
    last if $shash{$_}{die};
    eval $shash{$_}{process};
    warn("Error running process: $@") if ($@);
+print "$shash{$_}{process}\n" if ($@);
   }
  });
 }
@@ -6830,15 +6831,21 @@ sub scan_options {
 
  $shash{$sane_thread}{device} = $device->{name};
  $shash{$sane_thread}{process} = '
-  if (not defined($device)) {
-
-# open the device in the sane thread
-   $device = Sane::Device->open($shash{$sane_thread}{device});
+  if (defined($device)) {
+   undef $device; # close the handle
 
    if ($Sane::STATUS != SANE_STATUS_GOOD) {
-    warn "Error opening device: $Sane::STATUS\n";
+    warn "Error closing device: $Sane::STATUS\n";
     return;
    }
+  }
+
+# open the device in the sane thread
+  $device = Sane::Device->open($shash{$sane_thread}{device});
+
+  if ($Sane::STATUS != SANE_STATUS_GOOD) {
+   warn "Error opening device: $Sane::STATUS\n";
+   return;
   }
 
   my @options;
