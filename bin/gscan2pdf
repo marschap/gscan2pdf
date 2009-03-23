@@ -6833,14 +6833,7 @@ sub scan_options {
 
  $shash{$sane_thread}{device} = $device->{name};
  $shash{$sane_thread}{process} = '
-  if (defined($device)) {
-   undef $device; # close the handle
-
-   if ($Sane::STATUS != SANE_STATUS_GOOD) {
-    warn "Error closing device: $Sane::STATUS\n";
-    return;
-   }
-  }
+  undef $device if (defined($device)); # close the handle
 
 # open the device in the sane thread
   $device = Sane::Device->open($shash{$sane_thread}{device});
