@@ -941,8 +941,10 @@ my %pddo = (
                                  },
             'pagewidth'       => { string => $d->get('Page Width') },
             'pageheight'      => { string => $d->get('Page Height') },
-            'page-width'       => { string => $d->get('Page Width') },
-            'page-height'      => { string => $d->get('Page Height') },
+            'page-width'      => { string => $d->get('Page Width') },
+            'page-height'     => { string => $d->get('Page Height') },
+            'overscan-top'    => { string => $d->get('Top Overscan') },
+            'overscan-bottom' => { string => $d->get('Bottom Overscan') },
             'adf_mode'        => { string => $d->get('ADF Mode'),
                                    values => {
                                              'Simplex' => $d->get('Simplex'),
