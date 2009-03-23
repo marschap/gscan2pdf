@@ -6877,6 +6877,7 @@ sub scan_options {
    my ($group, $vbox, @widgets);
    my $num_dev_options = $#options+1;
    my %geometry;
+   undef $combobp; # So we don't carry over from one device to another
    for (my $i = 1; $i < $num_dev_options; ++$i) {
     my $opt = $options[$i];
 
