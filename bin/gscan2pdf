@@ -7141,8 +7141,8 @@ sub set_option {
 
  {
   my @data = ($i, $val);
-  $shash{$sane_thread}{data} = freeze(\@data);
   lock($shash{$sane_thread}{process});
+  $shash{$sane_thread}{data} = freeze(\@data);
   $shash{$sane_thread}{process} = '
    my ($i, $val) = @{thaw($shash{$sane_thread}{data})};
    undef $shash{$sane_thread}{data};
