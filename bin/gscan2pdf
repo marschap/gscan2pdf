@@ -103,7 +103,7 @@
 
 use warnings;
 use strict;
-use forks;
+use forks 0.31;                     # Anything earlier has the clone bug
 use forks::shared;
 use Thread::Semaphore;
 use Gscan2pdf;
