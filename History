@@ -20,6 +20,8 @@
 * Fix bug preventing non-PNM being passed to GIMP.
   Closes Debian bug #517913 (gscan2pdf: Tools -> Gimp broken)
 * + overscan-(top|bottom) options
+* Set batch-scan to yes if ADF used, or #pages is all or > 1
+  Closes Ubuntu bug #340099 (Scan all pages option doesn't stop when all pages are done)
 
 
 0.9.27 (11.12.2008):
