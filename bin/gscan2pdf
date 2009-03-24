@@ -312,6 +312,7 @@ foreach (1..$numthreads) {
   while (TRUE) {
    $shash{$_}{semaphore}->down;
    last if $shash{$_}{die};
+   lock($shash{$_}{process});
    eval $shash{$_}{process};
    warn("Error running process: $@") if ($@);
 print "$shash{$_}{process}\n" if ($@);
@@ -4627,13 +4628,16 @@ sub get_devices2 {
  $hboxd->pack_start ($pbar, TRUE, TRUE, 0);
  $pbar->show;
 
- $shash{$sane_thread}{process} = '
-  my @devices = Sane->get_devices;
-  $shash{$sane_thread}{data} = freeze(\@devices);
-  $shash{$sane_thread}{go} = 0;
- ';
- $shash{$sane_thread}{go} = 1;
- $shash{$sane_thread}{semaphore}->up;
+ {
+  lock($shash{$sane_thread}{process});
+  $shash{$sane_thread}{process} = '
+   my @devices = Sane->get_devices;
+   $shash{$sane_thread}{data} = freeze(\@devices);
+   $shash{$sane_thread}{go} = 0;
+  ';
+  $shash{$sane_thread}{go} = 1;
+  $shash{$sane_thread}{semaphore}->up;
+ }
 
 # Timer will run until callback returns false 
  my $timer = Glib::Timeout->add (100, sub {
@@ -5372,7 +5376,7 @@ sub scan_pages {
     $device->start;
     $shash{$sane_thread}{status} = $Sane::STATUS+0;
     if ($Sane::STATUS != SANE_STATUS_GOOD) {
-#print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
+print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
      last;
     }
 
@@ -7135,34 +7139,37 @@ sub set_option {
  });
  $dialog -> show_all;
 
- my @data = ($i, $val);
- $shash{$sane_thread}{data} = freeze(\@data);
- $shash{$sane_thread}{process} = '
-  my ($i, $val) = @{thaw($shash{$sane_thread}{data})};
-  undef $shash{$sane_thread}{data};
-  my $info = $device->set_option ($i, $val);
-  if ($info & SANE_INFO_RELOAD_OPTIONS) {
-   my @options;
+ {
+  my @data = ($i, $val);
+  $shash{$sane_thread}{data} = freeze(\@data);
+  lock($shash{$sane_thread}{process});
+  $shash{$sane_thread}{process} = '
+   my ($i, $val) = @{thaw($shash{$sane_thread}{data})};
+   undef $shash{$sane_thread}{data};
+   my $info = $device->set_option ($i, $val);
+   if ($info & SANE_INFO_RELOAD_OPTIONS) {
+    my @options;
 
 # We got a device, find out how many options it has:
-   my $num_dev_options = $device->get_option(0);
-   if ($Sane::STATUS != SANE_STATUS_GOOD) {
-    warn "Error: unable to determine option count\n";
-    return;
-   }
-   for (my $i = 1; $i < $num_dev_options; ++$i) {
-    my $opt = $device->get_option_descriptor ($i);
-    $options[$i] = $opt;
-    next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
+    my $num_dev_options = $device->get_option(0);
+    if ($Sane::STATUS != SANE_STATUS_GOOD) {
+     warn "Error: unable to determine option count\n";
+     return;
+    }
+    for (my $i = 1; $i < $num_dev_options; ++$i) {
+     my $opt = $device->get_option_descriptor ($i);
+     $options[$i] = $opt;
+     next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
 
-    $opt->{val} = $device->get_option ($i) if ($opt->{type} != SANE_TYPE_BUTTON);
+     $opt->{val} = $device->get_option ($i) if ($opt->{type} != SANE_TYPE_BUTTON);
+    }
+    $shash{$sane_thread}{data} = freeze(\@options);
    }
-   $shash{$sane_thread}{data} = freeze(\@options);
-  }
-  $shash{$sane_thread}{go} = 0;
- ';
- $shash{$sane_thread}{go} = 1;
- $shash{$sane_thread}{semaphore}->up;
+   $shash{$sane_thread}{go} = 0;
+  ';
+  $shash{$sane_thread}{go} = 1;
+  $shash{$sane_thread}{semaphore}->up;
+ }
 
 # Timer will run until callback returns false 
  my $timer = Glib::Timeout->add (100, sub {
