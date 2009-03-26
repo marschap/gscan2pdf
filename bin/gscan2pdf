@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Fix default device.
+#    Cache options
 #    fix order of pager size widget in manual mode
 #    scanning doesn't work after fork()
 #    progress bar not working at all during scan
@@ -103,7 +105,7 @@
 
 use warnings;
 use strict;
-use forks 0.31;                     # Anything earlier has the clone bug
+use forks;
 use forks::shared;
 use Thread::Semaphore;
 use Gscan2pdf;
@@ -5366,40 +5368,12 @@ sub scan_pages {
  });
  $dialog -> show_all;
 
-# Timer will run until callback returns false 
- $shash{$sane_thread}{go} = 0;
- my $timer = Glib::Timeout->add (100, sub {
-  if ($shash{$sane_thread}{go} == 0) {
-   my $path = sprintf $format, $n;
-   $shash{$sane_thread}{data} = $path;
-   $shash{$sane_thread}{process} = '
-    $device->start;
-    $shash{$sane_thread}{status} = $Sane::STATUS+0;
-    if ($Sane::STATUS != SANE_STATUS_GOOD) {
-print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
-     last;
-    }
+ new_page($format, $n);
 
-    my $path = $shash{$sane_thread}{data};
-    if (not open($fh, ">", $path)) {
-print STDERR "cannot open $path\n";
-     $device->cancel;
-     $shash{$sane_thread}{status} = SANE_STATUS_ACCESS_DENIED;
-     last;
-    }
-    scan_page($device, $fh);
-    $shash{$sane_thread}{status} = $Sane::STATUS+0;
-    close $fh;
-#printf STDERR "Scanned page %d.", $n;
-printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
-    $shash{$sane_thread}{status} = $Sane::STATUS+0;
-    $shash{$sane_thread}{go} = 2;
-   ';
-   $shash{$sane_thread}{semaphore}->up;
-   return TRUE;
-  }
-  elsif ($shash{$sane_thread}{go} == 1) {
-   $pbar->set_text (printf $d->get("Scanning page %d of %d\n"), $n, $npages);
+# Timer will run until callback returns false 
+ my $timer = Glib::Timeout->add (100, sub {
+  if ($shash{$sane_thread}{go}) {
+   $pbar->set_text (sprintf $d->get("Scanning page %d of %d\n"), $n, $npages);
    $pbar->set_fraction (($n-1)/$npages);
    return TRUE;
   }
@@ -5436,7 +5410,6 @@ printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
     $shash{$sane_thread}{go} = 1;
     $shash{$sane_thread}{semaphore}->up;
    }
-   $n += $step;
 
    unless ((($npages == -1 or --$npages)) and SANE_STATUS_GOOD == $shash{$sane_thread}{status}) {
     $shash{$sane_thread}{process} = '
@@ -5448,8 +5421,46 @@ printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
     $dialog -> destroy;
     return FALSE;
    }
+   $n += $step;
+   new_page($format, $n);
+   return TRUE;
   }
  });
+}
+
+
+sub new_page {
+ my ($format, $n) = @_;
+ my $path = sprintf $format, $n;
+ $shash{$sane_thread}{data} = $path;
+ $shash{$sane_thread}{process} = '
+  $shash{$sane_thread}{go} = 1;
+  $device->start;
+  $shash{$sane_thread}{status} = $Sane::STATUS+0;
+  if ($Sane::STATUS != SANE_STATUS_GOOD) {
+print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
+   last;
+  }
+
+  my $path = $shash{$sane_thread}{data};
+print STDERR "opening $path\n";
+  if (not open($fh, ">", $path)) {
+print STDERR "cannot open $path\n";
+   $device->cancel;
+   $shash{$sane_thread}{status} = SANE_STATUS_ACCESS_DENIED;
+   last;
+  }
+  scan_page($device, $fh);
+  $shash{$sane_thread}{status} = $Sane::STATUS+0;
+  close $fh;
+#printf STDERR "Scanned page %d.", $n;
+printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
+  $shash{$sane_thread}{status} = $Sane::STATUS+0;
+  $shash{$sane_thread}{go} = 0;
+ ';
+ $shash{$sane_thread}{go} = 1;
+ $shash{$sane_thread}{semaphore}->up;
+ return;
 }
 
 
