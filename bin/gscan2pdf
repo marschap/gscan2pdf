@@ -18,7 +18,6 @@
 # To do
 #    Fix default device.
 #    Cache options
-#    fix order of pager size widget in manual mode
 #    scanning doesn't work after fork()
 #    progress bar not working at all during scan
 #    window too tall after options have been found
@@ -6900,7 +6899,7 @@ sub scan_options {
    my @options = @{thaw($shash{$sane_thread}{data})};
    print "Sane->get_option_descriptor returned: ", Dumper(\@options) if $debug;
 
-   my ($group, $vbox, @widgets);
+   my ($group, $vbox, @widgets, $hboxp);
    my $num_dev_options = $#options+1;
    my %geometry;
    undef $combobp; # So we don't carry over from one device to another
@@ -6920,7 +6919,6 @@ sub scan_options {
 # Worry about the multiple value options later
 if ($opt->{max_values} < 2) {
 
-    my $hboxp;
     if (($opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT)
        and ($opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL)
        and (($opt->{name} eq SANE_NAME_SCAN_TL_X) or 
