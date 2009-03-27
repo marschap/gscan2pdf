@@ -3806,11 +3806,9 @@ sub scan_dialog {
  my $comboboxe = combobox_from_array(@ocr_engine);
  $tooltips -> set_tip ($comboboxe, $d->get('Select OCR engine'));
  $hboxo -> pack_end($comboboxe, TRUE, TRUE, 0);
- my ($comboboxl, @tesslang);
+ my ($comboboxl, @tesslang, $hboxl);
  if ($dependencies{tesseract}) {
-  (my $hboxl, $comboboxl, @tesslang) = add_ocr_languages($vboxp);
-  $hboxl->hide_all
-   if ($ocr_engine[$comboboxe -> get_active]->[0] ne 'tesseract');
+  ($hboxl, my $comboboxl, my @tesslang) = add_ocr_languages($vboxp);
   $comboboxe -> signal_connect (changed => sub {
    if ($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract') {
     $hboxl->show_all;
@@ -4026,6 +4024,9 @@ sub scan_dialog {
 # Show window
  $windows -> show_all;
  $framex->hide_all;
+ $hboxl->hide_all
+  if ($dependencies{tesseract}
+                   and $ocr_engine[$comboboxe -> get_active]->[0] ne 'tesseract');
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
  $sbutton -> set_sensitive(FALSE) if (! $test);
@@ -4476,11 +4477,9 @@ sub scan_dialog2 {
  my $comboboxe = combobox_from_array(@ocr_engine);
  $tooltips -> set_tip ($comboboxe, $d->get('Select OCR engine'));
  $hboxo -> pack_end($comboboxe, TRUE, TRUE, 0);
- my ($comboboxl, @tesslang);
+ my ($comboboxl, @tesslang, $hboxl);
  if ($dependencies{tesseract}) {
-  (my $hboxl, $comboboxl, @tesslang) = add_ocr_languages($vboxp);
-  $hboxl->hide_all
-   if ($ocr_engine[$comboboxe -> get_active]->[0] ne 'tesseract');
+  ($hboxl, my $comboboxl, my @tesslang) = add_ocr_languages($vboxp);
   $comboboxe -> signal_connect (changed => sub {
    if ($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract') {
     $hboxl->show_all;
@@ -4606,6 +4605,9 @@ sub scan_dialog2 {
 # Show window
  $windows2 -> show_all;
  $framex->hide_all;
+ $hboxl->hide_all
+  if ($dependencies{tesseract}
+                   and $ocr_engine[$comboboxe -> get_active]->[0] ne 'tesseract');
  return;
 }
 
@@ -9128,11 +9130,9 @@ sub OCR {
  my $combobe = combobox_from_array(@ocr_engine);
  combobox_set_active($combobe, $SETTING{'ocr engine'}, @ocr_engine);
  $hboxe -> pack_end ($combobe, FALSE, FALSE, 0);
- my ($comboboxl, @tesslang);
+ my ($comboboxl, @tesslang, $hboxl);
  if ($dependencies{tesseract}) {
-  (my $hboxl, $comboboxl, @tesslang) = add_ocr_languages($vbox);
-  $hboxl->hide_all
-   if ($ocr_engine[$combobe -> get_active]->[0] ne 'tesseract');
+  ($hboxl, my $comboboxl, my @tesslang) = add_ocr_languages($vbox);
   $combobe -> signal_connect (changed => sub {
    if ($ocr_engine[$combobe -> get_active]->[0] eq 'tesseract') {
     $hboxl->show_all;
@@ -9174,6 +9174,9 @@ sub OCR {
  $cbutton -> signal_connect( clicked => sub { $windowo -> hide; } );
 
  $windowo -> show_all;
+ $hboxl->hide_all
+  if ($dependencies{tesseract}
+                   and $ocr_engine[$combobe -> get_active]->[0] ne 'tesseract');
  return;
 }
 
