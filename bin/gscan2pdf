@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Track down segfault $selector->set_selection ($sel) if $sel is undef;
 #    Fix default device.
 #    scanning doesn't work after fork()
 #    window too tall after options have been found
@@ -862,7 +863,9 @@ $slist -> {selection_changed_signal} = $slist -> get_selection -> signal_connect
 
   my $path = Gtk2::TreePath->new_from_indices($page[0]);
   $slist->scroll_to_cell($path);
+  my $sel = $selector->get_selection;
   display_image($slist->{data}[$page[0]][2]);
+  $selector->set_selection ($sel) if (defined $sel);
 
 # Update the buffer, if created
   $textview -> set_sensitive(TRUE) if (! $textview -> is_sensitive);
