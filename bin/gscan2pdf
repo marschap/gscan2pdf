@@ -18,7 +18,7 @@
 # To do
 #    Fix default device.
 #    scanning doesn't work after fork()
-#    progress bar not working at all during scan
+#    update progress bar during scan
 #    window too tall after options have been found
 #    move scan messages to only on debug
 #    add profiles
@@ -5345,6 +5345,8 @@ sub scan_pages {
                           $rotate_facing, $rotate_reverse, $unpaper, $ocr) = @_;
  my $n = $start;
  my $format = "out%d.pnm";
+ my $n2 = 1;
+ my $npages2 = $npages;
 
 # Set up ProgressBar
  my $dialog = Gtk2::Dialog -> new ($d->get('Scanning...'), $windows2,
@@ -5360,14 +5362,19 @@ sub scan_pages {
   kill_subs();
  });
  $dialog -> show_all;
+ if ($npages2 > 0) {
+  $pbar->set_text (sprintf $d->get("Scanning page %d of %d"), $n2, $npages2);
+ }
+ else {
+  $pbar->set_text (sprintf $d->get("Scanning page %d"), $n2);
+ }
 
  new_page($format, $n);
 
 # Timer will run until callback returns false 
  my $timer = Glib::Timeout->add (100, sub {
   if ($shash{$sane_thread}{go}) {
-   $pbar->set_text (sprintf $d->get("Scanning page %d of %d\n"), $n, $npages);
-   $pbar->set_fraction (($n-1)/$npages);
+   $pbar->set_fraction (($n2-1)/$npages2);
    return TRUE;
   }
   else {
@@ -5415,6 +5422,13 @@ sub scan_pages {
     return FALSE;
    }
    $n += $step;
+   $n2++;
+   if ($npages2 > 0) {
+    $pbar->set_text (sprintf $d->get("Scanning page %d of %d"), $n2, $npages2);
+   }
+   else {
+    $pbar->set_text (sprintf $d->get("Scanning page %d"), $n2);
+   }
    new_page($format, $n);
    return TRUE;
   }
