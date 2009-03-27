@@ -7116,46 +7116,56 @@ print "Unknown type $opt->{type}\n";
 
 # Set defaults
 # Move them first to a dummy array, as otherwise it would be self-modifying
-   my @defaults = @{$SETTING{default}{$shash{$sane_thread}{device}}};
-   delete $SETTING{default}{$shash{$sane_thread}{device}};
+   if (defined $SETTING{default}{$shash{$sane_thread}{device}}) {
+# Config::General flattens arrays with 1 entry to scalars,
+# so we must check for this
+    my @defaults;
+    if (ref($SETTING{default}{$shash{$sane_thread}{device}}) ne 'ARRAY') {
+     push @defaults, $SETTING{default}{$shash{$sane_thread}{device}};
+    }
+    else {
+     @defaults = @{$SETTING{default}{$shash{$sane_thread}{device}}};
+    }
+    delete $SETTING{default}{$shash{$sane_thread}{device}};
 
 # Give the GUI a chance to catch up between settings,
 # in case they have to be reloaded.
 # Can't do this in Glib::Idle->add as the GUI is also idle waiting for the
 # sane thread to return, so manually flagging each loop
-   my $i = 0;
+    my $i = 0;
 # Timer will run until callback returns false 
-   my $timer = Glib::Timeout->add (100, sub {
-    unless ($gui_updating) {
-     if ($i < @defaults) {
-      $gui_updating = TRUE;
-      my ($option, $val) = each(%{$defaults[$i]});
-      my $widget = $optnamei{$option};
-      if ($widget->isa('Gtk2::CheckButton'))  {
-       $widget->set_active($val);
-      }
-      elsif ($widget->isa('Gtk2::SpinButton'))  {
-       $widget->set_value($val);
-      }
-      elsif ($widget->isa('Gtk2::ComboBox'))  {
-       my $opt = $options[$widget->{option_number}];
-       my $index;
-       for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
-        $index = $i if ($opt->{constraint}[$i] eq $val);
+    my $timer = Glib::Timeout->add (100, sub {
+     unless ($gui_updating) {
+      if ($i < @defaults) {
+       $gui_updating = TRUE;
+       my ($option, $val) = each(%{$defaults[$i]});
+       my $widget = $optnamei{$option};
+       if ($widget->isa('Gtk2::CheckButton'))  {
+        $widget->set_active($val);
        }
-       $widget -> set_active($index) if (defined $index);
+       elsif ($widget->isa('Gtk2::SpinButton'))  {
+        $widget->set_value($val);
+       }
+       elsif ($widget->isa('Gtk2::ComboBox'))  {
+        my $opt = $options[$widget->{option_number}];
+        my $index;
+        for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
+         $index = $i if ($opt->{constraint}[$i] eq $val);
+        }
+        $widget -> set_active($index) if (defined $index);
+       }
+       elsif ($widget->isa('Gtk2::Entry'))  {
+        $widget -> set_text($val)
+       }
+       $i++;
       }
-      elsif ($widget->isa('Gtk2::Entry'))  {
-       $widget -> set_text($val)
+      else {
+       return FALSE;
       }
-      $i++;
      }
-     else {
-      return FALSE;
-     }
-    }
-    return TRUE;
-   });
+     return TRUE;
+    });
+   }
 
 # Show new pages
    for (my $i = 1; $i < $notebook->get_n_pages; $i++) {
