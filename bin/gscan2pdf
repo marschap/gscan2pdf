@@ -19,7 +19,6 @@
 #    Fix default device.
 #    scanning doesn't work after fork()
 #    window too tall after options have been found
-#    move scan messages to only on debug
 #    add profiles
 #    support multiple value options
 #    add units
@@ -5445,14 +5444,12 @@ sub new_page {
   $device->start;
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
   if ($Sane::STATUS != SANE_STATUS_GOOD) {
-print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
+   print "$prog_name: sane_start: $Sane::STATUS\n" if $debug;
    last;
   }
 
   my $path = $shash{$sane_thread}{data};
-print STDERR "opening $path\n";
   if (not open($fh, ">", $path)) {
-print STDERR "cannot open $path\n";
    $device->cancel;
    $shash{$sane_thread}{status} = SANE_STATUS_ACCESS_DENIED;
    last;
@@ -5460,8 +5457,8 @@ print STDERR "cannot open $path\n";
   scan_page($device, $fh);
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
   close $fh;
-#printf STDERR "Scanned page %d.", $n;
-printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
+  printf "Scanned page %s.", $path if $debug;
+  printf " (scanner status = %d)\n", $Sane::STATUS if $debug;
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
   $shash{$sane_thread}{go} = 0;
  ';
@@ -5489,34 +5486,34 @@ sub scan_page {
   if (!$first_frame) {
    $device->start;
    if ($Sane::STATUS != SANE_STATUS_GOOD) {
-    printf STDERR "$prog_name: sane_start: $Sane::STATUS\n";
+    printf "$prog_name: sane_start: $Sane::STATUS\n" if $debug;
     goto cleanup;
    }
   }
 
   $parm = $device->get_parameters;
   if ($Sane::STATUS != SANE_STATUS_GOOD) {
-   printf STDERR "$prog_name: sane_get_parameters: $Sane::STATUS\n";
+   printf "$prog_name: sane_get_parameters: $Sane::STATUS\n" if $debug;
    goto cleanup;
   }
 
   if ($debug) {
    if ($first_frame) {
     if ($parm->{lines} >= 0) {
-     printf STDERR "$prog_name: scanning image of size %dx%d pixels at "
+     printf "$prog_name: scanning image of size %dx%d pixels at "
                ."%d bits/pixel\n",
                $parm->{pixels_per_line}, $parm->{lines},
                8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
     }
     else {
-     printf STDERR "$prog_name: scanning image %d pixels wide and "
+     printf "$prog_name: scanning image %d pixels wide and "
                ."variable height at %d bits/pixel\n",
                $parm->{pixels_per_line},
                8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
     }
    }
 
-   printf STDERR "$prog_name: acquiring %s frame\n",
+   printf "$prog_name: acquiring %s frame\n",
     $parm->{format} <= SANE_FRAME_BLUE ? $format_name[$parm->{format}]:"Unknown";
   }
 
@@ -5561,10 +5558,10 @@ sub scan_page {
    $shash{$sane_thread}{progress} = $progr;
 
    if ($Sane::STATUS != SANE_STATUS_GOOD) {
-    printf STDERR "$prog_name: min/max graylevel value = %d/%d\n", $min, $max
-     if ($debug && $parm->{depth} == 8);
-    if ($Sane::STATUS != SANE_STATUS_EOF) {
-     print STDERR "$prog_name: sane_read: $Sane::STATUS\n";
+    printf "$prog_name: min/max graylevel value = %d/%d\n", $min, $max
+     if ($debug and $parm->{depth} == 8);
+    if ($debug and $Sane::STATUS != SANE_STATUS_EOF) {
+     print "$prog_name: sane_read: $Sane::STATUS\n";
      return;
     }
     last;
@@ -5632,13 +5629,14 @@ cleanup:
    (($parm->{format} == SANE_FRAME_RGB
      || $parm->{format} == SANE_FRAME_GRAY) ? 1 : 3);
  $expected_bytes = 0 if ($parm->{lines} < 0);
- if ($total_bytes > $expected_bytes && $expected_bytes != 0) {
-  printf STDERR
-              "%s: WARNING: read more data than announced by backend "
-              ."(%u/%u)\n", $prog_name, $total_bytes, $expected_bytes;
- }
- elsif ($debug) {
-  printf STDERR "%s: read %u bytes in total\n", $prog_name, $total_bytes;
+ if ($debug) {
+  if ($total_bytes > $expected_bytes && $expected_bytes != 0) {
+   printf "%s: WARNING: read more data than announced by backend "
+         ."(%u/%u)\n", $prog_name, $total_bytes, $expected_bytes;
+  }
+  else {
+   printf "%s: read %u bytes in total\n", $prog_name, $total_bytes;
+  }
  }
  return;
 }
