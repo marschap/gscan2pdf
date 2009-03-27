@@ -18,7 +18,6 @@
 # To do
 #    Fix default device.
 #    scanning doesn't work after fork()
-#    update progress bar during scan
 #    window too tall after options have been found
 #    move scan messages to only on debug
 #    add profiles
@@ -336,6 +335,7 @@ foreach (1..$numthreads) {
  share ($shash{$_}{status});
  share ($shash{$_}{go});
  share ($shash{$_}{process});
+ share ($shash{$_}{progress});
  share ($shash{$_}{data});
  share ($shash{$_}{die});
  $thread{$_} = threads->new(sub {
@@ -5374,7 +5374,7 @@ sub scan_pages {
 # Timer will run until callback returns false 
  my $timer = Glib::Timeout->add (100, sub {
   if ($shash{$sane_thread}{go}) {
-   $pbar->set_fraction (($n2-1)/$npages2);
+   $pbar->set_fraction ($shash{$sane_thread}{progress});
    return TRUE;
   }
   else {
@@ -5556,9 +5556,9 @@ sub scan_page {
   while (1) {
    my ($buffer, $len) = $device->read ($buffer_size);
    $total_bytes += $len;
-   my $progr = (($total_bytes * 100.) / $hundred_percent);
-   $progr = 100. if ($progr > 100.);
-#   printf STDERR "Progress: %3.1f%%\r", $progr if ($progress);
+   my $progr = $total_bytes/$hundred_percent;
+   $progr = 1 if ($progr > 1);
+   $shash{$sane_thread}{progress} = $progr;
 
    if ($Sane::STATUS != SANE_STATUS_GOOD) {
     printf STDERR "$prog_name: min/max graylevel value = %d/%d\n", $min, $max
