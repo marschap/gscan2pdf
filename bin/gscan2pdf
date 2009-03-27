@@ -16,8 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Replace double config read with manual defaults
 #    Fix default device.
-#    Cache options
 #    scanning doesn't work after fork()
 #    progress bar not working at all during scan
 #    window too tall after options have been found
@@ -187,10 +187,17 @@ for (@device) {
 setlocale(LC_NUMERIC, "C");
 warn "Using ", setlocale( LC_CTYPE ), " locale\n" if ($debug);
 
-# Read config file
+# Reading config once without MergeDuplicateOptions to keep cache intact
 my $rc = "$ENV{'HOME'}/.$prog_name";
 system("touch $rc") if (! -r $rc);
-my $conf;
+my ($conf, %SETTING_CACHE);
+if (eval {$conf = Config::General->new(
+ -ConfigFile => $rc, -SplitPolicy => 'equalsign',
+)}) {
+ %SETTING_CACHE = $conf->getall;
+}
+
+# Read config file again, this time with defaults
 if (! eval {$conf = load_config()}) {
  print $d->get("Error: unable to load settings.\nBacking up settings\nReverting to defaults"), "\n";
  move($rc, "$rc.old");
@@ -198,6 +205,12 @@ if (! eval {$conf = load_config()}) {
  $conf = load_config();
 }
 my %SETTING = $conf->getall;
+
+# Adding arrays if present
+$SETTING{default} = $SETTING_CACHE{default}
+ if (defined $SETTING_CACHE{default});
+undef %SETTING_CACHE;
+
 if (! defined $SETTING{Paper}) {
  $SETTING{Paper} = {
   $d->get('A4') => {
@@ -348,7 +361,7 @@ my ($windowi, $windowe, $windows, $windows2, $windowh, $windowo, $windowrn,
     @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
     $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
     $windowr, @rotate_queue, $rotating, $view, $frames, $duplex, $windowp,
-    $batch_scan,
+    $batch_scan, $gui_updating,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -1175,6 +1188,7 @@ sub load_config {
  return Config::General->new(
  -ConfigFile        => $rc,
  -SplitPolicy       => 'equalsign',
+# The disadvantage of this is it flattens ALL arrays
  -MergeDuplicateOptions => TRUE,
  -DefaultConfig => {
   'window_width'       => 800,
@@ -6899,7 +6913,7 @@ sub scan_options {
    my @options = @{thaw($shash{$sane_thread}{data})};
    print "Sane->get_option_descriptor returned: ", Dumper(\@options) if $debug;
 
-   my ($group, $vbox, @widgets, $hboxp);
+   my ($group, $vbox, @widgets, $hboxp, %optnamei);
    my $num_dev_options = $#options+1;
    my %geometry;
    undef $combobp; # So we don't carry over from one device to another
@@ -6955,19 +6969,17 @@ if ($opt->{max_values} < 2) {
     if ($opt->{type} == SANE_TYPE_BOOL) {
      $widget = Gtk2::CheckButton -> new;
      $widget->set_active(TRUE) if ($val);
-     $widget->{option_number} = $i;
      $widget -> {signal} = $widget -> signal_connect (toggled => sub {
       my $val = $widget -> get_active;
-      set_option ($device, $widget->{option_number}, $val, @widgets);
+      set_option ($widget->{option_number}, $val, @widgets);
      });
     }
 
 # Button
     elsif ($opt->{type} == SANE_TYPE_BUTTON) {
      $widget = Gtk2::Button -> new($opt->{title});
-     $widget->{option_number} = $i;
      $widget -> {signal} = $widget -> signal_connect (clicked => sub {
-      set_option ($device, $widget->{option_number}, $val, @widgets);
+      set_option ($widget->{option_number}, $val, @widgets);
      });
     }
 
@@ -6977,14 +6989,13 @@ if ($opt->{max_values} < 2) {
      $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
      $widget = Gtk2::SpinButton -> new_with_range($opt->{constraint}{min},
                                                   $opt->{constraint}{max}, $step);
-     $widget->{option_number} = $i;
 
 # Set the default
      $widget -> set_value($val)
       if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
      $widget -> {signal} = $widget -> signal_connect ('value-changed' => sub {
       my $val = $widget -> get_value;
-      set_option ($device, $widget->{option_number}, $val, @widgets);
+      set_option ($widget->{option_number}, $val, @widgets);
      });
 
 # Note the max if geometry
@@ -6996,9 +7007,8 @@ if ($opt->{max_values} < 2) {
     elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
                       or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
      $widget = Gtk2::ComboBox -> new_text;
-     $widget->{option_number} = $i;
      my $index = 0;
-     foreach (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
+     for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
       $widget->append_text($opt->{constraint}[$i]);
       $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
      }
@@ -7007,25 +7017,27 @@ if ($opt->{max_values} < 2) {
      $widget -> set_active($index) if (defined $index);
      $widget -> {signal} = $widget -> signal_connect (changed => sub {
       my $val = $widget -> get_active_text;
-      set_option ($device, $widget->{option_number}, $val, @widgets);
+      set_option ($widget->{option_number}, $val, @widgets);
      });
     }
 
 # Entry
     elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
      $widget = Gtk2::Entry -> new;
-     $widget->{option_number} = $i;
 
 # Set the default
      $widget -> set_text($val)
       if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
      $widget -> {signal} = $widget->signal_connect (activate => sub {
       my $val = $widget -> get_text;
-      set_option ($device, $widget->{option_number}, $val, @widgets);
+      set_option ($widget->{option_number}, $val, @widgets);
      });
     }
 
 if (defined $widget) {
+    $widget->{option_number} = $i;
+    $widget->{option_name} = $opt->{name};
+    $optnamei{$opt->{name}} = $widget;
     $widgets[$i] = $widget;
     if ($opt->{type} == SANE_TYPE_BUTTON) {
      $hbox -> pack_end ($widget, TRUE, TRUE, 0);
@@ -7107,6 +7119,51 @@ print "Unknown type $opt->{type}\n";
 }
 }
    }
+
+# Set defaults
+# Move them first to a dummy array, as otherwise it would be self-modifying
+   my @defaults = @{$SETTING{default}{$shash{$sane_thread}{device}}};
+   delete $SETTING{default}{$shash{$sane_thread}{device}};
+
+# Give the GUI a chance to catch up between settings,
+# in case they have to be reloaded.
+# Can't do this in Glib::Idle->add as the GUI is also idle waiting for the
+# sane thread to return, so manually flagging each loop
+   my $i = 0;
+# Timer will run until callback returns false 
+   my $timer = Glib::Timeout->add (100, sub {
+    unless ($gui_updating) {
+     if ($i < @defaults) {
+      $gui_updating = TRUE;
+      my ($option, $val) = each(%{$defaults[$i]});
+      my $widget = $optnamei{$option};
+      if ($widget->isa('Gtk2::CheckButton'))  {
+       $widget->set_active($val);
+      }
+      elsif ($widget->isa('Gtk2::SpinButton'))  {
+       $widget->set_value($val);
+      }
+      elsif ($widget->isa('Gtk2::ComboBox'))  {
+       my $opt = $options[$widget->{option_number}];
+       my $index;
+       for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
+        $index = $i if ($opt->{constraint}[$i] eq $val);
+       }
+       $widget -> set_active($index) if (defined $index);
+      }
+      elsif ($widget->isa('Gtk2::Entry'))  {
+       $widget -> set_text($val)
+      }
+      $i++;
+     }
+     else {
+      return FALSE;
+     }
+    }
+    return TRUE;
+   });
+
+# Show new pages
    for (my $i = 1; $i < $notebook->get_n_pages; $i++) {
     $notebook->get_nth_page ($i)->show_all;
    }
@@ -7129,7 +7186,23 @@ print "Unknown type $opt->{type}\n";
 # and walking the widget tree, update the widgets
 
 sub set_option {
- my ($device, $i, $val, @widgets) = @_;
+ my ($i, $val, @widgets) = @_;
+
+# Cache option
+ push @{$SETTING{default}{$shash{$sane_thread}{device}}},
+                                          {$widgets[$i]->{option_name} => $val};
+
+# Note any duplicate options, keeping only the last entry.
+ my %seen;
+ my $j = $#{$SETTING{default}{$shash{$sane_thread}{device}}};
+ while ($j > -1) {
+  my ($option) = keys(%{$SETTING{default}{$shash{$sane_thread}{device}}[$j]});
+  $seen{$option}++;
+  if ($seen{$option} > 1) {
+   splice @{$SETTING{default}{$shash{$sane_thread}{device}}}, $j, 1;
+  }
+  $j--;
+ }
 
 # Set up ProgressBar
  my $dialog = Gtk2::Dialog -> new ($d->get('Updating options')."...", $windows2,
@@ -7252,6 +7325,7 @@ if ($opt->{max_values} < 2) {
     }
    }
    $dialog -> destroy;
+   $gui_updating = FALSE; # We can carry on applying defaults now, if necessary.
   }
  });
  return;
