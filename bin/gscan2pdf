@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # gscan2pdf --- to aid the scan to PDF or DjVu process
-# Copyright (C) 2006 -- 2008  Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
+# Copyright (C) 2006 -- 2009  Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the version 3 GNU General Public License as
@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    Replace double config read with manual defaults
 #    Fix default device.
 #    scanning doesn't work after fork()
 #    progress bar not working at all during scan
@@ -187,32 +186,50 @@ for (@device) {
 setlocale(LC_NUMERIC, "C");
 warn "Using ", setlocale( LC_CTYPE ), " locale\n" if ($debug);
 
-# Reading config once without MergeDuplicateOptions to keep cache intact
+# Read config file
 my $rc = "$ENV{'HOME'}/.$prog_name";
 system("touch $rc") if (! -r $rc);
-my ($conf, %SETTING_CACHE);
+my ($conf, %SETTING);
 if (eval {$conf = Config::General->new(
  -ConfigFile => $rc, -SplitPolicy => 'equalsign',
 )}) {
- %SETTING_CACHE = $conf->getall;
+ %SETTING = $conf->getall;
 }
-
-# Read config file again, this time with defaults
-if (! eval {$conf = load_config()}) {
+else {
  print $d->get("Error: unable to load settings.\nBacking up settings\nReverting to defaults"), "\n";
  move($rc, "$rc.old");
- system("touch $rc");
- $conf = load_config();
 }
-my %SETTING = $conf->getall;
 
-# Adding arrays if present
-$SETTING{default} = $SETTING_CACHE{default}
- if (defined $SETTING_CACHE{default});
-undef %SETTING_CACHE;
-
-if (! defined $SETTING{Paper}) {
- $SETTING{Paper} = {
+my %default_settings = (
+ 'window_width'      => 800,
+ 'window_height'     => 600,
+ 'window_maximize'   => TRUE,
+ 'thumb panel'       => 100,
+ 'Page range'        => 'all',
+ 'l'                 => 0,
+ 't'                 => 0,
+ 'layout'            => 'single',
+ 'downsample'        => FALSE,
+ 'downsample dpi'    => 150,
+ 'threshold tool'    => 80,
+ 'unsharp radius'    => 0,
+ 'unsharp sigma'     => 1,
+ 'unsharp amount'    => 1,
+ 'unsharp threshold' => 0.05,
+ 'cache options'     => TRUE,
+ 'restore window'    => TRUE,
+ 'startup warning'   => FALSE,
+ 'date offset'       => 0,
+ 'pdf compression'   => 'auto',
+ 'quality'           => 75,
+ 'pages to scan'     => 1,
+ 'unpaper on scan'   => TRUE,
+ 'OCR on scan'       => TRUE,
+ 'frontend'          => 'libsane-perl',
+ 'rotate facing'     => 0,
+ 'rotate reverse'    => 0,
+ 'scan prefix'       => '',
+ 'Paper'             => {
   $d->get('A4') => {
    x => 210,
    y => 297,
@@ -231,21 +248,22 @@ if (! defined $SETTING{Paper}) {
    l => 0,
    t => 0,
   },
- };
+ },
+);
+for (keys(%default_settings)) {
+ $SETTING{$_} = $default_settings{$_} unless (defined $SETTING{$_});
 }
 
 # Remove invalid paper sizes
-else {
- for my $paper (keys %{$SETTING{Paper}}) {
-  if ($paper eq '<>' or $paper eq '</>') {
-   delete $SETTING{Paper}{$paper};
-  }
-  else {
-   for (qw(x y t l)) {
-    if (! defined $SETTING{Paper}{$paper}{$_}) {
-     delete $SETTING{Paper}{$paper};
-     last;
-    }
+for my $paper (keys %{$SETTING{Paper}}) {
+ if ($paper eq '<>' or $paper eq '</>') {
+  delete $SETTING{Paper}{$paper};
+ }
+ else {
+  for (qw(x y t l)) {
+   if (! defined $SETTING{Paper}{$paper}{$_}) {
+    delete $SETTING{Paper}{$paper};
+    last;
    }
   }
  }
@@ -1184,44 +1202,6 @@ $window -> show_all;
 
 ### Subroutines
 
-sub load_config {
- return Config::General->new(
- -ConfigFile        => $rc,
- -SplitPolicy       => 'equalsign',
-# The disadvantage of this is it flattens ALL arrays
- -MergeDuplicateOptions => TRUE,
- -DefaultConfig => {
-  'window_width'       => 800,
-  'window_height'      => 600,
-  'window_maximize'    => TRUE,
-  'thumb panel'        => 100,
-  'Page range'         => 'all',
-  'l'                  => 0,
-  't'                  => 0,
-  'layout'             => 'single',
-  'downsample'         => FALSE,
-  'downsample dpi'     => 150,
-  'threshold tool'     => 80,
-  'unsharp radius'     => 0,
-  'unsharp sigma'      => 1,
-  'unsharp amount'     => 1,
-  'unsharp threshold'  => 0.05,
-  'cache options'      => TRUE,
-  'restore window'     => TRUE,
-  'startup warning'    => FALSE,
-  'date offset'        => 0,
-  'pdf compression'    => 'auto',
-  'quality'            => 75,
-  'pages to scan'      => 1,
-  'unpaper on scan'    => TRUE,
-  'OCR on scan'        => TRUE,
-  'frontend'           => 'libsane-perl',
-  'rotate facing'      => 0,
-  'rotate reverse'     => 0,
-  'scan prefix'        => '',
- },
- );
-}
 
 # Create the menu bar, initialize its menus, and return the menu bar.
 
