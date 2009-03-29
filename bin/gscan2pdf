@@ -5041,6 +5041,9 @@ sub scanimage {
 # flag to ignore error messages after cancelling scan
   my $cancel = FALSE;
 
+# flag to ignore out of documents message if successfully scanned at least one page
+  my $num_scans = 0;
+
 # Interface to scanimage
   my ($write, $read);
   my $error = IO::Handle -> new; # this needed because of a bug in open3.
@@ -5103,6 +5106,7 @@ sub scanimage {
        return FALSE;
       }
       else {
+       $num_scans++;
        my $rotate = $1 % 2 ? $rfacing : $rreverse;
        post_process_scan($index, $rotate, $unpaper, $ocr);
       }
@@ -5115,7 +5119,8 @@ sub scanimage {
      }
      elsif ($line =~ /^$SETTING{frontend}: sane_start: Document feeder out of documents/) {
       $dialog -> destroy;
-      show_message_dialog($windows, 'info', 'close', $d->get('Document feeder out of documents'));
+      show_message_dialog($windows, 'info', 'close', $d->get('Document feeder out of documents'))
+       if ($num_scans == 0);
      }
      elsif ($cancel
              and ($line =~ /^$SETTING{frontend}: sane_start: Error during device I\/O/
