@@ -3811,7 +3811,7 @@ sub scan_dialog {
  $hboxo -> pack_end($comboboxe, TRUE, TRUE, 0);
  my ($comboboxl, @tesslang, $hboxl);
  if ($dependencies{tesseract}) {
-  ($hboxl, my $comboboxl, my @tesslang) = add_ocr_languages($vboxp);
+  ($hboxl, $comboboxl, @tesslang) = add_ocr_languages($vboxp);
   $comboboxe -> signal_connect (changed => sub {
    if ($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract') {
     $hboxl->show_all;
@@ -4482,7 +4482,7 @@ sub scan_dialog2 {
  $hboxo -> pack_end($comboboxe, TRUE, TRUE, 0);
  my ($comboboxl, @tesslang, $hboxl);
  if ($dependencies{tesseract}) {
-  ($hboxl, my $comboboxl, my @tesslang) = add_ocr_languages($vboxp);
+  ($hboxl, $comboboxl, @tesslang) = add_ocr_languages($vboxp);
   $comboboxe -> signal_connect (changed => sub {
    if ($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract') {
     $hboxl->show_all;
@@ -9135,7 +9135,7 @@ sub OCR {
  $hboxe -> pack_end ($combobe, FALSE, FALSE, 0);
  my ($comboboxl, @tesslang, $hboxl);
  if ($dependencies{tesseract}) {
-  ($hboxl, my $comboboxl, my @tesslang) = add_ocr_languages($vbox);
+  ($hboxl, $comboboxl, @tesslang) = add_ocr_languages($vbox);
   $combobe -> signal_connect (changed => sub {
    if ($ocr_engine[$combobe -> get_active]->[0] eq 'tesseract') {
     $hboxl->show_all;
@@ -9157,7 +9157,6 @@ sub OCR {
  my $obutton = Gtk2::Button -> new($d->get('Start OCR'));
  $hbox -> pack_start( $obutton, TRUE, TRUE, 0 );
  $obutton -> signal_connect( clicked => sub {
-
   $SETTING{'ocr engine'} = $ocr_engine[$combobe -> get_active]->[0];
   $SETTING{'ocr language'} = $tesslang[$comboboxl -> get_active]->[0]
    if ($SETTING{'ocr engine'} eq 'tesseract');
