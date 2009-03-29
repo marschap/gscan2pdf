@@ -4894,6 +4894,7 @@ sub populate_device_list2 {
    get_devices2($hboxd);
   }
   else {
+   $SETTING{device} = $device_list[$combobd -> get_active]->{name};
    scan_options($notebook, $device_list[$combobd -> get_active]);
   }
  });
@@ -4914,10 +4915,7 @@ sub set_device2 {
    $o = $i if ($SETTING{device} eq $device_list[$i]->{name});
   }
  }
- if (! defined ($o)) {
-  $o = 0;
-  delete $SETTING{mode};
- }
+ $o = 0 unless (defined $o);
 
 # Set the device dependent devices after the number of pages to scan so that
 #  the source button callback can ghost the all button
@@ -5345,8 +5343,7 @@ sub scanadf {
 
 
 sub scan_pages {
- my ($npages, $start, $step,
-                          $rotate_facing, $rotate_reverse, $unpaper, $ocr) = @_;
+ my ($npages, $start, $step, $rfacing, $rreverse, $unpaper, $ocr) = @_;
  my $n = $start;
  my $format = "out%d.pnm";
  my $n2 = 1;
@@ -5378,27 +5375,13 @@ sub scan_pages {
 # Timer will run until callback returns false 
  my $timer = Glib::Timeout->add (100, sub {
   if ($shash{$sane_thread}{go}) {
-   $pbar->set_fraction ($shash{$sane_thread}{progress});
+   $pbar->set_fraction ($shash{$sane_thread}{progress})
+    if (defined $shash{$sane_thread}{progress});
    return TRUE;
   }
   else {
   
-# If the scan can't be loaded then blow the scanning dialog away and
-# show an error
-   my $index = import_scan ("out$n.pnm", $n, 'Portable anymap',
-                                                    $SETTING{resolution}, TRUE);
-   if ($index == -1) {
-    $dialog -> destroy;
-    show_message_dialog(
-     $windows, 'error', 'close', $d->get('Unable to load image')
-    );
-    return FALSE;
-   }
-#   else {
-#    my $rotate = $n % 2 ? $rfacing : $rreverse;
-#    post_process_scan($index, $rotate, $unpaper, $ocr);
-#   }
-
+# Check status of scan
    if ($shash{$sane_thread}{status} == SANE_STATUS_GOOD) {}
    elsif ($shash{$sane_thread}{status} == SANE_STATUS_EOF) {
     $shash{$sane_thread}{status} = SANE_STATUS_GOOD;
@@ -5415,6 +5398,7 @@ sub scan_pages {
     $shash{$sane_thread}{semaphore}->up;
    }
 
+# Stop the process unless everything OK and more scans required
    unless ((($npages == -1 or --$npages)) and SANE_STATUS_GOOD == $shash{$sane_thread}{status}) {
     $shash{$sane_thread}{process} = '
      $device->cancel;
@@ -5425,8 +5409,26 @@ sub scan_pages {
     $dialog -> destroy;
     return FALSE;
    }
+
+# If the scan can't be loaded then blow the scanning dialog away and
+# show an error
+   my $index = import_scan ("out$n.pnm", $n, 'Portable anymap',
+                                                    $SETTING{resolution}, TRUE);
+   if ($index == -1) {
+    $dialog -> destroy;
+    show_message_dialog(
+     $windows, 'error', 'close', $d->get('Unable to load image')
+    );
+    return FALSE;
+   }
+   else {
+    my $rotate = $n % 2 ? $rfacing : $rreverse;
+    post_process_scan($index, $rotate, $unpaper, $ocr);
+   }
+
    $n += $step;
    $n2++;
+   $pbar->set_fraction (0);
    if ($npages2 > 0) {
     $pbar->set_text (sprintf $d->get("Scanning page %d of %d"), $n2, $npages2);
    }
@@ -5450,6 +5452,7 @@ sub new_page {
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
   if ($Sane::STATUS != SANE_STATUS_GOOD) {
    print "$prog_name: sane_start: $Sane::STATUS\n" if $debug;
+   $shash{$sane_thread}{go} = 0;
    last;
   }
 
@@ -5457,6 +5460,7 @@ sub new_page {
   if (not open($fh, ">", $path)) {
    $device->cancel;
    $shash{$sane_thread}{status} = SANE_STATUS_ACCESS_DENIED;
+   $shash{$sane_thread}{go} = 0;
    last;
   }
   scan_page($device, $fh);
