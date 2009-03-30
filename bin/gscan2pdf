@@ -147,6 +147,7 @@ my $border = 1;
 # Expects /usr/share/locale/LANGUAGE/LC_MESSAGES/$prog_name.mo
 # or whatever is set by $d->dir([NEWDIR]);
 my $d = Locale::gettext->domain($prog_name);
+my $d_sane = Locale::gettext->domain('sane-backends');
 
 my $debug = FALSE;
 my ($test, $help, @device, @model, $locale, @device_list);
@@ -205,8 +206,6 @@ my %default_settings = (
  'window_maximize'   => TRUE,
  'thumb panel'       => 100,
  'Page range'        => 'all',
- 'l'                 => 0,
- 't'                 => 0,
  'layout'            => 'single',
  'downsample'        => FALSE,
  'downsample dpi'    => 150,
@@ -4598,11 +4597,11 @@ sub scan_dialog2 {
  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
  $cbutton -> signal_connect( clicked => sub { $windows2 -> hide; } );
 
- if (! @device) {
-  get_devices2($hboxd);
+ if (@device) {
+  populate_device_list2($hboxd);
  }
  else {
-  populate_device_list2($hboxd);
+  get_devices2($hboxd);
  }
 
 # Show window
@@ -6929,7 +6928,7 @@ sub scan_options {
 # Notebook page for group
     if ($opt->{type} == SANE_TYPE_GROUP or not defined($vbox)) {
      $vbox = Gtk2::VBox->new;
-     $group = $opt->{type} == SANE_TYPE_GROUP ? $d->get($opt->{title}) : $d->get('Scan Options');
+     $group = $opt->{type} == SANE_TYPE_GROUP ? $d_sane->get($opt->{title}) : $d->get('Scan Options');
      $notebook->append_page($vbox, $group);
      next;
     }
@@ -6963,7 +6962,7 @@ if ($opt->{max_values} < 2) {
 
 # Label
     if ($opt->{type} != SANE_TYPE_BUTTON) {
-     my $label = Gtk2::Label -> new ($opt->{title});
+     my $label = Gtk2::Label -> new ($d_sane->get($opt->{title}));
      $hbox -> pack_start ($label, FALSE, FALSE, 0);
     }
 
@@ -6983,7 +6982,7 @@ if ($opt->{max_values} < 2) {
 
 # Button
     elsif ($opt->{type} == SANE_TYPE_BUTTON) {
-     $widget = Gtk2::Button -> new($opt->{title});
+     $widget = Gtk2::Button -> new($d_sane->get($opt->{title}));
      $widget -> {signal} = $widget -> signal_connect (clicked => sub {
       set_option ($widget->{option_number}, $val, @widgets);
      });
@@ -7015,15 +7014,15 @@ if ($opt->{max_values} < 2) {
      $widget = Gtk2::ComboBox -> new_text;
      my $index = 0;
      for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
-      $widget->append_text($opt->{constraint}[$i]);
+      $widget->append_text($d_sane->get($opt->{constraint}[$i]));
       $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
      }
 
 # Set the default
      $widget -> set_active($index) if (defined $index);
      $widget -> {signal} = $widget -> signal_connect (changed => sub {
-      my $val = $widget -> get_active_text;
-      set_option ($widget->{option_number}, $val, @widgets);
+      my $i = $widget->get_active;
+      set_option ($widget->{option_number}, $opt->{constraint}[$i], @widgets);
      });
     }
 
@@ -7051,7 +7050,7 @@ if (defined $widget) {
     else {
      $hbox -> pack_end ($widget, FALSE, FALSE, 0);
     }
-    $tooltips -> set_tip ($widget, $opt->{desc});
+    $tooltips -> set_tip ($widget, $d_sane->get($opt->{desc}));
 
 # Look-up to hide/show the box if necessary
     $geometry{$opt->{name}}{box} = $hbox
@@ -7323,7 +7322,7 @@ if ($opt->{max_values} < 2) {
        $widget->get_model->clear;
        my $index = 0;
        for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
-        $widget->append_text($opt->{constraint}[$i]);
+        $widget->append_text($d_sane->get($opt->{constraint}[$i]));
         $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
        }
        $widget -> set_active($index) if (defined $index);
@@ -10277,6 +10276,16 @@ Please include the output of C<gscan2pdf --debug> with any new bug report.
 gscan2pdf has already been partly translated several languages.
 If you would like to contribute to an existing or new translation, please check
 out Rosetta: L<https://translations.launchpad.net/gscan2pdf>
+
+Note that the translations for the scanner options are taken
+directly from sane-backends. If you would like to contribute to these, you can
+do so either at contact the sane-devel mailing list
+(sane-devel@lists.alioth.debian.org) and have a look at the po/ directory in
+the source code L<http://www.sane-project.org/cvs.html>.
+
+Alternatively, Ubuntu has its own translation project. For the 9.04 release, the
+translations are available at
+L<https://translations.launchpad.net/ubuntu/jaunty/+source/sane-backends/+pots/sane-backends>
 
 =head1 Menus
 
