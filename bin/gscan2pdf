@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    Track down segfault $selector->set_selection ($sel) if $sel is undef;
 #    Fix default device.
 #    scanning doesn't work after fork()
 #    window too tall after options have been found
@@ -10066,9 +10065,7 @@ C<deb http://ppa.launchpad.net/jeffreyratcliffe/ubuntu E<lt>releaseE<gt> main>
 
 C<deb-src http://ppa.launchpad.net/jeffreyratcliffe/ubuntu E<lt>releaseE<gt> main>
 
-where C<E<lt>releaseE<gt>> is the version of Ubuntu you are using. hardy & gutsy are
-supported at the time of writing. intrepid, feisty and dapper will follow as
-soon as I get gtkimageview to build against those distros.
+where C<E<lt>releaseE<gt>> is the version of Ubuntu you are using.
 
 If you are you are using Synaptic, then use menu
 I<Edit/Reload Package Information>, search for gscan2pdf in the package list,
@@ -10089,10 +10086,6 @@ Then add it to the apt keyring:
 
 C<gpg --export --armor 4DD7CC93 | sudo apt-key add ->
 
-If your distribution doesn't have C<libgtk2-ex-simple-list-perl>, download it from the website and then install it with:
-
-C<sudo dpkg -i libgtk2-ex-simple-list-perl_0.50-1_all.deb>
-
 =head2 RPMs
 
 Download the rpm from Sourceforge, and then install it with
@@ -10106,11 +10099,11 @@ Sourceforge (L<http://sourceforge.net/project/showfiles.php?group_id=174140>).
 =head2 From the repository
 
 gscan2pdf uses Mercurial for its Revision Control System. You can browse the
-tree at L<http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf/>.
+tree at L<http://gscan2pdf.hg.sourceforge.net/hgweb/gscan2pdf/>.
 You can also download snapshots as .tar.gz, .zip, and .tar.bz2.
 
 Mercurial users can clone the complete tree with
-C<hg clone http://gscan2pdf.sourceforge.net/cgi-bin/hgwebdir.cgi/gscan2pdf>
+C<hg clone http://gscan2pdf.hg.sourceforge.net:8000/hgroot/gscan2pdf>
 
 =head1 Building gscan2pdf from source
 
@@ -10174,6 +10167,10 @@ provides the functions for creating PDF documents in Perl
 =item libsane
 
 API library for scanners
+
+=item libsane-perl
+
+Perl bindings for libsane.
 
 =item libtiff-tools
 
@@ -10599,13 +10596,10 @@ Sourceforge for hosting the project.
 
 =back
 
-=for html <hr /> <a href="http://sourceforge.net"><img alt="SourceForge.net Logo"
- align="right" height="31px" width="88px"
- src="http://sourceforge.net/sflogo.php?group_id=174140&amp;type=1"></a>
+=for html <hr />
+ <a href="http://sourceforge.net/projects/gscan2pdf">
+ <img src="http://sflogo.sourceforge.net/sflogo.php?group_id=174140&amp;type=14" width="150" height="40" alt="Get gscan2pdf at SourceForge.net. Fast, secure and Free Open Source software downloads" /></a>
  <a href="http://sourceforge.net/donate/index.php?group_id=174140">
- <img src="http://sourceforge.net/images/project-support.jpg" width="88"
- height="32" border="0" alt="Support This Project"></a>
- <a href="http://sourceforge.net/awards/cca/?project_name=gscan2pdf&project_url=http%3A//gscan2pdf.sourceforge.net/">
- <img src="http://sourceforge.net/awards/cca/badge_img.php?project_name=gscan2pdf&project_url=http%3A//gscan2pdf.sourceforge.net/&style=4" border="0" /></a>
+ <img src="http://sourceforge.net/images/project-support.jpg" width="88" height="32" border="0" alt="Support This Project"></a>
 
 =cut
