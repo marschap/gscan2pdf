@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    Fix default device.
 #    scanning doesn't work after fork()
 #    window too tall after options have been found
 #    add profiles
@@ -225,6 +224,9 @@ my %default_settings = (
  'rotate facing'     => 0,
  'rotate reverse'    => 0,
  'scan prefix'       => '',
+ 'Blank threshold'   => 0.005, # Blank page standard deviation threshold
+ 'Dark threshold'    => 0.12,  # Dark page mean threshold
+ 'Replace old OCR text' => 0,  # When a page is re-OCRed, replace old text with new text
  'Paper'             => {
   $d->get('A4') => {
    x => 210,
@@ -376,7 +378,7 @@ my ($windowi, $windowe, $windows, $windows2, $windowh, $windowo, $windowrn,
     @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
     $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
     $windowr, @rotate_queue, $rotating, $view, $frames, $duplex, $windowp,
-    $batch_scan, $gui_updating,
+    @analyze_queue, $analyzing, $batch_scan, $gui_updating,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -414,9 +416,12 @@ my @action_items = (
  [ 'Paste', 'gtk-paste', $d->get('_Paste'), '<control>v', $d->get('Paste selection'), \&paste_selection ],
  [ 'Delete', 'gtk-delete', $d->get('_Delete'), undef, $d->get('Delete selected pages'), \&delete_pages ],
  [ 'Renumber', 'gtk-sort-ascending', $d->get('_Renumber'), '<control>r', $d->get('Renumber pages'), \&renumber_dialog ],
- [ 'Select All', 'gtk-select-all', $d->get('Select _All'), '<control>a', $d->get('Select all pages'), \&select_all ],
- [ 'Select Odd', undef, $d->get('Select _Odd'), '<control>1', $d->get('Select all odd-numbered pages'), sub { select_odd_even(0); } ],
- [ 'Select Even', undef, $d->get('Select _Even'), '<control>2', $d->get('Select all evenly-numbered pages'), sub { select_odd_even(1); } ],
+ [ 'Select', undef, $d->get('_Select') ],
+ [ 'Select All', 'gtk-select-all', $d->get('_All'), '<control>a', $d->get('Select all pages'), \&select_all ],
+ [ 'Select Odd', undef, $d->get('_Odd'), '<control>1', $d->get('Select all odd-numbered pages'), sub { select_odd_even(0); } ],
+ [ 'Select Even', undef, $d->get('_Even'), '<control>2', $d->get('Select all evenly-numbered pages'), sub { select_odd_even(1); } ],
+ [ 'Select Blank', 'gtk-select-blank', $d->get('_Blank'), '<control>b', $d->get('Select pages with low standard deviation'), \&analyze_select_blank ],
+ [ 'Select Dark', 'gtk-select-blank', $d->get('_Dark'), '<control>d', $d->get('Select dark pages'), \&analyze_select_dark ],
  [ 'Properties', 'gtk-properties', $d->get('Propert_ies'), undef, $d->get('Edit image properties'), \&properties ],
  [ 'Preferences', 'gtk-preferences', $d->get('Prefere_nces'), undef, $d->get('Edit preferences'), \&preferences ],
 
@@ -426,9 +431,9 @@ my @action_items = (
  [ 'Zoom to fit', 'gtk-zoom-fit', $d->get('Zoom to _fit'), undef, $d->get('Zoom to fit'), sub { $view->set_fitting(TRUE); } ],
  [ 'Zoom in', 'gtk-zoom-in', $d->get('Zoom _in'), 'plus', $d->get('Zoom in'), sub { $view->zoom_in; } ],
  [ 'Zoom out', 'gtk-zoom-out', $d->get('Zoom _out'), 'minus', $d->get('Zoom out'), sub { $view->zoom_out; } ],
- [ 'Rotate 90', 'rotate90', $d->get('Rotate 90 clockwise'), undef, $d->get('Rotate 90 clockwise'), sub { rotate_selected(90); } ],
- [ 'Rotate 180', 'rotate180', $d->get('Rotate 180'), undef, $d->get('Rotate 180'), sub { rotate_selected(180); } ],
- [ 'Rotate 270', 'rotate270', $d->get('Rotate 90 anticlockwise'), undef, $d->get('Rotate 90 anticlockwise'), sub { rotate_selected(270); } ],
+ [ 'Rotate 90', 'rotate90', $d->get('Rotate 90 clockwise'), '<control><shift>R', $d->get('Rotate 90 clockwise'), sub { rotate_selected(90); } ],
+ [ 'Rotate 180', 'rotate180', $d->get('Rotate 180'), '<control><shift>F', $d->get('Rotate 180'), sub { rotate_selected(180); } ],
+ [ 'Rotate 270', 'rotate270', $d->get('Rotate 90 anticlockwise'), '<control><shift>C', $d->get('Rotate 90 anticlockwise'), sub { rotate_selected(270); } ],
  
  # Tools menu
  [ 'Tools', undef, $d->get('_Tools') ],
@@ -479,9 +484,13 @@ my $ui = "<ui>
    <menuitem action='Delete'/>
    <separator/>
    <menuitem action='Renumber'/>
-   <menuitem action='Select All'/>
-   <menuitem action='Select Odd'/>
-   <menuitem action='Select Even'/>
+   <menu action='Select'> 
+    <menuitem action='Select All'/>
+    <menuitem action='Select Odd'/>
+    <menuitem action='Select Even'/>
+    <menuitem action='Select Blank'/>
+    <menuitem action='Select Dark'/>
+   </menu>
    <separator/>
    <menuitem action='Properties'/>
    <separator/>
@@ -656,7 +665,14 @@ $slist = Gtk2::Ex::Simple::List -> new('#' => 'int',
                                        'Filename' => 'hstring',
                                        'Buffer' => 'hstring',
                                        'Resolution' => 'hstring',
-                                       'Saved' => 'hstring');
+                                       'Saved' => 'hstring',
+                                       'Mean' => 'hstring', #6 store image stats
+                                       'StdDev' => 'hstring', #store image stats
+                                       'Dirty' => 'hstring', #timestamp image when changed (which may affect OCR)
+                                       'FlagOCR' => 'hstring', #update OCR automatically on this page
+                                       'OCRtime' => 'hstring', #10 timestamp of last OCR
+                                       'AnalyzeTime' => 'hstring', #timestamp of last analyze
+                                       );
 $slist -> get_selection -> set_mode ('multiple');
 $slist -> set_headers_visible(FALSE);
 $slist -> set_reorderable( TRUE );
@@ -5708,8 +5724,12 @@ sub post_process_scan {
  push @rotate_queue, [ $page, $rotate ] if $rotate;
  push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper;
  push @ocr_stack, $page if $ocr;
+ print "OCRflagging page: $page\n" if $ocr && $debug;
+ $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+ $slist -> {data}[$page][9] = 1 if $ocr; #FlagOCR
+ $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
- if (not($rotating or $scanning or $running_unpaper or $running_ocr)) {
+ if (not($rotating or $analyzing or $scanning or $running_unpaper or $running_ocr)) {
   if (@rotate_queue) {
    rotate();
   }
@@ -6008,6 +6028,106 @@ sub select_odd_even {
 }
 
 
+# Analyze and select blank pages
+
+sub analyze_select_blank {
+ update_analysis(1,0);
+}
+
+
+# Select blank pages
+
+sub select_blank_pages {
+ $slist -> get_selection -> unselect_all;
+ foreach my $page (0..$#{$slist -> {data}} ) {
+  print "smp page: $page\n" if $debug;
+  my $dirty_time = $slist -> {data}[$page][8];
+  my $analyze_time = $slist -> {data}[$page][11];
+  $dirty_time = defined($dirty_time)?$dirty_time:0;
+  $analyze_time = defined($analyze_time)?$analyze_time:0;
+  if ($analyze_time le $dirty_time) {
+   warn $d->get(sprintf("Page %d probably needs to be re-Analyzed.  Try Update or Analyze.\n",$page+1));
+   next;
+  }
+  #compare Std Dev to threshold
+  if ($slist -> {data}[$page][7] <= $SETTING{'Blank threshold'} ) { 
+   $slist -> select($page);
+   print "selecting blank page\n" if $debug;
+  }
+  print "StdDev: ".$slist->{data}[$page][7]." threshold: ".$SETTING{'Blank threshold'}."\n" if $debug;
+ }
+ return;
+}
+
+
+# Analyze and select dark pages
+
+sub analyze_select_dark {
+ update_analysis(0,1);
+}
+
+
+# Select dark pages
+
+sub select_dark_pages {
+ $slist -> get_selection -> unselect_all;
+ print "checking for dark pages now, is analysis done?\n" if $debug;
+ foreach my $page (0..$#{$slist -> {data}} ) {
+  print "smp page: $page\n" if $debug;
+  my $dirty_time = $slist -> {data}[$page][8];
+  my $analyze_time = $slist -> {data}[$page][11];
+  $dirty_time = defined($dirty_time)?$dirty_time:0;
+  $analyze_time = defined($analyze_time)?$analyze_time:0;
+  if ($analyze_time le $dirty_time) {
+   warn $d->get(sprintf("Page %d probably needs to be re-Analyzed.  Try Update or Analyze.\n",$page+1));
+   next;
+  }
+  #compare Mean to threshold
+  if ($slist -> {data}[$page][6] <= $SETTING{'Dark threshold'}) {
+   $slist -> select($page);
+   print "selecting dark page\n" if $debug;
+  }
+ }
+ return;
+}
+
+
+# Update analysis on stale pages
+
+sub update_analysis {
+ my ($select_blank, $select_dark) = @_;
+ foreach my $page (0..$#{$slist -> {data}} ) {
+  my $dirty_time = $slist -> {data}[$page][8];
+  my $analyze_time = $slist -> {data}[$page][11];
+  $dirty_time = defined($dirty_time)?$dirty_time:0;
+  $analyze_time = defined($analyze_time)?$analyze_time:0;
+  if ($analyze_time le $dirty_time) {
+   print "updating: $page analyse_time: $analyze_time dirty_time: $dirty_time\n" if $debug;
+   push @analyze_queue, [$page];
+  }
+ }
+ analyze($select_blank,$select_dark) if @analyze_queue;
+ select_blank_pages() if $select_blank and !@analyze_queue;
+ select_dark_pages() if $select_dark and !@analyze_queue;
+}
+
+# Update OCR on stale pages
+
+sub update_ocr {
+ foreach my $page (0..$#{$slist -> {data}} ) {
+  my $dirty_time = $slist -> {data}[$page][8];
+  my $ocr_flag = $slist -> {data}[$page][9];
+  my $ocr_time = $slist -> {data}[$page][10];
+  $dirty_time = defined($dirty_time)?$dirty_time:0;
+  $ocr_time = defined($ocr_time)?$ocr_time:0;
+  if ($ocr_flag and ($ocr_time le $dirty_time) ) {
+   print "ocr_flag: $ocr_flag ocr_time: $ocr_time dirty_time: $dirty_time\n" if $debug;
+   push @ocr_stack, $page;
+  }
+ }
+ ocr_page() if @ocr_stack;
+}
+
 # Display about dialog
 
 sub about {
@@ -6024,15 +6144,16 @@ David Hampton
 Sascha Hunold
 Jakub Wilk
 freedo
+Roy Shahbazian
 EOS
  $about->set_authors ("Jeff Ratcliffe\n\n"
                       .$d->get('Patches gratefully received from:')
 		      ."\n$authors");
  $about->set_comments ($d->get('To aid the scan-to-PDF process'));
- $about->set_copyright ($d->get('Copyright 2006--2008 Jeffrey Ratcliffe'));
+ $about->set_copyright ($d->get('Copyright 2006--2009 Jeffrey Ratcliffe'));
  my $licence = <<EOS;
 gscan2pdf --- to aid the scan to PDF or DjVu process
-Copyright (C) 2006 -- 2008  Jeffrey Ratcliffe <Jeffrey.Ratcliffe\@gmail.com>
+Copyright (C) 2006 -- 2009  Jeffrey Ratcliffe <Jeffrey.Ratcliffe\@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the version 3 GNU General Public License as
@@ -7574,6 +7695,14 @@ sub renumber {
 }
 
 
+# Compute a timestamp
+
+sub timestamp {
+ my @time=localtime();
+ # return a time which can be string-wise compared
+ return sprintf ("%04d%02d%02d%02d%02d%02d",$time[5],$time[4],$time[3],$time[2],$time[1],$time[0]);
+}
+
 # Rotate selected images
 
 sub rotate_selected {
@@ -7665,6 +7794,7 @@ sub rotate {
     $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
     $slist -> {data}[$index][2] = $filename;
     $slist -> {data}[$index][1] = get_pixbuf($filename, $heightt, $widtht);
+    $slist -> {data}[$index][8] = timestamp(); #flag as dirty
     $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
     my @selected = $slist -> get_selected_indices;
     display_image($filename) if ($index == $selected[0]);
@@ -7698,6 +7828,145 @@ sub rotate {
   return TRUE;  # continue without uninstalling
  });
  $rotating = TRUE;
+ return;
+}
+
+
+# Analyze selected images
+
+sub analyze_selected {
+ my @page = $slist -> get_selected_indices; #should we just always analyze all?
+ my @list;
+ push @analyze_queue, [ $_ ] foreach (@page);
+
+# Update undo/redo buffers
+ take_snapshot();
+
+ analyze();
+ return;
+}
+
+
+# Analyze images in @analyze_queue 
+
+sub analyze {
+ my ($select_blank, $select_dark) = @_;
+ my $page = 0;
+ my $npages = 0;
+
+# guess where unpaper has been called from
+ my $window = get_parent($windows, $window);
+ my $dialog = Gtk2::Dialog -> new ($d->get('Analyze')."...", $window,
+                                           'destroy-with-parent',
+                                           'gtk-cancel' => 'cancel');
+
+# Set up ProgressBar
+ my $pbar = Gtk2::ProgressBar->new;
+ $dialog -> vbox -> add($pbar);
+
+# Ensure that the dialog box is destroyed when the user responds.
+ $dialog -> signal_connect (response => sub {
+  $_[0] -> destroy;
+  $analyzing = FALSE;
+  kill_subs();
+ });
+ $dialog -> show_all;
+
+# Install a handler for child processes
+ $SIG{CHLD} = \&sig_child;
+
+ my ($child, $parent) = open_socketpair();
+ my $pid = start_process(sub {
+  send($parent, 'ready', 0);
+
+  while (TRUE) {
+
+# Now block until the GUI passes the filename
+   my $rin = '';
+   my $rout = '';
+   my ($index, $filename);
+   vec($rin, $parent->fileno(), 1) = 1;
+   if (select($rout=$rin,undef,undef,undef)) {
+    my $line;
+    recv($parent, $line, 1000, 0);
+    return if ($line eq 'finished');
+    ($index, $filename) = split ' ', $line;
+    print "index: $index $filename\n" if $debug;
+   }
+
+# Identify with imagemagick
+   my $image = Image::Magick->new;
+   my $x = $image->Read($filename);
+   warn "$x" if "$x";
+
+   my ($depth,$min,$max,$mean,$stddev) = $image->Statistics();
+   warn "image->Statistics() failed" unless defined $depth;
+   print "std dev: $stddev mean: $mean" if $debug;
+   print "\n" if $debug;
+   #my $quantum_depth = $image->QuantumDepth;
+   #warn "image->QuantumDepth failed" unless defined $quantum_depth;
+   #TODO add any other useful image analysis here e.g. is the page mis-oriented?
+   #  detect mis-orientation possible algorithm:
+   #   blur or low-pass filter the image (so words look like ovals)
+   #   look at few vertical narrow slices of the image and get the Standard Deviation
+   #   if most of the Std Dev are high, then it might be portrait  
+   send($parent, "$index $filename $mean $stddev $depth", 0);  #TODO may need to send quantumdepth
+  }
+ });
+
+ $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
+  my ($fileno, $condition) = @_;
+
+  my $line;
+  if ($condition & 'in') { # bit field operation. >= would also work
+   recv($child, $line, 1000, 0);
+   my ($index, $filename, $mean, $stddev, $depth) = split ' ', $line;
+   if (defined $filename and $filename ne '' and $index ne 'ready') {
+    warn "index: $index depth: $depth\n" unless $depth;
+    my $maxQ=-1+(1<<$depth);
+    $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+    $slist -> {data}[$index][2] = $filename;
+    $slist -> {data}[$index][1] = get_pixbuf($filename, $heightt, $widtht);
+    $slist -> {data}[$index][6] = $maxQ?$mean/$maxQ:0;
+    $stddev=0 if $stddev eq "nan";
+    #normalize the Std Dev as in ImageMagick's "identify -verbose"
+    $slist -> {data}[$index][7] = $maxQ?$stddev/$maxQ:0; 
+    $slist -> {data}[$index][11] = timestamp();
+    $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
+    my @selected = $slist -> get_selected_indices;
+    display_image($filename) if ($index == $selected[0]);
+   }
+   if (@analyze_queue) {
+    $page++;
+    $npages++;
+    my ($index) = @{shift @analyze_queue};
+    my $filename = $slist -> {data}[$index][2];
+    send($child, "$index $filename", 0);
+    $pbar->set_text(sprintf($d->get("Analyzing page %i of %i"), $page, $#analyze_queue+$npages+1));
+    $pbar->set_fraction (($page-1)/($#analyze_queue+$npages+1));
+   }
+   else {
+    send($child, 'finished', 0);
+    $dialog -> destroy;
+    $analyzing = FALSE;
+    post_process_scan();
+    select_blank_pages() if $select_blank;
+    select_dark_pages() if $select_dark;
+    return FALSE;  # uninstall
+   }
+  }
+
+# Can't have elsif here because of the possibility that both in and hup are set.
+# Only allow the hup if sure an empty buffer has been read.
+  if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
+   $dialog -> destroy;
+   $analyzing = FALSE;
+   post_process_scan();
+   return FALSE;  # uninstall
+  }
+  return TRUE;  # continue without uninstalling
+ });
+ $analyzing = TRUE;
  return;
 }
 
@@ -7795,6 +8064,7 @@ sub threshold {
    my $page = 0;
 
    foreach (@pagelist) {
+    my $index=$_;
     my $filename = $slist -> {data}[$_][2];
     my $image = Image::Magick->new;
     my $x = $image->Read($filename);
@@ -7803,6 +8073,11 @@ sub threshold {
 # Threshold the image
     $image->BlackThreshold(threshold=>$SETTING{'threshold tool'}.'%');
     $image->WhiteThreshold(threshold=>$SETTING{'threshold tool'}.'%');
+
+# flag the page as modified so it can be re-OCRed and re-Analyzed
+    $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
+    $slist -> {data}[$index][8] = timestamp(); #flag as dirty
+    $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Write it
     my $suffix;
@@ -7952,6 +8227,7 @@ sub negate {
      $slist -> {data}[$pagelist[$page]][2] = $filename;
      $slist -> {data}[$pagelist[$page]][1] =
                                        get_pixbuf($filename, $heightt, $widtht);
+     $slist -> {data}[$pagelist[$page]][8] = timestamp(); #flag as dirty
      $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
     }
     display_image($filename) if (! $page);
@@ -8127,6 +8403,7 @@ sub unsharp {
       $slist -> {data}[$pagelist[$page]][2] = $filename;
       $slist -> {data}[$pagelist[$page]][1] =
                                        get_pixbuf($filename, $heightt, $widtht);
+      $slist -> {data}[$pagelist[$page]][8] = timestamp(); #flag as dirty
       $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
       display_image($filename) if (! $page);
      }
@@ -8290,6 +8567,7 @@ sub crop {
       $slist -> {data}[$pagelist[$page]][2] = $filename;
       $slist -> {data}[$pagelist[$page]][1] =
                                        get_pixbuf($filename, $heightt, $widtht);
+      $slist -> {data}[$pagelist[$page]][8] = timestamp(); #flag as dirty
       $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
       display_image($filename) if (! $page);
      }
@@ -8981,6 +9259,7 @@ sub ocr_page {
 # Slurp the OCR output
       $slist -> {data}[$pagenum][3] .= slurp("$txt.txt");
       unlink <$txt*>;
+      $slist -> {data}[$pagenum][10] = timestamp(); #remember when we ran OCR on this page
       $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Update the buffer if current
@@ -9769,10 +10048,29 @@ sub preferences {
  });
  $hbox -> pack_end( $button, TRUE, TRUE, 0 );
 
+# Blank page standard deviation threshold
  $hbox = Gtk2::HBox -> new;
  $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('Blank threshold'));
+ $hbox -> pack_start ($label, FALSE, FALSE, 0);
+ my $spinbuttonb = Gtk2::SpinButton -> new_with_range(0, 1, 0.001);
+ $spinbuttonb->set_value($SETTING{'Blank threshold'});
+ $tooltips -> set_tip ($spinbuttonb, $d->get('Threshold used for selecting blank pages'));
+ $hbox -> add($spinbuttonb);
+
+# Dark page mean threshold
+ $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('Dark threshold'));
+ $hbox -> pack_start ($label, FALSE, FALSE, 0);
+ my $spinbuttond = Gtk2::SpinButton -> new_with_range(0, 1, 0.01);
+ $spinbuttond->set_value($SETTING{'Dark threshold'});
+ $tooltips -> set_tip ($spinbuttond, $d->get('Threshold used for selecting dark pages'));
+ $hbox -> add($spinbuttond);
 
 # Apply button
+ $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
  $button = Gtk2::Button -> new_from_stock('gtk-apply');
  $hbox -> pack_start( $button, TRUE, TRUE, 0 );
  $button -> signal_connect (clicked => sub {
@@ -9807,6 +10105,8 @@ sub preferences {
    $SETTING{TMPDIR} = $newdir;
    show_message_dialog($window, 'warning', 'close', $d->get('You will have to restart gscanp2df for changes to the temporary directory to take effect.'));
   }
+  $SETTING{'Blank threshold'} = $spinbuttonb->get_value;
+  $SETTING{'Dark threshold'} = $spinbuttond->get_value;
  });
 
 # Cancel button
