@@ -38,7 +38,7 @@ WriteMakefile(
               NAME            => $program,
               VERSION         => $version,
               EXE_FILES       => [ "bin/$program",
-                                   'bin/scanimage.pl', 'bin/scanadf.pl' ],
+                                   'bin/scanimage-perl', 'bin/scanadf-perl' ],
               PREREQ_PM       => {
                                    Gtk2                   => 1.090,
                                    Sane                   => 0.02,
