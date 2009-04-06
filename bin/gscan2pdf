@@ -147,9 +147,10 @@ my $d = Locale::gettext->domain($prog_name);
 my $d_sane = Locale::gettext->domain('sane-backends');
 
 my $debug = FALSE;
-my ($test, $help, @device, @model, $locale, @device_list);
+my ($test, $help, @device, @model, $locale, @device_list, $test_image);
 my @args = ('device=s' => \@device,
             'test=s%' => \$test,
+            'test-image=s' => \$test_image,
             'locale=s' => \$locale,
             'help' => \$help,
             'debug' => \$debug,
@@ -300,6 +301,16 @@ if (keys %{$test}) {
 # GetOptions leaves $test as a reference to an empty hash.
 else {
  undef $test;
+}
+
+if (defined $test_image) {
+ if (-r $test_image) {
+  print "Using test image $test_image\n" if $debug;
+ }
+ else {
+  warn sprintf($d->get("Error: cannot read file: %s\n"), $test_image);
+  exit 1;
+ }
 }
 
 if ($debug) {
@@ -5181,7 +5192,17 @@ sub scanimage {
   $scanning = TRUE;
  }
  else {
-  warn "$cmd\n";
+  my $index = import_scan ($test_image, 1*$step+$offset, 'Portable anymap',
+                                                    $SETTING{resolution}, FALSE);
+  if ($index == -1) {
+   show_message_dialog(
+    $windows, 'error', 'close', $d->get('Unable to load image')
+   );
+  }
+  else {
+   my $rotate = 1 % 2 ? $rfacing : $rreverse;
+   post_process_scan($index, $rotate, $unpaper, $ocr);
+  }
  }
  return;
 }
@@ -5749,8 +5770,8 @@ sub post_process_scan {
 
 sub import_scan {
  my ($ofilename, $page, $format, $resolution, $delete, $unpaper, $ocr) = @_;
- (my $filename, $resolution) = prepare_import($ofilename, $format, $resolution, $delete);
-
+ (my $filename, $resolution) = prepare_import($ofilename, $format, $resolution,
+                                                                       $delete);
  return add_image($filename, $page, $resolution);
 }
 
@@ -8764,11 +8785,14 @@ sub unpaper_page {
       $slist -> {data}[$pagenum][1] = get_pixbuf($out, $heightt, $widtht);
  
       if ($options =~ /--output-pages 2 /) {
+       my $index = import_scan($out2, $slist -> {data}[$pagenum][0],
+                      'Portable anymap', $slist -> {data}[$pagenum][4], TRUE)+1;
 
 # Update stacks as we have inserted a page
        for (my $i = 0; $i < @unpaper_stack; ++$i) {
         ++$unpaper_stack[$i][0] if ($unpaper_stack[$i][0] > $pagenum);
        }
+# Using $ocr rather than pushing @ocr_stack inside for() to avoid infinite loop
        my $ocr = FALSE;
        for (@ocr_stack) {
         if ($_ > $pagenum) {
@@ -8778,6 +8802,9 @@ sub unpaper_page {
          $ocr = TRUE;
         }
        }
+       push @ocr_stack, $index if $ocr;
+
+# Using $selected rather than pushing @selection inside for() to avoid infinite loop
        my $selected = FALSE;
        for (@selection) {
         if ($_ > $pagenum) {
@@ -8787,10 +8814,7 @@ sub unpaper_page {
          $selected = TRUE;
         }
        }
-       push @selection, $pagenum+1 if $selected;
-
-       import_scan($out2, $slist -> {data}[$pagenum][0], 'Portable anymap',
-                    $slist -> {data}[$pagenum][4], TRUE, FALSE, $ocr);
+       push @selection, $index if $selected;
 
 # Sort out numbering as now we have duplicates
        renumber($slist, 0);
