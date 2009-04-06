@@ -1189,11 +1189,12 @@ if (defined $SETTING{session}) {
  }
  else {
   warn "gscan2pdf detected a crashed session, but was unable to restore it as it has been deleted.\n";
+  delete $SETTING{session};
  }
 }
-else {
 
-# Create a temporary directory for scans
+# Create temporary directory if necessary
+unless (defined $SETTING{session}) {
  if (defined($SETTING{TMPDIR}) and $SETTING{TMPDIR} ne '') {
   mkdir($SETTING{TMPDIR}) if (not -d $SETTING{TMPDIR});
   if (! eval {$SETTING{session} = tempdir(DIR => $SETTING{TMPDIR})}) {

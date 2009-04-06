@@ -29,6 +29,9 @@
 * Use Test::Pod on documentation
 * + Select blank and dark pages. Closes #2567485 (auto detect blank pages)
   Thanks to Roy Shahbazian for the patch.
+* Fix bug where temp dir not created after previous session killed and old
+  temp dir deleted.
+  Closes 2735303 (Import function fails when stale session variable set)
 
 
 0.9.27 (11.12.2008):
