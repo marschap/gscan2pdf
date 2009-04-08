@@ -5438,18 +5438,6 @@ sub scan_pages {
     $shash{$sane_thread}{semaphore}->up;
    }
 
-# Stop the process unless everything OK and more scans required
-   unless ((($npages == -1 or --$npages)) and SANE_STATUS_GOOD == $shash{$sane_thread}{status}) {
-    $shash{$sane_thread}{process} = '
-     $device->cancel;
-     $shash{$sane_thread}{go} = 0;
-    ';
-    $shash{$sane_thread}{go} = 1;
-    $shash{$sane_thread}{semaphore}->up;
-    $dialog -> destroy;
-    return FALSE;
-   }
-
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
    my $index = import_scan ("out$n.pnm", $n, 'Portable anymap',
@@ -5464,6 +5452,18 @@ sub scan_pages {
    else {
     my $rotate = $n % 2 ? $rfacing : $rreverse;
     post_process_scan($index, $rotate, $unpaper, $ocr);
+   }
+
+# Stop the process unless everything OK and more scans required
+   unless ((($npages == -1 or --$npages)) and SANE_STATUS_GOOD == $shash{$sane_thread}{status}) {
+    $shash{$sane_thread}{process} = '
+     $device->cancel;
+     $shash{$sane_thread}{go} = 0;
+    ';
+    $shash{$sane_thread}{go} = 1;
+    $shash{$sane_thread}{semaphore}->up;
+    $dialog -> destroy;
+    return FALSE;
    }
 
    $n += $step;
@@ -5487,7 +5487,6 @@ sub new_page {
  my $path = sprintf $format, $n;
  $shash{$sane_thread}{data} = $path;
  $shash{$sane_thread}{process} = '
-  $shash{$sane_thread}{go} = 1;
   $device->start;
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
   if ($Sane::STATUS != SANE_STATUS_GOOD) {
