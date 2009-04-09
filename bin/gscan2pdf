@@ -99,7 +99,7 @@
 
 use warnings;
 use strict;
-use forks;
+use forks 0.33;
 use forks::shared;
 use Thread::Semaphore;
 use Gscan2pdf;
