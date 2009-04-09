@@ -50,7 +50,6 @@
 #    move paper sizes into TreeModel
 #    Translate documentation (po4a?)
 #    cope with or prevent pages being deleted during scan/unpaper/ocr
-#    write hg2cl if necessary
 #    simplify code - only keep variables that are needed
 #    - rename those like $hboxu to $hbox
 #    get it to work on the TV tuner
@@ -75,7 +74,7 @@
 # 0. Test scan in lineart, greyscale and colour.
 #    Check with Perl::Critic http://perlcritic.com/
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
-#    Make sure that file list in hg manifest reflects MANIFEST
+#    Make sure that file list in git ls-tree -r HEAD reflects MANIFEST
 #    Download new translations
 #    Update translators in credits
 #    Check a translation with LANGUAGE=de bin/gscan2pdf --debug
@@ -84,9 +83,9 @@
 # 2. perl Makefile.PL
 #    make rpmdist debdist
 #    test dist sudo dpkg -i /tmp/gscan2pdf/gscan2pdf-x.x.x_all.deb
-# 3. hg status -ma
-#    hg tag vx-x-x
-#    hg push ssh://ra28145@gscan2pdf.hg.sourceforge.net/hgroot/gscan2pdf
+# 3. git status
+#    git tag vx.x.x
+#    git push ssh://ra28145@gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf master
 # 4. make remote-html 
 # 5. Upload to sourceforge (https://frs.sourceforge.net/webupload) and release files
 # 6. Freshmeat
@@ -10422,17 +10421,17 @@ Sourceforge (L<http://sourceforge.net/project/showfiles.php?group_id=174140>).
 
 =head2 From the repository
 
-gscan2pdf uses Mercurial for its Revision Control System. You can browse the
-tree at L<http://gscan2pdf.hg.sourceforge.net/hgweb/gscan2pdf/>.
+gscan2pdf uses Git for its Revision Control System. You can browse the
+tree at L<http://gscan2pdf.git.sourceforge.net/gitweb/gscan2pdf/>.
 You can also download snapshots as .tar.gz, .zip, and .tar.bz2.
 
-Mercurial users can clone the complete tree with
-C<hg clone http://gscan2pdf.hg.sourceforge.net:8000/hgroot/gscan2pdf>
+Git users can clone the complete tree with
+C<git clone git://gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf>
 
 =head1 Building gscan2pdf from source
 
 Having downloaded the source either from a Sourceforge file release, or from the
-Mercurial repository, unpack it if necessary with
+Git repository, unpack it if necessary with
 C<tar xvfz gscan2pdf-x.x.x.tar.gz
 cd gscan2pdf-x.x.x>
 
