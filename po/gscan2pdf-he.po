@@ -1,0 +1,1752 @@
+# Hebrew translation for gscan2pdf
+# Copyright (c) 2008 Rosetta Contributors and Canonical Ltd 2008
+# This file is distributed under the same license as the gscan2pdf package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2008.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: gscan2pdf\n"
+"Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
+"POT-Creation-Date: 2008-12-12 23:42+0100\n"
+"PO-Revision-Date: 2008-12-21 23:38+0000\n"
+"Last-Translator: liorda <Unknown>\n"
+"Language-Team: Hebrew <he@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Launchpad-Export-Date: 2009-04-09 10:48+0000\n"
+"X-Generator: Launchpad (build Unknown)\n"
+
+#: bin/gscan2pdf:149
+#, perl-format
+msgid "Error: cannot read file: %s\n"
+msgstr "שגיאה: אין אפשרות לקרוא את הקובץ %s\n"
+
+#: bin/gscan2pdf:157
+#, perl-format
+msgid ""
+"Usage:\n"
+"%s --test <file>=<model>\n"
+msgstr ""
+
+#: bin/gscan2pdf:162
+msgid "Error displaying help\n"
+msgstr "שגיאה בעת הצגת עזרה\n"
+
+#: bin/gscan2pdf:188
+#, perl-format
+msgid ""
+"Usage:\n"
+"%s --device <device>\n"
+msgstr ""
+
+#: bin/gscan2pdf:193
+#, perl-format
+msgid "Unknown option %s.\n"
+msgstr "האפשרות %s אינה מוכרת.\n"
+
+#: bin/gscan2pdf:208
+msgid ""
+"Error: unable to load settings.\n"
+"Backing up settings\n"
+"Reverting to defaults"
+msgstr ""
+"שגיאה: לא ניתן לטעון הגדרות.\n"
+"יוצר גיבוי להגדרות\n"
+"חוזר להגדרות ברירת המחדל"
+
+#: bin/gscan2pdf:216
+msgid "A4"
+msgstr "A4"
+
+#: bin/gscan2pdf:222
+msgid "US Letter"
+msgstr "US Letter"
+
+#: bin/gscan2pdf:228
+msgid "US Legal"
+msgstr "US Legal"
+
+#: bin/gscan2pdf:324
+msgid "_File"
+msgstr "_קובץ"
+
+#: bin/gscan2pdf:325
+msgid "_New"
+msgstr "_חדש"
+
+#: bin/gscan2pdf:325
+msgid "Clears all pages"
+msgstr "מוחק כל העמודים"
+
+#: bin/gscan2pdf:326
+msgid "_Open"
+msgstr "_פתח"
+
+#: bin/gscan2pdf:326
+msgid "Open gscan2pdf session file"
+msgstr "פתח קובץ הפעלה של gscan2pdf"
+
+#: bin/gscan2pdf:327
+msgid "_Import"
+msgstr "_יבא"
+
+#: bin/gscan2pdf:327
+msgid "Import image file(s)"
+msgstr "יבא קבצי תמונה"
+
+#: bin/gscan2pdf:328
+msgid "S_can"
+msgstr "_סרוק"
+
+#: bin/gscan2pdf:328
+msgid "Scan document"
+msgstr "סרוק מסמך"
+
+#: bin/gscan2pdf:329 bin/gscan2pdf:2577
+msgid "Save"
+msgstr "שמור"
+
+#: bin/gscan2pdf:330
+msgid "_Email as PDF"
+msgstr "_שלח כקובץ PDF"
+
+#: bin/gscan2pdf:330
+msgid "Attach as PDF to a new email"
+msgstr "צרף כמסמך PDF להודעת דואל חדשה"
+
+#: bin/gscan2pdf:331
+msgid "_Compress temporary files"
+msgstr "_דחס קבצים זמניים"
+
+#: bin/gscan2pdf:331
+msgid "Compress temporary files"
+msgstr "דחס קבצים זמניים"
+
+#: bin/gscan2pdf:332
+msgid "_Quit"
+msgstr "_יציאה"
+
+#: bin/gscan2pdf:332
+msgid "Quit"
+msgstr "יציאה"
+
+#: bin/gscan2pdf:335
+msgid "_Edit"
+msgstr "_ערוך"
+
+#: bin/gscan2pdf:336
+msgid "_Undo"
+msgstr "_בטל"
+
+#: bin/gscan2pdf:336
+msgid "Undo"
+msgstr "בטל את הפעולה האחרונה"
+
+#: bin/gscan2pdf:337
+msgid "_Redo"
+msgstr "ב_צע שוב"
+
+#: bin/gscan2pdf:337
+msgid "Redo"
+msgstr "בצע שוב"
+
+#: bin/gscan2pdf:338
+msgid "Cu_t"
+msgstr "גזו_ר"
+
+#: bin/gscan2pdf:338
+msgid "Cut selection"
+msgstr "גזור בחירה"
+
+#: bin/gscan2pdf:339
+msgid "_Copy"
+msgstr "הע_תק"
+
+#: bin/gscan2pdf:339
+msgid "Copy selection"
+msgstr "העתק בחירה"
+
+#: bin/gscan2pdf:340
+msgid "_Paste"
+msgstr "ה_דבק"
+
+#: bin/gscan2pdf:340
+msgid "Paste selection"
+msgstr "הדבק בחירה"
+
+#: bin/gscan2pdf:341
+msgid "_Delete"
+msgstr "_מחק"
+
+#: bin/gscan2pdf:341
+msgid "Delete selected pages"
+msgstr "מחק דפים מסומנים"
+
+#: bin/gscan2pdf:342
+msgid "_Renumber"
+msgstr "_מספר מחדש"
+
+#: bin/gscan2pdf:342
+msgid "Renumber pages from 1 to n"
+msgstr "מספר מחדש דפים 1 עד n"
+
+#: bin/gscan2pdf:348
+msgid "Select _All"
+msgstr ""
+
+#: bin/gscan2pdf:348
+msgid "Select all pages"
+msgstr ""
+
+#: bin/gscan2pdf:349
+msgid "Select _Odd"
+msgstr ""
+
+#: bin/gscan2pdf:349
+msgid "Select all odd-numbered pages"
+msgstr ""
+
+#: bin/gscan2pdf:350
+msgid "Select _Even"
+msgstr ""
+
+#: bin/gscan2pdf:350
+msgid "Select all evenly-numbered pages"
+msgstr ""
+
+#: bin/gscan2pdf:351
+msgid "Propert_ies"
+msgstr ""
+
+#: bin/gscan2pdf:351
+msgid "Edit image properties"
+msgstr ""
+
+#: bin/gscan2pdf:352
+msgid "Prefere_nces"
+msgstr ""
+
+#: bin/gscan2pdf:352
+msgid "Edit preferences"
+msgstr ""
+
+#: bin/gscan2pdf:355
+msgid "_View"
+msgstr ""
+
+#: bin/gscan2pdf:356
+msgid "Zoom _100%"
+msgstr ""
+
+#: bin/gscan2pdf:356
+msgid "Zoom to 100%"
+msgstr ""
+
+#: bin/gscan2pdf:357
+msgid "Zoom to _fit"
+msgstr ""
+
+#: bin/gscan2pdf:357
+msgid "Zoom to fit"
+msgstr ""
+
+#: bin/gscan2pdf:358
+msgid "Zoom _in"
+msgstr ""
+
+#: bin/gscan2pdf:358
+msgid "Zoom in"
+msgstr ""
+
+#: bin/gscan2pdf:359
+msgid "Zoom _out"
+msgstr ""
+
+#: bin/gscan2pdf:359
+msgid "Zoom out"
+msgstr ""
+
+#: bin/gscan2pdf:360
+msgid "Rotate 90 clockwise"
+msgstr ""
+
+#: bin/gscan2pdf:361
+msgid "Rotate 180"
+msgstr ""
+
+#: bin/gscan2pdf:362
+msgid "Rotate 90 anticlockwise"
+msgstr ""
+
+#: bin/gscan2pdf:365
+msgid "_Tools"
+msgstr ""
+
+#: bin/gscan2pdf:366
+msgid "_Threshold"
+msgstr ""
+
+#: bin/gscan2pdf:366
+msgid "Change each pixel above this threshold to black"
+msgstr ""
+
+#: bin/gscan2pdf:367
+msgid "_Negate"
+msgstr ""
+
+#: bin/gscan2pdf:367
+msgid "Converts black to white and vice versa"
+msgstr ""
+
+#: bin/gscan2pdf:368
+msgid "_Unsharp Mask"
+msgstr ""
+
+#: bin/gscan2pdf:368
+msgid "Apply an unsharp mask"
+msgstr ""
+
+#: bin/gscan2pdf:369
+msgid "_Crop"
+msgstr ""
+
+#: bin/gscan2pdf:369
+msgid "Crop pages"
+msgstr ""
+
+#: bin/gscan2pdf:370
+msgid "_GIMP"
+msgstr ""
+
+#: bin/gscan2pdf:370
+msgid "Edit current page with GIMP"
+msgstr ""
+
+#: bin/gscan2pdf:371
+msgid "_Clean up"
+msgstr ""
+
+#: bin/gscan2pdf:371 bin/gscan2pdf:3696
+msgid "Clean up scanned images with unpaper"
+msgstr ""
+
+#: bin/gscan2pdf:372
+msgid "_OCR"
+msgstr ""
+
+#: bin/gscan2pdf:372
+msgid "Optical Character Recognition"
+msgstr ""
+
+#: bin/gscan2pdf:375 bin/gscan2pdf:376
+msgid "_Help"
+msgstr ""
+
+#: bin/gscan2pdf:376
+msgid "Help"
+msgstr ""
+
+#: bin/gscan2pdf:377
+msgid "_About"
+msgstr ""
+
+#: bin/gscan2pdf:381
+msgid "_Drag"
+msgstr ""
+
+#: bin/gscan2pdf:381
+msgid "Use the hand tool"
+msgstr ""
+
+#: bin/gscan2pdf:382
+msgid "_Select"
+msgstr ""
+
+#: bin/gscan2pdf:382
+msgid "Use the rectangular selection tool"
+msgstr ""
+
+#: bin/gscan2pdf:383
+msgid "_Paint"
+msgstr ""
+
+#: bin/gscan2pdf:383
+msgid "Use the painter tool"
+msgstr ""
+
+#: bin/gscan2pdf:585
+msgid "Thumbnails"
+msgstr ""
+
+#: bin/gscan2pdf:637
+msgid "Error copying page"
+msgstr ""
+
+#: bin/gscan2pdf:836
+msgid "Mode"
+msgstr ""
+
+#: bin/gscan2pdf:838
+msgid "Lineart"
+msgstr ""
+
+#: bin/gscan2pdf:839
+msgid "Grayscale"
+msgstr ""
+
+#: bin/gscan2pdf:840
+msgid "Gray"
+msgstr ""
+
+#: bin/gscan2pdf:841
+msgid "Color"
+msgstr ""
+
+#: bin/gscan2pdf:842
+msgid "Black & White"
+msgstr ""
+
+#: bin/gscan2pdf:843
+msgid "True Gray"
+msgstr ""
+
+#: bin/gscan2pdf:844
+msgid "Binary"
+msgstr ""
+
+#: bin/gscan2pdf:845 bin/gscan2pdf:897 bin/gscan2pdf:898
+msgid "Auto"
+msgstr ""
+
+#: bin/gscan2pdf:846
+msgid "Halftone"
+msgstr ""
+
+#: bin/gscan2pdf:847
+msgid "24bit Color"
+msgstr ""
+
+#: bin/gscan2pdf:850 bin/gscan2pdf:2545 bin/gscan2pdf:2615
+msgid "Compression"
+msgstr ""
+
+#: bin/gscan2pdf:852 bin/gscan2pdf:2539 bin/gscan2pdf:2609
+msgid "None"
+msgstr ""
+
+#: bin/gscan2pdf:853 bin/gscan2pdf:2538 bin/gscan2pdf:2591 bin/gscan2pdf:2605
+msgid "JPEG"
+msgstr ""
+
+#: bin/gscan2pdf:856 bin/gscan2pdf:7982
+msgid "Resolution"
+msgstr ""
+
+#: bin/gscan2pdf:857
+msgid "Brightness"
+msgstr ""
+
+#: bin/gscan2pdf:858
+msgid "Gain"
+msgstr ""
+
+#: bin/gscan2pdf:859
+msgid "Contrast"
+msgstr ""
+
+#: bin/gscan2pdf:860 bin/gscan2pdf:5911 bin/gscan2pdf:5919 bin/gscan2pdf:6198
+msgid "Threshold"
+msgstr ""
+
+#: bin/gscan2pdf:861
+msgid "Speed"
+msgstr ""
+
+#: bin/gscan2pdf:863 bin/gscan2pdf:869 bin/gscan2pdf:875 bin/gscan2pdf:881
+#: bin/gscan2pdf:887
+msgid "Yes"
+msgstr ""
+
+#: bin/gscan2pdf:864 bin/gscan2pdf:870 bin/gscan2pdf:876 bin/gscan2pdf:882
+#: bin/gscan2pdf:888
+msgid "No"
+msgstr ""
+
+#: bin/gscan2pdf:867
+msgid "Batch scan"
+msgstr ""
+
+#: bin/gscan2pdf:873 bin/gscan2pdf:879
+msgid "Wait for button"
+msgstr ""
+
+#: bin/gscan2pdf:885
+msgid "Cache calibration"
+msgstr ""
+
+#: bin/gscan2pdf:891
+msgid "Source"
+msgstr ""
+
+#: bin/gscan2pdf:893
+msgid "Normal"
+msgstr ""
+
+#: bin/gscan2pdf:894
+msgid "ADF"
+msgstr ""
+
+#: bin/gscan2pdf:895
+msgid "Automatic Document Feeder"
+msgstr ""
+
+#: bin/gscan2pdf:896
+msgid "XPA"
+msgstr ""
+
+#: bin/gscan2pdf:899
+msgid "Flatbed"
+msgstr ""
+
+#: bin/gscan2pdf:900
+msgid "Transparency Adapter"
+msgstr ""
+
+#: bin/gscan2pdf:901
+msgid "Transparency Unit"
+msgstr ""
+
+#: bin/gscan2pdf:904 bin/gscan2pdf:906
+msgid "Page Width"
+msgstr ""
+
+#: bin/gscan2pdf:905 bin/gscan2pdf:907
+msgid "Page Height"
+msgstr ""
+
+#: bin/gscan2pdf:908
+msgid "ADF Mode"
+msgstr ""
+
+#: bin/gscan2pdf:910
+msgid "Simplex"
+msgstr ""
+
+#: bin/gscan2pdf:911
+msgid "Duplex"
+msgstr ""
+
+#: bin/gscan2pdf:920
+msgid "Layout"
+msgstr ""
+
+#: bin/gscan2pdf:923
+msgid "Single"
+msgstr ""
+
+#: bin/gscan2pdf:924
+msgid "One page per sheet, oriented upwards without rotation."
+msgstr ""
+
+#: bin/gscan2pdf:927
+msgid "Double"
+msgstr ""
+
+#: bin/gscan2pdf:928
+msgid ""
+"Two pages per sheet, landscape orientation (one page on the left half, one "
+"page on the right half)."
+msgstr ""
+
+#: bin/gscan2pdf:935
+msgid "# Output pages"
+msgstr ""
+
+#: bin/gscan2pdf:936
+msgid "Number of pages to output."
+msgstr ""
+
+#: bin/gscan2pdf:944
+msgid "No deskew"
+msgstr ""
+
+#: bin/gscan2pdf:945
+msgid "Disable deskewing."
+msgstr ""
+
+#: bin/gscan2pdf:950
+msgid "No mask scan"
+msgstr ""
+
+#: bin/gscan2pdf:951
+msgid "Disable mask detection."
+msgstr ""
+
+#: bin/gscan2pdf:956
+msgid "No black filter"
+msgstr ""
+
+#: bin/gscan2pdf:957
+msgid "Disable black area scan."
+msgstr ""
+
+#: bin/gscan2pdf:962
+msgid "No gray filter"
+msgstr ""
+
+#: bin/gscan2pdf:963
+msgid "Disable gray area scan."
+msgstr ""
+
+#: bin/gscan2pdf:968
+msgid "No noise filter"
+msgstr ""
+
+#: bin/gscan2pdf:969
+msgid "Disable noise filter."
+msgstr ""
+
+#: bin/gscan2pdf:974
+msgid "No blur filter"
+msgstr ""
+
+#: bin/gscan2pdf:975
+msgid "Disable blur filter."
+msgstr ""
+
+#: bin/gscan2pdf:980
+msgid "No border scan"
+msgstr ""
+
+#: bin/gscan2pdf:981
+msgid "Disable border scanning."
+msgstr ""
+
+#: bin/gscan2pdf:986
+msgid "No border align"
+msgstr ""
+
+#: bin/gscan2pdf:987
+msgid "Disable aligning of the area detected by border scanning."
+msgstr ""
+
+#: bin/gscan2pdf:992
+msgid "Deskew to edge"
+msgstr ""
+
+#: bin/gscan2pdf:993
+msgid ""
+"Edges from which to scan for rotation. Each edge of a mask can be used to "
+"detect the mask's rotation. If multiple edges are specified, the average "
+"value will be used, unless the statistical deviation exceeds --deskew-scan-"
+"deviation."
+msgstr ""
+
+#: bin/gscan2pdf:997 bin/gscan2pdf:1025 bin/gscan2pdf:5097 bin/gscan2pdf:5166
+#: bin/gscan2pdf:5308
+msgid "Left"
+msgstr ""
+
+#: bin/gscan2pdf:998
+msgid "Use 'left' for scanning from the left edge."
+msgstr ""
+
+#: bin/gscan2pdf:1002 bin/gscan2pdf:1030 bin/gscan2pdf:5098 bin/gscan2pdf:5170
+#: bin/gscan2pdf:5309
+msgid "Top"
+msgstr ""
+
+#: bin/gscan2pdf:1003
+msgid "Use 'top' for scanning from the top edge."
+msgstr ""
+
+#: bin/gscan2pdf:1007 bin/gscan2pdf:1035
+msgid "Right"
+msgstr ""
+
+#: bin/gscan2pdf:1008
+msgid "Use 'right' for scanning from the right edge."
+msgstr ""
+
+#: bin/gscan2pdf:1012 bin/gscan2pdf:1040
+msgid "Bottom"
+msgstr ""
+
+#: bin/gscan2pdf:1013
+msgid "Use 'bottom' for scanning from the bottom."
+msgstr ""
+
+#: bin/gscan2pdf:1020
+msgid "Align to edge"
+msgstr ""
+
+#: bin/gscan2pdf:1021
+msgid "Edge to which to align the page."
+msgstr ""
+
+#: bin/gscan2pdf:1026
+msgid "Use 'left' to align to the left edge."
+msgstr ""
+
+#: bin/gscan2pdf:1031
+msgid "Use 'top' to align to the top edge."
+msgstr ""
+
+#: bin/gscan2pdf:1036
+msgid "Use 'right' to align to the right edge."
+msgstr ""
+
+#: bin/gscan2pdf:1041
+msgid "Use 'bottom' to align to the bottom."
+msgstr ""
+
+#: bin/gscan2pdf:1047
+msgid "Border margin"
+msgstr ""
+
+#: bin/gscan2pdf:1051
+msgid "Vertical margin"
+msgstr ""
+
+#: bin/gscan2pdf:1052
+msgid ""
+"Vertical distance to keep from the sheet edge when aligning a border area."
+msgstr ""
+
+#: bin/gscan2pdf:1059
+msgid "Horizontal margin"
+msgstr ""
+
+#: bin/gscan2pdf:1060
+msgid ""
+"Horizontal distance to keep from the sheet edge when aligning a border area."
+msgstr ""
+
+#: bin/gscan2pdf:1069
+msgid "White threshold"
+msgstr ""
+
+#: bin/gscan2pdf:1070
+msgid "Brightness ratio above which a pixel is considered white."
+msgstr ""
+
+#: bin/gscan2pdf:1078
+msgid "Black threshold"
+msgstr ""
+
+#: bin/gscan2pdf:1079
+msgid ""
+"Brightness ratio below which a pixel is considered black (non-gray). This is "
+"used by the gray-filter. This value is also used when converting a grayscale "
+"image to black-and-white mode."
+msgstr ""
+
+#: bin/gscan2pdf:1105
+#, perl-format
+msgid ""
+"Warning: unable to use %s for temporary storage. Defaulting to %s instead.\n"
+msgstr ""
+
+#: bin/gscan2pdf:1217
+msgid "GOCR"
+msgstr ""
+
+#: bin/gscan2pdf:1217
+msgid "Process image with GOCR."
+msgstr ""
+
+#: bin/gscan2pdf:1220
+msgid "Tesseract"
+msgstr ""
+
+#: bin/gscan2pdf:1220
+msgid "Process image with Tesseract."
+msgstr ""
+
+#: bin/gscan2pdf:1225
+msgid "Save image and Save as PDF both require imagemagick\n"
+msgstr ""
+
+#: bin/gscan2pdf:1229
+msgid "Save image requires libtiff\n"
+msgstr ""
+
+#: bin/gscan2pdf:1233
+msgid "Save as DjVu requires djvulibre-bin\n"
+msgstr ""
+
+#: bin/gscan2pdf:1237
+msgid "Email as PDF requires xdg-email\n"
+msgstr ""
+
+#: bin/gscan2pdf:1278
+msgid "The rotating options and unpaper support require perlmagick\n"
+msgstr ""
+
+#: bin/gscan2pdf:1284
+msgid "unpaper missing\n"
+msgstr ""
+
+#: bin/gscan2pdf:1290
+msgid "OCR requires gocr or tesseract\n"
+msgstr ""
+
+#: bin/gscan2pdf:1295
+msgid "Warning: missing packages"
+msgstr ""
+
+#: bin/gscan2pdf:1301
+msgid "Don't show this message again"
+msgstr ""
+
+#: bin/gscan2pdf:1437
+msgid "Warning: "
+msgstr ""
+
+#: bin/gscan2pdf:1444
+#, perl-format
+msgid "Information: got %s on second attempt\n"
+msgstr ""
+
+#: bin/gscan2pdf:1528
+msgid "Open session file"
+msgstr ""
+
+#: bin/gscan2pdf:1548
+msgid "Opening"
+msgstr ""
+
+#: bin/gscan2pdf:1639
+msgid "Import image from file"
+msgstr ""
+
+#: bin/gscan2pdf:1660
+msgid "Importing"
+msgstr ""
+
+#: bin/gscan2pdf:1703
+msgid "Pages to extract"
+msgstr ""
+
+#: bin/gscan2pdf:1706
+msgid "First page to extract"
+msgstr ""
+
+#: bin/gscan2pdf:1712
+msgid "Last page to extract"
+msgstr ""
+
+#: bin/gscan2pdf:1787
+#, perl-format
+msgid "Can't open %s: %s"
+msgstr ""
+
+#: bin/gscan2pdf:1812
+msgid "Unknown DjVu file structure. Please contact the author."
+msgstr ""
+
+#: bin/gscan2pdf:1838 bin/gscan2pdf:1899 bin/gscan2pdf:1949
+#, perl-format
+msgid "Importing image %i of %i"
+msgstr ""
+
+#: bin/gscan2pdf:1860
+#, perl-format
+msgid "%s is not a recognised image type"
+msgstr ""
+
+#: bin/gscan2pdf:1888
+msgid "Extracting images from PDF"
+msgstr ""
+
+#: bin/gscan2pdf:1890
+msgid "Error extracting images from PDF"
+msgstr ""
+
+#: bin/gscan2pdf:1907
+msgid "Error extracting PDF infomation"
+msgstr ""
+
+#: bin/gscan2pdf:1911
+msgid "Extracting TIFF infomation"
+msgstr ""
+
+#: bin/gscan2pdf:1959 bin/gscan2pdf:1966
+#, perl-format
+msgid "Importing %s"
+msgstr ""
+
+#: bin/gscan2pdf:2004
+msgid "Page Range"
+msgstr ""
+
+#: bin/gscan2pdf:2075
+msgid "Metadata"
+msgstr ""
+
+#: bin/gscan2pdf:2084
+msgid "Date"
+msgstr ""
+
+#: bin/gscan2pdf:2093
+msgid "Select Date"
+msgstr ""
+
+#: bin/gscan2pdf:2110
+msgid "Today"
+msgstr ""
+
+#: bin/gscan2pdf:2121
+msgid "Year-Month-Day"
+msgstr ""
+
+#: bin/gscan2pdf:2127
+msgid "Document author"
+msgstr ""
+
+#: bin/gscan2pdf:2136
+msgid "Title"
+msgstr ""
+
+#: bin/gscan2pdf:2145
+msgid "Subject"
+msgstr ""
+
+#: bin/gscan2pdf:2154
+msgid "Keywords"
+msgstr ""
+
+#: bin/gscan2pdf:2200
+msgid "Saving PDF"
+msgstr ""
+
+#: bin/gscan2pdf:2226
+msgid "Setting up PDF"
+msgstr ""
+
+#: bin/gscan2pdf:2233
+#, perl-format
+msgid "Saving page %i of %i"
+msgstr ""
+
+#: bin/gscan2pdf:2377 bin/gscan2pdf:2383
+#, perl-format
+msgid "Error embedding file image in %s format to PDF: %s"
+msgstr ""
+
+#: bin/gscan2pdf:2390
+msgid "Closing PDF"
+msgstr ""
+
+#: bin/gscan2pdf:2441
+msgid "PDF filename"
+msgstr ""
+
+#: bin/gscan2pdf:2467 bin/gscan2pdf:2740 bin/gscan2pdf:2786 bin/gscan2pdf:2838
+#: bin/gscan2pdf:2887 bin/gscan2pdf:2938 bin/gscan2pdf:3151
+#, perl-format
+msgid "File %s is read-only"
+msgstr ""
+
+#: bin/gscan2pdf:2496
+msgid "JPEG Quality"
+msgstr ""
+
+#: bin/gscan2pdf:2511
+msgid "Downsample to"
+msgstr ""
+
+#: bin/gscan2pdf:2516
+msgid "dpi"
+msgstr ""
+
+#: bin/gscan2pdf:2531
+msgid "Automatic"
+msgstr ""
+
+#: bin/gscan2pdf:2531
+msgid "Let gscan2pdf which type of compression to use."
+msgstr ""
+
+#: bin/gscan2pdf:2532 bin/gscan2pdf:2603
+msgid "LZW"
+msgstr ""
+
+#: bin/gscan2pdf:2532 bin/gscan2pdf:2603
+msgid "Compress output with Lempel-Ziv & Welch encoding."
+msgstr ""
+
+#: bin/gscan2pdf:2533 bin/gscan2pdf:2604
+msgid "Zip"
+msgstr ""
+
+#: bin/gscan2pdf:2533 bin/gscan2pdf:2604
+msgid "Compress output with deflate encoding."
+msgstr ""
+
+#: bin/gscan2pdf:2534 bin/gscan2pdf:2606
+msgid "Packbits"
+msgstr ""
+
+#: bin/gscan2pdf:2534 bin/gscan2pdf:2606
+msgid "Compress output with Packbits encoding."
+msgstr ""
+
+#: bin/gscan2pdf:2535 bin/gscan2pdf:2607
+msgid "G3"
+msgstr ""
+
+#: bin/gscan2pdf:2535 bin/gscan2pdf:2607
+msgid "Compress output with CCITT Group 3 encoding."
+msgstr ""
+
+#: bin/gscan2pdf:2536 bin/gscan2pdf:2608
+msgid "G4"
+msgstr ""
+
+#: bin/gscan2pdf:2536 bin/gscan2pdf:2608
+msgid "Compress output with CCITT Group 4 encoding."
+msgstr ""
+
+#: bin/gscan2pdf:2537 bin/gscan2pdf:2592
+msgid "PNG"
+msgstr ""
+
+#: bin/gscan2pdf:2537
+msgid "Compress output with PNG encoding."
+msgstr ""
+
+#: bin/gscan2pdf:2538 bin/gscan2pdf:2605
+msgid "Compress output with JPEG encoding."
+msgstr ""
+
+#: bin/gscan2pdf:2539 bin/gscan2pdf:2609
+msgid "Use no compression algorithm on output."
+msgstr ""
+
+#: bin/gscan2pdf:2585
+msgid "Image type"
+msgstr ""
+
+#: bin/gscan2pdf:2589
+msgid "PDF"
+msgstr ""
+
+#: bin/gscan2pdf:2589
+msgid "Portable Document Format"
+msgstr ""
+
+#: bin/gscan2pdf:2590
+msgid "GIF"
+msgstr ""
+
+#: bin/gscan2pdf:2590
+msgid "CompuServe graphics interchange format"
+msgstr ""
+
+#: bin/gscan2pdf:2591
+msgid "Joint Photographic Experts Group JFIF format"
+msgstr ""
+
+#: bin/gscan2pdf:2592
+msgid "Portable Network Graphics"
+msgstr ""
+
+#: bin/gscan2pdf:2593
+msgid "PNM"
+msgstr ""
+
+#: bin/gscan2pdf:2593
+msgid "Portable anymap"
+msgstr ""
+
+#: bin/gscan2pdf:2594
+msgid "PS"
+msgstr ""
+
+#: bin/gscan2pdf:2594
+msgid "Postscript"
+msgstr ""
+
+#: bin/gscan2pdf:2595
+msgid "TIFF"
+msgstr ""
+
+#: bin/gscan2pdf:2595
+msgid "Tagged Image File Format"
+msgstr ""
+
+#: bin/gscan2pdf:2596
+msgid "Text"
+msgstr ""
+
+#: bin/gscan2pdf:2596
+msgid "Plain text"
+msgstr ""
+
+#: bin/gscan2pdf:2597
+msgid "Session"
+msgstr ""
+
+#: bin/gscan2pdf:2597
+msgid "gscan2pdf session file"
+msgstr ""
+
+#: bin/gscan2pdf:2599
+msgid "DjVu"
+msgstr ""
+
+#: bin/gscan2pdf:2599
+msgid "Deja Vu"
+msgstr ""
+
+#: bin/gscan2pdf:2620
+msgid "tiff"
+msgstr ""
+
+#: bin/gscan2pdf:2716
+msgid "TIFF filename"
+msgstr ""
+
+#: bin/gscan2pdf:2762
+msgid "Text filename"
+msgstr ""
+
+#: bin/gscan2pdf:2794 bin/gscan2pdf:3245
+#, perl-format
+msgid "Can't open file: %s"
+msgstr ""
+
+#: bin/gscan2pdf:2814
+msgid "PS filename"
+msgstr ""
+
+#: bin/gscan2pdf:2863
+msgid "gscan2pdf session filename"
+msgstr ""
+
+#: bin/gscan2pdf:2943
+#, perl-format
+msgid ""
+"File %s exists.\n"
+"Really overwrite?"
+msgstr ""
+
+#: bin/gscan2pdf:2956
+msgid "Image filename"
+msgstr ""
+
+#: bin/gscan2pdf:2986 bin/gscan2pdf:2997
+msgid "Error saving image"
+msgstr ""
+
+#: bin/gscan2pdf:3016
+msgid "Saving TIFF"
+msgstr ""
+
+#: bin/gscan2pdf:3046
+#, perl-format
+msgid "Converting image %i of %i to TIFF"
+msgstr ""
+
+#: bin/gscan2pdf:3056
+msgid "Error writing TIFF"
+msgstr ""
+
+#: bin/gscan2pdf:3067
+msgid "Concatenating TIFFs"
+msgstr ""
+
+#: bin/gscan2pdf:3074
+msgid "Converting to PS"
+msgstr ""
+
+#: bin/gscan2pdf:3127
+msgid "DjVu filename"
+msgstr ""
+
+#: bin/gscan2pdf:3161
+msgid "Saving DjVu"
+msgstr ""
+
+#: bin/gscan2pdf:3188
+#, perl-format
+msgid "Writing page %i of %i"
+msgstr ""
+
+#: bin/gscan2pdf:3227 bin/gscan2pdf:3254
+msgid "Error writing DjVu"
+msgstr ""
+
+#: bin/gscan2pdf:3257
+msgid "Closing DjVu"
+msgstr ""
+
+#: bin/gscan2pdf:3260
+msgid "Error closing DjVu"
+msgstr ""
+
+#: bin/gscan2pdf:3322
+msgid "Email as PDF"
+msgstr ""
+
+#: bin/gscan2pdf:3371
+msgid "Error creating email"
+msgstr ""
+
+#: bin/gscan2pdf:3399
+msgid "Scan Document"
+msgstr ""
+
+#: bin/gscan2pdf:3411
+msgid "Page Options"
+msgstr ""
+
+#: bin/gscan2pdf:3415
+msgid "Scan Options"
+msgstr ""
+
+#: bin/gscan2pdf:3418
+msgid "# Pages"
+msgstr ""
+
+#: bin/gscan2pdf:3427 bin/gscan2pdf:8087
+msgid "All"
+msgstr ""
+
+#: bin/gscan2pdf:3428
+msgid "Scan all pages"
+msgstr ""
+
+#: bin/gscan2pdf:3435 bin/gscan2pdf:3440
+msgid "Set number of pages to scan"
+msgstr ""
+
+#: bin/gscan2pdf:3453
+msgid "Extended page numbering"
+msgstr ""
+
+#: bin/gscan2pdf:3457
+msgid "Page number"
+msgstr ""
+
+#: bin/gscan2pdf:3466
+msgid "Start"
+msgstr ""
+
+#: bin/gscan2pdf:3475
+msgid "Increment"
+msgstr ""
+
+#: bin/gscan2pdf:3501
+msgid "Source document"
+msgstr ""
+
+#: bin/gscan2pdf:3508
+msgid "Single sided"
+msgstr ""
+
+#: bin/gscan2pdf:3509
+msgid "Source document is single-sided"
+msgstr ""
+
+#: bin/gscan2pdf:3516
+msgid "Double sided"
+msgstr ""
+
+#: bin/gscan2pdf:3517
+msgid "Source document is double-sided"
+msgstr ""
+
+#: bin/gscan2pdf:3523
+msgid "Side to scan"
+msgstr ""
+
+#: bin/gscan2pdf:3527
+msgid "Facing"
+msgstr ""
+
+#: bin/gscan2pdf:3527
+msgid "Reverse"
+msgstr ""
+
+#: bin/gscan2pdf:3547
+msgid "Sets which side of a double-sided document is scanned"
+msgstr ""
+
+#: bin/gscan2pdf:3593
+msgid "Post-processing"
+msgstr ""
+
+#: bin/gscan2pdf:3602 bin/gscan2pdf:3624
+msgid "Rotate"
+msgstr ""
+
+#: bin/gscan2pdf:3603 bin/gscan2pdf:3625
+msgid "Rotate image after scanning"
+msgstr ""
+
+#: bin/gscan2pdf:3606
+msgid "Both sides"
+msgstr ""
+
+#: bin/gscan2pdf:3606
+msgid "Both sides."
+msgstr ""
+
+#: bin/gscan2pdf:3607
+msgid "Facing side"
+msgstr ""
+
+#: bin/gscan2pdf:3607
+msgid "Facing side."
+msgstr ""
+
+#: bin/gscan2pdf:3608
+msgid "Reverse side"
+msgstr ""
+
+#: bin/gscan2pdf:3608
+msgid "Reverse side."
+msgstr ""
+
+#: bin/gscan2pdf:3611 bin/gscan2pdf:3629
+msgid "Select side to rotate"
+msgstr ""
+
+#: bin/gscan2pdf:3614
+msgid "90"
+msgstr ""
+
+#: bin/gscan2pdf:3614
+msgid "Rotate image 90 degrees clockwise."
+msgstr ""
+
+#: bin/gscan2pdf:3615
+msgid "180"
+msgstr ""
+
+#: bin/gscan2pdf:3615
+msgid "Rotate image 180 degrees clockwise."
+msgstr ""
+
+#: bin/gscan2pdf:3616
+msgid "270"
+msgstr ""
+
+#: bin/gscan2pdf:3616
+msgid "Rotate image 90 degrees anticlockwise."
+msgstr ""
+
+#: bin/gscan2pdf:3619 bin/gscan2pdf:3632
+msgid "Select direction of rotation"
+msgstr ""
+
+#: bin/gscan2pdf:3695
+msgid "Clean up images"
+msgstr ""
+
+#: bin/gscan2pdf:3705
+msgid "Options"
+msgstr ""
+
+#: bin/gscan2pdf:3706
+msgid "Set unpaper options"
+msgstr ""
+
+#: bin/gscan2pdf:3709
+msgid "unpaper options"
+msgstr ""
+
+#: bin/gscan2pdf:3738 bin/gscan2pdf:3739
+msgid "OCR scanned pages"
+msgstr ""
+
+#: bin/gscan2pdf:3749
+msgid "Select OCR engine"
+msgstr ""
+
+#: bin/gscan2pdf:3777
+msgid "Device-dependent options"
+msgstr ""
+
+#: bin/gscan2pdf:3784
+msgid "Scan profiles"
+msgstr ""
+
+#: bin/gscan2pdf:3810 bin/gscan2pdf:3815
+msgid "Name of scan profile"
+msgstr ""
+
+#: bin/gscan2pdf:3851
+msgid "Scan"
+msgstr ""
+
+#: bin/gscan2pdf:3885
+msgid "Must scan facing pages first"
+msgstr ""
+
+#: bin/gscan2pdf:3963
+msgid "Fetching list of devices"
+msgstr ""
+
+#: bin/gscan2pdf:4005
+msgid "No scanners found"
+msgstr ""
+
+#: bin/gscan2pdf:4126
+msgid "Device"
+msgstr ""
+
+#: bin/gscan2pdf:4145
+msgid "Sets the device to be used for the scan"
+msgstr ""
+
+#: bin/gscan2pdf:4292 bin/gscan2pdf:4296 bin/gscan2pdf:4328 bin/gscan2pdf:4448
+#: bin/gscan2pdf:4452
+msgid "Scanning"
+msgstr ""
+
+#: bin/gscan2pdf:4328
+msgid "pages"
+msgstr ""
+
+#: bin/gscan2pdf:4331
+#, perl-format
+msgid "Scanning page %i..."
+msgstr ""
+
+#: bin/gscan2pdf:4343 bin/gscan2pdf:4501
+msgid "Unable to load image"
+msgstr ""
+
+#: bin/gscan2pdf:4353 bin/gscan2pdf:4488
+msgid "Scanner warming up"
+msgstr ""
+
+#: bin/gscan2pdf:4372 bin/gscan2pdf:4519
+msgid "Device busy"
+msgstr ""
+
+#: bin/gscan2pdf:4375 bin/gscan2pdf:4522
+msgid "Unknown message: "
+msgstr ""
+
+#: bin/gscan2pdf:4491
+#, perl-format
+msgid "Scanned page %i..."
+msgstr ""
+
+#: bin/gscan2pdf:4635 bin/gscan2pdf:4639
+msgid "Error importing image"
+msgstr ""
+
+#: bin/gscan2pdf:4758
+msgid "Error pasting image"
+msgstr ""
+
+#: bin/gscan2pdf:4902
+msgid "Patches gratefully received from:"
+msgstr ""
+
+#: bin/gscan2pdf:4904
+msgid "To aid the scan-to-PDF process"
+msgstr ""
+
+#: bin/gscan2pdf:4905
+msgid "Copyright 2006--2008 Jeffrey Ratcliffe"
+msgstr ""
+
+#: bin/gscan2pdf:4998 bin/gscan2pdf:5502
+msgid "Updating options"
+msgstr ""
+
+#: bin/gscan2pdf:5077 bin/gscan2pdf:5094
+msgid "Paper size"
+msgstr ""
+
+#: bin/gscan2pdf:5081 bin/gscan2pdf:5179 bin/gscan2pdf:5689
+msgid "Manual"
+msgstr ""
+
+#: bin/gscan2pdf:5082 bin/gscan2pdf:5176
+msgid "Edit"
+msgstr ""
+
+#: bin/gscan2pdf:5083
+msgid "Selects or edits the paper size"
+msgstr ""
+
+#: bin/gscan2pdf:5095 bin/gscan2pdf:5158 bin/gscan2pdf:5306
+msgid "Width"
+msgstr ""
+
+#: bin/gscan2pdf:5096 bin/gscan2pdf:5162 bin/gscan2pdf:5307
+msgid "Height"
+msgstr ""
+
+#: bin/gscan2pdf:5159
+msgid "Width of scan area"
+msgstr ""
+
+#: bin/gscan2pdf:5163
+msgid "Height of scan area"
+msgstr ""
+
+#: bin/gscan2pdf:5167
+msgid "Top-left x position of scan area"
+msgstr ""
+
+#: bin/gscan2pdf:5171
+msgid "Top-left y position of scan area"
+msgstr ""
+
+#: bin/gscan2pdf:5292
+msgid "Edit paper size"
+msgstr ""
+
+#: bin/gscan2pdf:5305
+msgid "Name"
+msgstr ""
+
+#: bin/gscan2pdf:5352
+msgid "Cannot delete all paper sizes"
+msgstr ""
+
+#: bin/gscan2pdf:5395
+msgid ""
+"The following paper sizes are too big to be scanned by the selected device:"
+msgstr ""
+
+#: bin/gscan2pdf:5769
+msgid "Rotating"
+msgstr ""
+
+#: bin/gscan2pdf:5846
+#, perl-format
+msgid "Rotating page %i of %i"
+msgstr ""
+
+#: bin/gscan2pdf:5921 bin/gscan2pdf:6188
+msgid "%"
+msgstr ""
+
+#: bin/gscan2pdf:5940
+msgid "Applying threshold"
+msgstr ""
+
+#: bin/gscan2pdf:6000
+#, perl-format
+msgid "Applying threshold to page %i of %i"
+msgstr ""
+
+#: bin/gscan2pdf:6038
+msgid "Negate"
+msgstr ""
+
+#: bin/gscan2pdf:6055
+msgid "Applying negate"
+msgstr ""
+
+#: bin/gscan2pdf:6116
+#, perl-format
+msgid "Applying negate to page %i of %i"
+msgstr ""
+
+#: bin/gscan2pdf:6154
+msgid "Unsharp mask"
+msgstr ""
+
+#: bin/gscan2pdf:6162
+msgid "Radius"
+msgstr ""
+
+#: bin/gscan2pdf:6164 bin/gscan2pdf:6176
+msgid "pixels"
+msgstr ""
+
+#: bin/gscan2pdf:6168
+msgid ""
+"The radius of the Gaussian, in pixels, not counting the center pixel (0 = "
+"automatic)."
+msgstr ""
+
+#: bin/gscan2pdf:6174
+msgid "Sigma"
+msgstr ""
+
+#: bin/gscan2pdf:6180
+msgid "The standard deviation of the Gaussian."
+msgstr ""
+
+#: bin/gscan2pdf:6186
+msgid "Amount"
+msgstr ""
+
+#: bin/gscan2pdf:6192
+msgid ""
+"The percentage of the difference between the original and the blur image "
+"that is added back into the original."
+msgstr ""
+
+#: bin/gscan2pdf:6202
+msgid ""
+"The threshold, as a fraction of QuantumRange, needed to apply the difference "
+"amount."
+msgstr ""
+
+#: bin/gscan2pdf:6221
+msgid "Applying unsharp mask"
+msgstr ""
+
+#: bin/gscan2pdf:6291
+#, perl-format
+msgid "Applying unsharp mask to page %i of %i"
+msgstr ""
+
+#: bin/gscan2pdf:6354
+msgid "Crop"
+msgstr ""
+
+#: bin/gscan2pdf:6385
+msgid "Cropping"
+msgstr ""
+
+#: bin/gscan2pdf:6455
+#, perl-format
+msgid "Cropping page %i of %i"
+msgstr ""
+
+#: bin/gscan2pdf:6550 bin/gscan2pdf:6553
+msgid "Running unpaper"
+msgstr ""
+
+#: bin/gscan2pdf:6591 bin/gscan2pdf:7074
+#, perl-format
+msgid "Page %i of %i"
+msgstr ""
+
+#: bin/gscan2pdf:6888
+msgid "Deskew"
+msgstr ""
+
+#: bin/gscan2pdf:6918
+msgid "Border"
+msgstr ""
+
+#: bin/gscan2pdf:6969
+msgid "Filters"
+msgstr ""
+
+#: bin/gscan2pdf:6991
+msgid "unpaper"
+msgstr ""
+
+#: bin/gscan2pdf:7033 bin/gscan2pdf:7036
+msgid "Running OCR"
+msgstr ""
+
+#: bin/gscan2pdf:7230
+msgid "Language to recognise"
+msgstr ""
+
+#: bin/gscan2pdf:7235
+msgid "German"
+msgstr ""
+
+#: bin/gscan2pdf:7236
+msgid "Fraktur"
+msgstr ""
+
+#: bin/gscan2pdf:7237 bin/gscan2pdf:7278
+msgid "English"
+msgstr ""
+
+#: bin/gscan2pdf:7238
+msgid "French"
+msgstr ""
+
+#: bin/gscan2pdf:7239
+msgid "Italian"
+msgstr ""
+
+#: bin/gscan2pdf:7240
+msgid "Dutch"
+msgstr ""
+
+#: bin/gscan2pdf:7241
+msgid "Portuguese"
+msgstr ""
+
+#: bin/gscan2pdf:7242
+msgid "Spanish"
+msgstr ""
+
+#: bin/gscan2pdf:7243
+msgid "Vietnamese"
+msgstr ""
+
+#: bin/gscan2pdf:7296
+msgid "OCR"
+msgstr ""
+
+#: bin/gscan2pdf:7301
+msgid "OCR Engine"
+msgstr ""
+
+#: bin/gscan2pdf:7329
+msgid "Start OCR"
+msgstr ""
+
+#: bin/gscan2pdf:7340
+msgid "No page selected"
+msgstr ""
+
+#: bin/gscan2pdf:7364
+msgid ""
+"Some pages have not been saved.\n"
+"Do you really want to quit?"
+msgstr ""
+
+#: bin/gscan2pdf:7407
+#, perl-format
+msgid ""
+"The help viewer requires module Gtk2::Ex::PodViewer\n"
+"Alternatively, try: %s %s\n"
+"\n"
+msgstr ""
+
+#: bin/gscan2pdf:7749
+msgid "This operation cannot be undone. Are you sure?"
+msgstr ""
+
+#: bin/gscan2pdf:7755
+msgid "Compressing working files"
+msgstr ""
+
+#: bin/gscan2pdf:7788
+msgid "Compressing images"
+msgstr ""
+
+#: bin/gscan2pdf:7793
+msgid "Clearing up"
+msgstr ""
+
+#: bin/gscan2pdf:7956
+msgid ""
+"You will have to restart gscanp2df for changes to the temporary directory to "
+"take effect."
+msgstr ""
+
+#: bin/gscan2pdf:7978
+msgid "Properties"
+msgstr ""
+
+#: bin/gscan2pdf:8086
+msgid "Selected"
+msgstr ""
+
+#: bin/gscan2pdf:8110
+msgid "active"
+msgstr ""
