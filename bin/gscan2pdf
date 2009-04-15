@@ -226,7 +226,7 @@ my %default_settings = (
  'scan prefix'       => '',
  'Blank threshold'   => 0.005, # Blank page standard deviation threshold
  'Dark threshold'    => 0.12,  # Dark page mean threshold
- 'Replace old OCR text' => 0,  # When a page is re-OCRed, replace old text with new text
+ 'OCR output'        => 'replace', # When a page is re-OCRed, replace old text with new text
  'Paper'             => {
   $d->get('A4') => {
    x => 210,
@@ -9280,7 +9280,15 @@ sub ocr_page {
       $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
 
 # Slurp the OCR output
-      $slist -> {data}[$pagenum][3] .= slurp("$txt.txt");
+      if ($SETTING{'OCR output'} eq 'replace') {
+       $slist -> {data}[$pagenum][3] = slurp("$txt.txt"); 
+      }
+      elsif ($SETTING{'OCR output'} eq 'append') {
+       $slist -> {data}[$pagenum][3] .= slurp("$txt.txt"); 
+      }
+      else {
+       $slist -> {data}[$pagenum][3] = slurp("$txt.txt") . $slist -> {data}[$pagenum][3]; 
+      }
       unlink <$txt*>;
       $slist -> {data}[$pagenum][10] = timestamp(); #remember when we ran OCR on this page
       $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
@@ -10091,6 +10099,20 @@ sub preferences {
  $tooltips -> set_tip ($spinbuttond, $d->get('Threshold used for selecting dark pages'));
  $hbox -> add($spinbuttond);
 
+# OCR output
+ $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('OCR output'));
+ $hbox -> pack_start($label, FALSE, FALSE, 0);
+ my @array = (
+  [ 'replace', $d->get('Replace'), $d->get('Replace the contents of the text buffer with that from the OCR output.') ],
+  [ 'prepend', $d->get('Prepend'), $d->get('Prepend the OCR output to the text buffer.') ],
+  [ 'append', $d->get('Append'), $d->get('Append the OCR output to the text buffer.') ],
+ );
+ my $comboo =  combobox_from_array(@array);
+ combobox_set_active($comboo, $SETTING{'OCR output'}, @array);
+ $hbox -> pack_end($comboo, TRUE, TRUE, 0);
+
 # Apply button
  $hbox = Gtk2::HBox -> new;
  $vbox -> pack_start($hbox, TRUE, TRUE, 0);
@@ -10130,6 +10152,7 @@ sub preferences {
   }
   $SETTING{'Blank threshold'} = $spinbuttonb->get_value;
   $SETTING{'Dark threshold'} = $spinbuttond->get_value;
+  $SETTING{'OCR output'} = $array[$comboo->get_active][0];
  });
 
 # Cancel button
