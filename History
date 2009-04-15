@@ -27,13 +27,16 @@
 * Make rubberband selections persist between pages
   Closes 2629351 (Rectangular Crop Area)
 * Use Test::Pod on documentation
-* + Select blank and dark pages. Closes #2567485 (auto detect blank pages)
+* + Select blank and dark pages. Closes 2567485 (auto detect blank pages)
   Thanks to Roy Shahbazian for the patch.
 * Fixed bug where temp dir not created after previous session killed and old
   temp dir deleted.
   Closes 2735303 (Import function fails when stale session variable set)
 * Fixed bug after unpaper --output-pages=2 where OCR not carried out for second
   page.
+* + Option to select whether OCR output is replaced, appended or prepended.
+  Closes 2578995 (prepend new OCR text to old text)
+  Thanks to Roy Shahbazian for the patch.
 * Update to Brazilian Portuguese translation (thanks to André Gondim)
 * Update to Croatian translation (thanks to DarioSeparovic)
 * Update to Dutch translation (thanks to Jan Klopper)
