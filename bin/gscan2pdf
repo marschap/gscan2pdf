@@ -432,6 +432,7 @@ my @action_items = (
  [ 'Select Even', undef, $d->get('_Even'), '<control>2', $d->get('Select all evenly-numbered pages'), sub { select_odd_even(1); } ],
  [ 'Select Blank', 'gtk-select-blank', $d->get('_Blank'), '<control>b', $d->get('Select pages with low standard deviation'), \&analyze_select_blank ],
  [ 'Select Dark', 'gtk-select-blank', $d->get('_Dark'), '<control>d', $d->get('Select dark pages'), \&analyze_select_dark ],
+ [ 'Select Modified', 'gtk-select-modified', $d->get('Select _Modified'), '<control>m', $d->get('Select modified pages since last OCR'), \&select_modified_since_ocr ],
  [ 'Properties', 'gtk-properties', $d->get('Propert_ies'), undef, $d->get('Edit image properties'), \&properties ],
  [ 'Preferences', 'gtk-preferences', $d->get('Prefere_nces'), undef, $d->get('Edit preferences'), \&preferences ],
 
@@ -500,6 +501,7 @@ my $ui = "<ui>
     <menuitem action='Select Even'/>
     <menuitem action='Select Blank'/>
     <menuitem action='Select Dark'/>
+    <menuitem action='Select Modified'/>
    </menu>
    <separator/>
    <menuitem action='Properties'/>
@@ -5746,7 +5748,6 @@ sub post_process_scan {
  push @ocr_stack, $page if $ocr;
  print "OCRflagging page: $page\n" if $ocr && $debug;
  $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
- $slist -> {data}[$page][9] = 1 if $ocr; #FlagOCR
  $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
  if (not($rotating or $analyzing or $scanning or $running_unpaper or $running_ocr)) {
@@ -6042,6 +6043,23 @@ sub select_odd_even {
   push @selection, $_ if ($slist -> {data}[$_][0] % 2 xor $odd);
  }
  
+ $slist -> get_selection -> unselect_all;
+ $slist -> select(@selection);
+ return;
+}
+
+
+sub select_modified_since_ocr {
+ my @selection;
+ foreach my $page (0..$#{$slist -> {data}} ) {
+  my $dirty_time = $slist -> {data}[$page][8];
+  my $ocr_flag = $slist -> {data}[$page][9];
+  my $ocr_time = $slist -> {data}[$page][10];
+  $dirty_time = defined($dirty_time)?$dirty_time:0;
+  $ocr_time = defined($ocr_time)?$ocr_time:0;
+  push @selection, $_ if ($ocr_flag and ($ocr_time le $dirty_time));
+ }
+
  $slist -> get_selection -> unselect_all;
  $slist -> select(@selection);
  return;
@@ -9290,6 +9308,7 @@ sub ocr_page {
        $slist -> {data}[$pagenum][3] = slurp("$txt.txt") . $slist -> {data}[$pagenum][3]; 
       }
       unlink <$txt*>;
+      $slist -> {data}[$pagenum][9] = 1; #FlagOCR
       $slist -> {data}[$pagenum][10] = timestamp(); #remember when we ran OCR on this page
       $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
