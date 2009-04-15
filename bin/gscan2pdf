@@ -85,7 +85,7 @@
 #    test dist sudo dpkg -i /tmp/gscan2pdf/gscan2pdf-x.x.x_all.deb
 # 3. git status
 #    git tag vx.x.x
-#    git push ssh://ra28145@gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf master
+#    git push --tags ssh://ra28145@gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf master
 # 4. make remote-html 
 # 5. Upload to sourceforge (https://frs.sourceforge.net/webupload) and release files
 # 6. Freshmeat
@@ -10464,8 +10464,7 @@ Sourceforge (L<http://sourceforge.net/project/showfiles.php?group_id=174140>).
 =head2 From the repository
 
 gscan2pdf uses Git for its Revision Control System. You can browse the
-tree at L<http://gscan2pdf.git.sourceforge.net/gitweb/gscan2pdf/>.
-You can also download snapshots as .tar.gz, .zip, and .tar.bz2.
+tree at http://gscan2pdf.git.sourceforge.net/git/gitweb.cgi?p=gscan2pdf
 
 Git users can clone the complete tree with
 C<git clone git://gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf>
