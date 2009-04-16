@@ -354,9 +354,9 @@ foreach (1..$numthreads) {
    $shash{$_}{semaphore}->down;
    last if $shash{$_}{die};
    lock($shash{$_}{process});
-   eval $shash{$_}{process};
+   eval $shash{$_}{process}; ## no critic (ProhibitStringyEval)
    warn("Error running process: $@") if ($@);
-print "$shash{$_}{process}\n" if ($@);
+   print "$shash{$_}{process}\n" if ($@);
   }
  });
 }
@@ -5852,8 +5852,8 @@ sub add_image {
 
 
 # Helpers:
-sub compare_numeric_col { $_[0] <=> $_[1] }
-sub compare_text_col { $_[0] cmp $_[1] }
+sub compare_numeric_col { $_[0] <=> $_[1] } ## no critic
+sub compare_text_col { $_[0] cmp $_[1] }    ## no critic
 
 
 # Manual one-time sorting of the simplelist's data
@@ -10315,7 +10315,7 @@ sub get_size_from_PNM {
 Gtk2 -> main;
 
 
-package Gscan2pdf::PageRange;
+package Gscan2pdf::PageRange; ## no critic
 
 use strict;
 use warnings;
