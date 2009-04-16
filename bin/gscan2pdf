@@ -4893,6 +4893,7 @@ sub set_device {
 #  the source button callback can ghost the all button
 # This then fires the callback, updating the options, so no need to do it further down.
  $combobd -> set_active($o);
+ return;
 }
 
 
@@ -4947,6 +4948,7 @@ sub set_device2 {
 #  the source button callback can ghost the all button
 # This then fires the callback, updating the options, so no need to do it further down.
  $combobd -> set_active($o);
+ return;
 }
 
 
@@ -5480,6 +5482,7 @@ sub scan_pages {
    return TRUE;
   }
  });
+ return;
 }
 
 
@@ -6070,6 +6073,7 @@ sub select_modified_since_ocr {
 
 sub analyze_select_blank {
  update_analysis(1,0);
+ return;
 }
 
 
@@ -6102,6 +6106,7 @@ sub select_blank_pages {
 
 sub analyze_select_dark {
  update_analysis(0,1);
+ return;
 }
 
 
@@ -6145,8 +6150,9 @@ sub update_analysis {
   }
  }
  analyze($select_blank,$select_dark) if @analyze_queue;
- select_blank_pages() if $select_blank and !@analyze_queue;
- select_dark_pages() if $select_dark and !@analyze_queue;
+ select_blank_pages() if ($select_blank and not @analyze_queue);
+ select_dark_pages() if ($select_dark and not @analyze_queue);
+ return;
 }
 
 # Update OCR on stale pages
@@ -6164,6 +6170,7 @@ sub update_ocr {
   }
  }
  ocr_page() if @ocr_stack;
+ return;
 }
 
 # Display about dialog
