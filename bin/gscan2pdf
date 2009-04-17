@@ -72,9 +72,7 @@
 #    Use perltidy immediately before release so as not to affect any patches
 #    in between, and then consistently before each commit afterwards.
 # 0. Test scan in lineart, greyscale and colour.
-#    Check with Perl::Critic http://perlcritic.com/
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
-#    Make sure that file list in git ls-tree -r HEAD reflects MANIFEST
 #    Download new translations
 #    Update translators in credits
 #    Check a translation with LANGUAGE=de bin/gscan2pdf --debug
@@ -128,7 +126,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $prog_name = 'gscan2pdf';
-my $version = '0.9.28~rc1';
+my $version = '0.9.28';
 
 my $tolerance = 1;
 my $buffer_size = (32 * 1024);	# default size
@@ -354,9 +352,9 @@ foreach (1..$numthreads) {
    $shash{$_}{semaphore}->down;
    last if $shash{$_}{die};
    lock($shash{$_}{process});
-   eval $shash{$_}{process};
+   eval $shash{$_}{process}; ## no critic (ProhibitStringyEval)
    warn("Error running process: $@") if ($@);
-print "$shash{$_}{process}\n" if ($@);
+   print "$shash{$_}{process}\n" if ($@);
   }
  });
 }
@@ -4893,6 +4891,7 @@ sub set_device {
 #  the source button callback can ghost the all button
 # This then fires the callback, updating the options, so no need to do it further down.
  $combobd -> set_active($o);
+ return;
 }
 
 
@@ -4947,6 +4946,7 @@ sub set_device2 {
 #  the source button callback can ghost the all button
 # This then fires the callback, updating the options, so no need to do it further down.
  $combobd -> set_active($o);
+ return;
 }
 
 
@@ -5480,6 +5480,7 @@ sub scan_pages {
    return TRUE;
   }
  });
+ return;
 }
 
 
@@ -5849,8 +5850,8 @@ sub add_image {
 
 
 # Helpers:
-sub compare_numeric_col { $_[0] <=> $_[1] }
-sub compare_text_col { $_[0] cmp $_[1] }
+sub compare_numeric_col { $_[0] <=> $_[1] } ## no critic
+sub compare_text_col { $_[0] cmp $_[1] }    ## no critic
 
 
 # Manual one-time sorting of the simplelist's data
@@ -6070,6 +6071,7 @@ sub select_modified_since_ocr {
 
 sub analyze_select_blank {
  update_analysis(1,0);
+ return;
 }
 
 
@@ -6102,6 +6104,7 @@ sub select_blank_pages {
 
 sub analyze_select_dark {
  update_analysis(0,1);
+ return;
 }
 
 
@@ -6145,8 +6148,9 @@ sub update_analysis {
   }
  }
  analyze($select_blank,$select_dark) if @analyze_queue;
- select_blank_pages() if $select_blank and !@analyze_queue;
- select_dark_pages() if $select_dark and !@analyze_queue;
+ select_blank_pages() if ($select_blank and not @analyze_queue);
+ select_dark_pages() if ($select_dark and not @analyze_queue);
+ return;
 }
 
 # Update OCR on stale pages
@@ -6164,6 +6168,7 @@ sub update_ocr {
   }
  }
  ocr_page() if @ocr_stack;
+ return;
 }
 
 # Display about dialog
@@ -10308,7 +10313,7 @@ sub get_size_from_PNM {
 Gtk2 -> main;
 
 
-package Gscan2pdf::PageRange;
+package Gscan2pdf::PageRange; ## no critic
 
 use strict;
 use warnings;
