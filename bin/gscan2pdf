@@ -1505,12 +1505,8 @@ sub get_pixbuf {
   warn $d->get('Warning: ')."$@\n";
   eval { $pixbuf = Gtk2::Gdk::Pixbuf ->
                   new_from_file_at_scale ($filename, $width, $height, TRUE); };
-  if ($@) {
-   return FALSE;
-  }
-  else {
-   warn sprintf($d->get("Information: got %s on second attempt\n"), $filename);
-  }
+  warn sprintf($d->get("Information: got %s on second attempt\n"), $filename)
+   unless ($@);
  }
 
  return $pixbuf;
@@ -1764,7 +1760,7 @@ sub import_dialog {
      if ($fraction == -1) {
       show_message_dialog($window, 'error', 'close', join(' ', @text));
      }
-     if ($fraction == -2) {
+     elsif ($fraction == -2) {
       my $pages = $resolution;
       $dialog -> hide;
       my ($windowq, $vbox) =
