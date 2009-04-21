@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    save (e.g. djvu) progress dialog appears behind save dialog
+#    add find text in ocr buffer - search through all buffers
 #    scanning doesn't work after fork()
 #    window too tall after options have been found
 #    add profiles
@@ -1665,7 +1667,6 @@ sub open_session {
   new(); # clear the page list
   my $tar = Archive::Tar->new($filename, TRUE);
   my @filenamelist = $tar->list_files;
-print Dumper(\@filenamelist);
   $tar->extract;
  }
  my $sessionfile = "$SETTING{session}/session";
@@ -4618,7 +4619,7 @@ sub scan_dialog2 {
  $hboxb -> pack_end( $cbutton, FALSE, FALSE, 0 );
  $cbutton -> signal_connect( clicked => sub { $windows2 -> hide; } );
 
- if (@device) {
+ if (@device_list) {
   populate_device_list2($hboxd);
  }
  else {
