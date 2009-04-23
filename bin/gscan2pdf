@@ -5492,7 +5492,7 @@ sub new_page {
   if ($Sane::STATUS != SANE_STATUS_GOOD) {
    print "$prog_name: sane_start: $Sane::STATUS\n" if $debug;
    $shash{$sane_thread}{go} = 0;
-   last;
+   die; # quickest way out of the eval block
   }
 
   my $path = $shash{$sane_thread}{data};
@@ -5500,7 +5500,7 @@ sub new_page {
    $device->cancel;
    $shash{$sane_thread}{status} = SANE_STATUS_ACCESS_DENIED;
    $shash{$sane_thread}{go} = 0;
-   last;
+   die; # quickest way out of the eval block
   }
   scan_page($device, $fh);
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
