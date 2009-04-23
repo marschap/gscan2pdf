@@ -16,12 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    save (e.g. djvu) progress dialog appears behind save dialog
 #    fix Wide character in print at /usr/share/perl5/Config/General.pm line 1118. message.
 #     Report bug and switch to storable?
-#    gscan2pdf: sane_start: Document feeder out of documents tries to import a non-existant or empty file
 #    somehow the only default to still be working is the paper size
-#    scanner hangs on reverse side
 #    add find text in ocr buffer - search through all buffers
 #    scanning doesn't work after fork()
 #    window too tall after options have been found
@@ -3243,7 +3240,7 @@ sub save_djvu {
 # cd back to tempdir
    chdir $SETTING{session};
 
-   my $dialog = Gtk2::Dialog -> new ($d->get('Saving DjVu')."...", $window,
+   my $dialog = Gtk2::Dialog -> new ($d->get('Saving DjVu')."...", $windowi,
                                      'modal',
                                      'gtk-cancel' => 'cancel');
 
@@ -5425,9 +5422,25 @@ sub scan_pages {
   else {
   
 # Check status of scan
-   if ($shash{$sane_thread}{status} == SANE_STATUS_GOOD) {}
-   elsif ($shash{$sane_thread}{status} == SANE_STATUS_EOF) {
+   if ($shash{$sane_thread}{status} == SANE_STATUS_GOOD or
+       $shash{$sane_thread}{status} == SANE_STATUS_EOF) {
     $shash{$sane_thread}{status} = SANE_STATUS_GOOD;
+
+# If the scan can't be loaded then blow the scanning dialog away and
+# show an error
+    my $index = import_scan ("out$n.pnm", $n, 'Portable anymap',
+                                                    $SETTING{resolution}, TRUE);
+    if ($index == -1) {
+     $dialog -> destroy;
+     show_message_dialog(
+      $windows, 'error', 'close', $d->get('Unable to load image')
+     );
+     return FALSE;
+    }
+    else {
+     my $rotate = $n % 2 ? $rfacing : $rreverse;
+     post_process_scan($index, $rotate, $unpaper, $ocr);
+    }
    }
    else {
     $shash{$sane_thread}{data} = $path;
@@ -5439,22 +5452,6 @@ sub scan_pages {
     ';
     $shash{$sane_thread}{go} = 1;
     $shash{$sane_thread}{semaphore}->up;
-   }
-
-# If the scan can't be loaded then blow the scanning dialog away and
-# show an error
-   my $index = import_scan ("out$n.pnm", $n, 'Portable anymap',
-                                                    $SETTING{resolution}, TRUE);
-   if ($index == -1) {
-    $dialog -> destroy;
-    show_message_dialog(
-     $windows, 'error', 'close', $d->get('Unable to load image')
-    );
-    return FALSE;
-   }
-   else {
-    my $rotate = $n % 2 ? $rfacing : $rreverse;
-    post_process_scan($index, $rotate, $unpaper, $ocr);
    }
 
 # Stop the process unless everything OK and more scans required
@@ -5496,7 +5493,7 @@ sub new_page {
   if ($Sane::STATUS != SANE_STATUS_GOOD) {
    print "$prog_name: sane_start: $Sane::STATUS\n" if $debug;
    $shash{$sane_thread}{go} = 0;
-   last;
+   die; # quickest way out of the eval block
   }
 
   my $path = $shash{$sane_thread}{data};
@@ -5504,7 +5501,7 @@ sub new_page {
    $device->cancel;
    $shash{$sane_thread}{status} = SANE_STATUS_ACCESS_DENIED;
    $shash{$sane_thread}{go} = 0;
-   last;
+   die; # quickest way out of the eval block
   }
   scan_page($device, $fh);
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
