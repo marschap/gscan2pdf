@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    save (e.g. djvu) progress dialog appears behind save dialog
 #    add find text in ocr buffer - search through all buffers
 #    scanning doesn't work after fork()
 #    window too tall after options have been found
@@ -3239,7 +3238,7 @@ sub save_djvu {
 # cd back to tempdir
    chdir $SETTING{session};
 
-   my $dialog = Gtk2::Dialog -> new ($d->get('Saving DjVu')."...", $window,
+   my $dialog = Gtk2::Dialog -> new ($d->get('Saving DjVu')."...", $windowi,
                                      'modal',
                                      'gtk-cancel' => 'cancel');
 
