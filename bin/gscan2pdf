@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    save (e.g. djvu) progress dialog appears behind save dialog
+#    add find text in ocr buffer - search through all buffers
 #    scanning doesn't work after fork()
 #    window too tall after options have been found
 #    add profiles
@@ -5419,9 +5421,25 @@ sub scan_pages {
   else {
   
 # Check status of scan
-   if ($shash{$sane_thread}{status} == SANE_STATUS_GOOD) {}
-   elsif ($shash{$sane_thread}{status} == SANE_STATUS_EOF) {
+   if ($shash{$sane_thread}{status} == SANE_STATUS_GOOD or
+       $shash{$sane_thread}{status} == SANE_STATUS_EOF) {
     $shash{$sane_thread}{status} = SANE_STATUS_GOOD;
+
+# If the scan can't be loaded then blow the scanning dialog away and
+# show an error
+    my $index = import_scan ("out$n.pnm", $n, 'Portable anymap',
+                                                    $SETTING{resolution}, TRUE);
+    if ($index == -1) {
+     $dialog -> destroy;
+     show_message_dialog(
+      $windows, 'error', 'close', $d->get('Unable to load image')
+     );
+     return FALSE;
+    }
+    else {
+     my $rotate = $n % 2 ? $rfacing : $rreverse;
+     post_process_scan($index, $rotate, $unpaper, $ocr);
+    }
    }
    else {
     $shash{$sane_thread}{data} = $path;
@@ -5433,22 +5451,6 @@ sub scan_pages {
     ';
     $shash{$sane_thread}{go} = 1;
     $shash{$sane_thread}{semaphore}->up;
-   }
-
-# If the scan can't be loaded then blow the scanning dialog away and
-# show an error
-   my $index = import_scan ("out$n.pnm", $n, 'Portable anymap',
-                                                    $SETTING{resolution}, TRUE);
-   if ($index == -1) {
-    $dialog -> destroy;
-    show_message_dialog(
-     $windows, 'error', 'close', $d->get('Unable to load image')
-    );
-    return FALSE;
-   }
-   else {
-    my $rotate = $n % 2 ? $rfacing : $rreverse;
-    post_process_scan($index, $rotate, $unpaper, $ocr);
    }
 
 # Stop the process unless everything OK and more scans required
