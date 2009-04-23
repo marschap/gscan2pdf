@@ -17,6 +17,11 @@
 
 # To do
 #    save (e.g. djvu) progress dialog appears behind save dialog
+#    fix Wide character in print at /usr/share/perl5/Config/General.pm line 1118. message.
+#     Report bug and switch to storable?
+#    gscan2pdf: sane_start: Document feeder out of documents tries to import a non-existant or empty file
+#    somehow the only default to still be working is the paper size
+#    scanner hangs on reverse side
 #    add find text in ocr buffer - search through all buffers
 #    scanning doesn't work after fork()
 #    window too tall after options have been found
@@ -5484,7 +5489,7 @@ sub scan_pages {
 sub new_page {
  my ($format, $n) = @_;
  my $path = sprintf $format, $n;
- $shash{$sane_thread}{data} = $path;
+ $shash{$sane_thread}{data} = File::Spec->catdir($SETTING{session},$path);
  $shash{$sane_thread}{process} = '
   $device->start;
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
