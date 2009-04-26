@@ -7309,33 +7309,49 @@ print "Unknown type $opt->{type}\n";
     my $i = 0;
 # Timer will run until callback returns false 
     my $timer = Glib::Timeout->add (100, sub {
+     return FALSE unless ($i < @defaults);
      unless ($gui_updating) {
-      if ($i < @defaults) {
-       $gui_updating = TRUE;
-       my ($option, $val) = each(%{$defaults[$i]});
-       my $widget = $optnamei{$option};
-       if ($widget->isa('Gtk2::CheckButton'))  {
+      $gui_updating = TRUE;
+      my ($option, $val) = each(%{$defaults[$i]});
+      my $widget = $optnamei{$option};
+      if ($widget->isa('Gtk2::CheckButton')) {
+       if ($widget->get_active != $val) {
         $widget->set_active($val);
        }
-       elsif ($widget->isa('Gtk2::SpinButton'))  {
+       else {
+        $gui_updating = FALSE;
+       }
+      }
+      elsif ($widget->isa('Gtk2::SpinButton')) {
+       if ($widget->get_value != $val) {
         $widget->set_value($val);
        }
-       elsif ($widget->isa('Gtk2::ComboBox'))  {
-        my $opt = $options[$widget->{option_number}];
+       else {
+        $gui_updating = FALSE;
+       }
+      }
+      elsif ($widget->isa('Gtk2::ComboBox')) {
+       my $opt = $options[$widget->{option_number}];
+       if ($opt->{constraint}[$widget->get_active] ne $val) {
         my $index;
         for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
          $index = $i if ($opt->{constraint}[$i] eq $val);
         }
         $widget -> set_active($index) if (defined $index);
        }
-       elsif ($widget->isa('Gtk2::Entry'))  {
-        $widget -> set_text($val)
+       else {
+        $gui_updating = FALSE;
        }
-       $i++;
       }
-      else {
-       return FALSE;
+      elsif ($widget->isa('Gtk2::Entry')) {
+       if ($widget->get_text ne $val) {
+        $widget -> set_text($val);
+       }
+       else {
+        $gui_updating = FALSE;
+       }
       }
+      $i++;
      }
      return TRUE;
     });
