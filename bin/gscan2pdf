@@ -5428,8 +5428,10 @@ sub scan_pages {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-    my $index = import_scan ("out$n.pnm", $n, 'Portable anymap',
-                                                    $SETTING{resolution}, TRUE);
+    my $index = import_scan (
+     File::Spec->catdir($SETTING{session}, "out$n.pnm"), $n, 'Portable anymap',
+                                                    $SETTING{resolution}, TRUE
+    );
     if ($index == -1) {
      $dialog -> destroy;
      show_message_dialog(
@@ -5486,7 +5488,7 @@ sub scan_pages {
 sub new_page {
  my ($format, $n) = @_;
  my $path = sprintf $format, $n;
- $shash{$sane_thread}{data} = File::Spec->catdir($SETTING{session},$path);
+ $shash{$sane_thread}{data} = File::Spec->catdir($SETTING{session}, $path);
  $shash{$sane_thread}{process} = '
   $device->start;
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
