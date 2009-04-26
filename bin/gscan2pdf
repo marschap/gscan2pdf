@@ -4792,10 +4792,9 @@ sub parse_device_list {
  }
 
 # If device not set by config and there is a default device, then set it
- if (not defined($SETTING{device})
-      and defined($output) and $output =~ /default device is `(.*)'/) {
-  $SETTING{device} = $1;
- }
+ $SETTING{device} = $1
+  if (not defined($SETTING{device})
+       and defined($output) and $output =~ /default device is `(.*)'/);
  return;
 }
 
@@ -5457,7 +5456,8 @@ sub scan_pages {
    }
 
 # Stop the process unless everything OK and more scans required
-   unless ((($npages == -1 or --$npages)) and SANE_STATUS_GOOD == $shash{$sane_thread}{status}) {
+   unless (($npages == -1 or --$npages)
+                        and $shash{$sane_thread}{status} == SANE_STATUS_GOOD) {
     $shash{$sane_thread}{process} = '
      $device->cancel;
      $shash{$sane_thread}{go} = 0;
