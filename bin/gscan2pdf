@@ -18,7 +18,6 @@
 # To do
 #    fix Wide character in print at /usr/share/perl5/Config/General.pm line 1118. message.
 #     Report bug and switch to storable?
-#    somehow the only default to still be working is the paper size
 #    add find text in ocr buffer - search through all buffers
 #    scanning doesn't work after fork()
 #    window too tall after options have been found
@@ -5465,6 +5464,11 @@ sub scan_pages {
     $shash{$sane_thread}{go} = 1;
     $shash{$sane_thread}{semaphore}->up;
     $dialog -> destroy;
+    show_message_dialog($windows2, 'error', 'close',
+                    $d_sane->get(Sane::strstatus($shash{$sane_thread}{status})))
+     unless ($shash{$sane_thread}{status} == SANE_STATUS_GOOD
+             or ($shash{$sane_thread}{status} == SANE_STATUS_NO_DOCS
+                                                  and $npages < 1 and $n2 > 1));
     return FALSE;
    }
 
