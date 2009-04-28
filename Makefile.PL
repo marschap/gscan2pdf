@@ -49,6 +49,7 @@ WriteMakefile(
                                    Config::General        => 2.40,
                                    Test::Perl::Critic     => 0,
                                    PDF::API2              => 0,
+                                   Set::IntSpan           => 1.10,
                                    forks                  => 0.33,
               },
               ($] >= 5.005 ?    ## Add these new keywords supported since 5.005

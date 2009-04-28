@@ -121,7 +121,7 @@ use Archive::Tar;                    # For session files
 use Sane;
 use PDF::API2;
 use Getopt::Long;
-use Set::IntSpan;                    # For page numbering issues
+use Set::IntSpan 1.10;               # For page numbering issues. 1.10 required for size method
 use Storable qw(freeze thaw);        # to pass big data structures between threads
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
