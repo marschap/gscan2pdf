@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.27
+Version: 0.9.28
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -78,13 +78,24 @@ fi
 %{perl_vendorlib}/Gscan2pdf.pm
 %{_datadir}/%{name}
 %{_datadir}/applications/%{name}.desktop
+%{_datadir}/pixmaps/gscan2pdf.svg
 %{_mandir}/man1/*.1*
 
 %changelog
-* Fri Dec 12 2008 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Thu Apr 30 2009 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release.
+    Closes: #506150
+     (gscan2pdf: pdf creation failes when using LZW compression)
+    Closes: #512758 (Error handling: 'Unknown message: "scanimage: sane_read:
+     Operation was cancelled"')
+    Closes: #512760 (Error reporting: empty document feeder not reported)
+    Closes: #515605 (gscan2pdf: repeating save-dialog when saving as pnm)
+    Closes: #517913 (gscan2pdf: Tools -> Gimp broken)
+    New Depends: libset-intspan-perl, libforks-perl
   - New upstream release.
     Closes: #500547 (fails to save PDF files)
-    Closes: #497629 (Rotation of pages does work on manual double sided scanning)
+    Closes: #497629 (Rotation of pages does work on manual double sided
+                                                                      scanning)
     Closes: #497630 (Selection of all odd pages or all even pages)
     Closes: #504543 (gscan2pdf: Resolution strangeness)
     Closes: #504546 (gscan2pdf: Resolution not sent to gimp)
