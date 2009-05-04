@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.28
+Version: 0.9.29
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -82,7 +82,10 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Thu Apr 30 2009 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Mon May 04 2009 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release.
+    Closes: #526845
+     (gscan2pdf: Renaming of frontends breaks current settings)
   - New upstream release.
     Closes: #506150
      (gscan2pdf: pdf creation failes when using LZW compression)

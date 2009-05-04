@@ -90,9 +90,10 @@
 # 4. make remote-html 
 # 5. Upload to sourceforge (https://frs.sourceforge.net/webupload) and release files
 # 6. Freshmeat
-# 7. Launchpad, upload .pot if necessary
+# 7. Launchpad (https://launchpad.net/gscan2pdf), upload .pot if necessary
 # 8. http://www.gtkfiles.org/app.php/gscan2pdf
 # 9. make ppa
+#    name the release -0~ppa1, debuild -S -sa, dput gscan2pdf-ppa .changes
 #    https://launchpad.net/~jeffreyratcliffe/+archive
 #    gscan2pdf-announce, gnome-announce-list@gnome.org, sane-devel
 #    ftp-master (check contents with dpkg-deb --contents)
