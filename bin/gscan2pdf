@@ -129,7 +129,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;            # For translations
 
 my $prog_name = 'gscan2pdf';
-my $version = '0.9.28';
+my $version = '0.9.29';
 
 my $tolerance = 1;
 my $buffer_size = (32 * 1024);	# default size
@@ -249,6 +249,9 @@ my %default_settings = (
   },
  },
 );
+delete $SETTING{frontend}
+ if (defined $SETTING{frontend} and
+  ($SETTING{frontend} eq 'scanimage.pl' or $SETTING{frontend} eq 'scanadf.pl'));
 for (keys(%default_settings)) {
  $SETTING{$_} = $default_settings{$_} unless (defined $SETTING{$_});
 }
