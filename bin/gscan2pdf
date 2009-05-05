@@ -228,6 +228,7 @@ my %default_settings = (
  'scan prefix'       => '',
  'Blank threshold'   => 0.005, # Blank page standard deviation threshold
  'Dark threshold'    => 0.12,  # Dark page mean threshold
+ 'ocr engine'        => 'tesseract',
  'OCR output'        => 'replace', # When a page is re-OCRed, replace old text with new text
  'Paper'             => {
   $d->get('A4') => {
@@ -1272,6 +1273,7 @@ sub create_menu_bar {
  $dependencies{xdg} = check_command('xdg-email');
  $dependencies{gocr} = check_command('gocr');
  $dependencies{tesseract} = check_command('tesseract');
+ $dependencies{ocropus} = check_command('ocroscript');
  $dependencies{djvu} = check_command('cjb2');
  $dependencies{unpaper} = check_command('unpaper');
  $dependencies{libtiff} = check_command('tiffcp');
@@ -1282,6 +1284,7 @@ sub create_menu_bar {
   warn "Found xdg-email\n" if ($dependencies{xdg});
   warn "Found gocr\n" if ($dependencies{gocr});
   warn "Found tesseract\n" if ($dependencies{tesseract});
+  warn "Found ocropus\n" if ($dependencies{ocropus});
   warn "Found cjb2 (djvu)\n" if ($dependencies{djvu});
   warn "Found unpaper\n" if ($dependencies{unpaper});
   warn "Found libtiff\n" if ($dependencies{libtiff});
@@ -1294,6 +1297,9 @@ sub create_menu_bar {
  push @ocr_engine,
   [ 'tesseract',  $d->get('Tesseract'),  $d->get('Process image with Tesseract.') ],
   if ($dependencies{tesseract});
+ push @ocr_engine,
+  [ 'ocropus',  $d->get('Ocropus'),  $d->get('Process image with Ocropus.') ],
+  if ($dependencies{ocropus});
 
 # Ghost save image item if imagemagick not available
  my $msg = '';
@@ -1360,9 +1366,11 @@ sub create_menu_bar {
  }
 
 # Ghost ocr item if gocr and tesseract not available
- if (not $dependencies{gocr} and not $dependencies{tesseract}) {
+ if (not $dependencies{gocr}
+     and not $dependencies{tesseract}
+     and not $dependencies{ocropus}) {
   $uimanager->get_widget('/MenuBar/Tools/OCR') -> set_sensitive(FALSE);
-  $msg .= $d->get("OCR requires gocr or tesseract\n");
+  $msg .= $d->get("OCR requires gocr, tesseract or ocropus\n");
  }
 
 # Put up warning if needed
@@ -3824,7 +3832,9 @@ sub scan_dialog {
  $vboxp -> pack_start ($hboxo, FALSE, FALSE, 0);
  my $obutton = Gtk2::CheckButton -> new($d->get('OCR scanned pages'));
  $tooltips -> set_tip ($obutton, $d->get('OCR scanned pages'));
- if (not $dependencies{gocr} and not $dependencies{tesseract}) {
+ if (not $dependencies{gocr}
+     and not $dependencies{tesseract}
+     and not $dependencies{ocropus}) {
   $hboxo -> set_sensitive(FALSE);
   $obutton -> set_active(FALSE);
  }
@@ -4495,7 +4505,9 @@ sub scan_dialog2 {
  $vboxp -> pack_start ($hboxo, FALSE, FALSE, 0);
  my $obutton = Gtk2::CheckButton -> new($d->get('OCR scanned pages'));
  $tooltips -> set_tip ($obutton, $d->get('OCR scanned pages'));
- if (not $dependencies{gocr} and not $dependencies{tesseract}) {
+ if (not ($dependencies{gocr}
+          or $dependencies{tesseract}
+          or $dependencies{ocropus})) {
   $hboxo -> set_sensitive(FALSE);
   $obutton -> set_active(FALSE);
  }
@@ -9263,7 +9275,7 @@ sub ocr_page {
     my (undef, $txt) = tempfile(DIR => $SETTING{session});
 
     my $cmd;
-    if (defined($SETTING{'ocr engine'}) and $SETTING{'ocr engine'} eq 'gocr') {
+    if ($SETTING{'ocr engine'} eq 'gocr') {
      my $pnm;
      if ($slist -> {data}[$pagenum][2] !~ /\.pnm$/) {
       my $file = $slist -> {data}[$pagenum][2];
@@ -9278,7 +9290,7 @@ sub ocr_page {
       $cmd .= "gocr $pnm > $txt.txt;";
      }
     }
-    else {
+    elsif ($SETTING{'ocr engine'} eq 'tesseract') {
      my ($tif, $pre, $post);
      if ($slist -> {data}[$pagenum][2] !~ /\.tif$/) {
       my $file = $slist -> {data}[$pagenum][2];
@@ -9300,6 +9312,9 @@ sub ocr_page {
      else {
       $cmd = "$pre tesseract $tif $txt$post";
      }
+    }
+    else { #ocropus
+     $cmd = "ocroscript recognize $slist->{data}[$pagenum][2] > $txt.txt";
     }
     warn "$cmd\n" if ($debug);
 
@@ -10618,6 +10633,10 @@ A command line OCR. See L<http://jocr.sourceforge.net/>.
 =item tesseract
 
 A command line OCR. See L<http://code.google.com/p/tesseract-ocr/>
+
+=item ocropus
+
+A command line OCR. See L<http://code.google.com/p/ocropus/>
 
 =back
 
