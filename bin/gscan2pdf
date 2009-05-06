@@ -231,7 +231,7 @@ my %default_settings = (
  'scan prefix'       => '',
  'Blank threshold'   => 0.005, # Blank page standard deviation threshold
  'Dark threshold'    => 0.12,  # Dark page mean threshold
- 'ocr engine'        => 'tesseract',
+ 'ocr engine'        => 'ocropus',
  'OCR output'        => 'replace', # When a page is re-OCRed, replace old text with new text
  'Paper'             => {
   $d->get('A4') => {
@@ -3854,7 +3854,8 @@ sub scan_dialog {
  if ($dependencies{tesseract}) {
   ($hboxl, $comboboxl, @tesslang) = add_ocr_languages($vboxp);
   $comboboxe -> signal_connect (changed => sub {
-   if ($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract') {
+   if ($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract'
+       or $ocr_engine[$comboboxe -> get_active]->[0] eq 'ocropus') {
     $hboxl->show_all;
    }
    else {
@@ -4035,7 +4036,8 @@ sub scan_dialog {
   if ($SETTING{'OCR on scan'}) {
    $SETTING{'ocr engine'} = $ocr_engine[$comboboxe -> get_active]->[0];
    $SETTING{'ocr language'} = $tesslang[$comboboxl -> get_active]->[0]
-    if ($SETTING{'ocr engine'} eq 'tesseract');
+    if ($SETTING{'ocr engine'} eq 'tesseract'
+        or $SETTING{'ocr engine'} eq 'ocropus');
   }
   if ($SETTING{frontend} eq 'scanimage' or $SETTING{frontend} eq 'scanimage-perl') {
    scanimage($SETTING{device}, $npages, $start-$step, $step,
@@ -4069,8 +4071,8 @@ sub scan_dialog {
  $windows -> show_all;
  $framex->hide_all;
  $hboxl->hide_all
-  if ($dependencies{tesseract}
-                   and $ocr_engine[$comboboxe -> get_active]->[0] ne 'tesseract');
+  if (!($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract'
+                     or $ocr_engine[$comboboxe -> get_active]->[0] eq 'ocropus'));
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
  $sbutton -> set_sensitive(FALSE) if (! $test);
@@ -4527,7 +4529,8 @@ sub scan_dialog2 {
  if ($dependencies{tesseract}) {
   ($hboxl, $comboboxl, @tesslang) = add_ocr_languages($vboxp);
   $comboboxe -> signal_connect (changed => sub {
-   if ($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract') {
+   if ($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract'
+       or $ocr_engine[$comboboxe -> get_active]->[0] eq 'ocropus') {
     $hboxl->show_all;
    }
    else {
@@ -4630,7 +4633,8 @@ sub scan_dialog2 {
   if ($SETTING{'OCR on scan'}) {
    $SETTING{'ocr engine'} = $ocr_engine[$comboboxe -> get_active]->[0];
    $SETTING{'ocr language'} = $tesslang[$comboboxl -> get_active]->[0]
-    if ($SETTING{'ocr engine'} eq 'tesseract');
+    if ($SETTING{'ocr engine'} eq 'tesseract'
+        or $SETTING{'ocr engine'} eq 'ocropus');
   }
   scan_pages($npages, $start, $step, $rotate_facing, $rotate_reverse,
                 $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'});
@@ -4652,8 +4656,8 @@ sub scan_dialog2 {
  $windows2 -> show_all;
  $framex->hide_all;
  $hboxl->hide_all
-  if ($dependencies{tesseract}
-                   and $ocr_engine[$comboboxe -> get_active]->[0] ne 'tesseract');
+  if (!($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract'
+                   or $ocr_engine[$comboboxe -> get_active]->[0] eq 'ocropus'));
  return;
 }
 
@@ -9318,7 +9322,12 @@ sub ocr_page {
      }
     }
     else { #ocropus
-     $cmd = "ocroscript recognize $slist->{data}[$pagenum][2] > $txt.txt";
+     if (defined $SETTING{'ocr language'}) {
+      $cmd = "ocroscript recognize --tesslanguage=$SETTING{'ocr language'} $slist->{data}[$pagenum][2] > $txt.txt";
+     }
+     else {
+      $cmd = "ocroscript recognize $slist->{data}[$pagenum][2] > $txt.txt";
+     }
     }
     warn "$cmd\n" if ($debug);
 
@@ -9534,7 +9543,8 @@ sub OCR {
  if ($dependencies{tesseract}) {
   ($hboxl, $comboboxl, @tesslang) = add_ocr_languages($vbox);
   $combobe -> signal_connect (changed => sub {
-   if ($ocr_engine[$combobe -> get_active]->[0] eq 'tesseract') {
+   if ($ocr_engine[$combobe -> get_active]->[0] eq 'tesseract'
+       or $ocr_engine[$combobe -> get_active]->[0] eq 'ocropus') {
     $hboxl->show_all;
    }
    else {
@@ -9556,7 +9566,8 @@ sub OCR {
  $obutton -> signal_connect( clicked => sub {
   $SETTING{'ocr engine'} = $ocr_engine[$combobe -> get_active]->[0];
   $SETTING{'ocr language'} = $tesslang[$comboboxl -> get_active]->[0]
-   if ($SETTING{'ocr engine'} eq 'tesseract');
+   if ($SETTING{'ocr engine'} eq 'tesseract'
+       or $SETTING{'ocr engine'} eq 'ocropus');
 
 # fill $pagelist with filenames depending on which radiobutton is active
   my @pagelist = get_page_index();
@@ -9574,8 +9585,8 @@ sub OCR {
 
  $windowo -> show_all;
  $hboxl->hide_all
-  if ($dependencies{tesseract}
-                   and $ocr_engine[$combobe -> get_active]->[0] ne 'tesseract');
+  if (!($ocr_engine[$combobe -> get_active]->[0] eq 'tesseract'
+                     or $ocr_engine[$combobe -> get_active]->[0] eq 'ocropus'));
  return;
 }
 
