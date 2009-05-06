@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    push the canvas to pdf and djvu
+#    push the canvas to djvu
 #    try and get canvas zooming with imageview
 #    fix Wide character in print at /usr/share/perl5/Config/General.pm line 1118. message.
 #     Report bug and switch to storable?
@@ -674,9 +674,9 @@ $hpaned -> pack1($scwin_thumbs, FALSE, TRUE);
 $scwin_thumbs -> set_policy('automatic', 'automatic');
 $scwin_thumbs -> set_shadow_type('etched-in');
 
-# define hidden string column for filename and annotation buffer
+# define hidden string column for filename and misc other info
 Gtk2::Ex::Simple::List -> add_column_type( 'hstring',
-                                           type => 'Glib::String',
+                                           type => 'Glib::Scalar',
                                            attr => 'hidden' );
 
 # Set up a SimpleList
@@ -2368,44 +2368,22 @@ sub create_PDF {
    my $page = $pdf->page;
    $page->mediabox($w*72/$resolution, $h*72/$resolution);
 
-# Add OCR as annotation
-   if (defined($slist -> {data}[$_][3]) and $slist -> {data}[$_][3] ne '') {
-    my $ant=$page->annotation;
-    $ant->text($slist -> {data}[$_][3],
-     -rect=>[0,0,$w*72/$resolution,$h*72/$resolution]);
-
 # Add OCR as text behind the scan
+   if (defined($slist -> {data}[$_][3])) {
     my $font = $pdf->corefont('Times-Roman');
     my $text = $page->text;
-    if ($slist -> {data}[$_][3] =~ /<body>([\s\S]*)<\/body>/) {
-     my $hocr = $1;
-     require XML::Simple;
-     my $xs = XML::Simple->new;
-     my $ref = eval { $xs->XMLin($hocr) };
-     print "Error: $@" if ($@);
-print Dumper($ref);
-     walk_hocr_tree($ref);
-    }
-    else {
-     my $size = 1;
-     $text->font($font, $size);
-     $text->strokecolor('white');
-     $text->fillcolor('white');
-     my $y = $h*72/$resolution;
-     foreach my $line (split("\n", $slist -> {data}[$_][3])) {
-      my $x = 0;
-
-# Add a word at a time in order to linewrap
-      foreach my $word (split(' ', $line)) {
-       if (length($word)*$size+$x > $w) {
-        $x = 0;
-        $y -= $size;
-       }
-       $text -> translate($x, $y);
-       $word = ' '.$word if ($x > 0);
-       $x += $text->text($word);
-      }
-      $y -= $size;
+    my $canvas = $slist -> {data}[$_][3];
+    my $root = $canvas->get_root_item;
+    my $n = $root->get_n_children;
+    for (my $i = 0; $i < $n; $i++) {
+     my $item = $root->get_child($i);
+     if ($item->isa('Goo::Canvas::Text')) {
+      my $bounds = $item->get_bounds;
+      my ($x1, $y1, $x2, $y2) = ($bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2);
+      my $size = ($y2-$y1)*72/$resolution;
+      $text->font($font, $size);
+      $text -> translate($x1*72/$resolution, $h*72/$resolution-$y1*72/$resolution-$size);
+      $text->text($item->get('text'));
      }
     }
    }
@@ -10929,10 +10907,9 @@ unpaper (see L<http://unpaper.berlios.de/>) is a utility for cleaning up a scan.
 
 The gocr or tesseract utilities are used to produce text from an image.
 
-There is an OCR output buffer for each page and is embedded both as an
-annotation (pop-up note) and as plain text behind the scanned image in the PDF
-produced. This way, Beagle can index (i.e. search) the plain text, and the
-contents of the annotations can be viewed in Acrobat Reader.
+There is an OCR output buffer for each page and is embedded as
+plain text behind the scanned image in the PDF
+produced. This way, Beagle can index (i.e. search) the plain text.
 
 In DjVu files, the OCR output buffer is embedded in the hidden text layer.
 Thus these can also be indexed by Beagle.

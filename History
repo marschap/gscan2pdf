@@ -1,7 +1,9 @@
 0.9.30 (04.06.2009):
 
 * + Ocropus support
-* Use Goo::Canvas to place text at boundary box supplied by Ocropus
+* Use Goo::Canvas to place OCR output at boundary boxes supplied by Ocropus
+* Write OCR output to PDF at boundary boxes supplied by Goo::Canvas
+  No longer additionally write OCR output as PDF annotation
 
 
 0.9.29 (04.05.2009):
