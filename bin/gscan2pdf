@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    do something sane with non-hocr output
+#    try and get canvas zooming with imageview
 #    fix Wide character in print at /usr/share/perl5/Config/General.pm line 1118. message.
 #     Report bug and switch to storable?
 #    add find text in ocr buffer - search through all buffers
@@ -41,7 +43,6 @@
 #    note sane-backend and wipe scan settings if it changes
 #    reenable multiple scans from flatbed + delay and warning
 #    look at using potrace to convert images to vectors
-#    add option to overwrite textbuffer with OCR
 #    add an option selecting the number of processes to run simultaneously
 #    add a larger border inside notebook in scan dialog
 #    add (user-definable) metadata fields to DjVu save
@@ -106,6 +107,7 @@ use Thread::Semaphore;
 use Gscan2pdf;
 use Gtk2 -init;
 use Gtk2::ImageView;
+use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
 use Gtk2::Gdk::Keysyms;
 use Cwd;                             # To obtain current working directory
@@ -838,16 +840,16 @@ $slist -> {row_changed_signal} = $slist -> get_model ->
 
 $scwin_thumbs -> add($slist);
 
-# VPaned for detail view and OCR buffer
-my $vpaned = Gtk2::VPaned -> new;
-$hpaned -> pack2 ($vpaned, TRUE, TRUE);
+# Notebook for detail view and OCR output
+my $vnotebook = Gtk2::Notebook->new;
+$hpaned -> pack2 ($vnotebook, TRUE, TRUE);
 
 # ImageView for detail view
 $view = Gtk2::ImageView->new;
 my $dragger = Gtk2::ImageView::Tool::Dragger->new ($view);
 my $selector = Gtk2::ImageView::Tool::Selector->new ($view);
 my $painter = Gtk2::ImageView::Tool::Painter->new ($view);
-$vpaned -> pack1 ($view, TRUE, TRUE);
+$vnotebook->append_page($view, $d->get('Image'));
 
 $view->signal_connect(button_press_event => sub {
  my ($widget, $event) = @_;
@@ -855,35 +857,11 @@ $view->signal_connect(button_press_event => sub {
 });
 $view->signal_connect(button_release_event => \&handle_clicks);
 
-# OCR buffer
+# ScrolledWindow for Goo::Canvas for OCR output
 my $scwin_buffer = Gtk2::ScrolledWindow->new;
-$scwin_buffer -> set_policy ('never', 'automatic');
+$scwin_buffer -> set_policy ('automatic', 'automatic');
 $scwin_buffer -> set_shadow_type('etched-in');
-my $textbuffer = Gtk2::TextBuffer->new;
-my $textview = Gtk2::TextView->new_with_buffer($textbuffer);
-$textview->set_wrap_mode ('word-char');
-$textview -> set_sensitive(FALSE);
-$scwin_buffer->add($textview);
-$vpaned -> pack2 ($scwin_buffer, TRUE, TRUE);
-if (defined($SETTING{'ocr panel'})) {
- $vpaned -> set_position ($SETTING{'ocr panel'});
-}
-else {
-# $vpaned -> allocation -> height gives 1
-#  my $height = $vpaned -> allocation -> height;
- my ($width, $height) = $window->get_size;
- $vpaned -> set_position ($height*3/4);
-}
-
-# Keep the simple list buffer up to date
-$textbuffer -> {signalid} = $textbuffer -> signal_connect( changed => sub {
- $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
- my @page = $slist -> get_selected_indices;
- $slist -> {data}[$page[0]][3] =
-  $textbuffer->get_text ($textbuffer->get_start_iter, $textbuffer->get_end_iter, FALSE)
-   if ($#page > -1);
- $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
-} );
+$vnotebook->append_page($scwin_buffer, $d->get('OCR Output'));
 
 # Set up call back for list selection to update detail view
 $slist -> {selection_changed_signal} = $slist -> get_selection -> signal_connect(changed => sub {
@@ -899,18 +877,12 @@ $slist -> {selection_changed_signal} = $slist -> get_selection -> signal_connect
   $selector->set_selection ($sel) if (defined $sel);
 
 # Update the buffer, if created
-  $textview -> set_sensitive(TRUE) if (! $textview -> is_sensitive);
-  if (defined $slist -> {data}[$page[0]][3]) {
-   $textbuffer->set_text ($slist -> {data}[$page[0]][3]);
-  }
-  else {
-   $textbuffer -> delete($textbuffer->get_start_iter, $textbuffer->get_end_iter);
-  }
+  $scwin_buffer->remove ($_) for ($scwin_buffer->get_children);
+  $scwin_buffer->add($slist -> {data}[$page[0]][3])
+   if (defined $slist -> {data}[$page[0]][3]);
  }
  else {
   $view->set_pixbuf(undef);
-  $textview -> set_sensitive(FALSE);
-  $textbuffer -> set_text('');
  }
 
 # If no pages are selected, but some exist, PageRange widgets default to all
@@ -2405,25 +2377,36 @@ sub create_PDF {
 # Add OCR as text behind the scan
     my $font = $pdf->corefont('Times-Roman');
     my $text = $page->text;
-    my $size = 1;
-    $text->font($font, $size);
-    $text->strokecolor('white');
-    $text->fillcolor('white');
-    my $y = $h*72/$resolution;
-    foreach my $line (split("\n", $slist -> {data}[$_][3])) {
-     my $x = 0;
+    if ($slist -> {data}[$_][3] =~ /<body>([\s\S]*)<\/body>/) {
+     my $hocr = $1;
+     require XML::Simple;
+     my $xs = XML::Simple->new;
+     my $ref = eval { $xs->XMLin($hocr) };
+     print "Error: $@" if ($@);
+print Dumper($ref);
+     walk_hocr_tree($ref);
+    }
+    else {
+     my $size = 1;
+     $text->font($font, $size);
+     $text->strokecolor('white');
+     $text->fillcolor('white');
+     my $y = $h*72/$resolution;
+     foreach my $line (split("\n", $slist -> {data}[$_][3])) {
+      my $x = 0;
 
 # Add a word at a time in order to linewrap
-     foreach my $word (split(' ', $line)) {
-      if (length($word)*$size+$x > $w) {
-       $x = 0;
-       $y -= $size;
+      foreach my $word (split(' ', $line)) {
+       if (length($word)*$size+$x > $w) {
+        $x = 0;
+        $y -= $size;
+       }
+       $text -> translate($x, $y);
+       $word = ' '.$word if ($x > 0);
+       $x += $text->text($word);
       }
-      $text -> translate($x, $y);
-      $word = ' '.$word if ($x > 0);
-      $x += $text->text($word);
+      $y -= $size;
      }
-     $y -= $size;
     }
    }
 
@@ -2509,6 +2492,37 @@ sub create_PDF {
   return TRUE;  # continue without uninstalling
  });
  return;
+}
+
+
+# Walk the tree of hocr elements, adding text to PDF
+
+sub walk_hocr_tree {
+ my ($ref, $root) = @_;
+ if (ref($ref) eq 'ARRAY') {
+  for (@{$ref}) {
+   walk_hocr_tree($_, $root);
+  }
+ }
+ elsif (ref($ref) eq 'HASH') {
+  for (keys %{$ref}) {
+   if ($_ eq 'class' and $ref->{$_} eq 'ocr_line'
+       and defined($ref->{title}) and defined($ref->{content})) {
+    if ($ref->{title} =~ /bbox (\d+) (\d+) (\d+) (\d+)/) {
+     my ($x1, $y1, $x2, $y2) = ($1, $2, $3, $4);
+     chomp $ref->{content} if ($ref->{content} =~ /\n$/);
+     my $text = Goo::Canvas::Text->new(
+         $root, $ref->{content}, $x1, $y1, $x2-$x1, 'nw', 'height' => $y2-$y1,
+     );
+     my $rect = Goo::Canvas::Rect->new($root, $x1, $y1, $x2-$x1, $y2-$y1);
+    }
+
+   }
+   else {
+    walk_hocr_tree($ref->{$_}, $root);
+   }
+  }
+ }
 }
 
 
@@ -5906,10 +5920,10 @@ sub cut_selection {
   copy_selection();
   delete_pages();
  }
- elsif ($textview -> has_focus) {
-  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
-  $textbuffer->cut_clipboard ($clipboard, TRUE)
- }
+# elsif ($textview -> has_focus) {
+#  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
+#  $textbuffer->cut_clipboard ($clipboard, TRUE)
+# }
  return;
 }
 
@@ -5925,10 +5939,10 @@ sub copy_selection {
    push @clipboard, @copy;
   }
  }
- elsif ($textview -> has_focus) {
-  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
-  $textbuffer->copy_clipboard ($clipboard)
- }
+# elsif ($textview -> has_focus) {
+#  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
+#  $textbuffer->copy_clipboard ($clipboard)
+# }
  return;
 }
 
@@ -5971,10 +5985,10 @@ sub paste_selection {
 
   update_uimanager();
  }
- elsif ($textview -> has_focus) {
-  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
-  $textbuffer->paste_clipboard ($clipboard, undef, TRUE)
- }
+# elsif ($textview -> has_focus) {
+#  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
+#  $textbuffer->paste_clipboard ($clipboard, undef, TRUE)
+# }
  return;
 }
 
@@ -6012,8 +6026,7 @@ sub delete_pages {
 # No pages left, and having blocked the selection_changed_signal, we've got to clear the image
  else {
   $view -> set_pixbuf(undef);
-  $textview -> set_sensitive(FALSE);
-  $textbuffer -> set_text('');
+  $scwin_buffer->add(undef);
  }
 
 # Reset start page in scan dialog
@@ -6045,13 +6058,13 @@ sub reset_start {
 # Select all scans
 
 sub select_all {
- if ($textview -> has_focus) {
-  my ($start, $end) = $textbuffer->get_bounds;
-  $textbuffer->select_range ($start, $end);
- }
- else {
+# if ($textview -> has_focus) {
+#  my ($start, $end) = $textbuffer->get_bounds;
+#  $textbuffer->select_range ($start, $end);
+# }
+# else {
   $slist -> get_selection -> select_all;
- }
+# }
  return;
 }
 
@@ -9343,15 +9356,34 @@ sub ocr_page {
       $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
 
 # Slurp the OCR output
-      if ($SETTING{'OCR output'} eq 'replace') {
-       $slist -> {data}[$pagenum][3] = slurp("$txt.txt"); 
+      my $canvas = Goo::Canvas->new;
+      my $root = $canvas->get_root_item;
+      my $pixbuf = $view->get_pixbuf;
+      $canvas->set_bounds(0, 0, $pixbuf->get_width, $pixbuf->get_height);
+
+      my $output = slurp("$txt.txt");
+      if ($output =~ /<body>([\s\S]*)<\/body>/) {
+       my $hocr = $1;
+       require XML::Simple;
+       my $xs = XML::Simple->new;
+       my $ref = eval { $xs->XMLin($hocr) };
+       print "Error: $@" if ($@);
+print Dumper($ref);
+       walk_hocr_tree($ref, $root);
       }
-      elsif ($SETTING{'OCR output'} eq 'append') {
-       $slist -> {data}[$pagenum][3] .= slurp("$txt.txt"); 
-      }
-      else {
-       $slist -> {data}[$pagenum][3] = slurp("$txt.txt") . $slist -> {data}[$pagenum][3]; 
-      }
+
+
+      $slist -> {data}[$pagenum][3] = $canvas;
+
+#      if ($SETTING{'OCR output'} eq 'replace') {
+#       $slist -> {data}[$pagenum][3] = slurp("$txt.txt"); 
+#      }
+#      elsif ($SETTING{'OCR output'} eq 'append') {
+#       $slist -> {data}[$pagenum][3] .= slurp("$txt.txt"); 
+#      }
+#      else {
+#       $slist -> {data}[$pagenum][3] = slurp("$txt.txt") . $slist -> {data}[$pagenum][3]; 
+#      }
       unlink <$txt*>;
       $slist -> {data}[$pagenum][9] = 1; #FlagOCR
       $slist -> {data}[$pagenum][10] = timestamp(); #remember when we ran OCR on this page
@@ -9360,9 +9392,8 @@ sub ocr_page {
 # Update the buffer if current
       my @page = $slist -> get_selected_indices;
       if ($page[0] == $pagenum) {
-       $textbuffer -> signal_handler_block($textbuffer -> {signalid});
-       $textbuffer -> set_text ($slist -> {data}[$pagenum][3]);
-       $textbuffer -> signal_handler_unblock($textbuffer -> {signalid});
+       $scwin_buffer->add($canvas);
+       $canvas->show;
       }
       return FALSE;  # uninstall
      }
@@ -9590,7 +9621,6 @@ sub quit {
  ($SETTING{'window_width'}, $SETTING{'window_height'}) = $window -> get_size;
  ($SETTING{'window_x'}, $SETTING{'window_y'}) = $window -> get_position;
  $SETTING{'thumb panel'} = $hpaned -> get_position;
- $SETTING{'ocr panel'} = $vpaned -> get_position;
 
 # delete $SETTING{'RMB'};
 
