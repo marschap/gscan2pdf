@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    fix updating buffer on changing page
 #    fix save as text
 #    fix buffers in open/save session, probably with storable
 #    try and get canvas zooming with imageview
@@ -9322,11 +9323,26 @@ sub ocr_page {
      }
     }
     else { #ocropus
-     if (defined $SETTING{'ocr language'}) {
-      $cmd = "ocroscript recognize --tesslanguage=$SETTING{'ocr language'} $slist->{data}[$pagenum][2] > $txt.txt";
+     my ($png, $pre, $post);
+     if ($slist -> {data}[$pagenum][2] !~ /\.(png|jpg|pnm)$/) {
+      my $file = $slist -> {data}[$pagenum][2];
+
+# Temporary filename for new file
+      (undef, $png) = tempfile(DIR => $SETTING{session}, SUFFIX => '.png');
+      $pre = "convert $file $png;";
+      $post = "; rm $png";
+
      }
      else {
-      $cmd = "ocroscript recognize $slist->{data}[$pagenum][2] > $txt.txt";
+      $png = $slist -> {data}[$pagenum][2];
+      $pre = '';
+      $post = '';
+     }
+     if (defined $SETTING{'ocr language'}) {
+      $cmd = "$pre ocroscript recognize --tesslanguage=$SETTING{'ocr language'} $png > $txt.txt$post";
+     }
+     else {
+      $cmd = "$pre ocroscript recognize $png > $txt.txt$post";
      }
     }
     warn "$cmd\n" if ($debug);
