@@ -16,7 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    push the canvas to djvu
+#    fix save as text
+#    fix buffers in open/save session, probably with storable
 #    try and get canvas zooming with imageview
 #    fix Wide character in print at /usr/share/perl5/Config/General.pm line 1118. message.
 #     Report bug and switch to storable?
@@ -3313,24 +3314,36 @@ sub save_djvu {
      $filelist[$i] = $djvu;
 
 # Add OCR to text layer
-     if (defined($slist -> {data}[$j][3]) and $slist -> {data}[$j][3] ne '') {
+     if (defined($slist -> {data}[$j][3])) {
 
 # Get the size
       my $w = $image->Get('width');
       my $h = $image->Get('height');
 
-# Escape any inverted commas
-      my $txt = $slist -> {data}[$j][3];
-      $txt =~ s/\\/\\\\/g;
-      $txt =~ s/"/\\\"/g;
-
-# Write djvusedtxtfile
+# Open djvusedtxtfile
       my $djvusedtxtfile = "djvusedtxtfile";
       open my $fh, ">:utf8", $djvusedtxtfile
        or die sprintf($d->get("Can't open file: %s"), $djvusedtxtfile);
       print $fh "(page 0 0 $w $h\n";
-      print $fh "(line 0 0 $w $h \"";
-      print $fh $txt, "\"))";
+
+# Write the text boxes
+      my $canvas = $slist -> {data}[$j][3];
+      my $root = $canvas->get_root_item;
+      my $n = $root->get_n_children;
+      for (my $i = 0; $i < $n; $i++) {
+       my $item = $root->get_child($i);
+       if ($item->isa('Goo::Canvas::Text')) {
+        my $bounds = $item->get_bounds;
+        my ($x1, $y1, $x2, $y2) = ($bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2);
+
+# Escape any inverted commas
+        my $txt = $item->get('text');
+        $txt =~ s/\\/\\\\/g;
+        $txt =~ s/"/\\\"/g;
+        printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h-$y2, $x2, $h-$y1, $txt;
+       }
+      }
+      print $fh ")";
       close $fh;
 
 # Write djvusedtxtfile
