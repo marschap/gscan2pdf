@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    fix save as text
 #    fix buffers in open/save session, probably with storable
 #    try and get canvas zooming with imageview
 #    fix Wide character in print at /usr/share/perl5/Config/General.pm line 1118. message.
@@ -2874,7 +2873,14 @@ $hboxtq -> pack_start ($label, FALSE, FALSE, 0);
                       or die sprintf($d->get("Can't open file: %s"), $filename);
      my @pagelist = get_page_index();
      for (my $i = 0; $i < @pagelist; $i++) {
-      print $fh $slist -> {data}[$pagelist[$i]][3];
+      my $canvas = $slist -> {data}[$pagelist[$i]][3];;
+      my $root = $canvas->get_root_item;
+      my $n = $root->get_n_children;
+      for (my $i = 0; $i < $n; $i++) {
+       my $item = $root->get_child($i);
+       printf $fh "%s\n", $item->get('text')
+        if ($item->isa('Goo::Canvas::Text'));
+      }
      }
      close $fh;
     }
