@@ -16,10 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    fix buffers in open/save session, probably with storable
 #    try and get canvas zooming with imageview
-#    fix Wide character in print at /usr/share/perl5/Config/General.pm line 1118. message.
-#     Report bug and switch to storable?
 #    add find text in ocr buffer - search through all buffers
 #    scanning doesn't work after fork()
 #    window too tall after options have been found
@@ -125,7 +122,7 @@ use Sane;
 use PDF::API2;
 use Getopt::Long;
 use Set::IntSpan 1.10;               # For page numbering issues. 1.10 required for size method
-use Storable qw(freeze thaw);        # to pass big data structures between threads
+use Storable qw(freeze thaw store retrieve);
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -1658,22 +1655,43 @@ sub open_session {
   my @filenamelist = $tar->list_files;
   $tar->extract;
  }
- my $sessionfile = "$SETTING{session}/session";
- my $session = Config::General->new(-ConfigFile => $sessionfile);
- my %session = $session->getall;
+ my $sessionref = retrieve("$SETTING{session}/session");
+ my %session = %$sessionref;
 
 # Block the row-changed signal whilst adding the scan (row) and sorting it.
  $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
- my @selection = $session{selection};
+ my @selection = @{$session{selection}};
  delete $session{selection};
  foreach my $page (sort {$a <=> $b} (keys(%session))) {
   $session{$page}{filename} = File::Spec->catfile($SETTING{session},
                                             basename($session{$page}{filename}))
    if (dirname($session{$page}{filename}) ne $SETTING{session});
+
+# Set up the canvas
+  my $canvas;
+  if (defined $session{$page}{buffer}) {
+   $canvas = Goo::Canvas->new;
+   my $root = $canvas->get_root_item;
+   my @bounds = @{shift @{$session{$page}{buffer}}};
+   $canvas->set_bounds(@bounds);
+   
+   for my $box (@{$session{$page}{buffer}}) {
+    my $text = Goo::Canvas::Text->new(
+        $root, $box->{text}, $box->{x1}, $box->{y1}, $box->{x2}-$box->{x1},
+                             'nw', 'height' => $box->{y2}-$box->{y1},
+    );
+    my $rect = Goo::Canvas::Rect->new(
+        $root, $box->{x1}, $box->{y1}, $box->{x2}-$box->{x1}, $box->{y2}-$box->{y1}
+    );
+   }
+   $canvas->show;
+  }
+
+# Populate the SimpleList
   push @{ $slist->{data} }, [ $page,
                               get_pixbuf($session{$page}{filename}, $heightt, $widtht),
                               $session{$page}{filename},
-                              $session{$page}{buffer},
+                              $canvas,
                               $session{$page}{resolution} ];
  }
  $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
@@ -9806,7 +9824,7 @@ sub take_snapshot {
 }
 
 
-# Dump $slist to a text file.
+# Dump $slist to a file.
 # If a filename is given, zip it up as a session file
 
 sub save_session {
@@ -9815,15 +9833,33 @@ sub save_session {
  my %session;
  for (my $i = 0; $i <= $#{$slist->{data}}; $i++) {
   $session{$slist->{data}[$i][0]}{filename}   = $slist->{data}[$i][2];
-  $session{$slist->{data}[$i][0]}{buffer}     = $slist->{data}[$i][3]
-   if (defined $slist->{data}[$i][3]);
   $session{$slist->{data}[$i][0]}{resolution} = $slist->{data}[$i][4];
+
+  $session{$slist->{data}[$i][0]}{buffer} = ();
+  if (defined $slist->{data}[$i][3]) {
+   my $canvas = $slist->{data}[$i][3];
+   my @bounds = $canvas->get_bounds;
+   push @{$session{$slist->{data}[$i][0]}{buffer}}, [ @bounds ];
+
+# Walk the canvas and store the text boxes as an array of hashes
+   my $root = $canvas->get_root_item;
+   my $n = $root->get_n_children;
+   for (my $j = 0; $j < $n; $j++) {
+    my $item = $root->get_child($j);
+    if ($item->isa('Goo::Canvas::Text')) {
+     my $bounds = $item->get_bounds;
+     my %box;
+     ($box{x1}, $box{y1}, $box{x2}, $box{y2})
+                     = ($bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2);
+     $box{text} = $item->get('text');
+     push @{$session{$slist->{data}[$i][0]}{buffer}}, { %box };
+    }
+   }
+  }
  }
- $session{selection} = $slist -> get_selected_indices;
- my $sessionfile = "$SETTING{session}/session";
- system("touch $sessionfile");
- my $session = Config::General->new(-ConfigFile => $sessionfile);
- $session->save_file($sessionfile, \%session);
+ my @selection = $slist -> get_selected_indices;
+ @{$session{selection}} = @selection;
+ store(\%session, "$SETTING{session}/session");
  if (defined $filename) {
   my $tar = Archive::Tar->new;
   my @filenamelist = glob("*");
