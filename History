@@ -2,6 +2,7 @@
 
 * + Ocropus support
 * Use Goo::Canvas to place OCR output at boundary boxes supplied by Ocropus
+  New dependency on XML::Simple to parse hocr output from Ocropus
 * Write OCR output to PDF or DjVu at boundary boxes supplied by Goo::Canvas
   No longer additionally write OCR output as PDF annotation
 
