@@ -1,7 +1,8 @@
 gscan2pdf (0.9.30) intrepid; urgency=low
 
   * New upstream release.
-    New Depends: libxml-simple-perl
+    Closes: #461086 (embed OCR output at correct position)
+    New Depends: libxml-simple-perl, libgoo-canvas-perl
 
  -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>  Mon, 04 May 2009 21:32:43 +0200
 
