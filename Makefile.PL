@@ -47,7 +47,6 @@ WriteMakefile(
                                    Image::Magick          => 0,
                                    Locale::gettext        => 1.05,
                                    Config::General        => 2.40,
-                                   Test::Perl::Critic     => 0,
                                    PDF::API2              => 0,
                                    Set::IntSpan           => 1.10,
                                    forks                  => 0.33,
