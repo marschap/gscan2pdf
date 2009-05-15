@@ -1257,7 +1257,33 @@ sub create_menu_bar {
   warn "Found xdg-email\n" if ($dependencies{xdg});
   warn "Found gocr\n" if ($dependencies{gocr});
   warn "Found tesseract\n" if ($dependencies{tesseract});
-  warn "Found ocropus\n" if ($dependencies{ocropus});
+  if ($dependencies{ocropus}) {
+   unless (defined $ENV{OCROSCRIPTS}) {
+    for (qw(/usr /usr/local)) {
+     $ENV{OCROSCRIPTS} = "$_/share/ocropus/scripts"
+      if (-d "$_/share/ocropus/scripts");
+    }
+   }
+   if (defined $ENV{OCROSCRIPTS}) {
+    if (-f "$ENV{OCROSCRIPTS}/recognize.lua") {
+     $SETTING{ocroscript} = 'recognize';
+    }
+    elsif (-f "$ENV{OCROSCRIPTS}/rec-tess.lua") {
+     $SETTING{ocroscript} = 'rec-tess';
+    }
+    if (defined $SETTING{ocroscript}) {
+     warn "Using ocropus with $SETTING{ocroscript}.\n";
+    }
+    else {
+     warn "Found ocropus, but no recognition scripts. Disabling.\n";
+     $dependencies{ocropus} = 0;
+    }
+   }
+   else {
+    warn "Found ocropus, but not its scripts. Disabling.\n";
+    $dependencies{ocropus} = 0;
+   }
+  }
   warn "Found cjb2 (djvu)\n" if ($dependencies{djvu});
   warn "Found unpaper\n" if ($dependencies{unpaper});
   warn "Found libtiff\n" if ($dependencies{libtiff});
@@ -9366,10 +9392,10 @@ sub ocr_page {
       $post = '';
      }
      if (defined $SETTING{'ocr language'}) {
-      $cmd = "$pre ocroscript recognize --tesslanguage=$SETTING{'ocr language'} $png > $txt.txt$post";
+      $cmd = "$pre ocroscript $SETTING{ocroscript} --tesslanguage=$SETTING{'ocr language'} $png > $txt.txt$post";
      }
      else {
-      $cmd = "$pre ocroscript recognize $png > $txt.txt$post";
+      $cmd = "$pre ocroscript $SETTING{ocroscript} $png > $txt.txt$post";
      }
     }
     warn "$cmd\n" if ($debug);
