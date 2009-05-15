@@ -416,7 +416,7 @@ my @action_items = (
  [ 'New', 'gtk-new', $d->get('_New'), '<control>n', $d->get('Clears all pages'), \&new ],
  [ 'Open', 'gtk-revert-to-saved', $d->get('_Open'), '<control>o', $d->get('Open gscan2pdf session file'), \&open_dialog ],
  [ 'Import', 'gtk-open', $d->get('_Import'), '<control>i', $d->get('Import image file(s)'), \&import_dialog ],
- [ 'Scan', 'scanner', $d->get('S_can'), undef, $d->get('Scan document'), sub { $SETTING{frontend} eq 'libsane-perl' ? scan_dialog2() : scan_dialog() } ],
+ [ 'Scan', 'scanner', $d->get('S_can'), '<control>g', $d->get('Scan document'), sub { $SETTING{frontend} eq 'libsane-perl' ? scan_dialog2() : scan_dialog() } ],
  [ 'Save', 'gtk-save', $d->get('Save'), '<control>s', $d->get('Save'), \&save_dialog ],
  [ 'Email as PDF', 'gtk-edit', $d->get('_Email as PDF'), '<control>e', $d->get('Attach as PDF to a new email'), \&email ],
  [ 'Compress', undef, $d->get('_Compress temporary files'), undef, $d->get('Compress temporary files'), \&compress_temp ],
@@ -4129,7 +4129,12 @@ sub scan_dialog {
                      or $ocr_engine[$comboboxe -> get_active]->[0] eq 'ocropus'));
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
- $sbutton -> set_sensitive(FALSE) if (! $test);
+ if ($test) {
+  $sbutton->grab_focus;
+ }
+ else {
+  $sbutton->set_sensitive(FALSE);
+ }
  return;
 }
 
@@ -4712,6 +4717,8 @@ sub scan_dialog2 {
  $hboxl->hide_all
   if (!($ocr_engine[$comboboxe -> get_active]->[0] eq 'tesseract'
                    or $ocr_engine[$comboboxe -> get_active]->[0] eq 'ocropus'));
+# Has to be done in idle cycles to wait for the options to finish building
+ Glib::Idle->add (sub { $sbutton->grab_focus; });
  return;
 }
 
@@ -6580,7 +6587,10 @@ sub parse_options {
  set_paper($combobp);
 
 #  Unghost the scan button
- $sbutton->set_sensitive(TRUE) if (defined $sbutton);
+ if (defined $sbutton) {
+  $sbutton->set_sensitive(TRUE);
+  $sbutton->grab_focus;
+ }
  return;
 }
 
@@ -7449,6 +7459,7 @@ print "Unknown type $opt->{type}\n";
    set_paper($combobp);
 
    $sbutton->set_sensitive(TRUE);
+   $sbutton->grab_focus;
    $dialog -> destroy;
   }
  });
