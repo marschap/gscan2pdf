@@ -9549,44 +9549,38 @@ sub add_ocr_languages {
 # Tesseract language files
  my %iso639 = (
   deu     => $d->get('German'),
-  'deu-f' => $d->get('Fraktur'),
+  'deu-f' => $d->get('German (Fraktur)'),
   eng     => $d->get('English'),
   fra     => $d->get('French'),
   ita     => $d->get('Italian'),
   nld     => $d->get('Dutch'),
   por     => $d->get('Portuguese'),
+  slk     => $d->get('Slovak'),
   spa     => $d->get('Spanish'),
   vie     => $d->get('Vietnamese'),
  );
 
- my $tessdata_prefix = '/usr/share/tessdata';
- if (defined $ENV{TESSDATA_PREFIX}) {
-  $tessdata_prefix = $ENV{TESSDATA_PREFIX};
+ my $tessdata_prefix = '/usr/share';
+ for (($ENV{TESSDATA_PREFIX}, '/usr/local/share', '/usr/share/tesseract-ocr')) {
+  if (-d "$_/tessdata") {
+   $tessdata_prefix = $_;
+   last;
+  }
  }
- elsif (-d '/usr/local/share/tessdata') {
-  $tessdata_prefix = '/usr/local/share';
- }
- elsif (-d '/usr/share/tesseract-ocr/tessdata') {
-  $tessdata_prefix = '/usr/share/tesseract-ocr';
- }
- my @tesslang = glob "$tessdata_prefix/tessdata/*.unicharset";
+ print "Using tessdata at $tessdata_prefix/tessdata\n" if $debug;
+ my @tesslang;
+ for (glob "$tessdata_prefix/tessdata/*.unicharset") {
   
 # Weed out the empty language files
- my $i = 0;
- while ($i < @tesslang) {
-  if (-z $tesslang[$i]) {
-   splice @tesslang, $i, 1;
-  }
-  else {
+  if (not -z $_) {
    my $code;
-   $code = $1 if ($tesslang[$i] =~ /(\w*)\.unicharset$/);
+   $code = $1 if ($_ =~ /(\w*)\.unicharset$/);
    if (defined $iso639{$code}) {
-    $tesslang[$i] = [ $code, $iso639{$code} ];
+    push @tesslang, [ $code, $iso639{$code} ];
    }
    else {
-    $tesslang[$i] = [ $code, $code ];
+    push @tesslang, [ $code, $code ];
    }
-   $i++;
   }
  }
 
@@ -11027,7 +11021,7 @@ unpaper (see L<http://unpaper.berlios.de/>) is a utility for cleaning up a scan.
 
 =head3 OCR (Optical Character Recognition)
 
-The gocr or tesseract utilities are used to produce text from an image.
+The gocr, tesseract or ocropus utilities are used to produce text from an image.
 
 There is an OCR output buffer for each page and is embedded as
 plain text behind the scanned image in the PDF
@@ -11038,6 +11032,19 @@ Thus these can also be indexed by Beagle.
 
 There is an interesting review of OCR software at L<http://groundstate.ca/ocr>.
 An important conclusion was that 400dpi is necessary for decent results.
+
+Up to v2.03, the only way to tell which languages were available to tesseract
+was to look for the language files. Therefore, gscan2pdf checks the following
+paths:
+
+ $ENV{TESSDATA_PREFIX}/tessdata
+ /usr/local/share/tessdata
+ /usr/share/tesseract-ocr/tessdata
+ /usr/share/tessdata
+
+If there are no language files in the above locations, then it gscan2pdf
+assumes that tesseract v1.0 is installed, which had no language files.
+
 
 =head1 FAQs
 
@@ -11087,11 +11094,6 @@ C<gscan2pdf --device <device>>
 =head1 To Do
 
 =over
-
-=item *
-Correct positioning and size of OCR output behind scan -
-as soon as tesseract supports outputting the information in a sensible
-manner.
 
 =item *
 Print (using Net::Cups).
