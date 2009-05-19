@@ -393,7 +393,7 @@ my ($windowi, $windowe, $windows, $windows2, $windowh, $windowo, $windowrn,
     @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
     $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
     $windowr, @rotate_queue, $rotating, $view, $frames, $duplex, $windowp,
-    @analyze_queue, $analyzing, $batch_scan, $gui_updating,
+    @analyze_queue, $analyzing, $batch_scan, $gui_updating, %optnamei,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -5543,10 +5543,25 @@ sub scan_pages {
 # Stop the process unless everything OK and more scans required
    unless (($npages == -1 or --$npages)
                         and $shash{$sane_thread}{status} == SANE_STATUS_GOOD) {
-    $shash{$sane_thread}{process} = '
-     $device->cancel;
-     $shash{$sane_thread}{go} = 0;
-    ';
+    my $process = '';
+    if ($SETTING{'sane_close to eject'}) {
+     $process = '
+      undef $device;
+      $device = Sane::Device->open($shash{$sane_thread}{device});
+      if ($Sane::STATUS != SANE_STATUS_GOOD) {
+       warn "Error opening device: $Sane::STATUS\n";
+       return;
+      }
+     ';
+     for (@{$SETTING{default}{$shash{$sane_thread}{device}}}) {
+      my ($option, $val) = each(%{$_});
+      my $widget = $optnamei{$option};
+      my $i = $widget->{option_number};
+      $process .= "\$device->set_option ($i, '$val');";
+     }
+    }
+    $shash{$sane_thread}{process} = '$device->cancel;'.$process
+                                               .'$shash{$sane_thread}{go} = 0;';
     $shash{$sane_thread}{go} = 1;
     $shash{$sane_thread}{semaphore}->up;
     $dialog -> destroy;
@@ -7173,7 +7188,7 @@ sub scan_options {
    my @options = @{thaw($shash{$sane_thread}{data})};
    print "Sane->get_option_descriptor returned: ", Dumper(\@options) if $debug;
 
-   my ($group, $vbox, @widgets, $hboxp, %optnamei);
+   my ($group, $vbox, @widgets, $hboxp);
    my $num_dev_options = $#options+1;
    my %geometry;
    undef $combobp; # So we don't carry over from one device to another
@@ -10296,6 +10311,12 @@ sub preferences {
  combobox_set_active($comboo, $SETTING{'OCR output'}, @array);
  $hbox -> pack_end($comboo, TRUE, TRUE, 0);
 
+# Call sane_close to eject sheet from ADF
+ my $cbs = Gtk2::CheckButton->new_with_label(
+                            $d->get('Call sane_close to eject sheet from ADF'));
+ $cbs->set_active (TRUE) if ($SETTING{'sane_close to eject'});
+ $vbox -> pack_start($cbs, TRUE, TRUE, 0);
+
 # Apply button
  $hbox = Gtk2::HBox -> new;
  $vbox -> pack_start($hbox, TRUE, TRUE, 0);
@@ -10336,6 +10357,7 @@ sub preferences {
   $SETTING{'Blank threshold'} = $spinbuttonb->get_value;
   $SETTING{'Dark threshold'} = $spinbuttond->get_value;
   $SETTING{'OCR output'} = $array[$comboo->get_active][0];
+  $SETTING{'sane_close to eject'} = $cbs->get_active;
  });
 
 # Cancel button
