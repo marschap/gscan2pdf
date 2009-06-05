@@ -2782,7 +2782,8 @@ $hboxtq -> pack_start ($label, FALSE, FALSE, 0);
    $vboxp -> hide_all;
    $windowi -> resize(100, 100); # Doesn't matter that 200x200 is too small
   }
-  if ($type[$combobi->get_active][0] eq 'tif') {
+  if ($type[$combobi->get_active][0] eq 'tif'
+      or $type[$combobi->get_active][0] eq 'ps') {
    $hboxc -> show_all;
   }
   else {
@@ -2936,6 +2937,8 @@ $hboxtq -> pack_start ($label, FALSE, FALSE, 0);
    chdir $SETTING{session};
   }
   elsif ($SETTING{'image type'} eq 'ps') {
+   $SETTING{'tiff compression'} = $tiff_compression[$combobtc->get_active][0];
+   $SETTING{'quality'} = $spinbuttontq->get_value;
 
 # cd back to cwd to save
    chdir $SETTING{'cwd'};
@@ -3044,7 +3047,8 @@ $hboxtq -> pack_start ($label, FALSE, FALSE, 0);
  $hboxtq -> hide_all if ($type[$combobi->get_active][0] ne 'jpg'
                         or ($type[$combobi->get_active][0] eq 'tif'
                      and $tiff_compression[$combobtc->get_active][0] ne 'jpg'));
- $hboxc -> hide_all if ($type[$combobi->get_active][0] ne 'tif');
+ $hboxc -> hide_all if ($type[$combobi->get_active][0] ne 'tif'
+                        and $type[$combobi->get_active][0] ne 'ps');
  $vboxp -> hide_all if ($type[$combobi->get_active][0] ne 'pdf');
  $windowi -> resize(100, 100); # Doesn't matter that 200x200 is too small
  return;
