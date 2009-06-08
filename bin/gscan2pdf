@@ -10681,7 +10681,9 @@ additionally need the rpm, devscripts, fakeroot, debhelper and gettext packages.
 The list below looks daunting, but all packages are available from any
 reasonable up-to-date distribution. If you are using Synaptic, having installed
 gscan2pdf, locate the gscan2pdf entry in Synaptic, right-click it and you can
-install them under I<Recommends>.
+install them under I<Recommends>. Note also that the library names given below
+are the Debian/Ubuntu ones. Those distributions using RPM typically use
+perl(module) where Debian has libmodule-perl.
 
 =over
 
@@ -10725,6 +10727,14 @@ API library for scanners
 =item libsane-perl
 
 Perl bindings for libsane.
+
+=item libforks-perl
+
+a drop-in replacement for Perl threads using fork()
+
+=item libset-intspan-perl
+
+manages sets of integers
 
 =item libtiff-tools
 
