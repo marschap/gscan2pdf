@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Look at ejecting by starting a new scan, and cancel it immediately
 #    try and get canvas zooming with imageview
 #    add find text in ocr buffer - search through all buffers
 #    scanning doesn't work after fork()
@@ -5561,7 +5562,12 @@ sub scan_pages {
       my ($option, $val) = each(%{$_});
       my $widget = $optnamei{$option};
       my $i = $widget->{option_number};
-      $process .= "\$device->set_option ($i, '$val');";
+      if (ref($val) eq 'ARRAY') {
+       $process .= "\$device->set_option ($i, [ ".join(' ', @{$val})." ] );";
+      }
+      else {
+       $process .= "\$device->set_option ($i, '$val');";
+      }
      }
     }
     $shash{$sane_thread}{process} = '$device->cancel;'.$process
@@ -7209,15 +7215,16 @@ sub scan_options {
 
     next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
 
-# Worry about the multiple value options later
-if ($opt->{max_values} < 2) {
+# Widget
+    my ($widget, $val);
+    $val = $opt->{val};
 
     if (($opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT)
-       and ($opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL)
-       and (($opt->{name} eq SANE_NAME_SCAN_TL_X) or 
-            ($opt->{name} eq SANE_NAME_SCAN_TL_Y) or
-            ($opt->{name} eq SANE_NAME_SCAN_BR_X) or
-            ($opt->{name} eq SANE_NAME_SCAN_BR_Y))) {
+      and ($opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL)
+      and (($opt->{name} eq SANE_NAME_SCAN_TL_X) or 
+           ($opt->{name} eq SANE_NAME_SCAN_TL_Y) or
+           ($opt->{name} eq SANE_NAME_SCAN_BR_X) or
+           ($opt->{name} eq SANE_NAME_SCAN_BR_Y))) {
      $geometry{$opt->{name}}{i} = $i;
 
 # Define HBox for paper size here
@@ -7234,169 +7241,185 @@ if ($opt->{max_values} < 2) {
     $hbox->set_sensitive(FALSE)
      if ($opt->{cap} & SANE_CAP_INACTIVE or not $opt->{cap} & SANE_CAP_SOFT_SELECT);
 
-# Label
-    if ($opt->{type} != SANE_TYPE_BUTTON) {
-     my $label = Gtk2::Label -> new ($d_sane->get($opt->{title}));
-     $hbox -> pack_start ($label, FALSE, FALSE, 0);
-    }
+    if ($opt->{max_values} < 2) {
 
-# Widget
-    my ($widget, $val);
-    $val = $opt->{val};
+# Label
+     if ($opt->{type} != SANE_TYPE_BUTTON) {
+      my $label = Gtk2::Label -> new ($d_sane->get($opt->{title}));
+      $hbox -> pack_start ($label, FALSE, FALSE, 0);
+     }
 
 # CheckButton
-    if ($opt->{type} == SANE_TYPE_BOOL) {
-     $widget = Gtk2::CheckButton -> new;
-     $widget->set_active(TRUE) if ($val);
-     $widget -> {signal} = $widget -> signal_connect (toggled => sub {
-      my $val = $widget -> get_active;
-      set_option ($widget->{option_number}, $val, @widgets);
-     });
-    }
+     if ($opt->{type} == SANE_TYPE_BOOL) {
+      $widget = Gtk2::CheckButton -> new;
+      $widget->set_active(TRUE) if ($val);
+      $widget -> {signal} = $widget -> signal_connect (toggled => sub {
+       my $val = $widget -> get_active;
+       set_option ($widget->{option_number}, $val, @widgets);
+      });
+     }
 
 # Button
-    elsif ($opt->{type} == SANE_TYPE_BUTTON) {
-     $widget = Gtk2::Button -> new($d_sane->get($opt->{title}));
-     $widget -> {signal} = $widget -> signal_connect (clicked => sub {
-      set_option ($widget->{option_number}, $val, @widgets);
-     });
-    }
+     elsif ($opt->{type} == SANE_TYPE_BUTTON) {
+      $widget = Gtk2::Button -> new($d_sane->get($opt->{title}));
+      $widget -> {signal} = $widget -> signal_connect (clicked => sub {
+       set_option ($widget->{option_number}, $val, @widgets);
+      });
+     }
 
 # SpinButton
-    elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
-     my $step = 1;
-     $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
-     $widget = Gtk2::SpinButton -> new_with_range($opt->{constraint}{min},
+     elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
+      my $step = 1;
+      $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
+      $widget = Gtk2::SpinButton -> new_with_range($opt->{constraint}{min},
                                                   $opt->{constraint}{max}, $step);
 
 # Set the default
-     $widget -> set_value($val)
-      if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-     $widget -> {signal} = $widget -> signal_connect ('value-changed' => sub {
-      my $val = $widget -> get_value;
-      set_option ($widget->{option_number}, $val, @widgets);
-     });
+      $widget -> set_value($val)
+       if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+      $widget -> {signal} = $widget -> signal_connect ('value-changed' => sub {
+       my $val = $widget -> get_value;
+       set_option ($widget->{option_number}, $val, @widgets);
+      });
 
 # Note the max if geometry
-     $geometry{$opt->{name}}{max} = $opt->{constraint}{max}
-      if (defined($geometry{$opt->{name}}));
-    }
-
-# ComboBox
-    elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
-                      or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
-     $widget = Gtk2::ComboBox -> new_text;
-     my $index = 0;
-     for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
-      $widget->append_text($d_sane->get($opt->{constraint}[$i]));
-      $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
+      $geometry{$opt->{name}}{max} = $opt->{constraint}{max}
+       if (defined($geometry{$opt->{name}}));
      }
 
+# ComboBox
+     elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+                       or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
+      $widget = Gtk2::ComboBox -> new_text;
+      my $index = 0;
+      for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
+       $widget->append_text($d_sane->get($opt->{constraint}[$i]));
+       $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
+      }
+
 # Set the default
-     $widget -> set_active($index) if (defined $index);
-     $widget -> {signal} = $widget -> signal_connect (changed => sub {
-      my $i = $widget->get_active;
-      set_option ($widget->{option_number}, $opt->{constraint}[$i], @widgets);
-     });
-    }
+      $widget -> set_active($index) if (defined $index);
+      $widget -> {signal} = $widget -> signal_connect (changed => sub {
+       my $i = $widget->get_active;
+       set_option ($widget->{option_number}, $opt->{constraint}[$i], @widgets);
+      });
+     }
 
 # Entry
-    elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
-     $widget = Gtk2::Entry -> new;
+     elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
+      $widget = Gtk2::Entry -> new;
 
 # Set the default
-     $widget -> set_text($val)
-      if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-     $widget -> {signal} = $widget->signal_connect (activate => sub {
-      my $val = $widget -> get_text;
-      set_option ($widget->{option_number}, $val, @widgets);
-     });
+      $widget -> set_text($val)
+       if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+      $widget -> {signal} = $widget->signal_connect (activate => sub {
+       my $val = $widget -> get_text;
+       set_option ($widget->{option_number}, $val, @widgets);
+      });
+     }
     }
-
-if (defined $widget) {
-    $widget->{option_number} = $i;
-    $widget->{option_name} = $opt->{name};
-    $optnamei{$opt->{name}} = $widget;
-    $widgets[$i] = $widget;
-    if ($opt->{type} == SANE_TYPE_BUTTON) {
-     $hbox -> pack_end ($widget, TRUE, TRUE, 0);
-    }
-    else {
-     $hbox -> pack_end ($widget, FALSE, FALSE, 0);
-    }
-    $tooltips -> set_tip ($widget, $d_sane->get($opt->{desc}));
-
-# Look-up to hide/show the box if necessary
-    $geometry{$opt->{name}}{box} = $hbox
-     if (defined($geometry{$opt->{name}}));
-
-    if (defined($geometry{scalar(SANE_NAME_SCAN_BR_X)})
-        and defined($geometry{scalar(SANE_NAME_SCAN_BR_Y)})
-        and defined($geometry{scalar(SANE_NAME_SCAN_TL_X)})
-        and defined($geometry{scalar(SANE_NAME_SCAN_TL_Y)})
-        and not defined($combobp)) {
-
-# Paper list
-     my $label = Gtk2::Label -> new ($d->get('Paper size'));
-     $hboxp -> pack_start ($label, FALSE, FALSE, 0);
-
-     $combobp = Gtk2::ComboBox -> new_text;
-     $combobp -> append_text ($d->get('Manual'));
-     $combobp -> append_text ($d->get('Edit'));
-     $tooltips -> set_tip ($combobp, $d->get('Selects or edits the paper size'));
-     $hboxp -> pack_end ($combobp, FALSE, FALSE, 0);
-     $combobp -> signal_connect (changed => sub {
-      if ($combobp -> get_active_text eq $d->get('Edit')) {
-       edit_paper($combobp, $geometry{scalar(SANE_NAME_SCAN_BR_X)}{max},
-                            $geometry{scalar(SANE_NAME_SCAN_BR_Y)}{max},
-                            $geometry{scalar(SANE_NAME_SCAN_TL_X)}{max},
-#                            $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max}, $h, $w);
-                            $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max});
-      }
-      elsif ($combobp -> get_active_text eq $d->get('Manual')) {
-       for (( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
-              SANE_NAME_SCAN_BR_X, SANE_NAME_SCAN_BR_Y )) {
-        $geometry{$_}{box}->show_all if (defined $geometry{$_});
+    else { # $opt->{max_values} > 1
+     $widget = Gtk2::Button -> new($d_sane->get($opt->{title}));
+     $widget -> {signal} = $widget -> signal_connect (clicked => sub {
+      if ($opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT) {
+       if ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
+        show_message_dialog($windows2, 'info', 'close',
+         $d->get('Multiple unconstrained values are not currently supported. Please file a bug.'));
+       }
+       else {
+        set_options ($widget->{option_number}, $opt, @widgets);
        }
       }
       else {
-       my $paper = $combobp -> get_active_text;
-       $widgets[$geometry{scalar(SANE_NAME_SCAN_TL_X)}{i}]->set_value(
-        $SETTING{Paper}{$paper}{l}
-       ) if (defined $geometry{scalar(SANE_NAME_SCAN_TL_X)});
-       $widgets[$geometry{scalar(SANE_NAME_SCAN_TL_Y)}{i}]->set_value(
-        $SETTING{Paper}{$paper}{t}
-       ) if (defined $geometry{scalar(SANE_NAME_SCAN_TL_Y)});
-       $widgets[$geometry{scalar(SANE_NAME_SCAN_BR_X)}{i}]->set_value(
-        $SETTING{Paper}{$paper}{x}+$SETTING{Paper}{$paper}{l}
-       );
-       $widgets[$geometry{scalar(SANE_NAME_SCAN_BR_Y)}{i}]->set_value(
-        $SETTING{Paper}{$paper}{y}+$SETTING{Paper}{$paper}{t}
-       );
-#       if (defined($spin_buttonh) and defined($spin_buttonw)) {
-#        $spin_buttonw -> set_value($SETTING{Paper}{$paper}{x});
-#        $spin_buttonh -> set_value($SETTING{Paper}{$paper}{y});
-#       }
-       Glib::Idle->add (sub {
-        for (( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
-               SANE_NAME_SCAN_BR_X, SANE_NAME_SCAN_BR_Y )) {
-         $geometry{$_}{box}->hide_all if (defined $geometry{$_});
-        }
-       });
+       show_message_dialog($windows2, 'info', 'close',
+        $d->get('Multiple non-numerical values are not currently supported. Please file a bug.'));
       }
      });
-     add_paper($combobp, $geometry{scalar(SANE_NAME_SCAN_BR_X)}{max},
-                         $geometry{scalar(SANE_NAME_SCAN_BR_Y)}{max},
-                         $geometry{scalar(SANE_NAME_SCAN_TL_X)}{max},
-#                         $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max}, $h, $w);
-                         $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max});
     }
 
-}
-else {
-print "Unknown type $opt->{type}\n";
-}
-}
+    if (defined $widget) {
+     $widget->{option_number} = $i;
+     $widget->{option_name} = $opt->{name};
+     $optnamei{$opt->{name}} = $widget;
+     $widgets[$i] = $widget;
+     if ($opt->{type} == SANE_TYPE_BUTTON or $opt->{max_values} > 1) {
+      $hbox -> pack_end ($widget, TRUE, TRUE, 0);
+     }
+     else {
+      $hbox -> pack_end ($widget, FALSE, FALSE, 0);
+     }
+     $tooltips -> set_tip ($widget, $d_sane->get($opt->{desc}));
+
+# Look-up to hide/show the box if necessary
+     $geometry{$opt->{name}}{box} = $hbox
+      if (defined($geometry{$opt->{name}}));
+
+     if (defined($geometry{scalar(SANE_NAME_SCAN_BR_X)})
+         and defined($geometry{scalar(SANE_NAME_SCAN_BR_Y)})
+         and defined($geometry{scalar(SANE_NAME_SCAN_TL_X)})
+         and defined($geometry{scalar(SANE_NAME_SCAN_TL_Y)})
+         and not defined($combobp)) {
+
+# Paper list
+      my $label = Gtk2::Label -> new ($d->get('Paper size'));
+      $hboxp -> pack_start ($label, FALSE, FALSE, 0);
+
+      $combobp = Gtk2::ComboBox -> new_text;
+      $combobp -> append_text ($d->get('Manual'));
+      $combobp -> append_text ($d->get('Edit'));
+      $tooltips -> set_tip ($combobp, $d->get('Selects or edits the paper size'));
+      $hboxp -> pack_end ($combobp, FALSE, FALSE, 0);
+      $combobp -> signal_connect (changed => sub {
+       if ($combobp -> get_active_text eq $d->get('Edit')) {
+        edit_paper($combobp, $geometry{scalar(SANE_NAME_SCAN_BR_X)}{max},
+                             $geometry{scalar(SANE_NAME_SCAN_BR_Y)}{max},
+                              $geometry{scalar(SANE_NAME_SCAN_TL_X)}{max},
+#                             $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max}, $h, $w);
+                             $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max});
+       }
+       elsif ($combobp -> get_active_text eq $d->get('Manual')) {
+        for (( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+               SANE_NAME_SCAN_BR_X, SANE_NAME_SCAN_BR_Y )) {
+         $geometry{$_}{box}->show_all if (defined $geometry{$_});
+        }
+       }
+       else {
+        my $paper = $combobp -> get_active_text;
+        $widgets[$geometry{scalar(SANE_NAME_SCAN_TL_X)}{i}]->set_value(
+         $SETTING{Paper}{$paper}{l}
+        ) if (defined $geometry{scalar(SANE_NAME_SCAN_TL_X)});
+        $widgets[$geometry{scalar(SANE_NAME_SCAN_TL_Y)}{i}]->set_value(
+         $SETTING{Paper}{$paper}{t}
+        ) if (defined $geometry{scalar(SANE_NAME_SCAN_TL_Y)});
+        $widgets[$geometry{scalar(SANE_NAME_SCAN_BR_X)}{i}]->set_value(
+         $SETTING{Paper}{$paper}{x}+$SETTING{Paper}{$paper}{l}
+        );
+        $widgets[$geometry{scalar(SANE_NAME_SCAN_BR_Y)}{i}]->set_value(
+         $SETTING{Paper}{$paper}{y}+$SETTING{Paper}{$paper}{t}
+        );
+#        if (defined($spin_buttonh) and defined($spin_buttonw)) {
+#         $spin_buttonw -> set_value($SETTING{Paper}{$paper}{x});
+#         $spin_buttonh -> set_value($SETTING{Paper}{$paper}{y});
+#        }
+        Glib::Idle->add (sub {
+         for (( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+                SANE_NAME_SCAN_BR_X, SANE_NAME_SCAN_BR_Y )) {
+          $geometry{$_}{box}->hide_all if (defined $geometry{$_});
+         }
+        });
+       }
+      });
+      add_paper($combobp, $geometry{scalar(SANE_NAME_SCAN_BR_X)}{max},
+                          $geometry{scalar(SANE_NAME_SCAN_BR_Y)}{max},
+                          $geometry{scalar(SANE_NAME_SCAN_TL_X)}{max},
+#                          $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max}, $h, $w);
+                          $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max});
+     }
+
+    }
+    else {
+     print "Unknown type $opt->{type}\n";
+    }
    }
 
 # Set defaults
@@ -7425,7 +7448,13 @@ print "Unknown type $opt->{type}\n";
       $gui_updating = TRUE;
       my ($option, $val) = each(%{$defaults[$i]});
       my $widget = $optnamei{$option};
-      if ($widget->isa('Gtk2::CheckButton')) {
+      if (ref($val) eq 'ARRAY') {
+       set_option($widget->{option_number}, $val, @widgets);
+# when INFO_INEXACT is implemented, so that the value is reloaded, check for it
+# here, so that the reloaded value is not overwritten.
+       $options[$widget->{option_number}]->{val} = $val;
+      }
+      elsif ($widget->isa('Gtk2::CheckButton')) {
        if ($widget->get_active != $val) {
         $widget->set_active($val);
        }
@@ -7535,6 +7564,8 @@ sub set_option {
    my ($i, $val) = @{thaw($shash{$sane_thread}{data})};
    undef $shash{$sane_thread}{data};
    my $info = $device->set_option ($i, $val);
+   print "sane_set_option returned status $Sane::STATUS with info $info\n"
+    if $debug;
    if ($info & SANE_INFO_RELOAD_OPTIONS) {
     my @options;
 
@@ -7582,50 +7613,48 @@ sub set_option {
       my $val = $opt->{val};
       $widget -> signal_handler_block($widget -> {signal});
 
-# Worry about the multiple value options later
-if ($opt->{max_values} < 2) {
-
 # HBox for option
       my $hbox = $widget->parent;
       $hbox->set_sensitive((not $opt->{cap} & SANE_CAP_INACTIVE)
                             and $opt->{cap} & SANE_CAP_SOFT_SELECT);
 
+      if ($opt->{max_values} < 2) {
+
 # CheckButton
-      if ($opt->{type} == SANE_TYPE_BOOL) {
-       $widget->set_active($val)
-        if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-      }
+       if ($opt->{type} == SANE_TYPE_BOOL) {
+        $widget->set_active($val)
+         if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+       }
 
 # SpinButton
-      elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
-       my ($step, $page) = $widget->get_increments;
-       $step = 1;
-       $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
-       $widget->set_range($opt->{constraint}{min}, $opt->{constraint}{max});
-       $widget->set_increments($step, $page);
-       $widget -> set_value($val)
-        if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
-      }
+       elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
+        my ($step, $page) = $widget->get_increments;
+        $step = 1;
+        $step = $opt->{constraint}{quant} if ($opt->{constraint}{quant});
+        $widget->set_range($opt->{constraint}{min}, $opt->{constraint}{max});
+        $widget->set_increments($step, $page);
+        $widget -> set_value($val)
+         if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+       }
 
 # ComboBox
-      elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
-                          or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
-       $widget->get_model->clear;
-       my $index = 0;
-       for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
-        $widget->append_text($d_sane->get($opt->{constraint}[$i]));
-        $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
+       elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+                           or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
+        $widget->get_model->clear;
+        my $index = 0;
+        for (my $i = 0; $i < @{$opt->{constraint}}; ++$i) {
+         $widget->append_text($d_sane->get($opt->{constraint}[$i]));
+         $index = $i if (defined $val and $opt->{constraint}[$i] eq $val);
+        }
+        $widget -> set_active($index) if (defined $index);
        }
-       $widget -> set_active($index) if (defined $index);
-      }
 
 # Entry
-      elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
-       $widget -> set_text($val)
-        if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+       elsif ($opt->{constraint_type} == SANE_CONSTRAINT_NONE) {
+        $widget -> set_text($val)
+         if (defined $val and not $opt->{cap} & SANE_CAP_INACTIVE);
+       }
       }
-
-}
       $widget -> signal_handler_unblock($widget -> {signal});
      }
     }
@@ -7634,6 +7663,225 @@ if ($opt->{max_values} < 2) {
    $gui_updating = FALSE; # We can carry on applying defaults now, if necessary.
   }
  });
+ return;
+}
+
+
+# display goocanvas with graph
+
+sub set_options {
+ my ($i, $opt, @widgets) = @_;
+
+# Set up the canvas
+ my ($window, $vbox) = create_window($windows2, $d_sane->get($opt->{title}), TRUE);
+ my $canvas = Goo::Canvas->new;
+ my ($cwidth, $cheight) = (200, 200);
+ $canvas->set_size_request($cwidth, $cheight);
+ $canvas->{border} = 10;
+ $vbox -> add ($canvas);
+ my $root = $canvas->get_root_item;
+
+ $canvas->signal_connect('button-press-event' => sub {
+  my ($canvas, $event) = @_;
+  if (defined $canvas->{selected}) {
+   $canvas->{selected}->set('fill-color' => 'black');
+   undef $canvas->{selected};
+  }
+  return FALSE
+   if ($#{$canvas->{val}}+1 >= $opt->{max_values} or $canvas->{on_val});
+  my $fleur = Gtk2::Gdk::Cursor->new('fleur');
+  my ($x, $y) = to_graph($canvas, $event->x, $event->y);
+  $x = int($x)+1;
+  splice @{$canvas->{val}},   $x, 0, $y;
+  splice @{$canvas->{items}}, $x, 0, add_value($root, $canvas);
+  update_graph($canvas);
+  return TRUE;
+ });
+
+ $canvas->signal_connect_after('key_press_event', sub {
+  my ($canvas, $event) = @_;
+  if ($event->keyval == $Gtk2::Gdk::Keysyms{Delete}
+      and defined $canvas->{selected}) {
+   my $item = $canvas->{selected};
+   undef $canvas->{selected};
+   $canvas->{on_val} = FALSE;
+   splice @{$canvas->{val}},   $item->{index}, 1;
+   splice @{$canvas->{items}}, $item->{index}, 1;
+   my $parent = $item->get_parent;
+   my $num = $parent->find_child ($item);
+   $parent->remove_child($num); 
+   update_graph($canvas);
+  }
+  return FALSE;
+ });
+ $canvas->can_focus(TRUE);
+ $canvas->grab_focus($root); 
+
+ $canvas->{opt} = $opt;
+
+ $canvas->{val} = $canvas->{opt}->{val};
+ for (@{$canvas->{val}}) {
+  push @{$canvas->{items}}, add_value($root, $canvas);
+ }
+
+ if ($opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
+  sort {$a <=> $b} @{$opt->{constraint}};
+ }
+
+# HBox for buttons
+ my $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start ($hbox, FALSE, TRUE, 0);
+
+# Apply button
+ my $abutton = Gtk2::Button -> new_from_stock('gtk-apply');
+ $hbox -> pack_start( $abutton, TRUE, TRUE, 0 );
+ $abutton -> signal_connect (clicked => sub {
+  set_option($i, $canvas->{val}, @widgets);
+# when INFO_INEXACT is implemented, so that the value is reloaded, check for it
+# here, so that the reloaded value is not overwritten.
+  $opt->{val} = $canvas->{val};
+  $window -> destroy;
+ });
+
+# Cancel button
+ my $cbutton = Gtk2::Button -> new_from_stock('gtk-cancel');
+ $hbox -> pack_end( $cbutton, FALSE, FALSE, 0 );
+ $cbutton -> signal_connect( clicked => sub { $window -> destroy } );
+
+# Have to show the window before updating it otherwise is doesn't know how big it is
+ $window -> show_all;
+ update_graph($canvas);
+ return;
+}
+
+
+sub add_value {
+ my ($root, $canvas) = @_;
+ my $item = Goo::Canvas::Rect->new(
+     $root, 0, 0, 10, 10,
+     'fill-color' => 'black',
+     'line-width' => 0,
+ );
+ $item->signal_connect('enter-notify-event' => sub {
+  $canvas->{on_val} = TRUE;
+  return TRUE;
+ });
+ $item->signal_connect('leave-notify-event' => sub {
+  $canvas->{on_val} = FALSE;
+  return TRUE;
+ });
+ $item->signal_connect('button-press-event' => sub {
+  my ($widget, $target, $ev) = @_;
+  $canvas->{selected} = $item;
+  $item->set('fill-color' => 'red');
+  my $fleur = Gtk2::Gdk::Cursor->new('fleur');
+  $widget->get_canvas->pointer_grab(
+   $widget, ['pointer-motion-mask', 'button-release-mask'], $fleur, $ev->time
+  );
+  return TRUE;
+ });
+ $item->signal_connect('button-release-event' => sub {
+  my ($item, $target, $ev) = @_;
+  $item->get_canvas->pointer_ungrab($item, $ev->time);
+  return TRUE;
+ });
+ my $opt = $canvas->{opt};
+ $item->signal_connect('motion-notify-event' => sub {
+  my ($item, $target, $event)= @_;
+  return FALSE unless ($event->state >= 'button1-mask');
+  my ($x, $y) = ($event->x, $event->y);
+  my ($xgr, $ygr) = (0, $y);
+  if ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
+   ($xgr, $ygr) = to_graph($canvas, 0, $y);
+   if ($ygr > $opt->{constraint}{max}) {
+    $ygr = $opt->{constraint}{max};
+   }
+   elsif ($ygr < $opt->{constraint}{min}) {
+    $ygr = $opt->{constraint}{min};
+   }
+  }
+  elsif ($opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
+   ($xgr, $ygr) = to_graph($canvas, 0, $y);
+   for (my $i = 1; $i < @{$opt->{constraint}}; $i++) {
+    if ($ygr < ($opt->{constraint}[$i]+$opt->{constraint}[$i-1])/2) {
+     $ygr = $opt->{constraint}[$i-1];
+     last;
+    }
+    elsif ($i == $#{$opt->{constraint}}) {
+     $ygr = $opt->{constraint}[$i];
+    }
+   }
+  }
+  $canvas->{val}[$item->{index}] = $ygr;
+  ($x, $y) = to_canvas($canvas, $xgr, $ygr);
+  $item->set(y => $y-10/2);
+  return TRUE;
+ });
+ return $item;
+}
+
+
+# convert from graph co-ordinates to canvas co-ordinates
+
+sub to_canvas {
+ my ($canvas, $x, $y) = @_;
+ return ($x - $canvas->{bounds}[0])*$canvas->{scale}[0] + $canvas->{border},
+         $canvas->{cheight}-($y-$canvas->{bounds}[1])*$canvas->{scale}[1] - $canvas->{border};
+}
+
+
+# convert from canvas co-ordinates to graph co-ordinates
+
+sub to_graph {
+ my ($canvas, $x, $y) = @_;
+ return ($x - $canvas->{border})/$canvas->{scale}[0] + $canvas->{bounds}[0],
+         ($canvas->{cheight}-$y-$canvas->{border})/$canvas->{scale}[1] + $canvas->{bounds}[1];
+}
+
+
+sub update_graph {
+ my ($canvas) = @_;
+
+# Calculate bounds of graph
+ my @bounds;
+ for (@{$canvas->{val}}) {
+  $bounds[1] = $_ if (not defined $bounds[1] or $_ < $bounds[1]);
+  $bounds[3] = $_ if (not defined $bounds[3] or $_ > $bounds[3]);
+ }
+ my $opt = $canvas->{opt};
+ $bounds[0] = 0;
+ $bounds[2] = $#{$canvas->{val}};
+ if ($bounds[0] >= $bounds[2]) {
+  $bounds[0] = -0.5;
+  $bounds[2] = 0.5;
+ }
+ if ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
+  $bounds[1] = $opt->{constraint}{min};
+  $bounds[3] = $opt->{constraint}{max};
+ }
+ elsif ($opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST) {
+  $bounds[1] = $opt->{constraint}[0];
+  $bounds[3] = $opt->{constraint}[$#{$opt->{constraint}}];
+ }
+ my ($vwidth, $vheight) = ($bounds[2]-$bounds[0], $bounds[3]-$bounds[1]); 
+
+# Calculate bounds of canvas
+ my ($x, $y, $cwidth, $cheight) = $canvas->allocation->values;
+
+# Calculate scale factors
+ my @scale = (($cwidth-$canvas->{border}*2)/$vwidth, ($cheight-$canvas->{border}*2)/$vheight);
+
+ $canvas->{scale} = \@scale;
+ $canvas->{bounds} = \@bounds;
+ $canvas->{cheight} = $cheight;
+
+# Update canvas
+ for (my $i = 0; $i <= $#{$canvas->{items}}; $i++) {
+  my $item = $canvas->{items}[$i];
+  $item->{index} = $i;
+  my ($x, $y) = to_canvas($canvas, $i, $canvas->{val}[$i]);
+  $item->set(x => $x-10/2, y => $y-10/2);
+ }
  return;
 }
 
