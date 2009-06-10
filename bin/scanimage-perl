@@ -8,7 +8,7 @@ use Getopt::Long qw(:config no_ignore_case pass_through);
 use File::Basename;
 use IO::Handle;
 
-$Sane::DEBUG = 1;
+#$Sane::DEBUG = 1;
 
 my (%options, @window_val_user, @window_option, @window_val,
     @window, $num_dev_options, $device, $format, $devname, %option_number);
@@ -17,15 +17,13 @@ my $help = 0;
 my $test = 0;
 my $batch = 0;
 my $batch_start_at = 1;
-my $batch_count = -1;
+my $batch_count;
 my $batch_increment = 1;
 my $buffer_size = (32 * 1024);	# default size
 my $tl_x = 0;
 my $tl_y = 0;
 my $br_x = 0;
 my $br_y = 0;
-my $w_x = 0;
-my $h_y = 0;
 my $resolution_optind = -1;
 my $resolution_value = 0;
 my $progress = 0;
@@ -47,7 +45,7 @@ my @args = (\%options, 'd|device-name=s' => \$devname,
                        'T|test' => \$test,
                        'h|help' => \$help,
                        'v|verbose+' => \$verbose,
-                       'B|buffer-size' => \$buffer_size,
+                       'B|buffer-size=i' => \$buffer_size,
                        'V|version');
 
 
@@ -98,20 +96,51 @@ sub print_unit {
 
 
 sub print_option {
- my ($device, $opt_num, $short_name) = @_;
+ my ($device, $opt_num, $opt) = @_;
 
  my $not_first = SANE_FALSE;
- my $maxwindow = 0;
 
- my $opt = $device->get_option_descriptor ($opt_num);
+ if ($opt->{type} == SANE_TYPE_GROUP){
+  printf ("  %s:\n", $opt->{title});
+  return;
+ }
 
- if ($short_name) {
-  printf "    -%s", $short_name;
+# if both of these are set, option is invalid
+ if($opt->{cap} & SANE_CAP_SOFT_SELECT && $opt->{cap} & SANE_CAP_HARD_SELECT){
+  print STDERR "$prog_name: invalid option caps, SS+HS\n";
+  return;
+ }
+
+# invalid to select but not detect
+ if($opt->{cap} & SANE_CAP_SOFT_SELECT && !($opt->{cap} & SANE_CAP_SOFT_DETECT)){
+  print STDERR "$prog_name: invalid option caps, SS!SD\n";
+  return;
+ }
+# standard allows this, though it makes little sense
+# if($opt->{cap} & SANE_CAP_HARD_SELECT && !($opt->{cap} & SANE_CAP_SOFT_DETECT)){
+#  print STDERR "$prog_name: invalid option caps, HS!SD\n";
+#  return;
+# }
+
+# if one of these three is not set, option is useless, skip it
+ if(!($opt->{cap} & 
+  (SANE_CAP_SOFT_SELECT | SANE_CAP_HARD_SELECT | SANE_CAP_SOFT_DETECT)
+ )){
+  return;
+ }
+
+# print the option
+ if ($opt->{name} eq "x"
+     or $opt->{name} eq "y"
+     or $opt->{name} eq "t"
+     or $opt->{name} eq "l") {
+  printf "    -%s", $opt->{name};
  }
  else {
   printf "    --%s", $opt->{name};
  }
 
+# print the option choices
  if ($opt->{type} == SANE_TYPE_BOOL) {
   print "[=(";
   print "auto|" if ($opt->{cap} & SANE_CAP_AUTOMATIC);
@@ -138,13 +167,11 @@ sub print_option {
   elsif ($opt->{constraint_type} == SANE_CONSTRAINT_RANGE) {
    my $format = "%g..%g";
    $format = "%d..%d" if ($opt->{type} == SANE_TYPE_INT);
-   if ($opt->{name} eq SANE_NAME_SCAN_BR_X) {
-    $maxwindow = $opt->{constraint}{max} - $tl_x;
-    printf $format, $opt->{constraint}{min}, $maxwindow;
+   if ($opt->{name} eq "x") {
+    printf $format, $opt->{constraint}{min}, $opt->{constraint}{max} - $tl_x;
    }
-   elsif ($opt->{name} eq SANE_NAME_SCAN_BR_Y) {
-    $maxwindow = $opt->{constraint}{max} - $tl_y;
-    printf $format, $opt->{constraint}{min}, $maxwindow;
+   elsif ($opt->{name} eq "y") {
+    printf $format, $opt->{constraint}{min}, $opt->{constraint}{max} - $tl_y;
    }
    else {
     printf $format, $opt->{constraint}{min}, $opt->{constraint}{max};
@@ -167,8 +194,8 @@ sub print_option {
    }
   }
  }
+ # print current option value
  if ($opt->{max_values} == 1) {
-  # print current option value
   if (! ($opt->{cap} & SANE_CAP_INACTIVE)) {
    my $val = $device->get_option ($opt_num);
    print " [";
@@ -178,23 +205,21 @@ sub print_option {
    elsif ($opt->{type} == SANE_TYPE_INT or $opt->{type} == SANE_TYPE_FIXED) {
     my $format = "%g";
     $format = "%d" if ($opt->{type} == SANE_TYPE_INT);
-    if ($opt->{name} eq SANE_NAME_SCAN_TL_X) {
+    if ($opt->{name} eq "l") {
      $tl_x = $val;
      printf $format, $tl_x;
     }
-    elsif ($opt->{name} eq SANE_NAME_SCAN_TL_Y) {
+    elsif ($opt->{name} eq "t") {
      $tl_y = $val;
      printf $format, $tl_y;
     }
-    elsif ($opt->{name} eq SANE_NAME_SCAN_BR_X) {
+    elsif ($opt->{name} eq "x") {
      $br_x = $val;
-     $w_x = $br_x - $tl_x;
-     printf $format, $w_x;
+     printf $format, $br_x - $tl_x;
     }
-    elsif ($opt->{name} eq SANE_NAME_SCAN_BR_Y) {
+    elsif ($opt->{name} eq "y") {
      $br_y = $val;
-     $h_y = $br_y - $tl_y;
-     printf $format, $h_y;
+     printf $format, $br_y - $tl_y;
     }
     else {
      printf $format, $val;
@@ -207,32 +232,38 @@ sub print_option {
   }
  }
 
- print " [inactive]" if ($opt->{cap} & SANE_CAP_INACTIVE);
+ if ($opt->{cap} & SANE_CAP_INACTIVE) {
+  print " [inactive]";
+ }
+ elsif($opt->{cap} & SANE_CAP_HARD_SELECT) {
+  print " [hardware]";
+ }
+ elsif(!($opt->{cap} & SANE_CAP_SOFT_SELECT) && $opt->{cap} & SANE_CAP_SOFT_DETECT) {
+  print " [read-only]";
+ }
 
  print "\n        ";
 
- if ($short_name eq 'x') {
-  print "Width of scan-area.";
- }
- elsif ($short_name eq 'y') {
-  print "Height of scan-area.";
- }
- else {
-  my $column = 8;
-  my $last_break = 0;
-  my $start = 0;
-  for (my $pos = 0; $pos < length($opt->{desc}); ++$pos) {
-   ++$column;
-   $last_break = $pos if (substr($opt->{desc}, $pos, 1) eq ' ');
-   if ($column >= 79 and $last_break) {
-    print substr($opt->{desc}, $start++, 1) while ($start < $last_break);
-    $start = $last_break + 1;   # skip blank
-    print "\n        ";
-    $column = 8 + $pos - $start;
-   }
+ my $column = 8;
+ my $last_break = 0;
+ my $start = 0;
+ for (my $pos = 0; $pos < length($opt->{desc}); ++$pos) {
+  ++$column;
+  if (substr($opt->{desc}, $pos, 1) eq ' ') {
+   $last_break = $pos;
   }
-  print substr($opt->{desc}, $start++, 1) while ($start < length($opt->{desc}));
+  elsif (substr($opt->{desc}, $pos, 1) eq "\n") {
+   $column = 80;
+   $last_break = $pos;
+  }
+  if ($column >= 79 and $last_break) {
+   print substr($opt->{desc}, $start++, 1) while ($start < $last_break);
+   $start = $last_break + 1;   # skip blank
+   print "\n        ";
+   $column = 8 + $pos - $start;
+  }
  }
+ print substr($opt->{desc}, $start++, 1) while ($start < length($opt->{desc}));
  print "\n";
  return;
 }
@@ -383,15 +414,25 @@ sub parse_vector {
 sub fetch_options {
  my $device = shift;
 
-# We got a device, find out how many options it has:
- $num_dev_options = $device->get_option(0);
- if ($Sane::STATUS != SANE_STATUS_GOOD) {
-  print STDERR "$prog_name: unable to determine option count\n";
+ my $opt = $device->get_option_descriptor (0);
+ if (not defined($opt)) {
+  print STDERR "Could not get option descriptor for option 0\n";
   exit (1);
  }
 
- for (my $i = 0; $i < $num_dev_options; ++$i) {
-  my $opt = $device->get_option_descriptor ($i);
+ $num_dev_options = $device->get_option(0);
+ if ($Sane::STATUS != SANE_STATUS_GOOD) {
+  print STDERR "Could not get value for option 0: $Sane::STATUS\n";
+  exit (1);
+ }
+
+ # build the full table of long options
+ for (my $i = 1; $i < $num_dev_options; ++$i) {
+  $opt = $device->get_option_descriptor ($i);
+  if (not defined($opt)) {
+   print STDERR "Could not get option descriptor for option $i\n";
+   exit (1);
+  }
 
   next if (! ($opt->{cap} & SANE_CAP_SOFT_SELECT));
 
@@ -408,31 +449,31 @@ sub fetch_options {
 # width/height option (if they exist at all).
   if (($opt->{type} == SANE_TYPE_FIXED || $opt->{type} == SANE_TYPE_INT)
       and ($opt->{unit} == SANE_UNIT_MM || $opt->{unit} == SANE_UNIT_PIXEL)) {
-   if ($opt->{name} eq SANE_NAME_SCAN_TL_X) {
-    $window[2] = $i;
-    $opt->{name} = 'l';
-   }
-   elsif ($opt->{name} eq SANE_NAME_SCAN_TL_Y) {
-    $window[3] = $i;
-    $opt->{name} = 't';
-   }
-   elsif ($opt->{name} eq SANE_NAME_SCAN_BR_X) {
+   if ($opt->{name} eq SANE_NAME_SCAN_BR_X) {
     $window[0] = $i;
     $opt->{name} = 'x';
     $window_option[0] = $opt;
     $window_option[0]->{title} = 'Scan width';
-    $window_option[0]->{desc} = 'Width of scanning area.';
-    $window_val[0] = $device->get_option ($i)
-     if (!$window_val_user[0]);
+    $window_option[0]->{desc} = 'Width of scan-area.';
+    $window_option[0]->{name} = 'x';
    }
    elsif ($opt->{name} eq SANE_NAME_SCAN_BR_Y) {
     $window[1] = $i;
     $opt->{name} = 'y';
     $window_option[1] = $opt;
     $window_option[1]->{title} = 'Scan height';
-    $window_option[1]->{desc} = 'Height of scanning area.';
-    $window_val[1] = $device->get_option ($i)
-     if (!$window_val_user[1]);
+    $window_option[1]->{desc} = 'Height of scan-area.';
+    $window_option[1]->{name} = 'y';
+   }
+   elsif ($opt->{name} eq SANE_NAME_SCAN_TL_X) {
+    $window[2] = $i;
+    $window_option[2] = $opt;
+    $window_option[2]->{name} = 'l';
+   }
+   elsif ($opt->{name} eq SANE_NAME_SCAN_TL_Y) {
+    $window[3] = $i;
+    $window_option[3] = $opt;
+    $window_option[3]->{name} = 't';
    }
   }
 
@@ -450,9 +491,12 @@ sub fetch_options {
 # Initialize width & height options based on backend default
 # values for top-left x/y and bottom-right x/y:
  for (my $i = 0; $i < 2; ++$i) {
-  if ($window[$i] and $window[$i + 2] and not $window_val_user[$i]) {
-   my $pos = $device->get_option ($window[$i + 2]);
-   $window_val[$i] = $window_val[$i] - $pos if (defined $pos);
+  if ($window[$i] and not $window_val_user[$i]) {
+   $window_val[$i] = $device->get_option ($window[$i]);
+   if ($window[$i + 2]){
+    my $pos = $device->get_option ($window[$i + 2]);
+    $window_val[$i] -= $pos;
+   }
   }
  }
  return;
@@ -941,7 +985,7 @@ if (defined($options{V})) {
 if ($help) {
  printf "Usage: %s [OPTION]...
 
-Start image acquisition on a scanner device and write PNM image data to
+Start image acquisition on a scanner device and write image data to
 standard output.
 
 Parameters are separated by a blank from single-character options (e.g.
@@ -953,15 +997,16 @@ Parameters are separated by a blank from single-character options (e.g.
 -L, --list-devices         show available scanner devices
 -f, --formatted-device-list=FORMAT similar to -L, but the FORMAT of the output
                            can be specified: %%d (device name), %%v (vendor),
-                           %%m (model), %%t (type), and %%i (index number)
+                           %%m (model), %%t (type), %%i (index number), and
+                           %%n (newline)
 -b, --batch[=FORMAT]       working in batch mode, FORMAT is `out%%d.pnm' or
                            `out%%d.tif' by default depending on --format";
  printf "
     --batch-start=#        page number to start naming files with
     --batch-count=#        how many pages to scan in batch mode
-    --batch-increment=#    increase number in filename by an amount of #
-    --batch-double         increment page number by two for 2sided originals
-                           being scanned in a single sided scanner
+    --batch-increment=#    increase page number in filename by #
+    --batch-double         increment page number by two, same as
+                           --batch-increment=2
     --batch-prompt         ask for pressing a key before scanning a page
     --accept-md5-only      only accept authorization requests using md5";
  printf "
@@ -970,7 +1015,7 @@ Parameters are separated by a blank from single-character options (e.g.
 -T, --test                 test backend thoroughly
 -h, --help                 display this help message and exit
 -v, --verbose              give even more status messages
--B, --buffer-size          change default input buffersize
+-B, --buffer-size=#        change input buffer size (in kB, default 32)
 -V, --version              print version information\n";
 }
 
@@ -1063,41 +1108,40 @@ if (defined($device)) {
   }
  }
 
+ # convert x/y to br_x/br_y
  for (my $index = 0; $index < 2; ++$index) {
   if ($window[$index] and defined($window_val[$index])) {
-   my $val = $window_val[$index] - 1;
+   my $val = $window_val[$index];
    if ($window[$index + 2]) {
     my $pos = $device->get_option ($window[$index + 2]);
-    $val = $pos + $window_val[$index] if (defined $pos);
+    $val += $pos;
    }
    set_option ($device, $window[$index], $val);
   }
  }
+
+ # output device-specific help
  if ($help) {
   printf "\nOptions specific to device `%s':\n", $devname;
 
-  for (my $i = 0; $i < $num_dev_options; ++$i) {
-   my $short_name = '';
+  for (my $i = 1; $i < $num_dev_options; ++$i) {
+   my $opt;
 
-   my $opt = 0;
+   # scan area uses modified option struct
    for (my $j = 0; $j < 4; ++$j) {
     if ($i == $window[$j]) {
-     $short_name = substr("xylt", $j, 1);
-     $opt = $window_option[$j] if ($j < 2);
+     $opt = $window_option[$j];
     }
    }
-   $opt = $device->get_option_descriptor ($i) if (!$opt);
+   $opt = $device->get_option_descriptor ($i) if (not defined($opt));
 
-   printf "  %s:\n", $opt->{title} if ($opt->{type} == SANE_TYPE_GROUP);
-
-   next if (! ($opt->{cap} & SANE_CAP_SOFT_SELECT));
-
-   print_option ($device, $i, $short_name);
+   print_option ($device, $i, $opt);
   }
   print "\n" if ($num_dev_options);
  }
 }
 
+# output device list
 if ($help) {
  printf "Type ``$prog_name --help -d DEVICE'' to get list of all options for DEVICE.\n\nList of available devices:";
  my @device_list = Sane->get_devices;
@@ -1129,7 +1173,12 @@ $SIG{PIPE} = \&sighandler;
 $SIG{TERM} = \&sighandler;
 
 $batch_increment = 2 if ($batch_double);
-$batch = 1 if ($batch_count);
+if ($batch_count) {
+ $batch = 1;
+}
+elsif ($batch) {
+ $batch_count = -1;
+}
 
 if ($test == 0) {
  my $n = $batch_start_at;
@@ -1149,8 +1198,11 @@ if ($test == 0) {
             $batch_count, $batch_increment, $batch_start_at if ($batch);
 
  {do { # extra braces to get last to work.
-  my ($path, $fh);
-  $path = sprintf $format, $n if ($batch);    # format is NULL unless batch mode
+  my ($path, $part_path, $fh);
+  if ($batch) {    # format is NULL unless batch mode
+   $path = sprintf $format, $n;
+   $part_path = "$path.part";
+  }
 
   if ($batch) {
    if ($batch_prompt) {
@@ -1173,8 +1225,9 @@ if ($test == 0) {
    last;
   }
 
-  if ($batch && ! (open($fh, '>', $path) && STDOUT->fdopen($fh, '>'))) {
-   print STDERR "cannot open $path\n";
+  # write to .part file while scanning is in progress
+  if ($batch && ! (open($fh, '>', $part_path) && STDOUT->fdopen($fh, '>'))) {
+   print STDERR "cannot open $part_path\n";
    $device->cancel;
    exit SANE_STATUS_ACCESS_DENIED;
   }
@@ -1188,11 +1241,27 @@ if ($test == 0) {
   if ($Sane::STATUS == SANE_STATUS_GOOD) {}
   elsif ($Sane::STATUS == SANE_STATUS_EOF) {
    $Sane::_status = SANE_STATUS_GOOD;
+   if ($batch) {       
+    # close output file by redirecting, do not close stdout here!
+    if (! (open($fh, '>', '/dev/null') && STDOUT->fdopen($fh, '>'))) {
+     printf STDERR "cannot open /dev/null\n";
+     $device->cancel;
+     return SANE_STATUS_ACCESS_DENIED;
+    }
+    else {
+     # let the fully scanned file show up
+     if (not rename ($part_path, $path)) {
+      print STDERR "cannot rename $part_path to $path\n";
+      $device->cancel;
+      return SANE_STATUS_ACCESS_DENIED;
+     }
+    }
+   }
   }
   else {
    if ($batch) {
     close ($fh);
-    unlink ($path);
+    unlink ($part_path);
    }
    last;
   }
