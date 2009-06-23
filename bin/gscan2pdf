@@ -9829,7 +9829,7 @@ sub add_ocr_languages {
 
  my $tessdata_prefix = '/usr/share';
  for (($ENV{TESSDATA_PREFIX}, '/usr/local/share', '/usr/share/tesseract-ocr')) {
-  if (-d "$_/tessdata") {
+  if (defined($_) and -d "$_/tessdata") {
    $tessdata_prefix = $_;
    last;
   }
