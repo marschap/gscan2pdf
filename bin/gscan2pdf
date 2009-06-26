@@ -225,6 +225,7 @@ my %default_settings = (
  'frontend'          => 'libsane-perl',
  'rotate facing'     => 0,
  'rotate reverse'    => 0,
+ 'default filename'  => '%a %y-%m-%d',
  'scan prefix'       => '',
  'Blank threshold'   => 0.005, # Blank page standard deviation threshold
  'Dark threshold'    => 0.12,  # Dark page mean threshold
@@ -2565,8 +2566,28 @@ sub save_PDF {
                                                     $windowi, 'save',
                                                     'gtk-cancel' => 'cancel',
                                                     'gtk-save' => 'ok');
- $file_chooser -> set_current_name ($SETTING{'title'})
-  if (defined($SETTING{'title'}) and $SETTING{'title'} ne '');
+
+ my ($dday, $dmonth, $dyear) =
+                    (localtime(time+$SETTING{'date offset'}*24*60*60))[3, 4, 5];
+ $dyear += 1900;
+ $dmonth = sprintf("%02d", $dmonth + 1);
+ $dday = sprintf("%02d", $dday);
+ my ($tday, $tmonth, $tyear) = (localtime(time))[3, 4, 5];
+ $tyear += 1900;
+ $tmonth = sprintf("%02d", $tmonth + 1);
+ $tday = sprintf("%02d", $tday);
+
+ my $filename = $SETTING{'default filename'};
+ $filename =~ s/%a/$SETTING{author}/g;
+ $filename =~ s/%t/$SETTING{title}/g;
+ $filename =~ s/%y/$dyear/g;
+ $filename =~ s/%Y/$tyear/g;
+ $filename =~ s/%m/$dmonth/g;
+ $filename =~ s/%M/$tmonth/g;
+ $filename =~ s/%d/$dday/g;
+ $filename =~ s/%D/$tday/g;
+
+ $file_chooser -> set_current_name ($filename);
  $file_chooser -> set_default_response('ok');
  $file_chooser -> set_do_overwrite_confirmation (TRUE);
  $file_chooser -> signal_connect (response => sub {
@@ -10479,6 +10500,16 @@ sub preferences {
  combobox_set_active($combob, $SETTING{frontend}, @frontends);
  $hbox -> pack_end($combob, TRUE, TRUE, 0);
 
+# Default filename
+ $hbox = Gtk2::HBox -> new;
+ $vbox -> pack_start($hbox, TRUE, TRUE, 0);
+ $label = Gtk2::Label -> new ($d->get('Default filename for PDFs'));
+ $hbox -> pack_start ($label, FALSE, FALSE, 0);
+ my $fileentry = Gtk2::Entry -> new;
+ $tooltips -> set_tip ($fileentry, $d->get("\%a\t author\n\%t\t title\n\%y\t document's year\n\%Y\t today's year\n\%m\t document's month\n\%M\t today's month\n\%d\t document's day\n\%D\t today's day"));
+ $hbox -> add($fileentry);
+ $fileentry -> set_text($SETTING{'default filename'}) if defined($SETTING{'default filename'});
+
 # scan command prefix
  $hbox = Gtk2::HBox -> new;
  $vbox -> pack_start($hbox, TRUE, TRUE, 0);
@@ -11212,7 +11243,8 @@ Metadata are information that are not visible when viewing the PDF, but are
 embedded in the file and so searchable and can be examined, typically with the
 "Properties" option of the PDF viewer.
 
-The metadata are completely optional.
+The metadata are completely optional, but can also be used to generate the
+filename see preferences for details.
 
 =head4 DjVu
 
@@ -11258,7 +11290,21 @@ obviously ghosted out.
 
 In 0.9.27, Perl bindings for SANE were introduced and two further frontends,
 scanimage-perl and scanadf-perl (scanimage and scanadf transliterated from C into
-Perl) was added.
+Perl) were added.
+
+=head4 Default filename for PDF files
+
+The following variables are available, which are replaced by the corresponding
+metadata:
+
+ %a	author
+ %t	title
+ %y	document's year
+ %Y	today's year
+ %m	document's month
+ %M	today's month
+ %d	document's day
+ %D	today's day
 
 =head2 View
 
