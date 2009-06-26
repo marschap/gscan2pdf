@@ -2220,7 +2220,7 @@ sub add_PDF_options {
  $hboxa -> pack_start ($labela, FALSE, FALSE, 0);
  my $entrya = Gtk2::Entry -> new;
  $hboxa -> pack_end( $entrya, TRUE, TRUE, 0 );
- $entrya -> set_text($SETTING{'author'}) if (defined($SETTING{'author'}));
+ $entrya -> set_text($SETTING{author}) if (defined($SETTING{author}));
 
 # Title
  my $hboxt = Gtk2::HBox -> new;
@@ -2229,7 +2229,7 @@ sub add_PDF_options {
  $hboxt -> pack_start ($labelt, FALSE, FALSE, 0);
  my $entryt = Gtk2::Entry -> new;
  $hboxt -> pack_end( $entryt, TRUE, TRUE, 0 );
- $entryt -> set_text($SETTING{'title'}) if (defined($SETTING{'title'}));
+ $entryt -> set_text($SETTING{title}) if (defined($SETTING{title}));
 
 # Subject
  my $hboxs = Gtk2::HBox -> new;
@@ -2238,7 +2238,7 @@ sub add_PDF_options {
  $hboxs -> pack_start ($labels, FALSE, FALSE, 0);
  my $entrys = Gtk2::Entry -> new;
  $hboxs -> pack_end( $entrys, TRUE, TRUE, 0 );
- $entrys -> set_text($SETTING{'subject'}) if (defined($SETTING{'subject'}));
+ $entrys -> set_text($SETTING{subject}) if (defined($SETTING{subject}));
 
 # Keywords
  my $hboxk = Gtk2::HBox -> new;
@@ -2247,7 +2247,7 @@ sub add_PDF_options {
  $hboxk -> pack_start ($labelk, FALSE, FALSE, 0);
  my $entryk = Gtk2::Entry -> new;
  $hboxk -> pack_end( $entryk, TRUE, TRUE, 0 );
- $entryk -> set_text($SETTING{'keywords'}) if (defined($SETTING{'keywords'}));
+ $entryk -> set_text($SETTING{keywords}) if (defined($SETTING{keywords}));
 
  return ($entrya, $entryt, $entrys, $entryk);
 }
@@ -2257,29 +2257,29 @@ sub update_PDF_settings {
  my ($entrya, $entryt, $entrys, $entryk) = @_;
 
 # Get metadata
- $SETTING{'author'} = $entrya -> get_text;
- $SETTING{'title'} = $entryt -> get_text;
- $SETTING{'subject'} = $entrys -> get_text;
- $SETTING{'keywords'} = $entryk -> get_text;
+ $SETTING{author} = $entrya -> get_text;
+ $SETTING{title} = $entryt -> get_text;
+ $SETTING{subject} = $entrys -> get_text;
+ $SETTING{keywords} = $entryk -> get_text;
  return;
 }
 
 
 sub get_PDF_options {
  my %h;
- $h{'Author'} = $SETTING{'author'} if defined $SETTING{'author'};
+ $h{Author} = $SETTING{author} if defined $SETTING{author};
  my ($day, $month, $year) =
                     (localtime(time+$SETTING{'date offset'}*24*60*60))[3, 4, 5];
  $year += 1900;
  $month += 1;
- $h{'CreationDate'} = sprintf ("D:%4i%02i%02i000000+00'00'",
+ $h{CreationDate} = sprintf ("D:%4i%02i%02i000000+00'00'",
                                                            $year, $month, $day);
- $h{'ModDate'} = sprintf ("D:%4i%02i%02i000000+00'00'", $year, $month, $day);
- $h{'Creator'} = "$prog_name v$version";
- $h{'Producer'} = "PDF::API2";
- $h{'Title'} = $SETTING{'title'} if defined $SETTING{'title'};
- $h{'Subject'} = $SETTING{'subject'} if defined $SETTING{'subject'};
- $h{'Keywords'} = $SETTING{'keywords'} if defined $SETTING{'keywords'};
+ $h{ModDate} = sprintf ("D:%4i%02i%02i000000+00'00'", $year, $month, $day);
+ $h{Creator} = "$prog_name v$version";
+ $h{Producer} = "PDF::API2";
+ $h{Title} = $SETTING{title} if defined $SETTING{title};
+ $h{Subject} = $SETTING{subject} if defined $SETTING{subject};
+ $h{Keywords} = $SETTING{keywords} if defined $SETTING{keywords};
  return %h;
 }
 
