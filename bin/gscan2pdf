@@ -439,7 +439,7 @@ my @action_items = (
  [ 'Select Even', undef, $d->get('_Even'), '<control>2', $d->get('Select all evenly-numbered pages'), sub { select_odd_even(1); } ],
  [ 'Select Blank', 'gtk-select-blank', $d->get('_Blank'), '<control>b', $d->get('Select pages with low standard deviation'), \&analyze_select_blank ],
  [ 'Select Dark', 'gtk-select-blank', $d->get('_Dark'), '<control>d', $d->get('Select dark pages'), \&analyze_select_dark ],
- [ 'Select Modified', 'gtk-select-modified', $d->get('Select _Modified'), '<control>m', $d->get('Select modified pages since last OCR'), \&select_modified_since_ocr ],
+ [ 'Select Modified', 'gtk-select-modified', $d->get('_Modified'), '<control>m', $d->get('Select modified pages since last OCR'), \&select_modified_since_ocr ],
  [ 'Properties', 'gtk-properties', $d->get('Propert_ies'), undef, $d->get('Edit image properties'), \&properties ],
  [ 'Preferences', 'gtk-preferences', $d->get('Prefere_nces'), undef, $d->get('Edit preferences'), \&preferences ],
 
@@ -11276,11 +11276,19 @@ Renumbers the pages from 1..n.
 Note that the page order can also be changed by drag and drop in the thumbnail
 view.
 
-=head3 Select All
+=head3 Select
 
-Selects all pages.
+The select menus can be used to select, all, even, odd, blank, dark or modified
+pages. Selecting blank or dark pages runs imagemagick to make the decision.
+Selecting modified pages selects those which have modified by threshold,
+unsharp, etc., since the last OCR run was made.
 
-=head3 Frontend
+=head3 Preferences
+
+The preferences menu item allows the control of the default behviour of various
+functions. Most of these are self-explanatory.
+
+=head4 Frontend
 
 gscan2pdf supports two frontends, scanimage and scanadf.
 scanadf support was added when it was realised that scanadf works better than
