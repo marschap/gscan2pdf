@@ -17,12 +17,10 @@
 
 # To do
 #    Look at ejecting by starting a new scan, and cancel it immediately
-#    try and get canvas zooming with imageview
+#    get canvas scrolling with imageview
 #    add find text in ocr buffer - search through all buffers
-#    scanning doesn't work after fork()
 #    window too tall after options have been found
 #    add profiles
-#    support multiple value options
 #    add units
 #    Move the English comment in the .desktop file to the template,
 #     and write the translations on the fly back to the desktop file.
@@ -399,6 +397,9 @@ my ($windowi, $windowe, $windows, $windows2, $windowh, $windowo, $windowrn,
 
 # Spin buttons on scan dialog
     $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
+
+# Goo::Canvas for OCR output
+    $canvas,
 
 # Notebook on scan dialog
     $notebook,
@@ -855,6 +856,9 @@ $view->signal_connect(button_press_event => sub {
  handle_clicks($widget, $event);
 });
 $view->signal_connect(button_release_event => \&handle_clicks);
+$view->signal_connect('zoom-changed' => sub {
+ $canvas->set_scale($view->get_zoom) if (defined $canvas)
+});
 
 # ScrolledWindow for Goo::Canvas for OCR output
 my $scwin_buffer = Gtk2::ScrolledWindow->new;
@@ -877,7 +881,7 @@ $slist -> {selection_changed_signal} = $slist -> get_selection -> signal_connect
   $selector->set_selection ($sel) if (defined $sel);
 
 # Update the buffer, if created
-  my $canvas = $slist -> {data}[$page[0]][3];
+  $canvas = $slist -> {data}[$page[0]][3];
 # $canvas variable needed to prevent ->add() munging $slist -> {data}[$page[0]][3]
   if (defined $canvas) {
    $scwin_buffer->add($canvas);
@@ -7688,7 +7692,7 @@ sub set_option {
 }
 
 
-# display goocanvas with graph
+# display Goo::Canvas with graph
 
 sub set_options {
  my ($i, $opt, @widgets) = @_;
@@ -9724,10 +9728,10 @@ sub ocr_page {
       $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
 
 # Set up the canvas
-      my $canvas = Goo::Canvas->new;
-      my $root = $canvas->get_root_item;
+      my $canvas_new = Goo::Canvas->new;
+      my $root = $canvas_new->get_root_item;
       my $pixbuf = $view->get_pixbuf;
-      $canvas->set_bounds(0, 0, $pixbuf->get_width, $pixbuf->get_height);
+      $canvas_new->set_bounds(0, 0, $pixbuf->get_width, $pixbuf->get_height);
 
 # Attach the text to the canvas
       my $output = slurp("$txt.txt");
@@ -9745,7 +9749,7 @@ sub ocr_page {
            'height' => $pixbuf->get_height,
        );
       }
-      $slist -> {data}[$pagenum][3] = $canvas;
+      $slist -> {data}[$pagenum][3] = $canvas_new;
 
       unlink <$txt*>;
       $slist -> {data}[$pagenum][9] = 1; #FlagOCR
@@ -9755,7 +9759,9 @@ sub ocr_page {
 # Update the buffer if current
       my @page = $slist -> get_selected_indices;
       if ($page[0] == $pagenum) {
+       $canvas=$canvas_new;
        $scwin_buffer->add($canvas);
+       $canvas->set_scale($view->get_zoom);
        $canvas->show;
       }
       return FALSE;  # uninstall
