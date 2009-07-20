@@ -1708,13 +1708,7 @@ sub open_session {
    $canvas->set_bounds(@bounds);
    
    for my $box (@{$session{$page}{buffer}}) {
-    my $text = Goo::Canvas::Text->new(
-        $root, $box->{text}, $box->{x1}, $box->{y1}, $box->{x2}-$box->{x1},
-                             'nw', 'height' => $box->{y2}-$box->{y1},
-    );
-    my $rect = Goo::Canvas::Rect->new(
-        $root, $box->{x1}, $box->{y1}, $box->{x2}-$box->{x1}, $box->{y2}-$box->{y1}
-    );
+    boxed_text($root, $box->{text}, $box->{x1}, $box->{y1}, $box->{x2}, $box->{y2});
    }
    $canvas->show;
   }
@@ -2543,10 +2537,7 @@ sub walk_hocr_tree {
     if ($ref->{title} =~ /bbox (\d+) (\d+) (\d+) (\d+)/) {
      my ($x1, $y1, $x2, $y2) = ($1, $2, $3, $4);
      chomp $ref->{content} if ($ref->{content} =~ /\n$/);
-     my $text = Goo::Canvas::Text->new(
-         $root, $ref->{content}, $x1, $y1, $x2-$x1, 'nw', 'height' => $y2-$y1,
-     );
-     my $rect = Goo::Canvas::Rect->new($root, $x1, $y1, $x2-$x1, $y2-$y1);
+     boxed_text($root, $ref->{content}, $x1, $y1, $x2, $y2);
     }
 
    }
@@ -2555,6 +2546,61 @@ sub walk_hocr_tree {
    }
   }
  }
+}
+
+
+# Draw text on the canvas with a box around it
+
+sub boxed_text {
+ my ($root, $char, $x1, $y1, $x2, $y2) = @_;
+ my $g = Goo::Canvas::Group->new ($root);
+ $g->translate($x1, $y1);
+ my $text = Goo::Canvas::Text->new(
+     $g, $char, 0, 0, $x2-$x1, 'nw', 'height' => $y2-$y1,
+ );
+
+# clicking text box produces a dialog to edit the text
+ $text->signal_connect('button-press-event' => sub {
+  my ($widget, $target, $ev) = @_;
+print "text $widget button-press-event\n", $widget->get('text'), "\n";
+  my $dialog = Gtk2::Dialog -> new ($d->get('Editing text')."...", $window,
+                                    'modal',
+                                    'gtk-ok'     => 'ok',
+                                    'gtk-cancel' => 'cancel');
+  my $textview = Gtk2::TextView->new;
+  my $textbuffer = $textview->get_buffer;
+  my $char = $widget->get('text');
+  $textbuffer->set(text => $char);
+  $dialog -> vbox -> add($textview);
+  $dialog->set_default_response ('ok');
+  $dialog->show_all;
+  if ($dialog->run eq 'ok') {
+   my $char = $textbuffer->get('text');
+   $widget->set(text => $char);
+  }
+  $dialog->destroy;
+  $canvas->pointer_ungrab( $widget, $ev->time );
+  return TRUE;
+ });
+ my $rect = Goo::Canvas::Rect->new($g, 0, 0, $x2-$x1, $y2-$y1);
+ $rect->signal_connect('button-press-event' => sub {
+  my ($widget, $target, $ev) = @_;
+print "rect button-press-event\n";
+#  return TRUE;
+ });
+ $g->signal_connect('button-press-event' => sub {
+  my ($widget, $target, $ev) = @_;
+print "group $widget button-press-event\n";
+  my $n= $widget->get_n_children;
+  for (my $i = 0; $i < $n; $i++) {
+   my $item = $widget->get_child($i);
+   if ($item->isa('Goo::Canvas::Text')) {
+print "contains $item\n", $item->get('text'), "\n";
+    last;
+   }
+  }
+#  return TRUE;
+ });
 }
 
 
@@ -9744,10 +9790,7 @@ sub ocr_page {
        walk_hocr_tree($ref, $root);
       }
       else {
-       my $text = Goo::Canvas::Text->new(
-          $root, $output, 0, 0, $pixbuf->get_width, 'nw',
-           'height' => $pixbuf->get_height,
-       );
+       boxed_text($root, $output, 0, 0, $pixbuf->get_width, $pixbuf->get_height);
       }
       $slist -> {data}[$pagenum][3] = $canvas_new;
 
