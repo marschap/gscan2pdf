@@ -5281,7 +5281,7 @@ sub scanimage {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      my $index = import_scan ("out$1.pnm", $1*$step+$offset, 'Portable anymap',
+      my $index = import_scan ("out$1.pnm", $1*$step+$offset,
                                                     $SETTING{resolution}, TRUE);
       if ($index == -1) {
        $dialog -> destroy;
@@ -5352,7 +5352,7 @@ sub scanimage {
   $scanning = TRUE;
  }
  else {
-  my $index = import_scan ($test_image, 1*$step+$offset, 'Portable anymap',
+  my $index = import_scan ($test_image, 1*$step+$offset,
                                                     $SETTING{resolution}, FALSE);
   if ($index == -1) {
    show_message_dialog(
@@ -5474,7 +5474,7 @@ sub scanadf {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
-      my $index = import_scan ("out$id.pnm", $id*$step+$offset, 'Portable anymap',
+      my $index = import_scan ("out$id.pnm", $id*$step+$offset,
                                                     $SETTING{resolution}, TRUE);
       if ($index == -1) {
        $dialog -> destroy;
@@ -5589,7 +5589,7 @@ sub scan_pages {
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
     my $index = import_scan (
-     File::Spec->catdir($SETTING{session}, "out$n.pnm"), $n, 'Portable anymap',
+     File::Spec->catdir($SETTING{session}, "out$n.pnm"), $n,
                                                     $SETTING{resolution}, TRUE
     );
     if ($index == -1) {
@@ -5956,8 +5956,8 @@ sub post_process_scan {
 # Take new scan and display it
 
 sub import_scan {
- my ($ofilename, $page, $format, $resolution, $delete, $unpaper, $ocr) = @_;
- (my $filename, $resolution) = prepare_import($ofilename, $format, $resolution,
+ my ($ofilename, $page, $resolution, $delete, $unpaper, $ocr) = @_;
+ (my $filename, $resolution) = prepare_import($ofilename, 'Portable anymap', $resolution,
                                                                        $delete);
  return add_image($filename, $page, $resolution);
 }
@@ -9255,7 +9255,7 @@ sub unpaper_page {
  
       if ($options =~ /--output-pages 2 /) {
        my $index = import_scan($out2, $slist -> {data}[$pagenum][0],
-                      'Portable anymap', $slist -> {data}[$pagenum][4], TRUE)+1;
+                                       $slist -> {data}[$pagenum][4], TRUE)+1;
 
 # Update stacks as we have inserted a page
        for (my $i = 0; $i < @unpaper_stack; ++$i) {
