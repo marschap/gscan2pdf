@@ -5634,7 +5634,7 @@ sub scan_pages {
       my $widget = $optnamei{$option};
       my $i = $widget->{option_number};
       if (ref($val) eq 'ARRAY') {
-       $process .= "\$device->set_option ($i, [ ".join(' ', @{$val})." ] );";
+       $process .= "\$device->set_option ($i, [ ".join(',', @{$val})." ] );";
       }
       else {
        $process .= "\$device->set_option ($i, '$val');";
