@@ -2418,20 +2418,27 @@ sub create_PDF {
 
 # Add OCR as text behind the scan
    if (defined($slist -> {data}[$_][3])) {
+    print "Embedding OCR output behind image\n" if $debug;
     my $font = $pdf->corefont('Times-Roman');
     my $text = $page->text;
     my $canvas = $slist -> {data}[$_][3];
     my $root = $canvas->get_root_item;
     my $n = $root->get_n_children;
     for (my $i = 0; $i < $n; $i++) {
-     my $item = $root->get_child($i);
-     if ($item->isa('Goo::Canvas::Text')) {
-      my $bounds = $item->get_bounds;
-      my ($x1, $y1, $x2, $y2) = ($bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2);
-      my $size = ($y2-$y1)*72/$resolution;
-      $text->font($font, $size);
-      $text -> translate($x1*72/$resolution, $h*72/$resolution-$y1*72/$resolution-$size);
-      $text->text($item->get('text'));
+     my $group = $root->get_child($i);
+     if ($group->isa('Goo::Canvas::Group')) {
+       my $n = $group->get_n_children;
+       for (my $i = 0; $i < $n; $i++) {
+         my $item = $group->get_child($i);
+         if ($item->isa('Goo::Canvas::Text')) {
+           my $bounds = $item->get_bounds;
+           my ($x1, $y1, $x2, $y2) = ($bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2);
+           my $size = ($y2-$y1)*72/$resolution;
+           $text->font($font, $size);
+           $text -> translate($x1*72/$resolution, $h*72/$resolution-$y1*72/$resolution-$size);
+           $text->text($item->get('text'));
+         }
+       }
      }
     }
    }
