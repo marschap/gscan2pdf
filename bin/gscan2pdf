@@ -2468,11 +2468,11 @@ sub create_PDF {
     $msg = "$@";
    }
    else {
-    $msg = "Error embedding file $filename in $format format to PDF\n";
+    $msg = "Unknown format $format file $filename";
    }
    if ($msg) {
     warn $msg if $debug;
-    send($parent, '-1'.sprintf($d->get("Error embedding file image in %s format to PDF: %s"), $format, $msg), 0);
+    send($parent, '-1'.sprintf($d->get("Error creating PDF image object: %s"), $msg), 0);
    }
    else {
     eval {$gfx->image($imgobj,0,0,72/$resolution)};
