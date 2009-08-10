@@ -3404,7 +3404,7 @@ sub save_djvu {
    my $pid = start_process(sub {
 
     my @filelist;
-   
+
     for (my $i = 0; $i < @pagelist; $i++) {
      my $j = $pagelist[$i];
      send($parent, $i/($#pagelist+1)
@@ -3468,17 +3468,23 @@ sub save_djvu {
       my $root = $canvas->get_root_item;
       my $n = $root->get_n_children;
       for (my $i = 0; $i < $n; $i++) {
-       my $item = $root->get_child($i);
-       if ($item->isa('Goo::Canvas::Text')) {
-        my $bounds = $item->get_bounds;
-        my ($x1, $y1, $x2, $y2) = ($bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2);
+        my $group = $root->get_child($i);
+        if ($group->isa('Goo::Canvas::Group')) {
+          my $n = $group->get_n_children;
+          for (my $i = 0; $i < $n; $i++) {
+            my $item = $group->get_child($i);
+            if ($item->isa('Goo::Canvas::Text')) {
+              my $bounds = $item->get_bounds;
+              my ($x1, $y1, $x2, $y2) = ($bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2);
 
 # Escape any inverted commas
-        my $txt = $item->get('text');
-        $txt =~ s/\\/\\\\/g;
-        $txt =~ s/"/\\\"/g;
-        printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h-$y2, $x2, $h-$y1, $txt;
-       }
+              my $txt = $item->get('text');
+              $txt =~ s/\\/\\\\/g;
+              $txt =~ s/"/\\\"/g;
+              printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h-$y2, $x2, $h-$y1, $txt;
+            }
+          }
+        }
       }
       print $fh ")";
       close $fh;
@@ -3493,7 +3499,7 @@ sub save_djvu {
     my $cmd = "djvm -c '$filename' @filelist";
     print "$cmd\n" if $debug;
     system ($cmd) == 0 or send($parent, "2".$d->get('Error closing DjVu'), 0);
-   
+
     send($parent, "2", 0);
    });
 
