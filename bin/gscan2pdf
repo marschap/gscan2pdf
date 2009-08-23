@@ -182,6 +182,7 @@ for (@device) {
 # scanimage
 setlocale(LC_NUMERIC, "C");
 warn "Using ", setlocale( LC_CTYPE ), " locale\n" if ($debug);
+warn "Startup LC_NUMERIC ", setlocale( LC_NUMERIC ), "\n";
 
 # Read config file
 my $rc = "$ENV{'HOME'}/.$prog_name";
@@ -1776,6 +1777,7 @@ sub import_dialog {
   my ($child, $parent) = open_socketpair();
   my $pid = start_process(sub {
 
+warn "child LC_NUMERIC ", setlocale( LC_NUMERIC ), "\n";
    my $j = 0;
    foreach (@filename) {
     import_file($_, $j, $#filename+1, $parent);
@@ -1791,6 +1793,7 @@ sub import_dialog {
     recv($child, $line, 1000, 0);
     if (defined($line) and $line ne '') {
      my ($fraction, $filename, $resolution, @text) = split ' ', $line;
+warn "parent LC_NUMERIC ", setlocale( LC_NUMERIC ), "\n";
      if ($fraction == -1) {
       show_message_dialog($window, 'error', 'close', join(' ', @text));
      }
@@ -5288,20 +5291,10 @@ sub scanimage {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
+      my $rotate = $1 % 2 ? $rfacing : $rreverse;
       my $index = import_scan ("out$1.pnm", $1*$step+$offset,
-                                                    $SETTING{resolution}, TRUE);
-      if ($index == -1) {
-       $dialog -> destroy;
-       show_message_dialog(
-        $windows, 'error', 'close', $d->get('Unable to load image')
-       );
-       return FALSE;
-      }
-      else {
-       $num_scans++;
-       my $rotate = $1 % 2 ? $rfacing : $rreverse;
-       post_process_scan($index, $rotate, $unpaper, $ocr);
-      }
+                           $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr);
+      $num_scans++;
      }
      elsif ($line =~ /Scanner warming up - waiting \d* seconds|wait for lamp warm-up/) {
       $pbar -> set_text($d->get('Scanner warming up'));
@@ -5359,17 +5352,9 @@ sub scanimage {
   $scanning = TRUE;
  }
  else {
+  my $rotate = 1 % 2 ? $rfacing : $rreverse;
   my $index = import_scan ($test_image, 1*$step+$offset,
-                                                    $SETTING{resolution}, FALSE);
-  if ($index == -1) {
-   show_message_dialog(
-    $windows, 'error', 'close', $d->get('Unable to load image')
-   );
-  }
-  else {
-   my $rotate = 1 % 2 ? $rfacing : $rreverse;
-   post_process_scan($index, $rotate, $unpaper, $ocr);
-  }
+                          $SETTING{resolution}, FALSE, $rotate, $unpaper, $ocr);
  }
  return;
 }
@@ -5481,20 +5466,9 @@ sub scanadf {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
+      my $rotate = $id % 2 ? $rfacing : $rreverse;
       my $index = import_scan ("out$id.pnm", $id*$step+$offset,
-                                                    $SETTING{resolution}, TRUE);
-      if ($index == -1) {
-       $dialog -> destroy;
-       $running = FALSE;
-       show_message_dialog(
-        $windows, 'error', 'close', $d->get('Unable to load image')
-       );
-       return FALSE;
-      }
-      else {
-       my $rotate = $id % 2 ? $rfacing : $rreverse;
-       post_process_scan($index, $rotate, $unpaper, $ocr);
-      }
+                           $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr);
       $id++;
       $pbar -> set_text(sprintf($d->get('Scanning page %i...'), $id*$step+$offset));
      }
@@ -5595,21 +5569,11 @@ sub scan_pages {
 
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
+    my $rotate = $n % 2 ? $rfacing : $rreverse;
     my $index = import_scan (
      File::Spec->catdir($SETTING{session}, "out$n.pnm"), $n,
-                                                    $SETTING{resolution}, TRUE
+                             $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr
     );
-    if ($index == -1) {
-     $dialog -> destroy;
-     show_message_dialog(
-      $windows, 'error', 'close', $d->get('Unable to load image')
-     );
-     return FALSE;
-    }
-    else {
-     my $rotate = $n % 2 ? $rfacing : $rreverse;
-     post_process_scan($index, $rotate, $unpaper, $ocr);
-    }
    }
    else {
     $shash{$sane_thread}{data} = $path;
@@ -5963,10 +5927,65 @@ sub post_process_scan {
 # Take new scan and display it
 
 sub import_scan {
- my ($ofilename, $page, $resolution, $delete, $unpaper, $ocr) = @_;
- (my $filename, $resolution) = prepare_import($ofilename, 'Portable anymap', $resolution,
-                                                                       $delete);
- return add_image($filename, $page, $resolution);
+ my ($ofilename, $page, $resolution, $delete, $rotate, $unpaper, $ocr) = @_;
+
+# Interface to frontend
+ open my $fh, '<', $ofilename or die "can't open $ofilename: $!";
+ 
+# Read without blocking
+ my $size = 0;
+ Glib::IO->add_watch ( fileno($fh), ['in', 'hup'], sub {
+  my ($fileno, $condition) = @_;
+  if ($condition & 'in') { # bit field operation. >= would also work
+    if ($size == 0) {
+      my @data;
+      while (<$fh>) {
+        $size += length;
+        next if (/^#/);
+        my @cols = split;
+        @data = (@data, @cols);
+        my $n = 4;
+        $n = 3 if ($data[0] eq 'P4');
+        last if (@data == $n);
+      }
+      print "Format is $data[0]\n" if $debug;
+      print "Header is $size\n" if $debug;
+      my ($format, $width, $height) = @data;
+      if ($format eq 'P4') {
+        $size += $width*$height/8;
+      }
+      elsif ($format eq 'P5') {
+        $size += $width*$height;
+      }
+      elsif ($format eq 'P6') {
+        $size += $width*$height*3;
+      }
+      else {
+        print "Unknown format $format\n";
+      }
+      print "Header suggests $size\n" if $debug;
+      close($fh);
+    }
+    printf "Expecting $size, found %d\n", -s $ofilename if $debug;
+    if ($size <= -s $ofilename) {
+      (my $filename, $resolution) = prepare_import($ofilename,
+                                       'Portable anymap', $resolution, $delete);
+      my $index = add_image($filename, $page, $resolution);
+      if ($index == -1) {
+       show_message_dialog(
+        $windows, 'error', 'close', $d->get('Unable to load image')
+       );
+      }
+      else {
+       post_process_scan($index, $rotate, $unpaper, $ocr);
+      }
+      return FALSE;  # uninstall
+    }
+  }
+  return TRUE;  # continue without uninstalling
+ });
+
+ return;
 }
 
 
@@ -9261,8 +9280,12 @@ sub unpaper_page {
       $slist -> {data}[$pagenum][1] = get_pixbuf($out, $heightt, $widtht);
  
       if ($options =~ /--output-pages 2 /) {
-       my $index = import_scan($out2, $slist -> {data}[$pagenum][0],
-                                       $slist -> {data}[$pagenum][4], TRUE)+1;
+       my $ofilename = $out2;
+       my $page = $slist -> {data}[$pagenum][0];
+       my $resolution = $slist -> {data}[$pagenum][4];
+       (my $filename, $resolution) = prepare_import($ofilename,
+                                       'Portable anymap', $resolution, TRUE);
+       my $index = add_image($filename, $page, $resolution)+1;
 
 # Update stacks as we have inserted a page
        for (my $i = 0; $i < @unpaper_stack; ++$i) {
