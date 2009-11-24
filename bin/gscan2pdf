@@ -8584,9 +8584,7 @@ sub threshold {
     $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Write it
-    my $suffix;
-    $suffix = $1 if ($filename =~ /(\.\w*)$/);
-    (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => $suffix);
+    (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pbm');
     $x = $image->Write(filename => $filename);
     warn "$x" if "$x";
     warn "Thresholding at $SETTING{'threshold tool'} to $filename\n" if $debug;
