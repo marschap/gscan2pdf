@@ -16,6 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    if you delete all images and then undo the delete, the save button is
+#     ghosted out, and is still ghosted out after C-cing the session and
+#     restarting gscan2pdf.
 #    Look at ejecting by starting a new scan, and cancel it immediately
 #    get canvas scrolling with imageview
 #    add find text in ocr buffer - search through all buffers
@@ -2736,8 +2739,9 @@ sub add_pdf_compression {
   [ 'lzw', $d->get('LZW'), $d->get('Compress output with Lempel-Ziv & Welch encoding.') ],
   [ 'zip', $d->get('Zip'), $d->get('Compress output with deflate encoding.') ],
   [ 'packbits', $d->get('Packbits'), $d->get('Compress output with Packbits encoding.') ],
-  [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
-  [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
+# g3 and 4 give an error message
+#  [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
+#  [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
   [ 'png',  $d->get('PNG'),  $d->get('Compress output with PNG encoding.') ],
   [ 'jpg', $d->get('JPEG'), $d->get('Compress output with JPEG encoding.') ],
   [ 'none', $d->get('None'), $d->get('Use no compression algorithm on output.') ],
