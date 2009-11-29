@@ -19,6 +19,7 @@
 #    if you delete all images and then undo the delete, the save button is
 #     ghosted out, and is still ghosted out after C-cing the session and
 #     restarting gscan2pdf.
+#    Ask Fred http://www.fmwconcepts.com/imagemagick/ about techniques to split image into text/background
 #    Look at ejecting by starting a new scan, and cancel it immediately
 #    get canvas scrolling with imageview
 #    add find text in ocr buffer - search through all buffers
@@ -3411,7 +3412,7 @@ sub save_djvu {
    my $pid = start_process(sub {
 
     my @filelist;
-   
+
     for (my $i = 0; $i < @pagelist; $i++) {
      my $j = $pagelist[$i];
      send($parent, $i/($#pagelist+1)
@@ -3475,17 +3476,23 @@ sub save_djvu {
       my $root = $canvas->get_root_item;
       my $n = $root->get_n_children;
       for (my $i = 0; $i < $n; $i++) {
-       my $item = $root->get_child($i);
-       if ($item->isa('Goo::Canvas::Text')) {
-        my $bounds = $item->get_bounds;
-        my ($x1, $y1, $x2, $y2) = ($bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2);
+        my $group = $root->get_child($i);
+        if ($group->isa('Goo::Canvas::Group')) {
+          my $n = $group->get_n_children;
+          for (my $i = 0; $i < $n; $i++) {
+            my $item = $group->get_child($i);
+            if ($item->isa('Goo::Canvas::Text')) {
+              my $bounds = $item->get_bounds;
+              my ($x1, $y1, $x2, $y2) = ($bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2);
 
 # Escape any inverted commas
-        my $txt = $item->get('text');
-        $txt =~ s/\\/\\\\/g;
-        $txt =~ s/"/\\\"/g;
-        printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h-$y2, $x2, $h-$y1, $txt;
-       }
+              my $txt = $item->get('text');
+              $txt =~ s/\\/\\\\/g;
+              $txt =~ s/"/\\\"/g;
+              printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h-$y2, $x2, $h-$y1, $txt;
+            }
+          }
+        }
       }
       print $fh ")";
       close $fh;
@@ -3500,7 +3507,7 @@ sub save_djvu {
     my $cmd = "djvm -c '$filename' @filelist";
     print "$cmd\n" if $debug;
     system ($cmd) == 0 or send($parent, "2".$d->get('Error closing DjVu'), 0);
-   
+
     send($parent, "2", 0);
    });
 
@@ -8601,9 +8608,7 @@ sub threshold {
     $slist -> get_model -> signal_handler_unblock($slist -> {row_changed_signal});
 
 # Write it
-    my $suffix;
-    $suffix = $1 if ($filename =~ /(\.\w*)$/);
-    (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => $suffix);
+    (undef, $filename) = tempfile(DIR => $SETTING{session}, SUFFIX => '.pbm');
     $x = $image->Write(filename => $filename);
     warn "$x" if "$x";
     warn "Thresholding at $SETTING{'threshold tool'} to $filename\n" if $debug;
