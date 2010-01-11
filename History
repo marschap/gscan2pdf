@@ -19,6 +19,8 @@
 * Force bilevel image after thresholding
   Closes Debian bug #557657 (gscan2pdf binarization option [wishlist])
 * Deactivate G3 and G4 compression for PDF, as not supported by PDF::API2
+* Also look for tesseract language packages in /usr/share/tesseract,
+  to support Fedora
 
 
 0.9.29 (04.05.2009):
