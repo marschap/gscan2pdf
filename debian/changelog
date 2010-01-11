@@ -3,7 +3,8 @@ gscan2pdf (0.9.30) karmic; urgency=low
   * New upstream release.
     Closes: #461086 (embed OCR output at correct position)
     Closes: #510314 (gscan2pdf: Mapping File_Scan to a shortcut key)
-    New Depends: libxml-simple-perl, libgoo-canvas-perl
+    New Depends: libxml-simple-perl, libgoo-canvas-perl,
+	         libproc-processtable-perl
   * Removed URL from description
     Closes: #564325 (gscan2pdf: please remove homepage from description)
   * Fixed VCS-URLs

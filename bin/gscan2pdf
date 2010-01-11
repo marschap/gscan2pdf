@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # gscan2pdf --- to aid the scan to PDF or DjVu process
-# Copyright (C) 2006 -- 2009  Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
+# Copyright (C) 2006--2010 Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the version 3 GNU General Public License as
@@ -35,7 +35,6 @@
 #     and putting save options on same dialog.
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
-#    why doesn't cancel kill the process when running Tess?
 #    add option for number of background processes
 #    add possibility to have multiple scans from a flatbed with delay between
 #    if downgrading, don't read remaining options.
@@ -126,6 +125,7 @@ use PDF::API2;
 use Getopt::Long;
 use Set::IntSpan 1.10;               # For page numbering issues. 1.10 required for size method
 use Storable qw(freeze thaw store retrieve);
+use Proc::Killfam;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -5267,7 +5267,8 @@ sub scanimage {
   $dialog -> signal_connect (response => sub {
    $_[0] -> destroy;
    local $SIG{INT} = 'IGNORE';
-   kill INT => $pid;
+   print "Sending INT signal to PID $pid and its children\n" if $debug;
+   killfam 'INT', ($pid);
    $cancel = TRUE;
    undef(@unpaper_stack);
    undef(@ocr_stack);
@@ -5448,7 +5449,8 @@ sub scanadf {
   $dialog -> signal_connect (response => sub {
    $_[0] -> destroy;
    local $SIG{HUP} = 'IGNORE';
-   kill HUP => $pid;
+   print "Sending HUP signal to PID $pid and its children\n" if $debug;
+   killfam 'HUP', ($pid);
    $running = FALSE;
   });
   $dialog -> show_all;
@@ -9207,7 +9209,8 @@ sub unpaper_page {
  $dialog -> signal_connect (response => sub {
   $_[0] -> destroy;
   local $SIG{HUP} = 'IGNORE';
-  kill HUP => $pid;
+  print "Sending HUP signal to PID $pid and its children\n" if $debug;
+  killfam 'HUP', ($pid);
   $cancelled = TRUE;
   undef(@unpaper_stack);
  });
@@ -9698,7 +9701,8 @@ sub ocr_page {
  $dialog -> signal_connect (response => sub {
   $_[0] -> destroy;
   local $SIG{HUP} = 'IGNORE';
-  kill HUP => $pid;
+  print "Sending HUP signal to PID $pid and its children\n" if $debug;
+  killfam 'HUP', ($pid);
   $cancelled = TRUE;
   undef(@ocr_stack);
  });
@@ -10435,9 +10439,11 @@ sub start_process {
 # leave dead processes flying around.
 sub kill_subs {
 
-# 15 = SIGTERM
- kill 15, $_ foreach (keys %helperTag);
- return;
+  foreach (keys %helperTag) {
+    killfam 'TERM', ($_);
+    print "Sending TERM signal to PID $_ and its children\n" if $debug;
+  }
+  return;
 }
 
 

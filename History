@@ -21,6 +21,7 @@
 * Deactivate G3 and G4 compression for PDF, as not supported by PDF::API2
 * Also look for tesseract language packages in /usr/share/tesseract,
   to support Fedora
+* Use Proc::Killfam to ensure that all subprocesses are killed with the parent
 
 
 0.9.29 (04.05.2009):
