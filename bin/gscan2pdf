@@ -16,9 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    if you delete all images and then undo the delete, the save button is
-#     ghosted out, and is still ghosted out after C-cing the session and
-#     restarting gscan2pdf.
 #    Ask Fred http://www.fmwconcepts.com/imagemagick/ about techniques to split image into text/background
 #    Look at ejecting by starting a new scan, and cancel it immediately
 #    get canvas scrolling with imageview
@@ -10285,10 +10282,14 @@ sub save_session {
 # Put things back to last snapshot after updating redo buffer
 
 sub undo {
+ print "Undoing\n" if $debug;
 
 # Deep copy the tied data. Otherwise, very bad things happen.
  @redo_buffer = map { [ @$_ ] } @{ $slist->{data} };
  @redo_selection = $slist -> get_selected_indices;
+ warn "redo_selection, undo_selection:\n" if $debug;
+ warn Dumper(\@redo_selection, \@undo_selection) if $debug;
+ warn "redo_buffer, undo_buffer:\n" if $debug;
  warn Dumper(\@redo_buffer, \@undo_buffer) if $debug;
 
 # Block slist signals whilst updating
@@ -10302,6 +10303,7 @@ sub undo {
  $slist->select(@undo_selection);
 
 # Update menus/buttons
+ update_uimanager();
  $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Edit/Redo') -> set_sensitive(TRUE);
  $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(FALSE);
@@ -10313,10 +10315,15 @@ sub undo {
 # Put things back to last snapshot after updating redo buffer
 
 sub unundo {
+ print "Redoing\n" if $debug;
 
 # Deep copy the tied data. Otherwise, very bad things happen.
  @undo_buffer = map { [ @$_ ] } @{ $slist->{data} };
  @undo_selection = $slist -> get_selected_indices;
+ warn "redo_selection, undo_selection:\n" if $debug;
+ warn Dumper(\@redo_selection, \@undo_selection) if $debug;
+ warn "redo_buffer, undo_buffer:\n" if $debug;
+ warn Dumper(\@redo_buffer, \@undo_buffer) if $debug;
 
 # Block slist signals whilst updating
  $slist -> get_model -> signal_handler_block($slist -> {row_changed_signal});
@@ -10329,6 +10336,7 @@ sub unundo {
  $slist->select(@redo_selection);
 
 # Update menus/buttons
+ update_uimanager();
  $uimanager->get_widget('/MenuBar/Edit/Undo') -> set_sensitive(TRUE);
  $uimanager->get_widget('/MenuBar/Edit/Redo') -> set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Undo') -> set_sensitive(TRUE);
