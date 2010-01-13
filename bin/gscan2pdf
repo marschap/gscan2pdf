@@ -5580,6 +5580,8 @@ sub scan_pages {
 # If the scan can't be loaded then blow the scanning dialog away and
 # show an error
     my $rotate = $n % 2 ? $rfacing : $rreverse;
+    $SETTING{resolution} = defined($SETTING{resolution}) ? $SETTING{resolution} : 72;
+    print "importing scan with resolution=$SETTING{resolution}\n" if $debug;
     my $index = import_scan (
      File::Spec->catdir($SETTING{session}, "out$n.pnm"), $n,
                              $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr
@@ -7326,6 +7328,9 @@ sub scan_options {
     my ($widget, $val);
     $val = $opt->{val};
 
+# Note resolution default
+    $SETTING{resolution} = $val if ($opt->{name} eq SANE_NAME_SCAN_RESOLUTION);
+
     if (($opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT)
       and ($opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL)
       and (($opt->{name} eq SANE_NAME_SCAN_TL_X) or 
@@ -7554,6 +7559,10 @@ sub scan_options {
      unless ($gui_updating) {
       $gui_updating = TRUE;
       my ($option, $val) = each(%{$defaults[$i]});
+
+# Note resolution default
+      $SETTING{resolution} = $val if ($option eq SANE_NAME_SCAN_RESOLUTION);
+
       my $widget = $optnamei{$option};
       if (ref($val) eq 'ARRAY') {
        set_option($widget->{option_number}, $val, @widgets);
@@ -7629,6 +7638,9 @@ sub scan_options {
 
 sub set_option {
  my ($i, $val, @widgets) = @_;
+
+# Note resolution
+ $SETTING{resolution} = $val if ($widgets[$i]->{option_name} eq SANE_NAME_SCAN_RESOLUTION);
 
 # Cache option
  push @{$SETTING{default}{$shash{$sane_thread}{device}}},
