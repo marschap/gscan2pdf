@@ -5774,10 +5774,10 @@ sub scan_page {
 
   while (1) {
 print "loop\n";
-print "cancel\n"  if (not $shash{$sane_thread}{go});
    if (not $shash{$sane_thread}{go}) {
+print "cancel\n";
     $device->cancel;
-    last;
+#    last;
    }
    my ($buffer, $len) = $device->read ($buffer_size);
    $total_bytes += $len;
