@@ -1,11 +1,11 @@
 Source: gscan2pdf
 Section: utils
 Priority: optional
-Build-Depends: debhelper (>= 4.0.2)
+Build-Depends: debhelper (>= 7)
 Build-Depends-Indep: perl (>= 5.8.0-7), gettext, libtest-pod-perl
 Maintainer: Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
 Uploaders: John Goerzen <jgoerzen@complete.org>
-Standards-Version: 3.8.0
+Standards-Version: 3.8.3
 Vcs-git: ssh://gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf
 Vcs-Browser: http://gscan2pdf.git.sourceforge.net/git/gitweb.cgi?p=gscan2pdf/gscan2pdf;a=summary
 DM-Upload-Allowed: yes
@@ -18,7 +18,7 @@ Depends: libgtk2-imageview-perl, libgtk2-ex-simple-list-perl, libsane-perl,
  libpdf-api2-perl, libconfig-general-perl (>= 2.40), perlmagick, imagemagick,
  librsvg2-common, libarchive-tar-perl, libset-intspan-perl (>= 1.10),
  libforks-perl (>= 0.33), libxml-simple-perl, libgoo-canvas-perl,
- libproc-processtable-perl
+ libproc-processtable-perl, ${misc:Depends}
 Recommends: libgtk2-ex-podviewer-perl, sane, xdg-utils, djvulibre-bin,
  unpaper, gocr, tesseract-ocr
 Description: A GUI to produce PDFs from scanned documents

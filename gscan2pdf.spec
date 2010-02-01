@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.29
+Version: 0.9.30
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -83,7 +83,15 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Mon May 04 2009 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Mon Feb 01 2010 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release.
+    Closes: #461086 (embed OCR output at correct position)
+    Closes: #510314 (gscan2pdf: Mapping File_Scan to a shortcut key)
+    New Depends: libxml-simple-perl, libgoo-canvas-perl,
+	         libproc-processtable-perl
+  - Removed URL from description
+    Closes: #564325 (gscan2pdf: please remove homepage from description)
+  - Fixed VCS-URLs
   - New upstream release.
     Closes: #526845
      (gscan2pdf: Renaming of frontends breaks current settings)
