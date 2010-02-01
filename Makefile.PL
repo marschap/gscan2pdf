@@ -9,7 +9,7 @@ my $email = 'ra28145@users.sourceforge.net';
 
 # Slurp the program source and dig out the version number.
 my $text = do { local( @ARGV, $/ ) = "bin/$program" ; <> };
-my $version = $1 if ($text =~ /my \$version = '(.*)'/);
+my $version = $1 if ($text =~ /my \$version\s*=\s*'(.*)'/);
 
 my @argv=@ARGV;
 my $prefixdir;
