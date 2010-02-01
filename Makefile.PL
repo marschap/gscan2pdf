@@ -177,14 +177,14 @@ htdocs/index.html : bin/$(NAME)
 	pod2html --noindex --title=$(NAME)-$(VERSION) bin/$(NAME) > htdocs/index.html
 
 remote-html : htdocs/index.html
-	scp htdocs/index.html ra28145@shell.sf.net:/home/groups/g/gs/$(NAME)/htdocs/
+	scp htdocs/index.html ra28145,$(NAME)@web.sf.net:/home/groups/g/gs/$(NAME)/htdocs/
 
-incoming : 
-	wput --no-directories $(NAME)-$(VERSION).tar.gz \
+file_releases : 
+	scp $(NAME)-$(VERSION).tar.gz \
          rpm/RPMS/noarch/$(NAME)-$(VERSION)* \
          rpm/SRPMS/$(NAME)-$(VERSION)* \
-         htdocs/download/debian/binary/$(NAME)_$(VERSION)*.deb \
-	  ftp://upload.sf.net/incoming
+         /tmp/$(NAME)/$(NAME)_$(VERSION)*.deb \
+	  ra28145,$(NAME)@frs.sf.net:/home/frs/project/g/gs/$(NAME)/$(NAME)/$(VERSION)/
 
 po/$(NAME).pot : bin/$(NAME)
 	xgettext -L perl --keyword=get --from-code=UTF-8 -o - bin/$(NAME) | \
