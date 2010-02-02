@@ -99,7 +99,7 @@
 # 9. make ppa
 #    name the release -0~ppa1, debuild -S -sa, dput gscan2pdf-ppa .changes
 #    https://launchpad.net/~jeffreyratcliffe/+archive
-#    gscan2pdf-announce, gnome-announce-list@gnome.org, sane-devel
+#    gscan2pdf-announce@lists.sourceforge.net, gnome-announce-list@gnome.org, sane-devel@lists.alioth.debian.org
 #    ftp-master (check contents with dpkg-deb --contents)
 
 use warnings;
@@ -11844,6 +11844,16 @@ sub preferences {
  combobox_set_active( $comboo, $SETTING{'OCR output'}, @array );
  $hbox->pack_end( $comboo, TRUE, TRUE, 0 );
 
+ # Add tool button
+ $button = Gtk2::Button->new($d->get('Add new tool'));
+ $vbox->pack_start( $button, TRUE, TRUE, 0 );
+ my @list = $vbox->query_child_packing($button);
+ use Data::Dumper;
+ print Dumper(\@list);
+ $button->signal_connect( clicked => sub {
+   
+ });
+
  # Apply button
  $hbox = Gtk2::HBox->new;
  $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
@@ -12113,7 +12123,7 @@ __END__
 
 =head1 Name
 
-gscan2pdf - A GUI to produce a multipage PDF or DjVu from a scan.
+gscan2pdf - A GUI to produce PDFs or DjVus from scanned documents
 
 =for html <p align="center">
  <img src="http://sourceforge.net/dbimage.php?id=249848" border="1" width="632"
