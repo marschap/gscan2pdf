@@ -79,7 +79,7 @@
 # 0. Test scan in lineart, greyscale and colour.
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
 #    Download new translations
-#    Update translators in credits
+#    Update translators in credits (https://launchpad.net/gscan2pdf/+topcontributors)
 #    Check a translation with LANGUAGE=de bin/gscan2pdf --debug
 #    git ls-files > MANIFEST
 #    Check $version
@@ -92,7 +92,7 @@
 #    git push --tags ssh://ra28145@gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf/gscan2pdf master
 # 4. make remote-html
 # 5. create version directory in https://sourceforge.net/project/admin/explorer.php?group_id=174140
-     make file_releases
+#    make file_releases
 # 6. Freshmeat
 # 7. Launchpad (https://launchpad.net/gscan2pdf), upload .pot if necessary
 # 8. http://www.gtkfiles.org/app.php/gscan2pdf
@@ -7166,39 +7166,25 @@ EOS
  $about->set_license($licence);
  $about->set_website('http://gscan2pdf.sf.net');
  my $translators = <<EOS;
-You Hyun Jo
-Manuel Rennecke
-Mikal Krogstad
-Robert Hrovat
-rmare
-Jacob Nielsen
-Mattias Ohlsson
-Dirk Tas
-albertotomaduz
-starmaker
-Serhey Kusyumoff (Сергій Кусюмов)
-Jan Klopper
-Emil Pavlov
-Poppe
-saabaero
-Alexandre Prokoudine
-Matthias Gutjahr
-Christoph Langner
-Szenográdi Norbert Péter
-Andrius Gabriel da Luz
-Emil Pavlov
 zdpo
-cumulus007
-winniemiel05
-PsychoKim
-Ddorda
+Emil Pavlov
+Careone
+Jaroslaw Ogrodnik
+Petr Jelinek
 Nicola Cardinali
-Elex
-Piotr Str¹bski
-Tiago Silva
-aks-id
+Andrius Gabriel da Luz
+Tikkel
+saabaero
+Dirk Tas
+Jan Klopper
+liorda
+Serhey Kusyumoff
+starmaker
 Simon Vidmar
-Yözen Hernández
+Steven Sproat
+David Laursen
+aks-id
+DiegoJ
 EOS
  $about->set_translator_credits($translators);
  $about->set_artists('lodp');
@@ -12737,7 +12723,7 @@ the Gtk2-Perl project for their superb Perl bindings for GTK2.
 The SANE project for scanner access
 
 =item *
-Björn Lindqvist for the gtkimageview widget
+Bj��rn Lindqvist for the gtkimageview widget
 
 =item *
 Sourceforge for hosting the project.
