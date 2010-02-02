@@ -1,8 +1,16 @@
-gscan2pdf (0.9.30) karmic; urgency=low
+gscan2pdf (0.9.31) lucid; urgency=low
+
+  * New upstream release
+  * Minor editting of description
+
+ --
+
+gscan2pdf (0.9.30-1) unstable; urgency=low
 
   * New upstream release.
     Closes: #461086 (embed OCR output at correct position)
     Closes: #510314 (gscan2pdf: Mapping File_Scan to a shortcut key)
+    Closes: #557657 (gscan2pdf binarization option [wishlist])
     New Depends: libxml-simple-perl, libgoo-canvas-perl,
 	         libproc-processtable-perl
   * Removed URL from description
