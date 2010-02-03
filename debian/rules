@@ -1,4 +1,12 @@
 #!/usr/bin/make -f
-
 %:
 	dh $@
+
+override_dh_clean:
+	for file in $(wildcard po/*.po); do \
+         dummy=$${file#*/}; \
+         dummy2=$${dummy#*-}; \
+         lang=$${dummy2%%.po}; \
+         rm -rf $$lang; \
+        done
+	dh_clean
