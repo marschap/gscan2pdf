@@ -2619,7 +2619,7 @@ sub get_PDF_options {
 # Create the PDF
 
 sub create_PDF {
- my ($filename) = @_;
+ my ($filename, $mua_string) = @_;
 
  my $dialog = Gtk2::Dialog->new( $d->get('Saving PDF') . "...",
   $window, 'modal', 'gtk-cancel' => 'cancel' );
@@ -2873,6 +2873,14 @@ sub create_PDF {
      elsif ( $fraction > 1 ) {
       $dialog->destroy;
       mark_pages(@pagelist);
+
+      # create email if required
+      if (defined $mua_string) {
+        show_message_dialog( $window, 'error', 'close',
+         $d->get('Error creating email') )
+          if (system($mua_string));
+      }
+
       return FALSE;              # uninstall
      }
      else {
@@ -4108,9 +4116,6 @@ sub email {
 
    my ( undef, $pdf ) = tempfile( DIR => $SETTING{session}, SUFFIX => '.pdf' );
 
-   # Create the PDF
-   create_PDF($pdf);
-
    # Check for thunderbird
    my ( $client, $status );
    if ( defined( $ENV{KDE_FULL_SESSION} ) and $ENV{KDE_FULL_SESSION} eq 'true' )
@@ -4124,15 +4129,17 @@ sub email {
     $client =
 `gconftool --get /desktop/gnome/url-handlers/mailto/command | cut -d ' ' -f 1`;
    }
+
+   my $mua_string;
    if ( $client =~ /thunderbird/ ) {
-    $status = system("thunderbird -compose attachment=file://$pdf");
+    $mua_string = "thunderbird -compose attachment=file://$pdf";
    }
    else {
-    $status = system("xdg-email --attach $pdf 'x\@y'");
+    $mua_string = "xdg-email --attach $pdf 'x\@y'";
    }
-   show_message_dialog( $window, 'error', 'close',
-    $d->get('Error creating email') )
-     if ($status);
+
+   # Create the PDF
+   create_PDF($pdf, $mua_string);
 
    $windowe->hide;
 
