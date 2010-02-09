@@ -137,7 +137,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
 
 my $prog_name = 'gscan2pdf';
-my $version   = '0.9.30';
+my $version   = '0.9.31';
 
 my $tolerance   = 1;
 my $buffer_size = ( 32 * 1024 );    # default size
@@ -645,6 +645,7 @@ my @action_items = (
   'OCR', undef, $d->get('_OCR'), undef,
   $d->get('Optical Character Recognition'), \&OCR
  ],
+ [ 'User-defined', undef, $d->get('U_ser-defined') ],
 
  # Help menu
  [ 'Help menu', undef, $d->get('_Help') ],
@@ -677,7 +678,7 @@ my @image_tools = (
 my $uimanager;
 my $ui = "<ui>
  <menubar name='MenuBar'>
-  <menu action='File'> 
+  <menu action='File'>
    <menuitem action='New'/>
    <menuitem action='Open'/>
    <menuitem action='Import'/>
@@ -689,7 +690,7 @@ my $ui = "<ui>
    <separator/>
    <menuitem action='Quit'/>
   </menu>
-  <menu action='Edit'> 
+  <menu action='Edit'>
    <menuitem action='Undo'/>
    <menuitem action='Redo'/>
    <separator/>
@@ -699,7 +700,7 @@ my $ui = "<ui>
    <menuitem action='Delete'/>
    <separator/>
    <menuitem action='Renumber'/>
-   <menu action='Select'> 
+   <menu action='Select'>
     <menuitem action='Select All'/>
     <menuitem action='Select Odd'/>
     <menuitem action='Select Even'/>
@@ -712,7 +713,7 @@ my $ui = "<ui>
    <separator/>
    <menuitem action='Preferences'/>
   </menu>
-  <menu action='View'> 
+  <menu action='View'>
    <menuitem action = 'DraggerTool'/>
    <menuitem action = 'SelectorTool'/>
    <separator/>
@@ -725,7 +726,7 @@ my $ui = "<ui>
    <menuitem action='Rotate 180'/>
    <menuitem action='Rotate 270'/>
   </menu>
-  <menu action='Tools'> 
+  <menu action='Tools'>
    <menuitem action='Threshold'/>
    <menuitem action='Negate'/>
    <menuitem action='Unsharp'/>
@@ -734,8 +735,11 @@ my $ui = "<ui>
    <separator/>
    <menuitem action='unpaper'/>
    <menuitem action='OCR'/>
+   <separator/>
+   <menu action='User-defined'>
+   </menu>
   </menu>
-  <menu action='Help menu'> 
+  <menu action='Help menu'>
    <menuitem action='Help'/>
    <menuitem action='About'/>
   </menu>
@@ -1597,6 +1601,7 @@ sub create_menu_bar {
  $uimanager->get_widget('/MenuBar/Tools/Unsharp')->set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Tools/Crop')->set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Tools/GIMP')->set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/Tools/User-defined')->set_sensitive(FALSE);
 
  # a convenient place to put these
  $dependencies{pages} = -1;
@@ -1681,6 +1686,7 @@ sub update_uimanager {
   '/MenuBar/Tools/GIMP',
   '/MenuBar/Tools/unpaper',
   '/MenuBar/Tools/OCR',
+  '/MenuBar/Tools/User-defined',
 
   '/ToolBar/DraggerTool',
   '/ToolBar/SelectorTool',
@@ -10160,6 +10166,59 @@ sub crop {
  return;
 }
 
+# Run a user-defined tool on the selected images
+
+sub user_defined_tool {
+ my ($action) = @_;
+ my @pages = $slist->get_selected_indices;
+
+ # Update undo/redo buffers
+ take_snapshot();
+
+ my $dialog = Gtk2::Dialog->new( $d->get('Running') . "...",
+  $window, 'modal', 'gtk-cancel' => 'cancel' );
+
+ # Set up ProgressBar
+ my $pbar = Gtk2::ProgressBar->new;
+ $dialog->vbox->add($pbar);
+
+ # Ensure that the dialog box is destroyed when the user responds.
+ $dialog->signal_connect(
+  response => sub {
+   $_[0]->destroy;
+   kill_subs();
+  }
+ );
+ $dialog->show_all;
+
+ $slist->get_selection->unselect_all;
+
+ my $ifilename = $slist->{data}[ $pages[0] ][2];
+ my $format;
+ $format = $1 if ( $ifilename =~ /\.(\w*)$/ );
+ my ( undef, $ofilename ) =
+   tempfile( DIR => $SETTING{session}, SUFFIX => ".$format" );
+
+ my $cmd = $action->get('label');
+ if ( $cmd =~ s/%o/$ofilename/g ) {
+  $cmd =~ s/%i/$ifilename/g;
+ }
+ else {
+  copy( $ifilename, $ofilename )
+    or show_message_dialog( $window, 'error', 'close',
+   $d->get('Error copying page') );
+  $cmd =~ s/%i/$ofilename/g;
+ }
+ $cmd =~ s/%r/$slist->{data}[$pages[0]][4]/g;
+
+ system($cmd);
+
+ # Update thumbnail
+ $slist->{data}[ $pages[0] ][1] = get_pixbuf( $ofilename, $heightt, $widtht );
+ $slist->select(@pages);
+ return;
+}
+
 # Minimise gscan2pdf, feed GIMP with the current page, restore gscan2pdf when
 # GIMP finishes
 
@@ -11851,15 +11910,73 @@ sub preferences {
  combobox_set_active( $comboo, $SETTING{'OCR output'}, @array );
  $hbox->pack_end( $comboo, TRUE, TRUE, 0 );
 
- # Add tool button
- $button = Gtk2::Button->new($d->get('Add new tool'));
- $vbox->pack_start( $button, TRUE, TRUE, 0 );
- my @list = $vbox->query_child_packing($button);
- use Data::Dumper;
- print Dumper(\@list);
- $button->signal_connect( clicked => sub {
-   
- });
+ # User-defined tools
+ my $frame = Gtk2::Frame->new( $d->get('User-defined tools') );
+ $vbox->pack_start( $frame, TRUE, TRUE, 0 );
+ my $vboxt = Gtk2::VBox->new;
+ $vboxt->set_border_width($border_width);
+ $frame->add($vboxt);
+ my $abutton = Gtk2::Button->new_from_stock('gtk-add');
+ $vboxt->pack_start( $abutton, TRUE, TRUE, 0 );
+ $abutton->signal_connect(
+  clicked => sub {
+   my $hbox = Gtk2::HBox->new;
+   $vboxt->pack_start( $hbox, TRUE, TRUE, 0 );
+   $vboxt->reorder_child( $abutton, -1 );
+   my $entry = Gtk2::Entry->new;
+   $entry->set_text('my-tool %i %o');
+   my $ui = "<ui>
+ <menubar name='MenuBar'>
+  <menu action='Tools'>
+   <menu action='User-defined'>
+    <menuitem action='$entry'/>
+   </menu>
+  </menu>
+ </menubar>
+</ui>";
+
+   # add the basic XML description of the GUI
+   $entry->{merge_id} = $uimanager->add_ui_from_string($ui);
+
+   my $action_group = Gtk2::ActionGroup->new("actions");
+   my @action_items = (
+
+    # Fields for each action item:
+    # [name, stock_id, value, label, accelerator, tooltip, callback]
+    [ "$entry", undef, $entry->get_text, undef, undef, \&user_defined_tool ],
+   );
+   $action_group->add_actions( \@action_items, undef );
+
+   # Add the actiongroup to the uimanager
+   $uimanager->insert_action_group( $action_group, 0 );
+
+   $entry->signal_connect(
+    changed => sub {
+     my $action = $action_group->get_action("$entry");
+     $action->set( 'label', $entry->get_text );
+     ()    # this callback must return either 2 or 0 items.
+    }
+   );
+
+   $tooltips->set_tip(
+    $entry,
+    $d->get(
+"Use \%i and \%o for the input and output filenames respectively, or a single \%i if the image is to be modified in-place.\n\nThe other variable available is:\n\n\%r resolution"
+    )
+   );
+   $hbox->pack_start( $entry, TRUE, TRUE, 0 );
+   $button = Gtk2::Button->new;
+   $button->set_image( Gtk2::Image->new_from_stock( 'gtk-delete', 'button' ) );
+   $button->signal_connect(
+    clicked => sub {
+     $uimanager->remove_ui( $entry->{merge_id} );
+     $hbox->destroy;
+    }
+   );
+   $hbox->pack_end( $button, FALSE, FALSE, 0 );
+   $hbox->show_all;
+  }
+ );
 
  # Apply button
  $hbox = Gtk2::HBox->new;
@@ -12655,6 +12772,16 @@ paths:
 
 If there are no language files in the above locations, then it gscan2pdf
 assumes that tesseract v1.0 is installed, which had no language files.
+
+=head3 Variables for user-defined tools
+
+The following variables are available:
+
+ %i	input filename
+ %o	output filename
+ %r	resolution
+
+An image can be modified in-place by just specifying %i.
 
 
 =head1 FAQs
