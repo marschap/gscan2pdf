@@ -74,7 +74,10 @@
 #     Net::Cups
 #
 # Release procedure:
-#    Use perltidy -i=1 immediately before release so as not to affect any patches
+#    Use
+#      perltidy -i=1
+#      TEST_AUTHOR=1 make test
+#    immediately before release so as not to affect any patches
 #    in between, and then consistently before each commit afterwards.
 # 0. Test scan in lineart, greyscale and colour.
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
@@ -440,7 +443,10 @@ my (
  $sbutton,
 
  # List of PageRange widgets
- @prlist
+ @prlist,
+
+ # List of user-defined tools
+ @user_defined_tools,
 );
 
 my @action_items = (
@@ -1500,6 +1506,12 @@ sub create_menu_bar {
 
  # extract the menubar
  my $menubar = $uimanager->get_widget('/MenuBar');
+
+ for ( @{ $SETTING{user_defined_tools} } ) {
+  my %tool = ( cmd => $_ );
+  push @user_defined_tools, \%tool;
+  add_user_defined_tool_menu( \%tool );
+ }
 
  # Check for presence of various packages
  $dependencies{perlmagick}  = eval { require Image::Magick };
@@ -11916,65 +11928,18 @@ sub preferences {
  my $vboxt = Gtk2::VBox->new;
  $vboxt->set_border_width($border_width);
  $frame->add($vboxt);
+ for my $tool (@user_defined_tools) {
+  add_user_defined_tool_entry( $vboxt, $tool );
+ }
  my $abutton = Gtk2::Button->new_from_stock('gtk-add');
  $vboxt->pack_start( $abutton, TRUE, TRUE, 0 );
  $abutton->signal_connect(
   clicked => sub {
-   my $hbox = Gtk2::HBox->new;
-   $vboxt->pack_start( $hbox, TRUE, TRUE, 0 );
+   my %tool = ( cmd => 'my-tool %i %o' );
+   add_user_defined_tool_menu( \%tool );
+   add_user_defined_tool_entry( $vboxt, \%tool );
    $vboxt->reorder_child( $abutton, -1 );
-   my $entry = Gtk2::Entry->new;
-   $entry->set_text('my-tool %i %o');
-   my $ui = "<ui>
- <menubar name='MenuBar'>
-  <menu action='Tools'>
-   <menu action='User-defined'>
-    <menuitem action='$entry'/>
-   </menu>
-  </menu>
- </menubar>
-</ui>";
-
-   # add the basic XML description of the GUI
-   $entry->{merge_id} = $uimanager->add_ui_from_string($ui);
-
-   my $action_group = Gtk2::ActionGroup->new("actions");
-   my @action_items = (
-
-    # Fields for each action item:
-    # [name, stock_id, value, label, accelerator, tooltip, callback]
-    [ "$entry", undef, $entry->get_text, undef, undef, \&user_defined_tool ],
-   );
-   $action_group->add_actions( \@action_items, undef );
-
-   # Add the actiongroup to the uimanager
-   $uimanager->insert_action_group( $action_group, 0 );
-
-   $entry->signal_connect(
-    changed => sub {
-     my $action = $action_group->get_action("$entry");
-     $action->set( 'label', $entry->get_text );
-     ()    # this callback must return either 2 or 0 items.
-    }
-   );
-
-   $tooltips->set_tip(
-    $entry,
-    $d->get(
-"Use \%i and \%o for the input and output filenames respectively, or a single \%i if the image is to be modified in-place.\n\nThe other variable available is:\n\n\%r resolution"
-    )
-   );
-   $hbox->pack_start( $entry, TRUE, TRUE, 0 );
-   $button = Gtk2::Button->new;
-   $button->set_image( Gtk2::Image->new_from_stock( 'gtk-delete', 'button' ) );
-   $button->signal_connect(
-    clicked => sub {
-     $uimanager->remove_ui( $entry->{merge_id} );
-     $hbox->destroy;
-    }
-   );
-   $hbox->pack_end( $button, FALSE, FALSE, 0 );
-   $hbox->show_all;
+   $SETTING{user_defined_tools} = list_user_defined_tools($vboxt);
   }
  );
 
@@ -12039,6 +12004,89 @@ sub preferences {
   }
  );
  $windowr->show_all;
+ return;
+}
+
+# Return list of user-defined tools
+sub list_user_defined_tools {
+ my ($vbox) = @_;
+ my @list;
+ for my $hbox ( $vbox->get_children ) {
+  if ( $hbox->isa('Gtk2::HBox') ) {
+   for my $widget ( $hbox->get_children ) {
+    push @list, $widget->get_text if ( $widget->isa('Gtk2::Entry') );
+   }
+  }
+ }
+ return \@list;
+}
+
+# Add user-defined tool menu item
+sub add_user_defined_tool_menu {
+ my ($tool) = @_;
+ my $action_group = Gtk2::ActionGroup->new("actions");
+ $tool->{name} = "$action_group";
+ my $ui = "<ui>
+ <menubar name='MenuBar'>
+  <menu action='Tools'>
+   <menu action='User-defined'>
+    <menuitem action='$tool->{name}'/>
+   </menu>
+  </menu>
+ </menubar>
+</ui>";
+
+ # add the basic XML description of the GUI
+ $tool->{merge_id} = $uimanager->add_ui_from_string($ui);
+
+ my @action_items = (
+
+  # Fields for each action item:
+  # [name, stock_id, value, label, accelerator, tooltip, callback]
+  [ $tool->{name}, undef, $tool->{cmd}, undef, undef, \&user_defined_tool ],
+ );
+ $action_group->add_actions( \@action_items, undef );
+
+ # Add the actiongroup to the uimanager
+ $uimanager->insert_action_group( $action_group, 0 );
+ $tool->{action_group} = $action_group;
+ return;
+}
+
+# Add user-defined tool entry
+sub add_user_defined_tool_entry {
+ my ( $vbox, $tool ) = @_;
+ my $hbox = Gtk2::HBox->new;
+ $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+ my $entry = Gtk2::Entry->new;
+ $entry->set_text( $tool->{cmd} );
+ $entry->signal_connect(
+  changed => sub {
+   my $action = $tool->{action_group}->get_action( $tool->{name} );
+   $action->set( 'label', $entry->get_text );
+   $SETTING{user_defined_tools} = list_user_defined_tools($vbox);
+   ()    # this callback must return either 2 or 0 items.
+  }
+ );
+
+ $tooltips->set_tip(
+  $entry,
+  $d->get(
+"Use \%i and \%o for the input and output filenames respectively, or a single \%i if the image is to be modified in-place.\n\nThe other variable available is:\n\n\%r resolution"
+  )
+ );
+ $hbox->pack_start( $entry, TRUE, TRUE, 0 );
+ my $button = Gtk2::Button->new;
+ $button->set_image( Gtk2::Image->new_from_stock( 'gtk-delete', 'button' ) );
+ $button->signal_connect(
+  clicked => sub {
+   $uimanager->remove_ui( $tool->{merge_id} );
+   $hbox->destroy;
+   $SETTING{user_defined_tools} = list_user_defined_tools($vbox);
+  }
+ );
+ $hbox->pack_end( $button, FALSE, FALSE, 0 );
+ $hbox->show_all;
  return;
 }
 
