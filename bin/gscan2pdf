@@ -273,6 +273,7 @@ my %default_settings = (
    t => 0,
   },
  },
+ user_defined_tools => ['gimp %i']
 );
 delete $SETTING{frontend}
   if ( defined $SETTING{frontend}
@@ -638,11 +639,6 @@ my @action_items = (
   $d->get('Crop pages'), \&crop
  ],
  [
-  'GIMP',                                 undef,
-  $d->get('_GIMP'),                       undef,
-  $d->get('Edit current page with GIMP'), \&gimp
- ],
- [
   'unpaper',                                       undef,
   $d->get('_Clean up'),                            undef,
   $d->get('Clean up scanned images with unpaper'), \&unpaper
@@ -737,7 +733,6 @@ my $ui = "<ui>
    <menuitem action='Negate'/>
    <menuitem action='Unsharp'/>
    <menuitem action='Crop'/>
-   <menuitem action='GIMP'/>
    <separator/>
    <menuitem action='unpaper'/>
    <menuitem action='OCR'/>
@@ -1507,6 +1502,8 @@ sub create_menu_bar {
  # extract the menubar
  my $menubar = $uimanager->get_widget('/MenuBar');
 
+ $SETTING{user_defined_tools} = [ $SETTING{user_defined_tools} ]
+   if ( ref( $SETTING{user_defined_tools} ) ne 'ARRAY' );
  for ( @{ $SETTING{user_defined_tools} } ) {
   my %tool = ( cmd => $_ );
   push @user_defined_tools, \%tool;
@@ -1612,7 +1609,6 @@ sub create_menu_bar {
  $uimanager->get_widget('/MenuBar/Tools/Negate')->set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Tools/Unsharp')->set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Tools/Crop')->set_sensitive(FALSE);
- $uimanager->get_widget('/MenuBar/Tools/GIMP')->set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Tools/User-defined')->set_sensitive(FALSE);
 
  # a convenient place to put these
@@ -1695,7 +1691,6 @@ sub update_uimanager {
   '/MenuBar/Tools/Negate',
   '/MenuBar/Tools/Unsharp',
   '/MenuBar/Tools/Crop',
-  '/MenuBar/Tools/GIMP',
   '/MenuBar/Tools/unpaper',
   '/MenuBar/Tools/OCR',
   '/MenuBar/Tools/User-defined',
@@ -10195,13 +10190,30 @@ sub user_defined_tool {
  $dialog->vbox->add($pbar);
 
  # Ensure that the dialog box is destroyed when the user responds.
+ my $pid;
+ my $running = 1;
  $dialog->signal_connect(
   response => sub {
    $_[0]->destroy;
-   kill_subs();
+   local $SIG{HUP} = 'IGNORE';
+   print "Sending HUP signal to PID $pid and its children\n" if $debug;
+   killfam 'HUP', ($pid);
+   $running = 0;
   }
  );
  $dialog->show_all;
+ my $timer = Glib::Timeout->add(
+  100,
+  sub {
+   if ($running) {
+    $pbar->pulse;
+    return TRUE;
+   }
+   else {
+    return FALSE;
+   }
+  }
+ );
 
  $slist->get_selection->unselect_all;
 
@@ -10222,54 +10234,38 @@ sub user_defined_tool {
   $cmd =~ s/%i/$ofilename/g;
  }
  $cmd =~ s/%r/$slist->{data}[$pages[0]][4]/g;
+ print "$cmd\n" if ($debug);
 
- system($cmd);
+ $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+ warn "Forked PID $pid\n" if ($debug);
 
- # Update thumbnail
- $slist->{data}[ $pages[0] ][1] = get_pixbuf( $ofilename, $heightt, $widtht );
- $slist->select(@pages);
- return;
-}
+ # Read without blocking
+ my $output = '';
+ Glib::IO->add_watch(
+  fileno($read),
+  [ 'in', 'hup' ],
+  sub {
+   my ( $fileno, $condition ) = @_;
+   my ($line);
 
-# Minimise gscan2pdf, feed GIMP with the current page, restore gscan2pdf when
-# GIMP finishes
+   if ( $condition & 'hup' ) {    # bit field operation. >= would also work
+    close $read;
+    warn 'Waiting to reap process' if ($debug);
+    my $pid = waitpid( -1, &WNOHANG );
+    warn "Reaped PID $pid\n" if ($debug);
+    $slist->{data}[ $pages[0] ][2] = $ofilename;
 
-sub gimp {
- my @pages = $slist->get_selected_indices;
- $window->iconify;
- Gtk2->main_iteration while Gtk2->events_pending;
-
- # Update undo/redo buffers
- take_snapshot();
-
- $slist->get_selection->unselect_all;
-
- my $format;
- my $filename = $slist->{data}[ $pages[0] ][2];
- $format = $1 if ( $filename =~ /\.(\w*)$/ );
-
- # PNMs don't store the resolution, so GIMP doesn't get it. Convert to TIFF
- if ( $format eq 'pnm' ) {
-  ( undef, $filename ) = tempfile( DIR => $SETTING{session}, SUFFIX => '.tif' );
-  system(
-"convert $slist->{data}[$pages[0]][2] -density $slist->{data}[$pages[0]][4] -units PixelsPerInch $filename"
-  );
- }
- else {
-  ( undef, $filename ) =
-    tempfile( DIR => $SETTING{session}, SUFFIX => ".$format" );
-  copy( $slist->{data}[ $pages[0] ][2], $filename )
-    or show_message_dialog( $window, 'error', 'close',
-   $d->get('Error copying page') );
- }
- $slist->{data}[ $pages[0] ][2] = $filename;
- system("gimp $filename");
-
- # Update thumbnail
- $slist->{data}[ $pages[0] ][1] = get_pixbuf( $filename, $heightt, $widtht );
- $window->deiconify;
- Gtk2->main_iteration while Gtk2->events_pending;
- $slist->select(@pages);
+    # Update thumbnail
+    $slist->{data}[ $pages[0] ][1] =
+      get_pixbuf( $ofilename, $heightt, $widtht );
+    $slist->select(@pages);
+    $running = 0;
+    $dialog->destroy;
+    return FALSE;    # uninstall
+   }
+   return TRUE;      # continue without uninstalling
+  }
+ );
  return;
 }
 
