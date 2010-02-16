@@ -7124,25 +7124,6 @@ sub update_analysis {
  return;
 }
 
-# Update OCR on stale pages
-
-sub update_ocr {
- foreach my $page ( 0 .. $#{ $slist->{data} } ) {
-  my $dirty_time = $slist->{data}[$page][8];
-  my $ocr_flag   = $slist->{data}[$page][9];
-  my $ocr_time   = $slist->{data}[$page][10];
-  $dirty_time = defined($dirty_time) ? $dirty_time : 0;
-  $ocr_time   = defined($ocr_time)   ? $ocr_time   : 0;
-  if ( $ocr_flag and ( $ocr_time le $dirty_time ) ) {
-   print "ocr_flag: $ocr_flag ocr_time: $ocr_time dirty_time: $dirty_time\n"
-     if $debug;
-   push @ocr_stack, $page;
-  }
- }
- ocr_page() if @ocr_stack;
- return;
-}
-
 # Display about dialog
 
 sub about {
