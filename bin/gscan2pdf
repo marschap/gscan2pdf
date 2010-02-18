@@ -2005,6 +2005,7 @@ sub open_session {
  }
  $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
  $slist->select(@selection);
+ update_uimanager();
  return;
 }
 
