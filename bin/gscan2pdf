@@ -16,11 +16,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    Select/Modified doesn't seem to select rotated pages
 #    Test coverage http://search.cpan.org/~pjcj/Devel-Cover-0.65/
 #    It looks as though saving as PDF or DjVu with corrupted OCR output crashes gscan2pdf
 #    Add Edit/Select/No OCR
 #    Ask Fred http://www.fmwconcepts.com/imagemagick/ about techniques to split image into text/background
+#      1. threshold image into threhold.png
+#      2. convert white to alpha for foreground: convert threhold.png -negate -alpha copy -negate foreground.png
+#      3. subtract from original image to produce background: composite -compose minus original.png foreground.png background.png
+#     How do you fill the alpha layer in the background with white?
+#     Use in djvu with:
+#      1. convert foreground to DjVu Bitonal RLE format with
+#          convert foreground.png foreground.pbm
+#          pbmtodjvurle foreground.pbm > foreground.rle
+#      2. convert background to ppm
+#          convert background.png background.ppm
+#      3. create a file for the text layer with #T commands
+#      3. concatenate the three:
+#          cat foreground.rle background.ppm text > sep
+#      4. create the djvu:
+#          csepdjvu sep file.djvu
+#     For PDF put the background on top of the text, and then the foreground on top of that.
 #    move po to share/locale
 #    look at shutter, and see how he uses goocanvas together with gtkimageview
 #    get canvas scrolling with imageview
