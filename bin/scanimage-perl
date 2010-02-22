@@ -1173,16 +1173,19 @@ $SIG{PIPE} = \&sighandler;
 $SIG{TERM} = \&sighandler;
 
 $batch_increment = 2 if ($batch_double);
+$batch = 1 if (defined $format);
 if ($batch_count) {
  $batch = 1;
 }
 elsif ($batch) {
  $batch_count = -1;
 }
+else {
+ $batch_count = 1;
+}
 
 if ($test == 0) {
  my $n = $batch_start_at;
- $batch = 1 if (defined $format);
 
  if ($batch && (! defined($format) || $format eq '')) {
 #  if ($output_format == OUTPUT_TIFF) {

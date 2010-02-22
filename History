@@ -6,6 +6,8 @@
   Closes Debian bug #510309 (gscan2pdf: Ability to configure how GIMP is started)
 * Update UI after restore
   Closes 2952845 (Menu and toolbar items greyed out after restore)
+* Fixed bug in scanimage-perl with --batch option
+  Closes 2951789 (uninitialized value $batch_count scanimage-perl line 1199)
 
 
 0.9.30 (01.02.2010):
