@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Support multiple sessions
 #    Test coverage http://search.cpan.org/~pjcj/Devel-Cover-0.65/
 #    It looks as though saving as PDF or DjVu with corrupted OCR output crashes gscan2pdf
 #    Add Edit/Select/No OCR
@@ -149,6 +150,7 @@ use
   Set::IntSpan 1.10;  # For page numbering issues. 1.10 required for size method
 use Storable qw(freeze thaw store retrieve);
 use Proc::Killfam;
+use Proc::ProcessTable;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -1452,6 +1454,25 @@ update_uimanager();
 
 # Look for crashed session
 if ( defined $SETTING{session} ) {
+ if ( defined $SETTING{pid} ) {
+  my $t = Proc::ProcessTable->new;
+  for my $p ( @{ $t->table } ) {
+   if ( $p->pid == $SETTING{pid} and $p->cmndline =~ /gscan2pdf/ ) {
+    show_message_dialog( $window, 'error', 'close',
+     'Cannot run multiple instances of gscan2pdf' );
+
+    # kill all threads
+    for ( 1 .. $numthreads ) {
+     $shash{$_}{die} = 1;
+     $shash{$_}{semaphore}->up;
+     $thread{$_}->join;
+    }
+
+    die "Error: Cannot run multiple instances of gscan2pdf\n";
+   }
+  }
+ }
+
  if ( -r "$SETTING{session}/session" ) {
   open_session();
  }
@@ -1461,6 +1482,9 @@ if ( defined $SETTING{session} ) {
   delete $SETTING{session};
  }
 }
+
+# Note PID to able to tell if session has crashed or not
+$SETTING{pid} = $$;
 
 # Create temporary directory if necessary
 unless ( defined $SETTING{session} ) {
