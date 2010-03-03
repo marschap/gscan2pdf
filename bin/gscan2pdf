@@ -1460,14 +1460,7 @@ if ( defined $SETTING{session} ) {
    if ( $p->pid == $SETTING{pid} and $p->cmndline =~ /gscan2pdf/ ) {
     show_message_dialog( $window, 'error', 'close',
      'Cannot run multiple instances of gscan2pdf' );
-
-    # kill all threads
-    for ( 1 .. $numthreads ) {
-     $shash{$_}{die} = 1;
-     $shash{$_}{semaphore}->up;
-     $thread{$_}->join;
-    }
-
+    kill_threads();
     die "Error: Cannot run multiple instances of gscan2pdf\n";
    }
   }
@@ -11263,15 +11256,20 @@ sub quit {
  # Write config file
  $conf->save_file( $rc, \%SETTING );
 
- # kill all threads
+ kill_threads();
+ kill_subs();
+ return TRUE;
+}
+
+# kill all threads
+
+sub kill_threads {
  for ( 1 .. $numthreads ) {
   $shash{$_}{die} = 1;
   $shash{$_}{semaphore}->up;
   $thread{$_}->join;
  }
-
- kill_subs();
- return TRUE;
+ return;
 }
 
 # View POD
