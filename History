@@ -10,6 +10,8 @@
   Closes 2951789 (uninitialized value $batch_count scanimage-perl line 1199)
 * Do not allow multiple instances in order to prevent data loss
   Closes 2962298 (gscan2pdf instances collide and delete hours of work)
+* + Cuneiform support
+  Closes 2927831 (Add cuneiforms to supported OCR engines)
 
 
 0.9.30 (01.02.2010):
@@ -22,7 +24,7 @@
   No longer additionally write OCR output as PDF annotation
 * + <ctrl>g shortcut for the scan dialog, moving intial focus to the scan button
   Closes Debian bug #510314 (gscan2pdf: Mapping File_Scan to a shortcut key)
-* + Slovkak to tesseract languages. Documented logic.
+* + Slovak to tesseract languages. Documented logic.
   Closes 2793056 (gscan2pdf offers for tesseract only english)
 * Display and store TIFF compression options when saving PS
 * + basic functionality to view and modify numerical array scan options in graphical format

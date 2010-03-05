@@ -1550,6 +1550,7 @@ sub create_menu_bar {
  $dependencies{gocr}        = check_command('gocr');
  $dependencies{tesseract}   = check_command('tesseract');
  $dependencies{ocropus}     = check_command('ocroscript');
+ $dependencies{cuneiform}   = check_command('cuneiform');
  $dependencies{djvu}        = check_command('cjb2');
  $dependencies{unpaper}     = check_command('unpaper');
  $dependencies{libtiff}     = check_command('tiffcp');
@@ -1587,6 +1588,7 @@ sub create_menu_bar {
     $dependencies{ocropus} = 0;
    }
   }
+  warn "Found cuneiform\n"   if ( $dependencies{cuneiform} );
   warn "Found cjb2 (djvu)\n" if ( $dependencies{djvu} );
   warn "Found unpaper\n"     if ( $dependencies{unpaper} );
   warn "Found libtiff\n"     if ( $dependencies{libtiff} );
@@ -1605,6 +1607,12 @@ sub create_menu_bar {
  push @ocr_engine,
    [ 'ocropus', $d->get('Ocropus'), $d->get('Process image with Ocropus.') ],
    if ( $dependencies{ocropus} );
+ push @ocr_engine,
+   [
+  'cuneiform', $d->get('Cuneiform'),
+  $d->get('Process image with Cuneiform.')
+   ],
+   if ( $dependencies{cuneiform} );
 
  # Ghost save image item if imagemagick not available
  my $msg = '';
@@ -1674,10 +1682,11 @@ sub create_menu_bar {
  # Ghost ocr item if gocr and tesseract not available
  if ( not $dependencies{gocr}
   and not $dependencies{tesseract}
-  and not $dependencies{ocropus} )
+  and not $dependencies{ocropus}
+  and not $dependencies{cuneiform} )
  {
   $uimanager->get_widget('/MenuBar/Tools/OCR')->set_sensitive(FALSE);
-  $msg .= $d->get("OCR requires gocr, tesseract or ocropus\n");
+  $msg .= $d->get("OCR requires gocr, tesseract, ocropus, or cuneiform\n");
  }
 
  # Put up warning if needed
@@ -2948,36 +2957,6 @@ sub create_PDF {
   }
  );
  return;
-}
-
-# Walk the tree of hocr elements, adding text to PDF
-
-sub walk_hocr_tree {
- my ( $ref, $root ) = @_;
- if ( ref($ref) eq 'ARRAY' ) {
-  for ( @{$ref} ) {
-   walk_hocr_tree( $_, $root );
-  }
- }
- elsif ( ref($ref) eq 'HASH' ) {
-  for ( keys %{$ref} ) {
-   if ( $_ eq 'class'
-    and $ref->{$_} eq 'ocr_line'
-    and defined( $ref->{title} )
-    and defined( $ref->{content} ) )
-   {
-    if ( $ref->{title} =~ /bbox (\d+) (\d+) (\d+) (\d+)/ ) {
-     my ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
-     chomp $ref->{content} if ( $ref->{content} =~ /\n$/ );
-     boxed_text( $root, $ref->{content}, $x1, $y1, $x2, $y2 );
-    }
-
-   }
-   else {
-    walk_hocr_tree( $ref->{$_}, $root );
-   }
-  }
- }
 }
 
 # Draw text on the canvas with a box around it
@@ -4584,7 +4563,8 @@ sub scan_dialog {
  $tooltips->set_tip( $obutton, $d->get('OCR scanned pages') );
  if ( not $dependencies{gocr}
   and not $dependencies{tesseract}
-  and not $dependencies{ocropus} )
+  and not $dependencies{ocropus}
+  and not $dependencies{cuneiform} )
  {
   $hboxo->set_sensitive(FALSE);
   $obutton->set_active(FALSE);
@@ -4596,29 +4576,42 @@ sub scan_dialog {
  my $comboboxe = combobox_from_array(@ocr_engine);
  $tooltips->set_tip( $comboboxe, $d->get('Select OCR engine') );
  $hboxo->pack_end( $comboboxe, TRUE, TRUE, 0 );
- my ( $comboboxl, @tesslang, $hboxl );
+ my ( $comboboxtl, $hboxtl, @tesslang, $comboboxcl, $hboxcl, @cflang );
  if ( $dependencies{tesseract} ) {
-  ( $hboxl, $comboboxl, @tesslang ) = add_ocr_languages($vboxp);
+  ( $hboxtl, $comboboxtl, @tesslang ) = add_tess_languages($vboxp);
   $comboboxe->signal_connect(
    changed => sub {
     if ($ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
      or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
     {
-     $hboxl->show_all;
+     $hboxtl->show_all;
     }
     else {
-     $hboxl->hide_all;
+     $hboxtl->hide_all;
     }
    }
   );
-  $hboxl->set_sensitive(FALSE) if ( !( $obutton->get_active ) );
+  if ( $dependencies{cuneiform} ) {
+   ( $hboxcl, $comboboxcl, @cflang ) = add_cf_languages($vboxp);
+   $comboboxe->signal_connect(
+    changed => sub {
+     if ( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) {
+      $hboxcl->show_all;
+     }
+     else {
+      $hboxcl->hide_all;
+     }
+    }
+   );
+  }
+  $hboxtl->set_sensitive(FALSE) if ( !( $obutton->get_active ) );
   $obutton->signal_connect(
    toggled => sub {
     if ( $obutton->get_active ) {
-     $hboxl->set_sensitive(TRUE);
+     $hboxtl->set_sensitive(TRUE);
     }
     else {
-     $hboxl->set_sensitive(FALSE);
+     $hboxtl->set_sensitive(FALSE);
     }
    }
   );
@@ -4798,9 +4791,11 @@ sub scan_dialog {
    print "OCR $SETTING{'OCR on scan'}\n" if $debug;
    if ( $SETTING{'OCR on scan'} ) {
     $SETTING{'ocr engine'}   = $ocr_engine[ $comboboxe->get_active ]->[0];
-    $SETTING{'ocr language'} = $tesslang[ $comboboxl->get_active ]->[0]
+    $SETTING{'ocr language'} = $tesslang[ $comboboxtl->get_active ]->[0]
       if ( $SETTING{'ocr engine'} eq 'tesseract'
      or $SETTING{'ocr engine'} eq 'ocropus' );
+    $SETTING{'ocr language'} = $cflang[ $comboboxcl->get_active ]->[0]
+      if ( $SETTING{'ocr engine'} eq 'cuneiform' );
    }
    if ($SETTING{frontend} eq 'scanimage'
     or $SETTING{frontend} eq 'scanimage-perl' )
@@ -4844,13 +4839,15 @@ sub scan_dialog {
  # Show window
  $windows->show_all;
  $framex->hide_all;
- $hboxl->hide_all
+ $hboxcl->hide_all
    if (
   !(
       $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
    or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus'
   )
    );
+ $hboxcl->hide_all
+   if ( not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
  if ($test) {
@@ -5333,7 +5330,8 @@ sub scan_dialog2 {
  if (
   not($dependencies{gocr}
    or $dependencies{tesseract}
-   or $dependencies{ocropus} )
+   or $dependencies{ocropus}
+   or $dependencies{cuneiform} )
    )
  {
   $hboxo->set_sensitive(FALSE);
@@ -5346,29 +5344,42 @@ sub scan_dialog2 {
  my $comboboxe = combobox_from_array(@ocr_engine);
  $tooltips->set_tip( $comboboxe, $d->get('Select OCR engine') );
  $hboxo->pack_end( $comboboxe, TRUE, TRUE, 0 );
- my ( $comboboxl, @tesslang, $hboxl );
+ my ( $comboboxtl, $hboxtl, @tesslang, $comboboxcl, $hboxcl, @cflang );
  if ( $dependencies{tesseract} ) {
-  ( $hboxl, $comboboxl, @tesslang ) = add_ocr_languages($vboxp);
+  ( $hboxtl, $comboboxtl, @tesslang ) = add_tess_languages($vboxp);
   $comboboxe->signal_connect(
    changed => sub {
     if ($ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
      or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
     {
-     $hboxl->show_all;
+     $hboxtl->show_all;
     }
     else {
-     $hboxl->hide_all;
+     $hboxtl->hide_all;
     }
    }
   );
-  $hboxl->set_sensitive(FALSE) if ( !( $obutton->get_active ) );
+  if ( $dependencies{cuneiform} ) {
+   ( $hboxcl, $comboboxcl, @cflang ) = add_cf_languages($vboxp);
+   $comboboxe->signal_connect(
+    changed => sub {
+     if ( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) {
+      $hboxcl->show_all;
+     }
+     else {
+      $hboxcl->hide_all;
+     }
+    }
+   );
+  }
+  $hboxtl->set_sensitive(FALSE) if ( !( $obutton->get_active ) );
   $obutton->signal_connect(
    toggled => sub {
     if ( $obutton->get_active ) {
-     $hboxl->set_sensitive(TRUE);
+     $hboxtl->set_sensitive(TRUE);
     }
     else {
-     $hboxl->set_sensitive(FALSE);
+     $hboxtl->set_sensitive(FALSE);
     }
    }
   );
@@ -5460,9 +5471,11 @@ sub scan_dialog2 {
    print "OCR $SETTING{'OCR on scan'}\n" if $debug;
    if ( $SETTING{'OCR on scan'} ) {
     $SETTING{'ocr engine'}   = $ocr_engine[ $comboboxe->get_active ]->[0];
-    $SETTING{'ocr language'} = $tesslang[ $comboboxl->get_active ]->[0]
+    $SETTING{'ocr language'} = $tesslang[ $comboboxtl->get_active ]->[0]
       if ( $SETTING{'ocr engine'} eq 'tesseract'
      or $SETTING{'ocr engine'} eq 'ocropus' );
+    $SETTING{'ocr language'} = $cflang[ $comboboxcl->get_active ]->[0]
+      if ( $SETTING{'ocr engine'} eq 'cuneiform' );
    }
    scan_pages( $npages, $start, $step, $rotate_facing, $rotate_reverse,
     $SETTING{'unpaper on scan'},
@@ -5485,13 +5498,15 @@ sub scan_dialog2 {
  # Show window
  $windows2->show_all;
  $framex->hide_all;
- $hboxl->hide_all
+ $hboxtl->hide_all
    if (
   !(
       $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
    or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus'
   )
    );
+ $hboxcl->hide_all
+   if ( not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
 
  # Has to be done in idle cycles to wait for the options to finish building
  Glib::Idle->add( sub { $sbutton->grab_focus; } );
@@ -10922,7 +10937,7 @@ sub ocr_page {
        $cmd = "$pre tesseract $tif $txt$post";
       }
      }
-     else {    #ocropus
+     elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
       my ( $png, $pre, $post );
       if ( $slist->{data}[$pagenum][2] !~ /\.(png|jpg|pnm)$/ ) {
        my $file = $slist->{data}[$pagenum][2];
@@ -10945,6 +10960,9 @@ sub ocr_page {
       else {
        $cmd = "$pre ocroscript $SETTING{ocroscript} $png > $txt.txt$post";
       }
+     }
+     else { # cuneiform
+      $cmd = "cuneiform -l $SETTING{'ocr language'} -f hocr -o $txt.txt $slist->{data}[$pagenum][2]";
      }
      warn "$cmd\n" if ($debug);
 
@@ -10986,12 +11004,35 @@ sub ocr_page {
         # Attach the text to the canvas
         my $output = slurp("$txt.txt");
         if ( $output =~ /<body>([\s\S]*)<\/body>/ ) {
-         my $hocr = $1;
-         require XML::Simple;
-         my $xs = XML::Simple->new;
-         my $ref = eval { $xs->XMLin($hocr) };
-         print "Error: $@" if ($@);
-         walk_hocr_tree( $ref, $root );
+         require HTML::TokeParser;
+         my $p = HTML::TokeParser->new( \$output );
+         my ( $x1, $y1, $x2, $y2, $text );
+         while ( my $token = $p->get_token ) {
+          if ( $token->[0] eq 'S' ) {
+           if ( $token->[1] eq 'span'
+            and defined( $token->[2]{class} )
+            and $token->[2]{class} eq 'ocr_line'
+            and defined( $token->[2]{title} )
+            and $token->[2]{title} =~ /bbox (\d+) (\d+) (\d+) (\d+)/ )
+           {
+            ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
+           }
+           else {
+            undef $x1;
+            undef $text;
+           }
+          }
+          if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/ ) {
+           $text = $token->[1];
+           chomp($text);
+          }
+          if ( $token->[0] eq 'E' ) {
+           undef $x1;
+           undef $text;
+          }
+          boxed_text( $root, $text, $x1, $y1, $x2, $y2 )
+            if ( defined($x1) and defined($text) );
+         }
         }
         else {
          boxed_text( $root, $output, 0, 0, $pixbuf->get_width,
@@ -11078,9 +11119,9 @@ sub combobox_set_active {
  return;
 }
 
-# Add hbox for ocr languages
+# Add hbox for tesseract languages
 
-sub add_ocr_languages {
+sub add_tess_languages {
  my ($vbox) = @_;
 
  my $hbox = Gtk2::HBox->new;
@@ -11141,6 +11182,72 @@ sub add_ocr_languages {
  return $hbox, $combobox, @tesslang;
 }
 
+# Add hbox for cuneiform languages
+
+sub add_cf_languages {
+ my ($vbox) = @_;
+
+ my $hbox = Gtk2::HBox->new;
+ $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
+ my $label = Gtk2::Label->new( $d->get('Language to recognise') );
+ $hbox->pack_start( $label, TRUE, TRUE, 0 );
+
+ # cuneiform language codes
+ my %lang = (
+  eng    => $d->get('English'),
+  ger    => $d->get('German'),
+  fra    => $d->get('French'),
+  rus    => $d->get('Russian'),
+  swe    => $d->get('Swedish'),
+  spa    => $d->get('Spanish'),
+  ita    => $d->get('Italian'),
+  ruseng => $d->get('Russian+English'),
+  ukr    => $d->get('Ukrainian'),
+  srp    => $d->get('Serbian'),
+  hrv    => $d->get('Croatian'),
+  pol    => $d->get('Polish'),
+  dan    => $d->get('Danish'),
+  por    => $d->get('Portuguese'),
+  dut    => $d->get('Dutch'),
+  cze    => $d->get('Czech'),
+  rum    => $d->get('Romanian'),
+  hun    => $d->get('Hungarian'),
+  bul    => $d->get('Bulgarian'),
+  slo    => $d->get('Slovak'),
+  lav    => $d->get('Latvian'),
+  lit    => $d->get('Lithuanian'),
+  est    => $d->get('Estonian'),
+  tur    => $d->get('Turkish'),
+ );
+
+ # Dig out supported languages
+ my $cmd = "cuneiform -l";
+ warn "$cmd\n" if ($debug);
+ my $output = `$cmd`;
+ print $output if ($debug);
+
+ my $langs;
+ $langs = $1 if ( $output =~ /Supported languages: (.*)\./ );
+ my @lang;
+ for ( split " ", $langs ) {
+
+  # Weed out the empty language files
+  if ( not -z $_ ) {
+   if ( defined $lang{$_} ) {
+    push @lang, [ $_, $lang{$_} ];
+   }
+   else {
+    push @lang, [ $_, $_ ];
+   }
+  }
+ }
+
+ my $combobox = combobox_from_array(@lang);
+ combobox_set_active( $combobox, $SETTING{'ocr language'}, @lang );
+ $hbox->pack_end( $combobox, TRUE, TRUE, 0 );
+ return $hbox, $combobox, @lang;
+}
+
 # Run OCR on current page and display result
 
 sub OCR {
@@ -11160,19 +11267,32 @@ sub OCR {
  my $combobe = combobox_from_array(@ocr_engine);
  combobox_set_active( $combobe, $SETTING{'ocr engine'}, @ocr_engine );
  $hboxe->pack_end( $combobe, FALSE, FALSE, 0 );
- my ( $comboboxl, @tesslang, $hboxl );
+ my ( $comboboxtl, $hboxtl, @tesslang, $comboboxcl, $hboxcl, @cflang );
 
  if ( $dependencies{tesseract} ) {
-  ( $hboxl, $comboboxl, @tesslang ) = add_ocr_languages($vbox);
+  ( $hboxtl, $comboboxtl, @tesslang ) = add_tess_languages($vbox);
   $combobe->signal_connect(
    changed => sub {
     if ($ocr_engine[ $combobe->get_active ]->[0] eq 'tesseract'
      or $ocr_engine[ $combobe->get_active ]->[0] eq 'ocropus' )
     {
-     $hboxl->show_all;
+     $hboxtl->show_all;
     }
     else {
-     $hboxl->hide_all;
+     $hboxtl->hide_all;
+    }
+   }
+  );
+ }
+ if ( $dependencies{cuneiform} ) {
+  ( $hboxcl, $comboboxcl, @cflang ) = add_cf_languages($vbox);
+  $combobe->signal_connect(
+   changed => sub {
+    if ( $ocr_engine[ $combobe->get_active ]->[0] eq 'cuneiform' ) {
+     $hboxcl->show_all;
+    }
+    else {
+     $hboxcl->hide_all;
     }
    }
   );
@@ -11191,9 +11311,11 @@ sub OCR {
  $obutton->signal_connect(
   clicked => sub {
    $SETTING{'ocr engine'}   = $ocr_engine[ $combobe->get_active ]->[0];
-   $SETTING{'ocr language'} = $tesslang[ $comboboxl->get_active ]->[0]
+   $SETTING{'ocr language'} = $tesslang[ $comboboxtl->get_active ]->[0]
      if ( $SETTING{'ocr engine'} eq 'tesseract'
     or $SETTING{'ocr engine'} eq 'ocropus' );
+   $SETTING{'ocr language'} = $cflang[ $comboboxcl->get_active ]->[0]
+     if ( $SETTING{'ocr engine'} eq 'cuneiform' );
 
    # fill $pagelist with filenames depending on which radiobutton is active
    my @pagelist = get_page_index();
@@ -11212,13 +11334,15 @@ sub OCR {
  $cbutton->signal_connect( clicked => sub { $windowo->hide; } );
 
  $windowo->show_all;
- $hboxl->hide_all
+ $hboxtl->hide_all
    if (
   !(
       $ocr_engine[ $combobe->get_active ]->[0] eq 'tesseract'
    or $ocr_engine[ $combobe->get_active ]->[0] eq 'ocropus'
   )
    );
+ $hboxcl->hide_all
+   if ( not( $ocr_engine[ $combobe->get_active ]->[0] eq 'cuneiform' ) );
  return;
 }
 
@@ -12523,6 +12647,10 @@ A command line OCR. See L<http://code.google.com/p/tesseract-ocr/>
 
 A command line OCR. See L<http://code.google.com/p/ocropus/>
 
+=item cuneiform
+
+A command line OCR. See L<http://launchpad.net/cuneiform-linux>
+
 =back
 
 =back
@@ -12810,7 +12938,8 @@ unpaper (see L<http://unpaper.berlios.de/>) is a utility for cleaning up a scan.
 
 =head3 OCR (Optical Character Recognition)
 
-The gocr, tesseract or ocropus utilities are used to produce text from an image.
+The gocr, tesseract, ocropus or cuneiform utilities are used to produce text from
+an image.
 
 There is an OCR output buffer for each page and is embedded as
 plain text behind the scanned image in the PDF

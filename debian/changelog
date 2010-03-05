@@ -2,6 +2,9 @@ gscan2pdf (0.9.31) lucid; urgency=low
 
   * New upstream release
     Closes: #510309 (gscan2pdf: Ability to configure how GIMP is started)
+    New Depends: libhtml-parser-perl
+    Removed Depends: libxml-simple-perl
+    New Recommends: cuneiform
   * Minor editting of description
   * Patched the clean target to fix FTBFS
 
