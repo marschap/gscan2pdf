@@ -3702,12 +3702,15 @@ sub save_image {
   }
   else {
    my $i = 1;
+   my $w = length(scalar @filelist);
+   my $current_filename;
    foreach (@filelist) {
-    if ( !file_exists( $file_chooser, "$filename.$i.$SETTING{'image type'}" ) )
+    $current_filename = sprintf "${filename}_%0${w}d.$SETTING{'image type'}", $i;
+    if ( !file_exists( $file_chooser, $current_filename ) )
     {
      my $cmd = sprintf "convert %s -density %d \"%s\"",
        $_, $slist->{data}[ $pagelist[ $i - 1 ] ][4],
-       "$filename.$i.$SETTING{'image type'}";
+       $current_filename;
      if ( system($cmd) ) {
       show_message_dialog( $window, 'error', 'close',
        $d->get('Error saving image') );
@@ -7188,17 +7191,17 @@ Chris Mayo
 David Hampton
 Sascha Hunold
 Jakub Wilk
-freedo
+Frederik (freedo)
 Roy Shahbazian
 EOS
  $about->set_authors( "Jeff Ratcliffe\n\n"
     . $d->get('Patches gratefully received from:')
     . "\n$authors" );
  $about->set_comments( $d->get('To aid the scan-to-PDF process') );
- $about->set_copyright( $d->get('Copyright 2006--2009 Jeffrey Ratcliffe') );
+ $about->set_copyright( $d->get('Copyright 2006--2010 Jeffrey Ratcliffe') );
  my $licence = <<EOS;
 gscan2pdf --- to aid the scan to PDF or DjVu process
-Copyright (C) 2006 -- 2009  Jeffrey Ratcliffe <Jeffrey.Ratcliffe\@gmail.com>
+Copyright 2006 -- 2010 Jeffrey Ratcliffe <Jeffrey.Ratcliffe\@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the version 3 GNU General Public License as
