@@ -10224,77 +10224,94 @@ sub user_defined_tool {
 
  # Ensure that the dialog box is destroyed when the user responds.
  my $pid;
- my $running = 1;
+ my $running = FALSE;
+ my $cancelled = FALSE;
+ my $i = 0;
  $dialog->signal_connect(
   response => sub {
    $_[0]->destroy;
    local $SIG{HUP} = 'IGNORE';
    print "Sending HUP signal to PID $pid and its children\n" if $debug;
    killfam 'HUP', ($pid);
-   $running = 0;
+   $running = FALSE;
+   $cancelled = TRUE;
   }
  );
  $dialog->show_all;
- my $timer = Glib::Timeout->add(
+
+ # Timer will run until callback returns false
+ Glib::Timeout->add(
   100,
   sub {
-   if ($running) {
-    $pbar->pulse;
-    return TRUE;
-   }
-   else {
-    return FALSE;
-   }
-  }
- );
 
- $slist->get_selection->unselect_all;
-
- my $ifilename = $slist->{data}[ $pages[0] ][2];
- my $format;
- $format = $1 if ( $ifilename =~ /\.(\w*)$/ );
- my ( undef, $ofilename ) =
-   tempfile( DIR => $SETTING{session}, SUFFIX => ".$format" );
-
- my $cmd = $action->get('label');
- if ( $cmd =~ s/%o/$ofilename/g ) {
-  $cmd =~ s/%i/$ifilename/g;
- }
- else {
-  copy( $ifilename, $ofilename )
-    or show_message_dialog( $window, 'error', 'close',
-   $d->get('Error copying page') );
-  $cmd =~ s/%i/$ofilename/g;
- }
- $cmd =~ s/%r/$slist->{data}[$pages[0]][4]/g;
- print "$cmd\n" if ($debug);
-
- $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
- warn "Forked PID $pid\n" if ($debug);
-
- # Read without blocking
- my $output = '';
- Glib::IO->add_watch(
-  fileno($read),
-  [ 'in', 'hup' ],
-  sub {
-   my ( $fileno, $condition ) = @_;
-   my ($line);
-
-   if ( $condition & 'hup' ) {    # bit field operation. >= would also work
-    close $read;
-    warn 'Waiting to reap process' if ($debug);
-    my $pid = waitpid( -1, &WNOHANG );
-    warn "Reaped PID $pid\n" if ($debug);
-    $slist->{data}[ $pages[0] ][2] = $ofilename;
-
-    # Update thumbnail
-    $slist->{data}[ $pages[0] ][1] =
-      get_pixbuf( $ofilename, $heightt, $widtht );
-    $slist->select(@pages);
-    $running = 0;
-    $dialog->destroy;
+   # To prevent any further pages being processed
+   if ($cancelled) {
     return FALSE;    # uninstall
+   }
+   elsif ( not $running ) {
+    $running = TRUE;
+    $slist->get_selection->unselect_all;
+    $slist->select($pages[$i]);
+    $pbar->set_text(
+     sprintf( $d->get("Processing page %i of %i"), $i+1, $#pages + 1 )
+    );
+    $pbar->set_fraction( $i / ( $#pages + 1 ) );
+    my $ifilename = $slist->{data}[ $pages[$i] ][2];
+    my $format;
+    $format = $1 if ( $ifilename =~ /\.(\w*)$/ );
+    my ( undef, $ofilename ) =
+     tempfile( DIR => $SETTING{session}, SUFFIX => ".$format" );
+
+    my $cmd = $action->get('label');
+    if ( $cmd =~ s/%o/$ofilename/g ) {
+     $cmd =~ s/%i/$ifilename/g;
+    }
+    else {
+     copy( $ifilename, $ofilename )
+      or show_message_dialog( $window, 'error', 'close',
+      $d->get('Error copying page') );
+     $cmd =~ s/%i/$ofilename/g;
+    }
+    $cmd =~ s/%r/$slist->{data}[$pages[$i]][4]/g;
+    print "$cmd\n" if ($debug);
+
+    $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+    warn "Forked PID $pid\n" if ($debug);
+
+    # Read without blocking
+    my $output = '';
+    Glib::IO->add_watch(
+     fileno($read),
+     [ 'in', 'hup' ],
+     sub {
+      my ( $fileno, $condition ) = @_;
+
+      if ( $condition & 'hup' ) {    # bit field operation. >= would also work
+       close $read;
+       warn 'Waiting to reap process' if ($debug);
+       my $pid = waitpid( -1, &WNOHANG );
+       warn "Reaped PID $pid\n" if ($debug);
+       $slist->{data}[ $pages[$i] ][2] = $ofilename;
+
+       # Update thumbnail
+       $slist->{data}[ $pages[$i] ][1] =
+        get_pixbuf( $ofilename, $heightt, $widtht );
+
+       if ($i == $#pages) {
+        $slist->select(@pages);
+        $dialog->destroy;
+        $cancelled = TRUE;
+       }
+       else {
+        $slist->select($pages[$i]);
+       }
+       $running = FALSE;
+       $i++;
+       return FALSE;    # uninstall
+      }
+      return TRUE;      # continue without uninstalling
+     }
+    );
    }
    return TRUE;      # continue without uninstalling
   }
