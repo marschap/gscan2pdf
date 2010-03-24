@@ -16,6 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    add option for number of background processes
+#     does Thread::Queue play nicely with forks?
+#     grep -c '^processor' /proc/cpuinfo
+#     use Linux::Cpuinfo;
+#     my $cpuinfo = Linux::Cpuinfo->new();
+#     $cnt  = $cpuinfo->num_cpus();
 #    Support multiple sessions
 #    Test coverage http://search.cpan.org/~pjcj/Devel-Cover-0.65/
 #    It looks as though saving as PDF or DjVu with corrupted OCR output crashes gscan2pdf
@@ -53,7 +59,6 @@
 #     and putting save options on same dialog.
 #    add units retrieval in Gscan2pdf.pm and put them on the scan dialog
 #    rehash the Makefile.PL as per http://www.koders.com/perl/fidEAA93E6AE47B78C81E8991FAD2D79381F23280C2.aspx
-#    add option for number of background processes
 #    add possibility to have multiple scans from a flatbed with delay between
 #    if downgrading, don't read remaining options.
 #    note options like source before rescan due to mode change
@@ -75,10 +80,8 @@
 #    - rename those like $hboxu to $hbox
 #    get it to work on the TV tuner
 #    check out scanbuttond
-#    problem with wait after cancelling scan?
 #    cover case where unpaper or ocr starts running on a page that has in the
 #     meantime been deleted
-#    add run script option
 #    Add status line at bottom with messages like "filename saved"
 #    Fix blocking while rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
@@ -2030,7 +2033,7 @@ sub open_session {
 
    for my $box ( @{ $session{$page}{buffer} } ) {
     boxed_text( $root, $box->{text}, $box->{x1}, $box->{y1}, $box->{x2},
-     $box->{y2} );
+     $box->{y2}, $box->{height} );
    }
    $canvas->show;
   }
@@ -2840,11 +2843,31 @@ sub create_PDF {
          my $bounds = $item->get_bounds;
          my ( $x1, $y1, $x2, $y2 ) =
            ( $bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2 );
-         my $size = ( $y2 - $y1 ) * 72 / $resolution;
+         my $size = $item->get('height') * 72 / $resolution;
          $text->font( $font, $size );
-         $text->translate( $x1 * 72 / $resolution,
-          $h * 72 / $resolution - $y1 * 72 / $resolution - $size );
-         $text->text( $item->get('text') );
+         if ( $size > $resolution / 72 ) {
+          $text->translate( $x1 * 72 / $resolution,
+           ( $h - $y1 ) * 72 / $resolution - $size );
+          $text->text( $item->get('text') );
+         }
+         else {
+          my $y = $h * 72 / $resolution;
+          foreach my $line ( split( "\n", $item->get('text') ) ) {
+           my $x = 0;
+
+           # Add a word at a time in order to linewrap
+           foreach my $word ( split( ' ', $line ) ) {
+            if ( length($word) * $size + $x > $w ) {
+             $x = 0;
+             $y -= $size;
+            }
+            $text->translate( $x, $y );
+            $word = ' ' . $word if ( $x > 0 );
+            $x += $text->text($word);
+           }
+           $y -= $size;
+          }
+         }
         }
        }
       }
@@ -2962,11 +2985,12 @@ sub create_PDF {
 # Draw text on the canvas with a box around it
 
 sub boxed_text {
- my ( $root, $char, $x1, $y1, $x2, $y2 ) = @_;
+ my ( $root, $char, $x1, $y1, $x2, $y2, $size ) = @_;
  my $g = Goo::Canvas::Group->new($root);
  $g->translate( $x1, $y1 );
- my $text = Goo::Canvas::Text->new( $g, $char, 0, 0, $x2 - $x1, 'nw',
-  'height' => $y2 - $y1, );
+ my $text =
+   Goo::Canvas::Text->new( $g, $char, 0, 0, $x2 - $x1, 'nw', 'height' => $size,
+   );
 
  # clicking text box produces a dialog to edit the text
  $text->signal_connect(
@@ -11030,13 +11054,14 @@ sub ocr_page {
            undef $x1;
            undef $text;
           }
-          boxed_text( $root, $text, $x1, $y1, $x2, $y2 )
+          boxed_text( $root, $text, $x1, $y1, $x2, $y2, abs( $y2 - $y1 ) )
             if ( defined($x1) and defined($text) );
          }
         }
         else {
          boxed_text( $root, $output, 0, 0, $pixbuf->get_width,
-          $pixbuf->get_height );
+          $pixbuf->get_height, $slist->{data}[$pagenum][4] / 72 );
+
         }
         $slist->{data}[$pagenum][3] = $canvas_new;
 
@@ -11578,7 +11603,8 @@ sub save_session {
      my %box;
      ( $box{x1}, $box{y1}, $box{x2}, $box{y2} ) =
        ( $bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2 );
-     $box{text} = $item->get('text');
+     $box{text}   = $item->get('text');
+     $box{height} = $item->get('height');
      push @{ $session{ $slist->{data}[$i][0] }{buffer} }, {%box};
     }
    }
