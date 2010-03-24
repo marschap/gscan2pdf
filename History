@@ -12,6 +12,9 @@
   Closes 2962298 (gscan2pdf instances collide and delete hours of work)
 * + Cuneiform support
   Closes 2927831 (Add cuneiforms to supported OCR engines)
+* Pad filenames of saved images with zeros to fix subsequent sorting issues
+  Closes 2958788 (Add leading zeros to export image filenames)
+  Thanks to Frederik Elwert for the patch
 * Fix embedding of OCR output from tesseract and GOCR (broken in v0.9.30)
 
 
