@@ -1558,6 +1558,33 @@ sub create_menu_bar {
  $dependencies{djvu}        = check_command('cjb2');
  $dependencies{unpaper}     = check_command('unpaper');
  $dependencies{libtiff}     = check_command('tiffcp');
+ if ( $dependencies{ocropus} ) {
+  unless ( defined $ENV{OCROSCRIPTS} ) {
+   for (qw(/usr /usr/local)) {
+    $ENV{OCROSCRIPTS} = "$_/share/ocropus/scripts"
+      if ( -d "$_/share/ocropus/scripts" );
+   }
+  }
+  if ( defined $ENV{OCROSCRIPTS} ) {
+   if ( -f "$ENV{OCROSCRIPTS}/recognize.lua" ) {
+    $SETTING{ocroscript} = 'recognize';
+   }
+   elsif ( -f "$ENV{OCROSCRIPTS}/rec-tess.lua" ) {
+    $SETTING{ocroscript} = 'rec-tess';
+   }
+   if ( defined $SETTING{ocroscript} ) {
+    warn "Using ocropus with $SETTING{ocroscript}.\n";
+   }
+   else {
+    warn "Found ocropus, but no recognition scripts. Disabling.\n";
+    $dependencies{ocropus} = 0;
+   }
+  }
+  else {
+   warn "Found ocropus, but not its scripts. Disabling.\n";
+   $dependencies{ocropus} = 0;
+  }
+ }
  if ($debug) {
   warn "Found Image::Magick\n" if ( $dependencies{perlmagick} );
   warn "Found ImageMagick\n"   if ( $dependencies{imagemagick} );
@@ -1565,37 +1592,10 @@ sub create_menu_bar {
   warn "Found xdg-email\n"     if ( $dependencies{xdg} );
   warn "Found gocr\n"          if ( $dependencies{gocr} );
   warn "Found tesseract\n"     if ( $dependencies{tesseract} );
-  if ( $dependencies{ocropus} ) {
-   unless ( defined $ENV{OCROSCRIPTS} ) {
-    for (qw(/usr /usr/local)) {
-     $ENV{OCROSCRIPTS} = "$_/share/ocropus/scripts"
-       if ( -d "$_/share/ocropus/scripts" );
-    }
-   }
-   if ( defined $ENV{OCROSCRIPTS} ) {
-    if ( -f "$ENV{OCROSCRIPTS}/recognize.lua" ) {
-     $SETTING{ocroscript} = 'recognize';
-    }
-    elsif ( -f "$ENV{OCROSCRIPTS}/rec-tess.lua" ) {
-     $SETTING{ocroscript} = 'rec-tess';
-    }
-    if ( defined $SETTING{ocroscript} ) {
-     warn "Using ocropus with $SETTING{ocroscript}.\n";
-    }
-    else {
-     warn "Found ocropus, but no recognition scripts. Disabling.\n";
-     $dependencies{ocropus} = 0;
-    }
-   }
-   else {
-    warn "Found ocropus, but not its scripts. Disabling.\n";
-    $dependencies{ocropus} = 0;
-   }
-  }
-  warn "Found cuneiform\n"   if ( $dependencies{cuneiform} );
-  warn "Found cjb2 (djvu)\n" if ( $dependencies{djvu} );
-  warn "Found unpaper\n"     if ( $dependencies{unpaper} );
-  warn "Found libtiff\n"     if ( $dependencies{libtiff} );
+  warn "Found cuneiform\n"     if ( $dependencies{cuneiform} );
+  warn "Found cjb2 (djvu)\n"   if ( $dependencies{djvu} );
+  warn "Found unpaper\n"       if ( $dependencies{unpaper} );
+  warn "Found libtiff\n"       if ( $dependencies{libtiff} );
  }
 
  # OCR engine options
@@ -7218,6 +7218,7 @@ Sascha Hunold
 Jakub Wilk
 Frederik Elwert
 Roy Shahbazian
+Klaus Ethgen
 EOS
  $about->set_authors( "Jeff Ratcliffe\n\n"
     . $d->get('Patches gratefully received from:')
