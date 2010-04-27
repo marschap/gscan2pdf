@@ -12152,8 +12152,9 @@ sub preferences {
        if ( defined $windows );
     }
    }
-   $SETTING{'scan prefix'}   = $preentry->get_text;
-   $SETTING{'cache options'} = $cbc->get_active;
+   $SETTING{'default filename'} = $fileentry->get_text;
+   $SETTING{'scan prefix'}      = $preentry->get_text;
+   $SETTING{'cache options'}    = $cbc->get_active;
    delete $SETTING{cache}
      if ( defined $SETTING{cache} and not $SETTING{'cache options'} );
    $SETTING{'restore window'} = $cbw->get_active;
