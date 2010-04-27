@@ -11051,6 +11051,8 @@ sub ocr_page {
         my $output = slurp("$txt.txt");
         if ( $output =~ /<body>([\s\S]*)<\/body>/ ) {
          require HTML::TokeParser;
+         require HTML::Entities;
+         require utf8;
          my $p = HTML::TokeParser->new( \$output );
          my ( $x1, $y1, $x2, $y2, $text );
          while ( my $token = $p->get_token ) {
@@ -11069,7 +11071,8 @@ sub ocr_page {
            }
           }
           if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/ ) {
-           $text = $token->[1];
+           $text = HTML::Entities::decode_entities($token->[1]);
+           utf8::encode($text); # UTF-8 in perl sucks!
            chomp($text);
           }
           if ( $token->[0] eq 'E' ) {
