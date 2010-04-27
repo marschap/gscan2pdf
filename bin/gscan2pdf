@@ -76,13 +76,10 @@
 #     see if $pdf->finishobjects does any good.
 #    move paper sizes into TreeModel
 #    Translate documentation (po4a?)
-#    cope with or prevent pages being deleted during scan/unpaper/ocr
 #    simplify code - only keep variables that are needed
 #    - rename those like $hboxu to $hbox
 #    get it to work on the TV tuner
 #    check out scanbuttond
-#    cover case where unpaper or ocr starts running on a page that has in the
-#     meantime been deleted
 #    Add status line at bottom with messages like "filename saved"
 #    Fix blocking while rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
@@ -10872,6 +10869,8 @@ sub unpaper {
 
    # run unpaper
    unpaper_page( options2unpaper($unpaper_options), get_page_index() );
+
+   $windowu->hide;
   }
  );
 
@@ -11375,6 +11374,7 @@ sub OCR {
     return;
    }
    ocr_page(@pagelist);
+   $windowo->hide;
   }
  );
 
