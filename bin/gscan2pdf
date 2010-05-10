@@ -28,8 +28,8 @@
 #    It looks as though saving as PDF or DjVu with corrupted OCR output crashes gscan2pdf
 #    Add Edit/Select/No OCR
 #    Ask Fred http://www.fmwconcepts.com/imagemagick/ about techniques to split image into text/background
-#      1. threshold image into threhold.png
-#      2. convert white to alpha for foreground: convert threhold.png -negate -alpha copy -negate foreground.png
+#      1. threshold image into threshold.png
+#      2. convert white to alpha for foreground: convert threshold.png -negate -alpha copy -negate foreground.png
 #      3. subtract from original image to produce background: composite -compose minus original.png foreground.png background.png
 #     How do you fill the alpha layer in the background with white?
 #     Use in djvu with:
