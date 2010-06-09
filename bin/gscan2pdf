@@ -197,7 +197,7 @@ if ( defined $help ) {
  exit;
 }
 
-warn "$prog_name $version\n" if ( defined $debug );
+print "$prog_name $version\n" if ($debug);
 
 if ( defined $locale ) {
  if ( $locale !~ /^\// ) {
@@ -216,8 +216,10 @@ for (@device) {
 # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
 # scanimage
 setlocale( LC_NUMERIC, "C" );
-warn "Using ", setlocale(LC_CTYPE), " locale\n" if ($debug);
-warn "Startup LC_NUMERIC ", setlocale(LC_NUMERIC), "\n";
+if ($debug) {
+ print "Using ", setlocale(LC_CTYPE), " locale\n";
+ print "Startup LC_NUMERIC ", setlocale(LC_NUMERIC), "\n";
+}
 
 # Read config file
 my $rc = "$ENV{'HOME'}/.$prog_name";
@@ -1582,7 +1584,7 @@ sub create_menu_bar {
     $SETTING{ocroscript} = 'rec-tess';
    }
    if ( defined $SETTING{ocroscript} ) {
-    warn "Using ocropus with $SETTING{ocroscript}.\n";
+    print "Using ocropus with $SETTING{ocroscript}.\n" if ($debug);
    }
    else {
     warn "Found ocropus, but no recognition scripts. Disabling.\n";
