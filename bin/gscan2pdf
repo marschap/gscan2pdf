@@ -845,7 +845,16 @@ my $ui = "<ui>
 # Create the window
 my $window = Gtk2::Window->new;
 $window->set_title("$prog_name v$version");
-$window->signal_connect( 'delete-event' => sub { Gtk2->main_quit if quit(); } );
+$window->signal_connect(
+ 'delete-event' => sub {
+  if ( quit() ) {
+   Gtk2->main_quit;
+  }
+  else {
+   return TRUE;
+  } 
+ }
+);
 
 # Note when the window is maximised or not.
 $window->signal_connect(

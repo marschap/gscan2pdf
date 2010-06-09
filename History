@@ -20,6 +20,8 @@
 * Fixed UTF8 encoding in OCR output. Thanks to Klaus Ethgen for the patch.
 * Save default filename between sessions
 * Automatically hide unpaper and OCR dialogs when finished
+* Block delete event if main window is closed and quit not OK.
+  Closes LP 588974 (Program quits without saving)
 
 
 0.9.30 (01.02.2010):
