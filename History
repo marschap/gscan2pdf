@@ -22,6 +22,8 @@
 * Automatically hide unpaper and OCR dialogs when finished
 * Block delete event if main window is closed and quit not OK.
   Closes LP 588974 (Program quits without saving)
+* Wait until scan exists before trying to import.
+  Closes 2991751 (gscan2pdf randomly aborting multiple-pages scanning)
 
 
 0.9.30 (01.02.2010):

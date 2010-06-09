@@ -6051,13 +6051,23 @@ sub scanimage {
        $pbar->set_fraction(0);
       }
       elsif ( $line =~ /^Scanned page (\d*)\. \(scanner status = 5\)/ ) {
+       my $id = $1;
 
        # If the scan can't be loaded then blow the scanning dialog away and
        # show an error
-       my $rotate = $1 % 2 ? $rfacing : $rreverse;
-       my $index = import_scan( "out$1.pnm", $1 * $step + $offset,
-        $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
-       $num_scans++;
+       my $rotate = $id % 2 ? $rfacing : $rreverse;
+
+       # Timer will run until callback returns false
+       my $timer = Glib::Timeout->add(
+        100,
+        sub {
+         return TRUE unless ( -e "out$id.pnm" );
+         my $index = import_scan( "out$id.pnm", $id * $step + $offset,
+          $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
+         $num_scans++;
+         return FALSE;
+        }
+       );
       }
       elsif ( $line =~
        /Scanner warming up - waiting \d* seconds|wait for lamp warm-up/ )
@@ -6262,11 +6272,20 @@ sub scanadf {
        # If the scan can't be loaded then blow the scanning dialog away and
        # show an error
        my $rotate = $id % 2 ? $rfacing : $rreverse;
-       my $index = import_scan( "out$id.pnm", $id * $step + $offset,
-        $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
-       $id++;
-       $pbar->set_text(
-        sprintf( $d->get('Scanning page %i...'), $id * $step + $offset ) );
+
+       # Timer will run until callback returns false
+       my $timer = Glib::Timeout->add(
+        100,
+        sub {
+         return TRUE unless ( -e "out$id.pnm" );
+         my $index = import_scan( "out$id.pnm", $id * $step + $offset,
+          $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
+         $pbar->set_text(
+          sprintf( $d->get('Scanning page %i...'), $id * $step + $offset ) );
+         $id++;
+         return FALSE;
+        }
+       );
       }
       elsif ( $line =~ /^Scanned \d* pages/ ) {
        ;
