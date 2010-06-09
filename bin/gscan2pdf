@@ -6034,13 +6034,13 @@ sub scanimage {
      print $buffer if ( $debug and $buffer );
      $line .= $buffer;
 
-     while ( $line =~ /^Progress: (\d*\.\d*)%\r/ ) {
-      my $fraction = $1 / 100;
-      $pbar->set_fraction($fraction);
-      $line = substr( $line, index( $line, "\r" ) + 1, length($line) );
-     }
-     while ( $line =~ /\n/ ) {
-      if ( $line =~ /^Scanning (-?\d*) pages/ ) {
+     while ( $line =~ /([\r\n])/ ) {
+      my $le = $1;
+      if ( $line =~ /^Progress: (\d*\.\d*)%/ ) {
+       my $fraction = $1 / 100;
+       $pbar->set_fraction($fraction);
+      }
+      elsif ( $line =~ /^Scanning (-?\d*) pages/ ) {
        $pbar->set_text(
         $d->get('Scanning') . " $1 " . $d->get('pages') . "..." );
       }
@@ -6105,7 +6105,7 @@ sub scanimage {
          . substr( $line, 0, index( $line, "\n" ) );
        show_message_dialog( $windows, 'warning', 'close', $text );
       }
-      $line = substr( $line, index( $line, "\n" ) + 1, length($line) );
+      $line = substr( $line, index( $line, $le ) + 1, length($line) );
      }
     }
 
