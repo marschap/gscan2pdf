@@ -161,6 +161,8 @@ use Proc::ProcessTable;
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
 
+use constant POINTS_PER_INCH  => 72;
+
 my $prog_name = 'gscan2pdf';
 my $version   = '0.9.31';
 
@@ -2738,10 +2740,14 @@ sub create_PDF {
     my $x        = $image->Read($filename);
     warn "$x" if "$x";
 
-    # Get the size and resolution
-    my $w          = $image->Get('width');
-    my $h          = $image->Get('height');
+    # Get the size and resolution. Resolution is dots per inch, width
+    # and height are in inches.
     my $resolution = $slist->{data}[$_][4];
+    my $w          = $image->Get('width') / $resolution;
+    my $h          = $image->Get('height') / $resolution;
+    # The output resolution is normally the same as the input
+    # resolution.
+	my $output_resolution = $resolution;
 
     # Automatic mode
     my $depth;
@@ -2793,11 +2799,12 @@ sub create_PDF {
 
      $depth = $image->Get('depth') if ( !defined $depth );
      if ( $SETTING{'downsample'} ) {
-      $w          = $w / $resolution * $SETTING{'downsample dpi'};
-      $h          = $h / $resolution * $SETTING{'downsample dpi'};
-      $resolution = $SETTING{'downsample dpi'};
-      print "Resizing $filename to $w x $h\n" if ($debug);
-      $x = $image->Resize( width => $w, height => $h );
+      $output_resolution = $SETTING{'downsample dpi'};
+      my $w_pixels = $w * $output_resolution;
+      my $h_pixels =  $h * $output_resolution;
+
+      print "Resizing $filename to $w_pixels x $h_pixels\n" if ($debug);
+      $x = $image->Resize( width => $w_pixels, , height => $h_pixels);
       warn "$x" if "$x";
      }
      $x = $image->Set( quality => $SETTING{quality} )
@@ -2832,11 +2839,11 @@ sub create_PDF {
      }
     }
 
-    print "Defining page at ", $w * 72 / $resolution, " x ",
-      $h * 72 / $resolution, "\n"
+    print "Defining page at ", $w * POINTS_PER_INCH , "pt x ",
+      $h * POINTS_PER_INCH, "pt\n"
       if $debug;
     my $page = $pdf->page;
-    $page->mediabox( $w * 72 / $resolution, $h * 72 / $resolution );
+    $page->mediabox( $w * POINTS_PER_INCH, $h * POINTS_PER_INCH );
 
     # Add OCR as text behind the scan
     if ( defined( $slist->{data}[$_][3] ) ) {
@@ -2856,21 +2863,28 @@ sub create_PDF {
          my $bounds = $item->get_bounds;
          my ( $x1, $y1, $x2, $y2 ) =
            ( $bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2 );
-         my $size = $item->get('height') * 72 / $resolution;
+         my $size = $item->get('height') / $resolution * POINTS_PER_INCH;
          $text->font( $font, $size );
          if ( $size > $resolution / 72 ) {
-          $text->translate( $x1 * 72 / $resolution,
-           ( $h - $y1 ) * 72 / $resolution - $size );
+          # Set the text position.
+          # Translate x1 and y1 to inches and then to points. Invert the
+          # y coordinate (since the PDF coordinates are bottom to top
+          # instead of top to bottom) and subtract $size, since the text
+          # will end up above the given point instead of below.
+          $text->translate( $x1 / $resolution * POINTS_PER_INCH,
+           ($h - ($y1 / $resolution)) * POINTS_PER_INCH - $size );
           $text->text( $item->get('text') );
          }
          else {
-          my $y = $h * 72 / $resolution;
+          # Start at the top of the page (PDF coordinate system starts
+          # at the bottom left of the page)
+          my $y = $h * POINTS_PER_INCH;
           foreach my $line ( split( "\n", $item->get('text') ) ) {
            my $x = 0;
 
            # Add a word at a time in order to linewrap
            foreach my $word ( split( ' ', $line ) ) {
-            if ( length($word) * $size + $x > $w ) {
+            if ( length($word) * $size + $x > $w * POINTS_PER_INCH ) {
              $x = 0;
              $y -= $size;
             }
@@ -2921,7 +2935,7 @@ sub create_PDF {
       0 );
     }
     else {
-     eval { $gfx->image( $imgobj, 0, 0, 72 / $resolution ) };
+     eval { $gfx->image( $imgobj, 0, 0, $w * POINTS_PER_INCH, $h * POINTS_PER_INCH) };
      if ($@) {
       warn $@ if $debug;
       send(
@@ -2935,7 +2949,7 @@ sub create_PDF {
       );
      }
      else {
-      print "Adding $filename at $resolution dpi\n" if $debug;
+      print "Adding $filename at $output_resolution dpi\n" if $debug;
      }
     }
    }
