@@ -161,7 +161,7 @@ use Proc::ProcessTable;
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
 
-use constant POINTS_PER_INCH  => 72;
+use constant POINTS_PER_INCH => 72;
 
 my $prog_name = 'gscan2pdf';
 my $version   = '0.9.31';
@@ -1905,7 +1905,7 @@ sub get_resolution {
  my $width  = $image->Get('width');
  my $ratio  = $height / $width;
  $ratio = 1 / $ratio if ( $ratio < 1 );
- $resolution = 72;
+ $resolution = POINTS_PER_INCH;
  for ( keys %{ $SETTING{Paper} } ) {
   if ( $SETTING{Paper}{$_}{x} > 0
    and abs( $ratio - $SETTING{Paper}{$_}{y} / $SETTING{Paper}{$_}{x} ) < 0.02 )
@@ -2856,28 +2856,32 @@ sub create_PDF {
      for ( my $i = 0 ; $i < $n ; $i++ ) {
       my $group = $root->get_child($i);
       if ( $group->isa('Goo::Canvas::Group') ) {
+       my $bounds = $group->get_bounds;
+       my ( $x1, $y1, $x2, $y2 ) =
+           ( $bounds->x1+1, $bounds->y1+1, $bounds->x2-1, $bounds->y2-1 );
        my $n = $group->get_n_children;
        for ( my $i = 0 ; $i < $n ; $i++ ) {
         my $item = $group->get_child($i);
         if ( $item->isa('Goo::Canvas::Text') ) {
-         my $bounds = $item->get_bounds;
-         my ( $x1, $y1, $x2, $y2 ) =
-           ( $bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2 );
-         my $size = $item->get('height') / $resolution * POINTS_PER_INCH;
-         $text->font( $font, $size );
-         if ( $size > $resolution / 72 ) {
+         if ( abs($h*$resolution - $y2 + $y1 ) > 5 and abs($w*$resolution - $x2 + $x1 ) > 5 ) {
+          # Box is smaller than the page. We know the text position.
           # Set the text position.
           # Translate x1 and y1 to inches and then to points. Invert the
           # y coordinate (since the PDF coordinates are bottom to top
           # instead of top to bottom) and subtract $size, since the text
           # will end up above the given point instead of below.
+          my $size = ( $y2 - $y1 ) / $resolution * POINTS_PER_INCH;
+          $text->font( $font, $size );
           $text->translate( $x1 / $resolution * POINTS_PER_INCH,
            ($h - ($y1 / $resolution)) * POINTS_PER_INCH - $size );
           $text->text( $item->get('text') );
          }
          else {
+          # Box is the same size as the page. We don't know the text position.
           # Start at the top of the page (PDF coordinate system starts
           # at the bottom left of the page)
+          my $size = 1;
+          $text->font( $font, $size );
           my $y = $h * POINTS_PER_INCH;
           foreach my $line ( split( "\n", $item->get('text') ) ) {
            my $x = 0;
@@ -3015,6 +3019,9 @@ sub boxed_text {
  my ( $root, $char, $x1, $y1, $x2, $y2, $size ) = @_;
  my $g = Goo::Canvas::Group->new($root);
  $g->translate( $x1, $y1 );
+
+ # draw the rect first to make sure the text goes on top and receives any mouse clicks
+ my $rect = Goo::Canvas::Rect->new( $g, 0, 0, $x2 - $x1, $y2 - $y1 );
  my $text =
    Goo::Canvas::Text->new( $g, $char, 0, 0, $x2 - $x1, 'nw', 'height' => $size,
    );
@@ -3023,7 +3030,6 @@ sub boxed_text {
  $text->signal_connect(
   'button-press-event' => sub {
    my ( $widget, $target, $ev ) = @_;
-   print "text $widget button-press-event\n", $widget->get('text'), "\n";
    my $dialog = Gtk2::Dialog->new(
     $d->get('Editing text') . "...", $window,
     'modal',
@@ -3047,31 +3053,28 @@ sub boxed_text {
    return TRUE;
   }
  );
- my $rect = Goo::Canvas::Rect->new( $g, 0, 0, $x2 - $x1, $y2 - $y1 );
- $rect->signal_connect(
-  'button-press-event' => sub {
-   my ( $widget, $target, $ev ) = @_;
-   print "rect button-press-event\n";
-
-   #  return TRUE;
-  }
- );
- $g->signal_connect(
-  'button-press-event' => sub {
-   my ( $widget, $target, $ev ) = @_;
-   print "group $widget button-press-event\n";
-   my $n = $widget->get_n_children;
-   for ( my $i = 0 ; $i < $n ; $i++ ) {
-    my $item = $widget->get_child($i);
-    if ( $item->isa('Goo::Canvas::Text') ) {
-     print "contains $item\n", $item->get('text'), "\n";
-     last;
-    }
-   }
-
-   #  return TRUE;
-  }
- );
+# $rect->signal_connect(
+#  'button-press-event' => sub {
+#   my ( $widget, $target, $ev ) = @_;
+#   print "rect button-press-event\n";
+#   #  return TRUE;
+#  }
+# );
+# $g->signal_connect(
+#  'button-press-event' => sub {
+#   my ( $widget, $target, $ev ) = @_;
+#   print "group $widget button-press-event\n";
+#   my $n = $widget->get_n_children;
+#   for ( my $i = 0 ; $i < $n ; $i++ ) {
+#    my $item = $widget->get_child($i);
+#    if ( $item->isa('Goo::Canvas::Text') ) {
+#     print "contains $item\n", $item->get('text'), "\n";
+#     last;
+#    }
+#   }
+#   #  return TRUE;
+#  }
+# );
 }
 
 # Throw up file selector and save selected pages as PDF under given name.
@@ -4062,12 +4065,12 @@ sub save_djvu {
          my $group = $root->get_child($i);
          if ( $group->isa('Goo::Canvas::Group') ) {
           my $n = $group->get_n_children;
+          my $bounds = $group->get_bounds;
+          my ( $x1, $y1, $x2, $y2 ) =
+           ( $bounds->x1+1, $bounds->y1+1, $bounds->x2-1, $bounds->y2-1 );
           for ( my $i = 0 ; $i < $n ; $i++ ) {
            my $item = $group->get_child($i);
            if ( $item->isa('Goo::Canvas::Text') ) {
-            my $bounds = $item->get_bounds;
-            my ( $x1, $y1, $x2, $y2 ) =
-              ( $bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2 );
 
             # Escape any inverted commas
             my $txt = $item->get('text');
@@ -6413,7 +6416,7 @@ sub scan_pages {
      # show an error
      my $rotate = $n % 2 ? $rfacing : $rreverse;
      $SETTING{resolution} =
-       defined( $SETTING{resolution} ) ? $SETTING{resolution} : 72;
+       defined( $SETTING{resolution} ) ? $SETTING{resolution} : POINTS_PER_INCH;
      print "importing scan with resolution=$SETTING{resolution}\n" if $debug;
      my $index =
        import_scan( File::Spec->catdir( $SETTING{session}, "out$n.pnm" ),
@@ -11133,7 +11136,7 @@ sub ocr_page {
         }
         else {
          boxed_text( $root, $output, 0, 0, $pixbuf->get_width,
-          $pixbuf->get_height, $slist->{data}[$pagenum][4] / 72 );
+          $pixbuf->get_height, -1 );
 
         }
         $slist->{data}[$pagenum][3] = $canvas_new;
@@ -11671,16 +11674,24 @@ sub save_session {
    my $root = $canvas->get_root_item;
    my $n    = $root->get_n_children;
    for ( my $j = 0 ; $j < $n ; $j++ ) {
-    my $item = $root->get_child($j);
-    if ( $item->isa('Goo::Canvas::Text') ) {
-     my $bounds = $item->get_bounds;
-     my %box;
-     ( $box{x1}, $box{y1}, $box{x2}, $box{y2} ) =
-       ( $bounds->x1, $bounds->y1, $bounds->x2, $bounds->y2 );
-     $box{text}   = $item->get('text');
-     $box{height} = $item->get('height');
-     push @{ $session{ $slist->{data}[$i][0] }{buffer} }, {%box};
-    }
+     my $group = $root->get_child($j);
+     if ( $group->isa('Goo::Canvas::Group') ) {
+       my $bounds = $group->get_bounds;
+       my ( $x1, $y1, $x2, $y2 ) =
+           ( $bounds->x1+1, $bounds->y1+1, $bounds->x2-1, $bounds->y2-1 );
+       my $n = $group->get_n_children;
+       for ( my $k = 0 ; $k < $n ; $k++ ) {
+         my $item = $group->get_child($k);
+         if ( $item->isa('Goo::Canvas::Text') ) {
+           my %box;
+           ( $box{x1}, $box{y1}, $box{x2}, $box{y2} ) =
+             ( $x1, $y1, $x2, $y2 );
+           $box{text}   = $item->get('text');
+           $box{height} = $item->get('height');
+           push @{ $session{ $slist->{data}[$i][0] }{buffer} }, {%box};
+         }
+       }
+     }
    }
   }
  }
