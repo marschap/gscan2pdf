@@ -21,7 +21,9 @@
 * Save default filename between sessions
 * Automatically hide unpaper and OCR dialogs when finished
 * Block delete event if main window is closed and quit not OK.
+  Closes 3015248 (Gscan2pdf quits without saving)
   Closes LP 588974 (Program quits without saving)
+  Closes Debian bug #584787 (gscan2pdf: Gscan2pdf quits without saving)
 * Wait until scan exists before trying to import.
   Closes 2991751 (gscan2pdf randomly aborting multiple-pages scanning)
 * Correct position of OCR output when downsampling.
