@@ -2,6 +2,8 @@ gscan2pdf (0.9.31) lucid; urgency=low
 
   * New upstream release
     Closes: #510309 (gscan2pdf: Ability to configure how GIMP is started)
+    Closes: #576193 (gscan2pdf: OCR does not works, due to Goo::Canvas::Text
+                                                            programming error)
     Closes: #584787 (gscan2pdf: Gscan2pdf quits without saving)
     Closes: #585441 (gscan2pdf: "Useless use of sort in void context")
     New Depends: libhtml-parser-perl
