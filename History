@@ -28,6 +28,8 @@
   Closes 2991751 (gscan2pdf randomly aborting multiple-pages scanning)
 * Correct position of OCR output when downsampling.
   Thanks to Matthijs Kooijman for the patch
+* Suppress warning "Useless use of sort in void context"
+  Closes Debian bug #585441 (gscan2pdf: "Useless use of sort in void context")
 
 
 0.9.30 (01.02.2010):
