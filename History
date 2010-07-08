@@ -30,6 +30,8 @@
   Thanks to Matthijs Kooijman for the patch
 * Suppress warning "Useless use of sort in void context"
   Closes Debian bug #585441 (gscan2pdf: "Useless use of sort in void context")
+* Offer to reload device-dependent options cache if empty
+  Closes LP 602560 (device-dependent options cache inobvious)
 
 
 0.9.30 (01.02.2010):

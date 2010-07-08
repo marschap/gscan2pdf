@@ -7348,9 +7348,17 @@ sub rescan_options {
   $mode = 'default';
  }
  if ( $SETTING{'cache options'} and defined $SETTING{cache}{$device}{$mode} ) {
-  parse_options( $vboxd, $device,
-   options2hash( $SETTING{cache}{$device}{$mode} ) );
-  return;
+  my %options = options2hash( $SETTING{cache}{$device}{$mode} );
+  my $response = 'cancel';
+  if (not %options) {
+   $response =
+     show_message_dialog( $window, 'question', 'ok-cancel',
+    $d->get("The options cache seems to be empty. Reload device-dependent options?") );
+  }
+  if ( $response eq 'cancel' ) {
+   parse_options( $vboxd, $device, %options );
+   return;
+  }
  }
 
  my $output = '';
@@ -7920,9 +7928,17 @@ sub update_options {
   $mode = 'default';
  }
  if ( $SETTING{'cache options'} and defined $SETTING{cache}{$device}{$mode} ) {
-  update_options_hash( $vboxd,
-   options2hash( $SETTING{cache}{$device}{$mode} ) );
-  return;
+  my %options = options2hash( $SETTING{cache}{$device}{$mode} );
+  my $response = 'cancel';
+  if (not %options) {
+   $response =
+     show_message_dialog( $window, 'question', 'ok-cancel',
+    $d->get("The options cache seems to be empty. Reload device-dependent options?") );
+  }
+  if ( $response eq 'cancel' ) {
+   update_options_hash( $vboxd, %options );
+   return;
+  }
  }
 
  my $output = '';
