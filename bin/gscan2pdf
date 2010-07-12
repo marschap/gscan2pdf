@@ -220,7 +220,7 @@ for (@device) {
 # scanimage
 setlocale( LC_NUMERIC, "C" );
 if ($debug) {
- print "Using ", setlocale(LC_CTYPE), " locale\n";
+ print "Using ",              setlocale(LC_CTYPE),   " locale\n";
  print "Startup LC_NUMERIC ", setlocale(LC_NUMERIC), "\n";
 }
 
@@ -1573,6 +1573,7 @@ sub create_menu_bar {
  $dependencies{unpaper}     = check_command('unpaper');
  $dependencies{libtiff}     = check_command('tiffcp');
  if ( $dependencies{ocropus} ) {
+
   unless ( defined $ENV{OCROSCRIPTS} ) {
    for (qw(/usr /usr/local)) {
     $ENV{OCROSCRIPTS} = "$_/share/ocropus/scripts"
@@ -2745,9 +2746,10 @@ sub create_PDF {
     my $resolution = $slist->{data}[$_][4];
     my $w          = $image->Get('width') / $resolution;
     my $h          = $image->Get('height') / $resolution;
+
     # The output resolution is normally the same as the input
     # resolution.
-	my $output_resolution = $resolution;
+    my $output_resolution = $resolution;
 
     # Automatic mode
     my $depth;
@@ -2801,10 +2803,10 @@ sub create_PDF {
      if ( $SETTING{'downsample'} ) {
       $output_resolution = $SETTING{'downsample dpi'};
       my $w_pixels = $w * $output_resolution;
-      my $h_pixels =  $h * $output_resolution;
+      my $h_pixels = $h * $output_resolution;
 
       print "Resizing $filename to $w_pixels x $h_pixels\n" if ($debug);
-      $x = $image->Resize( width => $w_pixels, , height => $h_pixels);
+      $x = $image->Resize( width => $w_pixels,, height => $h_pixels );
       warn "$x" if "$x";
      }
      $x = $image->Set( quality => $SETTING{quality} )
@@ -2839,7 +2841,7 @@ sub create_PDF {
      }
     }
 
-    print "Defining page at ", $w * POINTS_PER_INCH , "pt x ",
+    print "Defining page at ", $w * POINTS_PER_INCH, "pt x ",
       $h * POINTS_PER_INCH, "pt\n"
       if $debug;
     my $page = $pdf->page;
@@ -2858,12 +2860,15 @@ sub create_PDF {
       if ( $group->isa('Goo::Canvas::Group') ) {
        my $bounds = $group->get_bounds;
        my ( $x1, $y1, $x2, $y2 ) =
-           ( $bounds->x1+1, $bounds->y1+1, $bounds->x2-1, $bounds->y2-1 );
+         ( $bounds->x1 + 1, $bounds->y1 + 1, $bounds->x2 - 1, $bounds->y2 - 1 );
        my $n = $group->get_n_children;
        for ( my $i = 0 ; $i < $n ; $i++ ) {
         my $item = $group->get_child($i);
         if ( $item->isa('Goo::Canvas::Text') ) {
-         if ( abs($h*$resolution - $y2 + $y1 ) > 5 and abs($w*$resolution - $x2 + $x1 ) > 5 ) {
+         if ( abs( $h * $resolution - $y2 + $y1 ) > 5
+          and abs( $w * $resolution - $x2 + $x1 ) > 5 )
+         {
+
           # Box is smaller than the page. We know the text position.
           # Set the text position.
           # Translate x1 and y1 to inches and then to points. Invert the
@@ -2873,10 +2878,11 @@ sub create_PDF {
           my $size = ( $y2 - $y1 ) / $resolution * POINTS_PER_INCH;
           $text->font( $font, $size );
           $text->translate( $x1 / $resolution * POINTS_PER_INCH,
-           ($h - ($y1 / $resolution)) * POINTS_PER_INCH - $size );
+           ( $h - ( $y1 / $resolution ) ) * POINTS_PER_INCH - $size );
           $text->text( $item->get('text') );
          }
          else {
+
           # Box is the same size as the page. We don't know the text position.
           # Start at the top of the page (PDF coordinate system starts
           # at the bottom left of the page)
@@ -2939,7 +2945,9 @@ sub create_PDF {
       0 );
     }
     else {
-     eval { $gfx->image( $imgobj, 0, 0, $w * POINTS_PER_INCH, $h * POINTS_PER_INCH) };
+     eval {
+      $gfx->image( $imgobj, 0, 0, $w * POINTS_PER_INCH, $h * POINTS_PER_INCH );
+     };
      if ($@) {
       warn $@ if $debug;
       send(
@@ -3020,7 +3028,7 @@ sub boxed_text {
  my $g = Goo::Canvas::Group->new($root);
  $g->translate( $x1, $y1 );
 
- # draw the rect first to make sure the text goes on top and receives any mouse clicks
+# draw the rect first to make sure the text goes on top and receives any mouse clicks
  my $rect = Goo::Canvas::Rect->new( $g, 0, 0, $x2 - $x1, $y2 - $y1 );
  my $text =
    Goo::Canvas::Text->new( $g, $char, 0, 0, $x2 - $x1, 'nw', 'height' => $size,
@@ -3756,12 +3764,12 @@ sub save_image {
   }
   else {
    my $i = 1;
-   my $w = length(scalar @filelist);
+   my $w = length( scalar @filelist );
    my $current_filename;
    foreach (@filelist) {
-    $current_filename = sprintf "${filename}_%0${w}d.$SETTING{'image type'}", $i;
-    if ( !file_exists( $file_chooser, $current_filename ) )
-    {
+    $current_filename = sprintf "${filename}_%0${w}d.$SETTING{'image type'}",
+      $i;
+    if ( !file_exists( $file_chooser, $current_filename ) ) {
      my $cmd = sprintf "convert %s -density %d \"%s\"",
        $_, $slist->{data}[ $pagelist[ $i - 1 ] ][4],
        $current_filename;
@@ -4064,10 +4072,14 @@ sub save_djvu {
         for ( my $i = 0 ; $i < $n ; $i++ ) {
          my $group = $root->get_child($i);
          if ( $group->isa('Goo::Canvas::Group') ) {
-          my $n = $group->get_n_children;
+          my $n      = $group->get_n_children;
           my $bounds = $group->get_bounds;
-          my ( $x1, $y1, $x2, $y2 ) =
-           ( $bounds->x1+1, $bounds->y1+1, $bounds->x2-1, $bounds->y2-1 );
+          my ( $x1, $y1, $x2, $y2 ) = (
+           $bounds->x1 + 1,
+           $bounds->y1 + 1,
+           $bounds->x2 - 1,
+           $bounds->y2 - 1
+          );
           for ( my $i = 0 ; $i < $n ; $i++ ) {
            my $item = $group->get_child($i);
            if ( $item->isa('Goo::Canvas::Text') ) {
@@ -6597,13 +6609,11 @@ sub scan_page {
     $offset = $parm->{format} - SANE_FRAME_RED;
     $image{x} = $image{y} = 0;
    }
-   my $hundred_percent =
-     $parm->{bytes_per_line} *
-     $parm->{lines} *
-     (
+   my $hundred_percent = $parm->{bytes_per_line} * $parm->{lines} * (
     ( $parm->{format} == SANE_FRAME_RGB || $parm->{format} == SANE_FRAME_GRAY )
     ? 1
-    : 3 );
+    : 3
+   );
 
    while (1) {
     $device->cancel if ( not $shash{$sane_thread}{go} );
@@ -6686,12 +6696,11 @@ sub scan_page {
  }
 
 cleanup:
- my $expected_bytes =
-   $parm->{bytes_per_line} *
-   $parm->{lines} *
-   ( ( $parm->{format} == SANE_FRAME_RGB || $parm->{format} == SANE_FRAME_GRAY )
+ my $expected_bytes = $parm->{bytes_per_line} * $parm->{lines} * (
+  ( $parm->{format} == SANE_FRAME_RGB || $parm->{format} == SANE_FRAME_GRAY )
   ? 1
-  : 3 );
+  : 3
+ );
  $expected_bytes = 0 if ( $parm->{lines} < 0 );
  if ($debug) {
   if ( $total_bytes > $expected_bytes && $expected_bytes != 0 ) {
@@ -7348,12 +7357,16 @@ sub rescan_options {
   $mode = 'default';
  }
  if ( $SETTING{'cache options'} and defined $SETTING{cache}{$device}{$mode} ) {
-  my %options = options2hash( $SETTING{cache}{$device}{$mode} );
+  my %options  = options2hash( $SETTING{cache}{$device}{$mode} );
   my $response = 'cancel';
-  if (not %options) {
-   $response =
-     show_message_dialog( $window, 'question', 'ok-cancel',
-    $d->get("The options cache seems to be empty. Reload device-dependent options?") );
+  if ( not %options ) {
+   $response = show_message_dialog(
+    $window,
+    'question',
+    'ok-cancel',
+    $d->get(
+     "The options cache seems to be empty. Reload device-dependent options?")
+   );
   }
   if ( $response eq 'cancel' ) {
    parse_options( $vboxd, $device, %options );
@@ -7928,12 +7941,16 @@ sub update_options {
   $mode = 'default';
  }
  if ( $SETTING{'cache options'} and defined $SETTING{cache}{$device}{$mode} ) {
-  my %options = options2hash( $SETTING{cache}{$device}{$mode} );
+  my %options  = options2hash( $SETTING{cache}{$device}{$mode} );
   my $response = 'cancel';
-  if (not %options) {
-   $response =
-     show_message_dialog( $window, 'question', 'ok-cancel',
-    $d->get("The options cache seems to be empty. Reload device-dependent options?") );
+  if ( not %options ) {
+   $response = show_message_dialog(
+    $window,
+    'question',
+    'ok-cancel',
+    $d->get(
+     "The options cache seems to be empty. Reload device-dependent options?")
+   );
   }
   if ( $response eq 'cancel' ) {
    update_options_hash( $vboxd, %options );
@@ -10314,16 +10331,16 @@ sub user_defined_tool {
 
  # Ensure that the dialog box is destroyed when the user responds.
  my $pid;
- my $running = FALSE;
+ my $running   = FALSE;
  my $cancelled = FALSE;
- my $i = 0;
+ my $i         = 0;
  $dialog->signal_connect(
   response => sub {
    $_[0]->destroy;
    local $SIG{HUP} = 'IGNORE';
    print "Sending HUP signal to PID $pid and its children\n" if $debug;
    killfam 'HUP', ($pid);
-   $running = FALSE;
+   $running   = FALSE;
    $cancelled = TRUE;
   }
  );
@@ -10341,16 +10358,15 @@ sub user_defined_tool {
    elsif ( not $running ) {
     $running = TRUE;
     $slist->get_selection->unselect_all;
-    $slist->select($pages[$i]);
+    $slist->select( $pages[$i] );
     $pbar->set_text(
-     sprintf( $d->get("Processing page %i of %i"), $i+1, $#pages + 1 )
-    );
+     sprintf( $d->get("Processing page %i of %i"), $i + 1, $#pages + 1 ) );
     $pbar->set_fraction( $i / ( $#pages + 1 ) );
     my $ifilename = $slist->{data}[ $pages[$i] ][2];
     my $format;
     $format = $1 if ( $ifilename =~ /\.(\w*)$/ );
     my ( undef, $ofilename ) =
-     tempfile( DIR => $SETTING{session}, SUFFIX => ".$format" );
+      tempfile( DIR => $SETTING{session}, SUFFIX => ".$format" );
 
     my $cmd = $action->get('label');
     if ( $cmd =~ s/%o/$ofilename/g ) {
@@ -10358,7 +10374,7 @@ sub user_defined_tool {
     }
     else {
      copy( $ifilename, $ofilename )
-      or show_message_dialog( $window, 'error', 'close',
+       or show_message_dialog( $window, 'error', 'close',
       $d->get('Error copying page') );
      $cmd =~ s/%i/$ofilename/g;
     }
@@ -10385,15 +10401,15 @@ sub user_defined_tool {
 
        # Update thumbnail
        $slist->{data}[ $pages[$i] ][1] =
-        get_pixbuf( $ofilename, $heightt, $widtht );
+         get_pixbuf( $ofilename, $heightt, $widtht );
 
-       if ($i == $#pages) {
+       if ( $i == $#pages ) {
         $slist->select(@pages);
         $dialog->destroy;
         $cancelled = TRUE;
        }
        else {
-        $slist->select($pages[$i]);
+        $slist->select( $pages[$i] );
        }
        $running = FALSE;
        $i++;
@@ -10403,7 +10419,7 @@ sub user_defined_tool {
      }
     );
    }
-   return TRUE;      # continue without uninstalling
+   return TRUE;         # continue without uninstalling
   }
  );
  return;
@@ -11074,8 +11090,9 @@ sub ocr_page {
        $cmd = "$pre ocroscript $SETTING{ocroscript} $png > $txt.txt$post";
       }
      }
-     else { # cuneiform
-      $cmd = "cuneiform -l $SETTING{'ocr language'} -f hocr -o $txt.txt $slist->{data}[$pagenum][2]";
+     else {    # cuneiform
+      $cmd =
+"cuneiform -l $SETTING{'ocr language'} -f hocr -o $txt.txt $slist->{data}[$pagenum][2]";
      }
      warn "$cmd\n" if ($debug);
 
@@ -11138,8 +11155,8 @@ sub ocr_page {
            }
           }
           if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/ ) {
-           $text = HTML::Entities::decode_entities($token->[1]);
-           utf8::encode($text); # UTF-8 in perl sucks!
+           $text = HTML::Entities::decode_entities( $token->[1] );
+           utf8::encode($text);    # UTF-8 in perl sucks!
            chomp($text);
           }
           if ( $token->[0] eq 'E' ) {
@@ -11690,24 +11707,23 @@ sub save_session {
    my $root = $canvas->get_root_item;
    my $n    = $root->get_n_children;
    for ( my $j = 0 ; $j < $n ; $j++ ) {
-     my $group = $root->get_child($j);
-     if ( $group->isa('Goo::Canvas::Group') ) {
-       my $bounds = $group->get_bounds;
-       my ( $x1, $y1, $x2, $y2 ) =
-           ( $bounds->x1+1, $bounds->y1+1, $bounds->x2-1, $bounds->y2-1 );
-       my $n = $group->get_n_children;
-       for ( my $k = 0 ; $k < $n ; $k++ ) {
-         my $item = $group->get_child($k);
-         if ( $item->isa('Goo::Canvas::Text') ) {
-           my %box;
-           ( $box{x1}, $box{y1}, $box{x2}, $box{y2} ) =
-             ( $x1, $y1, $x2, $y2 );
-           $box{text}   = $item->get('text');
-           $box{height} = $item->get('height');
-           push @{ $session{ $slist->{data}[$i][0] }{buffer} }, {%box};
-         }
-       }
+    my $group = $root->get_child($j);
+    if ( $group->isa('Goo::Canvas::Group') ) {
+     my $bounds = $group->get_bounds;
+     my ( $x1, $y1, $x2, $y2 ) =
+       ( $bounds->x1 + 1, $bounds->y1 + 1, $bounds->x2 - 1, $bounds->y2 - 1 );
+     my $n = $group->get_n_children;
+     for ( my $k = 0 ; $k < $n ; $k++ ) {
+      my $item = $group->get_child($k);
+      if ( $item->isa('Goo::Canvas::Text') ) {
+       my %box;
+       ( $box{x1}, $box{y1}, $box{x2}, $box{y2} ) = ( $x1, $y1, $x2, $y2 );
+       $box{text}   = $item->get('text');
+       $box{height} = $item->get('height');
+       push @{ $session{ $slist->{data}[$i][0] }{buffer} }, {%box};
+      }
      }
+    }
    }
   }
  }
