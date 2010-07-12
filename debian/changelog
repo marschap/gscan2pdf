@@ -6,7 +6,7 @@ gscan2pdf (0.9.31) lucid; urgency=low
                                                             programming error)
     Closes: #584787 (gscan2pdf: Gscan2pdf quits without saving)
     Closes: #585441 (gscan2pdf: "Useless use of sort in void context")
-    New Depends: libhtml-parser-perl
+    New Depends: libhtml-parser-perl, libreadonly-perl
     Removed Depends: libxml-simple-perl
     New Recommends: cuneiform
   * Minor editting of description

@@ -161,7 +161,8 @@ use Proc::ProcessTable;
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
 
-use constant POINTS_PER_INCH => 72;
+use Readonly;
+Readonly my $POINTS_PER_INCH => 72;
 
 my $prog_name = 'gscan2pdf';
 my $version   = '0.9.31';
@@ -1906,7 +1907,7 @@ sub get_resolution {
  my $width  = $image->Get('width');
  my $ratio  = $height / $width;
  $ratio = 1 / $ratio if ( $ratio < 1 );
- $resolution = POINTS_PER_INCH;
+ $resolution = $POINTS_PER_INCH;
  for ( keys %{ $SETTING{Paper} } ) {
   if ( $SETTING{Paper}{$_}{x} > 0
    and abs( $ratio - $SETTING{Paper}{$_}{y} / $SETTING{Paper}{$_}{x} ) < 0.02 )
@@ -2841,11 +2842,11 @@ sub create_PDF {
      }
     }
 
-    print "Defining page at ", $w * POINTS_PER_INCH, "pt x ",
-      $h * POINTS_PER_INCH, "pt\n"
+    print "Defining page at ", $w * $POINTS_PER_INCH, "pt x ",
+      $h * $POINTS_PER_INCH, "pt\n"
       if $debug;
     my $page = $pdf->page;
-    $page->mediabox( $w * POINTS_PER_INCH, $h * POINTS_PER_INCH );
+    $page->mediabox( $w * $POINTS_PER_INCH, $h * $POINTS_PER_INCH );
 
     # Add OCR as text behind the scan
     if ( defined( $slist->{data}[$_][3] ) ) {
@@ -2875,10 +2876,10 @@ sub create_PDF {
           # y coordinate (since the PDF coordinates are bottom to top
           # instead of top to bottom) and subtract $size, since the text
           # will end up above the given point instead of below.
-          my $size = ( $y2 - $y1 ) / $resolution * POINTS_PER_INCH;
+          my $size = ( $y2 - $y1 ) / $resolution * $POINTS_PER_INCH;
           $text->font( $font, $size );
-          $text->translate( $x1 / $resolution * POINTS_PER_INCH,
-           ( $h - ( $y1 / $resolution ) ) * POINTS_PER_INCH - $size );
+          $text->translate( $x1 / $resolution * $POINTS_PER_INCH,
+           ( $h - ( $y1 / $resolution ) ) * $POINTS_PER_INCH - $size );
           $text->text( $item->get('text') );
          }
          else {
@@ -2888,13 +2889,13 @@ sub create_PDF {
           # at the bottom left of the page)
           my $size = 1;
           $text->font( $font, $size );
-          my $y = $h * POINTS_PER_INCH;
+          my $y = $h * $POINTS_PER_INCH;
           foreach my $line ( split( "\n", $item->get('text') ) ) {
            my $x = 0;
 
            # Add a word at a time in order to linewrap
            foreach my $word ( split( ' ', $line ) ) {
-            if ( length($word) * $size + $x > $w * POINTS_PER_INCH ) {
+            if ( length($word) * $size + $x > $w * $POINTS_PER_INCH ) {
              $x = 0;
              $y -= $size;
             }
@@ -2946,7 +2947,8 @@ sub create_PDF {
     }
     else {
      eval {
-      $gfx->image( $imgobj, 0, 0, $w * POINTS_PER_INCH, $h * POINTS_PER_INCH );
+      $gfx->image( $imgobj, 0, 0, $w * $POINTS_PER_INCH,
+       $h * $POINTS_PER_INCH );
      };
      if ($@) {
       warn $@ if $debug;
@@ -6428,7 +6430,9 @@ sub scan_pages {
      # show an error
      my $rotate = $n % 2 ? $rfacing : $rreverse;
      $SETTING{resolution} =
-       defined( $SETTING{resolution} ) ? $SETTING{resolution} : POINTS_PER_INCH;
+       defined( $SETTING{resolution} )
+       ? $SETTING{resolution}
+       : $POINTS_PER_INCH;
      print "importing scan with resolution=$SETTING{resolution}\n" if $debug;
      my $index =
        import_scan( File::Spec->catdir( $SETTING{session}, "out$n.pnm" ),
