@@ -8,13 +8,13 @@ msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2009-04-09 14:31+0200\n"
-"PO-Revision-Date: 2009-11-01 11:42+0000\n"
+"PO-Revision-Date: 2010-07-06 07:16+0000\n"
 "Last-Translator: Сергій Дубик <dubyk@library.lviv.ua>\n"
 "Language-Team: Ukrainian <uk@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2010-01-29 15:40+0000\n"
+"X-Launchpad-Export-Date: 2010-07-12 09:20+0000\n"
 "X-Generator: Launchpad (build Unknown)\n"
 
 #: bin/gscan2pdf:147
@@ -66,7 +66,7 @@ msgstr "Очистити всі сторінки"
 
 #: bin/gscan2pdf:413
 msgid "_Open"
-msgstr "_Відкрити"
+msgstr "_Відкрити сеанс"
 
 #: bin/gscan2pdf:413
 msgid "Open gscan2pdf session file"
@@ -82,7 +82,7 @@ msgstr "Імпортувати файли зображень"
 
 #: bin/gscan2pdf:415
 msgid "S_can"
-msgstr "С_канування"
+msgstr "С_канувати"
 
 #: bin/gscan2pdf:415
 msgid "Scan document"
@@ -162,11 +162,11 @@ msgstr "Вставити виділене"
 
 #: bin/gscan2pdf:428
 msgid "_Delete"
-msgstr "В_идалити"
+msgstr "В_илучити"
 
 #: bin/gscan2pdf:428
 msgid "Delete selected pages"
-msgstr "Видалити обрані сторінки"
+msgstr "Вилучити обрані сторінки"
 
 #: bin/gscan2pdf:429
 msgid "_Renumber"
@@ -174,11 +174,11 @@ msgstr "Поновити нумерацію"
 
 #: bin/gscan2pdf:429
 msgid "Renumber pages"
-msgstr "Прономерувати сторінки послідовно"
+msgstr "Перенумерувати сторінки послідовно"
 
 #: bin/gscan2pdf:430 bin/gscan2pdf:467
 msgid "_Select"
-msgstr "Виді_лити"
+msgstr "По_значити"
 
 #: bin/gscan2pdf:431
 msgid "_All"
@@ -186,7 +186,7 @@ msgstr "Усе"
 
 #: bin/gscan2pdf:431
 msgid "Select all pages"
-msgstr "Виділити всі сторінки"
+msgstr "Позначити усі сторінки"
 
 #: bin/gscan2pdf:432
 msgid "_Odd"
@@ -576,7 +576,7 @@ msgstr "Виводимих сторінок: #"
 
 #: bin/gscan2pdf:1056
 msgid "Number of pages to output."
-msgstr "Кількість виводимих сторінок"
+msgstr "Кількість виводимих сторінок."
 
 #: bin/gscan2pdf:1064
 msgid "No deskew"
@@ -1007,7 +1007,7 @@ msgstr "LZW"
 
 #: bin/gscan2pdf:2618 bin/gscan2pdf:2689
 msgid "Compress output with Lempel-Ziv & Welch encoding."
-msgstr "Стиснення виведення алгоритмом Lempel-Ziv & Welch"
+msgstr "Стиснення виведення алгоритмом Лемпеля-Зіва-Велча (LZW)"
 
 #: bin/gscan2pdf:2619 bin/gscan2pdf:2690
 msgid "Zip"
@@ -1148,7 +1148,7 @@ msgstr "Ім’я текстового файлу"
 #: bin/gscan2pdf:2881 bin/gscan2pdf:3342
 #, perl-format
 msgid "Can't open file: %s"
-msgstr "Неможливо відкрити файл: %s"
+msgstr "Не вдалося відкрити файл: %s"
 
 #: bin/gscan2pdf:2901
 msgid "PS filename"
@@ -1315,7 +1315,7 @@ msgstr "Повернути"
 
 #: bin/gscan2pdf:3702 bin/gscan2pdf:3724 bin/gscan2pdf:4373 bin/gscan2pdf:4395
 msgid "Rotate image after scanning"
-msgstr "Повернути картинку після сканування"
+msgstr "Повернути зображення після сканування"
 
 #: bin/gscan2pdf:3705 bin/gscan2pdf:4376
 msgid "Both sides"
@@ -1351,7 +1351,7 @@ msgstr "90°"
 
 #: bin/gscan2pdf:3713 bin/gscan2pdf:4384
 msgid "Rotate image 90 degrees clockwise."
-msgstr "Повернуть на 90 градусів за часовою стрілкою"
+msgstr "Повернуть на 90 градусів за годинниковою стрілкою"
 
 #: bin/gscan2pdf:3714 bin/gscan2pdf:4385
 msgid "180"
@@ -1395,7 +1395,7 @@ msgstr "Розпізнати відскановані сторінки"
 
 #: bin/gscan2pdf:3848 bin/gscan2pdf:4519
 msgid "Select OCR engine"
-msgstr "Виберіть движок розпізнавання тексту"
+msgstr "Виберіть рушій розпізнавання тексту"
 
 #: bin/gscan2pdf:3875 bin/gscan2pdf:7084
 msgid "Scan Options"
@@ -1768,7 +1768,7 @@ msgstr "OCR"
 
 #: bin/gscan2pdf:9453
 msgid "OCR Engine"
-msgstr "Двигун OCR"
+msgstr "Рушій ОРС"
 
 #: bin/gscan2pdf:9479
 msgid "Start OCR"
