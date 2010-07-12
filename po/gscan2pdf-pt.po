@@ -8,22 +8,22 @@ msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2009-04-09 14:31+0200\n"
-"PO-Revision-Date: 2009-08-09 16:49+0000\n"
-"Last-Translator: Tiago Silva <Unknown>\n"
+"PO-Revision-Date: 2010-05-08 16:42+0000\n"
+"Last-Translator: Sérgio Marques <Unknown>\n"
 "Language-Team: Portuguese <pt@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2010-01-29 15:40+0000\n"
+"X-Launchpad-Export-Date: 2010-07-12 09:20+0000\n"
 "X-Generator: Launchpad (build Unknown)\n"
 
 #: bin/gscan2pdf:147
 msgid "sane-backends"
-msgstr ""
+msgstr "sane-backends"
 
 #: bin/gscan2pdf:162
 msgid "Error displaying help\n"
-msgstr ""
+msgstr "Erro ao mostrar ajuda\n"
 
 #: bin/gscan2pdf:197
 msgid ""
@@ -31,6 +31,9 @@ msgid ""
 "Backing up settings\n"
 "Reverting to defaults"
 msgstr ""
+"Erro:incapaz de carregar definições.\n"
+"Criando cópia das definições\n"
+"Revertendo para omissões"
 
 #: bin/gscan2pdf:232
 msgid "A4"
@@ -63,11 +66,11 @@ msgstr "Apagar todas as páginas"
 
 #: bin/gscan2pdf:413
 msgid "_Open"
-msgstr ""
+msgstr "_Abrir"
 
 #: bin/gscan2pdf:413
 msgid "Open gscan2pdf session file"
-msgstr ""
+msgstr "Abrir ficheiro de sessão gscan2pdf"
 
 #: bin/gscan2pdf:414
 msgid "_Import"
@@ -171,7 +174,7 @@ msgstr "_Renumerar"
 
 #: bin/gscan2pdf:429
 msgid "Renumber pages"
-msgstr ""
+msgstr "Renumerar páginas"
 
 #: bin/gscan2pdf:430 bin/gscan2pdf:467
 msgid "_Select"
@@ -179,7 +182,7 @@ msgstr "_Seleccionar"
 
 #: bin/gscan2pdf:431
 msgid "_All"
-msgstr ""
+msgstr "_Todas"
 
 #: bin/gscan2pdf:431
 msgid "Select all pages"
@@ -187,23 +190,23 @@ msgstr "Seleccionar todas as páginas"
 
 #: bin/gscan2pdf:432
 msgid "_Odd"
-msgstr ""
+msgstr "Í_mpares"
 
 #: bin/gscan2pdf:432
 msgid "Select all odd-numbered pages"
-msgstr ""
+msgstr "Seleccionar todas as ímpares"
 
 #: bin/gscan2pdf:433
 msgid "_Even"
-msgstr ""
+msgstr "_Pares"
 
 #: bin/gscan2pdf:433
 msgid "Select all evenly-numbered pages"
-msgstr ""
+msgstr "Seleccionar todas as pares"
 
 #: bin/gscan2pdf:434
 msgid "_Blank"
-msgstr ""
+msgstr "_Limpar"
 
 #: bin/gscan2pdf:434
 msgid "Select pages with low standard deviation"
@@ -223,7 +226,7 @@ msgstr "Propr_iedades"
 
 #: bin/gscan2pdf:436
 msgid "Edit image properties"
-msgstr ""
+msgstr "Editar propriedades da imagem"
 
 #: bin/gscan2pdf:437
 msgid "Prefere_nces"
@@ -295,7 +298,7 @@ msgstr ""
 
 #: bin/gscan2pdf:452
 msgid "_Negate"
-msgstr ""
+msgstr "_Negar"
 
 #: bin/gscan2pdf:452
 msgid "Converts black to white and vice versa"
@@ -311,11 +314,11 @@ msgstr ""
 
 #: bin/gscan2pdf:454
 msgid "_Crop"
-msgstr ""
+msgstr "_Cortar"
 
 #: bin/gscan2pdf:454
 msgid "Crop pages"
-msgstr ""
+msgstr "Cortar páginas"
 
 #: bin/gscan2pdf:455
 msgid "_GIMP"
@@ -323,11 +326,11 @@ msgstr "_GIMP"
 
 #: bin/gscan2pdf:455
 msgid "Edit current page with GIMP"
-msgstr ""
+msgstr "Editar a página actual com GIMP"
 
 #: bin/gscan2pdf:456
 msgid "_Clean up"
-msgstr ""
+msgstr "_Limpar"
 
 #: bin/gscan2pdf:456 bin/gscan2pdf:3795 bin/gscan2pdf:4466
 msgid "Clean up scanned images with unpaper"
@@ -355,19 +358,19 @@ msgstr "_Acerca"
 
 #: bin/gscan2pdf:466
 msgid "_Drag"
-msgstr ""
+msgstr "_Arrastar"
 
 #: bin/gscan2pdf:466
 msgid "Use the hand tool"
-msgstr ""
+msgstr "Usar a ferramenta mão"
 
 #: bin/gscan2pdf:467
 msgid "Use the rectangular selection tool"
-msgstr ""
+msgstr "Usar a ferramenta de selecção rectangular"
 
 #: bin/gscan2pdf:468
 msgid "_Paint"
-msgstr ""
+msgstr "_Pintar"
 
 #: bin/gscan2pdf:468
 msgid "Use the painter tool"
@@ -379,7 +382,7 @@ msgstr "Miniaturas"
 
 #: bin/gscan2pdf:747 bin/gscan2pdf:8657
 msgid "Error copying page"
-msgstr ""
+msgstr "Erro ao copiar página"
 
 #: bin/gscan2pdf:948
 msgid "Mode"
@@ -447,7 +450,7 @@ msgstr "Brilho"
 
 #: bin/gscan2pdf:970
 msgid "Gain"
-msgstr ""
+msgstr "Ganho"
 
 #: bin/gscan2pdf:971
 msgid "Contrast"
@@ -477,11 +480,11 @@ msgstr "Digitalizar em série"
 
 #: bin/gscan2pdf:985 bin/gscan2pdf:991
 msgid "Wait for button"
-msgstr ""
+msgstr "Espere pelo botão"
 
 #: bin/gscan2pdf:997
 msgid "Cache calibration"
-msgstr ""
+msgstr "Calibração de cache"
 
 #: bin/gscan2pdf:1003
 msgid "Source"
@@ -497,7 +500,7 @@ msgstr "ADF"
 
 #: bin/gscan2pdf:1007
 msgid "Automatic Document Feeder"
-msgstr ""
+msgstr "Alimentador Automático"
 
 #: bin/gscan2pdf:1008
 msgid "XPA"
@@ -521,7 +524,7 @@ msgstr "Largura da página"
 
 #: bin/gscan2pdf:1017 bin/gscan2pdf:1019
 msgid "Page Height"
-msgstr ""
+msgstr "Altura da Página"
 
 #: bin/gscan2pdf:1020
 msgid "Top Overscan"
@@ -533,15 +536,15 @@ msgstr ""
 
 #: bin/gscan2pdf:1022 bin/gscan2pdf:1028
 msgid "ADF Mode"
-msgstr ""
+msgstr "Modo ADF"
 
 #: bin/gscan2pdf:1024 bin/gscan2pdf:1030
 msgid "Simplex"
-msgstr ""
+msgstr "Simples"
 
 #: bin/gscan2pdf:1025 bin/gscan2pdf:1031
 msgid "Duplex"
-msgstr ""
+msgstr "Duplo"
 
 #: bin/gscan2pdf:1040
 msgid "Layout"
@@ -553,7 +556,7 @@ msgstr "Uma face"
 
 #: bin/gscan2pdf:1044
 msgid "One page per sheet, oriented upwards without rotation."
-msgstr ""
+msgstr "Uma página por folha, orientada para cima e sem rotação"
 
 #: bin/gscan2pdf:1047
 msgid "Double"
@@ -569,7 +572,7 @@ msgstr ""
 
 #: bin/gscan2pdf:1055
 msgid "# Output pages"
-msgstr ""
+msgstr "# Páginas de saída"
 
 #: bin/gscan2pdf:1056
 msgid "Number of pages to output."
