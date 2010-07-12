@@ -7270,7 +7270,7 @@ sub about {
 
  # Gtk2::AboutDialog->set_url_hook ($func, $data=undef);
  # Gtk2::AboutDialog->set_email_hook ($func, $data=undef);
- $about->set_name($prog_name);
+ $about->set_program_name($prog_name);
  $about->set_version($version);
  my $authors = <<EOS;
 John Goerzen
@@ -7306,27 +7306,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 EOS
  $about->set_license($licence);
  $about->set_website('http://gscan2pdf.sf.net');
- my $translators = <<EOS;
-zdpo
+ my $translators = <<'EOS'; # inverted commas requred around EOS because of UTF-8 in $translators
+suoko
 Emil Pavlov
-Careone
-Jaroslaw Ogrodnik
-Petr Jelinek
+Jarosław Ogrodnik
+Piotr Strębski
+Wojciech Górnaś
+Сергій Дубик
+Norbux
+Zachary Richey
+Cédric VALMARY (Tot en òc)
+Sérgio Marques
 Nicola Cardinali
-Andrius Gabriel da Luz
+zdpo
 Tikkel
-saabaero
-Dirk Tas
-Jan Klopper
 liorda
-Serhey Kusyumoff
-starmaker
-Simon Vidmar
+Spector
 Steven Sproat
-David Laursen
-aks-id
-DiegoJ
+nikt_taki
+Csörföly Dániel
+starmaker
+Yözen Hernández
 EOS
+ utf8::encode($translators);    # UTF-8 in perl sucks!
  $about->set_translator_credits($translators);
  $about->set_artists('lodp');
  $about->run;
@@ -13208,7 +13210,7 @@ the Gtk2-Perl project for their superb Perl bindings for GTK2.
 The SANE project for scanner access
 
 =item *
-Bj��rn Lindqvist for the gtkimageview widget
+Björn Lindqvist for the gtkimageview widget
 
 =item *
 Sourceforge for hosting the project.
