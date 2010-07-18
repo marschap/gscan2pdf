@@ -110,7 +110,7 @@
 #    Make appropriate updates to debian/changelog
 # 2. perl Makefile.PL
 #    make rpmdist debdist
-#    test dist sudo dpkg -i /tmp/gscan2pdf/gscan2pdf-x.x.x_all.deb
+#    test dist sudo dpkg -i gscan2pdf-x.x.x_all.deb
 # 3. git status
 #    git tag vx.x.x
 #    git push --tags ssh://ra28145@gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf/gscan2pdf master
