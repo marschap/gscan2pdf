@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.30
+Version: 0.9.31
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -82,15 +82,31 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Mon Feb 01 2010 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Wed Jul 14 2010 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #510309 (gscan2pdf: Ability to configure how GIMP is started)
+    Closes: #576193 (gscan2pdf: OCR does not works, due to Goo::Canvas::Text
+                                                            programming error)
+    Closes: #584787 (gscan2pdf: Gscan2pdf quits without saving)
+    Closes: #585441 (gscan2pdf: "Useless use of sort in void context")
+    New Depends: libhtml-parser-perl, libreadonly-perl
+    Removed Depends: libxml-simple-perl
+    New Recommends: cuneiform
+  - Minor editing of description
+  - Patched the clean target to fix FTBFS
+  - Bumped standards to 3.9.0 (no changes required)
   - New upstream release.
     Closes: #461086 (embed OCR output at correct position)
     Closes: #510314 (gscan2pdf: Mapping File_Scan to a shortcut key)
+    Closes: #557657 (gscan2pdf binarization option [wishlist])
     New Depends: libxml-simple-perl, libgoo-canvas-perl,
 	         libproc-processtable-perl
   - Removed URL from description
     Closes: #564325 (gscan2pdf: please remove homepage from description)
   - Fixed VCS-URLs
+  - Bumped standards to 3.8.3 (no changes required)
+  - Switch to tiny dh7 rules
+  - Added ${misc:Depends}
   - New upstream release.
     Closes: #526845
      (gscan2pdf: Renaming of frontends breaks current settings)
