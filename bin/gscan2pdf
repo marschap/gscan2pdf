@@ -117,8 +117,8 @@
 # 4. make remote-html
 # 5. create version directory in https://sourceforge.net/project/admin/explorer.php?group_id=174140
 #    make file_releases
-# 6. Freshmeat
-# 7. Launchpad (https://launchpad.net/gscan2pdf), upload .pot if necessary
+# 6. Freshmeat (requires summary of changes)
+# 7. Launchpad (https://launchpad.net/gscan2pdf/trunk/+addrelease), upload .pot if necessary
 # 8. http://www.gtkfiles.org/app.php/gscan2pdf
 # 9. make ppa
 #    name the release -0~ppa1, debuild -S -sa, dput gscan2pdf-ppa .changes
