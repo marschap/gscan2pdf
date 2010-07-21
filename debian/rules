@@ -10,3 +10,6 @@ override_dh_clean:
          rm -rf $$lang; \
         done
 	dh_clean
+
+override_dh_installchangelogs:
+	dh_installchangelogs History
