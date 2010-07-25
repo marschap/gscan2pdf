@@ -18,7 +18,8 @@ Depends: libgtk2-imageview-perl, libgtk2-ex-simple-list-perl, libsane-perl,
  libpdf-api2-perl, libconfig-general-perl (>= 2.40), perlmagick, imagemagick,
  librsvg2-common, libarchive-tar-perl, libset-intspan-perl (>= 1.10),
  libforks-perl (>= 0.33), libhtml-parser-perl, libgoo-canvas-perl,
- libproc-processtable-perl, libreadonly-perl, ${misc:Depends}
+ libproc-processtable-perl, libreadonly-perl, liblog-log4perl-perl,
+ ${misc:Depends}
 Recommends: libgtk2-ex-podviewer-perl, sane, xdg-utils, djvulibre-bin,
  unpaper, gocr, tesseract-ocr, cuneiform
 Description: A GUI to produce PDFs or DjVus from scanned documents

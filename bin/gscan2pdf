@@ -156,6 +156,7 @@ use
 use Storable qw(freeze thaw store retrieve);
 use Proc::Killfam;
 use Proc::ProcessTable;
+use Log::Log4perl;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -165,7 +166,7 @@ use Readonly;
 Readonly my $POINTS_PER_INCH => 72;
 
 my $prog_name = 'gscan2pdf';
-my $version   = '0.9.31';
+my $version   = '0.9.32';
 
 my $tolerance   = 1;
 my $buffer_size = ( 32 * 1024 );    # default size
@@ -183,25 +184,51 @@ my $d      = Locale::gettext->domain($prog_name);
 my $d_sane = Locale::gettext->domain('sane-backends');
 
 my $debug = FALSE;
-my ( $test, $help, @device, @model, $locale, @device_list, $test_image );
+my ( $test, $help, $log, @device, @model, $locale, @device_list, $test_image );
 my @args = (
  'device=s'     => \@device,
  'test=s%'      => \$test,
  'test-image=s' => \$test_image,
  'locale=s'     => \$locale,
  'help'         => \$help,
+ 'log=s'        => \$log,
  'debug'        => \$debug,
  'version'      => sub { warn "$prog_name $version\n"; exit 0 }
 );
 exit 1 if ( !GetOptions(@args) );
 $Sane::DEBUG = $debug;
 
+my $log_level = "INFO";
+$log_level = "DEBUG" if $debug;
+my $log_conf = qq/ 
+ log4perl.appender.Screen        = Log::Log4perl::Appender::Screen 
+ log4perl.appender.Screen.layout = Log::Log4perl::Layout::SimpleLayout
+/;
+
+if (defined $log) {
+ $log_conf .= qq/
+ log4perl.appender.Logfile          = Log::Log4perl::Appender::File 
+ log4perl.appender.Logfile.filename = $log
+ log4perl.appender.Logfile.mode     = write 
+ log4perl.appender.Logfile.layout   = Log::Log4perl::Layout::SimpleLayout
+ log4perl.category                  = $log_level, Logfile, Screen 
+/;
+}
+else {
+ $log_conf .= qq/
+ log4perl.category                  = $log_level, Screen 
+/;
+}
+
 if ( defined $help ) {
  system("perldoc $0") == 0 or warn $d->get("Error displaying help\n");
  exit;
 }
 
-print "$prog_name $version\n" if ($debug);
+Log::Log4perl::init( \$log_conf );
+my $logger = Log::Log4perl::get_logger();
+
+$logger->info("Starting $prog_name $version");
 
 if ( defined $locale ) {
  if ( $locale !~ /^\// ) {
@@ -220,10 +247,8 @@ for (@device) {
 # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
 # scanimage
 setlocale( LC_NUMERIC, "C" );
-if ($debug) {
- print "Using ",              setlocale(LC_CTYPE),   " locale\n";
- print "Startup LC_NUMERIC ", setlocale(LC_NUMERIC), "\n";
-}
+$logger->info("Using ",              setlocale(LC_CTYPE), " locale");
+$logger->info("Startup LC_NUMERIC ", setlocale(LC_NUMERIC)         );
 
 # Read config file
 my $rc = "$ENV{'HOME'}/.$prog_name";
@@ -241,9 +266,9 @@ if (
  %SETTING = $conf->getall;
 }
 else {
- print $d->get(
+ $logger->error( $d->get(
   "Error: unable to load settings.\nBacking up settings\nReverting to defaults"
- ), "\n";
+ ) );
  move( $rc, "$rc.old" );
 }
 
@@ -350,10 +375,10 @@ if ( keys %{$test} ) {
 
   # Find a way of emulating the nonsense \n that some people seem to get
   $device =~ s/\\n/\n/g;
-  print "'$file','$device'\n";
+  $logger->debug("'$file','$device'");
   $file = getcwd . "/$file" if ( $file !~ /^\// );
   if ( !-r $file ) {
-   warn sprintf( $d->get("Error: cannot read file: %s\n"), $file );
+   $logger->fatal( sprintf( $d->get("Cannot read file: %s"), $file ) );
    exit 1;
   }
   push @{ $test->{file} }, $file;
@@ -370,24 +395,23 @@ else {
 
 if ( defined $test_image ) {
  if ( -r $test_image ) {
-  print "Using test image $test_image\n" if $debug;
+  $logger->info( "Using test image $test_image" );
  }
  else {
-  warn sprintf( $d->get("Error: cannot read file: %s\n"), $test_image );
+  $logger->fatal( sprintf( $d->get("Cannot read file: %s"), $test_image ) );
   exit 1;
  }
 }
 
+$logger->info( "Gtk2-Perl version $Gtk2::VERSION" );
+$logger->info( "Built for GTK " . join( '.', Gtk2->GET_VERSION_INFO ) );
+$logger->info( "Running with GTK " . join( '.', Gtk2->get_version_info ) );
+$logger->info( "Using GtkImageView version ", Gtk2::ImageView->library_version );
+$logger->info( "Using Gtk2::ImageView version $Gtk2::ImageView::VERSION" );
+$logger->info( "Using PDF::API2 version $PDF::API2::Version::CVersion{vShort}" );
 if ($debug) {
- print "Gtk2-Perl version $Gtk2::VERSION\n";
- print "Built for " . join( '.', Gtk2->GET_VERSION_INFO ) . "\n";
- print "Running with " . join( '.', Gtk2->get_version_info ) . "\n";
- print "Using GtkImageView version ", Gtk2::ImageView->library_version, "\n";
- print "Using Gtk2::ImageView version ", $Gtk2::ImageView::VERSION, "\n";
- print "Using PDF::API2 version ", $PDF::API2::Version::CVersion{vShort}, "\n";
-
  use Data::Dumper;
- warn Dumper( \%SETTING );
+ $logger->debug( Dumper( \%SETTING ) );
 }
 
 # Just in case dependencies have changed, put put startup warning again
@@ -422,8 +446,7 @@ foreach ( 1 .. $numthreads ) {
     last if $shash{$_}{die};
     lock( $shash{$_}{process} );
     eval $shash{$_}{process};    ## no critic (ProhibitStringyEval)
-    warn("Error running process: $@") if ($@);
-    print "$shash{$_}{process}\n" if ($@);
+    $logger->error( "Running process: $@\n$shash{$_}{process}" ) if ($@);
    }
   }
  );
@@ -885,7 +908,7 @@ if ( $SETTING{'restore window'} ) {
 }
 
 eval { $window->set_default_icon_from_file("$path/gscan2pdf.svg"); };
-warn("Unable to load icon `$path/gscan2pdf.svg': $@") if ($@);
+$logger->warn( "Unable to load icon `$path/gscan2pdf.svg': $@" ) if ($@);
 
 my $vbox = Gtk2::VBox->new;
 $window->add($vbox);
@@ -1489,8 +1512,7 @@ if ( defined $SETTING{session} ) {
   open_session();
  }
  else {
-  warn
-"gscan2pdf detected a crashed session, but was unable to restore it as it has been deleted.\n";
+  $logger->warn( "gscan2pdf detected a crashed session, but was unable to restore it as it has been deleted." );
   delete $SETTING{session};
  }
 }
@@ -1504,19 +1526,19 @@ unless ( defined $SETTING{session} ) {
   mkdir( $SETTING{TMPDIR} ) if ( not -d $SETTING{TMPDIR} );
   if ( !eval { $SETTING{session} = tempdir( DIR => $SETTING{TMPDIR} ) } ) {
    $SETTING{session} = tempdir;
-   warn sprintf(
+   $logger->warn( sprintf(
     $d->get(
-"Warning: unable to use %s for temporary storage. Defaulting to %s instead.\n"
+"Warning: unable to use %s for temporary storage. Defaulting to %s instead."
     ),
     $SETTING{TMPDIR},
-    dirname( $SETTING{session} )
+    dirname( $SETTING{session} ) )
    );
   }
  }
  else {
   $SETTING{session} = tempdir;
  }
- print "Using $SETTING{session} for temporary files\n" if $debug;
+ $logger->info( "Using $SETTING{session} for temporary files" );
 
  # Save session data to settings
  $conf->save_file( $rc, \%SETTING );
@@ -1589,30 +1611,28 @@ sub create_menu_bar {
     $SETTING{ocroscript} = 'rec-tess';
    }
    if ( defined $SETTING{ocroscript} ) {
-    print "Using ocropus with $SETTING{ocroscript}.\n" if ($debug);
+    $logger->info( "Using ocropus with $SETTING{ocroscript}." );
    }
    else {
-    warn "Found ocropus, but no recognition scripts. Disabling.\n";
+    $logger->warn( "Found ocropus, but no recognition scripts. Disabling." );
     $dependencies{ocropus} = 0;
    }
   }
   else {
-   warn "Found ocropus, but not its scripts. Disabling.\n";
+   $logger->warn( "Found ocropus, but not its scripts. Disabling." );
    $dependencies{ocropus} = 0;
   }
  }
- if ($debug) {
-  warn "Found Image::Magick\n" if ( $dependencies{perlmagick} );
-  warn "Found ImageMagick\n"   if ( $dependencies{imagemagick} );
-  warn "Found scanadf\n"       if ( $dependencies{scanadf} );
-  warn "Found xdg-email\n"     if ( $dependencies{xdg} );
-  warn "Found gocr\n"          if ( $dependencies{gocr} );
-  warn "Found tesseract\n"     if ( $dependencies{tesseract} );
-  warn "Found cuneiform\n"     if ( $dependencies{cuneiform} );
-  warn "Found cjb2 (djvu)\n"   if ( $dependencies{djvu} );
-  warn "Found unpaper\n"       if ( $dependencies{unpaper} );
-  warn "Found libtiff\n"       if ( $dependencies{libtiff} );
- }
+ $logger->info( "Found Image::Magick" ) if ( $dependencies{perlmagick} );
+ $logger->info( "Found ImageMagick" )   if ( $dependencies{imagemagick} );
+ $logger->info( "Found scanadf" )       if ( $dependencies{scanadf} );
+ $logger->info( "Found xdg-email" )     if ( $dependencies{xdg} );
+ $logger->info( "Found gocr" )          if ( $dependencies{gocr} );
+ $logger->info( "Found tesseract" )     if ( $dependencies{tesseract} );
+ $logger->info( "Found cuneiform" )     if ( $dependencies{cuneiform} );
+ $logger->info( "Found cjb2 (djvu)" )   if ( $dependencies{djvu} );
+ $logger->info( "Found unpaper" )       if ( $dependencies{unpaper} );
+ $logger->info( "Found libtiff" )       if ( $dependencies{libtiff} );
 
  # OCR engine options
  push @ocr_engine,
@@ -1855,13 +1875,13 @@ sub get_pixbuf {
  #  recover_from_a_flop ();
  # }
  if ($@) {
-  warn $d->get('Warning: ') . "$@\n";
+  $logger->warn( $d->get('Warning: ') . "$@" );
   eval {
    $pixbuf =
      Gtk2::Gdk::Pixbuf->new_from_file_at_scale( $filename, $width, $height,
     TRUE );
   };
-  warn sprintf( $d->get("Information: got %s on second attempt\n"), $filename )
+  $logger->info( sprintf( $d->get("Got %s on second attempt"), $filename ) )
     unless ($@);
  }
 
@@ -1925,7 +1945,7 @@ sub convert_to_tiff {
  my ($filename) = @_;
  my $image      = Image::Magick->new;
  my $x          = $image->Read($filename);
- warn "$x" if "$x";
+ $logger->warn( $x ) if "$x";
  my $density = get_resolution($image);
 
  # Write the tif
@@ -2020,7 +2040,7 @@ sub open_dialog {
 
 sub open_session {
  my ($filename) = @_;
- print "Restoring session in $SETTING{session}\n" if $debug;
+ $logger->info( "Restoring session in $SETTING{session}" );
  if ( defined $filename ) {
   new();    # clear the page list
   my $tar = Archive::Tar->new( $filename, TRUE );
@@ -2123,7 +2143,7 @@ sub import_dialog {
   my $pid = start_process(
    sub {
 
-    warn "child LC_NUMERIC ", setlocale(LC_NUMERIC), "\n";
+    $logger->info( "child LC_NUMERIC ", setlocale(LC_NUMERIC) );
     my $j = 0;
     foreach (@filename) {
      import_file( $_, $j, $#filename + 1, $parent );
@@ -2143,7 +2163,7 @@ sub import_dialog {
      recv( $child, $line, 1000, 0 );
      if ( defined($line) and $line ne '' ) {
       my ( $fraction, $filename, $resolution, @text ) = split ' ', $line;
-      warn "parent LC_NUMERIC ", setlocale(LC_NUMERIC), "\n";
+      $logger->info( "parent LC_NUMERIC ", setlocale(LC_NUMERIC) );
       if ( $fraction == -1 ) {
        show_message_dialog( $window, 'error', 'close', join( ' ', @text ) );
       }
@@ -2234,7 +2254,7 @@ sub import_dialog {
 sub import_file {
  my ( $filename, $j, $n, $parent ) = @_;
 
- warn "Importing $filename\n" if ($debug);
+ $logger->info( "Importing $filename" );
 
  # Check if djvu
  my $buffer;
@@ -2252,9 +2272,9 @@ sub import_file {
 
   # Dig out the number of pages
   my $cmd = "djvudump \"$filename\"";
-  warn "$cmd\n" if ($debug);
+  $logger->info( $cmd );
   my $info = `$cmd`;
-  print $info if ($debug);
+  $logger->info( $info );
 
   my $first = 1;
   my $last  = 1;
@@ -2264,7 +2284,7 @@ sub import_file {
   my @dpi;
   while ( $info =~ /\s(\d+)\s+dpi/ ) {
    push @dpi, $1;
-   warn "Page $#dpi is $dpi[$#dpi] dpi\n" if ($debug);
+   $logger->info( "Page $#dpi is $dpi[$#dpi] dpi" );
    $info = substr( $info, index( $info, " dpi" ) + 4, length($info) );
   }
   if ( $last != @dpi ) {
@@ -2296,7 +2316,7 @@ sub import_file {
      my ( undef, $tif ) =
        tempfile( DIR => $SETTING{session}, SUFFIX => '.tif' );
      my $cmd = "ddjvu -format=tiff -page=$i \"$filename\" $tif";
-     warn "$cmd\n" if ($debug);
+     $logger->info( $cmd );
      system($cmd);
      send(
       $parent,
@@ -2317,10 +2337,10 @@ sub import_file {
  # Get file type
  my $image = Image::Magick->new;
  my $x     = $image->Read($filename);
- warn "$x" if "$x";
+ $logger->warn( $x ) if "$x";
 
  my $format = $image->Get('format');
- warn "Format $format\n" if ( $debug and defined($format) );
+ $logger->info( "Format $format" ) if (defined $format);
  undef $image;
 
  if ( !defined $format ) {
@@ -2335,10 +2355,10 @@ sub import_file {
 
   # Extract # of pages
   my $info = `pdfinfo \"$filename\"`;
-  print $info if ($debug);
+  $logger->info( $info );
   if ( $info =~ /Pages:\s+(\d+)/ ) {
    my $last = $1;
-   print "$last pages\n" if ($debug);
+   $logger->info( "$last pages" );
    my $first = 1;
    if ( $last > 1 ) {
     send( $parent, "-2 0 $last", 0 );
@@ -2393,9 +2413,9 @@ sub import_file {
  elsif ( $format eq 'Tagged Image File Format' ) {
   send( $parent, '0 0 0' . $d->get('Extracting TIFF infomation'), 0 );
   my $cmd = "tiffinfo \"$filename\"";
-  warn "$cmd\n" if ($debug);
+  $logger->info( $cmd );
   my $info = `$cmd`;
-  print $info if ($debug);
+  $logger->info( $info );
 
   # Count number of pages and their resolutions
   my @dpi;
@@ -2404,7 +2424,7 @@ sub import_file {
    $info = substr( $info, index( $info, 'Resolution' ) + 10, length($info) );
   }
   my $last = @dpi;
-  print "$last pages\n" if ($debug);
+  $logger->info( "$last pages" );
   my $first = 1;
   if ( $last > 1 ) {
    send( $parent, "-2 0 $last", 0 );
@@ -2425,7 +2445,7 @@ sub import_file {
    for ( my $i = $first - 1 ; $i < $last ; $i++ ) {
     my ( undef, $tif ) = tempfile( DIR => $SETTING{session}, SUFFIX => '.tif' );
     my $cmd = "tiffcp \"$filename\",$i $tif";
-    warn "$cmd\n" if ($debug);
+    $logger->info( $cmd );
     system($cmd);
     send(
      $parent,
@@ -2740,7 +2760,7 @@ sub create_PDF {
     my $filename = $slist->{data}[$_][2];
     my $image    = Image::Magick->new;
     my $x        = $image->Read($filename);
-    warn "$x" if "$x";
+    $logger->warn( $x ) if "$x";
 
     # Get the size and resolution. Resolution is dots per inch, width
     # and height are in inches.
@@ -2758,13 +2778,13 @@ sub create_PDF {
     my $type;
     if ( $SETTING{'pdf compression'} eq 'auto' ) {
      $depth = $image->Get('depth');
-     print "Depth of $filename is $depth\n" if ($debug);
+     $logger->info( "Depth of $filename is $depth" );
      if ( $depth == 1 ) {
       $compression = 'lzw';
      }
      else {
       $type = $image->Get('type');
-      print "Type of $filename is $type\n" if ($debug);
+      $logger->info( "Type of $filename is $type" );
       if ( $type =~ /TrueColor/ ) {
        $compression = 'jpg';
       }
@@ -2772,7 +2792,7 @@ sub create_PDF {
        $compression = 'png';
       }
      }
-     print "Selecting $compression compression\n" if ($debug);
+     $logger->info( "Selecting $compression compression" );
     }
     else {
      $compression = $SETTING{'pdf compression'};
@@ -2786,18 +2806,18 @@ sub create_PDF {
      or $compression eq 'jpg' )
     {
      if ( $compression !~ /(jpg|png)/ and $format ne 'tif' ) {
-      print "Converting $filename to " if ($debug);
+      my $ofn = $filename;
       ( undef, $filename ) =
         tempfile( DIR => $SETTING{session}, SUFFIX => '.tif' );
-      print "$filename\n" if ($debug);
+      $logger->info( "Converting $ofn to $filename" );
      }
      elsif ( $compression =~ /(jpg|png)/ ) {
-      print "Converting $filename to " if ($debug);
+      my $ofn = $filename;
       ( undef, $filename ) = tempfile(
        DIR    => $SETTING{session},
        SUFFIX => ".$compression"
       );
-      print "$filename\n" if ($debug);
+      $logger->info( "Converting $ofn to $filename" );
      }
 
      $depth = $image->Get('depth') if ( !defined $depth );
@@ -2806,13 +2826,13 @@ sub create_PDF {
       my $w_pixels = $w * $output_resolution;
       my $h_pixels = $h * $output_resolution;
 
-      print "Resizing $filename to $w_pixels x $h_pixels\n" if ($debug);
+      $logger->info( "Resizing $filename to $w_pixels x $h_pixels" );
       $x = $image->Resize( width => $w_pixels,, height => $h_pixels );
-      warn "$x" if "$x";
+      $logger->warn( $x ) if "$x";
      }
      $x = $image->Set( quality => $SETTING{quality} )
        if ( $compression eq 'jpg' );
-     warn "$x" if "$x";
+     $logger->warn( $x ) if "$x";
 
      if (( $compression !~ /(jpg|png)/ and $format ne 'tif' )
       or ( $compression =~ /(jpg|png)/ )
@@ -2820,9 +2840,9 @@ sub create_PDF {
      {
 
 # depth required because resize otherwise increases depth to maintain information
-      print "Writing temporary image $filename with depth $depth\n" if ($debug);
+      $logger->info( "Writing temporary image $filename with depth $depth" );
       $x = $image->Write( filename => $filename, depth => $depth );
-      warn "$x" if "$x";
+      $logger->warn( $x ) if "$x";
       $format = $1 if ( $filename =~ /\.(\w*)$/ );
      }
 
@@ -2830,11 +2850,11 @@ sub create_PDF {
       my ( undef, $filename2 ) =
         tempfile( DIR => $SETTING{session}, SUFFIX => '.tif' );
       my $cmd = "tiffcp -c $compression $filename $filename2";
-      print "$cmd\n" if $debug;
+      $logger->info( $cmd );
       my $status = system("$cmd 2>$SETTING{session}/tiffcp.stdout");
       if ( $status != 0 ) {
        my $output = slurp("$SETTING{session}/tiffcp.stdout");
-       print $output if $debug;
+       $logger->info( $output );
        send( $parent,
         '-1' . sprintf( $d->get("Error compressing image: %s"), $output ), 0 );
       }
@@ -2842,15 +2862,14 @@ sub create_PDF {
      }
     }
 
-    print "Defining page at ", $w * $POINTS_PER_INCH, "pt x ",
-      $h * $POINTS_PER_INCH, "pt\n"
-      if $debug;
+    $logger->info( "Defining page at ", $w * $POINTS_PER_INCH, "pt x ",
+      $h * $POINTS_PER_INCH, "pt" );
     my $page = $pdf->page;
     $page->mediabox( $w * $POINTS_PER_INCH, $h * $POINTS_PER_INCH );
 
     # Add OCR as text behind the scan
     if ( defined( $slist->{data}[$_][3] ) ) {
-     print "Embedding OCR output behind image\n" if $debug;
+     $logger->info( "Embedding OCR output behind image" );
      my $font   = $pdf->corefont('Times-Roman');
      my $text   = $page->text;
      my $canvas = $slist->{data}[$_][3];
@@ -2940,7 +2959,7 @@ sub create_PDF {
      $msg = "Unknown format $format file $filename";
     }
     if ($msg) {
-     warn $msg if $debug;
+     $logger->warn( $msg );
      send( $parent,
       '-1' . sprintf( $d->get("Error creating PDF image object: %s"), $msg ),
       0 );
@@ -2951,7 +2970,7 @@ sub create_PDF {
        $h * $POINTS_PER_INCH );
      };
      if ($@) {
-      warn $@ if $debug;
+      $logger->warn( $@ );
       send(
        $parent,
        '-1'
@@ -2963,7 +2982,7 @@ sub create_PDF {
       );
      }
      else {
-      print "Adding $filename at $output_resolution dpi\n" if $debug;
+      $logger->info( "Adding $filename at $output_resolution dpi" );
      }
     }
    }
@@ -3129,6 +3148,7 @@ sub save_PDF {
  $file_chooser->signal_connect(
   response => sub {
    my ( $dialog, $response ) = @_;
+   $logger->debug( "PDF save filename dialog returned $response" );
    if ( $response eq 'ok' ) {
     my $filename = $file_chooser->get_filename;
     if ( $filename !~ /\.pdf$/i ) {
@@ -3155,7 +3175,9 @@ sub save_PDF {
     $SETTING{'cwd'} = dirname($filename);
 
     # Create the PDF
+    $logger->debug( "Started saving $filename" );
     create_PDF($filename);
+    $logger->debug( "Finished saving $filename" );
 
     $windowi->hide if defined $windowi;
    }
@@ -3754,7 +3776,7 @@ sub save_image {
    if ( !file_exists( $file_chooser, $filename ) ) {
     my $cmd =
 "convert $filelist[0] -density $slist->{data}[$pagelist[0]][4] '$filename'";
-    print "$cmd\n" if $debug;
+    $logger->info( $cmd );
     if ( !system($cmd) ) {
      $windowi->hide if defined $windowi;
      mark_pages(@pagelist);
@@ -3864,19 +3886,19 @@ sub save_TIFF {
    my $rows = '';
    $rows = '-r 16' if ( $SETTING{'tiff compression'} eq 'jpeg' );
    my $cmd = "tiffcp $rows -c $compression $pagelist \"$filename\"";
-   print "$cmd\n" if $debug;
+   $logger->info( $cmd );
    my $status = system("$cmd 2>$SETTING{session}/tiffcp.stdout");
    my $output = '';
    if ( $status != 0 ) {
     $output = slurp("$SETTING{session}/tiffcp.stdout");
-    print $output if $debug;
+    $logger->info( $output );
     send( $parent,
      '-1' . sprintf( $d->get("Error compressing image: %s"), $output ), 0 );
    }
    if ( defined $ps ) {
     send( $parent, '1' . $d->get('Converting to PS'), 0 );
     my $cmd = "tiff2ps $filename > $ps";
-    print "$cmd\n" if $debug;
+    $logger->info( $cmd );
     $output = `$cmd`;
    }
    send( $parent, "2$output", 0 );
@@ -4014,7 +4036,7 @@ sub save_djvu {
        # Check the image depth to decide what sort of compression to use
        my $image = Image::Magick->new;
        my $x     = $image->Read($filename);
-       warn "$x" if "$x";
+       $logger->warn( $x ) if "$x";
        my $depth = $image->Get('depth');
        my $class = $image->Get('class');
        my $compression;
@@ -4028,7 +4050,7 @@ sub save_djvu {
          my ( undef, $pnm ) =
            tempfile( DIR => $SETTING{session}, SUFFIX => '.pnm' );
          $x = $image->Write( filename => $pnm );
-         warn "$x" if "$x";
+         $logger->warn( $x ) if "$x";
          $filename = $pnm;
         }
        }
@@ -4042,7 +4064,7 @@ sub save_djvu {
          my ( undef, $pbm ) =
            tempfile( DIR => $SETTING{session}, SUFFIX => '.pbm' );
          $x = $image->Write( filename => $pbm );
-         warn "$x" if "$x";
+         $logger->warn( $x ) if "$x";
          $filename = $pbm;
         }
        }
@@ -4050,7 +4072,7 @@ sub save_djvu {
        # Create the djvu
        my $resolution = $slist->{data}[$j][4];
        my $cmd        = "$compression -dpi $resolution $filename $djvu";
-       print "$cmd\n" if $debug;
+       $logger->info( $cmd );
        system($cmd) == 0
          or send( $parent, "2" . $d->get('Error writing DjVu'), 0 );
        $filelist[$i] = $djvu;
@@ -4102,14 +4124,14 @@ sub save_djvu {
 
         # Write djvusedtxtfile
         my $cmd = "djvused '$djvu' -e 'select 1; set-txt djvusedtxtfile' -s";
-        print "$cmd\n" if $debug;
+        $logger->info( $cmd );
         system($cmd) == 0
           or send( $parent, "2" . $d->get('Error writing DjVu'), 0 );
        }
       }
       send( $parent, '1' . $d->get('Closing DjVu'), 0 );
       my $cmd = "djvm -c '$filename' @filelist";
-      print "$cmd\n" if $debug;
+      $logger->info( $cmd );
       system($cmd) == 0
         or send( $parent, "2" . $d->get('Error closing DjVu'), 0 );
 
@@ -4841,11 +4863,11 @@ sub scan_dialog {
      }
     }
    }
-   print "rotate facing $SETTING{'rotate facing'}\n"   if $debug;
-   print "rotate reverse $SETTING{'rotate reverse'}\n" if $debug;
+   $logger->info( "rotate facing $SETTING{'rotate facing'}" );
+   $logger->info( "rotate reverse $SETTING{'rotate reverse'}" );
    my $rotate_facing  = $SETTING{'rotate facing'};
    my $rotate_reverse = $SETTING{'rotate reverse'};
-   print $duplex ? "" : "non-", "duplex mode\n" if $debug;
+   $logger->info( $duplex ? "" : "non-", "duplex mode" );
    if ( !$duplex ) {
     if ( $step > 0 ) {
      $rotate_reverse = $SETTING{'rotate facing'};
@@ -4854,13 +4876,13 @@ sub scan_dialog {
      $rotate_facing = $SETTING{'rotate reverse'};
     }
    }
-   print "rotate_facing $rotate_facing\n"   if $debug;
-   print "rotate_reverse $rotate_reverse\n" if $debug;
+   $logger->info( "rotate_facing $rotate_facing" );
+   $logger->info( "rotate_reverse $rotate_reverse" );
 
    $SETTING{'unpaper on scan'} = $ubutton->get_active;
-   print "unpaper $SETTING{'unpaper on scan'}\n" if $debug;
+   $logger->info( "unpaper $SETTING{'unpaper on scan'}" );
    $SETTING{'OCR on scan'} = $obutton->get_active;
-   print "OCR $SETTING{'OCR on scan'}\n" if $debug;
+   $logger->info( "OCR $SETTING{'OCR on scan'}" );
    if ( $SETTING{'OCR on scan'} ) {
     $SETTING{'ocr engine'}   = $ocr_engine[ $comboboxe->get_active ]->[0];
     $SETTING{'ocr language'} = $tesslang[ $comboboxtl->get_active ]->[0]
@@ -4960,11 +4982,11 @@ sub get_devices {
 
  my $cmd =
 "$SETTING{'scan prefix'} scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
- print "$cmd\n" if ($debug);
+ $logger->info( $cmd );
 
  # Interface to frontend
  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
- warn "Forked PID $pid\n" if ($debug);
+ $logger->info( "Forked PID $pid" );
 
  # Read without blocking
  my $output = '';
@@ -4984,9 +5006,9 @@ sub get_devices {
    if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
    {                             # bit field operation. >= would also work
     close $read;
-    warn 'Waiting to reap process' if ($debug);
+    $logger->info( 'Waiting to reap process' );
     my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-    warn "Reaped PID $pid\n" if ($debug);
+    $logger->info( "Reaped PID $pid" );
     $running = FALSE;
     $pbar->destroy;
 
@@ -5521,11 +5543,11 @@ sub scan_dialog2 {
      }
     }
    }
-   print "rotate facing $SETTING{'rotate facing'}\n"   if $debug;
-   print "rotate reverse $SETTING{'rotate reverse'}\n" if $debug;
+   $logger->info( "rotate facing $SETTING{'rotate facing'}" );
+   $logger->info( "rotate reverse $SETTING{'rotate reverse'}" );
    my $rotate_facing  = $SETTING{'rotate facing'};
    my $rotate_reverse = $SETTING{'rotate reverse'};
-   print $duplex ? "" : "non-", "duplex mode\n" if $debug;
+   $logger->info( $duplex ? "" : "non-", "duplex mode" );
    if ( !$duplex ) {
     if ( $step > 0 ) {
      $rotate_reverse = $SETTING{'rotate facing'};
@@ -5534,13 +5556,13 @@ sub scan_dialog2 {
      $rotate_facing = $SETTING{'rotate reverse'};
     }
    }
-   print "rotate_facing $rotate_facing\n"   if $debug;
-   print "rotate_reverse $rotate_reverse\n" if $debug;
+   $logger->info( "rotate_facing $rotate_facing" );
+   $logger->info( "rotate_reverse $rotate_reverse" );
 
    $SETTING{'unpaper on scan'} = $ubutton->get_active;
-   print "unpaper $SETTING{'unpaper on scan'}\n" if $debug;
+   $logger->info( "unpaper $SETTING{'unpaper on scan'}" );
    $SETTING{'OCR on scan'} = $obutton->get_active;
-   print "OCR $SETTING{'OCR on scan'}\n" if $debug;
+   $logger->info( "OCR $SETTING{'OCR on scan'}" );
    if ( $SETTING{'OCR on scan'} ) {
     $SETTING{'ocr engine'}   = $ocr_engine[ $comboboxe->get_active ]->[0];
     $SETTING{'ocr language'} = $tesslang[ $comboboxtl->get_active ]->[0]
@@ -5619,7 +5641,7 @@ sub get_devices2 {
    else {
     my @old_device_list = @device_list;
     @device_list = @{ thaw( $shash{$sane_thread}{data} ) };
-    print "Sane->get_devices returned: ", Dumper( \@device_list ) if $debug;
+    $logger->info( "Sane->get_devices returned: ", Dumper( \@device_list ) );
     if ( @device_list == 0 ) {
      $windows2->destroy;
      undef $windows2;
@@ -5687,7 +5709,7 @@ sub walk_options_tree {
    }
   }
  }
- warn Dumper( \%options ) if ($debug);
+ $logger->debug( Dumper( \%options ) );
  return %options;
 }
 
@@ -5706,7 +5728,7 @@ sub parse_device_list {
  @device = ();
  @model  = ();
 
- print $output if ( $debug and defined($output) );
+ $logger->info( $output ) if ( defined($output) );
 
  # parse out the device and model names
  my @words =
@@ -6017,7 +6039,7 @@ sub scanimage {
  # Create command
  my $cmd =
    "$SETTING{'scan prefix'} $SETTING{frontend} $device @options $npages";
- warn "$cmd\n" if $debug;
+ $logger->info( $cmd );
 
  if ( !$test ) {
 
@@ -6031,7 +6053,7 @@ sub scanimage {
   my ( $write, $read );
   my $error = IO::Handle->new;    # this needed because of a bug in open3.
   my $pid = IPC::Open3::open3( $write, $read, $error, $cmd );
-  warn "Forked PID $pid\n" if ($debug);
+  $logger->info( "Forked PID $pid" );
 
   my $dialog = Gtk2::Dialog->new( $d->get('Scanning') . "...",
    $windows, 'modal', 'gtk-cancel' => 'cancel' );
@@ -6044,7 +6066,7 @@ sub scanimage {
    response => sub {
     $_[0]->destroy;
     local $SIG{INT} = 'IGNORE';
-    print "Sending INT signal to PID $pid and its children\n" if $debug;
+    $logger->info( "Sending INT signal to PID $pid and its children" );
     killfam 'INT', ($pid);
     $cancel = TRUE;
     undef(@unpaper_stack);
@@ -6064,7 +6086,7 @@ sub scanimage {
 
 # Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
      sysread $error, $buffer, 1024;
-     print $buffer if ( $debug and $buffer );
+     $logger->debug( $buffer ) if ( $buffer );
      $line .= $buffer;
 
      while ( $line =~ /([\r\n])/ ) {
@@ -6128,7 +6150,7 @@ sub scanimage {
        ;
       }
       elsif ( $line =~ /^$SETTING{frontend}: rounded/ ) {
-       warn substr( $line, 0, index( $line, "\n" ) + 1 );
+       $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
       }
       elsif ( $line =~ /^$SETTING{frontend}: sane_start: Device busy/ ) {
        $dialog->destroy;
@@ -6156,9 +6178,9 @@ sub scanimage {
     if ( ( $condition & 'hup' ) and ( not defined($buffer) or $buffer eq '' ) )
     {    # bit field operation. >= would also work
      close $read;
-     warn 'Waiting to reap process' if ($debug);
+     $logger->info( 'Waiting to reap process' );
      my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-     warn "Reaped PID $pid\n" if ($debug);
+     $logger->info( "Reaped PID $pid" );
 
      # Now finished scanning, get on with post-processing
      $scanning = FALSE;
@@ -6214,7 +6236,7 @@ sub scanadf {
  # Create command
  my $cmd =
 "$SETTING{'scan prefix'} $SETTING{frontend} $device @options $start $end > /dev/stderr";
- warn "$cmd\n" if $debug;
+ $logger->info( $cmd );
 
  if ( !$test ) {
 
@@ -6222,7 +6244,7 @@ sub scanadf {
   my ( $write, $read );
   my $error = IO::Handle->new;    # this needed because of a bug in open3.
   my $pid = IPC::Open3::open3( $write, $read, $error, $cmd );
-  warn "Forked PID $pid\n" if ($debug);
+  $logger->info( "Forked PID $pid" );
 
   my $dialog = Gtk2::Dialog->new( $d->get('Scanning') . "...",
    $windows, 'modal', 'gtk-cancel' => 'cancel' );
@@ -6267,7 +6289,7 @@ sub scanadf {
    response => sub {
     $_[0]->destroy;
     local $SIG{HUP} = 'IGNORE';
-    print "Sending HUP signal to PID $pid and its children\n" if $debug;
+    $logger->info( "Sending HUP signal to PID $pid and its children" );
     killfam 'HUP', ($pid);
     $running = FALSE;
    }
@@ -6285,7 +6307,7 @@ sub scanadf {
 
 # Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
      sysread $error, $buffer, 1024;
-     print $buffer if ( $debug and $buffer );
+     $logger->debug( $buffer ) if ( $buffer );
      $line .= $buffer;
 
      while ( $line =~ /\n/ ) {
@@ -6323,7 +6345,7 @@ sub scanadf {
        ;
       }
       elsif ( $line =~ /^$SETTING{frontend}: rounded/ ) {
-       warn substr( $line, 0, index( $line, "\n" ) + 1 );
+       $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
       }
       elsif ( $line =~ /^$SETTING{frontend}: sane_start: Device busy/ ) {
        $dialog->destroy;
@@ -6353,9 +6375,9 @@ sub scanadf {
     if ( ( $condition & 'hup' ) and ( not defined($buffer) or $buffer eq '' ) )
     {    # bit field operation. >= would also work
      close $read;
-     warn 'Waiting to reap process' if ($debug);
+     $logger->info( 'Waiting to reap process' );
      my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-     warn "Reaped PID $pid\n" if ($debug);
+     $logger->info( "Reaped PID $pid" );
 
      # Now finished scanning, set off unpaper or ocr if necessary
      $scanning = FALSE;
@@ -6371,7 +6393,7 @@ sub scanadf {
   $scanning = TRUE;
  }
  else {
-  warn "$cmd\n";
+  $logger->info( $cmd );
  }
  return;
 }
@@ -6434,7 +6456,7 @@ sub scan_pages {
        defined( $SETTING{resolution} )
        ? $SETTING{resolution}
        : $POINTS_PER_INCH;
-     print "importing scan with resolution=$SETTING{resolution}\n" if $debug;
+     $logger->info( "Importing scan with resolution=$SETTING{resolution}" );
      my $index =
        import_scan( File::Spec->catdir( $SETTING{session}, "out$n.pnm" ),
       $n, $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
@@ -6503,7 +6525,7 @@ sub new_page {
   $device->start;
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
   if ($Sane::STATUS != SANE_STATUS_GOOD) {
-   print "$prog_name: sane_start: $Sane::STATUS\n" if $debug;
+   $logger->info( "$prog_name: sane_start: $Sane::STATUS" );
    $shash{$sane_thread}{go} = 0;
    die; # quickest way out of the eval block
   }
@@ -6518,8 +6540,7 @@ sub new_page {
   scan_page($device, $fh);
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
   close $fh;
-  printf "Scanned page %s.", $path if $debug;
-  printf " (scanner status = %d)\n", $Sane::STATUS if $debug;
+  $logger->info( sprintf "Scanned page %s. (scanner status = %d)", $path, $Sane::STATUS );
   $shash{$sane_thread}{status} = $Sane::STATUS+0;
   $shash{$sane_thread}{go} = 0;
  ';
@@ -6545,37 +6566,35 @@ sub scan_page {
    if ( !$first_frame ) {
     $device->start;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-     printf "$prog_name: sane_start: $Sane::STATUS\n" if $debug;
+     $logger->info( "$prog_name: sane_start: $Sane::STATUS" );
      goto cleanup;
     }
    }
 
    $parm = $device->get_parameters;
    if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-    printf "$prog_name: sane_get_parameters: $Sane::STATUS\n" if $debug;
+    $logger->info( "$prog_name: sane_get_parameters: $Sane::STATUS" );
     goto cleanup;
    }
 
-   if ($debug) {
-    if ($first_frame) {
-     if ( $parm->{lines} >= 0 ) {
-      printf "$prog_name: scanning image of size %dx%d pixels at "
-        . "%d bits/pixel\n",
-        $parm->{pixels_per_line}, $parm->{lines},
-        8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
-     }
-     else {
-      printf "$prog_name: scanning image %d pixels wide and "
-        . "variable height at %d bits/pixel\n",
-        $parm->{pixels_per_line},
-        8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
-     }
+   if ($first_frame) {
+    if ( $parm->{lines} >= 0 ) {
+     $logger->info( sprintf "$prog_name: scanning image of size %dx%d pixels at "
+       . "%d bits/pixel",
+       $parm->{pixels_per_line}, $parm->{lines},
+       8 * $parm->{bytes_per_line} / $parm->{pixels_per_line} );
+    }
+    else {
+     $logger->info( sprintf "$prog_name: scanning image %d pixels wide and "
+       . "variable height at %d bits/pixel",
+       $parm->{pixels_per_line},
+       8 * $parm->{bytes_per_line} / $parm->{pixels_per_line} );
     }
 
-    printf "$prog_name: acquiring %s frame\n",
+    $logger->info( sprintf "$prog_name: acquiring %s frame",
       $parm->{format} <= SANE_FRAME_BLUE
       ? $format_name[ $parm->{format} ]
-      : "Unknown";
+      : "Unknown" );
    }
 
    if ($first_frame) {
@@ -6629,10 +6648,10 @@ sub scan_page {
     $shash{$sane_thread}{progress} = $progr;
 
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-     printf "$prog_name: min/max graylevel value = %d/%d\n", $min, $max
-       if ( $debug and $parm->{depth} == 8 );
-     if ( $debug and $Sane::STATUS != SANE_STATUS_EOF ) {
-      print "$prog_name: sane_read: $Sane::STATUS\n";
+     $logger->info( sprintf "$prog_name: min/max graylevel value = %d/%d", $min, $max )
+       if ( $parm->{depth} == 8 );
+     if ( $Sane::STATUS != SANE_STATUS_EOF ) {
+      $logger->info( "$prog_name: sane_read: $Sane::STATUS" );
       return;
      }
      last;
@@ -6707,14 +6726,12 @@ cleanup:
   : 3
  );
  $expected_bytes = 0 if ( $parm->{lines} < 0 );
- if ($debug) {
-  if ( $total_bytes > $expected_bytes && $expected_bytes != 0 ) {
-   printf "%s: WARNING: read more data than announced by backend "
-     . "(%u/%u)\n", $prog_name, $total_bytes, $expected_bytes;
-  }
-  else {
-   printf "%s: read %u bytes in total\n", $prog_name, $total_bytes;
-  }
+ if ( $total_bytes > $expected_bytes && $expected_bytes != 0 ) {
+  $logger->info( sprintf "%s: WARNING: read more data than announced by backend "
+    . "(%u/%u)", $prog_name, $total_bytes, $expected_bytes );
+ }
+ else {
+  $logger->info( sprintf "%s: read %u bytes in total", $prog_name, $total_bytes );
  }
  return;
 }
@@ -6775,7 +6792,7 @@ sub post_process_scan {
  push @rotate_queue, [ $page, $rotate ] if $rotate;
  push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper;
  push @ocr_stack, $page if $ocr;
- print "OCRflagging page: $page\n" if $ocr && $debug;
+ $logger->info( "OCRflagging page: $page" ) if $ocr;
  $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
  $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
 
@@ -6828,8 +6845,8 @@ sub import_scan {
       $n = 3 if ( $data[0] eq 'P4' );
       last if ( @data == $n );
      }
-     print "Format is $data[0]\n" if $debug;
-     print "Header is $size\n"    if $debug;
+     $logger->info( "Format is $data[0]" );
+     $logger->info( "Header is $size" );
      my ( $format, $width, $height ) = @data;
      if ( $format eq 'P4' ) {
       $size += $width * $height / 8;
@@ -6841,12 +6858,12 @@ sub import_scan {
       $size += $width * $height * 3;
      }
      else {
-      print "Unknown format $format\n";
+      $logger->error( "Unknown format $format" );
      }
-     print "Header suggests $size\n" if $debug;
+     $logger->info( "Header suggests $size" );
      close($fh);
     }
-    printf "Expecting $size, found %d\n", -s $ofilename if $debug;
+    $logger->info( sprintf "Expecting $size, found %d", -s $ofilename );
     if ( $size <= -s $ofilename ) {
      ( my $filename, $resolution ) =
        prepare_import( $ofilename, 'Portable anymap', $resolution, $delete );
@@ -6871,7 +6888,7 @@ sub import_scan {
 sub prepare_import {
  my ( $ofilename, $format, $resolution, $delete ) = @_;
 
- warn "Importing $ofilename, format $format\n" if ($debug);
+ $logger->info( "Importing $ofilename, format $format" );
 
  my %suffix = (
   'Portable Network Graphics'                    => '.png',
@@ -6884,7 +6901,7 @@ sub prepare_import {
  if ( !$resolution ) {
   my $image = Image::Magick->new;
   my $x     = $image->Read($ofilename);
-  warn "$x" if "$x";
+  $logger->warn( $x ) if "$x";
   $resolution = get_resolution($image);
  }
 
@@ -6911,7 +6928,7 @@ sub add_image {
 
  # Add to the page list
  $page = $#{ $slist->{data} } + 2 if ( !defined($page) );
- warn "Added $filename at page $page with resolution $resolution\n" if ($debug);
+ $logger->info( "Added $filename at page $page with resolution $resolution" );
 
  # Block the row-changed signal whilst adding the scan (row) and sorting it.
  $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
@@ -7177,30 +7194,30 @@ sub analyze_select_blank {
 sub select_blank_pages {
  $slist->get_selection->unselect_all;
  foreach my $page ( 0 .. $#{ $slist->{data} } ) {
-  print "smp page: $page\n" if $debug;
+  $logger->info( "smp page: $page" );
   my $dirty_time   = $slist->{data}[$page][8];
   my $analyze_time = $slist->{data}[$page][11];
   $dirty_time   = defined($dirty_time)   ? $dirty_time   : 0;
   $analyze_time = defined($analyze_time) ? $analyze_time : 0;
   if ( $analyze_time le $dirty_time ) {
-   warn $d->get(
+   $logger->warn( $d->get(
     sprintf(
-     "Page %d probably needs to be re-Analyzed.  Try Update or Analyze.\n",
+     "Page %d probably needs to be re-Analyzed.  Try Update or Analyze.",
      $page + 1 )
-   );
+   ) );
    next;
   }
 
   #compare Std Dev to threshold
   if ( $slist->{data}[$page][7] <= $SETTING{'Blank threshold'} ) {
    $slist->select($page);
-   print "selecting blank page\n" if $debug;
+   $logger->info( "Selecting blank page" );
   }
-  print "StdDev: "
+  $logger->info( "StdDev: "
     . $slist->{data}[$page][7]
     . " threshold: "
-    . $SETTING{'Blank threshold'} . "\n"
-    if $debug;
+    . $SETTING{'Blank threshold'}
+  );
  }
  return;
 }
@@ -7216,26 +7233,26 @@ sub analyze_select_dark {
 
 sub select_dark_pages {
  $slist->get_selection->unselect_all;
- print "checking for dark pages now, is analysis done?\n" if $debug;
+ $logger->info( "Checking for dark pages now, is analysis done?" );
  foreach my $page ( 0 .. $#{ $slist->{data} } ) {
-  print "smp page: $page\n" if $debug;
+  $logger->info( "smp page: $page" );
   my $dirty_time   = $slist->{data}[$page][8];
   my $analyze_time = $slist->{data}[$page][11];
   $dirty_time   = defined($dirty_time)   ? $dirty_time   : 0;
   $analyze_time = defined($analyze_time) ? $analyze_time : 0;
   if ( $analyze_time le $dirty_time ) {
-   warn $d->get(
+   $logger->warn( $d->get(
     sprintf(
-     "Page %d probably needs to be re-Analyzed.  Try Update or Analyze.\n",
+     "Page %d probably needs to be re-Analyzed.  Try Update or Analyze.",
      $page + 1 )
-   );
+   ) );
    next;
   }
 
   #compare Mean to threshold
   if ( $slist->{data}[$page][6] <= $SETTING{'Dark threshold'} ) {
    $slist->select($page);
-   print "selecting dark page\n" if $debug;
+   $logger->info( "Selecting dark page" );
   }
  }
  return;
@@ -7251,8 +7268,7 @@ sub update_analysis {
   $dirty_time   = defined($dirty_time)   ? $dirty_time   : 0;
   $analyze_time = defined($analyze_time) ? $analyze_time : 0;
   if ( $analyze_time le $dirty_time ) {
-   print "updating: $page analyse_time: $analyze_time dirty_time: $dirty_time\n"
-     if $debug;
+   $logger->info( "Updating: $page analyse_time: $analyze_time dirty_time: $dirty_time" );
    push @analyze_queue, [$page];
   }
  }
@@ -7389,7 +7405,7 @@ sub rescan_options {
   my $cmd =
     "$SETTING{'scan prefix'} $SETTING{frontend} --help --device-name='$device'";
   $cmd .= " --mode='$SETTING{mode}'" if ( defined $SETTING{mode} );
-  warn "$cmd\n" if $debug;
+  $logger->info( $cmd );
 
   # Set up ProgressBar
   my $pbar = Gtk2::ProgressBar->new;
@@ -7415,7 +7431,7 @@ sub rescan_options {
 
   # Interface to frontend
   my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-  warn "Forked PID $pid\n" if ($debug);
+  $logger->info( "Forked PID $pid" );
 
   # Read without blocking
   Glib::IO->add_watch(
@@ -7434,13 +7450,13 @@ sub rescan_options {
     if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
     {                             # bit field operation. >= would also work
      close $read;
-     warn 'Waiting to reap process' if ($debug);
+     $logger->info( 'Waiting to reap process' );
      my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-     warn "Reaped PID $pid\n" if ($debug);
+     $logger->info( "Reaped PID $pid" );
      $running = FALSE;
      $pbar->destroy;
      $vboxd->hide_all;
-     warn $output if $debug;
+     $logger->info( $output );
      parse_options( $vboxd, $device, options2hash($output) );
      return FALSE;                         # uninstall
     }
@@ -7973,7 +7989,7 @@ sub update_options {
   my $cmd =
     "$SETTING{'scan prefix'} $SETTING{frontend} --help --device-name='$device'";
   $cmd .= " --mode='$SETTING{mode}'" if ( defined $SETTING{mode} );
-  warn "$cmd\n" if $debug;
+  $logger->info( $cmd );
 
   # Set up ProgressBar
   my $pbar = Gtk2::ProgressBar->new;
@@ -7999,7 +8015,7 @@ sub update_options {
 
   # Interface to frontend
   my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-  warn "Forked PID $pid\n" if ($debug);
+  $logger->info( "Forked PID $pid" );
 
   # Read without blocking
   Glib::IO->add_watch(
@@ -8018,13 +8034,13 @@ sub update_options {
     if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
     {                             # bit field operation. >= would also work
      close $read;
-     warn 'Waiting to reap process' if ($debug);
+     $logger->info( 'Waiting to reap process' );
      my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-     warn "Reaped PID $pid\n" if ($debug);
+     $logger->info( "Reaped PID $pid" );
      $running = FALSE;
      $pbar->destroy;
      $vboxd->hide_all;
-     warn $output if $debug;
+     $logger->info( $output );
      update_options_hash( $vboxd, options2hash($output) );
      return FALSE;                         # uninstall
     }
@@ -8054,7 +8070,7 @@ sub options2hash {
 
  my ($output) = @_;
  my %hash = Gscan2pdf::options2hash($output);
- warn Dumper( \%hash ) if ($debug);
+ $logger->debug( Dumper( \%hash ) );
  foreach ( keys %hash ) {
 
   # Set default from config
@@ -8244,7 +8260,7 @@ sub default2index {
   $device = Sane::Device->open($shash{$sane_thread}{device});
 
   if ($Sane::STATUS != SANE_STATUS_GOOD) {
-   warn "Error opening device: $Sane::STATUS\n";
+   $logger->error( "opening device: $Sane::STATUS" );
    return;
   }
 
@@ -8253,7 +8269,7 @@ sub default2index {
 # We got a device, find out how many options it has:
   my $num_dev_options = $device->get_option(0);
   if ($Sane::STATUS != SANE_STATUS_GOOD) {
-   warn "Error: unable to determine option count\n";
+   $logger->error( "unable to determine option count" );
    return;
   }
   for (my $i = 1; $i < $num_dev_options; ++$i) {
@@ -8279,8 +8295,7 @@ sub default2index {
     }
     else {
      my @options = @{ thaw( $shash{$sane_thread}{data} ) };
-     print "Sane->get_option_descriptor returned: ", Dumper( \@options )
-       if $debug;
+     $logger->debug( "Sane->get_option_descriptor returned: ", Dumper( \@options ) );
 
      my ( $group, $vbox, @widgets, $hboxp, %optnamei );
      my $num_dev_options = $#options + 1;
@@ -8557,7 +8572,7 @@ sub default2index {
 
       }
       else {
-       print "Unknown type $opt->{type}\n";
+       $logger->warn( "Unknown type $opt->{type}" );
       }
      }
 
@@ -8721,15 +8736,14 @@ sub default2index {
    my ($i, $val) = @{thaw($shash{$sane_thread}{data})};
    undef $shash{$sane_thread}{data};
    my $info = $device->set_option ($i, $val);
-   print "sane_set_option returned status $Sane::STATUS with info $info\n"
-    if $debug;
+   $logger->info( "sane_set_option returned status $Sane::STATUS with info $info" );
    if ($info & SANE_INFO_RELOAD_OPTIONS) {
     my @options;
 
 # We got a device, find out how many options it has:
     my $num_dev_options = $device->get_option(0);
     if ($Sane::STATUS != SANE_STATUS_GOOD) {
-     warn "Error: unable to determine option count\n";
+     $logger->error( "unable to determine option count" );
      return;
     }
     for (my $i = 1; $i < $num_dev_options; ++$i) {
@@ -8760,8 +8774,7 @@ sub default2index {
 
       # walk the widget tree and update them from the hash
       my @options = @{ thaw( $shash{$sane_thread}{data} ) };
-      print "Sane->get_option_descriptor returned: ", Dumper( \@options )
-        if $debug;
+      $logger->debug( "Sane->get_option_descriptor returned: ", Dumper( \@options ) );
 
       my ( $group, $vbox );
       my $num_dev_options = $#options + 1;
@@ -9391,19 +9404,19 @@ sub rotate {
     # Rotate with imagemagick
     my $image = Image::Magick->new;
     my $x     = $image->Read($filename);
-    warn "$x" if "$x";
+    $logger->warn( $x ) if "$x";
 
     # workaround for those versions of imagemagick that produce 16bit output
     # with rotate
     my $depth = $image->Get('depth');
     $x = $image->Rotate($degrees);
-    warn "$x" if "$x";
+    $logger->warn( $x ) if "$x";
     my $suffix;
     $suffix = $1 if ( $filename =~ /\.(\w*)$/ );
     ( undef, $filename ) =
       tempfile( DIR => $SETTING{session}, SUFFIX => '.' . $suffix );
     $x = $image->Write( filename => $filename, depth => $depth );
-    warn "$x" if "$x";
+    $logger->warn( $x ) if "$x";
     send( $parent, "$index $filename", 0 );
    }
   }
@@ -9527,18 +9540,17 @@ sub analyze {
      recv( $parent, $line, 1000, 0 );
      return if ( $line eq 'finished' );
      ( $index, $filename ) = split ' ', $line;
-     print "index: $index $filename\n" if $debug;
+     $logger->info( "index: $index $filename" );
     }
 
     # Identify with imagemagick
     my $image = Image::Magick->new;
     my $x     = $image->Read($filename);
-    warn "$x" if "$x";
+    $logger->warn( $x ) if "$x";
 
     my ( $depth, $min, $max, $mean, $stddev ) = $image->Statistics();
-    warn "image->Statistics() failed" unless defined $depth;
-    print "std dev: $stddev mean: $mean" if $debug;
-    print "\n"                           if $debug;
+    $logger->warn( "image->Statistics() failed" ) unless defined $depth;
+    $logger->info( "std dev: $stddev mean: $mean" );
 
 #my $quantum_depth = $image->QuantumDepth;
 #warn "image->QuantumDepth failed" unless defined $quantum_depth;
@@ -9564,7 +9576,7 @@ sub analyze {
     recv( $child, $line, 1000, 0 );
     my ( $index, $filename, $mean, $stddev, $depth ) = split ' ', $line;
     if ( defined $filename and $filename ne '' and $index ne 'ready' ) {
-     warn "index: $index depth: $depth\n" unless $depth;
+     $logger->info( "index: $index depth: $depth" ) unless $depth;
      my $maxQ = -1 + ( 1 << $depth );
      $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
      $slist->{data}[$index][2] = $filename;
@@ -9717,7 +9729,7 @@ sub threshold {
       my $filename = $slist->{data}[$_][2];
       my $image    = Image::Magick->new;
       my $x        = $image->Read($filename);
-      warn "$x" if "$x";
+      $logger->warn( $x ) if "$x";
 
       # Threshold the image
       $image->BlackThreshold( threshold => $SETTING{'threshold tool'} . '%' );
@@ -9732,9 +9744,8 @@ sub threshold {
       ( undef, $filename ) =
         tempfile( DIR => $SETTING{session}, SUFFIX => '.pbm' );
       $x = $image->Write( filename => $filename );
-      warn "$x" if "$x";
-      warn "Thresholding at $SETTING{'threshold tool'} to $filename\n"
-        if $debug;
+      $logger->warn( $x ) if "$x";
+      $logger->info( "Thresholding at $SETTING{'threshold tool'} to $filename" );
       send( $parent, sprintf( "%i %i %s", $page++, $#pagelist + 1, $filename ),
        0 );
      }
@@ -9852,7 +9863,7 @@ sub negate {
       my $filename = $slist->{data}[$_][2];
       my $image    = Image::Magick->new;
       my $x        = $image->Read($filename);
-      warn "$x" if "$x";
+      $logger->warn( $x ) if "$x";
 
       my $depth = $image->Get('depth');
 
@@ -9865,8 +9876,8 @@ sub negate {
       ( undef, $filename ) =
         tempfile( DIR => $SETTING{session}, SUFFIX => $suffix );
       $x = $image->Write( depth => $depth, filename => $filename );
-      warn "$x" if "$x";
-      warn "Negating to $filename\n" if $debug;
+      $logger->warn( $x ) if "$x";
+      $logger->info( "Negating to $filename" );
       send( $parent, sprintf( "%i %i %s", $page++, $#pagelist + 1, $filename ),
        0 );
      }
@@ -10053,7 +10064,7 @@ sub unsharp {
       my $filename = $slist->{data}[$_][2];
       my $image    = Image::Magick->new;
       my $x        = $image->Read($filename);
-      warn "$x" if "$x";
+      $logger->warn( $x ) if "$x";
 
       # Unsharp the image
       $image->UnsharpMask(
@@ -10069,10 +10080,8 @@ sub unsharp {
       ( undef, $filename ) =
         tempfile( DIR => $SETTING{session}, SUFFIX => '.' . $suffix );
       $x = $image->Write( filename => $filename );
-      warn "$x" if "$x";
-      warn
-"Written $filename with unsharp mask: r=$SETTING{'unsharp radius'}, s=$SETTING{'unsharp sigma'}, a=$SETTING{'unsharp amount'}, t=$SETTING{'unsharp threshold'}\n"
-        if $debug;
+      $logger->warn( $x ) if "$x";
+      $logger->info( "Written $filename with unsharp mask: r=$SETTING{'unsharp radius'}, s=$SETTING{'unsharp sigma'}, a=$SETTING{'unsharp amount'}, t=$SETTING{'unsharp threshold'}" );
 
       send( $parent, sprintf( "%i %i %s", $page, $#pagelist + 1, $filename ),
        0 );
@@ -10237,23 +10246,22 @@ sub crop {
       my $filename = $slist->{data}[$_][2];
       my $image    = Image::Magick->new;
       my $e        = $image->Read($filename);
-      warn "$e" if "$e";
+      $logger->warn( $e ) if "$e";
 
       my ( $x, $y, $w, $h ) = $sel->values;
 
       # Crop the image
-      warn "Cropping $w x $h + $x + $y\n" if $debug;
       $e = $image->Crop( width => $w, height => $h, x => $x, y => $y );
-      warn "$e" if "$e";
+      $logger->warn( $e ) if "$e";
 
       # Write it
       my $suffix;
       $suffix = $1 if ( $filename =~ /\.(\w*)$/ );
       ( undef, $filename ) =
         tempfile( DIR => $SETTING{session}, SUFFIX => '.' . $suffix );
-      warn " to $filename\n" if $debug;
+      $logger->info( "Cropping $w x $h + $x + $y to $filename" );
       $e = $image->Write( filename => $filename );
-      warn "$e" if "$e";
+      $logger->warn( $e ) if "$e";
 
       send( $parent, sprintf( "%i %i %s", $page, $#pagelist + 1, $filename ),
        0 );
@@ -10345,7 +10353,7 @@ sub user_defined_tool {
   response => sub {
    $_[0]->destroy;
    local $SIG{HUP} = 'IGNORE';
-   print "Sending HUP signal to PID $pid and its children\n" if $debug;
+   $logger->info( "Sending HUP signal to PID $pid and its children" );
    killfam 'HUP', ($pid);
    $running   = FALSE;
    $cancelled = TRUE;
@@ -10386,10 +10394,10 @@ sub user_defined_tool {
      $cmd =~ s/%i/$ofilename/g;
     }
     $cmd =~ s/%r/$slist->{data}[$pages[$i]][4]/g;
-    print "$cmd\n" if ($debug);
+    $logger->info( $cmd );
 
     $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-    warn "Forked PID $pid\n" if ($debug);
+    $logger->info( "Forked PID $pid" );
 
     # Read without blocking
     my $output = '';
@@ -10401,9 +10409,9 @@ sub user_defined_tool {
 
       if ( $condition & 'hup' ) {    # bit field operation. >= would also work
        close $read;
-       warn 'Waiting to reap process' if ($debug);
+       $logger->info( 'Waiting to reap process' );
        my $pid = waitpid( -1, &WNOHANG );
-       warn "Reaped PID $pid\n" if ($debug);
+       $logger->info( "Reaped PID $pid" );
        $slist->{data}[ $pages[$i] ][2] = $ofilename;
 
        # Update thumbnail
@@ -10478,7 +10486,7 @@ sub unpaper_page {
   response => sub {
    $_[0]->destroy;
    local $SIG{HUP} = 'IGNORE';
-   print "Sending HUP signal to PID $pid and its children\n" if $debug;
+   $logger->info( "Sending HUP signal to PID $pid and its children" );
    killfam 'HUP', ($pid);
    $cancelled = TRUE;
    undef(@unpaper_stack);
@@ -10518,7 +10526,7 @@ sub unpaper_page {
      if ( $slist->{data}[$pagenum][2] !~ /\.pnm$/ ) {
       my $image = Image::Magick->new;
       my $x     = $image->Read( $slist->{data}[$pagenum][2] );
-      warn "$x" if "$x";
+      $logger->warn( $x ) if "$x";
       my $depth = $image->Get('depth');
 
 # Unforunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
@@ -10535,11 +10543,11 @@ sub unpaper_page {
      $cmd .=
 "unpaper $options --overwrite --input-file-sequence $in --output-file-sequence $out $out2;";
      $cmd .= "rm $in" if ( $slist->{data}[$pagenum][2] !~ /\.pnm$/ );
-     warn "$cmd\n" if ($debug);
+     $logger->info( $cmd );
 
      # Interface to unpaper
      $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-     warn "Forked PID $pid\n" if ($debug);
+     $logger->info( "Forked PID $pid" );
      my $page_buffer = '';
 
      # Update TextBuffer without blocking
@@ -10558,11 +10566,11 @@ sub unpaper_page {
 # Only allow the hup if sure an empty buffer has been read.
        if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
        {                             # bit field operation. >= would also work
-        warn $page_buffer if ($debug);
+        $logger->debug( $page_buffer );
         close $read;
-        warn 'Waiting to reap process' if ($debug);
+        $logger->info( 'Waiting to reap process' );
         my $pid = waitpid( -1, &WNOHANG );
-        warn "Reaped PID $pid\n" if ($debug);
+        $logger->info( "Reaped PID $pid" );
 
         # Note page selection
         my @selection = $slist->get_selected_indices;
@@ -11003,7 +11011,7 @@ sub ocr_page {
   response => sub {
    $_[0]->destroy;
    local $SIG{HUP} = 'IGNORE';
-   print "Sending HUP signal to PID $pid and its children\n" if $debug;
+   $logger->info( "Sending HUP signal to PID $pid and its children" );
    killfam 'HUP', ($pid);
    $cancelled = TRUE;
    undef(@ocr_stack);
@@ -11101,11 +11109,11 @@ sub ocr_page {
       $cmd =
 "cuneiform -l $SETTING{'ocr language'} -f hocr -o $txt.txt $slist->{data}[$pagenum][2]";
      }
-     warn "$cmd\n" if ($debug);
+     $logger->info( $cmd );
 
      # Interface to ocr engine
      $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-     warn "Forked PID $pid\n" if ($debug);
+     $logger->info( "Forked PID $pid" );
 
      # Update TextBuffer without blocking
      Glib::IO->add_watch(
@@ -11123,9 +11131,9 @@ sub ocr_page {
        if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
        {                             # bit field operation. >= would also work
         close $read;
-        warn 'Waiting to reap process' if ($debug);
+        $logger->info( 'Waiting to reap process' );
         my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-        warn "Reaped PID $pid\n" if ($debug);
+        $logger->info( "Reaped PID $pid" );
         $running_ocr = FALSE;
 
    # Doing this once at the end to avoid firing the row-changed signal too often
@@ -11297,7 +11305,7 @@ sub add_tess_languages {
    last;
   }
  }
- print "Using tessdata at $tessdata_prefix/tessdata\n" if $debug;
+ $logger->info( "Using tessdata at $tessdata_prefix/tessdata" );
  my @tesslang;
  for ( glob "$tessdata_prefix/tessdata/*.unicharset" ) {
 
@@ -11363,9 +11371,9 @@ sub add_cf_languages {
 
  # Dig out supported languages
  my $cmd = "cuneiform -l";
- warn "$cmd\n" if ($debug);
+ $logger->info( $cmd );
  my $output = `$cmd`;
- print $output if ($debug);
+ $logger->info( $output );
 
  my $langs;
  $langs = $1 if ( $output =~ /Supported languages: (.*)\./ );
@@ -11524,6 +11532,7 @@ sub quit {
 
  kill_threads();
  kill_subs();
+ $logger->info( "Quitting" );
  return TRUE;
 }
 
@@ -11682,7 +11691,7 @@ sub take_snapshot {
  # Deep copy the tied data. Otherwise, very bad things happen.
  @undo_buffer = map { [@$_] } @{ $slist->{data} };
  @undo_selection = $slist->get_selected_indices;
- warn Dumper( \@undo_buffer ) if $debug;
+ $logger->debug( Dumper( \@undo_buffer ) );
 
  # Unghost Undo/redo
  $uimanager->get_widget('/MenuBar/Edit/Undo')->set_sensitive(TRUE);
@@ -11740,7 +11749,7 @@ sub save_session {
  if ( defined $filename ) {
   my $tar          = Archive::Tar->new;
   my @filenamelist = glob("*");
-  print Dumper( \@filenamelist ) if $debug;
+  $logger->info( Dumper( \@filenamelist ) );
   $tar->add_files(@filenamelist);
   $tar->write( $filename, TRUE, '' );
  }
@@ -11750,15 +11759,15 @@ sub save_session {
 # Put things back to last snapshot after updating redo buffer
 
 sub undo {
- print "Undoing\n" if $debug;
+ $logger->info( "Undoing" );
 
  # Deep copy the tied data. Otherwise, very bad things happen.
  @redo_buffer = map { [@$_] } @{ $slist->{data} };
  @redo_selection = $slist->get_selected_indices;
- warn "redo_selection, undo_selection:\n" if $debug;
- warn Dumper( \@redo_selection, \@undo_selection ) if $debug;
- warn "redo_buffer, undo_buffer:\n" if $debug;
- warn Dumper( \@redo_buffer, \@undo_buffer ) if $debug;
+ $logger->debug( "redo_selection, undo_selection:" );
+ $logger->debug( Dumper( \@redo_selection, \@undo_selection ) );
+ $logger->debug( "redo_buffer, undo_buffer:" );
+ $logger->debug( Dumper( \@redo_buffer, \@undo_buffer ) );
 
  # Block slist signals whilst updating
  $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
@@ -11782,15 +11791,15 @@ sub undo {
 # Put things back to last snapshot after updating redo buffer
 
 sub unundo {
- print "Redoing\n" if $debug;
+ $logger->info( "Redoing" );
 
  # Deep copy the tied data. Otherwise, very bad things happen.
  @undo_buffer = map { [@$_] } @{ $slist->{data} };
  @undo_selection = $slist->get_selected_indices;
- warn "redo_selection, undo_selection:\n" if $debug;
- warn Dumper( \@redo_selection, \@undo_selection ) if $debug;
- warn "redo_buffer, undo_buffer:\n" if $debug;
- warn Dumper( \@redo_buffer, \@undo_buffer ) if $debug;
+ $logger->debug( "redo_selection, undo_selection:" );
+ $logger->debug( Dumper( \@redo_selection, \@undo_selection ) );
+ $logger->debug( "redo_buffer, undo_buffer:" );
+ $logger->debug( Dumper( \@redo_buffer, \@undo_buffer ) );
 
  # Block slist signals whilst updating
  $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
@@ -11836,7 +11845,7 @@ sub register_icon {
  my $icon;
  eval { $icon = Gtk2::Gdk::Pixbuf->new_from_file($path); };
  if ($@) {
-  warn("Unable to load icon `$path': $@");
+  $logger->warn( "Unable to load icon `$path': $@" );
  }
  else {
   my $set = Gtk2::IconSet->new_from_pixbuf($icon);
@@ -11855,11 +11864,11 @@ sub sig_child {
   # no child waiting.  Ignore it.
  }
  elsif ( WIFEXITED($?) ) {
-  print "Process $pid exited.\n" if ($debug);
+  $logger->info( "Process $pid exited." );
   delete $helperTag{$pid};
  }
  else {
-  print "False alarm on $pid.\n" if ($debug);
+  $logger->info( "False alarm on $pid." );
  }
  $SIG{CHLD} = \&sig_child;    # install *after* calling waitpid
  return;
@@ -11883,7 +11892,7 @@ sub start_process {
  if ($pid) {
 
   # We're still in the parent; note pid and watch the streams:
-  warn "Forked PID $pid\n" if ($debug);
+  $logger->info( "Forked PID $pid" );
   return $pid;
  }
  else {
@@ -11911,7 +11920,7 @@ sub kill_subs {
 
  foreach ( keys %helperTag ) {
   killfam 'TERM', ($_);
-  print "Sending TERM signal to PID $_ and its children\n" if $debug;
+  $logger->info( "Sending TERM signal to PID $_ and its children" );
  }
  return;
 }
@@ -11994,7 +12003,7 @@ sub compress_temp {
    my $i     = 1;
    foreach (@files) {
     send( $parent, $i++ / @files . " -1 $_ " . $d->get('Clearing up'), 0 );
-    print "Deleting $_\n" if $debug;
+    $logger->info( "Deleting $_" );
     unlink $_;
    }
    send( $parent, '2', 0 );
@@ -12602,6 +12611,28 @@ gscan2pdf - A GUI to produce PDFs or DjVus from scanned documents
 =back
 
 =head1 Description
+
+gscan2pdf has the following command-line options:
+
+=over
+
+=item --device=<device>
+Specifies the device to use, instead of getting the list of devices from via the SANE API.
+This can be useful if the scanner is on a remote computer which is not broadcasting its existence.
+
+=item --help
+Displays this help page and exits.
+
+=item --log=<log file>
+Specifies a file to store logging messages.
+
+=item --debug
+Defines the log level
+
+=item --version
+Displays the program version and exits.
+
+=over
 
 Scanning is handled with SANE via scanimage.
 PDF conversion is done by PDF::API2.

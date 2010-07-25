@@ -53,6 +53,7 @@ WriteMakefile(
                                    XML::Simple            => 0,
                                    Goo::Canvas            => 0,
                                    Readonly               => 0,
+                                   Log::Log4perl          => 0,
               },
               ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
               (ABSTRACT_FROM  => "bin/$program", # retrieve abstract from module
