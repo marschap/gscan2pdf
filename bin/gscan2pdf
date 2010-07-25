@@ -184,7 +184,7 @@ my $d      = Locale::gettext->domain($prog_name);
 my $d_sane = Locale::gettext->domain('sane-backends');
 
 my $debug = FALSE;
-my ( $test, $help, $log, @device, @model, $locale, @device_list, $test_image );
+my ( $test, $help, $log, $log_level, @device, @model, $locale, @device_list, $test_image );
 my @args = (
  'device=s'     => \@device,
  'test=s%'      => \$test,
@@ -192,14 +192,25 @@ my @args = (
  'locale=s'     => \$locale,
  'help'         => \$help,
  'log=s'        => \$log,
- 'debug'        => \$debug,
- 'version'      => sub { warn "$prog_name $version\n"; exit 0 }
+ 'debug'        => sub { $log_level = 'DEBUG'; $debug = TRUE },
+ 'info'         => sub { $log_level = 'INFO' },
+ 'warn'         => sub { $log_level = 'WARN' },
+ 'error'        => sub { $log_level = 'ERROR' },
+ 'fatal'        => sub { $log_level = 'FATAL' },
+ 'version'      => sub { warn "$prog_name $version\n"; exit 0 },
 );
 exit 1 if ( !GetOptions(@args) );
 $Sane::DEBUG = $debug;
 
-my $log_level = "INFO";
-$log_level = "DEBUG" if $debug;
+if (not defined($log_level)) {
+ if (defined $log) {
+  $log_level = 'DEBUG';
+  $debug = TRUE;
+ }
+ else {
+  $log_level = 'ERROR';
+ }
+}
 my $log_conf = qq/ 
  log4perl.appender.Screen        = Log::Log4perl::Appender::Screen 
  log4perl.appender.Screen.layout = Log::Log4perl::Layout::SimpleLayout
@@ -229,6 +240,7 @@ Log::Log4perl::init( \$log_conf );
 my $logger = Log::Log4perl::get_logger();
 
 $logger->info("Starting $prog_name $version");
+$logger->info("Log level $log_level");
 
 if ( defined $locale ) {
  if ( $locale !~ /^\// ) {
@@ -11532,7 +11544,7 @@ sub quit {
 
  kill_threads();
  kill_subs();
- $logger->info( "Quitting" );
+ $logger->debug( "Quitting" );
  return TRUE;
 }
 
@@ -12626,8 +12638,8 @@ Displays this help page and exits.
 =item --log=<log file>
 Specifies a file to store logging messages.
 
-=item --debug
-Defines the log level
+=item --(debug|info|warn|error|fatal)
+Defines the log level. If a log file is specified, this defaults to 'debug', otherwise 'warn'.
 
 =item --version
 Displays the program version and exits.
