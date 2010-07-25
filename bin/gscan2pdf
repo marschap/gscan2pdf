@@ -166,7 +166,7 @@ use Readonly;
 Readonly my $POINTS_PER_INCH => 72;
 
 my $prog_name = 'gscan2pdf';
-my $version   = '0.9.32';
+my $version   = '0.9.32~1';
 
 my $tolerance   = 1;
 my $buffer_size = ( 32 * 1024 );    # default size
@@ -12644,7 +12644,7 @@ Defines the log level. If a log file is specified, this defaults to 'debug', oth
 =item --version
 Displays the program version and exits.
 
-=over
+=back
 
 Scanning is handled with SANE via scanimage.
 PDF conversion is done by PDF::API2.
