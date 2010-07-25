@@ -264,6 +264,7 @@ $logger->info("Startup LC_NUMERIC ", setlocale(LC_NUMERIC)         );
 
 # Read config file
 my $rc = "$ENV{'HOME'}/.$prog_name";
+$logger->info( "Reading config from $ENV{'HOME'}/.$prog_name" );
 system("touch $rc") if ( !-r $rc );
 my ( $conf, %SETTING );
 if (
@@ -11541,6 +11542,7 @@ sub quit {
 
  # Write config file
  $conf->save_file( $rc, \%SETTING );
+ $logger->info( "Wrote config to $ENV{'HOME'}/.$prog_name" );
 
  kill_threads();
  kill_subs();
