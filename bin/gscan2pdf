@@ -10833,6 +10833,15 @@ sub options2unpaper {
  return join ' ', @items;
 }
 
+sub count_active_children {
+ my ($frame) = @_;
+ my $n = 0;
+ for ( $frame->get_child->get_children ) {
+  $n++ if ( $_->get_active );
+ }
+ return $n;
+}
+
 sub add_unpaper_options {
  my ($vbox) = @_;
 
@@ -10879,11 +10888,7 @@ sub add_unpaper_options {
   # Ensure that at least one checkbutton stays active
   $button->signal_connect(
    toggled => sub {
-    my $n = 0;
-    foreach ( $dframe->get_child->get_children ) {
-     $n++ if ( $_->get_active );
-    }
-    $button->set_active(TRUE) if ( $n == 0 );
+    $button->set_active(TRUE) if ( count_active_children($dframe) == 0 );
    }
   );
  }
@@ -10922,20 +10927,14 @@ sub add_unpaper_options {
 
  # Define margins here to reference them below
  my $bmframe = add_widget( $vbox2, $unpaper_options, 'border-margin' );
- $bmframe->set_sensitive(FALSE);
 
- my $vboxb = $bframe->get_child;
  foreach ( keys %{ $unpaper_options->{'border-align'}{options} } ) {
   my $button = $unpaper_options->{'border-align'}{options}{$_}{widget};
 
   # Ghost margin if nothing selected
   $button->signal_connect(
    toggled => sub {
-    my $n = 0;
-    foreach ( $vboxb->get_children ) {
-     $n++ if ( $_->get_active );
-    }
-    if ( $n == 0 ) {
+    if ( count_active_children($bframe) == 0 ) {
      $bmframe->set_sensitive(FALSE);
     }
     else {
@@ -10943,6 +10942,12 @@ sub add_unpaper_options {
     }
    }
   );
+ }
+ if ( count_active_children($bframe) == 0 ) {
+  $bmframe->set_sensitive(FALSE);
+ }
+ else {
+  $bmframe->set_sensitive(TRUE);
  }
 
  # Notebook page 3
