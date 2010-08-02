@@ -1467,8 +1467,9 @@ my $unpaper_options = {
 'Vertical distance to keep from the sheet edge when aligning a border area.'
     ),
     min  => 0,
-    max  => 10,
+    max  => 1000,
     step => 1,
+    order => 0,
    },
    horizontal => {
     type    => 'SpinButton',
@@ -1477,8 +1478,9 @@ my $unpaper_options = {
 'Horizontal distance to keep from the sheet edge when aligning a border area.'
     ),
     min  => 0,
-    max  => 10,
+    max  => 1000,
     step => 1,
+    order => 1,
    },
   },
  },
@@ -10752,7 +10754,7 @@ sub add_widget {
   $widget->add($vboxf);
   my @default;
   @default = split /,/, $SETTING{$option} if ( defined $SETTING{$option} );
-  foreach ( keys %{ $hashref->{$option}{options} } ) {
+  foreach ( sort { $hashref->{$option}{options}{$a}{order} <=> $hashref->{$option}{options}{$b}{order} } keys %{ $hashref->{$option}{options} } ) {
    my $button = add_widget( $vboxf, $hashref->{$option}{options}, $_ );
    $button->set_value( shift @default ) if (@default);
   }
@@ -10800,6 +10802,15 @@ sub get_unpaper_options {
    }
    elsif ( defined $SETTING{$option} ) {
     delete $SETTING{$option};
+   }
+  }
+  elsif ( $hashref->{$option}{type} eq 'SpinButtonGroup' ) {
+   my @items;
+   foreach ( keys %{ $hashref->{$option}{options} } ) {
+    push @items, $hashref->{$option}{options}{$_}{widget}->get_value;
+   }
+   if (@items) {
+    $SETTING{$option} = join ',', @items;
    }
   }
  }
