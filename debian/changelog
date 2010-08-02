@@ -2,6 +2,8 @@ gscan2pdf (0.9.32~1) lucid; urgency=low
 
   * New upstream release
     New Depends: liblog-log4perl-perl
+    Removed Depends: libforks-perl
+    Closes: #591404 (gscan2pdf: libforks-perl could be removed)
 
  -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>  Sun, 25 Jul 2010 21:55:24 +0200
 

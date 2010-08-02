@@ -128,11 +128,11 @@
 
 use warnings;
 use strict;
-use forks 0.33;
-use forks::shared;
+use threads;
+use threads::shared;
 use Thread::Semaphore;
 use Gscan2pdf;
-use Gtk2 -init;
+use Gtk2 qw/-init -threads-init/;
 use Gtk2::ImageView;
 use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
