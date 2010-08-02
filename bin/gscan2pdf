@@ -407,6 +407,7 @@ else {
 }
 
 if ( defined $test_image ) {
+ $test_image = expand_tildes( $test_image );
  if ( -r $test_image ) {
   $logger->info( "Using test image $test_image" );
  }
@@ -12083,6 +12084,16 @@ sub compress_temp {
  return;
 }
 
+# Expand tildes in the filename
+
+sub expand_tildes {
+ my ($filename) = @_;
+ $filename =~ s{ ^ ~ ( [^/]* ) } {
+  $1 ? (getpwnam($1))[7] : ( $ENV{HOME} || $ENV{LOGDIR} || (getpwuid($>))[7] )
+ }ex;
+ return $filename;
+}
+
 # Preferences dialog
 
 sub preferences {
@@ -12302,10 +12313,7 @@ sub preferences {
    my $tmp = File::Spec->catdir(@tmpdirs);
 
    # Expand tildes in the filename
-   my $newdir = $tmpentry->get_text;
-   $newdir =~ s{ ^ ~ ( [^/]* ) } {
-   $1 ? (getpwnam($1))[7] : ( $ENV{HOME} || $ENV{LOGDIR} || (getpwuid($>))[7] )
-  }ex;
+   my $newdir = expand_tildes( $tmpentry->get_text );
 
    if ( $newdir ne $tmp ) {
     $SETTING{TMPDIR} = $newdir;
