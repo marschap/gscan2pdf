@@ -493,7 +493,7 @@ my (
  @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
  $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
  $windowr, @rotate_queue, $rotating, $view, $frames, $duplex, $windowp,
- @analyze_queue, $analyzing, $batch_scan, $gui_updating,
+ @analyze_queue, $analyzing, $batch_scan, $gui_updating, $print_settings,
 
  # Spin buttons on scan dialog
  $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -6995,6 +6995,23 @@ sub add_image {
  update_uimanager();
 
  return $page[0];
+}
+
+# print
+
+sub print_dialog {
+ my $op = Gtk2::PrintOperation->new;
+
+ $op->set_print_settings($print_settings)
+  if (defined $print_settings);
+
+ $op->signal_connect( begin_print => sub {} );
+ $op->signal_connect( draw_page => sub {} );
+
+ my $res = $op->run( 'print-dialog', $window);
+
+ $print_settings = $op->get_print_settings if ($res eq 'apply');
+ return;
 }
 
 # Helpers:
