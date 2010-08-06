@@ -91,8 +91,6 @@
 #    Option to throw up PDF viewer with newly created PDF file
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
-#    As soon as I have cups-config --version >= 1.2.2, move print routines to
-#     Net::Cups
 #
 # Release procedure:
 #    Use
@@ -7000,17 +6998,45 @@ sub add_image {
 # print
 
 sub print_dialog {
+ chdir $SETTING{'cwd'};
  my $op = Gtk2::PrintOperation->new;
 
  $op->set_print_settings($print_settings)
   if (defined $print_settings);
 
- $op->signal_connect( begin_print => sub {} );
- $op->signal_connect( draw_page => sub {} );
+ $op->set_n_pages(1);
 
- my $res = $op->run( 'print-dialog', $window);
+ $op->signal_connect( draw_page => sub {
+  my ($op, $context) = @_;
+  my $cr = $context->get_cairo_context;
+
+  # Context dimensions
+  my $pwidth  = $context->get_width;
+  my $pheight = $context->get_height;
+
+  # Image dimensions
+  my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file( $slist->{data}[0][2] );
+  my $iwidth  = $pixbuf->get_width;
+  my $iheight = $pixbuf->get_height;
+    
+  # Scale context to fit image
+  my $scale = $pwidth / $iwidth;
+  $scale = $pheight / $iheight if ( $pheight / $iheight < $scale ); 
+  $cr->scale( $scale, $scale ); 
+
+  # Set source pixbuf
+  Gtk2::Gdk::Cairo::Context::set_source_pixbuf( $cr, $pixbuf, 0, 0 );
+
+  # Paint
+  $cr->paint;
+
+  return;
+ } );
+
+ my $res = $op->run( 'print-dialog', $window );
 
  $print_settings = $op->get_print_settings if ($res eq 'apply');
+ chdir $SETTING{session};
  return;
 }
 
@@ -13277,18 +13303,6 @@ gscan2pdf cannot automatically find it. In this case, you can specify the
 scanner device on the command line:
 
 C<gscan2pdf --device <device>>
-
-=head1 To Do
-
-=over
-
-=item *
-Print (using Net::Cups).
-
-=item *
-Copier.
-
-=back
 
 =head1 See Also
 
