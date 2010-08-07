@@ -7004,10 +7004,32 @@ sub print_dialog {
  $op->set_print_settings($print_settings)
   if (defined $print_settings);
 
- $op->set_n_pages(1);
+ $op->signal_connect( begin_print => sub {
+  my ($op, $context) = @_;
+
+  my $print_settings = $op->get_print_settings;
+  $print_settings->to_file('/home/jeff/printsettings.txt');
+  my $pages  = $print_settings->get( 'print-pages' );
+  my @page_list;
+  if ($pages eq 'ranges') {
+   my $page_set = Set::IntSpan->new;
+   my $ranges = $print_settings->get( 'page-ranges' );
+   for (split ',', $ranges) {
+    $page_set->I( $_ );
+   }
+   for ( 0 .. $#{ $slist->{data} } ) {
+    push @page_list, $_ if ( $page_set->member( $slist->{data}[$_][0] ) );
+   }
+  }
+  else {
+   @page_list = ( 0 .. $#{ $slist->{data} } );
+  }
+  $op->set_n_pages( scalar(@page_list) );
+ });
 
  $op->signal_connect( draw_page => sub {
-  my ($op, $context) = @_;
+  my ($op, $context, $page_number) = @_;
+
   my $cr = $context->get_cairo_context;
 
   # Context dimensions
@@ -7015,7 +7037,7 @@ sub print_dialog {
   my $pheight = $context->get_height;
 
   # Image dimensions
-  my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file( $slist->{data}[0][2] );
+  my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file( $slist->{data}[$page_number][2] );
   my $iwidth  = $pixbuf->get_width;
   my $iheight = $pixbuf->get_height;
     
