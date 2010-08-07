@@ -1,11 +1,23 @@
-gscan2pdf (0.9.32~1) lucid; urgency=low
+gscan2pdf (0.9.32~2) lucid; urgency=low
 
   * New upstream release
     New Depends: liblog-log4perl-perl
-    Removed Depends: libforks-perl
-    Closes: #591404 (gscan2pdf: libforks-perl could be removed)
+  * Removed debian/patches/replace-forks-with-threads 
+    Removed Build-Depends: quilt
+    Updated rules not to use quilt
 
  -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>  Sun, 25 Jul 2010 21:55:24 +0200
+
+gscan2pdf (0.9.31-2) unstable; urgency=low
+
+  * Replace forks with threads
+    Closes: #591404 (gscan2pdf: libforks-perl could be removed)
+    Removed Depends: libforks-perl
+    Added Build-Depends: quilt
+    Updated rules to use quilt
+  * Bumped standards to 3.9.1 (no changes required)
+
+ -- Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>  Sat, 07 Aug 2010 23:35:46 +0200
 
 gscan2pdf (0.9.31-1) unstable; urgency=low
 
