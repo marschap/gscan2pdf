@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    make escape button hide/kill active dialog/window, e.g. scan
+#    make escape button hide/kill active dialog/window, e.g. scan, by turning all dialogs in Gtk2::Dialog
 #*** unhandled exception in callback:
 #***   Can't call method "hide_all" on an undefined value at bin/gscan2pdf line 5512.
 #***  ignoring at bin/gscan2pdf line 12380.
@@ -91,8 +91,6 @@
 #    Option to throw up PDF viewer with newly created PDF file
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
-#    As soon as I have cups-config --version >= 1.2.2, move print routines to
-#     Net::Cups
 #
 # Release procedure:
 #    Use
@@ -493,7 +491,7 @@ my (
  @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
  $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
  $windowr, @rotate_queue, $rotating, $view, $frames, $duplex, $windowp,
- @analyze_queue, $analyzing, $batch_scan, $gui_updating,
+ @analyze_queue, $analyzing, $batch_scan, $gui_updating, $print_settings,
 
  # Spin buttons on scan dialog
  $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -552,6 +550,10 @@ my @action_items = (
   'Email as PDF',                          'gtk-edit',
   $d->get('_Email as PDF'),                '<control>e',
   $d->get('Attach as PDF to a new email'), \&email
+ ],
+ [
+  'Print',          'gtk-print', $d->get('_Print'), '<control>p',
+  $d->get('Print'), \&print_dialog
  ],
  [
   'Compress',                           undef,
@@ -751,6 +753,7 @@ my $ui = "<ui>
    <menuitem action='Scan'/>
    <menuitem action='Save'/>
    <menuitem action='Email as PDF'/>
+   <menuitem action='Print'/>
    <separator/>
    <menuitem action='Compress'/>
    <separator/>
@@ -816,6 +819,7 @@ my $ui = "<ui>
   <toolitem action='Scan'/>
   <toolitem action='Save'/>
   <toolitem action='Email as PDF'/>
+  <toolitem action='Print'/>
   <separator/>
   <toolitem action='Undo'/>
   <toolitem action='Redo'/>
@@ -866,6 +870,7 @@ my $ui = "<ui>
  <popup name='Thumb_Popup'>
   <menuitem action='Save'/>
   <menuitem action='Email as PDF'/>
+  <menuitem action='Print'/>
   <separator/>
   <menuitem action='Renumber'/>
   <menuitem action='Select All'/>
@@ -1696,10 +1701,13 @@ sub create_menu_bar {
  # save * start off ghosted anyway-
  $uimanager->get_widget('/MenuBar/File/Save')->set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/File/Email as PDF')->set_sensitive(FALSE);
+ $uimanager->get_widget('/MenuBar/File/Print')->set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Save')->set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Email as PDF')->set_sensitive(FALSE);
+ $uimanager->get_widget('/ToolBar/Print')->set_sensitive(FALSE);
  $uimanager->get_widget('/Thumb_Popup/Save')->set_sensitive(FALSE);
  $uimanager->get_widget('/Thumb_Popup/Email as PDF')->set_sensitive(FALSE);
+ $uimanager->get_widget('/Thumb_Popup/Print')->set_sensitive(FALSE);
 
  $uimanager->get_widget('/MenuBar/Tools/Threshold')->set_sensitive(FALSE);
  $uimanager->get_widget('/MenuBar/Tools/Negate')->set_sensitive(FALSE);
@@ -1839,6 +1847,9 @@ sub update_uimanager {
     $uimanager->get_widget('/ToolBar/Save')->set_sensitive(TRUE);
     $uimanager->get_widget('/Thumb_Popup/Save')->set_sensitive(TRUE);
    }
+   $uimanager->get_widget('/MenuBar/File/Print')->set_sensitive(TRUE);
+   $uimanager->get_widget('/ToolBar/Print')->set_sensitive(TRUE);
+   $uimanager->get_widget('/Thumb_Popup/Print')->set_sensitive(TRUE);
 
    $dependencies{pages} = $#{ $slist->{data} };
   }
@@ -1856,6 +1867,9 @@ sub update_uimanager {
     $uimanager->get_widget('/ToolBar/Save')->set_sensitive(FALSE);
     $uimanager->get_widget('/Thumb_Popup/Save')->set_sensitive(FALSE);
    }
+   $uimanager->get_widget('/MenuBar/File/Print')->set_sensitive(FALSE);
+   $uimanager->get_widget('/ToolBar/Print')->set_sensitive(FALSE);
+   $uimanager->get_widget('/Thumb_Popup/Print')->set_sensitive(FALSE);
    $windowi->hide if defined $windowi;
 
    $dependencies{pages} = $#{ $slist->{data} };
@@ -6979,6 +6993,73 @@ sub add_image {
  update_uimanager();
 
  return $page[0];
+}
+
+# print
+
+sub print_dialog {
+ chdir $SETTING{'cwd'};
+ my $op = Gtk2::PrintOperation->new;
+
+ $op->set_print_settings($print_settings)
+  if (defined $print_settings);
+
+ $op->signal_connect( begin_print => sub {
+  my ($op, $context) = @_;
+
+  my $print_settings = $op->get_print_settings;
+  $print_settings->to_file('/home/jeff/printsettings.txt');
+  my $pages  = $print_settings->get( 'print-pages' );
+  my @page_list;
+  if ($pages eq 'ranges') {
+   my $page_set = Set::IntSpan->new;
+   my $ranges = $print_settings->get( 'page-ranges' );
+   for (split ',', $ranges) {
+    $page_set->I( $_ );
+   }
+   for ( 0 .. $#{ $slist->{data} } ) {
+    push @page_list, $_ if ( $page_set->member( $slist->{data}[$_][0] ) );
+   }
+  }
+  else {
+   @page_list = ( 0 .. $#{ $slist->{data} } );
+  }
+  $op->set_n_pages( scalar(@page_list) );
+ });
+
+ $op->signal_connect( draw_page => sub {
+  my ($op, $context, $page_number) = @_;
+
+  my $cr = $context->get_cairo_context;
+
+  # Context dimensions
+  my $pwidth  = $context->get_width;
+  my $pheight = $context->get_height;
+
+  # Image dimensions
+  my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file( $slist->{data}[$page_number][2] );
+  my $iwidth  = $pixbuf->get_width;
+  my $iheight = $pixbuf->get_height;
+    
+  # Scale context to fit image
+  my $scale = $pwidth / $iwidth;
+  $scale = $pheight / $iheight if ( $pheight / $iheight < $scale ); 
+  $cr->scale( $scale, $scale ); 
+
+  # Set source pixbuf
+  Gtk2::Gdk::Cairo::Context::set_source_pixbuf( $cr, $pixbuf, 0, 0 );
+
+  # Paint
+  $cr->paint;
+
+  return;
+ } );
+
+ my $res = $op->run( 'print-dialog', $window );
+
+ $print_settings = $op->get_print_settings if ($res eq 'apply');
+ chdir $SETTING{session};
+ return;
 }
 
 # Helpers:
@@ -13056,6 +13137,10 @@ Attaches the selected or all pages as a PDF to a blank email.
 This requires xdg-email, which is in the xdg-utils package.
 If this is not present, the option is ghosted out.
 
+=head3 Print
+
+Prints the selected or all pages.
+
 =head3 Compress temporary files
 
 If your temporary ($TMPDIR) directory is getting full, this function can be useful -
@@ -13240,18 +13325,6 @@ gscan2pdf cannot automatically find it. In this case, you can specify the
 scanner device on the command line:
 
 C<gscan2pdf --device <device>>
-
-=head1 To Do
-
-=over
-
-=item *
-Print (using Net::Cups).
-
-=item *
-Copier.
-
-=back
 
 =head1 See Also
 
