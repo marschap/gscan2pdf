@@ -7008,7 +7008,6 @@ sub print_dialog {
   my ($op, $context) = @_;
 
   my $print_settings = $op->get_print_settings;
-  $print_settings->to_file('/home/jeff/printsettings.txt');
   my $pages  = $print_settings->get( 'print-pages' );
   my @page_list;
   if ($pages eq 'ranges') {
