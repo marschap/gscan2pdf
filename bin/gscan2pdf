@@ -1989,6 +1989,24 @@ sub convert_to_tiff {
  return $tif;
 }
 
+# Create a file filter to show only supported file types in FileChooser dialog
+
+sub makeFileFilter {
+ my (@file_extensions) = @_ ;
+ my $filter = Gtk2::FileFilter->new;
+ foreach (@file_extensions) {
+  my @filter_pattern;
+  my $byte;
+  # Create case insensitive pattern
+  foreach $byte (split //, $_) {
+   push(@filter_pattern,'[' . uc($byte) . lc($byte) . ']');
+  }
+ my $new_filter_pattern = join("",@filter_pattern);
+ $filter->add_pattern('*.' . $new_filter_pattern);
+ } 
+   return $filter;
+}
+
 # Throw up file selector and open session file
 
 sub open_dialog {
@@ -2003,6 +2021,7 @@ sub open_dialog {
   'gtk-ok'     => 'ok'
  );
  $file_chooser->set_default_response('ok');
+ $file_chooser->set_filter(makeFileFilter('gs2p'));
 
  if ( 'ok' eq $file_chooser->run ) {
 
@@ -2135,6 +2154,7 @@ sub import_dialog {
  );
  $file_chooser->set_select_multiple(TRUE);
  $file_chooser->set_default_response('ok');
+ $file_chooser->set_filter(makeFileFilter('jpg','png','pnm','gif','tif','tiff','pdf','djvu','ps'));
 
  if ( 'ok' eq $file_chooser->run ) {
 
@@ -3174,6 +3194,7 @@ sub save_PDF {
 
  $file_chooser->set_current_name($filename);
  $file_chooser->set_default_response('ok');
+ $file_chooser->set_filter(makeFileFilter('pdf'));
  $file_chooser->set_do_overwrite_confirmation(TRUE);
  $file_chooser->signal_connect(
   response => sub {
@@ -3505,6 +3526,7 @@ sub save_dialog {
      'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
+    $file_chooser->set_filter(makeFileFilter($SETTING{'image type'}));
     $file_chooser->set_do_overwrite_confirmation(TRUE);
     $file_chooser->signal_connect(
      response => sub {
@@ -3625,6 +3647,7 @@ sub save_dialog {
      'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
+    $file_chooser->set_filter(makeFileFilter('ps'));
     $file_chooser->set_do_overwrite_confirmation(TRUE);
     $file_chooser->signal_connect(
      response => sub {
@@ -3681,6 +3704,7 @@ sub save_dialog {
      'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
+    $file_chooser->set_filter(makeFileFilter('gs2p'));
     $file_chooser->set_do_overwrite_confirmation(TRUE);
     $file_chooser->signal_connect(
      response => sub {
@@ -3785,6 +3809,7 @@ sub save_image {
   'gtk-save'   => 'ok'
  );
  $file_chooser->set_default_response('ok');
+ $file_chooser->set_filter(makeFileFilter('jpg','png','pnm','gif','tif','tiff','pdf','djvu','ps'));
 
  if ( 'ok' eq $file_chooser->run ) {
   my $filename = $file_chooser->get_filename;
@@ -3993,6 +4018,7 @@ sub save_djvu {
   'gtk-save'   => 'ok'
  );
  $file_chooser->set_default_response('ok');
+ $file_chooser->set_filter(makeFileFilter('djvu'));
  $file_chooser->set_do_overwrite_confirmation(TRUE);
  $file_chooser->signal_connect(
   response => sub {
@@ -7394,6 +7420,7 @@ Frederik Elwert
 Roy Shahbazian
 Klaus Ethgen
 Matthijs Kooijman
+Jarl Stefansson
 EOS
  $about->set_authors( "Jeff Ratcliffe\n\n"
     . $d->get('Patches gratefully received from:')
