@@ -1943,7 +1943,7 @@ sub get_resolution {
  my $resolution;
  my $format = $image->Get('format');
 
- # Imagemagick always reports PNMs as 72dpi
+ # Imagemagick always reports PNMs as 72ppi
  if ( $format ne 'Portable anymap' ) {
   $resolution = $image->Get('x-resolution');
   return $resolution if ($resolution);
@@ -2346,13 +2346,13 @@ sub import_file {
   $last = $1 if ( $info =~ /\s(\d+)\s+page/ );
 
   # Dig out and the resolution of each page
-  my @dpi;
+  my @ppi;
   while ( $info =~ /\s(\d+)\s+dpi/ ) {
-   push @dpi, $1;
-   $logger->info( "Page $#dpi is $dpi[$#dpi] dpi" );
-   $info = substr( $info, index( $info, " dpi" ) + 4, length($info) );
+   push @ppi, $1;
+   $logger->info( "Page $#ppi is $ppi[$#ppi] ppi" );
+   $info = substr( $info, index( $info, " ppi" ) + 4, length($info) );
   }
-  if ( $last != @dpi ) {
+  if ( $last != @ppi ) {
    send(
     $parent,
     sprintf( "%f %s %i ", -1, 0, 0 )
@@ -2385,7 +2385,7 @@ sub import_file {
      system($cmd);
      send(
       $parent,
-      sprintf( "%f %s %i ", ( $i / $last + $j ) / $n, $tif, $dpi[ $i - 1 ] )
+      sprintf( "%f %s %i ", ( $i / $last + $j ) / $n, $tif, $ppi[ $i - 1 ] )
         . sprintf( $d->get("Importing image %i of %i"), $i, $last ),
       0
      );
@@ -2483,12 +2483,12 @@ sub import_file {
   $logger->info( $info );
 
   # Count number of pages and their resolutions
-  my @dpi;
+  my @ppi;
   while ( $info =~ /Resolution: (\d*)/ ) {
-   push @dpi, $1;
+   push @ppi, $1;
    $info = substr( $info, index( $info, 'Resolution' ) + 10, length($info) );
   }
-  my $last = @dpi;
+  my $last = @ppi;
   $logger->info( "$last pages" );
   my $first = 1;
   if ( $last > 1 ) {
@@ -2516,7 +2516,7 @@ sub import_file {
      $parent,
      sprintf( "%f %s %i ",
       ( ( $i - $first + 1 ) / ( $last - $first + 1 ) + $j ) / $n, $tif,
-      $dpi[$i] )
+      $ppi[$i] )
        . sprintf(
       $d->get("Importing image %i of %i"),
       $i - $first,
@@ -2887,7 +2887,7 @@ sub create_PDF {
 
      $depth = $image->Get('depth') if ( !defined $depth );
      if ( $SETTING{'downsample'} ) {
-      $output_resolution = $SETTING{'downsample dpi'};
+      $output_resolution = $SETTING{'downsample ppi'};
       my $w_pixels = $w * $output_resolution;
       my $h_pixels = $h * $output_resolution;
 
@@ -3047,7 +3047,7 @@ sub create_PDF {
       );
      }
      else {
-      $logger->info( "Adding $filename at $output_resolution dpi" );
+      $logger->info( "Adding $filename at $output_resolution PPI" );
      }
     }
    }
@@ -3283,7 +3283,7 @@ sub add_pdf_compression {
  $hboxd->pack_start( $button, FALSE, FALSE, 0 );
  my $spinbutton = Gtk2::SpinButton->new_with_range( 9, 2400, 1 );
  $spinbutton->set_value( $SETTING{'downsample dpi'} );
- my $label = Gtk2::Label->new( $d->get('dpi') );
+ my $label = Gtk2::Label->new( $d->get('PPI') );
  $hboxd->pack_end( $label,      FALSE, FALSE, 0 );
  $hboxd->pack_end( $spinbutton, FALSE, FALSE, 0 );
  $button->signal_connect(
@@ -13133,7 +13133,7 @@ They can include
 
 =item Mode (colour/black & white/greyscale)
 
-=item Resolution (in dpi)
+=item Resolution (in PPI)
 
 =item Batch-scan
 
@@ -13296,7 +13296,7 @@ Thus these can also be indexed by Beagle.
 
 There is an interesting review of OCR software at
 L<http://web.archive.org/web/20080529012847/http://groundstate.ca/ocr>.
-An important conclusion was that 400dpi is necessary for decent results.
+An important conclusion was that 400ppi is necessary for decent results.
 
 Up to v2.03, the only way to tell which languages were available to tesseract
 was to look for the language files. Therefore, gscan2pdf checks the following
