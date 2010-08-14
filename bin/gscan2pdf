@@ -1991,8 +1991,8 @@ sub convert_to_tiff {
 
 # Create a file filter to show only supported file types in FileChooser dialog
 
-sub makeFileFilter {
- my (@file_extensions) = @_ ;
+sub add_filter {
+ my ($file_chooser, $name, @file_extensions) = @_ ;
  my $filter = Gtk2::FileFilter->new;
  foreach (@file_extensions) {
   my @filter_pattern;
@@ -2004,7 +2004,22 @@ sub makeFileFilter {
  my $new_filter_pattern = join("",@filter_pattern);
  $filter->add_pattern('*.' . $new_filter_pattern);
  } 
-   return $filter;
+ my $types;
+ for (@file_extensions) {
+  if (defined $types) {
+   $types .= ", *.$_";
+  }
+  else {
+   $types = "*.$_";
+  }
+ }
+ $filter->set_name( "$name ($types)" );
+ $file_chooser->add_filter($filter);
+ $filter = Gtk2::FileFilter->new;
+ $filter->add_pattern('*');
+ $filter->set_name( 'All files' );
+ $file_chooser->add_filter($filter);
+ return;
 }
 
 # Throw up file selector and open session file
@@ -2021,7 +2036,7 @@ sub open_dialog {
   'gtk-ok'     => 'ok'
  );
  $file_chooser->set_default_response('ok');
- $file_chooser->set_filter(makeFileFilter('gs2p'));
+ add_filter( $file_chooser, $d->get('gscan2pdf session files'), 'gs2p' );
 
  if ( 'ok' eq $file_chooser->run ) {
 
@@ -2154,7 +2169,7 @@ sub import_dialog {
  );
  $file_chooser->set_select_multiple(TRUE);
  $file_chooser->set_default_response('ok');
- $file_chooser->set_filter(makeFileFilter('jpg','png','pnm','gif','tif','tiff','pdf','djvu','ps'));
+ add_filter( $file_chooser, $d->get('Image files'), 'jpg','png','pnm','gif','tif','tiff','pdf','djvu','ps' );
 
  if ( 'ok' eq $file_chooser->run ) {
 
@@ -3194,7 +3209,7 @@ sub save_PDF {
 
  $file_chooser->set_current_name($filename);
  $file_chooser->set_default_response('ok');
- $file_chooser->set_filter(makeFileFilter('pdf'));
+ add_filter( $file_chooser, $d->get('PDF files'), 'pdf' );
  $file_chooser->set_do_overwrite_confirmation(TRUE);
  $file_chooser->signal_connect(
   response => sub {
@@ -3526,7 +3541,7 @@ sub save_dialog {
      'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
-    $file_chooser->set_filter(makeFileFilter($SETTING{'image type'}));
+    add_filter( $file_chooser, $d->get('Image files'), $SETTING{'image type'} );
     $file_chooser->set_do_overwrite_confirmation(TRUE);
     $file_chooser->signal_connect(
      response => sub {
@@ -3647,7 +3662,7 @@ sub save_dialog {
      'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
-    $file_chooser->set_filter(makeFileFilter('ps'));
+    add_filter( $file_chooser, $d->get('Postscript files'), 'ps' );
     $file_chooser->set_do_overwrite_confirmation(TRUE);
     $file_chooser->signal_connect(
      response => sub {
@@ -3704,7 +3719,7 @@ sub save_dialog {
      'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
-    $file_chooser->set_filter(makeFileFilter('gs2p'));
+    add_filter( $file_chooser, $d->get('gscan2pdf session files'), 'gs2p' );
     $file_chooser->set_do_overwrite_confirmation(TRUE);
     $file_chooser->signal_connect(
      response => sub {
@@ -3809,7 +3824,7 @@ sub save_image {
   'gtk-save'   => 'ok'
  );
  $file_chooser->set_default_response('ok');
- $file_chooser->set_filter(makeFileFilter('jpg','png','pnm','gif','tif','tiff','pdf','djvu','ps'));
+ add_filter( $file_chooser, $d->get('Image files'), 'jpg','png','pnm','gif','tif','tiff','pdf','djvu','ps' );
 
  if ( 'ok' eq $file_chooser->run ) {
   my $filename = $file_chooser->get_filename;
@@ -4018,7 +4033,7 @@ sub save_djvu {
   'gtk-save'   => 'ok'
  );
  $file_chooser->set_default_response('ok');
- $file_chooser->set_filter(makeFileFilter('djvu'));
+ add_filter( $file_chooser, $d->get('DjVu files'), 'djvu' );
  $file_chooser->set_do_overwrite_confirmation(TRUE);
  $file_chooser->signal_connect(
   response => sub {
