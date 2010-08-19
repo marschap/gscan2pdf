@@ -3596,6 +3596,7 @@ sub save_dialog {
     );
     $file_chooser->set_default_response('ok');
     $file_chooser->set_do_overwrite_confirmation(TRUE);
+    add_filter( $file_chooser, $d->get('Text files'), 'txt' );
     $file_chooser->signal_connect(
      response => sub {
       my ( $dialog, $response ) = @_;
