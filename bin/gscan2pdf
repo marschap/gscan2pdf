@@ -270,6 +270,7 @@ if (
   $conf = Config::General->new(
    -ConfigFile  => $rc,
    -SplitPolicy => 'equalsign',
+   -UTF8        => 1,
   );
  }
   )
@@ -7436,6 +7437,7 @@ Roy Shahbazian
 Klaus Ethgen
 Matthijs Kooijman
 Jarl Stefansson
+Andy Fingerhut
 EOS
  $about->set_authors( "Jeff Ratcliffe\n\n"
     . $d->get('Patches gratefully received from:')
