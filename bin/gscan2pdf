@@ -3968,7 +3968,7 @@ sub save_TIFF {
    }
    if ( defined $ps ) {
     send( $parent, '1' . $d->get('Converting to PS'), 0 );
-    my $cmd = "tiff2ps $filename > $ps";
+    my $cmd = "tiff2ps $filename > \"$ps\"";
     $logger->info( $cmd );
     $output = `$cmd`;
    }
