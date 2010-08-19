@@ -3968,7 +3968,11 @@ sub save_TIFF {
    }
    if ( defined $ps ) {
     send( $parent, '1' . $d->get('Converting to PS'), 0 );
-    my $cmd = "tiff2ps $filename > \"$ps\"";
+
+    # Note: -a option causes tiff2ps to generate multiple output
+    # pages, one for each page in the input TIFF file.  Without it, it
+    # only generates output for the first page.
+    my $cmd = "tiff2ps -a $filename > \"$ps\"";
     $logger->info( $cmd );
     $output = `$cmd`;
    }
