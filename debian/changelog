@@ -2,6 +2,7 @@ gscan2pdf (0.9.32~2) lucid; urgency=low
 
   * New upstream release
     New Depends: liblog-log4perl-perl
+    Removed Depends: libarchive-tar-perl, as now in perl
   * Removed debian/patches/replace-forks-with-threads 
     Removed Build-Depends: quilt
     Updated rules not to use quilt
