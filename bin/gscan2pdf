@@ -3633,12 +3633,19 @@ sub save_dialog {
         my $root   = $canvas->get_root_item;
         my $n      = $root->get_n_children;
         for ( my $i = 0 ; $i < $n ; $i++ ) {
-         my $item = $root->get_child($i);
-         printf $fh "%s\n", $item->get('text')
-           if ( $item->isa('Goo::Canvas::Text') );
+         my $group = $root->get_child($i);
+         if ( $group->isa('Goo::Canvas::Group') ) {
+          my $n = $group->get_n_children;
+          for ( my $i = 0 ; $i < $n ; $i++ ) {
+           my $item = $group->get_child($i);
+           printf $fh "%s\n", $item->get('text')
+             if ( $item->isa('Goo::Canvas::Text') );
+          }
+         }
         }
        }
        close $fh;
+       $windowi->hide if defined $windowi;
       }
       $file_chooser->destroy;
      }
