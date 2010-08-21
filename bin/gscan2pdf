@@ -2888,7 +2888,7 @@ sub create_PDF {
 
      $depth = $image->Get('depth') if ( !defined $depth );
      if ( $SETTING{'downsample'} ) {
-      $output_resolution = $SETTING{'downsample ppi'};
+      $output_resolution = $SETTING{'downsample dpi'};
       my $w_pixels = $w * $output_resolution;
       my $h_pixels = $h * $output_resolution;
 
