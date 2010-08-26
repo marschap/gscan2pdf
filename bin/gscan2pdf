@@ -3232,7 +3232,7 @@ sub save_PDF {
     }
 
     # Check that the file can be written
-    if ( !-w dirname($filename) ) {
+    if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
      show_message_dialog( $file_chooser, 'error', 'close',
       sprintf( $d->get("File %s is read-only"), $filename ) );
      return;
@@ -3563,7 +3563,7 @@ sub save_dialog {
        }
 
        # Check that the file can be written
-       if ( !-w dirname($filename) ) {
+       if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
         show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
@@ -3616,7 +3616,7 @@ sub save_dialog {
        }
 
        # Check that the file can be written
-       if ( !-w dirname($filename) ) {
+       if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
         show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
@@ -3692,7 +3692,7 @@ sub save_dialog {
        }
 
        # Check that the file can be written
-       if ( !-w dirname($filename) ) {
+       if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
         show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
@@ -3749,7 +3749,7 @@ sub save_dialog {
        }
 
        # Check that the file can be written
-       if ( !-w dirname($filename) ) {
+       if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
         show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
@@ -3806,7 +3806,7 @@ sub show_message_dialog {
 
 sub file_exists {
  my ( $file_chooser, $filename ) = @_;
- if ( !-w dirname($filename) ) {
+ if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
   show_message_dialog( $file_chooser, 'error', 'close',
    sprintf( $d->get("File %s is read-only"), $filename ) );
   return TRUE;
@@ -4067,7 +4067,7 @@ sub save_djvu {
     }
 
     # Check that the file can be written
-    if ( !-w dirname($filename) ) {
+    if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
      show_message_dialog( $file_chooser, 'error', 'close',
       sprintf( $d->get("File %s is read-only"), $filename ) );
      return;
