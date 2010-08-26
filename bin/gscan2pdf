@@ -11308,7 +11308,8 @@ sub ocr_page {
         # Set up the canvas
         my $canvas_new = Goo::Canvas->new;
         my $root       = $canvas_new->get_root_item;
-        my $pixbuf     = $view->get_pixbuf;
+        my $pixbuf     =
+          Gtk2::Gdk::Pixbuf->new_from_file( $slist->{data}[$pagenum][2] );
         $canvas_new->set_bounds( 0, 0, $pixbuf->get_width,
          $pixbuf->get_height );
 
