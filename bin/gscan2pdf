@@ -11479,7 +11479,7 @@ sub add_tess_languages {
   # Weed out the empty language files
   if ( not -z $_ ) {
    my $code;
-   $code = $1 if ( $_ =~ /(\w*)\.unicharset$/ );
+   $code = $1 if ( $_ =~ /([\w\-]*)\.unicharset$/ );
    if ( defined $iso639{$code} ) {
     push @tesslang, [ $code, $iso639{$code} ];
    }
