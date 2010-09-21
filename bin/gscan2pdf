@@ -11265,7 +11265,7 @@ sub ocr_page {
       }
       if ( defined $SETTING{'ocr language'} ) {
        $cmd =
-"$pre ocroscript $SETTING{ocroscript} --tesslanguage=$SETTING{'ocr language'} $png > $txt.txt$post";
+"$pre tesslanguage=$SETTING{'ocr language'} ocroscript $SETTING{ocroscript} $png > $txt.txt$post";
       }
       else {
        $cmd = "$pre ocroscript $SETTING{ocroscript} $png > $txt.txt$post";
