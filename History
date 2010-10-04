@@ -21,6 +21,8 @@
   Thanks to Andy Fingerhut for the patch
 * Fixed regex for Tesseract language codes so that deu-f is recognised
 * Moved ocropus option tesslanguage to environment variable
+* Support cuneiform better by converting first to bmp if necessary
+  Closes LP: #654771
 
 
 0.9.31 (19.07.2010):

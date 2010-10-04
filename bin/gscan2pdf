@@ -11272,8 +11272,21 @@ sub ocr_page {
       }
      }
      else {    # cuneiform
-      $cmd =
-"cuneiform -l $SETTING{'ocr language'} -f hocr -o $txt.txt $slist->{data}[$pagenum][2]";
+      my ( $bmp, $pre, $post );
+      if ( $slist->{data}[$pagenum][2] !~ /\.bmp$/ ) {
+       my $file = $slist->{data}[$pagenum][2];
+
+       # Temporary filename for new file
+       ( undef, $bmp ) = tempfile( DIR => $SETTING{session}, SUFFIX => '.bmp' );
+       $pre  = "convert $file $bmp;";
+       $post = "; rm $bmp";
+      }
+      else {
+       $bmp  = $slist->{data}[$pagenum][2];
+       $pre  = '';
+       $post = '';
+      }
+      $cmd = "$pre cuneiform -l $SETTING{'ocr language'} -f hocr -o $txt.txt $bmp $post";
      }
      $logger->info( $cmd );
 
