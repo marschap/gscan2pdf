@@ -1,6 +1,7 @@
 gscan2pdf (0.9.32~2) lucid; urgency=low
 
   * New upstream release
+    Closes: #599181 (gscan2pdf: OCR doesn't support Umlauts/national characters)
     New Depends: liblog-log4perl-perl
     Removed Depends: libarchive-tar-perl, as now in perl
   * Removed debian/patches/replace-forks-with-threads 
