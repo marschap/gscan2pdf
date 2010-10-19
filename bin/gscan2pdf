@@ -11472,22 +11472,13 @@ sub add_tess_languages {
   vie     => $d->get('Vietnamese'),
  );
 
- my $tessdata_prefix = '/usr/share';
- for (
-  (
-   $ENV{TESSDATA_PREFIX},      '/usr/local/share',
-   '/usr/share/tesseract-ocr', '/usr/share/tesseract'
-  )
-   )
- {
-  if ( defined($_) and -d "$_/tessdata" ) {
-   $tessdata_prefix = $_;
-   last;
-  }
- }
- $logger->info( "Using tessdata at $tessdata_prefix/tessdata" );
+ my $tessdata = `tesseract '' '' -l '' 2>&1`;
+ chomp $tessdata;
+ $tessdata =~ s/^Unable to load unicharset file //;
+ $tessdata =~ s/\/\.unicharset$//;
+ $logger->info( "Using tessdata at $tessdata" );
  my @tesslang;
- for ( glob "$tessdata_prefix/tessdata/*.unicharset" ) {
+ for ( glob "$tessdata/*.unicharset" ) {
 
   # Weed out the empty language files
   if ( not -z $_ ) {
@@ -13326,17 +13317,13 @@ There is an interesting review of OCR software at
 L<http://web.archive.org/web/20080529012847/http://groundstate.ca/ocr>.
 An important conclusion was that 400ppi is necessary for decent results.
 
-Up to v2.03, the only way to tell which languages were available to tesseract
-was to look for the language files. Therefore, gscan2pdf checks the following
-paths:
+Up to v2.04, the only way to tell which languages were available to tesseract
+was to look for the language files. Therefore, gscan2pdf checks the path
+returned by:
 
- $ENV{TESSDATA_PREFIX}/tessdata
- /usr/local/share/tessdata
- /usr/share/tesseract-ocr/tessdata
- /usr/share/tesseract/tessdata
- /usr/share/tessdata
+ tesseract '' '' -l ''
 
-If there are no language files in the above locations, then it gscan2pdf
+If there are no language files in the above location, then gscan2pdf
 assumes that tesseract v1.0 is installed, which had no language files.
 
 =head3 Variables for user-defined tools
