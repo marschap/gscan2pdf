@@ -12174,7 +12174,7 @@ sub compress_temp {
    my @files = keys %files;
    my $i     = 1;
    foreach (@files) {
-    send( $parent, $i++ / @files . " -1 $_ " . $d->get('Clearing up'), 0 );
+    send( $parent, ($i++) / @files . " -1 $_ " . $d->get('Clearing up'), 0 );
     $logger->info( "Deleting $_" );
     unlink $_;
    }
