@@ -126,9 +126,6 @@
 
 use warnings;
 use strict;
-use threads;
-use threads::shared;
-use Thread::Semaphore;
 use Gscan2pdf;
 use Gtk2 -init;
 use Gtk2::ImageView;
@@ -151,7 +148,7 @@ use PDF::API2;
 use Getopt::Long;
 use
   Set::IntSpan 1.10;  # For page numbering issues. 1.10 required for size method
-use Storable qw(freeze thaw store retrieve);
+use Storable qw(store retrieve);
 use Proc::Killfam;
 use Proc::ProcessTable;
 use Log::Log4perl;
@@ -434,36 +431,8 @@ if ( not defined( $SETTING{version} ) or $SETTING{version} ne $version ) {
 }
 $SETTING{version} = $version;
 
-# Initialise threads
-my ( %shash, %thread );
-
-#share(%shash); #will work only for first level keys
-my $numthreads  = 1;
-my $sane_thread = 1;    # Always use thread 1 for SANE
-foreach ( 1 .. $numthreads ) {
- $shash{$_}{semaphore} = Thread::Semaphore->new(0);
- share( $shash{$_}{semaphore} );
- share( $shash{$_}{device} );
- share( $shash{$_}{status} );
- share( $shash{$_}{go} );
- share( $shash{$_}{process} );
- share( $shash{$_}{progress} );
- share( $shash{$_}{data} );
- share( $shash{$_}{die} );
- $thread{$_} = threads->new(
-  sub {
-   my $device;    # variable local to thread for storing sane device object
-   my $fh;        # variable local to thread for storing file handle
-   while (TRUE) {
-    $shash{$_}{semaphore}->down;
-    last if $shash{$_}{die};
-    lock( $shash{$_}{process} );
-    eval $shash{$_}{process};    ## no critic (ProhibitStringyEval)
-    $logger->error( "Running process: $@\n$shash{$_}{process}" ) if ($@);
-   }
-  }
- );
-}
+# Initialise SANE backend
+Gscan2pdf::Backend::Sane->setup();
 
 # Create icons for rotate buttons
 my $IconFactory = undef;
@@ -5696,35 +5665,10 @@ sub scan_dialog2 {
 sub get_devices2 {
  my $hboxd = shift;
 
- # Set up ProgressBar
- my $pbar = Gtk2::ProgressBar->new;
- $pbar->set_pulse_step(.1);
- $pbar->set_text( $d->get('Fetching list of devices') );
- $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
- $pbar->show;
-
- {
-  lock( $shash{$sane_thread}{process} );
-  $shash{$sane_thread}{process} = '
-   my @devices = Sane->get_devices;
-   $shash{$sane_thread}{data} = freeze(\@devices);
-   $shash{$sane_thread}{go} = 0;
-  ';
-  $shash{$sane_thread}{go} = 1;
-  $shash{$sane_thread}{semaphore}->up;
- }
-
- # Timer will run until callback returns false
- my $timer = Glib::Timeout->add(
-  100,
-  sub {
-   if ( $shash{$sane_thread}{go} ) {
-    $pbar->pulse;
-    return TRUE;
-   }
-   else {
+ Gscan2pdf::Backend::Sane->get_devices( $hboxd, sub {
+    my ($data) = @_;
     my @old_device_list = @device_list;
-    @device_list = @{ thaw( $shash{$sane_thread}{data} ) };
+    @device_list = @{ $data };
     $logger->info( "Sane->get_devices returned: ", Dumper( \@device_list ) );
     if ( @device_list == 0 ) {
      $windows2->destroy;
@@ -5757,9 +5701,7 @@ sub get_devices2 {
     else {    # New combobox
      populate_device_list2($hboxd);
     }
-    $pbar->destroy;
    }
-  }
  );
  return;
 }
@@ -6486,53 +6428,9 @@ sub scan_pages {
  my ( $npages, $start, $step, $rfacing, $rreverse, $unpaper, $ocr ) = @_;
  my $n       = $start;
  my $format  = "out%d.pnm";
- my $n2      = 1;
- my $npages2 = $npages;
 
- # Set up ProgressBar
- my $dialog = Gtk2::Dialog->new( $d->get('Scanning...'),
-  $windows2, 'modal', 'gtk-cancel' => 'cancel' );
- my $pbar = Gtk2::ProgressBar->new;
- $dialog->vbox->add($pbar);
-
- # Ensure that the dialog box is destroyed when the user responds.
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-   $rotating = FALSE;
-   $shash{$sane_thread}{go} = 0;
-  }
- );
- $dialog->show_all;
- if ( $npages2 > 0 ) {
-  $pbar->set_text( sprintf $d->get("Scanning page %d of %d"), $n2, $npages2 );
- }
- else {
-  $pbar->set_text( sprintf $d->get("Scanning page %d"), $n2 );
- }
-
- new_page( $format, $n );
-
- # Timer will run until callback returns false
- my $timer = Glib::Timeout->add(
-  100,
-  sub {
-   if ( $shash{$sane_thread}{go} ) {
-    $pbar->set_fraction( $shash{$sane_thread}{progress} )
-      if ( defined $shash{$sane_thread}{progress} );
-    return TRUE;
-   }
-   else {
-
-    # Check status of scan
-    if (
-     defined( $shash{$sane_thread}{status} )
-     and ( $shash{$sane_thread}{status} == SANE_STATUS_GOOD
-      or $shash{$sane_thread}{status} == SANE_STATUS_EOF )
-      )
-    {
-     $shash{$sane_thread}{status} = SANE_STATUS_GOOD;
-
+ Gscan2pdf::Backend::Sane->scan_pages( $windows2, $format, $npages, $n, $step, sub {
+     my ($n) = @_;
      # If the scan can't be loaded then blow the scanning dialog away and
      # show an error
      my $rotate = $n % 2 ? $rfacing : $rreverse;
@@ -6544,306 +6442,11 @@ sub scan_pages {
      my $index =
        import_scan( File::Spec->catdir( $SETTING{session}, "out$n.pnm" ),
       $n, $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
+    }, sub {
+     my ($msg) = @_;
+     show_message_dialog( $windows2, 'error', 'close', $d_sane->get( $msg ) );
     }
-    else {
-     $shash{$sane_thread}{data}    = $path;
-     $shash{$sane_thread}{process} = '
-     my $path = $shash{$sane_thread}{data};
-     close ($fh);
-     unlink ($path);
-     $shash{$sane_thread}{go} = 0;
-    ';
-     $shash{$sane_thread}{go} = 1;
-     $shash{$sane_thread}{semaphore}->up;
-    }
-
-    # Stop the process unless everything OK and more scans required
-    unless ( ( $npages == -1 or --$npages )
-     and defined( $shash{$sane_thread}{status} )
-     and $shash{$sane_thread}{status} == SANE_STATUS_GOOD )
-    {
-     $shash{$sane_thread}{process} = '
-     $device->cancel;
-     $shash{$sane_thread}{go} = 0;
-    ';
-     $shash{$sane_thread}{go} = 1;
-     $shash{$sane_thread}{semaphore}->up;
-     $dialog->destroy;
-     show_message_dialog( $windows2, 'error', 'close',
-      $d_sane->get( Sane::strstatus( $shash{$sane_thread}{status} ) ) )
-       unless (
-      not defined( $shash{$sane_thread}{status} )
-      or (
-       $shash{$sane_thread}{status} == SANE_STATUS_GOOD
-       or ( $shash{$sane_thread}{status} == SANE_STATUS_NO_DOCS
-        and $npages < 1
-        and $n2 > 1 )
-      )
-       );
-     return FALSE;
-    }
-
-    $n += $step;
-    $n2++;
-    $pbar->set_fraction(0);
-    if ( $npages2 > 0 ) {
-     $pbar->set_text( sprintf $d->get("Scanning page %d of %d"), $n2,
-      $npages2 );
-    }
-    else {
-     $pbar->set_text( sprintf $d->get("Scanning page %d"), $n2 );
-    }
-    new_page( $format, $n );
-    return TRUE;
-   }
-  }
  );
- return;
-}
-
-sub new_page {
- my ( $format, $n ) = @_;
- my $path = sprintf $format, $n;
- $shash{$sane_thread}{data} = File::Spec->catdir( $SETTING{session}, $path );
- $shash{$sane_thread}{process} = '
-  $device->start;
-  $shash{$sane_thread}{status} = $Sane::STATUS+0;
-  if ($Sane::STATUS != SANE_STATUS_GOOD) {
-   $logger->info( "$prog_name: sane_start: $Sane::STATUS" );
-   $shash{$sane_thread}{go} = 0;
-   die; # quickest way out of the eval block
-  }
-
-  my $path = $shash{$sane_thread}{data};
-  if (not open($fh, ">", $path)) {
-   $device->cancel;
-   $shash{$sane_thread}{status} = SANE_STATUS_ACCESS_DENIED;
-   $shash{$sane_thread}{go} = 0;
-   die; # quickest way out of the eval block
-  }
-  scan_page($device, $fh);
-  $shash{$sane_thread}{status} = $Sane::STATUS+0;
-  close $fh;
-  $logger->info( sprintf "Scanned page %s. (scanner status = %d)", $path, $Sane::STATUS );
-  $shash{$sane_thread}{status} = $Sane::STATUS+0;
-  $shash{$sane_thread}{go} = 0;
- ';
- $shash{$sane_thread}{go} = 1;
- $shash{$sane_thread}{semaphore}->up;
- return;
-}
-
-sub scan_page {
- my ( $device, $fh ) = @_;
- my $first_frame = 1;
- my $offset      = 0;
- my $must_buffer = 0;
- my $min         = 0xff;
- my $max         = 0;
- my %image;
- my @format_name = ( "gray", "RGB", "red", "green", "blue" );
- my $total_bytes = 0;
-
- my $parm;
- {
-  do {    # extra braces to get last to work.
-   if ( !$first_frame ) {
-    $device->start;
-    if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-     $logger->info( "$prog_name: sane_start: $Sane::STATUS" );
-     goto cleanup;
-    }
-   }
-
-   $parm = $device->get_parameters;
-   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-    $logger->info( "$prog_name: sane_get_parameters: $Sane::STATUS" );
-    goto cleanup;
-   }
-
-   if ($first_frame) {
-    if ( $parm->{lines} >= 0 ) {
-     $logger->info( sprintf "$prog_name: scanning image of size %dx%d pixels at "
-       . "%d bits/pixel",
-       $parm->{pixels_per_line}, $parm->{lines},
-       8 * $parm->{bytes_per_line} / $parm->{pixels_per_line} );
-    }
-    else {
-     $logger->info( sprintf "$prog_name: scanning image %d pixels wide and "
-       . "variable height at %d bits/pixel",
-       $parm->{pixels_per_line},
-       8 * $parm->{bytes_per_line} / $parm->{pixels_per_line} );
-    }
-
-    $logger->info( sprintf "$prog_name: acquiring %s frame",
-      $parm->{format} <= SANE_FRAME_BLUE
-      ? $format_name[ $parm->{format} ]
-      : "Unknown" );
-   }
-
-   if ($first_frame) {
-    if ($parm->{format} == SANE_FRAME_RED
-     or $parm->{format} == SANE_FRAME_GREEN
-     or $parm->{format} == SANE_FRAME_BLUE )
-    {
-     die unless ( $parm->{depth} == 8 );
-     $must_buffer = 1;
-     $offset      = $parm->{format} - SANE_FRAME_RED;
-    }
-    elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-     die unless ( ( $parm->{depth} == 8 ) || ( $parm->{depth} == 16 ) );
-    }
-    if ($parm->{format} == SANE_FRAME_RGB
-     or $parm->{format} == SANE_FRAME_GRAY )
-    {
-     die
-       unless ( ( $parm->{depth} == 1 )
-      || ( $parm->{depth} == 8 )
-      || ( $parm->{depth} == 16 ) );
-     if ( $parm->{lines} < 0 ) {
-      $must_buffer = 1;
-      $offset      = 0;
-     }
-     else {
-      write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
-       $parm->{lines}, $parm->{depth} );
-     }
-    }
-   }
-   else {
-    die
-      unless ( $parm->{format} >= SANE_FRAME_RED
-     && $parm->{format} <= SANE_FRAME_BLUE );
-    $offset = $parm->{format} - SANE_FRAME_RED;
-    $image{x} = $image{y} = 0;
-   }
-   my $hundred_percent = $parm->{bytes_per_line} * $parm->{lines} * (
-    ( $parm->{format} == SANE_FRAME_RGB || $parm->{format} == SANE_FRAME_GRAY )
-    ? 1
-    : 3
-   );
-
-   while (1) {
-    $device->cancel if ( not $shash{$sane_thread}{go} );
-    my ( $buffer, $len ) = $device->read($buffer_size);
-    $total_bytes += $len;
-    my $progr = $total_bytes / $hundred_percent;
-    $progr = 1 if ( $progr > 1 );
-    $shash{$sane_thread}{progress} = $progr;
-
-    if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-     $logger->info( sprintf "$prog_name: min/max graylevel value = %d/%d", $min, $max )
-       if ( $parm->{depth} == 8 );
-     if ( $Sane::STATUS != SANE_STATUS_EOF ) {
-      $logger->info( "$prog_name: sane_read: $Sane::STATUS" );
-      return;
-     }
-     last;
-    }
-
-    if ($must_buffer) {
-
-     # We're either scanning a multi-frame image or the
-     # scanner doesn't know what the eventual image height
-     # will be (common for hand-held scanners).  In either
-     # case, we need to buffer all data before we can write
-     # the image
-     if ($parm->{format} == SANE_FRAME_RED
-      or $parm->{format} == SANE_FRAME_GREEN
-      or $parm->{format} == SANE_FRAME_BLUE )
-     {
-      for ( my $i = 0 ; $i < $len ; ++$i ) {
-       $image{data}[ $offset + 3 * $i ] = substr( $buffer, $i, 1 );
-      }
-      $offset += 3 * $len;
-     }
-     elsif ( $parm->{format} == SANE_FRAME_RGB
-      or $parm->{format} == SANE_FRAME_GRAY )
-     {
-      for ( my $i = 0 ; $i < $len ; ++$i ) {
-       $image{data}[ $offset + $i ] = substr( $buffer, $i, 1 );
-      }
-      $offset += $len;
-     }
-    }
-    else {    # ! must_buffer
-     print $fh $buffer;
-    }
-
-    if ( $debug && $parm->{depth} == 8 ) {
-     for ( split( //, $buffer ) ) {
-      my $c = ord;
-      if ( $c >= $max ) {
-       $max = $c;
-      }
-      elsif ( $c < $min ) {
-       $min = $c;
-      }
-     }
-    }
-
-   }
-   $first_frame = 0;
-  } while ( !$parm->{last_frame} );
- }
-
- if ($must_buffer) {
-  if ( $parm->{lines} > 0 ) {
-   $image{height} = $parm->{lines};
-  }
-  else {
-   $image{height} = @{ $image{data} } / $parm->{pixels_per_line};
-   $image{height} /= 3
-     if ( $parm->{format} == SANE_FRAME_RED
-    or $parm->{format} == SANE_FRAME_GREEN
-    or $parm->{format} == SANE_FRAME_BLUE );
-  }
-  write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
-   $image{height}, $parm->{depth} );
-  for ( @{ $image{data} } ) { print $fh; }
- }
-
-cleanup:
- my $expected_bytes = $parm->{bytes_per_line} * $parm->{lines} * (
-  ( $parm->{format} == SANE_FRAME_RGB || $parm->{format} == SANE_FRAME_GRAY )
-  ? 1
-  : 3
- );
- $expected_bytes = 0 if ( $parm->{lines} < 0 );
- if ( $total_bytes > $expected_bytes && $expected_bytes != 0 ) {
-  $logger->info( sprintf "%s: WARNING: read more data than announced by backend "
-    . "(%u/%u)", $prog_name, $total_bytes, $expected_bytes );
- }
- else {
-  $logger->info( sprintf "%s: read %u bytes in total", $prog_name, $total_bytes );
- }
- return;
-}
-
-sub write_pnm_header {
- my ( $fh, $format, $width, $height, $depth ) = @_;
-
- # The netpbm-package does not define raw image data with maxval > 255.
- # But writing maxval 65535 for 16bit data gives at least a chance
- # to read the image.
-
- if ($format == SANE_FRAME_RED
-  or $format == SANE_FRAME_GREEN
-  or $format == SANE_FRAME_BLUE
-  or $format == SANE_FRAME_RGB )
- {
-  printf $fh "P6\n# SANE data follows\n%d %d\n%d\n", $width, $height,
-    ( $depth <= 8 ) ? 255 : 65535;
- }
- else {
-  if ( $depth == 1 ) {
-   printf $fh "P4\n# SANE data follows\n%d %d\n", $width, $height;
-  }
-  else {
-   printf $fh "P5\n# SANE data follows\n%d %d\n%d\n", $width, $height,
-     ( $depth <= 8 ) ? 255 : 65535;
-  }
- }
  return;
 }
 
@@ -8386,67 +7989,12 @@ sub default2index {
   # Ghost the scan button whilst options being updated
   $sbutton->set_sensitive(FALSE) if ( defined $sbutton );
 
-  # Set up ProgressBar
-  my $dialog = Gtk2::Dialog->new( $d->get('Updating options') . "...",
-   $windows2, 'modal', 'gtk-cancel' => 'cancel' );
-  my $pbar = Gtk2::ProgressBar->new;
-  $pbar->set_pulse_step(.1);
-  $pbar->set_text( $d->get('Updating options') );
-  $dialog->vbox->add($pbar);
-
-  # Ensure that the dialog box is destroyed when the user responds.
-  $dialog->signal_connect(
-   response => sub {
-    $_[0]->destroy;
+  Gscan2pdf::Backend::Sane->find_scan_options( $device, $windows2, sub {
     $rotating = FALSE;
     kill_subs();
-   }
-  );
-  $dialog->show_all;
-
-  $shash{$sane_thread}{device}  = $device->{name};
-  $shash{$sane_thread}{process} = '
-  undef $device if (defined($device)); # close the handle
-
-# open the device in the sane thread
-  $device = Sane::Device->open($shash{$sane_thread}{device});
-
-  if ($Sane::STATUS != SANE_STATUS_GOOD) {
-   $logger->error( "opening device: $Sane::STATUS" );
-   return;
-  }
-
-  my @options;
-
-# We got a device, find out how many options it has:
-  my $num_dev_options = $device->get_option(0);
-  if ($Sane::STATUS != SANE_STATUS_GOOD) {
-   $logger->error( "unable to determine option count" );
-   return;
-  }
-  for (my $i = 1; $i < $num_dev_options; ++$i) {
-   my $opt = $device->get_option_descriptor ($i);
-   $options[$i] = $opt;
-   next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
-
-   $opt->{val} = $device->get_option ($i) if ($opt->{type} != SANE_TYPE_BUTTON);
-  }
-  $shash{$sane_thread}{data} = freeze(\@options);
-  $shash{$sane_thread}{go} = 0;
- ';
-  $shash{$sane_thread}{go} = 1;
-  $shash{$sane_thread}{semaphore}->up;
-
-  # Timer will run until callback returns false
-  my $timer = Glib::Timeout->add(
-   100,
-   sub {
-    if ( $shash{$sane_thread}{go} ) {
-     $pbar->pulse;
-     return TRUE;
-    }
-    else {
-     my @options = @{ thaw( $shash{$sane_thread}{data} ) };
+   }, sub {
+     my ($data) = @_;
+     my @options = @{ $data };
      $logger->debug( "Sane->get_option_descriptor returned: ", Dumper( \@options ) );
 
      my ( $group, $vbox, @widgets, $hboxp, %optnamei );
@@ -8729,20 +8277,21 @@ sub default2index {
      }
 
      # Set defaults
+     my $sane_device = Gscan2pdf::Backend::Sane->device();
      # Move them first to a dummy array, as otherwise it would be self-modifying
-     if ( defined $SETTING{default}{ $shash{$sane_thread}{device} } ) {
+     if ( defined $SETTING{default}{ $sane_device } ) {
 
       # Config::General flattens arrays with 1 entry to scalars,
       # so we must check for this
       my @defaults;
-      if ( ref( $SETTING{default}{ $shash{$sane_thread}{device} } ) ne 'ARRAY' )
+      if ( ref( $SETTING{default}{ $sane_device }) ne 'ARRAY' )
       {
-       push @defaults, $SETTING{default}{ $shash{$sane_thread}{device} };
+       push @defaults, $SETTING{default}{ $sane_device };
       }
       else {
-       @defaults = @{ $SETTING{default}{ $shash{$sane_thread}{device} } };
+       @defaults = @{ $SETTING{default}{ $sane_device } };
       }
-      delete $SETTING{default}{ $shash{$sane_thread}{device} };
+      delete $SETTING{default}{ $sane_device };
 
       # Give the GUI a chance to catch up between settings,
       # in case they have to be reloaded.
@@ -8826,9 +8375,7 @@ sub default2index {
 
      $sbutton->set_sensitive(TRUE);
      $sbutton->grab_focus;
-     $dialog->destroy;
     }
-   }
   );
 
   return;
@@ -8845,87 +8392,34 @@ sub default2index {
   $SETTING{resolution} = $val
     if ( $widgets[$i]->{option_name} eq SANE_NAME_SCAN_RESOLUTION );
 
+  my $sane_device = Gscan2pdf::Backend::Sane->device();
+
   # Cache option
-  push @{ $SETTING{default}{ $shash{$sane_thread}{device} } },
+  push @{ $SETTING{default}{ $sane_device } },
     { $widgets[$i]->{option_name} => $val };
 
   # Note any duplicate options, keeping only the last entry.
   my %seen;
-  my $j = $#{ $SETTING{default}{ $shash{$sane_thread}{device} } };
+  my $j = $#{ $SETTING{default}{ $sane_device } };
   while ( $j > -1 ) {
    my ($option) =
-     keys( %{ $SETTING{default}{ $shash{$sane_thread}{device} }[$j] } );
+     keys( %{ $SETTING{default}{ $sane_device }[$j] } );
    $seen{$option}++;
    if ( $seen{$option} > 1 ) {
-    splice @{ $SETTING{default}{ $shash{$sane_thread}{device} } }, $j, 1;
+    splice @{ $SETTING{default}{ $sane_device } }, $j, 1;
    }
    $j--;
   }
 
-  # Set up ProgressBar
-  my $dialog = Gtk2::Dialog->new( $d->get('Updating options') . "...",
-   $windows2, 'modal', 'gtk-cancel' => 'cancel' );
-  my $pbar = Gtk2::ProgressBar->new;
-  $pbar->set_pulse_step(.1);
-  $pbar->set_text( $d->get('Updating options') );
-  $dialog->vbox->add($pbar);
-
-  # Ensure that the dialog box is destroyed when the user responds.
-  $dialog->signal_connect(
-   response => sub {
-    $_[0]->destroy;
+  Gscan2pdf::Backend::Sane->set_option( $windows2, $i, $val, sub {
     $rotating = FALSE;
     kill_subs();
-   }
-  );
-  $dialog->show_all;
+   }, sub {
+     my ($data) = @_;
 
-  {
-   my @data = ( $i, $val );
-   lock( $shash{$sane_thread}{process} );
-   $shash{$sane_thread}{data}    = freeze( \@data );
-   $shash{$sane_thread}{process} = '
-   my ($i, $val) = @{thaw($shash{$sane_thread}{data})};
-   undef $shash{$sane_thread}{data};
-   my $info = $device->set_option ($i, $val);
-   $logger->info( "sane_set_option returned status $Sane::STATUS with info $info" );
-   if ($info & SANE_INFO_RELOAD_OPTIONS) {
-    my @options;
-
-# We got a device, find out how many options it has:
-    my $num_dev_options = $device->get_option(0);
-    if ($Sane::STATUS != SANE_STATUS_GOOD) {
-     $logger->error( "unable to determine option count" );
-     return;
-    }
-    for (my $i = 1; $i < $num_dev_options; ++$i) {
-     my $opt = $device->get_option_descriptor ($i);
-     $options[$i] = $opt;
-     next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
-
-     $opt->{val} = $device->get_option ($i) if ($opt->{type} != SANE_TYPE_BUTTON);
-    }
-    $shash{$sane_thread}{data} = freeze(\@options);
-   }
-   $shash{$sane_thread}{go} = 0;
-  ';
-   $shash{$sane_thread}{go} = 1;
-   $shash{$sane_thread}{semaphore}->up;
-  }
-
-  # Timer will run until callback returns false
-  my $timer = Glib::Timeout->add(
-   100,
-   sub {
-    if ( $shash{$sane_thread}{go} ) {
-     $pbar->pulse;
-     return TRUE;
-    }
-    else {
-     if ( defined $shash{$sane_thread}{data} ) {
-
+     if ( $data ) {
       # walk the widget tree and update them from the hash
-      my @options = @{ thaw( $shash{$sane_thread}{data} ) };
+      my @options = @{ $data };
       $logger->debug( "Sane->get_option_descriptor returned: ", Dumper( \@options ) );
 
       my ( $group, $vbox );
@@ -8987,11 +8481,9 @@ sub default2index {
        }
       }
      }
-     $dialog->destroy;
      $gui_updating =
        FALSE;    # We can carry on applying defaults now, if necessary.
     }
-   }
   );
   return;
  }
@@ -11711,11 +11203,7 @@ sub quit {
 # kill all threads
 
 sub kill_threads {
- for ( 1 .. $numthreads ) {
-  $shash{$_}{die} = 1;
-  $shash{$_}{semaphore}->up;
-  $thread{$_}->join;
- }
+ Gscan2pdf::Backend::Sane->kill();
  return;
 }
 
@@ -12767,6 +12255,592 @@ sub set_active {
   }
  }
  return;
+}
+
+package Gscan2pdf::Backend::Sane;
+
+use strict;
+use warnings;
+
+use threads;
+use threads::shared;
+use Thread::Semaphore;
+
+use Glib qw(TRUE FALSE);
+use Gtk2;
+use Sane;
+use Storable qw(freeze thaw);
+
+my ( %shash, $thread );
+
+sub setup {
+ $shash{semaphore} = Thread::Semaphore->new(0);
+ share( $shash{semaphore} );
+ share( $shash{device} );
+ share( $shash{status} );
+ share( $shash{go} );
+ share( $shash{process} );
+ share( $shash{progress} );
+ share( $shash{data} );
+ share( $shash{die} );
+ $thread = threads->new(
+  sub {
+   my $device;    # variable local to thread for storing sane device object
+   my $fh;        # variable local to thread for storing file handle
+   while (TRUE) {
+    $shash{semaphore}->down;
+    last if $shash{die};
+    lock( $shash{process} );
+    eval $shash{process};    ## no critic (ProhibitStringyEval)
+    $logger->error( "Running process: $@\n$shash{process}" ) if ($@);
+   }
+  }
+ );
+}
+
+sub kill {
+ $shash{die} = 1;
+ $shash{semaphore}->up;
+ $thread->join;
+ return;
+}
+
+sub get_devices {
+ my ($class, $container, $callback) = @_;
+
+ # Set up ProgressBar
+ my $pbar = Gtk2::ProgressBar->new;
+ $pbar->set_pulse_step(.1);
+ $pbar->set_text( $d->get('Fetching list of devices') );
+ $container->pack_start( $pbar, TRUE, TRUE, 0 );
+ $pbar->show;
+
+ {
+  lock( $shash{process} );
+  $shash{process} = '
+   my @devices = Sane->get_devices;
+   $shash{data} = freeze(\@devices);
+   $shash{go} = 0;
+  ';
+  $shash{go} = 1;
+  $shash{semaphore}->up;
+ }
+
+ # Timer will run until callback returns false
+ my $timer = Glib::Timeout->add(
+  100,
+  sub {
+   if ( $shash{go} ) {
+    $pbar->pulse;
+    return TRUE;
+   }
+   else {
+    $callback->( thaw( $shash{data} ) );
+    $pbar->destroy;
+   }
+  }
+ );
+}
+
+sub is_connected {
+ return defined $shash{device};
+}
+
+sub device {
+ return $shash{device};
+}
+
+sub find_scan_options {
+ my ($class, $device, $parent, $response_callback, $success_callback) = @_;
+
+  # Set up ProgressBar
+  my $dialog = Gtk2::Dialog->new( $d->get('Updating options') . "...",
+   $parent, 'modal', 'gtk-cancel' => 'cancel' );
+  my $pbar = Gtk2::ProgressBar->new;
+  $pbar->set_pulse_step(.1);
+  $pbar->set_text( $d->get('Updating options') );
+  $dialog->vbox->add($pbar);
+
+  # Ensure that the dialog box is destroyed when the user responds.
+  $dialog->signal_connect(
+   response => sub {
+    $_[0]->destroy;
+    $response_callback->();
+   }
+  );
+  $dialog->show_all;
+
+  $shash{device}  = $device->{name};
+  $shash{process} = '
+  undef $device if (defined($device)); # close the handle
+
+# open the device in the sane thread
+  $device = Sane::Device->open($shash{device});
+
+  if ($Sane::STATUS != SANE_STATUS_GOOD) {
+   $logger->error( "opening device: $Sane::STATUS" );
+   return;
+  }
+
+  my @options;
+
+  # We got a device, find out how many options it has:
+  my $num_dev_options = $device->get_option(0);
+  if ($Sane::STATUS != SANE_STATUS_GOOD) {
+   $logger->error( "unable to determine option count" );
+   return;
+  }
+  for (my $i = 1; $i < $num_dev_options; ++$i) {
+   my $opt = $device->get_option_descriptor ($i);
+   $options[$i] = $opt;
+   next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
+
+   $opt->{val} = $device->get_option ($i) if ($opt->{type} != SANE_TYPE_BUTTON);
+  }
+  $shash{data} = freeze(\@options);
+  $shash{go} = 0;
+ ';
+  $shash{go} = 1;
+  $shash{semaphore}->up;
+
+  # Timer will run until callback returns false
+  my $timer = Glib::Timeout->add(
+   100,
+   sub {
+    if ( $shash{go} ) {
+     $pbar->pulse;
+     return TRUE;
+    }
+    else {
+     my $options = thaw( $shash{data} );
+     $success_callback->( $options );
+     $dialog->destroy;
+     return FALSE;
+    }
+   }
+  );
+}
+
+sub set_option {
+ my ($class, $parent, $i, $val,
+     $response_callback, $success_callback) = @_;
+
+  # Set up ProgressBar
+  my $dialog = Gtk2::Dialog->new( $d->get('Updating options') . "...",
+   $parent, 'modal', 'gtk-cancel' => 'cancel' );
+  my $pbar = Gtk2::ProgressBar->new;
+  $pbar->set_pulse_step(.1);
+  $pbar->set_text( $d->get('Updating options') );
+  $dialog->vbox->add($pbar);
+
+  # Ensure that the dialog box is destroyed when the user responds.
+  $dialog->signal_connect(
+   response => sub {
+    $_[0]->destroy;
+    $response_callback->();
+  });
+  $dialog->show_all;
+
+  {
+   my @data = ( $i, $val );
+   lock( $shash{process} );
+   $shash{data}    = freeze( \@data );
+   $shash{process} = '
+   my ($i, $val) = @{thaw($shash{data})};
+   undef $shash{data};
+   my $info = $device->set_option ($i, $val);
+   $logger->info( "sane_set_option returned status $Sane::STATUS with info $info" );
+   if ($info & SANE_INFO_RELOAD_OPTIONS) {
+    my @options;
+
+    # We got a device, find out how many options it has:
+    my $num_dev_options = $device->get_option(0);
+    if ($Sane::STATUS != SANE_STATUS_GOOD) {
+     $logger->error( "unable to determine option count" );
+     return;
+    }
+    for (my $i = 1; $i < $num_dev_options; ++$i) {
+     my $opt = $device->get_option_descriptor ($i);
+     $options[$i] = $opt;
+     next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
+
+     $opt->{val} = $device->get_option ($i) if ($opt->{type} != SANE_TYPE_BUTTON);
+    }
+    $shash{data} = freeze(\@options);
+   }
+   $shash{go} = 0;
+  ';
+   $shash{go} = 1;
+   $shash{semaphore}->up;
+  }
+
+  # Timer will run until callback returns false
+  my $timer = Glib::Timeout->add(
+   100,
+   sub {
+    if ( $shash{go} ) {
+     $pbar->pulse;
+     return TRUE;
+    }
+    else {
+     $success_callback->( thaw( $shash{data} ) );
+     $dialog->destroy;
+     return FALSE;
+    }
+   }
+  );
+}
+
+sub _write_pnm_header {
+ my ( $fh, $format, $width, $height, $depth ) = @_;
+
+ # The netpbm-package does not define raw image data with maxval > 255.
+ # But writing maxval 65535 for 16bit data gives at least a chance
+ # to read the image.
+
+ if ($format == SANE_FRAME_RED
+  or $format == SANE_FRAME_GREEN
+  or $format == SANE_FRAME_BLUE
+  or $format == SANE_FRAME_RGB )
+ {
+  printf $fh "P6\n# SANE data follows\n%d %d\n%d\n", $width, $height,
+    ( $depth <= 8 ) ? 255 : 65535;
+ }
+ else {
+  if ( $depth == 1 ) {
+   printf $fh "P4\n# SANE data follows\n%d %d\n", $width, $height;
+  }
+  else {
+   printf $fh "P5\n# SANE data follows\n%d %d\n%d\n", $width, $height,
+     ( $depth <= 8 ) ? 255 : 65535;
+  }
+ }
+ return;
+}
+
+sub _scan_page {
+ my ( $device, $fh ) = @_;
+ my $first_frame = 1;
+ my $offset      = 0;
+ my $must_buffer = 0;
+ my $min         = 0xff;
+ my $max         = 0;
+ my %image;
+ my @format_name = ( "gray", "RGB", "red", "green", "blue" );
+ my $total_bytes = 0;
+
+ my $parm;
+ {
+  do {    # extra braces to get last to work.
+   if ( !$first_frame ) {
+    $device->start;
+    if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+     $logger->info( "$prog_name: sane_start: $Sane::STATUS" );
+     goto cleanup;
+    }
+   }
+
+   $parm = $device->get_parameters;
+   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+    $logger->info( "$prog_name: sane_get_parameters: $Sane::STATUS" );
+    goto cleanup;
+   }
+
+   if ($first_frame) {
+    if ( $parm->{lines} >= 0 ) {
+     $logger->info( sprintf "$prog_name: scanning image of size %dx%d pixels at "
+       . "%d bits/pixel",
+       $parm->{pixels_per_line}, $parm->{lines},
+       8 * $parm->{bytes_per_line} / $parm->{pixels_per_line} );
+    }
+    else {
+     $logger->info( sprintf "$prog_name: scanning image %d pixels wide and "
+       . "variable height at %d bits/pixel",
+       $parm->{pixels_per_line},
+       8 * $parm->{bytes_per_line} / $parm->{pixels_per_line} );
+    }
+
+    $logger->info( sprintf "$prog_name: acquiring %s frame",
+      $parm->{format} <= SANE_FRAME_BLUE
+      ? $format_name[ $parm->{format} ]
+      : "Unknown" );
+   }
+
+   if ($first_frame) {
+    if ($parm->{format} == SANE_FRAME_RED
+     or $parm->{format} == SANE_FRAME_GREEN
+     or $parm->{format} == SANE_FRAME_BLUE )
+    {
+     die unless ( $parm->{depth} == 8 );
+     $must_buffer = 1;
+     $offset      = $parm->{format} - SANE_FRAME_RED;
+    }
+    elsif ( $parm->{format} == SANE_FRAME_RGB ) {
+     die unless ( ( $parm->{depth} == 8 ) || ( $parm->{depth} == 16 ) );
+    }
+    if ($parm->{format} == SANE_FRAME_RGB
+     or $parm->{format} == SANE_FRAME_GRAY )
+    {
+     die
+       unless ( ( $parm->{depth} == 1 )
+      || ( $parm->{depth} == 8 )
+      || ( $parm->{depth} == 16 ) );
+     if ( $parm->{lines} < 0 ) {
+      $must_buffer = 1;
+      $offset      = 0;
+     }
+     else {
+      _write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
+       $parm->{lines}, $parm->{depth} );
+     }
+    }
+   }
+   else {
+    die
+      unless ( $parm->{format} >= SANE_FRAME_RED
+     && $parm->{format} <= SANE_FRAME_BLUE );
+    $offset = $parm->{format} - SANE_FRAME_RED;
+    $image{x} = $image{y} = 0;
+   }
+   my $hundred_percent = $parm->{bytes_per_line} * $parm->{lines} * (
+    ( $parm->{format} == SANE_FRAME_RGB || $parm->{format} == SANE_FRAME_GRAY )
+    ? 1
+    : 3
+   );
+
+   while (1) {
+    $device->cancel if ( not $shash{go} );
+    my ( $buffer, $len ) = $device->read($buffer_size);
+    $total_bytes += $len;
+    my $progr = $total_bytes / $hundred_percent;
+    $progr = 1 if ( $progr > 1 );
+    $shash{progress} = $progr;
+
+    if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+     $logger->info( sprintf "$prog_name: min/max graylevel value = %d/%d", $min, $max )
+       if ( $parm->{depth} == 8 );
+     if ( $Sane::STATUS != SANE_STATUS_EOF ) {
+      $logger->info( "$prog_name: sane_read: $Sane::STATUS" );
+      return;
+     }
+     last;
+    }
+
+    if ($must_buffer) {
+
+     # We're either scanning a multi-frame image or the
+     # scanner doesn't know what the eventual image height
+     # will be (common for hand-held scanners).  In either
+     # case, we need to buffer all data before we can write
+     # the image
+     if ($parm->{format} == SANE_FRAME_RED
+      or $parm->{format} == SANE_FRAME_GREEN
+      or $parm->{format} == SANE_FRAME_BLUE )
+     {
+      for ( my $i = 0 ; $i < $len ; ++$i ) {
+       $image{data}[ $offset + 3 * $i ] = substr( $buffer, $i, 1 );
+      }
+      $offset += 3 * $len;
+     }
+     elsif ( $parm->{format} == SANE_FRAME_RGB
+      or $parm->{format} == SANE_FRAME_GRAY )
+     {
+      for ( my $i = 0 ; $i < $len ; ++$i ) {
+       $image{data}[ $offset + $i ] = substr( $buffer, $i, 1 );
+      }
+      $offset += $len;
+     }
+    }
+    else {    # ! must_buffer
+     print $fh $buffer;
+    }
+
+    if ( $debug && $parm->{depth} == 8 ) {
+     for ( split( //, $buffer ) ) {
+      my $c = ord;
+      if ( $c >= $max ) {
+       $max = $c;
+      }
+      elsif ( $c < $min ) {
+       $min = $c;
+      }
+     }
+    }
+
+   }
+   $first_frame = 0;
+  } while ( !$parm->{last_frame} );
+ }
+
+ if ($must_buffer) {
+  if ( $parm->{lines} > 0 ) {
+   $image{height} = $parm->{lines};
+  }
+  else {
+   $image{height} = @{ $image{data} } / $parm->{pixels_per_line};
+   $image{height} /= 3
+     if ( $parm->{format} == SANE_FRAME_RED
+    or $parm->{format} == SANE_FRAME_GREEN
+    or $parm->{format} == SANE_FRAME_BLUE );
+  }
+  _write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
+   $image{height}, $parm->{depth} );
+  for ( @{ $image{data} } ) { print $fh; }
+ }
+
+cleanup:
+ my $expected_bytes = $parm->{bytes_per_line} * $parm->{lines} * (
+  ( $parm->{format} == SANE_FRAME_RGB || $parm->{format} == SANE_FRAME_GRAY )
+  ? 1
+  : 3
+ );
+ $expected_bytes = 0 if ( $parm->{lines} < 0 );
+ if ( $total_bytes > $expected_bytes && $expected_bytes != 0 ) {
+  $logger->info( sprintf "%s: WARNING: read more data than announced by backend "
+    . "(%u/%u)", $prog_name, $total_bytes, $expected_bytes );
+ }
+ else {
+  $logger->info( sprintf "%s: read %u bytes in total", $prog_name, $total_bytes );
+ }
+ return;
+}
+
+sub _new_page {
+ my ( $format, $n ) = @_;
+ my $path = sprintf $format, $n;
+ $shash{data} = File::Spec->catdir( $SETTING{session}, $path );
+ $shash{process} = '
+  $device->start;
+  $shash{status} = $Sane::STATUS+0;
+  if ($Sane::STATUS != SANE_STATUS_GOOD) {
+   $logger->info( "$prog_name: sane_start: $Sane::STATUS" );
+   $shash{go} = 0;
+   die; # quickest way out of the eval block
+  }
+
+  my $path = $shash{data};
+  if (not open($fh, ">", $path)) {
+   $device->cancel;
+   $shash{status} = SANE_STATUS_ACCESS_DENIED;
+   $shash{go} = 0;
+   die; # quickest way out of the eval block
+  }
+  _scan_page($device, $fh);
+  $shash{status} = $Sane::STATUS+0;
+  close $fh;
+  $logger->info( sprintf "Scanned page %s. (scanner status = %d)", $path, $Sane::STATUS );
+  $shash{status} = $Sane::STATUS+0;
+  $shash{go} = 0;
+ ';
+ $shash{go} = 1;
+ $shash{semaphore}->up;
+ return;
+}
+
+sub scan_pages {
+ my ($class, $parent, $format, $npages, $n, $step,
+     $page_good_callback, $error_callback) = @_;
+
+ my $n2      = 1;
+ my $npages2 = $npages;
+
+ # Set up ProgressBar
+ my $dialog = Gtk2::Dialog->new( $d->get('Scanning...'),
+  $parent, 'modal', 'gtk-cancel' => 'cancel' );
+ my $pbar = Gtk2::ProgressBar->new;
+ $dialog->vbox->add($pbar);
+
+ # Ensure that the dialog box is destroyed when the user responds.
+ $dialog->signal_connect(
+  response => sub {
+   $_[0]->destroy;
+   $rotating = FALSE; # FIXME
+   $shash{go} = 0;
+  }
+ );
+ $dialog->show_all;
+ if ( $npages2 > 0 ) {
+  $pbar->set_text( sprintf $d->get("Scanning page %d of %d"), $n2, $npages2 );
+ }
+ else {
+  $pbar->set_text( sprintf $d->get("Scanning page %d"), $n2 );
+ }
+
+ _new_page( $format, $n );
+
+ # Timer will run until callback returns false
+ my $timer = Glib::Timeout->add(
+  100,
+  sub {
+   if ( $shash{go} ) {
+    $pbar->set_fraction( $shash{progress} )
+      if ( defined $shash{progress} );
+    return TRUE;
+   }
+   else {
+
+    # Check status of scan
+    if (
+     defined( $shash{status} )
+     and ( $shash{status} == SANE_STATUS_GOOD
+      or $shash{status} == SANE_STATUS_EOF )
+      )
+    {
+     $shash{status} = SANE_STATUS_GOOD;
+     $page_good_callback->($n);
+    }
+    else {
+     $shash{data}    = $path;
+     $shash{process} = '
+     my $path = $shash{data};
+     close ($fh);
+     unlink ($path);
+     $shash{go} = 0;
+    ';
+     $shash{go} = 1;
+     $shash{semaphore}->up;
+    }
+
+    # Stop the process unless everything OK and more scans required
+    unless ( ( $npages == -1 or --$npages )
+     and defined( $shash{status} )
+     and $shash{status} == SANE_STATUS_GOOD )
+    {
+     $shash{process} = '
+     $device->cancel;
+     $shash{go} = 0;
+    ';
+     $shash{go} = 1;
+     $shash{semaphore}->up;
+     $dialog->destroy;
+     $error_callback->( Sane::strstatus( $shash{status} ) )
+       unless (
+      not defined( $shash{status} )
+      or (
+       $shash{status} == SANE_STATUS_GOOD
+       or ( $shash{status} == SANE_STATUS_NO_DOCS
+        and $npages < 1
+        and $n2 > 1 )
+      )
+       );
+     return FALSE;
+    }
+
+    $n += $step;
+    $n2++;
+    $pbar->set_fraction(0);
+    if ( $npages2 > 0 ) {
+     $pbar->set_text( sprintf $d->get("Scanning page %d of %d"), $n2,
+      $npages2 );
+    }
+    else {
+     $pbar->set_text( sprintf $d->get("Scanning page %d"), $n2 );
+    }
+    _new_page( $format, $n );
+    return TRUE;
+   }
+  }
+ );
 }
 
 __END__
