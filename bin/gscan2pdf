@@ -10733,10 +10733,11 @@ sub ocr_page {
        $post = '';
       }
       if ( defined $SETTING{'ocr language'} ) {
-       $cmd = "$pre tesseract $tif $txt -l $SETTING{'ocr language'}$post";
+       $cmd =
+"$pre tesseract $tif $txt -l $SETTING{'ocr language'} 2> $SETTING{session}/error.txt$post";
       }
       else {
-       $cmd = "$pre tesseract $tif $txt$post";
+       $cmd = "$pre tesseract $tif $txt 2> $SETTING{session}/error.txt$post";
       }
      }
      elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
@@ -10806,6 +10807,14 @@ sub ocr_page {
         my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
         $logger->info( "Reaped PID $pid" );
         $running_ocr = FALSE;
+        if ( -r "$SETTING{session}/error.txt" ) {
+         my $error = slurp("$SETTING{session}/error.txt");
+         if ( $error =~ /Unable to load unicharset file/ ) {
+          show_message_dialog( $windowo, 'error', 'close', $error );
+          return FALSE;                       # uninstall
+         }
+         unlink "$SETTING{session}/error.txt";
+        }
 
    # Doing this once at the end to avoid firing the row-changed signal too often
         $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
@@ -10976,6 +10985,7 @@ sub add_tess_languages {
   if ( not -z $_ ) {
    my $code;
    $code = $1 if ( $_ =~ /([\w\-]*)\.unicharset$/ );
+   $logger->info( "Found tesseract language $code" );
    if ( defined $iso639{$code} ) {
     push @tesslang, [ $code, $iso639{$code} ];
    }
@@ -10986,7 +10996,10 @@ sub add_tess_languages {
  }
 
  # If there are no language files, then we have tesseract-1.0, i.e. English
- push @tesslang, [ undef, $d->get('English') ] if ( !@tesslang );
+ if ( !@tesslang ) {
+   push @tesslang, [ undef, $d->get('English') ];
+   $logger->info( "No tesseract languages found" );
+ }
 
  my $combobox = combobox_from_array(@tesslang);
  combobox_set_active( $combobox, $SETTING{'ocr language'}, @tesslang );
