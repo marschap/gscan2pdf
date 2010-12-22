@@ -4986,15 +4986,15 @@ sub scan_dialog {
  # Show window
  $windows->show_all;
  $framex->hide_all;
- $hboxcl->hide_all
+ $hboxtl->hide_all
    if (
-  !(
-      $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
-   or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus'
-  )
+  defined($hboxtl)
+  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
+   or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
    );
  $hboxcl->hide_all
-   if ( not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
+   if ( defined($hboxcl)
+  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
  if ($test) {
@@ -5647,13 +5647,13 @@ sub scan_dialog2 {
  $framex->hide_all;
  $hboxtl->hide_all
    if (
-  !(
-      $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
-   or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus'
-  )
+  defined($hboxtl)
+  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
+   or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
    );
  $hboxcl->hide_all
-   if ( not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
+   if ( defined($hboxcl)
+  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
 
  # Has to be done in idle cycles to wait for the options to finish building
  Glib::Idle->add( sub { $sbutton->grab_focus; } );
@@ -10733,10 +10733,11 @@ sub ocr_page {
        $post = '';
       }
       if ( defined $SETTING{'ocr language'} ) {
-       $cmd = "$pre tesseract $tif $txt -l $SETTING{'ocr language'}$post";
+       $cmd =
+"$pre tesseract $tif $txt -l $SETTING{'ocr language'} 2> $SETTING{session}/error.txt$post";
       }
       else {
-       $cmd = "$pre tesseract $tif $txt$post";
+       $cmd = "$pre tesseract $tif $txt 2> $SETTING{session}/error.txt$post";
       }
      }
      elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
@@ -10806,6 +10807,14 @@ sub ocr_page {
         my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
         $logger->info( "Reaped PID $pid" );
         $running_ocr = FALSE;
+        if ( -r "$SETTING{session}/error.txt" ) {
+         my $error = slurp("$SETTING{session}/error.txt");
+         if ( $error =~ /Unable to load unicharset file/ ) {
+          show_message_dialog( $windowo, 'error', 'close', $error );
+          return FALSE;                       # uninstall
+         }
+         unlink "$SETTING{session}/error.txt";
+        }
 
    # Doing this once at the end to avoid firing the row-changed signal too often
         $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
@@ -10976,6 +10985,7 @@ sub add_tess_languages {
   if ( not -z $_ ) {
    my $code;
    $code = $1 if ( $_ =~ /([\w\-]*)\.unicharset$/ );
+   $logger->info( "Found tesseract language $code" );
    if ( defined $iso639{$code} ) {
     push @tesslang, [ $code, $iso639{$code} ];
    }
@@ -10986,7 +10996,10 @@ sub add_tess_languages {
  }
 
  # If there are no language files, then we have tesseract-1.0, i.e. English
- push @tesslang, [ undef, $d->get('English') ] if ( !@tesslang );
+ if ( !@tesslang ) {
+   push @tesslang, [ undef, $d->get('English') ];
+   $logger->info( "No tesseract languages found" );
+ }
 
  my $combobox = combobox_from_array(@tesslang);
  combobox_set_active( $combobox, $SETTING{'ocr language'}, @tesslang );
@@ -11149,13 +11162,13 @@ sub OCR {
  $windowo->show_all;
  $hboxtl->hide_all
    if (
-  !(
-      $ocr_engine[ $combobe->get_active ]->[0] eq 'tesseract'
-   or $ocr_engine[ $combobe->get_active ]->[0] eq 'ocropus'
-  )
+  defined($hboxtl)
+  and not( $ocr_engine[ $combobe->get_active ]->[0] eq 'tesseract'
+   or $ocr_engine[ $combobe->get_active ]->[0] eq 'ocropus' )
    );
  $hboxcl->hide_all
-   if ( not( $ocr_engine[ $combobe->get_active ]->[0] eq 'cuneiform' ) );
+   if ( defined($hboxcl)
+  and not( $ocr_engine[ $combobe->get_active ]->[0] eq 'cuneiform' ) );
  return;
 }
 
