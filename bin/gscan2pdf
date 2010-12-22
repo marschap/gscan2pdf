@@ -2320,7 +2320,7 @@ sub import_file {
   while ( $info =~ /\s(\d+)\s+dpi/ ) {
    push @ppi, $1;
    $logger->info( "Page $#ppi is $ppi[$#ppi] ppi" );
-   $info = substr( $info, index( $info, " ppi" ) + 4, length($info) );
+   $info = substr( $info, index( $info, " dpi" ) + 4, length($info) );
   }
   if ( $last != @ppi ) {
    send(
