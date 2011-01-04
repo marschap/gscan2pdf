@@ -1991,32 +1991,33 @@ sub convert_to_tiff {
 # Create a file filter to show only supported file types in FileChooser dialog
 
 sub add_filter {
- my ($file_chooser, $name, @file_extensions) = @_ ;
+ my ( $file_chooser, $name, @file_extensions ) = @_;
  my $filter = Gtk2::FileFilter->new;
  foreach (@file_extensions) {
   my @filter_pattern;
   my $byte;
+
   # Create case insensitive pattern
-  foreach $byte (split //, $_) {
-   push(@filter_pattern,'[' . uc($byte) . lc($byte) . ']');
+  foreach $byte ( split //, $_ ) {
+   push( @filter_pattern, '[' . uc($byte) . lc($byte) . ']' );
   }
- my $new_filter_pattern = join("",@filter_pattern);
- $filter->add_pattern('*.' . $new_filter_pattern);
- } 
+  my $new_filter_pattern = join( "", @filter_pattern );
+  $filter->add_pattern( '*.' . $new_filter_pattern );
+ }
  my $types;
  for (@file_extensions) {
-  if (defined $types) {
+  if ( defined $types ) {
    $types .= ", *.$_";
   }
   else {
    $types = "*.$_";
   }
  }
- $filter->set_name( "$name ($types)" );
+ $filter->set_name("$name ($types)");
  $file_chooser->add_filter($filter);
  $filter = Gtk2::FileFilter->new;
  $filter->add_pattern('*');
- $filter->set_name( 'All files' );
+ $filter->set_name('All files');
  $file_chooser->add_filter($filter);
  return;
 }
@@ -2168,7 +2169,8 @@ sub import_dialog {
  );
  $file_chooser->set_select_multiple(TRUE);
  $file_chooser->set_default_response('ok');
- add_filter( $file_chooser, $d->get('Image files'), 'jpg','png','pnm','gif','tif','tiff','pdf','djvu','ps' );
+ add_filter( $file_chooser, $d->get('Image files'),
+  'jpg', 'png', 'pnm', 'gif', 'tif', 'tiff', 'pdf', 'djvu', 'ps' );
 
  if ( 'ok' eq $file_chooser->run ) {
 
@@ -3834,7 +3836,8 @@ sub save_image {
   'gtk-save'   => 'ok'
  );
  $file_chooser->set_default_response('ok');
- add_filter( $file_chooser, $d->get('Image files'), 'jpg','png','pnm','gif','tif','tiff','pdf','djvu','ps' );
+ add_filter( $file_chooser, $d->get('Image files'),
+  'jpg', 'png', 'pnm', 'gif', 'tif', 'tiff', 'pdf', 'djvu', 'ps' );
 
  if ( 'ok' eq $file_chooser->run ) {
   my $filename = $file_chooser->get_filename;
