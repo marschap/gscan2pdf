@@ -10832,7 +10832,8 @@ sub ocr_page {
        $pre  = '';
        $post = '';
       }
-      $cmd = "$pre cuneiform -l $SETTING{'ocr language'} -f hocr -o $txt.txt $bmp $post";
+      $cmd =
+"$pre cuneiform -l $SETTING{'ocr language'} -f hocr -o $txt.txt $bmp $post";
      }
      $logger->info($cmd);
 
