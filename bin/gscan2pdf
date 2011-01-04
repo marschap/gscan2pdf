@@ -1892,6 +1892,25 @@ sub get_pixbuf {
 
 sub new {
 
+ # Check that all pages have been saved
+ for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
+  if ( !$slist->{data}[$i][5] ) {
+   my $response = show_message_dialog(
+    $window,
+    'question',
+    'ok-cancel',
+    $d->get(
+     "Some pages have not been saved.\nDo you really want to clear all pages?")
+   );
+   if ( $response ne 'ok' ) {
+    return FALSE;
+   }
+   else {
+    last;
+   }
+  }
+ }
+
  # Update undo/redo buffers
  take_snapshot();
 
