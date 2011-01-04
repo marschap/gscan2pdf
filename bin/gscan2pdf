@@ -179,7 +179,10 @@ my $d      = Locale::gettext->domain($prog_name);
 my $d_sane = Locale::gettext->domain('sane-backends');
 
 my $debug = FALSE;
-my ( $test, $help, $log, $log_level, @device, @model, $locale, @device_list, $test_image );
+my (
+ $test,  $help,   $log,         $log_level, @device,
+ @model, $locale, @device_list, $test_image
+);
 my @args = (
  'device=s'     => \@device,
  'test=s%'      => \$test,
@@ -188,11 +191,11 @@ my @args = (
  'help'         => \$help,
  'log=s'        => \$log,
  'debug'        => sub { $log_level = 'DEBUG'; $debug = TRUE },
- 'info'         => sub { $log_level = 'INFO' },
- 'warn'         => sub { $log_level = 'WARN' },
- 'error'        => sub { $log_level = 'ERROR' },
- 'fatal'        => sub { $log_level = 'FATAL' },
- 'version'      => sub { warn "$prog_name $version\n"; exit 0 },
+ 'info'  => sub { $log_level = 'INFO' },
+ 'warn'  => sub { $log_level = 'WARN' },
+ 'error' => sub { $log_level = 'ERROR' },
+ 'fatal' => sub { $log_level = 'FATAL' },
+ 'version' => sub { warn "$prog_name $version\n"; exit 0 },
 );
 exit 1 if ( !GetOptions(@args) );
 $Sane::DEBUG = $debug;
@@ -7110,7 +7113,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 EOS
  $about->set_license($licence);
  $about->set_website('http://gscan2pdf.sf.net');
- my $translators = <<'EOS'; # inverted commas requred around EOS because of UTF-8 in $translators
+ my $translators =
+   <<'EOS'; # inverted commas requred around EOS because of UTF-8 in $translators
 suoko
 Emil Pavlov
 Jarosław Ogrodnik
@@ -10418,7 +10422,13 @@ sub add_widget {
   $widget->add($vboxf);
   my @default;
   @default = split /,/, $SETTING{$option} if ( defined $SETTING{$option} );
-  foreach ( sort { $hashref->{$option}{options}{$a}{order} <=> $hashref->{$option}{options}{$b}{order} } keys %{ $hashref->{$option}{options} } ) {
+  foreach (
+   sort {
+    $hashref->{$option}{options}{$a}{order} <=> $hashref->{$option}{options}{$b}
+      {order}
+   } keys %{ $hashref->{$option}{options} }
+    )
+  {
    my $button = add_widget( $vboxf, $hashref->{$option}{options}, $_ );
    $button->set_value( shift @default ) if (@default);
   }
@@ -10857,7 +10867,7 @@ sub ocr_page {
         # Set up the canvas
         my $canvas_new = Goo::Canvas->new;
         my $root       = $canvas_new->get_root_item;
-        my $pixbuf     =
+        my $pixbuf =
           Gtk2::Gdk::Pixbuf->new_from_file( $slist->{data}[$pagenum][2] );
         $canvas_new->set_bounds( 0, 0, $pixbuf->get_width,
          $pixbuf->get_height );
