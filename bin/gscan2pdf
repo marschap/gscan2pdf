@@ -10196,7 +10196,7 @@ sub unpaper_page {
     return FALSE;    # uninstall
    }
    elsif (@unpaper_stack) {
-    if ( !$running_unpaper ) {
+    if ( not $running_unpaper ) {
      $running_unpaper = TRUE;
      $page++;
      $npages++;
@@ -10255,6 +10255,14 @@ sub unpaper_page {
 
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
+       if ( ( $condition & 'hup' ) and not $running_unpaper ) {
+        close $read;
+        $logger->info('Waiting to reap process');
+        my $pid = waitpid( -1, &WNOHANG );
+        $logger->info("Reaped PID $pid");
+        return FALSE;                # uninstall
+       }
+
        if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
        {                             # bit field operation. >= would also work
         $logger->debug($page_buffer);
@@ -10327,7 +10335,7 @@ sub unpaper_page {
     }
     return TRUE;         # continue without uninstalling
    }
-   elsif ( !$running_unpaper ) {
+   elsif ( not $running_unpaper ) {
     $dialog->destroy;
 
     # set off ocr if necessary now that unpaper has finished
