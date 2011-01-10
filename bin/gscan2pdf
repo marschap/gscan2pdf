@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    make escape button hide/kill active dialog/window, e.g. scan, by turning all dialogs in Gtk2::Dialog
 #*** unhandled exception in callback:
 #***   Can't call method "hide_all" on an undefined value at bin/gscan2pdf line 5512.
 #***  ignoring at bin/gscan2pdf line 12380.
@@ -2572,10 +2571,25 @@ sub create_window {
  $window_new->set_title($title);
  if ($destroy) {
   $window_new->signal_connect( destroy => sub { $window_new->destroy; } );
+  $window_new->signal_connect(
+   key_press_event => sub {
+    my ( $widget, $event ) = @_;
+    return unless $event->keyval == $Gtk2::Gdk::Keysyms{Escape};
+    $window_new->destroy;
+   }
+  );
  }
  else {
   $window_new->signal_connect(
    delete_event => sub {
+    $window_new->hide;
+    return TRUE;    # ensures that the window is not destroyed
+   }
+  );
+  $window_new->signal_connect(
+   key_press_event => sub {
+    my ( $widget, $event ) = @_;
+    return unless $event->keyval == $Gtk2::Gdk::Keysyms{Escape};
     $window_new->hide;
     return TRUE;    # ensures that the window is not destroyed
    }
