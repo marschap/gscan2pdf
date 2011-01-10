@@ -342,9 +342,13 @@ my %default_settings = (
  user_defined_tools => ['gimp %i']
 );
 delete $SETTING{frontend}
-  if ( defined $SETTING{frontend}
- and
- ( $SETTING{frontend} eq 'scanimage.pl' or $SETTING{frontend} eq 'scanadf.pl' )
+  if (
+ defined $SETTING{frontend}
+ and ( $SETTING{frontend} eq 'scanimage-perl'
+  or $SETTING{frontend} eq 'scanadf-perl'
+  or $SETTING{frontend} eq 'scanimage.pl'
+  or $SETTING{frontend} eq
+  'scanadf.pl' )    # these frontends are just for testing purposes
   );
 for ( keys(%default_settings) ) {
  $SETTING{$_} = $default_settings{$_} unless ( defined $SETTING{$_} );
