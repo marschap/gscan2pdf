@@ -4179,8 +4179,11 @@ sub save_djvu {
        my $resolution = $slist->{data}[$j][4];
        my $cmd        = "$compression -dpi $resolution $filename $djvu";
        $logger->info($cmd);
-       system($cmd) == 0
-         or send( $parent, "2" . $d->get('Error writing DjVu'), 0 );
+       my ( $status, $size ) = ( system($cmd), -s $djvu );
+       unless ( $status == 0 and $size ) {
+         send( $parent, "2" . $d->get('Error writing DjVu'), 0 );
+         $logger->error("Error writing image for page ",$i+1," of DjVu (process returned $status, image size $size)");
+       }
        $filelist[$i] = $djvu;
 
        # Add OCR to text layer
@@ -4191,7 +4194,8 @@ sub save_djvu {
         my $h = $image->Get('height');
 
         # Open djvusedtxtfile
-        my $djvusedtxtfile = "djvusedtxtfile";
+        my ( undef, $djvusedtxtfile ) =
+           tempfile( DIR => $SETTING{session}, SUFFIX => '.txt' );
         open my $fh, ">:utf8", $djvusedtxtfile
           or die sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile );
         print $fh "(page 0 0 $w $h\n";
@@ -4229,17 +4233,21 @@ sub save_djvu {
         close $fh;
 
         # Write djvusedtxtfile
-        my $cmd = "djvused '$djvu' -e 'select 1; set-txt djvusedtxtfile' -s";
+        my $cmd = "djvused '$djvu' -e 'select 1; set-txt $djvusedtxtfile' -s";
         $logger->info($cmd);
-        system($cmd) == 0
-          or send( $parent, "2" . $d->get('Error writing DjVu'), 0 );
+        unless ( system($cmd) == 0 ) {
+          send( $parent, "2" . $d->get('Error adding text layer to DjVu'), 0 );
+          $logger->error("Error adding text layer to DjVu page ",$i+1);
+        }
        }
       }
       send( $parent, '1' . $d->get('Closing DjVu'), 0 );
       my $cmd = "djvm -c '$filename' @filelist";
       $logger->info($cmd);
-      system($cmd) == 0
-        or send( $parent, "2" . $d->get('Error closing DjVu'), 0 );
+      unless ( system($cmd) == 0 ) {
+        send( $parent, "2" . $d->get('Error closing DjVu'), 0 );
+        $logger->error("Error closing DjVu");
+      }
 
       send( $parent, "2", 0 );
      }
