@@ -8052,10 +8052,14 @@ sub default2index {
   # Ghost the scan button whilst options being updated
   $sbutton->set_sensitive(FALSE) if ( defined $sbutton );
 
-  Gscan2pdf::Backend::Sane->find_scan_options( $device, $windows2, sub {
+  Gscan2pdf::Backend::Sane->open_device( $device, $windows2, sub {
     $rotating = FALSE;
     kill_subs();
    }, sub {
+     Gscan2pdf::Backend::Sane->find_scan_options( $windows2, sub {
+                                                    $rotating = FALSE;
+                                                    kill_subs();
+                                                  }, sub {
      my ($data) = @_;
      my @options = @{ $data };
      $logger->debug( "Sane->get_option_descriptor returned: ", Dumper( \@options ) );
@@ -8439,7 +8443,7 @@ sub default2index {
      $sbutton->set_sensitive(TRUE);
      $sbutton->grab_focus;
     }
-  );
+  )});
 
   return;
  }
@@ -12440,13 +12444,55 @@ sub device {
  return $_self->{device_name};
 }
 
-sub find_scan_options {
+sub open_device {
  my ($class, $device, $parent, $response_callback, $success_callback) = @_;
+
+ my $sentinel = _enqueue_request ('open',
+                                  {device_name => $device->{name}});
+
+  # Set up ProgressBar
+ my $dialog = Gtk2::Dialog->new( $d->get('Opening device') . "...",
+                                 $parent, 'modal', 'gtk-cancel' => 'cancel' );
+ my $pbar = Gtk2::ProgressBar->new;
+ $pbar->set_pulse_step(.1);
+ $pbar->set_text( $d->get('Opening device') );
+ $dialog->vbox->add($pbar);
+
+ # Ensure that the dialog box is destroyed when the user responds.
+ $dialog->signal_connect(
+  response => sub {
+   $_[0]->destroy;
+   $response_callback->();
+  }
+ );
+ $dialog->show_all;
+
+ _when_ready ($sentinel, sub {
+  $dialog->destroy;
+  if ( $_self->{status} == SANE_STATUS_GOOD ) {
+   $success_callback->();
+  }
+  else {
+   $parent->destroy;
+   main::show_message_dialog(
+                             $window,
+                             'error', 'close',
+                             $d->get(
+                                     'Error opening device: ' . Sane::strstatus( $_self->{status} )
+                                    )
+                            );
+  }
+ }, sub {
+  $pbar->pulse;
+ });
+}
+
+sub find_scan_options {
+ my ($class, $parent, $response_callback, $success_callback) = @_;
 
  my $options : shared;
  my $sentinel = _enqueue_request ('get-options',
-                                  {device_name => $device->{name},
-                                   options => \$options});
+                                   {options => \$options});
 
   # Set up ProgressBar
  my $dialog = Gtk2::Dialog->new( $d->get('Updating options') . "...",
@@ -12466,8 +12512,20 @@ sub find_scan_options {
  $dialog->show_all;
 
  _when_ready ($sentinel, sub {
-  $success_callback->( $options );
   $dialog->destroy;
+  if ( $_self->{status} == SANE_STATUS_GOOD ) {
+   $success_callback->( $options );
+  }
+  else {
+   $parent->destroy;
+   main::show_message_dialog(
+                             $window,
+                             'error', 'close',
+                             $d->get(
+                                     'Error retrieving scanner options: ' . Sane::strstatus( $_self->{status} )
+                                    )
+                            );
+  }
  }, sub {
   $pbar->pulse;
  });
@@ -12615,8 +12673,7 @@ sub _thread_main {
   }
 
   elsif ($request->{action} eq 'get-options') {
-   _thread_get_options ($self, $request->{device_name},
-                               $request->{options});
+   _thread_get_options ($self, $request->{options});
   }
 
   elsif ($request->{action} eq 'set-option') {
@@ -12638,6 +12695,12 @@ sub _thread_main {
    next;
   }
 
+  # Store the current status in the shared status variable.  Otherwise, the
+  # main thread has no way to access this thread's $Sane::STATUS.  Numerify to
+  # please thread::shared.
+  $self->{status} = $Sane::STATUS+0;
+
+  # Signal the sentinel that the request was completed.
   ${$request->{sentinel}}++;
  }
 }
@@ -12648,13 +12711,12 @@ sub _thread_get_devices {
  $self->{device_list} = shared_clone \@devices;
 }
 
-sub _thread_get_options {
- my ($self, $device_name, $options) = @_;
+sub _thread_open_device {
+ my ($self, $device_name) = @_;
 
  # close the handle
  undef $self->{device_handle} if (defined($self->{device_handle}));
 
- # open the device
  $self->{device_handle} = Sane::Device->open($device_name);
  if ($Sane::STATUS != SANE_STATUS_GOOD) {
   $logger->error( "opening device: $Sane::STATUS" );
@@ -12662,7 +12724,10 @@ sub _thread_get_options {
  } else {
   $self->{device_name} = $device_name;
  }
+}
 
+sub _thread_get_options {
+ my ($self, $options) = @_;
  my @options;
 
  # We got a device, find out how many options it has:
@@ -12674,9 +12739,8 @@ sub _thread_get_options {
  for (my $i = 1; $i < $num_dev_options; ++$i) {
   my $opt = $self->{device_handle}->get_option_descriptor ($i);
   $options[$i] = $opt;
-  next if (! ($opt->{cap} & SANE_CAP_SOFT_DETECT));
-
-  $opt->{val} = $self->{device_handle}->get_option ($i) if ($opt->{type} != SANE_TYPE_BUTTON);
+  $opt->{val} = $self->{device_handle}->get_option ($i)
+   if (not (($opt->{cap} & SANE_CAP_INACTIVE) or ($opt->{type} == SANE_TYPE_BUTTON) or ($opt->{type} == SANE_TYPE_GROUP)));
  }
 
  $$options = shared_clone \@options;
