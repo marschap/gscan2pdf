@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # gscan2pdf --- to aid the scan to PDF or DjVu process
-# Copyright (C) 2006--2010 Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
+# Copyright (C) 2006--2011 Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the version 3 GNU General Public License as
@@ -7120,10 +7120,10 @@ EOS
     . $d->get('Patches gratefully received from:')
     . "\n$authors" );
  $about->set_comments( $d->get('To aid the scan-to-PDF process') );
- $about->set_copyright( $d->get('Copyright 2006--2010 Jeffrey Ratcliffe') );
+ $about->set_copyright( $d->get('Copyright 2006--2011 Jeffrey Ratcliffe') );
  my $licence = <<EOS;
 gscan2pdf --- to aid the scan to PDF or DjVu process
-Copyright 2006 -- 2010 Jeffrey Ratcliffe <Jeffrey.Ratcliffe\@gmail.com>
+Copyright 2006 -- 2011 Jeffrey Ratcliffe <Jeffrey.Ratcliffe\@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the version 3 GNU General Public License as
