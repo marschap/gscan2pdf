@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # gscan2pdf --- to aid the scan to PDF or DjVu process
-# Copyright (C) 2006--2010 Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
+# Copyright (C) 2006--2011 Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the version 3 GNU General Public License as
@@ -7136,10 +7136,10 @@ EOS
     . $d->get('Patches gratefully received from:')
     . "\n$authors" );
  $about->set_comments( $d->get('To aid the scan-to-PDF process') );
- $about->set_copyright( $d->get('Copyright 2006--2010 Jeffrey Ratcliffe') );
+ $about->set_copyright( $d->get('Copyright 2006--2011 Jeffrey Ratcliffe') );
  my $licence = <<EOS;
 gscan2pdf --- to aid the scan to PDF or DjVu process
-Copyright 2006 -- 2010 Jeffrey Ratcliffe <Jeffrey.Ratcliffe\@gmail.com>
+Copyright 2006 -- 2011 Jeffrey Ratcliffe <Jeffrey.Ratcliffe\@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the version 3 GNU General Public License as
@@ -7157,26 +7157,26 @@ EOS
  $about->set_website('http://gscan2pdf.sf.net');
  my $translators =
    <<'EOS'; # inverted commas requred around EOS because of UTF-8 in $translators
-suoko
-Emil Pavlov
-Jarosław Ogrodnik
-Piotr Strębski
-Wojciech Górnaś
-Сергій Дубик
 Norbux
-Zachary Richey
-Cédric VALMARY (Tot en òc)
+Oleg Koptev
+Сергій Дубик
+Matthias Gutjahr
+Fitoschido
+YAMAKAGE Hideo
+Alejandro Cuervo
+Tico
+suoko
+Piotr Strębski
+JeromeJ
+David Planella
+Manuel Rennecke
+Wojciech Górnaś
 Sérgio Marques
-Nicola Cardinali
-zdpo
-Tikkel
-liorda
-Spector
-Steven Sproat
-nikt_taki
-Csörföly Dániel
-starmaker
-Yözen Hernández
+Cédric VALMARY
+Celso H. L. S. Junior
+Jarosław Ogrodnik
+Luisa Ravelli
+John M
 EOS
  utf8::encode($translators);    # UTF-8 in perl sucks!
  $about->set_translator_credits($translators);
