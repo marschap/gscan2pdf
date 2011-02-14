@@ -49,7 +49,6 @@ WriteMakefile(
                                    Config::General        => 2.40,
                                    PDF::API2              => 0,
                                    Set::IntSpan           => 1.10,
-                                   forks                  => 0.33,
                                    XML::Simple            => 0,
                                    Goo::Canvas            => 0,
                                    Readonly               => 0,

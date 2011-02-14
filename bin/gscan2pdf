@@ -160,7 +160,7 @@ use Readonly;
 Readonly my $POINTS_PER_INCH => 72;
 
 my $prog_name = 'gscan2pdf';
-my $version   = '0.9.32~1';
+my $version   = '0.9.32';
 
 my $tolerance   = 1;
 my $buffer_size = ( 32 * 1024 );    # default size

@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.31
+Version: 0.9.32
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -82,7 +82,21 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Wed Jul 14 2010 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Mon Feb 14 2011 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #599181 (gscan2pdf: OCR doesn't support Umlauts/national characters)
+    Closes: #608226 (pressing space causes unexpected data loss)
+    New Depends: liblog-log4perl-perl
+    Removed Depends: libarchive-tar-perl, as now in perl
+  - Removed debian/patches/replace-forks-with-threads 
+    Removed Build-Depends: quilt
+    Updated rules not to use quilt
+  - Replace forks with threads
+    Closes: #591404 (gscan2pdf: libforks-perl could be removed)
+    Removed Depends: libforks-perl
+    Added Build-Depends: quilt
+    Updated rules to use quilt
+  - Bumped standards to 3.9.1 (no changes required)
   - New upstream release
     Closes: #510309 (gscan2pdf: Ability to configure how GIMP is started)
     Closes: #576193 (gscan2pdf: OCR does not works, due to Goo::Canvas::Text
