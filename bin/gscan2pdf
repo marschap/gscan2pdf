@@ -427,7 +427,7 @@ $logger->info( "Running with GTK " . join( '.', Gtk2->get_version_info ) );
 $logger->info( "Using GtkImageView version ",
  Gtk2::ImageView->library_version );
 $logger->info("Using Gtk2::ImageView version $Gtk2::ImageView::VERSION");
-$logger->info("Using PDF::API2 version $PDF::API2::Version::CVersion{vShort}");
+$logger->info("Using PDF::API2 version $PDF::API2::VERSION");
 if ($debug) {
  use Data::Dumper;
  $logger->debug( Dumper( \%SETTING ) );
