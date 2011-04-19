@@ -6,7 +6,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test::More tests => 2;
-BEGIN { use_ok('Gscan2pdf') };
+BEGIN { use_ok('Gscan2pdf::Frontend::Scanimage') };
 
 #########################
 
@@ -15,7 +15,7 @@ BEGIN { use_ok('Gscan2pdf') };
 
 my $filename = 'scanners/officejet_5500';
 my $output = do { local( @ARGV, $/ ) = $filename ; <> } ;
-my %this = Gscan2pdf::options2hash($output);
+my %this = Gscan2pdf::Frontend::Scanimage::options2hash($output);
 my %that = (
           'jpeg-compression-factor' => {
                                          'tip' => 'Sets the scanner JPEG compression factor.  Larger numbers mean better compression, and smaller numbers mean better image quality.',

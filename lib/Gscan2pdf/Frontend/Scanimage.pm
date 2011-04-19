@@ -1,4 +1,4 @@
-package Gscan2pdf;
+package Gscan2pdf::Frontend::Scanimage;
 
 use strict;
 use warnings;

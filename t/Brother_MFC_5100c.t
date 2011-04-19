@@ -6,7 +6,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test::More tests => 2;
-BEGIN { use_ok('Gscan2pdf') };
+BEGIN { use_ok('Gscan2pdf::Frontend::Scanimage') };
 
 #########################
 
@@ -15,7 +15,7 @@ BEGIN { use_ok('Gscan2pdf') };
 
 my $filename = 'scanners/Brother_MFC_5100c';
 my $output = do { local( @ARGV, $/ ) = $filename ; <> } ;
-my %this = Gscan2pdf::options2hash($output);
+my %this = Gscan2pdf::Frontend::Scanimage::options2hash($output);
 my %that = (
           'source' => {
                         'tip' => 'Selects the scan source (such as a document-feeder).',

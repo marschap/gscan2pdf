@@ -125,7 +125,7 @@
 
 use warnings;
 use strict;
-use Gscan2pdf;
+use Gscan2pdf::Frontend::Scanimage;
 use Gtk2 -init;
 use Gtk2::ImageView;
 use Goo::Canvas;
@@ -7904,7 +7904,7 @@ sub update_options {
 sub options2hash {
 
  my ($output) = @_;
- my %hash = Gscan2pdf::options2hash($output);
+ my %hash = Gscan2pdf::Frontend::Scanimage::options2hash($output);
  $logger->debug( Dumper( \%hash ) );
  foreach ( keys %hash ) {
 
