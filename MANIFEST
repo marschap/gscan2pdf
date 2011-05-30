@@ -19,8 +19,11 @@ gscan2pdf.Suse.spec
 gscan2pdf.desktop
 gscan2pdf.spec
 gscan2pdf.svg
+lib/Gscan2pdf.pm
+lib/Gscan2pdf/Document.pm
 lib/Gscan2pdf/Frontend/Sane.pm
 lib/Gscan2pdf/Frontend/Scanimage.pm
+lib/Gscan2pdf/Page.pm
 pdf.svg
 po/gscan2pdf-ab.po
 po/gscan2pdf-be.po
@@ -104,6 +107,7 @@ stock-rotate-180.svg
 stock-rotate-270.svg
 stock-rotate-90.svg
 stock-selection-all-16.png
+t/1_save_pdf.t
 t/Brother_DCP-7025.t
 t/Brother_MFC_5100c.t
 t/MANIFEST.t
