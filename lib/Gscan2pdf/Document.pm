@@ -642,6 +642,34 @@ sub save_pdf {
  return;
 }
 
+sub save_djvu {
+ my ( $self, $path, $list_of_pages, $finished_callback, $not_finished_callback,
+  $error_callback )
+   = @_;
+
+ my $sentinel = Gscan2pdf::_enqueue_request(
+  'save-djvu',
+  {
+   path          => $path,
+   list_of_pages => $list_of_pages
+  }
+ );
+ Gscan2pdf::_when_ready(
+  $sentinel,
+  sub {
+   if ( $Gscan2pdf::_self->{status} ) {
+    $error_callback->();
+    return;
+   }
+   $finished_callback->();
+  },
+  sub {
+   $not_finished_callback->();
+  }
+ );
+ return;
+}
+
 1;
 
 __END__

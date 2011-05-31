@@ -93,6 +93,10 @@ sub _thread_main {
    );
   }
 
+  elsif ( $request->{action} eq 'save-djvu' ) {
+   _thread_save_djvu( $self, $request->{path}, $request->{list_of_pages} );
+  }
+
   elsif ( $request->{action} eq 'cancel' ) {
    _thread_cancel($self);
   }
@@ -576,6 +580,135 @@ sub _thread_save_pdf {
  $pdf->save;
  $pdf->end;
  return;
+}
+
+sub _thread_save_djvu {
+ my ( $self, $path, $list_of_pages ) = @_;
+
+ my $page = 0;
+ my @filelist;
+
+ foreach my $pagedata ( @{$list_of_pages} ) {
+  ++$page;
+  $self->{progress} = $page / ( $#{$list_of_pages} + 2 );
+  $self->{message} =
+    sprintf( $d->get("Writing page %i of %i"), $page, $#{$list_of_pages} + 1 );
+
+  my $filename = $pagedata->{filename};
+  my ( undef, $djvu ) =
+    tempfile( DIR => $main::SETTING{session}, SUFFIX => '.djvu' );
+
+  # Check the image depth to decide what sort of compression to use
+  my $image = Image::Magick->new;
+  my $x     = $image->Read($filename);
+  $logger->warn($x) if "$x";
+  my $depth = $image->Get('depth');
+  my $class = $image->Get('class');
+  my $compression;
+
+  # c44 can only use pnm and jpg
+  my $format;
+  $format = $1 if ( $filename =~ /\.(\w*)$/ );
+  if ( $depth > 1 ) {
+   $compression = 'c44';
+   if ( $format !~ /(pnm|jpg)/ ) {
+    my ( undef, $pnm ) =
+      tempfile( DIR => $main::SETTING{session}, SUFFIX => '.pnm' );
+    $x = $image->Write( filename => $pnm );
+    $logger->warn($x) if "$x";
+    $filename = $pnm;
+   }
+  }
+
+  # cjb2 can only use pnm and tif
+  else {
+   $compression = 'cjb2';
+   if ( $format !~ /(pnm|tif)/
+    or ( $format eq 'pnm' and $class ne 'PseudoClass' ) )
+   {
+    my ( undef, $pbm ) =
+      tempfile( DIR => $main::SETTING{session}, SUFFIX => '.pbm' );
+    $x = $image->Write( filename => $pbm );
+    $logger->warn($x) if "$x";
+    $filename = $pbm;
+   }
+  }
+
+  # Create the djvu
+  my $resolution = $pagedata->{resolution};
+  my $cmd        = "$compression -dpi $resolution $filename $djvu";
+  $logger->info($cmd);
+  my ( $status, $size ) = ( system($cmd), -s $djvu );
+  unless ( $status == 0 and $size ) {
+   $self->{status}  = 1;
+   $self->{message} = $d->get('Error writing DjVu');
+   $logger->error(
+"Error writing image for page $page of DjVu (process returned $status, image size $size)"
+   );
+  }
+  push @filelist, $djvu;
+
+  # Add OCR to text layer
+  if ( defined( $pagedata->{buffer} ) ) {
+
+   # Get the size
+   my $w = $image->Get('width');
+   my $h = $image->Get('height');
+
+   # Open djvusedtxtfile
+   my ( undef, $djvusedtxtfile ) =
+     tempfile( DIR => $main::SETTING{session}, SUFFIX => '.txt' );
+   open my $fh, ">:utf8", $djvusedtxtfile
+     or die sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile );
+   print $fh "(page 0 0 $w $h\n";
+
+   # Write the text boxes
+   my $canvas = $pagedata->{buffer};
+   my $root   = $canvas->get_root_item;
+   my $n      = $root->get_n_children;
+   for ( my $i = 0 ; $i < $n ; $i++ ) {
+    my $group = $root->get_child($i);
+    if ( $group->isa('Goo::Canvas::Group') ) {
+     my $n      = $group->get_n_children;
+     my $bounds = $group->get_bounds;
+     my ( $x1, $y1, $x2, $y2 ) =
+       ( $bounds->x1 + 1, $bounds->y1 + 1, $bounds->x2 - 1, $bounds->y2 - 1 );
+     for ( my $i = 0 ; $i < $n ; $i++ ) {
+      my $item = $group->get_child($i);
+      if ( $item->isa('Goo::Canvas::Text') ) {
+
+       # Escape any inverted commas
+       my $txt = $item->get('text');
+       $txt =~ s/\\/\\\\/g;
+       $txt =~ s/"/\\\"/g;
+       printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2,
+         $h - $y1, $txt;
+      }
+     }
+    }
+   }
+   print $fh ")";
+   close $fh;
+
+   # Write djvusedtxtfile
+   my $cmd = "djvused '$djvu' -e 'select 1; set-txt $djvusedtxtfile' -s";
+   $logger->info($cmd);
+   unless ( system($cmd) == 0 ) {
+    $self->{status}  = 1;
+    $self->{message} = $d->get('Error adding text layer to DjVu');
+    $logger->error("Error adding text layer to DjVu page $page");
+   }
+  }
+ }
+ $self->{progress} = 1;
+ $self->{message}  = $d->get('Closing DjVu');
+ my $cmd = "djvm -c '$path' @filelist";
+ $logger->info($cmd);
+ unless ( system($cmd) == 0 ) {
+  $self->{status}  = 1;
+  $self->{message} = $d->get('Error closing DjVu');
+  $logger->error("Error closing DjVu");
+ }
 }
 
 1;

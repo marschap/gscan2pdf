@@ -3449,6 +3449,13 @@ sub save_djvu {
     # Update cwd
     $SETTING{'cwd'} = dirname($filename);
 
+    # Compile list of pages
+    my @list_of_pages;
+    my @pagelist = get_page_index();
+    for (@pagelist) {
+     push @list_of_pages, $slist->{data}[$_][2];
+    }
+
     # cd back to tempdir
     chdir $SETTING{session};
 
@@ -3463,191 +3470,36 @@ sub save_djvu {
     $dialog->signal_connect(
      response => sub {
       $_[0]->destroy;
-      kill_subs();
      }
     );
     $dialog->show_all;
 
-    # Install a handler for child processes
-    $SIG{CHLD} = \&sig_child;
-
-    my @pagelist = get_page_index();
-    my ( $child, $parent ) = Gscan2pdf::Document::open_socketpair();
-    my $pid = start_process(
+    # Create the DjVu
+    $logger->debug("Started saving $filename");
+    $slist->save_djvu(
+     $filename,
+     \@list_of_pages,
      sub {
-
-      my @filelist;
-
-      for ( my $i = 0 ; $i < @pagelist ; $i++ ) {
-       my $j = $pagelist[$i];
-       send(
-        $parent,
-        $i / ( $#pagelist + 1 )
-          . sprintf( $d->get("Writing page %i of %i"), $i + 1, $#pagelist + 1 ),
-        0
-       );
-       my $filename = $slist->{data}[$j][2]{filename};
-       my ( undef, $djvu ) =
-         tempfile( DIR => $SETTING{session}, SUFFIX => '.djvu' );
-
-       # Check the image depth to decide what sort of compression to use
-       my $image = Image::Magick->new;
-       my $x     = $image->Read($filename);
-       $logger->warn($x) if "$x";
-       my $depth = $image->Get('depth');
-       my $class = $image->Get('class');
-       my $compression;
-
-       # c44 can only use pnm and jpg
-       my $format;
-       $format = $1 if ( $filename =~ /\.(\w*)$/ );
-       if ( $depth > 1 ) {
-        $compression = 'c44';
-        if ( $format !~ /(pnm|jpg)/ ) {
-         my ( undef, $pnm ) =
-           tempfile( DIR => $SETTING{session}, SUFFIX => '.pnm' );
-         $x = $image->Write( filename => $pnm );
-         $logger->warn($x) if "$x";
-         $filename = $pnm;
-        }
-       }
-
-       # cjb2 can only use pnm and tif
-       else {
-        $compression = 'cjb2';
-        if ( $format !~ /(pnm|tif)/
-         or ( $format eq 'pnm' and $class ne 'PseudoClass' ) )
-        {
-         my ( undef, $pbm ) =
-           tempfile( DIR => $SETTING{session}, SUFFIX => '.pbm' );
-         $x = $image->Write( filename => $pbm );
-         $logger->warn($x) if "$x";
-         $filename = $pbm;
-        }
-       }
-
-       # Create the djvu
-       my $resolution = $slist->{data}[$j][2]{resolution};
-       my $cmd        = "$compression -dpi $resolution $filename $djvu";
-       $logger->info($cmd);
-       my ( $status, $size ) = ( system($cmd), -s $djvu );
-       unless ( $status == 0 and $size ) {
-        send( $parent, "2" . $d->get('Error writing DjVu'), 0 );
-        $logger->error( "Error writing image for page ",
-         $i + 1, " of DjVu (process returned $status, image size $size)" );
-       }
-       $filelist[$i] = $djvu;
-
-       # Add OCR to text layer
-       if ( defined( $slist->{data}[$j][2]{buffer} ) ) {
-
-        # Get the size
-        my $w = $image->Get('width');
-        my $h = $image->Get('height');
-
-        # Open djvusedtxtfile
-        my ( undef, $djvusedtxtfile ) =
-          tempfile( DIR => $SETTING{session}, SUFFIX => '.txt' );
-        open my $fh, ">:utf8", $djvusedtxtfile
-          or die sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile );
-        print $fh "(page 0 0 $w $h\n";
-
-        # Write the text boxes
-        my $canvas = $slist->{data}[$j][2]{buffer};
-        my $root   = $canvas->get_root_item;
-        my $n      = $root->get_n_children;
-        for ( my $i = 0 ; $i < $n ; $i++ ) {
-         my $group = $root->get_child($i);
-         if ( $group->isa('Goo::Canvas::Group') ) {
-          my $n      = $group->get_n_children;
-          my $bounds = $group->get_bounds;
-          my ( $x1, $y1, $x2, $y2 ) = (
-           $bounds->x1 + 1,
-           $bounds->y1 + 1,
-           $bounds->x2 - 1,
-           $bounds->y2 - 1
-          );
-          for ( my $i = 0 ; $i < $n ; $i++ ) {
-           my $item = $group->get_child($i);
-           if ( $item->isa('Goo::Canvas::Text') ) {
-
-            # Escape any inverted commas
-            my $txt = $item->get('text');
-            $txt =~ s/\\/\\\\/g;
-            $txt =~ s/"/\\\"/g;
-            printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2,
-              $h - $y1, $txt;
-           }
-          }
-         }
-        }
-        print $fh ")";
-        close $fh;
-
-        # Write djvusedtxtfile
-        my $cmd = "djvused '$djvu' -e 'select 1; set-txt $djvusedtxtfile' -s";
-        $logger->info($cmd);
-        unless ( system($cmd) == 0 ) {
-         send( $parent, "2" . $d->get('Error adding text layer to DjVu'), 0 );
-         $logger->error( "Error adding text layer to DjVu page ", $i + 1 );
-        }
-       }
-      }
-      send( $parent, '1' . $d->get('Closing DjVu'), 0 );
-      my $cmd = "djvm -c '$filename' @filelist";
-      $logger->info($cmd);
-      unless ( system($cmd) == 0 ) {
-       send( $parent, "2" . $d->get('Error closing DjVu'), 0 );
-       $logger->error("Error closing DjVu");
-      }
-
-      send( $parent, "2", 0 );
+      $dialog->destroy;
+      mark_pages(@pagelist);
+      $logger->debug("Finished saving $filename");
+     },
+     sub {
+      $pbar->set_fraction( $Gscan2pdf::_self->{progress} )
+        if defined $Gscan2pdf::_self->{progress};
+      $pbar->set_text( $Gscan2pdf::_self->{message} )
+        if defined $Gscan2pdf::_self->{message};
+     },
+     sub {
+      $dialog->destroy;
+      show_message_dialog( $main::window, 'error', 'close',
+       $Gscan2pdf::_self->{message} );
      }
     );
 
-    $helperTag{$pid} = Glib::IO->add_watch(
-     $child->fileno(),
-     [ 'in', 'hup' ],
-     sub {
-      my ( $fileno, $condition ) = @_;
-
-      my $line;
-      if ( $condition & 'in' ) {    # bit field operation. >= would also work
-       recv( $child, $line, 1000, 0 );
-       if ( $line =~ /(\d*\.?\d*)(.*)/ ) {
-        my $fraction = $1;
-        my $text     = $2;
-        if ( $fraction > 1 ) {
-         $dialog->destroy;
-         if ( $text eq '' ) {
-          $windowi->hide if defined $windowi;
-          mark_pages(@pagelist);
-         }
-         else {
-          unlink $filename;
-          show_message_dialog( $windowi, 'error', 'close', $text );
-         }
-         return FALSE;    # uninstall
-        }
-        $pbar->set_fraction($fraction);
-        $pbar->set_text($text);
-       }
-      }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-      if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-      {                   # bit field operation. >= would also work
-       $dialog->destroy;
-       update_uimanager();
-       return FALSE;      # uninstall
-      }
-      return TRUE;        # continue without uninstalling
-     }
-    );
+    $windowi->hide if defined $windowi;
    }
    $file_chooser->destroy;
-
   }
  );
  $file_chooser->show;
