@@ -264,7 +264,7 @@ sub create_PDF {
    # Create PDF with PDF::API2
    send( $parent, '0' . $main::d->get('Setting up PDF'), 0 );
    my $pdf = PDF::API2->new( -file => $filename );
-   $pdf->info( get_PDF_options() );
+   $pdf->info( get_pdf_metadata() );
 
    foreach (@pagelist) {
     ++$page;
@@ -614,7 +614,7 @@ sub get_pixbuf {
 }
 
 sub save_pdf {
- my ( $self, $path, $list_of_pages, $pdf_options, $finished_callback,
+ my ( $self, $path, $list_of_pages, $metadata, $options, $finished_callback,
   $not_finished_callback, $error_callback )
    = @_;
 
@@ -623,7 +623,8 @@ sub save_pdf {
   {
    path          => $path,
    list_of_pages => $list_of_pages,
-   pdf_options   => $pdf_options
+   metadata      => $metadata,
+   options       => $options,
   }
  );
  Gscan2pdf::_when_ready(

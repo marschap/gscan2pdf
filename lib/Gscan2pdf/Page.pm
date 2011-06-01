@@ -50,7 +50,7 @@ sub new {
   'CompuServe graphics interchange format'       => '.gif',
  );
  ( undef, $self->{filename} ) = tempfile(
-  DIR    => $main::SETTING{session},
+  DIR    => $options{dir},
   SUFFIX => $suffix{ $options{format} }
  );
  if ( defined( $options{delete} ) and $options{delete} ) {

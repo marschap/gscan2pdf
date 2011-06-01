@@ -439,7 +439,7 @@ if ( not defined( $SETTING{version} ) or $SETTING{version} ne $version ) {
 $SETTING{version} = $version;
 
 # Initialise thread handler
-Gscan2pdf->setup( $d, $logger, \%SETTING );
+Gscan2pdf->setup( $d, $logger );
 
 # Initialise SANE frontend
 Gscan2pdf::Frontend::Sane->setup( $prog_name, $d, $logger, \%SETTING );
@@ -1505,8 +1505,9 @@ $SETTING{pid} = $$;
 unless ( defined $SETTING{session} ) {
  if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
   mkdir( $SETTING{TMPDIR} ) if ( not -d $SETTING{TMPDIR} );
-  if ( !eval { $SETTING{session} = tempdir( DIR => $SETTING{TMPDIR} ) } ) {
+  if ( not eval { $SETTING{session} = tempdir( DIR => $SETTING{TMPDIR} ) } ) {
    $SETTING{session} = tempdir;
+   $Gscan2pdf::_self->{dir} = $SETTING{session};
    $logger->warn(
     sprintf(
      $d->get(
@@ -1520,6 +1521,7 @@ unless ( defined $SETTING{session} ) {
  }
  else {
   $SETTING{session} = tempdir;
+  $Gscan2pdf::_self->{dir} = $SETTING{session};
  }
  $logger->info("Using $SETTING{session} for temporary files");
 
@@ -2302,7 +2304,7 @@ sub get_page_index {
 
 # Add PDF options to $vbox
 
-sub add_PDF_options {
+sub add_pdf_metadata {
  my ($vbox) = @_;
 
  # Frame for metadata
@@ -2413,7 +2415,7 @@ sub update_PDF_settings {
  return;
 }
 
-sub get_PDF_options {
+sub get_pdf_metadata {
  my %h;
  $h{Author} = $SETTING{author} if defined $SETTING{author};
  my ( $day, $month, $year ) =
@@ -2572,6 +2574,14 @@ sub save_PDF {
      push @list_of_pages, $slist->{data}[$_][2];
     }
 
+    # Compile options
+    my %options = (
+     compression      => $SETTING{'pdf compression'},
+     downsample       => $SETTING{downsample},
+     'downsample dpi' => $SETTING{'downsample dpi'},
+     quality          => $SETTING{quality},
+    );
+
     my $dialog = Gtk2::Dialog->new( $main::d->get('Saving PDF') . "...",
      $main::window, 'modal', 'gtk-cancel' => 'cancel' );
 
@@ -2592,7 +2602,8 @@ sub save_PDF {
     $slist->save_pdf(
      $filename,
      \@list_of_pages,
-     get_PDF_options(),
+     get_pdf_metadata(),
+     \%options,
      sub {
       $dialog->destroy;
       mark_pages(@pagelist);
@@ -2821,7 +2832,7 @@ sub save_dialog {
  # PDF options
  my $vboxp = Gtk2::VBox->new;
  $vbox->pack_start( $vboxp, FALSE, FALSE, 0 );
- my ( $entrya, $entryt, $entrys, $entryk ) = add_PDF_options($vboxp);
+ my ( $entrya, $entryt, $entrys, $entryk ) = add_pdf_metadata($vboxp);
 
  # Compression options
  my ( $buttond, $spinbuttond, $combob, $hboxpq, $spinbuttonpq,
@@ -3523,7 +3534,7 @@ sub email {
    create_window( $window, $d->get('Email as PDF'), FALSE );
 
  # PDF options
- my ( $entrya, $entryt, $entrys, $entryk ) = add_PDF_options($vbox);
+ my ( $entrya, $entryt, $entrys, $entryk ) = add_pdf_metadata($vbox);
 
  # Frame for page range
  add_page_range($vbox);

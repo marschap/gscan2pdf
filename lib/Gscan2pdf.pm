@@ -13,10 +13,10 @@ use File::Temp qw(tempfile tempdir);    # To create temporary files
 
 my $_POLL_INTERVAL;
 our $_self;
-my ( $d, $logger, $SETTING );
+my ( $d, $logger );
 
 sub setup {
- ( my $class, $d, $logger, $SETTING ) = @_;
+ ( my $class, $d, $logger ) = @_;
  $_POLL_INTERVAL = 100;                 # ms
  $_self          = {};
 
@@ -26,6 +26,7 @@ sub setup {
  share $_self->{message};
  share $_self->{progress};
  share $_self->{file_info};
+ share $_self->{dir};
 
  $_self->{thread} = threads->new( \&_thread_main, $_self );
 }
@@ -217,13 +218,13 @@ sub _thread_import_file {
   # Extract images from DjVu
   if ( $last >= $first and $first > 0 ) {
    for ( my $i = $first ; $i <= $last ; $i++ ) {
-    my ( undef, $tif ) =
-      tempfile( DIR => $SETTING->{session}, SUFFIX => '.tif' );
+    my ( undef, $tif ) = tempfile( DIR => $self->{dir}, SUFFIX => '.tif' );
     my $cmd = "ddjvu -format=tiff -page=$i \"$info->{path}\" $tif";
     $logger->info($cmd);
     system($cmd);
     my $page = Gscan2pdf::Page->new(
      filename   => $tif,
+     dir        => $self->{dir},
      delete     => TRUE,
      format     => 'Tagged Image File Format',
      resolution => $info->{ppi}[ $i - 1 ]
@@ -250,6 +251,7 @@ sub _thread_import_file {
    foreach (@images) {
     my $page = Gscan2pdf::Page->new(
      filename => $_,
+     dir      => $self->{dir},
      delete   => TRUE,
      format   => 'Portable anymap'
     );
@@ -262,13 +264,13 @@ sub _thread_import_file {
   # Split the tiff into its pages and import them individually
   if ( $last >= $first and $first > 0 ) {
    for ( my $i = $first - 1 ; $i < $last ; $i++ ) {
-    my ( undef, $tif ) =
-      tempfile( DIR => $SETTING->{session}, SUFFIX => '.tif' );
+    my ( undef, $tif ) = tempfile( DIR => $self->{dir}, SUFFIX => '.tif' );
     my $cmd = "tiffcp \"$info->{path}\",$i $tif";
     $logger->info($cmd);
     system($cmd);
     my $page = Gscan2pdf::Page->new(
      filename => $_,
+     dir      => $self->{dir},
      delete   => TRUE,
      format   => 'Portable anymap'
     );
@@ -282,6 +284,7 @@ sub _thread_import_file {
  {
   my $page = Gscan2pdf::Page->new(
    filename => $info->{path},
+   dir      => $self->{dir},
    format   => $info->{format}
   );
   $self->{data_queue}->enqueue($page);
@@ -290,6 +293,7 @@ sub _thread_import_file {
   my $tiff = convert_to_tiff( $info->{path} );
   my $page = Gscan2pdf::Page->new(
    filename => $tiff,
+   dir      => $self->{dir},
    format   => 'Tagged Image File Format'
   );
   $self->{data_queue}->enqueue($page);
@@ -305,7 +309,7 @@ sub convert_to_tiff {
  my $density = get_resolution($image);
 
  # Write the tif
- my ( undef, $tif ) = tempfile( DIR => $SETTING->{session}, SUFFIX => '.tif' );
+ my ( undef, $tif ) = tempfile( DIR => $_self->{dir}, SUFFIX => '.tif' );
  $image->Write(
   units       => 'PixelsPerInch',
   compression => 'lzw',
@@ -316,14 +320,14 @@ sub convert_to_tiff {
 }
 
 sub _thread_save_pdf {
- my ( $self, $path, $list_of_pages, $pdf_options ) = @_;
+ my ( $self, $path, $list_of_pages, $metadata, $options ) = @_;
 
  my $page = 0;
 
  # Create PDF with PDF::API2
  $self->{message} = $d->get('Setting up PDF');
  my $pdf = PDF::API2->new( -file => $path );
- $pdf->info($pdf_options);
+ $pdf->info($metadata) if defined($metadata);
 
  foreach my $pagedata ( @{$list_of_pages} ) {
   ++$page;
@@ -350,17 +354,17 @@ sub _thread_save_pdf {
   my $depth;
   my $compression;
   my $type;
-  if ( not defined( $main::SETTING{'pdf compression'} )
-   or $main::SETTING{'pdf compression'} eq 'auto' )
+  if ( not defined( $options->{compression} )
+   or $options->{compression} eq 'auto' )
   {
    $depth = $image->Get('depth');
-   $main::logger->info("Depth of $filename is $depth");
+   $logger->info("Depth of $filename is $depth");
    if ( $depth == 1 ) {
     $compression = 'lzw';
    }
    else {
     $type = $image->Get('type');
-    $main::logger->info("Type of $filename is $type");
+    $logger->info("Type of $filename is $type");
     if ( $type =~ /TrueColor/ ) {
      $compression = 'jpg';
     }
@@ -368,79 +372,78 @@ sub _thread_save_pdf {
      $compression = 'png';
     }
    }
-   $main::logger->info("Selecting $compression compression");
+   $logger->info("Selecting $compression compression");
   }
   else {
-   $compression = $main::SETTING{'pdf compression'};
+   $compression = $options->{compression};
   }
 
   # Convert file if necessary
   my $format;
   $format = $1 if ( $filename =~ /\.(\w*)$/ );
   if (( $compression ne 'none' and $compression ne $format )
-   or $main::SETTING{'downsample'}
+   or $options->{downsample}
    or $compression eq 'jpg' )
   {
    if ( $compression !~ /(jpg|png)/ and $format ne 'tif' ) {
     my $ofn = $filename;
-    ( undef, $filename ) =
-      tempfile( DIR => $main::SETTING{session}, SUFFIX => '.tif' );
-    $main::logger->info("Converting $ofn to $filename");
+    ( undef, $filename ) = tempfile( DIR => $self->{dir}, SUFFIX => '.tif' );
+    $logger->info("Converting $ofn to $filename");
    }
    elsif ( $compression =~ /(jpg|png)/ ) {
     my $ofn = $filename;
     ( undef, $filename ) = tempfile(
-     DIR    => $main::SETTING{session},
+     DIR    => $self->{dir},
      SUFFIX => ".$compression"
     );
-    $main::logger->info("Converting $ofn to $filename");
+    $logger->info("Converting $ofn to $filename");
    }
 
    $depth = $image->Get('depth') if ( not defined($depth) );
-   if ( $main::SETTING{'downsample'} ) {
-    $output_resolution = $main::SETTING{'downsample dpi'};
+   if ( $options->{downsample} ) {
+    $output_resolution = $options->{'downsample dpi'};
     my $w_pixels = $w * $output_resolution;
     my $h_pixels = $h * $output_resolution;
 
-    $main::logger->info("Resizing $filename to $w_pixels x $h_pixels");
+    $logger->info("Resizing $filename to $w_pixels x $h_pixels");
     $x = $image->Resize( width => $w_pixels,, height => $h_pixels );
-    $main::logger->warn($x) if "$x";
+    $logger->warn($x) if "$x";
    }
-   $x = $image->Set( quality => $main::SETTING{quality} )
-     if ( defined( $main::SETTING{quality} ) and $compression eq 'jpg' );
-   $main::logger->warn($x) if "$x";
+   $x = $image->Set( quality => $options->{quality} )
+     if ( defined( $options->{quality} ) and $compression eq 'jpg' );
+   $logger->warn($x) if "$x";
 
    if (( $compression !~ /(jpg|png)/ and $format ne 'tif' )
     or ( $compression =~ /(jpg|png)/ )
-    or $main::SETTING{'downsample'} )
+    or $options->{downsample} )
    {
 
 # depth required because resize otherwise increases depth to maintain information
-    $main::logger->info("Writing temporary image $filename with depth $depth");
+    $logger->info("Writing temporary image $filename with depth $depth");
     $x = $image->Write( filename => $filename, depth => $depth );
-    $main::logger->warn($x) if "$x";
+    $logger->warn($x) if "$x";
     $format = $1 if ( $filename =~ /\.(\w*)$/ );
    }
 
    if ( $compression !~ /(jpg|png)/ ) {
     my ( undef, $filename2 ) =
-      tempfile( DIR => $main::SETTING{session}, SUFFIX => '.tif' );
+      tempfile( DIR => $self->{dir}, SUFFIX => '.tif' );
     my $cmd = "tiffcp -c $compression $filename $filename2";
-    $main::logger->info($cmd);
-    my $status = system("$cmd 2>$main::SETTING{session}/tiffcp.stdout");
+    $logger->info($cmd);
+    my $status = system("$cmd 2>$self->{dir}/tiffcp.stdout");
     if ( $status != 0 ) {
-     my $output = slurp("$main::SETTING{session}/tiffcp.stdout");
-     $main::logger->info($output);
+     my $output = slurp("$self->{dir}/tiffcp.stdout");
+     $logger->info($output);
      $self->{status} = 1;
      $self->{message} =
-       sprintf( $main::d->get("Error compressing image: %s"), $output );
+       sprintf( $d->get("Error compressing image: %s"), $output );
      return;
     }
     $filename = $filename2;
    }
   }
 
-  $main::logger->info(
+  $logger->info(
    "Defining page at ",
    $w * $Gscan2pdf::Document::POINTS_PER_INCH,
    "pt x ", $h * $Gscan2pdf::Document::POINTS_PER_INCH, "pt"
@@ -595,8 +598,7 @@ sub _thread_save_djvu {
     sprintf( $d->get("Writing page %i of %i"), $page, $#{$list_of_pages} + 1 );
 
   my $filename = $pagedata->{filename};
-  my ( undef, $djvu ) =
-    tempfile( DIR => $main::SETTING{session}, SUFFIX => '.djvu' );
+  my ( undef, $djvu ) = tempfile( DIR => $self->{dir}, SUFFIX => '.djvu' );
 
   # Check the image depth to decide what sort of compression to use
   my $image = Image::Magick->new;
@@ -612,8 +614,7 @@ sub _thread_save_djvu {
   if ( $depth > 1 ) {
    $compression = 'c44';
    if ( $format !~ /(pnm|jpg)/ ) {
-    my ( undef, $pnm ) =
-      tempfile( DIR => $main::SETTING{session}, SUFFIX => '.pnm' );
+    my ( undef, $pnm ) = tempfile( DIR => $self->{dir}, SUFFIX => '.pnm' );
     $x = $image->Write( filename => $pnm );
     $logger->warn($x) if "$x";
     $filename = $pnm;
@@ -626,8 +627,7 @@ sub _thread_save_djvu {
    if ( $format !~ /(pnm|tif)/
     or ( $format eq 'pnm' and $class ne 'PseudoClass' ) )
    {
-    my ( undef, $pbm ) =
-      tempfile( DIR => $main::SETTING{session}, SUFFIX => '.pbm' );
+    my ( undef, $pbm ) = tempfile( DIR => $self->{dir}, SUFFIX => '.pbm' );
     $x = $image->Write( filename => $pbm );
     $logger->warn($x) if "$x";
     $filename = $pbm;
@@ -657,7 +657,7 @@ sub _thread_save_djvu {
 
    # Open djvusedtxtfile
    my ( undef, $djvusedtxtfile ) =
-     tempfile( DIR => $main::SETTING{session}, SUFFIX => '.txt' );
+     tempfile( DIR => $self->{dir}, SUFFIX => '.txt' );
    open my $fh, ">:utf8", $djvusedtxtfile
      or die sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile );
    print $fh "(page 0 0 $w $h\n";
