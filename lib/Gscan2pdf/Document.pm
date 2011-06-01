@@ -671,6 +671,36 @@ sub save_djvu {
  return;
 }
 
+sub save_tiff {
+ my ( $self, $path, $list_of_pages, $options, $ps, $finished_callback,
+  $not_finished_callback, $error_callback )
+   = @_;
+
+ my $sentinel = Gscan2pdf::_enqueue_request(
+  'save-tiff',
+  {
+   path          => $path,
+   list_of_pages => $list_of_pages,
+   options       => $options,
+   ps            => $ps,
+  }
+ );
+ Gscan2pdf::_when_ready(
+  $sentinel,
+  sub {
+   if ( $Gscan2pdf::_self->{status} ) {
+    $error_callback->();
+    return;
+   }
+   $finished_callback->();
+  },
+  sub {
+   $not_finished_callback->();
+  }
+ );
+ return;
+}
+
 1;
 
 __END__

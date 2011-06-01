@@ -3295,125 +3295,43 @@ sub save_TIFF {
  $dialog->signal_connect(
   response => sub {
    $_[0]->destroy;
-   kill_subs();
   }
  );
  $dialog->show_all;
 
- # Install a handler for child processes
- $SIG{CHLD} = \&sig_child;
+ # Compile list of pages
+ my @list_of_pages;
+ my @pagelist = get_page_index();
+ for (@pagelist) {
+  push @list_of_pages, $slist->{data}[$_][2];
+ }
 
- my ( $child, $parent ) = Gscan2pdf::Document::open_socketpair();
- my $pid = start_process(
-  sub {
-
-   # fill $pagelist with filenames depending on which radiobutton is active
-   my @pagelist = get_page_index();
-   my $pagelist = '';
-   my $page     = 0;
-   for ( my $i = 0 ; $i < @pagelist ; $i++ ) {
-    my $j = $pagelist[$i];
-
-    ++$page;
-    send(
-     $parent,
-     ( $page - 1 ) / ( $#pagelist + 2 )
-       . sprintf(
-      $d->get("Converting image %i of %i to TIFF"),
-      $page, $#pagelist + 1
-       ),
-     0
-    );
-    my $filename = $slist->{data}[$j][2]{filename};
-    if ( $filename !~ /\.tif/ or $SETTING{'tiff compression'} eq 'jpeg' ) {
-     my ( undef, $tif ) =
-       tempfile( DIR => $SETTING{session}, SUFFIX => '.tif' );
-     my $resolution = $slist->{data}[$j][2]{resolution};
-
-     # Convert to tiff
-     my $depth = '';
-     $depth = '-depth 8' if ( $SETTING{'tiff compression'} eq 'jpeg' );
-     system(
-      "convert -units PixelsPerInch -density $resolution $depth $filename $tif")
-       == 0
-       or send( $parent, "2" . $d->get('Error writing TIFF'), 0 );
-
-     $filename = $tif;
-    }
-    $pagelist .= " $filename";
-   }
-
-   my $compression = $SETTING{'tiff compression'};
-   $compression .= ':' . $SETTING{'quality'} if ( $compression eq 'jpeg' );
-
-   # Create the tiff
-   send( $parent, '1' . $d->get('Concatenating TIFFs'), 0 );
-   my $rows = '';
-   $rows = '-r 16' if ( $SETTING{'tiff compression'} eq 'jpeg' );
-   my $cmd = "tiffcp $rows -c $compression $pagelist \"$filename\"";
-   $logger->info($cmd);
-   my $status = system("$cmd 2>$SETTING{session}/tiffcp.stdout");
-   my $output = '';
-   if ( $status != 0 ) {
-    $output = slurp("$SETTING{session}/tiffcp.stdout");
-    $logger->info($output);
-    send( $parent,
-     '-1' . sprintf( $d->get("Error compressing image: %s"), $output ), 0 );
-   }
-   if ( defined $ps ) {
-    send( $parent, '1' . $d->get('Converting to PS'), 0 );
-
-    # Note: -a option causes tiff2ps to generate multiple output
-    # pages, one for each page in the input TIFF file.  Without it, it
-    # only generates output for the first page.
-    my $cmd = "tiff2ps -a $filename > \"$ps\"";
-    $logger->info($cmd);
-    $output = `$cmd`;
-   }
-   send( $parent, "2$output", 0 );
-  }
+ # Compile options
+ my %options = (
+  compression => $SETTING{'tiff compression'},
+  quality     => $SETTING{quality},
  );
 
- $helperTag{$pid} = Glib::IO->add_watch(
-  $child->fileno(),
-  [ 'in', 'hup' ],
+ $slist->save_tiff(
+  $filename,
+  \@list_of_pages,
+  \%options,
+  $ps,
   sub {
-   my ( $fileno, $condition ) = @_;
-
-   my $line;
-   if ( $condition & 'in' ) {    # bit field operation. >= would also work
-    recv( $child, $line, 1000, 0 );
-    if ( $line =~ /(-?\d*\.?\d*)(.*)/ ) {
-     my $fraction = $1;
-     my $text     = $2;
-     if ( $fraction > 1 ) {
-      $dialog->destroy;
-      if ( $text eq '' ) {
-       $windowi->hide if defined $windowi;
-       mark_pages( get_page_index() );
-      }
-      else {
-       unlink $filename;
-       show_message_dialog( $windowi, 'error', 'close', $text );
-      }
-      return FALSE;    # uninstall
-     }
-     if ( $fraction > -1 ) {
-      $pbar->set_fraction($fraction);
-      $pbar->set_text($text);
-     }
-    }
-   }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-   if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-   {                   # bit field operation. >= would also work
-    $dialog->destroy;
-    update_uimanager();
-    return FALSE;      # uninstall
-   }
-   return TRUE;        # continue without uninstalling
+   $dialog->destroy;
+   mark_pages(@pagelist);
+   $logger->debug("Finished saving $filename");
+  },
+  sub {
+   $pbar->set_fraction( $Gscan2pdf::_self->{progress} )
+     if defined $Gscan2pdf::_self->{progress};
+   $pbar->set_text( $Gscan2pdf::_self->{message} )
+     if defined $Gscan2pdf::_self->{message};
+  },
+  sub {
+   $dialog->destroy;
+   show_message_dialog( $main::window, 'error', 'close',
+    $Gscan2pdf::_self->{message} );
   }
  );
  return;
@@ -6419,7 +6337,7 @@ sub rescan_options {
     if ( defined( $SETTING{mode} ) and -e "$filename.$SETTING{mode}" );
 
   # Slurp it from file
-  $output = slurp($filename);
+  $output = Gscan2pdf::slurp($filename);
   $vboxd->hide_all;    # merely here for consistency with normal operation
   parse_options( $vboxd, $device, options2hash($output) );
  }
@@ -7002,7 +6920,7 @@ sub update_options {
   $filename .= ".$SETTING{mode}" if ( -e "$filename.$SETTING{mode}" );
 
   # Slurp it from file
-  $output = slurp($filename);
+  $output = Gscan2pdf::slurp($filename);
   $vboxd->hide_all;    # merely here for consistency with normal operation
   update_options_hash( $vboxd, options2hash($output) );
  }
@@ -10046,7 +9964,7 @@ sub ocr_page {
         $logger->info("Reaped PID $pid");
         $running_ocr = FALSE;
         if ( -r "$SETTING{session}/error.txt" ) {
-         my $error = slurp("$SETTING{session}/error.txt");
+         my $error = Gscan2pdf::slurp("$SETTING{session}/error.txt");
          if ( $error =~ /Unable to load unicharset file/ ) {
           show_message_dialog( $windowo, 'error', 'close', $error );
           return FALSE;                       # uninstall
@@ -10066,7 +9984,7 @@ sub ocr_page {
          $pixbuf->get_height );
 
         # Attach the text to the canvas
-        my $output = slurp("$txt.txt");
+        my $output = Gscan2pdf::slurp("$txt.txt");
         if ( $output =~ /<body>([\s\S]*)<\/body>/ ) {
          require HTML::TokeParser;
          require HTML::Entities;
@@ -10141,18 +10059,6 @@ sub ocr_page {
   }
  );
  return;
-}
-
-# Have to roll my own slurp sub to support utf8
-
-sub slurp {
- my ($file) = @_;
-
- local ($/);
- open my $fh, "<:utf8", $file or die "Error: cannot open $file\n";
- my $text = <$fh>;
- close $fh;
- return $text;
 }
 
 # Create a combobox from an array and set the default

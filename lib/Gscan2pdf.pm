@@ -87,15 +87,17 @@ sub _thread_main {
   }
 
   elsif ( $request->{action} eq 'save-pdf' ) {
-   _thread_save_pdf(
-    $self, $request->{path},
-    $request->{list_of_pages},
-    $request->{pdf_options}
-   );
+   _thread_save_pdf( $self, $request->{path}, $request->{list_of_pages},
+    $request->{metadata}, $request->{options} );
   }
 
   elsif ( $request->{action} eq 'save-djvu' ) {
    _thread_save_djvu( $self, $request->{path}, $request->{list_of_pages} );
+  }
+
+  elsif ( $request->{action} eq 'save-tiff' ) {
+   _thread_save_tiff( $self, $request->{path}, $request->{list_of_pages},
+    $request->{options}, $request->{ps} );
   }
 
   elsif ( $request->{action} eq 'cancel' ) {
@@ -709,6 +711,93 @@ sub _thread_save_djvu {
   $self->{message} = $d->get('Error closing DjVu');
   $logger->error("Error closing DjVu");
  }
+}
+
+sub _thread_save_tiff {
+ my ( $self, $path, $list_of_pages, $options, $ps ) = @_;
+
+ my $page = 0;
+ my @filelist;
+
+ foreach my $pagedata ( @{$list_of_pages} ) {
+  ++$page;
+  $self->{progress} = ( $page - 1 ) / ( $#{$list_of_pages} + 2 );
+  $self->{message} = sprintf( $d->get("Converting image %i of %i to TIFF"),
+   $page, $#{$list_of_pages} + 1 );
+
+  my $filename = $pagedata->{filename};
+  if ( $filename !~ /\.tif/ or $options->{compression} eq 'jpeg' ) {
+   my ( undef, $tif ) = tempfile( DIR => $self->{dir}, SUFFIX => '.tif' );
+   my $resolution = $pagedata->{resolution};
+
+   # Convert to tiff
+   my $depth = '';
+   $depth = '-depth 8'
+     if ( defined( $options->{compression} )
+    and $options->{compression} eq 'jpeg' );
+   unless (
+    system(
+     "convert -units PixelsPerInch -density $resolution $depth $filename $tif")
+    == 0
+     )
+   {
+    $self->{status}  = 1;
+    $self->{message} = $d->get('Error writing TIFF');
+    return;
+   }
+   $filename = $tif;
+  }
+  push @filelist, $filename;
+ }
+
+ my $compression = "";
+ if ( defined $options->{compression} ) {
+  $compression = "-c $options->{compression}";
+  $compression .= ":$options->{quality}" if ( $compression eq 'jpeg' );
+ }
+
+ # Create the tiff
+ $self->{progress} = 1;
+ $self->{message}  = $d->get('Concatenating TIFFs');
+ my $rows = '';
+ $rows = '-r 16'
+   if ( defined( $options->{compression} )
+  and $options->{compression} eq 'jpeg' );
+ my $cmd = "tiffcp $rows $compression @filelist '$path'";
+ $logger->info($cmd);
+ my ( undef, $out ) = tempfile( DIR => $self->{dir}, SUFFIX => '.stdout' );
+ my $status = system("$cmd 2>$out");
+
+ if ( $status != 0 ) {
+  my $output = slurp($out);
+  $logger->info($output);
+  $self->{status} = 1;
+  $self->{message} = sprintf( $d->get("Error compressing image: %s"), $output );
+  return;
+ }
+ unlink $out;
+ if ( defined $ps ) {
+  $self->{message} = $d->get('Converting to PS');
+
+  # Note: -a option causes tiff2ps to generate multiple output
+  # pages, one for each page in the input TIFF file.  Without it, it
+  # only generates output for the first page.
+  my $cmd = "tiff2ps -a $path > '$ps'";
+  $logger->info($cmd);
+  my $output = `$cmd`;
+ }
+}
+
+# Have to roll my own slurp sub to support utf8
+
+sub slurp {
+ my ($file) = @_;
+
+ local ($/);
+ open my $fh, "<:utf8", $file or die "Error: cannot open $file\n";
+ my $text = <$fh>;
+ close $fh;
+ return $text;
 }
 
 1;
