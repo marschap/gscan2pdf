@@ -451,7 +451,7 @@ if ( -d '/usr/share/gscan2pdf' ) {
  $path = '/usr/share/gscan2pdf';
 }
 else {
- $path = '.';    # make this a big cleverer, going one dir down from bin.
+ $path = '.';    # FIXME: make this a big cleverer, going one dir down from bin.
 }
 init_icons(
  [ 'rotate90',  "$path/stock-rotate-90.svg" ],
