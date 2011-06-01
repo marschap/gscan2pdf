@@ -2955,6 +2955,7 @@ sub save_dialog {
        # Update cwd
        $SETTING{'cwd'} = dirname($filename);
 
+       $windowi->hide if defined $windowi;
        save_TIFF($filename);
       }
       $file_chooser->destroy;
@@ -3087,6 +3088,7 @@ sub save_dialog {
        # Create the PS
        my ( undef, $tif ) =
          tempfile( DIR => $SETTING{session}, SUFFIX => '.tif' );
+       $windowi->hide if defined $windowi;
        save_TIFF( $tif, $filename );
        unlink $tif;
       }
