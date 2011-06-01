@@ -123,8 +123,7 @@ sub _thread_get_file_info {
  my ( $fh, $buffer );
  unless ( open $fh, '<', $filename ) {
   $self->{status} = 1;
-  $self->{message} =
-    sprintf( $main::d->get("Can't open %s: %s"), $filename, $! );
+  $self->{message} = sprintf( $d->get("Can't open %s: %s"), $filename, $! );
   return;
  }
  binmode $fh;
@@ -152,7 +151,7 @@ sub _thread_get_file_info {
   if ( $pages != @ppi ) {
    $self->{status} = 1;
    $self->{message} =
-     $main::d->get('Unknown DjVu file structure. Please contact the author.');
+     $d->get('Unknown DjVu file structure. Please contact the author.');
    return;
   }
   $info{ppi}         = \@ppi;
@@ -174,7 +173,7 @@ sub _thread_get_file_info {
  if ( not defined($format) ) {
   $self->{status} = 1;
   $self->{message} =
-    sprintf( $main::d->get("%s is not a recognised image type"), $filename );
+    sprintf( $d->get("%s is not a recognised image type"), $filename );
   return;
  }
  elsif ( $format eq 'Portable Document Format' ) {
@@ -244,7 +243,7 @@ sub _thread_import_file {
    system($cmd);
    unless ( system($cmd) == 0 ) {
     $self->{status}  = 1;
-    $self->{message} = $main::d->get('Error extracting images from PDF');
+    $self->{message} = $d->get('Error extracting images from PDF');
    }
 
    # Import each image
@@ -458,7 +457,7 @@ sub _thread_save_pdf {
 
   # Add OCR as text behind the scan
   if ( defined( $pagedata->{buffer} ) ) {
-   $main::logger->info("Embedding OCR output behind image");
+   $logger->info("Embedding OCR output behind image");
    my $font   = $pdf->corefont('Times-Roman');
    my $text   = $page->text;
    my $canvas = $pagedata->{buffer};
@@ -555,10 +554,10 @@ sub _thread_save_pdf {
    $msg = "Unknown format $format file $filename";
   }
   if ($msg) {
-   $main::logger->warn($msg);
+   $logger->warn($msg);
    $self->{status} = 1;
    $self->{message} =
-     sprintf( $main::d->get("Error creating PDF image object: %s"), $msg );
+     sprintf( $d->get("Error creating PDF image object: %s"), $msg );
    return;
   }
   else {
@@ -570,18 +569,18 @@ sub _thread_save_pdf {
     );
    };
    if ($@) {
-    $main::logger->warn($@);
-    $self->{status}  = 1;
-    $self->{message} = sprintf(
-     $main::d->get("Error embedding file image in %s format to PDF: %s"),
+    $logger->warn($@);
+    $self->{status} = 1;
+    $self->{message} =
+      sprintf( $d->get("Error embedding file image in %s format to PDF: %s"),
      $format, $@ );
    }
    else {
-    $main::logger->info("Adding $filename at $output_resolution PPI");
+    $logger->info("Adding $filename at $output_resolution PPI");
    }
   }
  }
- $self->{message} = $main::d->get('Closing PDF');
+ $self->{message} = $d->get('Closing PDF');
  $pdf->save;
  $pdf->end;
  return;
