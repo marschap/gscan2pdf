@@ -25,7 +25,6 @@
 #     use Linux::Cpuinfo;
 #     my $cpuinfo = Linux::Cpuinfo->new();
 #     $cnt  = $cpuinfo->num_cpus();
-#    Saving large numbers of PNGs, etc. blocks
 #    Support multiple sessions
 #    Test coverage http://search.cpan.org/~pjcj/Devel-Cover-0.65/
 #    It looks as though saving as PDF or DjVu with corrupted OCR output crashes gscan2pdf
@@ -470,7 +469,7 @@ my (
  @redo_buffer, @undo_selection, @redo_selection, %dependencies,
  @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
  $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
- $windowr, @rotate_queue, $rotating, $view, $frames, $duplex, $windowp,
+ $windowr,  $view,       $frames,   $duplex,   $windowp,
  @analyze_queue, $analyzing, $batch_scan, $gui_updating, $print_settings,
 
  # Spin buttons on scan dialog
@@ -651,17 +650,17 @@ my @action_items = (
  [
   'Rotate 90',                    'rotate90',
   $d->get('Rotate 90 clockwise'), '<control><shift>R',
-  $d->get('Rotate 90 clockwise'), sub { rotate_selected(90); }
+  $d->get('Rotate 90 clockwise'), sub { rotate(90); }
  ],
  [
   'Rotate 180',          'rotate180',
   $d->get('Rotate 180'), '<control><shift>F',
-  $d->get('Rotate 180'), sub { rotate_selected(180); }
+  $d->get('Rotate 180'), sub { rotate(180); }
  ],
  [
   'Rotate 270',                       'rotate270',
   $d->get('Rotate 90 anticlockwise'), '<control><shift>C',
-  $d->get('Rotate 90 anticlockwise'), sub { rotate_selected(270); }
+  $d->get('Rotate 90 anticlockwise'), sub { rotate(270); }
  ],
 
  # Tools menu
@@ -3230,53 +3229,68 @@ sub save_image {
   # cd back to tempdir
   chdir $SETTING{session};
 
-  # fill $pagelist with filenames depending on which radiobutton is active
-  my ( $pagelist, $n ) = get_pagelist();
+  # Compile list of pages
+  my @list_of_pages;
   my @pagelist = get_page_index();
+  for (@pagelist) {
+   push @list_of_pages, $slist->{data}[$_][2];
+  }
 
-  my @filelist = split / /, $pagelist;
-  if ( $#filelist == 0 ) {
-   $filename = $filename . ".$SETTING{'image type'}"
-     if ( $filename !~ /\.$SETTING{'image type'}$/i );
-   if ( !file_exists( $file_chooser, $filename ) ) {
-    my $cmd =
-"convert $filelist[0] -density $slist->{data}[$pagelist[0]][2]{resolution} '$filename'";
-    $logger->info($cmd);
-    if ( !system($cmd) ) {
-     $windowi->hide if defined $windowi;
-     mark_pages(@pagelist);
-    }
-    else {
-     show_message_dialog( $window, 'error', 'close',
-      $d->get('Error saving image') );
-    }
+  if ( @list_of_pages > 1 ) {
+   my $w = length( scalar @list_of_pages );
+   for ( my $i = 1 ; $i <= @list_of_pages ; $i++ ) {
+    my $current_filename = sprintf "${filename}_%0${w}d.$SETTING{'image type'}",
+      $i;
+    return if ( file_exists( $file_chooser, $current_filename ) );
    }
+   $filename = "${filename}_%0${w}d.$SETTING{'image type'}";
   }
   else {
-   my $i = 1;
-   my $w = length( scalar @filelist );
-   my $current_filename;
-   foreach (@filelist) {
-    $current_filename = sprintf "${filename}_%0${w}d.$SETTING{'image type'}",
-      $i;
-    if ( !file_exists( $file_chooser, $current_filename ) ) {
-     my $cmd = sprintf "convert %s -density %d \"%s\"",
-       $_, $slist->{data}[ $pagelist[ $i - 1 ] ][2]{resolution},
-       $current_filename;
-     if ( system($cmd) ) {
-      show_message_dialog( $window, 'error', 'close',
-       $d->get('Error saving image') );
-     }
-     else {
-      $windowi->hide if defined $windowi;
-      mark_pages(@pagelist);
-     }
-    }
-    $i++;
-   }
+   $filename = $filename . ".$SETTING{'image type'}"
+     if ( $filename !~ /\.$SETTING{'image type'}$/i );
+   return if ( file_exists( $file_chooser, $filename ) );
   }
- }
 
+  my $dialog = Gtk2::Dialog->new( $d->get('Saving image') . "...",
+   $windowi, 'modal', 'gtk-cancel' => 'cancel' );
+
+  # Set up ProgressBar
+  my $pbar = Gtk2::ProgressBar->new;
+  $dialog->vbox->add($pbar);
+
+  # Ensure that the dialog box is destroyed when the user responds.
+  $dialog->signal_connect(
+   response => sub {
+    $_[0]->destroy;
+   }
+  );
+  $dialog->show_all;
+
+  # Create the image
+  $logger->debug("Started saving $filename");
+  $slist->save_image(
+   $filename,
+   \@list_of_pages,
+   sub {
+    $dialog->destroy;
+    mark_pages(@pagelist);
+    $logger->debug("Finished saving $filename");
+   },
+   sub {
+    $pbar->set_fraction( $Gscan2pdf::_self->{progress} )
+      if defined $Gscan2pdf::_self->{progress};
+    $pbar->set_text( $Gscan2pdf::_self->{message} )
+      if defined $Gscan2pdf::_self->{message};
+   },
+   sub {
+    $dialog->destroy;
+    show_message_dialog( $main::window, 'error', 'close',
+     $Gscan2pdf::_self->{message} );
+   }
+  );
+
+  $windowi->hide if defined $windowi;
+ }
  $file_chooser->destroy;
  return;
 }
@@ -5679,7 +5693,8 @@ sub hash2options {
 
 sub post_process_scan {
  my ( $page, $rotate, $unpaper, $ocr ) = @_;
- push @rotate_queue, [ $page, $rotate ] if $rotate;
+
+ # push @rotate_queue, [ $page, $rotate ] if $rotate; FIXME
  push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper;
  push @ocr_stack, $page if $ocr;
  $logger->info("OCRflagging page: $page") if $ocr;
@@ -5687,23 +5702,23 @@ sub post_process_scan {
  $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
 
  if (
-  not($rotating
-   or $analyzing
+  not($analyzing
    or $scanning
    or $running_unpaper
    or $running_ocr )
    )
  {
 
-  if (@rotate_queue) {
-   rotate();
-  }
-  elsif (@unpaper_stack) {
-   unpaper_page();
-  }
-  elsif (@ocr_stack) {
-   ocr_page();
-  }
+  # FIXME:
+  #  if (@rotate_queue) {
+  #   rotate();
+  #  }
+  #  elsif (@unpaper_stack) {
+  #   unpaper_page();
+  #  }
+  #  elsif (@ocr_stack) {
+  #   ocr_page();
+  #  }
  }
  return;
 }
@@ -7101,14 +7116,12 @@ sub default2index {
    $device,
    $windows2,
    sub {
-    $rotating = FALSE;
     kill_subs();
    },
    sub {
     Gscan2pdf::Frontend::Sane->find_scan_options(
      $windows2,
      sub {
-      $rotating = FALSE;
       kill_subs();
      },
      sub {
@@ -7538,7 +7551,6 @@ sub default2index {
    $windows2,
    $i, $val,
    sub {
-    $rotating = FALSE;
     kill_subs();
    },
    sub {
@@ -8101,36 +8113,12 @@ sub renumber {
  return;
 }
 
-# Compute a timestamp
-
-sub timestamp {
- my @time = localtime();
-
- # return a time which can be string-wise compared
- return sprintf( "%04d%02d%02d%02d%02d%02d",
-  $time[5], $time[4], $time[3], $time[2], $time[1], $time[0] );
-}
-
 # Rotate selected images
 
-sub rotate_selected {
- my ($degrees) = @_;
- my @page = $slist->get_selected_indices;
- my @list;
- push @rotate_queue, [ $_, $degrees ] foreach (@page);
-
- # Update undo/redo buffers
- take_snapshot();
-
- rotate();
- return;
-}
-
-# Rotate images in @rotate_queue ($index, $degrees)
-
 sub rotate {
- my $page   = 0;
- my $npages = 0;
+ my ($angle) = @_;
+ my @page    = $slist->get_selected_indices;
+ my $page    = 0;
 
  # guess where unpaper has been called from
  my $window = get_parent( $windows, $window );
@@ -8145,111 +8133,39 @@ sub rotate {
  $dialog->signal_connect(
   response => sub {
    $_[0]->destroy;
-   $rotating = FALSE;
-   kill_subs();
   }
  );
  $dialog->show_all;
 
- # Install a handler for child processes
- $SIG{CHLD} = \&sig_child;
+ # Update undo/redo buffers
+ take_snapshot();
 
- my ( $child, $parent ) = Gscan2pdf::Document::open_socketpair();
- my $pid = start_process(
-  sub {
-   send( $parent, 'ready', 0 );
+ my @pagelist = get_page_index();
+ for my $i (@pagelist) {
+  $page++;
+  $slist->rotate(
+   $angle,
+   $slist->{data}[$i][2],
+   sub {
+    $dialog->destroy unless ( $page < $#pagelist );
 
-   while (TRUE) {
-
-    # Now block until the GUI passes the filename and direction
-    my $rin  = '';
-    my $rout = '';
-    my ( $index, $filename, $degrees );
-    vec( $rin, $parent->fileno(), 1 ) = 1;
-    if ( select( $rout = $rin, undef, undef, undef ) ) {
-     my $line;
-     recv( $parent, $line, 1000, 0 );
-     return if ( $line eq 'finished' );
-     ( $index, $filename, $degrees ) = split ' ', $line;
-    }
-
-    # Rotate with imagemagick
-    my $image = Image::Magick->new;
-    my $x     = $image->Read($filename);
-    $logger->warn($x) if "$x";
-
-    # workaround for those versions of imagemagick that produce 16bit output
-    # with rotate
-    my $depth = $image->Get('depth');
-    $x = $image->Rotate($degrees);
-    $logger->warn($x) if "$x";
-    my $suffix;
-    $suffix = $1 if ( $filename =~ /\.(\w*)$/ );
-    ( undef, $filename ) =
-      tempfile( DIR => $SETTING{session}, SUFFIX => '.' . $suffix );
-    $x = $image->Write( filename => $filename, depth => $depth );
-    $logger->warn($x) if "$x";
-    send( $parent, "$index $filename", 0 );
-   }
-  }
- );
-
- $helperTag{$pid} = Glib::IO->add_watch(
-  $child->fileno(),
-  [ 'in', 'hup' ],
-  sub {
-   my ( $fileno, $condition ) = @_;
-
-   my $line;
-   if ( $condition & 'in' ) {    # bit field operation. >= would also work
-    recv( $child, $line, 1000, 0 );
-    my ( $index, $filename ) = split ' ', $line;
-    if ( defined $filename and $filename ne '' and $index ne 'ready' ) {
-     $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-     $slist->{data}[$index][2]{filename} = $filename;
-     $slist->{data}[$index][1] =
-       Gscan2pdf::Page::get_pixbuf( $filename, $heightt, $widtht );
-     $slist->{data}[$index][2]{dirty_time} = timestamp();    #flag as dirty
-     $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
-     my @selected = $slist->get_selected_indices;
-     display_image($filename) if ( $index == $selected[0] );
-    }
-    if (@rotate_queue) {
-     $page++;
-     $npages++;
-     my ( $index, $degrees ) = @{ shift @rotate_queue };
-     my $filename = $slist->{data}[$index][2]{filename};
-     send( $child, "$index $filename $degrees", 0 );
-     $pbar->set_text(
-      sprintf(
-       $d->get("Rotating page %i of %i"),
-       $page, $#rotate_queue + $npages + 1
-      )
-     );
-     $pbar->set_fraction( ( $page - 1 ) / ( $#rotate_queue + $npages + 1 ) );
-    }
-    else {
-     send( $child, 'finished', 0 );
-     $dialog->destroy;
-     $rotating = FALSE;
-     post_process_scan();
-     return FALSE;    # uninstall
-    }
-   }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-   if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-   {                  # bit field operation. >= would also work
+    #                    post_process_scan(); FIXME
+   },
+   sub {
+    $pbar->set_text(
+     sprintf( $d->get("Rotating page %i of %i"), $page, $#pagelist + 1 ) );
+    $pbar->set_fraction( ( $page - 1 ) / ( $#pagelist + 1 ) );
+   },
+   sub {
     $dialog->destroy;
-    $rotating = FALSE;
-    post_process_scan();
-    return FALSE;     # uninstall
-   }
-   return TRUE;       # continue without uninstalling
-  }
- );
- $rotating = TRUE;
+    show_message_dialog( $main::window, 'error', 'close',
+     $Gscan2pdf::_self->{message} );
+   },
+   sub {
+    display_image( $slist->{data}[$i][2]{filename} );
+   },
+  );
+ }
  return;
 }
 
@@ -8360,7 +8276,7 @@ sub analyze {
 
      #normalize the Std Dev as in ImageMagick's "identify -verbose"
      $slist->{data}[$index][2]{std_dev} = $maxQ ? $stddev / $maxQ : 0;
-     $slist->{data}[$index][2]{analyze_time} = timestamp();
+     $slist->{data}[$index][2]{analyze_time} = Gscan2pdf::timestamp();
      $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
      my @selected = $slist->get_selected_indices;
      display_image($filename) if ( $index == $selected[0] );
@@ -8511,7 +8427,8 @@ sub threshold {
 
       # flag the page as modified so it can be re-OCRed and re-Analyzed
       $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-      $slist->{data}[$index][2]{dirty_time} = timestamp();    #flag as dirty
+      $slist->{data}[$index][2]{dirty_time} =
+        Gscan2pdf::timestamp();    #flag as dirty
       $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
 
       # Write it
@@ -8686,7 +8603,7 @@ sub negate {
        $slist->{data}[ $pagelist[$page] ][1] =
          Gscan2pdf::Page::get_pixbuf( $filename, $heightt, $widtht );
        $slist->{data}[ $pagelist[$page] ][2]{dirty_time} =
-         timestamp();    #flag as dirty
+         Gscan2pdf::timestamp();    #flag as dirty
        $slist->get_model->signal_handler_unblock(
         $slist->{row_changed_signal} );
       }
@@ -8696,11 +8613,11 @@ sub negate {
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
      if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-     {                   # bit field operation. >= would also work
+     {                              # bit field operation. >= would also work
       $dialog->destroy;
-      return FALSE;      # uninstall
+      return FALSE;                 # uninstall
      }
-     return TRUE;        # continue without uninstalling
+     return TRUE;                   # continue without uninstalling
     }
    );
   }
@@ -8899,7 +8816,7 @@ sub unsharp {
         $slist->{data}[ $pagelist[$page] ][1] =
           Gscan2pdf::Page::get_pixbuf( $filename, $heightt, $widtht );
         $slist->{data}[ $pagelist[$page] ][2]{dirty_time} =
-          timestamp();    #flag as dirty
+          Gscan2pdf::timestamp();    #flag as dirty
         $slist->get_model->signal_handler_unblock(
          $slist->{row_changed_signal} );
         display_image($filename) if ( !$page );
@@ -8910,12 +8827,12 @@ sub unsharp {
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
      if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-     {                    # bit field operation. >= would also work
+     {                               # bit field operation. >= would also work
       $dialog->destroy;
       update_uimanager();
-      return FALSE;       # uninstall
+      return FALSE;                  # uninstall
      }
-     return TRUE;         # continue without uninstalling
+     return TRUE;                    # continue without uninstalling
     }
    );
   }
@@ -9076,7 +8993,7 @@ sub crop {
         $slist->{data}[ $pagelist[$page] ][1] =
           Gscan2pdf::Page::get_pixbuf( $filename, $heightt, $widtht );
         $slist->{data}[ $pagelist[$page] ][2]{dirty_time} =
-          timestamp();             #flag as dirty
+          Gscan2pdf::timestamp();    #flag as dirty
         $slist->get_model->signal_handler_unblock(
          $slist->{row_changed_signal} );
         display_image($filename) if ( !$page );
@@ -9087,12 +9004,12 @@ sub crop {
 # Can't have elsif here because of the possibility that both in and hup are set.
 # Only allow the hup if sure an empty buffer has been read.
      if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-     {                             # bit field operation. >= would also work
+     {                               # bit field operation. >= would also work
       $dialog->destroy;
       update_uimanager();
-      return FALSE;                # uninstall
+      return FALSE;                  # uninstall
      }
-     return TRUE;                  # continue without uninstalling
+     return TRUE;                    # continue without uninstalling
     }
    );
   }
@@ -10029,7 +9946,7 @@ sub ocr_page {
         unlink <$txt*>;
         $slist->{data}[$pagenum][2]{ocr_flag} = 1;    #FlagOCR
         $slist->{data}[$pagenum][2]{ocr_time} =
-          timestamp();    #remember when we ran OCR on this page
+          Gscan2pdf::timestamp();    #remember when we ran OCR on this page
         $slist->get_model->signal_handler_unblock(
          $slist->{row_changed_signal} );
 
@@ -10041,20 +9958,20 @@ sub ocr_page {
          $canvas->set_scale( $view->get_zoom );
          $canvas->show;
         }
-        return FALSE;     # uninstall
+        return FALSE;                # uninstall
        }
-       return TRUE;       # continue without uninstalling
+       return TRUE;                  # continue without uninstalling
       }
      );
     }
-    return TRUE;          # continue without uninstalling
+    return TRUE;                     # continue without uninstalling
    }
    elsif ( !$running_ocr ) {
     $dialog->destroy;
-    return FALSE;         # uninstall
+    return FALSE;                    # uninstall
    }
    else {
-    return TRUE;          # continue without uninstalling
+    return TRUE;                     # continue without uninstalling
    }
   }
  );

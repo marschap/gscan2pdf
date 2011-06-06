@@ -68,6 +68,18 @@ sub new {
  return $self;
 }
 
+sub clone {
+ my ($self) = @_;
+ my $new = Gscan2pdf::Page->new(
+  filename => $self->{filename},
+  format   => $self->{format}
+ );
+ for ( keys %{$self} ) {
+  $new->{$_} = $self->{$_};
+ }
+ return $new;
+}
+
 1;
 
 __END__

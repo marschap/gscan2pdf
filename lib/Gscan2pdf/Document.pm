@@ -701,6 +701,88 @@ sub save_tiff {
  return;
 }
 
+sub rotate {
+ my ( $self, $angle, $page, $finished_callback, $not_finished_callback,
+  $error_callback, $display_callback )
+   = @_;
+
+ my $sentinel =
+   Gscan2pdf::_enqueue_request( 'rotate', { angle => $angle, page => $page } );
+ Gscan2pdf::_when_ready(
+  $sentinel,
+  sub {
+   if ( $Gscan2pdf::_self->{status} ) {
+    $error_callback->();
+    return;
+   }
+   $self->update_page($display_callback);
+   $finished_callback->();
+  },
+  sub {
+   $self->update_page($display_callback);
+   $not_finished_callback->();
+  }
+ );
+ return;
+}
+
+sub update_page {
+ my ( $self, $display_callback ) = @_;
+ while ( $Gscan2pdf::_self->{data_queue}->pending ) {
+  my $data = $Gscan2pdf::_self->{data_queue}->dequeue;
+
+  # find old page
+  my $i = 0;
+  $i++
+    while ( $i <= $#{ $self->{data} }
+   and $self->{data}[$i][2]{filename} ne $data->{old}{filename} );
+
+  # if found, replace with new one
+  if ( $i <= $#{ $self->{data} } ) {
+   $self->get_model->signal_handler_block( $self->{row_changed_signal} )
+     if defined( $self->{row_changed_signal} );
+   $self->{data}[$i][1] =
+     get_pixbuf( $data->{new}{filename}, $main::heightt, $main::widtht );
+   $self->{data}[$i][2] = $data->{new} if ( $i <= $#{ $self->{data} } );
+   $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
+     if defined( $self->{row_changed_signal} );
+   my @selected = $self->get_selected_indices;
+   $self->select(@selected) if ( $i == $selected[0] );
+   $display_callback->();
+  }
+
+ }
+ return;
+}
+
+sub save_image {
+ my ( $self, $path, $list_of_pages, $finished_callback, $not_finished_callback,
+  $error_callback )
+   = @_;
+
+ my $sentinel = Gscan2pdf::_enqueue_request(
+  'save-image',
+  {
+   path          => $path,
+   list_of_pages => $list_of_pages
+  }
+ );
+ Gscan2pdf::_when_ready(
+  $sentinel,
+  sub {
+   if ( $Gscan2pdf::_self->{status} ) {
+    $error_callback->();
+    return;
+   }
+   $finished_callback->();
+  },
+  sub {
+   $not_finished_callback->();
+  }
+ );
+ return;
+}
+
 1;
 
 __END__

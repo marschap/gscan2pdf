@@ -86,18 +86,26 @@ sub _thread_main {
    _thread_import_file( $self, $request->{first}, $request->{last} );
   }
 
+  elsif ( $request->{action} eq 'save-djvu' ) {
+   _thread_save_djvu( $self, $request->{path}, $request->{list_of_pages} );
+  }
+
+  elsif ( $request->{action} eq 'save-image' ) {
+   _thread_save_image( $self, $request->{path}, $request->{list_of_pages} );
+  }
+
   elsif ( $request->{action} eq 'save-pdf' ) {
    _thread_save_pdf( $self, $request->{path}, $request->{list_of_pages},
     $request->{metadata}, $request->{options} );
   }
 
-  elsif ( $request->{action} eq 'save-djvu' ) {
-   _thread_save_djvu( $self, $request->{path}, $request->{list_of_pages} );
-  }
-
   elsif ( $request->{action} eq 'save-tiff' ) {
    _thread_save_tiff( $self, $request->{path}, $request->{list_of_pages},
     $request->{options}, $request->{ps} );
+  }
+
+  elsif ( $request->{action} eq 'rotate' ) {
+   _thread_rotate( $self, $request->{angle}, $request->{page} );
   }
 
   elsif ( $request->{action} eq 'cancel' ) {
@@ -797,6 +805,73 @@ sub slurp {
  my $text = <$fh>;
  close $fh;
  return $text;
+}
+
+sub _thread_rotate {
+ my ( $self, $angle, $page ) = @_;
+ my $filename = $page->{filename};
+
+ # Rotate with imagemagick
+ my $image = Image::Magick->new;
+ my $x     = $image->Read($filename);
+ $logger->warn($x) if "$x";
+
+ # workaround for those versions of imagemagick that produce 16bit output
+ # with rotate
+ my $depth = $image->Get('depth');
+ $x = $image->Rotate($angle);
+ $logger->warn($x) if "$x";
+ my $suffix;
+ $suffix = $1 if ( $filename =~ /\.(\w*)$/ );
+ ( undef, $filename ) =
+   tempfile( DIR => $self->{dir}, SUFFIX => '.' . $suffix );
+ $x = $image->Write( filename => $filename, depth => $depth );
+ $logger->warn($x) if "$x";
+ my $new = $page->clone;
+ $new->{filename}   = $filename;
+ $new->{dirty_time} = timestamp();    #flag as dirty
+ my %data = ( old => $page, new => $new );
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+# Compute a timestamp
+
+sub timestamp {
+ my @time = localtime();
+
+ # return a time which can be string-wise compared
+ return sprintf( "%04d%02d%02d%02d%02d%02d",
+  $time[5], $time[4], $time[3], $time[2], $time[1], $time[0] );
+}
+
+sub _thread_save_image {
+ my ( $self, $path, $list_of_pages ) = @_;
+
+ if ( @{$list_of_pages} == 1 ) {
+  my $cmd =
+"convert $list_of_pages->[0]{filename} -density $list_of_pages->[0]{resolution} '$path'";
+  $logger->info($cmd);
+  if ( system($cmd) ) {
+   $self->{status}  = 1;
+   $self->{message} = $d->get('Error saving image');
+  }
+ }
+ else {
+  my $current_filename;
+  my $i = 1;
+  foreach ( @{$list_of_pages} ) {
+   $current_filename = sprintf $path, $i++;
+   my $cmd = sprintf "convert %s -density %d \"%s\"",
+     $_->{filename}, $_->{resolution},
+     $current_filename;
+   if ( system($cmd) ) {
+    $self->{status}  = 1;
+    $self->{message} = $d->get('Error saving image');
+   }
+  }
+ }
+ return;
 }
 
 1;
