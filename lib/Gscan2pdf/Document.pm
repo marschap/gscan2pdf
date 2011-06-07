@@ -748,7 +748,7 @@ sub update_page {
      if defined( $self->{row_changed_signal} );
    my @selected = $self->get_selected_indices;
    $self->select(@selected) if ( $i == $selected[0] );
-   $display_callback->();
+   $display_callback->() if ($display_callback);
   }
 
  }
@@ -777,6 +777,29 @@ sub save_image {
    $finished_callback->();
   },
   sub {
+   $not_finished_callback->();
+  }
+ );
+ return;
+}
+
+sub analyse {
+ my ( $self, $page, $finished_callback, $not_finished_callback,
+  $error_callback ) = @_;
+
+ my $sentinel = Gscan2pdf::_enqueue_request( 'analyse', { page => $page } );
+ Gscan2pdf::_when_ready(
+  $sentinel,
+  sub {
+   if ( $Gscan2pdf::_self->{status} ) {
+    $error_callback->();
+    return;
+   }
+   $self->update_page();
+   $finished_callback->();
+  },
+  sub {
+   $self->update_page();
    $not_finished_callback->();
   }
  );

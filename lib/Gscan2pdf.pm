@@ -74,8 +74,12 @@ sub _thread_main {
  my ($self) = @_;
 
  while ( my $request = $self->{requests}->dequeue ) {
-  if ( $request->{action} eq 'quit' ) {
-   last;
+  if ( $request->{action} eq 'analyse' ) {
+   _thread_analyse( $self, $request->{page} );
+  }
+
+  elsif ( $request->{action} eq 'cancel' ) {
+   _thread_cancel($self);
   }
 
   elsif ( $request->{action} eq 'get-file-info' ) {
@@ -108,8 +112,8 @@ sub _thread_main {
    _thread_rotate( $self, $request->{angle}, $request->{page} );
   }
 
-  elsif ( $request->{action} eq 'cancel' ) {
-   _thread_cancel($self);
+  elsif ( $request->{action} eq 'quit' ) {
+   last;
   }
 
   else {
@@ -871,6 +875,39 @@ sub _thread_save_image {
    }
   }
  }
+ return;
+}
+
+sub _thread_analyse {
+ my ( $self, $page ) = @_;
+
+ # Identify with imagemagick
+ my $image = Image::Magick->new;
+ my $x     = $image->Read( $page->{filename} );
+ $logger->warn($x) if "$x";
+
+ my ( $depth, $min, $max, $mean, $stddev ) = $image->Statistics();
+ $logger->warn("image->Statistics() failed") unless defined $depth;
+ $logger->info("std dev: $stddev mean: $mean");
+ my $maxQ = -1 + ( 1 << $depth );
+ $mean = $maxQ ? $mean / $maxQ : 0;
+ $stddev = 0 if $stddev eq "nan";
+
+# my $quantum_depth = $image->QuantumDepth;
+# warn "image->QuantumDepth failed" unless defined $quantum_depth;
+# TODO add any other useful image analysis here e.g. is the page mis-oriented?
+#  detect mis-orientation possible algorithm:
+#   blur or low-pass filter the image (so words look like ovals)
+#   look at few vertical narrow slices of the image and get the Standard Deviation
+#   if most of the Std Dev are high, then it might be portrait
+# TODO may need to send quantumdepth
+
+ my $new = $page->clone;
+ $new->{mean}         = $mean;
+ $new->{std_dev}      = $stddev;
+ $new->{analyse_time} = timestamp();
+ my %data = ( old => $page, new => $new );
+ $self->{data_queue}->enqueue( \%data );
  return;
 }
 

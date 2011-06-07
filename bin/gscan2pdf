@@ -468,9 +468,9 @@ my (
  $windowu, $vboxd, $labeld, $combobd, $combobp, $vboxm, @undo_buffer,
  @redo_buffer, @undo_selection, @redo_selection, %dependencies,
  @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
- $scanning, @ocr_engine, $bscanall, $bscannum, @clipboard, $windowd,
- $windowr,  $view,       $frames,   $duplex,   $windowp,
- @analyze_queue, $analyzing, $batch_scan, $gui_updating, $print_settings,
+ $scanning,   @ocr_engine,   $bscanall, $bscannum, @clipboard, $windowd,
+ $windowr,    $view,         $frames,   $duplex,   $windowp,
+ $batch_scan, $gui_updating, $print_settings,
 
  # Spin buttons on scan dialog
  $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -599,12 +599,12 @@ my @action_items = (
  [
   'Select Blank',                                      'gtk-select-blank',
   $d->get('_Blank'),                                   '<control>b',
-  $d->get('Select pages with low standard deviation'), \&analyze_select_blank
+  $d->get('Select pages with low standard deviation'), \&analyse_select_blank
  ],
  [
   'Select Dark',                'gtk-select-blank',
   $d->get('_Dark'),             '<control>d',
-  $d->get('Select dark pages'), \&analyze_select_dark
+  $d->get('Select dark pages'), \&analyse_select_dark
  ],
  [
   'Select Modified',
@@ -5702,8 +5702,7 @@ sub post_process_scan {
  $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
 
  if (
-  not($analyzing
-   or $scanning
+  not($scanning
    or $running_unpaper
    or $running_ocr )
    )
@@ -6053,10 +6052,10 @@ sub select_modified_since_ocr {
  return;
 }
 
-# Analyze and select blank pages
+# Analyse and select blank pages
 
-sub analyze_select_blank {
- update_analysis( 1, 0 );
+sub analyse_select_blank {
+ analyse( 1, 0 );
  return;
 }
 
@@ -6067,14 +6066,14 @@ sub select_blank_pages {
  foreach my $page ( 0 .. $#{ $slist->{data} } ) {
   $logger->info("smp page: $page");
   my $dirty_time   = $slist->{data}[$page][2]{dirty_time};
-  my $analyze_time = $slist->{data}[$page][2]{analyze_time};
+  my $analyse_time = $slist->{data}[$page][2]{analyse_time};
   $dirty_time   = defined($dirty_time)   ? $dirty_time   : 0;
-  $analyze_time = defined($analyze_time) ? $analyze_time : 0;
-  if ( $analyze_time le $dirty_time ) {
+  $analyse_time = defined($analyse_time) ? $analyse_time : 0;
+  if ( $analyse_time le $dirty_time ) {
    $logger->warn(
     $d->get(
      sprintf(
-      "Page %d probably needs to be re-Analyzed.  Try Update or Analyze.",
+      "Page %d probably needs to be re-Analysed.  Try Update or Analyse.",
       $page + 1 )
     )
    );
@@ -6094,10 +6093,10 @@ sub select_blank_pages {
  return;
 }
 
-# Analyze and select dark pages
+# Analyse and select dark pages
 
-sub analyze_select_dark {
- update_analysis( 0, 1 );
+sub analyse_select_dark {
+ analyse( 0, 1 );
  return;
 }
 
@@ -6109,14 +6108,14 @@ sub select_dark_pages {
  foreach my $page ( 0 .. $#{ $slist->{data} } ) {
   $logger->info("smp page: $page");
   my $dirty_time   = $slist->{data}[$page][2]{dirty_time};
-  my $analyze_time = $slist->{data}[$page][2]{analyze_time};
+  my $analyse_time = $slist->{data}[$page][2]{analyse_time};
   $dirty_time   = defined($dirty_time)   ? $dirty_time   : 0;
-  $analyze_time = defined($analyze_time) ? $analyze_time : 0;
-  if ( $analyze_time le $dirty_time ) {
+  $analyse_time = defined($analyse_time) ? $analyse_time : 0;
+  if ( $analyse_time le $dirty_time ) {
    $logger->warn(
     $d->get(
      sprintf(
-      "Page %d probably needs to be re-Analyzed.  Try Update or Analyze.",
+      "Page %d probably needs to be re-Analysed.  Try Update or Analyse.",
       $page + 1 )
     )
    );
@@ -6129,27 +6128,6 @@ sub select_dark_pages {
    $logger->info("Selecting dark page");
   }
  }
- return;
-}
-
-# Update analysis on stale pages
-
-sub update_analysis {
- my ( $select_blank, $select_dark ) = @_;
- foreach my $page ( 0 .. $#{ $slist->{data} } ) {
-  my $dirty_time   = $slist->{data}[$page][2]{dirty_time};
-  my $analyze_time = $slist->{data}[$page][2]{analyze_time};
-  $dirty_time   = defined($dirty_time)   ? $dirty_time   : 0;
-  $analyze_time = defined($analyze_time) ? $analyze_time : 0;
-  if ( $analyze_time le $dirty_time ) {
-   $logger->info(
-    "Updating: $page analyse_time: $analyze_time dirty_time: $dirty_time");
-   push @analyze_queue, [$page];
-  }
- }
- analyze( $select_blank, $select_dark ) if @analyze_queue;
- select_blank_pages() if ( $select_blank and not @analyze_queue );
- select_dark_pages()  if ( $select_dark  and not @analyze_queue );
  return;
 }
 
@@ -8169,23 +8147,9 @@ sub rotate {
  return;
 }
 
-# Analyze selected images
+# Analyse selected images
 
-sub analyze_selected {
- my @page = $slist->get_selected_indices;    #should we just always analyze all?
- my @list;
- push @analyze_queue, [$_] foreach (@page);
-
- # Update undo/redo buffers
- take_snapshot();
-
- analyze();
- return;
-}
-
-# Analyze images in @analyze_queue
-
-sub analyze {
+sub analyse {
  my ( $select_blank, $select_dark ) = @_;
  my $page   = 0;
  my $npages = 0;
@@ -8203,122 +8167,46 @@ sub analyze {
  $dialog->signal_connect(
   response => sub {
    $_[0]->destroy;
-   $analyzing = FALSE;
-   kill_subs();
   }
  );
  $dialog->show_all;
 
- # Install a handler for child processes
- $SIG{CHLD} = \&sig_child;
+ # Update undo/redo buffers
+ take_snapshot();
 
- my ( $child, $parent ) = Gscan2pdf::Document::open_socketpair();
- my $pid = start_process(
-  sub {
-   send( $parent, 'ready', 0 );
-
-   while (TRUE) {
-
-    # Now block until the GUI passes the filename
-    my $rin  = '';
-    my $rout = '';
-    my ( $index, $filename );
-    vec( $rin, $parent->fileno(), 1 ) = 1;
-    if ( select( $rout = $rin, undef, undef, undef ) ) {
-     my $line;
-     recv( $parent, $line, 1000, 0 );
-     return if ( $line eq 'finished' );
-     ( $index, $filename ) = split ' ', $line;
-     $logger->info("index: $index $filename");
-    }
-
-    # Identify with imagemagick
-    my $image = Image::Magick->new;
-    my $x     = $image->Read($filename);
-    $logger->warn($x) if "$x";
-
-    my ( $depth, $min, $max, $mean, $stddev ) = $image->Statistics();
-    $logger->warn("image->Statistics() failed") unless defined $depth;
-    $logger->info("std dev: $stddev mean: $mean");
-
-#my $quantum_depth = $image->QuantumDepth;
-#warn "image->QuantumDepth failed" unless defined $quantum_depth;
-#TODO add any other useful image analysis here e.g. is the page mis-oriented?
-#  detect mis-orientation possible algorithm:
-#   blur or low-pass filter the image (so words look like ovals)
-#   look at few vertical narrow slices of the image and get the Standard Deviation
-#   if most of the Std Dev are high, then it might be portrait
-    send( $parent, "$index $filename $mean $stddev $depth", 0 )
-      ;    #TODO may need to send quantumdepth
-   }
-  }
- );
-
- $helperTag{$pid} = Glib::IO->add_watch(
-  $child->fileno(),
-  [ 'in', 'hup' ],
-  sub {
-   my ( $fileno, $condition ) = @_;
-
-   my $line;
-   if ( $condition & 'in' ) {    # bit field operation. >= would also work
-    recv( $child, $line, 1000, 0 );
-    my ( $index, $filename, $mean, $stddev, $depth ) = split ' ', $line;
-    if ( defined $filename and $filename ne '' and $index ne 'ready' ) {
-     $logger->info("index: $index depth: $depth") unless $depth;
-     my $maxQ = -1 + ( 1 << $depth );
-     $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-     $slist->{data}[$index][2]{filename} = $filename;
-     $slist->{data}[$index][1] =
-       Gscan2pdf::Page::get_pixbuf( $filename, $heightt, $widtht );
-     $slist->{data}[$index][2]{mean} = $maxQ ? $mean / $maxQ : 0;
-     $stddev = 0 if $stddev eq "nan";
-
-     #normalize the Std Dev as in ImageMagick's "identify -verbose"
-     $slist->{data}[$index][2]{std_dev} = $maxQ ? $stddev / $maxQ : 0;
-     $slist->{data}[$index][2]{analyze_time} = Gscan2pdf::timestamp();
-     $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
-     my @selected = $slist->get_selected_indices;
-     display_image($filename) if ( $index == $selected[0] );
-    }
-    if (@analyze_queue) {
+ foreach my $i ( 0 .. $#{ $slist->{data} } ) {
+  my $dirty_time   = $slist->{data}[$i][2]{dirty_time};
+  my $analyse_time = $slist->{data}[$i][2]{analyse_time};
+  $dirty_time   = defined($dirty_time)   ? $dirty_time   : 0;
+  $analyse_time = defined($analyse_time) ? $analyse_time : 0;
+  if ( $analyse_time le $dirty_time ) {
+   $npages++;
+   $logger->info(
+    "Updating: $page analyse_time: $analyse_time dirty_time: $dirty_time");
+   $slist->analyse(
+    $slist->{data}[$i][2],
+    sub {
      $page++;
-     $npages++;
-     my ($index) = @{ shift @analyze_queue };
-     my $filename = $slist->{data}[$index][2]{filename};
-     send( $child, "$index $filename", 0 );
+     unless ( $page < $npages ) {
+      $dialog->destroy;
+      select_blank_pages() if $select_blank;
+      select_dark_pages()  if $select_dark;
+     }
+    },
+    sub {
      $pbar->set_text(
-      sprintf(
-       $d->get("Analyzing page %i of %i"),
-       $page, $#analyze_queue + $npages + 1
-      )
-     );
-     $pbar->set_fraction( ( $page - 1 ) / ( $#analyze_queue + $npages + 1 ) );
-    }
-    else {
-     send( $child, 'finished', 0 );
+      sprintf( $d->get("Analyzing page %i of %i"), $page + 1, $npages ) );
+     $pbar->set_fraction( $page / $npages );
+    },
+    sub {
      $dialog->destroy;
-     $analyzing = FALSE;
-     post_process_scan();
-     select_blank_pages() if $select_blank;
-     select_dark_pages()  if $select_dark;
-     return FALSE;    # uninstall
-    }
-   }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-   if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-   {                  # bit field operation. >= would also work
-    $dialog->destroy;
-    $analyzing = FALSE;
-    post_process_scan();
-    return FALSE;     # uninstall
-   }
-   return TRUE;       # continue without uninstalling
+     show_message_dialog( $main::window, 'error', 'close',
+      $Gscan2pdf::_self->{message} );
+    },
+   );
   }
- );
- $analyzing = TRUE;
+ }
+ $dialog->destroy unless ($npages);
  return;
 }
 
@@ -8425,7 +8313,7 @@ sub threshold {
       $image->BlackThreshold( threshold => $SETTING{'threshold tool'} . '%' );
       $image->WhiteThreshold( threshold => $SETTING{'threshold tool'} . '%' );
 
-      # flag the page as modified so it can be re-OCRed and re-Analyzed
+      # flag the page as modified so it can be re-OCRed and re-Analysed
       $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
       $slist->{data}[$index][2]{dirty_time} =
         Gscan2pdf::timestamp();    #flag as dirty
