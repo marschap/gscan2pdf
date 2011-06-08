@@ -468,9 +468,9 @@ my (
  $windowu, $vboxd, $labeld, $combobd, $combobp, $vboxm, @undo_buffer,
  @redo_buffer, @undo_selection, @redo_selection, %dependencies,
  @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
- $scanning,   @ocr_engine,   $bscanall, $bscannum, @clipboard, $windowd,
- $windowr,    $view,         $frames,   $duplex,   $windowp,
- $batch_scan, $gui_updating, $print_settings,
+ $scanning,   @ocr_engine,   $bscanall,       $bscannum, @clipboard, $windowd,
+ $windowr,    $view,         $frames,         $duplex,   $windowp,
+ $batch_scan, $gui_updating, $print_settings, $windowc,  $current_page,
 
  # Spin buttons on scan dialog
  $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
@@ -489,6 +489,9 @@ my (
 
  # List of user-defined tools
  @user_defined_tools,
+
+ # Spinbuttons for selector on crop dialog
+ $sb_selector_x, $sb_selector_y, $sb_selector_w, $sb_selector_h,
 );
 
 my @action_items = (
@@ -1122,6 +1125,22 @@ $view->signal_connect(
  }
 );
 
+# Callback if the selection changes
+$selector->{selection_changed_signal} = $selector->signal_connect(
+ 'selection-changed' => sub {
+  my $sel = $selector->get_selection;
+  if ( defined $sel ) {
+   $SETTING{selection} = [ $sel->values ];
+   if ( defined $sb_selector_x ) {
+    $sb_selector_x->set_value( $SETTING{selection}[0] );
+    $sb_selector_y->set_value( $SETTING{selection}[1] );
+    $sb_selector_w->set_value( $SETTING{selection}[2] );
+    $sb_selector_h->set_value( $SETTING{selection}[3] );
+   }
+  }
+ }
+);
+
 # ScrolledWindow for Goo::Canvas for OCR output
 my $scwin_buffer = Gtk2::ScrolledWindow->new;
 $scwin_buffer->set_policy( 'automatic', 'automatic' );
@@ -1139,13 +1158,13 @@ $slist->{selection_changed_signal} = $slist->get_selection->signal_connect(
 
    my $path = Gtk2::TreePath->new_from_indices( $page[0] );
    $slist->scroll_to_cell($path);
-   my $sel  = $selector->get_selection;
-   my $page = $slist->{data}[ $page[0] ][2];
-   display_image( $page->{filename} );
+   my $sel = $selector->get_selection;
+   $current_page = $slist->{data}[ $page[0] ][2];
+   display_image($current_page);
    $selector->set_selection($sel) if ( defined $sel );
 
    # Update the buffer, if created
-   $canvas = $page->{buffer};
+   $canvas = $current_page->{buffer};
 
 # $canvas variable needed to prevent ->add() munging $slist -> {data}[$page[0]][3]
    if ( defined $canvas ) {
@@ -1155,6 +1174,7 @@ $slist->{selection_changed_signal} = $slist->get_selection->signal_connect(
   }
   else {
    $view->set_pixbuf(undef);
+   undef $current_page;
   }
 
   # If no pages are selected, but some exist, PageRange widgets default to all
@@ -1845,10 +1865,33 @@ sub update_uimanager {
 }
 
 sub display_image {
- my ($filename) = @_;
+ my ($page) = @_;
 
- my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file($filename);
+ my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file( $page->{filename} );
  $view->set_pixbuf($pixbuf);
+
+ # Get image dimensions to constrain selector spinbuttons on crop dialog
+ ( $page->{w}, $page->{h} ) = ( $pixbuf->get_width, $pixbuf->get_height );
+
+ # Update the ranges on the crop dialog
+ if ( defined $sb_selector_w ) {
+  $sb_selector_w->set_range( 0,
+   $current_page->{w} - $sb_selector_x->get_value );
+  $sb_selector_h->set_range( 0,
+   $current_page->{h} - $sb_selector_y->get_value );
+  $sb_selector_x->set_range( 0,
+   $current_page->{w} - $sb_selector_w->get_value );
+  $sb_selector_y->set_range( 0,
+   $current_page->{h} - $sb_selector_h->get_value );
+
+  $SETTING{selection}[0] = $sb_selector_x->get_value;
+  $SETTING{selection}[1] = $sb_selector_y->get_value;
+  $SETTING{selection}[2] = $sb_selector_w->get_value;
+  $SETTING{selection}[3] = $sb_selector_h->get_value;
+
+  $selector->set_selection(
+   Gtk2::Gdk::Rectangle->new( @{ $SETTING{selection} } ) );
+ }
  return;
 }
 
@@ -5698,8 +5741,6 @@ sub post_process_scan {
  push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper;
  push @ocr_stack, $page if $ocr;
  $logger->info("OCRflagging page: $page") if $ocr;
- $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
- $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
 
  if (
   not($scanning
@@ -8140,7 +8181,7 @@ sub rotate {
      $Gscan2pdf::_self->{message} );
    },
    sub {
-    display_image( $slist->{data}[$i][2]{filename} );
+    display_image( $slist->{data}[$i][2] );
    },
   );
  }
@@ -8315,7 +8356,7 @@ sub threshold {
        $Gscan2pdf::_self->{message} );
      },
      sub {
-      display_image( $slist->{data}[$i][2]{filename} );
+      display_image( $slist->{data}[$i][2] );
      },
     );
    }
@@ -8395,7 +8436,7 @@ sub negate {
        $Gscan2pdf::_self->{message} );
      },
      sub {
-      display_image( $slist->{data}[$i][2]{filename} );
+      display_image( $slist->{data}[$i][2] );
      },
     );
    }
@@ -8546,7 +8587,7 @@ sub unsharp {
        $Gscan2pdf::_self->{message} );
      },
      sub {
-      display_image( $slist->{data}[$i][2]{filename} );
+      display_image( $slist->{data}[$i][2] );
      },
     );
    }
@@ -8576,13 +8617,12 @@ sub change_image_tool_cb {
   $tool = $painter;
  }
  $view->set_tool($tool);
-
- # if ($value == 20) {
- #  sel_changed_cb ($selector, $sel_info_label);
- # }
- # else {
- #  $sel_info_label->set_text ("");
- # }
+ if ( $value == 20 and defined( $SETTING{selection} ) ) {
+  $selector->signal_handler_block( $selector->{selection_changed_signal} );
+  $selector->set_selection(
+   Gtk2::Gdk::Rectangle->new( @{ $SETTING{selection} } ) );
+  $selector->signal_handler_unblock( $selector->{selection_changed_signal} );
+ }
  return;
 }
 
@@ -8590,12 +8630,102 @@ sub change_image_tool_cb {
 
 sub crop {
 
+ if ( defined $windowc ) {
+  $windowc->present;
+  return;
+ }
+
  # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
- my ( $windowc, $vbox ) = create_window( $window, $d->get('Crop'), TRUE );
+ ( $windowc, my $vbox ) = create_window( $window, $d->get('Crop'), TRUE );
 
  # Frame for page range
  add_page_range($vbox);
+
+ # SpinButton for x
+ my $hbox = Gtk2::HBox->new;
+ $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
+ my $label = Gtk2::Label->new( $d->get('x') );
+ $hbox->pack_start( $label, FALSE, TRUE, 0 );
+ $label = Gtk2::Label->new( $d->get('pixels') );
+ $hbox->pack_end( $label, FALSE, TRUE, 0 );
+ $sb_selector_x = Gtk2::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
+ $tooltips->set_tip( $sb_selector_x,
+  $d->get('The x-position of the left hand edge of the crop.') );
+ $hbox->pack_end( $sb_selector_x, FALSE, TRUE, 0 );
+
+ # SpinButton for y
+ $hbox = Gtk2::HBox->new;
+ $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
+ $label = Gtk2::Label->new( $d->get('y') );
+ $hbox->pack_start( $label, FALSE, TRUE, 0 );
+ $label = Gtk2::Label->new( $d->get('pixels') );
+ $hbox->pack_end( $label, FALSE, TRUE, 0 );
+ $sb_selector_y = Gtk2::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
+ $tooltips->set_tip( $sb_selector_y,
+  $d->get('The y-position of the top edge of the crop.') );
+ $hbox->pack_end( $sb_selector_y, FALSE, TRUE, 0 );
+
+ # SpinButton for w
+ $hbox = Gtk2::HBox->new;
+ $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
+ $label = Gtk2::Label->new( $d->get('Width') );
+ $hbox->pack_start( $label, FALSE, TRUE, 0 );
+ $label = Gtk2::Label->new( $d->get('pixels') );
+ $hbox->pack_end( $label, FALSE, TRUE, 0 );
+ $sb_selector_w = Gtk2::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
+ $tooltips->set_tip( $sb_selector_w, $d->get('The width of the crop.') );
+ $hbox->pack_end( $sb_selector_w, FALSE, TRUE, 0 );
+
+ # SpinButton for h
+ $hbox = Gtk2::HBox->new;
+ $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
+ $label = Gtk2::Label->new( $d->get('Height') );
+ $hbox->pack_start( $label, FALSE, TRUE, 0 );
+ $label = Gtk2::Label->new( $d->get('pixels') );
+ $hbox->pack_end( $label, FALSE, TRUE, 0 );
+ $sb_selector_h = Gtk2::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
+ $tooltips->set_tip( $sb_selector_h, $d->get('The height of the crop.') );
+ $hbox->pack_end( $sb_selector_h, FALSE, TRUE, 0 );
+
+ # Callbacks if the spinbuttons change
+ $sb_selector_x->signal_connect(
+  'value-changed' => sub {
+   $SETTING{selection}[0] = $sb_selector_x->get_value;
+   $sb_selector_w->set_range( 0, $current_page->{w} - $SETTING{selection}[0] );
+   update_selector();
+  }
+ );
+ $sb_selector_y->signal_connect(
+  'value-changed' => sub {
+   $SETTING{selection}[1] = $sb_selector_y->get_value;
+   $sb_selector_h->set_range( 0, $current_page->{h} - $SETTING{selection}[1] );
+   update_selector();
+  }
+ );
+ $sb_selector_w->signal_connect(
+  'value-changed' => sub {
+   $SETTING{selection}[2] = $sb_selector_w->get_value;
+   $sb_selector_x->set_range( 0, $current_page->{w} - $SETTING{selection}[2] );
+   update_selector();
+  }
+ );
+ $sb_selector_h->signal_connect(
+  'value-changed' => sub {
+   $SETTING{selection}[3] = $sb_selector_h->get_value;
+   $sb_selector_y->set_range( 0, $current_page->{h} - $SETTING{selection}[3] );
+   update_selector();
+  }
+ );
+
+ $sb_selector_x->set_value( $SETTING{selection}[0] )
+   if ( defined $SETTING{selection}[0] );
+ $sb_selector_y->set_value( $SETTING{selection}[1] )
+   if ( defined $SETTING{selection}[1] );
+ $sb_selector_w->set_value( $SETTING{selection}[2] )
+   if ( defined $SETTING{selection}[2] );
+ $sb_selector_h->set_value( $SETTING{selection}[3] )
+   if ( defined $SETTING{selection}[3] );
 
  # HBox for buttons
  my $hboxb = Gtk2::HBox->new;
@@ -8650,7 +8780,7 @@ sub crop {
        $Gscan2pdf::_self->{message} );
      },
      sub {
-      display_image( $slist->{data}[$i][2]{filename} );
+      display_image( $slist->{data}[$i][2] );
      },
     );
    }
@@ -8661,10 +8791,19 @@ sub crop {
  # Cancel button
  my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
  $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton->signal_connect( clicked => sub { $windowc->destroy } );
+ $cbutton->signal_connect( clicked => sub { $windowc->hide } );
 
  $windowc->show_all;
  return;
+}
+
+sub update_selector {
+ my $sel = $selector->get_selection;
+ $selector->signal_handler_block( $selector->{selection_changed_signal} );
+ $selector->set_selection(
+  Gtk2::Gdk::Rectangle->new( @{ $SETTING{selection} } ) )
+   if ( defined $sel );
+ $selector->signal_handler_unblock( $selector->{selection_changed_signal} );
 }
 
 # Run a user-defined tool on the selected images
