@@ -90,6 +90,10 @@ sub _thread_main {
    _thread_import_file( $self, $request->{first}, $request->{last} );
   }
 
+  elsif ( $request->{action} eq 'negate' ) {
+   _thread_negate( $self, $request->{page} );
+  }
+
   elsif ( $request->{action} eq 'rotate' ) {
    _thread_rotate( $self, $request->{angle}, $request->{page} );
   }
@@ -931,6 +935,35 @@ sub _thread_threshold {
  ( undef, $filename ) = tempfile( DIR => $self->{dir}, SUFFIX => '.pbm' );
  $x = $image->Write( filename => $filename );
  $logger->warn($x) if "$x";
+
+ my $new = $page->clone;
+ $new->{filename}   = $filename;
+ $new->{dirty_time} = timestamp();    #flag as dirty
+ my %data = ( old => $page, new => $new );
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_negate {
+ my ( $self, $page ) = @_;
+ my $filename = $page->{filename};
+
+ my $image = Image::Magick->new;
+ my $x     = $image->Read($filename);
+ $logger->warn($x) if "$x";
+
+ my $depth = $image->Get('depth');
+
+ # Negate the image
+ $image->Negate;
+
+ # Write it
+ my $suffix;
+ $suffix = $1 if ( $filename =~ /(\.\w*)$/ );
+ ( undef, $filename ) = tempfile( DIR => $self->{dir}, SUFFIX => $suffix );
+ $x = $image->Write( depth => $depth, filename => $filename );
+ $logger->warn($x) if "$x";
+ $logger->info("Negating to $filename");
 
  my $new = $page->clone;
  $new->{filename}   = $filename;
