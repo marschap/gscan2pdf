@@ -82,6 +82,13 @@ sub _thread_main {
    _thread_cancel($self);
   }
 
+  elsif ( $request->{action} eq 'crop' ) {
+   _thread_crop(
+    $self,         $request->{page}, $request->{x},
+    $request->{y}, $request->{w},    $request->{h}
+   );
+  }
+
   elsif ( $request->{action} eq 'get-file-info' ) {
    _thread_get_file_info( $self, $request->{path} );
   }
@@ -1004,6 +1011,35 @@ sub _thread_unsharp {
  $logger->info(
 "Wrote $filename with unsharp mask: r=$radius, s=$sigma, a=$amount, t=$threshold"
  );
+
+ my $new = $page->clone;
+ $new->{filename}   = $filename;
+ $new->{dirty_time} = timestamp();    #flag as dirty
+ my %data = ( old => $page, new => $new );
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_crop {
+ my ( $self, $page, $x, $y, $w, $h ) = @_;
+ my $filename = $page->{filename};
+
+ my $image = Image::Magick->new;
+ my $e     = $image->Read($filename);
+ $logger->warn($e) if "$e";
+
+ # Crop the image
+ $e = $image->Crop( width => $w, height => $h, x => $x, y => $y );
+ $logger->warn($e) if "$e";
+
+ # Write it
+ my $suffix;
+ $suffix = $1 if ( $filename =~ /\.(\w*)$/ );
+ ( undef, $filename ) =
+   tempfile( DIR => $self->{dir}, SUFFIX => '.' . $suffix );
+ $logger->info("Cropping $w x $h + $x + $y to $filename");
+ $e = $image->Write( filename => $filename );
+ $logger->warn($e) if "$e";
 
  my $new = $page->clone;
  $new->{filename}   = $filename;

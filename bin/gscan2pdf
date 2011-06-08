@@ -8597,17 +8597,6 @@ sub crop {
  # Frame for page range
  add_page_range($vbox);
 
- # SpinButton for threshold
- # my $hboxt = Gtk2::HBox -> new;
- # $vbox -> pack_start ($hboxt, FALSE, TRUE, 0);
- # my $label = Gtk2::Label -> new ($d->get('Crop'));
- # $hboxt -> pack_start ($label, FALSE, TRUE, 0);
- # my $labelp = Gtk2::Label -> new ($d->get('%'));
- # $hboxt -> pack_end ($labelp, FALSE, TRUE, 0);
- # my $spinbutton = Gtk2::SpinButton -> new_with_range(0, 100, 1);
- # $spinbutton->set_value ($SETTING{'threshold tool'});
- # $hboxt -> pack_end ($spinbutton, FALSE, TRUE, 0);
-
  # HBox for buttons
  my $hboxb = Gtk2::HBox->new;
  $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
@@ -8619,7 +8608,8 @@ sub crop {
   clicked => sub {
 
    my $sel = $selector->get_selection;
-   return if ( !defined $sel );
+   return if ( not defined $sel );
+   my ( $x, $y, $w, $h ) = $sel->values;
 
    # Update undo/redo buffers
    take_snapshot();
@@ -8635,99 +8625,36 @@ sub crop {
    $dialog->signal_connect(
     response => sub {
      $_[0]->destroy;
-     kill_subs();
     }
    );
    $dialog->show_all;
 
-   # Install a handler for child processes
-   $SIG{CHLD} = \&sig_child;
-
    my @pagelist = get_page_index();
-   my ( $child, $parent ) = Gscan2pdf::Document::open_socketpair();
-   my $pid = start_process(
-    sub {
-
-     # fill $pagelist with filenames depending on which radiobutton is active
-     my $page = 0;
-
-     foreach (@pagelist) {
-      send( $parent, sprintf( "%i %i", $page, $#pagelist + 1 ), 0 );
-
-      my $filename = $slist->{data}[$_][2]{filename};
-      my $image    = Image::Magick->new;
-      my $e        = $image->Read($filename);
-      $logger->warn($e) if "$e";
-
-      my ( $x, $y, $w, $h ) = $sel->values;
-
-      # Crop the image
-      $e = $image->Crop( width => $w, height => $h, x => $x, y => $y );
-      $logger->warn($e) if "$e";
-
-      # Write it
-      my $suffix;
-      $suffix = $1 if ( $filename =~ /\.(\w*)$/ );
-      ( undef, $filename ) =
-        tempfile( DIR => $SETTING{session}, SUFFIX => '.' . $suffix );
-      $logger->info("Cropping $w x $h + $x + $y to $filename");
-      $e = $image->Write( filename => $filename );
-      $logger->warn($e) if "$e";
-
-      send( $parent, sprintf( "%i %i %s", $page, $#pagelist + 1, $filename ),
-       0 );
-      ++$page;
-     }
-     send( $parent, '2 1', 0 );
-    }
-   );
-
-   $helperTag{$pid} = Glib::IO->add_watch(
-    $child->fileno(),
-    [ 'in', 'hup' ],
-    sub {
-     my ( $fileno, $condition ) = @_;
-
-     my $line;
-     if ( $condition & 'in' ) {    # bit field operation. >= would also work
-      recv( $child, $line, 1000, 0 );
-      if ( $line =~ /(\d*) (\d*) ?(.*)/ ) {
-       my $page     = $1;
-       my $total    = $2;
-       my $filename = $3;
-       my $fraction = $page / $total;
-       if ( $fraction > 1 ) {
-        $dialog->destroy;
-        return FALSE;              # uninstall
-       }
-       $pbar->set_fraction($fraction);
-       $pbar->set_text(
-        sprintf( $d->get("Cropping page %i of %i"), $page + 1, $total ) );
-       if ( defined $filename and $filename ne '' ) {
-        $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-        $slist->{data}[ $pagelist[$page] ][2]{filename} = $filename;
-        $slist->{data}[ $pagelist[$page] ][1] =
-          Gscan2pdf::Page::get_pixbuf( $filename, $heightt, $widtht );
-        $slist->{data}[ $pagelist[$page] ][2]{dirty_time} =
-          Gscan2pdf::timestamp();    #flag as dirty
-        $slist->get_model->signal_handler_unblock(
-         $slist->{row_changed_signal} );
-        display_image($filename) if ( !$page );
-       }
-      }
-     }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-     if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-     {                               # bit field operation. >= would also work
+   my $page     = 0;
+   for my $i (@pagelist) {
+    $page++;
+    $slist->crop(
+     $slist->{data}[$i][2],
+     $x, $y, $w, $h,
+     sub {
+      $dialog->destroy unless ( $page < $#pagelist );
+     },
+     sub {
+      $pbar->set_text(
+       sprintf( $d->get("Cropping page %i of %i"), $page, $#pagelist + 1 ) );
+      $pbar->set_fraction( ( $page - 1 ) / ( $#pagelist + 1 ) );
+     },
+     sub {
       $dialog->destroy;
-      update_uimanager();
-      return FALSE;                  # uninstall
-     }
-     return TRUE;                    # continue without uninstalling
-    }
-   );
+      show_message_dialog( $main::window, 'error', 'close',
+       $Gscan2pdf::_self->{message} );
+     },
+     sub {
+      display_image( $slist->{data}[$i][2]{filename} );
+     },
+    );
+   }
+
   }
  );
 
