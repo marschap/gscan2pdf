@@ -90,6 +90,10 @@ sub _thread_main {
    _thread_import_file( $self, $request->{first}, $request->{last} );
   }
 
+  elsif ( $request->{action} eq 'rotate' ) {
+   _thread_rotate( $self, $request->{angle}, $request->{page} );
+  }
+
   elsif ( $request->{action} eq 'save-djvu' ) {
    _thread_save_djvu( $self, $request->{path}, $request->{list_of_pages} );
   }
@@ -108,8 +112,8 @@ sub _thread_main {
     $request->{options}, $request->{ps} );
   }
 
-  elsif ( $request->{action} eq 'rotate' ) {
-   _thread_rotate( $self, $request->{angle}, $request->{page} );
+  elsif ( $request->{action} eq 'threshold' ) {
+   _thread_threshold( $self, $request->{threshold}, $request->{page} );
   }
 
   elsif ( $request->{action} eq 'quit' ) {
@@ -906,6 +910,31 @@ sub _thread_analyse {
  $new->{mean}         = $mean;
  $new->{std_dev}      = $stddev;
  $new->{analyse_time} = timestamp();
+ my %data = ( old => $page, new => $new );
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_threshold {
+ my ( $self, $threshold, $page ) = @_;
+ my $filename = $page->{filename};
+
+ my $image = Image::Magick->new;
+ my $x     = $image->Read($filename);
+ $logger->warn($x) if "$x";
+
+ # Threshold the image
+ $image->BlackThreshold( threshold => $threshold . '%' );
+ $image->WhiteThreshold( threshold => $threshold . '%' );
+
+ # Write it
+ ( undef, $filename ) = tempfile( DIR => $self->{dir}, SUFFIX => '.pbm' );
+ $x = $image->Write( filename => $filename );
+ $logger->warn($x) if "$x";
+
+ my $new = $page->clone;
+ $new->{filename}   = $filename;
+ $new->{dirty_time} = timestamp();    #flag as dirty
  my %data = ( old => $page, new => $new );
  $self->{data_queue}->enqueue( \%data );
  return;
