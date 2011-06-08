@@ -94,6 +94,10 @@ sub _thread_main {
    _thread_negate( $self, $request->{page} );
   }
 
+  elsif ( $request->{action} eq 'quit' ) {
+   last;
+  }
+
   elsif ( $request->{action} eq 'rotate' ) {
    _thread_rotate( $self, $request->{angle}, $request->{page} );
   }
@@ -120,8 +124,9 @@ sub _thread_main {
    _thread_threshold( $self, $request->{threshold}, $request->{page} );
   }
 
-  elsif ( $request->{action} eq 'quit' ) {
-   last;
+  elsif ( $request->{action} eq 'unsharp' ) {
+   _thread_unsharp( $self, $request->{page}, $request->{radius},
+    $request->{sigma}, $request->{amount}, $request->{threshold} );
   }
 
   else {
@@ -964,6 +969,41 @@ sub _thread_negate {
  $x = $image->Write( depth => $depth, filename => $filename );
  $logger->warn($x) if "$x";
  $logger->info("Negating to $filename");
+
+ my $new = $page->clone;
+ $new->{filename}   = $filename;
+ $new->{dirty_time} = timestamp();    #flag as dirty
+ my %data = ( old => $page, new => $new );
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_unsharp {
+ my ( $self, $page, $radius, $sigma, $amount, $threshold ) = @_;
+ my $filename = $page->{filename};
+
+ my $image = Image::Magick->new;
+ my $x     = $image->Read($filename);
+ $logger->warn($x) if "$x";
+
+ # Unsharp the image
+ $image->UnsharpMask(
+  radius    => $radius,
+  sigma     => $sigma,
+  amount    => $amount,
+  threshold => $threshold,
+ );
+
+ # Write it
+ my $suffix;
+ $suffix = $1 if ( $filename =~ /\.(\w*)$/ );
+ ( undef, $filename ) =
+   tempfile( DIR => $self->{dir}, SUFFIX => '.' . $suffix );
+ $x = $image->Write( filename => $filename );
+ $logger->warn($x) if "$x";
+ $logger->info(
+"Wrote $filename with unsharp mask: r=$radius, s=$sigma, a=$amount, t=$threshold"
+ );
 
  my $new = $page->clone;
  $new->{filename}   = $filename;

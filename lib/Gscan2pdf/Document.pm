@@ -856,6 +856,42 @@ sub negate {
  return;
 }
 
+sub unsharp {
+ my (
+  $self,              $page,                  $radius,
+  $sigma,             $amount,                $threshold,
+  $finished_callback, $not_finished_callback, $error_callback,
+  $display_callback
+ ) = @_;
+
+ my $sentinel = Gscan2pdf::_enqueue_request(
+  'unsharp',
+  {
+   page      => $page,
+   radius    => $radius,
+   sigma     => $sigma,
+   amount    => $amount,
+   threshold => $threshold
+  }
+ );
+ Gscan2pdf::_when_ready(
+  $sentinel,
+  sub {
+   if ( $Gscan2pdf::_self->{status} ) {
+    $error_callback->();
+    return;
+   }
+   $self->update_page($display_callback);
+   $finished_callback->();
+  },
+  sub {
+   $self->update_page($display_callback);
+   $not_finished_callback->();
+  }
+ );
+ return;
+}
+
 1;
 
 __END__
