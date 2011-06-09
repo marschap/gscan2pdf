@@ -25,7 +25,6 @@ sub setup {
  share $_self->{status};
  share $_self->{message};
  share $_self->{progress};
- share $_self->{file_info};
  share $_self->{dir};
 
  $_self->{thread} = threads->new( \&_thread_main, $_self );
@@ -94,7 +93,8 @@ sub _thread_main {
   }
 
   elsif ( $request->{action} eq 'import-file' ) {
-   _thread_import_file( $self, $request->{first}, $request->{last} );
+   _thread_import_file( $self, $request->{info}, $request->{first},
+    $request->{last} );
   }
 
   elsif ( $request->{action} eq 'negate' ) {
@@ -186,10 +186,10 @@ sub _thread_get_file_info {
      $d->get('Unknown DjVu file structure. Please contact the author.');
    return;
   }
-  $info{ppi}         = \@ppi;
-  $info{pages}       = $pages;
-  $info{path}        = $filename;
-  $self->{file_info} = shared_clone \%info;
+  $info{ppi}   = \@ppi;
+  $info{pages} = $pages;
+  $info{path}  = $filename;
+  $self->{data_queue}->enqueue( \%info );
   return;
  }
 
@@ -231,21 +231,20 @@ sub _thread_get_file_info {
   my $pages = @ppi;
   $logger->info("$pages pages");
   $info{pages} = $pages;
-  $self->{file_info} = shared_clone \%info;
+  $self->{data_queue}->enqueue( \%info );
  }
  else {
   $info{pages} = 1;
  }
- $info{format}      = $format;
- $info{path}        = $filename;
- $self->{file_info} = shared_clone \%info;
+ $info{format} = $format;
+ $info{path}   = $filename;
+ $self->{data_queue}->enqueue( \%info );
  return;
 }
 
 sub _thread_import_file {
- my ( $self, $first, $last ) = @_;
+ my ( $self, $info, $first, $last ) = @_;
 
- my $info = $self->{file_info};
  if ( $info->{format} eq 'DJVU' ) {
 
   # Extract images from DjVu

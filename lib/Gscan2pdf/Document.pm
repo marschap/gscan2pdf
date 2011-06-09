@@ -63,35 +63,33 @@ sub open_socketpair {
 }
 
 sub get_file_info {
- my ( $self, $finished_callback, $not_finished_callback, $error_callback,
-  @filename )
-   = @_;
- for (@filename) {
-  my $sentinel = Gscan2pdf::_enqueue_request( 'get-file-info', { path => $_ } );
-  Gscan2pdf::_when_ready(
-   $sentinel,
-   sub {
-    if ( $Gscan2pdf::_self->{status} ) {
-     $error_callback->();
-     return;
-    }
-    $finished_callback->();
-   },
-   sub {
-    $not_finished_callback->();
+ my ( $self, $path, $finished_callback, $not_finished_callback,
+  $error_callback ) = @_;
+ my $sentinel =
+   Gscan2pdf::_enqueue_request( 'get-file-info', { path => $path } );
+ Gscan2pdf::_when_ready(
+  $sentinel,
+  sub {
+   if ( $Gscan2pdf::_self->{status} ) {
+    $error_callback->();
+    return;
    }
-  );
- }
+   $finished_callback->();
+  },
+  sub {
+   $not_finished_callback->();
+  }
+ );
  return;
 }
 
 sub import_file {
- my ( $self, $first, $last, $finished_callback, $not_finished_callback,
+ my ( $self, $info, $first, $last, $finished_callback, $not_finished_callback,
   $error_callback )
    = @_;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'import-file',
-  { first => $first, last => $last } );
+  { info => $info, first => $first, last => $last } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {

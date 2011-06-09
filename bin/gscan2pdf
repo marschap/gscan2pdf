@@ -2148,85 +2148,90 @@ sub import_dialog {
   # Update cwd
   $SETTING{'cwd'} = dirname( $filename[0] );
 
-  $slist->get_file_info(
-   sub {
-    $dialog->destroy;
-    my $info = $Gscan2pdf::_self->{file_info};
-    if ( $info->{pages} > 1 ) {
-     $dialog->hide;
-     my ( $windowq, $vbox ) =
-       create_window( $window, $d->get('Pages to extract'), TRUE );
-     my $hbox = Gtk2::HBox->new;
-     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-     my $label = Gtk2::Label->new( $d->get('First page to extract') );
-     $hbox->pack_start( $label, FALSE, FALSE, 0 );
-     my $spinbuttonf = Gtk2::SpinButton->new_with_range( 1, $info->{pages}, 1 );
-     $hbox->pack_end( $spinbuttonf, FALSE, FALSE, 0 );
-     $hbox = Gtk2::HBox->new;
-     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-     $label = Gtk2::Label->new( $d->get('Last page to extract') );
-     $hbox->pack_start( $label, FALSE, FALSE, 0 );
-     my $spinbuttonl = Gtk2::SpinButton->new_with_range( 1, $info->{pages}, 1 );
-     $spinbuttonl->set_value( $info->{pages} );
-     $hbox->pack_end( $spinbuttonl, FALSE, FALSE, 0 );
+  for (@filename) {
+   $slist->get_file_info(
+    $_,
+    sub {
+     $dialog->destroy;
+     my $info = $Gscan2pdf::_self->{data_queue}->dequeue;
+     if ( $info->{pages} > 1 ) {
+      $dialog->hide;
+      my ( $windowq, $vbox ) =
+        create_window( $window, $d->get('Pages to extract'), TRUE );
+      my $hbox = Gtk2::HBox->new;
+      $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+      my $label = Gtk2::Label->new( $d->get('First page to extract') );
+      $hbox->pack_start( $label, FALSE, FALSE, 0 );
+      my $spinbuttonf =
+        Gtk2::SpinButton->new_with_range( 1, $info->{pages}, 1 );
+      $hbox->pack_end( $spinbuttonf, FALSE, FALSE, 0 );
+      $hbox = Gtk2::HBox->new;
+      $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+      $label = Gtk2::Label->new( $d->get('Last page to extract') );
+      $hbox->pack_start( $label, FALSE, FALSE, 0 );
+      my $spinbuttonl =
+        Gtk2::SpinButton->new_with_range( 1, $info->{pages}, 1 );
+      $spinbuttonl->set_value( $info->{pages} );
+      $hbox->pack_end( $spinbuttonl, FALSE, FALSE, 0 );
 
-     # HBox for buttons
-     my $hboxb = Gtk2::HBox->new;
-     $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
+      # HBox for buttons
+      my $hboxb = Gtk2::HBox->new;
+      $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
 
-     # OK button
-     my $obutton = Gtk2::Button->new_from_stock('gtk-ok');
-     $hboxb->pack_start( $obutton, TRUE, TRUE, 0 );
-     $obutton->signal_connect(
-      clicked => sub {
-       $windowq->destroy;
-       $slist->import_file(
-        $spinbuttonf->get_value,
-        $spinbuttonl->get_value,
-        sub {
-         update_uimanager();
-         $dialog->destroy;
-        },
-        sub {
-         $pbar->pulse;
-        },
-        sub { error_opening_image() }
-       );
-       $dialog->show;
-      }
-     );
+      # OK button
+      my $obutton = Gtk2::Button->new_from_stock('gtk-ok');
+      $hboxb->pack_start( $obutton, TRUE, TRUE, 0 );
+      $obutton->signal_connect(
+       clicked => sub {
+        $windowq->destroy;
+        $slist->import_file(
+         $info,
+         $spinbuttonf->get_value,
+         $spinbuttonl->get_value,
+         sub {
+          update_uimanager();
+          $dialog->destroy;
+         },
+         sub {
+          $pbar->pulse;
+         },
+         sub { error_opening_image() }
+        );
+        $dialog->show;
+       }
+      );
 
-     # Cancel button
-     my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
-     $hboxb->pack_start( $cbutton, TRUE, TRUE, 0 );
-     $cbutton->signal_connect(
-      clicked => sub {
-       $windowq->destroy;
-       return;
-      }
-     );
-     $windowq->show_all;
-    }
-    else {
-     $slist->import_file(
-      1, 1,
-      sub {
-       update_uimanager();
-       $dialog->destroy;
-      },
-      sub {
-       $pbar->pulse;
-      },
-      sub { error_opening_image() }
-     );
-    }
-   },
-   sub {
-    $pbar->pulse;
-   },
-   sub { error_opening_image() },
-   @filename
-  );
+      # Cancel button
+      my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
+      $hboxb->pack_start( $cbutton, TRUE, TRUE, 0 );
+      $cbutton->signal_connect(
+       clicked => sub {
+        $windowq->destroy;
+        return;
+       }
+      );
+      $windowq->show_all;
+     }
+     else {
+      $slist->import_file(
+       $info, 1, 1,
+       sub {
+        update_uimanager();
+        $dialog->destroy;
+       },
+       sub {
+        $pbar->pulse;
+       },
+       sub { error_opening_image() }
+      );
+     }
+    },
+    sub {
+     $pbar->pulse;
+    },
+    sub { error_opening_image() },
+   );
+  }
  }
  else {
   $file_chooser->destroy;

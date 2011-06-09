@@ -33,9 +33,9 @@ Gscan2pdf->setup($d, $logger);
 system('convert rose: test.pnm');
 
 my $slist = Gscan2pdf::Document->new;
-$slist->get_file_info( sub { $slist->import_file( 1, 1, sub {
+$slist->get_file_info( 'test.pnm', sub { $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {
   $slist->save_pdf('test.pdf', [ $slist->{data}[0][2] ], undef, undef, sub {Gtk2->main_quit}, sub {}, sub {});
-}, sub {}, sub {} ) }, sub {}, sub{}, 'test.pnm' );
+}, sub {}, sub {} ) }, sub {}, sub{} );
 Gtk2->main;
 
 is( -s 'test.pdf', 3152, 'PDF created with expected size' );
