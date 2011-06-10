@@ -4,10 +4,10 @@ use 5.008005;
 use strict;
 use warnings;
 use Carp;
-use Glib qw(TRUE FALSE);                # To get TRUE and FALSE
+use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2;
 use File::Copy;
-use File::Temp qw(tempfile tempdir);    # To create temporary files
+use File::Temp;             # To create temporary files
 
 BEGIN {
  use Exporter ();
@@ -15,7 +15,7 @@ BEGIN {
 
  @ISA         = qw(Exporter);
  @EXPORT      = qw();
- %EXPORT_TAGS = ();                     # eg: TAG => [ qw!name1 name2! ],
+ %EXPORT_TAGS = ();             # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,
  # as well as any optionally exported functions
@@ -49,9 +49,10 @@ sub new {
   'Portable anymap'                              => '.pnm',
   'CompuServe graphics interchange format'       => '.gif',
  );
- ( undef, $self->{filename} ) = tempfile(
+ $self->{filename} = File::Temp->new(
   DIR    => $options{dir},
-  SUFFIX => $suffix{ $options{format} }
+  SUFFIX => $suffix{ $options{format} },
+  UNLINK => FALSE,
  );
  if ( defined( $options{delete} ) and $options{delete} ) {
   move( $options{filename}, $self->{filename} )
@@ -70,13 +71,32 @@ sub new {
 
 sub clone {
  my ($self) = @_;
- my $new = Gscan2pdf::Page->new(
-  filename => $self->{filename},
-  format   => $self->{format}
- );
+ my $new = {};
  for ( keys %{$self} ) {
   $new->{$_} = $self->{$_};
  }
+ bless( $new, ref($self) );
+ return $new;
+}
+
+# cloning File::Temp objects causes problems
+
+sub freeze {
+ my ($self) = @_;
+ my $new = $self->clone;
+ $new->{filename} = $self->{filename}->filename
+   if ( ref( $new->{filename} ) eq 'File::Temp' );
+ return $new;
+}
+
+sub thaw {
+ my ($self) = @_;
+ my $new = $self->clone;
+ my $suffix;
+ $suffix = $1 if ( $new->{filename} =~ /\.(\w*)$/ );
+ my $filename = File::Temp->new( DIR => $new->{dir}, SUFFIX => ".$suffix" );
+ move( $new->{filename}, $filename );
+ $new->{filename} = $filename;
  return $new;
 }
 

@@ -131,15 +131,15 @@ use Gtk2::ImageView;
 use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
 use Gtk2::Gdk::Keysyms;
-use Cwd;                                # To obtain current working directory
-use File::Basename;                     # Split filename into dir, file, ext
+use Cwd;                    # To obtain current working directory
+use File::Basename;         # Split filename into dir, file, ext
 use File::Copy;
-use File::Temp qw(tempfile tempdir);    # To create temporary files
-use Glib qw(TRUE FALSE);                # To get TRUE and FALSE
+use File::Temp;             # To create temporary files
+use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Image::Magick;
 use Config::General 2.40;
 use Text::ParseWords;
-use Archive::Tar;                       # For session files
+use Archive::Tar;           # For session files
 use Sane;
 use PDF::API2;
 use Getopt::Long;
@@ -992,7 +992,7 @@ $slist->signal_connect(
    my @info = $model->get($iter);
    my $suffix;
    $suffix = $1 if ( $info[2] =~ /(\.\w*)$/ );
-   my ( undef, $new ) = tempfile( DIR => $SETTING{session}, SUFFIX => $suffix );
+   my $new = File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
    copy( $info[2], $new )
      or show_message_dialog( $window, 'error', 'close',
     $d->get('Error copying page') );
@@ -1524,8 +1524,11 @@ $SETTING{pid} = $$;
 unless ( defined $SETTING{session} ) {
  if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
   mkdir( $SETTING{TMPDIR} ) if ( not -d $SETTING{TMPDIR} );
-  if ( not eval { $SETTING{session} = tempdir( DIR => $SETTING{TMPDIR} ) } ) {
-   $SETTING{session} = tempdir;
+  if (
+   not
+   eval { $SETTING{session} = File::Temp->newdir( DIR => $SETTING{TMPDIR} ) } )
+  {
+   $SETTING{session} = File::Temp->newdir;
    $Gscan2pdf::_self->{dir} = $SETTING{session};
    $logger->warn(
     sprintf(
@@ -1539,8 +1542,8 @@ unless ( defined $SETTING{session} ) {
   }
  }
  else {
-  $SETTING{session} = tempdir;
-  $Gscan2pdf::_self->{dir} = $SETTING{session};
+  $SETTING{session} = File::Temp->newdir;
+  $Gscan2pdf::_self->{dir} = "$SETTING{session}";
  }
  $logger->info("Using $SETTING{session} for temporary files");
 
@@ -1867,7 +1870,8 @@ sub update_uimanager {
 sub display_image {
  my ($page) = @_;
 
- my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file( $page->{filename} );
+ # quotes required to prevent File::Temp object being clobbered
+ my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$page->{filename}");
  $view->set_pixbuf($pixbuf);
 
  # Get image dimensions to constrain selector spinbuttons on crop dialog
@@ -3133,11 +3137,9 @@ sub save_dialog {
        $SETTING{'cwd'} = dirname($filename);
 
        # Create the PS
-       my ( undef, $tif ) =
-         tempfile( DIR => $SETTING{session}, SUFFIX => '.tif' );
+       my $tif = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.tif' );
        $windowi->hide if defined $windowi;
        save_TIFF( $tif, $filename );
-       unlink $tif;
       }
       $file_chooser->destroy;
      }
@@ -3544,7 +3546,7 @@ sub email {
    $SETTING{'pdf compression'} = $compression[ $combob->get_active ][0];
    $SETTING{'quality'}         = $spinbuttonq->get_value;
 
-   my ( undef, $pdf ) = tempfile( DIR => $SETTING{session}, SUFFIX => '.pdf' );
+   my $pdf = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.pdf' );
 
    # Check for thunderbird
    my ( $client, $status );
@@ -5954,7 +5956,7 @@ sub paste_selection {
   for (@clipboard) {
    my $suffix;
    $suffix = $1 if ( $_->[2] =~ /(\.\w*)$/ );
-   my ( undef, $new ) = tempfile( DIR => $SETTING{session}, SUFFIX => $suffix );
+   my $new = File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
    copy( $_->[2], $new )
      or show_message_dialog( $window, 'error', 'close',
     $d->get('Error pasting image') );
@@ -8863,8 +8865,8 @@ sub user_defined_tool {
     my $ifilename = $slist->{data}[ $pages[$i] ][2]{filename};
     my $format;
     $format = $1 if ( $ifilename =~ /\.(\w*)$/ );
-    my ( undef, $ofilename ) =
-      tempfile( DIR => $SETTING{session}, SUFFIX => ".$format" );
+    my $ofilename =
+      File::Temp->new( DIR => $SETTING{session}, SUFFIX => ".$format" );
 
     my $cmd = $action->get('label');
     if ( $cmd =~ s/%o/$ofilename/g ) {
@@ -9000,10 +9002,9 @@ sub unpaper_page {
 
      my $cmd = '';
      my $in;
-     my ( undef, $out ) =
-       tempfile( DIR => $SETTING{session}, SUFFIX => '.pnm' );
+     my $out = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.pnm' );
      my $out2 = '';
-     ( undef, $out2 ) = tempfile( DIR => $SETTING{session}, SUFFIX => '.pnm' )
+     $out2 = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.pnm' )
        if ( $options =~ /--output-pages 2 / );
 
      if ( $slist->{data}[$pagenum][2]{filename} !~ /\.pnm$/ ) {
@@ -9015,7 +9016,7 @@ sub unpaper_page {
 # Unforunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
       my $suffix = ".pbm";
       $suffix = ".pnm" if ( $depth > 1 );
-      ( undef, $in ) = tempfile( DIR => $SETTING{session}, SUFFIX => $suffix );
+      $in = File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
       $cmd .=
         "convert -compress Zip $slist->{data}[$pagenum][2]{filename} $in;";
      }
@@ -9557,7 +9558,7 @@ sub ocr_page {
      $pbar->set_fraction( ( $page - 1 ) / ( $#ocr_stack + $npages + 1 ) );
 
      # Temporary filename for output
-     my ( undef, $txt ) = tempfile( DIR => $SETTING{session} );
+     my $txt = File::Temp->new( DIR => $SETTING{session} );
 
      my $cmd;
      if ( $SETTING{'ocr engine'} eq 'gocr' ) {
@@ -9566,7 +9567,7 @@ sub ocr_page {
        my $file = $slist->{data}[$pagenum][2]{filename};
 
        # Temporary filename for new file
-       ( undef, $pnm ) = tempfile( DIR => $SETTING{session}, SUFFIX => '.pnm' );
+       $pnm = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.pnm' );
 
        $cmd = "convert $file $pnm; gocr $pnm > $txt.txt; rm $pnm";
       }
@@ -9581,7 +9582,7 @@ sub ocr_page {
        my $file = $slist->{data}[$pagenum][2]{filename};
 
        # Temporary filename for new file
-       ( undef, $tif ) = tempfile( DIR => $SETTING{session}, SUFFIX => '.tif' );
+       $tif  = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.tif' );
        $pre  = "convert $file $tif;";
        $post = "; rm $tif";
 
@@ -9605,7 +9606,7 @@ sub ocr_page {
        my $file = $slist->{data}[$pagenum][2]{filename};
 
        # Temporary filename for new file
-       ( undef, $png ) = tempfile( DIR => $SETTING{session}, SUFFIX => '.png' );
+       $png  = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.png' );
        $pre  = "convert $file $png;";
        $post = "; rm $png";
 
@@ -9629,7 +9630,7 @@ sub ocr_page {
        my $file = $slist->{data}[$pagenum][2]{filename};
 
        # Temporary filename for new file
-       ( undef, $bmp ) = tempfile( DIR => $SETTING{session}, SUFFIX => '.bmp' );
+       $bmp  = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.bmp' );
        $pre  = "convert $file $bmp;";
        $post = "; rm $bmp";
       }
@@ -10231,8 +10232,9 @@ sub save_session {
  my ($filename) = @_;
 
  my %session;
- for ( my $i = 0 ; $i <= $#{ $slist->{data} } ; $i++ ) {
-  $session{ $slist->{data}[$i][0] }{filename} = $slist->{data}[$i][2]{filename};
+ for my $i ( 0 .. $#{ $slist->{data} } ) {
+  $session{ $slist->{data}[$i][0] }{filename} =
+    $slist->{data}[$i][2]{filename}->filename;
   $session{ $slist->{data}[$i][0] }{resolution} =
     $slist->{data}[$i][2]{resolution};
 
@@ -10397,37 +10399,6 @@ sub sig_child {
  return;
 }
 
-# Fork the passed sub
-
-sub start_process {
- my ($process) = @_;
-
- my $pid = fork();
- if ($pid) {
-
-  # We're still in the parent; note pid and watch the streams:
-  $logger->info("Forked PID $pid");
-  return $pid;
- }
- else {
-
-  # We're in the child. Do whatever processes we need to. We *must*
-  # exit this process with POSIX::_exit(...), because exit() would
-  # "clean up" open file handles, including our display connection,
-  # and merely returning from this subroutine in a separate process
-  # would *really* confuse things.
-
-  # reseed the randomiser to prevent
-  # "Have exceeded the maximum number of attempts (10) to open temp file/dir"
-  # errors from File::Temp
-  srand($$);
-
-  $process->();
-  POSIX::_exit(0);
- }
- return;
-}
-
 # We should clean up after ourselves so that we don't
 # leave dead processes flying around.
 sub kill_subs {
@@ -10451,8 +10422,7 @@ sub mark_pages {
  return;
 }
 
-# Convert all files in temp that are not jpg, png, tiff to tiff,
-# deleting those no longer needed
+# Convert all files in temp that are not jpg, png, or tiff to tiff,
 
 sub compress_temp {
  return
@@ -10478,92 +10448,35 @@ sub compress_temp {
  $dialog->signal_connect(
   response => sub {
    $_[0]->destroy;
-   kill_subs();
   }
  );
  $dialog->show_all;
 
- # Install a handler for child processes
- $SIG{CHLD} = \&sig_child;
-
- my @filename;
- for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
-  $filename[$i] = $slist->{data}[$i][2]{filename};
- }
-
- my ( $child, $parent ) = Gscan2pdf::Document::open_socketpair();
- my $pid = start_process(
-  sub {
-   for ( my $i = 0 ; $i < @filename ; $i++ ) {
-
-    # Update the list in the fork
-    $filename[$i] = convert_to_tiff( $filename[$i] );
-
-    # Pass the new filename back to the GUI
-    send( $parent,
-     $i / @filename . " $i $filename[$i] " . $d->get('Compressing images'), 0 );
-   }
-
-   # make a hash with a list of the files in temp
-   my %files;
-   send( $parent, "0 -1 x " . $d->get('Clearing up'), 0 );
-   foreach ( glob("$SETTING{session}/*") ) {
-    $files{$_} = TRUE;
-   }
-   foreach (@filename) {
-    delete $files{$_} if ( defined $files{$_} );
-   }
-   my @files = keys %files;
-   my $i     = 1;
-   foreach (@files) {
-    send( $parent, ( $i++ ) / @files . " -1 $_ " . $d->get('Clearing up'), 0 );
-    $logger->info("Deleting $_");
-    unlink $_;
-   }
-   send( $parent, '2', 0 );
-  }
- );
-
- $helperTag{$pid} = Glib::IO->add_watch(
-  $child->fileno(),
-  [ 'in', 'hup' ],
-  sub {
-   my ( $fileno, $condition ) = @_;
-
-   my $line;
-   if ( $condition & 'in' ) {    # bit field operation. >= would also work
-    recv( $child, $line, 100, 0 );
-    if ( defined($line) and $line ne '' ) {
-     my ( $fraction, $page, $filename, @text ) = split ' ', $line;
-     if ( $fraction > 1 ) {
-      $dialog->destroy;
-      return FALSE;              # uninstall
-     }
-     else {
-      $pbar->set_fraction($fraction);
-      $pbar->set_text( join ' ', @text );
-      Gtk2->main_iteration while Gtk2->events_pending;
-      if ( $page > -1 ) {
-       $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-       unlink $slist->{data}[$page][2]{filename};
-       $slist->{data}[$page][2]{filename} = $filename;
-       $slist->get_model->signal_handler_unblock(
-        $slist->{row_changed_signal} );
-      }
-     }
-    }
-   }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-   if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-   {    # bit field operation. >= would also work
+ my $page = 0;
+ for ( @{ $slist->{data} } ) {
+  $slist->to_tiff(
+   $_->[2],
+   sub {
+    $page++;
+    $dialog->destroy
+      unless ( $page < $#{ $slist->{data} } );
+   },
+   sub {
+    $pbar->set_text(
+     sprintf(
+      $d->get("Compressing page %i of %i"),
+      $page + 1, @{ $slist->{data} }
+     )
+    );
+    $pbar->set_fraction( $page / @{ $slist->{data} } );
+   },
+   sub {
     $dialog->destroy;
-    return FALSE;    # uninstall
-   }
-   return TRUE;      # continue without uninstalling
-  }
- );
+    show_message_dialog( $main::window, 'error', 'close',
+     $Gscan2pdf::_self->{message} );
+   },
+  );
+ }
  return;
 }
 

@@ -12,7 +12,7 @@ use Gtk2 -init;
 use Socket;
 use FileHandle;
 use Image::Magick;
-use File::Temp qw(tempfile tempdir);    # To create temporary files
+use File::Temp;    # To create temporary files
 use File::Copy;
 use Readonly;
 Readonly our $POINTS_PER_INCH => 72;
@@ -23,7 +23,7 @@ BEGIN {
 
  @ISA    = qw(Exporter Gtk2::Ex::Simple::List);
  @EXPORT = qw();
- %EXPORT_TAGS = ();                     # eg: TAG => [ qw!name1 name2! ],
+ %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,
  # as well as any optionally exported functions
@@ -112,7 +112,7 @@ sub fetch_file {
  my ($self) = @_;
  while ( $Gscan2pdf::_self->{data_queue}->pending ) {
   my $page = $Gscan2pdf::_self->{data_queue}->dequeue;
-  $self->add_page($page);
+  $self->add_page( $page->thaw );
  }
  return;
 }
@@ -325,13 +325,13 @@ sub create_PDF {
     {
      if ( $compression !~ /(jpg|png)/ and $format ne 'tif' ) {
       my $ofn = $filename;
-      ( undef, $filename ) =
-        tempfile( DIR => $main::SETTING{session}, SUFFIX => '.tif' );
+      $filename =
+        File::Temp->new( DIR => $main::SETTING{session}, SUFFIX => '.tif' );
       $main::logger->info("Converting $ofn to $filename");
      }
      elsif ( $compression =~ /(jpg|png)/ ) {
       my $ofn = $filename;
-      ( undef, $filename ) = tempfile(
+      $filename = File::Temp->new(
        DIR    => $main::SETTING{session},
        SUFFIX => ".$compression"
       );
@@ -366,8 +366,8 @@ sub create_PDF {
      }
 
      if ( $compression !~ /(jpg|png)/ ) {
-      my ( undef, $filename2 ) =
-        tempfile( DIR => $main::SETTING{session}, SUFFIX => '.tif' );
+      my $filename2 =
+        File::Temp->new( DIR => $main::SETTING{session}, SUFFIX => '.tif' );
       my $cmd = "tiffcp -c $compression $filename $filename2";
       $main::logger->info($cmd);
       my $status = system("$cmd 2>$main::SETTING{session}/tiffcp.stdout");
@@ -616,6 +616,10 @@ sub save_pdf {
   $not_finished_callback, $error_callback )
    = @_;
 
+ for my $i ( 0 .. $#{$list_of_pages} ) {
+  $list_of_pages->[$i] =
+    $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
+ }
  my $sentinel = Gscan2pdf::_enqueue_request(
   'save-pdf',
   {
@@ -646,6 +650,10 @@ sub save_djvu {
   $error_callback )
    = @_;
 
+ for my $i ( 0 .. $#{$list_of_pages} ) {
+  $list_of_pages->[$i] =
+    $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
+ }
  my $sentinel = Gscan2pdf::_enqueue_request(
   'save-djvu',
   {
@@ -674,6 +682,10 @@ sub save_tiff {
   $not_finished_callback, $error_callback )
    = @_;
 
+ for my $i ( 0 .. $#{$list_of_pages} ) {
+  $list_of_pages->[$i] =
+    $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
+ }
  my $sentinel = Gscan2pdf::_enqueue_request(
   'save-tiff',
   {
@@ -705,7 +717,8 @@ sub rotate {
    = @_;
 
  my $sentinel =
-   Gscan2pdf::_enqueue_request( 'rotate', { angle => $angle, page => $page } );
+   Gscan2pdf::_enqueue_request( 'rotate',
+  { angle => $angle, page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
@@ -737,11 +750,15 @@ sub update_page {
 
   # if found, replace with new one
   if ( $i <= $#{ $self->{data} } ) {
+
+# Move the temp file from the thread to a temp object that will be automatically cleared up
+   my $new = $data->{new}->thaw;
+
    $self->get_model->signal_handler_block( $self->{row_changed_signal} )
      if defined( $self->{row_changed_signal} );
    $self->{data}[$i][1] =
-     get_pixbuf( $data->{new}{filename}, $main::heightt, $main::widtht );
-   $self->{data}[$i][2] = $data->{new} if ( $i <= $#{ $self->{data} } );
+     get_pixbuf( $new->{filename}, $main::heightt, $main::widtht );
+   $self->{data}[$i][2] = $new;
    $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
      if defined( $self->{row_changed_signal} );
    my @selected = $self->get_selected_indices;
@@ -758,6 +775,10 @@ sub save_image {
   $error_callback )
    = @_;
 
+ for my $i ( 0 .. $#{$list_of_pages} ) {
+  $list_of_pages->[$i] =
+    $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
+ }
  my $sentinel = Gscan2pdf::_enqueue_request(
   'save-image',
   {
@@ -785,7 +806,8 @@ sub analyse {
  my ( $self, $page, $finished_callback, $not_finished_callback,
   $error_callback ) = @_;
 
- my $sentinel = Gscan2pdf::_enqueue_request( 'analyse', { page => $page } );
+ my $sentinel =
+   Gscan2pdf::_enqueue_request( 'analyse', { page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
@@ -811,7 +833,7 @@ sub threshold {
 
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'threshold',
-  { threshold => $threshold, page => $page } );
+  { threshold => $threshold, page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
@@ -835,7 +857,8 @@ sub negate {
   $display_callback )
    = @_;
 
- my $sentinel = Gscan2pdf::_enqueue_request( 'negate', { page => $page } );
+ my $sentinel =
+   Gscan2pdf::_enqueue_request( 'negate', { page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
@@ -865,7 +888,7 @@ sub unsharp {
  my $sentinel = Gscan2pdf::_enqueue_request(
   'unsharp',
   {
-   page      => $page,
+   page      => $page->freeze,
    radius    => $radius,
    sigma     => $sigma,
    amount    => $amount,
@@ -898,7 +921,7 @@ sub crop {
  my $sentinel = Gscan2pdf::_enqueue_request(
   'crop',
   {
-   page => $page,
+   page => $page->freeze,
    x    => $x,
    y    => $y,
    w    => $w,
@@ -917,6 +940,30 @@ sub crop {
   },
   sub {
    $self->update_page($display_callback);
+   $not_finished_callback->();
+  }
+ );
+ return;
+}
+
+sub to_tiff {
+ my ( $self, $page, $finished_callback, $not_finished_callback,
+  $error_callback ) = @_;
+
+ my $sentinel =
+   Gscan2pdf::_enqueue_request( 'to-tiff', { page => $page->freeze } );
+ Gscan2pdf::_when_ready(
+  $sentinel,
+  sub {
+   if ( $Gscan2pdf::_self->{status} ) {
+    $error_callback->();
+    return;
+   }
+   $self->update_page();
+   $finished_callback->();
+  },
+  sub {
+   $self->update_page();
    $not_finished_callback->();
   }
  );

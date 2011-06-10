@@ -9,7 +9,7 @@ use Thread::Queue;
 
 use Glib qw(TRUE FALSE);
 use Gtk2;
-use File::Temp qw(tempfile tempdir);    # To create temporary files
+use File::Temp;    # To create temporary files
 
 my $_POLL_INTERVAL;
 our $_self;
@@ -17,7 +17,7 @@ my ( $d, $logger );
 
 sub setup {
  ( my $class, $d, $logger ) = @_;
- $_POLL_INTERVAL = 100;                 # ms
+ $_POLL_INTERVAL = 100;    # ms
  $_self          = {};
 
  $_self->{requests}   = Thread::Queue->new;
@@ -129,6 +129,10 @@ sub _thread_main {
 
   elsif ( $request->{action} eq 'threshold' ) {
    _thread_threshold( $self, $request->{threshold}, $request->{page} );
+  }
+
+  elsif ( $request->{action} eq 'to-tiff' ) {
+   _thread_to_tiff( $self, $request->{page} );
   }
 
   elsif ( $request->{action} eq 'unsharp' ) {
@@ -250,7 +254,8 @@ sub _thread_import_file {
   # Extract images from DjVu
   if ( $last >= $first and $first > 0 ) {
    for ( my $i = $first ; $i <= $last ; $i++ ) {
-    my ( undef, $tif ) = tempfile( DIR => $self->{dir}, SUFFIX => '.tif' );
+    my $tif =
+      File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif', UNLINK => FALSE );
     my $cmd = "ddjvu -format=tiff -page=$i \"$info->{path}\" $tif";
     $logger->info($cmd);
     system($cmd);
@@ -261,7 +266,7 @@ sub _thread_import_file {
      format     => 'Tagged Image File Format',
      resolution => $info->{ppi}[ $i - 1 ]
     );
-    $self->{data_queue}->enqueue($page);
+    $self->{data_queue}->enqueue( $page->freeze );
    }
   }
  }
@@ -287,7 +292,7 @@ sub _thread_import_file {
      delete   => TRUE,
      format   => 'Portable anymap'
     );
-    $self->{data_queue}->enqueue($page);
+    $self->{data_queue}->enqueue( $page->freeze );
    }
   }
  }
@@ -296,7 +301,8 @@ sub _thread_import_file {
   # Split the tiff into its pages and import them individually
   if ( $last >= $first and $first > 0 ) {
    for ( my $i = $first - 1 ; $i < $last ; $i++ ) {
-    my ( undef, $tif ) = tempfile( DIR => $self->{dir}, SUFFIX => '.tif' );
+    my $tif =
+      File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif', UNLINK => FALSE );
     my $cmd = "tiffcp \"$info->{path}\",$i $tif";
     $logger->info($cmd);
     system($cmd);
@@ -306,7 +312,7 @@ sub _thread_import_file {
      delete   => TRUE,
      format   => 'Portable anymap'
     );
-    $self->{data_queue}->enqueue($page);
+    $self->{data_queue}->enqueue( $page->freeze );
    }
   }
  }
@@ -319,7 +325,7 @@ sub _thread_import_file {
    dir      => $self->{dir},
    format   => $info->{format}
   );
-  $self->{data_queue}->enqueue($page);
+  $self->{data_queue}->enqueue( $page->freeze );
  }
  else {
   my $tiff = convert_to_tiff( $info->{path} );
@@ -328,7 +334,7 @@ sub _thread_import_file {
    dir      => $self->{dir},
    format   => 'Tagged Image File Format'
   );
-  $self->{data_queue}->enqueue($page);
+  $self->{data_queue}->enqueue( $page->freeze );
  }
  return;
 }
@@ -338,10 +344,12 @@ sub convert_to_tiff {
  my $image      = Image::Magick->new;
  my $x          = $image->Read($filename);
  $logger->warn($x) if "$x";
- my $density = get_resolution($image);
+ my $density = Gscan2pdf::Document::get_resolution($image)
+   ; # FIXME: most of the time we already know this - pull it from $page->{resolution} rather than asking IM
 
  # Write the tif
- my ( undef, $tif ) = tempfile( DIR => $_self->{dir}, SUFFIX => '.tif' );
+ my $tif =
+   File::Temp->new( DIR => $_self->{dir}, SUFFIX => '.tif', UNLINK => FALSE );
  $image->Write(
   units       => 'PixelsPerInch',
   compression => 'lzw',
@@ -419,12 +427,12 @@ sub _thread_save_pdf {
   {
    if ( $compression !~ /(jpg|png)/ and $format ne 'tif' ) {
     my $ofn = $filename;
-    ( undef, $filename ) = tempfile( DIR => $self->{dir}, SUFFIX => '.tif' );
+    $filename = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif' );
     $logger->info("Converting $ofn to $filename");
    }
    elsif ( $compression =~ /(jpg|png)/ ) {
     my $ofn = $filename;
-    ( undef, $filename ) = tempfile(
+    $filename = File::Temp->new(
      DIR    => $self->{dir},
      SUFFIX => ".$compression"
     );
@@ -458,8 +466,7 @@ sub _thread_save_pdf {
    }
 
    if ( $compression !~ /(jpg|png)/ ) {
-    my ( undef, $filename2 ) =
-      tempfile( DIR => $self->{dir}, SUFFIX => '.tif' );
+    my $filename2 = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif' );
     my $cmd = "tiffcp -c $compression $filename $filename2";
     $logger->info($cmd);
     my $status = system("$cmd 2>$self->{dir}/tiffcp.stdout");
@@ -630,7 +637,7 @@ sub _thread_save_djvu {
     sprintf( $d->get("Writing page %i of %i"), $page, $#{$list_of_pages} + 1 );
 
   my $filename = $pagedata->{filename};
-  my ( undef, $djvu ) = tempfile( DIR => $self->{dir}, SUFFIX => '.djvu' );
+  my $djvu = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.djvu' );
 
   # Check the image depth to decide what sort of compression to use
   my $image = Image::Magick->new;
@@ -646,7 +653,7 @@ sub _thread_save_djvu {
   if ( $depth > 1 ) {
    $compression = 'c44';
    if ( $format !~ /(pnm|jpg)/ ) {
-    my ( undef, $pnm ) = tempfile( DIR => $self->{dir}, SUFFIX => '.pnm' );
+    my $pnm = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pnm' );
     $x = $image->Write( filename => $pnm );
     $logger->warn($x) if "$x";
     $filename = $pnm;
@@ -659,7 +666,7 @@ sub _thread_save_djvu {
    if ( $format !~ /(pnm|tif)/
     or ( $format eq 'pnm' and $class ne 'PseudoClass' ) )
    {
-    my ( undef, $pbm ) = tempfile( DIR => $self->{dir}, SUFFIX => '.pbm' );
+    my $pbm = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pbm' );
     $x = $image->Write( filename => $pbm );
     $logger->warn($x) if "$x";
     $filename = $pbm;
@@ -670,13 +677,16 @@ sub _thread_save_djvu {
   my $resolution = $pagedata->{resolution};
   my $cmd        = "$compression -dpi $resolution $filename $djvu";
   $logger->info($cmd);
-  my ( $status, $size ) = ( system($cmd), -s $djvu );
+  my ( $status, $size ) =
+    ( system($cmd), -s "$djvu" )
+    ;    # quotes needed to prevent -s clobbering File::Temp object
   unless ( $status == 0 and $size ) {
    $self->{status}  = 1;
    $self->{message} = $d->get('Error writing DjVu');
    $logger->error(
 "Error writing image for page $page of DjVu (process returned $status, image size $size)"
    );
+   return;
   }
   push @filelist, $djvu;
 
@@ -688,8 +698,8 @@ sub _thread_save_djvu {
    my $h = $image->Get('height');
 
    # Open djvusedtxtfile
-   my ( undef, $djvusedtxtfile ) =
-     tempfile( DIR => $self->{dir}, SUFFIX => '.txt' );
+   my $djvusedtxtfile =
+     File::Temp->new( DIR => $self->{dir}, SUFFIX => '.txt' );
    open my $fh, ">:utf8", $djvusedtxtfile
      or die sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile );
    print $fh "(page 0 0 $w $h\n";
@@ -757,7 +767,7 @@ sub _thread_save_tiff {
 
   my $filename = $pagedata->{filename};
   if ( $filename !~ /\.tif/ or $options->{compression} eq 'jpeg' ) {
-   my ( undef, $tif ) = tempfile( DIR => $self->{dir}, SUFFIX => '.tif' );
+   my $tif = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif' );
    my $resolution = $pagedata->{resolution};
 
    # Convert to tiff
@@ -795,7 +805,7 @@ sub _thread_save_tiff {
   and $options->{compression} eq 'jpeg' );
  my $cmd = "tiffcp $rows $compression @filelist '$path'";
  $logger->info($cmd);
- my ( undef, $out ) = tempfile( DIR => $self->{dir}, SUFFIX => '.stdout' );
+ my $out = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.stdout' );
  my $status = system("$cmd 2>$out");
 
  if ( $status != 0 ) {
@@ -805,7 +815,6 @@ sub _thread_save_tiff {
   $self->{message} = sprintf( $d->get("Error compressing image: %s"), $output );
   return;
  }
- unlink $out;
  if ( defined $ps ) {
   $self->{message} = $d->get('Converting to PS');
 
@@ -846,13 +855,16 @@ sub _thread_rotate {
  $logger->warn($x) if "$x";
  my $suffix;
  $suffix = $1 if ( $filename =~ /\.(\w*)$/ );
- ( undef, $filename ) =
-   tempfile( DIR => $self->{dir}, SUFFIX => '.' . $suffix );
+ $filename = File::Temp->new(
+  DIR    => $self->{dir},
+  SUFFIX => '.' . $suffix,
+  UNLINK => FALSE
+ );
  $x = $image->Write( filename => $filename, depth => $depth );
  $logger->warn($x) if "$x";
- my $new = $page->clone;
- $new->{filename}   = $filename;
- $new->{dirty_time} = timestamp();    #flag as dirty
+ my $new = $page->freeze;
+ $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
+ $new->{dirty_time} = timestamp();            #flag as dirty
  my %data = ( old => $page, new => $new );
  $self->{data_queue}->enqueue( \%data );
  return;
@@ -943,13 +955,14 @@ sub _thread_threshold {
  $image->WhiteThreshold( threshold => $threshold . '%' );
 
  # Write it
- ( undef, $filename ) = tempfile( DIR => $self->{dir}, SUFFIX => '.pbm' );
+ $filename =
+   File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pbm', UNLINK => FALSE );
  $x = $image->Write( filename => $filename );
  $logger->warn($x) if "$x";
 
- my $new = $page->clone;
- $new->{filename}   = $filename;
- $new->{dirty_time} = timestamp();    #flag as dirty
+ my $new = $page->freeze;
+ $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
+ $new->{dirty_time} = timestamp();            #flag as dirty
  my %data = ( old => $page, new => $new );
  $self->{data_queue}->enqueue( \%data );
  return;
@@ -971,14 +984,15 @@ sub _thread_negate {
  # Write it
  my $suffix;
  $suffix = $1 if ( $filename =~ /(\.\w*)$/ );
- ( undef, $filename ) = tempfile( DIR => $self->{dir}, SUFFIX => $suffix );
+ $filename =
+   File::Temp->new( DIR => $self->{dir}, SUFFIX => $suffix, UNLINK => FALSE );
  $x = $image->Write( depth => $depth, filename => $filename );
  $logger->warn($x) if "$x";
  $logger->info("Negating to $filename");
 
- my $new = $page->clone;
- $new->{filename}   = $filename;
- $new->{dirty_time} = timestamp();    #flag as dirty
+ my $new = $page->freeze;
+ $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
+ $new->{dirty_time} = timestamp();            #flag as dirty
  my %data = ( old => $page, new => $new );
  $self->{data_queue}->enqueue( \%data );
  return;
@@ -1003,17 +1017,20 @@ sub _thread_unsharp {
  # Write it
  my $suffix;
  $suffix = $1 if ( $filename =~ /\.(\w*)$/ );
- ( undef, $filename ) =
-   tempfile( DIR => $self->{dir}, SUFFIX => '.' . $suffix );
+ $filename = File::Temp->new(
+  DIR    => $self->{dir},
+  SUFFIX => '.' . $suffix,
+  UNLINK => FALSE
+ );
  $x = $image->Write( filename => $filename );
  $logger->warn($x) if "$x";
  $logger->info(
 "Wrote $filename with unsharp mask: r=$radius, s=$sigma, a=$amount, t=$threshold"
  );
 
- my $new = $page->clone;
- $new->{filename}   = $filename;
- $new->{dirty_time} = timestamp();    #flag as dirty
+ my $new = $page->freeze;
+ $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
+ $new->{dirty_time} = timestamp();            #flag as dirty
  my %data = ( old => $page, new => $new );
  $self->{data_queue}->enqueue( \%data );
  return;
@@ -1034,16 +1051,30 @@ sub _thread_crop {
  # Write it
  my $suffix;
  $suffix = $1 if ( $filename =~ /\.(\w*)$/ );
- ( undef, $filename ) =
-   tempfile( DIR => $self->{dir}, SUFFIX => '.' . $suffix );
+ $filename = File::Temp->new(
+  DIR    => $self->{dir},
+  SUFFIX => '.' . $suffix,
+  UNLINK => FALSE
+ );
  $logger->info("Cropping $w x $h + $x + $y to $filename");
  $e = $image->Write( filename => $filename );
  $logger->warn($e) if "$e";
 
- my $new = $page->clone;
- $new->{filename}   = $filename;
- $new->{dirty_time} = timestamp();    #flag as dirty
+ my $new = $page->freeze;
+ $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
+ $new->{dirty_time} = timestamp();            #flag as dirty
  my %data = ( old => $page, new => $new );
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_to_tiff {
+ my ( $self, $page ) = @_;
+ my $new = $page->clone;
+ $new->{filename} = convert_to_tiff( $page->{filename} );
+ $new->{format}   = 'Tagged Image File Format';
+ my %data = ( old => $page, new => $new->freeze );
+ $logger->info("Converted $page->{filename} to $data{new}{filename}");
  $self->{data_queue}->enqueue( \%data );
  return;
 }
