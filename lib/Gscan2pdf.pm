@@ -917,6 +917,21 @@ sub _thread_save_image {
  return;
 }
 
+sub _thread_save_text {
+ my ( $self, $path, $list_of_pages, $fh ) = @_;
+
+ unless ( open $fh, ">:utf8", $path ) {
+  $self->{status} = 1;
+  $self->{message} = sprintf( $d->get("Can't open file: %s"), $path );
+  return;
+ }
+ foreach ( @{$list_of_pages} ) {
+  print $fh $_->{hocr};
+ }
+ close $fh;
+ return;
+}
+
 sub _thread_analyse {
  my ( $self, $page ) = @_;
 

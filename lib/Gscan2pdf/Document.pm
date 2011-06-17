@@ -802,6 +802,38 @@ sub save_image {
  return;
 }
 
+sub save_text {
+ my ( $self, $path, $list_of_pages, $finished_callback, $not_finished_callback,
+  $error_callback )
+   = @_;
+
+ for my $i ( 0 .. $#{$list_of_pages} ) {
+  $list_of_pages->[$i] =
+    $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
+ }
+ my $sentinel = Gscan2pdf::_enqueue_request(
+  'save-text',
+  {
+   path          => $path,
+   list_of_pages => $list_of_pages
+  }
+ );
+ Gscan2pdf::_when_ready(
+  $sentinel,
+  sub {
+   if ( $Gscan2pdf::_self->{status} ) {
+    $error_callback->();
+    return;
+   }
+   $finished_callback->();
+  },
+  sub {
+   $not_finished_callback->();
+  }
+ );
+ return;
+}
+
 sub analyse {
  my ( $self, $page, $finished_callback, $not_finished_callback,
   $error_callback ) = @_;

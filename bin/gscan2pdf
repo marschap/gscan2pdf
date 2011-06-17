@@ -3115,26 +3115,48 @@ sub save_dialog {
        # Update cwd
        $SETTING{'cwd'} = dirname($filename);
 
-       open my $fh, ">:utf8", $filename
-         or die sprintf( $d->get("Can't open file: %s"), $filename );
-       my @pagelist = get_page_index();
-       for ( my $i = 0 ; $i < @pagelist ; $i++ ) {
-        my $canvas = $slist->{data}[ $pagelist[$i] ][2]{buffer};
-        my $root   = $canvas->get_root_item;
-        my $n      = $root->get_n_children;
-        for ( my $i = 0 ; $i < $n ; $i++ ) {
-         my $group = $root->get_child($i);
-         if ( $group->isa('Goo::Canvas::Group') ) {
-          my $n = $group->get_n_children;
-          for ( my $i = 0 ; $i < $n ; $i++ ) {
-           my $item = $group->get_child($i);
-           printf $fh "%s\n", $item->get('text')
-             if ( $item->isa('Goo::Canvas::Text') );
-          }
-         }
+       my $dialog = Gtk2::Dialog->new( $d->get('Saving text') . "...",
+        $window, 'modal', 'gtk-cancel' => 'cancel' );
+
+       # Set up ProgressBar
+       my $pbar = Gtk2::ProgressBar->new;
+       $dialog->vbox->add($pbar);
+
+       # Ensure that the dialog box is destroyed when the user responds.
+       $dialog->signal_connect(
+        response => sub {
+         $_[0]->destroy;
         }
+       );
+       $dialog->show_all;
+
+       # Compile list of pages
+       my @list_of_pages;
+       my @pagelist = get_page_index();
+       for (@pagelist) {
+        push @list_of_pages, $slist->{data}[$_][2];
        }
-       close $fh;
+
+       $slist->save_text(
+        $filename,
+        \@list_of_pages,
+        sub {
+         $dialog->destroy;
+         mark_pages(@pagelist);
+         $logger->debug("Finished saving $filename");
+        },
+        sub {
+         $pbar->set_fraction( $Gscan2pdf::_self->{progress} )
+           if defined $Gscan2pdf::_self->{progress};
+         $pbar->set_text( $Gscan2pdf::_self->{message} )
+           if defined $Gscan2pdf::_self->{message};
+        },
+        sub {
+         $dialog->destroy;
+         show_message_dialog( $main::window, 'error', 'close',
+          $Gscan2pdf::_self->{message} );
+        }
+       );
        $windowi->hide if defined $windowi;
       }
       $file_chooser->destroy;
