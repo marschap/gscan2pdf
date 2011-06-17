@@ -24,6 +24,7 @@ lib/Gscan2pdf/Document.pm
 lib/Gscan2pdf/Frontend/Sane.pm
 lib/Gscan2pdf/Frontend/Scanimage.pm
 lib/Gscan2pdf/Page.pm
+lib/Gscan2pdf/Tesseract.pm
 pdf.svg
 po/gscan2pdf-ab.po
 po/gscan2pdf-be.po
@@ -119,6 +120,7 @@ t/25_negate.t
 t/26_unsharp_mask.t
 t/27_crop.t
 t/28_to_tiff.t
+t/29_tesseract.t
 t/Brother_DCP-7025.t
 t/Brother_MFC_5100c.t
 t/MANIFEST.t

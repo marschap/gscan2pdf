@@ -970,6 +970,32 @@ sub to_tiff {
  return;
 }
 
+sub tesseract {
+ my ( $self, $page, $language, $finished_callback, $not_finished_callback,
+  $error_callback, $display_callback )
+   = @_;
+
+ my $sentinel =
+   Gscan2pdf::_enqueue_request( 'tesseract',
+  { page => $page->freeze, language => $language } );
+ Gscan2pdf::_when_ready(
+  $sentinel,
+  sub {
+   if ( $Gscan2pdf::_self->{status} ) {
+    $error_callback->();
+    return;
+   }
+   $self->update_page($display_callback);
+   $finished_callback->();
+  },
+  sub {
+   $self->update_page($display_callback);
+   $not_finished_callback->();
+  }
+ );
+ return;
+}
+
 1;
 
 __END__

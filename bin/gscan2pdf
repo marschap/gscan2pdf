@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Support for OCRE http://lem.eui.upm.es/ocre.html
 #*** unhandled exception in callback:
 #***   Can't call method "hide_all" on an undefined value at bin/gscan2pdf line 5512.
 #***  ignoring at bin/gscan2pdf line 12380.
@@ -1162,15 +1163,6 @@ $slist->{selection_changed_signal} = $slist->get_selection->signal_connect(
    $current_page = $slist->{data}[ $page[0] ][2];
    display_image($current_page);
    $selector->set_selection($sel) if ( defined $sel );
-
-   # Update the buffer, if created
-   $canvas = $current_page->{buffer};
-
-# $canvas variable needed to prevent ->add() munging $slist -> {data}[$page[0]][3]
-   if ( defined $canvas ) {
-    $scwin_buffer->add($canvas);
-    $canvas->show;
-   }
   }
   else {
    $view->set_pixbuf(undef);
@@ -1596,7 +1588,7 @@ sub create_menu_bar {
  $dependencies{scanadf}     = check_command('scanadf');
  $dependencies{xdg}         = check_command('xdg-email');
  $dependencies{gocr}        = check_command('gocr');
- $dependencies{tesseract}   = check_command('tesseract');
+ $dependencies{tesseract}   = eval { require Gscan2pdf::Tesseract };
  $dependencies{ocropus}     = check_command('ocroscript');
  $dependencies{cuneiform}   = check_command('cuneiform');
  $dependencies{djvu}        = check_command('cjb2');
@@ -1896,6 +1888,67 @@ sub display_image {
   $selector->set_selection(
    Gtk2::Gdk::Rectangle->new( @{ $SETTING{selection} } ) );
  }
+
+ # Convert hocr output to Goo:Canvas if defined
+ create_canvas($page) if ( defined $page->{hocr} );
+ return;
+}
+
+sub create_canvas {
+ my ($page) = @_;
+
+ # Set up the canvas
+ $canvas = Goo::Canvas->new;
+ my $root = $canvas->get_root_item;
+ unless ( defined $page->{w} ) {
+  my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file( $page->{filename} );
+  $page->{w} = $pixbuf->get_width;
+  $page->{h} = $pixbuf->get_height;
+ }
+ $canvas->set_bounds( 0, 0, $page->{w}, $page->{h} );
+
+ # Attach the text to the canvas
+ if ( $page->{hocr} =~ /<body>([\s\S]*)<\/body>/ ) {
+  require HTML::TokeParser;
+  require HTML::Entities;
+  require utf8;
+  my $p = HTML::TokeParser->new( \$page->{hocr} );
+  my ( $x1, $y1, $x2, $y2, $text );
+  while ( my $token = $p->get_token ) {
+   if ( $token->[0] eq 'S' ) {
+    if ( $token->[1] eq 'span'
+     and defined( $token->[2]{class} )
+     and $token->[2]{class} eq 'ocr_line'
+     and defined( $token->[2]{title} )
+     and $token->[2]{title} =~ /bbox (\d+) (\d+) (\d+) (\d+)/ )
+    {
+     ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
+    }
+    else {
+     undef $x1;
+     undef $text;
+    }
+   }
+   if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/ ) {
+    $text = HTML::Entities::decode_entities( $token->[1] );
+    utf8::encode($text);    # UTF-8 in perl sucks!
+    chomp($text);
+   }
+   if ( $token->[0] eq 'E' ) {
+    undef $x1;
+    undef $text;
+   }
+   boxed_text( $canvas, $text, $x1, $y1, $x2, $y2, abs( $y2 - $y1 ) )
+     if ( defined($x1) and defined($text) );
+  }
+ }
+ else {
+  boxed_text( $canvas, $page->{hocr}, 0, 0, $page->{w}, $page->{h}, -1 );
+ }
+
+ $scwin_buffer->add($canvas);
+ $canvas->set_scale( $view->get_zoom );
+ $canvas->show;
  return;
 }
 
@@ -2083,8 +2136,9 @@ sub open_session {
    $canvas->set_bounds(@bounds);
 
    for my $box ( @{ $session{$pagenum}{buffer} } ) {
-    boxed_text( $root, $box->{text}, $box->{x1}, $box->{y1}, $box->{x2},
-     $box->{y2}, $box->{height} );
+    boxed_text( $session{$pagenum}{buffer},
+     $box->{text}, $box->{x1}, $box->{y1}, $box->{x2}, $box->{y2},
+     $box->{height} );
    }
    $canvas->show;
   }
@@ -2487,8 +2541,9 @@ sub get_pdf_metadata {
 # Draw text on the canvas with a box around it
 
 sub boxed_text {
- my ( $root, $char, $x1, $y1, $x2, $y2, $size ) = @_;
- my $g = Goo::Canvas::Group->new($root);
+ my ( $canvas, $char, $x1, $y1, $x2, $y2, $size ) = @_;
+ my $root = $canvas->get_root_item;
+ my $g    = Goo::Canvas::Group->new($root);
  $g->translate( $x1, $y1 );
 
 # draw the rect first to make sure the text goes on top and receives any mouse clicks
@@ -2502,7 +2557,7 @@ sub boxed_text {
   'button-press-event' => sub {
    my ( $widget, $target, $ev ) = @_;
    my $dialog = Gtk2::Dialog->new(
-    $d->get('Editing text') . "...", $window,
+    $main::d->get('Editing text') . "...", $main::window,
     'modal',
     'gtk-ok'     => 'ok',
     'gtk-cancel' => 'cancel'
@@ -9577,28 +9632,28 @@ sub ocr_page {
       }
      }
      elsif ( $SETTING{'ocr engine'} eq 'tesseract' ) {
-      my ( $tif, $pre, $post );
-      if ( $slist->{data}[$pagenum][2]{filename} !~ /\.tif$/ ) {
-       my $file = $slist->{data}[$pagenum][2]{filename};
-
-       # Temporary filename for new file
-       $tif  = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.tif' );
-       $pre  = "convert $file $tif;";
-       $post = "; rm $tif";
-
-      }
-      else {
-       $tif  = $slist->{data}[$pagenum][2]{filename};
-       $pre  = '';
-       $post = '';
-      }
-      if ( defined $SETTING{'ocr language'} ) {
-       $cmd =
-"$pre tesseract $tif $txt -l $SETTING{'ocr language'} 2> $SETTING{session}/error.txt$post";
-      }
-      else {
-       $cmd = "$pre tesseract $tif $txt 2> $SETTING{session}/error.txt$post";
-      }
+      $slist->tesseract(
+       $slist->{data}[$pagenum][2],
+       $SETTING{'ocr language'},
+       sub {
+        $page++;
+        $dialog->destroy
+          unless ( $page < $#{ $slist->{data} } );
+       },
+       sub {
+        $pbar->set_text(
+         sprintf( $d->get("Page %i of %i"), $page + 1, @{ $slist->{data} } ) );
+        $pbar->set_fraction( $page / @{ $slist->{data} } );
+       },
+       sub {
+        $dialog->destroy;
+        show_message_dialog( $main::window, 'error', 'close',
+         $Gscan2pdf::_self->{message} );
+       },
+       sub {
+        create_canvas( $slist->{data}[$pagenum][2] );
+       }
+      );
      }
      elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
       my ( $png, $pre, $post );
@@ -9720,18 +9775,17 @@ sub ocr_page {
            undef $x1;
            undef $text;
           }
-          boxed_text( $root, $text, $x1, $y1, $x2, $y2, abs( $y2 - $y1 ) )
+          boxed_text( $canvas_new, $text, $x1, $y1, $x2, $y2, abs( $y2 - $y1 ) )
             if ( defined($x1) and defined($text) );
          }
         }
         else {
-         boxed_text( $root, $output, 0, 0, $pixbuf->get_width,
+         boxed_text( $canvas_new, $output, 0, 0, $pixbuf->get_width,
           $pixbuf->get_height, -1 );
 
         }
         $slist->{data}[$pagenum][2]{buffer} = $canvas_new;
 
-        unlink <$txt*>;
         $slist->{data}[$pagenum][2]{ocr_flag} = 1;    #FlagOCR
         $slist->{data}[$pagenum][2]{ocr_time} =
           Gscan2pdf::timestamp();    #remember when we ran OCR on this page
@@ -9809,43 +9863,14 @@ sub add_tess_languages {
  $hbox->pack_start( $label, TRUE, TRUE, 0 );
 
  # Tesseract language files
- my %iso639 = (
-  deu     => $d->get('German'),
-  'deu-f' => $d->get('German (Fraktur)'),
-  eng     => $d->get('English'),
-  fra     => $d->get('French'),
-  ita     => $d->get('Italian'),
-  nld     => $d->get('Dutch'),
-  por     => $d->get('Portuguese'),
-  slk     => $d->get('Slovak'),
-  spa     => $d->get('Spanish'),
-  vie     => $d->get('Vietnamese'),
- );
 
- my $tessdata = `tesseract '' '' -l '' 2>&1`;
- chomp $tessdata;
- $tessdata =~ s/^Unable to load unicharset file //;
- $tessdata =~ s/\/\.unicharset$//;
- $logger->info("Using tessdata at $tessdata");
  my @tesslang;
- for ( glob "$tessdata/*.unicharset" ) {
-
-  # Weed out the empty language files
-  if ( not -z $_ ) {
-   my $code;
-   $code = $1 if ( $_ =~ /([\w\-]*)\.unicharset$/ );
-   $logger->info("Found tesseract language $code");
-   if ( defined $iso639{$code} ) {
-    push @tesslang, [ $code, $iso639{$code} ];
-   }
-   else {
-    push @tesslang, [ $code, $code ];
-   }
-  }
+ for ( keys %{ Gscan2pdf::Tesseract->languages } ) {
+  push @tesslang, [ $_, $d->get( ${ Gscan2pdf::Tesseract->languages }{$_} ) ];
  }
 
  # If there are no language files, then we have tesseract-1.0, i.e. English
- if ( !@tesslang ) {
+ unless (@tesslang) {
   push @tesslang, [ undef, $d->get('English') ];
   $logger->info("No tesseract languages found");
  }

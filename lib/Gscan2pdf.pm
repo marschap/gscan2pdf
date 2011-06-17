@@ -122,9 +122,17 @@ sub _thread_main {
     $request->{metadata}, $request->{options} );
   }
 
+  elsif ( $request->{action} eq 'save-text' ) {
+   _thread_save_text( $self, $request->{path}, $request->{list_of_pages} );
+  }
+
   elsif ( $request->{action} eq 'save-tiff' ) {
    _thread_save_tiff( $self, $request->{path}, $request->{list_of_pages},
     $request->{options}, $request->{ps} );
+  }
+
+  elsif ( $request->{action} eq 'tesseract' ) {
+   _thread_tesseract( $self, $request->{page}, $request->{language} );
   }
 
   elsif ( $request->{action} eq 'threshold' ) {
@@ -1075,6 +1083,19 @@ sub _thread_to_tiff {
  $new->{format}   = 'Tagged Image File Format';
  my %data = ( old => $page, new => $new->freeze );
  $logger->info("Converted $page->{filename} to $data{new}{filename}");
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_tesseract {
+ my ( $self, $page, $language ) = @_;
+ my $new = $page->clone;
+ use Gscan2pdf::Tesseract;
+ $new->{hocr} = Gscan2pdf::Tesseract->text( $page->{filename}, $language );
+ $new->{ocr_flag} = 1;    #FlagOCR
+ $new->{ocr_time} =
+   Gscan2pdf::timestamp();    #remember when we ran OCR on this page
+ my %data = ( old => $page, new => $new );
  $self->{data_queue}->enqueue( \%data );
  return;
 }
