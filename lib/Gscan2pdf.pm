@@ -101,6 +101,11 @@ sub _thread_main {
    _thread_negate( $self, $request->{page} );
   }
 
+  elsif ( $request->{action} eq 'ocropus' ) {
+   _thread_ocropus( $self, $request->{page}, $request->{script},
+    $request->{language} );
+  }
+
   elsif ( $request->{action} eq 'quit' ) {
    last;
   }
@@ -1104,9 +1109,20 @@ sub _thread_to_tiff {
 sub _thread_tesseract {
  my ( $self, $page, $language ) = @_;
  my $new = $page->clone;
- use Gscan2pdf::Tesseract;
  $new->{hocr} = Gscan2pdf::Tesseract->text( $page->{filename}, $language );
  $new->{ocr_flag} = 1;    #FlagOCR
+ $new->{ocr_time} =
+   Gscan2pdf::timestamp();    #remember when we ran OCR on this page
+ my %data = ( old => $page, new => $new );
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_ocropus {
+ my ( $self, $page, $language ) = @_;
+ my $new = $page->clone;
+ $new->{hocr} = Gscan2pdf::Ocropus->hocr( $page->{filename}, $language );
+ $new->{ocr_flag} = 1;        #FlagOCR
  $new->{ocr_time} =
    Gscan2pdf::timestamp();    #remember when we ran OCR on this page
  my %data = ( old => $page, new => $new );

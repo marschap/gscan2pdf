@@ -372,7 +372,7 @@ sub create_PDF {
       $main::logger->info($cmd);
       my $status = system("$cmd 2>$main::SETTING{session}/tiffcp.stdout");
       if ( $status != 0 ) {
-       my $output = slurp("$main::SETTING{session}/tiffcp.stdout");
+       my $output = Gscan2pdf::slurp("$main::SETTING{session}/tiffcp.stdout");
        $main::logger->info($output);
        send(
         $parent,
@@ -1009,6 +1009,32 @@ sub tesseract {
 
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'tesseract',
+  { page => $page->freeze, language => $language } );
+ Gscan2pdf::_when_ready(
+  $sentinel,
+  sub {
+   if ( $Gscan2pdf::_self->{status} ) {
+    $error_callback->();
+    return;
+   }
+   $self->update_page($display_callback);
+   $finished_callback->();
+  },
+  sub {
+   $self->update_page($display_callback);
+   $not_finished_callback->();
+  }
+ );
+ return;
+}
+
+sub ocropus {
+ my ( $self, $page, $language, $finished_callback, $not_finished_callback,
+  $error_callback, $display_callback )
+   = @_;
+
+ my $sentinel =
+   Gscan2pdf::_enqueue_request( 'ocropus',
   { page => $page->freeze, language => $language } );
  Gscan2pdf::_when_ready(
   $sentinel,

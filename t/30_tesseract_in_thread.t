@@ -7,6 +7,8 @@
 
 use Test::More tests => 2;
 BEGIN {
+  use Gscan2pdf;
+  use Gscan2pdf::Document;
   use_ok('Gscan2pdf::Tesseract');
 };
 
@@ -24,13 +26,22 @@ SKIP: {
  my $prog_name = 'gscan2pdf';
  use Locale::gettext 1.05;    # For translations
  our $d = Locale::gettext->domain($prog_name);
+ Gscan2pdf->setup($d, $logger);
 
  # Create test image
  system('convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.tif');
 
- my $got = Gscan2pdf::Tesseract->text('test.tif', 'eng');
-
- like( $got, qr/The quick brown fox/, 'Tesseract returned sensible text' );
+ my $slist = Gscan2pdf::Document->new;
+ $slist->get_file_info( 'test.tif', sub {
+  $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {
+   $slist->tesseract( $slist->{data}[0][2], 'eng', sub {
+    like( $slist->{data}[0][2]{hocr}, qr/The quick brown fox/, 'Tesseract returned sensible text' );
+    Gtk2->main_quit;
+   }, sub {}, sub {}, sub {} );
+  }, sub {}, sub {} )
+ }, sub {}, sub{} );
+ Gtk2->main;
 
  unlink 'test.tif';
+ Gscan2pdf->kill();
 }

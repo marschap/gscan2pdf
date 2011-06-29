@@ -23,6 +23,7 @@ lib/Gscan2pdf.pm
 lib/Gscan2pdf/Document.pm
 lib/Gscan2pdf/Frontend/Sane.pm
 lib/Gscan2pdf/Frontend/Scanimage.pm
+lib/Gscan2pdf/Ocropus.pm
 lib/Gscan2pdf/Page.pm
 lib/Gscan2pdf/Tesseract.pm
 pdf.svg
@@ -113,6 +114,7 @@ t/12_save_djvu.t
 t/13_save_tiff.t
 t/14_save_image.t
 t/15_save_text.t
+t/16_import_TIFF.t
 t/21_rotate.t
 t/22_analyse_blank.t
 t/23_analyse_dark.t
@@ -122,6 +124,9 @@ t/26_unsharp_mask.t
 t/27_crop.t
 t/28_to_tiff.t
 t/29_tesseract.t
+t/30_tesseract_in_thread.t
+t/31_ocropus.t
+t/32_ocropus_in_thread.t
 t/Brother_DCP-7025.t
 t/Brother_MFC_5100c.t
 t/MANIFEST.t

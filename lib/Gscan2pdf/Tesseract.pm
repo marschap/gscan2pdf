@@ -6,8 +6,16 @@ use warnings;
 use Carp;
 use File::Temp;    # To create temporary files
 use File::Basename;
+use Gscan2pdf;     # for slurp
 
-my (%languages);
+my ( %languages, $installed, $setup );
+
+sub setup {
+ return $installed if $setup;
+ $installed = 1 if ( system("which tesseract > /dev/null 2> /dev/null") == 0 );
+ $setup = 1;
+ return $installed;
+}
 
 sub languages {
  unless (%languages) {
@@ -49,6 +57,7 @@ sub languages {
 
 sub text {
  my ( $class, $file, $language, $tif, $cmd ) = @_;
+ setup() unless $setup;
 
  # Temporary filename for output
  my $txt = File::Temp->new( SUFFIX => '.txt' );
@@ -76,6 +85,6 @@ sub text {
  return Gscan2pdf::slurp($txt);
 }
 
-system("which tesseract > /dev/null 2> /dev/null") == 0;
+1;
 
 __END__

@@ -128,6 +128,8 @@ use strict;
 use Gscan2pdf;
 use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Sane;
+use Gscan2pdf::Tesseract;
+use Gscan2pdf::Ocropus;
 use Gtk2::ImageView;
 use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
@@ -1588,40 +1590,12 @@ sub create_menu_bar {
  $dependencies{scanadf}     = check_command('scanadf');
  $dependencies{xdg}         = check_command('xdg-email');
  $dependencies{gocr}        = check_command('gocr');
- $dependencies{tesseract}   = eval { require Gscan2pdf::Tesseract };
- $dependencies{ocropus}     = check_command('ocroscript');
+ $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup;
+ $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup;
  $dependencies{cuneiform}   = check_command('cuneiform');
  $dependencies{djvu}        = check_command('cjb2');
  $dependencies{unpaper}     = check_command('unpaper');
  $dependencies{libtiff}     = check_command('tiffcp');
- if ( $dependencies{ocropus} ) {
-
-  unless ( defined $ENV{OCROSCRIPTS} ) {
-   for (qw(/usr /usr/local)) {
-    $ENV{OCROSCRIPTS} = "$_/share/ocropus/scripts"
-      if ( -d "$_/share/ocropus/scripts" );
-   }
-  }
-  if ( defined $ENV{OCROSCRIPTS} ) {
-   if ( -f "$ENV{OCROSCRIPTS}/recognize.lua" ) {
-    $SETTING{ocroscript} = 'recognize';
-   }
-   elsif ( -f "$ENV{OCROSCRIPTS}/rec-tess.lua" ) {
-    $SETTING{ocroscript} = 'rec-tess';
-   }
-   if ( defined $SETTING{ocroscript} ) {
-    $logger->info("Using ocropus with $SETTING{ocroscript}.");
-   }
-   else {
-    $logger->warn("Found ocropus, but no recognition scripts. Disabling.");
-    $dependencies{ocropus} = 0;
-   }
-  }
-  else {
-   $logger->warn("Found ocropus, but not its scripts. Disabling.");
-   $dependencies{ocropus} = 0;
-  }
- }
  $logger->info("Found Image::Magick") if ( $dependencies{perlmagick} );
  $logger->info("Found ImageMagick")   if ( $dependencies{imagemagick} );
  $logger->info("Found scanadf")       if ( $dependencies{scanadf} );
@@ -9664,8 +9638,8 @@ sub ocr_page {
        },
        sub {
         $pbar->set_text(
-         sprintf( $d->get("Page %i of %i"), $page + 1, @{ $slist->{data} } ) );
-        $pbar->set_fraction( $page / @{ $slist->{data} } );
+         sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
+        $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
        },
        sub {
         $dialog->destroy;
@@ -9678,28 +9652,28 @@ sub ocr_page {
       );
      }
      elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
-      my ( $png, $pre, $post );
-      if ( $slist->{data}[$pagenum][2]{filename} !~ /\.(png|jpg|pnm)$/ ) {
-       my $file = $slist->{data}[$pagenum][2]{filename};
-
-       # Temporary filename for new file
-       $png  = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.png' );
-       $pre  = "convert $file $png;";
-       $post = "; rm $png";
-
-      }
-      else {
-       $png  = $slist->{data}[$pagenum][2]{filename};
-       $pre  = '';
-       $post = '';
-      }
-      if ( defined $SETTING{'ocr language'} ) {
-       $cmd =
-"$pre tesslanguage=$SETTING{'ocr language'} ocroscript $SETTING{ocroscript} $png > $txt.txt$post";
-      }
-      else {
-       $cmd = "$pre ocroscript $SETTING{ocroscript} $png > $txt.txt$post";
-      }
+      $slist->ocropus(
+       $slist->{data}[$pagenum][2],
+       $SETTING{'ocr language'},
+       sub {
+        $page++;
+        $dialog->destroy
+          unless ( $page < $#{ $slist->{data} } );
+       },
+       sub {
+        $pbar->set_text(
+         sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
+        $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
+       },
+       sub {
+        $dialog->destroy;
+        show_message_dialog( $main::window, 'error', 'close',
+         $Gscan2pdf::_self->{message} );
+       },
+       sub {
+        create_canvas( $slist->{data}[$pagenum][2] );
+       }
+      );
      }
      else {    # cuneiform
       my ( $bmp, $pre, $post );
