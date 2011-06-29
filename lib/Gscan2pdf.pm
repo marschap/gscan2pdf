@@ -243,7 +243,6 @@ sub _thread_get_file_info {
   my $pages = @ppi;
   $logger->info("$pages pages");
   $info{pages} = $pages;
-  $self->{data_queue}->enqueue( \%info );
  }
  else {
   $info{pages} = 1;
@@ -315,10 +314,10 @@ sub _thread_import_file {
     $logger->info($cmd);
     system($cmd);
     my $page = Gscan2pdf::Page->new(
-     filename => $_,
+     filename => $tif,
      dir      => $self->{dir},
      delete   => TRUE,
-     format   => 'Portable anymap'
+     format   => $info->{format}
     );
     $self->{data_queue}->enqueue( $page->freeze );
    }
