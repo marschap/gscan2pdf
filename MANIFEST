@@ -20,6 +20,7 @@ gscan2pdf.desktop
 gscan2pdf.spec
 gscan2pdf.svg
 lib/Gscan2pdf.pm
+lib/Gscan2pdf/Cuneiform.pm
 lib/Gscan2pdf/Document.pm
 lib/Gscan2pdf/Frontend/Sane.pm
 lib/Gscan2pdf/Frontend/Scanimage.pm
@@ -127,6 +128,8 @@ t/29_tesseract.t
 t/30_tesseract_in_thread.t
 t/31_ocropus.t
 t/32_ocropus_in_thread.t
+t/33_cuneiform.t
+t/34_cuneiform_in_thread.t
 t/Brother_DCP-7025.t
 t/Brother_MFC_5100c.t
 t/MANIFEST.t

@@ -130,6 +130,7 @@ use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Sane;
 use Gscan2pdf::Tesseract;
 use Gscan2pdf::Ocropus;
+use Gscan2pdf::Cuneiform;
 use Gtk2::ImageView;
 use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
@@ -1592,7 +1593,7 @@ sub create_menu_bar {
  $dependencies{gocr}        = check_command('gocr');
  $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup;
  $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup;
- $dependencies{cuneiform}   = check_command('cuneiform');
+ $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup;
  $dependencies{djvu}        = check_command('cjb2');
  $dependencies{unpaper}     = check_command('unpaper');
  $dependencies{libtiff}     = check_command('tiffcp');
@@ -9676,22 +9677,28 @@ sub ocr_page {
       );
      }
      else {    # cuneiform
-      my ( $bmp, $pre, $post );
-      if ( $slist->{data}[$pagenum][2]{filename} !~ /\.bmp$/ ) {
-       my $file = $slist->{data}[$pagenum][2]{filename};
-
-       # Temporary filename for new file
-       $bmp  = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.bmp' );
-       $pre  = "convert $file $bmp;";
-       $post = "; rm $bmp";
-      }
-      else {
-       $bmp  = $slist->{data}[$pagenum][2]{filename};
-       $pre  = '';
-       $post = '';
-      }
-      $cmd =
-"$pre cuneiform -l $SETTING{'ocr language'} -f hocr -o $txt.txt $bmp $post";
+      $slist->cuneiform(
+       $slist->{data}[$pagenum][2],
+       $SETTING{'ocr language'},
+       sub {
+        $page++;
+        $dialog->destroy
+          unless ( $page < $#{ $slist->{data} } );
+       },
+       sub {
+        $pbar->set_text(
+         sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
+        $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
+       },
+       sub {
+        $dialog->destroy;
+        show_message_dialog( $main::window, 'error', 'close',
+         $Gscan2pdf::_self->{message} );
+       },
+       sub {
+        create_canvas( $slist->{data}[$pagenum][2] );
+       }
+      );
      }
      $logger->info($cmd);
 
@@ -9859,7 +9866,6 @@ sub add_tess_languages {
  $hbox->pack_start( $label, TRUE, TRUE, 0 );
 
  # Tesseract language files
-
  my @tesslang;
  for ( keys %{ Gscan2pdf::Tesseract->languages } ) {
   push @tesslang, [ $_, $d->get( ${ Gscan2pdf::Tesseract->languages }{$_} ) ];
@@ -9887,54 +9893,10 @@ sub add_cf_languages {
  my $label = Gtk2::Label->new( $d->get('Language to recognise') );
  $hbox->pack_start( $label, TRUE, TRUE, 0 );
 
- # cuneiform language codes
- my %lang = (
-  eng    => $d->get('English'),
-  ger    => $d->get('German'),
-  fra    => $d->get('French'),
-  rus    => $d->get('Russian'),
-  swe    => $d->get('Swedish'),
-  spa    => $d->get('Spanish'),
-  ita    => $d->get('Italian'),
-  ruseng => $d->get('Russian+English'),
-  ukr    => $d->get('Ukrainian'),
-  srp    => $d->get('Serbian'),
-  hrv    => $d->get('Croatian'),
-  pol    => $d->get('Polish'),
-  dan    => $d->get('Danish'),
-  por    => $d->get('Portuguese'),
-  dut    => $d->get('Dutch'),
-  cze    => $d->get('Czech'),
-  rum    => $d->get('Romanian'),
-  hun    => $d->get('Hungarian'),
-  bul    => $d->get('Bulgarian'),
-  slo    => $d->get('Slovak'),
-  lav    => $d->get('Latvian'),
-  lit    => $d->get('Lithuanian'),
-  est    => $d->get('Estonian'),
-  tur    => $d->get('Turkish'),
- );
-
- # Dig out supported languages
- my $cmd = "cuneiform -l";
- $logger->info($cmd);
- my $output = `$cmd`;
- $logger->info($output);
-
- my $langs;
- $langs = $1 if ( $output =~ /Supported languages: (.*)\./ );
+ # Tesseract language files
  my @lang;
- for ( split " ", $langs ) {
-
-  # Weed out the empty language files
-  if ( not -z $_ ) {
-   if ( defined $lang{$_} ) {
-    push @lang, [ $_, $lang{$_} ];
-   }
-   else {
-    push @lang, [ $_, $_ ];
-   }
-  }
+ for ( keys %{ Gscan2pdf::Cuneiform->languages } ) {
+  push @lang, [ $_, $d->get( ${ Gscan2pdf::Cuneiform->languages }{$_} ) ];
  }
 
  my $combobox = combobox_from_array(@lang);

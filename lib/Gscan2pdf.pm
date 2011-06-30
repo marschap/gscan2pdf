@@ -88,6 +88,10 @@ sub _thread_main {
    );
   }
 
+  elsif ( $request->{action} eq 'cuneiform' ) {
+   _thread_cuneiform( $self, $request->{page}, $request->{language} );
+  }
+
   elsif ( $request->{action} eq 'get-file-info' ) {
    _thread_get_file_info( $self, $request->{path} );
   }
@@ -1122,6 +1126,18 @@ sub _thread_ocropus {
  my ( $self, $page, $language ) = @_;
  my $new = $page->clone;
  $new->{hocr} = Gscan2pdf::Ocropus->hocr( $page->{filename}, $language );
+ $new->{ocr_flag} = 1;        #FlagOCR
+ $new->{ocr_time} =
+   Gscan2pdf::timestamp();    #remember when we ran OCR on this page
+ my %data = ( old => $page, new => $new );
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_cuneiform {
+ my ( $self, $page, $language ) = @_;
+ my $new = $page->clone;
+ $new->{hocr} = Gscan2pdf::Cuneiform->hocr( $page->{filename}, $language );
  $new->{ocr_flag} = 1;        #FlagOCR
  $new->{ocr_time} =
    Gscan2pdf::timestamp();    #remember when we ran OCR on this page
