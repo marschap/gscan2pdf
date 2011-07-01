@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    Gscan2pdf::Document methods (probably via update_page()) should return $page, or at least some some reference to the filename(s) so that they can be stacked to allow, e.g. scan->rotate->unpaper->ocr
 #    Support for OCRE http://lem.eui.upm.es/ocre.html
 #*** unhandled exception in callback:
 #***   Can't call method "hide_all" on an undefined value at bin/gscan2pdf line 5512.
@@ -84,7 +85,6 @@
 #    get it to work on the TV tuner
 #    check out scanbuttond
 #    Add status line at bottom with messages like "filename saved"
-#    Fix blocking while rotating
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
 #    Option to throw up PDF viewer with newly created PDF file
@@ -471,7 +471,7 @@ my (
  $slist, $windowi, $windowe, $windows, $windows2, $windowh, $windowo, $windowrn,
  $windowu, $vboxd, $labeld, $combobd, $combobp, $vboxm, @undo_buffer,
  @redo_buffer, @undo_selection, @redo_selection, %dependencies,
- @ocr_stack, $running_ocr, %helperTag, @unpaper_stack, $running_unpaper,
+ @ocr_stack,   $running_ocr,    %helperTag,
  $scanning,   @ocr_engine,   $bscanall,       $bscannum, @clipboard, $windowd,
  $windowr,    $view,         $frames,         $duplex,   $windowp,
  $batch_scan, $gui_updating, $print_settings, $windowc,  $current_page,
@@ -5409,7 +5409,6 @@ sub scanimage {
     $logger->info("Sending INT signal to PID $pid and its children");
     killfam 'INT', ($pid);
     $cancel = TRUE;
-    undef(@unpaper_stack);
     undef(@ocr_stack);
    }
   );
@@ -5796,15 +5795,18 @@ sub hash2options {
 sub post_process_scan {
  my ( $page, $rotate, $unpaper, $ocr ) = @_;
 
- # push @rotate_queue, [ $page, $rotate ] if $rotate; FIXME
- push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper;
+# push @rotate_queue, [ $page, $rotate ] if $rotate; FIXME
+# push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper; FIXME
  push @ocr_stack, $page if $ocr;
  $logger->info("OCRflagging page: $page") if $ocr;
 
  if (
-  not($scanning
-   or $running_unpaper
-   or $running_ocr )
+  not(
+   $scanning
+
+   #   or $running_unpaper
+   or $running_ocr
+  )
    )
  {
 
@@ -8198,7 +8200,7 @@ sub rotate {
  my @page    = $slist->get_selected_indices;
  my $page    = 0;
 
- # guess where unpaper has been called from
+ # guess where rotate has been called from
  my $window = get_parent( $windows, $window );
  my $dialog = Gtk2::Dialog->new( $d->get('Rotating') . "...",
   $window, 'modal', 'gtk-cancel' => 'cancel' );
@@ -8254,7 +8256,7 @@ sub analyse {
  my $page   = 0;
  my $npages = 0;
 
- # guess where unpaper has been called from
+ # guess where analyse has been called from
  my $window = get_parent( $windows, $window );
  my $dialog = Gtk2::Dialog->new( $d->get('Analyze') . "...",
   $window, 'destroy-with-parent', 'gtk-cancel' => 'cancel' );
@@ -8998,7 +9000,6 @@ sub get_parent {
 sub unpaper_page {
  my ( $options, @pages ) = @_;
  $options = '' if ( !defined($options) );
- push @unpaper_stack, [ $_, $options ] foreach (@pages);
 
  # guess where unpaper has been called from
  my $parent = get_parent( $windowu, $windows, $window );
@@ -9011,193 +9012,45 @@ sub unpaper_page {
  my $pbar = Gtk2::ProgressBar->new;
  $dialog->vbox->add($pbar);
 
- # Flag set if unpaper is running
- $running_unpaper = FALSE;
- my $cancelled = FALSE;
- my $page      = 0;
- my $npages    = 0;
+ my $page = 1;
 
  # Ensure that the dialog box is destroyed when the user responds.
  my $pid;
  $dialog->signal_connect(
   response => sub {
    $_[0]->destroy;
-   local $SIG{HUP} = 'IGNORE';
-   $logger->info("Sending HUP signal to PID $pid and its children");
-   killfam 'HUP', ($pid);
-   $cancelled = TRUE;
-   undef(@unpaper_stack);
+
+   #   $logger->info("Sending HUP signal to PID $pid and its children"); FIXME
+   #   killfam 'HUP', ($pid);
   }
  );
  $dialog->show_all;
 
- # Timer will run until callback returns false
- Glib::Timeout->add(
-  100,
-  sub {
-
-   # To prevent any further pages being processed
-   if ($cancelled) {
-    $running_unpaper = FALSE;
-    return FALSE;    # uninstall
-   }
-   elsif (@unpaper_stack) {
-    if ( not $running_unpaper ) {
-     $running_unpaper = TRUE;
-     $page++;
-     $npages++;
-     my ( $pagenum, $options ) = @{ shift @unpaper_stack };
-     $pbar->set_text(
-      sprintf( $d->get("Page %i of %i"), $page, $#unpaper_stack + $npages + 1 )
-     );
-     $pbar->set_fraction( ( $page - 1 ) / ( $#unpaper_stack + $npages + 1 ) );
-
-     my $cmd = '';
-     my $in;
-     my $out = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.pnm' );
-     my $out2 = '';
-     $out2 = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.pnm' )
-       if ( $options =~ /--output-pages 2 / );
-
-     if ( $slist->{data}[$pagenum][2]{filename} !~ /\.pnm$/ ) {
-      my $image = Image::Magick->new;
-      my $x     = $image->Read( $slist->{data}[$pagenum][2]{filename} );
-      $logger->warn($x) if "$x";
-      my $depth = $image->Get('depth');
-
-# Unforunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
-      my $suffix = ".pbm";
-      $suffix = ".pnm" if ( $depth > 1 );
-      $in = File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
-      $cmd .=
-        "convert -compress Zip $slist->{data}[$pagenum][2]{filename} $in;";
-     }
-     else {
-      $in = $slist->{data}[$pagenum][2]{filename};
-     }
-
-     # --overwrite needed because $out exists with 0 size
-     $cmd .=
-"unpaper $options --overwrite --input-file-sequence $in --output-file-sequence $out $out2;";
-     $cmd .= "rm $in" if ( $slist->{data}[$pagenum][2]{filename} !~ /\.pnm$/ );
-     $logger->info($cmd);
-
-     # Interface to unpaper
-     $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-     $logger->info("Forked PID $pid");
-     my $page_buffer = '';
-
-     # Update TextBuffer without blocking
-     Glib::IO->add_watch(
-      fileno($read),
-      [ 'in', 'hup' ],
-      sub {
-       my ( $fileno, $condition ) = @_;
-       my $line;
-       if ( $condition & 'in' ) {    # bit field operation. >= would also work
-        sysread $read, $line, 1024;
-        $page_buffer .= $line;
-       }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-       if ( ( $condition & 'hup' ) and not $running_unpaper ) {
-        close $read;
-        $logger->info('Waiting to reap process');
-        my $pid = waitpid( -1, &WNOHANG );
-        $logger->info("Reaped PID $pid");
-        return FALSE;                # uninstall
-       }
-
-       if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-       {                             # bit field operation. >= would also work
-        $logger->debug($page_buffer);
-        close $read;
-        $logger->info('Waiting to reap process');
-        my $pid = waitpid( -1, &WNOHANG );
-        $logger->info("Reaped PID $pid");
-
-        # Note page selection
-        my @selection = $slist->get_selected_indices;
-
-        $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-        $slist->{data}[$pagenum][2]{filename} = $out;
-        $slist->{data}[$pagenum][1] =
-          Gscan2pdf::Page::get_pixbuf( $out, $heightt, $widtht );
-
-        if ( $options =~ /--output-pages 2 / ) {
-         my $filename   = $out2;
-         my $page       = $slist->{data}[$pagenum][0];
-         my $resolution = $slist->{data}[$pagenum][2]{resolution};
-         my $gpage      = Gscan2pdf::Page->new(
-          filename   => $filename,
-          resolution => $resolution,
-          format     => 'Portable anymap',
-          delete     => TRUE
-         );
-         my $index = $slist->add_page( $gpage, $page, &update_uimanager ) + 1;
-
-         # Update stacks as we have inserted a page
-         for ( my $i = 0 ; $i < @unpaper_stack ; ++$i ) {
-          ++$unpaper_stack[$i][0] if ( $unpaper_stack[$i][0] > $pagenum );
-         }
-
- # Using $ocr rather than pushing @ocr_stack inside for() to avoid infinite loop
-         my $ocr = FALSE;
-         for (@ocr_stack) {
-          if ( $_ > $pagenum ) {
-           ++$_;
-          }
-          elsif ( $_ == $pagenum ) {
-           $ocr = TRUE;
-          }
-         }
-         push @ocr_stack, $index if $ocr;
-
-# Using $selected rather than pushing @selection inside for() to avoid infinite loop
-         my $selected = FALSE;
-         for (@selection) {
-          if ( $_ > $pagenum ) {
-           ++$_;
-          }
-          elsif ( $_ == $pagenum ) {
-           $selected = TRUE;
-          }
-         }
-         push @selection, $index if $selected;
-
-         # Sort out numbering as now we have duplicates
-         renumber( $slist, 0 );
-        }
-        $slist->get_model->signal_handler_unblock(
-         $slist->{row_changed_signal} );
-
-        # Reselect selected pages, firing the display callback
-        $slist->get_selection->unselect_all;
-        $slist->select(@selection);
-
-        $running_unpaper = FALSE;
-
-        return FALSE;    # uninstall
-       }
-       return TRUE;      # continue without uninstalling
-      }
-     );
-    }
-    return TRUE;         # continue without uninstalling
-   }
-   elsif ( not $running_unpaper ) {
+ for my $i (@pages) {
+  $slist->unpaper(
+   $slist->{data}[$i][2],
+   $options,
+   sub {
+    $page++;
+    $dialog->destroy
+      unless ( $page < $#{ $slist->{data} } );
+   },
+   sub {
+    $pbar->set_text(
+     sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
+    $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
+   },
+   sub {
     $dialog->destroy;
+    show_message_dialog( $main::window, 'error', 'close',
+     $Gscan2pdf::_self->{message} );
+   },
+   sub {
+    display_image( $slist->{data}[$i][2] );
+   },
+  );
+ }
 
-    # set off ocr if necessary now that unpaper has finished
-    post_process_scan();
-    return FALSE;        # uninstall
-   }
-   else {
-    return TRUE;         # continue without uninstalling
-   }
-  }
- );
  return;
 }
 

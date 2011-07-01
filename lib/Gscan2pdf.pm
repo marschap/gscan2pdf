@@ -152,6 +152,10 @@ sub _thread_main {
    _thread_to_tiff( $self, $request->{page} );
   }
 
+  elsif ( $request->{action} eq 'unpaper' ) {
+   _thread_unpaper( $self, $request->{page}, $request->{options} );
+  }
+
   elsif ( $request->{action} eq 'unsharp' ) {
    _thread_unsharp( $self, $request->{page}, $request->{radius},
     $request->{sigma}, $request->{amount}, $request->{threshold} );
@@ -1142,6 +1146,74 @@ sub _thread_cuneiform {
  $new->{ocr_time} =
    Gscan2pdf::timestamp();    #remember when we ran OCR on this page
  my %data = ( old => $page, new => $new );
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_unpaper {
+ my ( $self, $page, $options ) = @_;
+ my $filename = $page->{filename};
+ my $in;
+
+ if ( $filename !~ /\.pnm$/ ) {
+  my $image = Image::Magick->new;
+  my $x     = $image->Read($filename);
+  $logger->warn($x) if "$x";
+  my $depth = $image->Get('depth');
+
+# Unforunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
+  my $suffix = ".pbm";
+  $suffix = ".pnm" if ( $depth > 1 );
+
+  # Temporary filename for new file
+  $in = File::Temp->new(
+   DIR    => $self->{dir},
+   SUFFIX => $suffix,
+  );
+
+# FIXME: need to -compress Zip from perlmagick       "convert -compress Zip $slist->{data}[$pagenum][2]{filename} $in;";
+  $image->Write( filename => $in );
+ }
+ else {
+  $in = $filename;
+ }
+
+ my $out = File::Temp->new(
+  DIR    => $self->{dir},
+  SUFFIX => '.pnm',
+  UNLINK => FALSE
+ );
+ my $out2 = '';
+ $out2 = File::Temp->new(
+  DIR    => $self->{dir},
+  SUFFIX => '.pnm',
+  UNLINK => FALSE
+ ) if ( $options =~ /--output-pages 2 / );
+
+ # --overwrite needed because $out exists with 0 size
+ my $cmd =
+"unpaper $options --overwrite --input-file-sequence $in --output-file-sequence $out $out2;";
+ $logger->info($cmd);
+ system($cmd);
+
+ my $new = Gscan2pdf::Page->new(
+  filename => $out,
+  dir      => $self->{dir},
+  delete   => TRUE,
+  format   => 'Portable anymap'
+ );
+ $new->{dirty_time} = timestamp();    #flag as dirty
+ my %data = ( old => $page, new => $new->freeze );
+ unless ( $out2 eq '' ) {
+  my $new = Gscan2pdf::Page->new(
+   filename => $out2,
+   dir      => $self->{dir},
+   delete   => TRUE,
+   format   => 'Portable anymap'
+  );
+  $new->{dirty_time} = timestamp();    #flag as dirty
+  $data{new2} = $new->freeze;
+ }
  $self->{data_queue}->enqueue( \%data );
  return;
 }
