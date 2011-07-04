@@ -408,6 +408,16 @@ sub update_page {
    $self->{data}[$i][1] =
      get_pixbuf( $new->{filename}, $main::heightt, $main::widtht );
    $self->{data}[$i][2] = $new;
+
+   if ( defined $data->{new2} ) {
+    $new = $data->{new2}->thaw;
+    splice @{ $self->{data} }, $i + 1, 0,
+      [
+     $self->{data}[$i][0] + 1,
+     get_pixbuf( $new->{filename}, $main::heightt, $main::widtht ), $new
+      ];
+   }
+
    $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
      if defined( $self->{row_changed_signal} );
    my @selected = $self->get_selected_indices;
