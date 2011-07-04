@@ -28,7 +28,8 @@ sub new {
  my $self = {};
  croak "Error: filename not supplied" unless ( defined $options{filename} );
  croak "Error: format not supplied"   unless ( defined $options{format} );
- $main::logger->info("Importing $options{filename}, format $options{format}");
+ $main::logger->info(
+  "New page filename $options{filename}, format $options{format}");
  for ( keys %options ) {
   $self->{$_} = $options{$_};
  }
