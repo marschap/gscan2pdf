@@ -53,15 +53,6 @@ sub new {
  return $self;
 }
 
-sub open_socketpair {
- my $child  = FileHandle->new;
- my $parent = FileHandle->new;
- socketpair( $child, $parent, AF_UNIX, SOCK_DGRAM, PF_UNSPEC );
- binmode $child,  ':utf8';
- binmode $parent, ':utf8';
- return ( $child, $parent );
-}
-
 sub get_file_info {
  my ( $self, $path, $finished_callback, $not_finished_callback,
   $error_callback ) = @_;
