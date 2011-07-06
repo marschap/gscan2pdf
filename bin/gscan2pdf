@@ -22,7 +22,6 @@
 #***   Can't call method "hide_all" on an undefined value at bin/gscan2pdf line 5512.
 #***  ignoring at bin/gscan2pdf line 12380.
 #    add option for number of background processes
-#     does Thread::Queue play nicely with forks?
 #     grep -c '^processor' /proc/cpuinfo
 #     use Linux::Cpuinfo;
 #     my $cpuinfo = Linux::Cpuinfo->new();
@@ -10981,10 +10980,6 @@ API library for scanners
 =item libsane-perl
 
 Perl bindings for libsane.
-
-=item libforks-perl
-
-a drop-in replacement for Perl threads using fork()
 
 =item libset-intspan-perl
 
