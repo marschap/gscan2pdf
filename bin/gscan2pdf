@@ -8883,99 +8883,47 @@ sub user_defined_tool {
  my $pbar = Gtk2::ProgressBar->new;
  $dialog->vbox->add($pbar);
 
- # Ensure that the dialog box is destroyed when the user responds.
- my $pid;
- my $running   = FALSE;
- my $cancelled = FALSE;
- my $i         = 0;
  $dialog->signal_connect(
   response => sub {
    $_[0]->destroy;
-   local $SIG{HUP} = 'IGNORE';
-   $logger->info("Sending HUP signal to PID $pid and its children");
-   killfam 'HUP', ($pid);
-   $running   = FALSE;
-   $cancelled = TRUE;
+
+   #   local $SIG{HUP} = 'IGNORE';
+   #   $logger->info("Sending HUP signal to PID $pid and its children");
+   #   killfam 'HUP', ($pid);
   }
  );
  $dialog->show_all;
 
- # Timer will run until callback returns false
- Glib::Timeout->add(
-  100,
-  sub {
-
-   # To prevent any further pages being processed
-   if ($cancelled) {
-    return FALSE;    # uninstall
-   }
-   elsif ( not $running ) {
-    $running = TRUE;
-    $slist->get_selection->unselect_all;
-    $slist->select( $pages[$i] );
+ my $cmd  = $action->get('label');
+ my $page = 1;
+ for my $i (@pages) {
+  $slist->user_defined(
+   $slist->{data}[$i][2],
+   $cmd,
+   sub {
+    $page++;
+    $dialog->destroy
+      unless ( $page < $#{ $slist->{data} } );
+   },
+   sub {
     $pbar->set_text(
-     sprintf( $d->get("Processing page %i of %i"), $i + 1, $#pages + 1 ) );
-    $pbar->set_fraction( $i / ( $#pages + 1 ) );
-    my $ifilename = $slist->{data}[ $pages[$i] ][2]{filename};
-    my $format;
-    $format = $1 if ( $ifilename =~ /\.(\w*)$/ );
-    my $ofilename =
-      File::Temp->new( DIR => $SETTING{session}, SUFFIX => ".$format" );
-
-    my $cmd = $action->get('label');
-    if ( $cmd =~ s/%o/$ofilename/g ) {
-     $cmd =~ s/%i/$ifilename/g;
-    }
-    else {
-     copy( $ifilename, $ofilename )
-       or show_message_dialog( $window, 'error', 'close',
-      $d->get('Error copying page') );
-     $cmd =~ s/%i/$ofilename/g;
-    }
-    $cmd =~ s/%r/$slist->{data}[$pages[$i]][2]{resolution}/g;
-    $logger->info($cmd);
-
-    $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-    $logger->info("Forked PID $pid");
-
-    # Read without blocking
-    my $output = '';
-    Glib::IO->add_watch(
-     fileno($read),
-     [ 'in', 'hup' ],
-     sub {
-      my ( $fileno, $condition ) = @_;
-
-      if ( $condition & 'hup' ) {    # bit field operation. >= would also work
-       close $read;
-       $logger->info('Waiting to reap process');
-       my $pid = waitpid( -1, &WNOHANG );
-       $logger->info("Reaped PID $pid");
-       $slist->{data}[ $pages[$i] ][2]{filename} = $ofilename;
-
-       # Update thumbnail
-       $slist->{data}[ $pages[$i] ][1] =
-         Gscan2pdf::Page::get_pixbuf( $ofilename, $heightt, $widtht );
-
-       if ( $i == $#pages ) {
-        $slist->select(@pages);
-        $dialog->destroy;
-        $cancelled = TRUE;
-       }
-       else {
-        $slist->select( $pages[$i] );
-       }
-       $running = FALSE;
-       $i++;
-       return FALSE;    # uninstall
-      }
-      return TRUE;      # continue without uninstalling
-     }
+     sprintf(
+      $d->get("Processing page %i of %i"),
+      $page, $#{ $slist->{data} } + 1
+     )
     );
-   }
-   return TRUE;         # continue without uninstalling
-  }
- );
+    $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
+   },
+   sub {
+    $dialog->destroy;
+    show_message_dialog( $main::window, 'error', 'close',
+     $Gscan2pdf::_self->{message} );
+   },
+   sub {
+    display_image( $slist->{data}[$i][2] );
+   },
+  );
+ }
  return;
 }
 

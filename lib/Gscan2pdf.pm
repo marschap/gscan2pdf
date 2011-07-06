@@ -9,6 +9,7 @@ use Thread::Queue;
 
 use Glib qw(TRUE FALSE);
 use Gtk2;
+use File::Copy;
 use File::Temp;    # To create temporary files
 
 my $_POLL_INTERVAL;
@@ -159,6 +160,10 @@ sub _thread_main {
   elsif ( $request->{action} eq 'unsharp' ) {
    _thread_unsharp( $self, $request->{page}, $request->{radius},
     $request->{sigma}, $request->{amount}, $request->{threshold} );
+  }
+
+  elsif ( $request->{action} eq 'user-defined' ) {
+   _thread_user_defined( $self, $request->{page}, $request->{command} );
   }
 
   else {
@@ -1214,6 +1219,49 @@ sub _thread_unpaper {
   $new->{dirty_time} = timestamp();    #flag as dirty
   $data{new2} = $new->freeze;
  }
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_user_defined {
+ my ( $self, $page, $cmd ) = @_;
+ my $in = $page->{filename};
+ my $suffix;
+ $suffix = $1 if ( $in =~ /(\.\w*)$/ );
+ my $out = File::Temp->new(
+  DIR    => $self->{dir},
+  SUFFIX => $suffix,
+  UNLINK => FALSE
+ );
+
+ if ( $cmd =~ s/%o/$out/g ) {
+  $cmd =~ s/%i/$in/g;
+ }
+ else {
+  unless ( copy( $in, $out ) ) {
+   $self->{status}  = 1;
+   $self->{message} = $d->get('Error copying page');
+   $d->get('Error copying page');
+   return;
+  }
+  $cmd =~ s/%i/$out/g;
+ }
+ $cmd =~ s/%r/$page->{resolution}/g;
+ $logger->info($cmd);
+ system($cmd);
+
+ # Get file type
+ my $image = Image::Magick->new;
+ my $x     = $image->Read($out);
+ $logger->warn($x) if "$x";
+
+ my $new = Gscan2pdf::Page->new(
+  filename => $out,
+  dir      => $self->{dir},
+  delete   => TRUE,
+  format   => $image->Get('format'),
+ );
+ my %data = ( old => $page, new => $new->freeze );
  $self->{data_queue}->enqueue( \%data );
  return;
 }
