@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    Gscan2pdf::Document methods (probably via update_page()) should return $page, or at least some some reference to the filename(s) so that they can be stacked to allow, e.g. scan->rotate->unpaper->ocr
 #    Support for OCRE http://lem.eui.upm.es/ocre.html
 #*** unhandled exception in callback:
 #***   Can't call method "hide_all" on an undefined value at bin/gscan2pdf line 5512.
@@ -470,7 +469,7 @@ my (
  $slist, $windowi, $windowe, $windows, $windows2, $windowh, $windowo, $windowrn,
  $windowu, $vboxd, $labeld, $combobd, $combobp, $vboxm, @undo_buffer,
  @redo_buffer, @undo_selection, @redo_selection, %dependencies,
- @ocr_stack,   $running_ocr,    %helperTag,
+ %helperTag,
  $scanning,   @ocr_engine,   $bscanall,       $bscannum, @clipboard, $windowd,
  $windowr,    $view,         $frames,         $duplex,   $windowp,
  $batch_scan, $gui_updating, $print_settings, $windowc,  $current_page,
@@ -654,19 +653,28 @@ my @action_items = (
   $d->get('Zoom out'), sub { $view->zoom_out; }
  ],
  [
-  'Rotate 90',                    'rotate90',
-  $d->get('Rotate 90 clockwise'), '<control><shift>R',
-  $d->get('Rotate 90 clockwise'), sub { rotate(90); }
+  'Rotate 90',
+  'rotate90',
+  $d->get('Rotate 90 clockwise'),
+  '<control><shift>R',
+  $d->get('Rotate 90 clockwise'),
+  sub { rotate( 90, [ indices2pages( $slist->get_selected_indices ) ] ) }
  ],
  [
-  'Rotate 180',          'rotate180',
-  $d->get('Rotate 180'), '<control><shift>F',
-  $d->get('Rotate 180'), sub { rotate(180); }
+  'Rotate 180',
+  'rotate180',
+  $d->get('Rotate 180'),
+  '<control><shift>F',
+  $d->get('Rotate 180'),
+  sub { rotate( 180, [ indices2pages( $slist->get_selected_indices ) ] ) }
  ],
  [
-  'Rotate 270',                       'rotate270',
-  $d->get('Rotate 90 anticlockwise'), '<control><shift>C',
-  $d->get('Rotate 90 anticlockwise'), sub { rotate(270); }
+  'Rotate 270',
+  'rotate270',
+  $d->get('Rotate 90 anticlockwise'),
+  '<control><shift>C',
+  $d->get('Rotate 90 anticlockwise'),
+  sub { rotate( 270, [ indices2pages( $slist->get_selected_indices ) ] ) }
  ],
 
  # Tools menu
@@ -5408,7 +5416,6 @@ sub scanimage {
     $logger->info("Sending INT signal to PID $pid and its children");
     killfam 'INT', ($pid);
     $cancel = TRUE;
-    undef(@ocr_stack);
    }
   );
   $dialog->show_all;
@@ -5750,14 +5757,18 @@ sub scan_pages {
    # If the scan can't be loaded then blow the scanning dialog away and
    # show an error
    my $rotate = $n % 2 ? $rfacing : $rreverse;
-   $SETTING{resolution} =
-     defined( $SETTING{resolution} )
-     ? $SETTING{resolution}
-     : $Gscan2pdf::Document::POINTS_PER_INCH;
-   $logger->info("Importing scan with resolution=$SETTING{resolution}");
-   my $index =
-     import_scan( File::Spec->catdir( $SETTING{session}, "out$n.pnm" ),
-    $n, $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
+   if ( defined $test_image ) {
+    import_scan( $test_image, $n, undef, FALSE, $rotate, $unpaper, $ocr );
+   }
+   else {
+    $SETTING{resolution} =
+      defined( $SETTING{resolution} )
+      ? $SETTING{resolution}
+      : $Gscan2pdf::Document::POINTS_PER_INCH;
+    $logger->info("Importing scan with resolution=$SETTING{resolution}");
+    import_scan( File::Spec->catdir( $SETTING{session}, "out$n.pnm" ),
+     $n, $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
+   }
   },
   sub {
    my ($msg) = @_;
@@ -5794,31 +5805,47 @@ sub hash2options {
 sub post_process_scan {
  my ( $page, $rotate, $unpaper, $ocr ) = @_;
 
-# push @rotate_queue, [ $page, $rotate ] if $rotate; FIXME
-# push @unpaper_stack, [ $page, options2unpaper($unpaper_options) ] if $unpaper; FIXME
- push @ocr_stack, $page if $ocr;
- $logger->info("OCRflagging page: $page") if $ocr;
-
- if (
-  not(
-   $scanning
-
-   #   or $running_unpaper
-   or $running_ocr
-  )
-   )
- {
-
-  # FIXME:
-  #  if (@rotate_queue) {
-  #   rotate();
-  #  }
-  #  elsif (@unpaper_stack) {
-  #   unpaper_page();
-  #  }
-  #  elsif (@ocr_stack) {
-  #   ocr_page();
-  #  }
+ my $options = options2unpaper($unpaper_options);
+ if ($rotate) {
+  rotate(
+   $rotate,
+   [$page],
+   ( $unpaper or $ocr )
+   ? sub {
+    my ($pages) = @_;
+    if ($unpaper) {
+     unpaper_page(
+      $pages, $options,
+      $ocr
+      ? sub {
+       my ($pages) = @_;
+       ocr_page($pages);
+        }
+      : undef
+     );
+    }
+    else {
+     ocr_page($_);
+    }
+     }
+   : undef
+  );
+ }
+ elsif ($unpaper) {
+  unpaper_page(
+   $page, $options,
+   $ocr
+   ? sub {
+    my (@pages) = @_;
+    for (@pages) {
+     ocr_page($_);
+    }
+     }
+   : undef
+  );
+ }
+ elsif ($ocr) {
+  ocr_page($page);
  }
  return;
 }
@@ -5882,7 +5909,7 @@ sub import_scan {
        $d->get('Unable to load image') );
      }
      else {
-      post_process_scan( $index, $rotate, $unpaper, $ocr );
+      post_process_scan( $gpage, $rotate, $unpaper, $ocr );
      }
      return FALSE;    # uninstall
     }
@@ -8192,12 +8219,22 @@ sub renumber {
  return;
 }
 
+# Helper function to convert an array of indices into an array of Gscan2pdf::Page objects
+
+sub indices2pages {
+ my @indices = @_;
+ my @pages;
+ for (@indices) {
+  push @pages, $slist->{data}[$_][2];
+ }
+ return @pages;
+}
+
 # Rotate selected images
 
 sub rotate {
- my ($angle) = @_;
- my @page    = $slist->get_selected_indices;
- my $page    = 0;
+ my ( $angle, $pagelist, $callback ) = @_;
+ my $page = 0;
 
  # guess where rotate has been called from
  my $window = get_parent( $windows, $window );
@@ -8219,21 +8256,20 @@ sub rotate {
  # Update undo/redo buffers
  take_snapshot();
 
- my @pagelist = get_page_index();
- for my $i (@pagelist) {
+ for my $pageobject ( @{$pagelist} ) {
   $page++;
   $slist->rotate(
    $angle,
-   $slist->{data}[$i][2],
+   $pageobject,
    sub {
-    $dialog->destroy unless ( $page < $#pagelist );
-
-    #                    post_process_scan(); FIXME
+    my ($new_page) = @_;
+    $callback->($new_page) if $callback;
+    $dialog->destroy unless ( $page < $#{$pagelist} );
    },
    sub {
     $pbar->set_text(
-     sprintf( $d->get("Rotating page %i of %i"), $page, $#pagelist + 1 ) );
-    $pbar->set_fraction( ( $page - 1 ) / ( $#pagelist + 1 ) );
+     sprintf( $d->get("Rotating page %i of %i"), $page, $#{$pagelist} + 1 ) );
+    $pbar->set_fraction( ( $page - 1 ) / ( $#{$pagelist} + 1 ) );
    },
    sub {
     $dialog->destroy;
@@ -8241,7 +8277,8 @@ sub rotate {
      $Gscan2pdf::_self->{message} );
    },
    sub {
-    display_image( $slist->{data}[$i][2] );
+    my ($new_page) = @_;
+    display_image($new_page);
    },
   );
  }
@@ -8416,7 +8453,8 @@ sub threshold {
        $Gscan2pdf::_self->{message} );
      },
      sub {
-      display_image( $slist->{data}[$i][2] );
+      my ($new_page) = @_;
+      display_image($new_page);
      },
     );
    }
@@ -8496,7 +8534,8 @@ sub negate {
        $Gscan2pdf::_self->{message} );
      },
      sub {
-      display_image( $slist->{data}[$i][2] );
+      my ($new_page) = @_;
+      display_image($new_page);
      },
     );
    }
@@ -8647,7 +8686,8 @@ sub unsharp {
        $Gscan2pdf::_self->{message} );
      },
      sub {
-      display_image( $slist->{data}[$i][2] );
+      my ($new_page) = @_;
+      display_image($new_page);
      },
     );
    }
@@ -8840,7 +8880,8 @@ sub crop {
        $Gscan2pdf::_self->{message} );
      },
      sub {
-      display_image( $slist->{data}[$i][2] );
+      my ($new_page) = @_;
+      display_image($new_page);
      },
     );
    }
@@ -8919,7 +8960,8 @@ sub user_defined_tool {
      $Gscan2pdf::_self->{message} );
    },
    sub {
-    display_image( $slist->{data}[$i][2] );
+    my ($new_page) = @_;
+    display_image($new_page);
    },
   );
  }
@@ -8945,7 +8987,7 @@ sub get_parent {
 # Add $page to the unpaper stack, setting it off if not running.
 
 sub unpaper_page {
- my ( $options, @pages ) = @_;
+ my ( $pages, $options, $callback ) = @_;
  $options = '' if ( !defined($options) );
 
  # guess where unpaper has been called from
@@ -8973,11 +9015,13 @@ sub unpaper_page {
  );
  $dialog->show_all;
 
- for my $i (@pages) {
+ for my $pageobject ( @{$pages} ) {
   $slist->unpaper(
-   $slist->{data}[$i][2],
+   $pageobject,
    $options,
    sub {
+    my ($new_page) = @_;
+    $callback->($new_page) if $callback;
     $page++;
     $dialog->destroy
       unless ( $page < $#{ $slist->{data} } );
@@ -8993,7 +9037,8 @@ sub unpaper_page {
      $Gscan2pdf::_self->{message} );
    },
    sub {
-    display_image( $slist->{data}[$i][2] );
+    my ($new_page) = @_;
+    display_image($new_page);
    },
   );
  }
@@ -9337,7 +9382,8 @@ sub unpaper {
    get_unpaper_options($unpaper_options);
 
    # run unpaper
-   unpaper_page( options2unpaper($unpaper_options), get_page_index() );
+   my @pages = indices2pages( get_page_index() );
+   unpaper_page( \@pages, options2unpaper($unpaper_options) );
 
    $windowu->hide;
   }
@@ -9355,8 +9401,7 @@ sub unpaper {
 # Add $page to the OCR stack, setting it off if not running.
 
 sub ocr_page {
- my @pages = @_;
- push @ocr_stack, @pages;
+ my ($pages) = @_;
 
  # guess where ocr has been called from
  my $parent = get_parent( $windowo, $windows, $window );
@@ -9369,8 +9414,6 @@ sub ocr_page {
  my $pbar = Gtk2::ProgressBar->new;
  $dialog->vbox->add($pbar);
 
- # Flag set if ocr is running
- $running_ocr = FALSE;
  my $cancelled = FALSE;
  my $page      = 0;
  my $npages    = 0;
@@ -9382,244 +9425,121 @@ sub ocr_page {
    $_[0]->destroy;
    local $SIG{HUP} = 'IGNORE';
    $logger->info("Sending HUP signal to PID $pid and its children");
-   killfam 'HUP', ($pid);
+
+   #   killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
    $cancelled = TRUE;
-   undef(@ocr_stack);
   }
  );
  $dialog->show_all;
 
- # Timer will run until callback returns false
- Glib::Timeout->add(
-  100,
-  sub {
+ for my $pageobject ( @{$pages} ) {
+  $page++;
+  $npages++;
+  $pbar->set_text(
+   sprintf( $d->get("Page %i of %i"), $page, $#{$pages} + $npages + 1 ) );
+  $pbar->set_fraction( ( $page - 1 ) / ( $#{$pages} + $npages + 1 ) );
 
-   # To prevent any further pages being processed
-   if ($cancelled) {
-    $running_ocr = FALSE;
-    return FALSE;    # uninstall
-   }
-   elsif (@ocr_stack) {
-    if ( !$running_ocr ) {
-     $running_ocr = TRUE;
-     $page++;
-     $npages++;
-     my $pagenum = shift @ocr_stack;
-     $pbar->set_text(
-      sprintf( $d->get("Page %i of %i"), $page, $#ocr_stack + $npages + 1 ) );
-     $pbar->set_fraction( ( $page - 1 ) / ( $#ocr_stack + $npages + 1 ) );
+  # Temporary filename for output
+  my $txt = File::Temp->new( DIR => $SETTING{session} );
 
-     # Temporary filename for output
-     my $txt = File::Temp->new( DIR => $SETTING{session} );
+  my $cmd;
+  if ( $SETTING{'ocr engine'} eq 'gocr' ) {
+   my $pnm;
+   if ( $pageobject->{filename} !~ /\.pnm$/ ) {
+    my $file = $pageobject->{filename};
 
-     my $cmd;
-     if ( $SETTING{'ocr engine'} eq 'gocr' ) {
-      my $pnm;
-      if ( $slist->{data}[$pagenum][2]{filename} !~ /\.pnm$/ ) {
-       my $file = $slist->{data}[$pagenum][2]{filename};
+    # Temporary filename for new file
+    $pnm = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.pnm' );
 
-       # Temporary filename for new file
-       $pnm = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.pnm' );
-
-       $cmd = "convert $file $pnm; gocr $pnm > $txt.txt; rm $pnm";
-      }
-      else {
-       $pnm = $slist->{data}[$pagenum][2]{filename};
-       $cmd .= "gocr $pnm > $txt.txt;";
-      }
-     }
-     elsif ( $SETTING{'ocr engine'} eq 'tesseract' ) {
-      $slist->tesseract(
-       $slist->{data}[$pagenum][2],
-       $SETTING{'ocr language'},
-       sub {
-        $page++;
-        $dialog->destroy
-          unless ( $page < $#{ $slist->{data} } );
-       },
-       sub {
-        $pbar->set_text(
-         sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
-        $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
-       },
-       sub {
-        $dialog->destroy;
-        show_message_dialog( $main::window, 'error', 'close',
-         $Gscan2pdf::_self->{message} );
-       },
-       sub {
-        create_canvas( $slist->{data}[$pagenum][2] );
-       }
-      );
-     }
-     elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
-      $slist->ocropus(
-       $slist->{data}[$pagenum][2],
-       $SETTING{'ocr language'},
-       sub {
-        $page++;
-        $dialog->destroy
-          unless ( $page < $#{ $slist->{data} } );
-       },
-       sub {
-        $pbar->set_text(
-         sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
-        $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
-       },
-       sub {
-        $dialog->destroy;
-        show_message_dialog( $main::window, 'error', 'close',
-         $Gscan2pdf::_self->{message} );
-       },
-       sub {
-        create_canvas( $slist->{data}[$pagenum][2] );
-       }
-      );
-     }
-     else {    # cuneiform
-      $slist->cuneiform(
-       $slist->{data}[$pagenum][2],
-       $SETTING{'ocr language'},
-       sub {
-        $page++;
-        $dialog->destroy
-          unless ( $page < $#{ $slist->{data} } );
-       },
-       sub {
-        $pbar->set_text(
-         sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
-        $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
-       },
-       sub {
-        $dialog->destroy;
-        show_message_dialog( $main::window, 'error', 'close',
-         $Gscan2pdf::_self->{message} );
-       },
-       sub {
-        create_canvas( $slist->{data}[$pagenum][2] );
-       }
-      );
-     }
-     $logger->info($cmd);
-
-     # Interface to ocr engine
-     $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
-     $logger->info("Forked PID $pid");
-
-     # Update TextBuffer without blocking
-     Glib::IO->add_watch(
-      fileno($read),
-      [ 'in', 'hup' ],
-      sub {
-       my ( $fileno, $condition ) = @_;
-       my $line;
-       if ( $condition & 'in' ) {    # bit field operation. >= would also work
-        sysread $read, $line, 1024;
-       }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-       if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-       {                             # bit field operation. >= would also work
-        close $read;
-        $logger->info('Waiting to reap process');
-        my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-        $logger->info("Reaped PID $pid");
-        $running_ocr = FALSE;
-        if ( -r "$SETTING{session}/error.txt" ) {
-         my $error = Gscan2pdf::slurp("$SETTING{session}/error.txt");
-         if ( $error =~ /Unable to load unicharset file/ ) {
-          show_message_dialog( $windowo, 'error', 'close', $error );
-          return FALSE;                       # uninstall
-         }
-         unlink "$SETTING{session}/error.txt";
-        }
-
-   # Doing this once at the end to avoid firing the row-changed signal too often
-        $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-
-        # Set up the canvas
-        my $canvas_new = Goo::Canvas->new;
-        my $root       = $canvas_new->get_root_item;
-        my $pixbuf     = Gtk2::Gdk::Pixbuf->new_from_file(
-         $slist->{data}[$pagenum][2]{filename} );
-        $canvas_new->set_bounds( 0, 0, $pixbuf->get_width,
-         $pixbuf->get_height );
-
-        # Attach the text to the canvas
-        my $output = Gscan2pdf::slurp("$txt.txt");
-        if ( $output =~ /<body>([\s\S]*)<\/body>/ ) {
-         require HTML::TokeParser;
-         require HTML::Entities;
-         require utf8;
-         my $p = HTML::TokeParser->new( \$output );
-         my ( $x1, $y1, $x2, $y2, $text );
-         while ( my $token = $p->get_token ) {
-          if ( $token->[0] eq 'S' ) {
-           if ( $token->[1] eq 'span'
-            and defined( $token->[2]{class} )
-            and $token->[2]{class} eq 'ocr_line'
-            and defined( $token->[2]{title} )
-            and $token->[2]{title} =~ /bbox (\d+) (\d+) (\d+) (\d+)/ )
-           {
-            ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
-           }
-           else {
-            undef $x1;
-            undef $text;
-           }
-          }
-          if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/ ) {
-           $text = HTML::Entities::decode_entities( $token->[1] );
-           utf8::encode($text);    # UTF-8 in perl sucks!
-           chomp($text);
-          }
-          if ( $token->[0] eq 'E' ) {
-           undef $x1;
-           undef $text;
-          }
-          boxed_text( $canvas_new, $text, $x1, $y1, $x2, $y2, abs( $y2 - $y1 ) )
-            if ( defined($x1) and defined($text) );
-         }
-        }
-        else {
-         boxed_text( $canvas_new, $output, 0, 0, $pixbuf->get_width,
-          $pixbuf->get_height, -1 );
-
-        }
-        $slist->{data}[$pagenum][2]{buffer} = $canvas_new;
-
-        $slist->{data}[$pagenum][2]{ocr_flag} = 1;    #FlagOCR
-        $slist->{data}[$pagenum][2]{ocr_time} =
-          Gscan2pdf::timestamp();    #remember when we ran OCR on this page
-        $slist->get_model->signal_handler_unblock(
-         $slist->{row_changed_signal} );
-
-        # Update the buffer if current
-        my @page = $slist->get_selected_indices;
-        if ( $page[0] == $pagenum ) {
-         $canvas = $canvas_new;
-         $scwin_buffer->add($canvas);
-         $canvas->set_scale( $view->get_zoom );
-         $canvas->show;
-        }
-        return FALSE;                # uninstall
-       }
-       return TRUE;                  # continue without uninstalling
-      }
-     );
-    }
-    return TRUE;                     # continue without uninstalling
-   }
-   elsif ( !$running_ocr ) {
-    $dialog->destroy;
-    return FALSE;                    # uninstall
+    $cmd = "convert $file $pnm; gocr $pnm > $txt.txt; rm $pnm";
    }
    else {
-    return TRUE;                     # continue without uninstalling
+    $pnm = $pageobject->{filename};
+    $cmd .= "gocr $pnm > $txt.txt;";
    }
   }
- );
+  elsif ( $SETTING{'ocr engine'} eq 'tesseract' ) {
+   $slist->tesseract(
+    $pageobject,
+    $SETTING{'ocr language'},
+    sub {
+     $page++;
+     $dialog->destroy
+       unless ( $page < $#{ $slist->{data} } );
+    },
+    sub {
+     $pbar->set_text(
+      sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
+     $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
+    },
+    sub {
+     $dialog->destroy;
+     show_message_dialog( $main::window, 'error', 'close',
+      $Gscan2pdf::_self->{message} );
+    },
+    sub {
+     my ($new_page) = @_;
+     my @page = $slist->get_selected_indices;
+     create_canvas($new_page)
+       if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
+    }
+   );
+  }
+  elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
+   $slist->ocropus(
+    $pageobject,
+    $SETTING{'ocr language'},
+    sub {
+     $page++;
+     $dialog->destroy
+       unless ( $page < $#{ $slist->{data} } );
+    },
+    sub {
+     $pbar->set_text(
+      sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
+     $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
+    },
+    sub {
+     $dialog->destroy;
+     show_message_dialog( $main::window, 'error', 'close',
+      $Gscan2pdf::_self->{message} );
+    },
+    sub {
+     my ($new_page) = @_;
+     my @page = $slist->get_selected_indices;
+     create_canvas($new_page)
+       if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
+    }
+   );
+  }
+  else {    # cuneiform
+   $slist->cuneiform(
+    $pageobject,
+    $SETTING{'ocr language'},
+    sub {
+     $page++;
+     $dialog->destroy
+       unless ( $page < $#{ $slist->{data} } );
+    },
+    sub {
+     $pbar->set_text(
+      sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
+     $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
+    },
+    sub {
+     $dialog->destroy;
+     show_message_dialog( $main::window, 'error', 'close',
+      $Gscan2pdf::_self->{message} );
+    },
+    sub {
+     my ($new_page) = @_;
+     my @page = $slist->get_selected_indices;
+     create_canvas($new_page)
+       if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
+    }
+   );
+  }
+ }
  return;
 }
 
@@ -9775,13 +9695,13 @@ sub OCR {
      if ( $SETTING{'ocr engine'} eq 'cuneiform' );
 
    # fill $pagelist with filenames depending on which radiobutton is active
-   my @pagelist = get_page_index();
-   if ( !@pagelist ) {
+   my @pages = indices2pages( get_page_index() );
+   if ( not @pages ) {
     show_message_dialog( $windowo, 'error', 'close',
      $d->get('No page selected') );
     return;
    }
-   ocr_page(@pagelist);
+   ocr_page( \@pages );
    $windowo->hide;
   }
  );

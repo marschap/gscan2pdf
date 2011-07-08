@@ -867,6 +867,7 @@ sub slurp {
 sub _thread_rotate {
  my ( $self, $angle, $page ) = @_;
  my $filename = $page->{filename};
+ $logger->info("Rotating $filename by $angle degrees");
 
  # Rotate with imagemagick
  my $image = Image::Magick->new;

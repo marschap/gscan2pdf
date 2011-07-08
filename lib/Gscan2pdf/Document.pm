@@ -143,7 +143,7 @@ sub get_resolution {
  return $resolution;
 }
 
-# Take new scan and display it
+# Add a new page to the document
 
 sub add_page {
  my ( $self, $page, $pagenum, $success_cb ) = @_;
@@ -375,8 +375,7 @@ sub rotate {
     $error_callback->();
     return;
    }
-   $self->update_page($display_callback);
-   $finished_callback->();
+   $finished_callback->( $self->update_page($display_callback) );
   },
   sub {
    $self->update_page($display_callback);
@@ -388,6 +387,7 @@ sub rotate {
 
 sub update_page {
  my ( $self, $display_callback ) = @_;
+ my (@out);
  while ( $Gscan2pdf::_self->{data_queue}->pending ) {
   my $data = $Gscan2pdf::_self->{data_queue}->dequeue;
 
@@ -408,6 +408,7 @@ sub update_page {
    $self->{data}[$i][1] =
      get_pixbuf( $new->{filename}, $main::heightt, $main::widtht );
    $self->{data}[$i][2] = $new;
+   push @out, $new;
 
    if ( defined $data->{new2} ) {
     $new = $data->{new2}->thaw;
@@ -416,17 +417,18 @@ sub update_page {
      $self->{data}[$i][0] + 1,
      get_pixbuf( $new->{filename}, $main::heightt, $main::widtht ), $new
       ];
+    push @out, $new;
    }
 
    $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
      if defined( $self->{row_changed_signal} );
    my @selected = $self->get_selected_indices;
    $self->select(@selected) if ( $i == $selected[0] );
-   $display_callback->() if ($display_callback);
+   $display_callback->( $self->{data}[$i][2] ) if ($display_callback);
   }
 
  }
- return;
+ return \@out;
 }
 
 sub save_image {
@@ -754,8 +756,7 @@ sub unpaper {
     $error_callback->();
     return;
    }
-   $self->update_page($display_callback);
-   $finished_callback->();
+   $finished_callback->( $self->update_page($display_callback) );
   },
   sub {
    $self->update_page($display_callback);
