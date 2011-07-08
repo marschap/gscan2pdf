@@ -97,6 +97,10 @@ sub _thread_main {
    _thread_get_file_info( $self, $request->{path} );
   }
 
+  elsif ( $request->{action} eq 'gocr' ) {
+   _thread_gocr( $self, $request->{page} );
+  }
+
   elsif ( $request->{action} eq 'import-file' ) {
    _thread_import_file( $self, $request->{info}, $request->{first},
     $request->{last} );
@@ -1151,6 +1155,31 @@ sub _thread_cuneiform {
  $new->{ocr_flag} = 1;        #FlagOCR
  $new->{ocr_time} =
    Gscan2pdf::timestamp();    #remember when we ran OCR on this page
+ my %data = ( old => $page, new => $new );
+ $self->{data_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_gocr {
+ my ( $self, $page ) = @_;
+ my $pnm;
+ if ( $page->{filename} !~ /\.pnm$/ ) {
+
+  # Temporary filename for new file
+  $pnm = File::Temp->new( SUFFIX => '.pnm' );
+  my $image = Image::Magick->new;
+  $image->Read( $page->{filename} );
+  $image->Write( filename => $pnm );
+ }
+ else {
+  $pnm = $page->{filename};
+ }
+
+ my $new = $page->clone;
+ $new->{hocr}     = `gocr $pnm`;
+ $new->{ocr_flag} = 1;             #FlagOCR
+ $new->{ocr_time} =
+   Gscan2pdf::timestamp();         #remember when we ran OCR on this page
  my %data = ( old => $page, new => $new );
  $self->{data_queue}->enqueue( \%data );
  return;

@@ -9439,24 +9439,31 @@ sub ocr_page {
    sprintf( $d->get("Page %i of %i"), $page, $#{$pages} + $npages + 1 ) );
   $pbar->set_fraction( ( $page - 1 ) / ( $#{$pages} + $npages + 1 ) );
 
-  # Temporary filename for output
-  my $txt = File::Temp->new( DIR => $SETTING{session} );
-
-  my $cmd;
   if ( $SETTING{'ocr engine'} eq 'gocr' ) {
-   my $pnm;
-   if ( $pageobject->{filename} !~ /\.pnm$/ ) {
-    my $file = $pageobject->{filename};
-
-    # Temporary filename for new file
-    $pnm = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.pnm' );
-
-    $cmd = "convert $file $pnm; gocr $pnm > $txt.txt; rm $pnm";
-   }
-   else {
-    $pnm = $pageobject->{filename};
-    $cmd .= "gocr $pnm > $txt.txt;";
-   }
+   $slist->gocr(
+    $pageobject,
+    sub {
+     $page++;
+     $dialog->destroy
+       unless ( $page < $#{ $slist->{data} } );
+    },
+    sub {
+     $pbar->set_text(
+      sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
+     $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
+    },
+    sub {
+     $dialog->destroy;
+     show_message_dialog( $main::window, 'error', 'close',
+      $Gscan2pdf::_self->{message} );
+    },
+    sub {
+     my ($new_page) = @_;
+     my @page = $slist->get_selected_indices;
+     create_canvas($new_page)
+       if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
+    }
+   );
   }
   elsif ( $SETTING{'ocr engine'} eq 'tesseract' ) {
    $slist->tesseract(
