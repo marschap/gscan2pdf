@@ -32,11 +32,12 @@ Gscan2pdf->setup($d, $logger);
 system('convert rose: test.tif');
 
 my $slist = Gscan2pdf::Document->new;
-$slist->get_file_info( 'test.tif', sub {
- $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {
+$slist->get_file_info( 'test.tif', sub {}, sub {}, sub {
+ $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {}, sub {}, sub {
   system("cp $slist->{data}[0][2]{filename} test2.tif");
   Gtk2->main_quit;
-}, sub {}, sub {} ) }, sub {}, sub{} );
+ })
+});
 Gtk2->main;
 
 is( -s 'test.tif', -s 'test2.tif', 'TIFF imported correctly' );

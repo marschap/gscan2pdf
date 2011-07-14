@@ -54,46 +54,67 @@ sub new {
 }
 
 sub get_file_info {
- my ( $self, $path, $finished_callback, $not_finished_callback,
-  $error_callback ) = @_;
+ my ( $self, $path, $started_callback, $running_callback, $finished_callback,
+  $error_callback )
+   = @_;
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'get-file-info', { path => $path } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
-    $error_callback->();
+    $error_callback->() if ($error_callback);
     return;
    }
-   $finished_callback->();
+   $finished_callback->() if ($finished_callback);
   },
   sub {
-   $not_finished_callback->();
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'get_file_info',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub import_file {
- my ( $self, $info, $first, $last, $finished_callback, $not_finished_callback,
-  $error_callback )
+ my ( $self, $info, $first, $last, $started_callback, $running_callback,
+  $finished_callback, $error_callback )
    = @_;
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'import-file',
   { info => $info, first => $first, last => $last } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
-    $error_callback->();
+    $error_callback->() if ($error_callback);
     return;
    }
    $self->fetch_file;
-   $finished_callback->();
+   $finished_callback->() if ($finished_callback);
   },
   sub {
    $self->fetch_file;
-   $not_finished_callback->();
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'get_file_info',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
+   $running_callback->() if ($running_callback);
   }
  );
  return;
@@ -261,14 +282,17 @@ sub get_pixbuf {
 }
 
 sub save_pdf {
- my ( $self, $path, $list_of_pages, $metadata, $options, $finished_callback,
-  $not_finished_callback, $error_callback )
-   = @_;
+ my (
+  $self,             $path,              $list_of_pages,
+  $metadata,         $options,           $started_callback,
+  $running_callback, $finished_callback, $error_callback
+ ) = @_;
 
  for my $i ( 0 .. $#{$list_of_pages} ) {
   $list_of_pages->[$i] =
     $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
  }
+ my $started_flag;
  my $sentinel = Gscan2pdf::_enqueue_request(
   'save-pdf',
   {
@@ -281,6 +305,7 @@ sub save_pdf {
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -288,21 +313,30 @@ sub save_pdf {
    $finished_callback->();
   },
   sub {
-   $not_finished_callback->();
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'save PDF',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub save_djvu {
- my ( $self, $path, $list_of_pages, $finished_callback, $not_finished_callback,
-  $error_callback )
+ my ( $self, $path, $list_of_pages, $started_callback, $running_callback,
+  $finished_callback, $error_callback )
    = @_;
 
  for my $i ( 0 .. $#{$list_of_pages} ) {
   $list_of_pages->[$i] =
     $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
  }
+ my $started_flag;
  my $sentinel = Gscan2pdf::_enqueue_request(
   'save-djvu',
   {
@@ -313,6 +347,7 @@ sub save_djvu {
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -320,21 +355,32 @@ sub save_djvu {
    $finished_callback->();
   },
   sub {
-   $not_finished_callback->();
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'save DJVU',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub save_tiff {
- my ( $self, $path, $list_of_pages, $options, $ps, $finished_callback,
-  $not_finished_callback, $error_callback )
-   = @_;
+ my (
+  $self,             $path,              $list_of_pages,
+  $options,          $ps,                $started_callback,
+  $running_callback, $finished_callback, $error_callback
+ ) = @_;
 
  for my $i ( 0 .. $#{$list_of_pages} ) {
   $list_of_pages->[$i] =
     $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
  }
+ my $started_flag;
  my $sentinel = Gscan2pdf::_enqueue_request(
   'save-tiff',
   {
@@ -347,6 +393,7 @@ sub save_tiff {
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -354,23 +401,33 @@ sub save_tiff {
    $finished_callback->();
   },
   sub {
-   $not_finished_callback->();
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'save TIFF',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub rotate {
- my ( $self, $angle, $page, $finished_callback, $not_finished_callback,
-  $error_callback, $display_callback )
+ my ( $self, $angle, $page, $started_callback, $running_callback,
+  $finished_callback, $error_callback, $display_callback )
    = @_;
 
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'rotate',
   { angle => $angle, page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -378,8 +435,16 @@ sub rotate {
    $finished_callback->( $self->update_page($display_callback) );
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'rotate',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page($display_callback);
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
@@ -432,14 +497,15 @@ sub update_page {
 }
 
 sub save_image {
- my ( $self, $path, $list_of_pages, $finished_callback, $not_finished_callback,
-  $error_callback )
+ my ( $self, $path, $list_of_pages, $started_callback, $running_callback,
+  $finished_callback, $error_callback )
    = @_;
 
  for my $i ( 0 .. $#{$list_of_pages} ) {
   $list_of_pages->[$i] =
     $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
  }
+ my $started_flag;
  my $sentinel = Gscan2pdf::_enqueue_request(
   'save-image',
   {
@@ -450,6 +516,7 @@ sub save_image {
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -457,21 +524,30 @@ sub save_image {
    $finished_callback->();
   },
   sub {
-   $not_finished_callback->();
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'save image',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub save_text {
- my ( $self, $path, $list_of_pages, $finished_callback, $not_finished_callback,
-  $error_callback )
+ my ( $self, $path, $list_of_pages, $started_callback, $running_callback,
+  $finished_callback, $error_callback )
    = @_;
 
  for my $i ( 0 .. $#{$list_of_pages} ) {
   $list_of_pages->[$i] =
     $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
  }
+ my $started_flag;
  my $sentinel = Gscan2pdf::_enqueue_request(
   'save-text',
   {
@@ -482,6 +558,7 @@ sub save_text {
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -489,21 +566,32 @@ sub save_text {
    $finished_callback->();
   },
   sub {
-   $not_finished_callback->();
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'save text',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub analyse {
- my ( $self, $page, $finished_callback, $not_finished_callback,
-  $error_callback ) = @_;
+ my ( $self, $page, $started_callback, $running_callback, $finished_callback,
+  $error_callback )
+   = @_;
 
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'analyse', { page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -512,24 +600,34 @@ sub analyse {
    $finished_callback->();
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'analyze',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page();
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub threshold {
- my ( $self, $threshold, $page, $finished_callback, $not_finished_callback,
-  $error_callback, $display_callback )
+ my ( $self, $threshold, $page, $started_callback, $running_callback,
+  $finished_callback, $error_callback, $display_callback )
    = @_;
 
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'threshold',
   { threshold => $threshold, page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -538,23 +636,33 @@ sub threshold {
    $finished_callback->();
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'threshold',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page($display_callback);
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub negate {
- my ( $self, $page, $finished_callback, $not_finished_callback, $error_callback,
-  $display_callback )
+ my ( $self, $page, $started_callback, $running_callback, $finished_callback,
+  $error_callback, $display_callback )
    = @_;
 
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'negate', { page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -563,8 +671,16 @@ sub negate {
    $finished_callback->();
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'negate',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page($display_callback);
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
@@ -572,12 +688,13 @@ sub negate {
 
 sub unsharp {
  my (
-  $self,              $page,                  $radius,
-  $sigma,             $amount,                $threshold,
-  $finished_callback, $not_finished_callback, $error_callback,
-  $display_callback
+  $self,             $page,             $radius,
+  $sigma,            $amount,           $threshold,
+  $started_callback, $running_callback, $finished_callback,
+  $error_callback,   $display_callback
  ) = @_;
 
+ my $started_flag;
  my $sentinel = Gscan2pdf::_enqueue_request(
   'unsharp',
   {
@@ -591,6 +708,7 @@ sub unsharp {
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -599,18 +717,27 @@ sub unsharp {
    $finished_callback->();
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'unsharp',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page($display_callback);
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub crop {
- my ( $self, $page, $x, $y, $w, $h, $finished_callback, $not_finished_callback,
-  $error_callback, $display_callback )
+ my ( $self, $page, $x, $y, $w, $h, $started_callback, $running_callback,
+  $finished_callback, $error_callback, $display_callback )
    = @_;
 
+ my $started_flag;
  my $sentinel = Gscan2pdf::_enqueue_request(
   'crop',
   {
@@ -624,6 +751,7 @@ sub crop {
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -632,22 +760,33 @@ sub crop {
    $finished_callback->();
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'crop',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page($display_callback);
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub to_tiff {
- my ( $self, $page, $finished_callback, $not_finished_callback,
-  $error_callback ) = @_;
+ my ( $self, $page, $started_callback, $running_callback, $finished_callback,
+  $error_callback )
+   = @_;
 
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'to-tiff', { page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -656,24 +795,34 @@ sub to_tiff {
    $finished_callback->();
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'compress',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page();
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub tesseract {
- my ( $self, $page, $language, $finished_callback, $not_finished_callback,
-  $error_callback, $display_callback )
+ my ( $self, $page, $language, $started_callback, $running_callback,
+  $finished_callback, $error_callback, $display_callback )
    = @_;
 
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'tesseract',
   { page => $page->freeze, language => $language } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -682,24 +831,34 @@ sub tesseract {
    $finished_callback->();
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'tesseract',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page($display_callback);
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub ocropus {
- my ( $self, $page, $language, $finished_callback, $not_finished_callback,
-  $error_callback, $display_callback )
+ my ( $self, $page, $language, $started_callback, $running_callback,
+  $finished_callback, $error_callback, $display_callback )
    = @_;
 
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'ocropus',
   { page => $page->freeze, language => $language } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -708,24 +867,34 @@ sub ocropus {
    $finished_callback->();
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'ocropus',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page($display_callback);
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub cuneiform {
- my ( $self, $page, $language, $finished_callback, $not_finished_callback,
-  $error_callback, $display_callback )
+ my ( $self, $page, $language, $started_callback, $running_callback,
+  $finished_callback, $error_callback, $display_callback )
    = @_;
 
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'cuneiform',
   { page => $page->freeze, language => $language } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -734,23 +903,33 @@ sub cuneiform {
    $finished_callback->();
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'cuneiform',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page($display_callback);
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub gocr {
- my ( $self, $page, $finished_callback, $not_finished_callback, $error_callback,
-  $display_callback )
+ my ( $self, $page, $started_callback, $running_callback, $finished_callback,
+  $error_callback, $display_callback )
    = @_;
 
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'gocr', { page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -759,24 +938,34 @@ sub gocr {
    $finished_callback->();
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'gocr',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page($display_callback);
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub unpaper {
- my ( $self, $page, $options, $finished_callback, $not_finished_callback,
-  $error_callback, $display_callback )
+ my ( $self, $page, $options, $started_callback, $running_callback,
+  $finished_callback, $error_callback, $display_callback )
    = @_;
 
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'unpaper',
   { page => $page->freeze, options => $options } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -784,24 +973,34 @@ sub unpaper {
    $finished_callback->( $self->update_page($display_callback) );
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'clean up',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page($display_callback);
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;
 }
 
 sub user_defined {
- my ( $self, $page, $cmd, $finished_callback, $not_finished_callback,
-  $error_callback, $display_callback )
+ my ( $self, $page, $cmd, $started_callback, $running_callback,
+  $finished_callback, $error_callback, $display_callback )
    = @_;
 
+ my $started_flag;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'user-defined',
   { page => $page->freeze, command => $cmd } );
  Gscan2pdf::_when_ready(
   $sentinel,
   sub {
+   $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
     return;
@@ -810,8 +1009,16 @@ sub user_defined {
    $finished_callback->();
   },
   sub {
+   unless ($started_flag) {
+    $started_callback->(
+     1, 'user-defined',
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+    $started_flag = 1;
+   }
    $self->update_page($display_callback);
-   $not_finished_callback->();
+   $running_callback->() if ($running_callback);
   }
  );
  return;

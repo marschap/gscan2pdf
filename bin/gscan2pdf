@@ -443,7 +443,7 @@ $SETTING{version} = $version;
 Gscan2pdf->setup( $d, $logger );
 
 # Initialise SANE frontend
-Gscan2pdf::Frontend::Sane->setup( $prog_name, $d, $logger, \%SETTING );
+Gscan2pdf::Frontend::Sane->setup( $prog_name, $d, $logger );
 
 # Create icons for rotate buttons
 my $IconFactory = undef;
@@ -1555,6 +1555,25 @@ unless ( defined $SETTING{session} ) {
 
 $window->show_all;
 
+# Progress bars below window
+my $phbox = Gtk2::HBox->new;
+$vbox->pack_end( $phbox, FALSE, FALSE, 0 );
+$phbox->show;
+my $shbox = Gtk2::HBox->new;
+$phbox->add($shbox);
+my $spbar = Gtk2::ProgressBar->new;
+$shbox->add($spbar);
+my $scbutton = Gtk2::Button->new;
+$scbutton->set_image( Gtk2::Image->new_from_stock( 'gtk-cancel', 'button' ) );
+$shbox->pack_end( $scbutton, FALSE, FALSE, 0 );
+my $thbox = Gtk2::HBox->new;
+$phbox->add($thbox);
+my $tpbar = Gtk2::ProgressBar->new;
+$thbox->add($tpbar);
+my $tcbutton = Gtk2::Button->new;
+$tcbutton->set_image( Gtk2::Image->new_from_stock( 'gtk-cancel', 'button' ) );
+$thbox->pack_end( $tcbutton, FALSE, FALSE, 0 );
+
 ### Subroutines
 
 # Create the menu bar, initialize its menus, and return the menu bar.
@@ -2037,46 +2056,9 @@ sub open_dialog {
   # Update cwd
   $SETTING{'cwd'} = dirname($filename);
 
-  my $dialog = Gtk2::Dialog->new( $d->get('Opening') . "...",
-   $window, 'modal', 'gtk-cancel' => 'cancel' );
-
-  # Set up ProgressBar
-  my $pbar = Gtk2::ProgressBar->new;
-  $dialog->vbox->add($pbar);
-
-  # Ensure that the dialog box is destroyed when the user responds.
-  $dialog->signal_connect(
-   response => sub {
-    $_[0]->destroy;
-    kill_subs();
-   }
-  );
-  $dialog->show_all;
-
   open_session($filename);
 
-  # Install a handler for child processes
-  #  $SIG{CHLD} = \&sig_child;
-
-  #  my ($child, $parent) = Gscan2pdf::open_socketpair();
-  #  my $pid = start_process(sub {
-  #  });
-
-#  $helperTag{$pid} = Glib::IO->add_watch($child->fileno(), ['in', 'hup'], sub {
-#   my ($fileno, $condition) = @_;
-
-  #   my $line;
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-#   if (($condition & 'hup') and (not defined($line) or $line eq '')) { # bit field operation. >= would also work
-  $dialog->destroy;
   update_uimanager();
-
-  #    return FALSE;  # uninstall
-  #   }
-  #   return TRUE;  # continue without uninstalling
-  #  });
  }
  else {
   $file_chooser->destroy;
@@ -2129,7 +2111,8 @@ sub open_session {
   my $page = Gscan2pdf::Page->new(
    filename   => $filename,
    buffer     => $canvas,
-   resolution => $session{$pagenum}{resolution}
+   resolution => $session{$pagenum}{resolution},
+   dir        => $SETTING{session},
   );
   push @{ $slist->{data} }, [ $pagenum, $page->{thumb}, $page ];
  }
@@ -2168,34 +2151,37 @@ sub import_dialog {
   my @filename = $file_chooser->get_filenames;
   $file_chooser->destroy;
 
-  # Set up ProgressBar
-  my $i      = 0;
-  my $dialog = Gtk2::Dialog->new( $d->get('Importing image') . "...",
-   $window, 'modal', 'gtk-cancel' => 'cancel' );
-  my $pbar = Gtk2::ProgressBar->new;
-  $pbar->set_pulse_step(.1);
-  $pbar->set_text( $d->get('Importing image') );
-  $dialog->vbox->add($pbar);
-
-  # Ensure that the dialog box is destroyed when the user responds.
-  $dialog->signal_connect(
-   response => sub {
-    $_[0]->destroy;    # FIXME: cancel the import process here too
-   }
-  );
-  $dialog->show_all;
-
   # Update cwd
   $SETTING{'cwd'} = dirname( $filename[0] );
 
   for (@filename) {
+   my $signal;
    $slist->get_file_info(
     $_,
     sub {
-     $dialog->destroy;
+     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     $tpbar->set_text(
+      sprintf(
+       $d->get("Process %i of %i (%s)"),
+       $completed + 1,
+       $total, $process
+      )
+     );
+     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+     $thbox->show_all;
+     $signal = $tcbutton->signal_connect(
+      clicked => sub {
+       local $SIG{HUP} = 'IGNORE';
+       $logger->info("Sending HUP signal to PID $pid and its children");
+
+       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+      }
+     );
+    },
+    undef,
+    sub {
      my $info = $Gscan2pdf::_self->{data_queue}->dequeue;
      if ( $info->{pages} > 1 ) {
-      $dialog->hide;
       my ( $windowq, $vbox ) =
         create_window( $window, $d->get('Pages to extract'), TRUE );
       my $hbox = Gtk2::HBox->new;
@@ -2224,20 +2210,40 @@ sub import_dialog {
       $obutton->signal_connect(
        clicked => sub {
         $windowq->destroy;
+        my $signal;
         $slist->import_file(
          $info,
          $spinbuttonf->get_value,
          $spinbuttonl->get_value,
          sub {
-          update_uimanager();
-          $dialog->destroy;
+          my ( $thread, $process, $completed, $total, $pid ) = @_;
+          $tpbar->set_text(
+           sprintf(
+            $d->get("Process %i of %i (%s)"),
+            $completed + 1,
+            $total, $process
+           )
+          );
+          $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+          $thbox->show_all;
+          $signal = $tcbutton->signal_connect(
+           clicked => sub {
+            local $SIG{HUP} = 'IGNORE';
+            $logger->info("Sending HUP signal to PID $pid and its children");
+
+        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+           }
+          );
          },
+         undef,
          sub {
-          $pbar->pulse;
+          my ($new_page) = @_;
+          $thbox->hide_all;
+          $tcbutton->signal_handler_disconnect($signal);
+          update_uimanager();
          },
          sub { error_opening_image() }
         );
-        $dialog->show;
        }
       );
 
@@ -2253,21 +2259,39 @@ sub import_dialog {
       $windowq->show_all;
      }
      else {
+      my $signal;
       $slist->import_file(
        $info, 1, 1,
        sub {
-        update_uimanager();
-        $dialog->destroy;
+        my ( $thread, $process, $completed, $total, $pid ) = @_;
+        $tpbar->set_text(
+         sprintf(
+          $d->get("Process %i of %i (%s)"),
+          $completed + 1,
+          $total, $process
+         )
+        );
+        $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+        $thbox->show_all;
+        $signal = $tcbutton->signal_connect(
+         clicked => sub {
+          local $SIG{HUP} = 'IGNORE';
+          $logger->info("Sending HUP signal to PID $pid and its children");
+
+        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+         }
+        );
        },
+       undef,
        sub {
-        $pbar->pulse;
+        my ($new_page) = @_;
+        $thbox->hide_all;
+        $tcbutton->signal_handler_disconnect($signal);
+        update_uimanager();
        },
        sub { error_opening_image() }
       );
      }
-    },
-    sub {
-     $pbar->pulse;
     },
     sub { error_opening_image() },
    );
@@ -2670,30 +2694,46 @@ sub save_PDF {
      quality          => $SETTING{quality},
     );
 
-    my $dialog = Gtk2::Dialog->new( $main::d->get('Saving PDF') . "...",
-     $main::window, 'modal', 'gtk-cancel' => 'cancel' );
-
-    # Set up ProgressBar
-    my $pbar = Gtk2::ProgressBar->new;
-    $dialog->vbox->add($pbar);
-
-    # Ensure that the dialog box is destroyed when the user responds.
-    $dialog->signal_connect(
-     response => sub {
-      $_[0]->destroy;
-     }
-    );
-    $dialog->show_all;
-
     # Create the PDF
     $logger->debug("Started saving $filename");
+    my $signal;
     $slist->save_pdf(
      $filename,
      \@list_of_pages,
      get_pdf_metadata(),
      \%options,
      sub {
-      $dialog->destroy;
+      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      $tpbar->set_text(
+       sprintf(
+        $d->get("Process %i of %i (%s)"),
+        $completed + 1,
+        $total, $process
+       )
+      );
+      $tpbar->set_fraction( $completed / $total );
+      $thbox->show_all;
+      $signal = $tcbutton->signal_connect(
+       clicked => sub {
+        local $SIG{HUP} = 'IGNORE';
+        $logger->info("Sending HUP signal to PID $pid and its children");
+
+        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+       }
+      );
+     },
+     sub {
+      my ( $thread, $process, $completed, $total ) = @_;
+      $tpbar->set_fraction(
+       ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
+        if defined $Gscan2pdf::_self->{progress};
+      $tpbar->set_text( $Gscan2pdf::_self->{message} )
+        if defined $Gscan2pdf::_self->{message};
+     },
+     sub {
+      my ($new_page) = @_;
+      $thbox->hide_all;
+      $tcbutton->signal_handler_disconnect($signal);
       mark_pages(@pagelist);
 
 # create email if required
@@ -2705,13 +2745,6 @@ sub save_PDF {
       $logger->debug("Finished saving $filename");
      },
      sub {
-      $pbar->set_fraction( $Gscan2pdf::_self->{progress} )
-        if defined $Gscan2pdf::_self->{progress};
-      $pbar->set_text( $Gscan2pdf::_self->{message} )
-        if defined $Gscan2pdf::_self->{message};
-     },
-     sub {
-      $dialog->destroy;
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      }
@@ -3097,21 +3130,6 @@ sub save_dialog {
        # Update cwd
        $SETTING{'cwd'} = dirname($filename);
 
-       my $dialog = Gtk2::Dialog->new( $d->get('Saving text') . "...",
-        $window, 'modal', 'gtk-cancel' => 'cancel' );
-
-       # Set up ProgressBar
-       my $pbar = Gtk2::ProgressBar->new;
-       $dialog->vbox->add($pbar);
-
-       # Ensure that the dialog box is destroyed when the user responds.
-       $dialog->signal_connect(
-        response => sub {
-         $_[0]->destroy;
-        }
-       );
-       $dialog->show_all;
-
        # Compile list of pages
        my @list_of_pages;
        my @pagelist = get_page_index();
@@ -3119,22 +3137,46 @@ sub save_dialog {
         push @list_of_pages, $slist->{data}[$_][2];
        }
 
+       my $signal;
        $slist->save_text(
         $filename,
         \@list_of_pages,
         sub {
-         $dialog->destroy;
+         my ( $thread, $process, $completed, $total, $pid ) = @_;
+         $tpbar->set_text(
+          sprintf(
+           $d->get("Process %i of %i (%s)"),
+           $completed + 1,
+           $total, $process
+          )
+         );
+         $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+         $thbox->show_all;
+         $signal = $tcbutton->signal_connect(
+          clicked => sub {
+           local $SIG{HUP} = 'IGNORE';
+           $logger->info("Sending HUP signal to PID $pid and its children");
+
+        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+          }
+         );
+        },
+        sub {
+         my ( $thread, $process, $completed, $total ) = @_;
+         $tpbar->set_fraction(
+          ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
+           if defined $Gscan2pdf::_self->{progress};
+         $tpbar->set_text( $Gscan2pdf::_self->{message} )
+           if defined $Gscan2pdf::_self->{message};
+        },
+        sub {
+         my ($new_page) = @_;
+         $thbox->hide_all;
+         $tcbutton->signal_handler_disconnect($signal);
          mark_pages(@pagelist);
          $logger->debug("Finished saving $filename");
         },
         sub {
-         $pbar->set_fraction( $Gscan2pdf::_self->{progress} )
-           if defined $Gscan2pdf::_self->{progress};
-         $pbar->set_text( $Gscan2pdf::_self->{message} )
-           if defined $Gscan2pdf::_self->{message};
-        },
-        sub {
-         $dialog->destroy;
          show_message_dialog( $main::window, 'error', 'close',
           $Gscan2pdf::_self->{message} );
         }
@@ -3360,39 +3402,48 @@ sub save_image {
    return if ( file_exists( $file_chooser, $filename ) );
   }
 
-  my $dialog = Gtk2::Dialog->new( $d->get('Saving image') . "...",
-   $windowi, 'modal', 'gtk-cancel' => 'cancel' );
-
-  # Set up ProgressBar
-  my $pbar = Gtk2::ProgressBar->new;
-  $dialog->vbox->add($pbar);
-
-  # Ensure that the dialog box is destroyed when the user responds.
-  $dialog->signal_connect(
-   response => sub {
-    $_[0]->destroy;
-   }
-  );
-  $dialog->show_all;
-
   # Create the image
   $logger->debug("Started saving $filename");
+  my $signal;
   $slist->save_image(
    $filename,
    \@list_of_pages,
    sub {
-    $dialog->destroy;
+    my ( $thread, $process, $completed, $total, $pid ) = @_;
+    $tpbar->set_text(
+     sprintf(
+      $d->get("Process %i of %i (%s)"),
+      $completed + 1,
+      $total, $process
+     )
+    );
+    $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+    $thbox->show_all;
+    $signal = $tcbutton->signal_connect(
+     clicked => sub {
+      local $SIG{HUP} = 'IGNORE';
+      $logger->info("Sending HUP signal to PID $pid and its children");
+
+      # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+     }
+    );
+   },
+   sub {
+    my ( $thread, $process, $completed, $total ) = @_;
+    $tpbar->set_fraction(
+     ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
+      if defined $Gscan2pdf::_self->{progress};
+    $tpbar->set_text( $Gscan2pdf::_self->{message} )
+      if defined $Gscan2pdf::_self->{message};
+   },
+   sub {
+    my ($new_page) = @_;
+    $thbox->hide_all;
+    $tcbutton->signal_handler_disconnect($signal);
     mark_pages(@pagelist);
     $logger->debug("Finished saving $filename");
    },
    sub {
-    $pbar->set_fraction( $Gscan2pdf::_self->{progress} )
-      if defined $Gscan2pdf::_self->{progress};
-    $pbar->set_text( $Gscan2pdf::_self->{message} )
-      if defined $Gscan2pdf::_self->{message};
-   },
-   sub {
-    $dialog->destroy;
     show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    }
@@ -3407,21 +3458,6 @@ sub save_image {
 sub save_TIFF {
  my ( $filename, $ps ) = @_;
 
- my $dialog = Gtk2::Dialog->new( $d->get('Saving TIFF') . "...",
-  $window, 'modal', 'gtk-cancel' => 'cancel' );
-
- # Set up ProgressBar
- my $pbar = Gtk2::ProgressBar->new;
- $dialog->vbox->add($pbar);
-
- # Ensure that the dialog box is destroyed when the user responds.
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-  }
- );
- $dialog->show_all;
-
  # Compile list of pages
  my @list_of_pages;
  my @pagelist = get_page_index();
@@ -3435,24 +3471,48 @@ sub save_TIFF {
   quality     => $SETTING{quality},
  );
 
+ my $signal;
  $slist->save_tiff(
   $filename,
   \@list_of_pages,
   \%options,
   $ps,
   sub {
-   $dialog->destroy;
+   my ( $thread, $process, $completed, $total, $pid ) = @_;
+   $tpbar->set_text(
+    sprintf(
+     $d->get("Process %i of %i (%s)"),
+     $completed + 1,
+     $total, $process
+    )
+   );
+   $tpbar->set_fraction( $completed / $total );
+   $thbox->show_all;
+   $signal = $tcbutton->signal_connect(
+    clicked => sub {
+     local $SIG{HUP} = 'IGNORE';
+     $logger->info("Sending HUP signal to PID $pid and its children");
+
+     # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+    }
+   );
+  },
+  sub {
+   my ( $thread, $process, $completed, $total ) = @_;
+   $tpbar->set_fraction(
+    ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
+     if defined $Gscan2pdf::_self->{progress};
+   $tpbar->set_text( $Gscan2pdf::_self->{message} )
+     if defined $Gscan2pdf::_self->{message};
+  },
+  sub {
+   my ($new_page) = @_;
+   $thbox->hide_all;
+   $tcbutton->signal_handler_disconnect($signal);
    mark_pages(@pagelist);
    $logger->debug("Finished saving $filename");
   },
   sub {
-   $pbar->set_fraction( $Gscan2pdf::_self->{progress} )
-     if defined $Gscan2pdf::_self->{progress};
-   $pbar->set_text( $Gscan2pdf::_self->{message} )
-     if defined $Gscan2pdf::_self->{message};
-  },
-  sub {
-   $dialog->destroy;
    show_message_dialog( $main::window, 'error', 'close',
     $Gscan2pdf::_self->{message} );
   }
@@ -3513,39 +3573,48 @@ sub save_djvu {
     # cd back to tempdir
     chdir $SETTING{session};
 
-    my $dialog = Gtk2::Dialog->new( $d->get('Saving DjVu') . "...",
-     $windowi, 'modal', 'gtk-cancel' => 'cancel' );
-
-    # Set up ProgressBar
-    my $pbar = Gtk2::ProgressBar->new;
-    $dialog->vbox->add($pbar);
-
-    # Ensure that the dialog box is destroyed when the user responds.
-    $dialog->signal_connect(
-     response => sub {
-      $_[0]->destroy;
-     }
-    );
-    $dialog->show_all;
-
     # Create the DjVu
     $logger->debug("Started saving $filename");
+    my $signal;
     $slist->save_djvu(
      $filename,
      \@list_of_pages,
      sub {
-      $dialog->destroy;
+      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      $tpbar->set_text(
+       sprintf(
+        $d->get("Process %i of %i (%s)"),
+        $completed + 1,
+        $total, $process
+       )
+      );
+      $tpbar->set_fraction( $completed / $total );
+      $thbox->show_all;
+      $signal = $tcbutton->signal_connect(
+       clicked => sub {
+        local $SIG{HUP} = 'IGNORE';
+        $logger->info("Sending HUP signal to PID $pid and its children");
+
+        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+       }
+      );
+     },
+     sub {
+      my ( $thread, $process, $completed, $total ) = @_;
+      $tpbar->set_fraction(
+       ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
+        if defined $Gscan2pdf::_self->{progress};
+      $tpbar->set_text( $Gscan2pdf::_self->{message} )
+        if defined $Gscan2pdf::_self->{message};
+     },
+     sub {
+      my ($new_page) = @_;
+      $thbox->hide_all;
+      $tcbutton->signal_handler_disconnect($signal);
       mark_pages(@pagelist);
       $logger->debug("Finished saving $filename");
      },
      sub {
-      $pbar->set_fraction( $Gscan2pdf::_self->{progress} )
-        if defined $Gscan2pdf::_self->{progress};
-      $pbar->set_text( $Gscan2pdf::_self->{message} )
-        if defined $Gscan2pdf::_self->{message};
-     },
-     sub {
-      $dialog->destroy;
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      }
@@ -4984,10 +5053,23 @@ sub scan_dialog2 {
 sub get_devices2 {
  my $hboxd = shift;
 
+ my $pbar;
  Gscan2pdf::Frontend::Sane->get_devices(
-  $hboxd,
+  sub {
+
+   # Set up ProgressBar
+   $pbar = Gtk2::ProgressBar->new;
+   $pbar->set_pulse_step(.1);
+   $pbar->set_text( $d->get('Fetching list of devices') );
+   $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
+   $pbar->show;
+  },
+  sub {
+   $pbar->pulse;
+  },
   sub {
    my ($data) = @_;
+   $pbar->destroy;
    my @old_device_list = @device_list;
    @device_list = @{$data};
    $logger->info( "Sane->get_devices returned: ", Dumper( \@device_list ) );
@@ -5402,23 +5484,16 @@ sub scanimage {
   my $pid = IPC::Open3::open3( $write, $read, $error, $cmd );
   $logger->info("Forked PID $pid");
 
-  my $dialog = Gtk2::Dialog->new( $d->get('Scanning') . "...",
-   $windows, 'modal', 'gtk-cancel' => 'cancel' );
-  my $pbar = Gtk2::ProgressBar->new;
-  $pbar->set_text( $d->get('Scanning') );
-  $dialog->vbox->add($pbar);
-
-  # Ensure that the dialog box is destroyed when the user responds.
-  $dialog->signal_connect(
-   response => sub {
-    $_[0]->destroy;
+  $spbar->set_text( $d->get('Scanning') );
+  $shbox->show_all;
+  my $signal = $scbutton->signal_connect(
+   clicked => sub {
     local $SIG{INT} = 'IGNORE';
     $logger->info("Sending INT signal to PID $pid and its children");
     killfam 'INT', ($pid);
     $cancel = TRUE;
    }
   );
-  $dialog->show_all;
 
   my $line;
   Glib::IO->add_watch(
@@ -5438,16 +5513,16 @@ sub scanimage {
       my $le = $1;
       if ( $line =~ /^Progress: (\d*\.\d*)%/ ) {
        my $fraction = $1 / 100;
-       $pbar->set_fraction($fraction);
+       $spbar->set_fraction($fraction);
       }
       elsif ( $line =~ /^Scanning (-?\d*) pages/ ) {
-       $pbar->set_text(
+       $spbar->set_text(
         $d->get('Scanning') . " $1 " . $d->get('pages') . "..." );
       }
       elsif ( $line =~ /^Scanning page (\d*)/ ) {
-       $pbar->set_text(
+       $spbar->set_text(
         sprintf( $d->get('Scanning page %i...'), $1 * $step + $offset ) );
-       $pbar->set_fraction(0);
+       $spbar->set_fraction(0);
       }
       elsif ( $line =~ /^Scanned page (\d*)\. \(scanner status = 5\)/ ) {
        my $id = $1;
@@ -5471,7 +5546,7 @@ sub scanimage {
       elsif ( $line =~
        /Scanner warming up - waiting \d* seconds|wait for lamp warm-up/ )
       {
-       $pbar->set_text( $d->get('Scanner warming up') );
+       $spbar->set_text( $d->get('Scanner warming up') );
       }
       elsif ( $line =~ /^Scanned page \d*\. \(scanner status = 7\)/ ) {
        ;
@@ -5479,7 +5554,8 @@ sub scanimage {
       elsif ( $line =~
        /^$SETTING{frontend}: sane_start: Document feeder out of documents/ )
       {
-       $dialog->destroy;
+       $scbutton->signal_handler_disconnect($signal);
+       $shbox->hide;
        show_message_dialog( $windows, 'info', 'close',
         $d->get('Document feeder out of documents') )
          if ( $num_scans == 0 );
@@ -5498,14 +5574,16 @@ sub scanimage {
        $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
       }
       elsif ( $line =~ /^$SETTING{frontend}: sane_start: Device busy/ ) {
-       $dialog->destroy;
+       $scbutton->signal_handler_disconnect($signal);
+       $shbox->hide;
        show_message_dialog( $windows, 'error', 'close',
         $d->get('Device busy') );
       }
       elsif (
        $line =~ /^$SETTING{frontend}: sane_read: Operation was cancelled/ )
       {
-       $dialog->destroy;
+       $scbutton->signal_handler_disconnect($signal);
+       $shbox->hide;
        show_message_dialog( $windows, 'info', 'close',
         $d->get('Operation cancelled') );
       }
@@ -5529,9 +5607,9 @@ sub scanimage {
 
      # Now finished scanning, get on with post-processing
      $scanning = FALSE;
+     $scbutton->signal_handler_disconnect($signal);
+     $shbox->hide;
      post_process_scan();
-
-     $dialog->destroy;
      return FALSE;                         # uninstall
     }
     return TRUE;                           # continue without uninstalling
@@ -5591,17 +5669,23 @@ sub scanadf {
   my $pid = IPC::Open3::open3( $write, $read, $error, $cmd );
   $logger->info("Forked PID $pid");
 
-  my $dialog = Gtk2::Dialog->new( $d->get('Scanning') . "...",
-   $windows, 'modal', 'gtk-cancel' => 'cancel' );
-  my $pbar = Gtk2::ProgressBar->new;
-  $pbar->set_pulse_step(.1);
-  $dialog->vbox->add($pbar);
+  $spbar->set_text( $d->get('Scanning') );
+  $spbar->set_pulse_step(.1);
+  $shbox->show_all;
   my $running = TRUE;
+  my $signal  = $scbutton->signal_connect(
+   clicked => sub {
+    local $SIG{HUP} = 'IGNORE';
+    $logger->info("Sending INT signal to PID $pid and its children");
+    killfam 'HUP', ($pid);
+    $running = FALSE;
+   }
+  );
 
   # Timer will run until callback returns false
   my $size;
   my $id = 1;
-  $pbar->set_text(
+  $spbar->set_text(
    sprintf( $d->get('Scanning page %i...'), $id * $step + $offset ) );
   my $timer = Glib::Timeout->add(
    100,
@@ -5609,17 +5693,17 @@ sub scanadf {
     if ($running) {
      if ( defined $size ) {
       if ($size) {
-       $pbar->set_fraction( ( -s "out$id.pnm" ) / $size );
+       $spbar->set_fraction( ( -s "out$id.pnm" ) / $size );
       }
       else {
-       $pbar->pulse;
+       $spbar->pulse;
       }
      }
      elsif ( -e "out$id.pnm" and ( -s "out$id.pnm" ) > 50 ) {
       $size = get_size_from_PNM("out$id.pnm");
      }
      else {
-      $pbar->pulse;
+      $spbar->pulse;
      }
      return TRUE;
     }
@@ -5628,18 +5712,6 @@ sub scanadf {
     }
    }
   );
-
-  # Ensure that the dialog box is destroyed when the user responds.
-  $dialog->signal_connect(
-   response => sub {
-    $_[0]->destroy;
-    local $SIG{HUP} = 'IGNORE';
-    $logger->info("Sending HUP signal to PID $pid and its children");
-    killfam 'HUP', ($pid);
-    $running = FALSE;
-   }
-  );
-  $dialog->show_all;
 
   my $line;
   Glib::IO->add_watch(
@@ -5659,7 +5731,7 @@ sub scanadf {
       if ( $line =~
        /Scanner warming up - waiting \d* seconds|wait for lamp warm-up/ )
       {
-       $pbar->set_text( $d->get('Scanner warming up') );
+       $spbar->set_text( $d->get('Scanner warming up') );
       }
       elsif ( $line =~ /^Scanned document out(\d*)\.pnm/ ) {
        $id = $1;
@@ -5679,7 +5751,7 @@ sub scanadf {
          return TRUE unless ( -e "out$id.pnm" );
          my $index = import_scan( "out$id.pnm", $id * $step + $offset,
           $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
-         $pbar->set_text(
+         $spbar->set_text(
           sprintf( $d->get('Scanning page %i...'), $id * $step + $offset ) );
          $id++;
          return FALSE;
@@ -5693,7 +5765,8 @@ sub scanadf {
        $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
       }
       elsif ( $line =~ /^$SETTING{frontend}: sane_start: Device busy/ ) {
-       $dialog->destroy;
+       $scbutton->signal_handler_disconnect($signal);
+       $shbox->hide;
        $running = FALSE;
        show_message_dialog( $windows, 'error', 'close',
         $d->get('Device busy') );
@@ -5701,7 +5774,8 @@ sub scanadf {
       elsif (
        $line =~ /^$SETTING{frontend}: sane_read: Operation was cancelled/ )
       {
-       $dialog->destroy;
+       $scbutton->signal_handler_disconnect($signal);
+       $shbox->hide;
        $running = FALSE;
        show_message_dialog( $windows, 'info', 'close',
         $d->get('Operation cancelled') );
@@ -5726,9 +5800,9 @@ sub scanadf {
 
      # Now finished scanning, set off unpaper or ocr if necessary
      $scanning = FALSE;
+     $scbutton->signal_handler_disconnect($signal);
+     $shbox->hide;
      post_process_scan();
-
-     $dialog->destroy;
      $running = FALSE;
      return FALSE;                         # uninstall
     }
@@ -5748,10 +5822,33 @@ sub scan_pages {
  my $n      = $start;
  my $format = "out%d.pnm";
 
+ my $signal;
  Gscan2pdf::Frontend::Sane->scan_pages(
-  $windows2,
+  $SETTING{session},
   $format, $npages, $n, $step,
-  sub {
+  sub {    # started callback
+   if ( $npages > 0 ) {
+    $spbar->set_text( sprintf $d->get("Scanning page %d of %d"), $n, $npages );
+   }
+   else {
+    $spbar->set_text( sprintf $d->get("Scanning page %d"), $n );
+   }
+   $shbox->show_all;
+   $signal = $scbutton->signal_connect(
+    clicked => sub {
+     $Gscan2pdf::_self->{abort_scan} = 1;
+    }
+   );
+  },
+  sub {    # running callback
+   my ($progress) = @_;
+   $spbar->set_fraction($progress) if ( defined $progress );
+  },
+  sub {    # finished callback
+   $scbutton->signal_handler_disconnect($signal);
+   $shbox->hide;
+  },
+  sub {    # new page callback
    my ($n) = @_;
 
    # If the scan can't be loaded then blow the scanning dialog away and
@@ -5769,8 +5866,19 @@ sub scan_pages {
     import_scan( File::Spec->catdir( $SETTING{session}, "out$n.pnm" ),
      $n, $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
    }
+
+   if ( $npages > 0 ) {
+    $spbar->set_text( sprintf $d->get("Scanning page %d of %d"),
+     $n + 1, $npages );
+   }
+   else {
+    $spbar->set_text( sprintf $d->get("Scanning page %d"), $n + 1 );
+   }
+   $spbar->set_fraction(0);
   },
-  sub {
+  sub {    # error callback
+   $scbutton->signal_handler_disconnect($signal);
+   $shbox->hide;
    my ($msg) = @_;
    show_message_dialog( $windows2, 'error', 'close', $d_sane->get($msg) );
   }
@@ -5901,7 +6009,8 @@ sub import_scan {
       filename   => $ofilename,
       resolution => $resolution,
       format     => 'Portable anymap',
-      delete     => $delete
+      delete     => $delete,
+      dir        => $SETTING{session},
      );
      my $index = $slist->add_page( $gpage, $page, &update_uimanager );
      if ( $index == -1 ) {
@@ -5909,6 +6018,7 @@ sub import_scan {
        $d->get('Unable to load image') );
      }
      else {
+      update_uimanager();
       post_process_scan( $gpage, $rotate, $unpaper, $ocr );
      }
      return FALSE;    # uninstall
@@ -7218,19 +7328,40 @@ sub default2index {
   # Ghost the scan button whilst options being updated
   $sbutton->set_sensitive(FALSE) if ( defined $sbutton );
 
+  my $signal;
   Gscan2pdf::Frontend::Sane->open_device(
-   $device,
-   $windows2,
-   sub {
-    kill_subs();
-   },
-   sub {
-    Gscan2pdf::Frontend::Sane->find_scan_options(
-     $windows2,
-     sub {
+   $device->{name},
+   sub {    # started callback
+    $spbar->set_text( $d->get('Opening device') );
+    $spbar->set_pulse_step(.1);
+    $shbox->show_all;
+    $signal = $scbutton->signal_connect(
+     clicked => sub {
       kill_subs();
+     }
+    );
+   },
+   sub {    # running callback
+    $spbar->pulse;
+   },
+   sub {    # finished callback
+    $scbutton->signal_handler_disconnect($signal);
+    $shbox->hide;
+    Gscan2pdf::Frontend::Sane->find_scan_options(
+     sub {    # started callback
+      $spbar->set_text( $d->get('Opening device') );
+      $spbar->set_pulse_step(.1);
+      $shbox->show_all;
+      $signal = $scbutton->signal_connect(
+       clicked => sub {
+        kill_subs();
+       }
+      );
      },
-     sub {
+     sub {    # running callback
+      $spbar->pulse;
+     },
+     sub {    # finished callback
       my ($data) = @_;
       my @options = @{$data};
       $logger->debug( "Sane->get_option_descriptor returned: ",
@@ -7615,8 +7746,23 @@ sub default2index {
 
       $sbutton->set_sensitive(TRUE);
       $sbutton->grab_focus;
+
+      $scbutton->signal_handler_disconnect($signal);
+      $shbox->hide;
+     },
+     sub {    # error callback
+      my ($message) = @_;
+      $windows2->destroy;
+      main::show_message_dialog( $window, 'error', 'close',
+       $d->get( 'Error retrieving scanner options: ' . $message ) );
      }
     );
+   },
+   sub {      # error callback
+    my ($message) = @_;
+    $windows2->destroy;
+    main::show_message_dialog( $window, 'error', 'close',
+     $d->get( 'Error opening device: ' . $message ) );
    }
   );
 
@@ -7653,13 +7799,23 @@ sub default2index {
    $j--;
   }
 
+  my $signal;
   Gscan2pdf::Frontend::Sane->set_option(
-   $windows2,
    $i, $val,
-   sub {
-    kill_subs();
+   sub {    # started callback
+    $spbar->set_text( $d->get('Updating options') );
+    $spbar->set_pulse_step(.1);
+    $shbox->show_all;
+    $signal = $scbutton->signal_connect(
+     clicked => sub {
+      kill_subs();
+     }
+    );
    },
-   sub {
+   sub {    # running callback
+    $spbar->pulse;
+   },
+   sub {    # finished callback
     my ($data) = @_;
 
     if ($data) {
@@ -7729,6 +7885,8 @@ sub default2index {
     }
     $gui_updating =
       FALSE;    # We can carry on applying defaults now, if necessary.
+    $scbutton->signal_handler_disconnect($signal);
+    $shbox->hide;
    }
   );
   return;
@@ -8236,43 +8394,42 @@ sub rotate {
  my ( $angle, $pagelist, $callback ) = @_;
  my $page = 0;
 
- # guess where rotate has been called from
- my $window = get_parent( $windows, $window );
- my $dialog = Gtk2::Dialog->new( $d->get('Rotating') . "...",
-  $window, 'modal', 'gtk-cancel' => 'cancel' );
-
- # Set up ProgressBar
- my $pbar = Gtk2::ProgressBar->new;
- $dialog->vbox->add($pbar);
-
- # Ensure that the dialog box is destroyed when the user responds.
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-  }
- );
- $dialog->show_all;
-
  # Update undo/redo buffers
  take_snapshot();
 
  for my $pageobject ( @{$pagelist} ) {
-  $page++;
+  my $signal;
   $slist->rotate(
    $angle,
    $pageobject,
    sub {
+    my ( $thread, $process, $completed, $total, $pid ) = @_;
+    $tpbar->set_text(
+     sprintf(
+      $d->get("Process %i of %i (%s)"),
+      $completed + 1,
+      $total, $process
+     )
+    );
+    $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+    $thbox->show_all;
+    $signal = $tcbutton->signal_connect(
+     clicked => sub {
+      local $SIG{HUP} = 'IGNORE';
+      $logger->info("Sending HUP signal to PID $pid and its children");
+
+      # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+     }
+    );
+   },
+   undef,
+   sub {
     my ($new_page) = @_;
     $callback->($new_page) if $callback;
-    $dialog->destroy unless ( $page < $#{$pagelist} );
+    $thbox->hide_all;
+    $tcbutton->signal_handler_disconnect($signal);
    },
    sub {
-    $pbar->set_text(
-     sprintf( $d->get("Rotating page %i of %i"), $page, $#{$pagelist} + 1 ) );
-    $pbar->set_fraction( ( $page - 1 ) / ( $#{$pagelist} + 1 ) );
-   },
-   sub {
-    $dialog->destroy;
     show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
@@ -8289,25 +8446,6 @@ sub rotate {
 
 sub analyse {
  my ( $select_blank, $select_dark ) = @_;
- my $page   = 0;
- my $npages = 0;
-
- # guess where analyse has been called from
- my $window = get_parent( $windows, $window );
- my $dialog = Gtk2::Dialog->new( $d->get('Analyze') . "...",
-  $window, 'destroy-with-parent', 'gtk-cancel' => 'cancel' );
-
- # Set up ProgressBar
- my $pbar = Gtk2::ProgressBar->new;
- $dialog->vbox->add($pbar);
-
- # Ensure that the dialog box is destroyed when the user responds.
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-  }
- );
- $dialog->show_all;
 
  # Update undo/redo buffers
  take_snapshot();
@@ -8318,33 +8456,47 @@ sub analyse {
   $dirty_time   = defined($dirty_time)   ? $dirty_time   : 0;
   $analyse_time = defined($analyse_time) ? $analyse_time : 0;
   if ( $analyse_time le $dirty_time ) {
-   $npages++;
    $logger->info(
-    "Updating: $page analyse_time: $analyse_time dirty_time: $dirty_time");
+"Updating: $slist->{data}[$i][0] analyse_time: $analyse_time dirty_time: $dirty_time"
+   );
+   my $signal;
    $slist->analyse(
     $slist->{data}[$i][2],
     sub {
-     $page++;
-     unless ( $page < $npages ) {
-      $dialog->destroy;
-      select_blank_pages() if $select_blank;
-      select_dark_pages()  if $select_dark;
-     }
+     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     $tpbar->set_text(
+      sprintf(
+       $d->get("Process %i of %i (%s)"),
+       $completed + 1,
+       $total, $process
+      )
+     );
+     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+     $thbox->show_all;
+     $signal = $tcbutton->signal_connect(
+      clicked => sub {
+       local $SIG{HUP} = 'IGNORE';
+       $logger->info("Sending HUP signal to PID $pid and its children");
+
+       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+      }
+     );
+    },
+    undef,
+    sub {
+     my ($new_page) = @_;
+     $thbox->hide_all;
+     $tcbutton->signal_handler_disconnect($signal);
+     select_blank_pages() if $select_blank;
+     select_dark_pages()  if $select_dark;
     },
     sub {
-     $pbar->set_text(
-      sprintf( $d->get("Analyzing page %i of %i"), $page + 1, $npages ) );
-     $pbar->set_fraction( $page / $npages );
-    },
-    sub {
-     $dialog->destroy;
      show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
    );
   }
  }
- $dialog->destroy unless ($npages);
  return;
 }
 
@@ -8413,42 +8565,42 @@ sub threshold {
    take_snapshot();
 
    $SETTING{'threshold tool'} = $spinbutton->get_value;
-   my $dialog = Gtk2::Dialog->new( $d->get('Applying threshold') . "...",
-    $window, 'modal', 'gtk-cancel' => 'cancel' );
-
-   # Set up ProgressBar
-   my $pbar = Gtk2::ProgressBar->new;
-   $dialog->vbox->add($pbar);
-
-   # Ensure that the dialog box is destroyed when the user responds.
-   $dialog->signal_connect(
-    response => sub {
-     $_[0]->destroy;
-    }
-   );
-   $dialog->show_all;
 
    my @pagelist = get_page_index();
    my $page     = 0;
    for my $i (@pagelist) {
     $page++;
+    my $signal;
     $slist->threshold(
      $SETTING{'threshold tool'},
      $slist->{data}[$i][2],
      sub {
-      $dialog->destroy unless ( $page < $#pagelist );
-     },
-     sub {
-      $pbar->set_text(
+      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      $tpbar->set_text(
        sprintf(
-        $d->get("Applying threshold to page %i of %i"),
-        $page, $#pagelist + 1
+        $d->get("Process %i of %i (%s)"),
+        $completed + 1,
+        $total, $process
        )
       );
-      $pbar->set_fraction( ( $page - 1 ) / ( $#pagelist + 1 ) );
+      $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+      $thbox->show_all;
+      $signal = $tcbutton->signal_connect(
+       clicked => sub {
+        local $SIG{HUP} = 'IGNORE';
+        $logger->info("Sending HUP signal to PID $pid and its children");
+
+        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+       }
+      );
+     },
+     undef,
+     sub {
+      my ($new_page) = @_;
+      $thbox->hide_all;
+      $tcbutton->signal_handler_disconnect($signal);
      },
      sub {
-      $dialog->destroy;
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
@@ -8495,41 +8647,38 @@ sub negate {
    # Update undo/redo buffers
    take_snapshot();
 
-   my $dialog = Gtk2::Dialog->new( $d->get('Applying negate') . "...",
-    $window, 'modal', 'gtk-cancel' => 'cancel' );
-
-   # Set up ProgressBar
-   my $pbar = Gtk2::ProgressBar->new;
-   $dialog->vbox->add($pbar);
-
-   # Ensure that the dialog box is destroyed when the user responds.
-   $dialog->signal_connect(
-    response => sub {
-     $_[0]->destroy;
-    }
-   );
-   $dialog->show_all;
-
    my @pagelist = get_page_index();
-   my $page     = 0;
    for my $i (@pagelist) {
-    $page++;
+    my $signal;
     $slist->negate(
      $slist->{data}[$i][2],
      sub {
-      $dialog->destroy unless ( $page < $#pagelist );
-     },
-     sub {
-      $pbar->set_text(
+      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      $tpbar->set_text(
        sprintf(
-        $d->get("Applying negate to page %i of %i"),
-        $page, $#pagelist + 1
+        $d->get("Process %i of %i (%s)"),
+        $completed + 1,
+        $total, $process
        )
       );
-      $pbar->set_fraction( ( $page - 1 ) / ( $#pagelist + 1 ) );
+      $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+      $thbox->show_all;
+      $signal = $tcbutton->signal_connect(
+       clicked => sub {
+        local $SIG{HUP} = 'IGNORE';
+        $logger->info("Sending HUP signal to PID $pid and its children");
+
+        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+       }
+      );
+     },
+     undef,
+     sub {
+      my ($new_page) = @_;
+      $thbox->hide_all;
+      $tcbutton->signal_handler_disconnect($signal);
      },
      sub {
-      $dialog->destroy;
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
@@ -8643,25 +8792,10 @@ sub unsharp {
    $SETTING{'unsharp sigma'}     = $spinbuttons->get_value;
    $SETTING{'unsharp amount'}    = $spinbuttona->get_value;
    $SETTING{'unsharp threshold'} = $spinbuttont->get_value;
-   my $dialog = Gtk2::Dialog->new( $d->get('Applying unsharp mask') . "...",
-    $window, 'modal', 'gtk-cancel' => 'cancel' );
-
-   # Set up ProgressBar
-   my $pbar = Gtk2::ProgressBar->new;
-   $dialog->vbox->add($pbar);
-
-   # Ensure that the dialog box is destroyed when the user responds.
-   $dialog->signal_connect(
-    response => sub {
-     $_[0]->destroy;
-    }
-   );
-   $dialog->show_all;
 
    my @pagelist = get_page_index();
-   my $page     = 0;
    for my $i (@pagelist) {
-    $page++;
+    my $signal;
     $slist->unsharp(
      $slist->{data}[$i][2],
      $SETTING{'unsharp radius'},
@@ -8669,19 +8803,32 @@ sub unsharp {
      $SETTING{'unsharp amount'},
      $SETTING{'unsharp threshold'},
      sub {
-      $dialog->destroy unless ( $page < $#pagelist );
-     },
-     sub {
-      $pbar->set_text(
+      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      $tpbar->set_text(
        sprintf(
-        $d->get("Applying unsharp mask to page %i of %i"),
-        $page, $#pagelist + 1
+        $d->get("Process %i of %i (%s)"),
+        $completed + 1,
+        $total, $process
        )
       );
-      $pbar->set_fraction( ( $page - 1 ) / ( $#pagelist + 1 ) );
+      $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+      $thbox->show_all;
+      $signal = $tcbutton->signal_connect(
+       clicked => sub {
+        local $SIG{HUP} = 'IGNORE';
+        $logger->info("Sending HUP signal to PID $pid and its children");
+
+        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+       }
+      );
+     },
+     undef,
+     sub {
+      my ($new_page) = @_;
+      $thbox->hide_all;
+      $tcbutton->signal_handler_disconnect($signal);
      },
      sub {
-      $dialog->destroy;
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
@@ -8844,38 +8991,39 @@ sub crop {
    # Update undo/redo buffers
    take_snapshot();
 
-   my $dialog = Gtk2::Dialog->new( $d->get('Cropping') . "...",
-    $window, 'modal', 'gtk-cancel' => 'cancel' );
-
-   # Set up ProgressBar
-   my $pbar = Gtk2::ProgressBar->new;
-   $dialog->vbox->add($pbar);
-
-   # Ensure that the dialog box is destroyed when the user responds.
-   $dialog->signal_connect(
-    response => sub {
-     $_[0]->destroy;
-    }
-   );
-   $dialog->show_all;
-
    my @pagelist = get_page_index();
-   my $page     = 0;
    for my $i (@pagelist) {
-    $page++;
+    my $signal;
     $slist->crop(
      $slist->{data}[$i][2],
      $x, $y, $w, $h,
      sub {
-      $dialog->destroy unless ( $page < $#pagelist );
+      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      $tpbar->set_text(
+       sprintf(
+        $d->get("Process %i of %i (%s)"),
+        $completed + 1,
+        $total, $process
+       )
+      );
+      $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+      $thbox->show_all;
+      $signal = $tcbutton->signal_connect(
+       clicked => sub {
+        local $SIG{HUP} = 'IGNORE';
+        $logger->info("Sending HUP signal to PID $pid and its children");
+
+        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+       }
+      );
+     },
+     undef,
+     sub {
+      my ($new_page) = @_;
+      $thbox->hide_all;
+      $tcbutton->signal_handler_disconnect($signal);
      },
      sub {
-      $pbar->set_text(
-       sprintf( $d->get("Cropping page %i of %i"), $page, $#pagelist + 1 ) );
-      $pbar->set_fraction( ( $page - 1 ) / ( $#pagelist + 1 ) );
-     },
-     sub {
-      $dialog->destroy;
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
@@ -8916,46 +9064,39 @@ sub user_defined_tool {
  # Update undo/redo buffers
  take_snapshot();
 
- my $dialog = Gtk2::Dialog->new( $d->get('Running') . "...",
-  $window, 'modal', 'gtk-cancel' => 'cancel' );
-
- # Set up ProgressBar
- my $pbar = Gtk2::ProgressBar->new;
- $dialog->vbox->add($pbar);
-
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-
-   #   local $SIG{HUP} = 'IGNORE';
-   #   $logger->info("Sending HUP signal to PID $pid and its children");
-   #   killfam 'HUP', ($pid);
-  }
- );
- $dialog->show_all;
-
- my $cmd  = $action->get('label');
- my $page = 1;
+ my $cmd = $action->get('label');
  for my $i (@pages) {
+  my $signal;
   $slist->user_defined(
    $slist->{data}[$i][2],
    $cmd,
    sub {
-    $page++;
-    $dialog->destroy
-      unless ( $page < $#{ $slist->{data} } );
-   },
-   sub {
-    $pbar->set_text(
+    my ( $thread, $process, $completed, $total, $pid ) = @_;
+    $tpbar->set_text(
      sprintf(
-      $d->get("Processing page %i of %i"),
-      $page, $#{ $slist->{data} } + 1
+      $d->get("Process %i of %i (%s)"),
+      $completed + 1,
+      $total, $process
      )
     );
-    $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
+    $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+    $thbox->show_all;
+    $signal = $tcbutton->signal_connect(
+     clicked => sub {
+      local $SIG{HUP} = 'IGNORE';
+      $logger->info("Sending HUP signal to PID $pid and its children");
+
+      # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+     }
+    );
+   },
+   undef,
+   sub {
+    my ($new_page) = @_;
+    $thbox->hide_all;
+    $tcbutton->signal_handler_disconnect($signal);
    },
    sub {
-    $dialog->destroy;
     show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
@@ -8990,49 +9131,42 @@ sub unpaper_page {
  my ( $pages, $options, $callback ) = @_;
  $options = '' if ( !defined($options) );
 
- # guess where unpaper has been called from
- my $parent = get_parent( $windowu, $windows, $window );
- my $dialog = Gtk2::Dialog->new( $d->get('Running unpaper') . "...",
-  $parent, 'modal', 'gtk-cancel' => 'cancel' );
- my $label = Gtk2::Label->new( $d->get('Running unpaper') . "..." );
- $dialog->vbox->add($label);
-
- # Set up ProgressBar
- my $pbar = Gtk2::ProgressBar->new;
- $dialog->vbox->add($pbar);
-
- my $page = 1;
-
- # Ensure that the dialog box is destroyed when the user responds.
- my $pid;
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-
-   #   $logger->info("Sending HUP signal to PID $pid and its children"); FIXME
-   #   killfam 'HUP', ($pid);
-  }
- );
- $dialog->show_all;
+ # Update undo/redo buffers
+ take_snapshot();
 
  for my $pageobject ( @{$pages} ) {
+  my $signal;
   $slist->unpaper(
    $pageobject,
    $options,
    sub {
+    my ( $thread, $process, $completed, $total, $pid ) = @_;
+    $tpbar->set_text(
+     sprintf(
+      $d->get("Process %i of %i (%s)"),
+      $completed + 1,
+      $total, $process
+     )
+    );
+    $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+    $thbox->show_all;
+    $signal = $tcbutton->signal_connect(
+     clicked => sub {
+      local $SIG{HUP} = 'IGNORE';
+      $logger->info("Sending HUP signal to PID $pid and its children");
+
+      # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+     }
+    );
+   },
+   undef,
+   sub {
     my ($new_page) = @_;
     $callback->($new_page) if $callback;
-    $page++;
-    $dialog->destroy
-      unless ( $page < $#{ $slist->{data} } );
+    $thbox->hide_all;
+    $tcbutton->signal_handler_disconnect($signal);
    },
    sub {
-    $pbar->set_text(
-     sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
-    $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
-   },
-   sub {
-    $dialog->destroy;
     show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
@@ -9403,57 +9537,38 @@ sub unpaper {
 sub ocr_page {
  my ($pages) = @_;
 
- # guess where ocr has been called from
- my $parent = get_parent( $windowo, $windows, $window );
- my $dialog = Gtk2::Dialog->new( $d->get('Running OCR') . "...",
-  $parent, 'modal', 'gtk-cancel' => 'cancel' );
- my $label = Gtk2::Label->new( $d->get('Running OCR') . "..." );
- $dialog->vbox->add($label);
-
- # Set up ProgressBar
- my $pbar = Gtk2::ProgressBar->new;
- $dialog->vbox->add($pbar);
-
- my $cancelled = FALSE;
- my $page      = 0;
- my $npages    = 0;
-
- # Ensure that the dialog box is destroyed when the user responds.
- my $pid;
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-   local $SIG{HUP} = 'IGNORE';
-   $logger->info("Sending HUP signal to PID $pid and its children");
-
-   #   killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-   $cancelled = TRUE;
-  }
- );
- $dialog->show_all;
-
  for my $pageobject ( @{$pages} ) {
-  $page++;
-  $npages++;
-  $pbar->set_text(
-   sprintf( $d->get("Page %i of %i"), $page, $#{$pages} + $npages + 1 ) );
-  $pbar->set_fraction( ( $page - 1 ) / ( $#{$pages} + $npages + 1 ) );
-
+  my $signal;
   if ( $SETTING{'ocr engine'} eq 'gocr' ) {
    $slist->gocr(
     $pageobject,
     sub {
-     $page++;
-     $dialog->destroy
-       unless ( $page < $#{ $slist->{data} } );
+     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     $tpbar->set_text(
+      sprintf(
+       $d->get("Process %i of %i (%s)"),
+       $completed + 1,
+       $total, $process
+      )
+     );
+     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+     $thbox->show_all;
+     $signal = $tcbutton->signal_connect(
+      clicked => sub {
+       local $SIG{HUP} = 'IGNORE';
+       $logger->info("Sending HUP signal to PID $pid and its children");
+
+       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+      }
+     );
+    },
+    undef,
+    sub {
+     my ($new_page) = @_;
+     $thbox->hide_all;
+     $tcbutton->signal_handler_disconnect($signal);
     },
     sub {
-     $pbar->set_text(
-      sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
-     $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
-    },
-    sub {
-     $dialog->destroy;
      show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
@@ -9470,17 +9585,32 @@ sub ocr_page {
     $pageobject,
     $SETTING{'ocr language'},
     sub {
-     $page++;
-     $dialog->destroy
-       unless ( $page < $#{ $slist->{data} } );
+     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     $tpbar->set_text(
+      sprintf(
+       $d->get("Process %i of %i (%s)"),
+       $completed + 1,
+       $total, $process
+      )
+     );
+     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+     $thbox->show_all;
+     $signal = $tcbutton->signal_connect(
+      clicked => sub {
+       local $SIG{HUP} = 'IGNORE';
+       $logger->info("Sending HUP signal to PID $pid and its children");
+
+       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+      }
+     );
+    },
+    undef,
+    sub {
+     my ($new_page) = @_;
+     $thbox->hide_all;
+     $tcbutton->signal_handler_disconnect($signal);
     },
     sub {
-     $pbar->set_text(
-      sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
-     $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
-    },
-    sub {
-     $dialog->destroy;
      show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
@@ -9497,17 +9627,32 @@ sub ocr_page {
     $pageobject,
     $SETTING{'ocr language'},
     sub {
-     $page++;
-     $dialog->destroy
-       unless ( $page < $#{ $slist->{data} } );
+     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     $tpbar->set_text(
+      sprintf(
+       $d->get("Process %i of %i (%s)"),
+       $completed + 1,
+       $total, $process
+      )
+     );
+     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+     $thbox->show_all;
+     $signal = $tcbutton->signal_connect(
+      clicked => sub {
+       local $SIG{HUP} = 'IGNORE';
+       $logger->info("Sending HUP signal to PID $pid and its children");
+
+       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+      }
+     );
+    },
+    undef,
+    sub {
+     my ($new_page) = @_;
+     $thbox->hide_all;
+     $tcbutton->signal_handler_disconnect($signal);
     },
     sub {
-     $pbar->set_text(
-      sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
-     $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
-    },
-    sub {
-     $dialog->destroy;
      show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
@@ -9524,17 +9669,32 @@ sub ocr_page {
     $pageobject,
     $SETTING{'ocr language'},
     sub {
-     $page++;
-     $dialog->destroy
-       unless ( $page < $#{ $slist->{data} } );
+     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     $tpbar->set_text(
+      sprintf(
+       $d->get("Process %i of %i (%s)"),
+       $completed + 1,
+       $total, $process
+      )
+     );
+     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+     $thbox->show_all;
+     $signal = $tcbutton->signal_connect(
+      clicked => sub {
+       local $SIG{HUP} = 'IGNORE';
+       $logger->info("Sending HUP signal to PID $pid and its children");
+
+       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+      }
+     );
+    },
+    undef,
+    sub {
+     my ($new_page) = @_;
+     $thbox->hide_all;
+     $tcbutton->signal_handler_disconnect($signal);
     },
     sub {
-     $pbar->set_text(
-      sprintf( $d->get("Page %i of %i"), $page, $#{ $slist->{data} } + 1 ) );
-     $pbar->set_fraction( ( $page - 1 ) / ( $#{ $slist->{data} } + 1 ) );
-    },
-    sub {
-     $dialog->destroy;
      show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
@@ -10147,41 +10307,37 @@ sub compress_temp {
  $uimanager->get_widget('/MenuBar/Edit/Undo')->set_sensitive(FALSE);
  $uimanager->get_widget('/ToolBar/Undo')->set_sensitive(FALSE);
 
- my $dialog = Gtk2::Dialog->new( $d->get('Compressing working files') . "...",
-  $window, 'modal', 'gtk-cancel' => 'cancel' );
-
- # Set up ProgressBar
- my $pbar = Gtk2::ProgressBar->new;
- $dialog->vbox->add($pbar);
-
- # Ensure that the dialog box is destroyed when the user responds.
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-  }
- );
- $dialog->show_all;
-
- my $page = 0;
  for ( @{ $slist->{data} } ) {
+  my $signal;
   $slist->to_tiff(
    $_->[2],
    sub {
-    $page++;
-    $dialog->destroy
-      unless ( $page < $#{ $slist->{data} } );
-   },
-   sub {
-    $pbar->set_text(
+    my ( $thread, $process, $completed, $total, $pid ) = @_;
+    $tpbar->set_text(
      sprintf(
-      $d->get("Compressing page %i of %i"),
-      $page + 1, @{ $slist->{data} }
+      $d->get("Process %i of %i (%s)"),
+      $completed + 1,
+      $total, $process
      )
     );
-    $pbar->set_fraction( $page / @{ $slist->{data} } );
+    $tpbar->set_fraction( $completed / $total );
+    $thbox->show_all;
+    $signal = $tcbutton->signal_connect(
+     clicked => sub {
+      local $SIG{HUP} = 'IGNORE';
+      $logger->info("Sending HUP signal to PID $pid and its children");
+
+      # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+     }
+    );
+   },
+   undef,
+   sub {
+    my ($new_page) = @_;
+    $thbox->hide_all;
+    $tcbutton->signal_handler_disconnect($signal);
    },
    sub {
-    $dialog->destroy;
     show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },

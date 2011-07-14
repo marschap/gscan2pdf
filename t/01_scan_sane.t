@@ -5,11 +5,10 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 3;
+use Test::More tests => 2;
 BEGIN {
-  use_ok('Gscan2pdf');
-  use_ok('Gscan2pdf::Document');
-  use PDF::API2;
+  use_ok('Gscan2pdf::Frontend::Sane');
+  use Gtk2;
 };
 
 #########################
@@ -17,32 +16,23 @@ BEGIN {
 # Insert your test code below, the Test::More module is use()ed here so read
 # its man page ( perldoc Test::More ) for help writing this test script.
 
-# Thumbnail dimensions
-our $widtht  = 100;
-our $heightt = 100;
-
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($DEBUG);
 our $logger = Log::Log4perl::get_logger;
 my $prog_name = 'gscan2pdf';
 use Locale::gettext 1.05;    # For translations
 our $d = Locale::gettext->domain($prog_name);
-Gscan2pdf->setup($d, $logger);
+Gscan2pdf::Frontend::Sane->setup( $prog_name, $d, $logger );
 
-# Create test image
-system('convert rose: test.pnm');
-
-my $slist = Gscan2pdf::Document->new;
-$slist->get_file_info( 'test.pnm', sub {}, sub {}, sub {
- $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {}, sub {}, sub {
-  $slist->save_pdf('test.pdf', [ $slist->{data}[0][2] ], undef, undef, sub {}, sub {}, sub {Gtk2->main_quit});
+Gscan2pdf::Frontend::Sane->open_device('test', sub {}, sub {}, sub {
+ Gscan2pdf::Frontend::Sane->scan_pages( '.', 'out%d.pnm', 1, 1, 1, sub {}, sub {}, sub {}, sub {
+  is( -s 'out1.pnm', 30807, 'PNM created with expected size' );
+  Gtk2->main_quit;
  })
 });
 Gtk2->main;
 
-is( -s 'test.pdf', 3152, 'PDF created with expected size' );
-
 #########################
 
-unlink 'test.pnm', 'test.pdf';
-Gscan2pdf->kill();
+unlink 'out1.pnm';
+Gscan2pdf::Frontend::Sane->kill();

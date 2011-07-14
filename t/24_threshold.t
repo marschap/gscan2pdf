@@ -32,11 +32,13 @@ Gscan2pdf->setup($d, $logger);
 system('convert rose: test.jpg');
 
 my $slist = Gscan2pdf::Document->new;
-$slist->get_file_info( 'test.jpg', sub { $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {
-  $slist->threshold(80, $slist->{data}[0][2], sub{
-    $slist->save_image('test.png', [ $slist->{data}[0][2] ], sub {Gtk2->main_quit}, sub {}, sub {});
-  }, sub {}, sub {}, sub {});
-}, sub {}, sub {} ) }, sub {}, sub{} );
+$slist->get_file_info( 'test.jpg', sub {}, sub {}, sub {
+ $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {}, sub {}, sub {
+  $slist->threshold(80, $slist->{data}[0][2], sub {}, sub {}, sub {
+   $slist->save_image('test.png', [ $slist->{data}[0][2] ], sub {}, sub {}, sub {Gtk2->main_quit});
+  });
+ })
+});
 Gtk2->main;
 
 is( -s 'test.png', 296, 'PNG created with expected size' );

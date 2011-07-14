@@ -26,6 +26,10 @@ sub setup {
  share $_self->{status};
  share $_self->{message};
  share $_self->{progress};
+ share $_self->{jobs_completed};
+ share $_self->{jobs_total};
+ $_self->{jobs_completed} = 0;
+ $_self->{jobs_total}     = 0;
  share $_self->{dir};
 
  $_self->{thread} = threads->new( \&_thread_main, $_self );
@@ -41,6 +45,11 @@ sub _enqueue_request {
    ( $data ? %{$data} : () )
   }
  );
+ if ( $_self->{requests}->pending == 0 ) {
+  $_self->{jobs_completed} = 0;
+  $_self->{jobs_total}     = 0;
+ }
+ $_self->{jobs_total}++;
  return \$sentinel;
 }
 
@@ -50,13 +59,12 @@ sub _when_ready {
   $_POLL_INTERVAL,
   sub {
    if ($$sentinel) {
-    $ready_callback->();
+    $_self->{jobs_completed}++;
+    $ready_callback->() if ($ready_callback);
     return Glib::SOURCE_REMOVE;
    }
    else {
-    if ( defined $not_ready_callback ) {
-     $not_ready_callback->();
-    }
+    $not_ready_callback->() if ($not_ready_callback);
     return Glib::SOURCE_CONTINUE;
    }
   }

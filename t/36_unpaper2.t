@@ -35,16 +35,16 @@ SKIP: {
  system('convert 1.pnm black.pnm 2.pnm +append test.pnm');
 
  my $slist = Gscan2pdf::Document->new;
- $slist->get_file_info( 'test.pnm', sub {
-  $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {
-   $slist->unpaper( $slist->{data}[0][2], '--output-pages 2 --layout double', sub {
+ $slist->get_file_info( 'test.pnm', sub {}, sub {}, sub {
+  $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {}, sub {}, sub {
+   $slist->unpaper( $slist->{data}[0][2], '--output-pages 2 --layout double', sub {}, sub {}, sub {
     system("cp $slist->{data}[0][2]{filename} lh.pnm;cp $slist->{data}[1][2]{filename} rh.pnm;");
 #    copy( $slist->{data}[0][2]{filename}, 'lh.pnm' ) if (defined $slist->{data}[0][2]{filename}); FIXME: why does copy() not work when cp does?
 #    copy( $slist->{data}[1][2]{filename}, 'rh.pnm' ) if (defined $slist->{data}[1][2]{filename});
     Gtk2->main_quit;
-   }, sub {}, sub {}, sub {} );
-  }, sub {}, sub {} );
- }, sub {}, sub{} );
+   });
+  });
+ });
  Gtk2->main;
 
  is( -s 'lh.pnm', 5934, 'LH PNM created with expected size' );

@@ -8,16 +8,15 @@ use threads::shared;
 use Thread::Queue;
 
 use Glib qw(TRUE FALSE);
-use Gtk2;
 use Sane;
 
 my $_POLL_INTERVAL;
 my $_self;
 my $buffer_size = ( 32 * 1024 );    # default size
-my ($prog_name, $d, $logger, $SETTING);
+my ($prog_name, $d, $logger);
 
 sub setup {
- (my $class, $prog_name, $d, $logger, $SETTING) = @_;
+ (my $class, $prog_name, $d, $logger) = @_;
  $_POLL_INTERVAL = 100;    # ms
  $_self          = {};
 
@@ -73,25 +72,23 @@ sub kill {
 }
 
 sub get_devices {
- my ( $class, $container, $callback ) = @_;
+ my ( $class, $started_callback, $running_callback, $finished_callback ) = @_;
 
  my $sentinel = _enqueue_request('get-devices');
 
- # Set up ProgressBar
- my $pbar = Gtk2::ProgressBar->new;
- $pbar->set_pulse_step(.1);
- $pbar->set_text( $d->get('Fetching list of devices') );
- $container->pack_start( $pbar, TRUE, TRUE, 0 );
- $pbar->show;
-
+ my $started;
  _when_ready(
   $sentinel,
   sub {
-   $callback->( $_self->{device_list} );
-   $pbar->destroy;
+   $started_callback->() unless ($started);
+   $finished_callback->( $_self->{device_list} );
   },
   sub {
-   $pbar->pulse;
+   unless ($started) {
+    $started_callback->();
+    $started = 1;
+   }
+   $running_callback->();
   }
  );
 }
@@ -105,97 +102,62 @@ sub device {
 }
 
 sub open_device {
- my ( $class, $device, $parent, $response_callback, $success_callback ) = @_;
+ my ( $class, $device, $started_callback, $running_callback, $finished_callback, $error_callback ) = @_;
 
- my $sentinel = _enqueue_request( 'open', { device_name => $device->{name} } );
+ my $sentinel = _enqueue_request( 'open', { device_name => $device } );
 
- # Set up ProgressBar
- my $dialog = Gtk2::Dialog->new( $d->get('Opening device') . "...",
-  $parent, 'modal', 'gtk-cancel' => 'cancel' );
- my $pbar = Gtk2::ProgressBar->new;
- $pbar->set_pulse_step(.1);
- $pbar->set_text( $d->get('Opening device') );
- $dialog->vbox->add($pbar);
-
- # Ensure that the dialog box is destroyed when the user responds.
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-   $response_callback->();
-  }
- );
- $dialog->show_all;
-
+ my $started;
  _when_ready(
   $sentinel,
   sub {
-   $dialog->destroy;
+   $started_callback->() unless ($started);
    if ( $_self->{status} == SANE_STATUS_GOOD ) {
-    $success_callback->();
+    $finished_callback->();
    }
    else {
-    my $window = $parent->parent;
-    $parent->destroy;
-    main::show_message_dialog( $window, 'error', 'close',
-     $d->get( 'Error opening device: ' . Sane::strstatus( $_self->{status} ) )
-    );
+    $error_callback->(Sane::strstatus( $_self->{status}));
    }
   },
   sub {
-   $pbar->pulse;
+   unless ($started) {
+    $started_callback->();
+    $started = 1;
+   }
+   $running_callback->();
   }
  );
 }
 
 sub find_scan_options {
- my ( $class, $parent, $response_callback, $success_callback ) = @_;
+ my ( $class, $started_callback, $running_callback, $finished_callback, $error_callback ) = @_;
 
  my $options : shared;
  my $sentinel = _enqueue_request( 'get-options', { options => \$options } );
 
- # Set up ProgressBar
- my $dialog = Gtk2::Dialog->new( $d->get('Updating options') . "...",
-  $parent, 'modal', 'gtk-cancel' => 'cancel' );
- my $pbar = Gtk2::ProgressBar->new;
- $pbar->set_pulse_step(.1);
- $pbar->set_text( $d->get('Updating options') );
- $dialog->vbox->add($pbar);
-
- # Ensure that the dialog box is destroyed when the user responds.
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-   $response_callback->();
-  }
- );
- $dialog->show_all;
-
+ my $started;
  _when_ready(
   $sentinel,
   sub {
-   $dialog->destroy;
+   $started_callback->() unless ($started);
    if ( $_self->{status} == SANE_STATUS_GOOD ) {
-    $success_callback->($options);
+    $finished_callback->($options);
    }
    else {
-    my $window = $parent->parent;
-    $parent->destroy;
-    main::show_message_dialog(
-     $window, 'error', 'close',
-     $d->get(
-      'Error retrieving scanner options: ' . Sane::strstatus( $_self->{status} )
-     )
-    );
+    $error_callback->(Sane::strstatus( $_self->{status}));
    }
   },
   sub {
-   $pbar->pulse;
+   unless ($started) {
+    $started_callback->();
+    $started = 1;
+   }
+   $running_callback->();
   }
  );
 }
 
 sub set_option {
- my ( $class, $parent, $i, $val, $response_callback, $success_callback ) = @_;
+ my ( $class, $i, $val, $started_callback, $running_callback, $finished_callback ) = @_;
 
  my $options : shared;
  my $sentinel = _enqueue_request(
@@ -207,83 +169,53 @@ sub set_option {
   }
  );
 
- # Set up ProgressBar
- my $dialog = Gtk2::Dialog->new( $d->get('Updating options') . "...",
-  $parent, 'modal', 'gtk-cancel' => 'cancel' );
- my $pbar = Gtk2::ProgressBar->new;
- $pbar->set_pulse_step(.1);
- $pbar->set_text( $d->get('Updating options') );
- $dialog->vbox->add($pbar);
-
- # Ensure that the dialog box is destroyed when the user responds.
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-   $response_callback->();
-  }
- );
- $dialog->show_all;
-
+ my $started;
  _when_ready(
   $sentinel,
   sub {
-   $success_callback->($options);
-   $dialog->destroy;
+   $started_callback->() unless ($started);
+   $finished_callback->($options);
   },
   sub {
-   $pbar->pulse;
+   unless ($started) {
+    $started_callback->();
+    $started = 1;
+   }
+   $running_callback->();
   }
  );
 }
 
 sub _new_page {
- my ( $format, $n ) = @_;
+ my ( $dir, $format, $n ) = @_;
  my $path = sprintf $format, $n;
  return _enqueue_request( 'scan-page',
-  { path => File::Spec->catdir( $SETTING->{session}, $path ) } );
+  { path => File::Spec->catdir( $dir, $path ) } );
 }
 
 sub scan_pages {
- my ( $class, $parent, $format, $npages, $n, $step, $page_good_callback,
+ my ( $class, $dir, $format, $npages, $n, $step, $started_callback, $running_callback, $finished_callback, $new_page_callback,
   $error_callback )
    = @_;
 
  $_self->{status}        = SANE_STATUS_GOOD;
  $_self->{abort_scan}    = 0;
  $_self->{scan_progress} = 0;
- my $sentinel = _new_page( $format, $n );
+ my $sentinel = _new_page( $dir, $format, $n );
 
  my $n2      = 1;
  my $npages2 = $npages;
 
- # Set up ProgressBar
- my $dialog = Gtk2::Dialog->new( $d->get('Scanning...'),
-  $parent, 'modal', 'gtk-cancel' => 'cancel' );
- my $pbar = Gtk2::ProgressBar->new;
- $dialog->vbox->add($pbar);
-
- # Ensure that the dialog box is destroyed when the user responds.
- $dialog->signal_connect(
-  response => sub {
-   $_[0]->destroy;
-#   $rotating = FALSE;          # FIXME
-   $_self->{abort_scan} = 1;
-  }
- );
- $dialog->show_all;
- if ( $npages2 > 0 ) {
-  $pbar->set_text( sprintf $d->get("Scanning page %d of %d"), $n2, $npages2 );
- }
- else {
-  $pbar->set_text( sprintf $d->get("Scanning page %d"), $n2 );
- }
-
+ my $started;
  Glib::Timeout->add(
   $_POLL_INTERVAL,
   sub {
-   if ( !$$sentinel ) {
-    $pbar->set_fraction( $_self->{scan_progress} )
-      if ( defined $_self->{scan_progress} );
+   if ( not $$sentinel ) {
+   unless ($started) {
+    $started_callback->();
+    $started = 1;
+   }
+    $running_callback->($_self->{scan_progress} );
     return Glib::SOURCE_CONTINUE;
    }
    else {
@@ -292,7 +224,7 @@ sub scan_pages {
     if ($_self->{status} == SANE_STATUS_GOOD
      or $_self->{status} == SANE_STATUS_EOF )
     {
-     $page_good_callback->($n);
+     $new_page_callback->($n);
     }
 
     # Stop the process unless everything OK and more scans required
@@ -301,29 +233,24 @@ sub scan_pages {
         or $_self->{status} == SANE_STATUS_EOF ) )
     {
      _enqueue_request('cancel');
-     $dialog->destroy;
-     $error_callback->( Sane::strstatus( $_self->{status} ) )
-       unless (
+     if (
       $_self->{status} == SANE_STATUS_GOOD
       or $_self->{status} == SANE_STATUS_EOF
       or ( $_self->{status} == SANE_STATUS_NO_DOCS
        and $npages < 1
        and $n2 > 1 )
-       );
+        ) {
+      $finished_callback->();
+     }
+     else {
+       $error_callback->( Sane::strstatus( $_self->{status} ) )
+     }
      return Glib::SOURCE_REMOVE;
     }
 
     $n += $step;
     $n2++;
-    $pbar->set_fraction(0);
-    if ( $npages2 > 0 ) {
-     $pbar->set_text( sprintf $d->get("Scanning page %d of %d"), $n2,
-      $npages2 );
-    }
-    else {
-     $pbar->set_text( sprintf $d->get("Scanning page %d"), $n2 );
-    }
-    $sentinel = _new_page( $format, $n );
+    $sentinel = _new_page( $dir, $format, $n );
     return Glib::SOURCE_CONTINUE;
    }
   }

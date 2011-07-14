@@ -32,9 +32,11 @@ Gscan2pdf->setup($d, $logger);
 system('convert xc:black black.pnm');
 
 my $slist = Gscan2pdf::Document->new;
-$slist->get_file_info( 'black.pnm', sub { $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {
-  $slist->analyse( $slist->{data}[0][2], sub { Gtk2->main_quit }, sub {}, sub {} );
-}, sub {}, sub {} ) }, sub {}, sub{} );
+$slist->get_file_info( 'black.pnm', sub {}, sub {}, sub {
+ $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {}, sub {}, sub {
+  $slist->analyse( $slist->{data}[0][2], sub {}, sub {}, sub { Gtk2->main_quit });
+ })
+});
 Gtk2->main;
 
 is( $slist->{data}[0][2]{mean}, 0, 'Found dark page' );

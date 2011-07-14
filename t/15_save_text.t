@@ -32,10 +32,12 @@ Gscan2pdf->setup($d, $logger);
 system('convert rose: test.pnm');
 
 my $slist = Gscan2pdf::Document->new;
-$slist->get_file_info( 'test.pnm', sub { $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {
+$slist->get_file_info( 'test.pnm', sub {}, sub {}, sub {
+ $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {}, sub {}, sub {
   $slist->{data}[0][2]{hocr} = 'The quick brown fox';
-  $slist->save_text('test.txt', [ $slist->{data}[0][2] ], sub {Gtk2->main_quit}, sub {}, sub {});
-}, sub {}, sub {} ) }, sub {}, sub{} );
+  $slist->save_text('test.txt', [ $slist->{data}[0][2] ], sub {}, sub {}, sub {Gtk2->main_quit});
+ })
+});
 Gtk2->main;
 
 is( -s 'test.txt', 19, 'TXT created with expected size' );

@@ -32,14 +32,14 @@ SKIP: {
  system('convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.bmp');
 
  my $slist = Gscan2pdf::Document->new;
- $slist->get_file_info( 'test.bmp', sub {
-  $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {
-   $slist->cuneiform( $slist->{data}[0][2], 'eng', sub {
+ $slist->get_file_info( 'test.bmp', sub {}, sub {}, sub {
+  $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {}, sub {}, sub {
+   $slist->cuneiform( $slist->{data}[0][2], 'eng', sub {}, sub {}, sub {
     like( $slist->{data}[0][2]{hocr}, qr/The quick brown fox/, 'Cuneiform returned sensible text' );
     Gtk2->main_quit;
-   }, sub {}, sub {}, sub {} );
-  }, sub {}, sub {} )
- }, sub {}, sub{} );
+   });
+  })
+ });
  Gtk2->main;
 
  unlink 'test.bmp';
