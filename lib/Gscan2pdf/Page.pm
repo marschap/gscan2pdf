@@ -87,6 +87,8 @@ sub freeze {
  my $new = $self->clone;
  $new->{filename} = $self->{filename}->filename
    if ( ref( $new->{filename} ) eq 'File::Temp' );
+ $new->{dir} = $self->{dir}->dirname
+   if ( ref( $new->{dir} ) eq 'File::Temp::Dir' );
  return $new;
 }
 

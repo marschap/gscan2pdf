@@ -5938,7 +5938,7 @@ sub post_process_scan {
      );
     }
     else {
-     ocr_page($_);
+     ocr_page($pages);
     }
      }
    : undef
@@ -5958,7 +5958,7 @@ sub post_process_scan {
   );
  }
  elsif ($ocr) {
-  ocr_page($page);
+  ocr_page( [$page] );
  }
  return;
 }
