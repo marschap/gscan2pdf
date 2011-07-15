@@ -33,6 +33,7 @@ sub setup {
  share $_self->{dir};
 
  $_self->{thread} = threads->new( \&_thread_main, $_self );
+ return;
 }
 
 sub _enqueue_request {
@@ -69,9 +70,10 @@ sub _when_ready {
    }
   }
  );
+ return;
 }
 
-sub kill {
+sub quit {
  _enqueue_request('quit');
  $_self->{thread}->join();
  $_self->{thread} = undef;
@@ -186,6 +188,7 @@ sub _thread_main {
   # Signal the sentinel that the request was completed.
   ${ $request->{sentinel} }++;
  }
+ return;
 }
 
 sub _thread_get_file_info {
@@ -788,6 +791,7 @@ sub _thread_save_djvu {
   $self->{message} = $d->get('Error closing DjVu');
   $logger->error("Error closing DjVu");
  }
+ return;
 }
 
 sub _thread_save_tiff {
@@ -862,6 +866,7 @@ sub _thread_save_tiff {
   $logger->info($cmd);
   my $output = `$cmd`;
  }
+ return;
 }
 
 # Have to roll my own slurp sub to support utf8

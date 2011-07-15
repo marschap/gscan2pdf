@@ -44,4 +44,4 @@ is( $slist->{data}[0][2]{std_dev}, 0, 'Found blank page' );
 #########################
 
 unlink 'white.pnm';
-Gscan2pdf->kill();
+Gscan2pdf->quit();

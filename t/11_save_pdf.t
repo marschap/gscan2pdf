@@ -45,4 +45,4 @@ is( system( 'identify test.pdf' ), 0, 'valid PDF created' );
 #########################
 
 unlink 'test.pnm', 'test.pdf';
-Gscan2pdf->kill();
+Gscan2pdf->quit();

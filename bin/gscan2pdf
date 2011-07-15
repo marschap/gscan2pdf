@@ -2002,15 +2002,14 @@ sub new {
 sub add_filter {
  my ( $file_chooser, $name, @file_extensions ) = @_;
  my $filter = Gtk2::FileFilter->new;
- foreach (@file_extensions) {
+ for my $extension (@file_extensions) {
   my @filter_pattern;
-  my $byte;
 
   # Create case insensitive pattern
-  foreach $byte ( split //, $_ ) {
+  for my $byte ( split //, $extension ) {
    push( @filter_pattern, '[' . uc($byte) . lc($byte) . ']' );
   }
-  my $new_filter_pattern = join( "", @filter_pattern );
+  my $new_filter_pattern = join( '', @filter_pattern );
   $filter->add_pattern( '*.' . $new_filter_pattern );
  }
  my $types;
@@ -2298,6 +2297,7 @@ sub import_dialog {
 sub error_opening_image {
  show_message_dialog( $window, 'error', 'close',
   $d->get('Error opening image') );
+ return;
 }
 
 # Create $window_new transient to $window with $title and $vbox
@@ -2659,7 +2659,7 @@ sub save_PDF {
     }
 
     # Check that the file can be written
-    if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
+    if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
      show_message_dialog( $file_chooser, 'error', 'close',
       sprintf( $d->get("File %s is read-only"), $filename ) );
      return;
@@ -3041,7 +3041,8 @@ sub save_dialog {
        }
 
        # Check that the file can be written
-       if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
+       if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) )
+       {
         show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
@@ -3095,7 +3096,8 @@ sub save_dialog {
        }
 
        # Check that the file can be written
-       if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
+       if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) )
+       {
         show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
@@ -3187,7 +3189,8 @@ sub save_dialog {
        }
 
        # Check that the file can be written
-       if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
+       if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) )
+       {
         show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
@@ -3243,7 +3246,8 @@ sub save_dialog {
        }
 
        # Check that the file can be written
-       if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
+       if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) )
+       {
         show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
@@ -3300,7 +3304,7 @@ sub show_message_dialog {
 
 sub file_exists {
  my ( $file_chooser, $filename ) = @_;
- if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
+ if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
   show_message_dialog( $file_chooser, 'error', 'close',
    sprintf( $d->get("File %s is read-only"), $filename ) );
   return TRUE;
@@ -3483,7 +3487,7 @@ sub save_djvu {
     }
 
     # Check that the file can be written
-    if ( !-w dirname($filename) or ( -f $filename and !-w $filename ) ) {
+    if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
      show_message_dialog( $file_chooser, 'error', 'close',
       sprintf( $d->get("File %s is read-only"), $filename ) );
      return;
@@ -8877,6 +8881,7 @@ sub update_selector {
   Gtk2::Gdk::Rectangle->new( @{ $SETTING{selection} } ) )
    if ( defined $sel );
  $selector->signal_handler_unblock( $selector->{selection_changed_signal} );
+ return;
 }
 
 # Run a user-defined tool on the selected images
@@ -9669,8 +9674,8 @@ sub quit {
 # kill all threads
 
 sub kill_threads {
- Gscan2pdf::Frontend::Sane->kill();
- Gscan2pdf->kill();
+ Gscan2pdf::Frontend::Sane->quit();
+ Gscan2pdf->quit();
  return;
 }
 

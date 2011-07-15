@@ -46,4 +46,4 @@ is( $slist->{data}[0][2]{mean}, 0, 'Found dark page' );
 #########################
 
 unlink 'white.pnm';
-Gscan2pdf->kill();
+Gscan2pdf->quit();

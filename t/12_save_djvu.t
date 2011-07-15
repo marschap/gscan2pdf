@@ -44,4 +44,4 @@ is( -s 'test.djvu', 1054, 'DjVu created with expected size' );
 #########################
 
 unlink 'test.pnm', 'test.djvu';
-Gscan2pdf->kill();
+Gscan2pdf->quit();

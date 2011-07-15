@@ -47,4 +47,4 @@ cmp_ok( -s 'test2.jpg', '<', -s 'test.jpg', 'cropped JPG smaller than original' 
 #########################
 
 unlink 'test.jpg', 'test2.jpg';
-Gscan2pdf->kill();
+Gscan2pdf->quit();

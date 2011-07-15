@@ -45,4 +45,4 @@ is( -s 'test.tif', -s 'test2.tif', 'TIFF imported correctly' );
 #########################
 
 unlink 'test.tif', 'test2.tif';
-Gscan2pdf->kill();
+Gscan2pdf->quit();

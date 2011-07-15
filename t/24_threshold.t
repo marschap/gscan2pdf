@@ -46,4 +46,4 @@ is( system( 'identify test.png' ), 0, 'valid PNG created' );
 #########################
 
 unlink 'test.jpg', 'test.png';
-Gscan2pdf->kill();
+Gscan2pdf->quit();

@@ -43,5 +43,5 @@ SKIP: {
  is( system( 'identify test.png' ), 0, 'valid PNG created' );
 
  unlink 'test.pnm', 'test.png';
- Gscan2pdf->kill();
+ Gscan2pdf->quit();
 }

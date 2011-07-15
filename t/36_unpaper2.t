@@ -51,5 +51,5 @@ SKIP: {
  is( system( 'identify rh.pnm' ), 0, 'valid PNM created for RH' );
 
  unlink 'test.pnm', '1.pnm', '2.pnm', 'black.pnm', 'lh.pnm', 'rh.pnm';
- Gscan2pdf->kill();
+ Gscan2pdf->quit();
 }

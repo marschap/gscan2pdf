@@ -44,4 +44,4 @@ is( system( 'identify test.tif' ), 0, 'valid TIFF created' );
 #########################
 
 unlink 'test.pnm', 'test.tif';
-Gscan2pdf->kill();
+Gscan2pdf->quit();

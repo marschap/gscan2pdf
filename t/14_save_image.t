@@ -44,4 +44,4 @@ is( system( 'identify test.jpg' ), 0, 'valid JPG created' );
 #########################
 
 unlink 'test.pnm', 'test.jpg';
-Gscan2pdf->kill();
+Gscan2pdf->quit();

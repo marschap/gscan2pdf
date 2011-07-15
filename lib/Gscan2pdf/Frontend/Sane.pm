@@ -30,6 +30,7 @@ sub setup {
  share $_self->{scan_progress};
 
  $_self->{thread} = threads->new( \&_thread_main, $_self );
+ return;
 }
 
 sub _enqueue_request {
@@ -62,9 +63,10 @@ sub _when_ready {
    }
   }
  );
+ return;
 }
 
-sub kill {
+sub quit {
  _enqueue_request('quit');
  $_self->{thread}->join();
  $_self->{thread} = undef;
@@ -91,6 +93,7 @@ sub get_devices {
    $running_callback->();
   }
  );
+ return;
 }
 
 sub is_connected {
@@ -126,6 +129,7 @@ sub open_device {
    $running_callback->();
   }
  );
+ return;
 }
 
 sub find_scan_options {
@@ -154,6 +158,7 @@ sub find_scan_options {
    $running_callback->();
   }
  );
+ return;
 }
 
 sub set_option {
@@ -184,6 +189,7 @@ sub set_option {
    $running_callback->();
   }
  );
+ return;
 }
 
 sub _new_page {
@@ -255,6 +261,7 @@ sub scan_pages {
    }
   }
  );
+ return;
 }
 
 sub _thread_main {
@@ -303,12 +310,14 @@ sub _thread_main {
   # Signal the sentinel that the request was completed.
   ${ $request->{sentinel} }++;
  }
+ return;
 }
 
 sub _thread_get_devices {
  my ($self) = @_;
  my @devices = Sane->get_devices;
  $self->{device_list} = shared_clone \@devices;
+ return;
 }
 
 sub _thread_open_device {
@@ -325,6 +334,7 @@ sub _thread_open_device {
  else {
   $self->{device_name} = $device_name;
  }
+ return;
 }
 
 sub _thread_get_options {
@@ -349,6 +359,7 @@ sub _thread_get_options {
  }
 
  $$options = shared_clone \@options;
+ return;
 }
 
 sub _thread_set_option {
@@ -381,6 +392,7 @@ sub _thread_set_option {
 
   $$new_options = shared_clone \@options;
  }
+ return;
 }
 
 sub _thread_write_pnm_header {
@@ -631,6 +643,7 @@ sub _thread_scan_page {
 sub _thread_cancel {
  my ($self) = @_;
  $self->{device_handle}->cancel;
+ return;
 }
 
 1;

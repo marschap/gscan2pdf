@@ -45,4 +45,4 @@ is( -s 'test.txt', 19, 'TXT created with expected size' );
 #########################
 
 unlink 'test.pnm', 'test.txt';
-Gscan2pdf->kill();
+Gscan2pdf->quit();

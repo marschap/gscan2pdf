@@ -35,4 +35,4 @@ Gtk2->main;
 #########################
 
 unlink 'out1.pnm';
-Gscan2pdf::Frontend::Sane->kill();
+Gscan2pdf::Frontend::Sane->quit();
