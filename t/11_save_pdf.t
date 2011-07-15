@@ -40,7 +40,7 @@ $slist->get_file_info( 'test.pnm', sub {}, sub {}, sub {
 });
 Gtk2->main;
 
-is( -s 'test.pdf', 3152, 'PDF created with expected size' );
+is( system( 'identify test.pdf' ), 0, 'valid PDF created' );
 
 #########################
 

@@ -39,7 +39,7 @@ $slist->get_file_info( 'test.pnm', sub {}, sub {}, sub {
 });
 Gtk2->main;
 
-is( -s 'test.tif', 9230, 'TIFF created with expected size' );
+is( system( 'identify test.tif' ), 0, 'valid TIFF created' );
 
 #########################
 

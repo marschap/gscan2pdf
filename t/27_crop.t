@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 BEGIN {
   use_ok('Gscan2pdf');
   use_ok('Gscan2pdf::Document');
@@ -41,7 +41,8 @@ $slist->get_file_info( 'test.jpg', sub {}, sub {}, sub {
 });
 Gtk2->main;
 
-is( -s 'test2.jpg', 420, 'JPG created with expected size' );
+is( system( 'identify test2.jpg' ), 0, 'valid JPG created' );
+cmp_ok( -s 'test2.jpg', '<', -s 'test.jpg', 'cropped JPG smaller than original' );
 
 #########################
 

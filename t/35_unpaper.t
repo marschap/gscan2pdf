@@ -40,7 +40,7 @@ SKIP: {
  });
  Gtk2->main;
 
- is( -s 'test.png', 948, 'PNG created with expected size' );
+ is( system( 'identify test.png' ), 0, 'valid PNG created' );
 
  unlink 'test.pnm', 'test.png';
  Gscan2pdf->kill();

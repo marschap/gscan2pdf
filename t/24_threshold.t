@@ -41,7 +41,7 @@ $slist->get_file_info( 'test.jpg', sub {}, sub {}, sub {
 });
 Gtk2->main;
 
-is( -s 'test.png', 296, 'PNG created with expected size' );
+is( system( 'identify test.png' ), 0, 'valid PNG created' );
 
 #########################
 

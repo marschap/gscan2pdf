@@ -47,8 +47,8 @@ SKIP: {
  });
  Gtk2->main;
 
- is( -s 'lh.pnm', 5934, 'LH PNM created with expected size' );
- is( -s 'rh.pnm', 5934, 'RH PNM created with expected size' );
+ is( system( 'identify lh.pnm' ), 0, 'valid PNM created for LH' );
+ is( system( 'identify rh.pnm' ), 0, 'valid PNM created for RH' );
 
  unlink 'test.pnm', '1.pnm', '2.pnm', 'black.pnm', 'lh.pnm', 'rh.pnm';
  Gscan2pdf->kill();
