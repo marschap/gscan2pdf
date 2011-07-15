@@ -2155,6 +2155,21 @@ sub setup_tpbar {
  return;
 }
 
+# Helper function to update thread progress bar
+
+sub update_tpbar {
+ my ( $thread, $process, $completed, $total ) = @_;
+ if ($total) {
+  $tpbar->set_fraction(
+   ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
+    if defined $Gscan2pdf::_self->{progress};
+  $tpbar->set_text( $Gscan2pdf::_self->{message} )
+    if defined $Gscan2pdf::_self->{message};
+  return TRUE;
+ }
+ return;
+}
+
 # Throw up file selector and import selected file
 
 sub import_dialog {
@@ -2698,11 +2713,7 @@ sub save_PDF {
      },
      sub {
       my ( $thread, $process, $completed, $total ) = @_;
-      $tpbar->set_fraction(
-       ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
-        if defined $Gscan2pdf::_self->{progress};
-      $tpbar->set_text( $Gscan2pdf::_self->{message} )
-        if defined $Gscan2pdf::_self->{message};
+      return update_tpbar( $thread, $process, $completed, $total );
      },
      sub {
       my ($new_page) = @_;
@@ -3124,11 +3135,7 @@ sub save_dialog {
         },
         sub {
          my ( $thread, $process, $completed, $total ) = @_;
-         $tpbar->set_fraction(
-          ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
-           if defined $Gscan2pdf::_self->{progress};
-         $tpbar->set_text( $Gscan2pdf::_self->{message} )
-           if defined $Gscan2pdf::_self->{message};
+         return update_tpbar( $thread, $process, $completed, $total );
         },
         sub {
          my ($new_page) = @_;
@@ -3378,11 +3385,7 @@ sub save_image {
    },
    sub {
     my ( $thread, $process, $completed, $total ) = @_;
-    $tpbar->set_fraction(
-     ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
-      if defined $Gscan2pdf::_self->{progress};
-    $tpbar->set_text( $Gscan2pdf::_self->{message} )
-      if defined $Gscan2pdf::_self->{message};
+    return update_tpbar( $thread, $process, $completed, $total );
    },
    sub {
     my ($new_page) = @_;
@@ -3432,11 +3435,7 @@ sub save_TIFF {
   },
   sub {
    my ( $thread, $process, $completed, $total ) = @_;
-   $tpbar->set_fraction(
-    ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
-     if defined $Gscan2pdf::_self->{progress};
-   $tpbar->set_text( $Gscan2pdf::_self->{message} )
-     if defined $Gscan2pdf::_self->{message};
+   return update_tpbar( $thread, $process, $completed, $total );
   },
   sub {
    my ($new_page) = @_;
@@ -3519,11 +3518,7 @@ sub save_djvu {
      },
      sub {
       my ( $thread, $process, $completed, $total ) = @_;
-      $tpbar->set_fraction(
-       ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
-        if defined $Gscan2pdf::_self->{progress};
-      $tpbar->set_text( $Gscan2pdf::_self->{message} )
-        if defined $Gscan2pdf::_self->{message};
+      return update_tpbar( $thread, $process, $completed, $total );
      },
      sub {
       my ($new_page) = @_;
