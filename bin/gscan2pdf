@@ -2127,6 +2127,35 @@ sub open_session {
  return;
 }
 
+# Helper function to set up thread progress bar
+
+sub setup_tpbar {
+ my ( $thread, $process, $completed, $total, $pid ) = @_;
+ if ($total) {
+  $tpbar->set_text(
+   sprintf(
+    $d->get("Process %i of %i (%s)"), $completed + 1, $total, $process
+   )
+  );
+  $tpbar->set_fraction( ( $completed + 0.5 ) / $total ) if ( defined $total );
+  $thbox->show_all;
+
+# Pass the signal back to:
+# 1. be able to cancel it when the process has finished
+# 2. flag that the progress bar has been set up
+#    and avoid the race condition where the callback is entered before the $completed and $total variables have caught up
+  return $tcbutton->signal_connect(
+   clicked => sub {
+    local $SIG{HUP} = 'IGNORE';
+    $logger->info("Sending HUP signal to PID $pid and its children");
+
+    # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+   }
+  );
+ }
+ return;
+}
+
 # Throw up file selector and import selected file
 
 sub import_dialog {
@@ -2165,23 +2194,8 @@ sub import_dialog {
     $_,
     sub {
      my ( $thread, $process, $completed, $total, $pid ) = @_;
-     $tpbar->set_text(
-      sprintf(
-       $d->get("Process %i of %i (%s)"),
-       $completed + 1,
-       $total, $process
-      )
-     );
-     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-     $thbox->show_all;
-     $signal = $tcbutton->signal_connect(
-      clicked => sub {
-       local $SIG{HUP} = 'IGNORE';
-       $logger->info("Sending HUP signal to PID $pid and its children");
-
-       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-      }
-     );
+     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+     return TRUE if ( defined $signal );
     },
     undef,
     sub {
@@ -2222,23 +2236,8 @@ sub import_dialog {
          $spinbuttonl->get_value,
          sub {
           my ( $thread, $process, $completed, $total, $pid ) = @_;
-          $tpbar->set_text(
-           sprintf(
-            $d->get("Process %i of %i (%s)"),
-            $completed + 1,
-            $total, $process
-           )
-          );
-          $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-          $thbox->show_all;
-          $signal = $tcbutton->signal_connect(
-           clicked => sub {
-            local $SIG{HUP} = 'IGNORE';
-            $logger->info("Sending HUP signal to PID $pid and its children");
-
-        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-           }
-          );
+          $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+          return TRUE if ( defined $signal );
          },
          undef,
          sub {
@@ -2269,29 +2268,14 @@ sub import_dialog {
        $info, 1, 1,
        sub {
         my ( $thread, $process, $completed, $total, $pid ) = @_;
-        $tpbar->set_text(
-         sprintf(
-          $d->get("Process %i of %i (%s)"),
-          $completed + 1,
-          $total, $process
-         )
-        );
-        $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-        $thbox->show_all;
-        $signal = $tcbutton->signal_connect(
-         clicked => sub {
-          local $SIG{HUP} = 'IGNORE';
-          $logger->info("Sending HUP signal to PID $pid and its children");
-
-        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-         }
-        );
+        $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+        return TRUE if ( defined $signal );
        },
        undef,
        sub {
         my ($new_page) = @_;
         $thbox->hide_all;
-        $tcbutton->signal_handler_disconnect($signal);
+        $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
         update_uimanager();
        },
        sub { error_opening_image() }
@@ -2709,23 +2693,8 @@ sub save_PDF {
      \%options,
      sub {
       my ( $thread, $process, $completed, $total, $pid ) = @_;
-      $tpbar->set_text(
-       sprintf(
-        $d->get("Process %i of %i (%s)"),
-        $completed + 1,
-        $total, $process
-       )
-      );
-      $tpbar->set_fraction( $completed / $total );
-      $thbox->show_all;
-      $signal = $tcbutton->signal_connect(
-       clicked => sub {
-        local $SIG{HUP} = 'IGNORE';
-        $logger->info("Sending HUP signal to PID $pid and its children");
-
-        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-       }
-      );
+      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+      return TRUE if ( defined $signal );
      },
      sub {
       my ( $thread, $process, $completed, $total ) = @_;
@@ -2738,7 +2707,7 @@ sub save_PDF {
      sub {
       my ($new_page) = @_;
       $thbox->hide_all;
-      $tcbutton->signal_handler_disconnect($signal);
+      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
 
 # create email if required
@@ -3148,23 +3117,8 @@ sub save_dialog {
         \@list_of_pages,
         sub {
          my ( $thread, $process, $completed, $total, $pid ) = @_;
-         $tpbar->set_text(
-          sprintf(
-           $d->get("Process %i of %i (%s)"),
-           $completed + 1,
-           $total, $process
-          )
-         );
-         $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-         $thbox->show_all;
-         $signal = $tcbutton->signal_connect(
-          clicked => sub {
-           local $SIG{HUP} = 'IGNORE';
-           $logger->info("Sending HUP signal to PID $pid and its children");
-
-        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-          }
-         );
+         $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+         return TRUE if ( defined $signal );
         },
         sub {
          my ( $thread, $process, $completed, $total ) = @_;
@@ -3177,7 +3131,7 @@ sub save_dialog {
         sub {
          my ($new_page) = @_;
          $thbox->hide_all;
-         $tcbutton->signal_handler_disconnect($signal);
+         $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
          mark_pages(@pagelist);
          $logger->debug("Finished saving $filename");
         },
@@ -3415,23 +3369,8 @@ sub save_image {
    \@list_of_pages,
    sub {
     my ( $thread, $process, $completed, $total, $pid ) = @_;
-    $tpbar->set_text(
-     sprintf(
-      $d->get("Process %i of %i (%s)"),
-      $completed + 1,
-      $total, $process
-     )
-    );
-    $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-    $thbox->show_all;
-    $signal = $tcbutton->signal_connect(
-     clicked => sub {
-      local $SIG{HUP} = 'IGNORE';
-      $logger->info("Sending HUP signal to PID $pid and its children");
-
-      # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-     }
-    );
+    $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+    return TRUE if ( defined $signal );
    },
    sub {
     my ( $thread, $process, $completed, $total ) = @_;
@@ -3444,7 +3383,7 @@ sub save_image {
    sub {
     my ($new_page) = @_;
     $thbox->hide_all;
-    $tcbutton->signal_handler_disconnect($signal);
+    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     mark_pages(@pagelist);
     $logger->debug("Finished saving $filename");
    },
@@ -3484,23 +3423,8 @@ sub save_TIFF {
   $ps,
   sub {
    my ( $thread, $process, $completed, $total, $pid ) = @_;
-   $tpbar->set_text(
-    sprintf(
-     $d->get("Process %i of %i (%s)"),
-     $completed + 1,
-     $total, $process
-    )
-   );
-   $tpbar->set_fraction( $completed / $total );
-   $thbox->show_all;
-   $signal = $tcbutton->signal_connect(
-    clicked => sub {
-     local $SIG{HUP} = 'IGNORE';
-     $logger->info("Sending HUP signal to PID $pid and its children");
-
-     # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-    }
-   );
+   $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+   return TRUE if ( defined $signal );
   },
   sub {
    my ( $thread, $process, $completed, $total ) = @_;
@@ -3513,7 +3437,7 @@ sub save_TIFF {
   sub {
    my ($new_page) = @_;
    $thbox->hide_all;
-   $tcbutton->signal_handler_disconnect($signal);
+   $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    mark_pages(@pagelist);
    $logger->debug("Finished saving $filename");
   },
@@ -3586,23 +3510,8 @@ sub save_djvu {
      \@list_of_pages,
      sub {
       my ( $thread, $process, $completed, $total, $pid ) = @_;
-      $tpbar->set_text(
-       sprintf(
-        $d->get("Process %i of %i (%s)"),
-        $completed + 1,
-        $total, $process
-       )
-      );
-      $tpbar->set_fraction( $completed / $total );
-      $thbox->show_all;
-      $signal = $tcbutton->signal_connect(
-       clicked => sub {
-        local $SIG{HUP} = 'IGNORE';
-        $logger->info("Sending HUP signal to PID $pid and its children");
-
-        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-       }
-      );
+      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+      return TRUE if ( defined $signal );
      },
      sub {
       my ( $thread, $process, $completed, $total ) = @_;
@@ -3615,7 +3524,7 @@ sub save_djvu {
      sub {
       my ($new_page) = @_;
       $thbox->hide_all;
-      $tcbutton->signal_handler_disconnect($signal);
+      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
       $logger->debug("Finished saving $filename");
      },
@@ -8409,30 +8318,15 @@ sub rotate {
    $pageobject,
    sub {
     my ( $thread, $process, $completed, $total, $pid ) = @_;
-    $tpbar->set_text(
-     sprintf(
-      $d->get("Process %i of %i (%s)"),
-      $completed + 1,
-      $total, $process
-     )
-    );
-    $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-    $thbox->show_all;
-    $signal = $tcbutton->signal_connect(
-     clicked => sub {
-      local $SIG{HUP} = 'IGNORE';
-      $logger->info("Sending HUP signal to PID $pid and its children");
-
-      # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-     }
-    );
+    $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+    return TRUE if ( defined $signal );
    },
    undef,
    sub {
     my ($new_page) = @_;
     $callback->($new_page) if $callback;
     $thbox->hide_all;
-    $tcbutton->signal_handler_disconnect($signal);
+    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {
     show_message_dialog( $main::window, 'error', 'close',
@@ -8469,31 +8363,16 @@ sub analyse {
     $slist->{data}[$i][2],
     sub {
      my ( $thread, $process, $completed, $total, $pid ) = @_;
-     $tpbar->set_text(
-      sprintf(
-       $d->get("Process %i of %i (%s)"),
-       $completed + 1,
-       $total, $process
-      )
-     );
-     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-     $thbox->show_all;
-     $signal = $tcbutton->signal_connect(
-      clicked => sub {
-       local $SIG{HUP} = 'IGNORE';
-       $logger->info("Sending HUP signal to PID $pid and its children");
-
-       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-      }
-     );
+     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+     return TRUE if ( defined $signal );
     },
     undef,
     sub {
      my ($new_page) = @_;
      $thbox->hide_all;
-     $tcbutton->signal_handler_disconnect($signal);
-     select_blank_pages() if $select_blank;
-     select_dark_pages()  if $select_dark;
+     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+     select_blank_pages()                          if $select_blank;
+     select_dark_pages()                           if $select_dark;
     },
     sub {
      show_message_dialog( $main::window, 'error', 'close',
@@ -8581,29 +8460,14 @@ sub threshold {
      $slist->{data}[$i][2],
      sub {
       my ( $thread, $process, $completed, $total, $pid ) = @_;
-      $tpbar->set_text(
-       sprintf(
-        $d->get("Process %i of %i (%s)"),
-        $completed + 1,
-        $total, $process
-       )
-      );
-      $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-      $thbox->show_all;
-      $signal = $tcbutton->signal_connect(
-       clicked => sub {
-        local $SIG{HUP} = 'IGNORE';
-        $logger->info("Sending HUP signal to PID $pid and its children");
-
-        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-       }
-      );
+      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+      return TRUE if ( defined $signal );
      },
      undef,
      sub {
       my ($new_page) = @_;
       $thbox->hide_all;
-      $tcbutton->signal_handler_disconnect($signal);
+      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {
       show_message_dialog( $main::window, 'error', 'close',
@@ -8659,29 +8523,14 @@ sub negate {
      $slist->{data}[$i][2],
      sub {
       my ( $thread, $process, $completed, $total, $pid ) = @_;
-      $tpbar->set_text(
-       sprintf(
-        $d->get("Process %i of %i (%s)"),
-        $completed + 1,
-        $total, $process
-       )
-      );
-      $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-      $thbox->show_all;
-      $signal = $tcbutton->signal_connect(
-       clicked => sub {
-        local $SIG{HUP} = 'IGNORE';
-        $logger->info("Sending HUP signal to PID $pid and its children");
-
-        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-       }
-      );
+      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+      return TRUE if ( defined $signal );
      },
      undef,
      sub {
       my ($new_page) = @_;
       $thbox->hide_all;
-      $tcbutton->signal_handler_disconnect($signal);
+      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {
       show_message_dialog( $main::window, 'error', 'close',
@@ -8809,29 +8658,14 @@ sub unsharp {
      $SETTING{'unsharp threshold'},
      sub {
       my ( $thread, $process, $completed, $total, $pid ) = @_;
-      $tpbar->set_text(
-       sprintf(
-        $d->get("Process %i of %i (%s)"),
-        $completed + 1,
-        $total, $process
-       )
-      );
-      $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-      $thbox->show_all;
-      $signal = $tcbutton->signal_connect(
-       clicked => sub {
-        local $SIG{HUP} = 'IGNORE';
-        $logger->info("Sending HUP signal to PID $pid and its children");
-
-        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-       }
-      );
+      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+      return TRUE if ( defined $signal );
      },
      undef,
      sub {
       my ($new_page) = @_;
       $thbox->hide_all;
-      $tcbutton->signal_handler_disconnect($signal);
+      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {
       show_message_dialog( $main::window, 'error', 'close',
@@ -9004,29 +8838,14 @@ sub crop {
      $x, $y, $w, $h,
      sub {
       my ( $thread, $process, $completed, $total, $pid ) = @_;
-      $tpbar->set_text(
-       sprintf(
-        $d->get("Process %i of %i (%s)"),
-        $completed + 1,
-        $total, $process
-       )
-      );
-      $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-      $thbox->show_all;
-      $signal = $tcbutton->signal_connect(
-       clicked => sub {
-        local $SIG{HUP} = 'IGNORE';
-        $logger->info("Sending HUP signal to PID $pid and its children");
-
-        # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-       }
-      );
+      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+      return TRUE if ( defined $signal );
      },
      undef,
      sub {
       my ($new_page) = @_;
       $thbox->hide_all;
-      $tcbutton->signal_handler_disconnect($signal);
+      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {
       show_message_dialog( $main::window, 'error', 'close',
@@ -9077,29 +8896,14 @@ sub user_defined_tool {
    $cmd,
    sub {
     my ( $thread, $process, $completed, $total, $pid ) = @_;
-    $tpbar->set_text(
-     sprintf(
-      $d->get("Process %i of %i (%s)"),
-      $completed + 1,
-      $total, $process
-     )
-    );
-    $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-    $thbox->show_all;
-    $signal = $tcbutton->signal_connect(
-     clicked => sub {
-      local $SIG{HUP} = 'IGNORE';
-      $logger->info("Sending HUP signal to PID $pid and its children");
-
-      # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-     }
-    );
+    $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+    return TRUE if ( defined $signal );
    },
    undef,
    sub {
     my ($new_page) = @_;
     $thbox->hide_all;
-    $tcbutton->signal_handler_disconnect($signal);
+    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {
     show_message_dialog( $main::window, 'error', 'close',
@@ -9146,30 +8950,15 @@ sub unpaper_page {
    $options,
    sub {
     my ( $thread, $process, $completed, $total, $pid ) = @_;
-    $tpbar->set_text(
-     sprintf(
-      $d->get("Process %i of %i (%s)"),
-      $completed + 1,
-      $total, $process
-     )
-    );
-    $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-    $thbox->show_all;
-    $signal = $tcbutton->signal_connect(
-     clicked => sub {
-      local $SIG{HUP} = 'IGNORE';
-      $logger->info("Sending HUP signal to PID $pid and its children");
-
-      # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-     }
-    );
+    $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+    return TRUE if ( defined $signal );
    },
    undef,
    sub {
     my ($new_page) = @_;
     $callback->($new_page) if $callback;
     $thbox->hide_all;
-    $tcbutton->signal_handler_disconnect($signal);
+    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {
     show_message_dialog( $main::window, 'error', 'close',
@@ -9549,29 +9338,14 @@ sub ocr_page {
     $pageobject,
     sub {
      my ( $thread, $process, $completed, $total, $pid ) = @_;
-     $tpbar->set_text(
-      sprintf(
-       $d->get("Process %i of %i (%s)"),
-       $completed + 1,
-       $total, $process
-      )
-     );
-     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-     $thbox->show_all;
-     $signal = $tcbutton->signal_connect(
-      clicked => sub {
-       local $SIG{HUP} = 'IGNORE';
-       $logger->info("Sending HUP signal to PID $pid and its children");
-
-       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-      }
-     );
+     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+     return TRUE if ( defined $signal );
     },
     undef,
     sub {
      my ($new_page) = @_;
      $thbox->hide_all;
-     $tcbutton->signal_handler_disconnect($signal);
+     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {
      show_message_dialog( $main::window, 'error', 'close',
@@ -9591,29 +9365,14 @@ sub ocr_page {
     $SETTING{'ocr language'},
     sub {
      my ( $thread, $process, $completed, $total, $pid ) = @_;
-     $tpbar->set_text(
-      sprintf(
-       $d->get("Process %i of %i (%s)"),
-       $completed + 1,
-       $total, $process
-      )
-     );
-     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-     $thbox->show_all;
-     $signal = $tcbutton->signal_connect(
-      clicked => sub {
-       local $SIG{HUP} = 'IGNORE';
-       $logger->info("Sending HUP signal to PID $pid and its children");
-
-       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-      }
-     );
+     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+     return TRUE if ( defined $signal );
     },
     undef,
     sub {
      my ($new_page) = @_;
      $thbox->hide_all;
-     $tcbutton->signal_handler_disconnect($signal);
+     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {
      show_message_dialog( $main::window, 'error', 'close',
@@ -9633,29 +9392,14 @@ sub ocr_page {
     $SETTING{'ocr language'},
     sub {
      my ( $thread, $process, $completed, $total, $pid ) = @_;
-     $tpbar->set_text(
-      sprintf(
-       $d->get("Process %i of %i (%s)"),
-       $completed + 1,
-       $total, $process
-      )
-     );
-     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-     $thbox->show_all;
-     $signal = $tcbutton->signal_connect(
-      clicked => sub {
-       local $SIG{HUP} = 'IGNORE';
-       $logger->info("Sending HUP signal to PID $pid and its children");
-
-       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-      }
-     );
+     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+     return TRUE if ( defined $signal );
     },
     undef,
     sub {
      my ($new_page) = @_;
      $thbox->hide_all;
-     $tcbutton->signal_handler_disconnect($signal);
+     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {
      show_message_dialog( $main::window, 'error', 'close',
@@ -9675,29 +9419,14 @@ sub ocr_page {
     $SETTING{'ocr language'},
     sub {
      my ( $thread, $process, $completed, $total, $pid ) = @_;
-     $tpbar->set_text(
-      sprintf(
-       $d->get("Process %i of %i (%s)"),
-       $completed + 1,
-       $total, $process
-      )
-     );
-     $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
-     $thbox->show_all;
-     $signal = $tcbutton->signal_connect(
-      clicked => sub {
-       local $SIG{HUP} = 'IGNORE';
-       $logger->info("Sending HUP signal to PID $pid and its children");
-
-       # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-      }
-     );
+     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+     return TRUE if ( defined $signal );
     },
     undef,
     sub {
      my ($new_page) = @_;
      $thbox->hide_all;
-     $tcbutton->signal_handler_disconnect($signal);
+     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {
      show_message_dialog( $main::window, 'error', 'close',
@@ -10318,29 +10047,14 @@ sub compress_temp {
    $_->[2],
    sub {
     my ( $thread, $process, $completed, $total, $pid ) = @_;
-    $tpbar->set_text(
-     sprintf(
-      $d->get("Process %i of %i (%s)"),
-      $completed + 1,
-      $total, $process
-     )
-    );
-    $tpbar->set_fraction( $completed / $total );
-    $thbox->show_all;
-    $signal = $tcbutton->signal_connect(
-     clicked => sub {
-      local $SIG{HUP} = 'IGNORE';
-      $logger->info("Sending HUP signal to PID $pid and its children");
-
-      # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
-     }
-    );
+    $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+    return TRUE if ( defined $signal );
    },
    undef,
    sub {
     my ($new_page) = @_;
     $thbox->hide_all;
-    $tcbutton->signal_handler_disconnect($signal);
+    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {
     show_message_dialog( $main::window, 'error', 'close',

@@ -72,12 +72,11 @@ sub get_file_info {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'get_file_info',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $running_callback->() if ($running_callback);
   }
@@ -107,12 +106,11 @@ sub import_file {
   sub {
    $self->fetch_file;
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'get_file_info',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $running_callback->() if ($running_callback);
   }
@@ -314,12 +312,11 @@ sub save_pdf {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'save PDF',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $running_callback->() if ($running_callback);
   }
@@ -356,12 +353,11 @@ sub save_djvu {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'save DJVU',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $running_callback->() if ($running_callback);
   }
@@ -402,12 +398,11 @@ sub save_tiff {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'save TIFF',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $running_callback->() if ($running_callback);
   }
@@ -436,12 +431,11 @@ sub rotate {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'rotate',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
@@ -525,12 +519,11 @@ sub save_image {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'save image',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $running_callback->() if ($running_callback);
   }
@@ -567,12 +560,11 @@ sub save_text {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'save text',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $running_callback->() if ($running_callback);
   }
@@ -601,12 +593,11 @@ sub analyse {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'analyze',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page();
    $running_callback->() if ($running_callback);
@@ -637,12 +628,11 @@ sub threshold {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'threshold',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
@@ -672,12 +662,11 @@ sub negate {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'negate',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
@@ -718,12 +707,11 @@ sub unsharp {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'unsharp',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
@@ -761,12 +749,11 @@ sub crop {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'crop',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
@@ -796,12 +783,11 @@ sub to_tiff {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'compress',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page();
    $running_callback->() if ($running_callback);
@@ -832,12 +818,11 @@ sub tesseract {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'tesseract',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
@@ -868,12 +853,11 @@ sub ocropus {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'ocropus',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
@@ -904,12 +888,11 @@ sub cuneiform {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'cuneiform',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
@@ -939,12 +922,11 @@ sub gocr {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'gocr',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
@@ -974,12 +956,11 @@ sub unpaper {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'clean up',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
@@ -1010,12 +991,11 @@ sub user_defined {
   },
   sub {
    unless ($started_flag) {
-    $started_callback->(
+    $started_flag = $started_callback->(
      1, 'user-defined',
      $Gscan2pdf::_self->{jobs_completed},
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
-    $started_flag = 1;
    }
    $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
