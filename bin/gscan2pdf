@@ -9361,11 +9361,11 @@ sub unpaper {
 sub ocr_page {
  my ($pages) = @_;
 
- for my $pageobject ( @{$pages} ) {
+ for my $page ( @{$pages} ) {
   my $signal;
   if ( $SETTING{'ocr engine'} eq 'gocr' ) {
    $slist->gocr(
-    $pageobject,
+    $page,
     sub {
      my ( $thread, $process, $completed, $total, $pid ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
@@ -9391,7 +9391,7 @@ sub ocr_page {
   }
   elsif ( $SETTING{'ocr engine'} eq 'tesseract' ) {
    $slist->tesseract(
-    $pageobject,
+    $page,
     $SETTING{'ocr language'},
     sub {
      my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -9418,7 +9418,7 @@ sub ocr_page {
   }
   elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
    $slist->ocropus(
-    $pageobject,
+    $page,
     $SETTING{'ocr language'},
     sub {
      my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -9445,7 +9445,7 @@ sub ocr_page {
   }
   else {    # cuneiform
    $slist->cuneiform(
-    $pageobject,
+    $page,
     $SETTING{'ocr language'},
     sub {
      my ( $thread, $process, $completed, $total, $pid ) = @_;
