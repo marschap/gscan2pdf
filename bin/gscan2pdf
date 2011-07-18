@@ -1923,7 +1923,9 @@ sub create_canvas {
  $canvas = Goo::Canvas->new;
  my $root = $canvas->get_root_item;
  unless ( defined $page->{w} ) {
-  my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file( $page->{filename} );
+
+  # quotes required to prevent File::Temp object being clobbered
+  my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$page->{filename}");
   $page->{w} = $pixbuf->get_width;
   $page->{h} = $pixbuf->get_height;
  }
@@ -5986,7 +5988,8 @@ sub print_dialog {
 
    # Image dimensions
    my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file(
-    $slist->{data}[$page_number][2]{filename} );
+    "$slist->{data}[$page_number][2]{filename}")
+     ;    # quotes required to prevent File::Temp object being clobbered
    my $iwidth  = $pixbuf->get_width;
    my $iheight = $pixbuf->get_height;
 
