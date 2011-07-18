@@ -31,7 +31,6 @@
 #    Support multiple sessions
 #    Test coverage http://search.cpan.org/~pjcj/Devel-Cover-0.65/
 #    It looks as though saving as PDF or DjVu with corrupted OCR output crashes gscan2pdf
-#    Add Edit/Select/No OCR
 #    Ask Fred http://www.fmwconcepts.com/imagemagick/ about techniques to split image into text/background
 #      1. threshold image into threshold.png
 #      2. convert white to alpha for foreground: convert threshold.png -negate -alpha copy -negate foreground.png
@@ -628,6 +627,11 @@ my @action_items = (
   \&select_modified_since_ocr
  ],
  [
+  'Select No OCR',                            undef,
+  $d->get('_No OCR'),                         undef,
+  $d->get('Select pages with no OCR output'), \&select_no_ocr
+ ],
+ [
   'Properties',                     'gtk-properties',
   $d->get('Propert_ies'),           undef,
   $d->get('Edit image properties'), \&properties
@@ -777,6 +781,7 @@ my $ui = "<ui>
     <menuitem action='Select Blank'/>
     <menuitem action='Select Dark'/>
     <menuitem action='Select Modified'/>
+    <menuitem action='Select No OCR'/>
    </menu>
    <separator/>
    <menuitem action='Properties'/>
@@ -6180,6 +6185,19 @@ sub select_modified_since_ocr {
   $dirty_time = defined($dirty_time) ? $dirty_time : 0;
   $ocr_time   = defined($ocr_time)   ? $ocr_time   : 0;
   push @selection, $_ if ( $ocr_flag and ( $ocr_time le $dirty_time ) );
+ }
+
+ $slist->get_selection->unselect_all;
+ $slist->select(@selection);
+ return;
+}
+
+# Select pages with no ocr output
+
+sub select_no_ocr {
+ my @selection;
+ for ( 0 .. $#{ $slist->{data} } ) {
+  push @selection, $_ unless ( defined $slist->{data}[$_][2]{hocr} );
  }
 
  $slist->get_selection->unselect_all;
