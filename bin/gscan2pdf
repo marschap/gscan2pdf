@@ -8286,16 +8286,14 @@ sub indices2pages {
 
 sub rotate {
  my ( $angle, $pagelist, $callback ) = @_;
- my $page = 0;
 
  # Update undo/redo buffers
  take_snapshot();
 
- for my $pageobject ( @{$pagelist} ) {
+ for my $page ( @{$pagelist} ) {
   my $signal;
   $slist->rotate(
-   $angle,
-   $pageobject,
+   $angle, $page,
    sub {
     my ( $thread, $process, $completed, $total, $pid ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
