@@ -632,6 +632,11 @@ my @action_items = (
   $d->get('Select pages with no OCR output'), \&select_no_ocr
  ],
  [
+  'Clear OCR',                                     'gtk-clear',
+  $d->get('_Clear OCR'),                           undef,
+  $d->get('Clear OCR output from selected pages'), \&clear_ocr
+ ],
+ [
   'Properties',                     'gtk-properties',
   $d->get('Propert_ies'),           undef,
   $d->get('Edit image properties'), \&properties
@@ -783,6 +788,7 @@ my $ui = "<ui>
     <menuitem action='Select Modified'/>
     <menuitem action='Select No OCR'/>
    </menu>
+   <menuitem action='Clear OCR'/>
    <separator/>
    <menuitem action='Properties'/>
    <separator/>
@@ -891,6 +897,8 @@ my $ui = "<ui>
   <menuitem action='Copy'/>
   <menuitem action='Paste'/>
   <menuitem action='Delete'/>
+  <separator/>
+  <menuitem action='Clear OCR'/>
   <separator/>
   <menuitem action='Properties'/>
  </popup>
@@ -6202,6 +6210,25 @@ sub select_no_ocr {
 
  $slist->get_selection->unselect_all;
  $slist->select(@selection);
+ return;
+}
+
+# Clear the OCR output from selected pages
+
+sub clear_ocr {
+
+ # Update undo/redo buffers
+ take_snapshot();
+
+ # Remove the existing canvas
+ $scwin_buffer->remove($_) for ( $scwin_buffer->get_children );
+
+ my @selection = $slist->get_selected_indices;
+ for (@selection) {
+  delete $slist->{data}[$_][2]{hocr};
+ }
+ use Data::Dumper;
+ $logger->info( Dumper($slist) );
  return;
 }
 
