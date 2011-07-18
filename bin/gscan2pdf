@@ -1955,6 +1955,9 @@ sub create_canvas {
   boxed_text( $canvas, $page->{hocr}, 0, 0, $page->{w}, $page->{h}, -1 );
  }
 
+ # Remove the existing contents
+ $scwin_buffer->remove($_) for ( $scwin_buffer->get_children );
+
  $scwin_buffer->add($canvas);
  $canvas->set_scale( $view->get_zoom );
  $canvas->show;
