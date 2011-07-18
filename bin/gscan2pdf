@@ -5525,7 +5525,6 @@ sub scanimage {
      $scanning = FALSE;
      $scbutton->signal_handler_disconnect($signal);
      $shbox->hide;
-     post_process_scan();
      return FALSE;                         # uninstall
     }
     return TRUE;                           # continue without uninstalling
@@ -5718,7 +5717,6 @@ sub scanadf {
      $scanning = FALSE;
      $scbutton->signal_handler_disconnect($signal);
      $shbox->hide;
-     post_process_scan();
      $running = FALSE;
      return FALSE;                         # uninstall
     }
@@ -5827,49 +5825,29 @@ sub hash2options {
 }
 
 sub post_process_scan {
- my ( $page, $rotate, $unpaper, $ocr ) = @_;
+ my ( $pages, $rotate, $unpaper, $ocr ) = @_;
 
- my $options = options2unpaper($unpaper_options);
  if ($rotate) {
   rotate(
-   $rotate,
-   [$page],
-   ( $unpaper or $ocr )
-   ? sub {
+   $rotate, $pages,
+   sub {
     my ($pages) = @_;
-    if ($unpaper) {
-     unpaper_page(
-      $pages, $options,
-      $ocr
-      ? sub {
-       my ($pages) = @_;
-       ocr_page($pages);
-        }
-      : undef
-     );
-    }
-    else {
-     ocr_page($pages);
-    }
-     }
-   : undef
+    post_process_scan( $pages, undef, $unpaper, $ocr );
+   }
   );
  }
  elsif ($unpaper) {
+  my $options = options2unpaper($unpaper_options);
   unpaper_page(
-   $page, $options,
-   $ocr
-   ? sub {
-    my (@pages) = @_;
-    for (@pages) {
-     ocr_page($_);
-    }
-     }
-   : undef
+   $pages, $options,
+   sub {
+    my ($pages) = @_;
+    post_process_scan( $pages, undef, undef, $ocr );
+   }
   );
  }
  elsif ($ocr) {
-  ocr_page( [$page] );
+  ocr_page($pages);
  }
  return;
 }
@@ -5935,7 +5913,7 @@ sub import_scan {
      }
      else {
       update_uimanager();
-      post_process_scan( $gpage, $rotate, $unpaper, $ocr );
+      post_process_scan( [$gpage], $rotate, $unpaper, $ocr );
      }
      return FALSE;    # uninstall
     }
