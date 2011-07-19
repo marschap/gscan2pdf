@@ -57,13 +57,13 @@ sub new {
  );
  if ( defined( $options{delete} ) and $options{delete} ) {
   move( $options{filename}, $self->{filename} )
-    or show_message_dialog( $main::window, 'error', 'close',
-   $main::d->get('Error importing image') );
+    or main::show_message_dialog( $main::window, 'error', 'close',
+   $main::d->get('Error importing image: ') . $! );
  }
  else {
   copy( $options{filename}, $self->{filename} )
-    or show_message_dialog( $main::window, 'error', 'close',
-   $main::d->get('Error importing image') );
+    or main::show_message_dialog( $main::window, 'error', 'close',
+   $main::d->get('Error importing image: ') . $! );
  }
 
  bless( $self, $class );
