@@ -514,14 +514,9 @@ my @action_items = (
   $d->get('Clears all pages'), \&new
  ],
  [
-  'Open',                                 'gtk-revert-to-saved',
-  $d->get('_Open'),                       '<control>o',
-  $d->get('Open gscan2pdf session file'), \&open_dialog
- ],
- [
-  'Import',                        'gtk-open',
-  $d->get('_Import'),              '<control>i',
-  $d->get('Import image file(s)'), \&import_dialog
+  'Open',                        'gtk-open',
+  $d->get('_Open'),              '<control>o',
+  $d->get('Open image file(s)'), \&open_dialog
  ],
  [
   'Scan',
@@ -757,7 +752,6 @@ my $ui = "<ui>
   <menu action='File'>
    <menuitem action='New'/>
    <menuitem action='Open'/>
-   <menuitem action='Import'/>
    <menuitem action='Scan'/>
    <menuitem action='Save'/>
    <menuitem action='Email as PDF'/>
@@ -825,7 +819,6 @@ my $ui = "<ui>
  <toolbar name='ToolBar'>
   <toolitem action='New'/>
   <toolitem action='Open'/>
-  <toolitem action='Import'/>
   <toolitem action='Scan'/>
   <toolitem action='Save'/>
   <toolitem action='Email as PDF'/>
@@ -2049,49 +2042,6 @@ sub add_filter {
  return;
 }
 
-# Throw up file selector and open session file
-
-sub open_dialog {
-
- # cd back to cwd to get filename
- chdir $SETTING{'cwd'};
-
- my $file_chooser = Gtk2::FileChooserDialog->new(
-  $d->get('Open session file'),
-  $window, 'open',
-  'gtk-cancel' => 'cancel',
-  'gtk-ok'     => 'ok'
- );
- $file_chooser->set_default_response('ok');
- add_filter( $file_chooser, $d->get('gscan2pdf session files'), 'gs2p' );
-
- if ( 'ok' eq $file_chooser->run ) {
-
-  # cd back to tempdir to import
-  chdir $SETTING{session};
-
-  # Update undo/redo buffers
-  take_snapshot();
-
-  my $filename = $file_chooser->get_filename;
-  $file_chooser->destroy;
-
-  # Update cwd
-  $SETTING{'cwd'} = dirname($filename);
-
-  open_session($filename);
-
-  update_uimanager();
- }
- else {
-  $file_chooser->destroy;
- }
-
- # cd back to tempdir
- chdir $SETTING{session};
- return;
-}
-
 sub open_session {
  my ($filename) = @_;
  $logger->info("Restoring session in $SETTING{session}");
@@ -2144,15 +2094,15 @@ sub update_tpbar {
  return;
 }
 
-# Throw up file selector and import selected file
+# Throw up file selector and open selected file
 
-sub import_dialog {
+sub open_dialog {
 
  # cd back to cwd to get filename
  chdir $SETTING{'cwd'};
 
  my $file_chooser = Gtk2::FileChooserDialog->new(
-  $d->get('Import image from file'),
+  $d->get('Open image'),
   $window, 'open',
   'gtk-cancel' => 'cancel',
   'gtk-ok'     => 'ok'
@@ -2160,7 +2110,7 @@ sub import_dialog {
  $file_chooser->set_select_multiple(TRUE);
  $file_chooser->set_default_response('ok');
  add_filter( $file_chooser, $d->get('Image files'),
-  'jpg', 'png', 'pnm', 'gif', 'tif', 'tiff', 'pdf', 'djvu', 'ps' );
+  'jpg', 'png', 'pnm', 'gif', 'tif', 'tiff', 'pdf', 'djvu', 'ps', 'gs2p' );
 
  if ( 'ok' eq $file_chooser->run ) {
 
@@ -2188,7 +2138,10 @@ sub import_dialog {
     undef,
     sub {
      my $info = $Gscan2pdf::_self->{data_queue}->dequeue;
-     if ( $info->{pages} > 1 ) {
+     if ( $info->{format} eq 'session file' ) {
+      open_session( $info->{path} );
+     }
+     elsif ( $info->{pages} > 1 ) {
       my ( $windowq, $vbox ) =
         create_window( $window, $d->get('Pages to extract'), TRUE );
       my $hbox = Gtk2::HBox->new;
@@ -10841,9 +10794,9 @@ L<https://translations.launchpad.net/ubuntu/jaunty/+source/sane-backends/+pots/s
 
 Clears the page list.
 
-=head3 Import
+=head3 Open
 
-Imports any format that imagemagick supports. PDFs will have their embedded
+Opens any format that imagemagick supports. PDFs will have their embedded
 images extracted and imported one per page.
 
 =head3 Scan

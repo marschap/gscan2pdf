@@ -195,18 +195,15 @@ sub _thread_get_file_info {
  my ( $self, $filename, %info ) = @_;
 
  $logger->info("Getting info for $filename");
+ my $format = `file -b $filename`;
 
- # Check if djvu
- my ( $fh, $buffer );
- unless ( open $fh, '<', $filename ) {
-  $self->{status} = 1;
-  $self->{message} = sprintf( $d->get("Can't open %s: %s"), $filename, $! );
+ if ( $format =~ /gzip compressed data/ ) {
+  $info{path}   = $filename;
+  $info{format} = 'session file';
+  $self->{data_queue}->enqueue( \%info );
   return;
  }
- binmode $fh;
- read( $fh, $buffer, 8 );
- close $fh;
- if ( $buffer eq 'AT&TFORM' ) {
+ elsif ( $format =~ /DjVu/ ) {
 
   # Dig out the number of pages
   my $cmd = "djvudump \"$filename\"";
@@ -243,7 +240,7 @@ sub _thread_get_file_info {
  my $x     = $image->Read($filename);
  $logger->warn($x) if "$x";
 
- my $format = $image->Get('format');
+ $format = $image->Get('format');
  $logger->info("Format $format") if ( defined $format );
  undef $image;
 
