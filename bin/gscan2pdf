@@ -143,13 +143,11 @@ use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Image::Magick;
 use Config::General 2.40;
 use Text::ParseWords;
-use Archive::Tar;           # For session files
 use Sane;
 use PDF::API2;
 use Getopt::Long;
 use
   Set::IntSpan 1.10;  # For page numbering issues. 1.10 required for size method
-use Storable qw(store retrieve);
 use Proc::Killfam;
 use Proc::ProcessTable;
 use Log::Log4perl;
@@ -2097,52 +2095,7 @@ sub open_dialog {
 sub open_session {
  my ($filename) = @_;
  $logger->info("Restoring session in $SETTING{session}");
- if ( defined $filename ) {
-  new();    # clear the page list
-  my $tar = Archive::Tar->new( $filename, TRUE );
-  my @filenamelist = $tar->list_files;
-  $tar->extract;
- }
- my $sessionref = retrieve("$SETTING{session}/session");
- my %session    = %$sessionref;
-
- # Block the row-changed signal whilst adding the scan (row) and sorting it.
- $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
- my @selection = @{ $session{selection} };
- delete $session{selection};
- foreach my $pagenum ( sort { $a <=> $b } ( keys(%session) ) ) {
-  $session{$pagenum}{filename} =
-    File::Spec->catfile( $SETTING{session},
-   basename( $session{$pagenum}{filename} ) )
-    if ( dirname( $session{$pagenum}{filename} ) ne $SETTING{session} );
-
-  # Set up the canvas
-  my $canvas;
-  if ( defined $session{$pagenum}{buffer} ) {
-   $canvas = Goo::Canvas->new;
-   my $root   = $canvas->get_root_item;
-   my @bounds = @{ shift @{ $session{$pagenum}{buffer} } };
-   $canvas->set_bounds(@bounds);
-
-   for my $box ( @{ $session{$pagenum}{buffer} } ) {
-    boxed_text( $session{$pagenum}{buffer},
-     $box->{text}, $box->{x1}, $box->{y1}, $box->{x2}, $box->{y2},
-     $box->{height} );
-   }
-   $canvas->show;
-  }
-
-  # Populate the SimpleList
-  my $page = Gscan2pdf::Page->new(
-   filename   => $filename,
-   buffer     => $canvas,
-   resolution => $session{$pagenum}{resolution},
-   dir        => $SETTING{session},
-  );
-  push @{ $slist->{data} }, [ $pagenum, $page->{thumb}, $page ];
- }
- $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
- $slist->select(@selection);
+ $slist->open_session( $SETTING{session}, $filename );
  update_uimanager();
  return;
 }
@@ -3283,7 +3236,7 @@ sub save_dialog {
 
        # Update cwd
        $SETTING{'cwd'} = dirname($filename);
-       save_session($filename);
+       $slist->save_session( $SETTING{session}, $filename );
       }
       $file_chooser->destroy;
      }
@@ -9855,63 +9808,7 @@ sub take_snapshot {
  $uimanager->get_widget('/ToolBar/Undo')->set_sensitive(TRUE);
 
  # Save session
- save_session();
- return;
-}
-
-# Dump $slist to a file.
-# If a filename is given, zip it up as a session file
-
-sub save_session {
- my ($filename) = @_;
-
- my %session;
- for my $i ( 0 .. $#{ $slist->{data} } ) {
-  $session{ $slist->{data}[$i][0] }{filename} =
-    $slist->{data}[$i][2]{filename}->filename;
-  $session{ $slist->{data}[$i][0] }{resolution} =
-    $slist->{data}[$i][2]{resolution};
-
-  $session{ $slist->{data}[$i][0] }{buffer} = ();
-  if ( defined $slist->{data}[$i][2]{buffer} ) {
-   my $canvas = $slist->{data}[$i][2]{buffer};
-   my @bounds = $canvas->get_bounds;
-   push @{ $session{ $slist->{data}[$i][0] }{buffer} }, [@bounds];
-
-   # Walk the canvas and store the text boxes as an array of hashes
-   my $root = $canvas->get_root_item;
-   my $n    = $root->get_n_children;
-   for ( my $j = 0 ; $j < $n ; $j++ ) {
-    my $group = $root->get_child($j);
-    if ( $group->isa('Goo::Canvas::Group') ) {
-     my $bounds = $group->get_bounds;
-     my ( $x1, $y1, $x2, $y2 ) =
-       ( $bounds->x1 + 1, $bounds->y1 + 1, $bounds->x2 - 1, $bounds->y2 - 1 );
-     my $n = $group->get_n_children;
-     for ( my $k = 0 ; $k < $n ; $k++ ) {
-      my $item = $group->get_child($k);
-      if ( $item->isa('Goo::Canvas::Text') ) {
-       my %box;
-       ( $box{x1}, $box{y1}, $box{x2}, $box{y2} ) = ( $x1, $y1, $x2, $y2 );
-       $box{text}   = $item->get('text');
-       $box{height} = $item->get('height');
-       push @{ $session{ $slist->{data}[$i][0] }{buffer} }, {%box};
-      }
-     }
-    }
-   }
-  }
- }
- my @selection = $slist->get_selected_indices;
- @{ $session{selection} } = @selection;
- store( \%session, "$SETTING{session}/session" );
- if ( defined $filename ) {
-  my $tar          = Archive::Tar->new;
-  my @filenamelist = glob("*");
-  $logger->info( Dumper( \@filenamelist ) );
-  $tar->add_files(@filenamelist);
-  $tar->write( $filename, TRUE, '' );
- }
+ $slist->save_session( $SETTING{session} );
  return;
 }
 

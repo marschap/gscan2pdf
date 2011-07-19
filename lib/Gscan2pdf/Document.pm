@@ -12,8 +12,11 @@ use Gtk2 -init;
 use Socket;
 use FileHandle;
 use Image::Magick;
-use File::Temp;    # To create temporary files
+use File::Temp;        # To create temporary files
+use File::Basename;    # Split filename into dir, file, ext
 use File::Copy;
+use Storable qw(store retrieve);
+use Archive::Tar;      # For session files
 use Readonly;
 Readonly our $POINTS_PER_INCH => 72;
 
@@ -1001,6 +1004,77 @@ sub user_defined {
    $running_callback->() if ($running_callback);
   }
  );
+ return;
+}
+
+# Dump $self to a file.
+# If a filename is given, zip it up as a session file
+
+sub save_session {
+ my ( $self, $dir, $filename ) = @_;
+
+ my ( %session, @filenamelist );
+ for my $i ( 0 .. $#{ $self->{data} } ) {
+  $session{ $self->{data}[$i][0] }{filename} =
+    $self->{data}[$i][2]{filename}->filename;
+  push @filenamelist, $self->{data}[$i][2]{filename}->filename;
+  for my $key ( keys( %{ $self->{data}[$i][2] } ) ) {
+   $session{ $self->{data}[$i][0] }{$key} = $self->{data}[$i][2]{$key}
+     unless ( $key eq 'filename' );
+  }
+ }
+ push @filenamelist, File::Spec->catfile( $dir, 'session' );
+ my @selection = $self->get_selected_indices;
+ @{ $session{selection} } = @selection;
+ store( \%session, File::Spec->catfile( $dir, 'session' ) );
+ if ( defined $filename ) {
+  my $tar = Archive::Tar->new;
+  $tar->add_files(@filenamelist);
+  $tar->write( $filename, TRUE, '' );
+ }
+ return;
+}
+
+sub open_session {
+ my ( $self, $dir, $filename, @filenamelist ) = @_;
+ if ( defined $filename ) {
+  my $tar = Archive::Tar->new( $filename, TRUE );
+  @filenamelist = $tar->list_files;
+  use Data::Dumper;
+  $main::logger->info( Dumper( \@filenamelist ) );
+  $tar->extract;
+ }
+ $dir = dirname( $filenamelist[0] ) unless ( defined $dir );
+ my $sessionref = retrieve( File::Spec->catfile( $dir, 'session' ) );
+ my %session = %$sessionref;
+
+ # Block the row-changed signal whilst adding the scan (row) and sorting it.
+ $self->get_model->signal_handler_block( $self->{row_changed_signal} )
+   if defined( $self->{row_changed_signal} );
+ my @selection = @{ $session{selection} };
+ delete $session{selection};
+ for my $pagenum ( sort { $a <=> $b } ( keys(%session) ) ) {
+
+# If we are opening a session file, then the session directory will be different
+# If this is a crashed session, then we can use the same one
+  unless ( defined( $session{$pagenum}{dir} )
+   and $session{$pagenum}{dir} eq $dir )
+  {
+   $session{$pagenum}{filename} =
+     File::Spec->catfile( $dir, basename( $session{$pagenum}{filename} ) );
+   $session{$pagenum}{dir} = $dir;
+  }
+
+  # Populate the SimpleList
+  my $page = Gscan2pdf::Page->new( %{ $session{$pagenum} } );
+  my $thumb =
+    Gscan2pdf::Document::get_pixbuf( $page->{filename}, $main::heightt,
+   $main::widtht );
+  push @{ $self->{data} }, [ $pagenum, $thumb, $page ];
+ }
+ $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
+   if defined( $self->{row_changed_signal} );
+ $self->select(@selection);
  return;
 }
 
