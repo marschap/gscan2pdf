@@ -20,6 +20,10 @@ BEGIN {
 SKIP: {
  skip 'unpaper not installed', 1 unless (system("which unpaper > /dev/null 2> /dev/null") == 0);
 
+ # Thumbnail dimensions
+ our $widtht  = 100;
+ our $heightt = 100;
+
  use Log::Log4perl qw(:easy);
  Log::Log4perl->easy_init($DEBUG);
  our $logger = Log::Log4perl::get_logger;
