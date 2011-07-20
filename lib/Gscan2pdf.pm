@@ -22,7 +22,8 @@ sub setup {
  $_self          = {};
 
  $_self->{requests}   = Thread::Queue->new;
- $_self->{data_queue} = Thread::Queue->new;
+ $_self->{info_queue} = Thread::Queue->new;
+ $_self->{page_queue} = Thread::Queue->new;
  share $_self->{status};
  share $_self->{message};
  share $_self->{progress};
@@ -200,7 +201,7 @@ sub _thread_get_file_info {
  if ( $format =~ /gzip compressed data/ ) {
   $info{path}   = $filename;
   $info{format} = 'session file';
-  $self->{data_queue}->enqueue( \%info );
+  $self->{info_queue}->enqueue( \%info );
   return;
  }
  elsif ( $format =~ /DjVu/ ) {
@@ -231,7 +232,7 @@ sub _thread_get_file_info {
   $info{ppi}   = \@ppi;
   $info{pages} = $pages;
   $info{path}  = $filename;
-  $self->{data_queue}->enqueue( \%info );
+  $self->{info_queue}->enqueue( \%info );
   return;
  }
 
@@ -279,7 +280,7 @@ sub _thread_get_file_info {
  }
  $info{format} = $format;
  $info{path}   = $filename;
- $self->{data_queue}->enqueue( \%info );
+ $self->{info_queue}->enqueue( \%info );
  return;
 }
 
@@ -303,7 +304,7 @@ sub _thread_import_file {
      format     => 'Tagged Image File Format',
      resolution => $info->{ppi}[ $i - 1 ]
     );
-    $self->{data_queue}->enqueue( $page->freeze );
+    $self->{page_queue}->enqueue( $page->freeze );
    }
   }
  }
@@ -329,7 +330,7 @@ sub _thread_import_file {
      delete   => TRUE,
      format   => 'Portable anymap'
     );
-    $self->{data_queue}->enqueue( $page->freeze );
+    $self->{page_queue}->enqueue( $page->freeze );
    }
   }
  }
@@ -349,7 +350,7 @@ sub _thread_import_file {
      delete   => TRUE,
      format   => $info->{format}
     );
-    $self->{data_queue}->enqueue( $page->freeze );
+    $self->{page_queue}->enqueue( $page->freeze );
    }
   }
  }
@@ -362,7 +363,7 @@ sub _thread_import_file {
    dir      => $self->{dir},
    format   => $info->{format}
   );
-  $self->{data_queue}->enqueue( $page->freeze );
+  $self->{page_queue}->enqueue( $page->freeze );
  }
  else {
   my $tiff = convert_to_tiff( $info->{path} );
@@ -371,7 +372,7 @@ sub _thread_import_file {
    dir      => $self->{dir},
    format   => 'Tagged Image File Format'
   );
-  $self->{data_queue}->enqueue( $page->freeze );
+  $self->{page_queue}->enqueue( $page->freeze );
  }
  return;
 }
@@ -906,7 +907,7 @@ sub _thread_rotate {
  $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
  $new->{dirty_time} = timestamp();            #flag as dirty
  my %data = ( old => $page, new => $new );
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -993,7 +994,7 @@ sub _thread_analyse {
  $new->{std_dev}      = $stddev;
  $new->{analyse_time} = timestamp();
  my %data = ( old => $page, new => $new );
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -1019,7 +1020,7 @@ sub _thread_threshold {
  $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
  $new->{dirty_time} = timestamp();            #flag as dirty
  my %data = ( old => $page, new => $new );
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -1049,7 +1050,7 @@ sub _thread_negate {
  $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
  $new->{dirty_time} = timestamp();            #flag as dirty
  my %data = ( old => $page, new => $new );
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -1087,7 +1088,7 @@ sub _thread_unsharp {
  $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
  $new->{dirty_time} = timestamp();            #flag as dirty
  my %data = ( old => $page, new => $new );
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -1119,7 +1120,7 @@ sub _thread_crop {
  $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
  $new->{dirty_time} = timestamp();            #flag as dirty
  my %data = ( old => $page, new => $new );
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -1130,7 +1131,7 @@ sub _thread_to_tiff {
  $new->{format}   = 'Tagged Image File Format';
  my %data = ( old => $page, new => $new->freeze );
  $logger->info("Converted $page->{filename} to $data{new}{filename}");
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -1142,7 +1143,7 @@ sub _thread_tesseract {
  $new->{ocr_time} =
    Gscan2pdf::timestamp();    #remember when we ran OCR on this page
  my %data = ( old => $page, new => $new );
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -1154,7 +1155,7 @@ sub _thread_ocropus {
  $new->{ocr_time} =
    Gscan2pdf::timestamp();    #remember when we ran OCR on this page
  my %data = ( old => $page, new => $new );
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -1166,7 +1167,7 @@ sub _thread_cuneiform {
  $new->{ocr_time} =
    Gscan2pdf::timestamp();    #remember when we ran OCR on this page
  my %data = ( old => $page, new => $new );
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -1191,7 +1192,7 @@ sub _thread_gocr {
  $new->{ocr_time} =
    Gscan2pdf::timestamp();         #remember when we ran OCR on this page
  my %data = ( old => $page, new => $new );
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -1259,7 +1260,7 @@ sub _thread_unpaper {
   $new->{dirty_time} = timestamp();    #flag as dirty
   $data{new2} = $new->freeze;
  }
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 
@@ -1302,7 +1303,7 @@ sub _thread_user_defined {
   format   => $image->Get('format'),
  );
  my %data = ( old => $page, new => $new->freeze );
- $self->{data_queue}->enqueue( \%data );
+ $self->{page_queue}->enqueue( \%data );
  return;
 }
 

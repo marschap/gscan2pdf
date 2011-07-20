@@ -34,7 +34,8 @@ system('convert rose: test.pnm');
 
 my $slist = Gscan2pdf::Document->new;
 $slist->get_file_info( 'test.pnm', sub {}, sub {}, sub {
- $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {}, sub {}, sub {
+ my ($info) = @_;
+ $slist->import_file( $info, 1, 1, sub {}, sub {}, sub {
   $slist->{data}[0][2]{hocr} = 'The quick brown fox';
   $slist->save_session(dirname( $slist->{data}[0][2]{filename} ), 'test.gs2p');
   Gtk2->main_quit;

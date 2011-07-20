@@ -5,17 +5,21 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 2;
+use Test::More tests => 1;
 BEGIN {
   use Gscan2pdf;
   use Gscan2pdf::Document;
-  use_ok('Gscan2pdf::Ocropus');
+  use File::Copy;
 };
 
 #########################
 
 # Insert your test code below, the Test::More module is use()ed here so read
 # its man page ( perldoc Test::More ) for help writing this test script.
+
+# Thumbnail dimensions
+our $widtht  = 100;
+our $heightt = 100;
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($DEBUG);
@@ -25,24 +29,26 @@ use Locale::gettext 1.05;    # For translations
 our $d = Locale::gettext->domain($prog_name);
 Gscan2pdf->setup($d, $logger);
 
-SKIP: {
- skip 'Ocropus not installed', 1 unless Gscan2pdf::Ocropus->setup;
+# Create test image
+system('convert rose: 1.tif');
 
- # Create test image
- system('convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.png');
-
- my $slist = Gscan2pdf::Document->new;
- $slist->get_file_info( 'test.png', sub {}, sub {}, sub {
+my $slist = Gscan2pdf::Document->new;
+for my $i (1 .. 10) {
+ copy('1.tif', "$i.tif") if ($i > 1);
+ $slist->get_file_info( "$i.tif", sub {}, sub {}, sub {
   my ($info) = @_;
   $slist->import_file( $info, 1, 1, sub {}, sub {}, sub {
-   $slist->ocropus( $slist->{data}[0][2], 'eng', sub {}, sub {}, sub {
-    like( $slist->{data}[0][2]{hocr}, qr/The quick brown fox/, 'Ocropus returned sensible text' );
-    Gtk2->main_quit;
-   });
+   Gtk2->main_quit if ($i == 10);
   })
  });
- Gtk2->main;
-
- unlink 'test.png';
- Gscan2pdf->quit();
 }
+Gtk2->main;
+
+is( $#{$slist->{data}}, 9, 'Imported 10 images' );
+
+#########################
+
+for my $i (1 .. 10) {
+ unlink "$i.tif";
+}
+Gscan2pdf->quit();

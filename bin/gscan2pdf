@@ -2137,7 +2137,7 @@ sub open_dialog {
     },
     undef,
     sub {
-     my $info = $Gscan2pdf::_self->{data_queue}->dequeue;
+     my ($info) = @_;
      if ( $info->{format} eq 'session file' ) {
       open_session( $info->{path} );
      }

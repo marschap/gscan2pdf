@@ -33,7 +33,8 @@ SKIP: {
 
  my $slist = Gscan2pdf::Document->new;
  $slist->get_file_info( 'test.tif', sub {}, sub {}, sub {
-  $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {}, sub {}, sub {
+  my ($info) = @_;
+  $slist->import_file( $info, 1, 1, sub {}, sub {}, sub {
    $slist->tesseract( $slist->{data}[0][2], 'eng', sub {}, sub {}, sub {
     like( $slist->{data}[0][2]{hocr}, qr/The quick brown fox/, 'Tesseract returned sensible text' );
     Gtk2->main_quit;

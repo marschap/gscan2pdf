@@ -33,7 +33,8 @@ system('convert rose: test.jpg');
 
 my $slist = Gscan2pdf::Document->new;
 $slist->get_file_info( 'test.jpg', sub {}, sub {}, sub {
- $slist->import_file( $Gscan2pdf::_self->{data_queue}->dequeue, 1, 1, sub {}, sub {}, sub {
+ my ($info) = @_;
+ $slist->import_file( $info, 1, 1, sub {}, sub {}, sub {
   $slist->crop($slist->{data}[0][2], 10, 10, 10, 10, sub {}, sub {}, sub {
    $slist->save_image('test2.jpg', [ $slist->{data}[0][2] ], sub {}, sub {}, sub {Gtk2->main_quit});
   });

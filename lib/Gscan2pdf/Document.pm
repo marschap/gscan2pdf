@@ -71,7 +71,8 @@ sub get_file_info {
     $error_callback->() if ($error_callback);
     return;
    }
-   $finished_callback->() if ($finished_callback);
+   $finished_callback->( $Gscan2pdf::_self->{info_queue}->dequeue )
+     if ($finished_callback);
   },
   sub {
    unless ($started_flag) {
@@ -92,6 +93,7 @@ sub import_file {
   $finished_callback, $error_callback )
    = @_;
  my $started_flag;
+ my $outstanding = $last - $first + 1;
  my $sentinel =
    Gscan2pdf::_enqueue_request( 'import-file',
   { info => $info, first => $first, last => $last } );
@@ -103,11 +105,11 @@ sub import_file {
     $error_callback->() if ($error_callback);
     return;
    }
-   $self->fetch_file;
+   $outstanding -= $self->fetch_file;
    $finished_callback->() if ($finished_callback);
   },
   sub {
-   $self->fetch_file;
+   $self->fetch_file($outstanding);
    unless ($started_flag) {
     $started_flag = $started_callback->(
      1, 'get_file_info',
@@ -122,12 +124,20 @@ sub import_file {
 }
 
 sub fetch_file {
- my ($self) = @_;
- while ( $Gscan2pdf::_self->{data_queue}->pending ) {
-  my $page = $Gscan2pdf::_self->{data_queue}->dequeue;
-  $self->add_page( $page->thaw );
+ my ( $self, $n ) = @_;
+ my $i = 0;
+ if ($n) {
+  while ( $i < $n ) {
+   my $page = $Gscan2pdf::_self->{page_queue}->dequeue;
+   $self->add_page( $page->thaw );
+   ++$i;
+  }
  }
- return;
+ elsif ( defined( my $page = $Gscan2pdf::_self->{page_queue}->dequeue_nb() ) ) {
+  $self->add_page( $page->thaw );
+  ++$i;
+ }
+ return $i;
 }
 
 sub get_resolution {
@@ -440,7 +450,6 @@ sub rotate {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
   }
  );
@@ -450,46 +459,44 @@ sub rotate {
 sub update_page {
  my ( $self, $display_callback ) = @_;
  my (@out);
- while ( $Gscan2pdf::_self->{data_queue}->pending ) {
-  my $data = $Gscan2pdf::_self->{data_queue}->dequeue;
+ my $data = $Gscan2pdf::_self->{page_queue}->dequeue;
 
-  # find old page
-  my $i = 0;
-  $i++
-    while ( $i <= $#{ $self->{data} }
-   and $self->{data}[$i][2]{filename} ne $data->{old}{filename} );
+ # find old page
+ my $i = 0;
+ $i++
+   while ( $i <= $#{ $self->{data} }
+  and $self->{data}[$i][2]{filename} ne $data->{old}{filename} );
 
-  # if found, replace with new one
-  if ( $i <= $#{ $self->{data} } ) {
+ # if found, replace with new one
+ if ( $i <= $#{ $self->{data} } ) {
 
 # Move the temp file from the thread to a temp object that will be automatically cleared up
-   my $new = $data->{new}->thaw;
+  my $new = $data->{new}->thaw;
 
-   $self->get_model->signal_handler_block( $self->{row_changed_signal} )
-     if defined( $self->{row_changed_signal} );
-   $self->{data}[$i][1] =
-     get_pixbuf( $new->{filename}, $main::heightt, $main::widtht );
-   $self->{data}[$i][2] = $new;
+  $self->get_model->signal_handler_block( $self->{row_changed_signal} )
+    if defined( $self->{row_changed_signal} );
+  $self->{data}[$i][1] =
+    get_pixbuf( $new->{filename}, $main::heightt, $main::widtht );
+  $self->{data}[$i][2] = $new;
+  push @out, $new;
+
+  if ( defined $data->{new2} ) {
+   $new = $data->{new2}->thaw;
+   splice @{ $self->{data} }, $i + 1, 0,
+     [
+    $self->{data}[$i][0] + 1,
+    get_pixbuf( $new->{filename}, $main::heightt, $main::widtht ), $new
+     ];
    push @out, $new;
-
-   if ( defined $data->{new2} ) {
-    $new = $data->{new2}->thaw;
-    splice @{ $self->{data} }, $i + 1, 0,
-      [
-     $self->{data}[$i][0] + 1,
-     get_pixbuf( $new->{filename}, $main::heightt, $main::widtht ), $new
-      ];
-    push @out, $new;
-   }
-
-   $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
-     if defined( $self->{row_changed_signal} );
-   my @selected = $self->get_selected_indices;
-   $self->select(@selected) if ( $i == $selected[0] );
-   $display_callback->( $self->{data}[$i][2] ) if ($display_callback);
   }
 
+  $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
+    if defined( $self->{row_changed_signal} );
+  my @selected = $self->get_selected_indices;
+  $self->select(@selected) if ( $i == $selected[0] );
+  $display_callback->( $self->{data}[$i][2] ) if ($display_callback);
  }
+
  return \@out;
 }
 
@@ -602,7 +609,6 @@ sub analyse {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page();
    $running_callback->() if ($running_callback);
   }
  );
@@ -637,7 +643,6 @@ sub threshold {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
   }
  );
@@ -671,7 +676,6 @@ sub negate {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
   }
  );
@@ -716,7 +720,6 @@ sub unsharp {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
   }
  );
@@ -758,7 +761,6 @@ sub crop {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
   }
  );
@@ -792,7 +794,6 @@ sub to_tiff {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page();
    $running_callback->() if ($running_callback);
   }
  );
@@ -827,7 +828,6 @@ sub tesseract {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
   }
  );
@@ -862,7 +862,6 @@ sub ocropus {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
   }
  );
@@ -897,7 +896,6 @@ sub cuneiform {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
   }
  );
@@ -931,7 +929,6 @@ sub gocr {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
   }
  );
@@ -965,7 +962,6 @@ sub unpaper {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
   }
  );
@@ -1000,7 +996,6 @@ sub user_defined {
      $Gscan2pdf::_self->{jobs_total}
     ) if ($started_callback);
    }
-   $self->update_page($display_callback);
    $running_callback->() if ($running_callback);
   }
  );
