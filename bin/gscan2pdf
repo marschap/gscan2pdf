@@ -1014,12 +1014,15 @@ $slist->signal_connect(
    my $iter = $model->get_iter($_);
    my @info = $model->get($iter);
    my $suffix;
-   $suffix = $1 if ( $info[2] =~ /(\.\w*)$/ );
+   $suffix = $1 if ( $info[2]->{filename} =~ /(\.\w*)$/ );
    my $new = File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
-   copy( $info[2], $new )
+
+   # quotes required to prevent File::Temp objects from being clobbered
+   copy( "$info[2]->{filename}", "$new" )
      or show_message_dialog( $window, 'error', 'close',
     $d->get('Error copying page') );
-   $info[2] = $new;
+
+   $info[2]->{filename} = $new;
    push @data, [@info];
   }
 
