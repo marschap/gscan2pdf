@@ -65,7 +65,19 @@ sub get_file_info {
    Gscan2pdf::_enqueue_request( 'get-file-info', { path => $path } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->() if ($error_callback);
@@ -74,16 +86,6 @@ sub get_file_info {
    $finished_callback->( $Gscan2pdf::_self->{info_queue}->dequeue )
      if ($finished_callback);
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'get_file_info',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -99,7 +101,20 @@ sub import_file {
   { info => $info, first => $first, last => $last } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   $self->fetch_file($outstanding);
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->() if ($error_callback);
@@ -108,17 +123,6 @@ sub import_file {
    $outstanding -= $self->fetch_file;
    $finished_callback->() if ($finished_callback);
   },
-  sub {
-   $self->fetch_file($outstanding);
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'get_file_info',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -315,7 +319,19 @@ sub save_pdf {
  );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -323,16 +339,6 @@ sub save_pdf {
    }
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'save PDF',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -356,7 +362,19 @@ sub save_djvu {
  );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },                          # pending
+  sub {                             # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {                             # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -364,16 +382,6 @@ sub save_djvu {
    }
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'save DJVU',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -401,7 +409,19 @@ sub save_tiff {
  );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -409,16 +429,6 @@ sub save_tiff {
    }
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'save TIFF',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -434,7 +444,19 @@ sub rotate {
   { angle => $angle, page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -442,16 +464,6 @@ sub rotate {
    }
    $finished_callback->( $self->update_page($display_callback) );
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'rotate',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -519,7 +531,19 @@ sub save_image {
  );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },                          # pending
+  sub {                             # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {                             # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -527,16 +551,6 @@ sub save_image {
    }
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'save image',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -560,7 +574,19 @@ sub save_text {
  );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },                          # pending
+  sub {                             # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {                             # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -568,16 +594,6 @@ sub save_text {
    }
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'save text',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -592,7 +608,19 @@ sub analyse {
    Gscan2pdf::_enqueue_request( 'analyse', { page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -601,16 +629,6 @@ sub analyse {
    $self->update_page();
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'analyze',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -626,7 +644,19 @@ sub threshold {
   { threshold => $threshold, page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -635,16 +665,6 @@ sub threshold {
    $self->update_page($display_callback);
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'threshold',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -659,7 +679,19 @@ sub negate {
    Gscan2pdf::_enqueue_request( 'negate', { page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -668,16 +700,6 @@ sub negate {
    $self->update_page($display_callback);
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'negate',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -703,7 +725,19 @@ sub unsharp {
  );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -712,16 +746,6 @@ sub unsharp {
    $self->update_page($display_callback);
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'unsharp',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -744,7 +768,19 @@ sub crop {
  );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -753,16 +789,6 @@ sub crop {
    $self->update_page($display_callback);
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'crop',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -777,7 +803,19 @@ sub to_tiff {
    Gscan2pdf::_enqueue_request( 'to-tiff', { page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -786,16 +824,6 @@ sub to_tiff {
    $self->update_page();
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'compress',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -811,7 +839,19 @@ sub tesseract {
   { page => $page->freeze, language => $language } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -820,16 +860,6 @@ sub tesseract {
    $self->update_page($display_callback);
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'tesseract',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -845,7 +875,19 @@ sub ocropus {
   { page => $page->freeze, language => $language } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -854,16 +896,6 @@ sub ocropus {
    $self->update_page($display_callback);
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'ocropus',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -879,7 +911,19 @@ sub cuneiform {
   { page => $page->freeze, language => $language } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -888,16 +932,6 @@ sub cuneiform {
    $self->update_page($display_callback);
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'cuneiform',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -912,7 +946,19 @@ sub gocr {
    Gscan2pdf::_enqueue_request( 'gocr', { page => $page->freeze } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -921,16 +967,6 @@ sub gocr {
    $self->update_page($display_callback);
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'gocr',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -946,7 +982,19 @@ sub unpaper {
   { page => $page->freeze, options => $options } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -954,16 +1002,6 @@ sub unpaper {
    }
    $finished_callback->( $self->update_page($display_callback) );
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'clean up',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }
@@ -979,7 +1017,19 @@ sub user_defined {
   { page => $page->freeze, command => $cmd } );
  Gscan2pdf::_when_ready(
   $sentinel,
-  sub {
+  sub { },    # pending
+  sub {       # running
+   unless ($started_flag) {
+    $started_flag = $started_callback->(
+     1,
+     $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::_self->{jobs_completed},
+     $Gscan2pdf::_self->{jobs_total}
+    ) if ($started_callback);
+   }
+   $running_callback->() if ($running_callback);
+  },
+  sub {       # finished
    $started_callback->() unless ($started_flag);
    if ( $Gscan2pdf::_self->{status} ) {
     $error_callback->();
@@ -988,16 +1038,6 @@ sub user_defined {
    $self->update_page($display_callback);
    $finished_callback->();
   },
-  sub {
-   unless ($started_flag) {
-    $started_flag = $started_callback->(
-     1, 'user-defined',
-     $Gscan2pdf::_self->{jobs_completed},
-     $Gscan2pdf::_self->{jobs_total}
-    ) if ($started_callback);
-   }
-   $running_callback->() if ($running_callback);
-  }
  );
  return;
 }

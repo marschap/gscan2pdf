@@ -27,6 +27,7 @@ sub setup {
  share $_self->{status};
  share $_self->{message};
  share $_self->{progress};
+ share $_self->{process_name};
  share $_self->{jobs_completed};
  share $_self->{jobs_total};
  $_self->{jobs_completed} = 0;
@@ -56,17 +57,22 @@ sub _enqueue_request {
 }
 
 sub _when_ready {
- my ( $sentinel, $ready_callback, $not_ready_callback ) = @_;
+ my ( $sentinel, $pending_callback, $running_callback, $finished_callback ) =
+   @_;
  Glib::Timeout->add(
   $_POLL_INTERVAL,
   sub {
-   if ($$sentinel) {
+   if ( $$sentinel == 2 ) {
     $_self->{jobs_completed}++;
-    $ready_callback->() if ($ready_callback);
+    $finished_callback->() if ($finished_callback);
     return Glib::SOURCE_REMOVE;
    }
+   elsif ( $$sentinel == 1 ) {
+    $running_callback->() if ($running_callback);
+    return Glib::SOURCE_CONTINUE;
+   }
    else {
-    $not_ready_callback->() if ($not_ready_callback);
+    $pending_callback->() if ($pending_callback);
     return Glib::SOURCE_CONTINUE;
    }
   }
@@ -85,6 +91,11 @@ sub _thread_main {
  my ($self) = @_;
 
  while ( my $request = $self->{requests}->dequeue ) {
+  $self->{process_name} = $request->{action};
+
+  # Signal the sentinel that the request was started.
+  ${ $request->{sentinel} }++;
+
   if ( $request->{action} eq 'analyse' ) {
    _thread_analyse( $self, $request->{page} );
   }
@@ -188,6 +199,8 @@ sub _thread_main {
 
   # Signal the sentinel that the request was completed.
   ${ $request->{sentinel} }++;
+
+  undef $self->{process_name};
  }
  return;
 }

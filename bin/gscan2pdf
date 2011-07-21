@@ -2054,13 +2054,13 @@ sub open_session {
 
 sub setup_tpbar {
  my ( $thread, $process, $completed, $total, $pid ) = @_;
- if ($total) {
+ if ( $total and defined($process) ) {
   $tpbar->set_text(
    sprintf(
     $d->get("Process %i of %i (%s)"), $completed + 1, $total, $process
    )
   );
-  $tpbar->set_fraction( ( $completed + 0.5 ) / $total ) if ( defined $total );
+  $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
   $thbox->show_all;
 
 # Pass the signal back to:
