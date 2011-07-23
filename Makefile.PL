@@ -40,6 +40,7 @@ WriteMakefile(
               EXE_FILES       => [ "bin/$program",
                                    'bin/scanimage-perl', 'bin/scanadf-perl' ],
               PREREQ_PM       => {
+                                   Glib                   => 1.210,
                                    Gtk2                   => 1.090,
                                    Sane                   => 0.02,
                                    Gtk2::Ex::Simple::List => 0,
