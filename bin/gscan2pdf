@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
-#    put back ability to correct OCR output
+#    add OCR check mode as in http://jimgarrison.org/moz-hocr-edit/hocr-edit-0.4-screenshot.png
 #    move scan progress bar to replace scan button
 #    tesseract 3 support
 #    Support for OCRE http://lem.eui.upm.es/ocre.html
@@ -132,7 +132,8 @@ use Gscan2pdf::Tesseract;
 use Gscan2pdf::Ocropus;
 use Gscan2pdf::Cuneiform;
 use Gtk2::ImageView;
-use Goo::Canvas;
+use Goo::Canvas 0.07
+  ;    # 0.07 required to avoid segfault in Goo::Canvas::Item::get_transform
 use Gtk2::Ex::Simple::List;
 use Gtk2::Gdk::Keysyms;
 use Cwd;                    # To obtain current working directory
@@ -1912,6 +1913,7 @@ sub display_image {
 
 sub create_canvas {
  my ($page) = @_;
+ $current_page = $page;
 
  # Set up the canvas
  $canvas = Goo::Canvas->new;
@@ -2513,6 +2515,7 @@ sub boxed_text {
    if ( $dialog->run eq 'ok' ) {
     my $char = $textbuffer->get('text');
     $widget->set( text => $char );
+    canvas2hocr($canvas);
    }
    $dialog->destroy;
    $canvas->pointer_ungrab( $widget, $ev->time );
@@ -2543,6 +2546,51 @@ sub boxed_text {
  #  }
  # );
  return;
+}
+
+# Convert the canvas into hocr
+
+sub canvas2hocr {
+ my ($canvas) = @_;
+ my ( $x, $y, $w, $h ) = $canvas->get_bounds;
+
+ $current_page->{hocr} = <<EOS;
+<!DOCTYPE html
+ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN
+ http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+ <meta content="ocr_line ocr_page" name="ocr-capabilities"/>
+ <meta content="en" name="ocr-langs"/>
+ <meta content="Latn" name="ocr-scripts"/>
+ <meta content="" name="ocr-microformats"/>
+ <title>OCR Output</title>
+</head>
+<body>
+ <div class="ocr_page" title="bbox $x $y $w $h>
+ <p class="ocr_par">
+EOS
+
+ my $root = $canvas->get_root_item;
+ for my $i ( 0 .. $root->get_n_children - 1 ) {
+  my $group  = $root->get_child($i);
+  my $matrix = $group->get_transform;
+  my ( $x1, $y1 ) = ( $matrix->x0, $matrix->y0 );
+  my ( $x2, $y2, $text );
+  for my $i ( 0 .. $group->get_n_children - 1 ) {
+   my $item = $group->get_child($i);
+   if ( $item->isa('Goo::Canvas::Rect') ) {
+    ( $x2, $y2 ) = ( $x1 + $item->get('width'), $y1 + $item->get('height') );
+   }
+   elsif ( $item->isa('Goo::Canvas::Text') ) {
+    $text = $item->get('text');
+   }
+   $current_page->{hocr} .=
+     "  <span class=\"ocr_line\" title=\"bbox $x1 $y1 $x2 $y2\">$text</span>\n"
+     if ( defined($x2) and defined($text) );
+  }
+ }
+ $current_page->{hocr} .= "</p></div></body></html>";
 }
 
 # Throw up file selector and save selected pages as PDF under given name.
@@ -6139,8 +6187,6 @@ sub clear_ocr {
  for (@selection) {
   delete $slist->{data}[$_][2]{hocr};
  }
- use Data::Dumper;
- $logger->info( Dumper($slist) );
  return;
 }
 

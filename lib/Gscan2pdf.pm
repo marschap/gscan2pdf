@@ -7,7 +7,8 @@ use threads;
 use threads::shared;
 use Thread::Queue;
 
-use Glib 1.210 qw(TRUE FALSE);          # To get TRUE and FALSE. 1.210 necessary for Glib::SOURCE_REMOVE and Glib::SOURCE_CONTINUE
+use Glib 1.210 qw(TRUE FALSE)
+  ; # To get TRUE and FALSE. 1.210 necessary for Glib::SOURCE_REMOVE and Glib::SOURCE_CONTINUE
 use Gtk2;
 use File::Copy;
 use File::Temp;    # To create temporary files
