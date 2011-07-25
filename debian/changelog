@@ -1,6 +1,7 @@
 gscan2pdf (0.9.33) natty; urgency=low
 
   * New upstream release
+    Versioned depends: libgoo-canvas-perl (>= 0.07)
     Closes: #622616 (gscan2pdf: error message)
     Closes: #622844 (gscan2pdf + libsane-perl frontend + Canon CanoScan LiDE25
 	results in "End of file reached")
