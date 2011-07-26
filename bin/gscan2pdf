@@ -132,8 +132,7 @@ use Gscan2pdf::Tesseract;
 use Gscan2pdf::Ocropus;
 use Gscan2pdf::Cuneiform;
 use Gtk2::ImageView;
-use Goo::Canvas 0.07
-  ;    # 0.07 required to avoid segfault in Goo::Canvas::Item::get_transform
+use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
 use Gtk2::Gdk::Keysyms;
 use Cwd;                    # To obtain current working directory
@@ -2574,13 +2573,19 @@ EOS
  my $root = $canvas->get_root_item;
  for my $i ( 0 .. $root->get_n_children - 1 ) {
   my $group  = $root->get_child($i);
-  my $matrix = $group->get_transform;
-  my ( $x1, $y1 ) = ( $matrix->x0, $matrix->y0 );
-  my ( $x2, $y2, $text );
+  my $bounds = $group->get_bounds;
+  my ( $x1, $y1, $x2, $y2 ) =
+    ( $bounds->x1 + 1, $bounds->y1 + 1, $bounds->x2 - 1, $bounds->y2 - 1 );
+
+#  my $matrix = $group->get_transform; FIXME: use this as soon as Goo::Canvas 0.07 is in generally available
+#  my ( $x1, $y1 ) = ( $matrix->x0, $matrix->y0 );
+#  my ( $x2, $y2, $text );
+  my ($text);
   for my $i ( 0 .. $group->get_n_children - 1 ) {
    my $item = $group->get_child($i);
    if ( $item->isa('Goo::Canvas::Rect') ) {
-    ( $x2, $y2 ) = ( $x1 + $item->get('width'), $y1 + $item->get('height') );
+
+  #    ( $x2, $y2 ) = ( $x1 + $item->get('width'), $y1 + $item->get('height') );
    }
    elsif ( $item->isa('Goo::Canvas::Text') ) {
     $text = $item->get('text');
