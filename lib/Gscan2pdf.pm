@@ -731,7 +731,7 @@ sub _thread_save_djvu {
   push @filelist, $djvu;
 
   # Add OCR to text layer
-  if ( defined( $pagedata->{buffer} ) ) {
+  if ( defined( $pagedata->{hocr} ) ) {
 
    # Get the size
    my $w = $image->Get('width');
@@ -745,29 +745,16 @@ sub _thread_save_djvu {
    print $fh "(page 0 0 $w $h\n";
 
    # Write the text boxes
-   my $canvas = $pagedata->{buffer};
-   my $root   = $canvas->get_root_item;
-   my $n      = $root->get_n_children;
-   for ( my $i = 0 ; $i < $n ; $i++ ) {
-    my $group = $root->get_child($i);
-    if ( $group->isa('Goo::Canvas::Group') ) {
-     my $n      = $group->get_n_children;
-     my $bounds = $group->get_bounds;
-     my ( $x1, $y1, $x2, $y2 ) =
-       ( $bounds->x1 + 1, $bounds->y1 + 1, $bounds->x2 - 1, $bounds->y2 - 1 );
-     for ( my $i = 0 ; $i < $n ; $i++ ) {
-      my $item = $group->get_child($i);
-      if ( $item->isa('Goo::Canvas::Text') ) {
+   for my $box ( $pagedata->boxes ) {
+    my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
+    ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution )
+      if ( $x1 == 0 and $y1 == 0 and not defined($x2) );
 
-       # Escape any inverted commas
-       my $txt = $item->get('text');
-       $txt =~ s/\\/\\\\/g;
-       $txt =~ s/"/\\\"/g;
-       printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2,
-         $h - $y1, $txt;
-      }
-     }
-    }
+    # Escape any inverted commas
+    $txt =~ s/\\/\\\\/g;
+    $txt =~ s/"/\\\"/g;
+    printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2,
+      $h - $y1, $txt;
    }
    print $fh ")";
    close $fh;
