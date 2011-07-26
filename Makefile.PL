@@ -50,7 +50,6 @@ WriteMakefile(
                                    Config::General        => 2.40,
                                    PDF::API2              => 0,
                                    Set::IntSpan           => 1.10,
-                                   XML::Simple            => 0,
                                    Goo::Canvas            => 0,
                                    Readonly               => 0,
                                    Log::Log4perl          => 0,
