@@ -546,71 +546,59 @@ sub _thread_save_pdf {
   );
 
   # Add OCR as text behind the scan
-  if ( defined( $pagedata->{buffer} ) ) {
-   $logger->info("Embedding OCR output behind image");
-   my $font   = $pdf->corefont('Times-Roman');
-   my $text   = $page->text;
-   my $canvas = $pagedata->{buffer};
-   my $root   = $canvas->get_root_item;
-   my $n      = $root->get_n_children;
-   for ( my $i = 0 ; $i < $n ; $i++ ) {
-    my $group = $root->get_child($i);
-    if ( $group->isa('Goo::Canvas::Group') ) {
-     my $bounds = $group->get_bounds;
-     my ( $x1, $y1, $x2, $y2 ) =
-       ( $bounds->x1 + 1, $bounds->y1 + 1, $bounds->x2 - 1, $bounds->y2 - 1 );
-     my $n = $group->get_n_children;
-     for ( my $i = 0 ; $i < $n ; $i++ ) {
-      my $item = $group->get_child($i);
-      if ( $item->isa('Goo::Canvas::Text') ) {
-       if ( abs( $h * $resolution - $y2 + $y1 ) > 5
-        and abs( $w * $resolution - $x2 + $x1 ) > 5 )
+  if ( defined( $pagedata->{hocr} ) ) {
+   $logger->info('Embedding OCR output behind image');
+   my $font = $pdf->corefont('Times-Roman');
+   my $text = $page->text;
+   for my $box ( $pagedata->boxes ) {
+    my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
+    ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution )
+      if ( $x1 == 0 and $y1 == 0 and not defined($x2) );
+    if ( abs( $h * $resolution - $y2 + $y1 ) > 5
+     and abs( $w * $resolution - $x2 + $x1 ) > 5 )
+    {
+
+     # Box is smaller than the page. We know the text position.
+     # Set the text position.
+     # Translate x1 and y1 to inches and then to points. Invert the
+     # y coordinate (since the PDF coordinates are bottom to top
+     # instead of top to bottom) and subtract $size, since the text
+     # will end up above the given point instead of below.
+     my $size =
+       ( $y2 - $y1 ) / $resolution * $Gscan2pdf::Document::POINTS_PER_INCH;
+     $text->font( $font, $size );
+     $text->translate(
+      $x1 / $resolution * $Gscan2pdf::Document::POINTS_PER_INCH,
+      ( $h - ( $y1 / $resolution ) ) * $Gscan2pdf::Document::POINTS_PER_INCH -
+        $size
+     );
+     $text->text($txt);
+    }
+    else {
+
+     # Box is the same size as the page. We don't know the text position.
+     # Start at the top of the page (PDF coordinate system starts
+     # at the bottom left of the page)
+     my $size = 1;
+     $text->font( $font, $size );
+     my $y = $h * $Gscan2pdf::Document::POINTS_PER_INCH - $size;
+     foreach my $line ( split( "\n", $txt ) ) {
+      my $x = 0;
+
+      # Add a word at a time in order to linewrap
+      foreach my $word ( split( ' ', $line ) ) {
+       if (
+        length($word) * $size + $x >
+        $w * $Gscan2pdf::Document::POINTS_PER_INCH )
        {
-
-        # Box is smaller than the page. We know the text position.
-        # Set the text position.
-        # Translate x1 and y1 to inches and then to points. Invert the
-        # y coordinate (since the PDF coordinates are bottom to top
-        # instead of top to bottom) and subtract $size, since the text
-        # will end up above the given point instead of below.
-        my $size =
-          ( $y2 - $y1 ) / $resolution * $Gscan2pdf::Document::POINTS_PER_INCH;
-        $text->font( $font, $size );
-        $text->translate(
-         $x1 / $resolution * $Gscan2pdf::Document::POINTS_PER_INCH,
-         ( $h - ( $y1 / $resolution ) ) *
-           $Gscan2pdf::Document::POINTS_PER_INCH - $size
-        );
-        $text->text( $item->get('text') );
+        $x = 0;
+        $y -= $size;
        }
-       else {
-
-        # Box is the same size as the page. We don't know the text position.
-        # Start at the top of the page (PDF coordinate system starts
-        # at the bottom left of the page)
-        my $size = 1;
-        $text->font( $font, $size );
-        my $y = $h * $Gscan2pdf::Document::POINTS_PER_INCH;
-        foreach my $line ( split( "\n", $item->get('text') ) ) {
-         my $x = 0;
-
-         # Add a word at a time in order to linewrap
-         foreach my $word ( split( ' ', $line ) ) {
-          if (
-           length($word) * $size + $x >
-           $w * $Gscan2pdf::Document::POINTS_PER_INCH )
-          {
-           $x = 0;
-           $y -= $size;
-          }
-          $text->translate( $x, $y );
-          $word = ' ' . $word if ( $x > 0 );
-          $x += $text->text($word);
-         }
-         $y -= $size;
-        }
-       }
+       $text->translate( $x, $y );
+       $word = ' ' . $word if ( $x > 0 );
+       $x += $text->text($word);
       }
+      $y -= $size;
      }
     }
    }

@@ -1927,42 +1927,9 @@ sub create_canvas {
  $canvas->set_bounds( 0, 0, $page->{w}, $page->{h} );
 
  # Attach the text to the canvas
- if ( $page->{hocr} =~ /<body>([\s\S]*)<\/body>/ ) {
-  require HTML::TokeParser;
-  require HTML::Entities;
-  require utf8;
-  my $p = HTML::TokeParser->new( \$page->{hocr} );
-  my ( $x1, $y1, $x2, $y2, $text );
-  while ( my $token = $p->get_token ) {
-   if ( $token->[0] eq 'S' ) {
-    if ( $token->[1] eq 'span'
-     and defined( $token->[2]{class} )
-     and $token->[2]{class} eq 'ocr_line'
-     and defined( $token->[2]{title} )
-     and $token->[2]{title} =~ /bbox (\d+) (\d+) (\d+) (\d+)/ )
-    {
-     ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
-    }
-    else {
-     undef $x1;
-     undef $text;
-    }
-   }
-   if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/ ) {
-    $text = HTML::Entities::decode_entities( $token->[1] );
-    utf8::encode($text);    # UTF-8 in perl sucks!
-    chomp($text);
-   }
-   if ( $token->[0] eq 'E' ) {
-    undef $x1;
-    undef $text;
-   }
-   boxed_text( $canvas, $text, $x1, $y1, $x2, $y2, abs( $y2 - $y1 ) )
-     if ( defined($x1) and defined($text) );
-  }
- }
- else {
-  boxed_text( $canvas, $page->{hocr}, 0, 0, $page->{w}, $page->{h}, -1 );
+ for my $box ( $page->boxes ) {
+  my ( $x1, $y1, $x2, $y2, $text ) = @$box;
+  boxed_text( $canvas, $text, $x1, $y1, $x2, $y2, abs( $y2 - $y1 ) );
  }
 
  # Remove the existing contents

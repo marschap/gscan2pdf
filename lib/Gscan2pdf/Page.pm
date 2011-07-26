@@ -8,6 +8,9 @@ use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2;
 use File::Copy;
 use File::Temp;             # To create temporary files
+use HTML::TokeParser;
+use HTML::Entities;
+use utf8;
 
 BEGIN {
  use Exporter ();
@@ -101,6 +104,48 @@ sub thaw {
  move( $new->{filename}, $filename );
  $new->{filename} = $filename;
  return $new;
+}
+
+# returns array of boxes with OCR text
+
+sub boxes {
+ my ( $self, @boxes ) = @_;
+
+ if ( $self->{hocr} =~ /<body>([\s\S]*)<\/body>/ ) {
+  my $p = HTML::TokeParser->new( \$self->{hocr} );
+  my ( $x1, $y1, $x2, $y2, $text );
+  while ( my $token = $p->get_token ) {
+   if ( $token->[0] eq 'S' ) {
+    if ( $token->[1] eq 'span'
+     and defined( $token->[2]{class} )
+     and $token->[2]{class} eq 'ocr_line'
+     and defined( $token->[2]{title} )
+     and $token->[2]{title} =~ /bbox (\d+) (\d+) (\d+) (\d+)/ )
+    {
+     ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
+    }
+    else {
+     undef $x1;
+     undef $text;
+    }
+   }
+   if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/ ) {
+    $text = HTML::Entities::decode_entities( $token->[1] );
+    utf8::encode($text);    # UTF-8 in perl sucks!
+    chomp($text);
+   }
+   if ( $token->[0] eq 'E' ) {
+    undef $x1;
+    undef $text;
+   }
+   push @boxes, [ $x1, $y1, $x2, $y2, $text ]
+     if ( defined($x1) and defined($text) );
+  }
+ }
+ else {
+  push @boxes, [ 0, 0, $self->{w}, $self->{h}, $self->{hocr} ];
+ }
+ return @boxes;
 }
 
 1;
