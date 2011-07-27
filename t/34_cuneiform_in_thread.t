@@ -36,10 +36,10 @@ SKIP: {
  system('convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.bmp');
 
  my $slist = Gscan2pdf::Document->new;
- $slist->get_file_info( 'test.bmp', sub {}, sub {}, sub {
+ $slist->get_file_info( 'test.bmp', undef, undef, undef, sub {
   my ($info) = @_;
-  $slist->import_file( $info, 1, 1, sub {}, sub {}, sub {
-   $slist->cuneiform( $slist->{data}[0][2], 'eng', sub {}, sub {}, sub {
+  $slist->import_file( $info, 1, 1, undef, undef, undef, sub {
+   $slist->cuneiform( $slist->{data}[0][2], 'eng', undef, undef, undef, sub {
     like( $slist->{data}[0][2]{hocr}, qr/The quick brown fox/, 'Cuneiform returned sensible text' );
     Gtk2->main_quit;
    });

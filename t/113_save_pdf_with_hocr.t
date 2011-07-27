@@ -33,9 +33,9 @@ Gscan2pdf->setup($d, $logger);
 system('convert rose: test.pnm');
 
 my $slist = Gscan2pdf::Document->new;
-$slist->get_file_info( 'test.pnm', sub {}, sub {}, sub {
+$slist->get_file_info( 'test.pnm', undef, undef, undef, sub {
  my ($info) = @_;
- $slist->import_file( $info, 1, 1, sub {}, sub {}, sub {
+ $slist->import_file( $info, 1, 1, undef, undef, undef, sub {
   $slist->{data}[0][2]{hocr} = <<EOS;
 <!DOCTYPE html
  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN
@@ -57,7 +57,7 @@ $slist->get_file_info( 'test.pnm', sub {}, sub {}, sub {
  </body>
 </html>
 EOS
-  $slist->save_pdf('test.pdf', [ $slist->{data}[0][2] ], undef, undef, sub {}, sub {}, sub {Gtk2->main_quit});
+  $slist->save_pdf('test.pdf', [ $slist->{data}[0][2] ], undef, undef, undef, undef, undef, sub {Gtk2->main_quit});
  })
 });
 Gtk2->main;

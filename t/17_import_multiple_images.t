@@ -35,9 +35,9 @@ system('convert rose: 1.tif');
 my $slist = Gscan2pdf::Document->new;
 for my $i (1 .. 10) {
  copy('1.tif', "$i.tif") if ($i > 1);
- $slist->get_file_info( "$i.tif", sub {}, sub {}, sub {
+ $slist->get_file_info( "$i.tif", undef, undef, undef, sub {
   my ($info) = @_;
-  $slist->import_file( $info, 1, 1, sub {}, sub {}, sub {
+  $slist->import_file( $info, 1, 1, undef, undef, undef, sub {
    Gtk2->main_quit if ($i == 10);
   })
  });

@@ -13,14 +13,14 @@ use Gtk2;
 use File::Copy;
 use File::Temp;    # To create temporary files
 
-my $_POLL_INTERVAL;
 our $_self;
+our $jobs_completed = 0;
+our $jobs_total     = 0;
 my ( $d, $logger );
 
 sub setup {
  ( my $class, $d, $logger ) = @_;
- $_POLL_INTERVAL = 100;    # ms
- $_self          = {};
+ $_self = {};
 
  $_self->{requests}   = Thread::Queue->new;
  $_self->{info_queue} = Thread::Queue->new;
@@ -29,10 +29,6 @@ sub setup {
  share $_self->{message};
  share $_self->{progress};
  share $_self->{process_name};
- share $_self->{jobs_completed};
- share $_self->{jobs_total};
- $_self->{jobs_completed} = 0;
- $_self->{jobs_total}     = 0;
  share $_self->{dir};
 
  $_self->{thread} = threads->new( \&_thread_main, $_self );
@@ -50,35 +46,11 @@ sub _enqueue_request {
   }
  );
  if ( $_self->{requests}->pending == 0 ) {
-  $_self->{jobs_completed} = 0;
-  $_self->{jobs_total}     = 0;
+  $jobs_completed = 0;
+  $jobs_total     = 0;
  }
- $_self->{jobs_total}++;
+ $jobs_total++;
  return \$sentinel;
-}
-
-sub _when_ready {
- my ( $sentinel, $pending_callback, $running_callback, $finished_callback ) =
-   @_;
- Glib::Timeout->add(
-  $_POLL_INTERVAL,
-  sub {
-   if ( $$sentinel == 2 ) {
-    $_self->{jobs_completed}++;
-    $finished_callback->() if ($finished_callback);
-    return Glib::SOURCE_REMOVE;
-   }
-   elsif ( $$sentinel == 1 ) {
-    $running_callback->() if ($running_callback);
-    return Glib::SOURCE_CONTINUE;
-   }
-   else {
-    $pending_callback->() if ($pending_callback);
-    return Glib::SOURCE_CONTINUE;
-   }
-  }
- );
- return;
 }
 
 sub quit {

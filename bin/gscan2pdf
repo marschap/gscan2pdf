@@ -2055,11 +2055,29 @@ sub setup_tpbar {
 sub update_tpbar {
  my ( $thread, $process, $completed, $total ) = @_;
  if ($total) {
-  $tpbar->set_fraction(
-   ( $completed + $Gscan2pdf::_self->{progress} ) / $total )
-    if defined $Gscan2pdf::_self->{progress};
-  $tpbar->set_text( $Gscan2pdf::_self->{message} )
-    if defined $Gscan2pdf::_self->{message};
+  if ( defined $process ) {
+   $process .= " - $Gscan2pdf::_self->{message}"
+     if ( defined $Gscan2pdf::_self->{message} );
+   $tpbar->set_text(
+    sprintf(
+     $d->get("Process %i of %i (%s)"),
+     $completed + 1,
+     $total, $process
+    )
+   );
+  }
+  else {
+   $tpbar->set_text(
+    sprintf( $d->get("Process %i of %i"), $completed + 1, $total ) );
+  }
+  if ( defined $Gscan2pdf::_self->{progress} ) {
+   $tpbar->set_fraction(
+    ( $completed + $Gscan2pdf::_self->{progress} ) / $total );
+  }
+  else {
+   $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+  }
+  $thbox->show_all;
   return TRUE;
  }
  return;
@@ -2101,14 +2119,18 @@ sub open_dialog {
    my $signal;
    $slist->get_file_info(
     $_,
-    sub {
+    sub {    # queued
+     my ( $process, $completed, $total ) = @_;
+     return update_tpbar( 1, $process, $completed, $total );
+    },
+    sub {    # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
-    undef,
-    sub {
-     my ($info) = @_;
+    undef,    # running
+    sub {     # finished
+     my ( $info, $pending ) = @_;
      if ( $info->{format} eq 'session file' ) {
       open_session( $info->{path} );
      }
@@ -2146,19 +2168,23 @@ sub open_dialog {
          $info,
          $spinbuttonf->get_value,
          $spinbuttonl->get_value,
-         sub {
+         sub {    # queued
+          my ( $process, $completed, $total ) = @_;
+          return update_tpbar( 1, $process, $completed, $total );
+         },
+         sub {    # started
           my ( $thread, $process, $completed, $total, $pid ) = @_;
           $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
           return TRUE if ( defined $signal );
          },
-         undef,
-         sub {
-          my ($new_page) = @_;
-          $thbox->hide_all;
+         undef,    # running
+         sub {     # finished
+          my ( $new_page, $pending ) = @_;
+          $thbox->hide_all unless $pending;
           $tcbutton->signal_handler_disconnect($signal);
           update_uimanager();
          },
-         sub { error_opening_image() }
+         sub { error_opening_image() }    # error
         );
        }
       );
@@ -2178,23 +2204,27 @@ sub open_dialog {
       my $signal;
       $slist->import_file(
        $info, 1, 1,
-       sub {
+       sub {    # queued
+        my ( $process, $completed, $total ) = @_;
+        return update_tpbar( 1, $process, $completed, $total );
+       },
+       sub {    # started
         my ( $thread, $process, $completed, $total, $pid ) = @_;
         $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
         return TRUE if ( defined $signal );
        },
-       undef,
-       sub {
-        my ($new_page) = @_;
-        $thbox->hide_all;
+       undef,    # running
+       sub {     # finished
+        my ( $new_page, $pending ) = @_;
+        $thbox->hide_all unless $pending;
         $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
         update_uimanager();
        },
-       sub { error_opening_image() }
+       sub { error_opening_image() }    # error
       );
      }
     },
-    sub { error_opening_image() },
+    sub { error_opening_image() },      # error
    );
   }
  }
@@ -2656,18 +2686,22 @@ sub save_PDF {
      \@list_of_pages,
      get_pdf_metadata(),
      \%options,
-     sub {
+     sub {    # queued
+      my ( $process, $completed, $total ) = @_;
+      return update_tpbar( 1, $process, $completed, $total );
+     },
+     sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
-     sub {
+     sub {    # running
       my ( $thread, $process, $completed, $total ) = @_;
       return update_tpbar( $thread, $process, $completed, $total );
      },
-     sub {
-      my ($new_page) = @_;
-      $thbox->hide_all;
+     sub {    # finished
+      my ( $new_page, $pending ) = @_;
+      $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
 
@@ -2679,7 +2713,7 @@ sub save_PDF {
 #                       }
       $logger->debug("Finished saving $filename");
      },
-     sub {
+     sub {    # error
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      }
@@ -3078,23 +3112,27 @@ sub save_dialog {
        $slist->save_text(
         $filename,
         \@list_of_pages,
-        sub {
+        sub {    # queued
+         my ( $process, $completed, $total ) = @_;
+         return update_tpbar( 1, $process, $completed, $total );
+        },
+        sub {    # started
          my ( $thread, $process, $completed, $total, $pid ) = @_;
          $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
          return TRUE if ( defined $signal );
         },
-        sub {
+        sub {    # running
          my ( $thread, $process, $completed, $total ) = @_;
          return update_tpbar( $thread, $process, $completed, $total );
         },
-        sub {
-         my ($new_page) = @_;
-         $thbox->hide_all;
+        sub {    # finished
+         my ( $new_page, $pending ) = @_;
+         $thbox->hide_all unless $pending;
          $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
          mark_pages(@pagelist);
          $logger->debug("Finished saving $filename");
         },
-        sub {
+        sub {    # error
          show_message_dialog( $main::window, 'error', 'close',
           $Gscan2pdf::_self->{message} );
         }
@@ -3328,23 +3366,27 @@ sub save_image {
   $slist->save_image(
    $filename,
    \@list_of_pages,
-   sub {
+   sub {    # queued
+    my ( $process, $completed, $total ) = @_;
+    return update_tpbar( 1, $process, $completed, $total );
+   },
+   sub {    # started
     my ( $thread, $process, $completed, $total, $pid ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },
-   sub {
+   sub {    # running
     my ( $thread, $process, $completed, $total ) = @_;
     return update_tpbar( $thread, $process, $completed, $total );
    },
-   sub {
-    my ($new_page) = @_;
-    $thbox->hide_all;
+   sub {    # finished
+    my ( $new_page, $pending ) = @_;
+    $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     mark_pages(@pagelist);
     $logger->debug("Finished saving $filename");
    },
-   sub {
+   sub {    # error
     show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    }
@@ -3378,23 +3420,27 @@ sub save_TIFF {
   \@list_of_pages,
   \%options,
   $ps,
-  sub {
+  sub {    # queued
+   my ( $process, $completed, $total ) = @_;
+   return update_tpbar( 1, $process, $completed, $total );
+  },
+  sub {    # started
    my ( $thread, $process, $completed, $total, $pid ) = @_;
    $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
    return TRUE if ( defined $signal );
   },
-  sub {
+  sub {    # running
    my ( $thread, $process, $completed, $total ) = @_;
    return update_tpbar( $thread, $process, $completed, $total );
   },
-  sub {
-   my ($new_page) = @_;
-   $thbox->hide_all;
+  sub {    # finished
+   my ( $new_page, $pending ) = @_;
+   $thbox->hide_all unless $pending;
    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    mark_pages(@pagelist);
    $logger->debug("Finished saving $filename");
   },
-  sub {
+  sub {    # error
    show_message_dialog( $main::window, 'error', 'close',
     $Gscan2pdf::_self->{message} );
   }
@@ -3461,23 +3507,27 @@ sub save_djvu {
     $slist->save_djvu(
      $filename,
      \@list_of_pages,
-     sub {
+     sub {    # queued
+      my ( $process, $completed, $total ) = @_;
+      return update_tpbar( 1, $process, $completed, $total );
+     },
+     sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
-     sub {
+     sub {    # running
       my ( $thread, $process, $completed, $total ) = @_;
       return update_tpbar( $thread, $process, $completed, $total );
      },
-     sub {
-      my ($new_page) = @_;
-      $thbox->hide_all;
+     sub {    # finished
+      my ( $new_page, $pending ) = @_;
+      $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
       $logger->debug("Finished saving $filename");
      },
-     sub {
+     sub {    # error
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      }
@@ -8272,23 +8322,27 @@ sub rotate {
   my $signal;
   $slist->rotate(
    $angle, $page,
-   sub {
+   sub {    # queued
+    my ( $process, $completed, $total ) = @_;
+    return update_tpbar( 1, $process, $completed, $total );
+   },
+   sub {    # started
     my ( $thread, $process, $completed, $total, $pid ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },
-   undef,
-   sub {
-    my ($new_page) = @_;
+   undef,    # running
+   sub {     # finished
+    my ( $new_page, $pending ) = @_;
     $callback->($new_page) if $callback;
-    $thbox->hide_all;
+    $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
-   sub {
+   sub {     # error
     show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
-   sub {
+   sub {     # display
     my ($new_page) = @_;
     display_image($new_page);
    },
@@ -8317,20 +8371,24 @@ sub analyse {
    my $signal;
    $slist->analyse(
     $slist->{data}[$i][2],
-    sub {
+    sub {    # queued
+     my ( $process, $completed, $total ) = @_;
+     return update_tpbar( 1, $process, $completed, $total );
+    },
+    sub {    # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
-    undef,
-    sub {
-     my ($new_page) = @_;
-     $thbox->hide_all;
+    undef,    # running
+    sub {     # finished
+     my ( $new_page, $pending ) = @_;
+     $thbox->hide_all unless $pending;
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      select_blank_pages()                          if $select_blank;
      select_dark_pages()                           if $select_dark;
     },
-    sub {
+    sub {     # error
      show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
@@ -8414,22 +8472,26 @@ sub threshold {
     $slist->threshold(
      $SETTING{'threshold tool'},
      $slist->{data}[$i][2],
-     sub {
+     sub {    # queued
+      my ( $process, $completed, $total ) = @_;
+      return update_tpbar( 1, $process, $completed, $total );
+     },
+     sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
-     undef,
-     sub {
-      my ($new_page) = @_;
-      $thbox->hide_all;
+     undef,    # running
+     sub {     # finished
+      my ( $new_page, $pending ) = @_;
+      $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
-     sub {
+     sub {     # error
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
-     sub {
+     sub {     # display
       my ($new_page) = @_;
       display_image($new_page);
      },
@@ -8477,22 +8539,26 @@ sub negate {
     my $signal;
     $slist->negate(
      $slist->{data}[$i][2],
-     sub {
+     sub {    # queued
+      my ( $process, $completed, $total ) = @_;
+      return update_tpbar( 1, $process, $completed, $total );
+     },
+     sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
-     undef,
-     sub {
-      my ($new_page) = @_;
-      $thbox->hide_all;
+     undef,    # running
+     sub {     # finished
+      my ( $new_page, $pending ) = @_;
+      $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
-     sub {
+     sub {     # error
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
-     sub {
+     sub {     # display
       my ($new_page) = @_;
       display_image($new_page);
      },
@@ -8612,22 +8678,26 @@ sub unsharp {
      $SETTING{'unsharp sigma'},
      $SETTING{'unsharp amount'},
      $SETTING{'unsharp threshold'},
-     sub {
+     sub {    # queued
+      my ( $process, $completed, $total ) = @_;
+      return update_tpbar( 1, $process, $completed, $total );
+     },
+     sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
-     undef,
-     sub {
-      my ($new_page) = @_;
-      $thbox->hide_all;
+     undef,    # running
+     sub {     # finished
+      my ( $new_page, $pending ) = @_;
+      $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
-     sub {
+     sub {     # error
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
-     sub {
+     sub {     # display
       my ($new_page) = @_;
       display_image($new_page);
      },
@@ -8792,22 +8862,26 @@ sub crop {
     $slist->crop(
      $slist->{data}[$i][2],
      $x, $y, $w, $h,
-     sub {
+     sub {    # queued
+      my ( $process, $completed, $total ) = @_;
+      return update_tpbar( 1, $process, $completed, $total );
+     },
+     sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
-     undef,
-     sub {
-      my ($new_page) = @_;
-      $thbox->hide_all;
+     undef,    # running
+     sub {     # finished
+      my ( $new_page, $pending ) = @_;
+      $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
-     sub {
+     sub {     # error
       show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
-     sub {
+     sub {     # display
       my ($new_page) = @_;
       display_image($new_page);
      },
@@ -8851,22 +8925,26 @@ sub user_defined_tool {
   $slist->user_defined(
    $slist->{data}[$i][2],
    $cmd,
-   sub {
+   sub {    # queued
+    my ( $process, $completed, $total ) = @_;
+    return update_tpbar( 1, $process, $completed, $total );
+   },
+   sub {    # started
     my ( $thread, $process, $completed, $total, $pid ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },
-   undef,
-   sub {
-    my ($new_page) = @_;
-    $thbox->hide_all;
+   undef,    # running
+   sub {     # finished
+    my ( $new_page, $pending ) = @_;
+    $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
-   sub {
+   sub {     # error
     show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
-   sub {
+   sub {     # display
     my ($new_page) = @_;
     display_image($new_page);
    },
@@ -8905,23 +8983,27 @@ sub unpaper_page {
   $slist->unpaper(
    $pageobject,
    $options,
-   sub {
+   sub {    # queued
+    my ( $process, $completed, $total ) = @_;
+    return update_tpbar( 1, $process, $completed, $total );
+   },
+   sub {    # started
     my ( $thread, $process, $completed, $total, $pid ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },
-   undef,
-   sub {
-    my ($new_page) = @_;
+   undef,    # running
+   sub {     # finished
+    my ( $new_page, $pending ) = @_;
     $callback->($new_page) if $callback;
-    $thbox->hide_all;
+    $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
-   sub {
+   sub {     # error
     show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
-   sub {
+   sub {     # display
     my ($new_page) = @_;
     display_image($new_page);
    },
@@ -9293,22 +9375,26 @@ sub ocr_page {
   if ( $SETTING{'ocr engine'} eq 'gocr' ) {
    $slist->gocr(
     $page,
-    sub {
+    sub {    # queued
+     my ( $process, $completed, $total ) = @_;
+     return update_tpbar( 1, $process, $completed, $total );
+    },
+    sub {    # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
-    undef,
-    sub {
-     my ($new_page) = @_;
-     $thbox->hide_all;
+    undef,    # running
+    sub {     # finished
+     my ( $new_page, $pending ) = @_;
+     $thbox->hide_all unless $pending;
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
-    sub {
+    sub {     # error
      show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
-    sub {
+    sub {     # display
      my ($new_page) = @_;
      my @page = $slist->get_selected_indices;
      create_canvas($new_page)
@@ -9320,22 +9406,26 @@ sub ocr_page {
    $slist->tesseract(
     $page,
     $SETTING{'ocr language'},
-    sub {
+    sub {     # queued
+     my ( $process, $completed, $total ) = @_;
+     return update_tpbar( 1, $process, $completed, $total );
+    },
+    sub {     # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
-    undef,
-    sub {
-     my ($new_page) = @_;
-     $thbox->hide_all;
+    undef,    # running
+    sub {     # finished
+     my ( $new_page, $pending ) = @_;
+     $thbox->hide_all unless $pending;
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
-    sub {
+    sub {     # error
      show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
-    sub {
+    sub {     # display
      my ($new_page) = @_;
      my @page = $slist->get_selected_indices;
      create_canvas($new_page)
@@ -9347,22 +9437,26 @@ sub ocr_page {
    $slist->ocropus(
     $page,
     $SETTING{'ocr language'},
-    sub {
+    sub {     # queued
+     my ( $process, $completed, $total ) = @_;
+     return update_tpbar( 1, $process, $completed, $total );
+    },
+    sub {     # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
-    undef,
-    sub {
-     my ($new_page) = @_;
-     $thbox->hide_all;
+    undef,    # running
+    sub {     # finished
+     my ( $new_page, $pending ) = @_;
+     $thbox->hide_all unless $pending;
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
-    sub {
+    sub {     # error
      show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
-    sub {
+    sub {     # display
      my ($new_page) = @_;
      my @page = $slist->get_selected_indices;
      create_canvas($new_page)
@@ -9370,26 +9464,30 @@ sub ocr_page {
     }
    );
   }
-  else {    # cuneiform
+  else {      # cuneiform
    $slist->cuneiform(
     $page,
     $SETTING{'ocr language'},
-    sub {
+    sub {     # queued
+     my ( $process, $completed, $total ) = @_;
+     return update_tpbar( 1, $process, $completed, $total );
+    },
+    sub {     # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
-    undef,
-    sub {
-     my ($new_page) = @_;
-     $thbox->hide_all;
+    undef,    # running
+    sub {     # finished
+     my ( $new_page, $pending ) = @_;
+     $thbox->hide_all unless $pending;
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
-    sub {
+    sub {     # error
      show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
-    sub {
+    sub {     # display
      my ($new_page) = @_;
      my @page = $slist->get_selected_indices;
      create_canvas($new_page)
@@ -9946,18 +10044,22 @@ sub compress_temp {
   my $signal;
   $slist->to_tiff(
    $_->[2],
-   sub {
+   sub {    # queued
+    my ( $process, $completed, $total ) = @_;
+    return update_tpbar( 1, $process, $completed, $total );
+   },
+   sub {    # started
     my ( $thread, $process, $completed, $total, $pid ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },
-   undef,
-   sub {
-    my ($new_page) = @_;
-    $thbox->hide_all;
+   undef,    # running
+   sub {     # finished
+    my ( $new_page, $pending ) = @_;
+    $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
-   sub {
+   sub {     # error
     show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
