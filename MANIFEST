@@ -111,8 +111,12 @@ stock-rotate-270.svg
 stock-rotate-90.svg
 stock-selection-all-16.png
 t/01_scan_sane.t
-t/11_save_pdf.t
-t/12_save_djvu.t
+t/111_save_pdf.t
+t/112_save_pdf_with_text.t
+t/113_save_pdf_with_hocr.t
+t/121_save_djvu.t
+t/122_save_djvu_with_text.t
+t/123_save_djvu_with_hocr.t
 t/13_save_tiff.t
 t/14_save_image.t
 t/15_save_text.t
