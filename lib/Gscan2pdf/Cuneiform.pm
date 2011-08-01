@@ -68,7 +68,7 @@ sub languages {
 }
 
 sub hocr {
- my ( $class, $file, $language, $bmp, $cmd ) = @_;
+ my ( $class, $file, $language, $pidfile, $bmp, $cmd ) = @_;
 
  # Temporary filename for output
  my $txt = File::Temp->new( SUFFIX => '.txt' );
@@ -86,7 +86,12 @@ sub hocr {
  }
  $cmd = "cuneiform -l $language -f hocr -o $txt $bmp";
  $main::logger->info($cmd);
- system($cmd);
+ if ( defined $pidfile ) {
+  system("echo $$ > $pidfile;$cmd");
+ }
+ else {
+  system($cmd);
+ }
  return Gscan2pdf::slurp($txt);
 }
 

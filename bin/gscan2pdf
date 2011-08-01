@@ -2040,10 +2040,8 @@ sub setup_tpbar {
 #    and avoid the race condition where the callback is entered before the $completed and $total variables have caught up
   return $tcbutton->signal_connect(
    clicked => sub {
-    local $SIG{HUP} = 'IGNORE';
-    $logger->info("Sending HUP signal to PID $pid and its children");
-
-    # killfam 'HUP', ($pid); FIXME: work out how to cancel process in thread
+    $slist->{cancelled} = TRUE;
+    $thbox->hide;
    }
   );
  }

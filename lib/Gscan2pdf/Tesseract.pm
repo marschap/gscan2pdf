@@ -56,7 +56,7 @@ sub languages {
 }
 
 sub text {
- my ( $class, $file, $language, $tif, $cmd ) = @_;
+ my ( $class, $file, $language, $pidfile, $tif, $cmd ) = @_;
  setup() unless $setup;
 
  # Temporary filename for output
@@ -81,7 +81,12 @@ sub text {
   $cmd = "tesseract $tif $path$name 2> /dev/null";
  }
  $main::logger->info($cmd);
- system($cmd);
+ if ( defined $pidfile ) {
+  system("echo $$ > $pidfile;$cmd");
+ }
+ else {
+  system($cmd);
+ }
  return Gscan2pdf::slurp($txt);
 }
 

@@ -46,7 +46,7 @@ sub setup {
 }
 
 sub hocr {
- my ( $class, $file, $language, $png, $cmd ) = @_;
+ my ( $class, $file, $language, $pidfile, $png, $cmd ) = @_;
  setup() unless $setup;
 
  if ( $file !~ /\.(png|jpg|pnm)$/ ) {
@@ -67,6 +67,7 @@ sub hocr {
   $cmd = "$exe $png";
  }
  $main::logger->info($cmd);
+ return `echo $$ > $pidfile;$cmd` if ( defined $pidfile );
  return `$cmd`;
 }
 

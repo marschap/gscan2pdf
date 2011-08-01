@@ -12,6 +12,7 @@ use Glib 1.210 qw(TRUE FALSE)
 use Gtk2;
 use File::Copy;
 use File::Temp;    # To create temporary files
+use Proc::Killfam;
 
 our $_self;
 our $jobs_completed = 0;
@@ -30,6 +31,7 @@ sub setup {
  share $_self->{progress};
  share $_self->{process_name};
  share $_self->{dir};
+ share $_self->{cancel};
 
  $_self->{thread} = threads->new( \&_thread_main, $_self );
  return;
@@ -53,6 +55,25 @@ sub _enqueue_request {
  return \$sentinel;
 }
 
+sub _cancel_process {
+ my ($pid) = @_;
+
+ # Empty process queue first to stop any new process from starting
+ $logger->info("Emptying process queue");
+ while ( $_self->{requests}->dequeue_nb ) { }
+
+# Then send the thread a cancel signal to stop it going beyond the next break point
+ $_self->{cancel} = TRUE;
+
+ # Before killing any process running in the thread
+ if ($pid) {
+  $logger->info("Killing pid $pid");
+  local $SIG{HUP} = 'IGNORE';
+  killfam 'HUP', ($pid);
+ }
+ return;
+}
+
 sub quit {
  _enqueue_request('quit');
  $_self->{thread}->join();
@@ -65,6 +86,7 @@ sub _thread_main {
 
  while ( my $request = $self->{requests}->dequeue ) {
   $self->{process_name} = $request->{action};
+  undef $_self->{cancel};
 
   # Signal the sentinel that the request was started.
   ${ $request->{sentinel} }++;
@@ -85,20 +107,23 @@ sub _thread_main {
   }
 
   elsif ( $request->{action} eq 'cuneiform' ) {
-   _thread_cuneiform( $self, $request->{page}, $request->{language} );
+   _thread_cuneiform( $self, $request->{page}, $request->{language},
+    $request->{pid} );
   }
 
   elsif ( $request->{action} eq 'get-file-info' ) {
-   _thread_get_file_info( $self, $request->{path} );
+   _thread_get_file_info( $self, $request->{path}, $request->{pid} );
   }
 
   elsif ( $request->{action} eq 'gocr' ) {
-   _thread_gocr( $self, $request->{page} );
+   _thread_gocr( $self, $request->{page}, $request->{pid} );
   }
 
   elsif ( $request->{action} eq 'import-file' ) {
-   _thread_import_file( $self, $request->{info}, $request->{first},
-    $request->{last} );
+   _thread_import_file(
+    $self,            $request->{info}, $request->{first},
+    $request->{last}, $request->{pid}
+   );
   }
 
   elsif ( $request->{action} eq 'negate' ) {
@@ -106,8 +131,8 @@ sub _thread_main {
   }
 
   elsif ( $request->{action} eq 'ocropus' ) {
-   _thread_ocropus( $self, $request->{page}, $request->{script},
-    $request->{language} );
+   _thread_ocropus( $self, $request->{page}, $request->{language},
+    $request->{pid} );
   }
 
   elsif ( $request->{action} eq 'quit' ) {
@@ -119,16 +144,18 @@ sub _thread_main {
   }
 
   elsif ( $request->{action} eq 'save-djvu' ) {
-   _thread_save_djvu( $self, $request->{path}, $request->{list_of_pages} );
+   _thread_save_djvu( $self, $request->{path}, $request->{list_of_pages},
+    $request->{pid} );
   }
 
   elsif ( $request->{action} eq 'save-image' ) {
-   _thread_save_image( $self, $request->{path}, $request->{list_of_pages} );
+   _thread_save_image( $self, $request->{path}, $request->{list_of_pages},
+    $request->{pid} );
   }
 
   elsif ( $request->{action} eq 'save-pdf' ) {
    _thread_save_pdf( $self, $request->{path}, $request->{list_of_pages},
-    $request->{metadata}, $request->{options} );
+    $request->{metadata}, $request->{options}, $request->{pid} );
   }
 
   elsif ( $request->{action} eq 'save-text' ) {
@@ -137,11 +164,12 @@ sub _thread_main {
 
   elsif ( $request->{action} eq 'save-tiff' ) {
    _thread_save_tiff( $self, $request->{path}, $request->{list_of_pages},
-    $request->{options}, $request->{ps} );
+    $request->{options}, $request->{ps}, $request->{pid} );
   }
 
   elsif ( $request->{action} eq 'tesseract' ) {
-   _thread_tesseract( $self, $request->{page}, $request->{language} );
+   _thread_tesseract( $self, $request->{page}, $request->{language},
+    $request->{pid} );
   }
 
   elsif ( $request->{action} eq 'threshold' ) {
@@ -153,7 +181,8 @@ sub _thread_main {
   }
 
   elsif ( $request->{action} eq 'unpaper' ) {
-   _thread_unpaper( $self, $request->{page}, $request->{options} );
+   _thread_unpaper( $self, $request->{page}, $request->{options},
+    $request->{pid} );
   }
 
   elsif ( $request->{action} eq 'unsharp' ) {
@@ -162,7 +191,8 @@ sub _thread_main {
   }
 
   elsif ( $request->{action} eq 'user-defined' ) {
-   _thread_user_defined( $self, $request->{page}, $request->{command} );
+   _thread_user_defined( $self, $request->{page}, $request->{command},
+    $request->{pid} );
   }
 
   else {
@@ -179,7 +209,7 @@ sub _thread_main {
 }
 
 sub _thread_get_file_info {
- my ( $self, $filename, %info ) = @_;
+ my ( $self, $filename, $pidfile, %info ) = @_;
 
  $logger->info("Getting info for $filename");
  my $format = `file -b $filename`;
@@ -195,7 +225,8 @@ sub _thread_get_file_info {
   # Dig out the number of pages
   my $cmd = "djvudump \"$filename\"";
   $logger->info($cmd);
-  my $info = `$cmd`;
+  my $info = `echo $$ > $pidfile;$cmd`;
+  return if $_self->{cancel};
   $logger->info($info);
 
   my $pages = 1;
@@ -225,6 +256,7 @@ sub _thread_get_file_info {
  # Get file type
  my $image = Image::Magick->new;
  my $x     = $image->Read($filename);
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
 
  $format = $image->Get('format');
@@ -238,7 +270,10 @@ sub _thread_get_file_info {
   return;
  }
  elsif ( $format eq 'Portable Document Format' ) {
-  my $info = `pdfinfo \"$filename\"`;
+  my $cmd = "pdfinfo \"$filename\"";
+  $logger->info($cmd);
+  my $info = `echo $$ > $pidfile;$cmd`;
+  return if $_self->{cancel};
   $logger->info($info);
   my $pages = 1;
   $pages = $1 if ( $info =~ /Pages:\s+(\d+)/ );
@@ -248,7 +283,8 @@ sub _thread_get_file_info {
  elsif ( $format eq 'Tagged Image File Format' ) {
   my $cmd = "tiffinfo \"$filename\"";
   $logger->info($cmd);
-  my $info = `$cmd`;
+  my $info = `echo $$ > $pidfile;$cmd`;
+  return if $_self->{cancel};
   $logger->info($info);
 
   # Count number of pages and their resolutions
@@ -271,7 +307,7 @@ sub _thread_get_file_info {
 }
 
 sub _thread_import_file {
- my ( $self, $info, $first, $last ) = @_;
+ my ( $self, $info, $first, $last, $pidfile ) = @_;
 
  if ( $info->{format} eq 'DJVU' ) {
 
@@ -282,7 +318,8 @@ sub _thread_import_file {
       File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif', UNLINK => FALSE );
     my $cmd = "ddjvu -format=tiff -page=$i \"$info->{path}\" $tif";
     $logger->info($cmd);
-    system($cmd);
+    system("echo $$ > $pidfile;$cmd");
+    return if $_self->{cancel};
     my $page = Gscan2pdf::Page->new(
      filename   => $tif,
      dir        => $self->{dir},
@@ -300,8 +337,9 @@ sub _thread_import_file {
   if ( $last >= $first and $first > 0 ) {
    my $cmd = "pdfimages -f $first -l $last \"$info->{path}\" x";
    $logger->info($cmd);
-   system($cmd);
-   unless ( system($cmd) == 0 ) {
+   my $status = system("echo $$ > $pidfile;$cmd");
+   return if $_self->{cancel};
+   if ($status) {
     $self->{status}  = 1;
     $self->{message} = $d->get('Error extracting images from PDF');
    }
@@ -329,7 +367,8 @@ sub _thread_import_file {
       File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif', UNLINK => FALSE );
     my $cmd = "tiffcp \"$info->{path}\",$i $tif";
     $logger->info($cmd);
-    system($cmd);
+    system("echo $$ > $pidfile;$cmd");
+    return if $_self->{cancel};
     my $page = Gscan2pdf::Page->new(
      filename => $tif,
      dir      => $self->{dir},
@@ -353,6 +392,7 @@ sub _thread_import_file {
  }
  else {
   my $tiff = convert_to_tiff( $info->{path} );
+  return if $_self->{cancel};
   my $page = Gscan2pdf::Page->new(
    filename => $tiff,
    dir      => $self->{dir},
@@ -367,6 +407,7 @@ sub convert_to_tiff {
  my ($filename) = @_;
  my $image      = Image::Magick->new;
  my $x          = $image->Read($filename);
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
  my $density = Gscan2pdf::Document::get_resolution($image)
    ; # FIXME: most of the time we already know this - pull it from $page->{resolution} rather than asking IM
@@ -384,7 +425,7 @@ sub convert_to_tiff {
 }
 
 sub _thread_save_pdf {
- my ( $self, $path, $list_of_pages, $metadata, $options ) = @_;
+ my ( $self, $path, $list_of_pages, $metadata, $options, $pidfile ) = @_;
 
  my $page = 0;
 
@@ -402,6 +443,7 @@ sub _thread_save_pdf {
   my $filename = $pagedata->{filename};
   my $image    = Image::Magick->new;
   my $x        = $image->Read($filename);
+  return if $_self->{cancel};
   $logger->warn($x) if "$x";
 
   # Get the size and resolution. Resolution is dots per inch, width
@@ -485,17 +527,20 @@ sub _thread_save_pdf {
 # depth required because resize otherwise increases depth to maintain information
     $logger->info("Writing temporary image $filename with depth $depth");
     $x = $image->Write( filename => $filename, depth => $depth );
+    return if $_self->{cancel};
     $logger->warn($x) if "$x";
     $format = $1 if ( $filename =~ /\.(\w*)$/ );
    }
 
    if ( $compression !~ /(jpg|png)/ ) {
     my $filename2 = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif' );
+    my $error     = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.txt' );
     my $cmd = "tiffcp -c $compression $filename $filename2";
     $logger->info($cmd);
-    my $status = system("$cmd 2>$self->{dir}/tiffcp.stdout");
-    if ( $status != 0 ) {
-     my $output = slurp("$self->{dir}/tiffcp.stdout");
+    my $status = system("echo $$ > $pidfile;$cmd 2>$error");
+    return if $_self->{cancel};
+    if ($status) {
+     my $output = slurp($error);
      $logger->info($output);
      $self->{status} = 1;
      $self->{message} =
@@ -603,6 +648,7 @@ sub _thread_save_pdf {
   else {
    $msg = "Unknown format $format file $filename";
   }
+  return if $_self->{cancel};
   if ($msg) {
    $logger->warn($msg);
    $self->{status} = 1;
@@ -629,6 +675,7 @@ sub _thread_save_pdf {
     $logger->info("Adding $filename at $output_resolution PPI");
    }
   }
+  return if $_self->{cancel};
  }
  $self->{message} = $d->get('Closing PDF');
  $pdf->save;
@@ -637,7 +684,7 @@ sub _thread_save_pdf {
 }
 
 sub _thread_save_djvu {
- my ( $self, $path, $list_of_pages ) = @_;
+ my ( $self, $path, $list_of_pages, $pidfile ) = @_;
 
  my $page = 0;
  my @filelist;
@@ -690,8 +737,9 @@ sub _thread_save_djvu {
   my $cmd        = "$compression -dpi $resolution $filename $djvu";
   $logger->info($cmd);
   my ( $status, $size ) =
-    ( system($cmd), -s "$djvu" )
+    ( system("echo $$ > $pidfile;$cmd"), -s "$djvu" )
     ;    # quotes needed to prevent -s clobbering File::Temp object
+  return if $_self->{cancel};
   unless ( $status == 0 and $size ) {
    $self->{status}  = 1;
    $self->{message} = $d->get('Error writing DjVu');
@@ -734,7 +782,9 @@ sub _thread_save_djvu {
    # Write djvusedtxtfile
    my $cmd = "djvused '$djvu' -e 'select 1; set-txt $djvusedtxtfile' -s";
    $logger->info($cmd);
-   unless ( system($cmd) == 0 ) {
+   my $status = system("echo $$ > $pidfile;$cmd");
+   return if $_self->{cancel};
+   if ($status) {
     $self->{status}  = 1;
     $self->{message} = $d->get('Error adding text layer to DjVu');
     $logger->error("Error adding text layer to DjVu page $page");
@@ -745,7 +795,9 @@ sub _thread_save_djvu {
  $self->{message}  = $d->get('Closing DjVu');
  my $cmd = "djvm -c '$path' @filelist";
  $logger->info($cmd);
- unless ( system($cmd) == 0 ) {
+ my $status = system("echo $$ > $pidfile;$cmd");
+ return if $_self->{cancel};
+ if ($status) {
   $self->{status}  = 1;
   $self->{message} = $d->get('Error closing DjVu');
   $logger->error("Error closing DjVu");
@@ -754,7 +806,7 @@ sub _thread_save_djvu {
 }
 
 sub _thread_save_tiff {
- my ( $self, $path, $list_of_pages, $options, $ps ) = @_;
+ my ( $self, $path, $list_of_pages, $options, $ps, $pidfile ) = @_;
 
  my $page = 0;
  my @filelist;
@@ -775,12 +827,14 @@ sub _thread_save_tiff {
    $depth = '-depth 8'
      if ( defined( $options->{compression} )
     and $options->{compression} eq 'jpeg' );
-   unless (
-    system(
-     "convert -units PixelsPerInch -density $resolution $depth $filename $tif")
-    == 0
-     )
-   {
+
+   my $cmd =
+     "convert -units PixelsPerInch -density $resolution $depth $filename $tif";
+   $logger->info($cmd);
+   my $status = system("echo $$ > $pidfile;$cmd");
+   return if $_self->{cancel};
+
+   if ($status) {
     $self->{status}  = 1;
     $self->{message} = $d->get('Error writing TIFF');
     return;
@@ -806,9 +860,10 @@ sub _thread_save_tiff {
  my $cmd = "tiffcp $rows $compression @filelist '$path'";
  $logger->info($cmd);
  my $out = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.stdout' );
- my $status = system("$cmd 2>$out");
+ my $status = system("echo $$ > $pidfile;$cmd 2>$out");
+ return if $_self->{cancel};
 
- if ( $status != 0 ) {
+ if ($status) {
   my $output = slurp($out);
   $logger->info($output);
   $self->{status} = 1;
@@ -848,12 +903,14 @@ sub _thread_rotate {
  # Rotate with imagemagick
  my $image = Image::Magick->new;
  my $x     = $image->Read($filename);
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
 
  # workaround for those versions of imagemagick that produce 16bit output
  # with rotate
  my $depth = $image->Get('depth');
  $x = $image->Rotate($angle);
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
  my $suffix;
  $suffix = $1 if ( $filename =~ /\.(\w*)$/ );
@@ -863,6 +920,7 @@ sub _thread_rotate {
   UNLINK => FALSE
  );
  $x = $image->Write( filename => $filename, depth => $depth );
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
  my $new = $page->freeze;
  $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
@@ -883,13 +941,15 @@ sub timestamp {
 }
 
 sub _thread_save_image {
- my ( $self, $path, $list_of_pages ) = @_;
+ my ( $self, $path, $list_of_pages, $pidfile ) = @_;
 
  if ( @{$list_of_pages} == 1 ) {
   my $cmd =
 "convert $list_of_pages->[0]{filename} -density $list_of_pages->[0]{resolution} '$path'";
   $logger->info($cmd);
-  if ( system($cmd) ) {
+  my $status = system("echo $$ > $pidfile;$cmd");
+  return if $_self->{cancel};
+  if ($status) {
    $self->{status}  = 1;
    $self->{message} = $d->get('Error saving image');
   }
@@ -902,7 +962,9 @@ sub _thread_save_image {
    my $cmd = sprintf "convert %s -density %d \"%s\"",
      $_->{filename}, $_->{resolution},
      $current_filename;
-   if ( system($cmd) ) {
+   my $status = system("echo $$ > $pidfile;$cmd");
+   return if $_self->{cancel};
+   if ($status) {
     $self->{status}  = 1;
     $self->{message} = $d->get('Error saving image');
    }
@@ -921,6 +983,7 @@ sub _thread_save_text {
  }
  foreach ( @{$list_of_pages} ) {
   print $fh $_->{hocr};
+  return if $_self->{cancel};
  }
  close $fh;
  return;
@@ -932,11 +995,13 @@ sub _thread_analyse {
  # Identify with imagemagick
  my $image = Image::Magick->new;
  my $x     = $image->Read( $page->{filename} );
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
 
  my ( $depth, $min, $max, $mean, $stddev ) = $image->Statistics();
  $logger->warn("image->Statistics() failed") unless defined $depth;
  $logger->info("std dev: $stddev mean: $mean");
+ return if $_self->{cancel};
  my $maxQ = -1 + ( 1 << $depth );
  $mean = $maxQ ? $mean / $maxQ : 0;
  $stddev = 0 if $stddev eq "nan";
@@ -965,16 +1030,20 @@ sub _thread_threshold {
 
  my $image = Image::Magick->new;
  my $x     = $image->Read($filename);
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
 
  # Threshold the image
  $image->BlackThreshold( threshold => $threshold . '%' );
+ return if $_self->{cancel};
  $image->WhiteThreshold( threshold => $threshold . '%' );
+ return if $_self->{cancel};
 
  # Write it
  $filename =
    File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pbm', UNLINK => FALSE );
  $x = $image->Write( filename => $filename );
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
 
  my $new = $page->freeze;
@@ -991,12 +1060,14 @@ sub _thread_negate {
 
  my $image = Image::Magick->new;
  my $x     = $image->Read($filename);
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
 
  my $depth = $image->Get('depth');
 
  # Negate the image
  $image->Negate;
+ return if $_self->{cancel};
 
  # Write it
  my $suffix;
@@ -1004,6 +1075,7 @@ sub _thread_negate {
  $filename =
    File::Temp->new( DIR => $self->{dir}, SUFFIX => $suffix, UNLINK => FALSE );
  $x = $image->Write( depth => $depth, filename => $filename );
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
  $logger->info("Negating to $filename");
 
@@ -1021,6 +1093,7 @@ sub _thread_unsharp {
 
  my $image = Image::Magick->new;
  my $x     = $image->Read($filename);
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
 
  # Unsharp the image
@@ -1030,6 +1103,7 @@ sub _thread_unsharp {
   amount    => $amount,
   threshold => $threshold,
  );
+ return if $_self->{cancel};
 
  # Write it
  my $suffix;
@@ -1040,6 +1114,7 @@ sub _thread_unsharp {
   UNLINK => FALSE
  );
  $x = $image->Write( filename => $filename );
+ return if $_self->{cancel};
  $logger->warn($x) if "$x";
  $logger->info(
 "Wrote $filename with unsharp mask: r=$radius, s=$sigma, a=$amount, t=$threshold"
@@ -1059,10 +1134,12 @@ sub _thread_crop {
 
  my $image = Image::Magick->new;
  my $e     = $image->Read($filename);
+ return if $_self->{cancel};
  $logger->warn($e) if "$e";
 
  # Crop the image
  $e = $image->Crop( width => $w, height => $h, x => $x, y => $y );
+ return if $_self->{cancel};
  $logger->warn($e) if "$e";
 
  # Write it
@@ -1075,6 +1152,7 @@ sub _thread_crop {
  );
  $logger->info("Cropping $w x $h + $x + $y to $filename");
  $e = $image->Write( filename => $filename );
+ return if $_self->{cancel};
  $logger->warn($e) if "$e";
 
  my $new = $page->freeze;
@@ -1089,7 +1167,8 @@ sub _thread_to_tiff {
  my ( $self, $page ) = @_;
  my $new = $page->clone;
  $new->{filename} = convert_to_tiff( $page->{filename} );
- $new->{format}   = 'Tagged Image File Format';
+ return if $_self->{cancel};
+ $new->{format} = 'Tagged Image File Format';
  my %data = ( old => $page, new => $new->freeze );
  $logger->info("Converted $page->{filename} to $data{new}{filename}");
  $self->{page_queue}->enqueue( \%data );
@@ -1097,9 +1176,11 @@ sub _thread_to_tiff {
 }
 
 sub _thread_tesseract {
- my ( $self, $page, $language ) = @_;
+ my ( $self, $page, $language, $pidfile ) = @_;
  my $new = $page->clone;
- $new->{hocr} = Gscan2pdf::Tesseract->text( $page->{filename}, $language );
+ $new->{hocr} =
+   Gscan2pdf::Tesseract->text( $page->{filename}, $language, $pidfile );
+ return if $_self->{cancel};
  $new->{ocr_flag} = 1;    #FlagOCR
  $new->{ocr_time} =
    Gscan2pdf::timestamp();    #remember when we ran OCR on this page
@@ -1109,9 +1190,11 @@ sub _thread_tesseract {
 }
 
 sub _thread_ocropus {
- my ( $self, $page, $language ) = @_;
+ my ( $self, $page, $language, $pidfile ) = @_;
  my $new = $page->clone;
- $new->{hocr} = Gscan2pdf::Ocropus->hocr( $page->{filename}, $language );
+ $new->{hocr} =
+   Gscan2pdf::Ocropus->hocr( $page->{filename}, $language, $pidfile );
+ return if $_self->{cancel};
  $new->{ocr_flag} = 1;        #FlagOCR
  $new->{ocr_time} =
    Gscan2pdf::timestamp();    #remember when we ran OCR on this page
@@ -1121,9 +1204,11 @@ sub _thread_ocropus {
 }
 
 sub _thread_cuneiform {
- my ( $self, $page, $language ) = @_;
+ my ( $self, $page, $language, $pidfile ) = @_;
  my $new = $page->clone;
- $new->{hocr} = Gscan2pdf::Cuneiform->hocr( $page->{filename}, $language );
+ $new->{hocr} =
+   Gscan2pdf::Cuneiform->hocr( $page->{filename}, $language, $pidfile );
+ return if $_self->{cancel};
  $new->{ocr_flag} = 1;        #FlagOCR
  $new->{ocr_time} =
    Gscan2pdf::timestamp();    #remember when we ran OCR on this page
@@ -1133,7 +1218,7 @@ sub _thread_cuneiform {
 }
 
 sub _thread_gocr {
- my ( $self, $page ) = @_;
+ my ( $self, $page, $pidfile ) = @_;
  my $pnm;
  if ( $page->{filename} !~ /\.pnm$/ ) {
 
@@ -1141,24 +1226,30 @@ sub _thread_gocr {
   $pnm = File::Temp->new( SUFFIX => '.pnm' );
   my $image = Image::Magick->new;
   $image->Read( $page->{filename} );
+  return if $_self->{cancel};
   $image->Write( filename => $pnm );
+  return if $_self->{cancel};
  }
  else {
   $pnm = $page->{filename};
  }
 
  my $new = $page->clone;
- $new->{hocr}     = `gocr $pnm`;
- $new->{ocr_flag} = 1;             #FlagOCR
+
+ my $cmd = "gocr $pnm";
+ $logger->info($cmd);
+ $new->{hocr} = `echo $$ > $pidfile;$cmd`;
+ return if $_self->{cancel};
+ $new->{ocr_flag} = 1;    #FlagOCR
  $new->{ocr_time} =
-   Gscan2pdf::timestamp();         #remember when we ran OCR on this page
+   Gscan2pdf::timestamp();    #remember when we ran OCR on this page
  my %data = ( old => $page, new => $new );
  $self->{page_queue}->enqueue( \%data );
  return;
 }
 
 sub _thread_unpaper {
- my ( $self, $page, $options ) = @_;
+ my ( $self, $page, $options, $pidfile ) = @_;
  my $filename = $page->{filename};
  my $in;
 
@@ -1201,7 +1292,8 @@ sub _thread_unpaper {
  my $cmd =
 "unpaper $options --overwrite --input-file-sequence $in --output-file-sequence $out $out2;";
  $logger->info($cmd);
- system($cmd);
+ system("echo $$ > $pidfile;$cmd");
+ return if $_self->{cancel};
 
  my $new = Gscan2pdf::Page->new(
   filename => $out,
@@ -1226,7 +1318,7 @@ sub _thread_unpaper {
 }
 
 sub _thread_user_defined {
- my ( $self, $page, $cmd ) = @_;
+ my ( $self, $page, $cmd, $pidfile ) = @_;
  my $in = $page->{filename};
  my $suffix;
  $suffix = $1 if ( $in =~ /(\.\w*)$/ );
@@ -1250,7 +1342,8 @@ sub _thread_user_defined {
  }
  $cmd =~ s/%r/$page->{resolution}/g;
  $logger->info($cmd);
- system($cmd);
+ system("echo $$ > $pidfile;$cmd");
+ return if $_self->{cancel};
 
  # Get file type
  my $image = Image::Magick->new;
