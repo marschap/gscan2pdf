@@ -314,6 +314,9 @@ sub _thread_import_file {
   # Extract images from DjVu
   if ( $last >= $first and $first > 0 ) {
    for ( my $i = $first ; $i <= $last ; $i++ ) {
+    $self->{progress} = ( $i - 1 ) / ( $last - $first + 1 );
+    $self->{message} =
+      sprintf( $d->get("Importing page %i of %i"), $i, $last - $first + 1 );
     my $tif =
       File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif', UNLINK => FALSE );
     my $cmd = "ddjvu -format=tiff -page=$i \"$info->{path}\" $tif";
@@ -363,6 +366,9 @@ sub _thread_import_file {
   # Split the tiff into its pages and import them individually
   if ( $last >= $first and $first > 0 ) {
    for ( my $i = $first - 1 ; $i < $last ; $i++ ) {
+    $self->{progress} = $i / ( $last - $first + 1 );
+    $self->{message} =
+      sprintf( $d->get("Importing page %i of %i"), $i, $last - $first + 1 );
     my $tif =
       File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif', UNLINK => FALSE );
     my $cmd = "tiffcp \"$info->{path}\",$i $tif";

@@ -2051,11 +2051,10 @@ sub setup_tpbar {
 # Helper function to update thread progress bar
 
 sub update_tpbar {
- my ( $thread, $process, $completed, $total ) = @_;
+ my ( $thread, $process, $completed, $total, $message, $progress ) = @_;
  if ($total) {
   if ( defined $process ) {
-   $process .= " - $Gscan2pdf::_self->{message}"
-     if ( defined $Gscan2pdf::_self->{message} );
+   $process .= " - $message" if ( defined $message );
    $tpbar->set_text(
     sprintf(
      $d->get("Process %i of %i (%s)"),
@@ -2068,9 +2067,8 @@ sub update_tpbar {
    $tpbar->set_text(
     sprintf( $d->get("Process %i of %i"), $completed + 1, $total ) );
   }
-  if ( defined $Gscan2pdf::_self->{progress} ) {
-   $tpbar->set_fraction(
-    ( $completed + $Gscan2pdf::_self->{progress} ) / $total );
+  if ( defined $progress ) {
+   $tpbar->set_fraction( ( $completed + $progress ) / $total );
   }
   else {
    $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
@@ -2118,8 +2116,9 @@ sub open_dialog {
    $slist->get_file_info(
     $_,
     sub {    # queued
-     my ( $process, $completed, $total ) = @_;
-     return update_tpbar( 1, $process, $completed, $total );
+     my ( $process, $completed, $total, $message, $progress ) = @_;
+     return update_tpbar( 1, $process, $completed, $total, $message,
+      $progress );
     },
     sub {    # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -2167,16 +2166,22 @@ sub open_dialog {
          $spinbuttonf->get_value,
          $spinbuttonl->get_value,
          sub {    # queued
-          my ( $process, $completed, $total ) = @_;
-          return update_tpbar( 1, $process, $completed, $total );
+          my ( $process, $completed, $total, $message, $progress ) = @_;
+          return update_tpbar( 1, $process, $completed, $total, $message,
+           $progress );
          },
          sub {    # started
           my ( $thread, $process, $completed, $total, $pid ) = @_;
           $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
           return TRUE if ( defined $signal );
          },
-         undef,    # running
-         sub {     # finished
+         sub {    # running
+          my ( $thread, $process, $completed, $total, $message, $progress ) =
+            @_;
+          return update_tpbar( $thread, $process, $completed, $total, $message,
+           $progress );
+         },
+         sub {    # finished
           my ( $new_page, $pending ) = @_;
           $thbox->hide_all unless $pending;
           $tcbutton->signal_handler_disconnect($signal);
@@ -2203,8 +2208,9 @@ sub open_dialog {
       $slist->import_file(
        $info, 1, 1,
        sub {    # queued
-        my ( $process, $completed, $total ) = @_;
-        return update_tpbar( 1, $process, $completed, $total );
+        my ( $process, $completed, $total, $message, $progress ) = @_;
+        return update_tpbar( 1, $process, $completed, $total, $message,
+         $progress );
        },
        sub {    # started
         my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -2685,8 +2691,9 @@ sub save_PDF {
      get_pdf_metadata(),
      \%options,
      sub {    # queued
-      my ( $process, $completed, $total ) = @_;
-      return update_tpbar( 1, $process, $completed, $total );
+      my ( $process, $completed, $total, $message, $progress ) = @_;
+      return update_tpbar( 1, $process, $completed, $total, $message,
+       $progress );
      },
      sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -2694,8 +2701,9 @@ sub save_PDF {
       return TRUE if ( defined $signal );
      },
      sub {    # running
-      my ( $thread, $process, $completed, $total ) = @_;
-      return update_tpbar( $thread, $process, $completed, $total );
+      my ( $thread, $process, $completed, $total, $message, $progress ) = @_;
+      return update_tpbar( $thread, $process, $completed, $total, $message,
+       $progress );
      },
      sub {    # finished
       my ( $new_page, $pending ) = @_;
@@ -3111,8 +3119,9 @@ sub save_dialog {
         $filename,
         \@list_of_pages,
         sub {    # queued
-         my ( $process, $completed, $total ) = @_;
-         return update_tpbar( 1, $process, $completed, $total );
+         my ( $process, $completed, $total, $message, $progress ) = @_;
+         return update_tpbar( 1, $process, $completed, $total, $message,
+          $progress );
         },
         sub {    # started
          my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -3120,8 +3129,9 @@ sub save_dialog {
          return TRUE if ( defined $signal );
         },
         sub {    # running
-         my ( $thread, $process, $completed, $total ) = @_;
-         return update_tpbar( $thread, $process, $completed, $total );
+         my ( $thread, $process, $completed, $total, $message, $progress ) = @_;
+         return update_tpbar( $thread, $process, $completed, $total, $message,
+          $progress );
         },
         sub {    # finished
          my ( $new_page, $pending ) = @_;
@@ -3365,8 +3375,8 @@ sub save_image {
    $filename,
    \@list_of_pages,
    sub {    # queued
-    my ( $process, $completed, $total ) = @_;
-    return update_tpbar( 1, $process, $completed, $total );
+    my ( $process, $completed, $total, $message, $progress ) = @_;
+    return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
    sub {    # started
     my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -3374,8 +3384,9 @@ sub save_image {
     return TRUE if ( defined $signal );
    },
    sub {    # running
-    my ( $thread, $process, $completed, $total ) = @_;
-    return update_tpbar( $thread, $process, $completed, $total );
+    my ( $thread, $process, $completed, $total, $message, $progress ) = @_;
+    return update_tpbar( $thread, $process, $completed, $total, $message,
+     $progress );
    },
    sub {    # finished
     my ( $new_page, $pending ) = @_;
@@ -3419,8 +3430,8 @@ sub save_TIFF {
   \%options,
   $ps,
   sub {    # queued
-   my ( $process, $completed, $total ) = @_;
-   return update_tpbar( 1, $process, $completed, $total );
+   my ( $process, $completed, $total, $message, $progress ) = @_;
+   return update_tpbar( 1, $process, $completed, $total, $message, $progress );
   },
   sub {    # started
    my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -3428,8 +3439,9 @@ sub save_TIFF {
    return TRUE if ( defined $signal );
   },
   sub {    # running
-   my ( $thread, $process, $completed, $total ) = @_;
-   return update_tpbar( $thread, $process, $completed, $total );
+   my ( $thread, $process, $completed, $total, $message, $progress ) = @_;
+   return update_tpbar( $thread, $process, $completed, $total, $message,
+    $progress );
   },
   sub {    # finished
    my ( $new_page, $pending ) = @_;
@@ -3506,8 +3518,9 @@ sub save_djvu {
      $filename,
      \@list_of_pages,
      sub {    # queued
-      my ( $process, $completed, $total ) = @_;
-      return update_tpbar( 1, $process, $completed, $total );
+      my ( $process, $completed, $total, $message, $progress ) = @_;
+      return update_tpbar( 1, $process, $completed, $total, $message,
+       $progress );
      },
      sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -3515,8 +3528,9 @@ sub save_djvu {
       return TRUE if ( defined $signal );
      },
      sub {    # running
-      my ( $thread, $process, $completed, $total ) = @_;
-      return update_tpbar( $thread, $process, $completed, $total );
+      my ( $thread, $process, $completed, $total, $message, $progress ) = @_;
+      return update_tpbar( $thread, $process, $completed, $total, $message,
+       $progress );
      },
      sub {    # finished
       my ( $new_page, $pending ) = @_;
@@ -8322,8 +8336,8 @@ sub rotate {
   $slist->rotate(
    $angle, $page,
    sub {    # queued
-    my ( $process, $completed, $total ) = @_;
-    return update_tpbar( 1, $process, $completed, $total );
+    my ( $process, $completed, $total, $message, $progress ) = @_;
+    return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
    sub {    # started
     my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -8371,8 +8385,9 @@ sub analyse {
    $slist->analyse(
     $slist->{data}[$i][2],
     sub {    # queued
-     my ( $process, $completed, $total ) = @_;
-     return update_tpbar( 1, $process, $completed, $total );
+     my ( $process, $completed, $total, $message, $progress ) = @_;
+     return update_tpbar( 1, $process, $completed, $total, $message,
+      $progress );
     },
     sub {    # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -8472,8 +8487,9 @@ sub threshold {
      $SETTING{'threshold tool'},
      $slist->{data}[$i][2],
      sub {    # queued
-      my ( $process, $completed, $total ) = @_;
-      return update_tpbar( 1, $process, $completed, $total );
+      my ( $process, $completed, $total, $message, $progress ) = @_;
+      return update_tpbar( 1, $process, $completed, $total, $message,
+       $progress );
      },
      sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -8539,8 +8555,9 @@ sub negate {
     $slist->negate(
      $slist->{data}[$i][2],
      sub {    # queued
-      my ( $process, $completed, $total ) = @_;
-      return update_tpbar( 1, $process, $completed, $total );
+      my ( $process, $completed, $total, $message, $progress ) = @_;
+      return update_tpbar( 1, $process, $completed, $total, $message,
+       $progress );
      },
      sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -8678,8 +8695,9 @@ sub unsharp {
      $SETTING{'unsharp amount'},
      $SETTING{'unsharp threshold'},
      sub {    # queued
-      my ( $process, $completed, $total ) = @_;
-      return update_tpbar( 1, $process, $completed, $total );
+      my ( $process, $completed, $total, $message, $progress ) = @_;
+      return update_tpbar( 1, $process, $completed, $total, $message,
+       $progress );
      },
      sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -8862,8 +8880,9 @@ sub crop {
      $slist->{data}[$i][2],
      $x, $y, $w, $h,
      sub {    # queued
-      my ( $process, $completed, $total ) = @_;
-      return update_tpbar( 1, $process, $completed, $total );
+      my ( $process, $completed, $total, $message, $progress ) = @_;
+      return update_tpbar( 1, $process, $completed, $total, $message,
+       $progress );
      },
      sub {    # started
       my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -8925,8 +8944,8 @@ sub user_defined_tool {
    $slist->{data}[$i][2],
    $cmd,
    sub {    # queued
-    my ( $process, $completed, $total ) = @_;
-    return update_tpbar( 1, $process, $completed, $total );
+    my ( $process, $completed, $total, $message, $progress ) = @_;
+    return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
    sub {    # started
     my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -8983,8 +9002,8 @@ sub unpaper_page {
    $pageobject,
    $options,
    sub {    # queued
-    my ( $process, $completed, $total ) = @_;
-    return update_tpbar( 1, $process, $completed, $total );
+    my ( $process, $completed, $total, $message, $progress ) = @_;
+    return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
    sub {    # started
     my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -9375,8 +9394,9 @@ sub ocr_page {
    $slist->gocr(
     $page,
     sub {    # queued
-     my ( $process, $completed, $total ) = @_;
-     return update_tpbar( 1, $process, $completed, $total );
+     my ( $process, $completed, $total, $message, $progress ) = @_;
+     return update_tpbar( 1, $process, $completed, $total, $message,
+      $progress );
     },
     sub {    # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -9406,8 +9426,9 @@ sub ocr_page {
     $page,
     $SETTING{'ocr language'},
     sub {     # queued
-     my ( $process, $completed, $total ) = @_;
-     return update_tpbar( 1, $process, $completed, $total );
+     my ( $process, $completed, $total, $message, $progress ) = @_;
+     return update_tpbar( 1, $process, $completed, $total, $message,
+      $progress );
     },
     sub {     # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -9437,8 +9458,9 @@ sub ocr_page {
     $page,
     $SETTING{'ocr language'},
     sub {     # queued
-     my ( $process, $completed, $total ) = @_;
-     return update_tpbar( 1, $process, $completed, $total );
+     my ( $process, $completed, $total, $message, $progress ) = @_;
+     return update_tpbar( 1, $process, $completed, $total, $message,
+      $progress );
     },
     sub {     # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -9468,8 +9490,9 @@ sub ocr_page {
     $page,
     $SETTING{'ocr language'},
     sub {     # queued
-     my ( $process, $completed, $total ) = @_;
-     return update_tpbar( 1, $process, $completed, $total );
+     my ( $process, $completed, $total, $message, $progress ) = @_;
+     return update_tpbar( 1, $process, $completed, $total, $message,
+      $progress );
     },
     sub {     # started
      my ( $thread, $process, $completed, $total, $pid ) = @_;
@@ -10044,8 +10067,8 @@ sub compress_temp {
   $slist->to_tiff(
    $_->[2],
    sub {    # queued
-    my ( $process, $completed, $total ) = @_;
-    return update_tpbar( 1, $process, $completed, $total );
+    my ( $process, $completed, $total, $message, $progress ) = @_;
+    return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
    sub {    # started
     my ( $thread, $process, $completed, $total, $pid ) = @_;

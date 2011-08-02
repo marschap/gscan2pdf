@@ -109,12 +109,17 @@ sub get_file_info {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
     $cancelled_callback->() if ($cancelled_callback);
@@ -165,10 +170,15 @@ sub import_file {
    }
    $self->fetch_file($outstanding);
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
   sub {    # finished
    if ( $self->{cancelled} ) {
@@ -399,12 +409,17 @@ sub save_pdf {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
     $cancelled_callback->() if ($cancelled_callback);
@@ -460,12 +475,17 @@ sub save_djvu {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
     $cancelled_callback->() if ($cancelled_callback);
@@ -524,12 +544,17 @@ sub save_tiff {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
     $cancelled_callback->() if ($cancelled_callback);
@@ -573,12 +598,17 @@ sub rotate {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process;
     $cancelled_callback->() if ($cancelled_callback);
@@ -680,12 +710,17 @@ sub save_image {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
     $cancelled_callback->() if ($cancelled_callback);
@@ -732,13 +767,18 @@ sub save_text {
   sub {     # running
    unless ( $self->{cancelled} ) {
     $started_flag = $started_callback->(
-     1, $Gscan2pdf::_self->{process_name},
-     $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+     1,                            $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+     $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
     ) if ( $started_callback and not $started_flag );
-    $running_callback->() if ($running_callback);
+    $running_callback->(
+     1,                            $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+     $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+    ) if ($running_callback);
    }
   },
-  sub {     # finished
+  sub {    # finished
    unless ( $self->{cancelled} ) {
     $started_callback->() if ( $started_callback and not $started_flag );
     if ( $Gscan2pdf::_self->{status} ) {
@@ -771,13 +811,18 @@ sub analyse {
   sub {     # running
    unless ( $self->{cancelled} ) {
     $started_flag = $started_callback->(
-     1, $Gscan2pdf::_self->{process_name},
-     $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+     1,                            $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+     $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
     ) if ( $started_callback and not $started_flag );
-    $running_callback->() if ($running_callback);
+    $running_callback->(
+     1,                            $Gscan2pdf::_self->{process_name},
+     $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+     $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+    ) if ($running_callback);
    }
   },
-  sub {     # finished
+  sub {    # finished
    unless ( $self->{cancelled} ) {
     $started_callback->() if ( $started_callback and not $started_flag );
     if ( $Gscan2pdf::_self->{status} ) {
@@ -819,12 +864,17 @@ sub threshold {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process;
     $cancelled_callback->() if ($cancelled_callback);
@@ -867,12 +917,17 @@ sub negate {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process;
     $cancelled_callback->() if ($cancelled_callback);
@@ -925,12 +980,17 @@ sub unsharp {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process;
     $cancelled_callback->() if ($cancelled_callback);
@@ -983,12 +1043,17 @@ sub crop {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process;
     $cancelled_callback->() if ($cancelled_callback);
@@ -1029,12 +1094,17 @@ sub to_tiff {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process;
     $cancelled_callback->() if ($cancelled_callback);
@@ -1083,12 +1153,17 @@ sub tesseract {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
     $cancelled_callback->() if ($cancelled_callback);
@@ -1137,12 +1212,17 @@ sub ocropus {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
     $cancelled_callback->() if ($cancelled_callback);
@@ -1191,12 +1271,17 @@ sub cuneiform {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
     $cancelled_callback->() if ($cancelled_callback);
@@ -1244,12 +1329,17 @@ sub gocr {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
     $cancelled_callback->() if ($cancelled_callback);
@@ -1298,12 +1388,17 @@ sub unpaper {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
     $cancelled_callback->() if ($cancelled_callback);
@@ -1353,12 +1448,17 @@ sub user_defined {
     return;
    }
    $started_flag = $started_callback->(
-    1, $Gscan2pdf::_self->{process_name},
-    $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
    ) if ( $started_callback and not $started_flag );
-   $running_callback->() if ($running_callback);
+   $running_callback->(
+    1,                            $Gscan2pdf::_self->{process_name},
+    $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
+    $Gscan2pdf::_self->{message}, $Gscan2pdf::_self->{progress}
+   ) if ($running_callback);
   },
-  sub {     # finished
+  sub {    # finished
    if ( $self->{cancelled} ) {
     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
     $cancelled_callback->() if ($cancelled_callback);
