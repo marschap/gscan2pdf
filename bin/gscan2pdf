@@ -5726,22 +5726,29 @@ sub scanadf {
  return;
 }
 
+sub update_spbar {
+ my ( $i, $npages ) = @_;
+ if ( $npages > 0 ) {
+  $spbar->set_text( sprintf $d->get("Scanning page %d of %d"), $i, $npages );
+ }
+ else {
+  $spbar->set_text( sprintf $d->get("Scanning page %d"), $i );
+ }
+ $spbar->set_fraction(0);
+ return;
+}
+
 sub scan_pages {
  my ( $npages, $start, $step, $rfacing, $rreverse, $unpaper, $ocr ) = @_;
- my $n      = $start;
+ my $i      = 1;
  my $format = "out%d.pnm";
 
  my $signal;
  Gscan2pdf::Frontend::Sane->scan_pages(
   $SETTING{session},
-  $format, $npages, $n, $step,
+  $format, $npages, $start, $step,
   sub {    # started callback
-   if ( $npages > 0 ) {
-    $spbar->set_text( sprintf $d->get("Scanning page %d of %d"), $n, $npages );
-   }
-   else {
-    $spbar->set_text( sprintf $d->get("Scanning page %d"), $n );
-   }
+   update_spbar( $i, $npages );
    $shbox->show_all;
    $signal = $scbutton->signal_connect(
     clicked => sub {
@@ -5759,6 +5766,7 @@ sub scan_pages {
   },
   sub {    # new page callback
    my ($n) = @_;
+   $i++;
 
    # If the scan can't be loaded then blow the scanning dialog away and
    # show an error
@@ -5776,14 +5784,7 @@ sub scan_pages {
      $n, $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
    }
 
-   if ( $npages > 0 ) {
-    $spbar->set_text( sprintf $d->get("Scanning page %d of %d"),
-     $n + 1, $npages );
-   }
-   else {
-    $spbar->set_text( sprintf $d->get("Scanning page %d"), $n + 1 );
-   }
-   $spbar->set_fraction(0);
+   update_spbar( $i, $npages );
   },
   sub {    # error callback
    $scbutton->signal_handler_disconnect($signal);
