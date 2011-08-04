@@ -140,7 +140,6 @@ use File::Basename;         # Split filename into dir, file, ext
 use File::Copy;
 use File::Temp;             # To create temporary files
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Image::Magick;
 use Config::General 2.40;
 use Text::ParseWords;
 use Sane;
