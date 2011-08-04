@@ -8,25 +8,33 @@ use File::Temp;    # To create temporary files
 use File::Basename;
 use Gscan2pdf;     # for slurp
 
-my ( %languages, $installed, $setup );
+my ( %languages, $installed, $setup, $version, $tessdata, $suffix );
 
 sub setup {
  return $installed if $setup;
  $installed = 1 if ( system("which tesseract > /dev/null 2> /dev/null") == 0 );
+ $tessdata = `tesseract '' '' -l '' 2>&1`;
+ chomp $tessdata;
+ if ( $tessdata =~ s/^Unable to load unicharset file // ) {
+   $version = 2;
+   $suffix = '.unicharset';
+ }
+ elsif ( $tessdata =~ s/^Error openn?ing data file // ) {
+   $version = 3;
+   $suffix = '.traineddata';
+ }
+ $tessdata =~ s/\/$suffix$//;
+ $main::logger->info("Found tesseract version $version. Using tessdata at $tessdata");
  $setup = 1;
  return $installed;
 }
 
 sub languages {
  unless (%languages) {
-  my $tessdata = `tesseract '' '' -l '' 2>&1`;
-  chomp $tessdata;
-  $tessdata =~ s/^Unable to load unicharset file //;
-  $tessdata =~ s/\/\.unicharset$//;
-  $main::logger->info("Using tessdata at $tessdata");
   my %iso639 = (
    deu     => 'German',
    'deu-f' => 'German (Fraktur)',
+   'deu-frak' => 'German (Fraktur)',
    eng     => 'English',
    fra     => 'French',
    ita     => 'Italian',
@@ -36,12 +44,12 @@ sub languages {
    spa     => 'Spanish',
    vie     => 'Vietnamese',
   );
-  for ( glob "$tessdata/*.unicharset" ) {
+  for ( glob "$tessdata/*$suffix" ) {
 
    # Weed out the empty language files
    if ( not -z $_ ) {
     my $code;
-    $code = $1 if ( $_ =~ /([\w\-]*)\.unicharset$/ );
+    $code = $1 if ( $_ =~ /([\w\-]*)$suffix$/ );
     $main::logger->info("Found tesseract language $code");
     if ( defined $iso639{$code} ) {
      $languages{$code} = $iso639{$code};
@@ -55,13 +63,14 @@ sub languages {
  return \%languages;
 }
 
-sub text {
+sub hocr {
  my ( $class, $file, $language, $pidfile, $tif, $cmd ) = @_;
  setup() unless $setup;
 
  # Temporary filename for output
- my $txt = File::Temp->new( SUFFIX => '.txt' );
- my ( $name, $path, $suffix ) = fileparse( $txt, ".txt" );
+ my $suffix = $version == 3 ? '.html' : '.txt';
+ my $txt = File::Temp->new( SUFFIX => $suffix );
+ ( my $name, my $path, $suffix ) = fileparse( $txt, $suffix );
 
  if ( $file !~ /\.tif$/ ) {
 
@@ -74,7 +83,10 @@ sub text {
  else {
   $tif = $file;
  }
- if ($language) {
+ if ($version == 3) {
+  $cmd = "echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $language +hocr.config 2> /dev/null;rm hocr.config";
+ }
+ elsif ($language) {
   $cmd = "tesseract $tif $path$name -l $language 2> /dev/null";
  }
  else {

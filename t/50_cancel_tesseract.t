@@ -17,20 +17,20 @@ BEGIN {
 # Insert your test code below, the Test::More module is use()ed here so read
 # its man page ( perldoc Test::More ) for help writing this test script.
 
+# Thumbnail dimensions
+our $widtht  = 100;
+our $heightt = 100;
+
+use Log::Log4perl qw(:easy);
+Log::Log4perl->easy_init($DEBUG);
+our $logger = Log::Log4perl::get_logger;
+my $prog_name = 'gscan2pdf';
+use Locale::gettext 1.05;    # For translations
+our $d = Locale::gettext->domain($prog_name);
+Gscan2pdf->setup($d, $logger);
+
 SKIP: {
  skip 'Tesseract not installed', 1 unless Gscan2pdf::Tesseract->setup;
-
- # Thumbnail dimensions
- our $widtht  = 100;
- our $heightt = 100;
-
- use Log::Log4perl qw(:easy);
- Log::Log4perl->easy_init($DEBUG);
- our $logger = Log::Log4perl::get_logger;
- my $prog_name = 'gscan2pdf';
- use Locale::gettext 1.05;    # For translations
- our $d = Locale::gettext->domain($prog_name);
- Gscan2pdf->setup($d, $logger);
 
  # Create test image
  system('convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.tif');

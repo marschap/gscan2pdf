@@ -1185,7 +1185,7 @@ sub _thread_tesseract {
  my ( $self, $page, $language, $pidfile ) = @_;
  my $new = $page->clone;
  $new->{hocr} =
-   Gscan2pdf::Tesseract->text( $page->{filename}, $language, $pidfile );
+   Gscan2pdf::Tesseract->hocr( $page->{filename}, $language, $pidfile );
  return if $_self->{cancel};
  $new->{ocr_flag} = 1;    #FlagOCR
  $new->{ocr_time} =

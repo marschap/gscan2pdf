@@ -10,6 +10,7 @@ use File::Copy;
 use File::Temp;             # To create temporary files
 use HTML::TokeParser;
 use HTML::Entities;
+use Image::Magick;
 use utf8;
 
 BEGIN {
@@ -118,13 +119,15 @@ sub boxes {
    if ( $token->[0] eq 'S' ) {
     if ( $token->[1] eq 'span'
      and defined( $token->[2]{class} )
-     and $token->[2]{class} eq 'ocr_line'
+     and ($token->[2]{class} eq 'ocr_line' or $token->[2]{class} eq 'ocr_word')
      and defined( $token->[2]{title} )
      and $token->[2]{title} =~ /bbox (\d+) (\d+) (\d+) (\d+)/ )
     {
      ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
     }
-    else {
+    elsif ($token->[1] eq 'span'
+     and defined( $token->[2]{class} )
+     and $token->[2]{class} eq 'ocr_cinfo') {
      undef $x1;
      undef $text;
     }
