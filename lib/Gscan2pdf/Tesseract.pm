@@ -16,15 +16,16 @@ sub setup {
  $tessdata = `tesseract '' '' -l '' 2>&1`;
  chomp $tessdata;
  if ( $tessdata =~ s/^Unable to load unicharset file // ) {
-   $version = 2;
-   $suffix = '.unicharset';
+  $version = 2;
+  $suffix  = '.unicharset';
  }
  elsif ( $tessdata =~ s/^Error openn?ing data file // ) {
-   $version = 3;
-   $suffix = '.traineddata';
+  $version = 3;
+  $suffix  = '.traineddata';
  }
  $tessdata =~ s/\/$suffix$//;
- $main::logger->info("Found tesseract version $version. Using tessdata at $tessdata");
+ $main::logger->info(
+  "Found tesseract version $version. Using tessdata at $tessdata");
  $setup = 1;
  return $installed;
 }
@@ -32,17 +33,17 @@ sub setup {
 sub languages {
  unless (%languages) {
   my %iso639 = (
-   deu     => 'German',
-   'deu-f' => 'German (Fraktur)',
+   deu        => 'German',
+   'deu-f'    => 'German (Fraktur)',
    'deu-frak' => 'German (Fraktur)',
-   eng     => 'English',
-   fra     => 'French',
-   ita     => 'Italian',
-   nld     => 'Dutch',
-   por     => 'Portuguese',
-   slk     => 'Slovak',
-   spa     => 'Spanish',
-   vie     => 'Vietnamese',
+   eng        => 'English',
+   fra        => 'French',
+   ita        => 'Italian',
+   nld        => 'Dutch',
+   por        => 'Portuguese',
+   slk        => 'Slovak',
+   spa        => 'Spanish',
+   vie        => 'Vietnamese',
   );
   for ( glob "$tessdata/*$suffix" ) {
 
@@ -83,8 +84,9 @@ sub hocr {
  else {
   $tif = $file;
  }
- if ($version == 3) {
-  $cmd = "echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $language +hocr.config 2> /dev/null;rm hocr.config";
+ if ( $version == 3 ) {
+  $cmd =
+"echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $language +hocr.config 2> /dev/null;rm hocr.config";
  }
  elsif ($language) {
   $cmd = "tesseract $tif $path$name -l $language 2> /dev/null";
