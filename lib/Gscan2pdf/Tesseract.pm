@@ -50,13 +50,18 @@ sub languages {
    # Weed out the empty language files
    if ( not -z $_ ) {
     my $code;
-    $code = $1 if ( $_ =~ /([\w\-]*)$suffix$/ );
-    $main::logger->info("Found tesseract language $code");
-    if ( defined $iso639{$code} ) {
-     $languages{$code} = $iso639{$code};
+    if (/([\w\-]*)$suffix$/) {
+     $code = $1;
+     $main::logger->info("Found tesseract language $code");
+     if ( defined $iso639{$code} ) {
+      $languages{$code} = $iso639{$code};
+     }
+     else {
+      $languages{$code} = $code;
+     }
     }
     else {
-     $languages{$code} = $code;
+     $main::logger->info("Found unknown language file: $_");
     }
    }
   }

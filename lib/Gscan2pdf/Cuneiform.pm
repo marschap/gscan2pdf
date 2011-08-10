@@ -51,17 +51,21 @@ sub languages {
   my $cmd = "cuneiform -l";
   $main::logger->info($cmd);
   my $output = `$cmd`;
-  $main::logger->info($output);
 
   my $langs;
-  $langs = $1 if ( $output =~ /Supported languages: (.*)\./ );
-  for ( split " ", $langs ) {
-   if ( defined $lang{$_} ) {
-    $languages{$_} = $lang{$_};
+  if ( $output =~ /Supported languages: (.*)\./ ) {
+   $langs = $1;
+   for ( split " ", $langs ) {
+    if ( defined $lang{$_} ) {
+     $languages{$_} = $lang{$_};
+    }
+    else {
+     $languages{$_} = $_;
+    }
    }
-   else {
-    $languages{$_} = $_;
-   }
+  }
+  else {
+   $main::logger->info("Unrecognised output from cuneiform: $output");
   }
  }
  return \%languages;
