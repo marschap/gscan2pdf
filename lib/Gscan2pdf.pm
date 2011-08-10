@@ -766,7 +766,7 @@ sub _thread_save_djvu {
    # Open djvusedtxtfile
    my $djvusedtxtfile =
      File::Temp->new( DIR => $self->{dir}, SUFFIX => '.txt' );
-   open my $fh, ">:utf8", $djvusedtxtfile
+   open my $fh, ">:utf8", $djvusedtxtfile    ## no critic
      or die sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile );
    print $fh "(page 0 0 $w $h\n";
 
@@ -982,7 +982,7 @@ sub _thread_save_image {
 sub _thread_save_text {
  my ( $self, $path, $list_of_pages, $fh ) = @_;
 
- unless ( open $fh, ">:utf8", $path ) {
+ unless ( open $fh, ">:utf8", $path ) {    ## no critic
   $self->{status} = 1;
   $self->{message} = sprintf( $d->get("Can't open file: %s"), $path );
   return;

@@ -2595,6 +2595,7 @@ EOS
   }
  }
  $current_page->{hocr} .= "</p></div></body></html>";
+ return;
 }
 
 # Throw up file selector and save selected pages as PDF under given name.
@@ -9999,26 +10000,6 @@ sub register_icon {
   my $set = Gtk2::IconSet->new_from_pixbuf($icon);
   $IconFactory->add( $stock_id, $set );
  }
- return;
-}
-
-# Process the exit of the child.
-
-sub sig_child {
- my $pid = waitpid( -1, &WNOHANG );
-
- if ( $pid == -1 ) {
-
-  # no child waiting.  Ignore it.
- }
- elsif ( WIFEXITED($?) ) {
-  $logger->info("Process $pid exited.");
-  delete $helperTag{$pid};
- }
- else {
-  $logger->info("False alarm on $pid.");
- }
- $SIG{CHLD} = \&sig_child;    # install *after* calling waitpid
  return;
 }
 
