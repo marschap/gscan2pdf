@@ -14,7 +14,9 @@ sub setup {
  return $installed if $setup;
  $installed = 1 if ( system("which tesseract > /dev/null 2> /dev/null") == 0 );
  $tessdata = `tesseract '' '' -l '' 2>&1`;
- chomp $tessdata;
+ while ( $tessdata =~ /\n/ ) {
+  $tessdata =~ s/\n.*$//g;
+ }
  if ( $tessdata =~ s/^Unable to load unicharset file // ) {
   $version = 2;
   $suffix  = '.unicharset';
@@ -22,6 +24,9 @@ sub setup {
  elsif ( $tessdata =~ s/^Error openn?ing data file // ) {
   $version = 3;
   $suffix  = '.traineddata';
+ }
+ else {
+  return;
  }
  $tessdata =~ s/\/$suffix$//;
  $main::logger->info(
