@@ -12,27 +12,41 @@ my ( %languages, $installed, $setup, $version, $tessdata, $suffix );
 
 sub setup {
  return $installed if $setup;
- $installed = 1 if ( system("which tesseract > /dev/null 2> /dev/null") == 0 );
- $tessdata = `tesseract '' '' -l '' 2>&1`;
+ if ( system("which tesseract > /dev/null 2> /dev/null") == 0 ) {
+  $installed = 1;
+ }
+ else {
+  return;
+ }
+ ( $tessdata, $version, $suffix ) =
+   parse_tessdata( join '', `tesseract '' '' -l '' 2>&1` );
+ return unless defined $tessdata;
+ $main::logger->info(
+  "Found tesseract version $version. Using tessdata at $tessdata");
+ $setup = 1;
+ return $installed;
+}
+
+sub parse_tessdata {
+ my ($tessdata) = @_;
+ my ( $version, $suffix );
+ $version = $1 + 0 if ( $tessdata =~ / v(\d\.\d\d) / );
  while ( $tessdata =~ /\n/ ) {
   $tessdata =~ s/\n.*$//g;
  }
  if ( $tessdata =~ s/^Unable to load unicharset file // ) {
-  $version = 2;
-  $suffix  = '.unicharset';
+  $version = 2 unless defined $version;
+  $suffix = '.unicharset';
  }
  elsif ( $tessdata =~ s/^Error openn?ing data file // ) {
-  $version = 3;
-  $suffix  = '.traineddata';
+  $version = 3 unless defined $version;
+  $suffix = '.traineddata';
  }
  else {
   return;
  }
  $tessdata =~ s/\/$suffix$//;
- $main::logger->info(
-  "Found tesseract version $version. Using tessdata at $tessdata");
- $setup = 1;
- return $installed;
+ return $tessdata, $version, $suffix;
 }
 
 sub languages {
@@ -79,7 +93,7 @@ sub hocr {
  setup() unless $setup;
 
  # Temporary filename for output
- my $suffix = $version == 3 ? '.html' : '.txt';
+ my $suffix = $version >= 3 ? '.html' : '.txt';
  my $txt = File::Temp->new( SUFFIX => $suffix );
  ( my $name, my $path, $suffix ) = fileparse( $txt, $suffix );
 
@@ -94,7 +108,7 @@ sub hocr {
  else {
   $tif = $file;
  }
- if ( $version == 3 ) {
+ if ( $version >= 3 ) {
   $cmd =
 "echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $language +hocr.config 2> /dev/null;rm hocr.config";
  }

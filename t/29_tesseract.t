@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 5;
+use Test::More tests => 8;
 BEGIN {
   use_ok('Gscan2pdf::Tesseract');
 };
@@ -22,8 +22,20 @@ my $prog_name = 'gscan2pdf';
 use Locale::gettext 1.05;    # For translations
 our $d = Locale::gettext->domain($prog_name);
 
+my $output = <<EOS;
+Error opening data file /usr/share/tesseract-ocr/tessdata/.traineddata
+Tesseract Open Source OCR Engine v3.01 with Leptonica
+Image file  cannot be opened!
+Error during processing.
+EOS
+
+my ($tessdata, $version, $suffix) = Gscan2pdf::Tesseract::parse_tessdata($output);
+is( $tessdata, '/usr/share/tesseract-ocr/tessdata', 'v3.01 tessdata' );
+is( $version, 3.01, 'v3.01' );
+is( $suffix, '.traineddata', 'v3.01 suffix' );
+
 SKIP: {
- skip 'Tesseract not installed', 1 unless Gscan2pdf::Tesseract->setup;
+ skip 'Tesseract not installed', 4 unless Gscan2pdf::Tesseract->setup;
 
  # Create test image
  system('convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.tif');
