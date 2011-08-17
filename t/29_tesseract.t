@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 8;
+use Test::More tests => 11;
 BEGIN {
   use_ok('Gscan2pdf::Tesseract');
 };
@@ -23,13 +23,22 @@ use Locale::gettext 1.05;    # For translations
 our $d = Locale::gettext->domain($prog_name);
 
 my $output = <<EOS;
+Unable to load unicharset file /usr/share/tesseract-ocr/tessdata/.unicharset
+EOS
+
+my ($tessdata, $version, $suffix) = Gscan2pdf::Tesseract::parse_tessdata($output);
+is( $tessdata, '/usr/share/tesseract-ocr/tessdata', 'v2 tessdata' );
+is( $version, 2, 'v2' );
+is( $suffix, '.unicharset', 'v2 suffix' );
+
+$output = <<EOS;
 Error opening data file /usr/share/tesseract-ocr/tessdata/.traineddata
 Tesseract Open Source OCR Engine v3.01 with Leptonica
 Image file  cannot be opened!
 Error during processing.
 EOS
 
-my ($tessdata, $version, $suffix) = Gscan2pdf::Tesseract::parse_tessdata($output);
+($tessdata, $version, $suffix) = Gscan2pdf::Tesseract::parse_tessdata($output);
 is( $tessdata, '/usr/share/tesseract-ocr/tessdata', 'v3.01 tessdata' );
 is( $version, 3.01, 'v3.01' );
 is( $suffix, '.traineddata', 'v3.01 suffix' );
