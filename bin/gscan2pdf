@@ -2679,6 +2679,7 @@ sub save_PDF {
      downsample       => $SETTING{downsample},
      'downsample dpi' => $SETTING{'downsample dpi'},
      quality          => $SETTING{quality},
+     font             => $SETTING{'pdf font'},
     );
 
     # Create the PDF
@@ -2933,12 +2934,38 @@ sub save_dialog {
  my ( $buttond, $spinbuttond, $combob, $hboxpq, $spinbuttonpq,
   @pdf_compression ) = add_pdf_compression($vboxp);
 
+ # Font for non-ASCII text
+ my $hboxf = Gtk2::HBox->new;
+ $vbox->pack_start( $hboxf, TRUE, TRUE, 0 );
+ $label = Gtk2::Label->new( $d->get('Font for non-ASCII text') );
+ $hboxf->pack_start( $label, FALSE, FALSE, 0 );
+ my @fonts;
+ for (`fc-list : family style file`) {
+  if (/ttf: /) {
+   my ( $file, $family, $style ) = split ':';
+   chomp $style;
+   $family =~ s/^ //;
+   $style  =~ s/^style=//;
+   $style  =~ s/,.*$//;
+   my $font = "$family $style";
+   push @fonts, [ $file, $font, $font ];
+   $SETTING{'pdf font'} = $file
+     if ( not defined( $SETTING{'pdf font'} )
+    and $font eq 'Times New Roman Regular' );
+  }
+ }
+ @fonts = sort { $a->[1] cmp $b->[1] } @fonts;
+ my $combof = combobox_from_array(@fonts);
+ combobox_set_active( $combof, $SETTING{'pdf font'}, @fonts );
+ $hboxf->pack_start( $combof, FALSE, FALSE, 0 );
+
  # Fill image type ComboBox
  my $combobi = combobox_from_array(@type);
  $combobi->signal_connect(
   changed => sub {
    if ( $type[ $combobi->get_active ][0] eq 'pdf' ) {
     $vboxp->show_all;
+    $hboxf->show_all;
     if ( $pdf_compression[ $combob->get_active ][0] eq 'jpg' ) {
      $hboxpq->show_all;
     }
@@ -2949,6 +2976,7 @@ sub save_dialog {
    }
    else {
     $vboxp->hide_all;
+    $hboxf->hide_all;
     $windowi->resize( 100, 100 );     # Doesn't matter that 200x200 is too small
    }
    if ($type[ $combobi->get_active ][0] eq 'tif'
@@ -2997,6 +3025,8 @@ sub save_dialog {
     $SETTING{'downsample dpi'}  = $spinbuttond->get_value;
     $SETTING{'pdf compression'} = $pdf_compression[ $combob->get_active ][0];
     $SETTING{'quality'}         = $spinbuttonpq->get_value;
+
+    $SETTING{'pdf font'} = $fonts[ $combof->get_active ][0];
 
     update_PDF_settings( $entrya, $entryt, $entrys, $entryk );
     save_PDF();
@@ -3289,7 +3319,11 @@ sub save_dialog {
  $hboxc->hide_all
    if ( $type[ $combobi->get_active ][0] ne 'tif'
   and $type[ $combobi->get_active ][0] ne 'ps' );
- $vboxp->hide_all if ( $type[ $combobi->get_active ][0] ne 'pdf' );
+
+ if ( $type[ $combobi->get_active ][0] ne 'pdf' ) {
+  $vboxp->hide_all;
+  $hboxf->hide_all;
+ }
  $windowi->resize( 100, 100 );    # Doesn't matter that 200x200 is too small
  return;
 }

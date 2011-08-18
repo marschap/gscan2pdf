@@ -13,6 +13,7 @@ use Gtk2;
 use File::Copy;
 use File::Temp;    # To create temporary files
 use Proc::Killfam;
+use Encode;
 
 our $_self;
 our $jobs_completed = 0;
@@ -571,10 +572,18 @@ sub _thread_save_pdf {
   # Add OCR as text behind the scan
   if ( defined( $pagedata->{hocr} ) ) {
    $logger->info('Embedding OCR output behind image');
-   my $font = $pdf->corefont('Times-Roman');
+   $logger->info("Using $options->{font} for non-ASCII text")
+     if ( defined $options->{font} );
+   my $font;
    my $text = $page->text;
    for my $box ( $pagedata->boxes ) {
     my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
+    if ( $txt =~ /[[:^ascii:]]/ and defined( $options->{font} ) ) {
+     $font = $pdf->ttfont( $options->{font}, -unicodemap => 1 );
+    }
+    else {
+     $font = $pdf->corefont('Times-Roman');
+    }
     ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution )
       if ( $x1 == 0 and $y1 == 0 and not defined($x2) );
     if ( abs( $h * $resolution - $y2 + $y1 ) > 5
@@ -595,7 +604,7 @@ sub _thread_save_pdf {
       ( $h - ( $y1 / $resolution ) ) * $Gscan2pdf::Document::POINTS_PER_INCH -
         $size
      );
-     $text->text($txt);
+     $text->text( decode( 'utf-8', $txt ), utf8 => 1 );
     }
     else {
 
@@ -619,7 +628,7 @@ sub _thread_save_pdf {
        }
        $text->translate( $x, $y );
        $word = ' ' . $word if ( $x > 0 );
-       $x += $text->text($word);
+       $x += $text->text( decode( 'utf-8', $word ), utf8 => 1 );
       }
       $y -= $size;
      }
