@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 11;
+use Test::More tests => 14;
 BEGIN {
   use_ok('Gscan2pdf::Tesseract');
 };
@@ -30,6 +30,15 @@ my ($tessdata, $version, $suffix) = Gscan2pdf::Tesseract::parse_tessdata($output
 is( $tessdata, '/usr/share/tesseract-ocr/tessdata', 'v2 tessdata' );
 is( $version, 2, 'v2' );
 is( $suffix, '.unicharset', 'v2 suffix' );
+
+$output = <<EOS;
+Error openning data file /usr/share/tesseract-ocr/tessdata/.traineddata
+EOS
+
+($tessdata, $version, $suffix) = Gscan2pdf::Tesseract::parse_tessdata($output);
+is( $tessdata, '/usr/share/tesseract-ocr/tessdata', 'v3 tessdata' );
+is( $version, 3, 'v3' );
+is( $suffix, '.traineddata', 'v3 suffix' );
 
 $output = <<EOS;
 Error opening data file /usr/share/tesseract-ocr/tessdata/.traineddata
