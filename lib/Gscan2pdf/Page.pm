@@ -136,7 +136,6 @@ sub boxes {
    }
    if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/ ) {
     $text = HTML::Entities::decode_entities( $token->[1] );
-    utf8::encode($text);    # UTF-8 in perl sucks!
     chomp($text);
    }
    if ( $token->[0] eq 'E' ) {

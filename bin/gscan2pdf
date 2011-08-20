@@ -6406,7 +6406,6 @@ Jarosław Ogrodnik
 Luisa Ravelli
 John M
 EOS
- utf8::encode($translators);    # UTF-8 in perl sucks!
  $about->set_translator_credits($translators);
  $about->set_artists('lodp');
  $about->run;

@@ -41,6 +41,7 @@ my $slist = Gscan2pdf::Document->new;
 $slist->get_file_info( 'test.pnm', undef, undef, undef, sub {
  my ($info) = @_;
  $slist->import_file( $info, 1, 1, undef, undef, undef, sub {
+  use utf8;
   $slist->{data}[0][2]{hocr} = 'пени способствовала сохранению';
   $slist->save_pdf('test.pdf', [ $slist->{data}[0][2] ], undef, \%options, undef, undef, undef, sub {Gtk2->main_quit});
  })

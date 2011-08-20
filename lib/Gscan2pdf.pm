@@ -13,7 +13,6 @@ use Gtk2;
 use File::Copy;
 use File::Temp;    # To create temporary files
 use Proc::Killfam;
-use Encode;
 
 our $_self;
 our $jobs_completed = 0;
@@ -604,7 +603,7 @@ sub _thread_save_pdf {
       ( $h - ( $y1 / $resolution ) ) * $Gscan2pdf::Document::POINTS_PER_INCH -
         $size
      );
-     $text->text( decode( 'utf-8', $txt ), utf8 => 1 );
+     $text->text( $txt, utf8 => 1 );
     }
     else {
 
@@ -628,7 +627,7 @@ sub _thread_save_pdf {
        }
        $text->translate( $x, $y );
        $word = ' ' . $word if ( $x > 0 );
-       $x += $text->text( decode( 'utf-8', $word ), utf8 => 1 );
+       $x += $text->text( $word, utf8 => 1 );
       }
       $y -= $size;
      }
