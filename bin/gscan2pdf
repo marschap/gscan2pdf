@@ -8799,7 +8799,7 @@ sub crop {
 
  # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
- ( $windowc, my $vbox ) = create_window( $window, $d->get('Crop'), TRUE );
+ ( $windowc, my $vbox ) = create_window( $window, $d->get('Crop'), FALSE );
 
  # Frame for page range
  add_page_range($vbox);
