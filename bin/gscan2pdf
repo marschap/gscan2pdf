@@ -6385,27 +6385,27 @@ EOS
  $about->set_license($licence);
  $about->set_website('http://gscan2pdf.sf.net');
  my $translators =
-   <<'EOS'; # inverted commas requred around EOS because of UTF-8 in $translators
+   <<'EOS'; # inverted commas required around EOS because of UTF-8 in $translators
+Utku BERBEROĞLU
+zeugma
 Norbux
-Oleg Koptev
-Сергій Дубик
-Matthias Gutjahr
-Fitoschido
-YAMAKAGE Hideo
-Alejandro Cuervo
 Tico
-suoko
-Piotr Strębski
-JeromeJ
+Gábor Sepsi
+maidis
+Сергій Дубик
+Tayfun Kayhan
+pp/bs
+Eugene Marshal
+Édouard Lopez
+R120X (www.virtua.es)
+Fitoschido
+Jessica Tallon
+Jan Klopper
+Csörföly Dániel
+Alejandro Cuervo
+Cristian Marchi
 David Planella
-Manuel Rennecke
-Wojciech Górnaś
-Sérgio Marques
-Cédric VALMARY
-Celso H. L. S. Junior
-Jarosław Ogrodnik
-Luisa Ravelli
-John M
+Milo Casagrande
 EOS
  $about->set_translator_credits($translators);
  $about->set_artists('lodp');
