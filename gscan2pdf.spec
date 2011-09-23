@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 0.9.32
+Version: 1.0.0
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -77,20 +77,30 @@ fi
 %defattr(-,root,root,-)
 %doc LICENCE
 %{_bindir}/*
-%{perl_vendorlib}/Gscan2pdf.pm
+%{perl_vendorlib}/*
 %{_datadir}/%{name}
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/pixmaps/gscan2pdf.svg
 %{_mandir}/man1/*.1*
 
 %changelog
-* Mon Feb 14 2011 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Wed Sep 21 2011 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #622616 (gscan2pdf: error message)
+    Closes: #622844 (gscan2pdf + libsane-perl frontend + Canon CanoScan LiDE25
+	results in "End of file reached")
+    Closes: #563461 (ability to remove unreferenced temporary files)
+    Closes: #577144 (gscan2pdf: lost option for editing/scanning simultaneously
+	             in newer versions)
+    Closes: #602578 (Clearing the OCR text)
+    Closes: #617886 ("Open gscan2pdf session file" icon looks too much like
+	             "Save" icon)
   - New upstream release
     Closes: #599181 (gscan2pdf: OCR doesn't support Umlauts/national characters)
     Closes: #608226 (pressing space causes unexpected data loss)
     New Depends: liblog-log4perl-perl
     Removed Depends: libarchive-tar-perl, as now in perl
-  - Removed debian/patches/replace-forks-with-threads 
+  - Removed debian/patches/replace-forks-with-threads
     Removed Build-Depends: quilt
     Updated rules not to use quilt
   - Replace forks with threads
