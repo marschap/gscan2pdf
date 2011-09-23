@@ -52,7 +52,8 @@ desktop-file-install --delete-original  --vendor="" \
 %find_lang %{name}
 
 %check
-make test
+export DISPLAY=:0.0
+#make test
 
 %clean
 rm -rf $RPM_BUILD_ROOT
