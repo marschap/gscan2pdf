@@ -438,7 +438,7 @@ sub _thread_save_pdf {
  # Create PDF with PDF::API2
  $self->{message} = $d->get('Setting up PDF');
  my $pdf = PDF::API2->new( -file => $path );
- $pdf->info($metadata) if defined($metadata);
+ $pdf->info(%$metadata) if defined($metadata);
 
  foreach my $pagedata ( @{$list_of_pages} ) {
   ++$page;
