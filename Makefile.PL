@@ -164,7 +164,7 @@ ppa : tardist
 	cp $(NAME)-$(VERSION).tar.gz /tmp/$(NAME)/$(NAME)_$(VERSION).orig.tar.gz
 	cd /tmp/$(NAME) && tar xvfz $(NAME)_$(VERSION).orig.tar.gz
 	cd /tmp/$(NAME)/$(NAME)-$(VERSION) && debuild -S -sa
-	dput $(NAME)-ppa /tmp/$(NAME)/$(NAME)_$(VERSION)_source.changes
+	dput $(NAME)-ppa /tmp/$(NAME)/$(NAME)_$(VERSION)*_source.changes
 
 debdist : tardist
 	$(RM_RF) /tmp/$(NAME)
