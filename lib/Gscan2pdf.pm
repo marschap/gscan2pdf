@@ -434,11 +434,15 @@ sub _thread_save_pdf {
  my ( $self, $path, $list_of_pages, $metadata, $options, $pidfile ) = @_;
 
  my $page = 0;
+ my $fontcache;
 
  # Create PDF with PDF::API2
  $self->{message} = $d->get('Setting up PDF');
  my $pdf = PDF::API2->new( -file => $path );
  $pdf->info(%$metadata) if defined($metadata);
+
+ $fontcache = $pdf->ttfont( $options->{font}, -unicodemap => 1 )
+   if ( defined $options->{font} );
 
  foreach my $pagedata ( @{$list_of_pages} ) {
   ++$page;
@@ -578,7 +582,7 @@ sub _thread_save_pdf {
    for my $box ( $pagedata->boxes ) {
     my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
     if ( $txt =~ /[[:^ascii:]]/ and defined( $options->{font} ) ) {
-     $font = $pdf->ttfont( $options->{font}, -unicodemap => 1 );
+     $font = $fontcache;
     }
     else {
      $font = $pdf->corefont('Times-Roman');
