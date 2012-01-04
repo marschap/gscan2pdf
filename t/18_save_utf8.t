@@ -35,13 +35,13 @@ my $slist = Gscan2pdf::Document->new;
 $slist->get_file_info( 'test.pnm', undef, undef, undef, sub {
  my ($info) = @_;
  $slist->import_file( $info, 1, 1, undef, undef, undef, sub {
-  $slist->{data}[0][2]{hocr} = 'The quick brown fox';
+  $slist->{data}[0][2]{hocr} = 'пени способствовала сохранению';
   $slist->save_text('test.txt', [ $slist->{data}[0][2] ], undef, undef, undef, sub {Gtk2->main_quit});
  })
 });
 Gtk2->main;
 
-is( `cat test.txt`, 'The quick brown fox', 'saved ASCII' );
+is( `cat test.txt`, 'пени способствовала сохранению', 'saved UTF8' );
 
 #########################
 

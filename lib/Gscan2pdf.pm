@@ -994,7 +994,7 @@ sub _thread_save_image {
 sub _thread_save_text {
  my ( $self, $path, $list_of_pages, $fh ) = @_;
 
- unless ( open $fh, ">:utf8", $path ) {    ## no critic
+ unless ( open $fh, ">", $path ) {    ## no critic
   $self->{status} = 1;
   $self->{message} = sprintf( $d->get("Can't open file: %s"), $path );
   return;
