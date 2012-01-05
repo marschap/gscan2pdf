@@ -5,9 +5,10 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 14;
+use Test::More tests => 19;
 BEGIN {
   use_ok('Gscan2pdf::Tesseract');
+  use Encode;
 };
 
 #########################
@@ -53,7 +54,7 @@ is( $version, 3.01, 'v3.01' );
 is( $suffix, '.traineddata', 'v3.01 suffix' );
 
 SKIP: {
- skip 'Tesseract not installed', 4 unless Gscan2pdf::Tesseract->setup;
+ skip 'Tesseract not installed', 9 unless Gscan2pdf::Tesseract->setup;
 
  # Create test image
  system('convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.tif');
@@ -64,6 +65,19 @@ SKIP: {
  like( $got, qr/quick/, 'Tesseract returned "quick"' );
  like( $got, qr/brown/, 'Tesseract returned "brown"' );
  like( $got, qr/fox/,   'Tesseract returned "fox"' );
+
+ my $languages = Gscan2pdf::Tesseract->languages;
+ skip 'German language pack for Tesseract not installed', 5 unless (defined $languages->{'deu'});
+
+ # Create test image
+ system("convert +matte -depth 1 -pointsize 12 -density 300 label:'öÖäÄüÜß' test.tif");
+
+ my $got = Gscan2pdf::Tesseract->hocr('test.tif', 'deu');
+ is( Encode::is_utf8($got, 1), 1, "Tesseract returned UTF8" );
+ for my $c ( qw( ö ä ü ß ) ) {
+   my $c2 = decode_utf8( $c );
+   like( $got, qr/$c2/, "Tesseract returned $c" );
+ }
 
  unlink 'test.tif';
 }
