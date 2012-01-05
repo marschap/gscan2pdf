@@ -6,6 +6,8 @@ use warnings;
 use Carp;
 use File::Temp;    # To create temporary files
 use File::Basename;
+use HTML::Entities;
+use Encode;
 
 my ( $exe, $installed, $setup );
 
@@ -67,8 +69,21 @@ sub hocr {
   $cmd = "$exe $png";
  }
  $main::logger->info($cmd);
- return `echo $$ > $pidfile;$cmd` if ( defined $pidfile );
- return `$cmd`;
+
+ # decode html->utf8
+ my $output;
+ if ( defined $pidfile ) {
+   $output = `echo $$ > $pidfile;$cmd`;
+ }
+ else {
+   $output = `$cmd`;
+ }
+ my $decoded = decode_entities( $output );
+
+ # Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
+ # where decode_entities doesn't work cleanly, so encode/decode to finally
+ # get good UTF-8
+ return decode_utf8( encode_utf8( $decoded ) );
 }
 
 1;

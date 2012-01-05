@@ -11,7 +11,7 @@ use File::Temp;             # To create temporary files
 use HTML::TokeParser;
 use HTML::Entities;
 use Image::Magick;
-use utf8;
+use Encode;
 
 BEGIN {
  use Exporter ();
@@ -135,7 +135,11 @@ sub boxes {
     }
    }
    if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/ ) {
-    $text = HTML::Entities::decode_entities( $token->[1] );
+
+    # Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
+    # where decode_entities doesn't work cleanly, so encode/decode to finally
+    # get good UTF-8
+    $text = decode_utf8( encode_utf8( HTML::Entities::decode_entities( $token->[1] ) ) );
     chomp($text);
    }
    if ( $token->[0] eq 'E' ) {
@@ -147,7 +151,7 @@ sub boxes {
   }
  }
  else {
-  push @boxes, [ 0, 0, $self->{w}, $self->{h}, $self->{hocr} ];
+  push @boxes, [ 0, 0, $self->{w}, $self->{h}, decode_utf8( $self->{hocr} ) ];
  }
  return @boxes;
 }

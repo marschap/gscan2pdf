@@ -5,9 +5,10 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 4;
+use Test::More tests => 6;
 BEGIN {
   use_ok('Gscan2pdf::Page');
+  use Encode;
 };
 
 #########################
@@ -49,6 +50,35 @@ EOS
 
 my @boxes = ( [ 1, 14, 77, 48, 'The' ], [ 92, 14, 202, 59, 'quick' ], [ 214, 14, 341, 48, 'brown' ], [ 355, 14, 420, 48, 'fox' ] );
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from tesseract 3.00' );
+
+#########################
+
+$page->{hocr} = <<'EOS';
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN
+    http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta content="ocr_line ocr_page" name="ocr-capabilities"/><meta content="en" name="ocr-langs"/><meta content="Latn" name="ocr-scripts"/><meta content="" name="ocr-microformats"/><title>OCR Output</title></head>
+<body><div class="ocr_page" title="bbox 0 0 274 58; image test.png"><span class="ocr_line" title="bbox 3 1 271 47">&#246;&#246;&#228;ii&#252;&#252;&#223; &#8364;
+</span></div></body></html>
+EOS
+
+@boxes = ( [ 3, 1, 271, 47, decode_utf8('ööäiiüüß €') ] );
+is_deeply( [ $page->boxes ], \@boxes, 'Boxes from ocropus 0.3 with UTF8' );
+
+#########################
+
+$page->{hocr} = <<'EOS';
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN
+    http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta content="ocr_line ocr_page" name="ocr-capabilities"/><meta content="en" name="ocr-langs"/><meta content="Latn" name="ocr-scripts"/><meta content="" name="ocr-microformats"/><title>OCR Output</title></head>
+<body><div class="ocr_page" title="bbox 0 0 202 114; image /tmp/GgRiywY66V/qg_kooDQKE.pnm"><span class="ocr_line" title="bbox 22 26 107 39">&#164;&#246;A&#228;U&#252;&#223;'
+</span><span class="ocr_line" title="bbox 21 74 155 87">Test Test Test E
+</span></div></body></html>
+EOS
+
+@boxes = ( [ 22, 26, 107, 39, "\x{a4}\x{f6}A\x{e4}U\x{fc}\x{df}'" ], [ 21, 74, 155, 87, 'Test Test Test E' ] );
+is_deeply( [ $page->boxes ], \@boxes, 'More boxes from ocropus 0.3 with UTF8' );
 
 #########################
 
