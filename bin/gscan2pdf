@@ -3235,7 +3235,7 @@ sub save_dialog {
        # Create the PS
        my $tif = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.tif' );
        $windowi->hide if defined $windowi;
-       save_TIFF( $tif, $filename );
+       save_TIFF( $tif->filename, $filename );
       }
       $file_chooser->destroy;
      }
