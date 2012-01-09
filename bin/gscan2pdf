@@ -156,7 +156,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
 
 my $prog_name = 'gscan2pdf';
-my $version   = '1.0.0';
+my $version   = '1.0.1';
 
 my $tolerance = 1;
 
