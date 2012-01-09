@@ -2711,7 +2711,8 @@ sub save_PDF {
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
-
+      view_file($filename)
+       if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
 # create email if required
 #                       if ( defined $mua_string ) {
 #                         show_message_dialog( $main::window, 'error', 'close',
@@ -3168,6 +3169,8 @@ sub save_dialog {
          $thbox->hide_all unless $pending;
          $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
          mark_pages(@pagelist);
+         view_file($filename)
+          if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
          $logger->debug("Finished saving $filename");
         },
         sub {    # error
@@ -3427,6 +3430,8 @@ sub save_image {
     $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     mark_pages(@pagelist);
+    view_file($filename)
+     if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
     $logger->debug("Finished saving $filename");
    },
    sub {    # error
@@ -3482,6 +3487,9 @@ sub save_TIFF {
    $thbox->hide_all unless $pending;
    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    mark_pages(@pagelist);
+   my $file = defined($ps) ? $ps : $filename;
+   view_file($file)
+    if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
    $logger->debug("Finished saving $filename");
   },
   sub {    # error
@@ -3571,6 +3579,8 @@ sub save_djvu {
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
+      view_file($filename)
+       if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
       $logger->debug("Finished saving $filename");
      },
      sub {    # error
@@ -10302,6 +10312,56 @@ sub preferences {
   }
  );
 
+ # View saved files
+ my $cbv = Gtk2::CheckButton->new_with_label(
+  $d->get('View files on saving') );
+ $vbox->pack_start( $cbv, TRUE, TRUE, 0 );
+ $frame = Gtk2::Frame->new;
+ $frame->set_sensitive(FALSE) unless ( $SETTING{'view files toggle'} );
+ $cbv->signal_connect(
+  toggled => sub {
+   $frame->set_sensitive($cbv->get_active);
+  }
+ );
+ $cbv->set_active(TRUE) if ( $SETTING{'view files toggle'} );
+ $vbox->pack_start( $frame, TRUE, TRUE, 0 );
+ my $vboxv = Gtk2::VBox->new;
+ $vboxv->set_border_width($border_width);
+ $frame->add($vboxv);
+
+ # A simple list to hold the file type and associated applications
+ my $vlist = Gtk2::Ex::Simple::List->new(
+  $d->get('File Type')   => 'text',
+  $d->get('Application') => 'text',
+ );
+ if (defined($SETTING{'view files'}) and ref($SETTING{'view files'}) eq 'ARRAY') {
+   for ( my $i = 0; $i < @{ $SETTING{'view files'} }; $i += 2 ) {
+     push @{ $vlist->{data} }, [ $SETTING{'view files'}[$i], $SETTING{'view files'}[$i+1] ];
+   }
+ }
+ $vlist->get_selection->set_mode('multiple');
+ $vlist->set_column_editable( 0, TRUE );
+ $vlist->set_column_editable( 1, TRUE );
+ $vboxv->pack_start( $vlist, TRUE, TRUE, 0 );
+ $hbox = Gtk2::HBox->new;
+ $vboxv->pack_start( $hbox, TRUE, TRUE, 0 );
+ $button = Gtk2::Button->new_from_stock('gtk-add');
+ $button->signal_connect(
+  clicked => sub {
+   push @{ $vlist->{data} }, [];
+  }
+ );
+ $hbox->pack_start( $button, TRUE, TRUE, 0 );
+ $button = Gtk2::Button->new_from_stock('gtk-delete');
+ $button->signal_connect(
+  clicked => sub {
+   for ( $vlist->get_selected_indices ) {
+    splice @{ $vlist->{data} }, $_, 1;
+   }
+  }
+ );
+ $hbox->pack_start( $button, TRUE, TRUE, 0 );
+
  # Apply button
  $hbox = Gtk2::HBox->new;
  $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
@@ -10349,6 +10409,24 @@ sub preferences {
    $SETTING{'Blank threshold'} = $spinbuttonb->get_value;
    $SETTING{'Dark threshold'}  = $spinbuttond->get_value;
    $SETTING{'OCR output'}      = $array[ $comboo->get_active ][0];
+
+   # Store viewer preferences
+   $SETTING{'view files toggle'} = $cbv->get_active;
+   $SETTING{'view files'} = ();
+   for ( @{ $vlist->{data} } ) {
+    if ( not defined($_->[0]) or $_->[0] eq '' ) {
+     show_message_dialog( $window, 'error', 'close', $d->get(sprintf'Undefined file type') );
+    }
+    elsif ( not defined($_->[1]) or $_->[1] eq '' ) {
+     show_message_dialog( $window, 'error', 'close', $d->get(sprintf'Undefined application') );
+    }
+    elsif ( not check_command($_->[1]) ) {
+     show_message_dialog( $window, 'error', 'close', $d->get(sprintf'Unknown application: %s', $_->[1]) );
+    }
+    else {
+     push @{ $SETTING{'view files'} }, $_->[0], $_->[1];
+    }
+   }
   }
  );
 
@@ -10572,6 +10650,25 @@ sub get_size_from_PNM {
   close $fh;
   return 0;
  }
+}
+
+# View filename if match in $SETTING{'view files'}
+sub view_file {
+ my ($filename) = @_;
+ if (defined($SETTING{'view files'}) and ref($SETTING{'view files'}) eq 'ARRAY') {
+   for ( my $i = 0; $i < @{ $SETTING{'view files'} }; $i += 2 ) {
+     my $ext = $SETTING{'view files'}[$i];
+     $ext = "*.$ext" unless ($ext =~ /\*/);
+     $ext =~ s/\./\./;
+     $ext =~ s/\*/.*/;
+     if ($filename =~ /$ext$/) {
+       $logger->info("Starting ".$SETTING{'view files'}[$i+1]);
+       system($SETTING{'view files'}[$i+1]." $filename &");
+       last;
+     }
+   }
+ }
+ return;
 }
 
 Gtk2->main;
