@@ -2713,12 +2713,6 @@ sub save_PDF {
       mark_pages(@pagelist);
       view_file($filename)
        if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
-# create email if required
-#                       if ( defined $mua_string ) {
-#                         show_message_dialog( $main::window, 'error', 'close',
-#                                              $main::d->get('Error creating email') )
-#                           if ( system($mua_string) );
-#                       }
       $logger->debug("Finished saving $filename");
      },
      sub {    # error
@@ -3637,11 +3631,27 @@ sub email {
    # Set options
    update_PDF_settings( $entrya, $entryt, $entrys, $entryk );
 
+   # Compile list of pages
+   my @list_of_pages;
+   my @pagelist = get_page_index();
+   for (@pagelist) {
+    push @list_of_pages, $slist->{data}[$_][2];
+   }
+
    # dig out the compression
    $SETTING{'downsample'}      = $buttond->get_active;
    $SETTING{'downsample dpi'}  = $spinbuttond->get_value;
    $SETTING{'pdf compression'} = $compression[ $combob->get_active ][0];
    $SETTING{'quality'}         = $spinbuttonq->get_value;
+
+   # Compile options
+   my %options = (
+    compression      => $SETTING{'pdf compression'},
+    downsample       => $SETTING{downsample},
+    'downsample dpi' => $SETTING{'downsample dpi'},
+    quality          => $SETTING{quality},
+    font             => $SETTING{'pdf font'},
+   );
 
    my $pdf = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.pdf' );
 
@@ -3668,7 +3678,44 @@ sub email {
    }
 
    # Create the PDF
-   $slist->create_PDF( $pdf, $mua_string );
+   my $signal;
+   $slist->save_pdf(
+    $pdf->filename,
+    \@list_of_pages,
+    get_pdf_metadata(),
+    \%options,
+    sub {    # queued
+     my ( $process, $completed, $total, $message, $progress ) = @_;
+     return update_tpbar( 1, $process, $completed, $total, $message,
+      $progress );
+    },
+    sub {    # started
+     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+     return TRUE if ( defined $signal );
+    },
+    sub {    # running
+     my ( $thread, $process, $completed, $total, $message, $progress ) = @_;
+     return update_tpbar( $thread, $process, $completed, $total, $message,
+      $progress );
+    },
+    sub {    # finished
+     my ( $new_page, $pending ) = @_;
+     $thbox->hide_all unless $pending;
+     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+     mark_pages(@pagelist);
+     view_file($pdf)
+      if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
+     $logger->info($mua_string);
+     show_message_dialog( $main::window, 'error', 'close',
+                          $main::d->get('Error creating email') )
+      if ( system($mua_string) );
+    },
+    sub {    # error
+     show_message_dialog( $main::window, 'error', 'close',
+                          $Gscan2pdf::_self->{message} );
+    }
+   );
 
    $windowe->hide;
 
