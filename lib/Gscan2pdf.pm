@@ -212,7 +212,7 @@ sub _thread_get_file_info {
  my ( $self, $filename, $pidfile, %info ) = @_;
 
  $logger->info("Getting info for $filename");
- my $format = `file -b $filename`;
+ my $format = `file -b "$filename"`;
 
  if ( $format =~ /gzip compressed data/ ) {
   $info{path}   = $filename;
