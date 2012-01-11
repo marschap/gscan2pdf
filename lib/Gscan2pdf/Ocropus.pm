@@ -17,7 +17,7 @@ sub setup {
 
   unless ( defined $ENV{OCROSCRIPTS} ) {
    for (qw(/usr /usr/local)) {
-    $ENV{OCROSCRIPTS} = "$_/share/ocropus/scripts"
+    local $ENV{OCROSCRIPTS} = "$_/share/ocropus/scripts"
       if ( -d "$_/share/ocropus/scripts" );
    }
   }

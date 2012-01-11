@@ -625,7 +625,7 @@ sub scan_it_raw {
     goto cleanup;
    }
 
-   open $fp, '>', $fname;
+   open $fp, '>', $fname;    ## no critic
    if ( !$fp ) {
     print STDERR "Error opening output `$fname': $@\n";
     $Sane::_status = SANE_STATUS_IO_ERROR;
@@ -1072,10 +1072,10 @@ if ($help) {
  exit(0);
 }
 
-$SIG{HUP}  = \&sighandler;
-$SIG{INT}  = \&sighandler;
-$SIG{PIPE} = \&sighandler;
-$SIG{TERM} = \&sighandler;
+local $SIG{HUP}  = \&sighandler;
+local $SIG{INT}  = \&sighandler;
+local $SIG{PIPE} = \&sighandler;
+local $SIG{TERM} = \&sighandler;
 
 scan_docs( $startNum, $endNum, $no_overwrite, $raw, $outputFile, $scanScript );
 

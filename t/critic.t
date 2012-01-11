@@ -8,11 +8,11 @@ if ( not $ENV{TEST_AUTHOR} ) {
    plan( skip_all => $msg );
 }
 
-if ( ! eval { require Test::Perl::Critic; } ) {
+if ( not eval { require Test::Perl::Critic; } ) {
    my $msg = 'Test::Perl::Critic required to criticise code';
    plan( skip_all => $msg );
 }
 
 my $rcfile = File::Spec->catfile( 't', 'perlcriticrc' );
 Test::Perl::Critic->import( -profile => $rcfile );
-all_critic_ok();
+all_critic_ok('bin', 'lib');

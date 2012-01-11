@@ -25,10 +25,9 @@ my $_POLL_INTERVAL = 100;    # ms
 
 BEGIN {
  use Exporter ();
- our ( $VERSION, @ISA, @EXPORT, @EXPORT_OK, %EXPORT_TAGS );
+ our ( $VERSION, @ISA, @EXPORT_OK, %EXPORT_TAGS );
 
  @ISA    = qw(Exporter Gtk2::Ex::Simple::List);
- @EXPORT = qw();
  %EXPORT_TAGS = ();          # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,

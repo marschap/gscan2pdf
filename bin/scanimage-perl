@@ -109,7 +109,7 @@ sub print_option {
  }
 
  # if both of these are set, option is invalid
- if ( $opt->{cap} & SANE_CAP_SOFT_SELECT && $opt->{cap} & SANE_CAP_HARD_SELECT )
+ if ( $opt->{cap} & SANE_CAP_SOFT_SELECT and $opt->{cap} & SANE_CAP_HARD_SELECT )
  {
   print STDERR "$prog_name: invalid option caps, SS+HS\n";
   return;
@@ -117,21 +117,21 @@ sub print_option {
 
  # invalid to select but not detect
  if ( $opt->{cap} & SANE_CAP_SOFT_SELECT
-  && !( $opt->{cap} & SANE_CAP_SOFT_DETECT ) )
+  and not ( $opt->{cap} & SANE_CAP_SOFT_DETECT ) )
  {
   print STDERR "$prog_name: invalid option caps, SS!SD\n";
   return;
  }
 
 # standard allows this, though it makes little sense
-# if($opt->{cap} & SANE_CAP_HARD_SELECT && !($opt->{cap} & SANE_CAP_SOFT_DETECT)){
+# if($opt->{cap} & SANE_CAP_HARD_SELECT and !($opt->{cap} & SANE_CAP_SOFT_DETECT)){
 #  print STDERR "$prog_name: invalid option caps, HS!SD\n";
 #  return;
 # }
 
  # if one of these three is not set, option is useless, skip it
  if (
-  !(
+  not (
    $opt->{cap} &
    ( SANE_CAP_SOFT_SELECT | SANE_CAP_HARD_SELECT | SANE_CAP_SOFT_DETECT )
   )
@@ -210,7 +210,7 @@ sub print_option {
 
  # print current option value
  if ( $opt->{max_values} == 1 ) {
-  if ( !( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
+  if ( not ( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
    my $val = $device->get_option($opt_num);
    print " [";
    if ( $opt->{type} == SANE_TYPE_BOOL ) {
@@ -252,8 +252,8 @@ sub print_option {
  elsif ( $opt->{cap} & SANE_CAP_HARD_SELECT ) {
   print " [hardware]";
  }
- elsif ( !( $opt->{cap} & SANE_CAP_SOFT_SELECT )
-  && $opt->{cap} & SANE_CAP_SOFT_DETECT )
+ elsif ( not ( $opt->{cap} & SANE_CAP_SOFT_SELECT )
+  and $opt->{cap} & SANE_CAP_SOFT_DETECT )
  {
   print " [read-only]";
  }
@@ -411,7 +411,7 @@ sub parse_vector {
   $prev_index = $index;
   $prev_value = $value;
   $separator  = substr( $str, 0, 1 );
- } while ( $separator eq ',' || $separator eq '-' );
+ } while ( $separator eq ',' or $separator eq '-' );
 
  if ( $verbose > 2 ) {
   print STDERR "$prog_name: value for --$opt->{name} is: ";
@@ -447,21 +447,21 @@ sub fetch_options {
    exit(1);
   }
 
-  next if ( !( $opt->{cap} & SANE_CAP_SOFT_SELECT ) );
+  next if ( not ( $opt->{cap} & SANE_CAP_SOFT_SELECT ) );
 
   $option_number{ $opt->{name} } = $i;
 
   # Look for scan resolution
   $resolution_optind = $i
-    if ( ( $opt->{type} == SANE_TYPE_FIXED || $opt->{type} == SANE_TYPE_INT )
+    if ( ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
    and ( $opt->{unit} == SANE_UNIT_DPI )
    and ( $opt->{name} eq SANE_NAME_SCAN_RESOLUTION ) );
 
   # Keep track of top-left corner options (if they exist at
   # all) and replace the bottom-right corner options by a
   # width/height option (if they exist at all).
-  if ( ( $opt->{type} == SANE_TYPE_FIXED || $opt->{type} == SANE_TYPE_INT )
-   and ( $opt->{unit} == SANE_UNIT_MM || $opt->{unit} == SANE_UNIT_PIXEL ) )
+  if ( ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
+   and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL ) )
   {
    if ( $opt->{name} eq SANE_NAME_SCAN_BR_X ) {
     $window[0]                 = $i;
@@ -650,7 +650,7 @@ sub scan_it {
  my $parm;
  {
   do {    # extra braces to get last to work.
-   if ( !$first_frame ) {
+   if ( not $first_frame ) {
     $device->start;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
      printf STDERR "$prog_name: sane_start: $Sane::STATUS\n";
@@ -696,15 +696,15 @@ sub scan_it {
      $offset      = $parm->{format} - SANE_FRAME_RED;
     }
     elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-     die unless ( ( $parm->{depth} == 8 ) || ( $parm->{depth} == 16 ) );
+     die unless ( ( $parm->{depth} == 8 ) or ( $parm->{depth} == 16 ) );
     }
     if ($parm->{format} == SANE_FRAME_RGB
      or $parm->{format} == SANE_FRAME_GRAY )
     {
      die
        unless ( ( $parm->{depth} == 1 )
-      || ( $parm->{depth} == 8 )
-      || ( $parm->{depth} == 16 ) );
+      or ( $parm->{depth} == 8 )
+      or ( $parm->{depth} == 16 ) );
      if ( $parm->{lines} < 0 ) {
       $must_buffer = 1;
       $offset      = 0;
@@ -729,7 +729,7 @@ sub scan_it {
    else {
     die
       unless ( $parm->{format} >= SANE_FRAME_RED
-     && $parm->{format} <= SANE_FRAME_BLUE );
+     and $parm->{format} <= SANE_FRAME_BLUE );
     $offset = $parm->{format} - SANE_FRAME_RED;
     $image{x} = $image{y} = 0;
    }
@@ -737,7 +737,7 @@ sub scan_it {
      $parm->{bytes_per_line} *
      $parm->{lines} *
      (
-    ( $parm->{format} == SANE_FRAME_RGB || $parm->{format} == SANE_FRAME_GRAY )
+    ( $parm->{format} == SANE_FRAME_RGB or $parm->{format} == SANE_FRAME_GRAY )
     ? 1
     : 3 );
 
@@ -750,7 +750,7 @@ sub scan_it {
 
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
      printf STDERR "$prog_name: min/max graylevel value = %d/%d\n", $min, $max
-       if ( $verbose && $parm->{depth} == 8 );
+       if ( $verbose and $parm->{depth} == 8 );
      if ( $Sane::STATUS != SANE_STATUS_EOF ) {
       print STDERR "$prog_name: sane_read: $Sane::STATUS\n";
       return;
@@ -785,7 +785,7 @@ sub scan_it {
     }
     else {    # ! must_buffer
 
-     #    if (($output_format == OUTPUT_TIFF) || ($parm->{depth} != 16)) {
+     #    if (($output_format == OUTPUT_TIFF) or ($parm->{depth} != 16)) {
      #     print $buffer;
      #    }
      #    else {
@@ -815,7 +815,7 @@ sub scan_it {
      #    }
     }
 
-    if ( $verbose && $parm->{depth} == 8 ) {
+    if ( $verbose and $parm->{depth} == 8 ) {
      for ( split( //, $buffer ) ) {
       my $c = ord;
       if ( $c >= $max ) {
@@ -829,7 +829,7 @@ sub scan_it {
 
    }
    $first_frame = 0;
-  } while ( !$parm->{last_frame} );
+  } while ( not $parm->{last_frame} );
  }
 
  if ($must_buffer) {
@@ -856,8 +856,8 @@ sub scan_it {
   );
 
   #  }
-  #  if (($output_format == OUTPUT_TIFF) || ($image{Bpp} == 1)
-  #      || ($image{Bpp} == 3)) {
+  #  if (($output_format == OUTPUT_TIFF) or ($image{Bpp} == 1)
+  #      or ($image{Bpp} == 3)) {
   #   print $image{data};
   #  }
   #  else { # $image{Bpp} == 2 or $image{Bpp} == 6 assumed
@@ -880,11 +880,11 @@ cleanup:
  my $expected_bytes =
    $parm->{bytes_per_line} *
    $parm->{lines} *
-   ( ( $parm->{format} == SANE_FRAME_RGB || $parm->{format} == SANE_FRAME_GRAY )
+   ( ( $parm->{format} == SANE_FRAME_RGB or $parm->{format} == SANE_FRAME_GRAY )
   ? 1
   : 3 );
  $expected_bytes = 0 if ( $parm->{lines} < 0 );
- if ( $total_bytes > $expected_bytes && $expected_bytes != 0 ) {
+ if ( $total_bytes > $expected_bytes and $expected_bytes != 0 ) {
   printf STDERR "%s: WARNING: read more data than announced by backend "
     . "(%u/%u)\n", $prog_name, $total_bytes, $expected_bytes;
  }
@@ -1067,7 +1067,7 @@ Parameters are separated by a blank from single-character options (e.g.
 -V, --version              print version information\n";
 }
 
-if ( !$devname ) {
+if ( not $devname ) {
 
  # If no device name was specified explicitly, we look at the
  # environment variable SANE_DEFAULT_DEVICE.  If this variable
@@ -1122,7 +1122,7 @@ if ( defined($device) ) {
   $_ = '-t' if ( $_ eq '-u' );
  }
  my @ARGV_old = @ARGV;
- exit 1 if ( !GetOptions(@args) );
+ exit 1 if ( not GetOptions(@args) );
 
  # As it isn't possible to get the argument order from Getopt::Long 2.37, do
  # this myself
@@ -1220,10 +1220,10 @@ if ($help) {
 
 exit(0) if ($dont_scan);
 
-$SIG{HUP}  = \&sighandler;
-$SIG{INT}  = \&sighandler;
-$SIG{PIPE} = \&sighandler;
-$SIG{TERM} = \&sighandler;
+local $SIG{HUP}  = \&sighandler;
+local $SIG{INT}  = \&sighandler;
+local $SIG{PIPE} = \&sighandler;
+local $SIG{TERM} = \&sighandler;
 
 $batch_increment = 2 if ($batch_double);
 $batch           = 1 if ( defined $format );
@@ -1240,7 +1240,7 @@ else {
 if ( $test == 0 ) {
  my $n = $batch_start_at;
 
- if ( $batch && ( !defined($format) || $format eq '' ) ) {
+ if ( $batch and ( not defined($format) or $format eq '' ) ) {
 
   #  if ($output_format == OUTPUT_TIFF) {
   #   $format = "out%d.tif";
@@ -1270,7 +1270,7 @@ if ( $test == 0 ) {
      printf STDERR "Press <RETURN> to continue.\n";
      printf STDERR "Press Ctrl + D to terminate.\n";
 
-     if ( !defined(<>) ) {
+     if ( not defined(<>) ) {
       printf STDERR "Batch terminated, %d pages scanned\n",
         ( $n - $batch_increment );
       last;    # get out of this loop
@@ -1286,8 +1286,8 @@ if ( $test == 0 ) {
    }
 
    # write to .part file while scanning is in progress
-   if ( $batch
-    && !( open( $fh, '>', $part_path ) && STDOUT->fdopen( $fh, '>' ) ) )
+   if ( $batch    ## no critic
+    and not ( open( $fh, '>', $part_path ) and STDOUT->fdopen( $fh, '>' ) ) )    ## no critic
    {
     print STDERR "cannot open $part_path\n";
     $device->cancel;
@@ -1306,7 +1306,7 @@ if ( $test == 0 ) {
     if ($batch) {
 
      # close output file by redirecting, do not close stdout here!
-     if ( !( open( $fh, '>', '/dev/null' ) && STDOUT->fdopen( $fh, '>' ) ) ) {
+     if ( not ( open( $fh, '>', '/dev/null' ) and STDOUT->fdopen( $fh, '>' ) ) ) {    ## no critic
       printf STDERR "cannot open /dev/null\n";
       $device->cancel;
       return SANE_STATUS_ACCESS_DENIED;
@@ -1330,8 +1330,8 @@ if ( $test == 0 ) {
     last;
    }
    $n += $batch_increment;
-    } while ( ( $batch && ( $batch_count == -1 || --$batch_count ) )
-   && SANE_STATUS_GOOD == $Sane::STATUS );
+    } while ( ( $batch and ( $batch_count == -1 or --$batch_count ) )
+   and SANE_STATUS_GOOD == $Sane::STATUS );
  }
 
  $device->cancel;

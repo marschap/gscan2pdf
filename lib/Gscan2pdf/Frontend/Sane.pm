@@ -630,7 +630,7 @@ sub _thread_scan_page {
  }
 
  my $fh;
- if ( not open( $fh, ">", $path ) ) {
+ if ( not open( $fh, ">", $path ) ) {    ## no critic
   $self->{device_handle}->cancel;
   $self->{status} = SANE_STATUS_ACCESS_DENIED;
   return;

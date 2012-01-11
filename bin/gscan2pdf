@@ -1521,7 +1521,7 @@ else {
  $tmpdir = File::Spec->tmpdir;
 }
 $logger->info("Checking $tmpdir for crashed sessions");
-my ( @sessions, @crashed, $selected ) = <$tmpdir/gscan2pdf-????>;
+my ( @sessions, @crashed, $selected ) = glob File::Spec->catfile( $tmpdir, 'gscan2pdf-????' );
 
 # Forget those used by running sessions
 for (@sessions) {
@@ -1533,6 +1533,7 @@ for (@sessions) {
  {
   push @crashed, $_;
   flock( $lockfh, LOCK_UN );
+  close $lockfh;
  }
 }
 
@@ -1555,7 +1556,7 @@ if (@crashed) {
 
  if ( defined $selected ) {
   $session = $crashed[$selected];
-  open $lockfh, '>', File::Spec->catfile( $session, 'lockfile' )
+  open $lockfh, '>', File::Spec->catfile( $session, 'lockfile' )    ## no critic
     or die "Cannot open lockfile";
   flock( $lockfh, LOCK_EX ) or die "Cannot lock file";
   open_session();
@@ -1589,7 +1590,7 @@ unless ( defined $session ) {
   $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
   $Gscan2pdf::_self->{dir} = "$session";
  }
- open $lockfh, '>', File::Spec->catfile( $session, 'lockfile' )
+ open $lockfh, '>', File::Spec->catfile( $session, 'lockfile' )    ## no critic
    or die "Cannot open lockfile";
  flock( $lockfh, LOCK_EX ) or die "Cannot lock file";
  $slist->save_session($session);
@@ -4477,7 +4478,7 @@ sub get_devices {
  $logger->info($cmd);
 
  # Interface to frontend
- my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+ my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";    ## no critic
  $logger->info("Forked PID $pid");
 
  # Read without blocking
@@ -5993,7 +5994,7 @@ sub import_scan {
  my ( $ofilename, $page, $resolution, $delete, $rotate, $unpaper, $ocr ) = @_;
 
  # Interface to frontend
- open my $fh, '<', $ofilename or die "can't open $ofilename: $!";
+ open my $fh, '<', $ofilename or die "can't open $ofilename: $!";    ## no critic
 
  # Read without blocking
  my $size = 0;
@@ -6584,7 +6585,7 @@ sub rescan_options {
   );
 
   # Interface to frontend
-  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";    ## no critic
   $logger->info("Forked PID $pid");
 
   # Read without blocking
@@ -7168,7 +7169,7 @@ sub update_options {
   );
 
   # Interface to frontend
-  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";
+  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";    ## no critic
   $logger->info("Forked PID $pid");
 
   # Read without blocking
