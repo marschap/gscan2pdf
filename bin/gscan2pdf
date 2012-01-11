@@ -29,7 +29,6 @@
 #     use Linux::Cpuinfo;
 #     my $cpuinfo = Linux::Cpuinfo->new();
 #     $cnt  = $cpuinfo->num_cpus();
-#    Support multiple sessions
 #    Test coverage http://search.cpan.org/~pjcj/Devel-Cover-0.65/
 #    It looks as though saving as PDF or DjVu with corrupted OCR output crashes gscan2pdf
 #    Ask Fred http://www.fmwconcepts.com/imagemagick/ about techniques to split image into text/background
@@ -148,7 +147,8 @@ use Getopt::Long;
 use
   Set::IntSpan 1.10;  # For page numbering issues. 1.10 required for size method
 use Proc::Killfam;
-use Proc::ProcessTable;
+use Fcntl qw(:flock)
+  ;    # import LOCK_* constants to prevent us clobbering running instances
 use Log::Log4perl;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
@@ -498,6 +498,15 @@ my (
 
  # Spinbuttons for selector on crop dialog
  $sb_selector_x, $sb_selector_y, $sb_selector_w, $sb_selector_h,
+
+ # dir below session dir
+ $tmpdir,
+
+ # session dir
+ $session,
+
+ # filehandle for session lockfile
+ $lockfh,
 );
 
 my @action_items = (
@@ -1508,63 +1517,87 @@ my $unpaper_options = {
 
 update_uimanager();
 
-# Look for crashed session
-if ( defined $SETTING{session} ) {
- if ( defined $SETTING{pid} ) {
-  my $t = Proc::ProcessTable->new;
-  for my $p ( @{ $t->table } ) {
-   if ( $p->pid == $SETTING{pid} and $p->cmndline =~ /gscan2pdf/ ) {
-    show_message_dialog( $window, 'error', 'close',
-     'Cannot run multiple instances of gscan2pdf' );
-    kill_threads();
-    die "Error: Cannot run multiple instances of gscan2pdf\n";
-   }
-  }
- }
+# Look for crashed sessions
+if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
+ $tmpdir = $SETTING{TMPDIR};
+}
+else {
+ $tmpdir = File::Spec->tmpdir;
+}
+$logger->info("Checking $tmpdir for crashed sessions");
+my ( @sessions, @crashed, $selected ) = <$tmpdir/gscan2pdf-????>;
 
- if ( -r "$SETTING{session}/session" ) {
-  open_session();
- }
- else {
-  $logger->warn(
-"gscan2pdf detected a crashed session, but was unable to restore it as it has been deleted."
-  );
-  delete $SETTING{session};
+# Forget those used by running sessions
+for (@sessions) {
+ if (
+  open $lockfh,
+  '>',
+  File::Spec->catfile( $_, 'lockfile' ) and flock( $lockfh, LOCK_EX | LOCK_NB )
+   )
+ {
+  push @crashed, $_;
+  flock( $lockfh, LOCK_UN );
  }
 }
 
-# Note PID to able to tell if session has crashed or not
-$SETTING{pid} = $$;
+# Allow user to pick a crashed session to restore
+if (@crashed) {
+ my $dialog = Gtk2::Dialog->new(
+  $d->get('Pick crashed session to restore'),
+  $window, 'modal',
+  'gtk-ok'     => 'ok',
+  'gtk-cancel' => 'cancel'
+ );
+ my $label = Gtk2::Label->new( $d->get('Pick crashed session to restore') );
+ $dialog->vbox->add($label);
+ my $slist = Gtk2::Ex::Simple::List->new( $d->get('Session') => 'text', );
+ push @{ $slist->{data} }, @crashed;
+ $dialog->vbox->add($slist);
+ $dialog->show_all;
+ ($selected) = $slist->get_selected_indices if ( $dialog->run eq 'ok' );
+ $dialog->destroy;
+
+ if ( defined $selected ) {
+  $session = $crashed[$selected];
+  open $lockfh, '>', File::Spec->catfile( $session, 'lockfile' )
+    or die "Cannot open lockfile";
+  flock( $lockfh, LOCK_EX ) or die "Cannot lock file";
+  open_session();
+ }
+}
 
 # Create temporary directory if necessary
-unless ( defined $SETTING{session} ) {
+unless ( defined $session ) {
  if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
   mkdir( $SETTING{TMPDIR} ) if ( not -d $SETTING{TMPDIR} );
-  if (
-   not
-   eval { $SETTING{session} = File::Temp->newdir( DIR => $SETTING{TMPDIR} ) } )
+  unless (
+   eval {
+    $session = File::Temp->newdir( 'gscan2pdf-XXXX', DIR => $SETTING{TMPDIR} );
+   }
+    )
   {
-   $SETTING{session} = File::Temp->newdir;
-   $Gscan2pdf::_self->{dir} = $SETTING{session};
+   $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
+   $Gscan2pdf::_self->{dir} = $session;
    $logger->warn(
     sprintf(
      $d->get(
 "Warning: unable to use %s for temporary storage. Defaulting to %s instead."
      ),
      $SETTING{TMPDIR},
-     dirname( $SETTING{session} )
+     dirname($session)
     )
    );
   }
  }
  else {
-  $SETTING{session} = File::Temp->newdir;
-  $Gscan2pdf::_self->{dir} = "$SETTING{session}";
+  $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
+  $Gscan2pdf::_self->{dir} = "$session";
  }
- $logger->info("Using $SETTING{session} for temporary files");
-
- # Save session data to settings
- $conf->save_file( $rc, \%SETTING );
+ open $lockfh, '>', File::Spec->catfile( $session, 'lockfile' )
+   or die "Cannot open lockfile";
+ flock( $lockfh, LOCK_EX ) or die "Cannot lock file";
+ $slist->save_session($session);
+ $logger->info("Using $session for temporary files");
 }
 
 $window->show_all;
@@ -2014,8 +2047,8 @@ sub add_filter {
 
 sub open_session {
  my ($filename) = @_;
- $logger->info("Restoring session in $SETTING{session}");
- $slist->open_session( $SETTING{session}, $filename );
+ $logger->info("Restoring session in $session");
+ $slist->open_session( $session, $filename );
  update_uimanager();
  return;
 }
@@ -2099,7 +2132,7 @@ sub open_dialog {
  if ( 'ok' eq $file_chooser->run ) {
 
   # cd back to tempdir to import
-  chdir $SETTING{session};
+  chdir $session;
 
   # Update undo/redo buffers
   take_snapshot();
@@ -2236,7 +2269,7 @@ sub open_dialog {
  }
 
  # cd back to tempdir
- chdir $SETTING{session};
+ chdir $session;
  return;
 }
 
@@ -2712,7 +2745,8 @@ sub save_PDF {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
       view_file($filename)
-       if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
+        if ( defined( $SETTING{'view files toggle'} )
+       and $SETTING{'view files toggle'} );
       $logger->debug("Finished saving $filename");
      },
      sub {    # error
@@ -2729,7 +2763,7 @@ sub save_PDF {
  $file_chooser->show;
 
  # cd back to tempdir
- chdir $SETTING{session};
+ chdir $session;
  return;
 }
 
@@ -3086,7 +3120,7 @@ sub save_dialog {
     $file_chooser->show;
 
     # cd back to tempdir
-    chdir $SETTING{session};
+    chdir $session;
    }
    elsif ( $SETTING{'image type'} eq 'txt' ) {
 
@@ -3180,7 +3214,7 @@ sub save_dialog {
     $file_chooser->show;
 
     # cd back to tempdir
-    chdir $SETTING{session};
+    chdir $session;
    }
    elsif ( $SETTING{'image type'} eq 'ps' ) {
     $SETTING{'tiff compression'} =
@@ -3230,7 +3264,7 @@ sub save_dialog {
        $SETTING{'cwd'} = dirname($filename);
 
        # Create the PS
-       my $tif = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.tif' );
+       my $tif = File::Temp->new( DIR => $session, SUFFIX => '.tif' );
        $windowi->hide if defined $windowi;
        save_TIFF( $tif->filename, $filename );
       }
@@ -3240,7 +3274,7 @@ sub save_dialog {
     $file_chooser->show;
 
     # cd back to tempdir
-    chdir $SETTING{session};
+    chdir $session;
    }
    elsif ( $SETTING{'image type'} eq 'session' ) {
 
@@ -3285,7 +3319,7 @@ sub save_dialog {
 
        # Update cwd
        $SETTING{'cwd'} = dirname($filename);
-       $slist->save_session( $SETTING{session}, $filename );
+       $slist->save_session( $session, $filename );
       }
       $file_chooser->destroy;
      }
@@ -3293,7 +3327,7 @@ sub save_dialog {
     $file_chooser->show;
 
     # cd back to tempdir
-    chdir $SETTING{session};
+    chdir $session;
    }
    else {
     save_image();
@@ -3375,7 +3409,7 @@ sub save_image {
   $SETTING{'cwd'} = dirname($filename);
 
   # cd back to tempdir
-  chdir $SETTING{session};
+  chdir $session;
 
   # Compile list of pages
   my @list_of_pages;
@@ -3545,7 +3579,7 @@ sub save_djvu {
     }
 
     # cd back to tempdir
-    chdir $SETTING{session};
+    chdir $session;
 
     # Create the DjVu
     $logger->debug("Started saving $filename");
@@ -3591,7 +3625,7 @@ sub save_djvu {
  $file_chooser->show;
 
  # cd back to tempdir
- chdir $SETTING{session};
+ chdir $session;
  return;
 }
 
@@ -3653,7 +3687,7 @@ sub email {
     font             => $SETTING{'pdf font'},
    );
 
-   my $pdf = File::Temp->new( DIR => $SETTING{session}, SUFFIX => '.pdf' );
+   my $pdf = File::Temp->new( DIR => $session, SUFFIX => '.pdf' );
 
    # Check for thunderbird
    my ( $client, $status );
@@ -5479,7 +5513,7 @@ sub scanimage {
  push @options, '--progress';
 
  # Make sure we are in temp directory
- chdir $SETTING{session};
+ chdir $session;
 
  # Create command
  my $cmd =
@@ -5669,7 +5703,7 @@ sub scanadf {
  push @options, '-o out%d.pnm';
 
  # Make sure we are in temp directory
- chdir $SETTING{session};
+ chdir $session;
 
  # Create command
  my $cmd =
@@ -5850,8 +5884,7 @@ sub scan_pages {
 
  my $signal;
  Gscan2pdf::Frontend::Sane->scan_pages(
-  $SETTING{session},
-  $format, $npages, $start, $step,
+  $session, $format, $npages, $start, $step,
   sub {    # started callback
    update_spbar( $i, $npages );
    $shbox->show_all;
@@ -5885,7 +5918,7 @@ sub scan_pages {
       ? $SETTING{resolution}
       : $Gscan2pdf::Document::POINTS_PER_INCH;
     $logger->info("Importing scan with resolution=$SETTING{resolution}");
-    import_scan( File::Spec->catdir( $SETTING{session}, "out$n.pnm" ),
+    import_scan( File::Spec->catdir( $session, "out$n.pnm" ),
      $n, $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
    }
 
@@ -6005,7 +6038,7 @@ sub import_scan {
       resolution => $resolution,
       format     => 'Portable anymap',
       delete     => $delete,
-      dir        => $SETTING{session},
+      dir        => $session,
      );
      my $index = $slist->add_page( $gpage, $page, &update_uimanager );
      if ( $index == -1 ) {
@@ -6094,7 +6127,7 @@ sub print_dialog {
  my $res = $op->run( 'print-dialog', $window );
 
  $print_settings = $op->get_print_settings if ( $res eq 'apply' );
- chdir $SETTING{session};
+ chdir $session;
  return;
 }
 
@@ -6142,7 +6175,7 @@ sub paste_selection {
   for (@clipboard) {
    my $suffix;
    $suffix = $1 if ( $_->[2] =~ /(\.\w*)$/ );
-   my $new = File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
+   my $new = File::Temp->new( DIR => $session, SUFFIX => $suffix );
    copy( $_->[2], $new )
      or show_message_dialog( $window, 'error', 'close',
     $d->get('Error pasting image') );
@@ -9813,9 +9846,8 @@ sub quit {
  }
 
  # Remove temporary files (for some reason File::Temp wasn't doing its job here)
- unlink <$SETTING{session}/*>;
- rmdir $SETTING{session};
- delete $SETTING{session};
+ unlink <$session/*>;
+ rmdir $session;
 
  # Write window state to settings
  ( $SETTING{'window_width'}, $SETTING{'window_height'} ) = $window->get_size;
@@ -9993,7 +10025,7 @@ sub take_snapshot {
  $uimanager->get_widget('/ToolBar/Undo')->set_sensitive(TRUE);
 
  # Save session
- $slist->save_session( $SETTING{session} );
+ $slist->save_session($session);
  return;
 }
 
@@ -10272,7 +10304,7 @@ sub preferences {
  $hbox->pack_start( $label, FALSE, FALSE, 0 );
  my $tmpentry = Gtk2::Entry->new;
  $hbox->add($tmpentry);
- $tmpentry->set_text( dirname( $SETTING{session} ) );
+ $tmpentry->set_text( dirname($session) );
  $button = Gtk2::Button->new( $d->get('Browse') );
  $button->signal_connect(
   clicked => sub {
@@ -10435,7 +10467,7 @@ sub preferences {
      if ( defined $SETTING{cache} and not $SETTING{'cache options'} );
    $SETTING{'restore window'} = $cbw->get_active;
 
-   my @tmpdirs = File::Spec->splitdir( $SETTING{session} );
+   my @tmpdirs = File::Spec->splitdir($session);
    pop @tmpdirs;    # Remove the top level
    my $tmp = File::Spec->catdir(@tmpdirs);
 
