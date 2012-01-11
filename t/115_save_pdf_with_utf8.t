@@ -6,11 +6,12 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test::More tests => 1;
+
 BEGIN {
-  use Gscan2pdf;
-  use Gscan2pdf::Document;
-  use PDF::API2;
-};
+ use Gscan2pdf;
+ use Gscan2pdf::Document;
+ use PDF::API2;
+}
 
 #########################
 
@@ -27,7 +28,7 @@ our $logger = Log::Log4perl::get_logger;
 my $prog_name = 'gscan2pdf';
 use Locale::gettext 1.05;    # For translations
 our $d = Locale::gettext->domain($prog_name);
-Gscan2pdf->setup($d, $logger);
+Gscan2pdf->setup( $d, $logger );
 
 # Create test image
 system('convert rose: test.pnm');
@@ -38,17 +39,30 @@ chomp $options{font};
 $options{font} =~ s/: $//;
 
 my $slist = Gscan2pdf::Document->new;
-$slist->get_file_info( 'test.pnm', undef, undef, undef, sub {
- my ($info) = @_;
- $slist->import_file( $info, 1, 1, undef, undef, undef, sub {
-  use utf8;
-  $slist->{data}[0][2]{hocr} = 'пени способствовала сохранению';
-  $slist->save_pdf('test.pdf', [ $slist->{data}[0][2] ], undef, \%options, undef, undef, undef, sub {Gtk2->main_quit});
- })
-});
+$slist->get_file_info(
+ 'test.pnm',
+ undef, undef, undef,
+ sub {
+  my ($info) = @_;
+  $slist->import_file(
+   $info, 1, 1, undef, undef, undef,
+   sub {
+    use utf8;
+    $slist->{data}[0][2]{hocr} =
+      'пени способствовала сохранению';
+    $slist->save_pdf( 'test.pdf', [ $slist->{data}[0][2] ],
+     undef, \%options, undef, undef, undef, sub { Gtk2->main_quit } );
+   }
+  );
+ }
+);
 Gtk2->main;
 
-like( `pdftotext test.pdf -`, qr/пени способствовала сохранению/, 'PDF with expected text' );
+like(
+ `pdftotext test.pdf -`,
+ qr/пени способствовала сохранению/,
+ 'PDF with expected text'
+);
 
 #########################
 

@@ -215,7 +215,7 @@ MANIFEST : .
 
 tidy : MANIFEST
 	while read file; do \
-         if [[ $$file =~ "\.(PL|pl|pm)\$$" ]] ; then \
+         if [[ $$file =~ "\.(PL|pl|pm|t)\$$" ]] ; then \
           perltidy -i=1 $$file && mv $$file.tdy $$file; \
          fi; \
         done < MANIFEST

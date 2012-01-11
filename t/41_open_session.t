@@ -6,10 +6,11 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test::More tests => 2;
+
 BEGIN {
-  use Gscan2pdf;
-  use Gscan2pdf::Document;
-};
+ use Gscan2pdf;
+ use Gscan2pdf::Document;
+}
 
 #########################
 
@@ -28,10 +29,15 @@ use Locale::gettext 1.05;    # For translations
 our $d = Locale::gettext->domain($prog_name);
 
 my $slist = Gscan2pdf::Document->new;
-$slist->open_session(undef, 'test.gs2p');
+$slist->open_session( undef, 'test.gs2p' );
 
-is( -s $slist->{data}[0][2]{filename}, 9673, 'PNM extracted with expected size' );
-is( $slist->{data}[0][2]{hocr}, 'The quick brown fox', 'Basic OCR output extracted' );
+is( -s $slist->{data}[0][2]{filename},
+ 9673, 'PNM extracted with expected size' );
+is(
+ $slist->{data}[0][2]{hocr},
+ 'The quick brown fox',
+ 'Basic OCR output extracted'
+);
 
 #########################
 

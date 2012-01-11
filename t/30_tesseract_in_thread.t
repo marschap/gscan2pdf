@@ -6,11 +6,12 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test::More tests => 5;
+
 BEGIN {
-  use Gscan2pdf;
-  use Gscan2pdf::Document;
-  use_ok('Gscan2pdf::Tesseract');
-};
+ use Gscan2pdf;
+ use Gscan2pdf::Document;
+ use_ok('Gscan2pdf::Tesseract');
+}
 
 #########################
 
@@ -27,27 +28,42 @@ our $logger = Log::Log4perl::get_logger;
 my $prog_name = 'gscan2pdf';
 use Locale::gettext 1.05;    # For translations
 our $d = Locale::gettext->domain($prog_name);
-Gscan2pdf->setup($d, $logger);
+Gscan2pdf->setup( $d, $logger );
 
 SKIP: {
  skip 'Tesseract not installed', 1 unless Gscan2pdf::Tesseract->setup;
 
  # Create test image
- system('convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.tif');
+ system(
+'convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.tif'
+ );
 
  my $slist = Gscan2pdf::Document->new;
- $slist->get_file_info( 'test.tif', undef, undef, undef, sub {
-  my ($info) = @_;
-  $slist->import_file( $info, 1, 1, undef, undef, undef, sub {
-   $slist->tesseract( $slist->{data}[0][2], 'eng', undef, undef, undef, sub {
-    like( $slist->{data}[0][2]{hocr}, qr/The/,   'Tesseract returned "The"' );
-    like( $slist->{data}[0][2]{hocr}, qr/quick/, 'Tesseract returned "quick"' );
-    like( $slist->{data}[0][2]{hocr}, qr/brown/, 'Tesseract returned "brown"' );
-    like( $slist->{data}[0][2]{hocr}, qr/fox/,   'Tesseract returned "fox"' );
-    Gtk2->main_quit;
-   });
-  })
- });
+ $slist->get_file_info(
+  'test.tif',
+  undef, undef, undef,
+  sub {
+   my ($info) = @_;
+   $slist->import_file(
+    $info, 1, 1, undef, undef, undef,
+    sub {
+     $slist->tesseract(
+      $slist->{data}[0][2],
+      'eng', undef, undef, undef,
+      sub {
+       like( $slist->{data}[0][2]{hocr}, qr/The/, 'Tesseract returned "The"' );
+       like( $slist->{data}[0][2]{hocr},
+        qr/quick/, 'Tesseract returned "quick"' );
+       like( $slist->{data}[0][2]{hocr},
+        qr/brown/, 'Tesseract returned "brown"' );
+       like( $slist->{data}[0][2]{hocr}, qr/fox/, 'Tesseract returned "fox"' );
+       Gtk2->main_quit;
+      }
+     );
+    }
+   );
+  }
+ );
  Gtk2->main;
 
  unlink 'test.tif';

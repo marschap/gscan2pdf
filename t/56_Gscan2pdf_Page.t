@@ -6,10 +6,11 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test::More tests => 6;
+
 BEGIN {
-  use_ok('Gscan2pdf::Page');
-  use Encode;
-};
+ use_ok('Gscan2pdf::Page');
+ use Encode;
+}
 
 #########################
 
@@ -26,7 +27,11 @@ our $d = Locale::gettext->domain($prog_name);
 # Create test image
 system('convert rose: test.pnm');
 
-my $page = Gscan2pdf::Page->new(filename => 'test.pnm', format=> 'Portable anymap', resolution => 72);
+my $page = Gscan2pdf::Page->new(
+ filename   => 'test.pnm',
+ format     => 'Portable anymap',
+ resolution => 72
+);
 
 $page->{hocr} = <<'EOS';
                   '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -48,7 +53,12 @@ $page->{hocr} = <<'EOS';
 </html>
 EOS
 
-my @boxes = ( [ 1, 14, 77, 48, 'The' ], [ 92, 14, 202, 59, 'quick' ], [ 214, 14, 341, 48, 'brown' ], [ 355, 14, 420, 48, 'fox' ] );
+my @boxes = (
+ [ 1,   14, 77,  48, 'The' ],
+ [ 92,  14, 202, 59, 'quick' ],
+ [ 214, 14, 341, 48, 'brown' ],
+ [ 355, 14, 420, 48, 'fox' ]
+);
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from tesseract 3.00' );
 
 #########################
@@ -77,7 +87,10 @@ $page->{hocr} = <<'EOS';
 </span></div></body></html>
 EOS
 
-@boxes = ( [ 22, 26, 107, 39, "\x{a4}\x{f6}A\x{e4}U\x{fc}\x{df}'" ], [ 21, 74, 155, 87, 'Test Test Test E' ] );
+@boxes = (
+ [ 22, 26, 107, 39, "\x{a4}\x{f6}A\x{e4}U\x{fc}\x{df}'" ],
+ [ 21, 74, 155, 87, 'Test Test Test E' ]
+);
 is_deeply( [ $page->boxes ], \@boxes, 'More boxes from ocropus 0.3 with UTF8' );
 
 #########################

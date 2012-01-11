@@ -6,7 +6,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test::More tests => 2;
-BEGIN { use_ok('Gscan2pdf::Frontend::Scanimage') };
+BEGIN { use_ok('Gscan2pdf::Frontend::Scanimage') }
 
 #########################
 
@@ -14,99 +14,101 @@ BEGIN { use_ok('Gscan2pdf::Frontend::Scanimage') };
 # its man page ( perldoc Test::More ) for help writing this test script.
 
 my $filename = 'scanners/fujitsu';
-my $output = do { local( @ARGV, $/ ) = $filename ; <> } ;
-my %this = Gscan2pdf::Frontend::Scanimage::options2hash($output);
-my %that = (
-          'source' => {
-                        'tip' => 'Selects the scan source (such as a document-feeder).',
-                        'default' => 'ADF Front',
-                        'values' => ['ADF Front','ADF Back','ADF Duplex']
-                      },
-          'rif' => {
-                     'tip' => 'Reverse image format',
-                     'default' => 'no',
-                     'values' => ['yes','no']
-                   },
-          'sleeptimer' => {
-                            'tip' => 'Time in minutes until the internal power supply switches to sleep mode',
-                            'default' => '0',
-                                   'min' => 0,
-                            'max' => 60,
-                            'step' => 1,
-                          },
-          'mode' => {
-                      'tip' => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
-                      'default' => 'Gray',
-                      'values' => ['Gray','Color']
-                    },
-          'pageheight' => {
-                            'tip' => 'Must be set properly to eject pages',
-                            'default' => '279.364',
-                                   'min' => 0,
-                            'max' => 863.489,
-                            'step' => 0.0211639,
-                   'unit' => 'mm',
-                          },
-          'pagewidth' => {
-                           'tip' => 'Must be set properly to align scanning window',
-                           'default' => '215.872',
-                                   'min' => 0,
-                            'max' => 224.846,
-                            'step' => 0.0211639,
-                   'unit' => 'mm',
-                         },
-          'y-resolution' => {
-                              'tip' => 'Sets the vertical resolution of the scanned image.',
-                              'default' => '600',
-                                   'min' => 50,
-                            'max' => 600,
-                            'step' => 1,
-                   'unit' => 'dpi',
-                            },
-          'dropoutcolor' => {
-                              'tip' => 'One-pass scanners use only one color during gray or binary scanning, useful for colored paper or ink',
-                              'default' => 'Default',
-                              'values' => ['Default','Red','Green','Blue']
-                            },
-          'resolution' => {
-                            'tip' => 'Sets the horizontal resolution of the scanned image.',
-                            'default' => '600',
-                                   'min' => 100,
-                            'max' => 600,
-                            'step' => 1,
-                   'unit' => 'dpi',
-                          },
-          'l' => {
-                   'tip' => 'Top-left x position of scan area.',
-                   'default' => 0,
-                   'min' => 0,
-                   'max' => 224.846,
-                   'step' => 0.0211639,
-                   'unit' => 'mm',
-                 },
-          't' => {
-                   'tip' => 'Top-left y position of scan area.',
-                   'default' => 0,
-                   'min' => 0,
-                   'max' => 863.489,
-                   'step' => 0.0211639,
-                   'unit' => 'mm',
-                 },
-          'x' => {
-                   'tip' => 'Width of scan-area.',
-                   'default' => 215.872,
-                   'min' => 0,
-                   'max' => 224.846,
-                   'step' => 0.0211639,
-                   'unit' => 'mm',
-                 },
-          'y' => {
-                   'tip' => 'Height of scan-area.',
-                   'default' => 279.364,
-                   'min' => 0,
-                   'max' => 863.489,
-                   'step' => 0.0211639,
-                   'unit' => 'mm',
-                 }
-        );
-is_deeply(\%this, \%that, 'fujitsu');
+my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
+my %this     = Gscan2pdf::Frontend::Scanimage::options2hash($output);
+my %that     = (
+ 'source' => {
+  'tip'     => 'Selects the scan source (such as a document-feeder).',
+  'default' => 'ADF Front',
+  'values'  => [ 'ADF Front', 'ADF Back', 'ADF Duplex' ]
+ },
+ 'rif' => {
+  'tip'     => 'Reverse image format',
+  'default' => 'no',
+  'values'  => [ 'yes', 'no' ]
+ },
+ 'sleeptimer' => {
+  'tip' =>
+    'Time in minutes until the internal power supply switches to sleep mode',
+  'default' => '0',
+  'min'     => 0,
+  'max'     => 60,
+  'step'    => 1,
+ },
+ 'mode' => {
+  'tip'     => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
+  'default' => 'Gray',
+  'values'  => [ 'Gray', 'Color' ]
+ },
+ 'pageheight' => {
+  'tip'     => 'Must be set properly to eject pages',
+  'default' => '279.364',
+  'min'     => 0,
+  'max'     => 863.489,
+  'step'    => 0.0211639,
+  'unit'    => 'mm',
+ },
+ 'pagewidth' => {
+  'tip'     => 'Must be set properly to align scanning window',
+  'default' => '215.872',
+  'min'     => 0,
+  'max'     => 224.846,
+  'step'    => 0.0211639,
+  'unit'    => 'mm',
+ },
+ 'y-resolution' => {
+  'tip'     => 'Sets the vertical resolution of the scanned image.',
+  'default' => '600',
+  'min'     => 50,
+  'max'     => 600,
+  'step'    => 1,
+  'unit'    => 'dpi',
+ },
+ 'dropoutcolor' => {
+  'tip' =>
+'One-pass scanners use only one color during gray or binary scanning, useful for colored paper or ink',
+  'default' => 'Default',
+  'values'  => [ 'Default', 'Red', 'Green', 'Blue' ]
+ },
+ 'resolution' => {
+  'tip'     => 'Sets the horizontal resolution of the scanned image.',
+  'default' => '600',
+  'min'     => 100,
+  'max'     => 600,
+  'step'    => 1,
+  'unit'    => 'dpi',
+ },
+ 'l' => {
+  'tip'     => 'Top-left x position of scan area.',
+  'default' => 0,
+  'min'     => 0,
+  'max'     => 224.846,
+  'step'    => 0.0211639,
+  'unit'    => 'mm',
+ },
+ 't' => {
+  'tip'     => 'Top-left y position of scan area.',
+  'default' => 0,
+  'min'     => 0,
+  'max'     => 863.489,
+  'step'    => 0.0211639,
+  'unit'    => 'mm',
+ },
+ 'x' => {
+  'tip'     => 'Width of scan-area.',
+  'default' => 215.872,
+  'min'     => 0,
+  'max'     => 224.846,
+  'step'    => 0.0211639,
+  'unit'    => 'mm',
+ },
+ 'y' => {
+  'tip'     => 'Height of scan-area.',
+  'default' => 279.364,
+  'min'     => 0,
+  'max'     => 863.489,
+  'step'    => 0.0211639,
+  'unit'    => 'mm',
+ }
+);
+is_deeply( \%this, \%that, 'fujitsu' );

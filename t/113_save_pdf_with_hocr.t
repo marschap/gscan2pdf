@@ -6,11 +6,12 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test::More tests => 1;
+
 BEGIN {
-  use Gscan2pdf;
-  use Gscan2pdf::Document;
-  use PDF::API2;
-};
+ use Gscan2pdf;
+ use Gscan2pdf::Document;
+ use PDF::API2;
+}
 
 #########################
 
@@ -27,16 +28,21 @@ our $logger = Log::Log4perl::get_logger;
 my $prog_name = 'gscan2pdf';
 use Locale::gettext 1.05;    # For translations
 our $d = Locale::gettext->domain($prog_name);
-Gscan2pdf->setup($d, $logger);
+Gscan2pdf->setup( $d, $logger );
 
 # Create test image
 system('convert rose: test.pnm');
 
 my $slist = Gscan2pdf::Document->new;
-$slist->get_file_info( 'test.pnm', undef, undef, undef, sub {
- my ($info) = @_;
- $slist->import_file( $info, 1, 1, undef, undef, undef, sub {
-  $slist->{data}[0][2]{hocr} = <<EOS;
+$slist->get_file_info(
+ 'test.pnm',
+ undef, undef, undef,
+ sub {
+  my ($info) = @_;
+  $slist->import_file(
+   $info, 1, 1, undef, undef, undef,
+   sub {
+    $slist->{data}[0][2]{hocr} = <<EOS;
 <!DOCTYPE html
  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN
  http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -57,12 +63,19 @@ $slist->get_file_info( 'test.pnm', undef, undef, undef, sub {
  </body>
 </html>
 EOS
-  $slist->save_pdf('test.pdf', [ $slist->{data}[0][2] ], undef, undef, undef, undef, undef, sub {Gtk2->main_quit});
- })
-});
+    $slist->save_pdf( 'test.pdf', [ $slist->{data}[0][2] ],
+     undef, undef, undef, undef, undef, sub { Gtk2->main_quit } );
+   }
+  );
+ }
+);
 Gtk2->main;
 
-like( `pdftotext test.pdf -`, qr/The quick brown fox/, 'PDF with expected text' );
+like(
+ `pdftotext test.pdf -`,
+ qr/The quick brown fox/,
+ 'PDF with expected text'
+);
 
 #########################
 

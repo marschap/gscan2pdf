@@ -3,7 +3,7 @@ use warnings;
 use Test::More;
 
 my $git;
-if (-d '.git' and eval {$git = `git ls-tree --name-status -r HEAD`}) {
+if ( -d '.git' and eval { $git = `git ls-tree --name-status -r HEAD` } ) {
  plan( tests => 1 );
 }
 else {
@@ -13,4 +13,4 @@ else {
 
 my $manifest = `cat MANIFEST`;
 
-ok($git eq $manifest, 'MANIFEST up to date');
+ok( $git eq $manifest, 'MANIFEST up to date' );
