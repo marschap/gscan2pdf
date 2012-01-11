@@ -73,17 +73,17 @@ sub hocr {
  # decode html->utf8
  my $output;
  if ( defined $pidfile ) {
-   $output = `echo $$ > $pidfile;$cmd`;
+  $output = `echo $$ > $pidfile;$cmd`;
  }
  else {
-   $output = `$cmd`;
+  $output = `$cmd`;
  }
- my $decoded = decode_entities( $output );
+ my $decoded = decode_entities($output);
 
  # Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
  # where decode_entities doesn't work cleanly, so encode/decode to finally
  # get good UTF-8
- return decode_utf8( encode_utf8( $decoded ) );
+ return decode_utf8( encode_utf8($decoded) );
 }
 
 1;

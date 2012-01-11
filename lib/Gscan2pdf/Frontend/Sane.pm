@@ -13,11 +13,11 @@ use Sane;
 my $_POLL_INTERVAL;
 my $_self;
 my $buffer_size = ( 32 * 1024 );    # default size
-my ($prog_name, $d, $logger);
+my ( $prog_name, $d, $logger );
 
 sub setup {
- (my $class, $prog_name, $d, $logger) = @_;
- $_POLL_INTERVAL = 100;    # ms
+ ( my $class, $prog_name, $d, $logger ) = @_;
+ $_POLL_INTERVAL = 100;             # ms
  $_self          = {};
 
  $_self->{requests} = Thread::Queue->new;
@@ -105,7 +105,9 @@ sub device {
 }
 
 sub open_device {
- my ( $class, $device, $started_callback, $running_callback, $finished_callback, $error_callback ) = @_;
+ my ( $class, $device, $started_callback, $running_callback, $finished_callback,
+  $error_callback )
+   = @_;
 
  my $sentinel = _enqueue_request( 'open', { device_name => $device } );
 
@@ -118,7 +120,7 @@ sub open_device {
     $finished_callback->();
    }
    else {
-    $error_callback->(Sane::strstatus( $_self->{status}));
+    $error_callback->( Sane::strstatus( $_self->{status} ) );
    }
   },
   sub {
@@ -133,7 +135,10 @@ sub open_device {
 }
 
 sub find_scan_options {
- my ( $class, $started_callback, $running_callback, $finished_callback, $error_callback ) = @_;
+ my (
+  $class,             $started_callback, $running_callback,
+  $finished_callback, $error_callback
+ ) = @_;
 
  my $options : shared;
  my $sentinel = _enqueue_request( 'get-options', { options => \$options } );
@@ -147,7 +152,7 @@ sub find_scan_options {
     $finished_callback->($options);
    }
    else {
-    $error_callback->(Sane::strstatus( $_self->{status}));
+    $error_callback->( Sane::strstatus( $_self->{status} ) );
    }
   },
   sub {
@@ -162,7 +167,9 @@ sub find_scan_options {
 }
 
 sub set_option {
- my ( $class, $i, $val, $started_callback, $running_callback, $finished_callback ) = @_;
+ my ( $class, $i, $val, $started_callback, $running_callback,
+  $finished_callback )
+   = @_;
 
  my $options : shared;
  my $sentinel = _enqueue_request(
@@ -200,9 +207,12 @@ sub _new_page {
 }
 
 sub scan_pages {
- my ( $class, $dir, $format, $npages, $n, $step, $started_callback, $running_callback, $finished_callback, $new_page_callback,
-  $error_callback )
-   = @_;
+ my (
+  $class,             $dir,              $format,
+  $npages,            $n,                $step,
+  $started_callback,  $running_callback, $finished_callback,
+  $new_page_callback, $error_callback
+ ) = @_;
 
  $_self->{status}        = SANE_STATUS_GOOD;
  $_self->{abort_scan}    = 0;
@@ -217,11 +227,11 @@ sub scan_pages {
   $_POLL_INTERVAL,
   sub {
    if ( not $$sentinel ) {
-   unless ($started) {
-    $started_callback->();
-    $started = 1;
-   }
-    $running_callback->($_self->{scan_progress} );
+    unless ($started) {
+     $started_callback->();
+     $started = 1;
+    }
+    $running_callback->( $_self->{scan_progress} );
     return Glib::SOURCE_CONTINUE;
    }
    else {
@@ -234,22 +244,25 @@ sub scan_pages {
     }
 
     # Stop the process unless everything OK and more scans required
-    unless ( ( $npages == -1 or --$npages )
+    unless (
+     ( $npages == -1 or --$npages )
      and ( $_self->{status} == SANE_STATUS_GOOD
-        or $_self->{status} == SANE_STATUS_EOF ) )
+      or $_self->{status} == SANE_STATUS_EOF )
+      )
     {
      _enqueue_request('cancel');
      if (
-      $_self->{status} == SANE_STATUS_GOOD
+         $_self->{status} == SANE_STATUS_GOOD
       or $_self->{status} == SANE_STATUS_EOF
       or ( $_self->{status} == SANE_STATUS_NO_DOCS
        and $npages < 1
        and $n2 > 1 )
-        ) {
+       )
+     {
       $finished_callback->();
      }
      else {
-       $error_callback->( Sane::strstatus( $_self->{status} ) )
+      $error_callback->( Sane::strstatus( $_self->{status} ) );
      }
      return Glib::SOURCE_REMOVE;
     }
@@ -647,6 +660,5 @@ sub _thread_cancel {
 }
 
 1;
-
 
 __END__

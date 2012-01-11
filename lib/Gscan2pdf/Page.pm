@@ -139,7 +139,9 @@ sub boxes {
     # Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
     # where decode_entities doesn't work cleanly, so encode/decode to finally
     # get good UTF-8
-    $text = decode_utf8( encode_utf8( HTML::Entities::decode_entities( $token->[1] ) ) );
+    $text =
+      decode_utf8(
+     encode_utf8( HTML::Entities::decode_entities( $token->[1] ) ) );
     chomp($text);
    }
    if ( $token->[0] eq 'E' ) {

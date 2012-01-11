@@ -1,87 +1,96 @@
 use ExtUtils::MakeMaker;
+
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 
 my $program = "gscan2pdf";
-my $year = (localtime)[5] + 1900;
-my $author = "Jeffrey Ratcliffe";
-my $email = 'ra28145@users.sourceforge.net';
+my $year    = (localtime)[5] + 1900;
+my $author  = "Jeffrey Ratcliffe";
+my $email   = 'ra28145@users.sourceforge.net';
 
 # Slurp the program source and dig out the version number.
-my $text = do { local( @ARGV, $/ ) = "bin/$program" ; <> };
-my $version = $1 if ($text =~ /my \$version\s*=\s*'(.*)'/);
+my $text = do { local ( @ARGV, $/ ) = "bin/$program"; <> };
+my $version = $1 if ( $text =~ /my \$version\s*=\s*'(.*)'/ );
 
-my @argv=@ARGV;
+my @argv = @ARGV;
 my $prefixdir;
 my $sharedir;
 my $shareinstdir;
 
-@ARGV=();
+@ARGV = ();
 foreach (@argv) {
-    if (m!PREFIX=(.+)!i) {
-        $prefixdir = $1;
-        push @ARGV, $_;
-    } elsif (m!SHAREINSTDIR=(.+)!i) {
-        $shareinstdir = $1;
-    } elsif (m!SHAREDIR=(.+)!i) {
-        $sharedir = $1;
-    } else {
-        push @ARGV, $_;
-    }
+ if (m!PREFIX=(.+)!i) {
+  $prefixdir = $1;
+  push @ARGV, $_;
+ }
+ elsif (m!SHAREINSTDIR=(.+)!i) {
+  $shareinstdir = $1;
+ }
+ elsif (m!SHAREDIR=(.+)!i) {
+  $sharedir = $1;
+ }
+ else {
+  push @ARGV, $_;
+ }
 }
 
-$prefixdir = "/usr" unless ($prefixdir);
-$sharedir = $prefixdir."/share" unless ($sharedir);
-$localedir = $sharedir."/locale" unless ($localedir);
+$prefixdir = "/usr"                unless ($prefixdir);
+$sharedir  = $prefixdir . "/share" unless ($sharedir);
+$localedir = $sharedir . "/locale" unless ($localedir);
 
 WriteMakefile(
-              NAME            => $program,
-              VERSION         => $version,
-              EXE_FILES       => [ "bin/$program",
-                                   'bin/scanimage-perl', 'bin/scanadf-perl' ],
-              PREREQ_PM       => {
-                                   Glib                   => 1.210,
-                                   Gtk2                   => 1.090,
-                                   Sane                   => 0.02,
-                                   Gtk2::Ex::Simple::List => 0,
-                                   Gtk2::ImageView        => 0,
-                                   Image::Magick          => 0,
-                                   Locale::gettext        => 1.05,
-                                   Config::General        => 2.40,
-                                   PDF::API2              => 0,
-                                   Set::IntSpan           => 1.10,
-                                   Goo::Canvas            => 0,
-                                   Readonly               => 0,
-                                   Log::Log4perl          => 0,
-              },
-              ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
-              (ABSTRACT_FROM  => "bin/$program", # retrieve abstract from module
-              AUTHOR          => "$author <$email>") : ()),
+ NAME      => $program,
+ VERSION   => $version,
+ EXE_FILES => [ "bin/$program", 'bin/scanimage-perl', 'bin/scanadf-perl' ],
+ PREREQ_PM => {
+  Glib                   => 1.210,
+  Gtk2                   => 1.090,
+  Sane                   => 0.02,
+  Gtk2::Ex::Simple::List => 0,
+  Gtk2::ImageView        => 0,
+  Image::Magick          => 0,
+  Locale::gettext        => 1.05,
+  Config::General        => 2.40,
+  PDF::API2              => 0,
+  Set::IntSpan           => 1.10,
+  Goo::Canvas            => 0,
+  Readonly               => 0,
+  Log::Log4perl          => 0,
+ },
+ (
+  $] >= 5.005
+  ?    ## Add these new keywords supported since 5.005
+    (
+   ABSTRACT_FROM => "bin/$program",      # retrieve abstract from module
+   AUTHOR        => "$author <$email>"
+    )
+  : ()
+ ),
 );
 
 sub MY::macro {
-    my $self = shift;
-    my $string = $self->MM::macro();
-    $string .= "SHAREDIR=$sharedir\n";
-    $string .= "LOCALEDIR=$localedir\n";
-    $string .= "AUTHOR=$author\n";
-    $string .= "EMAIL=$email\n";
-    $string .= "YEAR=$year\n";
+ my $self   = shift;
+ my $string = $self->MM::macro();
+ $string .= "SHAREDIR=$sharedir\n";
+ $string .= "LOCALEDIR=$localedir\n";
+ $string .= "AUTHOR=$author\n";
+ $string .= "EMAIL=$email\n";
+ $string .= "YEAR=$year\n";
 
-    $string .= "SITEPREFIX=$prefixdir\n";
-    $string .= "INSTALLMAN1DIR=$sharedir/man/man1\n";
-    $string .= "INSTALLSITEMAN1DIR=$sharedir/man/man1\n";
-    $string .= "INSTALLMAN3DIR=$sharedir/man/man3\n";
-    $string .= "INSTALLSITEMAN3DIR=$sharedir/man/man3\n";
-    $string .= "MAN1EXT=1p\n";
-    return $string;
+ $string .= "SITEPREFIX=$prefixdir\n";
+ $string .= "INSTALLMAN1DIR=$sharedir/man/man1\n";
+ $string .= "INSTALLSITEMAN1DIR=$sharedir/man/man1\n";
+ $string .= "INSTALLMAN3DIR=$sharedir/man/man3\n";
+ $string .= "INSTALLSITEMAN3DIR=$sharedir/man/man3\n";
+ $string .= "MAN1EXT=1p\n";
+ return $string;
 }
 
 sub MY::install {
-    my $self = shift;
-    my $string = $self->MM::install();
-    $string =~ s/doc_install/doc_install locale_install icon_install/;
-    return $string;
+ my $self   = shift;
+ my $string = $self->MM::install();
+ $string =~ s/doc_install/doc_install locale_install icon_install/;
+ return $string;
 }
 
 sub MY::postamble {
@@ -200,6 +209,16 @@ po/$(NAME).pot : bin/$(NAME)
          sed 's/FIRST AUTHOR <EMAIL@ADDRESS>, YEAR/$(AUTHOR) <$(EMAIL)>, $(YEAR)/' | \
          sed 's/Report-Msgid-Bugs-To: /Report-Msgid-Bugs-To: $(EMAIL)/' | \
          grep -v fuzzy > $@
+
+MANIFEST : .
+	git ls-files > $@
+
+tidy : MANIFEST
+	while read file; do \
+         if [[ $$file =~ "\.(PL|pl|pm)\$$" ]] ; then \
+          perltidy -i=1 $$file && mv $$file.tdy $$file; \
+         fi; \
+        done < MANIFEST
 END
  $postamble;
 }

@@ -76,8 +76,6 @@
 #     (e.g. http://www.kdedevelopers.org/node/2653,
 #      http://djvu.sourceforge.net/doc/man/djvused.html)
 #     test if they are indexed by Beagle and file a bug if not
-#    if anybody else complains about spending a long time "Closing PDF",
-#     see if $pdf->finishobjects does any good.
 #    move paper sizes into TreeModel
 #    Translate documentation (po4a?)
 #    simplify code - only keep variables that are needed
@@ -87,13 +85,12 @@
 #    Add status line at bottom with messages like "filename saved"
 #    Use  $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
 #      and    $tree_view->window->set_cursor (undef); when working.
-#    Option to throw up PDF viewer with newly created PDF file
 #    Right click save to PDF or TIFF should default to page range "selected"
 #    Add "translate this application" to help menu like gedit, opening launchpad in the default browswer.
 #
 # Release procedure:
 #    Use
-#      perltidy -i=1
+#      make tidy
 #      TEST_AUTHOR=1 make test
 #    immediately before release so as not to affect any patches
 #    in between, and then consistently before each commit afterwards.
@@ -102,7 +99,6 @@
 #    Download new translations
 #    Update translators in credits (https://launchpad.net/gscan2pdf/+topcontributors)
 #    Check a locale with LANG=de_DE.utf8 LANGUAGE=de_DE:de LC_CTYPE="de_DE.utf8" LC_NUMERIC="de_DE.utf8" LC_TIME="de_DE.utf8" LC_COLLATE="de_DE.utf8" LC_MONETARY="de_DE.utf8" LC_MESSAGES="de_DE.utf8" LC_PAPER="de_DE.utf8" LC_NAME="de_DE.utf8" LC_ADDRESS="de_DE.utf8" LC_TELEPHONE="de_DE.utf8" LC_MEASUREMENT="de_DE.utf8" LC_IDENTIFICATION="de_DE.utf8" bin/gscan2pdf --log=log
-#    git ls-files > MANIFEST
 #    Check $version
 #    Make appropriate updates to debian/changelog
 # 2. perl Makefile.PL
@@ -3198,7 +3194,8 @@ sub save_dialog {
          $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
          mark_pages(@pagelist);
          view_file($filename)
-          if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
+           if ( defined( $SETTING{'view files toggle'} )
+          and $SETTING{'view files toggle'} );
          $logger->debug("Finished saving $filename");
         },
         sub {    # error
@@ -3459,7 +3456,8 @@ sub save_image {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     mark_pages(@pagelist);
     view_file($filename)
-     if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
+      if ( defined( $SETTING{'view files toggle'} )
+     and $SETTING{'view files toggle'} );
     $logger->debug("Finished saving $filename");
    },
    sub {    # error
@@ -3517,7 +3515,8 @@ sub save_TIFF {
    mark_pages(@pagelist);
    my $file = defined($ps) ? $ps : $filename;
    view_file($file)
-    if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
+     if ( defined( $SETTING{'view files toggle'} )
+    and $SETTING{'view files toggle'} );
    $logger->debug("Finished saving $filename");
   },
   sub {    # error
@@ -3608,7 +3607,8 @@ sub save_djvu {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
       view_file($filename)
-       if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
+        if ( defined( $SETTING{'view files toggle'} )
+       and $SETTING{'view files toggle'} );
       $logger->debug("Finished saving $filename");
      },
      sub {    # error
@@ -3739,15 +3739,16 @@ sub email {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      mark_pages(@pagelist);
      view_file($pdf)
-      if (defined($SETTING{'view files toggle'}) and $SETTING{'view files toggle'});
+       if ( defined( $SETTING{'view files toggle'} )
+      and $SETTING{'view files toggle'} );
      $logger->info($mua_string);
      show_message_dialog( $main::window, 'error', 'close',
-                          $main::d->get('Error creating email') )
-      if ( system($mua_string) );
+      $main::d->get('Error creating email') )
+       if ( system($mua_string) );
     },
     sub {    # error
      show_message_dialog( $main::window, 'error', 'close',
-                          $Gscan2pdf::_self->{message} );
+      $Gscan2pdf::_self->{message} );
     }
    );
 
@@ -10392,14 +10393,13 @@ sub preferences {
  );
 
  # View saved files
- my $cbv = Gtk2::CheckButton->new_with_label(
-  $d->get('View files on saving') );
+ my $cbv = Gtk2::CheckButton->new_with_label( $d->get('View files on saving') );
  $vbox->pack_start( $cbv, TRUE, TRUE, 0 );
  $frame = Gtk2::Frame->new;
  $frame->set_sensitive(FALSE) unless ( $SETTING{'view files toggle'} );
  $cbv->signal_connect(
   toggled => sub {
-   $frame->set_sensitive($cbv->get_active);
+   $frame->set_sensitive( $cbv->get_active );
   }
  );
  $cbv->set_active(TRUE) if ( $SETTING{'view files toggle'} );
@@ -10413,10 +10413,13 @@ sub preferences {
   $d->get('File Type')   => 'text',
   $d->get('Application') => 'text',
  );
- if (defined($SETTING{'view files'}) and ref($SETTING{'view files'}) eq 'ARRAY') {
-   for ( my $i = 0; $i < @{ $SETTING{'view files'} }; $i += 2 ) {
-     push @{ $vlist->{data} }, [ $SETTING{'view files'}[$i], $SETTING{'view files'}[$i+1] ];
-   }
+ if ( defined( $SETTING{'view files'} )
+  and ref( $SETTING{'view files'} ) eq 'ARRAY' )
+ {
+  for ( my $i = 0 ; $i < @{ $SETTING{'view files'} } ; $i += 2 ) {
+   push @{ $vlist->{data} },
+     [ $SETTING{'view files'}[$i], $SETTING{'view files'}[ $i + 1 ] ];
+  }
  }
  $vlist->get_selection->set_mode('multiple');
  $vlist->set_column_editable( 0, TRUE );
@@ -10491,16 +10494,19 @@ sub preferences {
 
    # Store viewer preferences
    $SETTING{'view files toggle'} = $cbv->get_active;
-   $SETTING{'view files'} = ();
+   $SETTING{'view files'}        = ();
    for ( @{ $vlist->{data} } ) {
-    if ( not defined($_->[0]) or $_->[0] eq '' ) {
-     show_message_dialog( $window, 'error', 'close', $d->get(sprintf'Undefined file type') );
+    if ( not defined( $_->[0] ) or $_->[0] eq '' ) {
+     show_message_dialog( $window, 'error', 'close',
+      $d->get( sprintf 'Undefined file type' ) );
     }
-    elsif ( not defined($_->[1]) or $_->[1] eq '' ) {
-     show_message_dialog( $window, 'error', 'close', $d->get(sprintf'Undefined application') );
+    elsif ( not defined( $_->[1] ) or $_->[1] eq '' ) {
+     show_message_dialog( $window, 'error', 'close',
+      $d->get( sprintf 'Undefined application' ) );
     }
-    elsif ( not check_command($_->[1]) ) {
-     show_message_dialog( $window, 'error', 'close', $d->get(sprintf'Unknown application: %s', $_->[1]) );
+    elsif ( not check_command( $_->[1] ) ) {
+     show_message_dialog( $window, 'error', 'close',
+      $d->get( sprintf 'Unknown application: %s', $_->[1] ) );
     }
     else {
      push @{ $SETTING{'view files'} }, $_->[0], $_->[1];
@@ -10734,18 +10740,20 @@ sub get_size_from_PNM {
 # View filename if match in $SETTING{'view files'}
 sub view_file {
  my ($filename) = @_;
- if (defined($SETTING{'view files'}) and ref($SETTING{'view files'}) eq 'ARRAY') {
-   for ( my $i = 0; $i < @{ $SETTING{'view files'} }; $i += 2 ) {
-     my $ext = $SETTING{'view files'}[$i];
-     $ext = "*.$ext" unless ($ext =~ /\*/);
-     $ext =~ s/\./\./;
-     $ext =~ s/\*/.*/;
-     if ($filename =~ /$ext$/) {
-       $logger->info("Starting ".$SETTING{'view files'}[$i+1]);
-       system($SETTING{'view files'}[$i+1]." $filename &");
-       last;
-     }
+ if ( defined( $SETTING{'view files'} )
+  and ref( $SETTING{'view files'} ) eq 'ARRAY' )
+ {
+  for ( my $i = 0 ; $i < @{ $SETTING{'view files'} } ; $i += 2 ) {
+   my $ext = $SETTING{'view files'}[$i];
+   $ext = "*.$ext" unless ( $ext =~ /\*/ );
+   $ext =~ s/\./\./;
+   $ext =~ s/\*/.*/;
+   if ( $filename =~ /$ext$/i ) {
+    $logger->info( "Starting " . $SETTING{'view files'}[ $i + 1 ] );
+    system( $SETTING{'view files'}[ $i + 1 ] . " $filename &" );
+    last;
    }
+  }
  }
  return;
 }
