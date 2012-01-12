@@ -21,7 +21,7 @@ SKIP: {
  skip 'Cuneiform not installed', 5 unless Gscan2pdf::Cuneiform->setup;
 
  use Log::Log4perl qw(:easy);
- Log::Log4perl->easy_init($DEBUG);
+ Log::Log4perl->easy_init($WARN);
  our $logger = Log::Log4perl::get_logger;
  my $prog_name = 'gscan2pdf';
  use Locale::gettext 1.05;    # For translations
