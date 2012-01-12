@@ -5,6 +5,8 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
+use warnings;
+use strict;
 use Test::More tests => 1;
 
 BEGIN {
@@ -42,11 +44,7 @@ $slist->get_file_info(
    $info, 1, 1, undef, undef, undef, undef,
    undef,
    sub {
-    isn't(
-     -s 'test.tif',
-     -s "$slist->{data}[0][2]{filename}",
-     'TIFF not imported'
-    );
+    is( $slist->{data}[0][2]{filename}, undef, 'TIFF not imported' );
     Gtk2->main_quit;
    }
   );
@@ -57,5 +55,5 @@ Gtk2->main;
 
 #########################
 
-unlink 'test.tif', 'test2.tif';
+unlink 'test.tif';
 Gscan2pdf->quit();

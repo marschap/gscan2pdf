@@ -5,6 +5,8 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
+use warnings;
+use strict;
 use Test::More tests => 6;
 
 BEGIN {
@@ -41,7 +43,7 @@ SKIP: {
 "convert +matte -depth 1 -pointsize 12 -density 300 label:'öÖäÄüÜß' test.bmp"
  );
 
- my $got = Gscan2pdf::Cuneiform->hocr( 'test.bmp', 'ger' );
+ $got = Gscan2pdf::Cuneiform->hocr( 'test.bmp', 'ger' );
  is( Encode::is_utf8( $got, 1 ), 1, "Cuneiform returned UTF8" );
  for my $c (qw( ö ä ü )) {
   my $c2 = decode_utf8($c);

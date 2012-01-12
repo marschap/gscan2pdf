@@ -836,7 +836,11 @@ sub _thread_save_tiff {
    $page, $#{$list_of_pages} + 1 );
 
   my $filename = $pagedata->{filename};
-  if ( $filename !~ /\.tif/ or $options->{compression} eq 'jpeg' ) {
+  if ( $filename !~ /\.tif/
+   or
+   ( defined( $options->{compression} ) and $options->{compression} eq 'jpeg' )
+    )
+  {
    my $tif = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif' );
    my $resolution = $pagedata->{resolution};
 

@@ -5,6 +5,8 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
+use warnings;
+use strict;
 use Test::More tests => 19;
 
 BEGIN {
@@ -81,7 +83,7 @@ SKIP: {
 "convert +matte -depth 1 -pointsize 12 -density 300 label:'öÖäÄüÜß' test.tif"
  );
 
- my $got = Gscan2pdf::Tesseract->hocr( 'test.tif', 'deu' );
+ $got = Gscan2pdf::Tesseract->hocr( 'test.tif', 'deu' );
  is( Encode::is_utf8( $got, 1 ), 1, "Tesseract returned UTF8" );
  for my $c (qw( ö ä ü ß )) {
   my $c2 = decode_utf8($c);
