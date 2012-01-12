@@ -32,7 +32,7 @@ my $slist = Gscan2pdf::Document->new;
 $slist->open_session( undef, 'test.gs2p' );
 
 is( -s $slist->{data}[0][2]{filename},
- 9673, 'PNM extracted with expected size' );
+ 9230, 'TIFF extracted with expected size' );
 is(
  $slist->{data}[0][2]{hocr},
  'The quick brown fox',

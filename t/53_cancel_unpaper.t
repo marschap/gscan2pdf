@@ -54,14 +54,15 @@ SKIP: {
    $slist->import_file(
     $info, 1, 1, undef, undef, undef,
     sub {
+     my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
      $slist->unpaper(
       $slist->{data}[0][2],
       '--output-pages 2 --layout double',
       undef, undef, undef, undef, undef, undef,
       sub {
        is(
-        -s 'test.pnm',
-        -s "$slist->{data}[0][2]{filename}",
+        $md5sum,
+        `md5sum $slist->{data}[0][2]{filename} | cut -c -32`,
         'image not modified'
        );
        Gtk2->main_quit;

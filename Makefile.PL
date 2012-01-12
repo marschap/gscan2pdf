@@ -219,6 +219,8 @@ tidy : MANIFEST
           perltidy -i=1 $$file && mv $$file.tdy $$file; \
          fi; \
         done < MANIFEST
+
+test :: MANIFEST
 END
  $postamble;
 }

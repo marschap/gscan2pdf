@@ -41,13 +41,14 @@ $slist->get_file_info(
   $slist->import_file(
    $info, 1, 1, undef, undef, undef,
    sub {
+    my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
     $slist->to_tiff(
      $slist->{data}[0][2],
      undef, undef, undef, undef, undef,
      sub {
       is(
-       -s 'test.pnm',
-       -s "$slist->{data}[0][2]{filename}",
+       $md5sum,
+       `md5sum $slist->{data}[0][2]{filename} | cut -c -32`,
        'image not modified'
       );
       Gtk2->main_quit;
