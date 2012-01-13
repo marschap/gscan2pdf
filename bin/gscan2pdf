@@ -426,6 +426,8 @@ $logger->info( "Using GtkImageView version ",
  Gtk2::ImageView->library_version );
 $logger->info("Using Gtk2::ImageView version $Gtk2::ImageView::VERSION");
 $logger->info("Using PDF::API2 version $PDF::API2::VERSION");
+$logger->info('Using Sane version '.join( '.', Sane->get_version ));
+$logger->info("Using libsane-perl version $Sane::VERSION");
 
 if ($debug) {
  use Data::Dumper;
