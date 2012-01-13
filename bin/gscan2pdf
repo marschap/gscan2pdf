@@ -2743,7 +2743,7 @@ sub save_PDF {
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
-      system( "xdg-open $filename &" )
+      system( "xdg-open \"$filename\" &" )
         if ( defined( $SETTING{'view files toggle'} )
        and $SETTING{'view files toggle'} );
       $logger->debug("Finished saving $filename");
@@ -3196,7 +3196,7 @@ sub save_dialog {
          $thbox->hide_all unless $pending;
          $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
          mark_pages(@pagelist);
-         system( "xdg-open $filename &" )
+         system( "xdg-open \"$filename\" &" )
            if ( defined( $SETTING{'view files toggle'} )
           and $SETTING{'view files toggle'} );
          $logger->debug("Finished saving $filename");
@@ -3458,7 +3458,7 @@ sub save_image {
     $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     mark_pages(@pagelist);
-    system( "xdg-open $filename &" )
+    system( "xdg-open \"$filename\" &" )
       if ( defined( $SETTING{'view files toggle'} )
      and $SETTING{'view files toggle'} );
     $logger->debug("Finished saving $filename");
@@ -3517,7 +3517,7 @@ sub save_TIFF {
    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    mark_pages(@pagelist);
    my $file = defined($ps) ? $ps : $filename;
-   system( "xdg-open $filename &" )
+   system( "xdg-open \"$filename\" &" )
      if ( defined( $SETTING{'view files toggle'} )
     and $SETTING{'view files toggle'} );
    $logger->debug("Finished saving $filename");
@@ -3609,7 +3609,7 @@ sub save_djvu {
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
-      system( "xdg-open $filename &" )
+      system( "xdg-open \"$filename\" &" )
         if ( defined( $SETTING{'view files toggle'} )
        and $SETTING{'view files toggle'} );
       $logger->debug("Finished saving $filename");
@@ -3741,7 +3741,7 @@ sub email {
      $thbox->hide_all unless $pending;
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      mark_pages(@pagelist);
-     system( "xdg-open $pdf &" )
+     system( "xdg-open \"$pdf\" &" )
        if ( defined( $SETTING{'view files toggle'} )
       and $SETTING{'view files toggle'} );
      $logger->info($mua_string);
