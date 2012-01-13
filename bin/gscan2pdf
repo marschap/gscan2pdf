@@ -5377,8 +5377,8 @@ sub populate_device_list2 {
     get_devices2($hboxd);
    }
    else {
-    $SETTING{device} = $device_list[ $combobd->get_active ]->{name};
-    scan_options( $notebook, $device_list[ $combobd->get_active ] );
+    $SETTING{device} = $device_list[ $index ]->{name};
+    scan_options( $notebook, $device_list[ $index ] );
    }
   }
  );
@@ -5903,7 +5903,9 @@ sub scan_pages {
    $spbar->set_fraction($progress) if ( defined $progress );
   },
   sub {    # finished callback
-   $scbutton->signal_handler_disconnect($signal);
+   $scbutton->signal_handler_disconnect($signal) if (defined $signal);
+   scan_options( $notebook, $device_list[ $combobd->get_active ] )
+     if ( $SETTING{'cycle sane handle'} );
    $shbox->hide;
   },
   sub {    # new page callback
@@ -5929,7 +5931,7 @@ sub scan_pages {
    update_spbar( $i, $npages );
   },
   sub {    # error callback
-   $scbutton->signal_handler_disconnect($signal);
+   $scbutton->signal_handler_disconnect($signal) if (defined $signal);
    $shbox->hide;
    my ($msg) = @_;
    show_message_dialog( $windows2, 'error', 'close', $d_sane->get($msg) );
@@ -10250,8 +10252,24 @@ sub preferences {
    ],
    if ( $dependencies{scanadf} );
  my $combob = combobox_from_array(@frontends);
+ my $cbcsh = Gtk2::CheckButton->new_with_label( $d->get('Cycle SANE handle after scan') );
+ $combob->signal_connect(
+  changed => sub {
+   if ( $frontends[ $combob->get_active ][0] eq 'libsane-perl' ) {
+    $cbcsh->set_sensitive(TRUE);
+   }
+   else {
+    $cbcsh->set_sensitive(FALSE);
+   }
+  }
+ );
  combobox_set_active( $combob, $SETTING{frontend}, @frontends );
  $hbox->pack_end( $combob, TRUE, TRUE, 0 );
+
+ # Cycle SANE handle after scan
+ $cbcsh->set_active($SETTING{'cycle sane handle'})
+   if (defined $SETTING{'cycle sane handle'});
+ $vbox->pack_start( $cbcsh, TRUE, TRUE, 0 );
 
  # Default filename
  $hbox = Gtk2::HBox->new;
@@ -10397,6 +10415,8 @@ sub preferences {
 
  # View saved files
  my $cbv = Gtk2::CheckButton->new_with_label( $d->get('View files on saving') );
+ $cbv->set_active($SETTING{'view files toggle'})
+   if (defined $SETTING{'view files toggle'});
  $vbox->pack_start( $cbv, TRUE, TRUE, 0 );
 
  # Apply button
@@ -10418,6 +10438,7 @@ sub preferences {
        if ( defined $windows );
     }
    }
+   $SETTING{'cycle sane handle'} = $cbcsh->get_active;
    $SETTING{'default filename'} = $fileentry->get_text;
    $SETTING{'scan prefix'}      = $preentry->get_text;
    $SETTING{'cache options'}    = $cbc->get_active;
