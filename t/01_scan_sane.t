@@ -27,40 +27,29 @@ use Locale::gettext 1.05;    # For translations
 our $d = Locale::gettext->domain($prog_name);
 Gscan2pdf::Frontend::Sane->setup( $prog_name, $d, $logger );
 
-SKIP: {
- if (
-  eval {
-   Gscan2pdf::Frontend::Sane->open_device(
-    'test',
-    sub { },
-    sub { },
-    sub {
-     Gscan2pdf::Frontend::Sane->scan_pages(
-      '.',
-      'out%d.pnm',
-      1, 1, 1,
-      sub { },
-      sub { },
-      sub { },
-      sub {
-       is( -s 'out1.pnm', 30807, 'PNM created with expected size' );
-       Gtk2->main_quit;
-      }
-     );
-    }
-   );
-  }
-   )
- {
-  Gtk2->main;
+Gscan2pdf::Frontend::Sane->open_device(
+ 'test',
+ sub { },
+ sub { },
+ sub {
+  Gscan2pdf::Frontend::Sane->scan_pages(
+   '.',
+   'out%d.pnm',
+   1, 1, 1,
+   sub { },
+   sub { },
+   sub { },
+   sub {
+    is( -s 'out1.pnm', 30807, 'PNM created with expected size' );
+    Gtk2->main_quit;
+   }
+  );
+ }
+);
+Gtk2->main;
 
 #########################
 
-  unlink 'out1.pnm';
- }
- else {
-  skip 'SANE test backend not installed', 1;
- }
-}
+unlink 'out1.pnm';
 
 Gscan2pdf::Frontend::Sane->quit();
