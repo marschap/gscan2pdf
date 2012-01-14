@@ -68,5 +68,6 @@ SKIP: {
  Gtk2->main;
 
  unlink 'test.png';
- Gscan2pdf->quit();
 }
+
+Gscan2pdf->quit();
