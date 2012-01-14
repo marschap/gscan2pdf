@@ -95,6 +95,7 @@ sub MY::install {
 
 sub MY::postamble {
  my $postamble = <<'END';
+SHELL = bash
 PO = $(wildcard po/*.po)
 DEB_BUILD_ROOT = /var/tmp/$(NAME)-$(VERSION)
 
