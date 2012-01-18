@@ -492,7 +492,7 @@ sub save_djvu {
    }
    $started_callback->() if ( $started_callback and not $started_flag );
    if ( $Gscan2pdf::_self->{status} ) {
-    $error_callback->();
+    $error_callback->() if ($error_callback);
     return;
    }
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
@@ -1071,14 +1071,14 @@ sub crop {
  return;
 }
 
-sub to_tiff {
+sub to_png {
  my ( $self, $page, $queued_callback, $started_callback, $running_callback,
   $finished_callback, $error_callback, $cancelled_callback )
    = @_;
 
  my $started_flag;
  my $sentinel =
-   Gscan2pdf::_enqueue_request( 'to-tiff', { page => $page->freeze } );
+   Gscan2pdf::_enqueue_request( 'to-png', { page => $page->freeze } );
  $queued_callback->(
   $Gscan2pdf::_self->{process_name},
   $Gscan2pdf::jobs_completed, $Gscan2pdf::jobs_total

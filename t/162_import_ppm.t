@@ -32,34 +32,29 @@ our $d = Locale::gettext->domain($prog_name);
 Gscan2pdf->setup( $d, $logger );
 
 # Create test image
-system('convert rose: test.pnm');
+system('convert rose: test.ppm');
+system('convert rose: test.png');
 
 my $slist = Gscan2pdf::Document->new;
 $slist->get_file_info(
- 'test.pnm',
+ 'test.ppm',
  undef, undef, undef,
  sub {
   my ($info) = @_;
   $slist->import_file(
    $info, 1, 1, undef, undef, undef,
    sub {
-    $slist->to_tiff(
-     $slist->{data}[0][2],
-     undef, undef, undef,
-     sub {
-      system("cp $slist->{data}[0][2]{filename} test.tif");
-      Gtk2->main_quit;
-     }
-    );
+    system("cp $slist->{data}[0][2]{filename} test2.png");
+    Gtk2->main_quit;
    }
   );
  }
 );
 Gtk2->main;
 
-is( system('identify test.tif'), 0, 'valid TIFF created' );
+is( -s 'test.png', -s 'test2.png', 'PPM imported correctly' );
 
 #########################
 
-unlink 'test.pnm', 'test.tif';
+unlink 'test.ppm', 'test.png', 'test2.png';
 Gscan2pdf->quit();

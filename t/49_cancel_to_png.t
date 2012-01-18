@@ -44,7 +44,7 @@ $slist->get_file_info(
    $info, 1, 1, undef, undef, undef,
    sub {
     my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
-    $slist->to_tiff(
+    $slist->to_png(
      $slist->{data}[0][2],
      undef, undef, undef, undef, undef,
      sub {

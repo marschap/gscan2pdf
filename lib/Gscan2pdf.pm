@@ -176,8 +176,8 @@ sub _thread_main {
    _thread_threshold( $self, $request->{threshold}, $request->{page} );
   }
 
-  elsif ( $request->{action} eq 'to-tiff' ) {
-   _thread_to_tiff( $self, $request->{page} );
+  elsif ( $request->{action} eq 'to-png' ) {
+   _thread_to_png( $self, $request->{page} );
   }
 
   elsif ( $request->{action} eq 'unpaper' ) {
@@ -351,11 +351,12 @@ sub _thread_import_file {
    my @images = glob('x-???.???');
    my $i      = 0;
    foreach (@images) {
+    my $png = convert_to_png( $_ );
     my $page = Gscan2pdf::Page->new(
-     filename => $_,
+     filename => $png,
      dir      => $self->{dir},
      delete   => TRUE,
-     format   => 'Portable anymap'
+     format   => 'Portable Network Graphics'
     );
     $self->{page_queue}->enqueue( $page->freeze );
    }
@@ -385,8 +386,10 @@ sub _thread_import_file {
    }
   }
  }
+
+ # only 1-bit Portable anymap is properly supported, so convert ANY pnm to tif
  elsif ( $info->{format} =~
-/(Portable anymap|Portable Network Graphics|Joint Photographic Experts Group JFIF format|CompuServe graphics interchange format)/
+/(Portable Network Graphics|Joint Photographic Experts Group JFIF format|CompuServe graphics interchange format)/
    )
  {
   my $page = Gscan2pdf::Page->new(
@@ -397,37 +400,38 @@ sub _thread_import_file {
   $self->{page_queue}->enqueue( $page->freeze );
  }
  else {
-  my $tiff = convert_to_tiff( $info->{path} );
+  my $png = convert_to_png( $info->{path} );
   return if $_self->{cancel};
   my $page = Gscan2pdf::Page->new(
-   filename => $tiff,
+   filename => $png,
    dir      => $self->{dir},
-   format   => 'Tagged Image File Format'
+   format   => 'Portable Network Graphics'
   );
   $self->{page_queue}->enqueue( $page->freeze );
  }
  return;
 }
 
-sub convert_to_tiff {
+sub convert_to_png {
  my ($filename) = @_;
  my $image      = Image::Magick->new;
  my $x          = $image->Read($filename);
- return if $_self->{cancel};
  $logger->warn($x) if "$x";
- my $density = Gscan2pdf::Document::get_resolution($image)
-   ; # FIXME: most of the time we already know this - pull it from $page->{resolution} rather than asking IM
+ return if $_self->{cancel};
 
- # Write the tif
- my $tif =
-   File::Temp->new( DIR => $_self->{dir}, SUFFIX => '.tif', UNLINK => FALSE );
+ # FIXME: most of the time we already know this -
+ # pull it from $page->{resolution} rather than asking IM
+ my $density = Gscan2pdf::Document::get_resolution($image);
+
+ # Write the png
+ my $png =
+   File::Temp->new( DIR => $_self->{dir}, SUFFIX => '.png', UNLINK => FALSE );
  $image->Write(
   units       => 'PixelsPerInch',
-  compression => 'lzw',
   density     => $density,
-  filename    => $tif
+  filename    => $png
  );
- return $tif;
+ return $png;
 }
 
 sub _thread_save_pdf {
@@ -752,7 +756,7 @@ sub _thread_save_djvu {
 
   # Create the djvu
   my $resolution = $pagedata->{resolution};
-  my $cmd        = "$compression -dpi $resolution $filename $djvu";
+  my $cmd        = sprintf "$compression -dpi %d $filename $djvu", $resolution;
   $logger->info($cmd);
   my ( $status, $size ) =
     ( system("echo $$ > $pidfile;$cmd"), -s "$djvu" )
@@ -1185,10 +1189,10 @@ sub _thread_crop {
  return;
 }
 
-sub _thread_to_tiff {
+sub _thread_to_png {
  my ( $self, $page ) = @_;
  my $new = $page->clone;
- $new->{filename} = convert_to_tiff( $page->{filename} );
+ $new->{filename} = convert_to_png( $page->{filename} );
  return if $_self->{cancel};
  $new->{format} = 'Tagged Image File Format';
  my %data = ( old => $page, new => $new->freeze );

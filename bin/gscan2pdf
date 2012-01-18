@@ -2215,7 +2215,7 @@ sub open_dialog {
          sub {    # finished
           my ( $new_page, $pending ) = @_;
           $thbox->hide_all unless $pending;
-          $tcbutton->signal_handler_disconnect($signal);
+          $tcbutton->signal_handler_disconnect($signal) if ($signal);
           update_uimanager();
          },
          sub { error_opening_image() }    # error
@@ -10156,7 +10156,7 @@ sub mark_pages {
  return;
 }
 
-# Convert all files in temp that are not jpg, png, or tiff to tiff,
+# Convert all files in temp that are not jpg, png, or tiff to png,
 
 sub compress_temp {
  return
@@ -10173,7 +10173,7 @@ sub compress_temp {
 
  for ( @{ $slist->{data} } ) {
   my $signal;
-  $slist->to_tiff(
+  $slist->to_png(
    $_->[2],
    sub {    # queued
     my ( $process, $completed, $total, $message, $progress ) = @_;
