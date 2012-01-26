@@ -1511,7 +1511,7 @@ sub open_session {
   @filenamelist = $tar->list_files;
   $tar->extract;
  }
- $dir = dirname( $filenamelist[0] ) unless ( defined $dir );
+ $dir = dirname( $filenamelist[0] );
  my $sessionref = retrieve( File::Spec->catfile( $dir, 'session' ) );
  my %session = %$sessionref;
 

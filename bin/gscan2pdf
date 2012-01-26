@@ -9846,6 +9846,10 @@ sub quit {
   }
  }
 
+ # Make sure that we are back in the start directory, otherwise we can't delete
+ # the temp dir.
+ chdir $SETTING{'cwd'};
+
  # Remove temporary files (for some reason File::Temp wasn't doing its job here)
  unlink <$session/*>;
  rmdir $session;
