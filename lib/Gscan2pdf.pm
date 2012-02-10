@@ -351,7 +351,7 @@ sub _thread_import_file {
    my @images = glob('x-???.???');
    my $i      = 0;
    foreach (@images) {
-    my $png = convert_to_png( $_ );
+    my $png  = convert_to_png($_);
     my $page = Gscan2pdf::Page->new(
      filename => $png,
      dir      => $self->{dir},
@@ -427,9 +427,9 @@ sub convert_to_png {
  my $png =
    File::Temp->new( DIR => $_self->{dir}, SUFFIX => '.png', UNLINK => FALSE );
  $image->Write(
-  units       => 'PixelsPerInch',
-  density     => $density,
-  filename    => $png
+  units    => 'PixelsPerInch',
+  density  => $density,
+  filename => $png
  );
  return $png;
 }
@@ -756,7 +756,7 @@ sub _thread_save_djvu {
 
   # Create the djvu
   my $resolution = $pagedata->{resolution};
-  my $cmd        = sprintf "$compression -dpi %d $filename $djvu", $resolution;
+  my $cmd = sprintf "$compression -dpi %d $filename $djvu", $resolution;
   $logger->info($cmd);
   my ( $status, $size ) =
     ( system("echo $$ > $pidfile;$cmd"), -s "$djvu" )
