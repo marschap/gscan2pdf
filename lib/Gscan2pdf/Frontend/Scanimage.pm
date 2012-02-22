@@ -3,16 +3,16 @@ package Gscan2pdf::Frontend::Scanimage;
 use strict;
 use warnings;
 use Carp;
+use base qw(Exporter);
 
 BEGIN {
  use Exporter ();
- our ( $VERSION, @ISA, @EXPORT_OK, %EXPORT_TAGS );
+ our ( $VERSION, @EXPORT_OK, %EXPORT_TAGS );
 
  # set the version for version checking
  # $VERSION     = 0.01;
 
- @ISA         = qw(Exporter);
- %EXPORT_TAGS = ();             # eg: TAG => [ qw!name1 name2! ],
+ %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,
  # as well as any optionally exported functions
@@ -26,7 +26,19 @@ sub options2hash {
 
  my ($output) = @_;
  my %hash;
- while ( $output =~ /-+([\w\-]+) ?(.*) \[(.*)\] *\n([\S\s]*)/ ) {
+ while (
+  $output =~ /
+                      -+        # at least one dash
+                      ([\w\-]+) # the option name
+                      \ ?       # an optional space
+                      (.*)      # possible values
+                      \         # a space
+                      \[(.*)\]  # the default value, surrounded by square brackets
+                      \ *\n     # the rest of the line
+                      ([\S\s]*) # the rest of the output
+                    /x
+   )
+ {
   my $option  = $1;
   my $values  = $2;
   my $default = $3;
@@ -35,14 +47,39 @@ sub options2hash {
   $output = $4;
 
   # Strip out the extra characters by e.g. [=(yes|no)]
-  $values = $1 if ( $values =~ /\[=\((.*)\)\]/ );
+  $values = $1
+    if (
+   $values =~ /
+                                 \[   # an opening square bracket
+                                 =    # an equals sign
+                                 \(   # an opening round bracket
+                                 (.*) # the options
+                                 \)   # a closing round bracket
+                                 \]   # a closing square bracket
+                               /x
+    );
 
-  if ( $values =~ /(-?\d*\.?\d*)\.\.(\d*\.?\d*)(pel|bit|mm|dpi|%|us)?/ ) {
+  if (
+   $values =~ /
+                    (-?\d*\.?\d*)          # min value, possibly negative or floating
+                    \.\.                   # two dots
+                    (\d*\.?\d*)            # max value, possible floating
+                    (pel|bit|mm|dpi|%|us)? # optional unit
+                  /x
+    )
+  {
    $hash{$option}{min}  = $1;
    $hash{$option}{max}  = $2;
    $hash{$option}{unit} = $3 if ( defined $3 );
    $hash{$option}{step} = $1
-     if ( $values =~ /\(in steps of (\d*\.?\d+)\)/ );
+     if (
+    $values =~ /
+                       \(              # opening round bracket
+                       in\ steps\ of\  # text
+                       (\d*\.?\d+)     # step
+                       \)              # closing round bracket
+                     /x
+     );
   }
   else {
    my @array;
@@ -54,7 +91,7 @@ sub options2hash {
      $values = substr( $values, $i + 1, length($values) );
     }
     else {
-     if ( $values =~ /(pel|bit|mm|dpi|%|us)$/ ) {
+     if ( $values =~ /(pel|bit|mm|dpi|%|us)$/x ) {
       $hash{$option}{unit} = $1;
       $values = substr( $values, 0, index( $values, $hash{$option}{unit} ) );
      }
@@ -68,7 +105,14 @@ sub options2hash {
 
   # Parse tooltips from option description based on an 8-character indent.
   my $tip = '';
-  while ( $output =~ /^ {8,}(.*)\n([\S\s]*)/ ) {
+  while (
+   $output =~ /
+                       ^\ {8,}   # 8-character indent
+                       (.*)\n    # text
+                       ([\S\s]*) # rest of output
+                     /x
+    )
+  {
    if ( $tip eq '' ) {
     $tip = $1;
    }
