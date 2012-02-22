@@ -14,19 +14,20 @@ my ( $exe, $installed, $setup );
 sub setup {
  return $installed if $setup;
  if ( system("which ocroscript > /dev/null 2> /dev/null") == 0 ) {
+  my $env = $ENV{OCROSCRIPTS};
 
-  unless ( defined $ENV{OCROSCRIPTS} ) {
+  unless ( defined $env ) {
    for (qw(/usr /usr/local)) {
-    local $ENV{OCROSCRIPTS} = "$_/share/ocropus/scripts"
+    $env = "$_/share/ocropus/scripts"
       if ( -d "$_/share/ocropus/scripts" );
    }
   }
-  if ( defined $ENV{OCROSCRIPTS} ) {
+  if ( defined $env ) {
    my $script;
-   if ( -f "$ENV{OCROSCRIPTS}/recognize.lua" ) {
+   if ( -f "$env/recognize.lua" ) {
     $script = 'recognize';
    }
-   elsif ( -f "$ENV{OCROSCRIPTS}/rec-tess.lua" ) {
+   elsif ( -f "$env/rec-tess.lua" ) {
     $script = 'rec-tess';
    }
    if ( defined $script ) {
