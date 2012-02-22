@@ -2,6 +2,7 @@
 
 * Fixed ocropus support
   Closes bug 3487120 (Ocropus no longer in OCR selection)
+* Reference core font in PDF only once
 
 
 1.0.1 (05.02.2012):
@@ -9,7 +10,7 @@
 * Fixed metadata in PDF
   Closes Debian bug #653918
   Thanks to Sebastian Schmidt for the patch
-* Embed font in PDF only once
+* Embed TTF in PDF only once
   Closes Debian bug #646298
   Thanks to noreply@example.com for the patch
 * Decode HTML entities returned by Ocropus

@@ -438,14 +438,15 @@ sub _thread_save_pdf {
  my ( $self, $path, $list_of_pages, $metadata, $options, $pidfile ) = @_;
 
  my $page = 0;
- my $fontcache;
+ my $ttfcache;
 
  # Create PDF with PDF::API2
  $self->{message} = $d->get('Setting up PDF');
  my $pdf = PDF::API2->new( -file => $path );
  $pdf->info(%$metadata) if defined($metadata);
 
- $fontcache = $pdf->ttfont( $options->{font}, -unicodemap => 1 )
+ my $corecache = $pdf->corefont('Times-Roman');
+ $ttfcache = $pdf->ttfont( $options->{font}, -unicodemap => 1 )
    if ( defined $options->{font} );
 
  foreach my $pagedata ( @{$list_of_pages} ) {
@@ -585,11 +586,12 @@ sub _thread_save_pdf {
    my $text = $page->text;
    for my $box ( $pagedata->boxes ) {
     my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
-    if ( $txt =~ /[[:^ascii:]]/ and defined( $options->{font} ) ) {
-     $font = $fontcache;
+    if ( $txt =~ /([[:^ascii:]])/ and defined( $options->{font} ) ) {
+     $logger->debug("non-ascii text is '$1' in '$txt'") if ( defined $1 );
+     $font = $ttfcache;
     }
     else {
-     $font = $pdf->corefont('Times-Roman');
+     $font = $corecache;
     }
     ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution )
       if ( $x1 == 0 and $y1 == 0 and not defined($x2) );
