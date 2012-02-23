@@ -8,7 +8,7 @@ use File::Temp;    # To create temporary files
 use File::Basename;
 use Gscan2pdf;     # for slurp
 
-my ( %languages, $installed, $setup, $version, $tessdata, $suffix );
+my ( %languages, $installed, $setup, $version, $tessdata, $datasuffix );
 
 sub setup {
  return $installed if $setup;
@@ -18,8 +18,8 @@ sub setup {
  else {
   return;
  }
- ( $tessdata, $version, $suffix ) =
-   parse_tessdata( join '', `tesseract '' '' -l '' 2>&1` );
+ ( $tessdata, $version, $datasuffix ) =
+   parse_tessdata(`tesseract '' '' -l '' 2>&1`);
  return unless defined $tessdata;
  $main::logger->info(
   "Found tesseract version $version. Using tessdata at $tessdata");
@@ -28,25 +28,25 @@ sub setup {
 }
 
 sub parse_tessdata {
- my ($tessdata) = @_;
- my ( $version, $suffix );
- $version = $1 + 0 if ( $tessdata =~ / v(\d\.\d\d) / );
- while ( $tessdata =~ /\n/ ) {
-  $tessdata =~ s/\n.*$//g;
+ my ($output) = @_;
+ my ( $v, $suffix );
+ $v = $1 + 0 if ( $output =~ /\ v(\d\.\d\d)\ /x );
+ while ( $output =~ /\n/x ) {
+  $output =~ s/\n.*$//gx;
  }
- if ( $tessdata =~ s/^Unable to load unicharset file // ) {
-  $version = 2 unless defined $version;
+ if ( $output =~ s/^Unable\ to\ load\ unicharset\ file\ //x ) {
+  $v = 2 unless defined $v;
   $suffix = '.unicharset';
  }
- elsif ( $tessdata =~ s/^Error openn?ing data file // ) {
-  $version = 3 unless defined $version;
+ elsif ( $output =~ s/^Error\ openn?ing\ data\ file\ //x ) {
+  $v = 3 unless defined $v;
   $suffix = '.traineddata';
  }
  else {
   return;
  }
- $tessdata =~ s/\/$suffix$//;
- return $tessdata, $version, $suffix;
+ $output =~ s/\/$suffix$//x;
+ return $output, $v, $suffix;
 }
 
 sub languages {
@@ -64,12 +64,12 @@ sub languages {
    spa        => 'Spanish',
    vie        => 'Vietnamese',
   );
-  for ( glob "$tessdata/*$suffix" ) {
+  for ( glob "$tessdata/*$datasuffix" ) {
 
    # Weed out the empty language files
    if ( not -z $_ ) {
     my $code;
-    if (/([\w\-]*)$suffix$/) {
+    if (/ ([\w\-]*) $datasuffix $/x) {
      $code = $1;
      $main::logger->info("Found tesseract language $code");
      if ( defined $iso639{$code} ) {
@@ -89,15 +89,16 @@ sub languages {
 }
 
 sub hocr {
- my ( $class, $file, $language, $pidfile, $tif, $cmd ) = @_;
+ my ( $class, $file, $language, $pidfile ) = @_;
+ my ( $tif, $cmd );
  setup() unless $setup;
 
  # Temporary filename for output
  my $suffix = $version >= 3 ? '.html' : '.txt';
  my $txt = File::Temp->new( SUFFIX => $suffix );
- ( my $name, my $path, $suffix ) = fileparse( $txt, $suffix );
+ ( my $name, my $path, undef ) = fileparse( $txt, $suffix );
 
- if ( $file !~ /\.tif$/ ) {
+ if ( $file !~ /\.tif$/x ) {
 
   # Temporary filename for new file
   $tif = File::Temp->new( SUFFIX => '.tif' );
