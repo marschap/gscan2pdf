@@ -41,6 +41,7 @@ sub languages {
    hun    => 'Hungarian',
    bul    => 'Bulgarian',
    slo    => 'Slovak',
+   slv    => 'Slovenian',
    lav    => 'Latvian',
    lit    => 'Lithuanian',
    est    => 'Estonian',
