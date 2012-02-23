@@ -5883,8 +5883,8 @@ sub scan_pages {
 
  my $signal;
  Gscan2pdf::Frontend::Sane->scan_pages(
-  $session, $format, $npages, $start, $step,
-  sub {    # started callback
+  dir => $session, format => $format, npages => $npages, start => $start, step => $step,
+  started_callback => sub {
    update_spbar( $i, $npages );
    $shbox->show_all;
    $signal = $scbutton->signal_connect(
@@ -5893,17 +5893,17 @@ sub scan_pages {
     }
    );
   },
-  sub {    # running callback
+  running_callback => sub {
    my ($progress) = @_;
    $spbar->set_fraction($progress) if ( defined $progress );
   },
-  sub {    # finished callback
+  finished_callback => sub {
    $scbutton->signal_handler_disconnect($signal) if (defined $signal);
    scan_options( $notebook, $device_list[ $combobd->get_active ] )
      if ( $SETTING{'cycle sane handle'} );
    $shbox->hide;
   },
-  sub {    # new page callback
+  new_page_callback => sub {
    my ($n) = @_;
    $i++;
 
@@ -5925,7 +5925,7 @@ sub scan_pages {
 
    update_spbar( $i, $npages );
   },
-  sub {    # error callback
+  error_callback => sub {
    $scbutton->signal_handler_disconnect($signal) if (defined $signal);
    $shbox->hide;
    my ($msg) = @_;
@@ -7390,8 +7390,8 @@ sub default2index {
 
   my $signal;
   Gscan2pdf::Frontend::Sane->open_device(
-   $device->{name},
-   sub {    # started callback
+   device_name => $device->{name},
+   started_callback => sub {
     $spbar->set_text( $d->get('Opening device') );
     $spbar->set_pulse_step(.1);
     $shbox->show_all;
@@ -7401,10 +7401,10 @@ sub default2index {
      }
     );
    },
-   sub {    # running callback
+   running_callback => sub {
     $spbar->pulse;
    },
-   sub {    # finished callback
+   finished_callback => sub {
     $scbutton->signal_handler_disconnect($signal);
     $shbox->hide;
     Gscan2pdf::Frontend::Sane->find_scan_options(
@@ -7818,7 +7818,7 @@ sub default2index {
      }
     );
    },
-   sub {      # error callback
+   error_callback => sub {
     my ($message) = @_;
     $windows2->destroy;
     main::show_message_dialog( $window, 'error', 'close',
@@ -7861,8 +7861,8 @@ sub default2index {
 
   my $signal;
   Gscan2pdf::Frontend::Sane->set_option(
-   $i, $val,
-   sub {    # started callback
+   index => $i, value => $val,
+   started_callback => sub {
     $spbar->set_text( $d->get('Updating options') );
     $spbar->set_pulse_step(.1);
     $shbox->show_all;
@@ -7872,10 +7872,10 @@ sub default2index {
      }
     );
    },
-   sub {    # running callback
+   running_callback => sub {
     $spbar->pulse;
    },
-   sub {    # finished callback
+   finished_callback => sub {
     my ($data) = @_;
 
     if ($data) {

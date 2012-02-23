@@ -28,18 +28,15 @@ our $d = Locale::gettext->domain($prog_name);
 Gscan2pdf::Frontend::Sane->setup( $prog_name, $d, $logger );
 
 Gscan2pdf::Frontend::Sane->open_device(
- 'test',
- sub { },
- sub { },
- sub {
+ device_name       => 'test',
+ finished_callback => sub {
   Gscan2pdf::Frontend::Sane->scan_pages(
-   '.',
-   'out%d.pnm',
-   1, 1, 1,
-   sub { },
-   sub { },
-   sub { },
-   sub {
+   dir               => '.',
+   format            => 'out%d.pnm',
+   start             => 1,
+   step              => 1,
+   npages            => 1,
+   finished_callback => sub {
     is( -s 'out1.pnm', 30807, 'PNM created with expected size' );
     Gtk2->main_quit;
    }

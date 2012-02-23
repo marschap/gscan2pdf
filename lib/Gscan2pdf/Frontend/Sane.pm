@@ -2,6 +2,7 @@ package Gscan2pdf::Frontend::Sane;
 
 use strict;
 use warnings;
+use feature "switch";
 
 use threads;
 use threads::shared;
@@ -105,30 +106,31 @@ sub device {
 }
 
 sub open_device {
- my ( $class, $device, $started_callback, $running_callback, $finished_callback,
-  $error_callback )
-   = @_;
+ my ( $class, %options ) = @_;
 
- my $sentinel = _enqueue_request( 'open', { device_name => $device } );
+ my $sentinel =
+   _enqueue_request( 'open', { device_name => $options{device_name} } );
 
  my $started;
  _when_ready(
   $sentinel,
   sub {
-   $started_callback->() unless ($started);
+   $options{started_callback}->()
+     if ( not $started and defined( $options{started_callback} ) );
    if ( $_self->{status} == SANE_STATUS_GOOD ) {
-    $finished_callback->();
+    $options{finished_callback}->() if ( defined $options{finished_callback} );
    }
    else {
-    $error_callback->( Sane::strstatus( $_self->{status} ) );
+    $options{error_callback}->( Sane::strstatus( $_self->{status} ) )
+      if ( defined $options{error_callback} );
    }
   },
   sub {
    unless ($started) {
-    $started_callback->();
+    $options{started_callback}->() if ( defined $options{started_callback} );
     $started = 1;
    }
-   $running_callback->();
+   $options{running_callback}->() if ( defined $options{running_callback} );
   }
  );
  return;
@@ -167,16 +169,14 @@ sub find_scan_options {
 }
 
 sub set_option {
- my ( $class, $i, $val, $started_callback, $running_callback,
-  $finished_callback )
-   = @_;
+ my ( $class, %options ) = @_;
 
  my $options : shared;
  my $sentinel = _enqueue_request(
   'set-option',
   {
-   index       => $i,
-   value       => $val,
+   index       => $options{index},
+   value       => $options{value},
    new_options => \$options
   }
  );
@@ -185,15 +185,17 @@ sub set_option {
  _when_ready(
   $sentinel,
   sub {
-   $started_callback->() unless ($started);
-   $finished_callback->($options);
+   $options{started_callback}->()
+     if ( not $started and defined( $options{started_callback} ) );
+   $options{finished_callback}->($options)
+     if ( defined $options{finished_callback} );
   },
   sub {
    unless ($started) {
-    $started_callback->();
+    $options{started_callback}->() if ( defined $options{started_callback} );
     $started = 1;
    }
-   $running_callback->();
+   $options{running_callback}->() if ( defined $options{running_callback} );
   }
  );
  return;
@@ -207,20 +209,15 @@ sub _new_page {
 }
 
 sub scan_pages {
- my (
-  $class,             $dir,              $format,
-  $npages,            $n,                $step,
-  $started_callback,  $running_callback, $finished_callback,
-  $new_page_callback, $error_callback
- ) = @_;
+ my ( $class, %options ) = @_;
 
  $_self->{status}        = SANE_STATUS_GOOD;
  $_self->{abort_scan}    = 0;
  $_self->{scan_progress} = 0;
- my $sentinel = _new_page( $dir, $format, $n );
+ my $sentinel = _new_page( $options{dir}, $options{format}, $options{start} );
 
  my $n2      = 1;
- my $npages2 = $npages;
+ my $npages2 = $options{npages};
 
  my $started;
  Glib::Timeout->add(
@@ -228,10 +225,11 @@ sub scan_pages {
   sub {
    if ( not $$sentinel ) {
     unless ($started) {
-     $started_callback->();
+     $options{started_callback}->() if ( defined $options{started_callback} );
      $started = 1;
     }
-    $running_callback->( $_self->{scan_progress} );
+    $options{running_callback}->( $_self->{scan_progress} )
+      if ( defined $options{running_callback} );
     return Glib::SOURCE_CONTINUE;
    }
    else {
@@ -240,12 +238,13 @@ sub scan_pages {
     if ($_self->{status} == SANE_STATUS_GOOD
      or $_self->{status} == SANE_STATUS_EOF )
     {
-     $new_page_callback->($n);
+     $options{new_page_callback}->( $options{start} )
+       if ( defined $options{new_page_callback} );
     }
 
     # Stop the process unless everything OK and more scans required
     unless (
-     ( $npages == -1 or --$npages )
+     ( $options{npages} == -1 or --$options{npages} )
      and ( $_self->{status} == SANE_STATUS_GOOD
       or $_self->{status} == SANE_STATUS_EOF )
       )
@@ -255,21 +254,23 @@ sub scan_pages {
          $_self->{status} == SANE_STATUS_GOOD
       or $_self->{status} == SANE_STATUS_EOF
       or ( $_self->{status} == SANE_STATUS_NO_DOCS
-       and $npages < 1
+       and $options{npages} < 1
        and $n2 > 1 )
        )
      {
-      $finished_callback->();
+      $options{finished_callback}->()
+        if ( defined $options{finished_callback} );
      }
      else {
-      $error_callback->( Sane::strstatus( $_self->{status} ) );
+      $options{error_callback}->( Sane::strstatus( $_self->{status} ) )
+        if ( defined $options{error_callback} );
      }
      return Glib::SOURCE_REMOVE;
     }
 
-    $n += $step;
+    $options{start} += $options{step};
     $n2++;
-    $sentinel = _new_page( $dir, $format, $n );
+    $sentinel = _new_page( $options{dir}, $options{format}, $options{start} );
     return Glib::SOURCE_CONTINUE;
    }
   }
@@ -281,38 +282,20 @@ sub _thread_main {
  my ($self) = @_;
 
  while ( my $request = $self->{requests}->dequeue ) {
-  if ( $request->{action} eq 'quit' ) {
-   last;
-  }
-
-  elsif ( $request->{action} eq 'get-devices' ) {
-   _thread_get_devices($self);
-  }
-
-  elsif ( $request->{action} eq 'open' ) {
-   _thread_open_device( $self, $request->{device_name} );
-  }
-
-  elsif ( $request->{action} eq 'get-options' ) {
-   _thread_get_options( $self, $request->{options} );
-  }
-
-  elsif ( $request->{action} eq 'set-option' ) {
+  given ( $request->{action} ) {
+   last when ( $_ eq 'quit' );
+   _thread_get_devices($self) when ( $_ eq 'get-devices' );
+   _thread_open_device( $self, $request->{device_name} ) when ( $_ eq 'open' );
+   _thread_get_options( $self, $request->{options} )
+     when ( $_ eq 'get-options' );
    _thread_set_option( $self, $request->{index}, $request->{value},
-    $request->{new_options} );
-  }
-
-  elsif ( $request->{action} eq 'scan-page' ) {
-   _thread_scan_page( $self, $request->{path} );
-  }
-
-  elsif ( $request->{action} eq 'cancel' ) {
-   _thread_cancel($self);
-  }
-
-  else {
-   $logger->info( "Ignoring unknown request " . $request->{action} );
-   next;
+    $request->{new_options} ) when ( $_ eq 'set-option' );
+   _thread_scan_page( $self, $request->{path} ) when ( $_ eq 'scan-page' );
+   _thread_cancel($self) when ( $_ eq 'cancel' );
+   default {
+    $logger->info( "Ignoring unknown request $_" );
+    next;
+   }
   }
 
   # Store the current status in the shared status variable.  Otherwise, the
@@ -449,7 +432,7 @@ sub _thread_scan_page_to_fh {
  my $parm;
  {
   do {    # extra braces to get last to work.
-   if ( !$first_frame ) {
+   if ( not $first_frame ) {
     $device->start;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
      $logger->info("$prog_name: sane_start: $Sane::STATUS");
@@ -495,20 +478,22 @@ sub _thread_scan_page_to_fh {
      or $parm->{format} == SANE_FRAME_GREEN
      or $parm->{format} == SANE_FRAME_BLUE )
     {
-     die unless ( $parm->{depth} == 8 );
+     die "Red/Green/Blue frames require depth=8\n"
+       unless ( $parm->{depth} == 8 );
      $must_buffer = 1;
      $offset      = $parm->{format} - SANE_FRAME_RED;
     }
     elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-     die unless ( ( $parm->{depth} == 8 ) || ( $parm->{depth} == 16 ) );
+     die "RGB frames require depth=8 or 16\n"
+       unless ( ( $parm->{depth} == 8 ) or ( $parm->{depth} == 16 ) );
     }
     if ($parm->{format} == SANE_FRAME_RGB
      or $parm->{format} == SANE_FRAME_GRAY )
     {
-     die
+     die "Valid depths are 1, 8 or 16\n"
        unless ( ( $parm->{depth} == 1 )
-      || ( $parm->{depth} == 8 )
-      || ( $parm->{depth} == 16 ) );
+      or ( $parm->{depth} == 8 )
+      or ( $parm->{depth} == 16 ) );
      if ( $parm->{lines} < 0 ) {
       $must_buffer = 1;
       $offset      = 0;
@@ -520,14 +505,14 @@ sub _thread_scan_page_to_fh {
     }
    }
    else {
-    die
-      unless ( $parm->{format} >= SANE_FRAME_RED
-     && $parm->{format} <= SANE_FRAME_BLUE );
+    die "Encountered unknown format\n"
+      if ( $parm->{format} < SANE_FRAME_RED
+     or $parm->{format} > SANE_FRAME_BLUE );
     $offset = $parm->{format} - SANE_FRAME_RED;
     $image{x} = $image{y} = 0;
    }
    my $hundred_percent = $parm->{bytes_per_line} * $parm->{lines} * (
-    ( $parm->{format} == SANE_FRAME_RGB || $parm->{format} == SANE_FRAME_GRAY )
+    ( $parm->{format} == SANE_FRAME_RGB or $parm->{format} == SANE_FRAME_GRAY )
     ? 1
     : 3
    );
@@ -602,12 +587,12 @@ sub _thread_scan_page_to_fh {
 
 cleanup:
  my $expected_bytes = $parm->{bytes_per_line} * $parm->{lines} * (
-  ( $parm->{format} == SANE_FRAME_RGB || $parm->{format} == SANE_FRAME_GRAY )
+  ( $parm->{format} == SANE_FRAME_RGB or $parm->{format} == SANE_FRAME_GRAY )
   ? 1
   : 3
  );
  $expected_bytes = 0 if ( $parm->{lines} < 0 );
- if ( $total_bytes > $expected_bytes && $expected_bytes != 0 ) {
+ if ( $total_bytes > $expected_bytes and $expected_bytes != 0 ) {
   $logger->info(
    sprintf "%s: WARNING: read more data than announced by backend " . "(%u/%u)",
    $prog_name, $total_bytes, $expected_bytes );
@@ -630,7 +615,7 @@ sub _thread_scan_page {
  }
 
  my $fh;
- if ( not open( $fh, ">", $path ) ) {    ## no critic
+ if ( not open( $fh, ">", $path ) ) {    ## no critic (RequireBriefOpen)
   $self->{device_handle}->cancel;
   $self->{status} = SANE_STATUS_ACCESS_DENIED;
   return;
@@ -644,8 +629,8 @@ sub _thread_scan_page {
  $logger->info( sprintf "Scanned page %s. (scanner status = %d)",
   $path, $Sane::STATUS );
 
- if ($Sane::STATUS != SANE_STATUS_GOOD
-  && $Sane::STATUS != SANE_STATUS_EOF )
+ if ( $Sane::STATUS != SANE_STATUS_GOOD
+  and $Sane::STATUS != SANE_STATUS_EOF )
  {
   unlink($path);
  }
