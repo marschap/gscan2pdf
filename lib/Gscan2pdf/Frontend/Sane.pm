@@ -293,7 +293,7 @@ sub _thread_main {
    _thread_scan_page( $self, $request->{path} ) when ( $_ eq 'scan-page' );
    _thread_cancel($self) when ( $_ eq 'cancel' );
    default {
-    $logger->info( "Ignoring unknown request $_" );
+    $logger->info("Ignoring unknown request $_");
     next;
    }
   }
