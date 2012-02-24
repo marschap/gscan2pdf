@@ -15,10 +15,10 @@ use Encode;
 
 BEGIN {
  use Exporter ();
- our ( $VERSION, @ISA, @EXPORT_OK, %EXPORT_TAGS );
+ our ( $VERSION, @EXPORT_OK, %EXPORT_TAGS );
 
- @ISA         = qw(Exporter);
- %EXPORT_TAGS = ();             # eg: TAG => [ qw!name1 name2! ],
+ use base qw(Exporter);
+ %EXPORT_TAGS = ();         # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,
  # as well as any optionally exported functions
@@ -99,7 +99,7 @@ sub thaw {
  my ($self) = @_;
  my $new = $self->clone;
  my $suffix;
- $suffix = $1 if ( $new->{filename} =~ /\.(\w*)$/ );
+ $suffix = $1 if ( $new->{filename} =~ /\.(\w*)$/x );
  my $filename = File::Temp->new( DIR => $new->{dir}, SUFFIX => ".$suffix" );
  move( $new->{filename}, $filename );
  $new->{filename} = $filename;
@@ -111,7 +111,7 @@ sub thaw {
 sub boxes {
  my ( $self, @boxes ) = @_;
 
- if ( $self->{hocr} =~ /<body>([\s\S]*)<\/body>/ ) {
+ if ( $self->{hocr} =~ /<body>([\s\S]*)<\/body>/x ) {
   my $p = HTML::TokeParser->new( \$self->{hocr} );
   my ( $x1, $y1, $x2, $y2, $text );
   while ( my $token = $p->get_token ) {
@@ -121,7 +121,7 @@ sub boxes {
      and
      ( $token->[2]{class} eq 'ocr_line' or $token->[2]{class} eq 'ocr_word' )
      and defined( $token->[2]{title} )
-     and $token->[2]{title} =~ /bbox (\d+) (\d+) (\d+) (\d+)/ )
+     and $token->[2]{title} =~ /bbox\ (\d+)\ (\d+)\ (\d+)\ (\d+)/x )
     {
      ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
     }
@@ -133,7 +133,7 @@ sub boxes {
      undef $text;
     }
    }
-   if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/ ) {
+   if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/x ) {
 
     # Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
     # where decode_entities doesn't work cleanly, so encode/decode to finally
