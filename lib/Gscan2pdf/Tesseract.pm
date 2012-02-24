@@ -153,12 +153,11 @@ sub hocr {
   $cmd = "tesseract $tif $path$name 2> /dev/null";
  }
  $main::logger->info($cmd);
- if ( defined $pidfile ) {
-  system("echo $$ > $pidfile;$cmd");
- }
- else {
-  system($cmd);
- }
+
+ # File in which to store the process ID so that it can be killed if necessary
+ $cmd = "echo $$ > $pidfile;$cmd" if ( defined $pidfile );
+
+ system($cmd);
  return Gscan2pdf::slurp($txt);
 }
 
