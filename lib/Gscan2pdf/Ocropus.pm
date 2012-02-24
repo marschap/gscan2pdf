@@ -49,10 +49,11 @@ sub setup {
 }
 
 sub hocr {
- my ( $class, $file, $language, $pidfile, $png, $cmd ) = @_;
+ my ( $class, $file, $language, $pidfile ) = @_;
+ my ( $png, $cmd );
  setup() unless $setup;
 
- if ( $file !~ /\.(png|jpg|pnm)$/ ) {
+ if ( $file !~ /\.(png|jpg|pnm)$/x ) {
 
   # Temporary filename for new file
   $png = File::Temp->new( SUFFIX => '.png' );
