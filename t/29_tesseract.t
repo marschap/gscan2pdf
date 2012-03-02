@@ -67,8 +67,8 @@ EOS
 
 ( $tessdata, $version, $suffix ) =
   Gscan2pdf::Tesseract::parse_tessdata($output);
-is( $version,  3.02,                                'v3.02' );
-is( $suffix,   '.traineddata',                      'v3.02 suffix' );
+is( $version, 3.02,           'v3.02' );
+is( $suffix,  '.traineddata', 'v3.02 suffix' );
 
 $output = <<'EOS';
 N9tesseract8IndexMapE
@@ -79,7 +79,11 @@ Warning:explicit path for executable will not be used for configs
 Offset for type %d is %lld
 EOS
 
-is( Gscan2pdf::Tesseract::parse_strings(split /\n/, $output), '/usr/share/tesseract-ocr/tessdata', 'v3.02 tessdata' );
+is(
+ Gscan2pdf::Tesseract::parse_strings( split /\n/, $output ),
+ '/usr/share/tesseract-ocr/tessdata',
+ 'v3.02 tessdata'
+);
 
 SKIP: {
  skip 'Tesseract not installed', 9 unless Gscan2pdf::Tesseract->setup;

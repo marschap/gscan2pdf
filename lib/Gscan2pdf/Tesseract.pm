@@ -21,17 +21,17 @@ sub setup {
  ( $tessdata, $version, $datasuffix ) =
    parse_tessdata(`tesseract '' '' -l '' 2>&1`);
 
- if (not defined($tessdata)) {
-   if (defined($version) and $version > 3.01) {
-     my $exe = `which tesseract`;
-     my $lib = `ldd $exe`;
-     if ($lib =~ /libtesseract\.so.\d+\ =>\ ([\/a-zA-Z0-9\-\.\_]+)\ /x) {
-       $tessdata = parse_strings(`strings $1`);
-     }
+ if ( not defined($tessdata) ) {
+  if ( defined($version) and $version > 3.01 ) {
+   my $exe = `which tesseract`;
+   my $lib = `ldd $exe`;
+   if ( $lib =~ /libtesseract\.so.\d+\ =>\ ([\/a-zA-Z0-9\-\.\_]+)\ /x ) {
+    $tessdata = parse_strings(`strings $1`);
    }
-   else {
-     return;
-   }
+  }
+  else {
+   return;
+  }
  }
 
  $main::logger->info(
@@ -56,21 +56,8 @@ sub parse_tessdata {
   $v = 3 unless defined $v;
   $suffix = '.traineddata';
  }
- elsif (defined($v) and $v > 3.01) {
-   my $exe = `which tesseract`;
-   my $lib = `ldd $exe`;
-   my $dir;
-   if ($lib =~ /libtesseract\.so.\d+\ =>\ ([\/a-zA-Z0-9\-\.\_]+)\ /x) {
-     my @strings = `strings $1`;
-     for (my $i = 0; $i < @strings; $i++) {
-       if ($strings[$i] =~ /Usage/) {
-         $dir = $strings[$i+3];
-         chomp $dir;
-         last;
-       }
-     }
-   }
-   return undef, $v, '.traineddata';
+ elsif ( defined($v) and $v > 3.01 ) {
+  return undef, $v, '.traineddata';
  }
  else {
   return;
@@ -80,16 +67,14 @@ sub parse_tessdata {
 }
 
 sub parse_strings {
-  my @strings = @_;
-  use Data::Dumper;
-  for (my $i = 0; $i < @strings; $i++) {
-    if ($strings[$i] =~ /Usage/) {
-      my $dir = $strings[$i+3];
-      chomp $dir;
-      return $dir."tessdata";
-    }
+ my @strings = @_;
+ for (@strings) {
+  if (/\/share\//) {
+   chomp $_;
+   return $_ . "tessdata";
   }
-  return;
+ }
+ return;
 }
 
 sub languages {
