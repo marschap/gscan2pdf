@@ -12,7 +12,7 @@ my ( %languages, $installed, $setup, $version, $tessdata, $datasuffix );
 
 sub setup {
  return $installed if $setup;
- if ( system("which tesseract > /dev/null 2> /dev/null") == 0 ) {
+ if ( system("which tesseract > /dev/null 2>&1") == 0 ) {
   $installed = 1;
  }
  else {
@@ -20,7 +20,20 @@ sub setup {
  }
  ( $tessdata, $version, $datasuffix ) =
    parse_tessdata(`tesseract '' '' -l '' 2>&1`);
- return unless defined $tessdata;
+
+ if (not defined($tessdata)) {
+   if (defined($version) and $version > 3.01) {
+     my $exe = `which tesseract`;
+     my $lib = `ldd $exe`;
+     if ($lib =~ /libtesseract\.so.\d+\ =>\ ([\/a-zA-Z0-9\-\.\_]+)\ /x) {
+       $tessdata = parse_strings(`strings $1`);
+     }
+   }
+   else {
+     return;
+   }
+ }
+
  $main::logger->info(
   "Found tesseract version $version. Using tessdata at $tessdata");
  $setup = 1;
@@ -28,7 +41,8 @@ sub setup {
 }
 
 sub parse_tessdata {
- my ($output) = @_;
+ my @output = @_;
+ my $output = join ",", @output;
  my ( $v, $suffix );
  $v = $1 + 0 if ( $output =~ /\ v(\d\.\d\d)\ /x );
  while ( $output =~ /\n/x ) {
@@ -42,11 +56,40 @@ sub parse_tessdata {
   $v = 3 unless defined $v;
   $suffix = '.traineddata';
  }
+ elsif (defined($v) and $v > 3.01) {
+   my $exe = `which tesseract`;
+   my $lib = `ldd $exe`;
+   my $dir;
+   if ($lib =~ /libtesseract\.so.\d+\ =>\ ([\/a-zA-Z0-9\-\.\_]+)\ /x) {
+     my @strings = `strings $1`;
+     for (my $i = 0; $i < @strings; $i++) {
+       if ($strings[$i] =~ /Usage/) {
+         $dir = $strings[$i+3];
+         chomp $dir;
+         last;
+       }
+     }
+   }
+   return undef, $v, '.traineddata';
+ }
  else {
   return;
  }
  $output =~ s/\/$suffix$//x;
  return $output, $v, $suffix;
+}
+
+sub parse_strings {
+  my @strings = @_;
+  use Data::Dumper;
+  for (my $i = 0; $i < @strings; $i++) {
+    if ($strings[$i] =~ /Usage/) {
+      my $dir = $strings[$i+3];
+      chomp $dir;
+      return $dir."tessdata";
+    }
+  }
+  return;
 }
 
 sub languages {

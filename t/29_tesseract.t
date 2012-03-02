@@ -7,7 +7,7 @@
 
 use warnings;
 use strict;
-use Test::More tests => 19;
+use Test::More tests => 22;
 
 BEGIN {
  use_ok('Gscan2pdf::Tesseract');
@@ -59,6 +59,28 @@ is( $tessdata, '/usr/share/tesseract-ocr/tessdata', 'v3.01 tessdata' );
 is( $version,  3.01,                                'v3.01' );
 is( $suffix,   '.traineddata',                      'v3.01 suffix' );
 
+$output = <<'EOS';
+Tesseract couldn't load any languages!
+Tesseract Open Source OCR Engine v3.02 with Leptonica
+Cannot open input file:
+EOS
+
+( $tessdata, $version, $suffix ) =
+  Gscan2pdf::Tesseract::parse_tessdata($output);
+is( $version,  3.02,                                'v3.02' );
+is( $suffix,   '.traineddata',                      'v3.02 suffix' );
+
+$output = <<'EOS';
+N9tesseract8IndexMapE
+Usage
+TESSDATA_PREFIX
+Warning:explicit path for executable will not be used for configs
+/usr/share/tesseract-ocr/
+Offset for type %d is %lld
+EOS
+
+is( Gscan2pdf::Tesseract::parse_strings(split /\n/, $output), '/usr/share/tesseract-ocr/tessdata', 'v3.02 tessdata' );
+
 SKIP: {
  skip 'Tesseract not installed', 9 unless Gscan2pdf::Tesseract->setup;
 
@@ -92,3 +114,5 @@ SKIP: {
 
  unlink 'test.tif';
 }
+
+__END__
