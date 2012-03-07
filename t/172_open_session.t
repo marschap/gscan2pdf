@@ -43,5 +43,4 @@ is(
 
 #########################
 
-unlink 'test.gs2p', <tmp/*>;
-rmdir 'tmp';
+unlink 'test.gs2p';

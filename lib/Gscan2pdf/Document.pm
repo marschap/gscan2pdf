@@ -1510,8 +1510,8 @@ sub open_session {
   my $tar = Archive::Tar->new( $filename, TRUE );
   @filenamelist = $tar->list_files;
   $tar->extract;
+  $dir = dirname( $filenamelist[0] );
  }
- $dir = dirname( $filenamelist[0] );
  my $sessionref = retrieve( File::Spec->catfile( $dir, 'session' ) );
  my %session = %$sessionref;
 

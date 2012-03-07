@@ -142,8 +142,11 @@ t/152_save_utf8.t
 t/161_import_TIFF.t
 t/162_import_ppm.t
 t/163_import_pdf.t
-t/18_import_multiple_images.t
-t/19_import_with_spaces.t
+t/164_import_multiple_images.t
+t/165_import_with_spaces.t
+t/171_save_session.t
+t/172_open_session.t
+t/173_open_crashed_session.t
 t/21_rotate.t
 t/22_analyse_blank.t
 t/23_analyse_dark.t
@@ -163,8 +166,6 @@ t/36_unpaper2.t
 t/37_user_defined.t
 t/38_user_defined2.t
 t/39_gocr.t
-t/40_save_session.t
-t/41_open_session.t
 t/42_cancel_save_tiff.t
 t/43_cancel_import.t
 t/44_cancel_rotate.t
