@@ -6174,27 +6174,34 @@ sub copy_selection {
 # Paste the selection
 
 sub paste_selection {
+
+ # We only add pages if the list of thumbnails has the focus
  if ( $slist->has_focus ) {
   my @page = $slist->get_selected_indices;
 
-  # Create a new image file
+  # Create a new image file for each page in the clipboard
   for (@clipboard) {
    my $suffix;
    $suffix = $1 if ( $_->[2] =~ /(\.\w*)$/ );
    my $new = File::Temp->new( DIR => $session, SUFFIX => $suffix );
-   copy( $_->[2], $new )
-     or show_message_dialog( $window, 'error', 'close',
-    $d->get('Error pasting image') );
+   unless ( copy( $_->[2], $new ) ) {
+    show_message_dialog( $window, 'error', 'close',
+     $d->get('Error pasting image') );
+    return;
+   }
    $_->[2] = $new;
   }
 
   # Block the row-changed signal whilst adding the scan (row) and sorting it.
   $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
 
+  # If a page is selected, then insert the pasted page immediately afterwards
   if (@page) {
    splice @{ $slist->{data} }, $page[0] + 1, 0, @clipboard;
    @page = ( $page[0] + 1 );
   }
+
+  # Otherwise append the page to the end
   else {
    push @{ $slist->{data} }, @clipboard;
    @page = ( $#{ $slist->{data} } - $#clipboard );
