@@ -421,7 +421,7 @@ $logger->info( "Using GtkImageView version ",
  Gtk2::ImageView->library_version );
 $logger->info("Using Gtk2::ImageView version $Gtk2::ImageView::VERSION");
 $logger->info("Using PDF::API2 version $PDF::API2::VERSION");
-$logger->info('Using Sane version '.join( '.', Sane->get_version ));
+$logger->info( 'Using Sane version ' . join( '.', Sane->get_version ) );
 $logger->info("Using libsane-perl version $Sane::VERSION");
 
 if ($debug) {
@@ -1518,7 +1518,8 @@ else {
  $tmpdir = File::Spec->tmpdir;
 }
 $logger->info("Checking $tmpdir for crashed sessions");
-my ( @sessions, @crashed, $selected ) = glob File::Spec->catfile( $tmpdir, 'gscan2pdf-????' );
+my ( @sessions, @crashed, $selected ) =
+  glob File::Spec->catfile( $tmpdir, 'gscan2pdf-????' );
 
 # Forget those used by running sessions
 for (@sessions) {
@@ -2738,7 +2739,7 @@ sub save_PDF {
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
-      system( "xdg-open \"$filename\" &" )
+      system("xdg-open \"$filename\" &")
         if ( defined( $SETTING{'view files toggle'} )
        and $SETTING{'view files toggle'} );
       $logger->debug("Finished saving $filename");
@@ -3191,7 +3192,7 @@ sub save_dialog {
          $thbox->hide_all unless $pending;
          $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
          mark_pages(@pagelist);
-         system( "xdg-open \"$filename\" &" )
+         system("xdg-open \"$filename\" &")
            if ( defined( $SETTING{'view files toggle'} )
           and $SETTING{'view files toggle'} );
          $logger->debug("Finished saving $filename");
@@ -3453,7 +3454,7 @@ sub save_image {
     $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     mark_pages(@pagelist);
-    system( "xdg-open \"$filename\" &" )
+    system("xdg-open \"$filename\" &")
       if ( defined( $SETTING{'view files toggle'} )
      and $SETTING{'view files toggle'} );
     $logger->debug("Finished saving $filename");
@@ -3512,7 +3513,7 @@ sub save_TIFF {
    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    mark_pages(@pagelist);
    my $file = defined($ps) ? $ps : $filename;
-   system( "xdg-open \"$filename\" &" )
+   system("xdg-open \"$filename\" &")
      if ( defined( $SETTING{'view files toggle'} )
     and $SETTING{'view files toggle'} );
    $logger->debug("Finished saving $filename");
@@ -3604,7 +3605,7 @@ sub save_djvu {
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
       mark_pages(@pagelist);
-      system( "xdg-open \"$filename\" &" )
+      system("xdg-open \"$filename\" &")
         if ( defined( $SETTING{'view files toggle'} )
        and $SETTING{'view files toggle'} );
       $logger->debug("Finished saving $filename");
@@ -3736,7 +3737,7 @@ sub email {
      $thbox->hide_all unless $pending;
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      mark_pages(@pagelist);
-     system( "xdg-open \"$pdf\" &" )
+     system("xdg-open \"$pdf\" &")
        if ( defined( $SETTING{'view files toggle'} )
       and $SETTING{'view files toggle'} );
      $logger->info($mua_string);
@@ -4475,7 +4476,7 @@ sub get_devices {
  $logger->info($cmd);
 
  # Interface to frontend
- my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";    ## no critic
+ my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";  ## no critic
  $logger->info("Forked PID $pid");
 
  # Read without blocking
@@ -5372,8 +5373,8 @@ sub populate_device_list2 {
     get_devices2($hboxd);
    }
    else {
-    $SETTING{device} = $device_list[ $index ]->{name};
-    scan_options( $notebook, $device_list[ $index ] );
+    $SETTING{device} = $device_list[$index]->{name};
+    scan_options( $notebook, $device_list[$index] );
    }
   }
  );
@@ -5883,7 +5884,11 @@ sub scan_pages {
 
  my $signal;
  Gscan2pdf::Frontend::Sane->scan_pages(
-  dir => $session, format => $format, npages => $npages, start => $start, step => $step,
+  dir              => $session,
+  format           => $format,
+  npages           => $npages,
+  start            => $start,
+  step             => $step,
   started_callback => sub {
    update_spbar( $i, $npages );
    $shbox->show_all;
@@ -5898,7 +5903,7 @@ sub scan_pages {
    $spbar->set_fraction($progress) if ( defined $progress );
   },
   finished_callback => sub {
-   $scbutton->signal_handler_disconnect($signal) if (defined $signal);
+   $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
    scan_options( $notebook, $device_list[ $combobd->get_active ] )
      if ( $SETTING{'cycle sane handle'} );
    $shbox->hide;
@@ -5926,7 +5931,7 @@ sub scan_pages {
    update_spbar( $i, $npages );
   },
   error_callback => sub {
-   $scbutton->signal_handler_disconnect($signal) if (defined $signal);
+   $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
    $shbox->hide;
    my ($msg) = @_;
    show_message_dialog( $windows2, 'error', 'close', $d_sane->get($msg) );
@@ -5993,7 +5998,7 @@ sub import_scan {
  my ( $ofilename, $page, $resolution, $delete, $rotate, $unpaper, $ocr ) = @_;
 
  # Interface to frontend
- open my $fh, '<', $ofilename or die "can't open $ofilename: $!";    ## no critic
+ open my $fh, '<', $ofilename or die "can't open $ofilename: $!";   ## no critic
 
  # Read without blocking
  my $size = 0;
@@ -6584,7 +6589,7 @@ sub rescan_options {
   );
 
   # Interface to frontend
-  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";    ## no critic
+  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!"; ## no critic
   $logger->info("Forked PID $pid");
 
   # Read without blocking
@@ -7168,7 +7173,7 @@ sub update_options {
   );
 
   # Interface to frontend
-  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";    ## no critic
+  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!"; ## no critic
   $logger->info("Forked PID $pid");
 
   # Read without blocking
@@ -7390,7 +7395,7 @@ sub default2index {
 
   my $signal;
   Gscan2pdf::Frontend::Sane->open_device(
-   device_name => $device->{name},
+   device_name      => $device->{name},
    started_callback => sub {
     $spbar->set_text( $d->get('Opening device') );
     $spbar->set_pulse_step(.1);
@@ -7861,7 +7866,8 @@ sub default2index {
 
   my $signal;
   Gscan2pdf::Frontend::Sane->set_option(
-   index => $i, value => $val,
+   index            => $i,
+   value            => $val,
    started_callback => sub {
     $spbar->set_text( $d->get('Updating options') );
     $spbar->set_pulse_step(.1);
@@ -10251,9 +10257,11 @@ sub preferences {
    ],
    if ( $dependencies{scanadf} );
  my $combob = combobox_from_array(@frontends);
- my $cbcsh = Gtk2::CheckButton->new_with_label( $d->get('Cycle SANE handle after scan') );
+ my $cbcsh =
+   Gtk2::CheckButton->new_with_label( $d->get('Cycle SANE handle after scan') );
  $combob->signal_connect(
   changed => sub {
+
    if ( $frontends[ $combob->get_active ][0] eq 'libsane-perl' ) {
     $cbcsh->set_sensitive(TRUE);
    }
@@ -10266,8 +10274,8 @@ sub preferences {
  $hbox->pack_end( $combob, TRUE, TRUE, 0 );
 
  # Cycle SANE handle after scan
- $cbcsh->set_active($SETTING{'cycle sane handle'})
-   if (defined $SETTING{'cycle sane handle'});
+ $cbcsh->set_active( $SETTING{'cycle sane handle'} )
+   if ( defined $SETTING{'cycle sane handle'} );
  $vbox->pack_start( $cbcsh, TRUE, TRUE, 0 );
 
  # Default filename
@@ -10414,8 +10422,8 @@ sub preferences {
 
  # View saved files
  my $cbv = Gtk2::CheckButton->new_with_label( $d->get('View files on saving') );
- $cbv->set_active($SETTING{'view files toggle'})
-   if (defined $SETTING{'view files toggle'});
+ $cbv->set_active( $SETTING{'view files toggle'} )
+   if ( defined $SETTING{'view files toggle'} );
  $vbox->pack_start( $cbv, TRUE, TRUE, 0 );
 
  # Apply button
@@ -10438,9 +10446,9 @@ sub preferences {
     }
    }
    $SETTING{'cycle sane handle'} = $cbcsh->get_active;
-   $SETTING{'default filename'} = $fileentry->get_text;
-   $SETTING{'scan prefix'}      = $preentry->get_text;
-   $SETTING{'cache options'}    = $cbc->get_active;
+   $SETTING{'default filename'}  = $fileentry->get_text;
+   $SETTING{'scan prefix'}       = $preentry->get_text;
+   $SETTING{'cache options'}     = $cbc->get_active;
    delete $SETTING{cache}
      if ( defined $SETTING{cache} and not $SETTING{'cache options'} );
    $SETTING{'restore window'} = $cbw->get_active;
