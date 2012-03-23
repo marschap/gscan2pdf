@@ -6,6 +6,8 @@
 * Add more language codes for Tesseract and Cuneiform
 * + Tesseract 3.02 support
 * Fixed Perl exiting when restoring a crashed session
+* Don't add corrupted page if error is thrown copying the image
+  Closes Debian bug #663584
 
 
 1.0.1 (05.02.2012):
