@@ -33,8 +33,11 @@ our $d = Locale::gettext->domain($prog_name);
 my $slist = Gscan2pdf::Document->new;
 $slist->open_session( undef, 'test.gs2p' );
 
-is( -s $slist->{data}[0][2]{filename},
- 6936, 'PNG extracted with expected size' );
+like(
+ `file $slist->{data}[0][2]{filename}`,
+ qr/PNG image data, 70 x 46, 8-bit\/color RGB, non-interlaced/,
+ 'PNG extracted with expected size'
+);
 is(
  $slist->{data}[0][2]{hocr},
  'The quick brown fox',
