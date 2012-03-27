@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.0.1
+Version: 1.0.2
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -83,7 +83,11 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sun Feb 05 2012 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Tue Mar 27 2012 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #663584 (copy-paste of pages corrupts document)
+    Closes: #664635 (Fails to restore session, invalid pathname)
+    Closes: #665871 (no longer offers 'tesseract' OCR, persistently)
   - New upstream release
     Closes: #653918 (gscan2pdf doesn't save metadata anymore)
     Closes: #646298 (pdf-exports of ocropus texts are slow, big)
