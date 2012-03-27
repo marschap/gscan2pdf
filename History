@@ -1,13 +1,16 @@
-1.0.2 (05.05.2012):
+1.0.2 (27.03.2012):
 
 * Fixed ocropus support
   Closes bug 3487120 (Ocropus no longer in OCR selection)
 * Reference core font in PDF only once
 * Add more language codes for Tesseract and Cuneiform
 * + Tesseract 3.02 support
+  Closes Debian bug #665871
 * Fixed Perl exiting when restoring a crashed session
 * Don't add corrupted page if error is thrown copying the image
   Closes Debian bug #663584
+* Fix restore crashed session
+  Closes Debian bug #664635
 
 
 1.0.1 (05.02.2012):

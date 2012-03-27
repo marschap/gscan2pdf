@@ -2,8 +2,10 @@ gscan2pdf (1.0.2) unstable; urgency=low
 
   * New upstream release
     Closes: #663584 (copy-paste of pages corrupts document)
+    Closes: #664635 (Fails to restore session, invalid pathname)
+    Closes: #665871 (no longer offers 'tesseract' OCR, persistently)
 
- -- Jeffrey Ratcliffe <jjr@debian.org>  Sun, 05 Feb 2012 22:13:28 +0100
+ -- Jeffrey Ratcliffe <jjr@debian.org>  Tue, 27 Mar 2012 10:56:33 +0200
 
 gscan2pdf (1.0.1-1) unstable; urgency=low
 
