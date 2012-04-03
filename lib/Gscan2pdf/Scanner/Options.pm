@@ -1,4 +1,4 @@
-package Gscan2pdf::Frontend::Scanimage;
+package Gscan2pdf::Scanner::Options;
 
 use strict;
 use warnings;
@@ -20,12 +20,48 @@ BEGIN {
 }
 our @EXPORT_OK;
 
-# return a hash of the passed options
+sub new {
+ my ( $class, $options ) = @_;
+ croak "Error: no options supplied" unless ( defined $options );
+ my $self = {};
+ ( $self->{array}, $self->{hash} ) = options2hash($options);
+ bless( $self, $class );
+ return $self;
+}
+
+sub by_index {
+ my ( $self, $i ) = @_;
+ return $self->{array}[$i];
+}
+
+sub by_name {
+ my ( $self, $name ) = @_;
+ return $self->{hash}{$name};
+}
+
+sub num_options {
+ my ($self) = @_;
+ return $#{ $self->{array} } + 1;
+}
+
+sub delete_by_index {
+ my ( $self, $i ) = @_;
+ delete $self->{hash}{ $self->{array}[$i]{name} };
+ undef $self->{array}[$i];
+}
+
+sub delete_by_name {
+ my ( $self, $name ) = @_;
+ undef $self->{array}[ $self->{hash}{$name}{index} ];
+ delete $self->{hash}{$name};
+}
+
+# parse the scanimage/scanadf output into an array and a hash
 
 sub options2hash {
 
  my ($output) = @_;
- my %hash;
+ my ( @options, %hash );
  while (
   $output =~ /
                       -+        # at least one dash
@@ -39,9 +75,13 @@ sub options2hash {
                     /x
    )
  {
-  my $option  = $1;
-  my $values  = $2;
-  my $default = $3;
+  my %option;
+  $option{name} = $1;
+  my $values = $2;
+  $option{default} = $3;
+  $hash{ $option{name} } = \%option;
+  push @options, \%option;
+  $option{index} = $#options;
 
   # Remove everything on the option line and above.
   $output = $4;
@@ -68,10 +108,10 @@ sub options2hash {
                   /x
     )
   {
-   $hash{$option}{min}  = $1;
-   $hash{$option}{max}  = $2;
-   $hash{$option}{unit} = $3 if ( defined $3 );
-   $hash{$option}{step} = $1
+   $option{min}  = $1;
+   $option{max}  = $2;
+   $option{unit} = $3 if ( defined $3 );
+   $option{step} = $1
      if (
     $values =~ /
                        \(              # opening round bracket
@@ -92,15 +132,15 @@ sub options2hash {
     }
     else {
      if ( $values =~ /(pel|bit|mm|dpi|%|us)$/x ) {
-      $hash{$option}{unit} = $1;
-      $values = substr( $values, 0, index( $values, $hash{$option}{unit} ) );
+      $option{unit} = $1;
+      $values = substr( $values, 0, index( $values, $option{unit} ) );
      }
      $value = $values;
      undef $values;
     }
     push @array, $value if ( $value ne '' );
    }
-   $hash{$option}{values} = [@array] if (@array);
+   $option{values} = [@array] if (@array);
   }
 
   # Parse tooltips from option description based on an 8-character indent.
@@ -124,10 +164,9 @@ sub options2hash {
    $output = $2;
   }
 
-  $hash{$option}{default} = $default;
-  $hash{$option}{tip}     = $tip;
+  $option{tip} = $tip;
  }
- return %hash;
+ return \@options, \%hash;
 }
 
 1;

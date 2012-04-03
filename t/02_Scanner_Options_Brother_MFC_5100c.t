@@ -8,42 +8,28 @@
 use warnings;
 use strict;
 use Test::More tests => 2;
-BEGIN { use_ok('Gscan2pdf::Frontend::Scanimage') }
+BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 #########################
 
 # Insert your test code below, the Test::More module is use()ed here so read
 # its man page ( perldoc Test::More ) for help writing this test script.
 
-my $filename = 'scanners/brother';
+my $filename = 'scanners/Brother_MFC_5100c';
 my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
-my %this     = Gscan2pdf::Frontend::Scanimage::options2hash($output);
-my %that     = (
- 'source' => {
-  'tip'     => 'Selects the scan source (such as a document-feeder).',
-  'default' => 'Automatic Document Feeder',
-  'values'  => [ 'FlatBed', 'Automatic Document Feeder' ]
- },
- 'brightness' => {
-  'tip'     => 'Controls the brightness of the acquired image.',
-  'default' => 'inactive',
-  'min'     => -50,
-  'max'     => 50,
-  'step'    => 1,
-  'unit'    => '%',
- },
- 'mode' => {
+my $options  = Gscan2pdf::Scanner::Options->new($output);
+my @that     = (
+ {
+  name      => 'mode',
+  index     => 0,
   'tip'     => 'Select the scan mode',
   'default' => '24bit Color',
-  'values'  => [
-   'Black & White',
-   'Gray[Error Diffusion]',
-   'True Gray',
-   '24bit Color',
-   '24bit Color[Fast]'
-  ]
+  'values' =>
+    [ 'Black & White', 'Gray[Error Diffusion]', 'True Gray', '24bit Color' ]
  },
- 'resolution' => {
+ {
+  name      => 'resolution',
+  index     => 1,
   'tip'     => 'Sets the resolution of the scanned image.',
   'default' => '200',
   'values'  => [
@@ -51,7 +37,26 @@ my %that     = (
   ],
   'unit' => 'dpi',
  },
- 'contrast' => {
+ {
+  name      => 'source',
+  index     => 2,
+  'tip'     => 'Selects the scan source (such as a document-feeder).',
+  'default' => 'Automatic Document Feeder',
+  'values'  => [ 'FlatBed', 'Automatic Document Feeder' ]
+ },
+ {
+  name      => 'brightness',
+  index     => 3,
+  'tip'     => 'Controls the brightness of the acquired image.',
+  'default' => 'inactive',
+  'min'     => -50,
+  'max'     => 50,
+  'step'    => 1,
+  'unit'    => '%',
+ },
+ {
+  name      => 'contrast',
+  index     => 4,
   'tip'     => 'Controls the contrast of the acquired image.',
   'default' => 'inactive',
   'min'     => -50,
@@ -59,37 +64,45 @@ my %that     = (
   'step'    => 1,
   'unit'    => '%',
  },
- 'l' => {
+ {
+  name      => 'l',
+  index     => 5,
   'tip'     => 'Top-left x position of scan area.',
   'default' => 0,
   'min'     => 0,
-  'max'     => 210,
+  'max'     => 208,
   'step'    => 0.0999908,
   'unit'    => 'mm',
  },
- 't' => {
+ {
+  name      => 't',
+  index     => 6,
   'tip'     => 'Top-left y position of scan area.',
   'default' => 0,
   'min'     => 0,
-  'max'     => 297,
+  'max'     => 355.6,
   'step'    => 0.0999908,
   'unit'    => 'mm',
  },
- 'x' => {
+ {
+  name      => 'x',
+  index     => 7,
   'tip'     => 'Width of scan-area.',
-  'default' => 209.981,
+  'default' => 207.981,
   'min'     => 0,
-  'max'     => 210,
+  'max'     => 208,
   'step'    => 0.0999908,
   'unit'    => 'mm',
  },
- 'y' => {
+ {
+  name      => 'y',
+  index     => 8,
   'tip'     => 'Height of scan-area.',
   'default' => 296.973,
   'min'     => 0,
-  'max'     => 297,
+  'max'     => 355.6,
   'step'    => 0.0999908,
   'unit'    => 'mm',
  }
 );
-is_deeply( \%this, \%that, 'brother' );
+is_deeply( $options->{array}, \@that, 'Brother_MFC_5100c' );
