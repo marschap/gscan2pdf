@@ -283,15 +283,16 @@ sub _thread_main {
 
  while ( my $request = $self->{requests}->dequeue ) {
   given ( $request->{action} ) {
-   last when ( $_ eq 'quit' );
-   _thread_get_devices($self) when ( $_ eq 'get-devices' );
-   _thread_open_device( $self, $request->{device_name} ) when ( $_ eq 'open' );
-   _thread_get_options( $self, $request->{options} )
-     when ( $_ eq 'get-options' );
-   _thread_set_option( $self, $request->{index}, $request->{value},
-    $request->{new_options} ) when ( $_ eq 'set-option' );
-   _thread_scan_page( $self, $request->{path} ) when ( $_ eq 'scan-page' );
-   _thread_cancel($self) when ( $_ eq 'cancel' );
+   when ('quit')        { last }
+   when ('get-devices') { _thread_get_devices($self) }
+   when ('open') { _thread_open_device( $self, $request->{device_name} ) }
+   when ('get-options') { _thread_get_options( $self, $request->{options} ) }
+   when ('set-option') {
+    _thread_set_option( $self, $request->{index}, $request->{value},
+     $request->{new_options} )
+   }
+   when ('scan-page') { _thread_scan_page( $self, $request->{path} ) }
+   when ('cancel') { _thread_cancel($self) }
    default {
     $logger->info("Ignoring unknown request $_");
     next;
