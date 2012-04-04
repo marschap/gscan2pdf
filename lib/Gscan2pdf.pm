@@ -387,7 +387,7 @@ sub _thread_import_file {
   }
  }
 
- # only 1-bit Portable anymap is properly supported, so convert ANY pnm to tif
+ # only 1-bit Portable anymap is properly supported, so convert ANY pnm to png
  elsif ( $info->{format} =~
 /(Portable Network Graphics|Joint Photographic Experts Group JFIF format|CompuServe graphics interchange format)/
    )
