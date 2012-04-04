@@ -199,22 +199,22 @@ if ( not defined($log_level) ) {
  }
 }
 my $log_conf = qq/ 
- log4perl.appender.Screen        = Log::Log4perl::Appender::Screen 
+ log4perl.appender.Screen        = Log::Log4perl::Appender::Screen
  log4perl.appender.Screen.layout = Log::Log4perl::Layout::SimpleLayout
 /;
 
 if ( defined $log ) {
  $log_conf .= qq/
- log4perl.appender.Logfile          = Log::Log4perl::Appender::File 
+ log4perl.appender.Logfile          = Log::Log4perl::Appender::File
  log4perl.appender.Logfile.filename = $log
- log4perl.appender.Logfile.mode     = write 
+ log4perl.appender.Logfile.mode     = write
  log4perl.appender.Logfile.layout   = Log::Log4perl::Layout::SimpleLayout
- log4perl.category                  = $log_level, Logfile, Screen 
+ log4perl.category                  = $log_level, Logfile, Screen
 /;
 }
 else {
  $log_conf .= qq/
- log4perl.category                  = $log_level, Screen 
+ log4perl.category                  = $log_level, Screen
 /;
 }
 
