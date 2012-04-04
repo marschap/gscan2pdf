@@ -7,7 +7,7 @@
 
 use warnings;
 use strict;
-use Test::More tests => 2;
+use Test::More tests => 9;
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 #########################
@@ -27,21 +27,25 @@ my @that     = (
   'values'  => [ 'Lineart', 'Grayscale', 'Color' ],
  },
  {
-  name      => 'resolution',
-  index     => 1,
-  'tip'     => 'Sets the resolution of the scanned image.',
-  'default' => '75',
-  'min'     => 75,
-  'max'     => 600,
-  'unit'    => 'dpi',
+  name       => 'resolution',
+  index      => 1,
+  'tip'      => 'Sets the resolution of the scanned image.',
+  'default'  => '75',
+  constraint => {
+   'min' => 75,
+   'max' => 600,
+  },
+  'unit' => 'dpi',
  },
  {
-  name      => 'contrast',
-  index     => 2,
-  'tip'     => 'Controls the contrast of the acquired image.',
-  'default' => 'inactive',
-  'min'     => 0,
-  'max'     => 100,
+  name       => 'contrast',
+  index      => 2,
+  'tip'      => 'Controls the contrast of the acquired image.',
+  'default'  => 'inactive',
+  constraint => {
+   'min' => 0,
+   'max' => 100,
+  },
  },
  {
   name  => 'compression',
@@ -56,9 +60,11 @@ my @that     = (
   index => 4,
   'tip' =>
 'Sets the scanner JPEG compression factor.  Larger numbers mean better compression, and smaller numbers mean better image quality.',
-  'default' => '10',
-  'min'     => 0,
-  'max'     => 100,
+  'default'  => '10',
+  constraint => {
+   'min' => 0,
+   'max' => 100,
+  },
  },
  {
   name  => 'batch-scan',
@@ -93,40 +99,140 @@ my @that     = (
   'values'  => [ 'Unknown', 'Approximate', 'Padded' ],
  },
  {
-  name      => 'l',
-  index     => 9,
-  'tip'     => 'Top-left x position of scan area.',
-  'default' => 0,
-  'min'     => 0,
-  'max'     => 215.9,
-  'unit'    => 'mm',
+  name       => 'l',
+  index      => 9,
+  'tip'      => 'Top-left x position of scan area.',
+  'default'  => 0,
+  constraint => {
+   'min' => 0,
+   'max' => 215.9,
+  },
+  'unit' => 'mm',
  },
  {
-  name      => 't',
-  index     => 10,
-  'tip'     => 'Top-left y position of scan area.',
-  'default' => 0,
-  'min'     => 0,
-  'max'     => 381,
-  'unit'    => 'mm',
+  name       => 't',
+  index      => 10,
+  'tip'      => 'Top-left y position of scan area.',
+  'default'  => 0,
+  constraint => {
+   'min' => 0,
+   'max' => 381,
+  },
+  'unit' => 'mm',
  },
  {
-  name      => 'x',
-  index     => 11,
-  'tip'     => 'Width of scan-area.',
-  'default' => 215.9,
-  'min'     => 0,
-  'max'     => 215.9,
-  'unit'    => 'mm',
+  name       => 'x',
+  index      => 11,
+  'tip'      => 'Width of scan-area.',
+  'default'  => 215.9,
+  constraint => {
+   'min' => 0,
+   'max' => 215.9,
+  },
+  'unit' => 'mm',
  },
  {
-  name      => 'y',
-  index     => 12,
-  'tip'     => 'Height of scan-area.',
-  'default' => 381,
-  'min'     => 0,
-  'max'     => 381,
-  'unit'    => 'mm',
+  name       => 'y',
+  index      => 12,
+  'tip'      => 'Height of scan-area.',
+  'default'  => 381,
+  constraint => {
+   'min' => 0,
+   'max' => 381,
+  },
+  'unit' => 'mm',
  }
 );
 is_deeply( $options->{array}, \@that, 'officejet_5500' );
+
+is(
+ $options->supports_paper(
+  {
+   x => 210,
+   y => 297,
+   l => 0,
+   t => 0,
+  },
+  0
+ ),
+ 1,
+ 'supports_paper'
+);
+is(
+ $options->supports_paper(
+  {
+   x => 210,
+   y => 297,
+   l => 0,
+   t => -10,
+  },
+  0
+ ),
+ 0,
+ 'paper crosses top border'
+);
+is(
+ $options->supports_paper(
+  {
+   x => 210,
+   y => 297,
+   l => 0,
+   t => 90,
+  },
+  0
+ ),
+ 0,
+ 'paper crosses bottom border'
+);
+is(
+ $options->supports_paper(
+  {
+   x => 210,
+   y => 297,
+   l => -10,
+   t => 0,
+  },
+  0
+ ),
+ 0,
+ 'paper crosses left border'
+);
+is(
+ $options->supports_paper(
+  {
+   x => 210,
+   y => 297,
+   l => 10,
+   t => 0,
+  },
+  0
+ ),
+ 0,
+ 'paper crosses right border'
+);
+is(
+ $options->supports_paper(
+  {
+   x => 225,
+   y => 297,
+   l => 0,
+   t => 0,
+  },
+  0
+ ),
+ 0,
+ 'paper too wide'
+);
+is(
+ $options->supports_paper(
+  {
+   x => 210,
+   y => 870,
+   l => 0,
+   t => 0,
+  },
+  0
+ ),
+ 0,
+ 'paper too tall'
+);

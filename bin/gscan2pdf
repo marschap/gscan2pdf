@@ -129,18 +129,17 @@ use Gtk2::ImageView;
 use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
 use Gtk2::Gdk::Keysyms;
-use Cwd;                    # To obtain current working directory
-use File::Basename;         # Split filename into dir, file, ext
+use Cwd;                   # To obtain current working directory
+use File::Basename;        # Split filename into dir, file, ext
 use File::Copy;
-use File::Temp;             # To create temporary files
-use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
+use File::Temp;            # To create temporary files
+use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Config::General 2.40;
 use Text::ParseWords;
-use Sane;
+use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use PDF::API2;
 use Getopt::Long;
-use
-  Set::IntSpan 1.10;  # For page numbering issues. 1.10 required for size method
+use Set::IntSpan 1.10;     # For size method for page numbering issues
 use Proc::Killfam;
 use Fcntl qw(:flock)
   ;    # import LOCK_* constants to prevent us clobbering running instances
@@ -6660,10 +6659,14 @@ sub parse_options {
   $h,            $w,            $spin_buttonx, $spin_buttony,
   $spin_buttonl, $spin_buttont, $spin_buttonh, $spin_buttonw
  );
- $x = $options->by_name('x')->{max} if ( defined $options->by_name('x') );
- $y = $options->by_name('y')->{max} if ( defined $options->by_name('y') );
- $l = $options->by_name('l')->{max} if ( defined $options->by_name('l') );
- $t = $options->by_name('t')->{max} if ( defined $options->by_name('t') );
+ $x = $options->by_name('x')->{constraint}{max}
+   if ( defined $options->by_name('x') );
+ $y = $options->by_name('y')->{constraint}{max}
+   if ( defined $options->by_name('y') );
+ $l = $options->by_name('l')->{constraint}{max}
+   if ( defined $options->by_name('l') );
+ $t = $options->by_name('t')->{constraint}{max}
+   if ( defined $options->by_name('t') );
 
  # Set device-dependent options
  # Dummy entries so that something is returned:
@@ -6703,12 +6706,12 @@ sub parse_options {
    my ( $widget, $hbox ) = add_widget_from_hash($option);
 
    if ( $option->{name} =~ /^page-?width$/ ) {
-    $w            = $option->{max};
+    $w            = $option->{constraint}{max};
     $spin_buttonw = $widget;
     $vboxm->pack_start( $hbox, TRUE, TRUE, 0 );
    }
    elsif ( $option->{name} =~ /^page-?height$/ ) {
-    $h            = $option->{max};
+    $h            = $option->{constraint}{max};
     $spin_buttonh = $widget;
     $vboxm->pack_start( $hbox, TRUE, TRUE, 0 );
    }
@@ -6799,7 +6802,7 @@ sub parse_options {
   $combobp->signal_connect(
    changed => sub {
     if ( $combobp->get_active_text eq $d->get('Edit') ) {
-     edit_paper( $combobp, $x, $y, $l, $t, $h, $w );
+     edit_paper( $combobp, $options );
     }
     elsif ( $combobp->get_active_text eq $d->get('Manual') ) {
      $vboxm->show_all;
@@ -6818,7 +6821,7 @@ sub parse_options {
     }
    }
   );
-  add_paper( $combobp, $x, $y, $l, $t, $h, $w );
+  add_paper( $combobp, $options );
  }
 
  # Show window
@@ -6856,11 +6859,12 @@ sub add_widget_from_hash {
  my $widget;
 
  # SpinButton
- if ( defined $option->{max} ) {
+ if ( defined $option->{constraint}{max} ) {
   my $step = 1;
-  $step = $option->{step} if ( defined $option->{step} );
-  $widget =
-    Gtk2::SpinButton->new_with_range( $option->{min}, $option->{max}, $step );
+  $step = $option->{constraint}{step}
+    if ( defined $option->{constraint}{step} );
+  $widget = Gtk2::SpinButton->new_with_range( $option->{constraint}{min},
+   $option->{constraint}{max}, $step );
 
   # Set the default
   $widget->set_value( $option->{default} )
@@ -6909,7 +6913,7 @@ sub add_spinbutton {
 
 # Paper editor
 sub edit_paper {
- my ( $combobp, $x, $y, $l, $t, $h, $w ) = @_;
+ my ( $combobp, $options ) = @_;
 
  if ( defined $windowd ) {
   $windowd->present;
@@ -7031,7 +7035,7 @@ sub edit_paper {
     $SETTING{Paper}{ $slist->{data}[$i][0] }{t} = $slist->{data}[$i][4];
    }
    $combobp->remove_text(0) while ( $combobp->get_active > 1 );
-   my @ignored = add_paper( $combobp, $x, $y, $l, $t, $h, $w );
+   my @ignored = add_paper( $combobp, $options );
    show_message_dialog(
     $windowd,
     'warning',
@@ -7068,21 +7072,10 @@ sub edit_paper {
 # Add paper size to combobox if scanner large enough
 
 sub add_paper {
- my ( $combobox, $x, $y, $l, $t, $h, $w ) = @_;
- my @ignored;
+ my ( $combobox, $options ) = @_;
+ my (@ignored);
  for ( keys %{ $SETTING{Paper} } ) {
-  if ( defined($h)
-   and defined($w)
-   and $h >= $SETTING{Paper}{$_}{y} + $SETTING{Paper}{$_}{t}
-   and $w >= $SETTING{Paper}{$_}{x} + $SETTING{Paper}{$_}{l} )
-  {
-   $combobox->prepend_text($_);
-  }
-  elsif ( $x + $tolerance >= $SETTING{Paper}{$_}{x} + $SETTING{Paper}{$_}{l}
-   and $y + $tolerance >= $SETTING{Paper}{$_}{y} + $SETTING{Paper}{$_}{t}
-   and $l + $tolerance >= $SETTING{Paper}{$_}{l}
-   and $t + $tolerance >= $SETTING{Paper}{$_}{t} )
-  {
+  if ( $options->supports_paper( $SETTING{Paper}{$_}, $tolerance ) ) {
    $combobox->prepend_text($_);
   }
   else {
@@ -7454,16 +7447,16 @@ sub default2index {
      },
      sub {    # finished callback
       my ($data) = @_;
-      my @options = @{$data};
+      my $options = Gscan2pdf::Scanner::Options->new($data);
       $logger->debug( "Sane->get_option_descriptor returned: ",
-       Dumper( \@options ) );
+       Dumper($options) );
 
       my ( $group, $vbox, @widgets, $hboxp, %optnamei );
-      my $num_dev_options = $#options + 1;
-      my %geometry;
+      my $num_dev_options = $options->num_options;
+
       undef $combobp;    # So we don't carry over from one device to another
       for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-       my $opt = $options[$i];
+       my $opt = $options->by_index($i);
 
        # Notebook page for group
        if ( $opt->{type} == SANE_TYPE_GROUP or not defined($vbox) ) {
@@ -7492,10 +7485,11 @@ sub default2index {
         and ( ( $opt->{name} eq SANE_NAME_SCAN_TL_X )
          or ( $opt->{name} eq SANE_NAME_SCAN_TL_Y )
          or ( $opt->{name} eq SANE_NAME_SCAN_BR_X )
-         or ( $opt->{name} eq SANE_NAME_SCAN_BR_Y ) )
+         or ( $opt->{name} eq SANE_NAME_SCAN_BR_Y )
+         or ( $opt->{name} eq SANE_NAME_PAGE_HEIGHT )
+         or ( $opt->{name} eq SANE_NAME_PAGE_WIDTH ) )
          )
        {
-        $geometry{ $opt->{name} }{i} = $i;
 
         # Define HBox for paper size here
         # so that it can be put before first geometry option
@@ -7558,10 +7552,6 @@ sub default2index {
            set_option( $widget->{option_number}, $val, @widgets );
           }
          );
-
-         # Note the max if geometry
-         $geometry{ $opt->{name} }{max} = $opt->{constraint}{max}
-           if ( defined( $geometry{ $opt->{name} } ) );
         }
 
         # ComboBox
@@ -7648,14 +7638,26 @@ sub default2index {
         $tooltips->set_tip( $widget, $d_sane->get( $opt->{desc} ) );
 
         # Look-up to hide/show the box if necessary
-        $geometry{ $opt->{name} }{box} = $hbox
-          if ( defined( $geometry{ $opt->{name} } ) );
+        $options->{box}{ $opt->{name} } = $hbox
+          if ( $opt->{name} eq SANE_NAME_SCAN_BR_X
+         or $opt->{name} eq SANE_NAME_SCAN_BR_Y
+         or $opt->{name} eq SANE_NAME_SCAN_TL_X
+         or $opt->{name} eq SANE_NAME_SCAN_TL_Y
+         or $opt->{name} eq SANE_NAME_PAGE_HEIGHT
+         or $opt->{name} eq SANE_NAME_PAGE_WIDTH );
 
-        if ( defined( $geometry{ scalar(SANE_NAME_SCAN_BR_X) } )
-         and defined( $geometry{ scalar(SANE_NAME_SCAN_BR_Y) } )
-         and defined( $geometry{ scalar(SANE_NAME_SCAN_TL_X) } )
-         and defined( $geometry{ scalar(SANE_NAME_SCAN_TL_Y) } )
-         and not defined($combobp) )
+# Only define the paper size once the rest of the geometry widget have been created
+        if (
+             defined( $options->{box}{ scalar(SANE_NAME_SCAN_BR_X) } )
+         and defined( $options->{box}{ scalar(SANE_NAME_SCAN_BR_Y) } )
+         and defined( $options->{box}{ scalar(SANE_NAME_SCAN_TL_X) } )
+         and defined( $options->{box}{ scalar(SANE_NAME_SCAN_TL_Y) } )
+         and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
+          or defined( $options->{box}{ scalar(SANE_NAME_PAGE_HEIGHT) } ) )
+         and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
+          or defined( $options->{box}{ scalar(SANE_NAME_PAGE_WIDTH) } ) )
+         and not defined($combobp)
+          )
         {
 
          # Paper list
@@ -7671,65 +7673,58 @@ sub default2index {
          $combobp->signal_connect(
           changed => sub {
            if ( $combobp->get_active_text eq $d->get('Edit') ) {
-            edit_paper(
-             $combobp, $geometry{ scalar(SANE_NAME_SCAN_BR_X) }{max},
-             $geometry{ scalar(SANE_NAME_SCAN_BR_Y) }{max},
-             $geometry{ scalar(SANE_NAME_SCAN_TL_X) }{max},
-
-#                             $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max}, $h, $w);
-             $geometry{ scalar(SANE_NAME_SCAN_TL_Y) }{max}
-            );
+            edit_paper( $combobp, $options );
            }
            elsif ( $combobp->get_active_text eq $d->get('Manual') ) {
             for (
              ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
-              SANE_NAME_SCAN_BR_X, SANE_NAME_SCAN_BR_Y
+              SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+              SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
              )
               )
             {
-             $geometry{$_}{box}->show_all if ( defined $geometry{$_} );
+             $options->{box}{$_}->show_all if ( defined $options->{box}{$_} );
             }
            }
            else {
             my $paper = $combobp->get_active_text;
-            $widgets[ $geometry{ scalar(SANE_NAME_SCAN_TL_X) }{i} ]
-              ->set_value( $SETTING{Paper}{$paper}{l} )
-              if ( defined $geometry{ scalar(SANE_NAME_SCAN_TL_X) } );
-            $widgets[ $geometry{ scalar(SANE_NAME_SCAN_TL_Y) }{i} ]
-              ->set_value( $SETTING{Paper}{$paper}{t} )
-              if ( defined $geometry{ scalar(SANE_NAME_SCAN_TL_Y) } );
-            $widgets[ $geometry{ scalar(SANE_NAME_SCAN_BR_X) }{i} ]->set_value(
+            if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
+             and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) ) )
+            {
+             $widgets[ $options->by_name(SANE_NAME_PAGE_HEIGHT)->{index} ]
+               ->set_value(
+              $SETTING{Paper}{$paper}{y} + $SETTING{Paper}{$paper}{t} );
+             $widgets[ $options->by_name(SANE_NAME_PAGE_WIDTH)->{index} ]
+               ->set_value(
+              $SETTING{Paper}{$paper}{x} + $SETTING{Paper}{$paper}{l} );
+            }
+            $widgets[ $options->by_name(SANE_NAME_SCAN_TL_X)->{index} ]
+              ->set_value( $SETTING{Paper}{$paper}{l} );
+            $widgets[ $options->by_name(SANE_NAME_SCAN_TL_Y)->{index} ]
+              ->set_value( $SETTING{Paper}{$paper}{t} );
+            $widgets[ $options->by_name(SANE_NAME_SCAN_BR_X)->{index} ]
+              ->set_value(
              $SETTING{Paper}{$paper}{x} + $SETTING{Paper}{$paper}{l} );
-            $widgets[ $geometry{ scalar(SANE_NAME_SCAN_BR_Y) }{i} ]->set_value(
+            $widgets[ $options->by_name(SANE_NAME_SCAN_BR_Y)->{index} ]
+              ->set_value(
              $SETTING{Paper}{$paper}{y} + $SETTING{Paper}{$paper}{t} );
-
-            #        if (defined($spin_buttonh) and defined($spin_buttonw)) {
-            #         $spin_buttonw -> set_value($SETTING{Paper}{$paper}{x});
-            #         $spin_buttonh -> set_value($SETTING{Paper}{$paper}{y});
-            #        }
             Glib::Idle->add(
              sub {
               for (
                ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
-                SANE_NAME_SCAN_BR_X, SANE_NAME_SCAN_BR_Y
+                SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+                SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
                )
                 )
               {
-               $geometry{$_}{box}->hide_all if ( defined $geometry{$_} );
+               $options->{box}{$_}->hide_all if ( defined $options->{box}{$_} );
               }
              }
             );
            }
           }
          );
-         add_paper(
-          $combobp, $geometry{ scalar(SANE_NAME_SCAN_BR_X) }{max},
-          $geometry{ scalar(SANE_NAME_SCAN_BR_Y) }{max},
-          $geometry{ scalar(SANE_NAME_SCAN_TL_X) }{max},
-
-#                          $geometry{scalar(SANE_NAME_SCAN_TL_Y)}{max}, $h, $w);
-          $geometry{ scalar(SANE_NAME_SCAN_TL_Y) }{max}
-         );
+         add_paper( $combobp, $options );
         }
 
        }
@@ -7780,7 +7775,7 @@ sub default2index {
 
  # when INFO_INEXACT is implemented, so that the value is reloaded, check for it
  # here, so that the reloaded value is not overwritten.
-           $options[ $widget->{option_number} ]->{val} = $val;
+           $options->by_index( $widget->{option_number} )->{val} = $val;
           }
           elsif ( $widget->isa('Gtk2::CheckButton') ) {
            if ( $widget->get_active != $val ) {
@@ -7799,7 +7794,7 @@ sub default2index {
            }
           }
           elsif ( $widget->isa('Gtk2::ComboBox') ) {
-           my $opt = $options[ $widget->{option_number} ];
+           my $opt = $options->by_index( $widget->{option_number} );
            if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
             my $index;
             for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
@@ -9259,9 +9254,9 @@ sub add_widget {
   my $label = Gtk2::Label->new( $hashref->{$option}{string} );
   $hbox->pack_start( $label, FALSE, FALSE, 0 );
   $widget = Gtk2::SpinButton->new_with_range(
-   $hashref->{$option}{min},
-   $hashref->{$option}{max},
-   $hashref->{$option}{step}
+   $hashref->{$option}{constraint}{min},
+   $hashref->{$option}{constraint}{max},
+   $hashref->{$option}{constraint}{step}
   );
   $hbox->pack_end( $widget, FALSE, FALSE, 0 );
   $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
