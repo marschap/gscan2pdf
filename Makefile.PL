@@ -45,7 +45,7 @@ WriteMakefile(
  PREREQ_PM => {
   Glib                   => 1.210,
   Gtk2                   => 1.090,
-  Sane                   => 0.02,
+  Sane                   => 0.05,
   Gtk2::Ex::Simple::List => 0,
   Gtk2::ImageView        => 0,
   Image::Magick          => 0,
