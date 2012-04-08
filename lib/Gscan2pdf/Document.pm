@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Gtk2::Ex::Simple::List;
-use Gscan2pdf::Frontend::Scanimage;
+use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Frontend::Sane;
 use Gscan2pdf::Page;
 use Glib qw(TRUE FALSE);
