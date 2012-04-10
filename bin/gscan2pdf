@@ -46,7 +46,6 @@
 #      4. create the djvu:
 #          csepdjvu sep file.djvu
 #     For PDF put the background on top of the text, and then the foreground on top of that.
-#    move po to share/locale
 #    look at shutter, and see how he uses goocanvas together with gtkimageview
 #    get canvas scrolling with imageview
 #    add find text in ocr buffer - search through all buffers
@@ -96,7 +95,7 @@
 #    Download new translations (https://translations.launchpad.net/gscan2pdf)
 #    Upload .pot
 #    Update translators in credits (https://launchpad.net/gscan2pdf/+topcontributors)
-#    Check a locale with LANG=de_DE.utf8 LANGUAGE=de_DE:de LC_CTYPE="de_DE.utf8" LC_NUMERIC="de_DE.utf8" LC_TIME="de_DE.utf8" LC_COLLATE="de_DE.utf8" LC_MONETARY="de_DE.utf8" LC_MESSAGES="de_DE.utf8" LC_PAPER="de_DE.utf8" LC_NAME="de_DE.utf8" LC_ADDRESS="de_DE.utf8" LC_TELEPHONE="de_DE.utf8" LC_MEASUREMENT="de_DE.utf8" LC_IDENTIFICATION="de_DE.utf8" bin/gscan2pdf --log=log
+#    Check a locale with LC_ALL=de_DE LC_MESSAGES=de_DE LC_CTYPE=de_DE LANG=de_DE LANGUAGE=de_DE bin/gscan2pdf --log=log --locale=<wherever the locale directory is>
 #    Check $version
 #    Make appropriate updates to debian/changelog
 # 2. perl Makefile.PL

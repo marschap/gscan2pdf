@@ -57,6 +57,7 @@ WriteMakefile(
   Readonly               => 0,
   Log::Log4perl          => 0,
  },
+ clean => { FILES => '$(SOURCE_TIDY)' },
  (
   $] >= 5.005
   ?    ## Add these new keywords supported since 5.005
@@ -98,6 +99,12 @@ sub MY::postamble {
 SHELL = bash
 PO = $(wildcard po/*.po)
 DEB_BUILD_ROOT = /var/tmp/$(NAME)-$(VERSION)
+MANIFEST = $(shell cat MANIFEST)
+SOURCE = $(filter bin/% %.pm %.PL %.pl %.t,$(MANIFEST))
+SOURCE_TIDY = $(foreach file,$(SOURCE),$(file).tdy)
+PO = $(filter %.po,$(MANIFEST))
+LANGUAGES = $(patsubst po/$(NAME)-%.po,%,$(PO))
+MO = $(foreach lang,$(LANGUAGES),$(DESTDIR)$(LOCALEDIR)/$(lang)/LC_MESSAGES/$(NAME).mo)
 
 rpmdist : $(NAME).spec $(NAME).Suse.spec tardist
 	$(MKPATH) rpm rpm/SPECS rpm/SOURCES rpm/BUILD rpm/RPMS rpm/SRPMS \
@@ -108,16 +115,12 @@ rpmdist : $(NAME).spec $(NAME).Suse.spec tardist
 	  rpmbuild --nodeps --define='_topdir $(PWD)/rpm' -ba $(NAME).spec; \
 	  rpmbuild --nodeps --define='_topdir $(PWD)/rpm' --define 'dist .Suse' -ba $(NAME).Suse.spec )
 
-locale_install : locale
-	for file in $(PO); do \
-         dummy=$${file#*/}; \
-         dummy2=$${dummy#*-}; \
-         lang=$${dummy2%%.po}; \
-         $(MKPATH) $(DESTDIR)$(LOCALEDIR)/$$lang/LC_MESSAGES; \
-         $(CP) $$lang/LC_MESSAGES/$(NAME).mo \
-                              $(DESTDIR)$(LOCALEDIR)/$$lang/LC_MESSAGES; \
-         $(CHMOD) 755 $(DESTDIR)$(LOCALEDIR)/$$lang/LC_MESSAGES; \
-         done
+locale_install : $(MO)
+
+$(DESTDIR)$(LOCALEDIR)/%/LC_MESSAGES/$(NAME).mo : po/$(NAME)-%.po
+	$(MKPATH) $(@D)
+	msgfmt -c $< -o $@
+	$(CHMOD) 755 $(@D)
 
 $(DESTDIR)$(SHAREDIR)/$(NAME) :
 	$(MKPATH) $(DESTDIR)$(SHAREDIR)/$(NAME)
@@ -131,7 +134,6 @@ icon_install : $(DESTDIR)$(SHAREDIR)/$(NAME)
 	      stock-selection-all-16.png $(DESTDIR)$(SHAREDIR)/$(NAME)
 	$(CP) $(NAME).svg $(DESTDIR)$(SHAREDIR)/pixmaps
 
-
 html : htdocs/index.html
 
 pot : po/$(NAME).pot
@@ -139,16 +141,6 @@ pot : po/$(NAME).pot
 po.tar.gz : po/$(NAME).pot $(PO)
 	cd po; tar cfvz po.tar.gz $(NAME).pot *.po
 	mv po/po.tar.gz .
-
-locale : $(PO)
-	for file in $(PO); do \
-         msgfmt -c $$file; \
-         dummy=$${file#*/}; \
-         dummy2=$${dummy#*-}; \
-         lang=$${dummy2%%.po}; \
-         $(MKPATH) $$lang/LC_MESSAGES; \
-         mv messages.mo $$lang/LC_MESSAGES/$(NAME).mo; \
-         done
 
 $(NAME).spec : bin/$(NAME) debian/changelog
 	$(CP) $(NAME).spec $(NAME).spec_tmp
@@ -201,7 +193,7 @@ file_releases :
          /tmp/$(NAME)/$(NAME)_$(VERSION)*.deb \
 	  ra28145,$(NAME)@frs.sf.net:/home/frs/project/g/gs/$(NAME)/$(NAME)/$(VERSION)/
 
-po/$(NAME).pot : bin/$(NAME)
+po/$(NAME).pot : $(SOURCE)
 	xgettext -L perl --keyword=get --from-code=UTF-8 -o - -f MANIFEST | \
          sed 's/SOME DESCRIPTIVE TITLE/messages.pot for $(NAME)/' | \
          sed 's/PACKAGE VERSION/$(NAME)-$(VERSION)/' | \
@@ -211,15 +203,13 @@ po/$(NAME).pot : bin/$(NAME)
          sed 's/Report-Msgid-Bugs-To: /Report-Msgid-Bugs-To: $(EMAIL)/' | \
          grep -v fuzzy > $@
 
-MANIFEST : .
+MANIFEST :
 	git ls-files > $@
 
-tidy : MANIFEST
-	while read file; do \
-         if [[ $$file =~ \.(PL|pl|pm|t)$$ || $$file =~ ^bin/ ]] ; then \
-          perltidy -i=1 $$file && mv $$file.tdy $$file; \
-         fi; \
-        done < MANIFEST
+tidy : $(SOURCE_TIDY)
+
+%.tdy : $(SOURCE)
+	perltidy -i=1 $* && mv $@ $*
 
 test :: MANIFEST
 END
