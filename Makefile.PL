@@ -208,8 +208,8 @@ MANIFEST : $(SOURCE)
 
 tidy : MANIFEST $(SOURCE_TIDY)
 
-%.tdy : $(SOURCE)
-	perltidy -i=1 $* && mv $@ $*
+%.tdy : %
+	perltidy -i=1 $* && if diff -q $@ $* > /dev/null; then rm $@; else mv $@ $*; fi
 END
  $postamble;
 }
