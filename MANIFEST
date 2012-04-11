@@ -27,6 +27,7 @@ lib/Gscan2pdf/Ocropus.pm
 lib/Gscan2pdf/Page.pm
 lib/Gscan2pdf/Scanner/Options.pm
 lib/Gscan2pdf/Tesseract.pm
+lib/Gscan2pdf/Unpaper.pm
 pdf.svg
 po/gscan2pdf-ab.po
 po/gscan2pdf-be.po
@@ -182,6 +183,7 @@ t/53_cancel_unpaper.t
 t/54_cancel_user_defined.t
 t/55_cancel_gocr.t
 t/56_Gscan2pdf_Page.t
+t/57_Gscan2pdf_Unpaper.t
 t/90_MANIFEST.t
 t/91_critic.t
 t/99_pod.t

@@ -124,6 +124,7 @@ use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Tesseract;
 use Gscan2pdf::Ocropus;
 use Gscan2pdf::Cuneiform;
+use Gscan2pdf::Unpaper;
 use Gtk2::ImageView;
 use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
@@ -149,7 +150,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
 
 my $prog_name = 'gscan2pdf';
-my $version   = '1.0.3';
+my $version   = '1.0.4';
 
 my $tolerance = 1;
 
@@ -1223,6 +1224,8 @@ $window->signal_connect_after(
 # If defined in the config file, set the current directory
 $SETTING{'cwd'} = getcwd if ( !defined( $SETTING{'cwd'} ) );
 
+my $unpaper = Gscan2pdf::Unpaper->new( $SETTING{'unpaper options'} );
+
 # Set up the strings for the possible device-dependent options
 my %ddo;
 my %pddo = (
@@ -1323,192 +1326,6 @@ my %pddo = (
   },
  },
 );
-
-# Set up hash for unpaper options
-my $unpaper_options = {
- layout => {
-  type    => 'ComboBox',
-  string  => $d->get('Layout'),
-  options => {
-   single => {
-    string => $d->get('Single'),
-    tooltip =>
-      $d->get('One page per sheet, oriented upwards without rotation.'),
-   },
-   double => {
-    string  => $d->get('Double'),
-    tooltip => $d->get(
-'Two pages per sheet, landscape orientation (one page on the left half, one page on the right half).'
-    ),
-   },
-  },
-  default => 'single',
- },
- 'output-pages' => {
-  type    => 'SpinButton',
-  string  => $d->get('# Output pages'),
-  tooltip => $d->get('Number of pages to output.'),
-  min     => 1,
-  max     => 2,
-  step    => 1,
-  default => 1,
- },
- 'no-deskew' => {
-  type    => 'CheckButton',
-  string  => $d->get('No deskew'),
-  tooltip => $d->get('Disable deskewing.'),
-  default => FALSE,
- },
- 'no-mask-scan' => {
-  type    => 'CheckButton',
-  string  => $d->get('No mask scan'),
-  tooltip => $d->get('Disable mask detection.'),
-  default => FALSE,
- },
- 'no-blackfilter' => {
-  type    => 'CheckButton',
-  string  => $d->get('No black filter'),
-  tooltip => $d->get('Disable black area scan.'),
-  default => FALSE,
- },
- 'no-grayfilter' => {
-  type    => 'CheckButton',
-  string  => $d->get('No gray filter'),
-  tooltip => $d->get('Disable gray area scan.'),
-  default => FALSE,
- },
- 'no-noisefilter' => {
-  type    => 'CheckButton',
-  string  => $d->get('No noise filter'),
-  tooltip => $d->get('Disable noise filter.'),
-  default => FALSE,
- },
- 'no-blurfilter' => {
-  type    => 'CheckButton',
-  string  => $d->get('No blur filter'),
-  tooltip => $d->get('Disable blur filter.'),
-  default => FALSE,
- },
- 'no-border-scan' => {
-  type    => 'CheckButton',
-  string  => $d->get('No border scan'),
-  tooltip => $d->get('Disable border scanning.'),
-  default => FALSE,
- },
- 'no-border-align' => {
-  type   => 'CheckButton',
-  string => $d->get('No border align'),
-  tooltip =>
-    $d->get('Disable aligning of the area detected by border scanning.'),
-  default => FALSE,
- },
- 'deskew-scan-direction' => {
-  type    => 'CheckButtonGroup',
-  string  => $d->get('Deskew to edge'),
-  tooltip => $d->get(
-"Edges from which to scan for rotation. Each edge of a mask can be used to detect the mask's rotation. If multiple edges are specified, the average value will be used, unless the statistical deviation exceeds --deskew-scan-deviation."
-  ),
-  options => {
-   left => {
-    type    => 'CheckButton',
-    string  => $d->get('Left'),
-    tooltip => $d->get("Use 'left' for scanning from the left edge."),
-   },
-   top => {
-    type    => 'CheckButton',
-    string  => $d->get('Top'),
-    tooltip => $d->get("Use 'top' for scanning from the top edge."),
-   },
-   right => {
-    type    => 'CheckButton',
-    string  => $d->get('Right'),
-    tooltip => $d->get("Use 'right' for scanning from the right edge."),
-   },
-   bottom => {
-    type    => 'CheckButton',
-    string  => $d->get('Bottom'),
-    tooltip => $d->get("Use 'bottom' for scanning from the bottom."),
-   },
-  },
-  default => 'left,right',
- },
- 'border-align' => {
-  type    => 'CheckButtonGroup',
-  string  => $d->get('Align to edge'),
-  tooltip => $d->get('Edge to which to align the page.'),
-  options => {
-   left => {
-    type    => 'CheckButton',
-    string  => $d->get('Left'),
-    tooltip => $d->get("Use 'left' to align to the left edge."),
-   },
-   top => {
-    type    => 'CheckButton',
-    string  => $d->get('Top'),
-    tooltip => $d->get("Use 'top' to align to the top edge."),
-   },
-   right => {
-    type    => 'CheckButton',
-    string  => $d->get('Right'),
-    tooltip => $d->get("Use 'right' to align to the right edge."),
-   },
-   bottom => {
-    type    => 'CheckButton',
-    string  => $d->get('Bottom'),
-    tooltip => $d->get("Use 'bottom' to align to the bottom."),
-   },
-  },
- },
- 'border-margin' => {
-  type    => 'SpinButtonGroup',
-  string  => $d->get('Border margin'),
-  options => {
-   vertical => {
-    type    => 'SpinButton',
-    string  => $d->get('Vertical margin'),
-    tooltip => $d->get(
-'Vertical distance to keep from the sheet edge when aligning a border area.'
-    ),
-    min   => 0,
-    max   => 1000,
-    step  => 1,
-    order => 0,
-   },
-   horizontal => {
-    type    => 'SpinButton',
-    string  => $d->get('Horizontal margin'),
-    tooltip => $d->get(
-'Horizontal distance to keep from the sheet edge when aligning a border area.'
-    ),
-    min   => 0,
-    max   => 1000,
-    step  => 1,
-    order => 1,
-   },
-  },
- },
- 'white-threshold' => {
-  type   => 'SpinButton',
-  string => $d->get('White threshold'),
-  tooltip =>
-    $d->get('Brightness ratio above which a pixel is considered white.'),
-  min     => 0,
-  max     => 1,
-  step    => .01,
-  default => 0.9,
- },
- 'black-threshold' => {
-  type    => 'SpinButton',
-  string  => $d->get('Black threshold'),
-  tooltip => $d->get(
-'Brightness ratio below which a pixel is considered black (non-gray). This is used by the gray-filter. This value is also used when converting a grayscale image to black-and-white mode.'
-  ),
-  min     => 0,
-  max     => 1,
-  step    => .01,
-  default => 0.33,
- },
-};
 
 update_uimanager();
 
@@ -4115,7 +3932,7 @@ sub scan_dialog {
   clicked => sub {
    my ( $windowo, $vbox1 ) =
      create_window( $window, $d->get('unpaper options'), TRUE );
-   add_unpaper_options($vbox1);
+   $unpaper->add_options($vbox1);
 
    # HBox for buttons
    my $hboxb = Gtk2::HBox->new;
@@ -4128,7 +3945,7 @@ sub scan_dialog {
     clicked => sub {
 
      # Update $SETTING
-     get_unpaper_options($unpaper_options);
+     $SETTING{'unpaper options'} = $unpaper->get_options;
 
      $windowo->destroy;
     }
@@ -4881,7 +4698,7 @@ sub scan_dialog2 {
   clicked => sub {
    my ( $windowo, $vbox1 ) =
      create_window( $window, $d->get('unpaper options'), TRUE );
-   add_unpaper_options($vbox1);
+   $unpaper->add_options($vbox1);
 
    # HBox for buttons
    my $hboxb = Gtk2::HBox->new;
@@ -4894,7 +4711,7 @@ sub scan_dialog2 {
     clicked => sub {
 
      # Update $SETTING
-     get_unpaper_options($unpaper_options);
+     $SETTING{'unpaper options'} = $unpaper->get_options;
 
      $windowo->destroy;
     }
@@ -5979,9 +5796,9 @@ sub post_process_scan {
   );
  }
  elsif ($unpaper) {
-  my $options = options2unpaper($unpaper_options);
   unpaper_page(
-   $pages, $options,
+   $pages,
+   $unpaper->get_cmdline,
    sub {
     my ($pages) = @_;
     post_process_scan( $pages, undef, undef, $ocr );
@@ -9138,7 +8955,7 @@ sub get_parent {
  return;
 }
 
-# Add $page to the unpaper stack, setting it off if not running.
+# queue $page to be processed by unpaper
 
 sub unpaper_page {
  my ( $pages, $options, $callback ) = @_;
@@ -9182,310 +8999,6 @@ sub unpaper_page {
  return;
 }
 
-sub add_widget {
- my ( $vbox, $hashref, $option ) = @_;
-
- my $widget;
- $SETTING{$option} = $hashref->{$option}{default}
-   if ( defined( $hashref->{$option}{default} )
-  and not defined( $SETTING{$option} ) );
-
- if ( $hashref->{$option}{type} eq 'ComboBox' ) {
-  my $hbox = Gtk2::HBox->new;
-  $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-  my $label = Gtk2::Label->new( $hashref->{$option}{string} );
-  $hbox->pack_start( $label, FALSE, FALSE, 0 );
-  $widget = Gtk2::ComboBox->new_text;
-  $hbox->pack_end( $widget, FALSE, FALSE, 0 );
-
-  # Add text and tooltips
-  my @tooltip;
-  my $i = -1;
-  my $o = 0;
-  foreach ( keys %{ $hashref->{$option}{options} } ) {
-   $widget->append_text( $hashref->{$option}{options}{$_}{string} );
-   push @tooltip, $hashref->{$option}{options}{$_}{tooltip};
-   $hashref->{$option}{options}{$_}{index} = ++$i;
-   $o = $i if ( $_ eq $SETTING{$option} );
-  }
-  $widget->signal_connect(
-   changed => sub {
-    $tooltips->set_tip( $widget, $tooltip[ $widget->get_active ] )
-      if ( defined $tooltip[ $widget->get_active ] );
-   }
-  );
-
-  # Set defaults
-  $widget->set_active($o);
-  $tooltips->set_tip( $widget, $tooltip[0] );
- }
-
- elsif ( $hashref->{$option}{type} eq 'CheckButton' ) {
-  $widget = Gtk2::CheckButton->new( $hashref->{$option}{string} );
-  $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
-  $vbox->pack_start( $widget, TRUE, TRUE, 0 );
-  $widget->set_active( $SETTING{$option} ) if defined( $SETTING{$option} );
- }
-
- elsif ( $hashref->{$option}{type} eq 'CheckButtonGroup' ) {
-  $widget = Gtk2::Frame->new( $hashref->{$option}{string} );
-  $vbox->pack_start( $widget, TRUE, TRUE, 0 );
-  my $vboxf = Gtk2::VBox->new;
-  $vboxf->set_border_width($border_width);
-  $widget->add($vboxf);
-  $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
-  my %default;
-  if ( defined $SETTING{$option} ) {
-
-   foreach ( split /,/, $SETTING{$option} ) {
-    $default{$_} = TRUE;
-   }
-  }
-  foreach ( keys %{ $hashref->{$option}{options} } ) {
-   my $button = add_widget( $vboxf, $hashref->{$option}{options}, $_ );
-   $button->set_active(TRUE) if ( defined $default{$_} );
-  }
- }
-
- elsif ( $hashref->{$option}{type} eq 'SpinButton' ) {
-  my $hbox = Gtk2::HBox->new;
-  $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-  my $label = Gtk2::Label->new( $hashref->{$option}{string} );
-  $hbox->pack_start( $label, FALSE, FALSE, 0 );
-  $widget = Gtk2::SpinButton->new_with_range(
-   $hashref->{$option}{constraint}{min},
-   $hashref->{$option}{constraint}{max},
-   $hashref->{$option}{constraint}{step}
-  );
-  $hbox->pack_end( $widget, FALSE, FALSE, 0 );
-  $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
-  $widget->set_value( $SETTING{$option} ) if ( defined $SETTING{$option} );
- }
-
- elsif ( $hashref->{$option}{type} eq 'SpinButtonGroup' ) {
-  $widget = Gtk2::Frame->new( $hashref->{$option}{string} );
-  $vbox->pack_start( $widget, TRUE, TRUE, 0 );
-  my $vboxf = Gtk2::VBox->new;
-  $vboxf->set_border_width($border_width);
-  $widget->add($vboxf);
-  my @default;
-  @default = split /,/, $SETTING{$option} if ( defined $SETTING{$option} );
-  foreach (
-   sort {
-    $hashref->{$option}{options}{$a}{order} <=> $hashref->{$option}{options}{$b}
-      {order}
-   } keys %{ $hashref->{$option}{options} }
-    )
-  {
-   my $button = add_widget( $vboxf, $hashref->{$option}{options}, $_ );
-   $button->set_value( shift @default ) if (@default);
-  }
- }
-
- $hashref->{$option}{widget} = $widget;
- return $widget;
-}
-
-sub get_unpaper_options {
- my $hashref = shift;
-
- foreach my $option ( keys %{$hashref} ) {
-  if ( $hashref->{$option}{type} eq 'ComboBox' ) {
-   my $i = $hashref->{$option}{widget}->get_active;
-   my $item;
-   foreach ( keys %{ $hashref->{$option}{options} } ) {
-    $item = $_ if ( $hashref->{$option}{options}{$_}{index} == $i );
-   }
-   if ( defined $item ) {
-    $SETTING{$option} = $item;
-   }
-   elsif ( defined $SETTING{$option} ) {
-    delete $SETTING{$option};
-   }
-  }
-  elsif ( $hashref->{$option}{type} eq 'CheckButton' ) {
-   if ( $hashref->{$option}{widget}->get_active ) {
-    $SETTING{$option} = TRUE;
-   }
-   else {
-    delete $SETTING{$option};
-   }
-  }
-  elsif ( $hashref->{$option}{type} eq 'SpinButton' ) {
-   $SETTING{$option} = $hashref->{$option}{widget}->get_value;
-  }
-  elsif ( $hashref->{$option}{type} eq 'CheckButtonGroup' ) {
-   my @items;
-   foreach ( keys %{ $hashref->{$option}{options} } ) {
-    push @items, $_ if ( $hashref->{$option}{options}{$_}{widget}->get_active );
-   }
-   if (@items) {
-    $SETTING{$option} = join ',', @items;
-   }
-   elsif ( defined $SETTING{$option} ) {
-    delete $SETTING{$option};
-   }
-  }
-  elsif ( $hashref->{$option}{type} eq 'SpinButtonGroup' ) {
-   my @items;
-   foreach ( keys %{ $hashref->{$option}{options} } ) {
-    push @items, $hashref->{$option}{options}{$_}{widget}->get_value;
-   }
-   if (@items) {
-    $SETTING{$option} = join ',', @items;
-   }
-  }
- }
- return;
-}
-
-sub options2unpaper {
- my $hashref = $unpaper_options;
-
- my @items;
- foreach my $option ( keys %{$hashref} ) {
-  if ( $hashref->{$option}{type} eq 'CheckButton' ) {
-   push @items, "--$option"
-     if ( defined $SETTING{$option} and $SETTING{$option} );
-  }
-  else {
-   push @items, "--$option $SETTING{$option}" if ( defined $SETTING{$option} );
-  }
- }
- return join ' ', @items;
-}
-
-sub count_active_children {
- my ($frame) = @_;
- my $n = 0;
- for ( $frame->get_child->get_children ) {
-  $n++ if ( $_->get_active );
- }
- return $n;
-}
-
-sub add_unpaper_options {
- my ($vbox) = @_;
-
- # Layout ComboBox
- my $combobl  = add_widget( $vbox, $unpaper_options, 'layout' );
- my $outpages = add_widget( $vbox, $unpaper_options, 'output-pages' );
- $combobl->signal_connect(
-  changed => sub {
-   if ( $combobl->get_active == 0 ) {
-    $outpages->set_range( 1, 2 );
-   }
-   else {
-    $outpages->set_range( 1, 1 );
-   }
-  }
- );
-
- # Notebook to collate options
- my $notebook = Gtk2::Notebook->new;
- $vbox->pack_start( $notebook, TRUE, TRUE, 0 );
-
- # Notebook page 1
- my $vbox1 = Gtk2::VBox->new;
- $notebook->append_page( $vbox1, $d->get('Deskew') );
-
- my $dsbutton = add_widget( $vbox1, $unpaper_options, 'no-deskew' );
-
- # Frame for Deskew Scan Direction
- my $dframe = add_widget( $vbox1, $unpaper_options, 'deskew-scan-direction' );
- $dsbutton->signal_connect(
-  toggled => sub {
-   if ( $dsbutton->get_active ) {
-    $dframe->set_sensitive(FALSE);
-   }
-   else {
-    $dframe->set_sensitive(TRUE);
-   }
-  }
- );
-
- foreach ( keys %{ $unpaper_options->{'deskew-scan-direction'}{options} } ) {
-  my $button = $unpaper_options->{'deskew-scan-direction'}{options}{$_}{widget};
-
-  # Ensure that at least one checkbutton stays active
-  $button->signal_connect(
-   toggled => sub {
-    $button->set_active(TRUE) if ( count_active_children($dframe) == 0 );
-   }
-  );
- }
-
- # Notebook page 2
- my $vbox2 = Gtk2::VBox->new;
- $notebook->append_page( $vbox2, $d->get('Border') );
-
- my $bsbutton = add_widget( $vbox2, $unpaper_options, 'no-border-scan' );
- my $babutton = add_widget( $vbox2, $unpaper_options, 'no-border-align' );
-
- # Frame for Align Border
- my $bframe = add_widget( $vbox2, $unpaper_options, 'border-align' );
- $bsbutton->signal_connect(
-  toggled => sub {
-   if ( $bsbutton->get_active ) {
-    $bframe->set_sensitive(FALSE);
-    $babutton->set_sensitive(FALSE);
-   }
-   else {
-    $babutton->set_sensitive(TRUE);
-    $bframe->set_sensitive(TRUE) if ( !( $babutton->get_active ) );
-   }
-  }
- );
- $babutton->signal_connect(
-  toggled => sub {
-   if ( $babutton->get_active ) {
-    $bframe->set_sensitive(FALSE);
-   }
-   else {
-    $bframe->set_sensitive(TRUE);
-   }
-  }
- );
-
- # Define margins here to reference them below
- my $bmframe = add_widget( $vbox2, $unpaper_options, 'border-margin' );
-
- foreach ( keys %{ $unpaper_options->{'border-align'}{options} } ) {
-  my $button = $unpaper_options->{'border-align'}{options}{$_}{widget};
-
-  # Ghost margin if nothing selected
-  $button->signal_connect(
-   toggled => sub {
-    if ( count_active_children($bframe) == 0 ) {
-     $bmframe->set_sensitive(FALSE);
-    }
-    else {
-     $bmframe->set_sensitive(TRUE);
-    }
-   }
-  );
- }
- if ( count_active_children($bframe) == 0 ) {
-  $bmframe->set_sensitive(FALSE);
- }
- else {
-  $bmframe->set_sensitive(TRUE);
- }
-
- # Notebook page 3
- my $vbox3 = Gtk2::VBox->new;
- $notebook->append_page( $vbox3, $d->get('Filters') );
-
- my $spinbuttonwt = add_widget( $vbox3, $unpaper_options, 'white-threshold' );
- my $spinbuttonbt = add_widget( $vbox3, $unpaper_options, 'black-threshold' );
- my $msbutton     = add_widget( $vbox3, $unpaper_options, 'no-mask-scan' );
- my $bfbutton     = add_widget( $vbox3, $unpaper_options, 'no-blackfilter' );
- my $gfbutton     = add_widget( $vbox3, $unpaper_options, 'no-grayfilter' );
- my $nfbutton     = add_widget( $vbox3, $unpaper_options, 'no-noisefilter' );
- my $blbutton     = add_widget( $vbox3, $unpaper_options, 'no-blurfilter' );
- return;
-}
-
 # Run unpaper to clean up scan.
 
 sub unpaper {
@@ -9496,7 +9009,7 @@ sub unpaper {
  }
 
  ( $windowu, my $vbox ) = create_window( $window, $d->get('unpaper'), FALSE );
- add_unpaper_options($vbox);
+ $unpaper->add_options($vbox);
 
  # Frame for page range
  add_page_range($vbox);
@@ -9515,11 +9028,11 @@ sub unpaper {
    take_snapshot();
 
    # Update $SETTING
-   get_unpaper_options($unpaper_options);
+   $SETTING{'unpaper options'} = $unpaper->get_options;
 
    # run unpaper
    my @pages = indices2pages( get_page_index() );
-   unpaper_page( \@pages, options2unpaper($unpaper_options) );
+   unpaper_page( \@pages, $unpaper->get_cmdline );
 
    $windowu->hide;
   }
