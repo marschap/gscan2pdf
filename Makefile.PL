@@ -203,15 +203,13 @@ po/$(NAME).pot : $(SOURCE)
          sed 's/Report-Msgid-Bugs-To: /Report-Msgid-Bugs-To: $(EMAIL)/' | \
          grep -v fuzzy > $@
 
-MANIFEST :
+MANIFEST : $(SOURCE)
 	git ls-files > $@
 
-tidy : $(SOURCE_TIDY)
+tidy : MANIFEST $(SOURCE_TIDY)
 
 %.tdy : $(SOURCE)
 	perltidy -i=1 $* && mv $@ $*
-
-test :: MANIFEST
 END
  $postamble;
 }
