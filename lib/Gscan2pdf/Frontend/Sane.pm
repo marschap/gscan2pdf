@@ -367,7 +367,9 @@ sub _thread_set_option {
  $value = "$value";
 
  my $info = $self->{device_handle}->set_option( $index, $value );
- $logger->info("sane_set_option returned status $Sane::STATUS with info $info");
+ $logger->info(
+"sane_set_option $index to $value returned status $Sane::STATUS with info $info"
+ );
 
  # FIXME: This duplicates _thread_get_options.
  if ( $info & SANE_INFO_RELOAD_OPTIONS ) {
