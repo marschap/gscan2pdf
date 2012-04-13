@@ -150,7 +150,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
 
 my $prog_name = 'gscan2pdf';
-my $version   = '1.0.4';
+my $version   = '1.0.5';
 
 my $tolerance = 1;
 
@@ -1886,7 +1886,7 @@ sub setup_tpbar {
 #    and avoid the race condition where the callback is entered before the $completed and $total variables have caught up
   return $tcbutton->signal_connect(
    clicked => sub {
-    $slist->{cancelled} = TRUE;
+    $slist->cancel($pid);
     $thbox->hide;
    }
   );
@@ -1958,8 +1958,8 @@ sub open_dialog {
   $SETTING{'cwd'} = dirname( $filename[0] );
 
   for (@filename) {
-   my $signal;
-   $slist->get_file_info(
+   my ( $signal, $pid );
+   $pid = $slist->get_file_info(
     $_,
     sub {    # queued
      my ( $process, $completed, $total, $message, $progress ) = @_;
@@ -1967,7 +1967,7 @@ sub open_dialog {
       $progress );
     },
     sub {    # started
-     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
@@ -2006,8 +2006,8 @@ sub open_dialog {
       $obutton->signal_connect(
        clicked => sub {
         $windowq->destroy;
-        my $signal;
-        $slist->import_file(
+        my ( $signal, $pid );
+        $pid = $slist->import_file(
          $info,
          $spinbuttonf->get_value,
          $spinbuttonl->get_value,
@@ -2017,7 +2017,7 @@ sub open_dialog {
            $progress );
          },
          sub {    # started
-          my ( $thread, $process, $completed, $total, $pid ) = @_;
+          my ( $thread, $process, $completed, $total ) = @_;
           $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
           return TRUE if ( defined $signal );
          },
@@ -2050,8 +2050,8 @@ sub open_dialog {
       $windowq->show_all;
      }
      else {
-      my $signal;
-      $slist->import_file(
+      my ( $signal, $pid );
+      $pid = $slist->import_file(
        $info, 1, 1,
        sub {    # queued
         my ( $process, $completed, $total, $message, $progress ) = @_;
@@ -2059,7 +2059,7 @@ sub open_dialog {
          $progress );
        },
        sub {    # started
-        my ( $thread, $process, $completed, $total, $pid ) = @_;
+        my ( $thread, $process, $completed, $total ) = @_;
         $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
         return TRUE if ( defined $signal );
        },
@@ -2532,8 +2532,8 @@ sub save_PDF {
 
     # Create the PDF
     $logger->debug("Started saving $filename");
-    my $signal;
-    $slist->save_pdf(
+    my ( $signal, $pid );
+    $pid = $slist->save_pdf(
      $filename,
      \@list_of_pages,
      get_pdf_metadata(),
@@ -2544,7 +2544,7 @@ sub save_PDF {
        $progress );
      },
      sub {    # started
-      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      my ( $thread, $process, $completed, $total ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
@@ -2987,8 +2987,8 @@ sub save_dialog {
         push @list_of_pages, $slist->{data}[$_][2];
        }
 
-       my $signal;
-       $slist->save_text(
+       my ( $signal, $pid );
+       $pid = $slist->save_text(
         $filename,
         \@list_of_pages,
         sub {    # queued
@@ -2997,7 +2997,7 @@ sub save_dialog {
           $progress );
         },
         sub {    # started
-         my ( $thread, $process, $completed, $total, $pid ) = @_;
+         my ( $thread, $process, $completed, $total ) = @_;
          $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
          return TRUE if ( defined $signal );
         },
@@ -3250,8 +3250,8 @@ sub save_image {
 
   # Create the image
   $logger->debug("Started saving $filename");
-  my $signal;
-  $slist->save_image(
+  my ( $signal, $pid );
+  $pid = $slist->save_image(
    $filename,
    \@list_of_pages,
    sub {    # queued
@@ -3259,7 +3259,7 @@ sub save_image {
     return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
    sub {    # started
-    my ( $thread, $process, $completed, $total, $pid ) = @_;
+    my ( $thread, $process, $completed, $total ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },
@@ -3306,8 +3306,8 @@ sub save_TIFF {
   quality     => $SETTING{quality},
  );
 
- my $signal;
- $slist->save_tiff(
+ my ( $signal, $pid );
+ $pid = $slist->save_tiff(
   $filename,
   \@list_of_pages,
   \%options,
@@ -3317,7 +3317,7 @@ sub save_TIFF {
    return update_tpbar( 1, $process, $completed, $total, $message, $progress );
   },
   sub {    # started
-   my ( $thread, $process, $completed, $total, $pid ) = @_;
+   my ( $thread, $process, $completed, $total ) = @_;
    $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
    return TRUE if ( defined $signal );
   },
@@ -3400,8 +3400,8 @@ sub save_djvu {
 
     # Create the DjVu
     $logger->debug("Started saving $filename");
-    my $signal;
-    $slist->save_djvu(
+    my ( $signal, $pid );
+    $pid = $slist->save_djvu(
      $filename,
      \@list_of_pages,
      sub {    # queued
@@ -3410,7 +3410,7 @@ sub save_djvu {
        $progress );
      },
      sub {    # started
-      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      my ( $thread, $process, $completed, $total ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
@@ -3530,8 +3530,8 @@ sub email {
    }
 
    # Create the PDF
-   my $signal;
-   $slist->save_pdf(
+   my ( $signal, $pid );
+   $pid = $slist->save_pdf(
     $pdf->filename,
     \@list_of_pages,
     get_pdf_metadata(),
@@ -3542,7 +3542,7 @@ sub email {
       $progress );
     },
     sub {    # started
-     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
@@ -8300,15 +8300,15 @@ sub rotate {
  take_snapshot();
 
  for my $page ( @{$pagelist} ) {
-  my $signal;
-  $slist->rotate(
+  my ( $signal, $pid );
+  $pid = $slist->rotate(
    $angle, $page,
    sub {    # queued
     my ( $process, $completed, $total, $message, $progress ) = @_;
     return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
    sub {    # started
-    my ( $thread, $process, $completed, $total, $pid ) = @_;
+    my ( $thread, $process, $completed, $total ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },
@@ -8349,8 +8349,8 @@ sub analyse {
    $logger->info(
 "Updating: $slist->{data}[$i][0] analyse_time: $analyse_time dirty_time: $dirty_time"
    );
-   my $signal;
-   $slist->analyse(
+   my ( $signal, $pid );
+   $pid = $slist->analyse(
     $slist->{data}[$i][2],
     sub {    # queued
      my ( $process, $completed, $total, $message, $progress ) = @_;
@@ -8358,7 +8358,7 @@ sub analyse {
       $progress );
     },
     sub {    # started
-     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
@@ -8450,8 +8450,8 @@ sub threshold {
    my $page     = 0;
    for my $i (@pagelist) {
     $page++;
-    my $signal;
-    $slist->threshold(
+    my ( $signal, $pid );
+    $pid = $slist->threshold(
      $SETTING{'threshold tool'},
      $slist->{data}[$i][2],
      sub {    # queued
@@ -8460,7 +8460,7 @@ sub threshold {
        $progress );
      },
      sub {    # started
-      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      my ( $thread, $process, $completed, $total ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
@@ -8519,8 +8519,8 @@ sub negate {
 
    my @pagelist = get_page_index();
    for my $i (@pagelist) {
-    my $signal;
-    $slist->negate(
+    my ( $signal, $pid );
+    $pid = $slist->negate(
      $slist->{data}[$i][2],
      sub {    # queued
       my ( $process, $completed, $total, $message, $progress ) = @_;
@@ -8528,7 +8528,7 @@ sub negate {
        $progress );
      },
      sub {    # started
-      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      my ( $thread, $process, $completed, $total ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
@@ -8655,8 +8655,8 @@ sub unsharp {
 
    my @pagelist = get_page_index();
    for my $i (@pagelist) {
-    my $signal;
-    $slist->unsharp(
+    my ( $signal, $pid );
+    $pid = $slist->unsharp(
      $slist->{data}[$i][2],
      $SETTING{'unsharp radius'},
      $SETTING{'unsharp sigma'},
@@ -8668,7 +8668,7 @@ sub unsharp {
        $progress );
      },
      sub {    # started
-      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      my ( $thread, $process, $completed, $total ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
@@ -8843,8 +8843,8 @@ sub crop {
 
    my @pagelist = get_page_index();
    for my $i (@pagelist) {
-    my $signal;
-    $slist->crop(
+    my ( $signal, $pid );
+    $pid = $slist->crop(
      $slist->{data}[$i][2],
      $x, $y, $w, $h,
      sub {    # queued
@@ -8853,7 +8853,7 @@ sub crop {
        $progress );
      },
      sub {    # started
-      my ( $thread, $process, $completed, $total, $pid ) = @_;
+      my ( $thread, $process, $completed, $total ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
@@ -8907,8 +8907,8 @@ sub user_defined_tool {
 
  my $cmd = $action->get('label');
  for my $i (@pages) {
-  my $signal;
-  $slist->user_defined(
+  my ( $signal, $pid );
+  $pid = $slist->user_defined(
    $slist->{data}[$i][2],
    $cmd,
    sub {    # queued
@@ -8916,7 +8916,7 @@ sub user_defined_tool {
     return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
    sub {    # started
-    my ( $thread, $process, $completed, $total, $pid ) = @_;
+    my ( $thread, $process, $completed, $total ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },
@@ -8965,8 +8965,8 @@ sub unpaper_page {
  take_snapshot();
 
  for my $pageobject ( @{$pages} ) {
-  my $signal;
-  $slist->unpaper(
+  my ( $signal, $pid );
+  $pid = $slist->unpaper(
    $pageobject,
    $options,
    sub {    # queued
@@ -8974,7 +8974,7 @@ sub unpaper_page {
     return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
    sub {    # started
-    my ( $thread, $process, $completed, $total, $pid ) = @_;
+    my ( $thread, $process, $completed, $total ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },
@@ -9053,9 +9053,9 @@ sub ocr_page {
  my ($pages) = @_;
 
  for my $page ( @{$pages} ) {
-  my $signal;
+  my ( $signal, $pid );
   if ( $SETTING{'ocr engine'} eq 'gocr' ) {
-   $slist->gocr(
+   $pid = $slist->gocr(
     $page,
     sub {    # queued
      my ( $process, $completed, $total, $message, $progress ) = @_;
@@ -9063,7 +9063,7 @@ sub ocr_page {
       $progress );
     },
     sub {    # started
-     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
@@ -9086,7 +9086,7 @@ sub ocr_page {
    );
   }
   elsif ( $SETTING{'ocr engine'} eq 'tesseract' ) {
-   $slist->tesseract(
+   $pid = $slist->tesseract(
     $page,
     $SETTING{'ocr language'},
     sub {     # queued
@@ -9095,7 +9095,7 @@ sub ocr_page {
       $progress );
     },
     sub {     # started
-     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
@@ -9118,7 +9118,7 @@ sub ocr_page {
    );
   }
   elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
-   $slist->ocropus(
+   $pid = $slist->ocropus(
     $page,
     $SETTING{'ocr language'},
     sub {     # queued
@@ -9127,7 +9127,7 @@ sub ocr_page {
       $progress );
     },
     sub {     # started
-     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
@@ -9150,7 +9150,7 @@ sub ocr_page {
    );
   }
   else {      # cuneiform
-   $slist->cuneiform(
+   $pid = $slist->cuneiform(
     $page,
     $SETTING{'ocr language'},
     sub {     # queued
@@ -9159,7 +9159,7 @@ sub ocr_page {
       $progress );
     },
     sub {     # started
-     my ( $thread, $process, $completed, $total, $pid ) = @_;
+     my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
@@ -9710,15 +9710,15 @@ sub compress_temp {
  $uimanager->get_widget('/ToolBar/Undo')->set_sensitive(FALSE);
 
  for ( @{ $slist->{data} } ) {
-  my $signal;
-  $slist->to_png(
+  my ( $signal, $pid );
+  $pid = $slist->to_png(
    $_->[2],
    sub {    # queued
     my ( $process, $completed, $total, $message, $progress ) = @_;
     return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
    sub {    # started
-    my ( $thread, $process, $completed, $total, $pid ) = @_;
+    my ( $thread, $process, $completed, $total ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },

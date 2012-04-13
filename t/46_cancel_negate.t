@@ -7,7 +7,7 @@
 
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 BEGIN {
  use Gscan2pdf;
@@ -44,7 +44,7 @@ $slist->get_file_info(
    $info, 1, 1, undef, undef, undef,
    sub {
     my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
-    $slist->negate(
+    my $pid    = $slist->negate(
      $slist->{data}[0][2],
      undef, undef, undef, undef, undef, undef,
      sub {
@@ -53,17 +53,21 @@ $slist->get_file_info(
        `md5sum $slist->{data}[0][2]{filename} | cut -c -32`,
        'image not modified'
       );
-      Gtk2->main_quit;
+      $slist->save_image( 'test.jpg', [ $slist->{data}[0][2] ],
+       undef, undef, undef, sub { Gtk2->main_quit } );
      }
     );
-    $slist->{cancelled} = 1;
+    $slist->cancel($pid);
    }
   );
  }
 );
 Gtk2->main;
 
+is( system('identify test.jpg'),
+ 0, 'can create a valid JPG after cancelling previous process' );
+
 #########################
 
-unlink 'white.pnm';
+unlink 'white.pnm', 'test.jpg';
 Gscan2pdf->quit();

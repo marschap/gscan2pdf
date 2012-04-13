@@ -22,6 +22,7 @@ use Readonly;
 Readonly our $POINTS_PER_INCH => 72;
 
 my $_POLL_INTERVAL = 100;    # ms
+my $_PID           = 0;      # flag to identify which process to cancel
 
 BEGIN {
  use Exporter ();
@@ -80,13 +81,26 @@ sub _when_ready {
  return;
 }
 
+# Flag the given process to cancel itself
+
+sub cancel {
+ my ( $self, $pid, $callback ) = @_;
+ $self->{cancel_cb}{$pid} = $callback
+   if ( defined $self->{running_pids}{$pid} );
+ return;
+}
+
 sub get_file_info {
  my ( $self, $path, $queued_callback, $started_callback, $running_callback,
   $finished_callback, $error_callback, $cancelled_callback )
    = @_;
  my $started_flag;
 
- # File in which to store the process ID so that it can be killed if necessary
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
+
+# File in which to store the subprocess ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
 
  my $sentinel =
@@ -100,9 +114,19 @@ sub get_file_info {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -117,9 +141,16 @@ sub get_file_info {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -131,9 +162,10 @@ sub get_file_info {
     $Gscan2pdf::_self->{info_queue}->dequeue,
     $Gscan2pdf::_self->{requests}->pending
    ) if ($finished_callback);
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub import_file {
@@ -145,6 +177,10 @@ sub import_file {
  ) = @_;
  my $started_flag;
  my $outstanding = $last - $first + 1;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
@@ -160,9 +196,19 @@ sub import_file {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $self->fetch_file($outstanding);
@@ -178,9 +224,16 @@ sub import_file {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -191,9 +244,10 @@ sub import_file {
    $outstanding -= $self->fetch_file;
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if ($finished_callback);
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub fetch_file {
@@ -379,6 +433,10 @@ sub save_pdf {
  }
  my $started_flag;
 
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
+
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
 
@@ -400,9 +458,19 @@ sub save_pdf {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -417,9 +485,16 @@ sub save_pdf {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -429,9 +504,10 @@ sub save_pdf {
    }
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub save_djvu {
@@ -446,6 +522,10 @@ sub save_djvu {
     $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
  }
  my $started_flag;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
@@ -466,9 +546,19 @@ sub save_djvu {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -483,9 +573,16 @@ sub save_djvu {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -495,9 +592,10 @@ sub save_djvu {
    }
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub save_tiff {
@@ -513,6 +611,10 @@ sub save_tiff {
     $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
  }
  my $started_flag;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
@@ -535,9 +637,19 @@ sub save_tiff {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -552,9 +664,16 @@ sub save_tiff {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -564,9 +683,10 @@ sub save_tiff {
    }
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub rotate {
@@ -576,6 +696,10 @@ sub rotate {
   $finished_callback, $error_callback,   $display_callback,
   $cancelled_callback
  ) = @_;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  my $started_flag;
  my $sentinel =
@@ -589,9 +713,19 @@ sub rotate {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -606,9 +740,16 @@ sub rotate {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -620,9 +761,10 @@ sub rotate {
     $self->update_page($display_callback),
     $Gscan2pdf::_self->{requests}->pending
    ) if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub update_page {
@@ -682,6 +824,10 @@ sub save_image {
  }
  my $started_flag;
 
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
+
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
 
@@ -701,9 +847,19 @@ sub save_image {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -718,9 +874,16 @@ sub save_image {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -730,9 +893,10 @@ sub save_image {
    }
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub save_text {
@@ -741,6 +905,10 @@ sub save_text {
   $queued_callback,   $started_callback, $running_callback,
   $finished_callback, $error_callback,   $cancelled_callback
  ) = @_;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  for my $i ( 0 .. $#{$list_of_pages} ) {
   $list_of_pages->[$i] =
@@ -762,7 +930,7 @@ sub save_text {
   $sentinel,
   undef,    # pending
   sub {     # running
-   unless ( $self->{cancelled} ) {
+   unless ( exists $self->{cancel_cb}{$pid} ) {
     $started_flag = $started_callback->(
      1,                            $Gscan2pdf::_self->{process_name},
      $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
@@ -776,7 +944,7 @@ sub save_text {
    }
   },
   sub {    # finished
-   unless ( $self->{cancelled} ) {
+   unless ( exists $self->{cancel_cb}{$pid} ) {
     $started_callback->() if ( $started_callback and not $started_flag );
     if ( $Gscan2pdf::_self->{status} ) {
      $error_callback->();
@@ -785,15 +953,22 @@ sub save_text {
     $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
       if $finished_callback;
    }
+   $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+   delete $self->{cancel_cb}{$pid};
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub analyse {
  my ( $self, $page, $queued_callback, $started_callback, $running_callback,
   $finished_callback, $error_callback, $cancelled_callback )
    = @_;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  my $started_flag;
  my $sentinel =
@@ -806,7 +981,7 @@ sub analyse {
   $sentinel,
   undef,    # pending
   sub {     # running
-   unless ( $self->{cancelled} ) {
+   unless ( exists $self->{cancel_cb}{$pid} ) {
     $started_flag = $started_callback->(
      1,                            $Gscan2pdf::_self->{process_name},
      $Gscan2pdf::jobs_completed,   $Gscan2pdf::jobs_total,
@@ -820,7 +995,7 @@ sub analyse {
    }
   },
   sub {    # finished
-   unless ( $self->{cancelled} ) {
+   unless ( exists $self->{cancel_cb}{$pid} ) {
     $started_callback->() if ( $started_callback and not $started_flag );
     if ( $Gscan2pdf::_self->{status} ) {
      $error_callback->();
@@ -830,9 +1005,12 @@ sub analyse {
     $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
       if $finished_callback;
    }
+   $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+   delete $self->{cancel_cb}{$pid};
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub threshold {
@@ -842,6 +1020,10 @@ sub threshold {
   $finished_callback, $error_callback,   $display_callback,
   $cancelled_callback
  ) = @_;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  my $started_flag;
  my $sentinel =
@@ -855,9 +1037,19 @@ sub threshold {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -872,9 +1064,16 @@ sub threshold {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -885,9 +1084,10 @@ sub threshold {
    $self->update_page($display_callback);
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub negate {
@@ -896,6 +1096,10 @@ sub negate {
   $started_callback, $running_callback, $finished_callback,
   $error_callback,   $display_callback, $cancelled_callback
  ) = @_;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  my $started_flag;
  my $sentinel =
@@ -908,9 +1112,19 @@ sub negate {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -925,9 +1139,16 @@ sub negate {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -938,9 +1159,10 @@ sub negate {
    $self->update_page($display_callback);
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub unsharp {
@@ -951,6 +1173,10 @@ sub unsharp {
   $finished_callback, $error_callback,   $display_callback,
   $cancelled_callback
  ) = @_;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  my $started_flag;
  my $sentinel = Gscan2pdf::_enqueue_request(
@@ -971,9 +1197,19 @@ sub unsharp {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -988,9 +1224,16 @@ sub unsharp {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -1001,9 +1244,10 @@ sub unsharp {
    $self->update_page($display_callback);
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub crop {
@@ -1014,6 +1258,10 @@ sub crop {
   $finished_callback, $error_callback,   $display_callback,
   $cancelled_callback
  ) = @_;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  my $started_flag;
  my $sentinel = Gscan2pdf::_enqueue_request(
@@ -1034,9 +1282,19 @@ sub crop {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -1051,9 +1309,16 @@ sub crop {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -1064,15 +1329,20 @@ sub crop {
    $self->update_page($display_callback);
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub to_png {
  my ( $self, $page, $queued_callback, $started_callback, $running_callback,
   $finished_callback, $error_callback, $cancelled_callback )
    = @_;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  my $started_flag;
  my $sentinel =
@@ -1085,9 +1355,19 @@ sub to_png {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -1102,9 +1382,16 @@ sub to_png {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process;
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process;
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -1115,9 +1402,10 @@ sub to_png {
    $self->update_page();
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub tesseract {
@@ -1129,6 +1417,10 @@ sub tesseract {
  ) = @_;
 
  my $started_flag;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
@@ -1144,9 +1436,19 @@ sub tesseract {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -1161,9 +1463,16 @@ sub tesseract {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -1174,9 +1483,10 @@ sub tesseract {
    $self->update_page($display_callback);
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub ocropus {
@@ -1188,6 +1498,10 @@ sub ocropus {
  ) = @_;
 
  my $started_flag;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
@@ -1203,9 +1517,19 @@ sub ocropus {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -1220,9 +1544,16 @@ sub ocropus {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -1233,9 +1564,10 @@ sub ocropus {
    $self->update_page($display_callback);
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub cuneiform {
@@ -1247,6 +1579,10 @@ sub cuneiform {
  ) = @_;
 
  my $started_flag;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
@@ -1262,9 +1598,19 @@ sub cuneiform {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -1279,9 +1625,16 @@ sub cuneiform {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -1292,9 +1645,10 @@ sub cuneiform {
    $self->update_page($display_callback);
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub gocr {
@@ -1305,6 +1659,10 @@ sub gocr {
  ) = @_;
 
  my $started_flag;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
@@ -1320,9 +1678,19 @@ sub gocr {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -1337,9 +1705,16 @@ sub gocr {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -1350,9 +1725,10 @@ sub gocr {
    $self->update_page($display_callback);
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub unpaper {
@@ -1364,6 +1740,10 @@ sub unpaper {
  ) = @_;
 
  my $started_flag;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
@@ -1379,9 +1759,19 @@ sub unpaper {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -1396,9 +1786,16 @@ sub unpaper {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -1410,9 +1807,10 @@ sub unpaper {
     $self->update_page($display_callback),
     $Gscan2pdf::_self->{requests}->pending
    ) if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 sub user_defined {
@@ -1424,6 +1822,10 @@ sub user_defined {
  ) = @_;
 
  my $started_flag;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
 
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
@@ -1439,9 +1841,19 @@ sub user_defined {
   $sentinel,
   undef,    # pending
   sub {     # running
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
     return;
    }
    $started_flag = $started_callback->(
@@ -1456,9 +1868,16 @@ sub user_defined {
    ) if ($running_callback);
   },
   sub {    # finished
-   if ( $self->{cancelled} ) {
-    Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
-    $cancelled_callback->() if ($cancelled_callback);
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     Gscan2pdf::_cancel_process( Gscan2pdf::slurp($pidfile) );
+     $cancelled_callback->() if ($cancelled_callback);
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
     return;
    }
    $started_callback->() if ( $started_callback and not $started_flag );
@@ -1469,9 +1888,10 @@ sub user_defined {
    $self->update_page($display_callback);
    $finished_callback->( $Gscan2pdf::_self->{requests}->pending )
      if $finished_callback;
+   delete $self->{running_pids}{$pid};
   },
  );
- return;
+ return $pid;
 }
 
 # Dump $self to a file.

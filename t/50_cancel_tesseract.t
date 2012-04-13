@@ -7,7 +7,7 @@
 
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 BEGIN {
  use Gscan2pdf;
@@ -33,7 +33,7 @@ our $d = Locale::gettext->domain($prog_name);
 Gscan2pdf->setup( $d, $logger );
 
 SKIP: {
- skip 'Tesseract not installed', 1 unless Gscan2pdf::Tesseract->setup;
+ skip 'Tesseract not installed', 2 unless Gscan2pdf::Tesseract->setup;
 
  # Create test image
  system(
@@ -49,21 +49,25 @@ SKIP: {
    $slist->import_file(
     $info, 1, 1, undef, undef, undef,
     sub {
-     $slist->tesseract(
+     my $pid = $slist->tesseract(
       $slist->{data}[0][2],
       'eng', undef, undef, undef, undef, undef, undef,
       sub {
        is( $slist->{data}[0][2]{hocr}, undef, 'no OCR output' );
-       Gtk2->main_quit;
+       $slist->save_image( 'test.jpg', [ $slist->{data}[0][2] ],
+        undef, undef, undef, sub { Gtk2->main_quit } );
       }
      );
-     $slist->{cancelled} = 1;
+     $slist->cancel($pid);
     }
    );
   }
  );
  Gtk2->main;
 
- unlink 'test.tif';
+ is( system('identify test.jpg'),
+  0, 'can create a valid JPG after cancelling previous process' );
+
+ unlink 'test.tif', 'test.jpg';
  Gscan2pdf->quit();
 }

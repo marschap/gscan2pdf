@@ -7,7 +7,7 @@
 
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 BEGIN {
  use Gscan2pdf;
@@ -43,7 +43,7 @@ $slist->get_file_info(
   $slist->import_file(
    $info, 1, 1, undef, undef, undef,
    sub {
-    $slist->threshold(
+    my $pid = $slist->threshold(
      80,
      $slist->{data}[0][2],
      undef, undef, undef, undef, undef, undef,
@@ -53,17 +53,21 @@ $slist->get_file_info(
        -s "$slist->{data}[0][2]{filename}",
        'image not modified'
       );
-      Gtk2->main_quit;
+      $slist->save_image( 'test2.jpg', [ $slist->{data}[0][2] ],
+       undef, undef, undef, sub { Gtk2->main_quit } );
      }
     );
-    $slist->{cancelled} = 1;
+    $slist->cancel($pid);
    }
   );
  }
 );
 Gtk2->main;
 
+is( system('identify test2.jpg'),
+ 0, 'can create a valid JPG after cancelling previous process' );
+
 #########################
 
-unlink 'test.jpg', 'test.png';
+unlink 'test.jpg', 'test2.jpg';
 Gscan2pdf->quit();

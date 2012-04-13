@@ -7,13 +7,11 @@
 
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 BEGIN {
  use Gscan2pdf;
  use Gscan2pdf::Document;
-
- #  use File::Copy;
 }
 
 #########################
@@ -22,7 +20,7 @@ BEGIN {
 # its man page ( perldoc Test::More ) for help writing this test script.
 
 SKIP: {
- skip 'unpaper not installed', 1
+ skip 'unpaper not installed', 2
    unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
 
  # Thumbnail dimensions
@@ -57,7 +55,7 @@ SKIP: {
     $info, 1, 1, undef, undef, undef,
     sub {
      my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
-     $slist->unpaper(
+     my $pid    = $slist->unpaper(
       $slist->{data}[0][2],
       '--output-pages 2 --layout double',
       undef, undef, undef, undef, undef, undef,
@@ -67,16 +65,20 @@ SKIP: {
         `md5sum $slist->{data}[0][2]{filename} | cut -c -32`,
         'image not modified'
        );
-       Gtk2->main_quit;
+       $slist->save_image( 'test.jpg', [ $slist->{data}[0][2] ],
+        undef, undef, undef, sub { Gtk2->main_quit } );
       }
      );
-     $slist->{cancelled} = 1;
+     $slist->cancel($pid);
     }
    );
   }
  );
  Gtk2->main;
 
- unlink 'test.pnm', '1.pnm', '2.pnm', 'black.pnm';
+ is( system('identify test.jpg'),
+  0, 'can create a valid JPG after cancelling previous process' );
+
+ unlink 'test.pnm', '1.pnm', '2.pnm', 'black.pnm', 'test.jpg';
  Gscan2pdf->quit();
 }

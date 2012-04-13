@@ -7,7 +7,7 @@
 
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 BEGIN {
  use Gscan2pdf;
@@ -40,20 +40,32 @@ $slist->get_file_info(
  undef, undef, undef,
  sub {
   my ($info) = @_;
-  $slist->import_file(
+  my $pid = $slist->import_file(
    $info, 1, 1, undef, undef, undef, undef,
    undef,
    sub {
-    is( $slist->{data}[0][2]{filename}, undef, 'TIFF not imported' );
-    Gtk2->main_quit;
+    is( defined( $slist->{data}[0] ), '', 'TIFF not imported' );
+    $slist->import_file(
+     $info, 1, 1, undef, undef, undef,
+     sub {
+      system("cp $slist->{data}[0][2]{filename} test2.tif");
+      Gtk2->main_quit;
+     }
+    );
    }
   );
-  $slist->{cancelled} = 1;
+  $slist->cancel($pid);
  }
 );
 Gtk2->main;
 
+is(
+ -s 'test2.tif',
+ -s 'test.tif',
+ 'TIFF imported correctly after cancelling previous import'
+);
+
 #########################
 
-unlink 'test.tif';
+unlink 'test.tif', 'test2.tif';
 Gscan2pdf->quit();

@@ -43,18 +43,26 @@ $slist->get_file_info(
   $slist->import_file(
    $info, 1, 1, undef, undef, undef,
    sub {
-    $slist->save_tiff( 'test.tif', [ $slist->{data}[0][2] ],
-     undef, undef, undef, undef, undef, undef, undef, sub { Gtk2->main_quit } );
-    $slist->{cancelled} = 1;
+    my $pid = $slist->save_tiff(
+     'test.tif',
+     [ $slist->{data}[0][2] ],
+     undef, undef, undef, undef, undef, undef, undef,
+     sub {
+      $slist->save_image( 'test.jpg', [ $slist->{data}[0][2] ],
+       undef, undef, undef, sub { Gtk2->main_quit } );
+     }
+    );
+    $slist->cancel($pid);
    }
   );
  }
 );
 Gtk2->main;
 
-is( $Gscan2pdf::_self->{cancel}, 1, 'save_tiff was cancelled' );
+is( system('identify test.jpg'),
+ 0, 'can create a valid JPG after cancelling save TIFF process' );
 
 #########################
 
-unlink 'test.pnm', 'test.tif';
+unlink 'test.pnm', 'test.tif', 'test.jpg';
 Gscan2pdf->quit();

@@ -7,7 +7,7 @@
 
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 BEGIN {
  use Gscan2pdf;
@@ -21,7 +21,7 @@ BEGIN {
 # its man page ( perldoc Test::More ) for help writing this test script.
 
 SKIP: {
- skip 'Cuneiform not installed', 1 unless Gscan2pdf::Cuneiform->setup;
+ skip 'Cuneiform not installed', 2 unless Gscan2pdf::Cuneiform->setup;
 
  # Thumbnail dimensions
  our $widtht  = 100;
@@ -49,21 +49,25 @@ SKIP: {
    $slist->import_file(
     $info, 1, 1, undef, undef, undef,
     sub {
-     $slist->cuneiform(
+     my $pid = $slist->cuneiform(
       $slist->{data}[0][2],
       'eng', undef, undef, undef, undef, undef, undef,
       sub {
        is( $slist->{data}[0][2]{hocr}, undef, 'no OCR output' );
-       Gtk2->main_quit;
+       $slist->save_image( 'test.jpg', [ $slist->{data}[0][2] ],
+        undef, undef, undef, sub { Gtk2->main_quit } );
       }
      );
-     $slist->{cancelled} = 1;
+     $slist->cancel($pid);
     }
    );
   }
  );
  Gtk2->main;
 
- unlink 'test.bmp';
+ is( system('identify test.jpg'),
+  0, 'can create a valid JPG after cancelling previous process' );
+
+ unlink 'test.bmp', 'test.jpg';
  Gscan2pdf->quit();
 }
