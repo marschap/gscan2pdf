@@ -73,10 +73,8 @@ sub _when_ready {
     $running_callback->() if ($running_callback);
     return Glib::SOURCE_CONTINUE;
    }
-   else {
-    $pending_callback->() if ($pending_callback);
-    return Glib::SOURCE_CONTINUE;
-   }
+   $pending_callback->() if ($pending_callback);
+   return Glib::SOURCE_CONTINUE;
   }
  );
  return;
