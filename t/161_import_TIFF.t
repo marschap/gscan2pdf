@@ -51,7 +51,7 @@ $slist->get_file_info(
 );
 Gtk2->main;
 
-is( -s 'test.tif', -s 'test2.tif', 'TIFF imported correctly' );
+is( -s 'test2.tif', -s 'test.tif', 'TIFF imported correctly' );
 
 #########################
 
