@@ -6001,14 +6001,16 @@ sub paste_selection {
   # Create a new image file for each page in the clipboard
   for (@clipboard) {
    my $suffix;
-   $suffix = $1 if ( $_->[2] =~ /(\.\w*)$/ );
+   $suffix = $1 if ( $_->[2]{filename} =~ /(\.\w*)$/ );
    my $new = File::Temp->new( DIR => $session, SUFFIX => $suffix );
-   unless ( copy( $_->[2], $new ) ) {
+
+   # stringify filename to prevent copy from mangling it
+   unless ( copy( "$_->[2]{filename}", $new ) ) {
     show_message_dialog( $window, 'error', 'close',
-     $d->get('Error pasting image') );
+     $d->get("Error pasting image - $!") );
     return;
    }
-   $_->[2] = $new;
+   $_->[2]{filename} = $new;
   }
 
   # Block the row-changed signal whilst adding the scan (row) and sorting it.
