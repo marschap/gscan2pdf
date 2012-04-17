@@ -5856,28 +5856,38 @@ sub import_scan {
      $logger->info("Header suggests $size");
      close($fh);
     }
-    $logger->info( sprintf "Expecting $size, found %d", -s $ofilename );
-    if ( $size <= -s $ofilename ) {
-     my $gpage = Gscan2pdf::Page->new(
-      filename   => $ofilename,
-      resolution => $resolution,
-      format     => 'Portable anymap',
-      delete     => $delete,
-      dir        => $session,
-     );
-     my $index = $slist->add_page( $gpage, $page, &update_uimanager );
-     if ( $index == -1 ) {
-      show_message_dialog( $windows, 'error', 'close',
-       $d->get('Unable to load image') );
+    my $filesize = -s $ofilename;
+    $logger->info("Expecting $size, found $filesize");
+    if ( $size > $filesize ) {
+     my $pad = $size - $filesize;
+     open( my $fh, ">>", $ofilename ) or die "cannot open >> $ofilename: $!";
+     my $data = '';
+     for ( 1 .. $pad * 8 ) {
+      $data .= '1';
      }
-     else {
-      update_uimanager();
-      post_process_scan( [$gpage], $rotate, $unpaper, $ocr );
-     }
-     return FALSE;    # uninstall
+     printf $fh pack( sprintf( "b%d", length $data ), $data );
+     close $fh;
+     $logger->info("Padded $pad bytes");
     }
+    my $gpage = Gscan2pdf::Page->new(
+     filename   => $ofilename,
+     resolution => $resolution,
+     format     => 'Portable anymap',
+     delete     => $delete,
+     dir        => $session,
+    );
+    my $index = $slist->add_page( $gpage, $page, &update_uimanager );
+    if ( $index == -1 ) {
+     show_message_dialog( $windows, 'error', 'close',
+      $d->get('Unable to load image') );
+    }
+    else {
+     update_uimanager();
+     post_process_scan( [$gpage], $rotate, $unpaper, $ocr );
+    }
+    return FALSE;    # uninstall
    }
-   return TRUE;       # continue without uninstalling
+   return TRUE;      # continue without uninstalling
   }
  );
 
