@@ -28,10 +28,7 @@ our $heightt = 100;
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 our $logger = Log::Log4perl::get_logger;
-my $prog_name = 'gscan2pdf';
-use Locale::gettext 1.05;    # For translations
-our $d = Locale::gettext->domain($prog_name);
-Gscan2pdf->setup( $d, $logger );
+Gscan2pdf->setup($logger);
 
 # Create test image
 system('convert rose: 1.pnm');

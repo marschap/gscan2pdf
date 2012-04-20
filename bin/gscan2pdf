@@ -150,7 +150,8 @@ use Log::Log4perl;
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
 
-my $prog_name = 'gscan2pdf';
+Glib::set_application_name('gscan2pdf');
+my $prog_name = Glib::get_application_name;
 my $version   = '1.0.5';
 
 my $tolerance = 1;
@@ -164,7 +165,7 @@ my $border = 1;
 # Set up domain for gettext (internationalisation)
 # Expects /usr/share/locale/LANGUAGE/LC_MESSAGES/$prog_name.mo
 # or whatever is set by $d->dir([NEWDIR]);
-our $d = Locale::gettext->domain($prog_name);
+my $d      = Locale::gettext->domain($prog_name);
 my $d_sane = Locale::gettext->domain('sane-backends');
 
 my $debug = FALSE;
@@ -441,10 +442,10 @@ if ( not defined( $SETTING{version} ) or $SETTING{version} ne $version ) {
 $SETTING{version} = $version;
 
 # Initialise thread handler
-Gscan2pdf->setup( $d, $logger );
+Gscan2pdf->setup($logger);
 
 # Initialise SANE frontend
-Gscan2pdf::Frontend::Sane->setup( $prog_name, $d, $logger );
+Gscan2pdf::Frontend::Sane->setup($logger);
 
 # Create icons for rotate buttons
 my $IconFactory = undef;

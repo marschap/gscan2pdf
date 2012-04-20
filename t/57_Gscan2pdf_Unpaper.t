@@ -8,10 +8,6 @@ BEGIN {
 
 #########################
 
-my $prog_name = 'gscan2pdf';
-use Locale::gettext 1.05;    # For translations
-our $d = Locale::gettext->domain($prog_name);
-
 my $unpaper = Gscan2pdf::Unpaper->new;
 my $vbox    = Gtk2::VBox->new;
 $unpaper->add_options($vbox);

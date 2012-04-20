@@ -46,10 +46,11 @@ our @EXPORT_OK;
 
 sub new {
  my $class = shift;
+ my $d     = Locale::gettext->domain(Glib::get_application_name);
  my $self  = Gtk2::Ex::Simple::List->new(
-  '#'                         => 'int',
-  $main::d->get('Thumbnails') => 'pixbuf',
-  'Page Data'                 => 'hstring',
+  '#'                   => 'int',
+  $d->get('Thumbnails') => 'pixbuf',
+  'Page Data'           => 'hstring',
  );
  $self->get_selection->set_mode('multiple');
  $self->set_headers_visible(FALSE);

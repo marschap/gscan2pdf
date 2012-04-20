@@ -13,6 +13,7 @@ use Gtk2;
 use File::Copy;
 use File::Temp;    # To create temporary files
 use Proc::Killfam;
+use Locale::gettext 1.05;    # For translations
 
 our $_self;
 our $jobs_completed = 0;
@@ -20,8 +21,9 @@ our $jobs_total     = 0;
 my ( $d, $logger );
 
 sub setup {
- ( my $class, $d, $logger ) = @_;
+ ( my $class, $logger ) = @_;
  $_self = {};
+ $d     = Locale::gettext->domain(Glib::get_application_name);
 
  $_self->{requests}   = Thread::Queue->new;
  $_self->{info_queue} = Thread::Queue->new;

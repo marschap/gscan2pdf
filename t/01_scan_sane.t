@@ -19,13 +19,11 @@ BEGIN {
 # Insert your test code below, the Test::More module is use()ed here so read
 # its man page ( perldoc Test::More ) for help writing this test script.
 
+Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 our $logger = Log::Log4perl::get_logger;
-my $prog_name = 'gscan2pdf';
-use Locale::gettext 1.05;    # For translations
-our $d = Locale::gettext->domain($prog_name);
-Gscan2pdf::Frontend::Sane->setup( $prog_name, $d, $logger );
+Gscan2pdf::Frontend::Sane->setup($logger);
 
 Gscan2pdf::Frontend::Sane->open_device(
  device_name       => 'test',
