@@ -1981,12 +1981,11 @@ sub open_dialog {
      }
      elsif ( $info->{pages} > 1 ) {
       my $windowq = Gscan2pdf::Dialog->new(
-       parent       => $window,
-       title        => $d->get('Pages to extract'),
-       destroy      => TRUE,
-       border_width => $border_width
+       'transient-for' => $window,
+       title           => $d->get('Pages to extract'),
+       border_width    => $border_width
       );
-      my $vbox = $windowq->vbox;
+      my $vbox = $windowq->get('vbox');
       my $hbox = Gtk2::HBox->new;
       $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
       my $label = Gtk2::Label->new( $d->get('First page to extract') );
@@ -2186,12 +2185,11 @@ sub add_pdf_metadata {
  $button->signal_connect(
   clicked => sub {
    my $window = Gscan2pdf::Dialog->new(
-    parent       => $windowi,
-    title        => $d->get('Select Date'),
-    destroy      => TRUE,
-    border_width => $border_width
+    'transient-for' => $windowi,
+    title           => $d->get('Select Date'),
+    border_width    => $border_width
    );
-   my $vbox = $window->vbox;
+   my $vbox = $window->get('vbox');
    $window->set_resizable(FALSE);
 
    my $calendar = Gtk2::Calendar->new;
@@ -2656,12 +2654,12 @@ sub save_dialog {
  }
 
  $windowi = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('Save'),
-  destroy      => FALSE,
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('Save'),
+  destroy         => FALSE,
+  border_width    => $border_width
  );
- my $vbox = $windowi->vbox;
+ my $vbox = $windowi->get('vbox');
 
  # Frame for page range
  add_page_range($vbox);
@@ -3433,12 +3431,12 @@ sub email {
 
  # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
  $windowe = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('Email as PDF'),
-  destroy      => FALSE,
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('Email as PDF'),
+  destroy         => FALSE,
+  border_width    => $border_width
  );
- my $vbox = $windowe->vbox;
+ my $vbox = $windowe->get('vbox');
 
  # PDF options
  my ( $entrya, $entryt, $entrys, $entryk ) = add_pdf_metadata($vbox);
@@ -3576,12 +3574,12 @@ sub scan_dialog {
 
  # scan pop-up window
  $windows = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('Scan Document'),
-  destroy      => FALSE,
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('Scan Document'),
+  destroy         => FALSE,
+  border_width    => $border_width
  );
- my $vbox = $windows->vbox;
+ my $vbox = $windows->get('vbox');
 
  # HBox for devices
  my $hboxd = Gtk2::HBox->new;
@@ -3916,12 +3914,11 @@ sub scan_dialog {
  $button->signal_connect(
   clicked => sub {
    my $windowo = Gscan2pdf::Dialog->new(
-    parent       => $window,
-    title        => $d->get('unpaper options'),
-    destroy      => TRUE,
-    border_width => $border_width
+    'transient-for' => $window,
+    title           => $d->get('unpaper options'),
+    border_width    => $border_width
    );
-   my $vbox1 = $windowo->vbox;
+   my $vbox1 = $windowo->get('vbox');
    $unpaper->add_options($vbox1);
 
    # HBox for buttons
@@ -4360,11 +4357,11 @@ sub scan_dialog2 {
 
  # scan pop-up window
  $windows2 = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('Scan Document'),
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('Scan Document'),
+  border_width    => $border_width
  );
- my $vbox = $windows2->vbox;
+ my $vbox = $windows2->get('vbox');
 
  # HBox for devices
  my $hboxd = Gtk2::HBox->new;
@@ -4691,12 +4688,11 @@ sub scan_dialog2 {
  $button->signal_connect(
   clicked => sub {
    my $windowo = Gscan2pdf::Dialog->new(
-    parent       => $window,
-    title        => $d->get('unpaper options'),
-    destroy      => TRUE,
-    border_width => $border_width
+    'transient-for' => $window,
+    title           => $d->get('unpaper options'),
+    border_width    => $border_width
    );
-   my $vbox1 = $windowo->vbox;
+   my $vbox1 = $windowo->get('vbox');
    $unpaper->add_options($vbox1);
 
    # HBox for buttons
@@ -6748,12 +6744,11 @@ sub edit_paper {
  }
 
  $windowd = Gscan2pdf::Dialog->new(
-  parent       => $windows,
-  title        => $d->get('Edit paper size'),
-  destroy      => TRUE,
-  border_width => $border_width
+  'transient-for' => $windows,
+  title           => $d->get('Edit paper size'),
+  border_width    => $border_width
  );
- my $vbox1 = $windowd->vbox;
+ my $vbox1 = $windowd->get('vbox');
 
  # Buttons for SimpleList
  my $hboxl = Gtk2::HBox->new;
@@ -8442,12 +8437,11 @@ sub threshold {
  # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
  my $windowt = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('Threshold'),
-  destroy      => TRUE,
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('Threshold'),
+  border_width    => $border_width
  );
- my $vbox = $windowt->vbox;
+ my $vbox = $windowt->get('vbox');
 
  # Frame for page range
  add_page_range($vbox);
@@ -8532,12 +8526,11 @@ sub negate {
  # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
  my $windowt = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('Negate'),
-  destroy      => TRUE,
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('Negate'),
+  border_width    => $border_width
  );
- my $vbox = $windowt->vbox;
+ my $vbox = $windowt->get('vbox');
 
  # Frame for page range
  add_page_range($vbox);
@@ -8606,12 +8599,11 @@ sub unsharp {
  # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
  my $windowum = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('Unsharp mask'),
-  destroy      => TRUE,
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('Unsharp mask'),
+  border_width    => $border_width
  );
- my $vbox = $windowum->vbox;
+ my $vbox = $windowum->get('vbox');
 
  # Frame for page range
  add_page_range($vbox);
@@ -8778,12 +8770,12 @@ sub crop {
  # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
  $windowc = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('Crop'),
-  destroy      => FALSE,
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('Crop'),
+  destroy         => FALSE,
+  border_width    => $border_width
  );
- my $vbox = $windowc->vbox;
+ my $vbox = $windowc->get('vbox');
 
  # Frame for page range
  add_page_range($vbox);
@@ -9058,12 +9050,12 @@ sub unpaper {
  }
 
  $windowu = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('unpaper'),
-  destroy      => FALSE,
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('unpaper'),
+  destroy         => FALSE,
+  border_width    => $border_width
  );
- my $vbox = $windowu->vbox;
+ my $vbox = $windowu->get('vbox');
  $unpaper->add_options($vbox);
 
  # Frame for page range
@@ -9332,12 +9324,12 @@ sub OCR {
  }
 
  $windowo = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('OCR'),
-  destroy      => FALSE,
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('OCR'),
+  destroy         => FALSE,
+  border_width    => $border_width
  );
- my $vbox = $windowo->vbox;
+ my $vbox = $windowo->get('vbox');
 
  # OCR engine selection
  my $hboxe = Gtk2::HBox->new;
@@ -9818,12 +9810,12 @@ sub preferences {
  }
 
  $windowr = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('Preferences'),
-  destroy      => FALSE,
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('Preferences'),
+  destroy         => FALSE,
+  border_width    => $border_width
  );
- my $vbox = $windowr->vbox;
+ my $vbox = $windowr->get('vbox');
 
  # Frontends
  my $hbox = Gtk2::HBox->new;
@@ -10182,12 +10174,12 @@ sub properties {
  }
 
  $windowp = Gscan2pdf::Dialog->new(
-  parent       => $window,
-  title        => $d->get('Properties'),
-  destroy      => FALSE,
-  border_width => $border_width
+  'transient-for' => $window,
+  title           => $d->get('Properties'),
+  destroy         => FALSE,
+  border_width    => $border_width
  );
- my $vbox = $windowp->vbox;
+ my $vbox = $windowp->get('vbox');
 
  my $hbox = Gtk2::HBox->new;
  $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
