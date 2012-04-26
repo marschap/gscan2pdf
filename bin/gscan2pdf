@@ -7062,7 +7062,7 @@ sub update_options {
 sub options2hash {
 
  my ($output) = @_;
- my $options = Gscan2pdf::Scanner::Options->new($output);
+ my $options = Gscan2pdf::Scanner::Options->new_from_data($output);
  $logger->debug( Dumper($options) );
  for ( 0 .. $options->num_options - 1 ) {
   my $option = $options->by_index($_);
@@ -7275,7 +7275,7 @@ sub default2index {
      },
      sub {    # finished callback
       my ($data) = @_;
-      my $options = Gscan2pdf::Scanner::Options->new($data);
+      my $options = Gscan2pdf::Scanner::Options->new_from_data($data);
       $logger->debug( "Sane->get_option_descriptor returned: ",
        Dumper($options) );
 

@@ -17,7 +17,7 @@ BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 my $filename = 'scanners/epson_3490';
 my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
-my $options  = Gscan2pdf::Scanner::Options->new($output);
+my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
  {
   name      => 'resolution',

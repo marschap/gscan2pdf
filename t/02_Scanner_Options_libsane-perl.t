@@ -124,7 +124,7 @@ my $data = [
   'constraint_type' => '1'
  },
 ];
-my $options = Gscan2pdf::Scanner::Options->new($data);
+my $options = Gscan2pdf::Scanner::Options->new_from_data($data);
 my @that    = (
  {
   index             => 0,

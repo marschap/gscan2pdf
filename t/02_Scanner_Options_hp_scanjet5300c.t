@@ -17,7 +17,7 @@ BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 my $filename = 'scanners/hp_scanjet5300c';
 my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
-my $options  = Gscan2pdf::Scanner::Options->new($output);
+my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
  {
   name      => 'mode',

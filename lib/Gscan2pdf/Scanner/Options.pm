@@ -3,33 +3,25 @@ package Gscan2pdf::Scanner::Options;
 use strict;
 use warnings;
 use Carp;
-use base qw(Exporter);
-use Sane 0.05;    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
+use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
+use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 
-BEGIN {
- use Exporter ();
- our ( $VERSION, @EXPORT_OK, %EXPORT_TAGS );
+use Glib::Object::Subclass Glib::Object::;
 
- # set the version for version checking
- # $VERSION     = 0.01;
-
- %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
-
- # your exported package globals go here,
- # as well as any optionally exported functions
- @EXPORT_OK = qw();
-}
-our @EXPORT_OK;
-
-sub new {
+sub new_from_data {
  my ( $class, $options ) = @_;
+ my $self = $class->new();
  croak "Error: no options supplied" unless ( defined $options );
- my $self = {};
  if ( ref($options) eq 'ARRAY' ) {
-  my @options = @$options;
+
+  # do a two level clone to allow us to add extra keys to the option hashes
+  my @options;
   $self->{array} = \@options;
-  for my $i ( 0 .. @options - 1 ) {
-   $options[$i]{index} = $i;
+  for my $i ( 0 .. $#{$options} ) {
+   my %option;
+   %option = %{ $options->[$i] } if ( defined $options->[$i] );
+   $option{index} = $i;
+   push @options, \%option;
    $self->{hash}{ $options[$i]{name} } = $options[$i]
      if ( defined( $options[$i]{name} ) and $options[$i]{name} ne '' );
   }
@@ -37,7 +29,6 @@ sub new {
  else {
   ( $self->{array}, $self->{hash} ) = options2hash($options);
  }
- bless( $self, $class );
  $self->parse_geometry;
  return $self;
 }
