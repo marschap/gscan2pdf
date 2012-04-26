@@ -12,6 +12,7 @@ use Test::More tests => 1;
 BEGIN {
  use Gscan2pdf;
  use Gscan2pdf::Document;
+ use Gtk2 -init;    # Could just call init separately
  use PDF::API2;
  use File::Copy;
 }

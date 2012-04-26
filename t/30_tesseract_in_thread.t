@@ -13,6 +13,7 @@ BEGIN {
  use Gscan2pdf;
  use Gscan2pdf::Document;
  use_ok('Gscan2pdf::Tesseract');
+ use Gtk2 -init;    # Could just call init separately
 }
 
 #########################

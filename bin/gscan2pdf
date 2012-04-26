@@ -129,6 +129,7 @@ use Gscan2pdf::Unpaper;
 use Gtk2::ImageView;
 use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
+use Gtk2 -init;    # Could just call init separately
 use Gtk2::Gdk::Keysyms;
 use Cwd;                   # To obtain current working directory
 use File::Basename;        # Split filename into dir, file, ext

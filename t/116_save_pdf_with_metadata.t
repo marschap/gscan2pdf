@@ -12,6 +12,7 @@ use Test::More tests => 3;
 BEGIN {
  use_ok('Gscan2pdf');
  use_ok('Gscan2pdf::Document');
+ use Gtk2 -init;    # Could just call init separately
  use PDF::API2;
 }
 

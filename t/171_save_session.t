@@ -12,6 +12,7 @@ use Test::More tests => 2;
 BEGIN {
  use Gscan2pdf;
  use Gscan2pdf::Document;
+ use Gtk2 -init;        # Could just call init separately
  use File::Basename;    # Split filename into dir, file, ext
 }
 

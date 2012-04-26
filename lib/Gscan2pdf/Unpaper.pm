@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Carp;
 use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
-use Gtk2 -init;
+use Gtk2;
 use Locale::gettext 1.05;    # For translations
 
 BEGIN {

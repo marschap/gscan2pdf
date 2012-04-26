@@ -8,7 +8,6 @@ use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Frontend::Sane;
 use Gscan2pdf::Page;
 use Glib qw(TRUE FALSE);
-use Gtk2 -init;
 use Socket;
 use FileHandle;
 use Image::Magick;
