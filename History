@@ -5,6 +5,8 @@
   Closes bug 3517797 (Copy and paste no longer work)
 * Pad scans which have less data than their headers announce with blanks
   Closes bug 3480247 (No image from HP6500A ADF)
+* Fix unpaper when used as part of scan process
+  Closes Debian bug #670640 (Can't call method get_cmdline)
 
 
 1.0.4 (11.04.2012):

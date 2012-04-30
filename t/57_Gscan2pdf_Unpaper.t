@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 BEGIN {
  use_ok('Gscan2pdf::Unpaper');
@@ -46,5 +46,17 @@ is_deeply(
  },
  'get_options'
 );
+
+#########################
+
+$unpaper = Gscan2pdf::Unpaper->new(
+ {
+  'white-threshold' => '0.8',
+  'black-threshold' => '0.35',
+ },
+);
+
+is( $unpaper->get_cmdline, '--white-threshold 0.8 --black-threshold 0.35',
+ 'no GUI' );
 
 __END__
