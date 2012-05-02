@@ -145,8 +145,9 @@ sub find_scan_options {
   $finished_callback, $error_callback
  ) = @_;
 
- my $options : shared;
- my $sentinel = _enqueue_request( 'get-options', { options => \$options } );
+ my $option_array : shared;
+ my $sentinel =
+   _enqueue_request( 'get-options', { options => \$option_array } );
 
  my $started;
  _when_ready(
@@ -154,7 +155,7 @@ sub find_scan_options {
   sub {
    $started_callback->() unless ($started);
    if ( $_self->{status} == SANE_STATUS_GOOD ) {
-    $finished_callback->($options);
+    $finished_callback->($option_array);
    }
    else {
     $error_callback->( Sane::strstatus( $_self->{status} ) );
@@ -174,13 +175,13 @@ sub find_scan_options {
 sub set_option {
  my ( $class, %options ) = @_;
 
- my $options : shared;
+ my $option_array : shared;
  my $sentinel = _enqueue_request(
   'set-option',
   {
    index       => $options{index},
    value       => $options{value},
-   new_options => \$options
+   new_options => \$option_array
   }
  );
 
@@ -190,7 +191,7 @@ sub set_option {
   sub {
    $options{started_callback}->()
      if ( not $started and defined( $options{started_callback} ) );
-   $options{finished_callback}->($options)
+   $options{finished_callback}->($option_array)
      if ( defined $options{finished_callback} );
   },
   sub {
@@ -327,6 +328,7 @@ sub _thread_open_device {
  undef $self->{device_handle} if ( defined( $self->{device_handle} ) );
 
  $self->{device_handle} = Sane::Device->open($device_name);
+$logger->debug("opening device: $Sane::STATUS");
  if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
   $logger->error("opening device: $Sane::STATUS");
   return;
@@ -613,7 +615,12 @@ cleanup:
 sub _thread_scan_page {
  my ( $self, $path ) = @_;
 
+ unless ( defined $self->{device_handle} ) {
+  $logger->info("$prog_name: must open device before starting scan");
+  return;
+ }
  $self->{device_handle}->start;
+
  $self->{status} = $Sane::STATUS + 0;
  if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
   $logger->info("$prog_name: sane_start: $Sane::STATUS");
@@ -646,7 +653,7 @@ sub _thread_scan_page {
 
 sub _thread_cancel {
  my ($self) = @_;
- $self->{device_handle}->cancel;
+ $self->{device_handle}->cancel if (defined $self->{device_handle});
  return;
 }
 
