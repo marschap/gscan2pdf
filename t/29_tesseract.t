@@ -90,7 +90,7 @@ SKIP: {
 'convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.tif'
  );
 
- my $got = Gscan2pdf::Tesseract->hocr( 'test.tif', 'eng' );
+ my ( $got, $messages ) = Gscan2pdf::Tesseract->hocr( 'test.tif', 'eng' );
 
  like( $got, qr/The/,   'Tesseract returned "The"' );
  like( $got, qr/quick/, 'Tesseract returned "quick"' );
@@ -106,7 +106,7 @@ SKIP: {
 "convert +matte -depth 1 -pointsize 12 -density 300 label:'öÖäÄüÜß' test.tif"
  );
 
- $got = Gscan2pdf::Tesseract->hocr( 'test.tif', 'deu' );
+ ( $got, $messages ) = Gscan2pdf::Tesseract->hocr( 'test.tif', 'deu' );
  is( Encode::is_utf8( $got, 1 ), 1, "Tesseract returned UTF8" );
  for my $c (qw( ö ä ü ß )) {
   my $c2 = decode_utf8($c);

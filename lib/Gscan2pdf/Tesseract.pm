@@ -7,6 +7,7 @@ use Carp;
 use File::Temp;    # To create temporary files
 use File::Basename;
 use Gscan2pdf;     # for slurp
+use IPC::Open3 'open3';
 
 my ( %languages, $installed, $setup, $version, $tessdata, $datasuffix );
 
@@ -172,21 +173,30 @@ sub hocr {
  }
  if ( $version >= 3 ) {
   $cmd =
-"echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $language +hocr.config 2> /dev/null;rm hocr.config";
+"echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $language +hocr.config;rm hocr.config";
  }
  elsif ($language) {
-  $cmd = "tesseract $tif $path$name -l $language 2> /dev/null";
+  $cmd = "tesseract $tif $path$name -l $language";
  }
  else {
-  $cmd = "tesseract $tif $path$name 2> /dev/null";
+  $cmd = "tesseract $tif $path$name";
  }
  $main::logger->info($cmd);
 
  # File in which to store the process ID so that it can be killed if necessary
  $cmd = "echo $$ > $pidfile;$cmd" if ( defined $pidfile );
 
- system($cmd);
- return Gscan2pdf::slurp($txt);
+ my $err = 1;    # to suppress the error message if stderr is empty
+ open3( undef, my $reader, $err, $cmd );
+ my @output   = <$reader>;
+ my @errors   = <$err>;
+ my $warnings = join '', @output, @errors;
+ $warnings =~
+   s/Tesseract\ Open\ Source\ OCR\ Engine\ v\d.\d\d\ with\ Leptonica\n//x;
+ $warnings =~ s/^Page\ 0\n//x;
+ $main::logger->debug( 'Warnings from Tesseract: ', $warnings );
+
+ return Gscan2pdf::slurp($txt), $warnings;
 }
 
 1;

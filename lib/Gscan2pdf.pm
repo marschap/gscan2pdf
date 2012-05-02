@@ -1208,7 +1208,7 @@ sub _thread_to_png {
 sub _thread_tesseract {
  my ( $self, $page, $language, $pidfile ) = @_;
  my $new = $page->clone;
- $new->{hocr} =
+ ( $new->{hocr}, $new->{warnings} ) =
    Gscan2pdf::Tesseract->hocr( $page->{filename}, $language, $pidfile );
  return if $_self->{cancel};
  $new->{ocr_flag} = 1;    #FlagOCR
