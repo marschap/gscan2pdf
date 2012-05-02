@@ -111,6 +111,13 @@ sub thaw {
 sub boxes {
  my ( $self, @boxes ) = @_;
 
+ # Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
+ # where decode_entities doesn't work cleanly, so encode/decode to finally
+ # get good UTF-8
+ $self->{hocr} =
+   decode_utf8(
+  encode_utf8( HTML::Entities::decode_entities( $self->{hocr} ) ) );
+
  if ( $self->{hocr} =~ /<body>([\s\S]*)<\/body>/x ) {
   my $p = HTML::TokeParser->new( \$self->{hocr} );
   my ( $x1, $y1, $x2, $y2, $text );
@@ -134,13 +141,7 @@ sub boxes {
     }
    }
    if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/x ) {
-
-    # Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
-    # where decode_entities doesn't work cleanly, so encode/decode to finally
-    # get good UTF-8
-    $text =
-      decode_utf8(
-     encode_utf8( HTML::Entities::decode_entities( $token->[1] ) ) );
+    $text = $token->[1];
     chomp($text);
    }
    if ( $token->[0] eq 'E' ) {

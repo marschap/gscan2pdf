@@ -8,6 +8,8 @@
 * Fix unpaper when used as part of scan process
   Closes Debian bug #670640 (Can't call method get_cmdline)
 * Sort OCR languages in ComboBoxes
+* Deal with non-UTF-8 output from OCR. Closes Debian bug #670831
+  (gscan2pdf is not resilient against non utf-8 from tesseract)
 
 
 1.0.4 (11.04.2012):
