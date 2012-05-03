@@ -6003,7 +6003,7 @@ sub copy_selection {
 sub paste_selection {
 
  # We only add pages if the list of thumbnails has the focus
- if ( $slist->has_focus ) {
+ if ( $window->get_focus eq $slist ) {
   my @page = $slist->get_selected_indices;
 
   # Create a new image file for each page in the clipboard
