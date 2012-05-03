@@ -22,6 +22,7 @@
 #    look at http://giv.sourceforge.net/giv/ as an alternative to make OCR layer easier
 #    add support for hugin to stitch images together
 #    add OCR check mode as in http://jimgarrison.org/moz-hocr-edit/hocr-edit-0.4-screenshot.png
+#     or http://live.gnome.org/OCRFeeder
 #    Support for OCRE http://lem.eui.upm.es/ocre.html
 #    add option for number of background processes
 #     grep -c '^processor' /proc/cpuinfo
@@ -9278,7 +9279,7 @@ sub add_tess_languages {
 
  # Tesseract language files
  my @tesslang;
- for ( keys %{ Gscan2pdf::Tesseract->languages } ) {
+ for ( sort { $a cmp $b } keys %{ Gscan2pdf::Tesseract->languages } ) {
   push @tesslang, [ $_, $d->get( ${ Gscan2pdf::Tesseract->languages }{$_} ) ];
  }
 
@@ -9306,7 +9307,7 @@ sub add_cf_languages {
 
  # Tesseract language files
  my @lang;
- for ( keys %{ Gscan2pdf::Cuneiform->languages } ) {
+ for ( sort { $a cmp $b } keys %{ Gscan2pdf::Cuneiform->languages } ) {
   push @lang, [ $_, $d->get( ${ Gscan2pdf::Cuneiform->languages }{$_} ) ];
  }
 
