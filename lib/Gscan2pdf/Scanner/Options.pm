@@ -40,7 +40,7 @@ sub by_index {
 
 sub by_name {
  my ( $self, $name ) = @_;
- return $self->{hash}{$name};
+ return defined($name) ? $self->{hash}{$name} : undef;
 }
 
 sub num_options {
