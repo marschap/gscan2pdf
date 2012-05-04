@@ -328,7 +328,7 @@ sub _thread_open_device {
  undef $self->{device_handle} if ( defined( $self->{device_handle} ) );
 
  $self->{device_handle} = Sane::Device->open($device_name);
-$logger->debug("opening device: $Sane::STATUS");
+ $logger->debug("opening device: $Sane::STATUS");
  if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
   $logger->error("opening device: $Sane::STATUS");
   return;
@@ -653,7 +653,7 @@ sub _thread_scan_page {
 
 sub _thread_cancel {
  my ($self) = @_;
- $self->{device_handle}->cancel if (defined $self->{device_handle});
+ $self->{device_handle}->cancel if ( defined $self->{device_handle} );
  return;
 }
 

@@ -4384,55 +4384,60 @@ sub scan_dialog2 {
   'transient-for' => $window,
   title           => $d->get('Scan Document'),
   border_width    => $border_width,
-  device    => $SETTING{device},
-  logger => $logger,
-  dir => $session,
+  device          => $SETTING{device},
+  logger          => $logger,
+  dir             => $session,
  );
 
  # Set default
- $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all');
- $windows2->set('num-pages', $SETTING{'pages to scan'});
+ $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all' );
+ $windows2->set( 'num-pages', $SETTING{'pages to scan'} );
 
  my $signal;
  $windows2->signal_connect(
-                           'started-process' => sub {
-                             my ($widget, $message) = @_;
-      $spbar->set_fraction(0);
-      $spbar->set_text( $message );
-      $shbox->show_all;
-      $signal = $scbutton->signal_connect(
-                                          clicked => sub {
-                                            $Gscan2pdf::_self->{abort_scan} = 1;
-                                          }
-                                         );
-    });
+  'started-process' => sub {
+   my ( $widget, $message ) = @_;
+   $spbar->set_fraction(0);
+   $spbar->set_text($message);
+   $shbox->show_all;
+   $signal = $scbutton->signal_connect(
+    clicked => sub {
+     $Gscan2pdf::_self->{abort_scan} = 1;
+    }
+   );
+  }
+ );
 
  $windows2->signal_connect(
-                           'changed-progress' => sub {
-                             my ($widget, $progress, $message) = @_;
-                             if ($progress == -1) {
-                               $spbar->pulse;
-                             }
-                             else {
-                               $spbar->set_fraction($progress);
-                             }
-                             $spbar->set_text( $message ) if (defined $message);
-    });
+  'changed-progress' => sub {
+   my ( $widget, $progress, $message ) = @_;
+   if ( $progress == -1 ) {
+    $spbar->pulse;
+   }
+   else {
+    $spbar->set_fraction($progress);
+   }
+   $spbar->set_text($message) if ( defined $message );
+  }
+ );
 
  $windows2->signal_connect(
-                           'finished-process' => sub {
-                             my ($widget, $signal) = @_;
+  'finished-process' => sub {
+   my ( $widget, $signal ) = @_;
    $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
    $shbox->hide;
-    }, $signal);
+  },
+  $signal
+ );
 
  $windows2->signal_connect(
-                           'process-error' => sub {
-                             my ($widget, $msg) = @_;
+  'process-error' => sub {
+   my ( $widget, $msg ) = @_;
    $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
    $shbox->hide;
    show_message_dialog( $windows2, 'error', 'close', $d_sane->get($msg) );
-    });
+  }
+ );
 
  my $vbox = $windows2->get('vbox');
 
@@ -4671,10 +4676,10 @@ sub scan_dialog2 {
 
  $windows2->signal_connect(
   'new-scan' => sub {
-    my ($widget, $n) = @_;
+   my ( $widget, $n ) = @_;
 
- # Update undo/redo buffers
- take_snapshot();
+   # Update undo/redo buffers
+   take_snapshot();
 
    $SETTING{'rotate facing'}  = 0;
    $SETTING{'rotate reverse'} = 0;
@@ -4715,7 +4720,9 @@ sub scan_dialog2 {
    # show an error
    my $rotate = $n % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
    if ( defined $test_image ) {
-    import_scan( $test_image, $n, undef, FALSE, $rotate, $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'} );
+    import_scan( $test_image, $n, undef, FALSE, $rotate,
+     $SETTING{'unpaper on scan'},
+     $SETTING{'OCR on scan'} );
    }
    else {
     $SETTING{resolution} =
@@ -4723,8 +4730,11 @@ sub scan_dialog2 {
       ? $SETTING{resolution}
       : $Gscan2pdf::Document::POINTS_PER_INCH;
     $logger->info("Importing scan with resolution=$SETTING{resolution}");
-    import_scan( File::Spec->catdir( $session, "out$n.pnm" ),
-     $n, $SETTING{resolution}, TRUE, $rotate, $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'} );
+    import_scan(
+     File::Spec->catdir( $session, "out$n.pnm" ),
+     $n, $SETTING{resolution}, TRUE, $rotate, $SETTING{'unpaper on scan'},
+     $SETTING{'OCR on scan'}
+    );
    }
   }
  );
