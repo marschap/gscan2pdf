@@ -189,7 +189,7 @@ my @args = (
  'fatal' => sub { $log_level = 'FATAL' },
  'version' => sub { warn "$prog_name $version\n"; exit 0 },
 );
-exit 1 if ( !GetOptions(@args) );
+exit 1 unless ( GetOptions(@args) );
 $Sane::DEBUG = $debug;
 
 if ( not defined($log_level) ) {
@@ -233,11 +233,11 @@ $logger->info("Starting $prog_name $version");
 $logger->info("Log level $log_level");
 
 if ( defined $locale ) {
- if ( $locale !~ /^\// ) {
-  $d->dir( getcwd . "/$locale" );
+ if ( $locale =~ /^\// ) {
+  $d->dir($locale);
  }
  else {
-  $d->dir($locale);
+  $d->dir( getcwd . "/$locale" );
  }
 }
 
@@ -354,7 +354,7 @@ for my $paper ( keys %{ $SETTING{Paper} } ) {
  }
  else {
   for (qw(x y t l)) {
-   if ( !defined $SETTING{Paper}{$paper}{$_} ) {
+   unless ( defined $SETTING{Paper}{$paper}{$_} ) {
     delete $SETTING{Paper}{$paper};
     last;
    }
@@ -393,7 +393,7 @@ if ( keys %{$test} ) {
    exit 1;
   }
   push @{ $test->{file} }, $file;
-  $test->{output} = '' if ( !defined( $test->{output} ) );
+  $test->{output} = '' unless ( defined( $test->{output} ) );
   $test->{output} .=
     "'$#{$test->{file}}','$device','" . basename($file) . "'\n";
  }
@@ -1226,7 +1226,7 @@ $window->signal_connect_after(
 );
 
 # If defined in the config file, set the current directory
-$SETTING{'cwd'} = getcwd if ( !defined( $SETTING{'cwd'} ) );
+$SETTING{'cwd'} = getcwd unless ( defined( $SETTING{'cwd'} ) );
 
 my $unpaper = Gscan2pdf::Unpaper->new( $SETTING{'unpaper options'} );
 
@@ -1522,19 +1522,19 @@ sub create_menu_bar {
  # Ghost save image item if imagemagick not available
  my $msg = '';
  $msg .= $d->get("Save image and Save as PDF both require imagemagick\n")
-   if ( !$dependencies{imagemagick} );
+   unless ( $dependencies{imagemagick} );
 
  # Ghost save image item if libtiff not available
  $msg .= $d->get("Save image requires libtiff\n")
-   if ( !$dependencies{libtiff} );
+   unless ( $dependencies{libtiff} );
 
  # Ghost djvu item if cjb2 not available
  $msg .= $d->get("Save as DjVu requires djvulibre-bin\n")
-   if ( !$dependencies{djvu} );
+   unless ( $dependencies{djvu} );
 
  # Ghost email item if xdg-email not available
  $msg .= $d->get("Email as PDF requires xdg-email\n")
-   if ( !$dependencies{xdg} );
+   unless ( $dependencies{xdg} );
 
  # Undo/redo start off ghosted anyway-
  $uimanager->get_widget('/MenuBar/Edit/Undo')->set_sensitive(FALSE);
@@ -1563,7 +1563,7 @@ sub create_menu_bar {
  $dependencies{pages} = -1;
 
  # Ghost rotations and unpaper if perlmagick not available
- if ( !$dependencies{perlmagick} ) {
+ unless ( $dependencies{perlmagick} ) {
   $uimanager->get_widget('/MenuBar/View/Rotate 90')->set_sensitive(FALSE);
   $uimanager->get_widget('/MenuBar/View/Rotate 180')->set_sensitive(FALSE);
   $uimanager->get_widget('/MenuBar/View/Rotate 270')->set_sensitive(FALSE);
@@ -1582,7 +1582,7 @@ sub create_menu_bar {
  }
 
  # Ghost unpaper item if unpaper not available
- if ( !$dependencies{unpaper} ) {
+ unless ( $dependencies{unpaper} ) {
   $uimanager->get_widget('/MenuBar/Tools/unpaper')->set_sensitive(FALSE);
   $msg .= $d->get("unpaper missing\n");
  }
@@ -3903,7 +3903,7 @@ sub scan_dialog {
  $tooltips->set_tip( $ubutton,
   $d->get('Clean up scanned images with unpaper') );
  $hboxu->pack_start( $ubutton, TRUE, TRUE, 0 );
- if ( !$dependencies{unpaper} ) {
+ if ( not $dependencies{unpaper} ) {
   $ubutton->set_sensitive(FALSE);
   $ubutton->set_active(FALSE);
  }
@@ -3997,7 +3997,7 @@ sub scan_dialog {
     }
    );
   }
-  $hboxtl->set_sensitive(FALSE) if ( !( $obutton->get_active ) );
+  $hboxtl->set_sensitive(FALSE) unless ( $obutton->get_active );
   $obutton->signal_connect(
    toggled => sub {
     if ( $obutton->get_active ) {
@@ -4167,7 +4167,7 @@ sub scan_dialog {
    my $rotate_facing  = $SETTING{'rotate facing'};
    my $rotate_reverse = $SETTING{'rotate reverse'};
    $logger->info( $duplex ? "" : "non-", "duplex mode" );
-   if ( !$duplex ) {
+   if ( not $duplex ) {
     if ( $step > 0 ) {
      $rotate_reverse = $SETTING{'rotate facing'};
     }
@@ -4222,7 +4222,7 @@ sub scan_dialog {
   parse_device_list( $test->{output} );
   populate_device_list($hboxd);
  }
- elsif ( !@device ) {
+ elsif ( not @device ) {
   get_devices($hboxd);
  }
  else {
@@ -4677,7 +4677,7 @@ sub scan_dialog2 {
  $tooltips->set_tip( $ubutton,
   $d->get('Clean up scanned images with unpaper') );
  $hboxu->pack_start( $ubutton, TRUE, TRUE, 0 );
- if ( !$dependencies{unpaper} ) {
+ if ( not $dependencies{unpaper} ) {
   $ubutton->set_sensitive(FALSE);
   $ubutton->set_active(FALSE);
  }
@@ -4773,7 +4773,7 @@ sub scan_dialog2 {
     }
    );
   }
-  $hboxtl->set_sensitive(FALSE) if ( !( $obutton->get_active ) );
+  $hboxtl->set_sensitive(FALSE) unless ( $obutton->get_active );
   $obutton->signal_connect(
    toggled => sub {
     if ( $obutton->get_active ) {
@@ -4855,7 +4855,7 @@ sub scan_dialog2 {
    my $rotate_facing  = $SETTING{'rotate facing'};
    my $rotate_reverse = $SETTING{'rotate reverse'};
    $logger->info( $duplex ? "" : "non-", "duplex mode" );
-   if ( !$duplex ) {
+   if ( not $duplex ) {
     if ( $step > 0 ) {
      $rotate_reverse = $SETTING{'rotate facing'};
     }
@@ -5113,7 +5113,7 @@ sub populate_device_list {
  foreach (@model) {
   $combobd->append_text($_);
  }
- $combobd->append_text( $d->get('Rescan for devices') ) if ( !$test );
+ $combobd->append_text( $d->get('Rescan for devices') ) unless ($test);
 
  # flags whether already run or not
  my $run = FALSE;
@@ -5152,7 +5152,7 @@ sub set_device {
    $o = $i if ( $SETTING{device} eq $device[$i] );
   }
  }
- if ( !defined($o) ) {
+ unless ( defined $o ) {
   $o = 0;
   delete $SETTING{mode};
  }
@@ -5176,7 +5176,7 @@ sub populate_device_list2 {
  for (@device_list) {
   $combobd->append_text( $_->{label} );
  }
- $combobd->append_text( $d->get('Rescan for devices') ) if ( !$test );
+ $combobd->append_text( $d->get('Rescan for devices') ) unless ($test);
 
  # flags whether already run or not
  my $run = FALSE;
@@ -5224,7 +5224,7 @@ sub set_device2 {
 # or row-changed signal of simplelist
 
 sub update_start {
- return if ( !defined $spin_buttons );
+ return unless ( defined $spin_buttons );
  my $exists = TRUE;
  my $value  = $spin_buttons->get_value;
  my $step   = $value - $start;
@@ -5266,7 +5266,7 @@ sub pages_possible {
  my $start = $spin_buttons->get_value;
  my $step  = $spin_buttoni->get_value;
  my $exists;
- while ( !defined $exists ) {
+ while ( not defined($exists) ) {
   if ( $start + $n * $step < 1 ) {
    $exists = TRUE;
   }
@@ -5336,7 +5336,12 @@ sub scanimage {
    "$SETTING{'scan prefix'} $SETTING{frontend} $device @options $npages";
  $logger->info($cmd);
 
- if ( !$test ) {
+ if ($test) {
+  my $rotate = 1 % 2 ? $rfacing : $rreverse;
+  my $index = import_scan( $test_image, 1 * $step + $offset,
+   $SETTING{resolution}, FALSE, $rotate, $unpaper_flag, $ocr );
+ }
+ else {
 
   # flag to ignore error messages after cancelling scan
   my $cancel = FALSE;
@@ -5482,11 +5487,6 @@ sub scanimage {
   );
   $scanning = TRUE;
  }
- else {
-  my $rotate = 1 % 2 ? $rfacing : $rreverse;
-  my $index = import_scan( $test_image, 1 * $step + $offset,
-   $SETTING{resolution}, FALSE, $rotate, $unpaper_flag, $ocr );
- }
  return;
 }
 
@@ -5526,7 +5526,10 @@ sub scanadf {
 "$SETTING{'scan prefix'} $SETTING{frontend} $device @options $start $end > /dev/stderr";
  $logger->info($cmd);
 
- if ( !$test ) {
+ if ($test) {
+  $logger->info($cmd);
+ }
+ else {
 
   # Interface to frontend
   my ( $write, $read );
@@ -5674,9 +5677,6 @@ sub scanadf {
    }
   );
   $scanning = TRUE;
- }
- else {
-  $logger->info($cmd);
  }
  return;
 }
@@ -6393,7 +6393,21 @@ sub rescan_options {
  }
 
  my $output = '';
- if ( !$test ) {
+ if ($test) {
+  my $i = 0;
+  $i++ while ( $device[$i] ne $device );
+
+  # check if we have output for the mode
+  my $filename = $test->{file}[$i];
+  $filename .= ".$SETTING{mode}"
+    if ( defined( $SETTING{mode} ) and -e "$filename.$SETTING{mode}" );
+
+  # Slurp it from file
+  $output = Gscan2pdf::slurp($filename);
+  $vboxd->hide_all;    # merely here for consistency with normal operation
+  parse_options( $vboxd, $device, options2hash($output) );
+ }
+ else {
 
   # Get output from scanimage or scanadf.
   # Inverted commas needed for strange characters in device name
@@ -6458,20 +6472,6 @@ sub rescan_options {
     return TRUE;                           # continue without uninstalling
    }
   );
- }
- else {
-  my $i = 0;
-  $i++ while ( $device[$i] ne $device );
-
-  # check if we have output for the mode
-  my $filename = $test->{file}[$i];
-  $filename .= ".$SETTING{mode}"
-    if ( defined( $SETTING{mode} ) and -e "$filename.$SETTING{mode}" );
-
-  # Slurp it from file
-  $output = Gscan2pdf::slurp($filename);
-  $vboxd->hide_all;    # merely here for consistency with normal operation
-  parse_options( $vboxd, $device, options2hash($output) );
  }
  return;
 }
@@ -6728,7 +6728,7 @@ sub add_spinbutton {
   $hbox->pack_start( $label, FALSE, FALSE, 0 );
   my $spinbutton = Gtk2::SpinButton->new_with_range( 0, $_->{dimension}, 1 );
   $SETTING{ $_->{letter} } = $_->{dimension}
-    if ( !defined( $SETTING{ $_->{letter} } ) );
+    unless ( defined $SETTING{ $_->{letter} } );
   $spinbutton->set_value( $SETTING{ $_->{letter} } );
   $tooltips->set_tip( $spinbutton, $_->{tooltip} );
   $hbox->pack_end( $spinbutton, FALSE, FALSE, 0 );
@@ -6789,7 +6789,7 @@ sub edit_paper {
  $dbutton->signal_connect(
   clicked => sub {
    my @rows = $slist->get_selected_indices;
-   $rows[0] = 0 if ( !@rows );
+   $rows[0] = 0 unless (@rows);
    my $name    = $slist->{data}[ $rows[0] ][0];
    my $version = 2;
    my $i       = 0;
@@ -6877,7 +6877,7 @@ sub edit_paper {
       . join( ', ', @ignored )
    ) if (@ignored);
    my @rows = $slist->get_selected_indices;
-   $rows[0] = 0 if ( !@rows );
+   $rows[0] = 0 unless (@rows);
    $SETTING{'Paper size'} = $slist->{data}[ $rows[0] ][0];
    set_paper($combobp);
    $windowd->hide;
@@ -6888,7 +6888,7 @@ sub edit_paper {
  $cbutton->signal_connect(
   clicked => sub {
    my @rows = $slist->get_selected_indices;
-   $rows[0] = 0 if ( !@rows );
+   $rows[0] = 0 unless (@rows);
    $SETTING{'Paper size'} = $slist->{data}[ $rows[0] ][0];
    set_paper($combobp);
    $windowd->hide;
@@ -6919,7 +6919,7 @@ sub add_paper {
 
 sub set_paper {
  my ($combobox) = @_;
- return if ( !defined $combobox );
+ return unless ( defined $combobox );
  my $o = 0;
  if ( defined( $SETTING{'Paper size'} ) ) {
   my $i = 0;
@@ -6977,7 +6977,20 @@ sub update_options {
  }
 
  my $output = '';
- if ( !$test ) {
+ if ($test) {
+  my $i = 0;
+  $i++ while ( $device[$i] ne $device );
+
+  # check if we have output for the new mode
+  my $filename = $test->{file}[$i];
+  $filename .= ".$SETTING{mode}" if ( -e "$filename.$SETTING{mode}" );
+
+  # Slurp it from file
+  $output = Gscan2pdf::slurp($filename);
+  $vboxd->hide_all;    # merely here for consistency with normal operation
+  update_options_hash( $vboxd, options2hash($output) );
+ }
+ else {
 
   # Get output from scanimage or scanadf.
   # Inverted commas needed for strange characters in device name
@@ -7042,19 +7055,6 @@ sub update_options {
     return TRUE;                           # continue without uninstalling
    }
   );
- }
- else {
-  my $i = 0;
-  $i++ while ( $device[$i] ne $device );
-
-  # check if we have output for the new mode
-  my $filename = $test->{file}[$i];
-  $filename .= ".$SETTING{mode}" if ( -e "$filename.$SETTING{mode}" );
-
-  # Slurp it from file
-  $output = Gscan2pdf::slurp($filename);
-  $vboxd->hide_all;    # merely here for consistency with normal operation
-  update_options_hash( $vboxd, options2hash($output) );
  }
  return;
 }
@@ -7299,7 +7299,7 @@ sub default2index {
         next;
        }
 
-       next if ( !( $opt->{cap} & SANE_CAP_SOFT_DETECT ) );
+       next unless ( $opt->{cap} & SANE_CAP_SOFT_DETECT );
 
        # Widget
        my ( $widget, $val );
@@ -7608,19 +7608,19 @@ sub default2index {
            $options->by_index( $widget->{option_number} )->{val} = $val;
           }
           elsif ( $widget->isa('Gtk2::CheckButton') ) {
-           if ( $widget->get_active != $val ) {
-            $widget->set_active($val);
+           if ( $widget->get_active == $val ) {
+            $gui_updating = FALSE;
            }
            else {
-            $gui_updating = FALSE;
+            $widget->set_active($val);
            }
           }
           elsif ( $widget->isa('Gtk2::SpinButton') ) {
-           if ( $widget->get_value != $val ) {
-            $widget->set_value($val);
+           if ( $widget->get_value == $val ) {
+            $gui_updating = FALSE;
            }
            else {
-            $gui_updating = FALSE;
+            $widget->set_value($val);
            }
           }
           elsif ( $widget->isa('Gtk2::ComboBox') ) {
@@ -8276,8 +8276,8 @@ sub renumber {
  my ( $slist, $column, $start, $step, $selection ) = @_;
 
  if ( defined($start) ) {
-  $step      = 1     if ( !defined($step) );
-  $selection = 'all' if ( !defined($selection) );
+  $step      = 1     unless ( defined $step );
+  $selection = 'all' unless ( defined $selection );
 
   my @selection;
   if ( $selection eq 'selected' ) {
@@ -9003,7 +9003,7 @@ sub get_parent {
 
 sub unpaper_page {
  my ( $pages, $options, $callback ) = @_;
- $options = '' if ( !defined($options) );
+ $options = '' unless ( defined $options );
 
  # Update undo/redo buffers
  take_snapshot();
@@ -9262,7 +9262,7 @@ sub combobox_set_active {
    ++$i;
   }
  }
- $o = 0 if ( !defined $o );
+ $o = 0 unless ( defined $o );
  $combobox->set_active($o);
  return;
 }
@@ -10352,8 +10352,8 @@ sub INIT_INSTANCE {
    }
   );
   $vbox->pack_start( $self->{button}{$nick}, TRUE, TRUE, 0 );
-  $group = $self->{button}{$nick}->get_group if ( !$group );
-  $self->{active} = $nick if ( !$self->{active} );
+  $group = $self->{button}{$nick}->get_group unless ($group);
+  $self->{active} = $nick unless ( $self->{active} );
  }
  return;
 }
