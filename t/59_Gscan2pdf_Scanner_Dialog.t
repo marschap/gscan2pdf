@@ -1,8 +1,9 @@
 use warnings;
 use strict;
-use Test::More tests => 17;
+use Test::More tests => 18;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
+use Sane 0.05;              # To get SANE_* enums
 
 BEGIN {
  use_ok('Gscan2pdf::Scanner::Dialog');
@@ -80,8 +81,27 @@ $dialog->signal_connect(
 $dialog->set( 'page-number-increment', 2 );
 
 $dialog->signal_connect(
- 'changed-scan-options' => sub {
-  ok( 1, 'changed-scan-options' );
+ 'changed-scan-option' => sub {
+  my ( $widget, $option, $value ) = @_;
+  is( $option, SANE_NAME_SCAN_RESOLUTION, 'changed-scan-option name' );
+  is( $value, 51, 'changed-scan-option value' );
+ }
+);
+my $options = $dialog->get('scan-options');
+$dialog->set_option( $options->by_name(SANE_NAME_SCAN_RESOLUTION), 51 );
+
+$dialog->signal_connect(
+ 'changed-profile' => sub {
+  my ( $widget, $profile ) = @_;
+  is( $profile, 'my profile', 'changed-profile' );
+ }
+);
+$dialog->add_profile( 'my profile', [ { SANE_NAME_SCAN_RESOLUTION => 52 } ] );
+$dialog->set( 'profile', 'my profile' );
+
+$dialog->signal_connect(
+ 'reloaded-scan-options' => sub {
+  ok( 1, 'reloaded-scan-options' );
  }
 );
 $dialog->set( 'scan-options', Gscan2pdf::Scanner::Options->new );

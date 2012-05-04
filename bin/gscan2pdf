@@ -4054,7 +4054,8 @@ sub scan_dialog {
   }
  );
  if ( defined $SETTING{'default profile'} ) {
-  set_combobox_by_text( $combobsp, $SETTING{'default profile'} );
+  Gscan2pdf::Scanner::Dialog::set_combobox_by_text( $combobsp,
+   $SETTING{'default profile'} );
  }
  elsif ( num_rows_combobox($combobsp) > -1 ) {
   $combobsp->set_active(0);
@@ -4385,9 +4386,31 @@ sub scan_dialog2 {
   'transient-for' => $window,
   title           => $d->get('Scan Document'),
   border_width    => $border_width,
-  device          => $SETTING{device},
   logger          => $logger,
   dir             => $session,
+ );
+
+# Can't set the device when creating the window, as the list does not exist then
+ $windows2->signal_connect(
+  'changed-device-list' => sub {
+   my ( $widget, $device_list ) = @_;
+   if ( defined $device_list ) {
+    if ( defined $SETTING{device} ) {
+     $windows2->set( 'device', $SETTING{device} );
+    }
+    else {
+     $windows2->set( 'device', $device_list->[0]{name} );
+    }
+   }
+  }
+ );
+
+ # Update default device
+ $windows2->signal_connect(
+  'changed-device' => sub {
+   my ( $widget, $device ) = @_;
+   $SETTING{device} = $device;
+  }
  );
 
  # Set default
@@ -4447,6 +4470,36 @@ sub scan_dialog2 {
    # Note resolution
    $SETTING{resolution} = $value
      if ( $option eq SANE_NAME_SCAN_RESOLUTION );
+  }
+ );
+
+ # Profiles
+ my @profiles = keys %{ $SETTING{profile} };
+ foreach my $profile (@profiles) {
+  $windows2->add_profile( $profile, $SETTING{profile}{$profile} );
+ }
+ if ( defined $SETTING{'default profile'} ) {
+  $windows2->set( 'profile', $SETTING{'default profile'} );
+ }
+ elsif (@profiles) {
+  $windows2->set( 'profile', $profiles[0] );
+ }
+ $windows2->signal_connect(
+  'changed-profile' => sub {
+   my ( $widget, $profile ) = @_;
+   $SETTING{'default profile'} = $profile;
+  }
+ );
+ $windows2->signal_connect(
+  'added-profile' => sub {
+   my ( $widget, $name, $profile ) = @_;
+   $SETTING{profile}{$name} = $profile;
+  }
+ );
+ $windows2->signal_connect(
+  'removed-profile' => sub {
+   my ( $widget, $profile ) = @_;
+   delete $SETTING{profile}{$profile};
   }
  );
 
@@ -6260,7 +6313,8 @@ sub parse_options {
 
  # Give the GUI a chance to catch up before resizing.
  Glib::Idle->add( sub { $windows->resize( 100, 100 ); } );
- set_combobox_by_text( $combobp, $SETTING{'paper size'} );
+ Gscan2pdf::Scanner::Dialog::set_combobox_by_text( $combobp,
+  $SETTING{'paper size'} );
 
  #  Unghost the scan button
  if ( defined $sbutton ) {
@@ -6484,7 +6538,8 @@ sub edit_paper {
    my @rows = $slist->get_selected_indices;
    $rows[0] = 0 if ( !@rows );
    $SETTING{'Paper size'} = $slist->{data}[ $rows[0] ][0];
-   set_combobox_by_text( $combobp, $SETTING{'paper size'} );
+   Gscan2pdf::Scanner::Dialog::set_combobox_by_text( $combobp,
+    $SETTING{'paper size'} );
    $windowd->hide;
   }
  );
@@ -6495,40 +6550,13 @@ sub edit_paper {
    my @rows = $slist->get_selected_indices;
    $rows[0] = 0 if ( !@rows );
    $SETTING{'Paper size'} = $slist->{data}[ $rows[0] ][0];
-   set_combobox_by_text( $combobp, $SETTING{'paper size'} );
+   Gscan2pdf::Scanner::Dialog::set_combobox_by_text( $combobp,
+    $SETTING{'paper size'} );
    $windowd->hide;
   }
  );
  $hboxb->pack_end( $cbutton, TRUE, FALSE, 0 );
  $windowd->show_all;
- return;
-}
-
-sub get_combobox_by_text {
- my ( $combobox, $text ) = @_;
- return -1 unless ( defined($combobox) and defined($text) );
- my $o = -1;
- my $i = 0;
- $combobox->get_model->foreach(
-  sub {
-   my ( $model, $path, $iter ) = @_;
-   if ( $model->get( $iter, 0 ) eq $text ) {
-    $o = $i;
-    return TRUE;
-   }
-   else {
-    ++$i;
-    return FALSE;
-   }
-  }
- );
- return $o;
-}
-
-sub set_combobox_by_text {
- my ( $combobox, $text ) = @_;
- my $i = get_combobox_by_text( $combobox, $text );
- $combobox->set_active($i) if ( $i > -1 );
  return;
 }
 

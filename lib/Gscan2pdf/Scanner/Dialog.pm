@@ -24,8 +24,11 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   param_types => ['Glib::String'],    # device name
   return_type => undef
  },
- 'changed-device-list' => {},
- 'changed-num-pages'   => {
+ 'changed-device-list' => {
+  param_types => ['Glib::Scalar'],    # array of hashes with device info
+  return_type => undef
+ },
+ 'changed-num-pages' => {
   param_types => ['Glib::UInt'],      # new number pages
   return_type => undef
  },
@@ -42,7 +45,19 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   return_type => undef
  },
  'reloaded-scan-options' => {},
- 'started-process'       => {
+ 'changed-profile'       => {
+  param_types => ['Glib::Scalar'],                      # name
+  return_type => undef
+ },
+ 'added-profile' => {
+  param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, profile
+  return_type => undef
+ },
+ 'removed-profile' => {
+  param_types => ['Glib::Scalar'],                      # name
+  return_type => undef
+ },
+ 'started-process' => {
   param_types => ['Glib::Scalar'],                      # message
   return_type => undef
  },
@@ -81,6 +96,12 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   'logger',                                             # name
   'Logger',                                             # nick
   'Log::Log4perl::get_logger object',                   # blurb
+  [qw/readable writable/]                               # flags
+ ),
+ Glib::ParamSpec->scalar(
+  'profile',                                            # name
+  'Profile',                                            # nick
+  'Array of options making up a profile',               # blurb
   [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->int(
@@ -352,29 +373,14 @@ sub INIT_INSTANCE {
  my $vboxsp = Gtk2::VBox->new;
  $vboxsp->set_border_width($border_width);
  $framesp->add($vboxsp);
- my $combobsp = Gtk2::ComboBox->new_text;
-
- # FIXME: pass the profiles via properties
- # foreach my $profile ( keys %{ $SETTING{profile} } ) {
- #  $combobsp->append_text($profile);
- # }
- # $combobsp->signal_connect(
- #  changed => sub {
- #   my $profile = $combobsp->get_active_text;
- #   if ( defined $profile ) {
- #    $SETTING{'default profile'} = $profile;
- #    set_profile( $SETTING{profile}{$profile} )
- #      if ( defined $SETTING{profile}{$profile} );
- #   }
- #  }
- # );
- # if ( defined $SETTING{'default profile'} ) {
- #  set_combobox_by_text( $combobsp, $SETTING{'default profile'} );
- # }
- # elsif ( num_rows_combobox($combobsp) > -1 ) {
- #  $combobsp->set_active(0);
- # }
- $vboxsp->pack_start( $combobsp, FALSE, FALSE, 0 );
+ $self->{combobsp} = Gtk2::ComboBox->new_text;
+ $self->{combobsp}->signal_connect(
+  changed => sub {
+   my $profile = $self->{combobsp}->get_active_text;
+   $self->set( 'profile', $profile ) if ( defined $profile );
+  }
+ );
+ $vboxsp->pack_start( $self->{combobsp}, FALSE, FALSE, 0 );
  my $hboxsp = Gtk2::HBox->new;
  $vboxsp->pack_end( $hboxsp, FALSE, FALSE, 0 );
 
@@ -398,17 +404,18 @@ sub INIT_INSTANCE {
    $dialog->set_default_response('ok');
    $dialog->show_all;
 
-   #   if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/ ) {
-   #    my $profile = $entry->get_text;
-   #    $combobsp->append_text($profile);
-   #    $SETTING{'default profile'} = $profile;
-   #    my $sane_device = Gscan2pdf::Frontend::Sane->device();
-   #    $SETTING{profile}{$profile} = ();
-   #    for ( @{ $SETTING{default}{$sane_device} } ) {
-   #     push @{ $SETTING{profile}{$profile} }, $_;
-   #    }
-   #    $combobsp->set_active( num_rows_combobox($combobsp) );
-   #   }
+   if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/ ) {
+    my $profile = $entry->get_text;
+    $self->{combobsp}->append_text($profile);
+    my $sane_device = Gscan2pdf::Frontend::Sane->device();
+    $self->{profiles}{$profile} = ();
+    for ( @{ $self->{current_options}{$sane_device} } ) {
+     push @{ $self->{profiles}{$profile} }, $_;
+    }
+    $self->{combobsp}->set_active( num_rows_combobox( $self->{combobsp} ) );
+    $self->signal_emit( 'added-profile', $profile,
+     $self->{profiles}{$profile} );
+   }
    $dialog->destroy;
   }
  );
@@ -416,19 +423,19 @@ sub INIT_INSTANCE {
 
  # Delete button
  my $dbutton = Gtk2::Button->new_from_stock('gtk-delete');
-
- # $dbutton->signal_connect(
- #  clicked => sub {
- #   my $i = $combobsp->get_active;
- #   if ( $i > -1 ) {
- #    delete $SETTING{profile}{ $combobsp->get_active_text };
- #    $combobsp->remove_text($i);
- #    my $n = num_rows_combobox($combobsp);
- #    $i = $n if ( $i > $n );
- #    $combobsp->set_active($i) if ( $i > -1 );
- #   }
- #  }
- # );
+ $dbutton->signal_connect(
+  clicked => sub {
+   my $i = $self->{combobsp}->get_active;
+   if ( $i > -1 ) {
+    my $name = $self->{combobsp}->get_active_text;
+    $self->{combobsp}->remove_text($i);
+    my $n = num_rows_combobox( $self->{combobsp} );
+    $i = $n if ( $i > $n );
+    $self->{combobsp}->set_active($i) if ( $i > -1 );
+    $self->signal_emit( 'removed-profile', $name );
+   }
+  }
+ );
  $hboxsp->pack_start( $dbutton, FALSE, FALSE, 0 );
 
  # HBox for buttons
@@ -445,16 +452,18 @@ sub INIT_INSTANCE {
  $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
  $cbutton->signal_connect( clicked => sub { $self->hide; } );
 
+ # FIXME: this doesn't work as the device list will always be undefined here
  my $device_list = $self->get('device_list');
  if ( defined($device_list) and @$device_list ) {
-  $self->populate_device_list2;
+  $self->populate_device_list($device_list);
  }
  else {
-  $self->get_devices2;
+  $self->get_devices;
  }
 
  # Has to be done in idle cycles to wait for the options to finish building
  Glib::Idle->add( sub { $self->{sbutton}->grab_focus; } );
+ return;
 }
 
 sub SET_PROPERTY {
@@ -466,15 +475,23 @@ sub SET_PROPERTY {
   or ( defined($newval) xor defined($oldval) ) )
  {
   given ($name) {
-   when ('device') { $self->signal_emit( 'changed-device', $newval ) }
-   when ('device_list') { $self->signal_emit('changed-device-list') }
-   when ('logger')      { $logger = $self->get('logger') }
-   when ('num_pages')   { $self->signal_emit( 'changed-num-pages', $newval ) }
+   when ('device') {
+    $self->set_device($newval);
+    $self->signal_emit( 'changed-device', $newval )
+   }
+   when ('device_list') { $self->signal_emit( 'changed-device-list', $newval ) }
+   when ('logger') { $logger = $self->get('logger') }
+   when ('num_pages') { $self->signal_emit( 'changed-num-pages', $newval ) }
    when ('page_number_start') {
     $self->signal_emit( 'changed-page-number-start', $newval )
    }
    when ('page_number_increment') {
     $self->signal_emit( 'changed-page-number-increment', $newval )
+   }
+   when ('profile') {
+    set_combobox_by_text( $self->{combobsp}, $newval );
+    $self->set_profile($newval);
+    $self->signal_emit( 'changed-profile', $newval )
    }
    when ('scan_options') { $self->signal_emit('reloaded-scan-options') }
   }
@@ -498,7 +515,7 @@ sub num_rows_combobox {
 
 # Run Sane->get_devices
 
-sub get_devices2 {
+sub get_devices {
  my ($self) = @_;
 
  my $pbar;
@@ -524,15 +541,14 @@ sub get_devices2 {
    use Data::Dumper;
    $logger->info( "Sane->get_devices returned: ", Dumper( \@device_list ) );
    if ( @device_list == 0 ) {
-    my $parent = $self->get('transient_to');
+    my $parent = $self->get('transient-for');
     $self->destroy;
     undef $self;
     show_message_dialog( $parent, 'error', 'close',
      $d->get('No devices found') );
     return FALSE;
    }
-   parse_device_list2( \@device_list );
-   $self->set( 'device-list', \@device_list );
+   parse_device_list( \@device_list );
    if ( defined $self->{combobd} ) {    # Update combobox
     my $i = 0;
     while ( $i < @$old_device_list ) {
@@ -549,18 +565,20 @@ sub get_devices2 {
      $self->{combobd}->insert_text( $i, $device_list[$i]->{label} );
      $i++;
     }
-    set_device2();
     $hboxd->show_all;
    }
    else {    # New combobox
-    $self->populate_device_list2;
+    $self->populate_device_list( \@device_list );
    }
+
+   # Do this last as it fires the signal
+   $self->set( 'device-list', \@device_list );
   }
  );
  return;
 }
 
-sub parse_device_list2 {
+sub parse_device_list {
  my ($device_list) = @_;
 
  # Note any duplicate device names and delete if necessary
@@ -588,8 +606,8 @@ sub parse_device_list2 {
  return;
 }
 
-sub populate_device_list2 {
- my ($self) = @_;
+sub populate_device_list {
+ my ( $self, $device_list ) = @_;
  my $hboxd = $self->{hboxd};
 
  # device list
@@ -598,12 +616,12 @@ sub populate_device_list2 {
  $self->{combobd} = Gtk2::ComboBox->new_text;
 
  # read the model names into the combobox
- my @device_list = @{ $self->get('device-list') };
+ my @device_list = @$device_list;
  for (@device_list) {
   $self->{combobd}->append_text( $_->{label} );
  }
 
- # $self->{combobd}->append_text( $d->get('Rescan for devices') ) if ( !$test );
+# $self->{combobd}->append_text( $d->get('Rescan for devices') ) unless ( $test );
 
  # flags whether already run or not
  my $run = FALSE;
@@ -613,11 +631,9 @@ sub populate_device_list2 {
    if ( $index > $#device_list ) {
     $self->{combobd}->hide;
     $labeld->hide;
-    $self->get_devices2;
+    $self->get_devices;
    }
    else {
-
-    #    $SETTING{device} = $device_list[$index]->{name};
     $self->scan_options( $device_list[$index] );
    }
   }
@@ -625,29 +641,25 @@ sub populate_device_list2 {
  $tooltips->set_tip( $self->{combobd},
   $d->get('Sets the device to be used for the scan') );
  $hboxd->pack_end( $self->{combobd}, FALSE, FALSE, 0 );
-
- # If device in settings then set it
- $self->set_device2;
  $hboxd->show_all;
  return;
 }
 
-sub set_device2 {
- my ($self) = @_;
- my $device = $self->get('device');
- my $o;
+sub set_device {
+ my ( $self, $device ) = @_;
  if ( defined($device) and $device ne '' ) {
+  my $o;
   my @device_list = @{ $self->get('device_list') };
   for ( my $i = 0 ; $i < @device_list ; $i++ ) {
    $o = $i if ( $device eq $device_list[$i]->{name} );
   }
- }
- $o = 0 unless ( defined $o );
+  $o = 0 unless ( defined $o );
 
 # Set the device dependent devices after the number of pages to scan so that
 #  the source button callback can ghost the all button
 # This then fires the callback, updating the options, so no need to do it further down.
- $self->{combobd}->set_active($o);
+  $self->{combobd}->set_active($o);
+ }
  return;
 }
 
@@ -987,7 +999,7 @@ sub scan_options {
     },
     sub {    # error callback
      my ($message) = @_;
-     my $parent = $self->get('transient_to');
+     my $parent = $self->get('transient-for');
      $self->destroy;
      main::show_message_dialog( $parent, 'error', 'close',
       $d->get( 'Error retrieving scanner options: ' . $message ) );
@@ -996,7 +1008,7 @@ sub scan_options {
   },
   error_callback => sub {
    my ($message) = @_;
-   my $parent = $self->get('transient_to');
+   my $parent = $self->get('transient-for');
    $self->destroy;
    main::show_message_dialog( $parent, 'error', 'close',
     $d->get( 'Error opening device: ' . $message ) );
@@ -1013,24 +1025,24 @@ sub scan_options {
 sub set_option {
  my ( $self, $option, $val ) = @_;
 
- my $sane_device = Gscan2pdf::Frontend::Sane->device();
+ my $sane_device = $self->get('device');
 
  # Cache option
- #  push @{ $SETTING{default}{$sane_device} }, { $option->{name} => $val };
+ push @{ $self->{current_options}{$sane_device} }, { $option->{name} => $val };
 
  # Note any duplicate options, keeping only the last entry.
  my %seen;
 
- #  my $j = $#{ $SETTING{default}{$sane_device} };
- #  while ( $j > -1 ) {
- #   my ($option) =
- #     keys( %{ $SETTING{default}{$sane_device}[$j] } );
- #   $seen{$option}++;
- #   if ( $seen{$option} > 1 ) {
- #    splice @{ $SETTING{default}{$sane_device} }, $j, 1;
- #   }
- #   $j--;
- #  }
+ my $j = $#{ $self->{current_options}{$sane_device} };
+ while ( $j > -1 ) {
+  my ($option) =
+    keys( %{ $self->{current_options}{$sane_device}[$j] } );
+  $seen{$option}++;
+  if ( $seen{$option} > 1 ) {
+   splice @{ $self->{current_options}{$sane_device} }, $j, 1;
+  }
+  $j--;
+ }
 
  my $signal;
  my $options = $self->get('scan-options');
@@ -1058,8 +1070,8 @@ sub set_option {
     for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
      my $widget = $options->by_index($i)->{widget};
 
-     if ( defined $widget )
-     {    # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
+     # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
+     if ( defined $widget ) {
       my $opt = $options[$i];
       my $val = $opt->{val};
       $widget->signal_handler_block( $widget->{signal} );
@@ -1111,8 +1123,9 @@ sub set_option {
      }
     }
    }
-   $self->{gui_updating} =
-     FALSE;    # We can carry on applying defaults now, if necessary.
+
+   # We can carry on applying defaults now, if necessary.
+   $self->{gui_updating} = FALSE;
    $self->signal_emit('finished-process');
   }
  );
@@ -1127,10 +1140,10 @@ sub set_options {
 
  # Set up the canvas
  my $window = Gscan2pdf::Dialog->new(
-  'transient-to' => $self,
-  title          => $d_sane->get( $opt->{title} ),
-  destroy        => TRUE,
-  border_width   => $self->get('border_width'),
+  'transient-for' => $self,
+  title           => $d_sane->get( $opt->{title} ),
+  destroy         => TRUE,
+  border_width    => $self->get('border_width'),
  );
  my $vbox   = $window->vbox;
  my $canvas = Goo::Canvas->new;
@@ -1373,9 +1386,10 @@ sub update_graph {
 # Set options to profile referenced by hashref
 
 sub set_profile {
- my ( $self, $profile, $sane_device ) = @_;
+ my ( $self, $name, $sane_device ) = @_;
 
- my $options = $self->get('scan-options');
+ my $profile = $self->{profiles}{$name};
+ return unless ( defined $profile );
 
  # Move them first to a dummy array, as otherwise it would be self-modifying
  my @defaults;
@@ -1389,8 +1403,8 @@ sub set_profile {
   @defaults = @$profile;
  }
 
- #  delete $SETTING{default}{$sane_device}
- #    if ( defined $sane_device );
+ delete $self->{current_options}{$sane_device}
+   if ( defined $sane_device );
 
  # Give the GUI a chance to catch up between settings,
  # in case they have to be reloaded.
@@ -1405,15 +1419,11 @@ sub set_profile {
    return FALSE unless ( $i < @defaults );
 
    # wait until the options have been loaded and the gui has stopped updating
+   my $options = $self->get('scan-options');
    if ( defined($options) and not $self->{gui_updating} ) {
     $self->{gui_updating} = TRUE;
     my ( $name, $val ) = each( %{ $defaults[$i] } );
-    print "$name, $options\n";
     my $opt = $options->by_name($name);
-
-    # Note resolution default
-    #     $SETTING{resolution} = $val
-    #       if ( $name eq SANE_NAME_SCAN_RESOLUTION );
 
     my $widget = $opt->{widget};
     if ( ref($val) eq 'ARRAY' ) {
@@ -1488,9 +1498,6 @@ sub add_paper {
 sub scan {
  my ($self) = @_;
 
- # Get selected device
- #   $SETTING{device} = $device[ $self->{combobd}->get_active ];
-
  # Get selected number of pages
  my $npages = $self->get('num-pages');
  if ($npages) {
@@ -1561,6 +1568,43 @@ sub make_progress_string {
  return sprintf $d->get("Scanning page %d of %d"), $i, $npages
    if ( $npages > 0 );
  return sprintf $d->get("Scanning page %d"), $i;
+}
+
+sub add_profile {
+ my ( $self, $name, $profile ) = @_;
+ if ( defined($name) and defined($profile) ) {
+  $self->{profiles}{$name} = $profile;
+  $self->{combobsp}->append_text($name);
+ }
+ return;
+}
+
+sub get_combobox_by_text {
+ my ( $combobox, $text ) = @_;
+ return -1 unless ( defined($combobox) and defined($text) );
+ my $o = -1;
+ my $i = 0;
+ $combobox->get_model->foreach(
+  sub {
+   my ( $model, $path, $iter ) = @_;
+   if ( $model->get( $iter, 0 ) eq $text ) {
+    $o = $i;
+    return TRUE;
+   }
+   else {
+    ++$i;
+    return FALSE;
+   }
+  }
+ );
+ return $o;
+}
+
+sub set_combobox_by_text {
+ my ( $combobox, $text ) = @_;
+ my $i = get_combobox_by_text( $combobox, $text );
+ $combobox->set_active($i) if ( $i > -1 );
+ return;
 }
 
 1;
