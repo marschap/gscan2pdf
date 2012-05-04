@@ -15,8 +15,7 @@ BEGIN {
 }
 
 # from http://gtk2-perl.sourceforge.net/doc/subclassing_widgets_in_perl.html
-use Glib::Object::Subclass
-  Gscan2pdf::Dialog::, signals => {
+use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  'new-scan' => {
   param_types => ['Glib::UInt'],    # page number
   return_type => undef
@@ -38,12 +37,12 @@ use Glib::Object::Subclass
   param_types => ['Glib::UInt'],      # new increment
   return_type => undef
  },
- 'changed-scan-options' => {},
- 'changed-scan-option'  => {
+ 'changed-scan-option' => {
   param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, value
   return_type => undef
  },
- 'started-process' => {
+ 'reloaded-scan-options' => {},
+ 'started-process'       => {
   param_types => ['Glib::Scalar'],                      # message
   return_type => undef
  },
@@ -477,7 +476,7 @@ sub SET_PROPERTY {
    when ('page_number_increment') {
     $self->signal_emit( 'changed-page-number-increment', $newval )
    }
-   when ('scan_options') { $self->signal_emit('changed-scan-options') }
+   when ('scan_options') { $self->signal_emit('reloaded-scan-options') }
   }
  }
  return;
@@ -760,7 +759,7 @@ sub scan_options {
         $widget->{signal} = $widget->signal_connect(
          toggled => sub {
           my $val = $widget->get_active;
-          set_option( $opt, $val );
+          $self->set_option( $opt, $val );
          }
         );
        }
@@ -770,7 +769,7 @@ sub scan_options {
         $widget = Gtk2::Button->new( $d_sane->get( $opt->{title} ) );
         $widget->{signal} = $widget->signal_connect(
          clicked => sub {
-          set_option( $opt, $val );
+          $self->set_option( $opt, $val );
          }
         );
        }
@@ -788,7 +787,7 @@ sub scan_options {
         $widget->{signal} = $widget->signal_connect(
          'value-changed' => sub {
           my $val = $widget->get_value;
-          set_option( $opt, $val );
+          $self->set_option( $opt, $val );
          }
         );
        }
@@ -809,7 +808,7 @@ sub scan_options {
         $widget->{signal} = $widget->signal_connect(
          changed => sub {
           my $i = $widget->get_active;
-          set_option( $opt, $opt->{constraint}[$i] );
+          $self->set_option( $opt, $opt->{constraint}[$i] );
          }
         );
        }
@@ -824,7 +823,7 @@ sub scan_options {
         $widget->{signal} = $widget->signal_connect(
          activate => sub {
           my $val = $widget->get_text;
-          set_option( $opt, $val );
+          $self->set_option( $opt, $val );
          }
         );
        }
@@ -845,7 +844,7 @@ sub scan_options {
            );
           }
           else {
-           set_options($opt);
+           $self->set_options($opt);
           }
          }
          else {
@@ -1014,10 +1013,6 @@ sub scan_options {
 sub set_option {
  my ( $self, $option, $val ) = @_;
 
- # Note resolution
- #  $SETTING{resolution} = $val
- #    if ( $option->{name} eq SANE_NAME_SCAN_RESOLUTION );
-
  my $sane_device = Gscan2pdf::Frontend::Sane->device();
 
  # Cache option
@@ -1121,6 +1116,7 @@ sub set_option {
    $self->signal_emit('finished-process');
   }
  );
+ $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
  return;
 }
 
@@ -1207,7 +1203,7 @@ sub set_options {
  $hbox->pack_start( $abutton, TRUE, TRUE, 0 );
  $abutton->signal_connect(
   clicked => sub {
-   set_option( $opt, $canvas->{val} );
+   $self->set_option( $opt, $canvas->{val} );
 
  # when INFO_INEXACT is implemented, so that the value is reloaded, check for it
  # here, so that the reloaded value is not overwritten.
@@ -1421,7 +1417,7 @@ sub set_profile {
 
     my $widget = $opt->{widget};
     if ( ref($val) eq 'ARRAY' ) {
-     set_option( $opt, $val );
+     $self->set_option( $opt, $val );
 
  # when INFO_INEXACT is implemented, so that the value is reloaded, check for it
  # here, so that the reloaded value is not overwritten.

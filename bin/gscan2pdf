@@ -126,6 +126,7 @@ use Gscan2pdf::Tesseract;
 use Gscan2pdf::Ocropus;
 use Gscan2pdf::Cuneiform;
 use Gscan2pdf::Unpaper;
+use Sane 0.05;    # To get SANE_* enums
 use Gtk2::ImageView;
 use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
@@ -4436,6 +4437,16 @@ sub scan_dialog2 {
    $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
    $shbox->hide;
    show_message_dialog( $windows2, 'error', 'close', $d_sane->get($msg) );
+  }
+ );
+
+ $windows2->signal_connect(
+  'changed-scan-option' => sub {
+   my ( $widget, $option, $value ) = @_;
+
+   # Note resolution
+   $SETTING{resolution} = $value
+     if ( $option eq SANE_NAME_SCAN_RESOLUTION );
   }
  );
 
