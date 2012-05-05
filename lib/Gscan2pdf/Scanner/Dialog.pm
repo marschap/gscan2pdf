@@ -57,6 +57,18 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   param_types => ['Glib::Scalar'],                      # name
   return_type => undef
  },
+ 'changed-paper'       => {
+  param_types => ['Glib::Scalar'],                      # name
+  return_type => undef
+ },
+ 'added-paper' => {
+  param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, profile
+  return_type => undef
+ },
+ 'removed-paper' => {
+  param_types => ['Glib::Scalar'],                      # name
+  return_type => undef
+ },
  'started-process' => {
   param_types => ['Glib::Scalar'],                      # message
   return_type => undef
