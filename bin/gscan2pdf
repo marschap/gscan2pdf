@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # To do
+#    automatic white balance, -auto-gamma or e.g. http://www.fmwconcepts.com/imagemagick/autowhite/index.php
+#    automatic contrast using imagemagick -normalize or -brightness-contrast option
 #    check TMPDIR regularly and display error if not enough space for another, say 2 of the largest pages.
 #      To do this, keep file size in page hash.
 #    use libfiu to inject file system faults into test suite

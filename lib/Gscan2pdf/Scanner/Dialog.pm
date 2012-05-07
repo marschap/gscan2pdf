@@ -116,6 +116,12 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   'Array of options making up a profile',               # blurb
   [qw/readable writable/]                               # flags
  ),
+ Glib::ParamSpec->string(
+  'paper',                                            # name
+  'Paper',                                            # nick
+  'Name of currently selected paper format',               # blurb
+  [qw/readable writable/]                               # flags
+ ),
  Glib::ParamSpec->int(
   'num-pages',                                          # name
   'Number of pages',                                    # nickname
