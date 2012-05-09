@@ -57,16 +57,12 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   param_types => ['Glib::Scalar'],                      # name
   return_type => undef
  },
- 'changed-paper'       => {
+ 'changed-paper' => {
   param_types => ['Glib::Scalar'],                      # name
   return_type => undef
  },
- 'added-paper' => {
-  param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, profile
-  return_type => undef
- },
- 'removed-paper' => {
-  param_types => ['Glib::Scalar'],                      # name
+ 'changed-paper-formats' => {
+  param_types => ['Glib::Scalar'],                      # formats
   return_type => undef
  },
  'started-process' => {
@@ -117,28 +113,35 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->string(
-  'paper',                                            # name
-  'Paper',                                            # nick
-  'Name of currently selected paper format',               # blurb
+  'paper',                                              # name
+  'Paper',                                              # nick
+  'Name of currently selected paper format',            # blurb
+  '',                                                   # default
   [qw/readable writable/]                               # flags
  ),
- Glib::ParamSpec->int(
-  'num-pages',                                          # name
-  'Number of pages',                                    # nickname
-  'Number of pages to be scanned',                      # blurb
-  0,                                                    # min 0 implies all
-  999,                                                  # max
-  1,                                                    # default
-  [qw/readable writable/]                               # flags
+ Glib::ParamSpec->scalar(
+  'paper-formats',                                                   # name
+  'Paper formats',                                                   # nick
+  'Hash of arrays defining paper formats, e.g. A4, Letter, etc.',    # blurb
+  [qw/readable writable/]                                            # flags
  ),
  Glib::ParamSpec->int(
-  'page-number-start',                                  # name
-  'Starting page number',                               # nickname
-  'Page number of first page to be scanned',            # blurb
-  1,                                                    # min
-  999,                                                  # max
-  1,                                                    # default
-  [qw/readable writable/]                               # flags
+  'num-pages',                        # name
+  'Number of pages',                  # nickname
+  'Number of pages to be scanned',    # blurb
+  0,                                  # min 0 implies all
+  999,                                # max
+  1,                                  # default
+  [qw/readable writable/]             # flags
+ ),
+ Glib::ParamSpec->int(
+  'page-number-start',                          # name
+  'Starting page number',                       # nickname
+  'Page number of first page to be scanned',    # blurb
+  1,                                            # min
+  999,                                          # max
+  1,                                            # default
+  [qw/readable writable/]                       # flags
  ),
  Glib::ParamSpec->int(
   'page-number-increment',                                           # name
@@ -158,7 +161,8 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  ),
   ];
 
-my ( $d, $d_sane, $logger, $tooltips, $combobp );
+my ( $d, $d_sane, $logger, $tooltips );
+my $tolerance = 1;
 
 sub INIT_INSTANCE {
  my $self = shift;
@@ -506,6 +510,14 @@ sub SET_PROPERTY {
    when ('page_number_increment') {
     $self->signal_emit( 'changed-page-number-increment', $newval )
    }
+   when ('paper') {
+    set_combobox_by_text( $self->{combobp}, $newval );
+    $self->signal_emit( 'changed-paper', $newval )
+   }
+   when ('paper_formats') {
+    $self->set_paper_formats($newval);
+    $self->signal_emit( 'changed-paper-formats', $newval )
+   }
    when ('profile') {
     set_combobox_by_text( $self->{combobsp}, $newval );
     $self->set_profile($newval);
@@ -715,14 +727,14 @@ sub scan_options {
     sub {    # finished callback
      my ($data) = @_;
      my $options = Gscan2pdf::Scanner::Options->new_from_data($data);
-     $self->set( 'scan-options', $options );
      $logger->debug( "Sane->get_option_descriptor returned: ",
       Dumper($options) );
 
      my ( $group, $vbox, $hboxp );
      my $num_dev_options = $options->num_options;
 
-     undef $combobp;    # So we don't carry over from one device to another
+     delete
+       $self->{combobp};    # So we don't carry over from one device to another
      for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
       my $opt = $options->by_index($i);
 
@@ -742,10 +754,6 @@ sub scan_options {
       # Widget
       my ( $widget, $val );
       $val = $opt->{val};
-
-      # Note resolution default
-      #       $SETTING{resolution} = $val
-      #         if ( $opt->{name} eq SANE_NAME_SCAN_RESOLUTION );
 
       if (
            ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
@@ -918,7 +926,7 @@ sub scan_options {
          or defined( $options->{box}{ scalar(SANE_NAME_PAGE_HEIGHT) } ) )
         and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
          or defined( $options->{box}{ scalar(SANE_NAME_PAGE_WIDTH) } ) )
-        and not defined($combobp)
+        and not defined( $self->{combobp} )
          )
        {
 
@@ -926,18 +934,21 @@ sub scan_options {
         my $label = Gtk2::Label->new( $d->get('Paper size') );
         $hboxp->pack_start( $label, FALSE, FALSE, 0 );
 
-        $combobp = Gtk2::ComboBox->new_text;
-        $combobp->append_text( $d->get('Manual') );
-        $combobp->append_text( $d->get('Edit') );
-        $tooltips->set_tip( $combobp,
+        $self->{combobp} = Gtk2::ComboBox->new_text;
+        $self->{combobp}->append_text( $d->get('Manual') );
+        $self->{combobp}->append_text( $d->get('Edit') );
+        $tooltips->set_tip( $self->{combobp},
          $d->get('Selects or edits the paper size') );
-        $hboxp->pack_end( $combobp, FALSE, FALSE, 0 );
-        $combobp->signal_connect(
+        $hboxp->pack_end( $self->{combobp}, FALSE, FALSE, 0 );
+        $self->{combobp}->set_active(0);
+        $self->{combobp}->signal_connect(
          changed => sub {
-          if ( $combobp->get_active_text eq $d->get('Edit') ) {
-           edit_paper( $combobp, $options );
+
+          if ( $self->{combobp}->get_active_text eq $d->get('Edit') ) {
+
+           #           edit_paper( $self->{combobp}, $options );
           }
-          elsif ( $combobp->get_active_text eq $d->get('Manual') ) {
+          elsif ( $self->{combobp}->get_active_text eq $d->get('Manual') ) {
            for (
             ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
              SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
@@ -949,25 +960,25 @@ sub scan_options {
            }
           }
           else {
-           my $paper = $combobp->get_active_text;
+           my $paper   = $self->{combobp}->get_active_text;
+           my $formats = $self->get('paper-formats');
            if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
             and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) ) )
            {
-
-    #             $options->by_name(SANE_NAME_PAGE_HEIGHT)->{widget}->set_value(
-    #              $SETTING{Paper}{$paper}{y} + $SETTING{Paper}{$paper}{t} );
-    #             $options->by_name(SANE_NAME_PAGE_WIDTH)->{widget}->set_value(
-    #              $SETTING{Paper}{$paper}{x} + $SETTING{Paper}{$paper}{l} );
+            $options->by_name(SANE_NAME_PAGE_HEIGHT)->{widget}
+              ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
+            $options->by_name(SANE_NAME_PAGE_WIDTH)->{widget}
+              ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
            }
 
-       #            $options->by_name(SANE_NAME_SCAN_TL_X)->{widget}
-       #              ->set_value( $SETTING{Paper}{$paper}{l} );
-       #            $options->by_name(SANE_NAME_SCAN_TL_Y)->{widget}
-       #              ->set_value( $SETTING{Paper}{$paper}{t} );
-       #            $options->by_name(SANE_NAME_SCAN_BR_X)->{widget}->set_value(
-       #             $SETTING{Paper}{$paper}{x} + $SETTING{Paper}{$paper}{l} );
-       #            $options->by_name(SANE_NAME_SCAN_BR_Y)->{widget}->set_value(
-       #             $SETTING{Paper}{$paper}{y} + $SETTING{Paper}{$paper}{t} );
+           $options->by_name(SANE_NAME_SCAN_TL_X)->{widget}
+             ->set_value( $formats->{$paper}{l} );
+           $options->by_name(SANE_NAME_SCAN_TL_Y)->{widget}
+             ->set_value( $formats->{$paper}{t} );
+           $options->by_name(SANE_NAME_SCAN_BR_X)->{widget}
+             ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
+           $options->by_name(SANE_NAME_SCAN_BR_Y)->{widget}
+             ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
            Glib::Idle->add(
             sub {
              for (
@@ -981,10 +992,12 @@ sub scan_options {
              }
             }
            );
+
+           # Do this last, as it fires the changed-paper signal
+           $self->set( 'paper', $paper );
           }
          }
         );
-        add_paper( $combobp, $options );
        }
 
       }
@@ -996,10 +1009,6 @@ sub scan_options {
      # Set defaults
      my $sane_device = Gscan2pdf::Frontend::Sane->device();
 
-     #      set_profile( $SETTING{default}{$sane_device}, $sane_device )
-     #        if ( defined( $SETTING{default}{$sane_device} )
-     #       and not defined( $SETTING{'default profile'} ) );
-
      # Show new pages
      for ( my $i = 1 ; $i < $self->{notebook}->get_n_pages ; $i++ ) {
       $self->{notebook}->get_nth_page($i)->show_all;
@@ -1008,12 +1017,14 @@ sub scan_options {
      # Give the GUI a chance to catch up before resizing.
      Glib::Idle->add( sub { $self->resize( 100, 100 ); } );
 
-     #      set_combobox_by_text( $combobp, $SETTING{'paper size'} );
-
      $self->{sbutton}->set_sensitive(TRUE);
      $self->{sbutton}->grab_focus;
 
      $self->signal_emit('finished-process');
+
+     # Don't set this, therefore firing the reloaded-scan-options signal,
+     # until we have finished
+     $self->set( 'scan-options', $options );
     },
     sub {    # error callback
      my ($message) = @_;
@@ -1498,18 +1509,19 @@ sub set_profile {
 
 # Add paper size to combobox if scanner large enough
 
-sub add_paper {
- my ( $combobox, $options ) = @_;
+sub set_paper_formats {
+ my ( $self, $formats ) = @_;
  my @ignored;
+ my $options = $self->get('scan-options');
 
- # for ( keys %{ $SETTING{Paper} } ) {
- #  if ( $options->supports_paper( $SETTING{Paper}{$_}, $tolerance ) ) {
- #   $combobox->prepend_text($_);
- #  }
- #  else {
- #   push @ignored, $_;
- #  }
- # }
+ for ( keys %$formats ) {
+  if ( $options->supports_paper( $formats->{$_}, $tolerance ) ) {
+   $self->{combobp}->prepend_text($_);
+  }
+  else {
+   push @ignored, $_;
+  }
+ }
  return @ignored;
 }
 

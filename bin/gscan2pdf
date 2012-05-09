@@ -157,8 +157,6 @@ Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
 my $version   = '1.0.5';
 
-my $tolerance = 1;
-
 # Window parameters
 my $border_width = 6;
 
@@ -4502,6 +4500,27 @@ sub scan_dialog2 {
   'removed-profile' => sub {
    my ( $widget, $profile ) = @_;
    delete $SETTING{profile}{$profile};
+  }
+ );
+
+ # Paper - but can't set the paper until the options have been loaded
+ $windows2->signal_connect(
+  'reloaded-scan-options' => sub {
+   $windows2->set( 'paper-formats', $SETTING{Paper} );
+   $windows2->set( 'paper',         $SETTING{'paper size'} )
+     if ( defined $SETTING{'paper size'} );
+  }
+ );
+ $windows2->signal_connect(
+  'changed-paper-formats' => sub {
+   my ( $widget, $formats ) = @_;
+   $SETTING{Paper} = $formats;
+  }
+ );
+ $windows2->signal_connect(
+  'changed-paper' => sub {
+   my ( $widget, $paper ) = @_;
+   $SETTING{'paper size'} = $paper;
   }
  );
 
