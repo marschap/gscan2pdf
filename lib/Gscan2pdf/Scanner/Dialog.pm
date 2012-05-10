@@ -945,8 +945,7 @@ sub scan_options {
          changed => sub {
 
           if ( $self->{combobp}->get_active_text eq $d->get('Edit') ) {
-
-           #           edit_paper( $self->{combobp}, $options );
+           $self->edit_paper;
           }
           elsif ( $self->{combobp}->get_active_text eq $d->get('Manual') ) {
            for (
@@ -1511,7 +1510,7 @@ sub set_profile {
 
 sub set_paper_formats {
  my ( $self, $formats ) = @_;
- my @ignored;
+ $self->{ignored_paper_formats} = ();
  my $options = $self->get('scan-options');
 
  for ( keys %$formats ) {
@@ -1519,10 +1518,175 @@ sub set_paper_formats {
    $self->{combobp}->prepend_text($_);
   }
   else {
-   push @ignored, $_;
+   push @{ $self->{ignored_paper_formats} }, $_;
   }
  }
- return @ignored;
+ return;
+}
+
+# Paper editor
+sub edit_paper {
+ my ($self) = @_;
+
+ my $combobp = $self->{combobp};
+ my $options = $self->get('scan-options');
+ my $formats = $self->get('paper-formats');
+
+ my $window = Gscan2pdf::Dialog->new(
+  'transient-for' => $self,
+  title           => $d->get('Edit paper size'),
+  border_width    => $self->get('border-width'),
+ );
+ my $vbox = $window->get('vbox');
+
+ # Buttons for SimpleList
+ my $hboxl = Gtk2::HBox->new;
+ $vbox->pack_start( $hboxl, FALSE, FALSE, 0 );
+ my $vboxb = Gtk2::VBox->new;
+ $hboxl->pack_start( $vboxb, FALSE, FALSE, 0 );
+ my $dbutton = Gtk2::Button->new_from_stock('gtk-add');
+ $vboxb->pack_start( $dbutton, TRUE, FALSE, 0 );
+ my $rbutton = Gtk2::Button->new_from_stock('gtk-remove');
+ $vboxb->pack_end( $rbutton, TRUE, FALSE, 0 );
+
+ # Set up a SimpleList
+ my $slist = Gtk2::Ex::Simple::List->new(
+  $d->get('Name')   => 'text',
+  $d->get('Width')  => 'int',
+  $d->get('Height') => 'int',
+  $d->get('Left')   => 'int',
+  $d->get('Top')    => 'int'
+ );
+ for ( keys %$formats ) {
+  push @{ $slist->{data} },
+    [
+   $_,                $formats->{$_}{x}, $formats->{$_}{y},
+   $formats->{$_}{l}, $formats->{$_}{t}
+    ];
+ }
+
+ # Set everything to be editable
+ for ( 0 .. 4 ) {
+  $slist->set_column_editable( $_, TRUE );
+ }
+ $slist->get_column(0)->set_sort_column_id(0);
+
+ # Add button callback
+ $dbutton->signal_connect(
+  clicked => sub {
+   my @rows = $slist->get_selected_indices;
+   $rows[0] = 0 if ( !@rows );
+   my $name    = $slist->{data}[ $rows[0] ][0];
+   my $version = 2;
+   my $i       = 0;
+   while ( $i < @{ $slist->{data} } ) {
+    if ( $slist->{data}[$i][0] eq "$name ($version)" ) {
+     ++$version;
+     $i = 0;
+    }
+    else {
+     ++$i;
+    }
+   }
+   my @line = [
+    "$name ($version)",
+    $slist->{data}[ $rows[0] ][1],
+    $slist->{data}[ $rows[0] ][2],
+    $slist->{data}[ $rows[0] ][3],
+    $slist->{data}[ $rows[0] ][4]
+   ];
+   splice @{ $slist->{data} }, $rows[0] + 1, 0, @line;
+  }
+ );
+
+ # Remove button callback
+ $rbutton->signal_connect(
+  clicked => sub {
+   my @rows = $slist->get_selected_indices;
+   if ( $#rows == $#{ $slist->{data} } ) {
+    show_message_dialog( $window, 'error', 'close',
+     $d->get('Cannot delete all paper sizes') );
+   }
+   else {
+    while (@rows) {
+     splice @{ $slist->{data} }, shift(@rows), 1;
+    }
+   }
+  }
+ );
+
+ # Set-up the callback to check that no two Names are the same
+ $slist->get_model->signal_connect(
+  'row-changed' => sub {
+   my ( $model, $path, $iter ) = @_;
+   for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
+    if ( $i != $path->to_string
+     and $slist->{data}[ $path->to_string ][0] eq $slist->{data}[$i][0] )
+    {
+     my $name    = $slist->{data}[ $path->to_string ][0];
+     my $version = 2;
+     if ( $name =~ /(.*) \((\d+)\)/ ) {
+      $name    = $1;
+      $version = $2 + 1;
+     }
+     $slist->{data}[ $path->to_string ][0] = "$name ($version)";
+     return;
+    }
+   }
+  }
+ );
+ $hboxl->pack_end( $slist, FALSE, FALSE, 0 );
+
+ # Buttons
+ my $hboxb = Gtk2::HBox->new;
+ $vbox->pack_start( $hboxb, FALSE, FALSE, 0 );
+ my $abutton = Gtk2::Button->new_from_stock('gtk-apply');
+ $abutton->signal_connect(
+  clicked => sub {
+   my %formats;
+   for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
+    $formats{ $slist->{data}[$i][0] }{x} = $slist->{data}[$i][1];
+    $formats{ $slist->{data}[$i][0] }{y} = $slist->{data}[$i][2];
+    $formats{ $slist->{data}[$i][0] }{l} = $slist->{data}[$i][3];
+    $formats{ $slist->{data}[$i][0] }{t} = $slist->{data}[$i][4];
+   }
+
+   # Remove all formats, leaving Manual and Edit
+   $combobp->remove_text(0) while ( $combobp->get_active > 1 );
+
+   # Add new definitions
+   $self->set( 'paper-formats', \%formats );
+   main::show_message_dialog(
+    $window,
+    'warning',
+    'close',
+    $d->get(
+'The following paper sizes are too big to be scanned by the selected device:'
+      )
+      . ' '
+      . join( ', ', @{ $self->{ignored_paper_formats} } )
+   ) if ( @{ $self->{ignored_paper_formats} } );
+
+   # Set the combobox back from Edit to the previous value
+   set_combobox_by_text( $combobp, $self->get('paper') );
+
+   $window->destroy;
+  }
+ );
+ $hboxb->pack_start( $abutton, TRUE, FALSE, 0 );
+ my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
+ $cbutton->signal_connect(
+  clicked => sub {
+
+   # Set the combobox back from Edit to the previous value
+   set_combobox_by_text( $combobp, $self->get('paper') );
+
+   $window->destroy;
+  }
+ );
+ $hboxb->pack_end( $cbutton, TRUE, FALSE, 0 );
+ $window->show_all;
+ return;
 }
 
 sub scan {
