@@ -174,8 +174,30 @@ sub INIT_INSTANCE {
  $d      = Locale::gettext->domain(Glib::get_application_name);
  $d_sane = Locale::gettext->domain('sane-backends');
 
- # HBox for devices
+ # device list
  $self->{hboxd} = Gtk2::HBox->new;
+ my $labeld = Gtk2::Label->new( $d->get('Device') );
+ $self->{hboxd}->pack_start( $labeld, FALSE, FALSE, 0 );
+ $self->{combobd} = Gtk2::ComboBox->new_text;
+ $self->{combobd}->append_text( $d->get('Rescan for devices') );
+
+ $self->{combobd_changed_signal} = $self->{combobd}->signal_connect(
+  changed => sub {
+   my $index       = $self->{combobd}->get_active;
+   my $device_list = $self->get('device-list');
+   if ( $index > $#$device_list ) {
+    $self->{combobd}->hide;
+    $labeld->hide;
+    $self->get_devices;
+   }
+   else {
+    $self->scan_options( $device_list->[$index] );
+   }
+  }
+ );
+ $tooltips->set_tip( $self->{combobd},
+  $d->get('Sets the device to be used for the scan') );
+ $self->{hboxd}->pack_end( $self->{combobd}, FALSE, FALSE, 0 );
  $vbox->pack_start( $self->{hboxd}, FALSE, FALSE, 0 );
 
  # Notebook to collate options
@@ -474,15 +496,7 @@ sub INIT_INSTANCE {
  $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
  $cbutton->signal_connect( clicked => sub { $self->hide; } );
 
- # FIXME: this doesn't work as the device list will always be undefined here
- my $device_list = $self->get('device_list');
- if ( defined($device_list) and @$device_list ) {
-  $self->populate_device_list($device_list);
- }
- else {
-  $self->get_devices;
- }
-
+ # FIXME: this has to be done somewhere else
  # Has to be done in idle cycles to wait for the options to finish building
  Glib::Idle->add( sub { $self->{sbutton}->grab_focus; } );
  return;
@@ -501,7 +515,10 @@ sub SET_PROPERTY {
     $self->set_device($newval);
     $self->signal_emit( 'changed-device', $newval )
    }
-   when ('device_list') { $self->signal_emit( 'changed-device-list', $newval ) }
+   when ('device_list') {
+    $self->set_device_list($newval);
+    $self->signal_emit( 'changed-device-list', $newval )
+   }
    when ('logger') { $logger = $self->get('logger') }
    when ('num_pages') { $self->signal_emit( 'changed-num-pages', $newval ) }
    when ('page_number_start') {
@@ -566,8 +583,7 @@ sub get_devices {
   sub {
    my ($data) = @_;
    $pbar->destroy;
-   my $old_device_list = $self->get('device-list');
-   my @device_list     = @{$data};
+   my @device_list = @{$data};
    use Data::Dumper;
    $logger->info( "Sane->get_devices returned: ", Dumper( \@device_list ) );
    if ( @device_list == 0 ) {
@@ -578,38 +594,14 @@ sub get_devices {
      $d->get('No devices found') );
     return FALSE;
    }
-   parse_device_list( \@device_list );
-   if ( defined $self->{combobd} ) {    # Update combobox
-    my $i = 0;
-    while ( $i < @$old_device_list ) {
-     if ( @device_list
-      and $i < @device_list
-      and $old_device_list->[$i]{label} ne $device_list[$i]->{label} )
-     {
-      $self->{combobd}->remove_text($i);
-      $self->{combobd}->insert_text( $i, $device_list[$i]->{label} );
-     }
-     $i++;
-    }
-    while ( $i < @device_list ) {
-     $self->{combobd}->insert_text( $i, $device_list[$i]->{label} );
-     $i++;
-    }
-    $hboxd->show_all;
-   }
-   else {    # New combobox
-    $self->populate_device_list( \@device_list );
-   }
-
-   # Do this last as it fires the signal
    $self->set( 'device-list', \@device_list );
   }
  );
  return;
 }
 
-sub parse_device_list {
- my ($device_list) = @_;
+sub set_device_list {
+ my ( $self, $device_list ) = @_;
 
  # Note any duplicate device names and delete if necessary
  my %seen;
@@ -633,45 +625,19 @@ sub parse_device_list {
   $_->{label} = "$_->{vendor} $_->{model}";
   $_->{label} .= " on $_->{name}" if ( $seen{ $_->{model} } > 1 );
  }
- return;
-}
 
-sub populate_device_list {
- my ( $self, $device_list ) = @_;
- my $hboxd = $self->{hboxd};
+ $self->{combobd}->signal_handler_block( $self->{combobd_changed_signal} );
 
- # device list
- my $labeld = Gtk2::Label->new( $d->get('Device') );
- $hboxd->pack_start( $labeld, FALSE, FALSE, 0 );
- $self->{combobd} = Gtk2::ComboBox->new_text;
+ # Remove all entries apart from rescan
+ $i = get_combobox_num_items( $self->{combobd} );
+ $self->{combobd}->remove_text(0) while ( $i-- > 1 );
 
  # read the model names into the combobox
- my @device_list = @$device_list;
- for (@device_list) {
+ for (@$device_list) {
   $self->{combobd}->append_text( $_->{label} );
  }
 
-# $self->{combobd}->append_text( $d->get('Rescan for devices') ) unless ( $test );
-
- # flags whether already run or not
- my $run = FALSE;
- $self->{combobd}->signal_connect(
-  changed => sub {
-   my $index = $self->{combobd}->get_active;
-   if ( $index > $#device_list ) {
-    $self->{combobd}->hide;
-    $labeld->hide;
-    $self->get_devices;
-   }
-   else {
-    $self->scan_options( $device_list[$index] );
-   }
-  }
- );
- $tooltips->set_tip( $self->{combobd},
-  $d->get('Sets the device to be used for the scan') );
- $hboxd->pack_end( $self->{combobd}, FALSE, FALSE, 0 );
- $hboxd->show_all;
+ $self->{combobd}->signal_handler_unblock( $self->{combobd_changed_signal} );
  return;
 }
 
@@ -679,16 +645,20 @@ sub set_device {
  my ( $self, $device ) = @_;
  if ( defined($device) and $device ne '' ) {
   my $o;
-  my @device_list = @{ $self->get('device_list') };
-  for ( my $i = 0 ; $i < @device_list ; $i++ ) {
-   $o = $i if ( $device eq $device_list[$i]->{name} );
-  }
-  $o = 0 unless ( defined $o );
+  my $device_list = $self->get('device_list');
+  if ( defined $device_list ) {
+   for ( my $i = 0 ; $i < @$device_list ; $i++ ) {
+    $o = $i if ( $device eq $device_list->[$i]{name} );
+   }
+   $o = 0 unless ( defined $o );
 
-# Set the device dependent devices after the number of pages to scan so that
-#  the source button callback can ghost the all button
-# This then fires the callback, updating the options, so no need to do it further down.
-  $self->{combobd}->set_active($o);
+   # Set the device dependent options after the number of pages
+   #  to scan so that the source button callback can ghost the
+   #  all button.
+   # This then fires the callback, updating the options,
+   #  so no need to do it further down.
+   $self->{combobd}->set_active($o);
+  }
  }
  return;
 }
@@ -1021,8 +991,8 @@ sub scan_options {
 
      $self->signal_emit('finished-process');
 
-     # Don't set this, therefore firing the reloaded-scan-options signal,
-     # until we have finished
+     # This fires the reloaded-scan-options signal,
+     # so don't set this until we have finished
      $self->set( 'scan-options', $options );
     },
     sub {    # error callback
@@ -1457,8 +1427,8 @@ sub set_profile {
     if ( ref($val) eq 'ARRAY' ) {
      $self->set_option( $opt, $val );
 
- # when INFO_INEXACT is implemented, so that the value is reloaded, check for it
- # here, so that the reloaded value is not overwritten.
+     # when INFO_INEXACT is implemented, so that the value is reloaded,
+     # check for it here, so that the reloaded value is not overwritten.
      $opt->{val} = $val;
     }
     elsif ( $widget->isa('Gtk2::CheckButton') ) {
@@ -1771,6 +1741,14 @@ sub add_profile {
   $self->{combobsp}->append_text($name);
  }
  return;
+}
+
+sub get_combobox_num_items {
+ my ($combobox) = @_;
+ return unless ( defined $combobox );
+ my $i = 0;
+ $combobox->get_model->foreach( sub { ++$i } );
+ return $i;
 }
 
 sub get_combobox_by_text {
