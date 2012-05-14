@@ -449,16 +449,10 @@ sub INIT_INSTANCE {
    $dialog->show_all;
 
    if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/ ) {
-    my $profile = $entry->get_text;
-    $self->{combobsp}->append_text($profile);
+    my $profile     = $entry->get_text;
     my $sane_device = Gscan2pdf::Frontend::Sane->device();
-    $self->{profiles}{$profile} = ();
-    for ( @{ $self->{current_options}{$sane_device} } ) {
-     push @{ $self->{profiles}{$profile} }, $_;
-    }
+    $self->add_profile( $profile, $self->{current_options}{$sane_device} );
     $self->{combobsp}->set_active( num_rows_combobox( $self->{combobsp} ) );
-    $self->signal_emit( 'added-profile', $profile,
-     $self->{profiles}{$profile} );
    }
    $dialog->destroy;
   }
@@ -1737,8 +1731,12 @@ sub make_progress_string {
 sub add_profile {
  my ( $self, $name, $profile ) = @_;
  if ( defined($name) and defined($profile) ) {
-  $self->{profiles}{$name} = $profile;
+  $self->{profiles}{$name} = ();
+  for (@$profile) {
+   push @{ $self->{profiles}{$profile} }, $_;
+  }
   $self->{combobsp}->append_text($name);
+  $self->signal_emit( 'added-profile', $name, $self->{profiles}{$profile} );
  }
  return;
 }

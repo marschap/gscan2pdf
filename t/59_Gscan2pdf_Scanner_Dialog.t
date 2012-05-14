@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 22;
+use Test::More tests => 24;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -104,6 +104,17 @@ $signal = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
     is( $profile, 'my profile', 'changed-profile' );
+   }
+  );
+  $dialog->signal_connect(
+   'added-profile' => sub {
+    my ( $widget, $name, $profile ) = @_;
+    is( $name, 'my profile', 'added-profile name' );
+    is_deeply(
+     $profile,
+     [ { SANE_NAME_SCAN_RESOLUTION => 52 } ],
+     'added-profile profile'
+    );
    }
   );
   $dialog->add_profile( 'my profile', [ { SANE_NAME_SCAN_RESOLUTION => 52 } ] );
