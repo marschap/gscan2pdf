@@ -463,15 +463,7 @@ sub INIT_INSTANCE {
  my $dbutton = Gtk2::Button->new_from_stock('gtk-delete');
  $dbutton->signal_connect(
   clicked => sub {
-   my $i = $self->{combobsp}->get_active;
-   if ( $i > -1 ) {
-    my $name = $self->{combobsp}->get_active_text;
-    $self->{combobsp}->remove_text($i);
-    my $n = num_rows_combobox( $self->{combobsp} );
-    $i = $n if ( $i > $n );
-    $self->{combobsp}->set_active($i) if ( $i > -1 );
-    $self->signal_emit( 'removed-profile', $name );
-   }
+   $self->remove_profile( $self->{combobsp}->get_active_text );
   }
  );
  $hboxsp->pack_start( $dbutton, FALSE, FALSE, 0 );
@@ -1733,10 +1725,25 @@ sub add_profile {
  if ( defined($name) and defined($profile) ) {
   $self->{profiles}{$name} = ();
   for (@$profile) {
-   push @{ $self->{profiles}{$profile} }, $_;
+   push @{ $self->{profiles}{$name} }, $_;
   }
   $self->{combobsp}->append_text($name);
-  $self->signal_emit( 'added-profile', $name, $self->{profiles}{$profile} );
+  $self->signal_emit( 'added-profile', $name, $self->{profiles}{$name} );
+ }
+ return;
+}
+
+sub remove_profile {
+ my ( $self, $name ) = @_;
+ if ( defined($name) and defined( $self->{profiles}{$name} ) ) {
+  my $i = get_combobox_by_text( $self->{combobsp}, $name );
+  if ( $i > -1 ) {
+   $self->{combobsp}->remove_text($i);
+   my $n = num_rows_combobox( $self->{combobsp} );
+   $i = $n if ( $i > $n );
+   $self->{combobsp}->set_active($i) if ( $i > -1 );
+   $self->signal_emit( 'removed-profile', $name );
+  }
  }
  return;
 }
