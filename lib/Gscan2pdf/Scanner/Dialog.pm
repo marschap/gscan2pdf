@@ -1034,7 +1034,8 @@ sub set_option {
   index            => $option->{index},
   value            => $val,
   started_callback => sub {
-   $self->signal_emit( 'started-process', $d->get('Updating options') );
+   $self->signal_emit( 'started-process', sprintf $d->get('Setting option %s'),
+    $option->{name} );
   },
   running_callback => sub {
    $self->signal_emit( 'changed-progress', -1 );

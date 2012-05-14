@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 25;
+use Test::More tests => 28;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -153,6 +153,36 @@ $signal = $dialog->signal_connect(
   );
   $dialog->set( 'paper', 'A4' );
 
+  my $s_signal;
+  $s_signal = $dialog->signal_connect(
+   'started-process' => sub {
+    ok( 1, 'started-process' );
+    $dialog->signal_handler_disconnect($s_signal);
+   }
+  );
+  my $c_signal;
+  $c_signal = $dialog->signal_connect(
+   'changed-progress' => sub {
+    ok( 1, 'changed-progress' );
+    $dialog->signal_handler_disconnect($c_signal);
+   }
+  );
+  my $f_signal;
+  $f_signal = $dialog->signal_connect(
+   'finished-process' => sub {
+    ok( 1, 'finished-process' );
+    $dialog->signal_handler_disconnect($f_signal);
+   }
+  );
+
+  # got to figure out how to emit this
+  #     my $e_signal;
+  #     $e_signal = $dialog->signal_connect(
+  #      'process-error' => sub {
+  #       ok( 1, 'process-error' );
+  #       $dialog->signal_handler_disconnect($e_signal);
+  #      }
+  #     );
   $dialog->signal_connect(
    'new-scan' => sub {
     my ( $widget, $n ) = @_;
@@ -161,6 +191,7 @@ $signal = $dialog->signal_connect(
    }
   );
   $dialog->scan;
+
  }
 );
 Gtk2->main;
