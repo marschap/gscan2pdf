@@ -209,7 +209,7 @@ MANIFEST : $(SOURCE)
 tidy : MANIFEST $(SOURCE_TIDY)
 
 %.tdy : %
-	perltidy -i=1 $* && if diff -q $@ $* > /dev/null; then rm $@; else mv $@ $*; fi
+	perltidy -i=1 $* && if ! diff -q $@ $* > /dev/null; then cp $@ $*; fi
 END
  $postamble;
 }
