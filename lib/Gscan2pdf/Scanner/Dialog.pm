@@ -44,13 +44,17 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, value
   return_type => undef
  },
+ 'changed-current-scan-options' => {
+  param_types => ['Glib::Scalar'],                      # profile array
+  return_type => undef
+ },
  'reloaded-scan-options' => {},
  'changed-profile'       => {
   param_types => ['Glib::Scalar'],                      # name
   return_type => undef
  },
  'added-profile' => {
-  param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, profile
+  param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, profile array
   return_type => undef
  },
  'removed-profile' => {
@@ -109,7 +113,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  Glib::ParamSpec->scalar(
   'profile',                                            # name
   'Profile',                                            # nick
-  'Array of options making up a profile',               # blurb
+  'Name of current profile',                            # blurb
   [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->string(
@@ -153,11 +157,17 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   [qw/readable writable/]                                            # flags
  ),
  Glib::ParamSpec->object(
-  'scan-options',                                                    # name
-  'Scan options',                                                    # nickname
-  'Current scan options',                                            # blurb
-  'Gscan2pdf::Scanner::Options',                                     # package
-  [qw/readable writable/]                                            # flags
+  'available-scan-options',                                          # name
+  'Scan options available',                                          # nickname
+  'Scan options currently available, whether active, selected, or not',  # blurb
+  'Gscan2pdf::Scanner::Options',    # package
+  [qw/readable writable/]           # flags
+ ),
+ Glib::ParamSpec->scalar(
+  'current-scan-options',                               # name
+  'Current scan options',                               # nick
+  'Array of scan options making up current profile',    # blurb
+  [qw/readable writable/]                               # flags
  ),
   ];
 
@@ -449,9 +459,8 @@ sub INIT_INSTANCE {
    $dialog->show_all;
 
    if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/ ) {
-    my $profile     = $entry->get_text;
-    my $sane_device = Gscan2pdf::Frontend::Sane->device();
-    $self->add_profile( $profile, $self->{current_options}{$sane_device} );
+    my $profile = $entry->get_text;
+    $self->add_profile( $profile, $self->get('current-scan-options') );
     $self->{combobsp}->set_active( num_rows_combobox( $self->{combobsp} ) );
    }
    $dialog->destroy;
@@ -522,11 +531,12 @@ sub SET_PROPERTY {
     $self->signal_emit( 'changed-paper-formats', $newval )
    }
    when ('profile') {
-    set_combobox_by_text( $self->{combobsp}, $newval );
     $self->set_profile($newval);
-    $self->signal_emit( 'changed-profile', $newval )
    }
-   when ('scan_options') { $self->signal_emit('reloaded-scan-options') }
+   when ('available_scan_options') {
+    $self->signal_emit('reloaded-scan-options')
+   }
+   when ('current_scan_options') { $self->set_current_scan_options($newval) }
   }
  }
  return;
@@ -979,7 +989,7 @@ sub scan_options {
 
      # This fires the reloaded-scan-options signal,
      # so don't set this until we have finished
-     $self->set( 'scan-options', $options );
+     $self->set( 'available-scan-options', $options );
     },
     sub {    # error callback
      my ($message) = @_;
@@ -1009,27 +1019,31 @@ sub scan_options {
 sub set_option {
  my ( $self, $option, $val ) = @_;
 
- my $sane_device = $self->get('device');
+ # Unset the profile unless we are actively setting it
+ $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+
+ my $current = $self->{current_scan_options};
 
  # Cache option
- push @{ $self->{current_options}{$sane_device} }, { $option->{name} => $val };
+ push @$current, { $option->{name} => $val };
 
  # Note any duplicate options, keeping only the last entry.
  my %seen;
 
- my $j = $#{ $self->{current_options}{$sane_device} };
+ my $j = $#{$current};
  while ( $j > -1 ) {
   my ($option) =
-    keys( %{ $self->{current_options}{$sane_device}[$j] } );
+    keys( %{ $current->[$j] } );
   $seen{$option}++;
   if ( $seen{$option} > 1 ) {
-   splice @{ $self->{current_options}{$sane_device} }, $j, 1;
+   splice @$current, $j, 1;
   }
   $j--;
  }
+ $self->{current_scan_options} = $current;
 
  my $signal;
- my $options = $self->get('scan-options');
+ my $options = $self->get('available-scan-options');
  Gscan2pdf::Frontend::Sane->set_option(
   index            => $option->{index},
   value            => $val,
@@ -1368,12 +1382,34 @@ sub update_graph {
  return;
 }
 
+sub set_profile {
+ my ( $self, $name ) = @_;
+ set_combobox_by_text( $self->{combobsp}, $name );
+ if ( defined($name) and $name ne '' ) {
+  my $profile = $self->{profiles}{$name};
+
+  # If we are setting the profile, don't unset the profile name
+  $self->{setting_profile} = TRUE;
+
+  # Only emit the changed-profile signal when the GUI has caught up
+  $self->signal_connect(
+   'changed-current-scan-options' => sub {
+    delete $self->{setting_profile};
+    $self->signal_emit( 'changed-profile', $name );
+   }
+  );
+
+  $self->set( 'current-scan-options', $profile );
+ }
+ return;
+}
+
 # Set options to profile referenced by hashref
 
-sub set_profile {
- my ( $self, $name, $sane_device ) = @_;
+sub set_current_scan_options {
+ my ( $self, $profile ) = @_;
+ use Data::Dumper;
 
- my $profile = $self->{profiles}{$name};
  return unless ( defined $profile );
 
  # Move them first to a dummy array, as otherwise it would be self-modifying
@@ -1388,8 +1424,8 @@ sub set_profile {
   @defaults = @$profile;
  }
 
- delete $self->{current_options}{$sane_device}
-   if ( defined $sane_device );
+ $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+ delete $self->{current_scan_options};
 
  # Give the GUI a chance to catch up between settings,
  # in case they have to be reloaded.
@@ -1401,10 +1437,9 @@ sub set_profile {
  my $timer = Glib::Timeout->add(
   100,
   sub {
-   return FALSE unless ( $i < @defaults );
 
    # wait until the options have been loaded and the gui has stopped updating
-   my $options = $self->get('scan-options');
+   my $options = $self->get('available-scan-options');
    if ( defined($options) and not $self->{gui_updating} ) {
     $self->{gui_updating} = TRUE;
     my ( $name, $val ) = each( %{ $defaults[$i] } );
@@ -1455,6 +1490,9 @@ sub set_profile {
      }
     }
     $i++;
+    $self->signal_emit( 'changed-current-scan-options', $profile )
+      unless ( $i < @defaults );
+    return FALSE unless ( $i++ < @defaults );
    }
    return TRUE;
   }
@@ -1468,7 +1506,7 @@ sub set_profile {
 sub set_paper_formats {
  my ( $self, $formats ) = @_;
  $self->{ignored_paper_formats} = ();
- my $options = $self->get('scan-options');
+ my $options = $self->get('available-scan-options');
 
  for ( keys %$formats ) {
   if ( $options->supports_paper( $formats->{$_}, $tolerance ) ) {
@@ -1486,7 +1524,7 @@ sub edit_paper {
  my ($self) = @_;
 
  my $combobp = $self->{combobp};
- my $options = $self->get('scan-options');
+ my $options = $self->get('available-scan-options');
  my $formats = $self->get('paper-formats');
 
  my $window = Gscan2pdf::Dialog->new(

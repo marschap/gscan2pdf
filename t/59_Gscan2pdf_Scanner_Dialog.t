@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 28;
+use Test::More tests => 31;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -31,13 +31,13 @@ ok(
 );
 isa_ok( $dialog, 'Gscan2pdf::Scanner::Dialog' );
 
-is( $dialog->get('device'),                '',    'device' );
-is( $dialog->get('device-list'),           undef, 'device-list' );
-is( $dialog->get('dir'),                   undef, 'dir' );
-is( $dialog->get('num-pages'),             1,     'num-pages' );
-is( $dialog->get('page-number-start'),     1,     'page-number-start' );
-is( $dialog->get('page-number-increment'), 1,     'page-number-increment' );
-is( $dialog->get('scan-options'),          undef, 'scan-options' );
+is( $dialog->get('device'),                 '',    'device' );
+is( $dialog->get('device-list'),            undef, 'device-list' );
+is( $dialog->get('dir'),                    undef, 'dir' );
+is( $dialog->get('num-pages'),              1,     'num-pages' );
+is( $dialog->get('page-number-start'),      1,     'page-number-start' );
+is( $dialog->get('page-number-increment'),  1,     'page-number-increment' );
+is( $dialog->get('available-scan-options'), undef, 'available-scan-options' );
 
 my $signal = $dialog->signal_connect(
  'changed-device-list' => sub {
@@ -87,38 +87,57 @@ $dialog->set( 'page-number-increment', 2 );
 $signal = $dialog->signal_connect(
  'reloaded-scan-options' => sub {
   ok( 1, 'reloaded-scan-options' );
+  $dialog->signal_handler_disconnect($signal);
+
+  # So that it can be used in hash
+  my $resolution = SANE_NAME_SCAN_RESOLUTION;
+
+  $dialog->signal_connect(
+   'added-profile' => sub {
+    my ( $widget, $name, $profile ) = @_;
+    is( $name, 'my profile', 'added-profile name' );
+    is_deeply( $profile, [ { $resolution => 52 } ], 'added-profile profile' );
+   }
+  );
+  $dialog->add_profile( 'my profile', [ { $resolution => 52 } ] );
+
+  # need a new main loop because of the timeout
+  my $loop;
+  my $profile_signal = $dialog->signal_connect(
+   'changed-profile' => sub {
+    my ( $widget, $profile ) = @_;
+    is( $profile, 'my profile', 'changed-profile' );
+    is_deeply(
+     $dialog->get('current-scan-options'),
+     [ { $resolution => 52 } ],
+     'current-scan-options with profile'
+    );
+    $loop->quit;
+   }
+  );
+  $loop = Glib::MainLoop->new;
+  $dialog->set( 'profile', 'my profile' );
+  $loop->run;
+
   my $option_signal;
   $option_signal = $dialog->signal_connect(
    'changed-scan-option' => sub {
     my ( $widget, $option, $value ) = @_;
     is( $option, SANE_NAME_SCAN_RESOLUTION, 'changed-scan-option name' );
     is( $value, 51, 'changed-scan-option value' );
+    is( $dialog->get('profile'),
+     undef, 'changing an option deselects the current profile' );
+    is_deeply(
+     $dialog->get('current-scan-options'),
+     [ { $resolution => 51 } ],
+     'current-scan-options without profile'
+    );
     $dialog->signal_handler_disconnect($option_signal);
    }
   );
-  my $options = $dialog->get('scan-options');
+  my $options = $dialog->get('available-scan-options');
   $dialog->set_option( $options->by_name(SANE_NAME_SCAN_RESOLUTION), 51 );
-  $dialog->signal_handler_disconnect($signal);
 
-  $dialog->signal_connect(
-   'added-profile' => sub {
-    my ( $widget, $name, $profile ) = @_;
-    is( $name, 'my profile', 'added-profile name' );
-    is_deeply(
-     $profile,
-     [ { SANE_NAME_SCAN_RESOLUTION => 52 } ],
-     'added-profile profile'
-    );
-   }
-  );
-  $dialog->add_profile( 'my profile', [ { SANE_NAME_SCAN_RESOLUTION => 52 } ] );
-  $dialog->signal_connect(
-   'changed-profile' => sub {
-    my ( $widget, $profile ) = @_;
-    is( $profile, 'my profile', 'changed-profile' );
-   }
-  );
-  $dialog->set( 'profile', 'my profile' );
   $dialog->signal_connect(
    'removed-profile' => sub {
     my ( $widget, $profile ) = @_;
