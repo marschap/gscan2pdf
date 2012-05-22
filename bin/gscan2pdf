@@ -508,6 +508,11 @@ my (
 
  # filehandle for session lockfile
  $lockfh,
+
+ # Temp::File object for PDF to be emailed
+ # Define here to make sure that it doesn't get deleted until the next email
+ # is created we quit
+ $pdf,
 );
 
 my @action_items = (
@@ -3486,7 +3491,7 @@ sub email {
     font             => $SETTING{'pdf font'},
    );
 
-   my $pdf = File::Temp->new( DIR => $session, SUFFIX => '.pdf' );
+   $pdf = File::Temp->new( DIR => $session, SUFFIX => '.pdf' );
 
    # Check for thunderbird
    my ( $client, $status );
