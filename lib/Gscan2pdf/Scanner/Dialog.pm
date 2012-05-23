@@ -641,8 +641,8 @@ sub set_device_list {
  $self->{combobd}->remove_text(0) while ( $i-- > 1 );
 
  # read the model names into the combobox
- for (@$device_list) {
-  $self->{combobd}->append_text( $_->{label} );
+ for ( my $i = 0 ; $i < @$device_list ; $i++ ) {
+  $self->{combobd}->insert_text( $i, $device_list->[$i]{label} );
  }
 
  $self->{combobd}->signal_handler_unblock( $self->{combobd_changed_signal} );
@@ -1420,7 +1420,6 @@ sub set_profile {
 
 sub set_current_scan_options {
  my ( $self, $profile ) = @_;
- use Data::Dumper;
 
  return unless ( defined $profile );
 
