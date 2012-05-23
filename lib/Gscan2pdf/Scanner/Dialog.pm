@@ -1731,11 +1731,9 @@ sub scan {
   },
   new_page_callback => sub {
    my ($n) = @_;
-   $i++;
-
    $self->signal_emit( 'new-scan', $n );
    $self->signal_emit( 'changed-progress', 0,
-    make_progress_string( $i, $npages ) );
+    make_progress_string( ++$i, $npages ) );
   },
   error_callback => sub {
    my ($msg) = @_;
