@@ -4468,9 +4468,12 @@ sub scan_dialog2 {
 
  $windows2->signal_connect(
   'finished-process' => sub {
-   my ( $widget, $signal ) = @_;
+   my ( $widget, $process, $signal ) = @_;
    $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
    $shbox->hide;
+
+   $windows2->scan_options( $SETTING{device} )
+     if ( $SETTING{'cycle sane handle'} and $process eq 'scan_pages' );
   },
   $signal
  );

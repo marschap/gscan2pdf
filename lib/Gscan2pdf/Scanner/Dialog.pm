@@ -77,51 +77,54 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # progress, message
   return_type => undef
  },
- 'finished-process' => {},
- 'process-error'    => {
-  param_types => ['Glib::Scalar'],                      # error message
+ 'finished-process' => {
+  param_types => ['Glib::String'],  # process name - or do we want an enum here?
+  return_type => undef
+ },
+ 'process-error' => {
+  param_types => ['Glib::Scalar'],    # error message
   return_type => undef
  },
  show => \&show,
   },
   properties => [
  Glib::ParamSpec->string(
-  'device',                                             # name
-  'Device',                                             # nick
-  'Device name',                                        # blurb
-  '',                                                   # default
-  [qw/readable writable/]                               # flags
+  'device',                           # name
+  'Device',                           # nick
+  'Device name',                      # blurb
+  '',                                 # default
+  [qw/readable writable/]             # flags
  ),
  Glib::ParamSpec->scalar(
-  'device-list',                                        # name
-  'Device list',                                        # nick
-  'Array of hashes of available devices',               # blurb
-  [qw/readable writable/]                               # flags
+  'device-list',                             # name
+  'Device list',                             # nick
+  'Array of hashes of available devices',    # blurb
+  [qw/readable writable/]                    # flags
  ),
  Glib::ParamSpec->scalar(
-  'dir',                                                # name
-  'Directory',                                          # nick
-  'Directory in which to store scans',                  # blurb
-  [qw/readable writable/]                               # flags
+  'dir',                                     # name
+  'Directory',                               # nick
+  'Directory in which to store scans',       # blurb
+  [qw/readable writable/]                    # flags
  ),
  Glib::ParamSpec->scalar(
-  'logger',                                             # name
-  'Logger',                                             # nick
-  'Log::Log4perl::get_logger object',                   # blurb
-  [qw/readable writable/]                               # flags
+  'logger',                                  # name
+  'Logger',                                  # nick
+  'Log::Log4perl::get_logger object',        # blurb
+  [qw/readable writable/]                    # flags
  ),
  Glib::ParamSpec->scalar(
-  'profile',                                            # name
-  'Profile',                                            # nick
-  'Name of current profile',                            # blurb
-  [qw/readable writable/]                               # flags
+  'profile',                                 # name
+  'Profile',                                 # nick
+  'Name of current profile',                 # blurb
+  [qw/readable writable/]                    # flags
  ),
  Glib::ParamSpec->string(
-  'paper',                                              # name
-  'Paper',                                              # nick
-  'Name of currently selected paper format',            # blurb
-  '',                                                   # default
-  [qw/readable writable/]                               # flags
+  'paper',                                      # name
+  'Paper',                                      # nick
+  'Name of currently selected paper format',    # blurb
+  '',                                           # default
+  [qw/readable writable/]                       # flags
  ),
  Glib::ParamSpec->scalar(
   'paper-formats',                                                   # name
@@ -691,7 +694,7 @@ sub scan_options {
    $self->signal_emit( 'changed-progress', -1, undef );
   },
   finished_callback => sub {
-   $self->signal_emit('finished-process');
+   $self->signal_emit( 'finished-process', 'open_device' );
    Gscan2pdf::Frontend::Sane->find_scan_options(
     sub {    # started callback
      $self->signal_emit( 'started-process', $d->get('Retrieving options') );
@@ -994,7 +997,7 @@ sub scan_options {
      $self->{sbutton}->set_sensitive(TRUE);
      $self->{sbutton}->grab_focus;
 
-     $self->signal_emit('finished-process');
+     $self->signal_emit( 'finished-process', 'find_scan_options' );
 
      # This fires the reloaded-scan-options signal,
      # so don't set this until we have finished
@@ -1134,7 +1137,7 @@ sub set_option {
 
    # We can carry on applying defaults now, if necessary.
    $self->{gui_updating} = FALSE;
-   $self->signal_emit('finished-process');
+   $self->signal_emit( 'finished-process', 'set_option' );
   }
  );
  $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
@@ -1724,10 +1727,7 @@ sub scan {
    $self->signal_emit( 'changed-progress', $progress, undef );
   },
   finished_callback => sub {
-   $self->signal_emit('finished-process');
-
-   #   scan_options( $device_list[ $self->{combobd}->get_active ] )
-   #     if ( $SETTING{'cycle sane handle'} );
+   $self->signal_emit( 'finished-process', 'scan_pages' );
   },
   new_page_callback => sub {
    my ($n) = @_;

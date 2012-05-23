@@ -190,12 +190,13 @@ $signal = $dialog->signal_connect(
   my $f_signal;
   $f_signal = $dialog->signal_connect(
    'finished-process' => sub {
-    ok( 1, 'finished-process' );
+    my ( $widget, $process ) = @_;
+    is( $process, 'set_option', 'finished-process set_option' );
     $dialog->signal_handler_disconnect($f_signal);
    }
   );
 
-  # got to figure out how to emit this
+  # FIXME: figure out how to emit this
   #     my $e_signal;
   #     $e_signal = $dialog->signal_connect(
   #      'process-error' => sub {
