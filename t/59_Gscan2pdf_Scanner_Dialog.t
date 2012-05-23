@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 31;
+use Test::More tests => 32;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -35,6 +35,7 @@ is( $dialog->get('device'),                 '',    'device' );
 is( $dialog->get('device-list'),            undef, 'device-list' );
 is( $dialog->get('dir'),                    undef, 'dir' );
 is( $dialog->get('num-pages'),              1,     'num-pages' );
+is( $dialog->get('max-pages'),              0,     'max-pages' );
 is( $dialog->get('page-number-start'),      1,     'page-number-start' );
 is( $dialog->get('page-number-increment'),  1,     'page-number-increment' );
 is( $dialog->get('available-scan-options'), undef, 'available-scan-options' );

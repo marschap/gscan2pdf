@@ -4416,6 +4416,25 @@ sub scan_dialog2 {
  );
 
  # Set default
+ $windows2->signal_connect(
+  'changed-num-pages' => sub {
+   ( my $widget, $SETTING{'pages to scan'} ) = @_;
+  }
+ );
+ $windows2->signal_connect(
+  'changed-page-number-start' => sub {
+   my ( $widget, $start ) = @_;
+   $windows2->set( 'max-pages',
+    $slist->possible_pages( $start, $windows2->get('page-number-increment') ) );
+  }
+ );
+ $windows2->signal_connect(
+  'changed-page-number-increment' => sub {
+   my ( $widget, $step ) = @_;
+   $windows2->set( 'max-pages',
+    $slist->possible_pages( $windows2->get('page-number-start'), $step ) );
+  }
+ );
  $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all' );
  $windows2->set( 'num-pages', $SETTING{'pages to scan'} );
 

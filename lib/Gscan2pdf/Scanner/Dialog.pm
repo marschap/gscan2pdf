@@ -29,7 +29,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   return_type => undef
  },
  'changed-num-pages' => {
-  param_types => ['Glib::UInt'],      # new number pages
+  param_types => ['Glib::UInt'],      # new number of pages to scan
   return_type => undef
  },
  'changed-page-number-start' => {
@@ -139,6 +139,16 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   [qw/readable writable/]             # flags
  ),
  Glib::ParamSpec->int(
+  'max-pages',                        # name
+  'Maximum number of pages',          # nickname
+'Maximum number of pages that can be scanned with current page-number-start and page-number-increment'
+  ,                                   # blurb
+  0,                                  # min 0 implies all
+  999,                                # max
+  0,                                  # default
+  [qw/readable writable/]             # flags
+ ),
+ Glib::ParamSpec->int(
   'page-number-start',                          # name
   'Starting page number',                       # nickname
   'Page number of first page to be scanned',    # blurb
@@ -236,7 +246,6 @@ sub INIT_INSTANCE {
  $bscanall->signal_connect(
   clicked => sub {
    $self->set( 'num-pages', 0 );
-   $self->signal_emit( 'changed-num-pages', 0 );
   }
  );
 
@@ -1689,24 +1698,12 @@ sub scan {
 
  # Get selected number of pages
  my $npages = $self->get('num-pages');
- if ($npages) {
+ my $start  = $self->get('page-number-start');
+ my $step   = $self->get('page-number-increment');
+ $npages = $self->get('max-pages')
+   if ( $npages > 0 and $step < 0 );
 
-  #    $SETTING{'pages to scan'} = $npages;
- }
- else {
-
-  #    $SETTING{'pages to scan'} = 'all';
-  if ( $self->get('page-number-increment') < 0 ) {
-   $npages = pages_possible();
-  }
-  else {
-   $npages = 0;
-  }
- }
-
- if ( $self->get('page-number-start') == 1
-  and $self->get('page-number-increment') < 0 )
- {
+ if ( $start == 1 and $step < 0 ) {
   show_message_dialog( $self, 'error', 'cancel',
    $d->get('Must scan facing pages first') );
   return TRUE;
@@ -1717,8 +1714,8 @@ sub scan {
   dir              => $self->get('dir'),
   format           => "out%d.pnm",
   npages           => $npages,
-  start            => $self->get('page-number-start'),
-  step             => $self->get('page-number-increment'),
+  start            => $start,
+  step             => $step,
   started_callback => sub {
    $self->signal_emit( 'started-process', make_progress_string( $i, $npages ) );
   },
