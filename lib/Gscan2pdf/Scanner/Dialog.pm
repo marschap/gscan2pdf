@@ -595,7 +595,7 @@ sub get_devices {
     my $parent = $self->get('transient-for');
     $self->destroy;
     undef $self;
-    show_message_dialog( $parent, 'error', 'close',
+    main::show_message_dialog( $parent, 'error', 'close',
      $d->get('No devices found') );
     return FALSE;
    }
@@ -849,7 +849,7 @@ sub scan_options {
           or $opt->{type} == SANE_TYPE_INT )
          {
           if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-           show_message_dialog(
+           main::show_message_dialog(
             $self, 'info', 'close',
             $d->get(
 'Multiple unconstrained values are not currently supported. Please file a bug.'
@@ -861,7 +861,7 @@ sub scan_options {
           }
          }
          else {
-          show_message_dialog(
+          main::show_message_dialog(
            $self, 'info', 'close',
            $d->get(
 'Multiple non-numerical values are not currently supported. Please file a bug.'
@@ -1608,7 +1608,7 @@ sub edit_paper {
   clicked => sub {
    my @rows = $slist->get_selected_indices;
    if ( $#rows == $#{ $slist->{data} } ) {
-    show_message_dialog( $window, 'error', 'close',
+    main::show_message_dialog( $window, 'error', 'close',
      $d->get('Cannot delete all paper sizes') );
    }
    else {
@@ -1704,7 +1704,7 @@ sub scan {
    if ( $npages > 0 and $step < 0 );
 
  if ( $start == 1 and $step < 0 ) {
-  show_message_dialog( $self, 'error', 'cancel',
+  main::show_message_dialog( $self, 'error', 'cancel',
    $d->get('Must scan facing pages first') );
   return TRUE;
  }
