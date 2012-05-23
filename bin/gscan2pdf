@@ -4143,7 +4143,9 @@ sub scan_dialog {
    else {
     $SETTING{'pages to scan'} = 'all';
     if ( $step < 0 ) {
-     $npages = pages_possible();
+     $npages =
+       $slist->pages_possible( $spin_buttons->get_value,
+      $spin_buttoni->get_value );
     }
     else {
      $npages = 0;
@@ -5025,45 +5027,11 @@ sub update_start {
  return;
 }
 
-# Check how many pages could be scanned
-
-sub pages_possible {
- my $n     = 1;
- my $i     = $#{ $slist->{data} };
- my $start = $spin_buttons->get_value;
- my $step  = $spin_buttoni->get_value;
- my $exists;
- while ( !defined $exists ) {
-  if ( $start + $n * $step < 1 ) {
-   $exists = TRUE;
-  }
-  elsif ( $i < 0 and $step < 0 ) {
-   ++$n;
-  }
-  elsif ( $i > $#{ $slist->{data} } or $i < 0 ) {
-   $exists = FALSE;
-   $n      = -1;
-  }
-  elsif ( $slist->{data}[$i][0] == $start + $n * $step ) {
-   $exists = TRUE;
-  }
-  elsif ( $slist->{data}[$i][0] > $start + $n * $step and $step < 0 ) {
-   --$i;
-  }
-  elsif ( $slist->{data}[$i][0] < $start + $n * $step and $step > 0 ) {
-   ++$i;
-  }
-  else {
-   ++$n;
-  }
- }
- return $n;
-}
-
 # Update the number of pages to scan spinbutton if necessary
 
 sub update_number {
- my $n = pages_possible();
+ my $n =
+   $slist->pages_possible( $spin_buttons->get_value, $spin_buttoni->get_value );
  $spin_buttonn->set_value($n) if ( $n > 0 and $n < $spin_buttonn->get_value );
  return;
 }

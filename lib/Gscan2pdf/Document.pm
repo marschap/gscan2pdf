@@ -301,6 +301,40 @@ sub get_resolution {
  return $resolution;
 }
 
+# Check how many pages could be scanned
+
+sub pages_possible {
+ my ( $self, $start, $step ) = @_;
+ my $n = 1;
+ my $i = $#{ $self->{data} };
+ my $exists;
+ while ( not defined($exists) ) {
+  if ( $start + $n * $step < 1 ) {
+   $exists = TRUE;
+  }
+  elsif ( $i < 0 and $step < 0 ) {
+   ++$n;
+  }
+  elsif ( $i > $#{ $self->{data} } or $i < 0 ) {
+   $exists = FALSE;
+   $n      = -1;
+  }
+  elsif ( $self->{data}[$i][0] == $start + $n * $step ) {
+   $exists = TRUE;
+  }
+  elsif ( $self->{data}[$i][0] > $start + $n * $step and $step < 0 ) {
+   --$i;
+  }
+  elsif ( $self->{data}[$i][0] < $start + $n * $step and $step > 0 ) {
+   ++$i;
+  }
+  else {
+   ++$n;
+  }
+ }
+ return $n;
+}
+
 # Add a new page to the document
 
 sub add_page {
