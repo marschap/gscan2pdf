@@ -211,6 +211,7 @@ sub INIT_INSTANCE {
    if ( $index > $#$device_list ) {
     $self->{combobd}->hide;
     $labeld->hide;
+    $self->set( 'device', undef );    # to make sure that the device is reloaded
     $self->get_devices;
    }
    else {
@@ -603,6 +604,7 @@ sub get_devices {
     return FALSE;
    }
    $self->set( 'device-list', \@device_list );
+   $hboxd->show_all;
   }
  );
  return;
@@ -1785,7 +1787,12 @@ sub get_combobox_num_items {
  my ($combobox) = @_;
  return unless ( defined $combobox );
  my $i = 0;
- $combobox->get_model->foreach( sub { ++$i } );
+ $combobox->get_model->foreach(
+  sub {
+   ++$i;
+   return FALSE;    # continue the foreach()
+  }
+ );
  return $i;
 }
 
@@ -1799,11 +1806,11 @@ sub get_combobox_by_text {
    my ( $model, $path, $iter ) = @_;
    if ( $model->get( $iter, 0 ) eq $text ) {
     $o = $i;
-    return TRUE;
+    return TRUE;    # found - stop the foreach()
    }
    else {
     ++$i;
-    return FALSE;
+    return FALSE;    # not found - continue the foreach()
    }
   }
  );
