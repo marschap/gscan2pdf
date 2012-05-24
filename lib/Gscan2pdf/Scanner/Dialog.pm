@@ -20,76 +20,58 @@ BEGIN {
 use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  'new-scan' => {
   param_types => ['Glib::UInt'],    # page number
-  return_type => undef
  },
  'changed-device' => {
   param_types => ['Glib::String'],    # device name
-  return_type => undef
  },
  'changed-device-list' => {
   param_types => ['Glib::Scalar'],    # array of hashes with device info
-  return_type => undef
  },
  'changed-num-pages' => {
   param_types => ['Glib::UInt'],      # new number of pages to scan
-  return_type => undef
  },
  'changed-page-number-start' => {
   param_types => ['Glib::UInt'],      # new start page
-  return_type => undef
  },
  'changed-page-number-increment' => {
   param_types => ['Glib::UInt'],      # new increment
-  return_type => undef
  },
  'changed-side-to-scan' => {
   param_types => ['Glib::String'],    # facing or reverse
-  return_type => undef
  },
  'changed-scan-option' => {
   param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, value
-  return_type => undef
  },
  'changed-current-scan-options' => {
   param_types => ['Glib::Scalar'],                      # profile array
-  return_type => undef
  },
  'reloaded-scan-options' => {},
  'changed-profile'       => {
   param_types => ['Glib::Scalar'],                      # name
-  return_type => undef
  },
  'added-profile' => {
   param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, profile array
-  return_type => undef
  },
  'removed-profile' => {
   param_types => ['Glib::Scalar'],                      # name
-  return_type => undef
  },
  'changed-paper' => {
   param_types => ['Glib::Scalar'],                      # name
-  return_type => undef
  },
  'changed-paper-formats' => {
   param_types => ['Glib::Scalar'],                      # formats
-  return_type => undef
  },
  'started-process' => {
   param_types => ['Glib::Scalar'],                      # message
-  return_type => undef
  },
  'changed-progress' => {
   param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # progress, message
-  return_type => undef
  },
  'finished-process' => {
   param_types => ['Glib::String'],                      # process name
-  return_type => undef
  },
  'process-error' => {
   param_types => ['Glib::Scalar'],                      # error message
-  return_type => undef
  },
  show => \&show,
   },
