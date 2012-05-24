@@ -462,37 +462,41 @@ sub add_widget {
 }
 
 sub get_options {
- my ($self) = @_;
+ my ($self)  = @_;
  my $hashref = $self->{options};
- my $default;
+ my $default = $self->{default};
 
  foreach my $option ( keys %{$hashref} ) {
-  if ( $hashref->{$option}{type} eq 'ComboBox' ) {
-   my $i = $hashref->{$option}{widget}->get_active;
-   for ( keys %{ $hashref->{$option}{options} } ) {
-    $default->{$option} = $_
-      if ( $hashref->{$option}{options}{$_}{index} == $i );
+  if ( defined $hashref->{$option}{widget} ) {
+   if ( $hashref->{$option}{type} eq 'ComboBox' ) {
+    my $i = $hashref->{$option}{widget}->get_active;
+    for ( keys %{ $hashref->{$option}{options} } ) {
+     $default->{$option} = $_
+       if ( $hashref->{$option}{options}{$_}{index} == $i );
+    }
    }
-  }
-  elsif ( $hashref->{$option}{type} eq 'CheckButton' ) {
-   $default->{$option} = $hashref->{$option}{widget}->get_active ? TRUE : FALSE;
-  }
-  elsif ( $hashref->{$option}{type} eq 'SpinButton' ) {
-   $default->{$option} = $hashref->{$option}{widget}->get_value;
-  }
-  elsif ( $hashref->{$option}{type} eq 'CheckButtonGroup' ) {
-   my @items;
-   foreach ( keys %{ $hashref->{$option}{options} } ) {
-    push @items, $_ if ( $hashref->{$option}{options}{$_}{widget}->get_active );
+   elsif ( $hashref->{$option}{type} eq 'CheckButton' ) {
+    $default->{$option} =
+      $hashref->{$option}{widget}->get_active ? TRUE : FALSE;
    }
-   $default->{$option} = join ',', @items if (@items);
-  }
-  elsif ( $hashref->{$option}{type} eq 'SpinButtonGroup' ) {
-   my @items;
-   foreach ( keys %{ $hashref->{$option}{options} } ) {
-    push @items, $hashref->{$option}{options}{$_}{widget}->get_value;
+   elsif ( $hashref->{$option}{type} eq 'SpinButton' ) {
+    $default->{$option} = $hashref->{$option}{widget}->get_value;
    }
-   $default->{$option} = join ',', @items if (@items);
+   elsif ( $hashref->{$option}{type} eq 'CheckButtonGroup' ) {
+    my @items;
+    foreach ( keys %{ $hashref->{$option}{options} } ) {
+     push @items, $_
+       if ( $hashref->{$option}{options}{$_}{widget}->get_active );
+    }
+    $default->{$option} = join ',', @items if (@items);
+   }
+   elsif ( $hashref->{$option}{type} eq 'SpinButtonGroup' ) {
+    my @items;
+    foreach ( keys %{ $hashref->{$option}{options} } ) {
+     push @items, $hashref->{$option}{options}{$_}{widget}->get_value;
+    }
+    $default->{$option} = join ',', @items if (@items);
+   }
   }
  }
  return $default;

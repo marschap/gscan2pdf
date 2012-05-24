@@ -5060,8 +5060,8 @@ sub update_number {
 
 sub scanimage {
  my (
-  $device,   $npages,  $offset, $step, $rfacing,
-  $rreverse, $unpaper, $ocr,    %options
+  $device,   $npages,       $offset, $step, $rfacing,
+  $rreverse, $unpaper_flag, $ocr,    %options
  ) = @_;
 
  require IPC::Open3;
@@ -5158,7 +5158,7 @@ sub scanimage {
         sub {
          return TRUE unless ( -e "out$id.pnm" );
          my $index = import_scan( "out$id.pnm", $id * $step + $offset,
-          $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
+          $SETTING{resolution}, TRUE, $rotate, $unpaper_flag, $ocr );
          $num_scans++;
          return FALSE;
         }
@@ -5240,7 +5240,7 @@ sub scanimage {
  else {
   my $rotate = 1 % 2 ? $rfacing : $rreverse;
   my $index = import_scan( $test_image, 1 * $step + $offset,
-   $SETTING{resolution}, FALSE, $rotate, $unpaper, $ocr );
+   $SETTING{resolution}, FALSE, $rotate, $unpaper_flag, $ocr );
  }
  return;
 }
@@ -5249,8 +5249,8 @@ sub scanimage {
 
 sub scanadf {
  my (
-  $device,   $npages,  $offset, $step, $rfacing,
-  $rreverse, $unpaper, $ocr,    %options
+  $device,   $npages,       $offset, $step, $rfacing,
+  $rreverse, $unpaper_flag, $ocr,    %options
  ) = @_;
 
  require IPC::Open3;
@@ -5370,7 +5370,7 @@ sub scanadf {
         sub {
          return TRUE unless ( -e "out$id.pnm" );
          my $index = import_scan( "out$id.pnm", $id * $step + $offset,
-          $SETTING{resolution}, TRUE, $rotate, $unpaper, $ocr );
+          $SETTING{resolution}, TRUE, $rotate, $unpaper_flag, $ocr );
          $spbar->set_text(
           sprintf( $d->get('Scanning page %i...'), $id * $step + $offset ) );
          $id++;
@@ -5461,18 +5461,18 @@ sub hash2options {
 }
 
 sub post_process_scan {
- my ( $pages, $rotate, $unpaper, $ocr ) = @_;
+ my ( $pages, $rotate, $unpaper_flag, $ocr ) = @_;
 
  if ($rotate) {
   rotate(
    $rotate, $pages,
    sub {
     my ($pages) = @_;
-    post_process_scan( $pages, undef, $unpaper, $ocr );
+    post_process_scan( $pages, undef, $unpaper_flag, $ocr );
    }
   );
  }
- elsif ($unpaper) {
+ elsif ($unpaper_flag) {
   unpaper_page(
    $pages,
    $unpaper->get_cmdline,
@@ -5491,7 +5491,8 @@ sub post_process_scan {
 # Take new scan and display it
 
 sub import_scan {
- my ( $ofilename, $page, $resolution, $delete, $rotate, $unpaper, $ocr ) = @_;
+ my ( $ofilename, $page, $resolution, $delete, $rotate, $unpaper_flag, $ocr ) =
+   @_;
 
  # Interface to frontend
  open my $fh, '<', $ofilename or die "can't open $ofilename: $!";   ## no critic
@@ -5560,7 +5561,7 @@ sub import_scan {
     }
     else {
      update_uimanager();
-     post_process_scan( [$gpage], $rotate, $unpaper, $ocr );
+     post_process_scan( [$gpage], $rotate, $unpaper_flag, $ocr );
     }
     return FALSE;    # uninstall
    }
