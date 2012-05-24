@@ -4425,14 +4425,14 @@ sub scan_dialog2 {
   'changed-page-number-start' => sub {
    my ( $widget, $start ) = @_;
    $windows2->set( 'max-pages',
-    $slist->possible_pages( $start, $windows2->get('page-number-increment') ) );
+    $slist->pages_possible( $start, $windows2->get('page-number-increment') ) );
   }
  );
  $windows2->signal_connect(
   'changed-page-number-increment' => sub {
    my ( $widget, $step ) = @_;
    $windows2->set( 'max-pages',
-    $slist->possible_pages( $windows2->get('page-number-start'), $step ) );
+    $slist->pages_possible( $windows2->get('page-number-start'), $step ) );
   }
  );
  $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all' );

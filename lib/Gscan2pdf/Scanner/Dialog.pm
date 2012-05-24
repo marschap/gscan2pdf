@@ -152,7 +152,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   'Maximum number of pages',          # nickname
 'Maximum number of pages that can be scanned with current page-number-start and page-number-increment'
   ,                                   # blurb
-  0,                                  # min 0 implies all
+  -1,                                 # min -1 implies all
   999,                                # max
   0,                                  # default
   [qw/readable writable/]             # flags
@@ -324,8 +324,9 @@ sub INIT_INSTANCE {
   }
  );
 
+ # FIXME: move this to main in signal callback
  # Check whether the start page exists
- $spin_buttons->signal_connect( 'value-changed' => \&update_start );
+ # $spin_buttons->signal_connect( 'value-changed' => \&update_start );
 
  # Setting this here to fire callback running update_start
  $spin_buttons->set_value( $self->get('page-number-start') );
@@ -336,8 +337,9 @@ sub INIT_INSTANCE {
    $self->set( 'num-pages', $spin_buttonn->get_value );
    $bscannum->set_active(TRUE);    # Set the radiobutton active
 
+   # FIXME: move this to main in signal callback
    # Check that there is room in the list for the number of pages
-   update_number();
+   # update_number();
   }
  );
 
@@ -1749,11 +1751,6 @@ sub scan {
    $self->signal_emit( 'process-error', $msg );
   }
  );
-
- #   scan_pages( $npages, $start, $step, $rotate_facing, $rotate_reverse,
- #    $SETTING{'unpaper on scan'},
- #    $SETTING{'OCR on scan'}
- #  );
 }
 
 sub make_progress_string {
