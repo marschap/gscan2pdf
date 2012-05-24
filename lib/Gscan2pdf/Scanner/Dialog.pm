@@ -9,9 +9,11 @@ use Gscan2pdf::Frontend::Sane;
 use Locale::gettext 1.05;    # For translations
 use feature "switch";
 
+# need to register this with Glib before we can use it below
 BEGIN {
- use Gscan2pdf::Scanner::Options
-   ;    # need to register this with Glib before we can use it below
+ use Gscan2pdf::Scanner::Options;
+ Glib::Type->register_enum( 'Gscan2pdf::Scanner::Dialog::Side',
+  qw(facing reverse) );
 }
 
 # from http://gtk2-perl.sourceforge.net/doc/subclassing_widgets_in_perl.html
@@ -38,6 +40,10 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  },
  'changed-page-number-increment' => {
   param_types => ['Glib::UInt'],      # new increment
+  return_type => undef
+ },
+ 'changed-side-to-scan' => {
+  param_types => ['Glib::String'],    # facing or reverse
   return_type => undef
  },
  'changed-scan-option' => {
@@ -78,53 +84,53 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   return_type => undef
  },
  'finished-process' => {
-  param_types => ['Glib::String'],  # process name - or do we want an enum here?
+  param_types => ['Glib::String'],                      # process name
   return_type => undef
  },
  'process-error' => {
-  param_types => ['Glib::Scalar'],    # error message
+  param_types => ['Glib::Scalar'],                      # error message
   return_type => undef
  },
  show => \&show,
   },
   properties => [
  Glib::ParamSpec->string(
-  'device',                           # name
-  'Device',                           # nick
-  'Device name',                      # blurb
-  '',                                 # default
-  [qw/readable writable/]             # flags
+  'device',                                             # name
+  'Device',                                             # nick
+  'Device name',                                        # blurb
+  '',                                                   # default
+  [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->scalar(
-  'device-list',                             # name
-  'Device list',                             # nick
-  'Array of hashes of available devices',    # blurb
-  [qw/readable writable/]                    # flags
+  'device-list',                                        # name
+  'Device list',                                        # nick
+  'Array of hashes of available devices',               # blurb
+  [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->scalar(
-  'dir',                                     # name
-  'Directory',                               # nick
-  'Directory in which to store scans',       # blurb
-  [qw/readable writable/]                    # flags
+  'dir',                                                # name
+  'Directory',                                          # nick
+  'Directory in which to store scans',                  # blurb
+  [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->scalar(
-  'logger',                                  # name
-  'Logger',                                  # nick
-  'Log::Log4perl::get_logger object',        # blurb
-  [qw/readable writable/]                    # flags
+  'logger',                                             # name
+  'Logger',                                             # nick
+  'Log::Log4perl::get_logger object',                   # blurb
+  [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->scalar(
-  'profile',                                 # name
-  'Profile',                                 # nick
-  'Name of current profile',                 # blurb
-  [qw/readable writable/]                    # flags
+  'profile',                                            # name
+  'Profile',                                            # nick
+  'Name of current profile',                            # blurb
+  [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->string(
-  'paper',                                      # name
-  'Paper',                                      # nick
-  'Name of currently selected paper format',    # blurb
-  '',                                           # default
-  [qw/readable writable/]                       # flags
+  'paper',                                              # name
+  'Paper',                                              # nick
+  'Name of currently selected paper format',            # blurb
+  '',                                                   # default
+  [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->scalar(
   'paper-formats',                                                   # name
@@ -167,6 +173,14 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   -99,                                                               # min
   99,                                                                # max
   1,                                                                 # default
+  [qw/readable writable/]                                            # flags
+ ),
+ Glib::ParamSpec->enum(
+  'side-to-scan',                                                    # name
+  'Side to scan',                                                    # nickname
+  'Either facing or reverse',                                        # blurb
+  'Gscan2pdf::Scanner::Dialog::Side',                                # type
+  'facing',                                                          # default
   [qw/readable writable/]                                            # flags
  ),
  Glib::ParamSpec->object(
@@ -369,15 +383,6 @@ sub INIT_INSTANCE {
    else {
     $spin_buttoni->set_value(-2);
    }
-
- # FIXME: do this in a callback from a signal
- #   if ( $#{ $slist->{data} } > -1 ) {
- #    $spin_buttons->set_value( $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
- #   }
- #   else {
-   $spin_buttons->set_value(1);
-
-   #   }
   }
  );
  $tooltips->set_tip( $combobs,
@@ -534,6 +539,9 @@ sub SET_PROPERTY {
    }
    when ('page_number_increment') {
     $self->signal_emit( 'changed-page-number-increment', $newval )
+   }
+   when ('side_to_scan') {
+    $self->signal_emit( 'changed-side-to-scan', $newval )
    }
    when ('paper') {
     set_combobox_by_text( $self->{combobp}, $newval );

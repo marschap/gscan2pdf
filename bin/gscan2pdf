@@ -4438,6 +4438,19 @@ sub scan_dialog2 {
  $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all' );
  $windows2->set( 'num-pages', $SETTING{'pages to scan'} );
 
+ $windows2->signal_connect(
+  'changed-side-to-scan' => sub {
+   my ( $widget, $side ) = @_;
+   if ( $#{ $slist->{data} } > -1 ) {
+    $windows2->set( 'page-number-start',
+     $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
+   }
+   else {
+    $windows2->set( 'page-number-start', 1 );
+   }
+  }
+ );
+
  my $signal;
  $windows2->signal_connect(
   'started-process' => sub {

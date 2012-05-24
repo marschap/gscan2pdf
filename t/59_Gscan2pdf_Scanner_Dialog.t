@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 32;
+use Test::More tests => 34;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -31,13 +31,14 @@ ok(
 );
 isa_ok( $dialog, 'Gscan2pdf::Scanner::Dialog' );
 
-is( $dialog->get('device'),                 '',    'device' );
-is( $dialog->get('device-list'),            undef, 'device-list' );
-is( $dialog->get('dir'),                    undef, 'dir' );
-is( $dialog->get('num-pages'),              1,     'num-pages' );
-is( $dialog->get('max-pages'),              0,     'max-pages' );
-is( $dialog->get('page-number-start'),      1,     'page-number-start' );
-is( $dialog->get('page-number-increment'),  1,     'page-number-increment' );
+is( $dialog->get('device'),                '',       'device' );
+is( $dialog->get('device-list'),           undef,    'device-list' );
+is( $dialog->get('dir'),                   undef,    'dir' );
+is( $dialog->get('num-pages'),             1,        'num-pages' );
+is( $dialog->get('max-pages'),             0,        'max-pages' );
+is( $dialog->get('page-number-start'),     1,        'page-number-start' );
+is( $dialog->get('page-number-increment'), 1,        'page-number-increment' );
+is( $dialog->get('side-to-scan'),          'facing', 'side-to-scan' );
 is( $dialog->get('available-scan-options'), undef, 'available-scan-options' );
 
 my $signal = $dialog->signal_connect(
@@ -84,6 +85,14 @@ $dialog->signal_connect(
  }
 );
 $dialog->set( 'page-number-increment', 2 );
+
+$dialog->signal_connect(
+ 'changed-side-to-scan' => sub {
+  my ( $widget, $side ) = @_;
+  is( $side, 'reverse', 'changed-side-to-scan' );
+ }
+);
+$dialog->set( 'side-to-scan', 'reverse' );
 
 $signal = $dialog->signal_connect(
  'reloaded-scan-options' => sub {
