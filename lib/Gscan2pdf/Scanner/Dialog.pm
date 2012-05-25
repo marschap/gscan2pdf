@@ -705,6 +705,12 @@ sub scan_options {
      my ( $group, $vbox, $hboxp );
      my $num_dev_options = $options->num_options;
 
+     # We have hereby removed the active profile and paper,
+     # so update the properties without triggering the signals
+     $self->{profile}       = undef;
+     $self->{paper_formats} = undef;
+     $self->{paper}         = undef;
+
      delete
        $self->{combobp};    # So we don't carry over from one device to another
      for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
@@ -1446,8 +1452,9 @@ sub set_current_scan_options {
    # wait until the options have been loaded and the gui has stopped updating
    my $options = $self->get('available-scan-options');
    if ( defined($options) and not $self->{gui_updating} ) {
-    $self->{gui_updating} = TRUE;
     my ( $name, $val ) = each( %{ $defaults[$i] } );
+    return TRUE unless ( defined($name) and defined($val) );
+    $self->{gui_updating} = TRUE;
     my $opt = $options->by_name($name);
 
     my $widget = $opt->{widget};

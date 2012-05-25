@@ -4411,7 +4411,8 @@ sub scan_dialog2 {
  $windows2->signal_connect(
   'changed-device' => sub {
    my ( $widget, $device ) = @_;
-   $SETTING{device} = $device;
+   $SETTING{device} = $device
+     if ( defined($device) and $device ne '' );
   }
  );
 
@@ -4515,12 +4516,6 @@ sub scan_dialog2 {
  foreach my $profile (@profiles) {
   $windows2->add_profile( $profile, $SETTING{profile}{$profile} );
  }
- if ( defined $SETTING{'default profile'} ) {
-  $windows2->set( 'profile', $SETTING{'default profile'} );
- }
- elsif (@profiles) {
-  $windows2->set( 'profile', $profiles[0] );
- }
  $windows2->signal_connect(
   'changed-profile' => sub {
    my ( $widget, $profile ) = @_;
@@ -4540,12 +4535,19 @@ sub scan_dialog2 {
   }
  );
 
- # Paper - but can't set the paper until the options have been loaded
+ # Can't set the paper or profile until the options have been loaded
  $windows2->signal_connect(
   'reloaded-scan-options' => sub {
    $windows2->set( 'paper-formats', $SETTING{Paper} );
    $windows2->set( 'paper',         $SETTING{'paper size'} )
      if ( defined $SETTING{'paper size'} );
+
+   if ( defined $SETTING{'default profile'} ) {
+    $windows2->set( 'profile', $SETTING{'default profile'} );
+   }
+   elsif (@profiles) {
+    $windows2->set( 'profile', $profiles[0] );
+   }
   }
  );
  $windows2->signal_connect(
