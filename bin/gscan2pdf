@@ -4243,7 +4243,7 @@ sub scan_dialog {
   parse_device_list( $test->{output} );
   populate_device_list($hboxd);
  }
- elsif ( !@device ) {
+ elsif ( not @device ) {
   get_devices($hboxd);
  }
  else {
@@ -4863,10 +4863,8 @@ sub scan_dialog2 {
   }
  );
 
- # FIXME: this doesn't work as the device list will always be undefined here
- my $device_list = $windows2->get('device_list');
- if ( defined($device_list) and @$device_list ) {
-  $windows2->populate_device_list($device_list);
+ if (@device_list) {
+  $windows2->set( 'device-list', \@device_list );
  }
  else {
   $windows2->get_devices;

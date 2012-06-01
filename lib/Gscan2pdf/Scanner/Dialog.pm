@@ -621,6 +621,8 @@ sub set_device_list {
  # Note any duplicate model names and add the device if necessary
  undef %seen;
  for (@$device_list) {
+  $_->{model}  = $_->{name} unless ( defined $_->{model} );
+  $_->{vendor} = ''         unless ( defined $_->{vendor} );
   $seen{ $_->{model} }++;
  }
  for (@$device_list) {
