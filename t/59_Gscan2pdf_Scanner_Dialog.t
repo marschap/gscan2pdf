@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 34;
+use Test::More tests => 35;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -56,8 +56,11 @@ my $signal = $dialog->signal_connect(
   $dialog->set( 'device', 'test' );
  }
 );
-$dialog->set( 'device-list',
- [ { 'name' => 'test:0', 'model' => 'frontend-tester', 'vendor' => 'Noname' } ]
+$dialog->set( 'device-list', [ { 'name' => 'test' } ] );
+is_deeply(
+ $dialog->get('device-list'),
+ [ { 'name' => 'test', 'model' => 'test', 'label' => 'test' } ],
+ 'add model field if missing'
 );
 
 $dialog->signal_connect(

@@ -621,12 +621,16 @@ sub set_device_list {
  # Note any duplicate model names and add the device if necessary
  undef %seen;
  for (@$device_list) {
-  $_->{model}  = $_->{name} unless ( defined $_->{model} );
-  $_->{vendor} = ''         unless ( defined $_->{vendor} );
+  $_->{model} = $_->{name} unless ( defined $_->{model} );
   $seen{ $_->{model} }++;
  }
  for (@$device_list) {
-  $_->{label} = "$_->{vendor} $_->{model}";
+  if ( defined $_->{vendor} ) {
+   $_->{label} = "$_->{vendor} $_->{model}";
+  }
+  else {
+   $_->{label} = $_->{model};
+  }
   $_->{label} .= " on $_->{name}" if ( $seen{ $_->{model} } > 1 );
  }
 
