@@ -5026,15 +5026,23 @@ sub set_device {
 # or row-changed signal of simplelist
 
 sub update_start {
- return if ( !defined $spin_buttons );
+ return unless ( defined($spin_buttons) or defined($windows2) );
+ my ($value, $step);
+ if (defined $windows2 ) {
+  $value = $windows2->get('page-number-start');
+  $start = $windows2->get('page-number-start') unless (defined $start);
+  $step  = $value - $start;
+  $step  = $windows2->get('page-number-increment') if ( $step == 0 );
+ }
+ else {
+  $value = $spin_buttons->get_value;
+  $step  = $value - $start;
+  $step  = $spin_buttoni->get_value if ( $step == 0 );
+ }
  my $exists = TRUE;
- my $value  = $spin_buttons->get_value;
- my $step   = $value - $start;
- $step = $spin_buttoni->get_value if ( $step == 0 );
  my $i = $step > 0 ? 0 : $#{ $slist->{data} };
  $start = $value;
  while ($exists) {
-
   if ($i < 0
    or $i > $#{ $slist->{data} }
    or ( $slist->{data}[$i][0] > $value and $step > 0 )
@@ -5053,10 +5061,11 @@ sub update_start {
    $i += $step > 0 ? 1 : -1;
   }
  }
- $spin_buttons->set_value($value) if ( $start != $value );
+ $spin_buttons->set_value($value) if ( defined($spin_buttons) and $start != $value );
+ $windows2->set('page-number-start', $value) if (defined $windows2 );
  $start = $value;
 
- update_number() if ( $bscannum->get_active );
+ update_number() if ( defined($bscannum) and $bscannum->get_active );
  return;
 }
 
