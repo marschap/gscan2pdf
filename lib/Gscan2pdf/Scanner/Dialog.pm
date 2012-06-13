@@ -289,6 +289,12 @@ sub INIT_INSTANCE {
    $self->set( 'page-number-start', $spin_buttons->get_value );
   }
  );
+ $self->signal_connect(
+  'changed-page-number-start' => sub {
+   my ($widget, $value) = @_;
+   $spin_buttons->set_value($value);
+  }
+ );
 
  # SpinButton for page number increment
  my $hboxi = Gtk2::HBox->new;
