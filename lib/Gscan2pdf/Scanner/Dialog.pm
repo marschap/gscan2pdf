@@ -291,7 +291,7 @@ sub INIT_INSTANCE {
  );
  $self->signal_connect(
   'changed-page-number-start' => sub {
-   my ($widget, $value) = @_;
+   my ( $widget, $value ) = @_;
    $spin_buttons->set_value($value);
   }
  );
@@ -369,11 +369,11 @@ sub INIT_INSTANCE {
    $buttond->set_active(TRUE);    # Set the radiobutton active
    if ( $combobs->get_active == 0 ) {
     $spin_buttoni->set_value(2);
-    $self->set('side_to_scan', 'facing');
+    $self->set( 'side_to_scan', 'facing' );
    }
    else {
     $spin_buttoni->set_value(-2);
-    $self->set('side_to_scan', 'reverse');
+    $self->set( 'side_to_scan', 'reverse' );
    }
   }
  );

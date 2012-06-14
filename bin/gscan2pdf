@@ -5027,10 +5027,10 @@ sub set_device {
 
 sub update_start {
  return unless ( defined($spin_buttons) or defined($windows2) );
- my ($value, $step);
- if (defined $windows2 ) {
+ my ( $value, $step );
+ if ( defined $windows2 ) {
   $value = $windows2->get('page-number-start');
-  $start = $windows2->get('page-number-start') unless (defined $start);
+  $start = $windows2->get('page-number-start') unless ( defined $start );
   $step  = $value - $start;
   $step  = $windows2->get('page-number-increment') if ( $step == 0 );
  }
@@ -5061,8 +5061,9 @@ sub update_start {
    $i += $step > 0 ? 1 : -1;
   }
  }
- $spin_buttons->set_value($value) if ( defined($spin_buttons) and $start != $value );
- $windows2->set('page-number-start', $value) if (defined $windows2 );
+ $spin_buttons->set_value($value)
+   if ( defined($spin_buttons) and $start != $value );
+ $windows2->set( 'page-number-start', $value ) if ( defined $windows2 );
  $start = $value;
 
  update_number() if ( defined($bscannum) and $bscannum->get_active );
