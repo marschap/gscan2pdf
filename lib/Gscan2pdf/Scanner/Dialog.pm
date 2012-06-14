@@ -265,6 +265,12 @@ sub INIT_INSTANCE {
    $self->set( 'num-pages', $spin_buttonn->get_value );
   }
  );
+ $self->signal_connect(
+  'changed-num-pages' => sub {
+   my ( $widget, $value ) = @_;
+   $spin_buttonn->set_value($value);
+  }
+ );
 
  # Toggle to switch between basic and extended modes
  my $checkx = Gtk2::CheckButton->new( $d->get('Extended page numbering') );
@@ -312,10 +318,6 @@ sub INIT_INSTANCE {
   }
  );
 
- # FIXME: move this to main in signal callback
- # Check whether the start page exists
- # $spin_buttons->signal_connect( 'value-changed' => \&update_start );
-
  # Setting this here to fire callback running update_start
  $spin_buttons->set_value( $self->get('page-number-start') );
 
@@ -324,10 +326,6 @@ sub INIT_INSTANCE {
   'value-changed' => sub {
    $self->set( 'num-pages', $spin_buttonn->get_value );
    $bscannum->set_active(TRUE);    # Set the radiobutton active
-
-   # FIXME: move this to main in signal callback
-   # Check that there is room in the list for the number of pages
-   # update_number();
   }
  );
 
@@ -394,15 +392,6 @@ sub INIT_INSTANCE {
    else {
     $spin_buttoni->set_value(-2);
    }
-
- # FIXME: do this in a callback from a signal
- #   if ( $#{ $slist->{data} } > -1 ) {
- #    $spin_buttons->set_value( $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
- #   }
- #   else {
-   $spin_buttons->set_value(1);
-
-   #   }
   }
  );
 

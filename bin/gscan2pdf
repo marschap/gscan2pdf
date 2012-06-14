@@ -4420,6 +4420,9 @@ sub scan_dialog2 {
  $windows2->signal_connect(
   'changed-num-pages' => sub {
    ( my $widget, $SETTING{'pages to scan'} ) = @_;
+
+   # Check that there is room in the list for the number of pages
+   update_number();
   }
  );
  $windows2->signal_connect(
@@ -5066,16 +5069,28 @@ sub update_start {
  $windows2->set( 'page-number-start', $value ) if ( defined $windows2 );
  $start = $value;
 
- update_number() if ( defined($bscannum) and $bscannum->get_active );
+ update_number();
  return;
 }
 
 # Update the number of pages to scan spinbutton if necessary
 
 sub update_number {
- my $n =
-   $slist->pages_possible( $spin_buttons->get_value, $spin_buttoni->get_value );
- $spin_buttonn->set_value($n) if ( $n > 0 and $n < $spin_buttonn->get_value );
+ return unless ( defined($spin_buttons) or defined($windows2) );
+ if ( defined $windows2 ) {
+  my $n = $slist->pages_possible(
+   $windows2->get('page-number-start'),
+   $windows2->get('page-number-increment')
+  );
+  $windows2->set( 'num-pages', $n )
+    if ( $n > 0 and $n < $windows2->get('num-pages') );
+ }
+ else {
+  my $n =
+    $slist->pages_possible( $spin_buttons->get_value,
+   $spin_buttoni->get_value );
+  $spin_buttonn->set_value($n) if ( $n > 0 and $n < $spin_buttonn->get_value );
+ }
  return;
 }
 
