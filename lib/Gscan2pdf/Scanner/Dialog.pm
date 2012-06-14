@@ -369,9 +369,11 @@ sub INIT_INSTANCE {
    $buttond->set_active(TRUE);    # Set the radiobutton active
    if ( $combobs->get_active == 0 ) {
     $spin_buttoni->set_value(2);
+    $self->set('side_to_scan', 'facing');
    }
    else {
     $spin_buttoni->set_value(-2);
+    $self->set('side_to_scan', 'reverse');
    }
   }
  );
