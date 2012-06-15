@@ -215,6 +215,12 @@ sub INIT_INSTANCE {
    }
   }
  );
+ $self->signal_connect(
+  'changed-device' => sub {
+   my ( $widget, $device ) = @_;
+   set_combobox_by_text( $self->{combobd}, $device );
+  }
+ );
  $tooltips->set_tip( $self->{combobd},
   $d->get('Sets the device to be used for the scan') );
  $self->{hboxd}->pack_end( $self->{combobd}, FALSE, FALSE, 0 );
@@ -268,7 +274,12 @@ sub INIT_INSTANCE {
  $self->signal_connect(
   'changed-num-pages' => sub {
    my ( $widget, $value ) = @_;
-   $spin_buttonn->set_value($value);
+   if ( $value == 0 ) {
+    $bscanall->set_active(TRUE);
+   }
+   else {
+    $spin_buttonn->set_value($value);
+   }
   }
  );
 
@@ -315,6 +326,12 @@ sub INIT_INSTANCE {
    $spin_buttoni->set_value( -$self->get('page-number-increment') )
      if ( $spin_buttoni->get_value == 0 );
    $self->set( 'page-number-increment', $spin_buttoni->get_value );
+  }
+ );
+ $self->signal_connect(
+  'changed-page-number-increment' => sub {
+   my ( $widget, $value ) = @_;
+   $spin_buttoni->set_value($value);
   }
  );
 
