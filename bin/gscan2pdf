@@ -4390,6 +4390,7 @@ sub scan_dialog2 {
   border_width    => $border_width,
   logger          => $logger,
   dir             => $session,
+  destroy         => FALSE,
  );
 
 # Can't set the device when creating the window, as the list does not exist then
