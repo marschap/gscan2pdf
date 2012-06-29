@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 35;
+use Test::More tests => 37;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -105,7 +105,7 @@ $signal = $dialog->signal_connect(
   # So that it can be used in hash
   my $resolution = SANE_NAME_SCAN_RESOLUTION;
 
-  $dialog->signal_connect(
+  $signal = $dialog->signal_connect(
    'added-profile' => sub {
     my ( $widget, $name, $profile ) = @_;
     is( $name, 'my profile', 'added-profile name' );
@@ -113,12 +113,28 @@ $signal = $dialog->signal_connect(
    }
   );
   $dialog->add_profile( 'my profile', [ { $resolution => 52 } ] );
+  $dialog->signal_handler_disconnect($signal);
+
+  $signal = $dialog->signal_connect(
+   'added-profile' => sub {
+    my ( $widget, $name, $profile ) = @_;
+    is( $name, 'old profile', 'added-profile old name' );
+    is_deeply(
+     $profile,
+     [ { $resolution => 52 } ],
+     'added-profile profile as hash'
+    );
+   }
+  );
+  $dialog->add_profile( 'old profile', { $resolution => 52 } );
+  $dialog->signal_handler_disconnect($signal);
 
   # need a new main loop because of the timeout
   my $loop;
-  my $profile_signal = $dialog->signal_connect(
+  $signal = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
+    $dialog->signal_handler_disconnect($signal);
     is( $profile, 'my profile', 'changed-profile' );
     is_deeply(
      $dialog->get('current-scan-options'),

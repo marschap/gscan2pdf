@@ -1773,8 +1773,14 @@ sub add_profile {
  my ( $self, $name, $profile ) = @_;
  if ( defined($name) and defined($profile) ) {
   $self->{profiles}{$name} = ();
-  for (@$profile) {
-   push @{ $self->{profiles}{$name} }, $_;
+  if ( ref($profile) eq 'ARRAY' ) {
+   for (@$profile) {
+    push @{ $self->{profiles}{$name} }, $_;
+   }
+  }
+  elsif ( ref($profile) eq 'HASH' ) {
+   my ( $key, $value ) = each(%$profile);
+   push @{ $self->{profiles}{$name} }, { $key => $value };
   }
   $self->{combobsp}->append_text($name);
   $self->signal_emit( 'added-profile', $name, $self->{profiles}{$name} );
