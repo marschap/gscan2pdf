@@ -4398,12 +4398,18 @@ sub scan_dialog2 {
   'changed-device-list' => sub {
    my ( $widget, $device_list ) = @_;
    if ( defined $device_list ) {
-    if ( defined $SETTING{device} ) {
-     $windows2->set( 'device', $SETTING{device} );
+
+    # Only set default device if it hasn't been specified on the command line
+    # and it is in the the device list
+    if ( defined( $SETTING{device} ) and not @device_list ) {
+     for (@$device_list) {
+      if ( $SETTING{device} eq $_->{name} ) {
+       $windows2->set( 'device', $SETTING{device} );
+       return;
+      }
+     }
     }
-    else {
-     $windows2->set( 'device', $device_list->[0]{name} );
-    }
+    $windows2->set( 'device', $device_list->[0]{name} );
    }
   }
  );
