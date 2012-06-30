@@ -521,6 +521,23 @@ sub SET_PROPERTY {
  if (( defined($newval) and defined($oldval) and $newval ne $oldval )
   or ( defined($newval) xor defined($oldval) ) )
  {
+  if ( defined $logger ) {
+   use Data::Dumper;
+   $logger->debug(
+    "Setting $name from "
+      . (
+     defined($oldval)
+     ? ( ref($oldval) =~ /(HASH|ARRAY)/ ? Dumper($oldval) : $oldval )
+     : 'undef'
+      )
+      . ' to '
+      . (
+     defined($newval)
+     ? ( ref($newval) =~ /(HASH|ARRAY)/ ? Dumper($newval) : $newval )
+     : 'undef'
+      )
+   );
+  }
   given ($name) {
    when ('device') {
     $self->set_device($newval);
