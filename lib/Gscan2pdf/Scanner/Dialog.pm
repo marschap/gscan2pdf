@@ -607,6 +607,8 @@ sub get_devices {
    $pbar->set_pulse_step(.1);
    $pbar->set_text( $d->get('Fetching list of devices') );
    $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
+   $hboxd->hide_all;
+   $hboxd->show;
    $pbar->show;
   },
   sub {
