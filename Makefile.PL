@@ -204,7 +204,7 @@ po/$(NAME).pot : $(SOURCE)
          grep -v fuzzy > $@
 
 MANIFEST : $(SOURCE)
-	git ls-files > $@
+	git ls-files | egrep -v '^\.(git|be)' > $@
 
 tidy : MANIFEST $(SOURCE_TIDY)
 
