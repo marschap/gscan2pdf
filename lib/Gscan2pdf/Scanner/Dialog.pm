@@ -1863,6 +1863,11 @@ sub set_combobox_by_text {
  return;
 }
 
+sub cancel_scan {
+ Gscan2pdf::Frontend::Sane->cancel_scan;
+ $logger->info("Cancelled scan");
+}
+
 1;
 
 __END__

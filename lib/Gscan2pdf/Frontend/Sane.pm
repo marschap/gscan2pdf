@@ -239,8 +239,11 @@ sub scan_pages {
    else {
 
     # Check status of scan
-    if ($_self->{status} == SANE_STATUS_GOOD
-     or $_self->{status} == SANE_STATUS_EOF )
+    if (
+     not $_self->{abort_scan}
+     and ( $_self->{status} == SANE_STATUS_GOOD
+      or $_self->{status} == SANE_STATUS_EOF )
+      )
     {
      $options{new_page_callback}->( $options{start} )
        if ( defined $options{new_page_callback} );
@@ -248,7 +251,8 @@ sub scan_pages {
 
     # Stop the process unless everything OK and more scans required
     unless (
-     ( $options{npages} == -1 or --$options{npages} )
+         not $_self->{abort_scan}
+     and ( $options{npages} == -1 or --$options{npages} )
      and ( $_self->{status} == SANE_STATUS_GOOD
       or $_self->{status} == SANE_STATUS_EOF )
       )
@@ -279,6 +283,19 @@ sub scan_pages {
    }
   }
  );
+ return;
+}
+
+# Flag the scan routine to abort
+
+sub cancel_scan {
+
+ # Empty process queue first to stop any new process from starting
+ $logger->info("Emptying process queue");
+ while ( $_self->{requests}->dequeue_nb ) { }
+
+ # Then send the thread a cancel signal
+ $_self->{abort_scan} = 1;
  return;
 }
 
@@ -526,7 +543,14 @@ sub _thread_scan_page_to_fh {
    );
 
    while (1) {
-    $device->cancel if ( $_self->{abort_scan} );
+
+    # Pick up flag from cancel_scan()
+    if ( $_self->{abort_scan} ) {
+     $device->cancel;
+     $logger->info('Scan cancelled');
+     return;
+    }
+
     my ( $buffer, $len ) = $device->read($buffer_size);
     $total_bytes += $len;
     my $progr = $total_bytes / $hundred_percent;

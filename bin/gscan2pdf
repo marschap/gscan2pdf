@@ -4471,7 +4471,7 @@ sub scan_dialog2 {
    $shbox->show_all;
    $signal = $scbutton->signal_connect(
     clicked => sub {
-     $Gscan2pdf::_self->{abort_scan} = 1;
+     $windows2->cancel_scan;
     }
    );
   }
