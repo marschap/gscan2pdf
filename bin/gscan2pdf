@@ -7122,7 +7122,10 @@ sub update_options_hash {
      $widget->isa('Gtk2::ComboBox')
 
      # to prevent recursion
-     and $key ne 'mode' and defined( $options->by_name($key)->{values} )
+     and $key ne 'mode'
+     and $key ne 'Paper size'
+     and defined( $options->by_name($key) )
+     and defined( $options->by_name($key)->{values} )
       )
     {
 
@@ -7161,10 +7164,13 @@ sub update_options_hash {
      $hboxp = $hbox;
     }
     elsif ( $widget->isa('Gtk2::SpinButton')
-     and defined( $options->by_name($key)->{max} ) )
+     and defined( $options->by_name($key) )
+     and defined( $options->by_name($key)->{constraint}{max} ) )
     {
-     $widget->set_range( $options->by_name($key)->{min},
-      $options->by_name($key)->{max} );
+     $widget->set_range(
+      $options->by_name($key)->{constraint}{min},
+      $options->by_name($key)->{constraint}{max}
+     );
 
      # Set the default
      if ( $options->by_name($key)->{default} =~ /inactive/ ) {
@@ -7192,7 +7198,8 @@ sub update_options_hash {
  # Add any new options
  for ( 0 .. $options->num_options - 1 ) {
   my $option = $options->by_index($_);
-  if ( defined( $pddo{ $option->{name} } )
+  if ( defined($option)
+   and defined( $pddo{ $option->{name} } )
    and $option->{name} !~ /^page-?(width|height)/ )
   {
    my ( $widget, $hbox ) = add_widget_from_hash($option);
