@@ -4047,8 +4047,17 @@ sub scan_dialog {
   changed => sub {
    my $profile = $combobsp->get_active_text;
    if ( defined $profile ) {
-    foreach my $key ( keys %{ $SETTING{profile}{$profile} } ) {
-     $SETTING{$key} = $SETTING{profile}{$profile}{$key};
+    if ( ref( $SETTING{profile}{$profile} ) eq 'HASH' ) {
+     foreach my $key ( keys %{ $SETTING{profile}{$profile} } ) {
+      $SETTING{$key} = $SETTING{profile}{$profile}{$key};
+     }
+    }
+    elsif ( ref( $SETTING{profile}{$profile} ) eq 'ARRAY' ) {
+     for my $option ( @{ $SETTING{profile}{$profile} } ) {
+      foreach my $key ( keys %$option ) {
+       $SETTING{$key} = $option->{$key};
+      }
+     }
     }
     rescan_options( $vboxd, $device[ $combobd->get_active ] )
       if ( defined $combobd );
