@@ -31,7 +31,7 @@ sub new {
   for my $i ( 0 .. @options - 1 ) {
    $options[$i]{index} = $i;
    $self->{hash}{ $options[$i]{name} } = $options[$i]
-     if ( $options[$i]{name} ne '' );
+     if ( defined( $options[$i]{name} ) and $options[$i]{name} ne '' );
   }
  }
  else {
