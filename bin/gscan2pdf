@@ -4042,6 +4042,8 @@ sub scan_dialog {
   changed => sub {
    my $profile = $combobsp->get_active_text;
    if ( defined $profile ) {
+    $logger->debug( "Setting profile $profile: ",
+     Dumper( $SETTING{profile}{$profile} ) );
     if ( ref( $SETTING{profile}{$profile} ) eq 'HASH' ) {
      foreach my $key ( keys %{ $SETTING{profile}{$profile} } ) {
       $SETTING{$key} = $SETTING{profile}{$profile}{$key};
