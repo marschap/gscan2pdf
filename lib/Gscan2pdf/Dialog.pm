@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use Gtk2;
 use Carp;
-use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
+use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
 
 use Glib::Object::Subclass Gtk2::Window::,
   signals => {
@@ -14,13 +14,13 @@ use Glib::Object::Subclass Gtk2::Window::,
   },
   properties => [
  Glib::ParamSpec->uint(
-  'border-width',             # name
-  'Border width',             # nickname
-  'Border width for vbox',    # blurb
-  0,                          # min
-  999,                        # max
-  0,                          # default
-  [qw/readable writable/]     # flags
+  'border-width',                 # name
+  'Border width',                 # nickname
+  'Border width for vbox',        # blurb
+  0,                              # min
+  999,                            # max
+  0,                              # default
+  [qw/readable writable/]         # flags
  ),
  Glib::ParamSpec->boolean(
   'destroy',                                                       # name
@@ -63,19 +63,19 @@ sub on_delete_event {
  my ( $widget, $event ) = @_;
  unless ( $widget->get('destroy') ) {
   $widget->hide;
-  return TRUE;    # ensures that the window is not destroyed
+  return Gtk2::EVENT_STOP;    # ensures that the window is not destroyed
  }
- $widget->destroy;
- return;
+ $widget->signal_chain_from_overridden($event);
+ return Gtk2::EVENT_PROPAGATE;
 }
 
 sub on_destroy {
  my ( $widget, $event ) = @_;
  if ( $widget->get('destroy') ) {
   $widget->signal_chain_from_overridden;
-  return;
+  return Gtk2::EVENT_PROPAGATE;
  }
- return TRUE;     # ensures that the window is not destroyed
+ return Gtk2::EVENT_STOP;     # ensures that the window is not destroyed
 }
 
 sub on_key_press_event {
@@ -86,7 +86,7 @@ sub on_key_press_event {
  }
  else {
   $widget->hide;
-  return TRUE;    # ensures that the window is not destroyed
+  return TRUE;                # ensures that the window is not destroyed
  }
  return;
 }
