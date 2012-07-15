@@ -6032,7 +6032,7 @@ sub paste_selection {
    # stringify filename to prevent copy from mangling it
    unless ( copy( "$_->[2]{filename}", $new ) ) {
     show_message_dialog( $window, 'error', 'close',
-     $d->get("Error pasting image - $!") );
+     $d->get( sprintf("Error pasting image - %s"), $! ) );
     return;
    }
    $_->[2]{filename} = $new;
