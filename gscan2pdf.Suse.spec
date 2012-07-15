@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.0.4
+Version: 1.0.5
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -83,7 +83,17 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Wed Apr 11 2012 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sun Jul 15 2012 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+  - Fix updating widgets in scanimage dialog
+    Closes: #678911
+    (Device-dependent options disappear after selecting Lineart mode)
+  - Fixed warning in lib/Gscan2pdf/Scanner/Options.pm
+  - Fix unpaper as part of scan process
+    Closes: #670640 (Can't call method get_cmdline)
+  - Deal with non-utf-8 characters in OCR output
+    Closes: #670831 (not resilient against non utf-8 from tesseract)
+  - Bumped standards to 3.9.3 (no changes required)
   - New upstream release
   - New upstream release
   - Updated Depends on libsane-perl to 0.05

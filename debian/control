@@ -4,14 +4,14 @@ Priority: optional
 Build-Depends: debhelper (>= 7.0.50~)
 Build-Depends-Indep: perl (>= 5.8.0-7), gettext, libtest-pod-perl
 Maintainer: Jeffrey Ratcliffe <jjr@debian.org>
-Standards-Version: 3.9.2
+Standards-Version: 3.9.3
 Vcs-git: git://gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf
 Vcs-Browser: http://gscan2pdf.git.sourceforge.net/git/gitweb.cgi?p=gscan2pdf/gscan2pdf;a=summary
 Homepage: http://gscan2pdf.sourceforge.net/
 
 Package: gscan2pdf
 Architecture: all
-Depends: libgtk2-imageview-perl, libgtk2-ex-simple-list-perl, libsane-perl (>= 0.05),
+Depends: libgtk2-imageview-perl, libgtk2-ex-simple-list-perl, libsane-perl (>= 0.05~0),
  liblocale-gettext-perl (>= 1.05), sane-utils (>= 1.0.17), libtiff-tools,
  libpdf-api2-perl, libconfig-general-perl (>= 2.40), perlmagick, imagemagick,
  librsvg2-common, libset-intspan-perl (>= 1.10),
