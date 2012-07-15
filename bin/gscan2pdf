@@ -6336,26 +6336,26 @@ EOS
  $about->set_website('http://gscan2pdf.sf.net');
  my $translators =
    <<'EOS'; # inverted commas required around EOS because of UTF-8 in $translators
+Shushi Kurose
+vishal goswami
+Herczeg Zsolt
+Zbyněk Schwarz
+Wang Dianjin
+Arthur Rodrigues
+Wojciech Górnaś
 Utku BERBEROĞLU
+Dennis Baudys
 Oleg Koptev
+Daniel Dietric
+Adolfo Jayme Barrientos
 zeugma
-Daniel Dietrich
-Fitoschido
+Daniel
 Сергій Дубик
-maidis
-Serkan Guldal
-Artem Karimov
-Tayfun Kayhan
+Артём Воротников
+Tobias Holm
 Igor Zubarev
-Tico
-Eugene Marshal
-pp/bs
-Gábor Sepsi
-Úr Balázs
-Szenográdi Norbert Péter
-jimpap
-andreas
-Jessica Tallon
+Serkan Guldal
+maidis
 EOS
  $about->set_translator_credits($translators);
  $about->set_artists('lodp');
