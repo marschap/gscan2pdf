@@ -50,7 +50,8 @@ $slist->get_file_info(
 );
 Gtk2->main;
 
-is( `identify -format '%m %G %g %z-bit %r %b' test.tif`, $old, 'TIFF imported correctly' );
+is( `identify -format '%m %G %g %z-bit %r %b' test.tif`,
+ $old, 'TIFF imported correctly' );
 
 #########################
 
