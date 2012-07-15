@@ -13,6 +13,7 @@ BEGIN {
  use Gscan2pdf;
  use Gscan2pdf::Document;
  use Gtk2 -init;    # Could just call init separately
+ use version;
 }
 
 #########################
@@ -23,6 +24,10 @@ BEGIN {
 SKIP: {
  skip 'unpaper not installed', 1
    unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
+ my $version = `unpaper --version`;
+ chomp($version);
+ skip 'unpaper > 0.3 not supported', 1
+   unless ( version->parse($version) > 0.3 );
 
  # Thumbnail dimensions
  our $widtht  = 100;

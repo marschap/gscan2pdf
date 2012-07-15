@@ -23,6 +23,10 @@ BEGIN {
 SKIP: {
  skip 'unpaper not installed', 2
    unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
+ my $version = `unpaper --version`;
+ chomp($version);
+ skip 'unpaper > 0.3 not supported', 2
+   unless ( version->parse($version) > 0.3 );
 
  # Thumbnail dimensions
  our $widtht  = 100;
