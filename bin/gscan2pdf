@@ -156,7 +156,7 @@ use Locale::gettext 1.05;    # For translations
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
-my $version   = '1.0.5';
+my $version   = '1.0.6';
 
 my $tolerance = 1;
 
@@ -1743,7 +1743,7 @@ sub display_image {
  ( $page->{w}, $page->{h} ) = ( $pixbuf->get_width, $pixbuf->get_height );
 
  # Update the ranges on the crop dialog
- if ( defined $sb_selector_w ) {
+ if ( defined($sb_selector_w) and defined($current_page) ) {
   $sb_selector_w->set_range( 0,
    $current_page->{w} - $sb_selector_x->get_value );
   $sb_selector_h->set_range( 0,
@@ -8903,9 +8903,7 @@ sub crop {
  $abutton->signal_connect(
   clicked => sub {
 
-   my $sel = $selector->get_selection;
-   return if ( not defined $sel );
-   my ( $x, $y, $w, $h ) = $sel->values;
+   return unless ( @{ $SETTING{selection} } );
 
    # Update undo/redo buffers
    take_snapshot();
@@ -8915,7 +8913,7 @@ sub crop {
     my ( $signal, $pid );
     $pid = $slist->crop(
      $slist->{data}[$i][2],
-     $x, $y, $w, $h,
+     @{ $SETTING{selection} },
      sub {    # queued
       my ( $process, $completed, $total, $message, $progress ) = @_;
       return update_tpbar( 1, $process, $completed, $total, $message,

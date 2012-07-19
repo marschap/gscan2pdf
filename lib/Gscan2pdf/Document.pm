@@ -804,7 +804,7 @@ sub update_page {
   $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
     if defined( $self->{row_changed_signal} );
   my @selected = $self->get_selected_indices;
-  $self->select(@selected) if ( $i == $selected[0] );
+  $self->select(@selected) if ( @selected and $i == $selected[0] );
   $display_callback->( $self->{data}[$i][2] ) if ($display_callback);
  }
 
