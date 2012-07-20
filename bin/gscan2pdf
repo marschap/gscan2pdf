@@ -8094,12 +8094,12 @@ sub default2index {
   }
 
   $windowrn = Gscan2pdf::Dialog->new(
-   parent       => $window,
-   title        => $d->get('Renumber'),
-   destroy      => FALSE,
-   border_width => $border_width
+   'transient-for' => $window,
+   title           => $d->get('Renumber'),
+   destroy         => FALSE,
+   border_width    => $border_width
   );
-  my $vbox = $windowrn->vbox;
+  my $vbox = $windowrn->get('vbox');
 
   # Frame for page range
   my $frame = Gtk2::Frame->new( $d->get('Page Range') );
