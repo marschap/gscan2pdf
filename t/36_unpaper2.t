@@ -12,6 +12,7 @@ use Test::More tests => 2;
 BEGIN {
  use Gscan2pdf;
  use Gscan2pdf::Document;
+ use Gscan2pdf::Unpaper;
  use Gtk2 -init;    # Could just call init separately
 
  #  use File::Copy;
@@ -25,10 +26,8 @@ BEGIN {
 SKIP: {
  skip 'unpaper not installed', 2
    unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
- my $version = `unpaper --version`;
- chomp($version);
- skip 'unpaper > 0.3 not supported', 2
-   unless ( version->parse($version) > 0.3 );
+ my $unpaper =
+   Gscan2pdf::Unpaper->new( { 'output-pages' => 2, layout => 'double' } );
 
  # Thumbnail dimensions
  our $widtht  = 100;
@@ -60,7 +59,7 @@ SKIP: {
     sub {
      $slist->unpaper(
       $slist->{data}[0][2],
-      '--output-pages 2 --layout double',
+      $unpaper->get_cmdline,
       undef, undef, undef,
       sub {
        system(

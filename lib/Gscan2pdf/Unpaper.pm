@@ -7,6 +7,7 @@ use Carp;
 use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
 use Gtk2;
 use Locale::gettext 1.05;    # For translations
+use version;
 
 BEGIN {
  use Exporter ();
@@ -23,7 +24,7 @@ our @EXPORT_OK;
 
 # Window parameters
 my $border_width = 6;
-my $d;
+my ( $d, $version );
 
 sub new {
  my ( $class, $default ) = @_;
@@ -216,6 +217,10 @@ sub new {
    default => 0.33,
   },
  };
+ unless ( defined $version ) {
+  $version = `unpaper --version`;
+  chomp($version);
+ }
  bless( $self, $class );
  return $self;
 }
@@ -520,7 +525,16 @@ sub get_cmdline {
      if ( defined $default->{$option} );
   }
  }
- return join ' ', @items;
+ my $cmd = 'unpaper ' . join( ' ', @items ) . ' --overwrite ';
+ $cmd .=
+   version->parse($version) > '0.3.0'
+   ? '%s %s %s'
+   : '--input-file-sequence %s --output-file-sequence %s %s';
+ return $cmd;
+}
+
+sub version {
+ return $version;
 }
 
 1;

@@ -1319,8 +1319,8 @@ sub _thread_unpaper {
  ) if ( $options =~ /--output-pages 2 / );
 
  # --overwrite needed because $out exists with 0 size
- my $cmd =
-"unpaper $options --overwrite --input-file-sequence $in --output-file-sequence $out $out2;";
+ my $cmd = sprintf "$options;", $in, $out, $out2;
+ print "$cmd\n";
  $logger->info($cmd);
  system("echo $$ > $pidfile;$cmd");
  return if $_self->{cancel};
