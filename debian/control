@@ -18,7 +18,7 @@ Depends: libgtk2-imageview-perl, libgtk2-ex-simple-list-perl, libsane-perl (>= 0
  libhtml-parser-perl, libgoo-canvas-perl, libproc-processtable-perl,
  libreadonly-perl, liblog-log4perl-perl, ${misc:Depends}
 Recommends: libgtk2-ex-podviewer-perl, sane, xdg-utils, djvulibre-bin,
- unpaper, gocr, tesseract-ocr, cuneiform
+ unpaper, tesseract-ocr | gocr | cuneiform
 Description: GUI to produce PDFs or DjVus from scanned documents
  Only two clicks are required to scan several pages and then save all or a
  selection as a PDF or DjVu file, including metadata if required.

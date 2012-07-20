@@ -4,6 +4,13 @@ gscan2pdf (1.0.5) unstable; urgency=low
 
  -- Jeffrey Ratcliffe <jjr@debian.org>  Sun, 15 Jul 2012 12:18:16 +0200
 
+gscan2pdf (1.0.4-4) unstable; urgency=low
+
+  * Recommend tesseract OR gocr OR cuneiform, rather than AND
+    Closes: #682100 gscan2pdf Recommends cuneiform which is in non-free
+
+ -- Jeffrey Ratcliffe <jjr@debian.org>  Thu, 19 Jul 2012 22:16:51 +0200
+
 gscan2pdf (1.0.4-3) unstable; urgency=low
 
   * Fix updating widgets in scanimage dialog
