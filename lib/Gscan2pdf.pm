@@ -1169,6 +1169,7 @@ sub _thread_crop {
 
  # Crop the image
  $e = $image->Crop( width => $w, height => $h, x => $x, y => $y );
+ $image->Set( page => '0x0+0+0' );
  return if $_self->{cancel};
  $logger->warn($e) if "$e";
 

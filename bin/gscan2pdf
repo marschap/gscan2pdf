@@ -1200,8 +1200,7 @@ $slist->{selection_changed_signal} = $slist->get_selection->signal_connect(
    my $path = Gtk2::TreePath->new_from_indices( $page[0] );
    $slist->scroll_to_cell($path);
    my $sel = $selector->get_selection;
-   $current_page = $slist->{data}[ $page[0] ][2];
-   display_image($current_page);
+   display_image( $slist->{data}[ $page[0] ][2] );
    $selector->set_selection($sel) if ( defined $sel );
   }
   else {
@@ -1735,12 +1734,15 @@ sub update_uimanager {
 sub display_image {
  my ($page) = @_;
 
+ $current_page = $page;
+
  # quotes required to prevent File::Temp object being clobbered
- my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$page->{filename}");
+ my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$current_page->{filename}");
  $view->set_pixbuf($pixbuf);
 
  # Get image dimensions to constrain selector spinbuttons on crop dialog
- ( $page->{w}, $page->{h} ) = ( $pixbuf->get_width, $pixbuf->get_height );
+ ( $current_page->{w}, $current_page->{h} ) =
+   ( $pixbuf->get_width, $pixbuf->get_height );
 
  # Update the ranges on the crop dialog
  if ( defined($sb_selector_w) and defined($current_page) ) {
@@ -1763,7 +1765,7 @@ sub display_image {
  }
 
  # Convert hocr output to Goo:Canvas if defined
- create_canvas($page) if ( defined $page->{hocr} );
+ create_canvas($current_page) if ( defined $current_page->{hocr} );
  return;
 }
 
@@ -8777,7 +8779,10 @@ sub change_image_tool_cb {
   $tool = $painter;
  }
  $view->set_tool($tool);
- if ( $value == 20 and defined( $SETTING{selection} ) ) {
+ if ( $value == 20
+  and defined( $SETTING{selection} )
+  and @{ $SETTING{selection} } == 4 )
+ {
   $selector->signal_handler_block( $selector->{selection_changed_signal} );
   $selector->set_selection(
    Gtk2::Gdk::Rectangle->new( @{ $SETTING{selection} } ) );
