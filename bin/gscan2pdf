@@ -7841,10 +7841,10 @@ sub default2index {
 
   # Set up the canvas
   my $window = Gscan2pdf::Dialog->new(
-   parent       => $windows2,
-   title        => $d_sane->get( $opt->{title} ),
-   destroy      => TRUE,
-   border_width => $border_width
+   'transient-for' => $windows2,
+   title           => $d_sane->get( $opt->{title} ),
+   destroy         => TRUE,
+   border_width    => $border_width
   );
   my $vbox   = $window->vbox;
   my $canvas = Goo::Canvas->new;
