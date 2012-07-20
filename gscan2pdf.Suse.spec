@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.0.5
+Version: 1.0.6
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -83,8 +83,11 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sun Jul 15 2012 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Fri Jul 20 2012 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
   - New upstream release
+  - New upstream release
+  - Recommend tesseract OR gocr OR cuneiform, rather than AND
+    Closes: #682100 gscan2pdf Recommends cuneiform which is in non-free
   - Fix updating widgets in scanimage dialog
     Closes: #678911
     (Device-dependent options disappear after selecting Lineart mode)
