@@ -1,0 +1,12 @@
+Checking for a duplex ADF, however, isn't 100% - it will rely on looking for text like "Duplex" in the options. For some scanners, this seems to be selected on the source option:
+
+--source ADF Front|ADF Back|ADF Duplex
+
+and for others, there is an extra adf_mode option:
+
+--adf_mode Simplex|Duplex [Simplex]
+
+others have a duplex option:
+
+--duplex[=(yes|no)]
+
