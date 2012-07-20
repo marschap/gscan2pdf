@@ -7,7 +7,7 @@
 
 use warnings;
 use strict;
-use Test::More tests => 4;
+use Test::More tests => 3;
 
 BEGIN {
  use_ok('Gscan2pdf');
@@ -30,11 +30,11 @@ our $logger = Log::Log4perl::get_logger;
 Gscan2pdf->setup($logger);
 
 # Create test image
-system('convert rose: test.jpg');
+system('convert rose: test.gif');
 
 my $slist = Gscan2pdf::Document->new;
 $slist->get_file_info(
- 'test.jpg',
+ 'test.gif',
  undef, undef, undef,
  sub {
   my ($info) = @_;
@@ -45,7 +45,7 @@ $slist->get_file_info(
      $slist->{data}[0][2],
      10, 10, 10, 10, undef, undef, undef,
      sub {
-      $slist->save_image( 'test2.jpg', [ $slist->{data}[0][2] ],
+      $slist->save_image( 'test2.gif', [ $slist->{data}[0][2] ],
        undef, undef, undef, sub { Gtk2->main_quit } );
      }
     );
@@ -55,15 +55,9 @@ $slist->get_file_info(
 );
 Gtk2->main;
 
-is( system('identify test2.jpg'), 0, 'valid JPG created' );
-cmp_ok(
- -s 'test2.jpg',
- '<',
- -s 'test.jpg',
- 'cropped JPG smaller than original'
-);
+is( `identify -format '%g' test2.gif`, "10x10+0+0\n", 'GIF cropped correctly' );
 
 #########################
 
-unlink 'test.jpg', 'test2.jpg';
+unlink 'test.gif', 'test2.gif';
 Gscan2pdf->quit();
