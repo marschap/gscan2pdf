@@ -80,15 +80,18 @@ sub on_destroy {
 
 sub on_key_press_event {
  my ( $widget, $event ) = @_;
- return unless $event->keyval == $Gtk2::Gdk::Keysyms{Escape};
+ unless ( $event->keyval == $Gtk2::Gdk::Keysyms{Escape} ) {
+  $widget->signal_chain_from_overridden($event);
+  return Gtk2::EVENT_PROPAGATE;
+ }
  if ( $widget->get('destroy') ) {
   $widget->destroy;
  }
  else {
   $widget->hide;
-  return TRUE;                # ensures that the window is not destroyed
+  return TRUE;    # ensures that the window is not destroyed
  }
- return;
+ return Gtk2::EVENT_STOP;
 }
 
 1;
