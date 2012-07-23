@@ -5,11 +5,11 @@ use strict;
 use Gtk2;
 use Carp;
 use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
+use Gtk2::Gdk::Keysyms;
 
 use Glib::Object::Subclass Gtk2::Window::,
   signals => {
  delete_event    => \&on_delete_event,
- destroy         => \&on_destroy,
  key_press_event => \&on_key_press_event,
   },
   properties => [
@@ -23,10 +23,10 @@ use Glib::Object::Subclass Gtk2::Window::,
   [qw/readable writable/]         # flags
  ),
  Glib::ParamSpec->boolean(
-  'destroy',                                                       # name
-  'Destroy',                                                       # nickname
+  'hide-on-delete',                                                # name
+  'Hide on delete',                                                # nickname
   'Whether to destroy or hide the dialog when it is dismissed',    # blurb
-  TRUE,                                                            # default
+  FALSE,                                                           # default
   [qw/readable writable/]                                          # flags
  ),
  Glib::ParamSpec->object(
@@ -61,21 +61,12 @@ sub SET_PROPERTY {
 
 sub on_delete_event {
  my ( $widget, $event ) = @_;
- unless ( $widget->get('destroy') ) {
+ if ( $widget->get('hide-on-delete') ) {
   $widget->hide;
   return Gtk2::EVENT_STOP;    # ensures that the window is not destroyed
  }
- $widget->signal_chain_from_overridden($event);
+ $widget->destroy;
  return Gtk2::EVENT_PROPAGATE;
-}
-
-sub on_destroy {
- my ( $widget, $event ) = @_;
- if ( $widget->get('destroy') ) {
-  $widget->signal_chain_from_overridden;
-  return Gtk2::EVENT_PROPAGATE;
- }
- return Gtk2::EVENT_STOP;     # ensures that the window is not destroyed
 }
 
 sub on_key_press_event {
@@ -84,12 +75,11 @@ sub on_key_press_event {
   $widget->signal_chain_from_overridden($event);
   return Gtk2::EVENT_PROPAGATE;
  }
- if ( $widget->get('destroy') ) {
-  $widget->destroy;
+ if ( $widget->get('hide-on-delete') ) {
+  $widget->hide;
  }
  else {
-  $widget->hide;
-  return TRUE;    # ensures that the window is not destroyed
+  $widget->destroy;
  }
  return Gtk2::EVENT_STOP;
 }

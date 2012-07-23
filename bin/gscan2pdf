@@ -2666,10 +2666,10 @@ sub save_dialog {
  }
 
  $windowi = Gscan2pdf::Dialog->new(
-  'transient-for' => $window,
-  title           => $d->get('Save'),
-  destroy         => FALSE,
-  border_width    => $border_width
+  'transient-for'  => $window,
+  title            => $d->get('Save'),
+  'hide-on-delete' => TRUE,
+  border_width     => $border_width
  );
  my $vbox = $windowi->get('vbox');
 
@@ -3443,10 +3443,10 @@ sub email {
 
  # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
  $windowe = Gscan2pdf::Dialog->new(
-  'transient-for' => $window,
-  title           => $d->get('Email as PDF'),
-  destroy         => FALSE,
-  border_width    => $border_width
+  'transient-for'  => $window,
+  title            => $d->get('Email as PDF'),
+  'hide-on-delete' => TRUE,
+  border_width     => $border_width
  );
  my $vbox = $windowe->get('vbox');
 
@@ -3586,10 +3586,10 @@ sub scan_dialog {
 
  # scan pop-up window
  $windows = Gscan2pdf::Dialog->new(
-  'transient-for' => $window,
-  title           => $d->get('Scan Document'),
-  destroy         => FALSE,
-  border_width    => $border_width
+  'transient-for'  => $window,
+  title            => $d->get('Scan Document'),
+  'hide-on-delete' => TRUE,
+  border_width     => $border_width
  );
  my $vbox = $windows->get('vbox');
 
@@ -4380,9 +4380,10 @@ sub scan_dialog2 {
 
  # scan pop-up window
  $windows2 = Gscan2pdf::Dialog->new(
-  'transient-for' => $window,
-  title           => $d->get('Scan Document'),
-  border_width    => $border_width
+  'transient-for'  => $window,
+  title            => $d->get('Scan Document'),
+  'hide-on-delete' => TRUE,
+  border_width     => $border_width,
  );
  my $vbox = $windows2->get('vbox');
 
@@ -8097,10 +8098,10 @@ sub default2index {
   }
 
   $windowrn = Gscan2pdf::Dialog->new(
-   'transient-for' => $window,
-   title           => $d->get('Renumber'),
-   destroy         => FALSE,
-   border_width    => $border_width
+   'transient-for'  => $window,
+   title            => $d->get('Renumber'),
+   'hide-on-delete' => TRUE,
+   border_width     => $border_width
   );
   my $vbox = $windowrn->get('vbox');
 
@@ -8804,10 +8805,10 @@ sub crop {
  # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
  $windowc = Gscan2pdf::Dialog->new(
-  'transient-for' => $window,
-  title           => $d->get('Crop'),
-  destroy         => FALSE,
-  border_width    => $border_width
+  'transient-for'  => $window,
+  title            => $d->get('Crop'),
+  'hide-on-delete' => TRUE,
+  border_width     => $border_width
  );
  my $vbox = $windowc->get('vbox');
 
@@ -9082,10 +9083,10 @@ sub unpaper {
  }
 
  $windowu = Gscan2pdf::Dialog->new(
-  'transient-for' => $window,
-  title           => $d->get('unpaper'),
-  destroy         => FALSE,
-  border_width    => $border_width
+  'transient-for'  => $window,
+  title            => $d->get('unpaper'),
+  'hide-on-delete' => TRUE,
+  border_width     => $border_width
  );
  my $vbox = $windowu->get('vbox');
  $unpaper->add_options($vbox);
@@ -9356,10 +9357,10 @@ sub OCR {
  }
 
  $windowo = Gscan2pdf::Dialog->new(
-  'transient-for' => $window,
-  title           => $d->get('OCR'),
-  destroy         => FALSE,
-  border_width    => $border_width
+  'transient-for'  => $window,
+  title            => $d->get('OCR'),
+  'hide-on-delete' => TRUE,
+  border_width     => $border_width
  );
  my $vbox = $windowo->get('vbox');
 
@@ -9842,10 +9843,10 @@ sub preferences {
  }
 
  $windowr = Gscan2pdf::Dialog->new(
-  'transient-for' => $window,
-  title           => $d->get('Preferences'),
-  destroy         => FALSE,
-  border_width    => $border_width
+  'transient-for'  => $window,
+  title            => $d->get('Preferences'),
+  'hide-on-delete' => TRUE,
+  border_width     => $border_width
  );
  my $vbox = $windowr->get('vbox');
 
@@ -10206,10 +10207,10 @@ sub properties {
  }
 
  $windowp = Gscan2pdf::Dialog->new(
-  'transient-for' => $window,
-  title           => $d->get('Properties'),
-  destroy         => FALSE,
-  border_width    => $border_width
+  'transient-for'  => $window,
+  title            => $d->get('Properties'),
+  'hide-on-delete' => TRUE,
+  border_width     => $border_width
  );
  my $vbox = $windowp->get('vbox');
 
