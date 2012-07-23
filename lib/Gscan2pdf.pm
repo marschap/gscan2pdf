@@ -1321,7 +1321,6 @@ sub _thread_unpaper {
 
  # --overwrite needed because $out exists with 0 size
  my $cmd = sprintf "$options;", $in, $out, $out2;
- print "$cmd\n";
  $logger->info($cmd);
  system("echo $$ > $pidfile;$cmd");
  return if $_self->{cancel};
