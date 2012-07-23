@@ -1492,7 +1492,7 @@ sub create_menu_bar {
  $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup;
  $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup;
  $dependencies{djvu}        = check_command('cjb2');
- $dependencies{unpaper}     = check_command('unpaper');
+ $dependencies{unpaper}     = Gscan2pdf::Unpaper->version;
  $dependencies{libtiff}     = check_command('tiffcp');
  $logger->info("Found Image::Magick") if ( $dependencies{perlmagick} );
  $logger->info("Found ImageMagick")   if ( $dependencies{imagemagick} );
@@ -1502,8 +1502,9 @@ sub create_menu_bar {
  $logger->info("Found tesseract")     if ( $dependencies{tesseract} );
  $logger->info("Found cuneiform")     if ( $dependencies{cuneiform} );
  $logger->info("Found cjb2 (djvu)")   if ( $dependencies{djvu} );
- $logger->info("Found unpaper")       if ( $dependencies{unpaper} );
  $logger->info("Found libtiff")       if ( $dependencies{libtiff} );
+ $logger->info("Found unpaper v$dependencies{unpaper}")
+   if ( $dependencies{unpaper} );
 
  # OCR engine options
  push @ocr_engine,

@@ -217,10 +217,6 @@ sub new {
    default => 0.33,
   },
  };
- unless ( defined $version ) {
-  $version = `unpaper --version`;
-  chomp($version);
- }
  bless( $self, $class );
  return $self;
 }
@@ -527,13 +523,17 @@ sub get_cmdline {
  }
  my $cmd = 'unpaper ' . join( ' ', @items ) . ' --overwrite ';
  $cmd .=
-   version->parse($version) > '0.3.0'
+   version->parse( $self->version ) > '0.3.0'
    ? '%s %s %s'
    : '--input-file-sequence %s --output-file-sequence %s %s';
  return $cmd;
 }
 
 sub version {
+ unless ( defined $version ) {
+  $version = `unpaper --version`;
+  chomp($version);
+ }
  return $version;
 }
 
