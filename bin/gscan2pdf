@@ -4472,6 +4472,14 @@ sub scan_dialog2 {
   }
  );
 
+ # Update the default profile when the scan options change
+ $windows2->signal_connect(
+  'changed-current-scan-options' => sub {
+   my ( $widget, $option_array ) = @_;
+   $SETTING{'default-scan-options'} = $option_array;
+  }
+ );
+
  # Can't set the paper or profile until the options have been loaded
  $windows2->signal_connect(
   'reloaded-scan-options' => sub {
@@ -4481,6 +4489,9 @@ sub scan_dialog2 {
 
    if ( defined $SETTING{'default profile'} ) {
     $windows2->set( 'profile', $SETTING{'default profile'} );
+   }
+   elsif ( defined $SETTING{'default-scan-options'} ) {
+    $windows2->set( 'current-scan-options', $SETTING{'default-scan-options'} );
    }
    elsif (@profiles) {
     $windows2->set( 'profile', $profiles[0] );

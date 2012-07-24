@@ -574,10 +574,18 @@ sub SET_PROPERTY {
    when ('profile') {
     $self->set_profile($newval);
    }
+
+   # This resets all options, so also clear the profile and current-scan-options
+   # options, but without setting off their signals
    when ('available_scan_options') {
+    $self->{profile}              = undef;
+    $self->{current_scan_options} = undef;
     $self->signal_emit('reloaded-scan-options')
    }
-   when ('current_scan_options') { $self->set_current_scan_options($newval) }
+
+   when ('current_scan_options') {
+    $self->set_current_scan_options($newval)
+   }
   }
  }
  return;
@@ -1182,9 +1190,11 @@ sub set_option {
    # We can carry on applying defaults now, if necessary.
    $self->{gui_updating} = FALSE;
    $self->signal_emit( 'finished-process', 'set_option' );
+   $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
+   $self->signal_emit( 'changed-current-scan-options',
+    $self->get('current-scan-options') );
   }
  );
- $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
  return;
 }
 
@@ -1546,6 +1556,8 @@ sub set_current_scan_options {
      }
     }
     $i++;
+
+    # Only emit the changed-current-scan-options signal when we have finished
     $self->signal_emit( 'changed-current-scan-options', $profile )
       unless ( $i < @defaults );
     return FALSE unless ( $i++ < @defaults );
