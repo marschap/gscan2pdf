@@ -16,8 +16,6 @@ my $window = Gtk2::Window->new;
 Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
-
-#Log::Log4perl->easy_init($DEBUG);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::Sane->setup($logger);
 
@@ -129,8 +127,6 @@ $signal = $dialog->signal_connect(
   $dialog->add_profile( 'old profile', { $resolution => 52 } );
   $dialog->signal_handler_disconnect($signal);
 
-  # need a new main loop because of the timeout
-  my $loop;
   $signal = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
@@ -141,6 +137,16 @@ $signal = $dialog->signal_connect(
      [ { $resolution => 52 } ],
      'current-scan-options with profile'
     );
+   }
+  );
+  my $loop;
+  my $option_signal;
+  $option_signal = $dialog->signal_connect(
+   'changed-scan-option' => sub {
+    my ( $widget, $option, $value ) = @_;
+    is( $option, SANE_NAME_SCAN_RESOLUTION, 'changed-scan-option name' );
+    is( $value, 52, 'changed-scan-option value' );
+    $dialog->signal_handler_disconnect($option_signal);
     $loop->quit;
    }
   );
@@ -148,12 +154,17 @@ $signal = $dialog->signal_connect(
   $dialog->set( 'profile', 'my profile' );
   $loop->run;
 
-  my $option_signal;
+  $dialog->signal_connect(
+   'removed-profile' => sub {
+    my ( $widget, $profile ) = @_;
+    is( $profile, 'old profile', 'removed-profile' );
+   }
+  );
+  $dialog->remove_profile('old profile');
+
   $option_signal = $dialog->signal_connect(
    'changed-scan-option' => sub {
     my ( $widget, $option, $value ) = @_;
-    is( $option, SANE_NAME_SCAN_RESOLUTION, 'changed-scan-option name' );
-    is( $value, 51, 'changed-scan-option value' );
     is( $dialog->get('profile'),
      undef, 'changing an option deselects the current profile' );
     is_deeply(
@@ -162,18 +173,15 @@ $signal = $dialog->signal_connect(
      'current-scan-options without profile'
     );
     $dialog->signal_handler_disconnect($option_signal);
+    $loop->quit;
    }
   );
+
+  # need a new main loop because of the timeout
+  $loop = Glib::MainLoop->new;
   my $options = $dialog->get('available-scan-options');
   $dialog->set_option( $options->by_name(SANE_NAME_SCAN_RESOLUTION), 51 );
-
-  $dialog->signal_connect(
-   'removed-profile' => sub {
-    my ( $widget, $profile ) = @_;
-    is( $profile, 'my profile', 'removed-profile' );
-   }
-  );
-  $dialog->remove_profile('my profile');
+  $loop->run;
 
   $dialog->signal_connect(
    'changed-paper-formats' => sub {
@@ -240,7 +248,6 @@ $signal = $dialog->signal_connect(
    }
   );
   $dialog->scan;
-
  }
 );
 Gtk2->main;
