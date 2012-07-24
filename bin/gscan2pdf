@@ -3971,8 +3971,6 @@ sub scan_dialog {
     }
     elsif ( ref( $SETTING{profile}{$profile} ) eq 'ARRAY' ) {
      for ( @{ $SETTING{profile}{$profile} } ) {
-      use Data::Dumper;
-      print Dumper($_);
       my ( $name, $val ) = each(%$_);
       $SETTING{$name} = $val;
      }
@@ -6735,8 +6733,6 @@ sub update_options_hash {
   my $key;
   if ( $hbox->isa('Gtk2::HBox') ) {
    foreach my $widget ( $hbox->get_children ) {
-    use Data::Dumper;
-    print Dumper($key);
     my $opt = $options->by_name($key) if ( defined $key );
     if ( $widget->isa('Gtk2::Label') ) {
      $key = get_key( \%ddo, $widget->get_label );
@@ -6812,8 +6808,6 @@ sub update_options_hash {
  # Add any new options
  for ( 0 .. $options->num_options - 1 ) {
   my $option = $options->by_index($_);
-  use Data::Dumper;
-  print Dumper($option);
   if ( defined( $pddo{ $option->{name} } )
    and $option->{name} !~ /^page-?(width|height)/ )
   {
