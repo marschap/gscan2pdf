@@ -249,7 +249,7 @@ sub INIT_INSTANCE {
  my $bscanall = Gtk2::RadioButton->new( undef, $d->get('All') );
  $tooltips->set_tip( $bscanall, $d->get('Scan all pages') );
  $vboxn->pack_start( $bscanall, TRUE, TRUE, 0 );
- $bscanall->signal_connect(
+ my $bscanall_clicked_signal = $bscanall->signal_connect(
   clicked => sub {
    $self->set( 'num-pages', 0 );
   }
@@ -266,7 +266,7 @@ sub INIT_INSTANCE {
  my $spin_buttonn = Gtk2::SpinButton->new_with_range( 1, 999, 1 );
  $tooltips->set_tip( $spin_buttonn, $d->get('Set number of pages to scan') );
  $hboxn->pack_end( $spin_buttonn, FALSE, FALSE, 0 );
- $bscannum->signal_connect(
+ my $bscannum_clicked_signal = $bscannum->signal_connect(
   clicked => sub {
    $self->set( 'num-pages', $spin_buttonn->get_value );
   }
@@ -275,10 +275,15 @@ sub INIT_INSTANCE {
   'changed-num-pages' => sub {
    my ( $widget, $value ) = @_;
    if ( $value == 0 ) {
+    $bscanall->signal_handler_block($bscanall_clicked_signal);
     $bscanall->set_active(TRUE);
+    $bscanall->signal_handler_unblock($bscanall_clicked_signal);
    }
    else {
     $spin_buttonn->set_value($value);
+    $bscannum->signal_handler_block($bscannum_clicked_signal);
+    $bscannum->set_active(TRUE);
+    $bscannum->signal_handler_unblock($bscannum_clicked_signal);
    }
   }
  );
