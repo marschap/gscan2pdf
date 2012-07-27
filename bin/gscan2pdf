@@ -6716,7 +6716,7 @@ sub add_widget_from_hash {
 
   # Set the default
   $widget->set_value( $option->{default} )
-    if ( $option->{default} !~ /inactive/ );
+    unless ( $option->{default} =~ /inactive/ );
  }
 
  # ComboBox
