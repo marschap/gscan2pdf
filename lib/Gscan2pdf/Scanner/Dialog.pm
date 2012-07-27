@@ -183,8 +183,20 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
 my ( $d, $d_sane, $logger, $tooltips );
 my $tolerance = 1;
 
-sub INIT_INSTANCE {
- my $self = shift;
+# Normally, we would initialise the widget in INIT_INSTANCE and use the
+# default constructor new(). However, we have to override the default contructor
+# in order to be able to access any properties assigned in ->new(), which are
+# not available in INIT_INSTANCE. Therefore, we use the default INIT_INSTANCE,
+# and override new(). If we ever need to subclass Gscan2pdf::Scanner::Dialog,
+# then we would need to put the bulk of this code back into INIT_INSTANCE,
+# and leave just at which needed assigned properties.
+
+# Glib::Object::new takes the class as the first argument, so below is short
+# for:
+#  my $class = shift;
+#  my $self = Glib::Object::new($class, @_);
+sub new {
+ my $self = Glib::Object::new(@_);
 
  my $vbox = $self->get('vbox');
  $tooltips = Gtk2::Tooltips->new;
@@ -249,9 +261,9 @@ sub INIT_INSTANCE {
  my $bscanall = Gtk2::RadioButton->new( undef, $d->get('All') );
  $tooltips->set_tip( $bscanall, $d->get('Scan all pages') );
  $vboxn->pack_start( $bscanall, TRUE, TRUE, 0 );
- my $bscanall_clicked_signal = $bscanall->signal_connect(
+ $bscanall->signal_connect(
   clicked => sub {
-   $self->set( 'num-pages', 0 );
+   $self->set( 'num-pages', 0 ) if ( $bscanall->get_active );
   }
  );
 
@@ -266,27 +278,31 @@ sub INIT_INSTANCE {
  my $spin_buttonn = Gtk2::SpinButton->new_with_range( 1, 999, 1 );
  $tooltips->set_tip( $spin_buttonn, $d->get('Set number of pages to scan') );
  $hboxn->pack_end( $spin_buttonn, FALSE, FALSE, 0 );
- my $bscannum_clicked_signal = $bscannum->signal_connect(
+ $bscannum->signal_connect(
   clicked => sub {
-   $self->set( 'num-pages', $spin_buttonn->get_value );
+   $self->set( 'num-pages', $spin_buttonn->get_value )
+     if ( $bscannum->get_active );
   }
  );
  $self->signal_connect(
   'changed-num-pages' => sub {
    my ( $widget, $value ) = @_;
    if ( $value == 0 ) {
-    $bscanall->signal_handler_block($bscanall_clicked_signal);
     $bscanall->set_active(TRUE);
-    $bscanall->signal_handler_unblock($bscanall_clicked_signal);
    }
    else {
     $spin_buttonn->set_value($value);
-    $bscannum->signal_handler_block($bscannum_clicked_signal);
-    $bscannum->set_active(TRUE);
-    $bscannum->signal_handler_unblock($bscannum_clicked_signal);
    }
   }
  );
+
+ # Actively set a radio button to synchronise GUI and properties
+ if ( $self->get('num-pages') > 0 ) {
+  $bscannum->set_active(TRUE);
+ }
+ else {
+  $bscanall->set_active(TRUE);
+ }
 
  # Toggle to switch between basic and extended modes
  my $checkx = Gtk2::CheckButton->new( $d->get('Extended page numbering') );
@@ -515,7 +531,7 @@ sub INIT_INSTANCE {
  # FIXME: this has to be done somewhere else
  # Has to be done in idle cycles to wait for the options to finish building
  Glib::Idle->add( sub { $self->{sbutton}->grab_focus; } );
- return;
+ return $self;
 }
 
 sub SET_PROPERTY {

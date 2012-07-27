@@ -4310,6 +4310,8 @@ sub scan_dialog2 {
    if ( not defined( $SETTING{device} )
   and defined( $ENV{'SANE_DEFAULT_DEVICE'} ) );
 
+ $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all' );
+
  # scan pop-up window
  $windows2 = Gscan2pdf::Scanner::Dialog->new(
   'transient-for' => $window,
@@ -4318,6 +4320,7 @@ sub scan_dialog2 {
   logger          => $logger,
   dir             => $session,
   destroy         => FALSE,
+  'num-pages'     => $SETTING{'pages to scan'},
  );
 
 # Can't set the device when creating the window, as the list does not exist then
@@ -4373,8 +4376,6 @@ sub scan_dialog2 {
     $slist->pages_possible( $windows2->get('page-number-start'), $step ) );
   }
  );
- $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all' );
- $windows2->set( 'num-pages', $SETTING{'pages to scan'} );
 
  $windows2->signal_connect(
   'changed-side-to-scan' => sub {
