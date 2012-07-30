@@ -2324,7 +2324,7 @@ sub boxed_text {
   'button-press-event' => sub {
    my ( $widget, $target, $ev ) = @_;
    my $dialog = Gtk2::Dialog->new(
-    $d->get('Editing text') . "...", $main::window,
+    $d->get('Editing text') . "...", $window,
     'modal',
     'gtk-ok'     => 'ok',
     'gtk-cancel' => 'cancel'
@@ -2543,7 +2543,7 @@ sub save_PDF {
       $logger->debug("Finished saving $filename");
      },
      sub {    # error
-      show_message_dialog( $main::window, 'error', 'close',
+      show_message_dialog( $window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      }
     );
@@ -3002,7 +3002,7 @@ sub save_dialog {
          $logger->debug("Finished saving $filename");
         },
         sub {    # error
-         show_message_dialog( $main::window, 'error', 'close',
+         show_message_dialog( $window, 'error', 'close',
           $Gscan2pdf::_self->{message} );
         }
        );
@@ -3264,7 +3264,7 @@ sub save_image {
     $logger->debug("Finished saving $filename");
    },
    sub {    # error
-    show_message_dialog( $main::window, 'error', 'close',
+    show_message_dialog( $window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    }
   );
@@ -3323,7 +3323,7 @@ sub save_TIFF {
    $logger->debug("Finished saving $filename");
   },
   sub {    # error
-   show_message_dialog( $main::window, 'error', 'close',
+   show_message_dialog( $window, 'error', 'close',
     $Gscan2pdf::_self->{message} );
   }
  );
@@ -3415,7 +3415,7 @@ sub save_djvu {
       $logger->debug("Finished saving $filename");
      },
      sub {    # error
-      show_message_dialog( $main::window, 'error', 'close',
+      show_message_dialog( $window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      }
     );
@@ -3550,12 +3550,12 @@ sub email {
        if ( defined( $SETTING{'view files toggle'} )
       and $SETTING{'view files toggle'} );
      $logger->info($mua_string);
-     show_message_dialog( $main::window, 'error', 'close',
-      $main::d->get('Error creating email') )
+     show_message_dialog( $window, 'error', 'close',
+      $d->get('Error creating email') )
        if ( system($mua_string) );
     },
     sub {    # error
-     show_message_dialog( $main::window, 'error', 'close',
+     show_message_dialog( $window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     }
    );
@@ -7698,7 +7698,7 @@ sub default2index {
      sub {    # error callback
       my ($message) = @_;
       $windows2->destroy;
-      main::show_message_dialog( $window, 'error', 'close',
+      show_message_dialog( $window, 'error', 'close',
        $d->get( 'Error retrieving scanner options: ' . $message ) );
      }
     );
@@ -7706,7 +7706,7 @@ sub default2index {
    error_callback => sub {
     my ($message) = @_;
     $windows2->destroy;
-    main::show_message_dialog( $window, 'error', 'close',
+    show_message_dialog( $window, 'error', 'close',
      $d->get( 'Error opening device: ' . $message ) );
    }
   );
@@ -8373,7 +8373,7 @@ sub rotate {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {     # error
-    show_message_dialog( $main::window, 'error', 'close',
+    show_message_dialog( $window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
    sub {     # display
@@ -8424,7 +8424,7 @@ sub analyse {
      select_dark_pages()                           if $select_dark;
     },
     sub {     # error
-     show_message_dialog( $main::window, 'error', 'close',
+     show_message_dialog( $window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
    );
@@ -8529,7 +8529,7 @@ sub threshold {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {     # error
-      show_message_dialog( $main::window, 'error', 'close',
+      show_message_dialog( $window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
      sub {     # display
@@ -8602,7 +8602,7 @@ sub negate {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {     # error
-      show_message_dialog( $main::window, 'error', 'close',
+      show_message_dialog( $window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
      sub {     # display
@@ -8746,7 +8746,7 @@ sub unsharp {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {     # error
-      show_message_dialog( $main::window, 'error', 'close',
+      show_message_dialog( $window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
      sub {     # display
@@ -8938,7 +8938,7 @@ sub crop {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {     # error
-      show_message_dialog( $main::window, 'error', 'close',
+      show_message_dialog( $window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
      sub {     # display
@@ -9001,7 +9001,7 @@ sub user_defined_tool {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {     # error
-    show_message_dialog( $main::window, 'error', 'close',
+    show_message_dialog( $window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
    sub {     # display
@@ -9060,7 +9060,7 @@ sub unpaper_page {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {     # error
-    show_message_dialog( $main::window, 'error', 'close',
+    show_message_dialog( $window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
    sub {     # display
@@ -9154,7 +9154,7 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {     # error
-     show_message_dialog( $main::window, 'error', 'close',
+     show_message_dialog( $window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
     sub {     # display
@@ -9186,7 +9186,7 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {     # error
-     show_message_dialog( $main::window, 'error', 'close',
+     show_message_dialog( $window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
     sub {     # display
@@ -9218,7 +9218,7 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {     # error
-     show_message_dialog( $main::window, 'error', 'close',
+     show_message_dialog( $window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
     sub {     # display
@@ -9250,7 +9250,7 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {     # error
-     show_message_dialog( $main::window, 'error', 'close',
+     show_message_dialog( $window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
     sub {     # display
@@ -9815,7 +9815,7 @@ sub compress_temp {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {     # error
-    show_message_dialog( $main::window, 'error', 'close',
+    show_message_dialog( $window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
   );
