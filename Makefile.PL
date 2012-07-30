@@ -204,12 +204,12 @@ po/$(NAME).pot : $(SOURCE)
          grep -v fuzzy > $@
 
 MANIFEST : $(SOURCE)
-	git ls-files > $@
+	git ls-files | egrep -v '^\.(git|be)' > $@
 
 tidy : MANIFEST $(SOURCE_TIDY)
 
 %.tdy : %
-	perltidy -i=1 $* && if diff -q $@ $* > /dev/null; then rm $@; else mv $@ $*; fi
+	perltidy -i=1 $* && if ! diff -q $@ $* > /dev/null; then cp $@ $*; fi
 END
  $postamble;
 }

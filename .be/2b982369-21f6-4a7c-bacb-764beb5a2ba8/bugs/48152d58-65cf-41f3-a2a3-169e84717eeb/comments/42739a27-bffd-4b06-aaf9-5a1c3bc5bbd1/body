@@ -1,0 +1,4 @@
+grep -c '^processor' /proc/cpuinfo
+use Linux::Cpuinfo;
+my $cpuinfo = Linux::Cpuinfo->new();
+$cnt  = $cpuinfo->num_cpus();

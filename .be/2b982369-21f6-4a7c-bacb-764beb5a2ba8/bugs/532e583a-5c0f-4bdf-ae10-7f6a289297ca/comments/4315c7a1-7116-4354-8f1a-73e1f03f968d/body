@@ -1,0 +1,3 @@
+ $tree_view->window->set_cursor( Gtk2::Gdk::Cursor->new('watch') );
+and
+ $tree_view->window->set_cursor (undef);

@@ -1,4 +1,3 @@
-.gitignore
 COPYING
 History
 INSTALL
@@ -26,6 +25,7 @@ lib/Gscan2pdf/Document.pm
 lib/Gscan2pdf/Frontend/Sane.pm
 lib/Gscan2pdf/Ocropus.pm
 lib/Gscan2pdf/Page.pm
+lib/Gscan2pdf/Scanner/Dialog.pm
 lib/Gscan2pdf/Scanner/Options.pm
 lib/Gscan2pdf/Tesseract.pm
 lib/Gscan2pdf/Unpaper.pm
@@ -188,6 +188,8 @@ t/55_cancel_gocr.t
 t/56_Gscan2pdf_Page.t
 t/57_Gscan2pdf_Unpaper.t
 t/58_Gscan2pdf_Dialog.t
+t/59_Gscan2pdf_Scanner_Dialog.t
+t/60_Gscan2pdf_Scanner_Dialog.t
 t/90_MANIFEST.t
 t/91_critic.t
 t/99_pod.t

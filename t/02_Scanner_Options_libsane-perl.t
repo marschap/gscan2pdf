@@ -7,7 +7,7 @@
 
 use warnings;
 use strict;
-use Test::More tests => 16;
+use Test::More tests => 17;
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 #########################
@@ -431,3 +431,5 @@ is(
  0,
  'paper too tall'
 );
+
+is( $options->by_name('page-height'), undef, 'by name undefined' );
