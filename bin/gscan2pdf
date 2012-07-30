@@ -2324,7 +2324,7 @@ sub boxed_text {
   'button-press-event' => sub {
    my ( $widget, $target, $ev ) = @_;
    my $dialog = Gtk2::Dialog->new(
-    $main::d->get('Editing text') . "...", $main::window,
+    $d->get('Editing text') . "...", $main::window,
     'modal',
     'gtk-ok'     => 'ok',
     'gtk-cancel' => 'cancel'
