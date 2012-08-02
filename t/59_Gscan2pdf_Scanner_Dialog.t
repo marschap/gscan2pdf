@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 37;
+use Test::More tests => 38;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -79,10 +79,11 @@ $dialog->signal_connect(
 );
 $dialog->set( 'page-number-start', 2 );
 
-$dialog->signal_connect(
+$signal = $dialog->signal_connect(
  'changed-page-number-increment' => sub {
   my ( $widget, $n ) = @_;
   is( $n, 2, 'changed-page-number-increment' );
+  $dialog->signal_handler_disconnect($signal);
  }
 );
 $dialog->set( 'page-number-increment', 2 );
@@ -91,6 +92,8 @@ $dialog->signal_connect(
  'changed-side-to-scan' => sub {
   my ( $widget, $side ) = @_;
   is( $side, 'reverse', 'changed-side-to-scan' );
+  is( $dialog->get('page-number-increment'),
+   -2, 'reverse side gives increment -2' );
  }
 );
 $dialog->set( 'side-to-scan', 'reverse' );

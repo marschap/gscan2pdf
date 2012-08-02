@@ -34,7 +34,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   param_types => ['Glib::UInt'],      # new start page
  },
  'changed-page-number-increment' => {
-  param_types => ['Glib::UInt'],      # new increment
+  param_types => ['Glib::Int'],       # new increment
  },
  'changed-side-to-scan' => {
   param_types => ['Glib::String'],    # facing or reverse
@@ -344,9 +344,10 @@ sub new {
  $hboxi->pack_end( $spin_buttoni, FALSE, FALSE, 0 );
  $spin_buttoni->signal_connect(
   'value-changed' => sub {
-   $spin_buttoni->set_value( -$self->get('page-number-increment') )
-     if ( $spin_buttoni->get_value == 0 );
-   $self->set( 'page-number-increment', $spin_buttoni->get_value );
+   my $value = $spin_buttoni->get_value;
+   $value = -$self->get('page-number-increment') if ( $value == 0 );
+   $spin_buttoni->set_value($value);
+   $self->set( 'page-number-increment', $value );
   }
  );
  $self->signal_connect(
@@ -403,14 +404,14 @@ sub new {
  $combobs->signal_connect(
   changed => sub {
    $buttond->set_active(TRUE);    # Set the radiobutton active
-   if ( $combobs->get_active == 0 ) {
-    $spin_buttoni->set_value(2);
-    $self->set( 'side_to_scan', 'facing' );
-   }
-   else {
-    $spin_buttoni->set_value(-2);
-    $self->set( 'side_to_scan', 'reverse' );
-   }
+   $self->set( 'side-to-scan',
+    $combobs->get_active == 0 ? 'facing' : 'reverse' );
+  }
+ );
+ $self->signal_connect(
+  'changed-side-to-scan' => sub {
+   my ( $widget, $value ) = @_;
+   $self->set( 'page-number-increment', $value eq 'facing' ? 2 : -2 );
   }
  );
  $tooltips->set_tip( $combobs,
@@ -424,12 +425,7 @@ sub new {
  # Have to put the double-sided callback here to reference page side
  $buttond->signal_connect(
   clicked => sub {
-   if ( $combobs->get_active == 0 ) {
-    $spin_buttoni->set_value(2);
-   }
-   else {
-    $spin_buttoni->set_value(-2);
-   }
+   $spin_buttoni->set_value( $combobs->get_active == 0 ? 2 : -2 );
   }
  );
 
