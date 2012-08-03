@@ -112,12 +112,14 @@ sub supports_paper {
  my ( $self, $paper, $tolerance ) = @_;
 
  # Check the geometry against the paper size
- unless ( defined( $self->{geometry}{l} )
+ unless (   ## no critic (ProhibitNegativeExpressionsInUnlessAndUntilConditions)
+      defined( $self->{geometry}{l} )
   and defined( $self->{geometry}{x} )
   and defined( $self->{geometry}{t} )
   and defined( $self->{geometry}{y} )
   and $self->{geometry}{l} <= $paper->{l} + $tolerance
-  and $self->{geometry}{t} <= $paper->{t} + $tolerance )
+  and $self->{geometry}{t} <= $paper->{t} + $tolerance
+   )
  {
   return 0;
  }
