@@ -14,6 +14,8 @@ use File::Copy;
 use File::Temp;    # To create temporary files
 use Proc::Killfam;
 use Locale::gettext 1.05;    # For translations
+use IPC::Open3 'open3';
+use Symbol;                  # for gensym
 
 our $_self;
 our $jobs_completed = 0;
@@ -919,10 +921,27 @@ sub slurp {
  my ($file) = @_;
 
  local ($/);
- open my $fh, "<:utf8", $file or die "Error: cannot open $file\n";
+ my $fh;
+
+ if ( ref($file) eq 'GLOB' ) {
+  $fh = $file;
+ }
+ else {
+  open $fh, "<:utf8", $file or die "Error: cannot open $file\n";
+ }
  my $text = <$fh>;
  close $fh;
  return $text;
+}
+
+# Wrapper for open3
+sub open_three {
+ my ($cmd) = @_;
+
+ # we create a symbol for the err because open3 will not do that for us
+ my $err = gensym();
+ open3( undef, my $reader, $err, $cmd );
+ return ( slurp($reader), slurp($err) );
 }
 
 sub _thread_rotate {
@@ -1209,7 +1228,8 @@ sub _thread_tesseract {
  my ( $self, $page, $language, $pidfile ) = @_;
  my $new = $page->clone;
  ( $new->{hocr}, $new->{warnings} ) =
-   Gscan2pdf::Tesseract->hocr( $page->{filename}, $language, $pidfile );
+   Gscan2pdf::Tesseract->hocr( $page->{filename}, $language, $logger,
+  $pidfile );
  return if $_self->{cancel};
  $new->{ocr_flag} = 1;    #FlagOCR
  $new->{ocr_time} =

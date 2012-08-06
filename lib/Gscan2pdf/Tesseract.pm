@@ -7,27 +7,33 @@ use Carp;
 use File::Temp;    # To create temporary files
 use File::Basename;
 use Gscan2pdf;     # for slurp
-use IPC::Open3 'open3';
 
-my ( %languages, $installed, $setup, $version, $tessdata, $datasuffix );
+my ( %languages, $installed, $setup, $version, $tessdata, $datasuffix,
+ $logger );
 
 sub setup {
+ ( my $class, $logger ) = @_;
  return $installed if $setup;
- if ( system("which tesseract > /dev/null 2>&1") == 0 ) {
+
+ my ( $exe, undef ) = Gscan2pdf::open_three('which tesseract');
+ if ( defined $exe ) {
   $installed = 1;
  }
  else {
   return;
  }
- ( $tessdata, $version, $datasuffix ) =
-   parse_tessdata(`tesseract '' '' -l '' 2>&1`);
+ my ( $out, undef ) = Gscan2pdf::open_three("tesseract '' '' -l ''");
+ ( $tessdata, $version, $datasuffix ) = parse_tessdata($out);
 
- if ( not defined($tessdata) ) {
+ unless ( defined $tessdata ) {
   if ( defined($version) and $version > 3.01 ) {
-   my $exe = `which tesseract`;
-   my $lib = `ldd $exe`;
+   my ( $lib, undef ) = Gscan2pdf::open_three("ldd $exe");
    if ( $lib =~ /libtesseract\.so.\d+\ =>\ ([\/a-zA-Z0-9\-\.\_]+)\ /x ) {
-    $tessdata = parse_strings(`strings $1`);
+    ( $out, undef ) = Gscan2pdf::open_three("strings $1");
+    $tessdata = parse_strings($out);
+   }
+   else {
+    return;
    }
   }
   else {
@@ -35,8 +41,7 @@ sub setup {
   }
  }
 
- $main::logger->info(
-  "Found tesseract version $version. Using tessdata at $tessdata");
+ $logger->info("Found tesseract version $version. Using tessdata at $tessdata");
  $setup = 1;
  return $installed;
 }
@@ -45,7 +50,9 @@ sub parse_tessdata {
  my @output = @_;
  my $output = join ",", @output;
  my ( $v, $suffix );
- $v = $1 + 0 if ( $output =~ /\ v(\d\.\d\d)\ /x );
+ if ( $output =~ /\ v(\d\.\d\d)\ /x ) {
+  $v = $1 + 0;
+ }
  while ( $output =~ /\n/x ) {
   $output =~ s/\n.*$//gx;
  }
@@ -58,22 +65,20 @@ sub parse_tessdata {
   $suffix = '.traineddata';
  }
  elsif ( defined($v) and $v > 3.01 ) {
-  return undef, $v, '.traineddata';
+  return ( undef, $v, '.traineddata' );
  }
  else {
   return;
  }
- $output =~ s/\/$suffix$//x;
+ $output =~ s/\/ $suffix $//x;
  return $output, $v, $suffix;
 }
 
 sub parse_strings {
- my @strings = @_;
+ my ($strings) = @_;
+ my @strings = split "\n", $strings;
  for (@strings) {
-  if (/\/share\//) {
-   chomp $_;
-   return $_ . "tessdata";
-  }
+  return $_ . "tessdata" if (/\/ share \//x);
  }
  return;
 }
@@ -133,7 +138,7 @@ sub languages {
     my $code;
     if (/ ([\w\-]*) $datasuffix $/x) {
      $code = $1;
-     $main::logger->info("Found tesseract language $code");
+     $logger->info("Found tesseract language $code");
      if ( defined $iso639{$code} ) {
       $languages{$code} = $iso639{$code};
      }
@@ -142,7 +147,7 @@ sub languages {
      }
     }
     else {
-     $main::logger->info("Found unknown language file: $_");
+     $logger->info("Found unknown language file: $_");
     }
    }
   }
@@ -151,14 +156,16 @@ sub languages {
 }
 
 sub hocr {
- my ( $class, $file, $language, $pidfile ) = @_;
- my ( $tif, $cmd );
- setup() unless $setup;
+
+ # can't use the package-wide logger variable as we are in a thread here.
+ ( my $class, my $file, my $language, $logger, my $pidfile ) = @_;
+ my ( $tif, $cmd, $name, $path );
+ Gscan2pdf::Tesseract->setup($logger) unless $setup;
 
  # Temporary filename for output
  my $suffix = $version >= 3 ? '.html' : '.txt';
  my $txt = File::Temp->new( SUFFIX => $suffix );
- ( my $name, my $path, undef ) = fileparse( $txt, $suffix );
+ ( $name, $path, undef ) = fileparse( $txt, $suffix );
 
  if ( $file !~ /\.tif$/x ) {
 
@@ -181,20 +188,18 @@ sub hocr {
  else {
   $cmd = "tesseract $tif $path$name";
  }
- $main::logger->info($cmd);
+ $logger->info($cmd);
 
  # File in which to store the process ID so that it can be killed if necessary
  $cmd = "echo $$ > $pidfile;$cmd" if ( defined $pidfile );
 
- my $err = 1;    # to suppress the error message if stderr is empty
- open3( undef, my $reader, $err, $cmd );
- my @output   = <$reader>;
- my @errors   = <$err>;
- my $warnings = join '', @output, @errors;
- $warnings =~
-   s/Tesseract\ Open\ Source\ OCR\ Engine\ v\d.\d\d\ with\ Leptonica\n//x;
+ my ( $out, $err ) = Gscan2pdf::open_three($cmd);
+ my $warnings = $out . $err;
+ my $leading  = 'Tesseract Open Source OCR Engine';
+ my $trailing = 'with Leptonica';
+ $warnings =~ s/$leading v\d\.\d\d $trailing\n//x;
  $warnings =~ s/^Page\ 0\n//x;
- $main::logger->debug( 'Warnings from Tesseract: ', $warnings );
+ $logger->debug( 'Warnings from Tesseract: ', $warnings );
 
  return Gscan2pdf::slurp($txt), $warnings;
 }

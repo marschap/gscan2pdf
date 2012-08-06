@@ -1481,7 +1481,7 @@ sub create_menu_bar {
  $dependencies{scanadf}     = check_command('scanadf');
  $dependencies{xdg}         = check_command('xdg-email');
  $dependencies{gocr}        = check_command('gocr');
- $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup;
+ $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup($logger);
  $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup;
  $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup;
  $dependencies{djvu}        = check_command('cjb2');

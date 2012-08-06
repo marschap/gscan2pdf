@@ -22,7 +22,7 @@ BEGIN {
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
-our $logger = Log::Log4perl::get_logger;
+my $logger = Log::Log4perl::get_logger;
 
 SKIP: {
  skip 'Ocropus not installed', 6 unless Gscan2pdf::Ocropus->setup;
@@ -35,7 +35,7 @@ SKIP: {
  my $got = Gscan2pdf::Ocropus->hocr( 'test.png', 'eng' );
  like( $got, qr/The quick brown fox/, 'Ocropus returned sensible text' );
 
- skip 'Tesseract not installed', 5 unless Gscan2pdf::Tesseract->setup;
+ skip 'Tesseract not installed', 5 unless Gscan2pdf::Tesseract->setup($logger);
  my $languages = Gscan2pdf::Tesseract->languages;
  skip 'German language pack for Tesseract not installed', 5
    unless ( defined $languages->{'deu'} );

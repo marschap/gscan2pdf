@@ -31,7 +31,7 @@ our $logger = Log::Log4perl::get_logger;
 Gscan2pdf->setup($logger);
 
 SKIP: {
- skip 'Tesseract not installed', 1 unless Gscan2pdf::Tesseract->setup;
+ skip 'Tesseract not installed', 1 unless Gscan2pdf::Tesseract->setup($logger);
 
  # Create test image
  system(
