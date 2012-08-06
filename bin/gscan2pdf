@@ -1026,7 +1026,7 @@ $slist->signal_connect(
 
    # quotes required to prevent File::Temp objects from being clobbered
    copy( "$info[2]->{filename}", "$new" )
-     or show_message_dialog( $window, 'error', 'close',
+     or Gscan2pdf::show_message_dialog( $window, 'error', 'close',
     $d->get('Error copying page') );
 
    $info[2]->{filename} = $new;
@@ -1797,7 +1797,7 @@ sub new {
  # Check that all pages have been saved
  for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
   if ( not $slist->{data}[$i][2]{saved} ) {
-   my $response = show_message_dialog(
+   my $response = Gscan2pdf::show_message_dialog(
     $window,
     'question',
     'ok-cancel',
@@ -2095,7 +2095,7 @@ sub open_dialog {
 }
 
 sub error_opening_image {
- show_message_dialog( $window, 'error', 'close',
+ Gscan2pdf::show_message_dialog( $window, 'error', 'close',
   $d->get('Error opening image') );
  return;
 }
@@ -2474,7 +2474,7 @@ sub save_PDF {
 
     # Check that the file can be written
     if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
-     show_message_dialog( $file_chooser, 'error', 'close',
+     Gscan2pdf::show_message_dialog( $file_chooser, 'error', 'close',
       sprintf( $d->get("File %s is read-only"), $filename ) );
      return;
     }
@@ -2532,7 +2532,7 @@ sub save_PDF {
       $logger->debug("Finished saving $filename");
      },
      sub {    # error
-      show_message_dialog( $main::window, 'error', 'close',
+      Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      }
     );
@@ -2891,7 +2891,7 @@ sub save_dialog {
        # Check that the file can be written
        if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) )
        {
-        show_message_dialog( $file_chooser, 'error', 'close',
+        Gscan2pdf::show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
        }
@@ -2946,7 +2946,7 @@ sub save_dialog {
        # Check that the file can be written
        if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) )
        {
-        show_message_dialog( $file_chooser, 'error', 'close',
+        Gscan2pdf::show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
        }
@@ -2991,7 +2991,7 @@ sub save_dialog {
          $logger->debug("Finished saving $filename");
         },
         sub {    # error
-         show_message_dialog( $main::window, 'error', 'close',
+         Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
           $Gscan2pdf::_self->{message} );
         }
        );
@@ -3044,7 +3044,7 @@ sub save_dialog {
        # Check that the file can be written
        if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) )
        {
-        show_message_dialog( $file_chooser, 'error', 'close',
+        Gscan2pdf::show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
        }
@@ -3101,7 +3101,7 @@ sub save_dialog {
        # Check that the file can be written
        if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) )
        {
-        show_message_dialog( $file_chooser, 'error', 'close',
+        Gscan2pdf::show_message_dialog( $file_chooser, 'error', 'close',
          sprintf( $d->get("File %s is read-only"), $filename ) );
         return;
        }
@@ -3149,26 +3149,16 @@ sub save_dialog {
  return;
 }
 
-sub show_message_dialog {
- my ( $parent, $type, $buttons, $text ) = @_;
- my $dialog =
-   Gtk2::MessageDialog->new( $parent, 'destroy-with-parent', $type, $buttons,
-  $text );
- my $response = $dialog->run;
- $dialog->destroy;
- return $response;
-}
-
 sub file_exists {
  my ( $file_chooser, $filename ) = @_;
  if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
-  show_message_dialog( $file_chooser, 'error', 'close',
+  Gscan2pdf::show_message_dialog( $file_chooser, 'error', 'close',
    sprintf( $d->get("File %s is read-only"), $filename ) );
   return TRUE;
  }
  elsif ( -e $filename ) {
   my $response =
-    show_message_dialog( $file_chooser, 'question', 'ok-cancel',
+    Gscan2pdf::show_message_dialog( $file_chooser, 'question', 'ok-cancel',
    sprintf( $d->get("File %s exists.\nReally overwrite?"), $filename ) );
   return TRUE if ( $response ne 'ok' );
  }
@@ -3253,7 +3243,7 @@ sub save_image {
     $logger->debug("Finished saving $filename");
    },
    sub {    # error
-    show_message_dialog( $main::window, 'error', 'close',
+    Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    }
   );
@@ -3312,7 +3302,7 @@ sub save_TIFF {
    $logger->debug("Finished saving $filename");
   },
   sub {    # error
-   show_message_dialog( $main::window, 'error', 'close',
+   Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
     $Gscan2pdf::_self->{message} );
   }
  );
@@ -3354,7 +3344,7 @@ sub save_djvu {
 
     # Check that the file can be written
     if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
-     show_message_dialog( $file_chooser, 'error', 'close',
+     Gscan2pdf::show_message_dialog( $file_chooser, 'error', 'close',
       sprintf( $d->get("File %s is read-only"), $filename ) );
      return;
     }
@@ -3404,7 +3394,7 @@ sub save_djvu {
       $logger->debug("Finished saving $filename");
      },
      sub {    # error
-      show_message_dialog( $main::window, 'error', 'close',
+      Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      }
     );
@@ -3539,12 +3529,12 @@ sub email {
        if ( defined( $SETTING{'view files toggle'} )
       and $SETTING{'view files toggle'} );
      $logger->info($mua_string);
-     show_message_dialog( $main::window, 'error', 'close',
+     Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
       $main::d->get('Error creating email') )
        if ( system($mua_string) );
     },
     sub {    # error
-     show_message_dialog( $main::window, 'error', 'close',
+     Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     }
    );
@@ -4134,7 +4124,7 @@ sub scan_dialog {
    my $step  = $spin_buttoni->get_value;
 
    if ( not $checkx->get_active and $start == 1 and $step < 0 ) {
-    show_message_dialog( $windows, 'error', 'cancel',
+    Gscan2pdf::show_message_dialog( $windows, 'error', 'cancel',
      $d->get('Must scan facing pages first') );
     return TRUE;
    }
@@ -4313,7 +4303,7 @@ sub get_devices {
     if ( $output eq '' ) {
      $windows->destroy;
      undef $windows;
-     show_message_dialog( $window, 'error', 'close',
+     Gscan2pdf::show_message_dialog( $window, 'error', 'close',
       $d->get('No devices found') );
      return FALSE;
     }
@@ -4822,7 +4812,7 @@ sub scan_dialog2 {
    my $step  = $spin_buttoni->get_value;
 
    if ( not $checkx->get_active and $start == 1 and $step < 0 ) {
-    show_message_dialog( $windows2, 'error', 'cancel',
+    Gscan2pdf::show_message_dialog( $windows2, 'error', 'cancel',
      $d->get('Must scan facing pages first') );
     return TRUE;
    }
@@ -4941,7 +4931,7 @@ sub get_devices2 {
    if ( @device_list == 0 ) {
     $windows2->destroy;
     undef $windows2;
-    show_message_dialog( $window, 'error', 'close',
+    Gscan2pdf::show_message_dialog( $window, 'error', 'close',
      $d->get('No devices found') );
     return FALSE;
    }
@@ -5421,7 +5411,7 @@ sub scanimage {
       {
        $scbutton->signal_handler_disconnect($signal);
        $shbox->hide;
-       show_message_dialog( $windows, 'info', 'close',
+       Gscan2pdf::show_message_dialog( $windows, 'info', 'close',
         $d->get('Document feeder out of documents') )
          if ( $num_scans == 0 );
       }
@@ -5441,7 +5431,7 @@ sub scanimage {
       elsif ( $line =~ /^$SETTING{frontend}: sane_start: Device busy/ ) {
        $scbutton->signal_handler_disconnect($signal);
        $shbox->hide;
-       show_message_dialog( $windows, 'error', 'close',
+       Gscan2pdf::show_message_dialog( $windows, 'error', 'close',
         $d->get('Device busy') );
       }
       elsif (
@@ -5449,14 +5439,14 @@ sub scanimage {
       {
        $scbutton->signal_handler_disconnect($signal);
        $shbox->hide;
-       show_message_dialog( $windows, 'info', 'close',
+       Gscan2pdf::show_message_dialog( $windows, 'info', 'close',
         $d->get('Operation cancelled') );
       }
       else {
        my $text =
          $d->get('Unknown message: ')
          . substr( $line, 0, index( $line, "\n" ) );
-       show_message_dialog( $windows, 'warning', 'close', $text );
+       Gscan2pdf::show_message_dialog( $windows, 'warning', 'close', $text );
       }
       $line = substr( $line, index( $line, $le ) + 1, length($line) );
      }
@@ -5632,7 +5622,7 @@ sub scanadf {
        $scbutton->signal_handler_disconnect($signal);
        $shbox->hide;
        $running = FALSE;
-       show_message_dialog( $windows, 'error', 'close',
+       Gscan2pdf::show_message_dialog( $windows, 'error', 'close',
         $d->get('Device busy') );
       }
       elsif (
@@ -5641,14 +5631,14 @@ sub scanadf {
        $scbutton->signal_handler_disconnect($signal);
        $shbox->hide;
        $running = FALSE;
-       show_message_dialog( $windows, 'info', 'close',
+       Gscan2pdf::show_message_dialog( $windows, 'info', 'close',
         $d->get('Operation cancelled') );
       }
       else {
        my $text =
          $d->get('Unknown message: ')
          . substr( $line, 0, index( $line, "\n" ) );
-       show_message_dialog( $windows, 'warning', 'close', $text );
+       Gscan2pdf::show_message_dialog( $windows, 'warning', 'close', $text );
       }
       $line = substr( $line, index( $line, "\n" ) + 1, length($line) );
      }
@@ -5749,7 +5739,8 @@ sub scan_pages {
    $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
    $shbox->hide;
    my ($msg) = @_;
-   show_message_dialog( $windows2, 'error', 'close', $d_sane->get($msg) );
+   Gscan2pdf::show_message_dialog( $windows2, 'error', 'close',
+    $d_sane->get($msg) );
   }
  );
  return;
@@ -5871,10 +5862,12 @@ sub import_scan {
      format     => 'Portable anymap',
      delete     => $delete,
      dir        => $session,
+     logger     => $logger,
+     window     => $window,
     );
     my $index = $slist->add_page( $gpage, $page, &update_uimanager );
     if ( $index == -1 ) {
-     show_message_dialog( $windows, 'error', 'close',
+     Gscan2pdf::show_message_dialog( $windows, 'error', 'close',
       $d->get('Unable to load image') );
     }
     else {
@@ -6012,7 +6005,7 @@ sub paste_selection {
 
    # stringify filename to prevent copy from mangling it
    unless ( copy( "$_->[2]{filename}", $new ) ) {
-    show_message_dialog( $window, 'error', 'close',
+    Gscan2pdf::show_message_dialog( $window, 'error', 'close',
      $d->get("Error pasting image - $!") );
     return;
    }
@@ -6376,7 +6369,7 @@ sub rescan_options {
   my $options  = options2hash( $SETTING{cache}{$device}{$mode} );
   my $response = 'cancel';
   unless ( $options->num_options ) {
-   $response = show_message_dialog(
+   $response = Gscan2pdf::show_message_dialog(
     $window,
     'question',
     'ok-cancel',
@@ -6816,7 +6809,7 @@ sub edit_paper {
   clicked => sub {
    my @rows = $slist->get_selected_indices;
    if ( $#rows == $#{ $slist->{data} } ) {
-    show_message_dialog( $windowd, 'error', 'close',
+    Gscan2pdf::show_message_dialog( $windowd, 'error', 'close',
      $d->get('Cannot delete all paper sizes') );
    }
    else {
@@ -6864,7 +6857,7 @@ sub edit_paper {
    }
    $combobp->remove_text(0) while ( $combobp->get_active > 1 );
    my @ignored = add_paper( $combobp, $options );
-   show_message_dialog(
+   Gscan2pdf::show_message_dialog(
     $windowd,
     'warning',
     'close',
@@ -6960,7 +6953,7 @@ sub update_options {
   my $options  = options2hash( $SETTING{cache}{$device}{$mode} );
   my $response = 'cancel';
   unless ( $options->num_options ) {
-   $response = show_message_dialog(
+   $response = Gscan2pdf::show_message_dialog(
     $window,
     'question',
     'ok-cancel',
@@ -7427,7 +7420,7 @@ sub default2index {
            or $opt->{type} == SANE_TYPE_INT )
           {
            if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-            show_message_dialog(
+            Gscan2pdf::show_message_dialog(
              $windows2,
              'info', 'close',
              $d->get(
@@ -7440,7 +7433,7 @@ sub default2index {
            }
           }
           else {
-           show_message_dialog(
+           Gscan2pdf::show_message_dialog(
             $windows2,
             'info', 'close',
             $d->get(
@@ -7667,7 +7660,7 @@ sub default2index {
      sub {    # error callback
       my ($message) = @_;
       $windows2->destroy;
-      main::show_message_dialog( $window, 'error', 'close',
+      Gscan2pdf::show_message_dialog( $window, 'error', 'close',
        $d->get( 'Error retrieving scanner options: ' . $message ) );
      }
     );
@@ -7675,7 +7668,7 @@ sub default2index {
    error_callback => sub {
     my ($message) = @_;
     $windows2->destroy;
-    main::show_message_dialog( $window, 'error', 'close',
+    Gscan2pdf::show_message_dialog( $window, 'error', 'close',
      $d->get( 'Error opening device: ' . $message ) );
    }
   );
@@ -8131,7 +8124,7 @@ sub default2index {
     if ( $n > -1
      and ( $current->min < 1 or $current->intersect($not_selected)->size ) )
     {
-     show_message_dialog(
+     Gscan2pdf::show_message_dialog(
       $windowo, 'error', 'close',
       $d->get(
 'The current settings would result in duplicate page numbers. Please select new start and increment values.'
@@ -8342,7 +8335,7 @@ sub rotate {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {     # error
-    show_message_dialog( $main::window, 'error', 'close',
+    Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
    sub {     # display
@@ -8393,7 +8386,7 @@ sub analyse {
      select_dark_pages()                           if $select_dark;
     },
     sub {     # error
-     show_message_dialog( $main::window, 'error', 'close',
+     Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
    );
@@ -8498,7 +8491,7 @@ sub threshold {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {     # error
-      show_message_dialog( $main::window, 'error', 'close',
+      Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
      sub {     # display
@@ -8571,7 +8564,7 @@ sub negate {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {     # error
-      show_message_dialog( $main::window, 'error', 'close',
+      Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
      sub {     # display
@@ -8715,7 +8708,7 @@ sub unsharp {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {     # error
-      show_message_dialog( $main::window, 'error', 'close',
+      Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
      sub {     # display
@@ -8906,7 +8899,7 @@ sub crop {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      sub {     # error
-      show_message_dialog( $main::window, 'error', 'close',
+      Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
        $Gscan2pdf::_self->{message} );
      },
      sub {     # display
@@ -8969,7 +8962,7 @@ sub user_defined_tool {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {     # error
-    show_message_dialog( $main::window, 'error', 'close',
+    Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
    sub {     # display
@@ -9028,7 +9021,7 @@ sub unpaper_page {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {     # error
-    show_message_dialog( $main::window, 'error', 'close',
+    Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
    sub {     # display
@@ -9122,7 +9115,7 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {     # error
-     show_message_dialog( $main::window, 'error', 'close',
+     Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
     sub {     # display
@@ -9154,7 +9147,7 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {     # error
-     show_message_dialog( $main::window, 'error', 'close',
+     Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
     sub {     # display
@@ -9186,7 +9179,7 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {     # error
-     show_message_dialog( $main::window, 'error', 'close',
+     Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
     sub {     # display
@@ -9218,7 +9211,7 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     sub {     # error
-     show_message_dialog( $main::window, 'error', 'close',
+     Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
       $Gscan2pdf::_self->{message} );
     },
     sub {     # display
@@ -9393,7 +9386,7 @@ sub OCR {
    # fill $pagelist with filenames depending on which radiobutton is active
    my @pages = indices2pages( get_page_index() );
    if ( not @pages ) {
-    show_message_dialog( $windowo, 'error', 'close',
+    Gscan2pdf::show_message_dialog( $windowo, 'error', 'close',
      $d->get('No page selected') );
     return;
    }
@@ -9428,7 +9421,7 @@ sub quit {
  for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
   if ( not $slist->{data}[$i][2]{saved} ) {
    my $response =
-     show_message_dialog( $window, 'question', 'ok-cancel',
+     Gscan2pdf::show_message_dialog( $window, 'question', 'ok-cancel',
     $d->get("Some pages have not been saved.\nDo you really want to quit?") );
    if ( $response ne 'ok' ) {
     return FALSE;
@@ -9483,7 +9476,7 @@ sub view_pod {
 
  eval { require Gtk2::Ex::PodViewer };
  if ($@) {
-  show_message_dialog(
+  Gscan2pdf::show_message_dialog(
    $window, 'error', 'close',
    sprintf(
     $d->get(
@@ -9753,7 +9746,7 @@ sub mark_pages {
 sub compress_temp {
  return
    if (
-  show_message_dialog(
+  Gscan2pdf::show_message_dialog(
    $window,     'question',
    'ok-cancel', $d->get('This operation cannot be undone. Are you sure?')
   ) ne 'ok'
@@ -9783,7 +9776,7 @@ sub compress_temp {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    sub {     # error
-    show_message_dialog( $main::window, 'error', 'close',
+    Gscan2pdf::show_message_dialog( $main::window, 'error', 'close',
      $Gscan2pdf::_self->{message} );
    },
   );
@@ -10054,7 +10047,7 @@ sub preferences {
 
    if ( $newdir ne $tmp ) {
     $SETTING{TMPDIR} = $newdir;
-    show_message_dialog(
+    Gscan2pdf::show_message_dialog(
      $window,
      'warning',
      'close',

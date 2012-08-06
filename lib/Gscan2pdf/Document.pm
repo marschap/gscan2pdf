@@ -43,6 +43,8 @@ BEGIN {
 }
 our @EXPORT_OK;
 
+my $logger;
+
 sub new {
  my $class = shift;
  my $d     = Locale::gettext->domain(Glib::get_application_name);
@@ -57,6 +59,12 @@ sub new {
 
  bless( $self, $class );
  return $self;
+}
+
+sub set_logger {
+ ( my $class, $logger ) = @_;
+ Gscan2pdf::Page->set_logger($logger);
+ return;
 }
 
 sub _when_ready {
@@ -315,7 +323,7 @@ sub add_page {
    if defined( $self->{row_changed_signal} );
  my $thumb = get_pixbuf( $page->{filename}, $main::heightt, $main::widtht );
  push @{ $self->{data} }, [ $pagenum, $thumb, $page ];
- $main::logger->info(
+ $logger->info(
   "Added $page->{filename} at page $pagenum with resolution $page->{resolution}"
  );
 
@@ -406,13 +414,13 @@ sub get_pixbuf {
  #  recover_from_a_flop ();
  # }
  if ($@) {
-  $main::logger->warn( 'Warning: ' . "$@" );
+  $logger->warn( 'Warning: ' . "$@" );
   eval {
    $pixbuf =
      Gtk2::Gdk::Pixbuf->new_from_file_at_scale( $filename, $width, $height,
     TRUE );
   };
-  $main::logger->info("Got $filename on second attempt")
+  $logger->info("Got $filename on second attempt")
     unless ($@);
  }
 

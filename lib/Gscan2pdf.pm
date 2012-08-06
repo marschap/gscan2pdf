@@ -26,6 +26,7 @@ sub setup {
  ( my $class, $logger ) = @_;
  $_self = {};
  $d     = Locale::gettext->domain(Glib::get_application_name);
+ Gscan2pdf::Document->set_logger($logger);
 
  $_self->{requests}   = Thread::Queue->new;
  $_self->{info_queue} = Thread::Queue->new;
@@ -332,7 +333,7 @@ sub _thread_import_file {
      dir        => $self->{dir},
      delete     => TRUE,
      format     => 'Tagged Image File Format',
-     resolution => $info->{ppi}[ $i - 1 ]
+     resolution => $info->{ppi}[ $i - 1 ],
     );
     $self->{page_queue}->enqueue( $page->freeze );
    }
@@ -360,7 +361,7 @@ sub _thread_import_file {
      filename => $png,
      dir      => $self->{dir},
      delete   => TRUE,
-     format   => 'Portable Network Graphics'
+     format   => 'Portable Network Graphics',
     );
     $self->{page_queue}->enqueue( $page->freeze );
    }
@@ -384,7 +385,7 @@ sub _thread_import_file {
      filename => $tif,
      dir      => $self->{dir},
      delete   => TRUE,
-     format   => $info->{format}
+     format   => $info->{format},
     );
     $self->{page_queue}->enqueue( $page->freeze );
    }
@@ -399,7 +400,7 @@ sub _thread_import_file {
   my $page = Gscan2pdf::Page->new(
    filename => $info->{path},
    dir      => $self->{dir},
-   format   => $info->{format}
+   format   => $info->{format},
   );
   $self->{page_queue}->enqueue( $page->freeze );
  }
@@ -409,7 +410,7 @@ sub _thread_import_file {
   my $page = Gscan2pdf::Page->new(
    filename => $png,
    dir      => $self->{dir},
-   format   => 'Portable Network Graphics'
+   format   => 'Portable Network Graphics',
   );
   $self->{page_queue}->enqueue( $page->freeze );
  }
@@ -436,6 +437,16 @@ sub convert_to_png {
   filename => $png
  );
  return $png;
+}
+
+sub show_message_dialog {
+ my ( $parent, $type, $buttons, $text ) = @_;
+ my $dialog =
+   Gtk2::MessageDialog->new( $parent, 'destroy-with-parent', $type, $buttons,
+  $text );
+ my $response = $dialog->run;
+ $dialog->destroy;
+ return $response;
 }
 
 sub _thread_save_pdf {
@@ -1349,7 +1360,7 @@ sub _thread_unpaper {
   filename => $out,
   dir      => $self->{dir},
   delete   => TRUE,
-  format   => 'Portable anymap'
+  format   => 'Portable anymap',
  );
  $new->{dirty_time} = timestamp();    #flag as dirty
  my %data = ( old => $page, new => $new->freeze );
@@ -1358,7 +1369,7 @@ sub _thread_unpaper {
    filename => $out2,
    dir      => $self->{dir},
    delete   => TRUE,
-   format   => 'Portable anymap'
+   format   => 'Portable anymap',
   );
   $new->{dirty_time} = timestamp();    #flag as dirty
   $data{new2} = $new->freeze;
