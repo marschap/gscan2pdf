@@ -376,6 +376,9 @@ if (
 $SETTING{'SANE version'} = join( '.', Sane->get_version );
 $SETTING{'libsane-perl version'} = $Sane::VERSION;
 
+# Update list in Gscan2pdf::Document so that it can be used by get_resolution
+Gscan2pdf::Document->set_paper_sizes($SETTING{Paper});
+
 # Set up test mode and make sure file has absolute path and is readable
 if ( keys %{$test} ) {
  $SETTING{frontend} = 'scanimage-perl';
@@ -6851,6 +6854,11 @@ sub edit_paper {
     $SETTING{Paper}{ $slist->{data}[$i][0] }{l} = $slist->{data}[$i][3];
     $SETTING{Paper}{ $slist->{data}[$i][0] }{t} = $slist->{data}[$i][4];
    }
+
+   # Update list in Gscan2pdf::Document so that it can be used by get_resolution
+   # FIXME: make sure that this is updated for all scan dialogs
+   Gscan2pdf::Document->set_paper_sizes($SETTING{Paper});
+
    $combobp->remove_text(0) while ( $combobp->get_active > 1 );
    my @ignored = add_paper( $combobp, $options );
    Gscan2pdf::show_message_dialog(

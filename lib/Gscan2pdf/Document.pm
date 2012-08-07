@@ -43,7 +43,7 @@ BEGIN {
 }
 our @EXPORT_OK;
 
-my $logger;
+my ($logger, $paper_sizes);
 
 sub new {
  my ( $class, %options ) = @_;
@@ -71,6 +71,11 @@ sub new {
 sub set_logger {
  ( my $class, $logger ) = @_;
  Gscan2pdf::Page->set_logger($logger);
+ return;
+}
+
+sub set_paper_sizes {
+ ( my $class, $paper_sizes ) = @_;
  return;
 }
 
@@ -302,15 +307,17 @@ sub get_resolution {
  my $ratio  = $height / $width;
  $ratio = 1 / $ratio if ( $ratio < 1 );
  $resolution = $POINTS_PER_INCH;
- for ( keys %{ $main::SETTING{Paper} } ) {
-  if ( $main::SETTING{Paper}{$_}{x} > 0
+
+ # FIXME: add test to make sure this is working
+ for ( keys %$paper_sizes ) {
+  if ( $paper_sizes->{$_}{x} > 0
    and
-   abs( $ratio - $main::SETTING{Paper}{$_}{y} / $main::SETTING{Paper}{$_}{x} ) <
+   abs( $ratio - $paper_sizes->{$_}{y} / $paper_sizes->{$_}{x} ) <
    0.02 )
   {
    $resolution =
      int( ( ( $height > $width ) ? $height : $width ) /
-      $main::SETTING{Paper}{$_}{y} *
+      $paper_sizes->{$_}{y} *
       25.4 + 0.5 );
   }
  }
