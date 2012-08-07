@@ -34,8 +34,10 @@ $slist->get_file_info(
  finished_callback => sub {
   my ($info) = @_;
   $slist->import_file(
-   $info, 1, 1, undef, undef, undef,
-   sub {
+   info              => $info,
+   first             => 1,
+   last              => 1,
+   finished_callback => sub {
     $slist->{data}[0][2]{hocr} = <<EOS;
 <!DOCTYPE html
  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN

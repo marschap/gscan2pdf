@@ -2012,32 +2012,32 @@ sub open_dialog {
         $windowq->destroy;
         my ( $signal, $pid );
         $pid = $slist->import_file(
-         $info,
-         $spinbuttonf->get_value,
-         $spinbuttonl->get_value,
-         sub {    # queued
+         info            => $info,
+         first           => $spinbuttonf->get_value,
+         last            => $spinbuttonl->get_value,
+         queued_callback => sub {
           my ( $process, $completed, $total, $message, $progress ) = @_;
           return update_tpbar( 1, $process, $completed, $total, $message,
            $progress );
          },
-         sub {    # started
+         started_callback => sub {
           my ( $thread, $process, $completed, $total ) = @_;
           $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
           return TRUE if ( defined $signal );
          },
-         sub {    # running
+         running_callback => sub {
           my ( $thread, $process, $completed, $total, $message, $progress ) =
             @_;
           return update_tpbar( $thread, $process, $completed, $total, $message,
            $progress );
          },
-         sub {    # finished
+         finished_callback => sub {
           my ( $new_page, $pending ) = @_;
           $thbox->hide_all unless $pending;
           $tcbutton->signal_handler_disconnect($signal) if ($signal);
           update_uimanager();
          },
-         sub { error_opening_image() }    # error
+         error_callback => sub { error_opening_image() }
         );
        }
       );
@@ -2056,25 +2056,26 @@ sub open_dialog {
      else {
       my ( $signal, $pid );
       $pid = $slist->import_file(
-       $info, 1, 1,
-       sub {    # queued
+       info            => $info,
+       first           => 1,
+       last            => 1,
+       queued_callback => sub {
         my ( $process, $completed, $total, $message, $progress ) = @_;
         return update_tpbar( 1, $process, $completed, $total, $message,
          $progress );
        },
-       sub {    # started
+       started_callback => sub {
         my ( $thread, $process, $completed, $total ) = @_;
         $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
         return TRUE if ( defined $signal );
        },
-       undef,    # running
-       sub {     # finished
+       finished_callback => sub {
         my ( $new_page, $pending ) = @_;
         $thbox->hide_all unless $pending;
         $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
         update_uimanager();
        },
-       sub { error_opening_image() }    # error
+       error_callback => sub { error_opening_image() }
       );
      }
     },

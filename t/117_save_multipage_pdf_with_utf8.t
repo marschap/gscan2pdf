@@ -46,8 +46,10 @@ for my $i ( 1 .. $n ) {
   finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
-    $info, 1, 1, undef, undef, undef,
-    sub {
+    info              => $info,
+    first             => 1,
+    last              => 1,
+    finished_callback => sub {
      use utf8;
      $slist->{data}[ $i - 1 ][2]{hocr} =
        'пени способствовала сохранению';

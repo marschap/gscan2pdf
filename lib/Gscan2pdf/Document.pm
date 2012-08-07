@@ -193,14 +193,9 @@ sub get_file_info {
 }
 
 sub import_file {
- my (
-  $self,             $info,              $first,
-  $last,             $queued_callback,   $started_callback,
-  $running_callback, $finished_callback, $error_callback,
-  $cancelled_callback
- ) = @_;
+ my ( $self, %options ) = @_;
  my $started_flag;
- my $outstanding = $last - $first + 1;
+ my $outstanding = $options{last} - $options{first} + 1;
 
  # Get new process ID
  my $pid = ++$_PID;
@@ -209,11 +204,18 @@ sub import_file {
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
 
- my $sentinel =
-   _enqueue_request( 'import-file',
-  { info => $info, first => $first, last => $last, pid => "$pidfile" } );
- $queued_callback->( $_self->{process_name}, $jobs_completed, $jobs_total )
-   if ($queued_callback);
+ my $sentinel = _enqueue_request(
+  'import-file',
+  {
+   info  => $options{info},
+   first => $options{first},
+   last  => $options{last},
+   pid   => "$pidfile"
+  }
+ );
+ $options{queued_callback}
+   ->( $_self->{process_name}, $jobs_completed, $jobs_total )
+   if ( $options{queued_callback} );
  _when_ready(
   $sentinel,
   undef,    # pending
@@ -223,7 +225,7 @@ sub import_file {
      or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
     {
      _cancel_process( slurp($pidfile) );
-     $cancelled_callback->() if ($cancelled_callback);
+     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
      $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
 
      # Flag that the callbacks have been done here
@@ -234,14 +236,14 @@ sub import_file {
     return;
    }
    $self->fetch_file($outstanding);
-   $started_flag = $started_callback->(
+   $started_flag = $options{started_callback}->(
     1, $_self->{process_name},
     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ( $started_callback and not $started_flag );
-   $running_callback->(
+   ) if ( $options{started_callback} and not $started_flag );
+   $options{running_callback}->(
     1, $_self->{process_name},
     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ($running_callback);
+   ) if ( $options{running_callback} );
   },
   sub {    # finished
    if ( exists $self->{cancel_cb}{$pid} ) {
@@ -249,21 +251,22 @@ sub import_file {
      or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
     {
      _cancel_process( slurp($pidfile) );
-     $cancelled_callback->() if ($cancelled_callback);
+     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
      $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
     }
     delete $self->{cancel_cb}{$pid};
     delete $self->{running_pids}{$pid};
     return;
    }
-   $started_callback->() if ( $started_callback and not $started_flag );
+   $options{started_callback}->()
+     if ( $options{started_callback} and not $started_flag );
    if ( $_self->{status} ) {
-    $error_callback->() if ($error_callback);
+    $options{error_callback}->() if ( $options{error_callback} );
     return;
    }
    $outstanding -= $self->fetch_file;
-   $finished_callback->( $_self->{requests}->pending )
-     if ($finished_callback);
+   $options{finished_callback}->( $_self->{requests}->pending )
+     if ( $options{finished_callback} );
    delete $self->{running_pids}{$pid};
   },
  );

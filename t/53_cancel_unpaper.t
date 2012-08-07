@@ -44,8 +44,10 @@ SKIP: {
   finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
-    $info, 1, 1, undef, undef, undef,
-    sub {
+    info              => $info,
+    first             => 1,
+    last              => 1,
+    finished_callback => sub {
      my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
      my $pid    = $slist->unpaper(
       $slist->{data}[0][2],

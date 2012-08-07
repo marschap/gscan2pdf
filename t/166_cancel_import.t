@@ -33,13 +33,16 @@ $slist->get_file_info(
  finished_callback => sub {
   my ($info) = @_;
   my $pid = $slist->import_file(
-   $info, 1, 1, undef, undef, undef, undef,
-   undef,
-   sub {
+   info               => $info,
+   first              => 1,
+   last               => 1,
+   cancelled_callback => sub {
     is( defined( $slist->{data}[0] ), '', 'TIFF not imported' );
     $slist->import_file(
-     $info, 1, 1, undef, undef, undef,
-     sub {
+     info              => $info,
+     first             => 1,
+     last              => 1,
+     finished_callback => sub {
       system("cp $slist->{data}[0][2]{filename} test2.tif");
       Gtk2->main_quit;
      }

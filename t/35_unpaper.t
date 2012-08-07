@@ -39,8 +39,10 @@ SKIP: {
   finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
-    $info, 1, 1, undef, undef, undef,
-    sub {
+    info              => $info,
+    first             => 1,
+    last              => 1,
+    finished_callback => sub {
      $slist->unpaper(
       $slist->{data}[0][2],
       '', undef, undef, undef,

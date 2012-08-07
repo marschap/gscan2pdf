@@ -32,8 +32,10 @@ $slist->get_file_info(
  finished_callback => sub {
   my ($info) = @_;
   $slist->import_file(
-   $info, 1, 1, undef, undef, undef,
-   sub {
+   info              => $info,
+   first             => 1,
+   last              => 1,
+   finished_callback => sub {
     $slist->user_defined(
      $slist->{data}[0][2],
      'convert %i -negate %i',
