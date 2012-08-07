@@ -392,19 +392,6 @@ sub manual_sort_by_column {
  return;
 }
 
-# return array index of pages depending on which radiobutton is active
-
-sub get_page_index {
- my ($self) = @_;
- if ( $main::SETTING{'Page range'} eq 'all' ) {
-  return 0 .. $#{ $self->{data} };
- }
- elsif ( $main::SETTING{'Page range'} eq 'selected' ) {
-  return $self->get_selected_indices;
- }
- return;
-}
-
 # Returns the pixbuf scaled to fit in the given box
 
 sub get_pixbuf {
