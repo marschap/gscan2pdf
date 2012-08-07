@@ -23,9 +23,8 @@ system('convert rose: test.pnm');
 
 my $slist = Gscan2pdf::Document->new;
 $slist->get_file_info(
- 'test.pnm',
- undef, undef, undef,
- sub {
+ path              => 'test.pnm',
+ finished_callback => sub {
   my ($info) = @_;
   $slist->import_file(
    $info, 1, 1, undef, undef, undef,

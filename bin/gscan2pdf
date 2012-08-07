@@ -1961,19 +1961,18 @@ sub open_dialog {
   for (@filename) {
    my ( $signal, $pid );
    $pid = $slist->get_file_info(
-    $_,
-    sub {    # queued
+    path            => $_,
+    queued_callback => sub {
      my ( $process, $completed, $total, $message, $progress ) = @_;
      return update_tpbar( 1, $process, $completed, $total, $message,
       $progress );
     },
-    sub {    # started
+    started_callback => sub {
      my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
-    undef,    # running
-    sub {     # finished
+    finished_callback => sub {
      my ( $info, $pending ) = @_;
      if ( $info->{format} eq 'session file' ) {
       open_session( $info->{path} );
@@ -2079,7 +2078,7 @@ sub open_dialog {
       );
      }
     },
-    sub { error_opening_image() },      # error
+    error_callback => sub { error_opening_image() },
    );
   }
  }

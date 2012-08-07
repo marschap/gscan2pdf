@@ -37,8 +37,8 @@ my $slist = Gscan2pdf::Document->new;
 for my $i ( 1 .. $n ) {
  copy( '1.pnm', "$i.pnm" ) if ( $i > 1 );
  $slist->get_file_info(
-  "$i.pnm", undef, undef, undef,
-  sub {
+  path              => "$i.pnm",
+  finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
     $info, 1, 1, undef, undef, undef,

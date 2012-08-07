@@ -120,9 +120,7 @@ sub cancel {
 }
 
 sub get_file_info {
- my ( $self, $path, $queued_callback, $started_callback, $running_callback,
-  $finished_callback, $error_callback, $cancelled_callback )
-   = @_;
+ my ( $self, %options ) = @_;
  my $started_flag;
 
  # Get new process ID
@@ -133,9 +131,11 @@ sub get_file_info {
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
 
  my $sentinel =
-   _enqueue_request( 'get-file-info', { path => $path, pid => "$pidfile" } );
- $queued_callback->( $_self->{process_name}, $jobs_completed, $jobs_total )
-   if ($queued_callback);
+   _enqueue_request( 'get-file-info',
+  { path => $options{path}, pid => "$pidfile" } );
+ $options{queued_callback}
+   ->( $_self->{process_name}, $jobs_completed, $jobs_total )
+   if ( $options{queued_callback} );
  _when_ready(
   $sentinel,
   undef,    # pending
@@ -145,7 +145,7 @@ sub get_file_info {
      or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
     {
      _cancel_process( slurp($pidfile) );
-     $cancelled_callback->() if ($cancelled_callback);
+     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
      $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
 
      # Flag that the callbacks have been done here
@@ -155,14 +155,14 @@ sub get_file_info {
     }
     return;
    }
-   $started_flag = $started_callback->(
+   $started_flag = $options{started_callback}->(
     1, $_self->{process_name},
     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ( $started_callback and not $started_flag );
-   $running_callback->(
+   ) if ( $options{started_callback} and not $started_flag );
+   $options{running_callback}->(
     1, $_self->{process_name},
     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ($running_callback);
+   ) if ( $options{running_callback} );
   },
   sub {    # finished
    if ( exists $self->{cancel_cb}{$pid} ) {
@@ -170,22 +170,22 @@ sub get_file_info {
      or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
     {
      _cancel_process( slurp($pidfile) );
-     $cancelled_callback->() if ($cancelled_callback);
+     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
      $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
     }
     delete $self->{cancel_cb}{$pid};
     delete $self->{running_pids}{$pid};
     return;
    }
-   $started_callback->() if ( $started_callback and not $started_flag );
+   $options{started_callback}->()
+     if ( $options{started_callback} and not $started_flag );
    if ( $_self->{status} ) {
-    $error_callback->() if ($error_callback);
+    $options{error_callback}->() if ( $options{error_callback} );
     return;
    }
-   $finished_callback->(
-    $_self->{info_queue}->dequeue,
-    $_self->{requests}->pending
-   ) if ($finished_callback);
+   $options{finished_callback}
+     ->( $_self->{info_queue}->dequeue, $_self->{requests}->pending )
+     if ( $options{finished_callback} );
    delete $self->{running_pids}{$pid};
   },
  );

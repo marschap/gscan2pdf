@@ -32,8 +32,8 @@ my $slist = Gscan2pdf::Document->new;
 for my $i ( 1 .. 10 ) {
  copy( '1.tif', "$i.tif" ) if ( $i > 1 );
  $slist->get_file_info(
-  "$i.tif", undef, undef, undef,
-  sub {
+  path              => "$i.tif",
+  finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
     $info, 1, 1, undef, undef, undef,

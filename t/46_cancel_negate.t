@@ -29,9 +29,8 @@ system('convert xc:white white.pnm');
 
 my $slist = Gscan2pdf::Document->new;
 $slist->get_file_info(
- 'white.pnm',
- undef, undef, undef,
- sub {
+ path              => 'white.pnm',
+ finished_callback => sub {
   my ($info) = @_;
   $slist->import_file(
    $info, 1, 1, undef, undef, undef,

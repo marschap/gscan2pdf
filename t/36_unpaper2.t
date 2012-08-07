@@ -27,8 +27,7 @@ SKIP: {
 
  use Log::Log4perl qw(:easy);
  Log::Log4perl->easy_init($WARN);
- our $logger = Log::Log4perl::get_logger;
- Gscan2pdf::Document->setup($logger);
+ Gscan2pdf::Document->setup(Log::Log4perl::get_logger);
 
  # Create test image
  system(
@@ -42,9 +41,8 @@ SKIP: {
 
  my $slist = Gscan2pdf::Document->new;
  $slist->get_file_info(
-  'test.pnm',
-  undef, undef, undef,
-  sub {
+  path              => 'test.pnm',
+  finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
     $info, 1, 1, undef, undef, undef,

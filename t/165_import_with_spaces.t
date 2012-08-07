@@ -29,9 +29,8 @@ system('convert rose: test.pnm; c44 test.pnm te\ st.djvu');
 
 my $slist = Gscan2pdf::Document->new;
 $slist->get_file_info(
- 'te st.djvu',
- undef, undef, undef,
- sub {
+ path              => 'te st.djvu',
+ finished_callback => sub {
   my ($info) = @_;
   is( $info->{format}, 'DJVU', 'DjVu with spaces recognised correctly' );
   Gtk2->main_quit;
