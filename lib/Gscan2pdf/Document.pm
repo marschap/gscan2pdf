@@ -77,7 +77,6 @@ sub setup {
 
 sub new {
  my ( $class, %options ) = @_;
- my $d    = Locale::gettext->domain(Glib::get_application_name);
  my $self = Gtk2::Ex::Simple::List->new(
   '#'                   => 'int',
   $d->get('Thumbnails') => 'pixbuf',
@@ -2692,7 +2691,7 @@ sub _thread_save_djvu {
    my $djvusedtxtfile =
      File::Temp->new( DIR => $self->{dir}, SUFFIX => '.txt' );
    open my $fh, ">:utf8", $djvusedtxtfile    ## no critic
-     or die sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile );
+     or croak( sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile ) );
    print $fh "(page 0 0 $w $h\n";
 
    # Write the text boxes
