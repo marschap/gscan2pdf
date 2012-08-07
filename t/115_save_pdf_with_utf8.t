@@ -46,8 +46,12 @@ $slist->get_file_info(
     use utf8;
     $slist->{data}[0][2]{hocr} =
       'пени способствовала сохранению';
-    $slist->save_pdf( 'test.pdf', [ $slist->{data}[0][2] ],
-     undef, \%options, undef, undef, undef, sub { Gtk2->main_quit } );
+    $slist->save_pdf(
+     path             => 'test.pdf',
+     list_of_pages    => [ $slist->{data}[0][2] ],
+     options          => \%options,
+     finished_callbac => sub { Gtk2->main_quit }
+    );
    }
   );
  }

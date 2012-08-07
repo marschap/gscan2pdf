@@ -54,9 +54,12 @@ for my $i ( 1 .. $n ) {
      $slist->{data}[ $i - 1 ][2]{hocr} =
        'пени способствовала сохранению';
      push @pages, $slist->{data}[ $i - 1 ][2];
-     $slist->save_pdf( 'test.pdf', \@pages, undef, \%options, undef, undef,
-      undef, sub { Gtk2->main_quit } )
-       if ( $i == $n );
+     $slist->save_pdf(
+      path              => 'test.pdf',
+      list_of_pages     => \@pages,
+      options           => \%options,
+      finished_callback => sub { Gtk2->main_quit }
+     ) if ( $i == $n );
     }
    );
   }

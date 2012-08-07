@@ -428,16 +428,12 @@ sub get_pixbuf {
 }
 
 sub save_pdf {
- my (
-  $self,             $path,             $list_of_pages,
-  $metadata,         $options,          $queued_callback,
-  $started_callback, $running_callback, $finished_callback,
-  $error_callback,   $cancelled_callback
- ) = @_;
+ my ( $self, %options ) = @_;
 
- for my $i ( 0 .. $#{$list_of_pages} ) {
-  $list_of_pages->[$i] =
-    $list_of_pages->[$i]->freeze;   # sharing File::Temp objects causes problems
+ for my $i ( 0 .. $#{ $options{list_of_pages} } ) {
+  $options{list_of_pages}->[$i] =
+    $options{list_of_pages}->[$i]
+    ->freeze;    # sharing File::Temp objects causes problems
  }
  my $started_flag;
 
@@ -451,15 +447,16 @@ sub save_pdf {
  my $sentinel = _enqueue_request(
   'save-pdf',
   {
-   path          => $path,
-   list_of_pages => $list_of_pages,
-   metadata      => $metadata,
-   options       => $options,
+   path          => $options{path},
+   list_of_pages => $options{list_of_pages},
+   metadata      => $options{metadata},
+   options       => $options{options},
    pid           => "$pidfile"
   }
  );
- $queued_callback->( $_self->{process_name}, $jobs_completed, $jobs_total )
-   if ($queued_callback);
+ $options{queued_callback}
+   ->( $_self->{process_name}, $jobs_completed, $jobs_total )
+   if ( $options{queued_callback} );
  _when_ready(
   $sentinel,
   undef,    # pending
@@ -469,7 +466,7 @@ sub save_pdf {
      or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
     {
      _cancel_process( slurp($pidfile) );
-     $cancelled_callback->() if ($cancelled_callback);
+     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
      $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
 
      # Flag that the callbacks have been done here
@@ -479,14 +476,14 @@ sub save_pdf {
     }
     return;
    }
-   $started_flag = $started_callback->(
+   $started_flag = $options{started_callback}->(
     1, $_self->{process_name},
     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ( $started_callback and not $started_flag );
-   $running_callback->(
+   ) if ( $options{started_callback} and not $started_flag );
+   $options{running_callback}->(
     1, $_self->{process_name},
     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ($running_callback);
+   ) if ( $options{running_callback} );
   },
   sub {    # finished
    if ( exists $self->{cancel_cb}{$pid} ) {
@@ -494,20 +491,21 @@ sub save_pdf {
      or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
     {
      _cancel_process( slurp($pidfile) );
-     $cancelled_callback->() if ($cancelled_callback);
+     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
      $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
     }
     delete $self->{cancel_cb}{$pid};
     delete $self->{running_pids}{$pid};
     return;
    }
-   $started_callback->() if ( $started_callback and not $started_flag );
+   $options{started_callback}->()
+     if ( $options{started_callback} and not $started_flag );
    if ( $_self->{status} ) {
-    $error_callback->();
+    $options{error_callback}->();
     return;
    }
-   $finished_callback->( $_self->{requests}->pending )
-     if $finished_callback;
+   $options{finished_callback}->( $_self->{requests}->pending )
+     if $options{finished_callback};
    delete $self->{running_pids}{$pid};
   },
  );

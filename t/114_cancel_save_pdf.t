@@ -39,10 +39,9 @@ $slist->get_file_info(
    last              => 1,
    finished_callback => sub {
     my $pid = $slist->save_pdf(
-     'test.pdf',
-     [ $slist->{data}[0][2] ],
-     undef, undef, undef, undef, undef, undef, undef,
-     sub {
+     path               => 'test.pdf',
+     list_of_pages      => [ $slist->{data}[0][2] ],
+     cancelled_callback => sub {
       $slist->save_image( 'test.jpg', [ $slist->{data}[0][2] ],
        undef, undef, undef, sub { Gtk2->main_quit } );
      }
