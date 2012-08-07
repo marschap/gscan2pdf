@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 1;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use Gtk2 -init;    # Could just call init separately
  use PDF::API2;
@@ -25,7 +24,7 @@ BEGIN {
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 our $logger = Log::Log4perl::get_logger;
-Gscan2pdf->setup($logger);
+Gscan2pdf::Document->setup($logger);
 
 # Create test image
 system('convert rose: 1.pnm');
@@ -72,4 +71,4 @@ for my $i ( 1 .. $n ) {
  unlink "$i.pnm";
 }
 unlink 'test.pdf';
-Gscan2pdf->quit();
+Gscan2pdf::Document->quit();

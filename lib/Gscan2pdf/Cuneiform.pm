@@ -4,8 +4,8 @@ use 5.008005;
 use strict;
 use warnings;
 use Carp;
-use File::Temp;    # To create temporary files
-use Gscan2pdf;     # for slurp
+use File::Temp;             # To create temporary files
+use Gscan2pdf::Document;    # for slurp
 
 my ( %languages, $installed, $setup );
 
@@ -97,7 +97,7 @@ sub hocr {
  else {
   system($cmd);
  }
- return Gscan2pdf::slurp($txt);
+ return Gscan2pdf::Document::slurp($txt);
 }
 
 1;

@@ -23,7 +23,7 @@ BEGIN {
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 our $logger = Log::Log4perl::get_logger;
-Gscan2pdf->setup($logger);
+Gscan2pdf::Document->setup($logger);
 
 # Create test image
 system('convert xc:black black.pnm');
@@ -50,4 +50,4 @@ is( $slist->{data}[0][2]{mean}, 0, 'Found dark page' );
 #########################
 
 unlink 'black.pnm';
-Gscan2pdf->quit();
+Gscan2pdf::Document->quit();

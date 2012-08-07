@@ -16,7 +16,7 @@ Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 our $logger = Log::Log4perl::get_logger;
-Gscan2pdf->setup($logger);
+Gscan2pdf::Document->setup($logger);
 
 # Create test image
 system('convert rose: test.pnm');
@@ -43,4 +43,4 @@ is( system('identify test.pdf'), 0, 'valid PDF created' );
 #########################
 
 unlink 'test.pnm', 'test.pdf';
-Gscan2pdf->quit();
+Gscan2pdf::Document->quit();

@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 1;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use Gtk2 -init;    # Could just call init separately
 }
@@ -27,7 +26,7 @@ SKIP: {
  use Log::Log4perl qw(:easy);
  Log::Log4perl->easy_init($WARN);
  our $logger = Log::Log4perl::get_logger;
- Gscan2pdf->setup($logger);
+ Gscan2pdf::Document->setup($logger);
 
  # Create test image
  system(
@@ -60,5 +59,5 @@ SKIP: {
  is( system('identify test.png'), 0, 'valid PNG created' );
 
  unlink 'test.pnm', 'test.png';
- Gscan2pdf->quit();
+ Gscan2pdf::Document->quit();
 }

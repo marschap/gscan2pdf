@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 5;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use_ok('Gscan2pdf::Tesseract');
  use Gtk2 -init;    # Could just call init separately
@@ -24,7 +23,7 @@ BEGIN {
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 our $logger = Log::Log4perl::get_logger;
-Gscan2pdf->setup($logger);
+Gscan2pdf::Document->setup($logger);
 
 SKIP: {
  skip 'Tesseract not installed', 1 unless Gscan2pdf::Tesseract->setup($logger);
@@ -63,5 +62,5 @@ SKIP: {
  Gtk2->main;
 
  unlink 'test.tif';
- Gscan2pdf->quit();
+ Gscan2pdf::Document->quit();
 }

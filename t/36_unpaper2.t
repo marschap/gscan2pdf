@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 2;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use Gtk2 -init;    # Could just call init separately
 
@@ -29,7 +28,7 @@ SKIP: {
  use Log::Log4perl qw(:easy);
  Log::Log4perl->easy_init($WARN);
  our $logger = Log::Log4perl::get_logger;
- Gscan2pdf->setup($logger);
+ Gscan2pdf::Document->setup($logger);
 
  # Create test image
  system(
@@ -74,5 +73,5 @@ SKIP: {
  is( system('identify rh.pnm'), 0, 'valid PNM created for RH' );
 
  unlink 'test.pnm', '1.pnm', '2.pnm', 'black.pnm', 'lh.pnm', 'rh.pnm';
- Gscan2pdf->quit();
+ Gscan2pdf::Document->quit();
 }

@@ -75,10 +75,11 @@ sub hocr {
  # decode html->utf8
  my $output;
  if ( defined $pidfile ) {
-  ( $output, undef ) = Gscan2pdf::open_three("echo $$ > $pidfile;$cmd");
+  ( $output, undef ) =
+    Gscan2pdf::Document::open_three("echo $$ > $pidfile;$cmd");
  }
  else {
-  ( $output, undef ) = Gscan2pdf::open_three($cmd);
+  ( $output, undef ) = Gscan2pdf::Document::open_three($cmd);
  }
  my $decoded = decode_entities($output);
 

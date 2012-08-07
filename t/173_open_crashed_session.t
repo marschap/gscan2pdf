@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 2;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use Gtk2 -init;    # Could just call init separately
 }
@@ -23,7 +22,7 @@ BEGIN {
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 
-Gscan2pdf::Document->set_logger(Log::Log4perl::get_logger);
+Gscan2pdf::Document->setup(Log::Log4perl::get_logger);
 my $slist = Gscan2pdf::Document->new;
 $slist->open_session('tmp');
 
@@ -42,3 +41,4 @@ is(
 
 unlink <tmp/*>;
 rmdir 'tmp';
+Gscan2pdf::Document->quit;

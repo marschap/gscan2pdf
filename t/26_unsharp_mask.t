@@ -23,7 +23,7 @@ BEGIN {
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 our $logger = Log::Log4perl::get_logger;
-Gscan2pdf->setup($logger);
+Gscan2pdf::Document->setup($logger);
 
 # Create test image
 system('convert rose: test.jpg');
@@ -56,4 +56,4 @@ is( system('identify test2.jpg'), 0, 'valid JPG created' );
 #########################
 
 unlink 'test.jpg', 'test2.jpg';
-Gscan2pdf->quit();
+Gscan2pdf::Document->quit();

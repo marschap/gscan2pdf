@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 2;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use Gscan2pdf::Ocropus;
  use Gtk2 -init;    # Could just call init separately
@@ -24,7 +23,7 @@ BEGIN {
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;
-Gscan2pdf->setup($logger);
+Gscan2pdf::Document->setup($logger);
 
 SKIP: {
  skip 'Ocropus not installed', 2 unless Gscan2pdf::Ocropus->setup($logger);
@@ -65,4 +64,4 @@ SKIP: {
  unlink 'test.png', 'test.jpg';
 }
 
-Gscan2pdf->quit();
+Gscan2pdf::Document->quit();

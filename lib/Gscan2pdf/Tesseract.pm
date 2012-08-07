@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use File::Temp;    # To create temporary files
 use File::Basename;
-use Gscan2pdf;     # for slurp
+use Gscan2pdf::Document;    # for slurp
 
 my ( %languages, $installed, $setup, $version, $tessdata, $datasuffix,
  $logger );
@@ -15,21 +15,21 @@ sub setup {
  ( my $class, $logger ) = @_;
  return $installed if $setup;
 
- my ( $exe, undef ) = Gscan2pdf::open_three('which tesseract');
+ my ( $exe, undef ) = Gscan2pdf::Document::open_three('which tesseract');
  if ( defined $exe ) {
   $installed = 1;
  }
  else {
   return;
  }
- my ( $out, undef ) = Gscan2pdf::open_three("tesseract '' '' -l ''");
+ my ( $out, undef ) = Gscan2pdf::Document::open_three("tesseract '' '' -l ''");
  ( $tessdata, $version, $datasuffix ) = parse_tessdata($out);
 
  unless ( defined $tessdata ) {
   if ( defined($version) and $version > 3.01 ) {
-   my ( $lib, undef ) = Gscan2pdf::open_three("ldd $exe");
+   my ( $lib, undef ) = Gscan2pdf::Document::open_three("ldd $exe");
    if ( $lib =~ /libtesseract\.so.\d+\ =>\ ([\/a-zA-Z0-9\-\.\_]+)\ /x ) {
-    ( $out, undef ) = Gscan2pdf::open_three("strings $1");
+    ( $out, undef ) = Gscan2pdf::Document::open_three("strings $1");
     $tessdata = parse_strings($out);
    }
    else {
@@ -193,7 +193,7 @@ sub hocr {
  # File in which to store the process ID so that it can be killed if necessary
  $cmd = "echo $$ > $pidfile;$cmd" if ( defined $pidfile );
 
- my ( $out, $err ) = Gscan2pdf::open_three($cmd);
+ my ( $out, $err ) = Gscan2pdf::Document::open_three($cmd);
  my $warnings = $out . $err;
  my $leading  = 'Tesseract Open Source OCR Engine';
  my $trailing = 'with Leptonica';
@@ -201,7 +201,7 @@ sub hocr {
  $warnings =~ s/^Page\ 0\n//x;
  $logger->debug( 'Warnings from Tesseract: ', $warnings );
 
- return Gscan2pdf::slurp($txt), $warnings;
+ return Gscan2pdf::Document::slurp($txt), $warnings;
 }
 
 1;
