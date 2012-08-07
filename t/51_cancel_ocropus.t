@@ -23,11 +23,11 @@ BEGIN {
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
-our $logger = Log::Log4perl::get_logger;
+my $logger = Log::Log4perl::get_logger;
 Gscan2pdf->setup($logger);
 
 SKIP: {
- skip 'Ocropus not installed', 2 unless Gscan2pdf::Ocropus->setup;
+ skip 'Ocropus not installed', 2 unless Gscan2pdf::Ocropus->setup($logger);
 
  # Thumbnail dimensions
  our $widtht  = 100;

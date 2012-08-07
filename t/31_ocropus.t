@@ -25,7 +25,7 @@ Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;
 
 SKIP: {
- skip 'Ocropus not installed', 6 unless Gscan2pdf::Ocropus->setup;
+ skip 'Ocropus not installed', 6 unless Gscan2pdf::Ocropus->setup($logger);
 
  # Create test image
  system(

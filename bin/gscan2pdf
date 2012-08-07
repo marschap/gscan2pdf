@@ -1482,7 +1482,7 @@ sub create_menu_bar {
  $dependencies{xdg}         = check_command('xdg-email');
  $dependencies{gocr}        = check_command('gocr');
  $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup($logger);
- $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup;
+ $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup($logger);
  $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup;
  $dependencies{djvu}        = check_command('cjb2');
  $dependencies{unpaper}     = check_command('unpaper');
