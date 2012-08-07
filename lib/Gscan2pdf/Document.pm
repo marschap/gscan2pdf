@@ -46,9 +46,9 @@ our @EXPORT_OK;
 my $logger;
 
 sub new {
- my $class = shift;
- my $d     = Locale::gettext->domain(Glib::get_application_name);
- my $self  = Gtk2::Ex::Simple::List->new(
+ my ( $class, %options ) = @_;
+ my $d    = Locale::gettext->domain(Glib::get_application_name);
+ my $self = Gtk2::Ex::Simple::List->new(
   '#'                   => 'int',
   $d->get('Thumbnails') => 'pixbuf',
   'Page Data'           => 'hstring',
@@ -56,6 +56,13 @@ sub new {
  $self->get_selection->set_mode('multiple');
  $self->set_headers_visible(FALSE);
  $self->set_reorderable(TRUE);
+ for ( keys %options ) {
+  $self->{$_} = $options{$_};
+ }
+
+ # Default thumbnail sizes
+ $self->{heightt} = 100 unless ( defined $self->{heightt} );
+ $self->{widtht}  = 100 unless ( defined $self->{widtht} );
 
  bless( $self, $class );
  return $self;
@@ -321,7 +328,7 @@ sub add_page {
  # Block the row-changed signal whilst adding the scan (row) and sorting it.
  $self->get_model->signal_handler_block( $self->{row_changed_signal} )
    if defined( $self->{row_changed_signal} );
- my $thumb = get_pixbuf( $page->{filename}, $main::heightt, $main::widtht );
+ my $thumb = get_pixbuf( $page->{filename}, $self->{heightt}, $self->{widtht} );
  push @{ $self->{data} }, [ $pagenum, $thumb, $page ];
  $logger->info(
   "Added $page->{filename} at page $pagenum with resolution $page->{resolution}"
@@ -795,7 +802,7 @@ sub update_page {
   $self->get_model->signal_handler_block( $self->{row_changed_signal} )
     if defined( $self->{row_changed_signal} );
   $self->{data}[$i][1] =
-    get_pixbuf( $new->{filename}, $main::heightt, $main::widtht );
+    get_pixbuf( $new->{filename}, $self->{heightt}, $self->{widtht} );
   $self->{data}[$i][2] = $new;
   push @out, $new;
 
@@ -804,7 +811,7 @@ sub update_page {
    splice @{ $self->{data} }, $i + 1, 0,
      [
     $self->{data}[$i][0] + 1,
-    get_pixbuf( $new->{filename}, $main::heightt, $main::widtht ), $new
+    get_pixbuf( $new->{filename}, $self->{heightt}, $self->{widtht} ), $new
      ];
    push @out, $new;
   }
@@ -1961,8 +1968,8 @@ sub open_session {
   # Populate the SimpleList
   my $page = Gscan2pdf::Page->new( %{ $session{$pagenum} } );
   my $thumb =
-    Gscan2pdf::Document::get_pixbuf( $page->{filename}, $main::heightt,
-   $main::widtht );
+    Gscan2pdf::Document::get_pixbuf( $page->{filename}, $self->{heightt},
+   $self->{widtht} );
   push @{ $self->{data} }, [ $pagenum, $thumb, $page ];
  }
  $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )

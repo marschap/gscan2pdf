@@ -957,10 +957,6 @@ my $hpaned = Gtk2::HPaned->new;
 $hpaned->set_position( $SETTING{'thumb panel'} );
 $vbox->pack_start( $hpaned, TRUE, TRUE, 0 );
 
-# Thumbnail dimensions
-our $widtht  = 100;
-our $heightt = 100;
-
 # Scrolled window for thumbnails
 my $scwin_thumbs = Gtk2::ScrolledWindow->new;
 

@@ -29,10 +29,6 @@ Gscan2pdf->setup($logger);
 SKIP: {
  skip 'Ocropus not installed', 2 unless Gscan2pdf::Ocropus->setup($logger);
 
- # Thumbnail dimensions
- our $widtht  = 100;
- our $heightt = 100;
-
  # Create test image
  system(
 'convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.png'

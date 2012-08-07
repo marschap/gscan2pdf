@@ -13,10 +13,6 @@ BEGIN {
 
 Glib::set_application_name('gscan2pdf');
 
-# Thumbnail dimensions
-our $widtht  = 100;
-our $heightt = 100;
-
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 our $logger = Log::Log4perl::get_logger;
