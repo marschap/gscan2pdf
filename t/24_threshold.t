@@ -43,8 +43,11 @@ $slist->get_file_info(
      $slist->{data}[0][2],
      undef, undef, undef,
      sub {
-      $slist->save_image( 'test.png', [ $slist->{data}[0][2] ],
-       undef, undef, undef, sub { Gtk2->main_quit } );
+      $slist->save_image(
+       path              => 'test.jpg',
+       list_of_pages     => [ $slist->{data}[0][2] ],
+       finished_callback => sub { Gtk2->main_quit }
+      );
      }
     );
    }

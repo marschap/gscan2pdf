@@ -46,8 +46,11 @@ $slist->get_file_info(
        -s "$slist->{data}[0][2]{filename}",
        'image not rotated'
       );
-      $slist->save_image( 'test2.jpg', [ $slist->{data}[0][2] ],
-       undef, undef, undef, sub { Gtk2->main_quit } );
+      $slist->save_image(
+       path              => 'test2.jpg',
+       list_of_pages     => [ $slist->{data}[0][2] ],
+       finished_callback => sub { Gtk2->main_quit }
+      );
      }
     );
     $slist->cancel($pid);

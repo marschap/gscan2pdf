@@ -42,8 +42,11 @@ $slist->get_file_info(
      angle             => 90,
      page              => $slist->{data}[0][2],
      finished_callback => sub {
-      $slist->save_image( 'test2.jpg', [ $slist->{data}[0][2] ],
-       undef, undef, undef, sub { Gtk2->main_quit } );
+      $slist->save_image(
+       path              => 'test2.jpg',
+       list_of_pages     => [ $slist->{data}[0][2] ],
+       finished_callback => sub { Gtk2->main_quit }
+      );
      }
     );
    }

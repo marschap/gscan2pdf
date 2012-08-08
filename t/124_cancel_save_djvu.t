@@ -41,8 +41,11 @@ $slist->get_file_info(
      path               => 'test.djvu',
      list_of_pages      => [ $slist->{data}[0][2] ],
      cancelled_callback => sub {
-      $slist->save_image( 'test.jpg', [ $slist->{data}[0][2] ],
-       undef, undef, undef, sub { Gtk2->main_quit } );
+      $slist->save_image(
+       path              => 'test.jpg',
+       list_of_pages     => [ $slist->{data}[0][2] ],
+       finished_callback => sub { Gtk2->main_quit }
+      );
      }
     );
     $slist->cancel($pid);
