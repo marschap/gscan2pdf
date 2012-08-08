@@ -58,8 +58,11 @@ $slist->get_file_info(
  </body>
 </html>
 EOS
-    $slist->save_djvu( 'test.djvu', [ $slist->{data}[0][2] ],
-     undef, undef, undef, sub { Gtk2->main_quit } );
+    $slist->save_djvu(
+     path              => 'test.djvu',
+     list_of_pages     => [ $slist->{data}[0][2] ],
+     finished_callback => sub { Gtk2->main_quit }
+    );
    }
   );
  }
