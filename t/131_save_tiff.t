@@ -38,8 +38,11 @@ $slist->get_file_info(
    first             => 1,
    last              => 1,
    finished_callback => sub {
-    $slist->save_tiff( 'test.tif', [ $slist->{data}[0][2] ],
-     undef, undef, undef, undef, undef, sub { Gtk2->main_quit } );
+    $slist->save_tiff(
+     path              => 'test.tif',
+     list_of_pages     => [ $slist->{data}[0][2] ],
+     finished_callback => sub { Gtk2->main_quit }
+    );
    }
   );
  }
