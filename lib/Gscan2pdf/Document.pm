@@ -681,12 +681,7 @@ sub save_tiff {
 }
 
 sub rotate {
- my (
-  $self,              $angle,            $page,
-  $queued_callback,   $started_callback, $running_callback,
-  $finished_callback, $error_callback,   $display_callback,
-  $cancelled_callback
- ) = @_;
+ my ( $self, %options ) = @_;
 
  # Get new process ID
  my $pid = ++$_PID;
@@ -694,9 +689,11 @@ sub rotate {
 
  my $started_flag;
  my $sentinel =
-   _enqueue_request( 'rotate', { angle => $angle, page => $page->freeze } );
- $queued_callback->( $_self->{process_name}, $jobs_completed, $jobs_total )
-   if ($queued_callback);
+   _enqueue_request( 'rotate',
+  { angle => $options{angle}, page => $options{page}->freeze } );
+ $options{queued_callback}
+   ->( $_self->{process_name}, $jobs_completed, $jobs_total )
+   if ( $options{queued_callback} );
  _when_ready(
   $sentinel,
   undef,    # pending
@@ -706,7 +703,7 @@ sub rotate {
      or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
     {
      _cancel_process();
-     $cancelled_callback->() if ($cancelled_callback);
+     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
      $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
 
      # Flag that the callbacks have been done here
@@ -716,14 +713,14 @@ sub rotate {
     }
     return;
    }
-   $started_flag = $started_callback->(
+   $started_flag = $options{started_callback}->(
     1, $_self->{process_name},
     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ( $started_callback and not $started_flag );
-   $running_callback->(
+   ) if ( $options{started_callback} and not $started_flag );
+   $options{running_callback}->(
     1, $_self->{process_name},
     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ($running_callback);
+   ) if ( $options{running_callback} );
   },
   sub {    # finished
    if ( exists $self->{cancel_cb}{$pid} ) {
@@ -731,22 +728,23 @@ sub rotate {
      or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
     {
      _cancel_process();
-     $cancelled_callback->() if ($cancelled_callback);
+     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
      $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
     }
     delete $self->{cancel_cb}{$pid};
     delete $self->{running_pids}{$pid};
     return;
    }
-   $started_callback->() if ( $started_callback and not $started_flag );
+   $options{started_callback}->()
+     if ( $options{started_callback} and not $started_flag );
    if ( $_self->{status} ) {
-    $error_callback->();
+    $options{error_callback}->();
     return;
    }
-   $finished_callback->(
-    $self->update_page($display_callback),
+   $options{finished_callback}->(
+    $self->update_page( $options{display_callback} ),
     $_self->{requests}->pending
-   ) if $finished_callback;
+   ) if $options{finished_callback};
    delete $self->{running_pids}{$pid};
   },
  );

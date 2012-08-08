@@ -39,10 +39,9 @@ $slist->get_file_info(
    last              => 1,
    finished_callback => sub {
     $slist->rotate(
-     90,
-     $slist->{data}[0][2],
-     undef, undef, undef,
-     sub {
+     angle             => 90,
+     page              => $slist->{data}[0][2],
+     finished_callback => sub {
       $slist->save_image( 'test2.jpg', [ $slist->{data}[0][2] ],
        undef, undef, undef, sub { Gtk2->main_quit } );
      }
