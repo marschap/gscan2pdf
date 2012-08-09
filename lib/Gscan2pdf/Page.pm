@@ -5,20 +5,20 @@ use strict;
 use warnings;
 use Carp;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2;
 use File::Copy;
 use File::Temp;             # To create temporary files
 use HTML::TokeParser;
 use HTML::Entities;
 use Image::Magick;
 use Encode;
+use Locale::gettext 1.05;    # For translations
 
 BEGIN {
  use Exporter ();
  our ( $VERSION, @EXPORT_OK, %EXPORT_TAGS );
 
  use base qw(Exporter);
- %EXPORT_TAGS = ();         # eg: TAG => [ qw!name1 name2! ],
+ %EXPORT_TAGS = ();          # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,
  # as well as any optionally exported functions
@@ -26,13 +26,17 @@ BEGIN {
 }
 our @EXPORT_OK;
 
+my ( $d, $logger );
+
 sub new {
  my ( $class, %options ) = @_;
  my $self = {};
+ $d = Locale::gettext->domain(Glib::get_application_name) unless ( defined $d );
+
  croak "Error: filename not supplied" unless ( defined $options{filename} );
  croak "Error: format not supplied"   unless ( defined $options{format} );
- $main::logger->info(
-  "New page filename $options{filename}, format $options{format}");
+
+ $logger->info("New page filename $options{filename}, format $options{format}");
  for ( keys %options ) {
   $self->{$_} = $options{$_};
  }
@@ -41,7 +45,7 @@ sub new {
  unless ( defined( $self->{resolution} ) ) {
   my $image = Image::Magick->new;
   my $x     = $image->Read( $options{filename} );
-  $main::logger->warn($x) if "$x";
+  $logger->warn($x) if "$x";
   $self->{resolution} = Gscan2pdf::Document::get_resolution($image);
  }
 
@@ -60,17 +64,20 @@ sub new {
  );
  if ( defined( $options{delete} ) and $options{delete} ) {
   move( $options{filename}, $self->{filename} )
-    or main::show_message_dialog( $main::window, 'error', 'close',
-   $main::d->get('Error importing image: ') . $! );
+    or croak $d->get('Error importing image: ') . $!;
  }
  else {
   copy( $options{filename}, $self->{filename} )
-    or main::show_message_dialog( $main::window, 'error', 'close',
-   $main::d->get('Error importing image: ') . $! );
+    or croak $d->get('Error importing image: ') . $!;
  }
 
  bless( $self, $class );
  return $self;
+}
+
+sub set_logger {
+ ( my $class, $logger ) = @_;
+ return;
 }
 
 sub clone {
@@ -99,7 +106,9 @@ sub thaw {
  my ($self) = @_;
  my $new = $self->clone;
  my $suffix;
- $suffix = $1 if ( $new->{filename} =~ /\.(\w*)$/x );
+ if ( $new->{filename} =~ /\.(\w*)$/x ) {
+  $suffix = $1;
+ }
  my $filename = File::Temp->new( DIR => $new->{dir}, SUFFIX => ".$suffix" );
  move( $new->{filename}, $filename );
  $new->{filename} = $filename;

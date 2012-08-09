@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 1;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use Gtk2 -init;    # Could just call init separately
  use PDF::API2;
@@ -22,14 +21,10 @@ BEGIN {
 # Insert your test code below, the Test::More module is use()ed here so read
 # its man page ( perldoc Test::More ) for help writing this test script.
 
-# Thumbnail dimensions
-our $widtht  = 100;
-our $heightt = 100;
-
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 our $logger = Log::Log4perl::get_logger;
-Gscan2pdf->setup($logger);
+Gscan2pdf::Document->setup($logger);
 
 # Create test image
 system('convert rose: 1.pnm');
@@ -42,18 +37,22 @@ my $slist = Gscan2pdf::Document->new;
 for my $i ( 1 .. $n ) {
  copy( '1.pnm', "$i.pnm" ) if ( $i > 1 );
  $slist->get_file_info(
-  "$i.pnm", undef, undef, undef,
-  sub {
+  path              => "$i.pnm",
+  finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
-    $info, 1, 1, undef, undef, undef,
-    sub {
+    info              => $info,
+    first             => 1,
+    last              => 1,
+    finished_callback => sub {
      use utf8;
      $slist->{data}[ $i - 1 ][2]{hocr} = 'hello world';
      push @pages, $slist->{data}[ $i - 1 ][2];
-     $slist->save_pdf( 'test.pdf', \@pages, undef, undef, undef, undef, undef,
-      sub { Gtk2->main_quit } )
-       if ( $i == $n );
+     $slist->save_pdf(
+      path              => 'test.pdf',
+      list_of_pages     => \@pages,
+      finished_callback => sub { Gtk2->main_quit }
+     ) if ( $i == $n );
     }
    );
   }
@@ -70,4 +69,4 @@ for my $i ( 1 .. $n ) {
  unlink "$i.pnm";
 }
 unlink 'test.pdf';
-Gscan2pdf->quit();
+Gscan2pdf::Document->quit();

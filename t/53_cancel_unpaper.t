@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 2;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use Gscan2pdf::Unpaper;
  use Gtk2 -init;    # Could just call init separately
@@ -27,14 +26,10 @@ SKIP: {
  my $unpaper =
    Gscan2pdf::Unpaper->new( { 'output-pages' => 2, layout => 'double' } );
 
- # Thumbnail dimensions
- our $widtht  = 100;
- our $heightt = 100;
-
  use Log::Log4perl qw(:easy);
  Log::Log4perl->easy_init($WARN);
  our $logger = Log::Log4perl::get_logger;
- Gscan2pdf->setup($logger);
+ Gscan2pdf::Document->setup($logger);
 
  # Create test image
  system(
@@ -48,13 +43,14 @@ SKIP: {
 
  my $slist = Gscan2pdf::Document->new;
  $slist->get_file_info(
-  'test.pnm',
-  undef, undef, undef,
-  sub {
+  path              => 'test.pnm',
+  finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
-    $info, 1, 1, undef, undef, undef,
-    sub {
+    info              => $info,
+    first             => 1,
+    last              => 1,
+    finished_callback => sub {
      my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
      my $pid    = $slist->unpaper(
       $slist->{data}[0][2],
@@ -66,8 +62,11 @@ SKIP: {
         `md5sum $slist->{data}[0][2]{filename} | cut -c -32`,
         'image not modified'
        );
-       $slist->save_image( 'test.jpg', [ $slist->{data}[0][2] ],
-        undef, undef, undef, sub { Gtk2->main_quit } );
+       $slist->save_image(
+        path              => 'test.jpg',
+        list_of_pages     => [ $slist->{data}[0][2] ],
+        finished_callback => sub { Gtk2->main_quit }
+       );
       }
      );
      $slist->cancel($pid);
@@ -81,5 +80,5 @@ SKIP: {
   0, 'can create a valid JPG after cancelling previous process' );
 
  unlink 'test.pnm', '1.pnm', '2.pnm', 'black.pnm', 'test.jpg';
- Gscan2pdf->quit();
+ Gscan2pdf::Document->quit();
 }

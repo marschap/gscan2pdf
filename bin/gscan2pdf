@@ -49,7 +49,6 @@
 
 use warnings;
 use strict;
-use Gscan2pdf;
 use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Sane;
 use Gscan2pdf::Scanner::Options;
@@ -306,6 +305,9 @@ if (
 $SETTING{'SANE version'} = join( '.', Sane->get_version );
 $SETTING{'libsane-perl version'} = $Sane::VERSION;
 
+# Update list in Gscan2pdf::Document so that it can be used by get_resolution
+Gscan2pdf::Document->set_paper_sizes( $SETTING{Paper} );
+
 # Set up test mode and make sure file has absolute path and is readable
 if ( keys %{$test} ) {
  $SETTING{frontend} = 'scanimage-perl';
@@ -373,7 +375,7 @@ if ( not defined( $SETTING{version} ) or $SETTING{version} ne $version ) {
 $SETTING{version} = $version;
 
 # Initialise thread handler
-Gscan2pdf->setup($logger);
+Gscan2pdf::Document->setup($logger);
 
 # Initialise SANE frontend
 Gscan2pdf::Frontend::Sane->setup($logger);
@@ -892,10 +894,6 @@ my $hpaned = Gtk2::HPaned->new;
 $hpaned->set_position( $SETTING{'thumb panel'} );
 $vbox->pack_start( $hpaned, TRUE, TRUE, 0 );
 
-# Thumbnail dimensions
-our $widtht  = 100;
-our $heightt = 100;
-
 # Scrolled window for thumbnails
 my $scwin_thumbs = Gtk2::ScrolledWindow->new;
 
@@ -1328,7 +1326,7 @@ unless ( defined $session ) {
     )
   {
    $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
-   $Gscan2pdf::_self->{dir} = $session;
+   $Gscan2pdf::Document::_self->{dir} = $session;
    $logger->warn(
     sprintf(
      $d->get(
@@ -1342,7 +1340,7 @@ unless ( defined $session ) {
  }
  else {
   $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
-  $Gscan2pdf::_self->{dir} = "$session";
+  $Gscan2pdf::Document::_self->{dir} = "$session";
  }
  open $lockfh, '>', File::Spec->catfile( $session, 'lockfile' )    ## no critic
    or die "Cannot open lockfile";
@@ -1415,8 +1413,8 @@ sub create_menu_bar {
  $dependencies{scanadf}     = check_command('scanadf');
  $dependencies{xdg}         = check_command('xdg-email');
  $dependencies{gocr}        = check_command('gocr');
- $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup;
- $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup;
+ $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup($logger);
+ $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup($logger);
  $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup;
  $dependencies{djvu}        = check_command('cjb2');
  $dependencies{unpaper}     = Gscan2pdf::Unpaper->version;
@@ -1901,19 +1899,18 @@ sub open_dialog {
   for (@filename) {
    my ( $signal, $pid );
    $pid = $slist->get_file_info(
-    $_,
-    sub {    # queued
+    path            => $_,
+    queued_callback => sub {
      my ( $process, $completed, $total, $message, $progress ) = @_;
      return update_tpbar( 1, $process, $completed, $total, $message,
       $progress );
     },
-    sub {    # started
+    started_callback => sub {
      my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
-    undef,    # running
-    sub {     # finished
+    finished_callback => sub {
      my ( $info, $pending ) = @_;
      if ( $info->{format} eq 'session file' ) {
       open_session( $info->{path} );
@@ -1953,32 +1950,32 @@ sub open_dialog {
         $windowq->destroy;
         my ( $signal, $pid );
         $pid = $slist->import_file(
-         $info,
-         $spinbuttonf->get_value,
-         $spinbuttonl->get_value,
-         sub {    # queued
+         info            => $info,
+         first           => $spinbuttonf->get_value,
+         last            => $spinbuttonl->get_value,
+         queued_callback => sub {
           my ( $process, $completed, $total, $message, $progress ) = @_;
           return update_tpbar( 1, $process, $completed, $total, $message,
            $progress );
          },
-         sub {    # started
+         started_callback => sub {
           my ( $thread, $process, $completed, $total ) = @_;
           $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
           return TRUE if ( defined $signal );
          },
-         sub {    # running
+         running_callback => sub {
           my ( $thread, $process, $completed, $total, $message, $progress ) =
             @_;
           return update_tpbar( $thread, $process, $completed, $total, $message,
            $progress );
          },
-         sub {    # finished
+         finished_callback => sub {
           my ( $new_page, $pending ) = @_;
           $thbox->hide_all unless $pending;
           $tcbutton->signal_handler_disconnect($signal) if ($signal);
           update_uimanager();
          },
-         sub { error_opening_image() }    # error
+         error_callback => sub { error_opening_image() }
         );
        }
       );
@@ -1997,29 +1994,30 @@ sub open_dialog {
      else {
       my ( $signal, $pid );
       $pid = $slist->import_file(
-       $info, 1, 1,
-       sub {    # queued
+       info            => $info,
+       first           => 1,
+       last            => 1,
+       queued_callback => sub {
         my ( $process, $completed, $total, $message, $progress ) = @_;
         return update_tpbar( 1, $process, $completed, $total, $message,
          $progress );
        },
-       sub {    # started
+       started_callback => sub {
         my ( $thread, $process, $completed, $total ) = @_;
         $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
         return TRUE if ( defined $signal );
        },
-       undef,    # running
-       sub {     # finished
+       finished_callback => sub {
         my ( $new_page, $pending ) = @_;
         $thbox->hide_all unless $pending;
         $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
         update_uimanager();
        },
-       sub { error_opening_image() }    # error
+       error_callback => sub { error_opening_image() }
       );
      }
     },
-    sub { error_opening_image() },      # error
+    error_callback => sub { error_opening_image() },
    );
   }
  }
@@ -2440,26 +2438,26 @@ sub save_PDF {
     $logger->debug("Started saving $filename");
     my ( $signal, $pid );
     $pid = $slist->save_pdf(
-     $filename,
-     \@list_of_pages,
-     get_pdf_metadata(),
-     \%options,
-     sub {    # queued
+     path            => $filename,
+     list_of_pages   => \@list_of_pages,
+     metadata        => get_pdf_metadata(),
+     options         => \%options,
+     queued_callback => sub {
       my ( $process, $completed, $total, $message, $progress ) = @_;
       return update_tpbar( 1, $process, $completed, $total, $message,
        $progress );
      },
-     sub {    # started
+     started_callback => sub {
       my ( $thread, $process, $completed, $total ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
-     sub {    # running
+     running_callback => sub {
       my ( $thread, $process, $completed, $total, $message, $progress ) = @_;
       return update_tpbar( $thread, $process, $completed, $total, $message,
        $progress );
      },
-     sub {    # finished
+     finished_callback => sub {
       my ( $new_page, $pending ) = @_;
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
@@ -2469,9 +2467,9 @@ sub save_PDF {
        and $SETTING{'view files toggle'} );
       $logger->debug("Finished saving $filename");
      },
-     sub {    # error
+     error_callback => sub {
       show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::_self->{message} );
+       $Gscan2pdf::Document::_self->{message} );
      }
     );
 
@@ -2930,7 +2928,7 @@ sub save_dialog {
         },
         sub {    # error
          show_message_dialog( $window, 'error', 'close',
-          $Gscan2pdf::_self->{message} );
+          $Gscan2pdf::Document::_self->{message} );
         }
        );
        $windowi->hide if defined $windowi;
@@ -3087,16 +3085,6 @@ sub save_dialog {
  return;
 }
 
-sub show_message_dialog {
- my ( $parent, $type, $buttons, $text ) = @_;
- my $dialog =
-   Gtk2::MessageDialog->new( $parent, 'destroy-with-parent', $type, $buttons,
-  $text );
- my $response = $dialog->run;
- $dialog->destroy;
- return $response;
-}
-
 sub file_exists {
  my ( $file_chooser, $filename ) = @_;
  if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
@@ -3164,23 +3152,23 @@ sub save_image {
   $logger->debug("Started saving $filename");
   my ( $signal, $pid );
   $pid = $slist->save_image(
-   $filename,
-   \@list_of_pages,
-   sub {    # queued
+   path            => $filename,
+   list_of_pages   => \@list_of_pages,
+   queued_callback => sub {
     my ( $process, $completed, $total, $message, $progress ) = @_;
     return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
-   sub {    # started
+   started_callback => sub {
     my ( $thread, $process, $completed, $total ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },
-   sub {    # running
+   running_callback => sub {
     my ( $thread, $process, $completed, $total, $message, $progress ) = @_;
     return update_tpbar( $thread, $process, $completed, $total, $message,
      $progress );
    },
-   sub {    # finished
+   finished_callback => sub {
     my ( $new_page, $pending ) = @_;
     $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
@@ -3190,9 +3178,9 @@ sub save_image {
      and $SETTING{'view files toggle'} );
     $logger->debug("Finished saving $filename");
    },
-   sub {    # error
+   error_callback => sub {
     show_message_dialog( $window, 'error', 'close',
-     $Gscan2pdf::_self->{message} );
+     $Gscan2pdf::Document::_self->{message} );
    }
   );
 
@@ -3220,25 +3208,25 @@ sub save_TIFF {
 
  my ( $signal, $pid );
  $pid = $slist->save_tiff(
-  $filename,
-  \@list_of_pages,
-  \%options,
-  $ps,
-  sub {    # queued
+  path            => $filename,
+  list_of_pages   => \@list_of_pages,
+  options         => \%options,
+  ps              => $ps,
+  queued_callback => sub {
    my ( $process, $completed, $total, $message, $progress ) = @_;
    return update_tpbar( 1, $process, $completed, $total, $message, $progress );
   },
-  sub {    # started
+  started_callback => sub {
    my ( $thread, $process, $completed, $total ) = @_;
    $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
    return TRUE if ( defined $signal );
   },
-  sub {    # running
+  running_callback => sub {
    my ( $thread, $process, $completed, $total, $message, $progress ) = @_;
    return update_tpbar( $thread, $process, $completed, $total, $message,
     $progress );
   },
-  sub {    # finished
+  finished_callback => sub {
    my ( $new_page, $pending ) = @_;
    $thbox->hide_all unless $pending;
    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
@@ -3249,9 +3237,9 @@ sub save_TIFF {
     and $SETTING{'view files toggle'} );
    $logger->debug("Finished saving $filename");
   },
-  sub {    # error
+  error_callback => sub {
    show_message_dialog( $window, 'error', 'close',
-    $Gscan2pdf::_self->{message} );
+    $Gscan2pdf::Document::_self->{message} );
   }
  );
  return;
@@ -3314,24 +3302,24 @@ sub save_djvu {
     $logger->debug("Started saving $filename");
     my ( $signal, $pid );
     $pid = $slist->save_djvu(
-     $filename,
-     \@list_of_pages,
-     sub {    # queued
+     path            => $filename,
+     list_of_pages   => \@list_of_pages,
+     queued_callback => sub {
       my ( $process, $completed, $total, $message, $progress ) = @_;
       return update_tpbar( 1, $process, $completed, $total, $message,
        $progress );
      },
-     sub {    # started
+     started_callback => sub {
       my ( $thread, $process, $completed, $total ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
-     sub {    # running
+     running_callback => sub {
       my ( $thread, $process, $completed, $total, $message, $progress ) = @_;
       return update_tpbar( $thread, $process, $completed, $total, $message,
        $progress );
      },
-     sub {    # finished
+     finished_callback => sub {
       my ( $new_page, $pending ) = @_;
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
@@ -3341,9 +3329,9 @@ sub save_djvu {
        and $SETTING{'view files toggle'} );
       $logger->debug("Finished saving $filename");
      },
-     sub {    # error
+     error_callback => sub {
       show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::_self->{message} );
+       $Gscan2pdf::Document::_self->{message} );
      }
     );
 
@@ -3483,7 +3471,7 @@ sub email {
     },
     sub {    # error
      show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::_self->{message} );
+      $Gscan2pdf::Document::_self->{message} );
     }
    );
 
@@ -5553,6 +5541,8 @@ sub import_scan {
      format     => 'Portable anymap',
      delete     => $delete,
      dir        => $session,
+     logger     => $logger,
+     window     => $window,
     );
     my $index = $slist->add_page( $gpage, $page, &update_uimanager );
     if ( $index == -1 ) {
@@ -6083,7 +6073,7 @@ sub rescan_options {
     if ( defined( $SETTING{mode} ) and -e "$filename.$SETTING{mode}" );
 
   # Slurp it from file
-  $output = Gscan2pdf::slurp($filename);
+  $output = Gscan2pdf::Document::slurp($filename);
   $vboxd->hide_all;    # merely here for consistency with normal operation
   parse_options( $vboxd, $device, options2hash($output) );
  }
@@ -6545,6 +6535,11 @@ sub edit_paper {
     $SETTING{Paper}{ $slist->{data}[$i][0] }{l} = $slist->{data}[$i][3];
     $SETTING{Paper}{ $slist->{data}[$i][0] }{t} = $slist->{data}[$i][4];
    }
+
+   # Update list in Gscan2pdf::Document so that it can be used by get_resolution
+   # FIXME: make sure that this is updated for all scan dialogs
+   Gscan2pdf::Document->set_paper_sizes( $SETTING{Paper} );
+
    $combobp->remove_text(0) while ( $combobp->get_active > 1 );
    my @ignored = add_paper( $combobp, $options );
    show_message_dialog(
@@ -6644,7 +6639,7 @@ sub update_options {
   $filename .= ".$SETTING{mode}" if ( -e "$filename.$SETTING{mode}" );
 
   # Slurp it from file
-  $output = Gscan2pdf::slurp($filename);
+  $output = Gscan2pdf::Document::slurp($filename);
   $vboxd->hide_all;    # merely here for consistency with normal operation
   update_options_hash( $vboxd, options2hash($output) );
  }
@@ -7158,28 +7153,28 @@ sub rotate {
  for my $page ( @{$pagelist} ) {
   my ( $signal, $pid );
   $pid = $slist->rotate(
-   $angle, $page,
-   sub {    # queued
+   angle           => $angle,
+   page            => $page,
+   queued_callback => sub {
     my ( $process, $completed, $total, $message, $progress ) = @_;
     return update_tpbar( 1, $process, $completed, $total, $message, $progress );
    },
-   sub {    # started
+   started_callback => sub {
     my ( $thread, $process, $completed, $total ) = @_;
     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
     return TRUE if ( defined $signal );
    },
-   undef,    # running
-   sub {     # finished
+   finished_callback => sub {
     my ( $new_page, $pending ) = @_;
     $callback->($new_page) if $callback;
     $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
-   sub {     # error
+   error_callback => sub {
     show_message_dialog( $window, 'error', 'close',
-     $Gscan2pdf::_self->{message} );
+     $Gscan2pdf::Document::_self->{message} );
    },
-   sub {     # display
+   display_callback => sub {
     my ($new_page) = @_;
     display_image($new_page);
    },
@@ -7228,7 +7223,7 @@ sub analyse {
     },
     sub {     # error
      show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::_self->{message} );
+      $Gscan2pdf::Document::_self->{message} );
     },
    );
   }
@@ -7330,7 +7325,7 @@ sub threshold {
      },
      sub {     # error
       show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::_self->{message} );
+       $Gscan2pdf::Document::_self->{message} );
      },
      sub {     # display
       my ($new_page) = @_;
@@ -7403,7 +7398,7 @@ sub negate {
      },
      sub {     # error
       show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::_self->{message} );
+       $Gscan2pdf::Document::_self->{message} );
      },
      sub {     # display
       my ($new_page) = @_;
@@ -7547,7 +7542,7 @@ sub unsharp {
      },
      sub {     # error
       show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::_self->{message} );
+       $Gscan2pdf::Document::_self->{message} );
      },
      sub {     # display
       my ($new_page) = @_;
@@ -7739,7 +7734,7 @@ sub crop {
      },
      sub {     # error
       show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::_self->{message} );
+       $Gscan2pdf::Document::_self->{message} );
      },
      sub {     # display
       my ($new_page) = @_;
@@ -7802,7 +7797,7 @@ sub user_defined_tool {
    },
    sub {     # error
     show_message_dialog( $window, 'error', 'close',
-     $Gscan2pdf::_self->{message} );
+     $Gscan2pdf::Document::_self->{message} );
    },
    sub {     # display
     my ($new_page) = @_;
@@ -7861,7 +7856,7 @@ sub unpaper_page {
    },
    sub {     # error
     show_message_dialog( $window, 'error', 'close',
-     $Gscan2pdf::_self->{message} );
+     $Gscan2pdf::Document::_self->{message} );
    },
    sub {     # display
     my ($new_page) = @_;
@@ -7955,7 +7950,7 @@ sub ocr_page {
     },
     sub {     # error
      show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::_self->{message} );
+      $Gscan2pdf::Document::_self->{message} );
     },
     sub {     # display
      my ($new_page) = @_;
@@ -7987,7 +7982,7 @@ sub ocr_page {
     },
     sub {     # error
      show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::_self->{message} );
+      $Gscan2pdf::Document::_self->{message} );
     },
     sub {     # display
      my ($new_page) = @_;
@@ -8019,7 +8014,7 @@ sub ocr_page {
     },
     sub {     # error
      show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::_self->{message} );
+      $Gscan2pdf::Document::_self->{message} );
     },
     sub {     # display
      my ($new_page) = @_;
@@ -8051,7 +8046,7 @@ sub ocr_page {
     },
     sub {     # error
      show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::_self->{message} );
+      $Gscan2pdf::Document::_self->{message} );
     },
     sub {     # display
      my ($new_page) = @_;
@@ -8300,7 +8295,7 @@ sub quit {
 
 sub kill_threads {
  Gscan2pdf::Frontend::Sane->quit();
- Gscan2pdf->quit();
+ Gscan2pdf::Document->quit();
  return;
 }
 
@@ -8616,7 +8611,7 @@ sub compress_temp {
    },
    sub {     # error
     show_message_dialog( $window, 'error', 'close',
-     $Gscan2pdf::_self->{message} );
+     $Gscan2pdf::Document::_self->{message} );
    },
   );
  }
@@ -9129,6 +9124,18 @@ sub get_size_from_PNM {
   close $fh;
   return 0;
  }
+}
+
+# Helper function to display a message dialog, wait for a response, and return it
+
+sub show_message_dialog {
+ my ( $parent, $type, $buttons, $text ) = @_;
+ my $dialog =
+   Gtk2::MessageDialog->new( $parent, 'destroy-with-parent', $type, $buttons,
+  $text );
+ my $response = $dialog->run;
+ $dialog->destroy;
+ return $response;
 }
 
 Gtk2->main;

@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 1;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use Gtk2 -init;    # Could just call init separately
 }
@@ -20,23 +19,18 @@ BEGIN {
 # Insert your test code below, the Test::More module is use()ed here so read
 # its man page ( perldoc Test::More ) for help writing this test script.
 
-# Thumbnail dimensions
-our $widtht  = 100;
-our $heightt = 100;
-
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 our $logger = Log::Log4perl::get_logger;
-Gscan2pdf->setup($logger);
+Gscan2pdf::Document->setup($logger);
 
 # Create test image
 system('convert rose: test.pnm; c44 test.pnm te\ st.djvu');
 
 my $slist = Gscan2pdf::Document->new;
 $slist->get_file_info(
- 'te st.djvu',
- undef, undef, undef,
- sub {
+ path              => 'te st.djvu',
+ finished_callback => sub {
   my ($info) = @_;
   is( $info->{format}, 'DJVU', 'DjVu with spaces recognised correctly' );
   Gtk2->main_quit;
@@ -47,4 +41,4 @@ Gtk2->main;
 #########################
 
 unlink 'test.pnm', 'te st.djvu';
-Gscan2pdf->quit();
+Gscan2pdf::Document->quit();

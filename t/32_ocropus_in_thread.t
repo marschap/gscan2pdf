@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 2;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use_ok('Gscan2pdf::Ocropus');
 }
@@ -22,15 +21,11 @@ BEGIN {
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
-our $logger = Log::Log4perl::get_logger;
-Gscan2pdf->setup($logger);
+my $logger = Log::Log4perl::get_logger;
+Gscan2pdf::Document->setup($logger);
 
 SKIP: {
- skip 'Ocropus not installed', 1 unless Gscan2pdf::Ocropus->setup;
-
- # Thumbnail dimensions
- our $widtht  = 100;
- our $heightt = 100;
+ skip 'Ocropus not installed', 1 unless Gscan2pdf::Ocropus->setup($logger);
 
  # Create test image
  system(
@@ -39,13 +34,14 @@ SKIP: {
 
  my $slist = Gscan2pdf::Document->new;
  $slist->get_file_info(
-  'test.png',
-  undef, undef, undef,
-  sub {
+  path              => 'test.png',
+  finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
-    $info, 1, 1, undef, undef, undef,
-    sub {
+    info              => $info,
+    first             => 1,
+    last              => 1,
+    finished_callback => sub {
      $slist->ocropus(
       $slist->{data}[0][2],
       'eng', undef, undef, undef,
@@ -67,4 +63,4 @@ SKIP: {
  unlink 'test.png';
 }
 
-Gscan2pdf->quit();
+Gscan2pdf::Document->quit();

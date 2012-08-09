@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 1;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use Gscan2pdf::Unpaper;
  use Gtk2 -init;    # Could just call init separately
@@ -27,14 +26,10 @@ SKIP: {
    unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
  my $unpaper = Gscan2pdf::Unpaper->new;
 
- # Thumbnail dimensions
- our $widtht  = 100;
- our $heightt = 100;
-
  use Log::Log4perl qw(:easy);
  Log::Log4perl->easy_init($WARN);
  our $logger = Log::Log4perl::get_logger;
- Gscan2pdf->setup($logger);
+ Gscan2pdf::Document->setup($logger);
 
  # Create test image
  system(
@@ -43,20 +38,24 @@ SKIP: {
 
  my $slist = Gscan2pdf::Document->new;
  $slist->get_file_info(
-  'test.pnm',
-  undef, undef, undef,
-  sub {
+  path              => 'test.pnm',
+  finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
-    $info, 1, 1, undef, undef, undef,
-    sub {
+    info              => $info,
+    first             => 1,
+    last              => 1,
+    finished_callback => sub {
      $slist->unpaper(
       $slist->{data}[0][2],
       $unpaper->get_cmdline,
       undef, undef, undef,
       sub {
-       $slist->save_image( 'test.png', [ $slist->{data}[0][2] ],
-        undef, undef, undef, sub { Gtk2->main_quit } );
+       $slist->save_image(
+        path              => 'test.png',
+        list_of_pages     => [ $slist->{data}[0][2] ],
+        finished_callback => sub { Gtk2->main_quit }
+       );
       }
      );
     }
@@ -68,5 +67,5 @@ SKIP: {
  is( system('identify test.png'), 0, 'valid PNG created' );
 
  unlink 'test.pnm', 'test.png';
- Gscan2pdf->quit();
+ Gscan2pdf::Document->quit();
 }
