@@ -9,6 +9,7 @@ use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
 use Gtk2;
 use Locale::gettext 1.05;    # For translations
 use version;
+use Gscan2pdf::Document;
 
 BEGIN {
  use Exporter ();
@@ -528,7 +529,8 @@ sub get_cmdline {
  }
  my $cmd = 'unpaper ' . join( ' ', @items ) . ' --overwrite ';
  $cmd .=
-   version->parse( $self->version ) > '0.3.0'
+   version->parse( $self->version ) > ## no critic (ProhibitMismatchedOperators)
+   '0.3.0'
    ? '%s %s %s'
    : '--input-file-sequence %s --output-file-sequence %s %s';
  return $cmd;
@@ -536,7 +538,7 @@ sub get_cmdline {
 
 sub version {
  unless ( defined $version ) {
-  $version = `unpaper --version`;
+  ( $version, undef ) = Gscan2pdf::Document::open_three('unpaper --version');
   chomp($version);
  }
  return $version;
