@@ -250,33 +250,34 @@ sub scan_pages {
     }
 
     # Stop the process unless everything OK and more scans required
-    unless (
-         not $_self->{abort_scan}
-     and ( $options{npages} == -1 or --$options{npages} )
-     and ( $_self->{status} == SANE_STATUS_GOOD
-      or $_self->{status} == SANE_STATUS_EOF )
-      )
-    {
-     _enqueue_request('cancel');
-     if (
-         $_self->{status} == SANE_STATUS_GOOD
-      or $_self->{status} == SANE_STATUS_EOF
-      or ( $_self->{status} == SANE_STATUS_NO_DOCS
-       and $options{npages} < 1
-       and $n2 > 1 )
+    unless  ## no critic (ProhibitNegativeExpressionsInUnlessAndUntilConditions)
+       (
+            not $_self->{abort_scan}
+        and ( $options{npages} == -1 or --$options{npages} )
+        and ( $_self->{status} == SANE_STATUS_GOOD
+         or $_self->{status} == SANE_STATUS_EOF )
        )
-     {
-      $options{finished_callback}->()
-        if ( defined $options{finished_callback} );
+       {
+        _enqueue_request('cancel');
+        if (
+            $_self->{status} == SANE_STATUS_GOOD
+         or $_self->{status} == SANE_STATUS_EOF
+         or ( $_self->{status} == SANE_STATUS_NO_DOCS
+          and $options{npages} < 1
+          and $n2 > 1 )
+          )
+        {
+         $options{finished_callback}->()
+           if ( defined $options{finished_callback} );
+        }
+        else {
+         $options{error_callback}->( Sane::strstatus( $_self->{status} ) )
+           if ( defined $options{error_callback} );
+        }
+        return Glib::SOURCE_REMOVE;
      }
-     else {
-      $options{error_callback}->( Sane::strstatus( $_self->{status} ) )
-        if ( defined $options{error_callback} );
-     }
-     return Glib::SOURCE_REMOVE;
-    }
 
-    $options{start} += $options{step};
+     $options{start} += $options{step};
     $n2++;
     $sentinel = _new_page( $options{dir}, $options{format}, $options{start} );
     return Glib::SOURCE_CONTINUE;
