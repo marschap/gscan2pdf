@@ -38,8 +38,11 @@ $slist->get_file_info(
    last              => 1,
    finished_callback => sub {
     $slist->{data}[0][2]{hocr} = 'The quick brown fox';
-    $slist->save_text( 'test.txt', [ $slist->{data}[0][2] ],
-     undef, undef, undef, sub { Gtk2->main_quit } );
+    $slist->save_text(
+     path              => 'test.txt',
+     list_of_pages     => [ $slist->{data}[0][2] ],
+     finished_callback => sub { Gtk2->main_quit }
+    );
    }
   );
  }
