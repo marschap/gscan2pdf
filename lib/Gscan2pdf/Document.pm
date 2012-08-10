@@ -914,16 +914,11 @@ sub save_image {
 sub save_text {
  my ( $self, %options ) = @_;
 
- # Get new process ID
- my $pid = ++$_PID;
- $self->{running_pids}{$pid} = 1;
-
  for my $i ( 0 .. $#{ $options{list_of_pages} } ) {
   $options{list_of_pages}->[$i] =
     $options{list_of_pages}->[$i]
     ->freeze;    # sharing File::Temp objects causes problems
  }
- my $started_flag;
  my $sentinel = _enqueue_request(
   'save-text',
   {
@@ -931,41 +926,14 @@ sub save_text {
    list_of_pages => $options{list_of_pages},
   }
  );
- $options{queued_callback}
-   ->( $_self->{process_name}, $jobs_completed, $jobs_total )
-   if ( $options{queued_callback} );
- _when_ready(
-  $sentinel,
-  undef,    # pending
-  sub {     # running
-   unless ( exists $self->{cancel_cb}{$pid} ) {
-    $started_flag = $options{started_callback}->(
-     1, $_self->{process_name},
-     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-    ) if ( $options{started_callback} and not $started_flag );
-    $options{running_callback}->(
-     1, $_self->{process_name},
-     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-    ) if ( $options{running_callback} );
-   }
-  },
-  sub {     # finished
-   unless ( exists $self->{cancel_cb}{$pid} ) {
-    $options{started_callback}->()
-      if ( $options{started_callback} and not $started_flag );
-    if ( $_self->{status} ) {
-     $options{error_callback}->();
-     return;
-    }
-    $options{finished_callback}->( $_self->{requests}->pending )
-      if $options{finished_callback};
-   }
-   $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
-   delete $self->{cancel_cb}{$pid};
-   delete $self->{running_pids}{$pid};
-  },
+ return $self->_monitor_process(
+  sentinel          => $sentinel,
+  queued_callback   => $options{queued_callback},
+  started_callback  => $options{started_callback},
+  running_callback  => $options{running_callback},
+  error_callback    => $options{error_callback},
+  finished_callback => $options{finished_callback},
  );
- return $pid;
 }
 
 sub analyse {
@@ -1994,6 +1962,81 @@ sub _enqueue_request {
  }
  $jobs_total++;
  return \$sentinel;
+}
+
+sub _monitor_process {
+ my ( $self, %options ) = @_;
+ my $started_flag;
+
+ # Get new process ID
+ my $pid = ++$_PID;
+ $self->{running_pids}{$pid} = 1;
+
+ $options{queued_callback}
+   ->( $_self->{process_name}, $jobs_completed, $jobs_total )
+   if ( $options{queued_callback} );
+ _when_ready(
+  $options{sentinel},
+  undef,    # pending
+  sub {     # running
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     if ( defined $options{pidfile} ) {
+      _cancel_process( slurp( $options{pidfile} ) );
+     }
+     else {
+      _cancel_process();
+     }
+     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+     # Flag that the callbacks have been done here
+     # so they are not repeated here or in finished
+     $self->{cancel_cb}{$pid} = 1;
+     delete $self->{running_pids}{$pid};
+    }
+    return;
+   }
+   $started_flag = $options{started_callback}->(
+    1, $_self->{process_name},
+    $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
+   ) if ( $options{started_callback} and not $started_flag );
+   $options{running_callback}->(
+    1, $_self->{process_name},
+    $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
+   ) if ( $options{running_callback} );
+  },
+  sub {    # finished
+   if ( exists $self->{cancel_cb}{$pid} ) {
+    if ( not defined( $self->{cancel_cb}{$pid} )
+     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+    {
+     _cancel_process();
+     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
+     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+    }
+    delete $self->{cancel_cb}{$pid};
+    delete $self->{running_pids}{$pid};
+    return;
+   }
+   $options{started_callback}->()
+     if ( $options{started_callback} and not $started_flag );
+   if ( $_self->{status} ) {
+    $options{error_callback}->();
+    return;
+   }
+   my $new_page;
+   $new_page = $self->update_page( $options{display_callback} )
+     if ( $options{update_slist} );
+   $options{finished_callback}->( $new_page, $_self->{requests}->pending )
+     if $options{finished_callback};
+   delete $self->{cancel_cb}{$pid};
+   delete $self->{running_pids}{$pid};
+  },
+ );
+ return $pid;
 }
 
 sub _cancel_process {
