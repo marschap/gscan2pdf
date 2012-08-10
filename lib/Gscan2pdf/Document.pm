@@ -584,50 +584,21 @@ sub save_text {
 }
 
 sub analyse {
- my ( $self, $page, $queued_callback, $started_callback, $running_callback,
-  $finished_callback, $error_callback, $cancelled_callback )
-   = @_;
+ my ( $self, %options ) = @_;
 
- # Get new process ID
- my $pid = ++$_PID;
- $self->{running_pids}{$pid} = 1;
+ my $sentinel =
+   _enqueue_request( 'analyse', { page => $options{page}->freeze } );
 
- my $started_flag;
- my $sentinel = _enqueue_request( 'analyse', { page => $page->freeze } );
- $queued_callback->( $_self->{process_name}, $jobs_completed, $jobs_total )
-   if ($queued_callback);
- _when_ready(
-  $sentinel,
-  undef,    # pending
-  sub {     # running
-   unless ( exists $self->{cancel_cb}{$pid} ) {
-    $started_flag = $started_callback->(
-     1, $_self->{process_name},
-     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-    ) if ( $started_callback and not $started_flag );
-    $running_callback->(
-     1, $_self->{process_name},
-     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-    ) if ($running_callback);
-   }
-  },
-  sub {     # finished
-   unless ( exists $self->{cancel_cb}{$pid} ) {
-    $started_callback->() if ( $started_callback and not $started_flag );
-    if ( $_self->{status} ) {
-     $error_callback->();
-     return;
-    }
-    $self->update_page();
-    $finished_callback->( $_self->{requests}->pending )
-      if $finished_callback;
-   }
-   $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
-   delete $self->{cancel_cb}{$pid};
-   delete $self->{running_pids}{$pid};
-  },
+ return $self->_monitor_process(
+  sentinel           => $sentinel,
+  update_slist       => TRUE,
+  queued_callback    => $options{queued_callback},
+  started_callback   => $options{started_callback},
+  running_callback   => $options{running_callback},
+  error_callback     => $options{error_callback},
+  cancelled_callback => $options{cancelled_callback},
+  finished_callback  => $options{finished_callback},
  );
- return $pid;
 }
 
 sub threshold {

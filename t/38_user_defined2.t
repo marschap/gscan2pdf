@@ -41,8 +41,10 @@ $slist->get_file_info(
      'convert %i -negate %i',
      undef, undef, undef,
      sub {
-      $slist->analyse( $slist->{data}[0][2],
-       undef, undef, undef, sub { Gtk2->main_quit } );
+      $slist->analyse(
+       page              => $slist->{data}[0][2],
+       finished_callback => sub { Gtk2->main_quit }
+      );
      }
     );
    }

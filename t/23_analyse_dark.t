@@ -27,8 +27,10 @@ $slist->get_file_info(
    first             => 1,
    last              => 1,
    finished_callback => sub {
-    $slist->analyse( $slist->{data}[0][2],
-     undef, undef, undef, sub { Gtk2->main_quit } );
+    $slist->analyse(
+     page              => $slist->{data}[0][2],
+     finished_callback => sub { Gtk2->main_quit }
+    );
    }
   );
  }
