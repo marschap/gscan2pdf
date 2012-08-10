@@ -553,11 +553,6 @@ sub save_djvu {
     $options{list_of_pages}->[$i]
     ->freeze;    # sharing File::Temp objects causes problems
  }
- my $started_flag;
-
- # Get new process ID
- my $pid = ++$_PID;
- $self->{running_pids}{$pid} = 1;
 
  # File in which to store the process ID so that it can be killed if necessary
  my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
@@ -570,62 +565,17 @@ sub save_djvu {
    pid           => "$pidfile"
   }
  );
- $options{queued_callback}
-   ->( $_self->{process_name}, $jobs_completed, $jobs_total )
-   if ( $options{queued_callback} );
- _when_ready(
-  $sentinel,
-  undef,    # pending
-  sub {     # running
-   if ( exists $self->{cancel_cb}{$pid} ) {
-    if ( not defined( $self->{cancel_cb}{$pid} )
-     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
-    {
-     _cancel_process( slurp($pidfile) );
-     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
-     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
 
-     # Flag that the callbacks have been done here
-     # so they are not repeated here or in finished
-     $self->{cancel_cb}{$pid} = 1;
-     delete $self->{running_pids}{$pid};
-    }
-    return;
-   }
-   $started_flag = $options{started_callback}->(
-    1, $_self->{process_name},
-    $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ( $options{started_callback} and not $started_flag );
-   $options{running_callback}->(
-    1, $_self->{process_name},
-    $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ( $options{running_callback} );
-  },
-  sub {    # finished
-   if ( exists $self->{cancel_cb}{$pid} ) {
-    if ( not defined( $self->{cancel_cb}{$pid} )
-     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
-    {
-     _cancel_process( slurp($pidfile) );
-     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
-     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
-    }
-    delete $self->{cancel_cb}{$pid};
-    delete $self->{running_pids}{$pid};
-    return;
-   }
-   $options{started_callback}->()
-     if ( $options{started_callback} and not $started_flag );
-   if ( $_self->{status} ) {
-    $options{error_callback}->() if ( $options{error_callback} );
-    return;
-   }
-   $options{finished_callback}->( $_self->{requests}->pending )
-     if $options{finished_callback};
-   delete $self->{running_pids}{$pid};
-  },
+ return $self->_monitor_process(
+  sentinel           => $sentinel,
+  pidfile            => $pidfile,
+  queued_callback    => $options{queued_callback},
+  started_callback   => $options{started_callback},
+  running_callback   => $options{running_callback},
+  error_callback     => $options{error_callback},
+  cancelled_callback => $options{cancelled_callback},
+  finished_callback  => $options{finished_callback},
  );
- return $pid;
 }
 
 sub save_tiff {
