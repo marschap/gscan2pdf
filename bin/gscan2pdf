@@ -7304,29 +7304,28 @@ sub threshold {
     $page++;
     my ( $signal, $pid );
     $pid = $slist->threshold(
-     $SETTING{'threshold tool'},
-     $slist->{data}[$i][2],
-     sub {    # queued
+     threshold       => $SETTING{'threshold tool'},
+     page            => $slist->{data}[$i][2],
+     queued_callback => sub {
       my ( $process, $completed, $total, $message, $progress ) = @_;
       return update_tpbar( 1, $process, $completed, $total, $message,
        $progress );
      },
-     sub {    # started
+     started_callback => sub {
       my ( $thread, $process, $completed, $total ) = @_;
       $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
       return TRUE if ( defined $signal );
      },
-     undef,    # running
-     sub {     # finished
+     finished_callback => sub {
       my ( $new_page, $pending ) = @_;
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
-     sub {     # error
+     error_callback => sub {
       show_message_dialog( $window, 'error', 'close',
        $Gscan2pdf::Document::_self->{message} );
      },
-     sub {     # display
+     display_callback => sub {
       my ($new_page) = @_;
       display_image($new_page);
      },

@@ -28,10 +28,9 @@ $slist->get_file_info(
    last              => 1,
    finished_callback => sub {
     $slist->threshold(
-     80,
-     $slist->{data}[0][2],
-     undef, undef, undef,
-     sub {
+     threshold         => 80,
+     page              => $slist->{data}[0][2],
+     finished_callback => sub {
       $slist->save_image(
        path              => 'test.png',
        list_of_pages     => [ $slist->{data}[0][2] ],

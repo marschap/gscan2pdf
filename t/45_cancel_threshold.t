@@ -38,10 +38,9 @@ $slist->get_file_info(
    last              => 1,
    finished_callback => sub {
     my $pid = $slist->threshold(
-     80,
-     $slist->{data}[0][2],
-     undef, undef, undef, undef, undef, undef,
-     sub {
+     threshold          => 80,
+     page               => $slist->{data}[0][2],
+     cancelled_callback => sub {
       is(
        -s 'test.jpg',
        -s "$slist->{data}[0][2]{filename}",
