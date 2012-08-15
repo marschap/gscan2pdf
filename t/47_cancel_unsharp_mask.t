@@ -38,10 +38,12 @@ $slist->get_file_info(
    last              => 1,
    finished_callback => sub {
     my $pid = $slist->unsharp(
-     $slist->{data}[0][2],
-     100,   5,     100, 0.5, undef, undef, undef,
-     undef, undef, undef,
-     sub {
+     page               => $slist->{data}[0][2],
+     radius             => 100,
+     sigma              => 5,
+     amount             => 100,
+     threshold          => 0.5,
+     cancelled_callback => sub {
       is(
        -s 'test.jpg',
        -s "$slist->{data}[0][2]{filename}",
