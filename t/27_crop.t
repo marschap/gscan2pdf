@@ -28,9 +28,12 @@ $slist->get_file_info(
    last              => 1,
    finished_callback => sub {
     $slist->crop(
-     $slist->{data}[0][2],
-     10, 10, 10, 10, undef, undef, undef,
-     sub {
+     page              => $slist->{data}[0][2],
+     x                 => 10,
+     y                 => 10,
+     w                 => 10,
+     h                 => 10,
+     finished_callback => sub {
       $slist->save_image(
        path              => 'test2.gif',
        list_of_pages     => [ $slist->{data}[0][2] ],

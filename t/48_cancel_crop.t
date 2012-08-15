@@ -38,10 +38,12 @@ $slist->get_file_info(
    last              => 1,
    finished_callback => sub {
     my $pid = $slist->crop(
-     $slist->{data}[0][2],
-     10,    10,    10, 10, undef, undef, undef,
-     undef, undef, undef,
-     sub {
+     page               => $slist->{data}[0][2],
+     x                  => 10,
+     y                  => 10,
+     w                  => 10,
+     h                  => 10,
+     cancelled_callback => sub {
       is(
        -s 'test.jpg',
        -s "$slist->{data}[0][2]{filename}",
