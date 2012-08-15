@@ -28,9 +28,8 @@ $slist->get_file_info(
    last              => 1,
    finished_callback => sub {
     $slist->to_png(
-     $slist->{data}[0][2],
-     undef, undef, undef,
-     sub {
+     page              => $slist->{data}[0][2],
+     finished_callback => sub {
       system("cp $slist->{data}[0][2]{filename} test.png");
       Gtk2->main_quit;
      }

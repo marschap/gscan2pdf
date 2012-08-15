@@ -39,9 +39,8 @@ $slist->get_file_info(
    finished_callback => sub {
     my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
     my $pid    = $slist->to_png(
-     $slist->{data}[0][2],
-     undef, undef, undef, undef, undef,
-     sub {
+     page               => $slist->{data}[0][2],
+     cancelled_callback => sub {
       is(
        $md5sum,
        `md5sum $slist->{data}[0][2]{filename} | cut -c -32`,

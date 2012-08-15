@@ -695,71 +695,21 @@ sub crop {
 }
 
 sub to_png {
- my ( $self, $page, $queued_callback, $started_callback, $running_callback,
-  $finished_callback, $error_callback, $cancelled_callback )
-   = @_;
+ my ( $self, %options ) = @_;
 
- # Get new process ID
- my $pid = ++$_PID;
- $self->{running_pids}{$pid} = 1;
+ my $sentinel =
+   _enqueue_request( 'to-png', { page => $options{page}->freeze } );
 
- my $started_flag;
- my $sentinel = _enqueue_request( 'to-png', { page => $page->freeze } );
- $queued_callback->( $_self->{process_name}, $jobs_completed, $jobs_total )
-   if ($queued_callback);
- _when_ready(
-  $sentinel,
-  undef,    # pending
-  sub {     # running
-   if ( exists $self->{cancel_cb}{$pid} ) {
-    if ( not defined( $self->{cancel_cb}{$pid} )
-     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
-    {
-     _cancel_process();
-     $cancelled_callback->() if ($cancelled_callback);
-     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
-
-     # Flag that the callbacks have been done here
-     # so they are not repeated here or in finished
-     $self->{cancel_cb}{$pid} = 1;
-     delete $self->{running_pids}{$pid};
-    }
-    return;
-   }
-   $started_flag = $started_callback->(
-    1, $_self->{process_name},
-    $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ( $started_callback and not $started_flag );
-   $running_callback->(
-    1, $_self->{process_name},
-    $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ($running_callback);
-  },
-  sub {    # finished
-   if ( exists $self->{cancel_cb}{$pid} ) {
-    if ( not defined( $self->{cancel_cb}{$pid} )
-     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
-    {
-     _cancel_process();
-     $cancelled_callback->() if ($cancelled_callback);
-     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
-    }
-    delete $self->{cancel_cb}{$pid};
-    delete $self->{running_pids}{$pid};
-    return;
-   }
-   $started_callback->() if ( $started_callback and not $started_flag );
-   if ( $_self->{status} ) {
-    $error_callback->();
-    return;
-   }
-   $self->update_page();
-   $finished_callback->( $_self->{requests}->pending )
-     if $finished_callback;
-   delete $self->{running_pids}{$pid};
-  },
+ return $self->_monitor_process(
+  sentinel           => $sentinel,
+  update_slist       => TRUE,
+  queued_callback    => $options{queued_callback},
+  started_callback   => $options{started_callback},
+  running_callback   => $options{running_callback},
+  error_callback     => $options{error_callback},
+  cancelled_callback => $options{cancelled_callback},
+  finished_callback  => $options{finished_callback},
  );
- return $pid;
 }
 
 sub tesseract {
