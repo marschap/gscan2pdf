@@ -759,6 +759,7 @@ sub ocropus {
  return $self->_monitor_process(
   sentinel           => $sentinel,
   update_slist       => TRUE,
+  pidfile            => $pidfile,
   queued_callback    => $options{queued_callback},
   started_callback   => $options{started_callback},
   running_callback   => $options{running_callback},
