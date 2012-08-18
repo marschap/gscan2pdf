@@ -44,9 +44,9 @@ SKIP: {
     last              => 1,
     finished_callback => sub {
      $slist->cuneiform(
-      $slist->{data}[0][2],
-      'eng', undef, undef, undef,
-      sub {
+      page              => $slist->{data}[0][2],
+      language          => 'eng',
+      finished_callback => sub {
        like(
         $slist->{data}[0][2]{hocr},
         qr/The quick brown fox/,
