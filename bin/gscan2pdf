@@ -7990,6 +7990,37 @@ sub ocr_page {
   }
   elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
    $pid = $slist->ocropus(
+    page            => $page,
+    language        => $SETTING{'ocr language'},
+    queued_callback => sub {
+     my ( $process, $completed, $total, $message, $progress ) = @_;
+     return update_tpbar( 1, $process, $completed, $total, $message,
+      $progress );
+    },
+    started_callback => sub {
+     my ( $thread, $process, $completed, $total ) = @_;
+     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+     return TRUE if ( defined $signal );
+    },
+    finished_callback => sub {
+     my ( $new_page, $pending ) = @_;
+     $thbox->hide_all unless $pending;
+     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+    },
+    error_callback => sub {
+     show_message_dialog( $window, 'error', 'close',
+      $Gscan2pdf::Document::_self->{message} );
+    },
+    display_callback => sub {
+     my ($new_page) = @_;
+     my @page = $slist->get_selected_indices;
+     create_canvas($new_page)
+       if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
+    }
+   );
+  }
+  else {    # cuneiform
+   $pid = $slist->cuneiform(
     $page,
     $SETTING{'ocr language'},
     sub {    # queued
@@ -7998,38 +8029,6 @@ sub ocr_page {
       $progress );
     },
     sub {    # started
-     my ( $thread, $process, $completed, $total ) = @_;
-     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
-     return TRUE if ( defined $signal );
-    },
-    undef,    # running
-    sub {     # finished
-     my ( $new_page, $pending ) = @_;
-     $thbox->hide_all unless $pending;
-     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
-    },
-    sub {     # error
-     show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::Document::_self->{message} );
-    },
-    sub {     # display
-     my ($new_page) = @_;
-     my @page = $slist->get_selected_indices;
-     create_canvas($new_page)
-       if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
-    }
-   );
-  }
-  else {      # cuneiform
-   $pid = $slist->cuneiform(
-    $page,
-    $SETTING{'ocr language'},
-    sub {     # queued
-     my ( $process, $completed, $total, $message, $progress ) = @_;
-     return update_tpbar( 1, $process, $completed, $total, $message,
-      $progress );
-    },
-    sub {     # started
      my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
