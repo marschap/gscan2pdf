@@ -7928,28 +7928,27 @@ sub ocr_page {
   my ( $signal, $pid );
   if ( $SETTING{'ocr engine'} eq 'gocr' ) {
    $pid = $slist->gocr(
-    $page,
-    sub {    # queued
+    page            => $page,
+    queued_callback => sub {
      my ( $process, $completed, $total, $message, $progress ) = @_;
      return update_tpbar( 1, $process, $completed, $total, $message,
       $progress );
     },
-    sub {    # started
+    started_callback => sub {
      my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
-    undef,    # running
-    sub {     # finished
+    finished_callback => sub {
      my ( $new_page, $pending ) = @_;
      $thbox->hide_all unless $pending;
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
-    sub {     # error
+    error_callback => sub {
      show_message_dialog( $window, 'error', 'close',
       $Gscan2pdf::Document::_self->{message} );
     },
-    sub {     # display
+    display_callback => sub {
      my ($new_page) = @_;
      my @page = $slist->get_selected_indices;
      create_canvas($new_page)

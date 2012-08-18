@@ -44,9 +44,8 @@ SKIP: {
     last              => 1,
     finished_callback => sub {
      $slist->gocr(
-      $slist->{data}[0][2],
-      undef, undef, undef,
-      sub {
+      page              => $slist->{data}[0][2],
+      finished_callback => sub {
        like(
         $slist->{data}[0][2]{hocr},
         qr/The quick brown fox/,

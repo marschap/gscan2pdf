@@ -44,9 +44,8 @@ SKIP: {
     last              => 1,
     finished_callback => sub {
      my $pid = $slist->gocr(
-      $slist->{data}[0][2],
-      undef, undef, undef, undef, undef, undef,
-      sub {
+      page               => $slist->{data}[0][2],
+      cancelled_callback => sub {
        is( $slist->{data}[0][2]{hocr}, undef, 'no OCR output' );
        $slist->save_image(
         path              => 'test.jpg',
