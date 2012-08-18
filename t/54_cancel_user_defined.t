@@ -39,10 +39,9 @@ $slist->get_file_info(
    finished_callback => sub {
     my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
     my $pid    = $slist->user_defined(
-     $slist->{data}[0][2],
-     'convert %i -negate %o',
-     undef, undef, undef, undef, undef, undef,
-     sub {
+     page               => $slist->{data}[0][2],
+     command            => 'convert %i -negate %o',
+     cancelled_callback => sub {
       is(
        $md5sum,
        `md5sum $slist->{data}[0][2]{filename} | cut -c -32`,

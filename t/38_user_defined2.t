@@ -37,10 +37,9 @@ $slist->get_file_info(
    last              => 1,
    finished_callback => sub {
     $slist->user_defined(
-     $slist->{data}[0][2],
-     'convert %i -negate %i',
-     undef, undef, undef,
-     sub {
+     page              => $slist->{data}[0][2],
+     command           => 'convert %i -negate %i',
+     finished_callback => sub {
       $slist->analyse(
        page              => $slist->{data}[0][2],
        finished_callback => sub { Gtk2->main_quit }
