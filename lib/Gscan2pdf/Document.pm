@@ -1186,7 +1186,7 @@ sub save_session {
   push @filenamelist, $self->{data}[$i][2]{filename}->filename;
   for my $key ( keys( %{ $self->{data}[$i][2] } ) ) {
    $session{ $self->{data}[$i][0] }{$key} = $self->{data}[$i][2]{$key}
-     unless ( $key eq 'filename' or $key eq 'logger' );
+     unless ( $key eq 'filename' );
   }
  }
  push @filenamelist, File::Spec->catfile( $dir, 'session' );
