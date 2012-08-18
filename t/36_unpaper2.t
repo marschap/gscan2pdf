@@ -53,10 +53,9 @@ SKIP: {
     last              => 1,
     finished_callback => sub {
      $slist->unpaper(
-      $slist->{data}[0][2],
-      $unpaper->get_cmdline,
-      undef, undef, undef,
-      sub {
+      page              => $slist->{data}[0][2],
+      options           => $unpaper->get_cmdline,
+      finished_callback => sub {
        system(
 "cp $slist->{data}[0][2]{filename} lh.pnm;cp $slist->{data}[1][2]{filename} rh.pnm;"
        );

@@ -47,10 +47,9 @@ SKIP: {
     last              => 1,
     finished_callback => sub {
      $slist->unpaper(
-      $slist->{data}[0][2],
-      $unpaper->get_cmdline,
-      undef, undef, undef,
-      sub {
+      page              => $slist->{data}[0][2],
+      options           => $unpaper->get_cmdline,
+      finished_callback => sub {
        $slist->save_image(
         path              => 'test.png',
         list_of_pages     => [ $slist->{data}[0][2] ],

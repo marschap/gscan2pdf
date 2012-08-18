@@ -53,10 +53,9 @@ SKIP: {
     finished_callback => sub {
      my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
      my $pid    = $slist->unpaper(
-      $slist->{data}[0][2],
-      $unpaper->get_cmdline,
-      undef, undef, undef, undef, undef, undef,
-      sub {
+      page               => $slist->{data}[0][2],
+      options            => $unpaper->get_cmdline,
+      cancelled_callback => sub {
        is(
         $md5sum,
         `md5sum $slist->{data}[0][2]{filename} | cut -c -32`,
