@@ -1260,8 +1260,14 @@ sub _thread_main {
   }
 
   elsif ( $request->{action} eq 'unsharp' ) {
-   _thread_unsharp( $self, $request->{page}, $request->{radius},
-    $request->{sigma}, $request->{amount}, $request->{threshold} );
+   _thread_unsharp(
+    $self,
+    page      => $request->{page},
+    radius    => $request->{radius},
+    sigma     => $request->{sigma},
+    amount    => $request->{amount},
+    threshold => $request->{threshold}
+   );
   }
 
   elsif ( $request->{action} eq 'user-defined' ) {
@@ -2146,8 +2152,8 @@ sub _thread_negate {
 }
 
 sub _thread_unsharp {
- my ( $self, $page, $radius, $sigma, $amount, $threshold ) = @_;
- my $filename = $page->{filename};
+ my ( $self, %options ) = @_;
+ my $filename = $options{page}->{filename};
 
  my $image = Image::Magick->new;
  my $x     = $image->Read($filename);
@@ -2156,10 +2162,10 @@ sub _thread_unsharp {
 
  # Unsharp the image
  $image->UnsharpMask(
-  radius    => $radius,
-  sigma     => $sigma,
-  amount    => $amount,
-  threshold => $threshold,
+  radius    => $options{radius},
+  sigma     => $options{sigma},
+  amount    => $options{amount},
+  threshold => $options{threshold},
  );
  return if $_self->{cancel};
 
@@ -2177,13 +2183,13 @@ sub _thread_unsharp {
  return if $_self->{cancel};
  $logger->warn($x) if "$x";
  $logger->info(
-"Wrote $filename with unsharp mask: r=$radius, s=$sigma, a=$amount, t=$threshold"
+"Wrote $filename with unsharp mask: r=$options{radius}, s=$options{sigma}, a=$options{amount}, t=$options{threshold}"
  );
 
- my $new = $page->freeze;
+ my $new = $options{page}->freeze;
  $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
  $new->{dirty_time} = timestamp();            #flag as dirty
- my %data = ( old => $page, new => $new );
+ my %data = ( old => $options{page}, new => $new );
  $self->{page_queue}->enqueue( \%data );
  return;
 }
