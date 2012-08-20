@@ -1228,8 +1228,14 @@ sub _thread_main {
   }
 
   elsif ( $request->{action} eq 'save-pdf' ) {
-   _thread_save_pdf( $self, $request->{path}, $request->{list_of_pages},
-    $request->{metadata}, $request->{options}, $request->{pid} );
+   _thread_save_pdf(
+    $self,
+    path          => $request->{path},
+    list_of_pages => $request->{list_of_pages},
+    metadata      => $request->{metadata},
+    options       => $request->{options},
+    pidfile       => $request->{pid}
+   );
   }
 
   elsif ( $request->{action} eq 'save-text' ) {
@@ -1497,25 +1503,25 @@ sub _thread_import_file {
 }
 
 sub _thread_save_pdf {
- my ( $self, $path, $list_of_pages, $metadata, $options, $pidfile ) = @_;
+ my ( $self, %options ) = @_;
 
  my $page = 0;
  my $ttfcache;
 
  # Create PDF with PDF::API2
  $self->{message} = $d->get('Setting up PDF');
- my $pdf = PDF::API2->new( -file => $path );
- $pdf->info(%$metadata) if defined($metadata);
+ my $pdf = PDF::API2->new( -file => $options{path} );
+ $pdf->info( %{ $options{metadata} } ) if defined( $options{metadata} );
 
  my $corecache = $pdf->corefont('Times-Roman');
- $ttfcache = $pdf->ttfont( $options->{font}, -unicodemap => 1 )
-   if ( defined $options->{font} );
+ $ttfcache = $pdf->ttfont( $options{options}->{font}, -unicodemap => 1 )
+   if ( defined $options{options}->{font} );
 
- foreach my $pagedata ( @{$list_of_pages} ) {
+ foreach my $pagedata ( @{ $options{list_of_pages} } ) {
   ++$page;
-  $self->{progress} = $page / ( $#{$list_of_pages} + 2 );
-  $self->{message} =
-    sprintf( $d->get("Saving page %i of %i"), $page, $#{$list_of_pages} + 1 );
+  $self->{progress} = $page / ( $#{ $options{list_of_pages} } + 2 );
+  $self->{message} = sprintf( $d->get("Saving page %i of %i"),
+   $page, $#{ $options{list_of_pages} } + 1 );
 
   my $filename = $pagedata->{filename};
   my $image    = Image::Magick->new;
@@ -1537,8 +1543,8 @@ sub _thread_save_pdf {
   my $depth;
   my $compression;
   my $type;
-  if ( not defined( $options->{compression} )
-   or $options->{compression} eq 'auto' )
+  if ( not defined( $options{options}->{compression} )
+   or $options{options}->{compression} eq 'auto' )
   {
    $depth = $image->Get('depth');
    $logger->info("Depth of $filename is $depth");
@@ -1558,7 +1564,7 @@ sub _thread_save_pdf {
    $logger->info("Selecting $compression compression");
   }
   else {
-   $compression = $options->{compression};
+   $compression = $options{options}->{compression};
   }
 
   # Convert file if necessary
@@ -1567,7 +1573,7 @@ sub _thread_save_pdf {
    $format = $1;
   }
   if (( $compression ne 'none' and $compression ne $format )
-   or $options->{downsample}
+   or $options{options}->{downsample}
    or $compression eq 'jpg' )
   {
    if ( $compression !~ /(?:jpg|png)/x and $format ne 'tif' ) {
@@ -1585,8 +1591,8 @@ sub _thread_save_pdf {
    }
 
    $depth = $image->Get('depth') if ( not defined($depth) );
-   if ( $options->{downsample} ) {
-    $output_resolution = $options->{'downsample dpi'};
+   if ( $options{options}->{downsample} ) {
+    $output_resolution = $options{options}->{'downsample dpi'};
     my $w_pixels = $w * $output_resolution;
     my $h_pixels = $h * $output_resolution;
 
@@ -1594,13 +1600,13 @@ sub _thread_save_pdf {
     $x = $image->Resize( width => $w_pixels,, height => $h_pixels );
     $logger->warn($x) if "$x";
    }
-   $x = $image->Set( quality => $options->{quality} )
-     if ( defined( $options->{quality} ) and $compression eq 'jpg' );
+   $x = $image->Set( quality => $options{options}->{quality} )
+     if ( defined( $options{options}->{quality} ) and $compression eq 'jpg' );
    $logger->warn($x) if "$x";
 
    if (( $compression !~ /(?:jpg|png)/x and $format ne 'tif' )
     or ( $compression =~ /(?:jpg|png)/x )
-    or $options->{downsample} )
+    or $options{options}->{downsample} )
    {
 
 # depth required because resize otherwise increases depth to maintain information
@@ -1618,7 +1624,7 @@ sub _thread_save_pdf {
     my $error     = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.txt' );
     my $cmd = "tiffcp -c $compression $filename $filename2";
     $logger->info($cmd);
-    my $status = system("echo $$ > $pidfile;$cmd 2>$error");
+    my $status = system("echo $$ > $options{pidfile};$cmd 2>$error");
     return if $_self->{cancel};
     if ($status) {
      my $output = slurp($error);
@@ -1643,13 +1649,13 @@ sub _thread_save_pdf {
   # Add OCR as text behind the scan
   if ( defined( $pagedata->{hocr} ) ) {
    $logger->info('Embedding OCR output behind image');
-   $logger->info("Using $options->{font} for non-ASCII text")
-     if ( defined $options->{font} );
+   $logger->info("Using $options{options}->{font} for non-ASCII text")
+     if ( defined $options{options}->{font} );
    my $font;
    my $text = $page->text;
    for my $box ( $pagedata->boxes ) {
     my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
-    if ( $txt =~ /([[:^ascii:]])/x and defined( $options->{font} ) ) {
+    if ( $txt =~ /([[:^ascii:]])/x and defined( $options{options}->{font} ) ) {
      $logger->debug("non-ascii text is '$1' in '$txt'") if ( defined $1 );
      $font = $ttfcache;
     }
