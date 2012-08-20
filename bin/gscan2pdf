@@ -1881,6 +1881,7 @@ sub open_dialog {
  );
  $file_chooser->set_select_multiple(TRUE);
  $file_chooser->set_default_response('ok');
+ $file_chooser->set_current_folder( $SETTING{'cwd'} );
  add_filter( $file_chooser, $d->get('Image files'),
   'jpg', 'png', 'pnm', 'gif', 'tif', 'tiff', 'pdf', 'djvu', 'ps', 'gs2p' );
 
@@ -2389,6 +2390,7 @@ sub save_PDF {
 
  $file_chooser->set_current_name($filename);
  $file_chooser->set_default_response('ok');
+ $file_chooser->set_current_folder( $SETTING{'cwd'} );
  add_filter( $file_chooser, $d->get('PDF files'), 'pdf' );
  $file_chooser->set_do_overwrite_confirmation(TRUE);
  $file_chooser->signal_connect(
@@ -2806,6 +2808,7 @@ sub save_dialog {
      'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
+    $file_chooser->set_current_folder( $SETTING{'cwd'} );
     add_filter( $file_chooser, $d->get('Image files'), $SETTING{'image type'} );
     $file_chooser->set_do_overwrite_confirmation(TRUE);
     $file_chooser->signal_connect(
@@ -2861,6 +2864,7 @@ sub save_dialog {
      'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
+    $file_chooser->set_current_folder( $SETTING{'cwd'} );
     $file_chooser->set_do_overwrite_confirmation(TRUE);
     add_filter( $file_chooser, $d->get('Text files'), 'txt' );
     $file_chooser->signal_connect(
@@ -2959,6 +2963,7 @@ sub save_dialog {
      'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
+    $file_chooser->set_current_folder( $SETTING{'cwd'} );
     add_filter( $file_chooser, $d->get('Postscript files'), 'ps' );
     $file_chooser->set_do_overwrite_confirmation(TRUE);
     $file_chooser->signal_connect(
@@ -3016,6 +3021,7 @@ sub save_dialog {
      'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
+    $file_chooser->set_current_folder( $SETTING{'cwd'} );
     add_filter( $file_chooser, $d->get('gscan2pdf session files'), 'gs2p' );
     $file_chooser->set_do_overwrite_confirmation(TRUE);
     $file_chooser->signal_connect(
@@ -3126,6 +3132,7 @@ sub save_image {
   'gtk-save'   => 'ok'
  );
  $file_chooser->set_default_response('ok');
+ $file_chooser->set_current_folder( $SETTING{'cwd'} );
  add_filter( $file_chooser, $d->get('Image files'),
   'jpg', 'png', 'pnm', 'gif', 'tif', 'tiff', 'pdf', 'djvu', 'ps' );
 
@@ -3270,6 +3277,7 @@ sub save_djvu {
   'gtk-save'   => 'ok'
  );
  $file_chooser->set_default_response('ok');
+ $file_chooser->set_current_folder( $SETTING{'cwd'} );
  add_filter( $file_chooser, $d->get('DjVu files'), 'djvu' );
  $file_chooser->set_do_overwrite_confirmation(TRUE);
  $file_chooser->signal_connect(
