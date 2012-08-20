@@ -1175,8 +1175,12 @@ sub _thread_main {
 
   elsif ( $request->{action} eq 'crop' ) {
    _thread_crop(
-    $self,         $request->{page}, $request->{x},
-    $request->{y}, $request->{w},    $request->{h}
+    $self,
+    page => $request->{page},
+    x    => $request->{x},
+    y    => $request->{y},
+    w    => $request->{w},
+    h    => $request->{h}
    );
   }
 
@@ -2208,8 +2212,8 @@ sub _thread_unsharp {
 }
 
 sub _thread_crop {
- my ( $self, $page, $x, $y, $w, $h ) = @_;
- my $filename = $page->{filename};
+ my ( $self, %options ) = @_;
+ my $filename = $options{page}->{filename};
 
  my $image = Image::Magick->new;
  my $e     = $image->Read($filename);
@@ -2217,7 +2221,12 @@ sub _thread_crop {
  $logger->warn($e) if "$e";
 
  # Crop the image
- $e = $image->Crop( width => $w, height => $h, x => $x, y => $y );
+ $e = $image->Crop(
+  width  => $options{w},
+  height => $options{h},
+  x      => $options{x},
+  y      => $options{y}
+ );
  $image->Set( page => '0x0+0+0' );
  return if $_self->{cancel};
  $logger->warn($e) if "$e";
@@ -2232,15 +2241,17 @@ sub _thread_crop {
   SUFFIX => '.' . $suffix,
   UNLINK => FALSE
  );
- $logger->info("Cropping $w x $h + $x + $y to $filename");
+ $logger->info(
+  "Cropping $options{w} x $options{h} + $options{x} + $options{y} to $filename"
+ );
  $e = $image->Write( filename => $filename );
  return if $_self->{cancel};
  $logger->warn($e) if "$e";
 
- my $new = $page->freeze;
+ my $new = $options{page}->freeze;
  $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
  $new->{dirty_time} = timestamp();            #flag as dirty
- my %data = ( old => $page, new => $new );
+ my %data = ( old => $options{page}, new => $new );
  $self->{page_queue}->enqueue( \%data );
  return;
 }
