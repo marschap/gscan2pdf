@@ -1243,8 +1243,14 @@ sub _thread_main {
   }
 
   elsif ( $request->{action} eq 'save-tiff' ) {
-   _thread_save_tiff( $self, $request->{path}, $request->{list_of_pages},
-    $request->{options}, $request->{ps}, $request->{pid} );
+   _thread_save_tiff(
+    $self,
+    path          => $request->{path},
+    list_of_pages => $request->{list_of_pages},
+    options       => $request->{options},
+    ps            => $request->{ps},
+    pidfile       => $request->{pid}
+   );
   }
 
   elsif ( $request->{action} eq 'tesseract' ) {
@@ -1890,21 +1896,22 @@ sub _thread_save_djvu {
 }
 
 sub _thread_save_tiff {
- my ( $self, $path, $list_of_pages, $options, $ps, $pidfile ) = @_;
+ my ( $self, %options ) = @_;
 
  my $page = 0;
  my @filelist;
 
- foreach my $pagedata ( @{$list_of_pages} ) {
+ foreach my $pagedata ( @{ $options{list_of_pages} } ) {
   ++$page;
-  $self->{progress} = ( $page - 1 ) / ( $#{$list_of_pages} + 2 );
+  $self->{progress} = ( $page - 1 ) / ( $#{ $options{list_of_pages} } + 2 );
   $self->{message} = sprintf( $d->get("Converting image %i of %i to TIFF"),
-   $page, $#{$list_of_pages} + 1 );
+   $page, $#{ $options{list_of_pages} } + 1 );
 
   my $filename = $pagedata->{filename};
-  if ( $filename !~ /\.tif/x
-   or
-   ( defined( $options->{compression} ) and $options->{compression} eq 'jpeg' )
+  if (
+   $filename !~ /\.tif/x
+   or ( defined( $options{options}->{compression} )
+    and $options{options}->{compression} eq 'jpeg' )
     )
   {
    my $tif = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif' );
@@ -1913,13 +1920,13 @@ sub _thread_save_tiff {
    # Convert to tiff
    my $depth = '';
    $depth = '-depth 8'
-     if ( defined( $options->{compression} )
-    and $options->{compression} eq 'jpeg' );
+     if ( defined( $options{options}->{compression} )
+    and $options{options}->{compression} eq 'jpeg' );
 
    my $cmd =
      "convert -units PixelsPerInch -density $resolution $depth $filename $tif";
    $logger->info($cmd);
-   my $status = system("echo $$ > $pidfile;$cmd");
+   my $status = system("echo $$ > $options{pidfile};$cmd");
    return if $_self->{cancel};
 
    if ($status) {
@@ -1933,9 +1940,9 @@ sub _thread_save_tiff {
  }
 
  my $compression = "";
- if ( defined $options->{compression} ) {
-  $compression = "-c $options->{compression}";
-  $compression .= ":$options->{quality}" if ( $compression eq 'jpeg' );
+ if ( defined $options{options}->{compression} ) {
+  $compression = "-c $options{options}->{compression}";
+  $compression .= ":$options{options}->{quality}" if ( $compression eq 'jpeg' );
  }
 
  # Create the tiff
@@ -1943,12 +1950,12 @@ sub _thread_save_tiff {
  $self->{message}  = $d->get('Concatenating TIFFs');
  my $rows = '';
  $rows = '-r 16'
-   if ( defined( $options->{compression} )
-  and $options->{compression} eq 'jpeg' );
- my $cmd = "tiffcp $rows $compression @filelist '$path'";
+   if ( defined( $options{options}->{compression} )
+  and $options{options}->{compression} eq 'jpeg' );
+ my $cmd = "tiffcp $rows $compression @filelist '$options{path}'";
  $logger->info($cmd);
  my $out = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.stdout' );
- my $status = system("echo $$ > $pidfile;$cmd 2>$out");
+ my $status = system("echo $$ > $options{pidfile};$cmd 2>$out");
  return if $_self->{cancel};
 
  if ($status) {
@@ -1958,13 +1965,13 @@ sub _thread_save_tiff {
   $self->{message} = sprintf( $d->get("Error compressing image: %s"), $output );
   return;
  }
- if ( defined $ps ) {
+ if ( defined $options{ps} ) {
   $self->{message} = $d->get('Converting to PS');
 
   # Note: -a option causes tiff2ps to generate multiple output
   # pages, one for each page in the input TIFF file.  Without it, it
   # only generates output for the first page.
-  my $cmd = "tiff2ps -a $path > '$ps'";
+  my $cmd = "tiff2ps -a $options{path} > '$options{ps}'";
   $logger->info($cmd);
   my $output = `$cmd`;
  }
