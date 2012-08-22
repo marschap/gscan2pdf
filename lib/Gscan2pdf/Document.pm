@@ -225,34 +225,46 @@ sub get_resolution {
 
 sub pages_possible {
  my ( $self, $start, $step ) = @_;
- my $n = 1;
+ my $n = 0;
  my $i = $#{ $self->{data} };
- my $exists;
- while ( not defined($exists) ) {
-  if ( $start + $n * $step < 1 ) {
-   $exists = TRUE;
+ while (TRUE) {
+
+  # Settings take us into negative page range
+  if ( $start + $n * $step < 1 ) {    ## no critic (ProhibitCascadingIfElse)
+   return $n;
   }
+
+  # Empty document and negative step
   elsif ( $i < 0 and $step < 0 ) {
+   return -$start / $step;
+  }
+
+  # Checked beyond end of document, allow infinite pages
+  elsif ( $i > $#{ $self->{data} } or $i < 0 ) {
+   return -1;
+  }
+
+  # Found existing page
+  elsif ( $self->{data}[$i][0] == $start + $n * $step ) {
+   return $n;
+  }
+
+  # Current page doesn't exist, check for at least one more
+  elsif ( $n == 0 ) {
    ++$n;
   }
-  elsif ( $i > $#{ $self->{data} } or $i < 0 ) {
-   $exists = FALSE;
-   $n      = -1;
-  }
-  elsif ( $self->{data}[$i][0] == $start + $n * $step ) {
-   $exists = TRUE;
-  }
-  elsif ( $self->{data}[$i][0] > $start + $n * $step and $step < 0 ) {
+
+  # In the middle of the document, scan back to find page nearer start
+  elsif ( $self->{data}[$i][0] > $start + $n * $step and $i > 0 ) {
    --$i;
   }
-  elsif ( $self->{data}[$i][0] < $start + $n * $step and $step > 0 ) {
-   ++$i;
-  }
+
+  # Try one more page
   else {
    ++$n;
   }
  }
- return $n;
+ return;
 }
 
 # Add a new page to the document
