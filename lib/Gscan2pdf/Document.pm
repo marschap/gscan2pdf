@@ -983,7 +983,7 @@ sub slurp {
   $fh = $file;
  }
  else {
-  open $fh, "<:utf8", $file or die "Error: cannot open $file\n";
+  open $fh, '<:encoding(UTF8)', $file or die "Error: cannot open $file\n";
  }
  my $text = <$fh>;
  close $fh;
