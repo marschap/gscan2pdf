@@ -126,6 +126,11 @@ t/02_Scanner_Options_libsane-perl.t
 t/02_Scanner_Options_officejet_5500.t
 t/02_Scanner_Options_snapscan.t
 t/02_Scanner_Options_umax.t
+t/03_Page.t
+t/04_Unpaper.t
+t/05_Dialog.t
+t/061_Scanner_Dialog.t
+t/062_Scanner_Dialog.t
 t/111_save_pdf.t
 t/112_save_pdf_with_text.t
 t/113_save_pdf_with_hocr.t
@@ -184,11 +189,6 @@ t/52_cancel_cuneiform.t
 t/53_cancel_unpaper.t
 t/54_cancel_user_defined.t
 t/55_cancel_gocr.t
-t/56_Gscan2pdf_Page.t
-t/57_Gscan2pdf_Unpaper.t
-t/58_Gscan2pdf_Dialog.t
-t/59_Gscan2pdf_Scanner_Dialog.t
-t/60_Gscan2pdf_Scanner_Dialog.t
 t/90_MANIFEST.t
 t/91_critic.t
 t/99_pod.t
