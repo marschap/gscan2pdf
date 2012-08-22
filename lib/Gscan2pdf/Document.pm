@@ -1733,23 +1733,25 @@ sub _thread_save_pdf {
   my $gfx = $page->gfx;
   my $imgobj;
   my $msg;
-  if ( $format eq 'png' ) {
-   try { $imgobj = $pdf->image_png($filename) } catch { $msg = $_ };
-  }
-  elsif ( $format eq 'jpg' ) {
-   try { $imgobj = $pdf->image_jpeg($filename) } catch { $msg = $_ };
-  }
-  elsif ( $format eq 'pnm' ) {
-   try { $imgobj = $pdf->image_pnm($filename) } catch { $msg = $_ };
-  }
-  elsif ( $format eq 'gif' ) {
-   try { $imgobj = $pdf->image_gif($filename) } catch { $msg = $_ };
-  }
-  elsif ( $format eq 'tif' ) {
-   try { $imgobj = $pdf->image_tiff($filename) } catch { $msg = $_ };
-  }
-  else {
-   $msg = "Unknown format $format file $filename";
+  given ($format) {
+   when ('png') {
+    try { $imgobj = $pdf->image_png($filename) } catch { $msg = $_ };
+   }
+   when ('jpg') {
+    try { $imgobj = $pdf->image_jpeg($filename) } catch { $msg = $_ };
+   }
+   when ('pnm') {
+    try { $imgobj = $pdf->image_pnm($filename) } catch { $msg = $_ };
+   }
+   when ('gif') {
+    try { $imgobj = $pdf->image_gif($filename) } catch { $msg = $_ };
+   }
+   when ('tif') {
+    try { $imgobj = $pdf->image_tiff($filename) } catch { $msg = $_ };
+   }
+   default {
+    $msg = "Unknown format $format file $filename";
+   }
   }
   return if $_self->{cancel};
   if ($msg) {
