@@ -24,6 +24,7 @@ use Proc::Killfam;
 use Locale::gettext 1.05;    # For translations
 use IPC::Open3 'open3';
 use Symbol;                  # for gensym
+use Try::Tiny;
 use Readonly;
 Readonly our $POINTS_PER_INCH => 72;
 
@@ -335,26 +336,14 @@ sub get_pixbuf {
  my ( $filename, $height, $width ) = @_;
 
  my $pixbuf;
- eval {
+ try {
   $pixbuf =
     Gtk2::Gdk::Pixbuf->new_from_file_at_scale( $filename, $width, $height,
    TRUE );
- };
-
- # if (Glib::Error::matches ($@, 'Mup::Thing::Error', 'flop')) {
- #  recover_from_a_flop ();
- # }
- if ($@) {
-  $logger->warn( 'Warning: ' . "$@" );
-  eval {
-   $pixbuf =
-     Gtk2::Gdk::Pixbuf->new_from_file_at_scale( $filename, $width, $height,
-    TRUE );
-  };
-  $logger->info("Got $filename on second attempt")
-    unless ($@);
  }
-
+ catch {
+  $logger->warn("Caught error getting pixbuf: $_");
+ };
  return $pixbuf;
 }
 
@@ -1722,24 +1711,19 @@ sub _thread_save_pdf {
   my $imgobj;
   my $msg;
   if ( $format eq 'png' ) {
-   eval { $imgobj = $pdf->image_png($filename) };
-   $msg = "$@";
+   try { $imgobj = $pdf->image_png($filename) } catch { $msg = $_ };
   }
   elsif ( $format eq 'jpg' ) {
-   eval { $imgobj = $pdf->image_jpeg($filename) };
-   $msg = "$@";
+   try { $imgobj = $pdf->image_jpeg($filename) } catch { $msg = $_ };
   }
   elsif ( $format eq 'pnm' ) {
-   eval { $imgobj = $pdf->image_pnm($filename) };
-   $msg = "$@";
+   try { $imgobj = $pdf->image_pnm($filename) } catch { $msg = $_ };
   }
   elsif ( $format eq 'gif' ) {
-   eval { $imgobj = $pdf->image_gif($filename) };
-   $msg = "$@";
+   try { $imgobj = $pdf->image_gif($filename) } catch { $msg = $_ };
   }
   elsif ( $format eq 'tif' ) {
-   eval { $imgobj = $pdf->image_tiff($filename) };
-   $msg = "$@";
+   try { $imgobj = $pdf->image_tiff($filename) } catch { $msg = $_ };
   }
   else {
    $msg = "Unknown format $format file $filename";
@@ -1753,19 +1737,19 @@ sub _thread_save_pdf {
    return;
   }
   else {
-   eval {
+   try {
     $gfx->image( $imgobj, 0, 0, $w * $POINTS_PER_INCH, $h * $POINTS_PER_INCH );
-   };
-   if ($@) {
-    $logger->warn($@);
+   }
+   catch {
+    $logger->warn($_);
     $self->{status} = 1;
     $self->{message} =
       sprintf( $d->get("Error embedding file image in %s format to PDF: %s"),
-     $format, $@ );
+     $format, $_ );
    }
-   else {
-    $logger->info("Adding $filename at $output_resolution PPI");
-   }
+   finally {
+    $logger->info("Adding $filename at $output_resolution PPI") unless (@_);
+   };
   }
   return if $_self->{cancel};
  }
