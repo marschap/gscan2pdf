@@ -8,7 +8,6 @@ use threads;
 use threads::shared;
 use Thread::Queue;
 
-use Gtk2::Ex::Simple::List;
 use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Page;
 use Glib 1.210 qw(TRUE FALSE)
@@ -31,9 +30,9 @@ Readonly our $POINTS_PER_INCH => 72;
 
 BEGIN {
  use Exporter ();
- our ( $VERSION, @ISA, @EXPORT_OK, %EXPORT_TAGS );
+ our ( $VERSION, @EXPORT_OK, %EXPORT_TAGS );
 
- @ISA = qw(Exporter Gtk2::Ex::Simple::List);
+ use base qw(Exporter Gtk2::Ex::Simple::List);
  %EXPORT_TAGS = ();          # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,
