@@ -2,6 +2,7 @@ package Gscan2pdf::Document;
 
 use strict;
 use warnings;
+use feature "switch";
 
 use threads;
 use threads::shared;
@@ -1166,135 +1167,137 @@ sub _thread_main {
   # Signal the sentinel that the request was started.
   ${ $request->{sentinel} }++;
 
-  if ( $request->{action} eq 'analyse' ) {
-   _thread_analyse( $self, $request->{page} );
-  }
+  given ( $request->{action} ) {
+   when ('analyse') {
+    _thread_analyse( $self, $request->{page} );
+   }
 
-  elsif ( $request->{action} eq 'cancel' ) {
-   _thread_cancel($self);
-  }
+   when ('cancel') {
+    _thread_cancel($self);
+   }
 
-  elsif ( $request->{action} eq 'crop' ) {
-   _thread_crop(
-    $self,
-    page => $request->{page},
-    x    => $request->{x},
-    y    => $request->{y},
-    w    => $request->{w},
-    h    => $request->{h}
-   );
-  }
+   when ('crop') {
+    _thread_crop(
+     $self,
+     page => $request->{page},
+     x    => $request->{x},
+     y    => $request->{y},
+     w    => $request->{w},
+     h    => $request->{h}
+    );
+   }
 
-  elsif ( $request->{action} eq 'cuneiform' ) {
-   _thread_cuneiform( $self, $request->{page}, $request->{language},
-    $request->{pid} );
-  }
+   when ('cuneiform') {
+    _thread_cuneiform( $self, $request->{page}, $request->{language},
+     $request->{pid} );
+   }
 
-  elsif ( $request->{action} eq 'get-file-info' ) {
-   _thread_get_file_info( $self, $request->{path}, $request->{pid} );
-  }
+   when ('get-file-info') {
+    _thread_get_file_info( $self, $request->{path}, $request->{pid} );
+   }
 
-  elsif ( $request->{action} eq 'gocr' ) {
-   _thread_gocr( $self, $request->{page}, $request->{pid} );
-  }
+   when ('gocr') {
+    _thread_gocr( $self, $request->{page}, $request->{pid} );
+   }
 
-  elsif ( $request->{action} eq 'import-file' ) {
-   _thread_import_file(
-    $self,            $request->{info}, $request->{first},
-    $request->{last}, $request->{pid}
-   );
-  }
+   when ('import-file') {
+    _thread_import_file(
+     $self,            $request->{info}, $request->{first},
+     $request->{last}, $request->{pid}
+    );
+   }
 
-  elsif ( $request->{action} eq 'negate' ) {
-   _thread_negate( $self, $request->{page} );
-  }
+   when ('negate') {
+    _thread_negate( $self, $request->{page} );
+   }
 
-  elsif ( $request->{action} eq 'ocropus' ) {
-   _thread_ocropus( $self, $request->{page}, $request->{language},
-    $request->{pid} );
-  }
+   when ('ocropus') {
+    _thread_ocropus( $self, $request->{page}, $request->{language},
+     $request->{pid} );
+   }
 
-  elsif ( $request->{action} eq 'quit' ) {
-   last;
-  }
+   when ('quit') {
+    last;
+   }
 
-  elsif ( $request->{action} eq 'rotate' ) {
-   _thread_rotate( $self, $request->{angle}, $request->{page} );
-  }
+   when ('rotate') {
+    _thread_rotate( $self, $request->{angle}, $request->{page} );
+   }
 
-  elsif ( $request->{action} eq 'save-djvu' ) {
-   _thread_save_djvu( $self, $request->{path}, $request->{list_of_pages},
-    $request->{pid} );
-  }
+   when ('save-djvu') {
+    _thread_save_djvu( $self, $request->{path}, $request->{list_of_pages},
+     $request->{pid} );
+   }
 
-  elsif ( $request->{action} eq 'save-image' ) {
-   _thread_save_image( $self, $request->{path}, $request->{list_of_pages},
-    $request->{pid} );
-  }
+   when ('save-image') {
+    _thread_save_image( $self, $request->{path}, $request->{list_of_pages},
+     $request->{pid} );
+   }
 
-  elsif ( $request->{action} eq 'save-pdf' ) {
-   _thread_save_pdf(
-    $self,
-    path          => $request->{path},
-    list_of_pages => $request->{list_of_pages},
-    metadata      => $request->{metadata},
-    options       => $request->{options},
-    pidfile       => $request->{pid}
-   );
-  }
+   when ('save-pdf') {
+    _thread_save_pdf(
+     $self,
+     path          => $request->{path},
+     list_of_pages => $request->{list_of_pages},
+     metadata      => $request->{metadata},
+     options       => $request->{options},
+     pidfile       => $request->{pid}
+    );
+   }
 
-  elsif ( $request->{action} eq 'save-text' ) {
-   _thread_save_text( $self, $request->{path}, $request->{list_of_pages} );
-  }
+   when ('save-text') {
+    _thread_save_text( $self, $request->{path}, $request->{list_of_pages} );
+   }
 
-  elsif ( $request->{action} eq 'save-tiff' ) {
-   _thread_save_tiff(
-    $self,
-    path          => $request->{path},
-    list_of_pages => $request->{list_of_pages},
-    options       => $request->{options},
-    ps            => $request->{ps},
-    pidfile       => $request->{pid}
-   );
-  }
+   when ('save-tiff') {
+    _thread_save_tiff(
+     $self,
+     path          => $request->{path},
+     list_of_pages => $request->{list_of_pages},
+     options       => $request->{options},
+     ps            => $request->{ps},
+     pidfile       => $request->{pid}
+    );
+   }
 
-  elsif ( $request->{action} eq 'tesseract' ) {
-   _thread_tesseract( $self, $request->{page}, $request->{language},
-    $request->{pid} );
-  }
+   when ('tesseract') {
+    _thread_tesseract( $self, $request->{page}, $request->{language},
+     $request->{pid} );
+   }
 
-  elsif ( $request->{action} eq 'threshold' ) {
-   _thread_threshold( $self, $request->{threshold}, $request->{page} );
-  }
+   when ('threshold') {
+    _thread_threshold( $self, $request->{threshold}, $request->{page} );
+   }
 
-  elsif ( $request->{action} eq 'to-png' ) {
-   _thread_to_png( $self, $request->{page} );
-  }
+   when ('to-png') {
+    _thread_to_png( $self, $request->{page} );
+   }
 
-  elsif ( $request->{action} eq 'unpaper' ) {
-   _thread_unpaper( $self, $request->{page}, $request->{options},
-    $request->{pid} );
-  }
+   when ('unpaper') {
+    _thread_unpaper( $self, $request->{page}, $request->{options},
+     $request->{pid} );
+   }
 
-  elsif ( $request->{action} eq 'unsharp' ) {
-   _thread_unsharp(
-    $self,
-    page      => $request->{page},
-    radius    => $request->{radius},
-    sigma     => $request->{sigma},
-    amount    => $request->{amount},
-    threshold => $request->{threshold}
-   );
-  }
+   when ('unsharp') {
+    _thread_unsharp(
+     $self,
+     page      => $request->{page},
+     radius    => $request->{radius},
+     sigma     => $request->{sigma},
+     amount    => $request->{amount},
+     threshold => $request->{threshold}
+    );
+   }
 
-  elsif ( $request->{action} eq 'user-defined' ) {
-   _thread_user_defined( $self, $request->{page}, $request->{command},
-    $request->{pid} );
-  }
+   when ('user-defined') {
+    _thread_user_defined( $self, $request->{page}, $request->{command},
+     $request->{pid} );
+   }
 
-  else {
-   $logger->info( "Ignoring unknown request " . $request->{action} );
-   next;
+   default {
+    $logger->info( "Ignoring unknown request " . $request->{action} );
+    next;
+   }
   }
 
   # Signal the sentinel that the request was completed.
