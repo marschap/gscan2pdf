@@ -315,8 +315,13 @@ sub add_page {
 }
 
 # Helpers:
-sub compare_numeric_col { $_[0] <=> $_[1] }    ## no critic
-sub compare_text_col    { $_[0] cmp $_[1] }    ## no critic
+sub compare_numeric_col { ## no critic (RequireArgUnpacking, RequireFinalReturn)
+ $_[0] <=> $_[1];
+}
+
+sub compare_text_col {    ## no critic (RequireArgUnpacking, RequireFinalReturn)
+ $_[0] cmp $_[1];
+}
 
 # Manual one-time sorting of the simplelist's data
 
@@ -1863,7 +1868,8 @@ sub _thread_save_djvu {
    # Open djvusedtxtfile
    my $djvusedtxtfile =
      File::Temp->new( DIR => $self->{dir}, SUFFIX => '.txt' );
-   open my $fh, ">:utf8", $djvusedtxtfile    ## no critic
+   open my $fh, '>:encoding(UTF8)',    ## no critic (RequireBriefOpen)
+     $djvusedtxtfile
      or croak( sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile ) );
    print $fh "(page 0 0 $w $h\n";
 
@@ -2064,7 +2070,7 @@ sub _thread_save_image {
 sub _thread_save_text {
  my ( $self, $path, $list_of_pages, $fh ) = @_;
 
- unless ( open $fh, ">", $path ) {    ## no critic
+ unless ( open $fh, ">", $path ) {    ## no critic (RequireBriefOpen)
   $self->{status} = 1;
   $self->{message} = sprintf( $d->get("Can't open file: %s"), $path );
   return;
