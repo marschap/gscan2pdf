@@ -1413,105 +1413,113 @@ sub _thread_get_file_info {
 sub _thread_import_file {
  my ( $self, $info, $first, $last, $pidfile ) = @_;
 
- if ( $info->{format} eq 'DJVU' ) {
+ given ( $info->{format} ) {
+  when ('DJVU') {
 
-  # Extract images from DjVu
-  if ( $last >= $first and $first > 0 ) {
-   for ( my $i = $first ; $i <= $last ; $i++ ) {
-    $self->{progress} = ( $i - 1 ) / ( $last - $first + 1 );
-    $self->{message} =
-      sprintf( $d->get("Importing page %i of %i"), $i, $last - $first + 1 );
-    my $tif =
-      File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif', UNLINK => FALSE );
-    my $cmd = "ddjvu -format=tiff -page=$i \"$info->{path}\" $tif";
+   # Extract images from DjVu
+   if ( $last >= $first and $first > 0 ) {
+    for ( my $i = $first ; $i <= $last ; $i++ ) {
+     $self->{progress} = ( $i - 1 ) / ( $last - $first + 1 );
+     $self->{message} =
+       sprintf( $d->get("Importing page %i of %i"), $i, $last - $first + 1 );
+     my $tif = File::Temp->new(
+      DIR    => $self->{dir},
+      SUFFIX => '.tif',
+      UNLINK => FALSE
+     );
+     my $cmd = "ddjvu -format=tiff -page=$i \"$info->{path}\" $tif";
+     $logger->info($cmd);
+     system("echo $$ > $pidfile;$cmd");
+     return if $_self->{cancel};
+     my $page = Gscan2pdf::Page->new(
+      filename   => $tif,
+      dir        => $self->{dir},
+      delete     => TRUE,
+      format     => 'Tagged Image File Format',
+      resolution => $info->{ppi}[ $i - 1 ],
+     );
+     $self->{page_queue}->enqueue( $page->freeze );
+    }
+   }
+  }
+  when ('Portable Document Format') {
+
+   # Extract images from PDF
+   if ( $last >= $first and $first > 0 ) {
+    my $cmd = "pdfimages -f $first -l $last \"$info->{path}\" x";
     $logger->info($cmd);
-    system("echo $$ > $pidfile;$cmd");
+    my $status = system("echo $$ > $pidfile;$cmd");
     return if $_self->{cancel};
-    my $page = Gscan2pdf::Page->new(
-     filename   => $tif,
-     dir        => $self->{dir},
-     delete     => TRUE,
-     format     => 'Tagged Image File Format',
-     resolution => $info->{ppi}[ $i - 1 ],
-    );
-    $self->{page_queue}->enqueue( $page->freeze );
+    if ($status) {
+     $self->{status}  = 1;
+     $self->{message} = $d->get('Error extracting images from PDF');
+    }
+
+    # Import each image
+    my @images = glob('x-???.???');
+    my $i      = 0;
+    foreach (@images) {
+     my $png  = convert_to_png($_);
+     my $page = Gscan2pdf::Page->new(
+      filename => $png,
+      dir      => $self->{dir},
+      delete   => TRUE,
+      format   => 'Portable Network Graphics',
+     );
+     $self->{page_queue}->enqueue( $page->freeze );
+    }
    }
   }
- }
- elsif ( $info->{format} eq 'Portable Document Format' ) {
+  when ('Tagged Image File Format') {
 
-  # Extract images from PDF
-  if ( $last >= $first and $first > 0 ) {
-   my $cmd = "pdfimages -f $first -l $last \"$info->{path}\" x";
-   $logger->info($cmd);
-   my $status = system("echo $$ > $pidfile;$cmd");
-   return if $_self->{cancel};
-   if ($status) {
-    $self->{status}  = 1;
-    $self->{message} = $d->get('Error extracting images from PDF');
-   }
-
-   # Import each image
-   my @images = glob('x-???.???');
-   my $i      = 0;
-   foreach (@images) {
-    my $png  = convert_to_png($_);
-    my $page = Gscan2pdf::Page->new(
-     filename => $png,
-     dir      => $self->{dir},
-     delete   => TRUE,
-     format   => 'Portable Network Graphics',
-    );
-    $self->{page_queue}->enqueue( $page->freeze );
-   }
-  }
- }
- elsif ( $info->{format} eq 'Tagged Image File Format' ) {
-
-  # Split the tiff into its pages and import them individually
-  if ( $last >= $first and $first > 0 ) {
-   for ( my $i = $first - 1 ; $i < $last ; $i++ ) {
-    $self->{progress} = $i / ( $last - $first + 1 );
-    $self->{message} =
-      sprintf( $d->get("Importing page %i of %i"), $i, $last - $first + 1 );
-    my $tif =
-      File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif', UNLINK => FALSE );
-    my $cmd = "tiffcp \"$info->{path}\",$i $tif";
-    $logger->info($cmd);
-    system("echo $$ > $pidfile;$cmd");
-    return if $_self->{cancel};
-    my $page = Gscan2pdf::Page->new(
-     filename => $tif,
-     dir      => $self->{dir},
-     delete   => TRUE,
-     format   => $info->{format},
-    );
-    $self->{page_queue}->enqueue( $page->freeze );
+   # Split the tiff into its pages and import them individually
+   if ( $last >= $first and $first > 0 ) {
+    for ( my $i = $first - 1 ; $i < $last ; $i++ ) {
+     $self->{progress} = $i / ( $last - $first + 1 );
+     $self->{message} =
+       sprintf( $d->get("Importing page %i of %i"), $i, $last - $first + 1 );
+     my $tif = File::Temp->new(
+      DIR    => $self->{dir},
+      SUFFIX => '.tif',
+      UNLINK => FALSE
+     );
+     my $cmd = "tiffcp \"$info->{path}\",$i $tif";
+     $logger->info($cmd);
+     system("echo $$ > $pidfile;$cmd");
+     return if $_self->{cancel};
+     my $page = Gscan2pdf::Page->new(
+      filename => $tif,
+      dir      => $self->{dir},
+      delete   => TRUE,
+      format   => $info->{format},
+     );
+     $self->{page_queue}->enqueue( $page->freeze );
+    }
    }
   }
- }
 
- # only 1-bit Portable anymap is properly supported, so convert ANY pnm to png
- elsif ( $info->{format} =~
+  # only 1-bit Portable anymap is properly supported, so convert ANY pnm to png
+  when (
 /(?:Portable\ Network\ Graphics|Joint\ Photographic\ Experts\ Group\ JFIF\ format|CompuServe\ graphics\ interchange\ format)/x
-   )
- {
-  my $page = Gscan2pdf::Page->new(
-   filename => $info->{path},
-   dir      => $self->{dir},
-   format   => $info->{format},
-  );
-  $self->{page_queue}->enqueue( $page->freeze );
- }
- else {
-  my $png = convert_to_png( $info->{path} );
-  return if $_self->{cancel};
-  my $page = Gscan2pdf::Page->new(
-   filename => $png,
-   dir      => $self->{dir},
-   format   => 'Portable Network Graphics',
-  );
-  $self->{page_queue}->enqueue( $page->freeze );
+    )
+  {
+   my $page = Gscan2pdf::Page->new(
+    filename => $info->{path},
+    dir      => $self->{dir},
+    format   => $info->{format},
+   );
+   $self->{page_queue}->enqueue( $page->freeze );
+  }
+  default {
+   my $png = convert_to_png( $info->{path} );
+   return if $_self->{cancel};
+   my $page = Gscan2pdf::Page->new(
+    filename => $png,
+    dir      => $self->{dir},
+    format   => 'Portable Network Graphics',
+   );
+   $self->{page_queue}->enqueue( $page->freeze );
+  }
  }
  return;
 }
