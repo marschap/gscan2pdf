@@ -1534,7 +1534,7 @@ sub _thread_import_file {
 sub _thread_save_pdf {
  my ( $self, %options ) = @_;
 
- my $page = 0;
+ my $pagenr = 0;
  my $ttfcache;
 
  # Create PDF with PDF::API2
@@ -1547,16 +1547,16 @@ sub _thread_save_pdf {
    if ( defined $options{options}->{font} );
 
  foreach my $pagedata ( @{ $options{list_of_pages} } ) {
-  ++$page;
-  $self->{progress} = $page / ( $#{ $options{list_of_pages} } + 2 );
+  ++$pagenr;
+  $self->{progress} = $pagenr / ( $#{ $options{list_of_pages} } + 2 );
   $self->{message} = sprintf( $d->get("Saving page %i of %i"),
-   $page, $#{ $options{list_of_pages} } + 1 );
+   $pagenr, $#{ $options{list_of_pages} } + 1 );
 
   my $filename = $pagedata->{filename};
   my $image    = Image::Magick->new;
-  my $x        = $image->Read($filename);
+  my $status   = $image->Read($filename);
   return if $_self->{cancel};
-  $logger->warn($x) if "$x";
+  $logger->warn($status) if "$status";
 
   # Get the size and resolution. Resolution is dots per inch, width
   # and height are in inches.
@@ -1626,12 +1626,12 @@ sub _thread_save_pdf {
     my $h_pixels = $h * $output_resolution;
 
     $logger->info("Resizing $filename to $w_pixels x $h_pixels");
-    $x = $image->Resize( width => $w_pixels,, height => $h_pixels );
-    $logger->warn($x) if "$x";
+    $status = $image->Resize( width => $w_pixels,, height => $h_pixels );
+    $logger->warn($status) if "$status";
    }
-   $x = $image->Set( quality => $options{options}->{quality} )
+   $status = $image->Set( quality => $options{options}->{quality} )
      if ( defined( $options{options}->{quality} ) and $compression eq 'jpg' );
-   $logger->warn($x) if "$x";
+   $logger->warn($status) if "$status";
 
    if (( $compression !~ /(?:jpg|png)/x and $format ne 'tif' )
     or ( $compression =~ /(?:jpg|png)/x )
@@ -1640,9 +1640,9 @@ sub _thread_save_pdf {
 
 # depth required because resize otherwise increases depth to maintain information
     $logger->info("Writing temporary image $filename with depth $depth");
-    $x = $image->Write( filename => $filename, depth => $depth );
+    $status = $image->Write( filename => $filename, depth => $depth );
     return if $_self->{cancel};
-    $logger->warn($x) if "$x";
+    $logger->warn($status) if "$status";
     if ( $filename =~ /\.(\w*)$/x ) {
      $format = $1;
     }
@@ -1653,7 +1653,7 @@ sub _thread_save_pdf {
     my $error     = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.txt' );
     my $cmd = "tiffcp -c $compression $filename $filename2";
     $logger->info($cmd);
-    my $status = system("echo $$ > $options{pidfile};$cmd 2>$error");
+    $status = system("echo $$ > $options{pidfile};$cmd 2>$error");
     return if $_self->{cancel};
     if ($status) {
      my $output = slurp($error);
@@ -1891,9 +1891,9 @@ sub _thread_save_djvu {
    close $fh;
 
    # Write djvusedtxtfile
-   my $cmd = "djvused '$djvu' -e 'select 1; set-txt $djvusedtxtfile' -s";
+   $cmd = "djvused '$djvu' -e 'select 1; set-txt $djvusedtxtfile' -s";
    $logger->info($cmd);
-   my $status = system("echo $$ > $pidfile;$cmd");
+   $status = system("echo $$ > $pidfile;$cmd");
    return if $_self->{cancel};
    if ($status) {
     $self->{status}  = 1;
@@ -1992,7 +1992,7 @@ sub _thread_save_tiff {
   # Note: -a option causes tiff2ps to generate multiple output
   # pages, one for each page in the input TIFF file.  Without it, it
   # only generates output for the first page.
-  my $cmd = "tiff2ps -a $options{path} > '$options{ps}'";
+  $cmd = "tiff2ps -a $options{path} > '$options{ps}'";
   $logger->info($cmd);
   ( my $output, undef ) = open_three($cmd);
  }
@@ -2410,14 +2410,14 @@ sub _thread_unpaper {
  $new->{dirty_time} = timestamp();    #flag as dirty
  my %data = ( old => $page, new => $new->freeze );
  unless ( $out2 eq '' ) {
-  my $new = Gscan2pdf::Page->new(
+  my $new2 = Gscan2pdf::Page->new(
    filename => $out2,
    dir      => $self->{dir},
    delete   => TRUE,
    format   => 'Portable anymap',
   );
-  $new->{dirty_time} = timestamp();    #flag as dirty
-  $data{new2} = $new->freeze;
+  $new2->{dirty_time} = timestamp();    #flag as dirty
+  $data{new2} = $new2->freeze;
  }
  $self->{page_queue}->enqueue( \%data );
  return;
