@@ -1416,7 +1416,10 @@ sub _thread_get_file_info {
 }
 
 sub _thread_import_file {
- my ( $self, $info, $first, $last, $pidfile ) = @_;
+ my (    ## no critic (ProhibitAmbiguousNames)
+  $self, $info, $first, $last,
+  $pidfile
+ ) = @_;
 
  given ( $info->{format} ) {
   when ('DJVU') {
