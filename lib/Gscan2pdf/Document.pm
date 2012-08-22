@@ -977,16 +977,16 @@ sub slurp {
  my ($file) = @_;
 
  local ($/);
- my $fh;
+ my ($text);
 
  if ( ref($file) eq 'GLOB' ) {
-  $fh = $file;
+  $text = <$file>;
  }
  else {
-  open $fh, '<:encoding(UTF8)', $file or die "Error: cannot open $file\n";
+  open my $fh, '<:encoding(UTF8)', $file or die "Error: cannot open $file\n";
+  $text = <$fh>;
+  close $fh;
  }
- my $text = <$fh>;
- close $fh;
  return $text;
 }
 
