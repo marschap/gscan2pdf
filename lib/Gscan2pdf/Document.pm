@@ -1317,7 +1317,7 @@ sub _thread_get_file_info {
  my ( $self, $filename, $pidfile, %info ) = @_;
 
  $logger->info("Getting info for $filename");
- my $format = `file -b "$filename"`;
+ ( my $format, undef ) = open_three("file -b \"$filename\"");
 
  if ( $format =~ /gzip\ compressed\ data/x ) {
   $info{path}   = $filename;
@@ -1330,7 +1330,7 @@ sub _thread_get_file_info {
   # Dig out the number of pages
   my $cmd = "djvudump \"$filename\"";
   $logger->info($cmd);
-  my $info = `echo $$ > $pidfile;$cmd`;
+  ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
   return if $_self->{cancel};
   $logger->info($info);
 
@@ -1379,7 +1379,7 @@ sub _thread_get_file_info {
  elsif ( $format eq 'Portable Document Format' ) {
   my $cmd = "pdfinfo \"$filename\"";
   $logger->info($cmd);
-  my $info = `echo $$ > $pidfile;$cmd`;
+  ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
   return if $_self->{cancel};
   $logger->info($info);
   my $pages = 1;
@@ -1392,7 +1392,7 @@ sub _thread_get_file_info {
  elsif ( $format eq 'Tagged Image File Format' ) {
   my $cmd = "tiffinfo \"$filename\"";
   $logger->info($cmd);
-  my $info = `echo $$ > $pidfile;$cmd`;
+  ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
   return if $_self->{cancel};
   $logger->info($info);
 
@@ -1992,7 +1992,7 @@ sub _thread_save_tiff {
   # only generates output for the first page.
   my $cmd = "tiff2ps -a $options{path} > '$options{ps}'";
   $logger->info($cmd);
-  my $output = `$cmd`;
+  ( my $output, undef ) = open_three($cmd);
  }
  return;
 }
@@ -2344,7 +2344,7 @@ sub _thread_gocr {
 
  my $cmd = "gocr $pnm";
  $logger->info($cmd);
- $new->{hocr} = `echo $$ > $pidfile;$cmd`;
+ ( $new->{hocr}, undef ) = open_three("echo $$ > $pidfile;$cmd");
  return if $_self->{cancel};
  $new->{ocr_flag} = 1;              #FlagOCR
  $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page
