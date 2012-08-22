@@ -982,7 +982,7 @@ sub convert_to_png {
 sub slurp {
  my ($file) = @_;
 
- local ($/);
+ local $/ = undef;
  my ($text);
 
  if ( ref($file) eq 'GLOB' ) {
