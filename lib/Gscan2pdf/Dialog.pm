@@ -71,7 +71,9 @@ sub on_delete_event {
 
 sub on_key_press_event {
  my ( $widget, $event ) = @_;
- unless ( $event->keyval == $Gtk2::Gdk::Keysyms{Escape} ) {
+ unless ( $event->keyval ==
+  $Gtk2::Gdk::Keysyms{Escape} )    ## no critic (ProhibitPackageVars)
+ {
   $widget->signal_chain_from_overridden($event);
   return Gtk2::EVENT_PROPAGATE;
  }
