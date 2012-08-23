@@ -1283,9 +1283,12 @@ if ( $test == 0 ) {
 
    # write to .part file while scanning is in progress
    if (
-    $batch    ## no critic
-    and not( open( $fh, '>', $part_path ) and STDOUT->fdopen( $fh, '>' ) )
-     )        ## no critic
+    $batch
+    and not(
+     open( $fh, '>', $part_path )    ## no critic (RequireBriefOpen)
+     and STDOUT->fdopen( $fh, '>' )
+    )
+     )
    {
     print STDERR "cannot open $part_path\n";
     $device->cancel;
@@ -1304,8 +1307,13 @@ if ( $test == 0 ) {
     if ($batch) {
 
      # close output file by redirecting, do not close stdout here!
-     if ( not( open( $fh, '>', '/dev/null' ) and STDOUT->fdopen( $fh, '>' ) ) )
-     {    ## no critic
+     if (
+      not(
+       open( $fh, '>', '/dev/null' )    ## no critic (RequireBriefOpen)
+       and STDOUT->fdopen( $fh, '>' )
+      )
+       )
+     {
       printf STDERR "cannot open /dev/null\n";
       $device->cancel;
       return SANE_STATUS_ACCESS_DENIED;
