@@ -52,10 +52,10 @@ sub languages {
   # Dig out supported languages
   my $cmd = "cuneiform -l";
   $logger->info($cmd);
-  my $output = `$cmd`;
+  ( my $output, undef ) = Gscan2pdf::Document::open_three($cmd);
 
   my $langs;
-  if ( $output =~ /Supported languages: (.*)\./ ) {
+  if ( $output =~ /Supported\ languages:\ (.*)\./x ) {
    $langs = $1;
    for ( split " ", $langs ) {
     if ( defined $lang{$_} ) {
@@ -80,7 +80,7 @@ sub hocr {
  # Temporary filename for output
  my $txt = File::Temp->new( SUFFIX => '.txt' );
 
- if ( $file !~ /\.bmp$/ ) {
+ if ( $file !~ /\.bmp$/x ) {
 
   # Temporary filename for new file
   $bmp = File::Temp->new( SUFFIX => '.bmp' );
