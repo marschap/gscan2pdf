@@ -1414,7 +1414,7 @@ sub create_menu_bar {
  $dependencies{gocr}        = check_command('gocr');
  $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup($logger);
  $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup($logger);
- $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup;
+ $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup($logger);
  $dependencies{djvu}        = check_command('cjb2');
  $dependencies{unpaper}     = Gscan2pdf::Unpaper->version;
  $dependencies{libtiff}     = check_command('tiffcp');

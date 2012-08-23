@@ -1,10 +1,3 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl Gscan2pdf.t'
-
-#########################
-
-# change 'tests => 1' to 'tests => last_test_to_print';
-
 use warnings;
 use strict;
 use Test::More tests => 6;
@@ -16,15 +9,12 @@ BEGIN {
 
 #########################
 
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
+use Log::Log4perl qw(:easy);
+Log::Log4perl->easy_init($WARN);
+my $logger = Log::Log4perl::get_logger;
 
 SKIP: {
- skip 'Cuneiform not installed', 5 unless Gscan2pdf::Cuneiform->setup;
-
- use Log::Log4perl qw(:easy);
- Log::Log4perl->easy_init($WARN);
- our $logger = Log::Log4perl::get_logger;
+ skip 'Cuneiform not installed', 5 unless Gscan2pdf::Cuneiform->setup($logger);
 
  # Create test image
  system(
