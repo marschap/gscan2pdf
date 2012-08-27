@@ -309,10 +309,16 @@ sub parse_scalar {
  my ( $opt, $str ) = @_;
 
  my ( $v, $unit );
- if ( $str =~ /^(\d*\.?\d*)(cm|mm|in|\"|b|B|dpi|%|us)?/ ) {
+ if (
+  $str =~ /^
+               (\d*\.?\d*) # value
+               (cm|mm|in|\"|b|B|dpi|%|us)? # optional unit
+              /x
+   )
+ {
   $v    = $1;
   $unit = $2;
-  $unit = '' if not defined $unit;
+  $unit = '' unless defined $unit;
  }
  else {
   print STDERR
@@ -363,11 +369,9 @@ sub parse_vector {
  my $separator  = '';
  my ( @vector, $value );
  do {
-  if ( $str =~ /^\[/ ) {
-   if ( $str =~ /^\[(\d*\.?\d*)\]/ ) {
-    $index = $1;
-   }
-   else {
+  if ( $str =~ /^\[(\d*\.?\d*)(\])?/x ) {
+   $index = $1;
+   unless ( $2 eq '\]' ) {
     print STDERR "$prog_name: option --$opt->{name}: closing bracket missing "
       . "(rest of option: $str)\n";
     exit(1);
@@ -387,7 +391,7 @@ sub parse_vector {
   # read value
   ( $value, $str ) = parse_scalar( $opt, $str );
 
-  if ( $str ne '' and $str !~ /^[-,]/ ) {
+  if ( $str ne '' and $str !~ /^[-,]/x ) {
    print STDERR
 "$prog_name: option --$opt->{name}: illegal separator (rest of option: $str)\n";
    exit(1);
@@ -561,7 +565,7 @@ sub process_backend_option {
 
  if ( ( $opt->{cap} & SANE_CAP_AUTOMATIC )
   and $optarg
-  and $optarg =~ /^auto$/i )
+  and $optarg =~ /^auto$/xi )
  {
   $device->set_auto($optnum);
   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
@@ -576,10 +580,10 @@ sub process_backend_option {
  if ( $opt->{type} == SANE_TYPE_BOOL ) {
   $value = 1;    # no argument means option is set
   if ($optarg) {
-   if ( $optarg =~ /^yes$/i ) {
+   if ( $optarg =~ /^yes$/xi ) {
     $value = 1;
    }
-   elsif ( $optarg =~ /^no$/i ) {
+   elsif ( $optarg =~ /^no$/xi ) {
     $value = 0;
    }
    else {
@@ -1124,12 +1128,12 @@ if ( defined($device) ) {
  # this myself
  for (@ARGV_old) {
   my $ch;
-  if (/--(.*)/) {
+  if (/--(.*)/x) {
    $ch = $1;
    my $i = index( $ch, '=' );
    $ch = substr( $ch, 0, $i ) if ( $i > -1 );
   }
-  elsif (/-(.)/) {
+  elsif (/-(.)/x) {
    $ch = $1;
   }
   else {
