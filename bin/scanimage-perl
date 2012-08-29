@@ -694,17 +694,22 @@ sub scan_it {
      or $parm->{format} == SANE_FRAME_GREEN
      or $parm->{format} == SANE_FRAME_BLUE )
     {
-     die unless ( $parm->{depth} == 8 );
+     die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n"
+       unless ( $parm->{depth} == 8 );
      $must_buffer = 1;
      $offset      = $parm->{format} - SANE_FRAME_RED;
     }
     elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-     die unless ( ( $parm->{depth} == 8 ) or ( $parm->{depth} == 16 ) );
+     die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8 or 16)\n"
+       unless ( ( $parm->{depth} == 8 ) or ( $parm->{depth} == 16 ) );
     }
     if ($parm->{format} == SANE_FRAME_RGB
      or $parm->{format} == SANE_FRAME_GRAY )
     {
-     die
+     die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 1, 8 or 16)\n"
        unless ( ( $parm->{depth} == 1 )
       or ( $parm->{depth} == 8 )
       or ( $parm->{depth} == 16 ) );
@@ -730,7 +735,8 @@ sub scan_it {
     }
    }
    else {
-    die
+    die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but expected SANE_FRAME_RED, SANE_FRAME_GREEN, or SANE_FRAME_BLUE\n"
       unless ( $parm->{format} >= SANE_FRAME_RED
      and $parm->{format} <= SANE_FRAME_BLUE );
     $offset = $parm->{format} - SANE_FRAME_RED;

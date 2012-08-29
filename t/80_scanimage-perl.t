@@ -177,9 +177,9 @@ List of available devices:
     test:0 test:1
 END
 
-my @output = split("\n", $output);
-my @example = split("\n", $example);
-is_deeply(\@output, \@example, "basic help functionality");
+my @output  = split( "\n", $output );
+my @example = split( "\n", $example );
+is_deeply( \@output, \@example, "basic help functionality" );
 
 #########################
 
