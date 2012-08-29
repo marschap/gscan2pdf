@@ -743,8 +743,8 @@ sub scan_it {
    else {
     die # FIXME: compare message with SANE source, and give them patch if necessary
 "Error: frame format $parm->{format}, but expected SANE_FRAME_RED, SANE_FRAME_GREEN, or SANE_FRAME_BLUE\n"
-      unless ( $parm->{format} >= SANE_FRAME_RED
-     and $parm->{format} <= SANE_FRAME_BLUE );
+      if ( $parm->{format} < SANE_FRAME_RED
+     or $parm->{format} > SANE_FRAME_BLUE );
     $offset = $parm->{format} - SANE_FRAME_RED;
     $image{x} = $image{y} = 0;
    }
