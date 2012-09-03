@@ -13,14 +13,13 @@ use IO::Handle;
 my (
  %options, @window_val_user, @window_option, @window_val,
  @window,  $num_dev_options, $device,        $format,
- $devname, %option_number
+ $devname, %option_number,   $batch_count,
 );
-my $verbose        = 0;
-my $help           = 0;
-my $test           = 0;
-my $batch          = 0;
-my $batch_start_at = 1;
-my $batch_count;
+my $verbose           = 0;
+my $help              = 0;
+my $test              = 0;
+my $batch             = 0;
+my $batch_start_at    = 1;
 my $batch_increment   = 1;
 my $buffer_size       = ( 32 * 1024 );    # default size
 my $tl_x              = 0;
@@ -101,7 +100,7 @@ sub print_unit {
 }
 
 sub print_option {
- my ( $device, $opt_num, $opt ) = @_;
+ ( $device, my $opt_num, my $opt ) = @_;
 
  my $not_first = SANE_FALSE;
 
@@ -178,16 +177,18 @@ sub print_option {
    print ",..." if ( $opt->{max_values} > 1 );
   }
   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-   my $format = "%g..%g";
-   $format = "%d..%d" if ( $opt->{type} == SANE_TYPE_INT );
+   my $string_format = "%g..%g";
+   $string_format = "%d..%d" if ( $opt->{type} == SANE_TYPE_INT );
    if ( $opt->{name} eq "x" ) {
-    printf $format, $opt->{constraint}{min}, $opt->{constraint}{max} - $tl_x;
+    printf $string_format, $opt->{constraint}{min},
+      $opt->{constraint}{max} - $tl_x;
    }
    elsif ( $opt->{name} eq "y" ) {
-    printf $format, $opt->{constraint}{min}, $opt->{constraint}{max} - $tl_y;
+    printf $string_format, $opt->{constraint}{min},
+      $opt->{constraint}{max} - $tl_y;
    }
    else {
-    printf $format, $opt->{constraint}{min}, $opt->{constraint}{max};
+    printf $string_format, $opt->{constraint}{min}, $opt->{constraint}{max};
    }
    print_unit( $opt->{unit} );
    print ",..." if ( $opt->{max_values} > 1 );
@@ -218,27 +219,27 @@ sub print_option {
     print( $val ? "yes" : "no" );
    }
    elsif ( $opt->{type} == SANE_TYPE_INT or $opt->{type} == SANE_TYPE_FIXED ) {
-    my $format = "%g";
-    $format = "%d" if ( $opt->{type} == SANE_TYPE_INT );
+    my $string_format = "%g";
+    $string_format = "%d" if ( $opt->{type} == SANE_TYPE_INT );
     given ( $opt->{name} ) {
      when ("l") {
       $tl_x = $val;
-      printf $format, $tl_x;
+      printf $string_format, $tl_x;
      }
      when ("t") {
       $tl_y = $val;
-      printf $format, $tl_y;
+      printf $string_format, $tl_y;
      }
      when ("x") {
       $br_x = $val;
-      printf $format, $br_x - $tl_x;
+      printf $string_format, $br_x - $tl_x;
      }
      when ("y") {
       $br_y = $val;
-      printf $format, $br_y - $tl_y;
+      printf $string_format, $br_y - $tl_y;
      }
      default {
-      printf $format, $val;
+      printf $string_format, $val;
      }
     }
    }
@@ -432,7 +433,7 @@ sub parse_vector {
 }
 
 sub fetch_options {
- my $device = shift;
+ $device = shift;
 
  my $opt = $device->get_option_descriptor(0);
  if ( not defined($opt) ) {
@@ -526,7 +527,7 @@ sub fetch_options {
 }
 
 sub set_option {
- my ( $device, $optnum, $value ) = @_;
+ ( $device, my $optnum, my $value ) = @_;
 
  my $opt = $device->get_option_descriptor($optnum);
  if ( $opt and ( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
@@ -560,7 +561,7 @@ sub set_option {
 }
 
 sub process_backend_option {
- my ( $device, $optnum, $optarg ) = @_;
+ ( $device, my $optnum, my $optarg ) = @_;
 
  my $opt = $device->get_option_descriptor($optnum);
 
@@ -618,16 +619,16 @@ sub process_backend_option {
 }
 
 sub write_pnm_header {
- my ( $format, $width, $height, $depth ) = @_;
+ my ( $frame_format, $width, $height, $depth ) = @_;
 
  # The netpbm-package does not define raw image data with maxval > 255.
  # But writing maxval 65535 for 16bit data gives at least a chance
  # to read the image.
 
- if ($format == SANE_FRAME_RED
-  or $format == SANE_FRAME_GREEN
-  or $format == SANE_FRAME_BLUE
-  or $format == SANE_FRAME_RGB )
+ if ($frame_format == SANE_FRAME_RED
+  or $frame_format == SANE_FRAME_GREEN
+  or $frame_format == SANE_FRAME_BLUE
+  or $frame_format == SANE_FRAME_RGB )
  {
   printf "P6\n# SANE data follows\n%d %d\n%d\n", $width, $height,
     ( $depth <= 8 ) ? 255 : 65535;
@@ -1023,13 +1024,13 @@ if ( defined( $options{L} ) or defined( $options{f} ) ) {
  }
  else {
   for ( my $i = 0 ; $i < @device_list ; $i++ ) {
-   my $format = $options{f};
-   $format =~ s/%d/$device_list[$i]->{name}/g;
-   $format =~ s/%v/$device_list[$i]->{vendor}/g;
-   $format =~ s/%m/$device_list[$i]->{model}/g;
-   $format =~ s/%t/$device_list[$i]->{type}/g;
-   $format =~ s/%i/$i/g;
-   print $format;
+   my $string_format = $options{f};
+   $string_format =~ s/%d/$device_list[$i]->{name}/g;
+   $string_format =~ s/%v/$device_list[$i]->{vendor}/g;
+   $string_format =~ s/%m/$device_list[$i]->{model}/g;
+   $string_format =~ s/%t/$device_list[$i]->{type}/g;
+   $string_format =~ s/%i/$i/g;
+   print $string_format;
   }
  }
  printf "default device is `%s'\n", $ENV{'SANE_DEFAULT_DEVICE'}
