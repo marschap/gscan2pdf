@@ -2,6 +2,7 @@
 
 use warnings;
 use strict;
+use feature "switch";
 use Sane;
 use Data::Dumper;
 use Getopt::Long qw(:config no_ignore_case pass_through);
@@ -101,23 +102,25 @@ sub sighandler {
 sub print_unit {
  my ($unit) = @_;
 
- if ( $unit == SANE_UNIT_PIXEL ) {
-  print "pel";
- }
- elsif ( $unit == SANE_UNIT_BIT ) {
-  print "bit";
- }
- elsif ( $unit == SANE_UNIT_MM ) {
-  print "mm";
- }
- elsif ( $unit == SANE_UNIT_DPI ) {
-  print "dpi";
- }
- elsif ( $unit == SANE_UNIT_PERCENT ) {
-  print "%";
- }
- elsif ( $unit == SANE_UNIT_MICROSECOND ) {
-  print "us";
+ given ($unit) {
+  when (SANE_UNIT_PIXEL) {
+   print "pel";
+  }
+  when (SANE_UNIT_BIT) {
+   print "bit";
+  }
+  when (SANE_UNIT_MM) {
+   print "mm";
+  }
+  when (SANE_UNIT_DPI) {
+   print "dpi";
+  }
+  when (SANE_UNIT_PERCENT) {
+   print "%";
+  }
+  when (SANE_UNIT_MICROSECOND) {
+   print "us";
+  }
  }
  return;
 }
@@ -205,26 +208,28 @@ sub print_option {
    elsif ( $opt->{type} == SANE_TYPE_INT or $opt->{type} == SANE_TYPE_FIXED ) {
     my $format = "%g";
     $format = "%d" if ( $opt->{type} == SANE_TYPE_INT );
-    if ( $opt->{name} eq SANE_NAME_SCAN_TL_X ) {
-     $tl_x = $val;
-     printf $format, $tl_x;
-    }
-    elsif ( $opt->{name} eq SANE_NAME_SCAN_TL_Y ) {
-     $tl_y = $val;
-     printf $format, $tl_y;
-    }
-    elsif ( $opt->{name} eq SANE_NAME_SCAN_BR_X ) {
-     $br_x = $val;
-     $w_x  = $br_x - $tl_x;
-     printf $format, $w_x;
-    }
-    elsif ( $opt->{name} eq SANE_NAME_SCAN_BR_Y ) {
-     $br_y = $val;
-     $h_y  = $br_y - $tl_y;
-     printf $format, $h_y;
-    }
-    else {
-     printf $format, $val;
+    given ( $opt->{name} ) {
+     when (SANE_NAME_SCAN_TL_X) {
+      $tl_x = $val;
+      printf $format, $tl_x;
+     }
+     when (SANE_NAME_SCAN_TL_Y) {
+      $tl_y = $val;
+      printf $format, $tl_y;
+     }
+     when (SANE_NAME_SCAN_BR_X) {
+      $br_x = $val;
+      $w_x  = $br_x - $tl_x;
+      printf $format, $w_x;
+     }
+     when (SANE_NAME_SCAN_BR_Y) {
+      $br_y = $val;
+      $h_y  = $br_y - $tl_y;
+      printf $format, $h_y;
+     }
+     default {
+      printf $format, $val;
+     }
     }
    }
    elsif ( $opt->{type} == SANE_TYPE_STRING ) {
@@ -437,31 +442,33 @@ sub fetch_options {
   if ( ( $opt->{type} == SANE_TYPE_FIXED || $opt->{type} == SANE_TYPE_INT )
    and ( $opt->{unit} == SANE_UNIT_MM || $opt->{unit} == SANE_UNIT_PIXEL ) )
   {
-   if ( $opt->{name} eq SANE_NAME_SCAN_TL_X ) {
-    $window[2] = $i;
-    $opt->{name} = 'l';
-   }
-   elsif ( $opt->{name} eq SANE_NAME_SCAN_TL_Y ) {
-    $window[3] = $i;
-    $opt->{name} = 't';
-   }
-   elsif ( $opt->{name} eq SANE_NAME_SCAN_BR_X ) {
-    $window[0]                 = $i;
-    $opt->{name}               = 'x';
-    $window_option[0]          = $opt;
-    $window_option[0]->{title} = 'Scan width';
-    $window_option[0]->{desc}  = 'Width of scanning area.';
-    $window_val[0]             = $device->get_option($i)
-      if ( !$window_val_user[0] );
-   }
-   elsif ( $opt->{name} eq SANE_NAME_SCAN_BR_Y ) {
-    $window[1]                 = $i;
-    $opt->{name}               = 'y';
-    $window_option[1]          = $opt;
-    $window_option[1]->{title} = 'Scan height';
-    $window_option[1]->{desc}  = 'Height of scanning area.';
-    $window_val[1]             = $device->get_option($i)
-      if ( !$window_val_user[1] );
+   given ( $opt->{name} ) {
+    when (SANE_NAME_SCAN_TL_X) {
+     $window[2] = $i;
+     $opt->{name} = 'l';
+    }
+    when (SANE_NAME_SCAN_TL_Y) {
+     $window[3] = $i;
+     $opt->{name} = 't';
+    }
+    when (SANE_NAME_SCAN_BR_X) {
+     $window[0]                 = $i;
+     $opt->{name}               = 'x';
+     $window_option[0]          = $opt;
+     $window_option[0]->{title} = 'Scan width';
+     $window_option[0]->{desc}  = 'Width of scanning area.';
+     $window_val[0]             = $device->get_option($i)
+       if ( !$window_val_user[0] );
+    }
+    when (SANE_NAME_SCAN_BR_Y) {
+     $window[1]                 = $i;
+     $opt->{name}               = 'y';
+     $window_option[1]          = $opt;
+     $window_option[1]->{title} = 'Scan height';
+     $window_option[1]->{desc}  = 'Height of scanning area.';
+     $window_val[1]             = $device->get_option($i)
+       if ( !$window_val_user[1] );
+    }
    }
   }
 
@@ -545,35 +552,37 @@ sub process_backend_option {
  }
 
  my $value;
- if ( $opt->{type} == SANE_TYPE_BOOL ) {
-  $value = 1;    # no argument means option is set
-  if ($optarg) {
-   if ( $optarg =~ /^yes$/ix ) {
-    $value = 1;
-   }
-   elsif ( $optarg =~ /^no$/ix ) {
-    $value = 0;
-   }
-   else {
-    printf STDERR
-      "$prog_name: option --$opt->{name}: bad option value `$optarg'\n";
-    exit(1);
+ given ( $opt->{type} ) {
+  when (SANE_TYPE_BOOL) {
+   $value = 1;    # no argument means option is set
+   if ($optarg) {
+    if ( $optarg =~ /^yes$/ix ) {
+     $value = 1;
+    }
+    elsif ( $optarg =~ /^no$/ix ) {
+     $value = 0;
+    }
+    else {
+     printf STDERR
+       "$prog_name: option --$opt->{name}: bad option value `$optarg'\n";
+     exit(1);
+    }
    }
   }
- }
- elsif ( $opt->{type} == SANE_TYPE_INT or $opt->{type} == SANE_TYPE_FIXED ) {
-  my @vector = parse_vector( $opt, $optarg );
-  $value = \@vector;
- }
- elsif ( $opt->{type} == SANE_TYPE_STRING ) {
-  $value = $optarg;
- }
- elsif ( $opt->{type} == SANE_TYPE_BUTTON ) {
-  $value = 0;    # value doesn't matter
- }
- else {
-  printf STDERR "$prog_name: duh, got unknown option type $opt->{type}\n";
-  return;
+  when ( $opt->{type} == SANE_TYPE_INT or $opt->{type} == SANE_TYPE_FIXED ) {
+   my @vector = parse_vector( $opt, $optarg );
+   $value = \@vector;
+  }
+  when (SANE_TYPE_STRING) {
+   $value = $optarg;
+  }
+  when (SANE_TYPE_BUTTON) {
+   $value = 0;    # value doesn't matter
+  }
+  default {
+   printf STDERR "$prog_name: duh, got unknown option type $opt->{type}\n";
+   return;
+  }
  }
  set_option( $device, $optnum, $value );
  return;
@@ -1004,22 +1013,24 @@ if ( defined($device) ) {
    next;
   }
   if ( defined $options{$ch} ) {
-   if ( $ch eq 'x' ) {
-    $window_val_user[0] = 1;
-    ( $window_val[0] ) = parse_vector( $window_option[0], $options{x} );
-   }
-   elsif ( $ch eq 'y' ) {
-    $window_val_user[1] = 1;
-    ( $window_val[1] ) = parse_vector( $window_option[1], $options{y} );
-   }
-   elsif ( $ch eq 'l' ) {    # tl-x
-    process_backend_option( $device, $window[2], $options{l} );
-   }
-   elsif ( $ch eq 't' ) {    # tl-y
-    process_backend_option( $device, $window[3], $options{t} );
-   }
-   else {
-    process_backend_option( $device, $option_number{$ch}, $options{$ch} );
+   given ($ch) {
+    when ('x') {
+     $window_val_user[0] = 1;
+     ( $window_val[0] ) = parse_vector( $window_option[0], $options{x} );
+    }
+    when ('y') {
+     $window_val_user[1] = 1;
+     ( $window_val[1] ) = parse_vector( $window_option[1], $options{y} );
+    }
+    when ('l') {    # tl-x
+     process_backend_option( $device, $window[2], $options{l} );
+    }
+    when ('t') {    # tl-y
+     process_backend_option( $device, $window[3], $options{t} );
+    }
+    default {
+     process_backend_option( $device, $option_number{$ch}, $options{$ch} );
+    }
    }
   }
  }
