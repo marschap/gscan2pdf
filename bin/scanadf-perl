@@ -675,17 +675,23 @@ sub scan_it_raw {
      or $parm->{format} == SANE_FRAME_GREEN
      or $parm->{format} == SANE_FRAME_BLUE )
     {
-     die unless ( $parm->{depth} == 8 );
+     die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n"
+       unless ( $parm->{depth} == 8 );
      $must_buffer = 1;
      $offset      = $parm->{format} - SANE_FRAME_RED;
     }
     elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-     die unless ( $parm->{depth} == 8 );
+     die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n"
+       unless ( $parm->{depth} == 8 );
     }
     if ($parm->{format} == SANE_FRAME_RGB
      or $parm->{format} == SANE_FRAME_GRAY )
     {
-     die unless ( ( $parm->{depth} == 1 ) || ( $parm->{depth} == 8 ) );
+     die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 1 or 8)\n"
+       unless ( ( $parm->{depth} == 1 ) || ( $parm->{depth} == 8 ) );
 
      # if we're writing raw, we skip the header and never
      # have to buffer a single frame format.
@@ -732,9 +738,10 @@ sub scan_it_raw {
     }
    }
    else {
-    die
-      unless ( $parm->{format} >= SANE_FRAME_RED
-     && $parm->{format} <= SANE_FRAME_BLUE );
+    die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but expected SANE_FRAME_RED, SANE_FRAME_GREEN, or SANE_FRAME_BLUE\n"
+      if ( $parm->{format} < SANE_FRAME_RED
+     or $parm->{format} > SANE_FRAME_BLUE );
     $offset = $parm->{format} - SANE_FRAME_RED;
     $image{x} = $image{y} = 0;
    }
