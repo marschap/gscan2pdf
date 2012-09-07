@@ -126,7 +126,7 @@ sub print_unit {
 }
 
 sub print_option {
- my ( $device, $opt_num, $short_name ) = @_;
+ ( $device, my $opt_num, my $short_name ) = @_;
 
  my $not_first = SANE_FALSE;
  my $maxwindow = 0;
@@ -164,18 +164,18 @@ sub print_option {
    print ",..." if ( $opt->{max_values} > 1 );
   }
   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-   my $format = "%g..%g";
-   $format = "%d..%d" if ( $opt->{type} == SANE_TYPE_INT );
+   my $string_format = "%g..%g";
+   $string_format = "%d..%d" if ( $opt->{type} == SANE_TYPE_INT );
    if ( $opt->{name} eq SANE_NAME_SCAN_BR_X ) {
     $maxwindow = $opt->{constraint}{max} - $tl_x;
-    printf $format, $opt->{constraint}{min}, $maxwindow;
+    printf $string_format, $opt->{constraint}{min}, $maxwindow;
    }
    elsif ( $opt->{name} eq SANE_NAME_SCAN_BR_Y ) {
     $maxwindow = $opt->{constraint}{max} - $tl_y;
-    printf $format, $opt->{constraint}{min}, $maxwindow;
+    printf $string_format, $opt->{constraint}{min}, $maxwindow;
    }
    else {
-    printf $format, $opt->{constraint}{min}, $opt->{constraint}{max};
+    printf $string_format, $opt->{constraint}{min}, $opt->{constraint}{max};
    }
    print_unit( $opt->{unit} );
    print ",..." if ( $opt->{max_values} > 1 );
@@ -206,29 +206,29 @@ sub print_option {
     print( $val ? "yes" : "no" );
    }
    elsif ( $opt->{type} == SANE_TYPE_INT or $opt->{type} == SANE_TYPE_FIXED ) {
-    my $format = "%g";
-    $format = "%d" if ( $opt->{type} == SANE_TYPE_INT );
+    my $string_format = "%g";
+    $string_format = "%d" if ( $opt->{type} == SANE_TYPE_INT );
     given ( $opt->{name} ) {
      when (SANE_NAME_SCAN_TL_X) {
       $tl_x = $val;
-      printf $format, $tl_x;
+      printf $string_format, $tl_x;
      }
      when (SANE_NAME_SCAN_TL_Y) {
       $tl_y = $val;
-      printf $format, $tl_y;
+      printf $string_format, $tl_y;
      }
      when (SANE_NAME_SCAN_BR_X) {
       $br_x = $val;
       $w_x  = $br_x - $tl_x;
-      printf $format, $w_x;
+      printf $string_format, $w_x;
      }
      when (SANE_NAME_SCAN_BR_Y) {
       $br_y = $val;
       $h_y  = $br_y - $tl_y;
-      printf $format, $h_y;
+      printf $string_format, $h_y;
      }
      default {
-      printf $format, $val;
+      printf $string_format, $val;
      }
     }
    }
@@ -414,7 +414,7 @@ sub parse_vector {
 }
 
 sub fetch_options {
- my $device = shift;
+ $device = shift;
 
  # We got a device, find out how many options it has:
  $num_dev_options = $device->get_option(0);
@@ -495,7 +495,7 @@ sub fetch_options {
 }
 
 sub set_option {
- my ( $device, $optnum, $value ) = @_;
+ ( $device, my $optnum, my $value ) = @_;
 
  my $opt = $device->get_option_descriptor($optnum);
  if ( $opt and ( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
@@ -529,7 +529,7 @@ sub set_option {
 }
 
 sub process_backend_option {
- my ( $device, $optnum, $optarg ) = @_;
+ ( $device, my $optnum, my $optarg ) = @_;
 
  my $opt = $device->get_option_descriptor($optnum);
 
@@ -589,21 +589,21 @@ sub process_backend_option {
 }
 
 sub write_pnm_header_to_file {
- my ( $fh, $format, $width, $height, $depth ) = @_;
+ my ( $fh, $frame_format, $width, $height, $depth ) = @_;
 
  # The netpbm-package does not define raw image data with maxval > 255.
  # But writing maxval 65535 for 16bit data gives at least a chance
  # to read the image.
 
- if ($format == SANE_FRAME_RED
-  or $format == SANE_FRAME_GREEN
-  or $format == SANE_FRAME_BLUE
-  or $format == SANE_FRAME_RGB )
+ if ($frame_format == SANE_FRAME_RED
+  or $frame_format == SANE_FRAME_GREEN
+  or $frame_format == SANE_FRAME_BLUE
+  or $frame_format == SANE_FRAME_RGB )
  {
   printf $fh "P6\n# SANE data follows\n%d %d\n%d\n", $width, $height,
     ( $depth <= 8 ) ? 255 : 65535;
  }
- elsif ( $format == SANE_FRAME_GRAY ) {
+ elsif ( $frame_format == SANE_FRAME_GRAY ) {
   if ( $depth == 1 ) {
    printf $fh "P4\n# SANE data follows\n%d %d\n", $width, $height;
   }
@@ -616,7 +616,7 @@ sub write_pnm_header_to_file {
 }
 
 sub scan_it_raw {
- my ( $fname, $raw, $script ) = @_;
+ ( my $fname, $raw, my $script ) = @_;
 
  my $first_frame = 1, my $offset = 0, my $must_buffer = 0;
  my $min = 0xff, my $max = 0;
@@ -850,7 +850,7 @@ cleanup:
 }
 
 sub scan_docs {
- my ( $start, $end, $no_overwrite, $raw, $outfmt, $script ) = @_;
+ ( my $start, my $end, $no_overwrite, $raw, my $outfmt, my $script ) = @_;
 
  $Sane::_status = SANE_STATUS_GOOD;
  my $scannedPages = 0;
