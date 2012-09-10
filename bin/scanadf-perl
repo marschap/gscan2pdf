@@ -933,22 +933,27 @@ if ( defined( $options{V} ) ) {
 }
 
 if ($help) {
- print "Usage: $prog_name [OPTION]...\n
+ print <<"EOS";
+Usage: $prog_name [OPTION]...
+
 Start image acquisition on a scanner device and write image data to
-output files.\n
+output files.
+
    [ -d | --device-name <device> ]   use a given scanner device.
    [ -h | --help ]                   display this help message and exit.
    [ -L | --list-devices ]           show available scanner devices.
    [ -v | --verbose ]                give even more status messages.
    [ -V | --version ]                print version information.
-   [ -N | --no-overwrite ]           don't overwrite existing files.\n
+   [ -N | --no-overwrite ]           don't overwrite existing files.
+
    [ -o | --output-file <name> ]     name of file to write image data
                                      (\%d replacement in output file name).
    [ -S | --scan-script <name> ]     name of script to run after every scan.
    [ --script-wait ]                 wait for scripts to finish before exit
    [ -s | --start-count <num> ]      page count of first scanned image.
    [ -e | --end-count <num> ]        last page number to scan.
-   [ -r | --raw ]                    write raw image data to file.\n";
+   [ -r | --raw ]                    write raw image data to file.
+EOS
 }
 
 if ( !$devname ) {
