@@ -11,11 +11,8 @@ use IO::Handle;
 
 #$Sane::DEBUG = 1;
 
-my (
- %options,    @window_val_user, @window_option,
- @window_val, @window,          $device,
- $format,     $devname,         %option_number
-);
+my ( %options, @window_val_user, @window_option, @window_val, @window, $device,
+ $devname, %option_number );
 my $num_dev_options   = 0;
 my $verbose           = 0;
 my $help              = 0;
