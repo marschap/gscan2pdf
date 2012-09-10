@@ -847,7 +847,7 @@ cleanup:
 }
 
 sub scan_docs {
- ( my $start, my $end, $no_overwrite, $raw, my $outfmt, my $script ) = @_;
+ my ( $start, $end, $outfmt, $script ) = @_;
 
  $Sane::_status = SANE_STATUS_GOOD;
  my $scannedPages = 0;
@@ -1101,7 +1101,7 @@ local $SIG{INT}  = \&sighandler;
 local $SIG{PIPE} = \&sighandler;
 local $SIG{TERM} = \&sighandler;
 
-scan_docs( $startNum, $endNum, $no_overwrite, $raw, $outputFile, $scanScript );
+scan_docs( $startNum, $endNum, $outputFile, $scanScript );
 
 exit $Sane::STATUS;
 
