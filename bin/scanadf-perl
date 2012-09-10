@@ -635,8 +635,8 @@ sub scan_it_raw {
     goto cleanup;
    }
 
-   open $fp, '>', $fname;    ## no critic (RequireBriefOpen)
-   if ( !$fp ) {
+   unless ( open $fp, '>', $fname )    ## no critic (RequireBriefOpen)
+   {
     print STDERR "Error opening output `$fname': $@\n";
     $Sane::_status = SANE_STATUS_IO_ERROR;
     goto cleanup;
