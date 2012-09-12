@@ -239,8 +239,15 @@ sub pages_possible {
    return -$start / $step;
   }
 
-  # Checked beyond end of document, allow infinite pages
-  elsif ( $i > $#{ $self->{data} } or $i < 0 ) {
+  # Empty document, or checked beyond end of document, allow infinite pages
+  elsif (
+   (
+       $#{ $self->{data} } == -1
+    or $self->{data}[ $#{ $self->{data} } ][0] < $start
+   )
+   and $step > 0
+    )
+  {
    return -1;
   }
 

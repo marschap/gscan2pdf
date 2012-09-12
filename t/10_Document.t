@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 9;
+use Test::More tests => 10;
 use Gtk2 -init;    # Could just call init separately
 
 BEGIN {
@@ -29,6 +29,10 @@ is( $slist->pages_possible( 1, 1 ),
  1, 'pages_possible finite forwards in non-empty document' );
 is( $slist->pages_possible( 1, -1 ),
  1, 'pages_possible finite backwards in non-empty document' );
+
+$slist->{data}[0][0] = 1;
+is( $slist->pages_possible( 2, 1 ),
+ -1, 'pages_possible infinite forwards in non-empty document' );
 
 $slist->{data}[0][0] = 1;
 $slist->{data}[1][0] = 3;
