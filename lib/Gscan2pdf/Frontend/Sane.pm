@@ -15,14 +15,13 @@ use Locale::gettext 1.05;    # For translations
 my $_POLL_INTERVAL;
 my $_self;
 my $buffer_size = ( 32 * 1024 );    # default size
-my ( $prog_name, $d, $logger );
+my ( $prog_name, $logger );
 
 sub setup {
  ( my $class, $logger ) = @_;
- $_POLL_INTERVAL = 100;                                   # ms
+ $_POLL_INTERVAL = 100;                          # ms
  $_self          = {};
  $prog_name      = Glib::get_application_name;
- $d              = Locale::gettext->domain($prog_name);
 
  $_self->{requests} = Thread::Queue->new;
  share $_self->{device_list};
