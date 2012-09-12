@@ -162,7 +162,7 @@ $logger->info("Starting $prog_name $version");
 $logger->info("Log level $log_level");
 
 if ( defined $locale ) {
- if ( $locale =~ /^\// ) {
+ if ( $locale =~ /^\//x ) {
   $d->dir($locale);
  }
  else {
@@ -317,7 +317,7 @@ if ( keys %{$test} ) {
   # Find a way of emulating the nonsense \n that some people seem to get
   $device =~ s/\\n/\n/g;
   $logger->debug("'$file','$device'");
-  $file = getcwd . "/$file" if ( $file !~ /^\// );
+  $file = getcwd . "/$file" if ( $file !~ /^\//x );
   if ( !-r $file ) {
    $logger->fatal( sprintf( $d->get("Cannot read file: %s"), $file ) );
    exit 1;
@@ -955,7 +955,7 @@ $slist->signal_connect(
    my $iter = $model->get_iter($_);
    my @info = $model->get($iter);
    my $suffix;
-   $suffix = $1 if ( $info[2]->{filename} =~ /(\.\w*)$/ );
+   $suffix = $1 if ( $info[2]->{filename} =~ /(\.\w*)$/x );
    my $new = File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
 
    # quotes required to prevent File::Temp objects from being clobbered
@@ -2394,7 +2394,7 @@ sub save_PDF {
    $logger->debug("PDF save filename dialog returned $response");
    if ( $response eq 'ok' ) {
     my $filename = $file_chooser->get_filename;
-    if ( $filename !~ /\.pdf$/i ) {
+    if ( $filename !~ /\.pdf$/ix ) {
      $filename = $filename . '.pdf';
      if ( -f $filename ) {
 
@@ -2694,7 +2694,7 @@ sub save_dialog {
  $hboxf->pack_start( $label, FALSE, FALSE, 0 );
  my @fonts;
  for (`fc-list : family style file`) {
-  if (/ttf: /) {
+  if (/ttf:\ /x) {
    my ( $file, $family, $style ) = split ':';
    chomp $style;
    $family =~ s/^ //;
@@ -2810,7 +2810,7 @@ sub save_dialog {
       my ( $dialog, $response ) = @_;
       if ( $response eq 'ok' ) {
        my $filename = $file_chooser->get_filename;
-       if ( $filename !~ /\.tif$/i ) {
+       if ( $filename !~ /\.tif$/ix ) {
         $filename = $filename . '.tif';
         if ( -f $filename ) {
 
@@ -2865,7 +2865,7 @@ sub save_dialog {
       my ( $dialog, $response ) = @_;
       if ( $response eq 'ok' ) {
        my $filename = $file_chooser->get_filename;
-       if ( $filename !~ /\.txt$/i ) {
+       if ( $filename !~ /\.txt$/ix ) {
         $filename = $filename . '.txt';
         if ( -f $filename ) {
 
@@ -2963,7 +2963,7 @@ sub save_dialog {
       my ( $dialog, $response ) = @_;
       if ( $response eq 'ok' ) {
        my $filename = $file_chooser->get_filename;
-       if ( $filename !~ /\.ps$/i ) {
+       if ( $filename !~ /\.ps$/ix ) {
         $filename = $filename . '.ps';
         if ( -f $filename ) {
 
@@ -3020,7 +3020,7 @@ sub save_dialog {
       my ( $dialog, $response ) = @_;
       if ( $response eq 'ok' ) {
        my $filename = $file_chooser->get_filename;
-       if ( $filename !~ /\.gs2p$/i ) {
+       if ( $filename !~ /\.gs2p$/ix ) {
         $filename = $filename . '.gs2p';
         if ( -f $filename ) {
 
@@ -3143,7 +3143,7 @@ sub save_image {
   }
   else {
    $filename = $filename . ".$SETTING{'image type'}"
-     if ( $filename !~ /\.$SETTING{'image type'}$/i );
+     if ( $filename !~ /\.$SETTING{'image type'}$/ix );
    return if ( file_exists( $file_chooser, $filename ) );
   }
 
@@ -3264,7 +3264,7 @@ sub save_djvu {
    my ( $dialog, $response ) = @_;
    if ( $response eq 'ok' ) {
     my $filename = $file_chooser->get_filename;
-    if ( $filename !~ /\.djvu$/i ) {
+    if ( $filename !~ /\.djvu$/ix ) {
      $filename = $filename . '.djvu';
      if ( -f $filename ) {
 
@@ -4011,7 +4011,7 @@ sub scan_dialog {
    $dialog->set_default_response('ok');
    $dialog->show_all;
 
-   if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/ ) {
+   if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/x ) {
     my $profile = $entry->get_text;
     $SETTING{'default profile'} = $profile;
     my %options = walk_options_tree();
@@ -4907,7 +4907,7 @@ sub parse_device_list {
  $SETTING{device} = $1
    if ( not defined( $SETTING{device} )
   and defined($output)
-  and $output =~ /default device is `(.*)'/ );
+  and $output =~ /default\ device\ is\ `(.*)'/x );
  return;
 }
 
@@ -5122,22 +5122,22 @@ sub scanimage {
      $logger->debug($buffer) if ($buffer);
      $line .= $buffer;
 
-     while ( $line =~ /([\r\n])/ ) {
+     while ( $line =~ /([\r\n])/x ) {
       my $le = $1;
-      if ( $line =~ /^Progress: (\d*\.\d*)%/ ) {
+      if ( $line =~ /^Progress:\ (\d*\.\d*)%/x ) {
        my $fraction = $1 / 100;
        $spbar->set_fraction($fraction);
       }
-      elsif ( $line =~ /^Scanning (-?\d*) pages/ ) {
+      elsif ( $line =~ /^Scanning\ (-?\d*)\ pages/x ) {
        $spbar->set_text(
         $d->get('Scanning') . " $1 " . $d->get('pages') . "..." );
       }
-      elsif ( $line =~ /^Scanning page (\d*)/ ) {
+      elsif ( $line =~ /^Scanning\ page\ (\d*)/x ) {
        $spbar->set_text(
         sprintf( $d->get('Scanning page %i...'), $1 * $step + $offset ) );
        $spbar->set_fraction(0);
       }
-      elsif ( $line =~ /^Scanned page (\d*)\. \(scanner status = 5\)/ ) {
+      elsif ( $line =~ /^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ 5\)/x ) {
        my $id = $1;
 
        # If the scan can't be loaded then blow the scanning dialog away and
@@ -5157,15 +5157,17 @@ sub scanimage {
        );
       }
       elsif ( $line =~
-       /Scanner warming up - waiting \d* seconds|wait for lamp warm-up/ )
+/Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x
+        )
       {
        $spbar->set_text( $d->get('Scanner warming up') );
       }
-      elsif ( $line =~ /^Scanned page \d*\. \(scanner status = 7\)/ ) {
+      elsif ( $line =~ /^Scanned\ page\ \d*\.\ \(scanner\ status\ =\ 7\)/x ) {
        ;
       }
       elsif ( $line =~
-       /^$SETTING{frontend}: sane_start: Document feeder out of documents/ )
+/^$SETTING{frontend}:\ sane_start:\ Document\ feeder\ out\ of\ documents/x
+        )
       {
        $scbutton->signal_handler_disconnect($signal);
        $shbox->hide;
@@ -5175,25 +5177,25 @@ sub scanimage {
       }
       elsif (
        $cancel
-       and
-       (   $line =~ /^$SETTING{frontend}: sane_start: Error during device I\/O/
-        or $line =~ /^$SETTING{frontend}: received signal 2/
-        or $line =~ /^$SETTING{frontend}: trying to stop scanner/ )
+       and ( $line =~
+           /^$SETTING{frontend}:\ sane_start:\ Error\ during\ device\ I\/O/x
+        or $line =~ /^$SETTING{frontend}:\ received\ signal\ 2/x
+        or $line =~ /^$SETTING{frontend}:\ trying\ to\ stop\ scanner/x )
         )
       {
        ;
       }
-      elsif ( $line =~ /^$SETTING{frontend}: rounded/ ) {
+      elsif ( $line =~ /^$SETTING{frontend}:\ rounded/x ) {
        $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
       }
-      elsif ( $line =~ /^$SETTING{frontend}: sane_start: Device busy/ ) {
+      elsif ( $line =~ /^$SETTING{frontend}:\ sane_start:\ Device\ busy/x ) {
        $scbutton->signal_handler_disconnect($signal);
        $shbox->hide;
        show_message_dialog( $windows, 'error', 'close',
         $d->get('Device busy') );
       }
       elsif (
-       $line =~ /^$SETTING{frontend}: sane_read: Operation was cancelled/ )
+       $line =~ /^$SETTING{frontend}:\ sane_read:\ Operation\ was\ cancelled/x )
       {
        $scbutton->signal_handler_disconnect($signal);
        $shbox->hide;
@@ -5337,9 +5339,10 @@ sub scanadf {
      $logger->debug($buffer) if ($buffer);
      $line .= $buffer;
 
-     while ( $line =~ /\n/ ) {
+     while ( $line =~ /\n/x ) {
       if ( $line =~
-       /Scanner warming up - waiting \d* seconds|wait for lamp warm-up/ )
+/Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x
+        )
       {
        $spbar->set_text( $d->get('Scanner warming up') );
       }
