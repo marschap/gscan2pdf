@@ -21,15 +21,15 @@ BEGIN {
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
-our $logger = Log::Log4perl::get_logger;
 
 # Create test image
 system('convert rose: test.pnm');
 
+Gscan2pdf::Page->set_logger(Log::Log4perl::get_logger);
 my $page = Gscan2pdf::Page->new(
  filename   => 'test.pnm',
  format     => 'Portable anymap',
- resolution => 72
+ resolution => 72,
 );
 
 $page->{hocr} = <<'EOS';

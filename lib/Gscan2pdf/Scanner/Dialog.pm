@@ -195,7 +195,7 @@ my $tolerance = 1;
 # for:
 #  my $class = shift;
 #  my $self = Glib::Object::new($class, @_);
-sub new {
+sub new {    ## no critic (RequireArgUnpacking)
  my $self = Glib::Object::new(@_);
 
  my $vbox = $self->get('vbox');
@@ -491,7 +491,7 @@ sub new {
    $dialog->set_default_response('ok');
    $dialog->show_all;
 
-   if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/ ) {
+   if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/x ) {
     my $profile = $entry->get_text;
     $self->add_profile( $profile, $self->get('current-scan-options') );
     $self->{combobsp}->set_active( num_rows_combobox( $self->{combobsp} ) );
@@ -539,18 +539,18 @@ sub SET_PROPERTY {
   or ( defined($newval) xor defined($oldval) ) )
  {
   if ( defined $logger ) {
-   use Data::Dumper;
+   require Data::Dumper;
    $logger->debug(
     "Setting $name from "
       . (
      defined($oldval)
-     ? ( ref($oldval) =~ /(HASH|ARRAY)/ ? Dumper($oldval) : $oldval )
+     ? ( ref($oldval) =~ /(?:HASH|ARRAY)/x ? Dumper($oldval) : $oldval )
      : 'undef'
       )
       . ' to '
       . (
      defined($newval)
-     ? ( ref($newval) =~ /(HASH|ARRAY)/ ? Dumper($newval) : $newval )
+     ? ( ref($newval) =~ /(?:HASH|ARRAY)/x ? Dumper($newval) : $newval )
      : 'undef'
       )
    );
@@ -607,6 +607,7 @@ sub show {
  my $self = shift;
  $self->signal_chain_from_overridden;
  $self->{framex}->hide_all;
+ return;
 }
 
 # Get number of rows in combobox
@@ -695,12 +696,13 @@ sub set_device_list {
  $self->{combobd}->signal_handler_block( $self->{combobd_changed_signal} );
 
  # Remove all entries apart from rescan
- $i = get_combobox_num_items( $self->{combobd} );
- $self->{combobd}->remove_text(0) while ( $i-- > 1 );
+ for ( my $j = get_combobox_num_items( $self->{combobd} ) ; $j > 1 ; $j-- ) {
+  $self->{combobd}->remove_text(0);
+ }
 
  # read the model names into the combobox
- for ( my $i = 0 ; $i < @$device_list ; $i++ ) {
-  $self->{combobd}->insert_text( $i, $device_list->[$i]{label} );
+ for ( my $j = 0 ; $j < @$device_list ; $j++ ) {
+  $self->{combobd}->insert_text( $j, $device_list->[$j]{label} );
  }
 
  $self->{combobd}->signal_handler_unblock( $self->{combobd_changed_signal} );
@@ -833,13 +835,14 @@ sub scan_options {
        }
 
        # CheckButton
-       if ( $opt->{type} == SANE_TYPE_BOOL ) {
+       if ( $opt->{type} == SANE_TYPE_BOOL )
+       {    ## no critic (ProhibitCascadingIfElse)
         $widget = Gtk2::CheckButton->new;
         $widget->set_active(TRUE) if ($val);
         $widget->{signal} = $widget->signal_connect(
          toggled => sub {
-          my $val = $widget->get_active;
-          $self->set_option( $opt, $val );
+          my $value = $widget->get_active;
+          $self->set_option( $opt, $value );
          }
         );
        }
@@ -866,8 +869,8 @@ sub scan_options {
           if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE );
         $widget->{signal} = $widget->signal_connect(
          'value-changed' => sub {
-          my $val = $widget->get_value;
-          $self->set_option( $opt, $val );
+          my $value = $widget->get_value;
+          $self->set_option( $opt, $value );
          }
         );
        }
@@ -902,8 +905,8 @@ sub scan_options {
           if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE );
         $widget->{signal} = $widget->signal_connect(
          activate => sub {
-          my $val = $widget->get_text;
-          $self->set_option( $opt, $val );
+          my $value = $widget->get_text;
+          $self->set_option( $opt, $value );
          }
         );
        }
@@ -1108,10 +1111,10 @@ sub set_option {
 
  my $j = $#{$current};
  while ( $j > -1 ) {
-  my ($option) =
+  my ($opt) =
     keys( %{ $current->[$j] } );
-  $seen{$option}++;
-  if ( $seen{$option} > 1 ) {
+  $seen{$opt}++;
+  if ( $seen{$opt} > 1 ) {
    splice @$current, $j, 1;
   }
   $j--;
@@ -1147,8 +1150,8 @@ sub set_option {
 
      # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
      if ( defined $widget ) {
-      my $opt = $options[$i];
-      my $val = $opt->{val};
+      my $opt   = $options[$i];
+      my $value = $opt->{val};
       $widget->signal_handler_block( $widget->{signal} );
 
       # HBox for option
@@ -1159,9 +1162,10 @@ sub set_option {
       if ( $opt->{max_values} < 2 ) {
 
        # CheckButton
-       if ( $opt->{type} == SANE_TYPE_BOOL ) {
-        $widget->set_active($val)
-          if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE );
+       if ( $opt->{type} == SANE_TYPE_BOOL )
+       {    ## no critic (ProhibitCascadingIfElse)
+        $widget->set_active($value)
+          if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
        }
 
        # SpinButton
@@ -1171,8 +1175,8 @@ sub set_option {
         $step = $opt->{constraint}{quant} if ( $opt->{constraint}{quant} );
         $widget->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
         $widget->set_increments( $step, $page );
-        $widget->set_value($val)
-          if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE );
+        $widget->set_value($value)
+          if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
        }
 
        # ComboBox
@@ -1183,15 +1187,15 @@ sub set_option {
         my $index = 0;
         for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
          $widget->append_text( $d_sane->get( $opt->{constraint}[$i] ) );
-         $index = $i if ( defined $val and $opt->{constraint}[$i] eq $val );
+         $index = $i if ( defined $value and $opt->{constraint}[$i] eq $value );
         }
         $widget->set_active($index) if ( defined $index );
        }
 
        # Entry
        elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-        $widget->set_text($val)
-          if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE );
+        $widget->set_text($value)
+          if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
        }
       }
       $widget->signal_handler_unblock( $widget->{signal} );
@@ -1232,20 +1236,20 @@ sub set_options {
 
  $canvas->signal_connect(
   'button-press-event' => sub {
-   my ( $canvas, $event ) = @_;
-   if ( defined $canvas->{selected} ) {
-    $canvas->{selected}->set( 'fill-color' => 'black' );
-    undef $canvas->{selected};
+   my ( $widget, $event ) = @_;
+   if ( defined $widget->{selected} ) {
+    $widget->{selected}->set( 'fill-color' => 'black' );
+    undef $widget->{selected};
    }
    return FALSE
-     if ( $#{ $canvas->{val} } + 1 >= $opt->{max_values}
-    or $canvas->{on_val} );
+     if ( $#{ $widget->{val} } + 1 >= $opt->{max_values}
+    or $widget->{on_val} );
    my $fleur = Gtk2::Gdk::Cursor->new('fleur');
-   my ( $x, $y ) = to_graph( $canvas, $event->x, $event->y );
+   my ( $x, $y ) = to_graph( $widget, $event->x, $event->y );
    $x = int($x) + 1;
-   splice @{ $canvas->{val} }, $x, 0, $y;
-   splice @{ $canvas->{items} }, $x, 0, add_value( $root, $canvas );
-   update_graph($canvas);
+   splice @{ $widget->{val} }, $x, 0, $y;
+   splice @{ $widget->{items} }, $x, 0, add_value( $root, $widget );
+   update_graph($widget);
    return TRUE;
   }
  );
@@ -1253,19 +1257,22 @@ sub set_options {
  $canvas->signal_connect_after(
   'key_press_event',
   sub {
-   my ( $canvas, $event ) = @_;
-   if ( $event->keyval == $Gtk2::Gdk::Keysyms{Delete}
-    and defined $canvas->{selected} )
+   my ( $widget, $event ) = @_;
+   if (
+    $event->keyval ==
+    $Gtk2::Gdk::Keysyms{Delete}    ## no critic (ProhibitPackageVars)
+    and defined $widget->{selected}
+     )
    {
-    my $item = $canvas->{selected};
-    undef $canvas->{selected};
-    $canvas->{on_val} = FALSE;
-    splice @{ $canvas->{val} },   $item->{index}, 1;
-    splice @{ $canvas->{items} }, $item->{index}, 1;
+    my $item = $widget->{selected};
+    undef $widget->{selected};
+    $widget->{on_val} = FALSE;
+    splice @{ $widget->{val} },   $item->{index}, 1;
+    splice @{ $widget->{items} }, $item->{index}, 1;
     my $parent = $item->get_parent;
     my $num    = $parent->find_child($item);
     $parent->remove_child($num);
-    update_graph($canvas);
+    update_graph($widget);
    }
    return FALSE;
   }
@@ -1346,16 +1353,21 @@ sub add_value {
  );
  $item->signal_connect(
   'button-release-event' => sub {
-   my ( $item, $target, $ev ) = @_;
-   $item->get_canvas->pointer_ungrab( $item, $ev->time );
+   my ( $widget, $target, $ev ) = @_;
+   $widget->get_canvas->pointer_ungrab( $widget, $ev->time );
    return TRUE;
   }
  );
  my $opt = $canvas->{opt};
  $item->signal_connect(
   'motion-notify-event' => sub {
-   my ( $item, $target, $event ) = @_;
-   return FALSE unless ( $event->state >= 'button1-mask' );
+   my ( $widget, $target, $event ) = @_;
+   return FALSE
+     unless ## no critic (ProhibitNegativeExpressionsInUnlessAndUntilConditions)
+      (
+       $event->state >=    ## no critic (ProhibitMismatchedOperators)
+       'button1-mask'
+      );
    my ( $x, $y ) = ( $event->x, $event->y );
    my ( $xgr, $ygr ) = ( 0, $y );
    if ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
@@ -1380,9 +1392,9 @@ sub add_value {
      }
     }
    }
-   $canvas->{val}[ $item->{index} ] = $ygr;
+   $canvas->{val}[ $widget->{index} ] = $ygr;
    ( $x, $y ) = to_canvas( $canvas, $xgr, $ygr );
-   $item->set( y => $y - 10 / 2 );
+   $widget->set( y => $y - 10 / 2 );
    return TRUE;
   }
  );
@@ -1454,8 +1466,8 @@ sub update_graph {
  for ( my $i = 0 ; $i <= $#{ $canvas->{items} } ; $i++ ) {
   my $item = $canvas->{items}[$i];
   $item->{index} = $i;
-  my ( $x, $y ) = to_canvas( $canvas, $i, $canvas->{val}[$i] );
-  $item->set( x => $x - 10 / 2, y => $y - 10 / 2 );
+  my ( $xc, $yc ) = to_canvas( $canvas, $i, $canvas->{val}[$i] );
+  $item->set( x => $xc - 10 / 2, y => $yc - 10 / 2 );
  }
  return;
 }
@@ -1524,7 +1536,7 @@ sub set_current_scan_options {
     my $opt = $options->by_name($name);
 
     my $widget = $opt->{widget};
-    if ( ref($val) eq 'ARRAY' ) {
+    if ( ref($val) eq 'ARRAY' ) {    ## no critic (ProhibitCascadingIfElse)
      $self->set_option( $opt, $val );
 
      # when INFO_INEXACT is implemented, so that the value is reloaded,
@@ -1550,8 +1562,8 @@ sub set_current_scan_options {
     elsif ( $widget->isa('Gtk2::ComboBox') ) {
      if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
       my $index;
-      for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
-       $index = $i if ( $opt->{constraint}[$i] eq $val );
+      for ( my $j = 0 ; $j < @{ $opt->{constraint} } ; ++$j ) {
+       $index = $j if ( $opt->{constraint}[$j] eq $val );
       }
       $widget->set_active($index) if ( defined $index );
      }
@@ -1571,8 +1583,8 @@ sub set_current_scan_options {
 
     # Only emit the changed-current-scan-options signal when we have finished
     $self->signal_emit( 'changed-current-scan-options', $profile )
-      unless ( $i < @defaults );
-    return FALSE unless ( $i++ < @defaults );
+      if ( $i >= @defaults );
+    return FALSE if ( $i++ >= @defaults );
    }
    return TRUE;
   }
@@ -1700,7 +1712,15 @@ sub edit_paper {
     {
      my $name    = $slist->{data}[ $path->to_string ][0];
      my $version = 2;
-     if ( $name =~ /(.*) \((\d+)\)/ ) {
+     if (
+      $name =~ /
+                     (.*) # name
+                     \ \( # space, opening bracket
+                     (\d+) # version
+                     \) # closing bracket
+                   /x
+       )
+     {
       $name    = $1;
       $version = $2 + 1;
      }
@@ -1808,6 +1828,7 @@ sub scan {
    $self->signal_emit( 'process-error', $msg );
   }
  );
+ return;
 }
 
 sub make_progress_string {
@@ -1895,6 +1916,7 @@ sub set_combobox_by_text {
 sub cancel_scan {
  Gscan2pdf::Frontend::Sane->cancel_scan;
  $logger->info("Cancelled scan");
+ return;
 }
 
 1;

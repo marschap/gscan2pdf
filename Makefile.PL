@@ -56,6 +56,7 @@ WriteMakefile(
   Goo::Canvas            => 0,
   Readonly               => 0,
   Log::Log4perl          => 0,
+  Try::Tiny              => 0,
  },
  clean => { FILES => '$(SOURCE_TIDY)' },
  (

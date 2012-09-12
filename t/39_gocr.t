@@ -10,7 +10,6 @@ use strict;
 use Test::More tests => 1;
 
 BEGIN {
- use Gscan2pdf;
  use Gscan2pdf::Document;
  use Gtk2 -init;    # Could just call init separately
 }
@@ -24,14 +23,10 @@ SKIP: {
  skip 'gocr not installed', 1
    unless ( system("which gocr > /dev/null 2> /dev/null") == 0 );
 
- # Thumbnail dimensions
- our $widtht  = 100;
- our $heightt = 100;
-
  use Log::Log4perl qw(:easy);
  Log::Log4perl->easy_init($WARN);
  our $logger = Log::Log4perl::get_logger;
- Gscan2pdf->setup($logger);
+ Gscan2pdf::Document->setup($logger);
 
  # Create test image
  system(
@@ -40,17 +35,17 @@ SKIP: {
 
  my $slist = Gscan2pdf::Document->new;
  $slist->get_file_info(
-  'test.pnm',
-  undef, undef, undef,
-  sub {
+  path              => 'test.pnm',
+  finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
-    $info, 1, 1, undef, undef, undef,
-    sub {
+    info              => $info,
+    first             => 1,
+    last              => 1,
+    finished_callback => sub {
      $slist->gocr(
-      $slist->{data}[0][2],
-      undef, undef, undef,
-      sub {
+      page              => $slist->{data}[0][2],
+      finished_callback => sub {
        like(
         $slist->{data}[0][2]{hocr},
         qr/The quick brown fox/,
@@ -66,5 +61,5 @@ SKIP: {
  Gtk2->main;
 
  unlink 'test.pnm';
- Gscan2pdf->quit();
+ Gscan2pdf::Document->quit();
 }

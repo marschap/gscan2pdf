@@ -15,14 +15,13 @@ use Locale::gettext 1.05;    # For translations
 my $_POLL_INTERVAL;
 my $_self;
 my $buffer_size = ( 32 * 1024 );    # default size
-my ( $prog_name, $d, $logger );
+my ( $prog_name, $logger );
 
 sub setup {
  ( my $class, $logger ) = @_;
- $_POLL_INTERVAL = 100;                                   # ms
+ $_POLL_INTERVAL = 100;                          # ms
  $_self          = {};
  $prog_name      = Glib::get_application_name;
- $d              = Locale::gettext->domain($prog_name);
 
  $_self->{requests} = Thread::Queue->new;
  share $_self->{device_list};
@@ -250,33 +249,34 @@ sub scan_pages {
     }
 
     # Stop the process unless everything OK and more scans required
-    unless (
-         not $_self->{abort_scan}
-     and ( $options{npages} == -1 or --$options{npages} )
-     and ( $_self->{status} == SANE_STATUS_GOOD
-      or $_self->{status} == SANE_STATUS_EOF )
-      )
-    {
-     _enqueue_request('cancel');
-     if (
-         $_self->{status} == SANE_STATUS_GOOD
-      or $_self->{status} == SANE_STATUS_EOF
-      or ( $_self->{status} == SANE_STATUS_NO_DOCS
-       and $options{npages} < 1
-       and $n2 > 1 )
+    unless  ## no critic (ProhibitNegativeExpressionsInUnlessAndUntilConditions)
+       (
+            not $_self->{abort_scan}
+        and ( $options{npages} == -1 or --$options{npages} )
+        and ( $_self->{status} == SANE_STATUS_GOOD
+         or $_self->{status} == SANE_STATUS_EOF )
        )
-     {
-      $options{finished_callback}->()
-        if ( defined $options{finished_callback} );
+       {
+        _enqueue_request('cancel');
+        if (
+            $_self->{status} == SANE_STATUS_GOOD
+         or $_self->{status} == SANE_STATUS_EOF
+         or ( $_self->{status} == SANE_STATUS_NO_DOCS
+          and $options{npages} < 1
+          and $n2 > 1 )
+          )
+        {
+         $options{finished_callback}->()
+           if ( defined $options{finished_callback} );
+        }
+        else {
+         $options{error_callback}->( Sane::strstatus( $_self->{status} ) )
+           if ( defined $options{error_callback} );
+        }
+        return Glib::SOURCE_REMOVE;
      }
-     else {
-      $options{error_callback}->( Sane::strstatus( $_self->{status} ) )
-        if ( defined $options{error_callback} );
-     }
-     return Glib::SOURCE_REMOVE;
-    }
 
-    $options{start} += $options{step};
+     $options{start} += $options{step};
     $n2++;
     $sentinel = _new_page( $options{dir}, $options{format}, $options{start} );
     return Glib::SOURCE_CONTINUE;

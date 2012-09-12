@@ -3,7 +3,10 @@ use warnings;
 use Test::More;
 
 my $git;
-if ( -d '.git' and eval { $git = `git ls-tree --name-status -r HEAD` } ) {
+if ( -d '.git'
+ and
+ eval { $git = `git ls-tree --name-status -r HEAD | egrep -v '^\.(git|be)'` } )
+{
  plan( tests => 1 );
 }
 else {

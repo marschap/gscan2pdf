@@ -2,8 +2,8 @@
 
 use warnings;
 use strict;
+use feature "switch";
 use Sane;
-use Data::Dumper;
 use Getopt::Long qw(:config no_ignore_case pass_through);
 use File::Basename;
 use IO::Handle;
@@ -13,14 +13,13 @@ use IO::Handle;
 my (
  %options, @window_val_user, @window_option, @window_val,
  @window,  $num_dev_options, $device,        $format,
- $devname, %option_number
+ $devname, %option_number,   $batch_count,
 );
-my $verbose        = 0;
-my $help           = 0;
-my $test           = 0;
-my $batch          = 0;
-my $batch_start_at = 1;
-my $batch_count;
+my $verbose           = 0;
+my $help              = 0;
+my $test              = 0;
+my $batch             = 0;
+my $batch_start_at    = 1;
 my $batch_increment   = 1;
 my $buffer_size       = ( 32 * 1024 );    # default size
 my $tl_x              = 0;
@@ -77,29 +76,31 @@ sub sighandler {
 sub print_unit {
  my ($unit) = @_;
 
- if ( $unit == SANE_UNIT_PIXEL ) {
-  print "pel";
- }
- elsif ( $unit == SANE_UNIT_BIT ) {
-  print "bit";
- }
- elsif ( $unit == SANE_UNIT_MM ) {
-  print "mm";
- }
- elsif ( $unit == SANE_UNIT_DPI ) {
-  print "dpi";
- }
- elsif ( $unit == SANE_UNIT_PERCENT ) {
-  print "%";
- }
- elsif ( $unit == SANE_UNIT_MICROSECOND ) {
-  print "us";
+ given ($unit) {
+  when (SANE_UNIT_PIXEL) {
+   print "pel";
+  }
+  when (SANE_UNIT_BIT) {
+   print "bit";
+  }
+  when (SANE_UNIT_MM) {
+   print "mm";
+  }
+  when (SANE_UNIT_DPI) {
+   print "dpi";
+  }
+  when (SANE_UNIT_PERCENT) {
+   print "%";
+  }
+  when (SANE_UNIT_MICROSECOND) {
+   print "us";
+  }
  }
  return;
 }
 
 sub print_option {
- my ( $device, $opt_num, $opt ) = @_;
+ ( $device, my $opt_num, my $opt ) = @_;
 
  my $not_first = SANE_FALSE;
 
@@ -176,16 +177,18 @@ sub print_option {
    print ",..." if ( $opt->{max_values} > 1 );
   }
   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-   my $format = "%g..%g";
-   $format = "%d..%d" if ( $opt->{type} == SANE_TYPE_INT );
+   my $string_format = "%g..%g";
+   $string_format = "%d..%d" if ( $opt->{type} == SANE_TYPE_INT );
    if ( $opt->{name} eq "x" ) {
-    printf $format, $opt->{constraint}{min}, $opt->{constraint}{max} - $tl_x;
+    printf $string_format, $opt->{constraint}{min},
+      $opt->{constraint}{max} - $tl_x;
    }
    elsif ( $opt->{name} eq "y" ) {
-    printf $format, $opt->{constraint}{min}, $opt->{constraint}{max} - $tl_y;
+    printf $string_format, $opt->{constraint}{min},
+      $opt->{constraint}{max} - $tl_y;
    }
    else {
-    printf $format, $opt->{constraint}{min}, $opt->{constraint}{max};
+    printf $string_format, $opt->{constraint}{min}, $opt->{constraint}{max};
    }
    print_unit( $opt->{unit} );
    print ",..." if ( $opt->{max_values} > 1 );
@@ -216,26 +219,28 @@ sub print_option {
     print( $val ? "yes" : "no" );
    }
    elsif ( $opt->{type} == SANE_TYPE_INT or $opt->{type} == SANE_TYPE_FIXED ) {
-    my $format = "%g";
-    $format = "%d" if ( $opt->{type} == SANE_TYPE_INT );
-    if ( $opt->{name} eq "l" ) {
-     $tl_x = $val;
-     printf $format, $tl_x;
-    }
-    elsif ( $opt->{name} eq "t" ) {
-     $tl_y = $val;
-     printf $format, $tl_y;
-    }
-    elsif ( $opt->{name} eq "x" ) {
-     $br_x = $val;
-     printf $format, $br_x - $tl_x;
-    }
-    elsif ( $opt->{name} eq "y" ) {
-     $br_y = $val;
-     printf $format, $br_y - $tl_y;
-    }
-    else {
-     printf $format, $val;
+    my $string_format = "%g";
+    $string_format = "%d" if ( $opt->{type} == SANE_TYPE_INT );
+    given ( $opt->{name} ) {
+     when ("l") {
+      $tl_x = $val;
+      printf $string_format, $tl_x;
+     }
+     when ("t") {
+      $tl_y = $val;
+      printf $string_format, $tl_y;
+     }
+     when ("x") {
+      $br_x = $val;
+      printf $string_format, $br_x - $tl_x;
+     }
+     when ("y") {
+      $br_y = $val;
+      printf $string_format, $br_y - $tl_y;
+     }
+     default {
+      printf $string_format, $val;
+     }
     }
    }
    elsif ( $opt->{type} == SANE_TYPE_STRING ) {
@@ -309,10 +314,16 @@ sub parse_scalar {
  my ( $opt, $str ) = @_;
 
  my ( $v, $unit );
- if ( $str =~ /^(\d*\.?\d*)(cm|mm|in|\"|b|B|dpi|%|us)?/ ) {
+ if (
+  $str =~ /^
+               (\d*\.?\d*) # value
+               (cm|mm|in|\"|b|B|dpi|%|us)? # optional unit
+              /x
+   )
+ {
   $v    = $1;
   $unit = $2;
-  $unit = '' if not defined $unit;
+  $unit = '' unless defined $unit;
  }
  else {
   print STDERR
@@ -363,11 +374,9 @@ sub parse_vector {
  my $separator  = '';
  my ( @vector, $value );
  do {
-  if ( $str =~ /^\[/ ) {
-   if ( $str =~ /^\[(\d*\.?\d*)\]/ ) {
-    $index = $1;
-   }
-   else {
+  if ( $str =~ /^\[(\d*\.?\d*)(\])?/x ) {
+   $index = $1;
+   unless ( $2 eq '\]' ) {
     print STDERR "$prog_name: option --$opt->{name}: closing bracket missing "
       . "(rest of option: $str)\n";
     exit(1);
@@ -387,7 +396,7 @@ sub parse_vector {
   # read value
   ( $value, $str ) = parse_scalar( $opt, $str );
 
-  if ( $str ne '' and $str !~ /^[-,]/ ) {
+  if ( $str ne '' and $str !~ /^[-,]/x ) {
    print STDERR
 "$prog_name: option --$opt->{name}: illegal separator (rest of option: $str)\n";
    exit(1);
@@ -424,7 +433,7 @@ sub parse_vector {
 }
 
 sub fetch_options {
- my $device = shift;
+ $device = shift;
 
  my $opt = $device->get_option_descriptor(0);
  if ( not defined($opt) ) {
@@ -462,31 +471,33 @@ sub fetch_options {
   if ( ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
    and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL ) )
   {
-   if ( $opt->{name} eq SANE_NAME_SCAN_BR_X ) {
-    $window[0]                 = $i;
-    $opt->{name}               = 'x';
-    $window_option[0]          = $opt;
-    $window_option[0]->{title} = 'Scan width';
-    $window_option[0]->{desc}  = 'Width of scan-area.';
-    $window_option[0]->{name}  = 'x';
-   }
-   elsif ( $opt->{name} eq SANE_NAME_SCAN_BR_Y ) {
-    $window[1]                 = $i;
-    $opt->{name}               = 'y';
-    $window_option[1]          = $opt;
-    $window_option[1]->{title} = 'Scan height';
-    $window_option[1]->{desc}  = 'Height of scan-area.';
-    $window_option[1]->{name}  = 'y';
-   }
-   elsif ( $opt->{name} eq SANE_NAME_SCAN_TL_X ) {
-    $window[2]                = $i;
-    $window_option[2]         = $opt;
-    $window_option[2]->{name} = 'l';
-   }
-   elsif ( $opt->{name} eq SANE_NAME_SCAN_TL_Y ) {
-    $window[3]                = $i;
-    $window_option[3]         = $opt;
-    $window_option[3]->{name} = 't';
+   given ( $opt->{name} ) {
+    when (SANE_NAME_SCAN_BR_X) {
+     $window[0]                 = $i;
+     $opt->{name}               = 'x';
+     $window_option[0]          = $opt;
+     $window_option[0]->{title} = 'Scan width';
+     $window_option[0]->{desc}  = 'Width of scan-area.';
+     $window_option[0]->{name}  = 'x';
+    }
+    when (SANE_NAME_SCAN_BR_Y) {
+     $window[1]                 = $i;
+     $opt->{name}               = 'y';
+     $window_option[1]          = $opt;
+     $window_option[1]->{title} = 'Scan height';
+     $window_option[1]->{desc}  = 'Height of scan-area.';
+     $window_option[1]->{name}  = 'y';
+    }
+    when (SANE_NAME_SCAN_TL_X) {
+     $window[2]                = $i;
+     $window_option[2]         = $opt;
+     $window_option[2]->{name} = 'l';
+    }
+    when (SANE_NAME_SCAN_TL_Y) {
+     $window[3]                = $i;
+     $window_option[3]         = $opt;
+     $window_option[3]->{name} = 't';
+    }
    }
   }
 
@@ -516,7 +527,7 @@ sub fetch_options {
 }
 
 sub set_option {
- my ( $device, $optnum, $value ) = @_;
+ ( $device, my $optnum, my $value ) = @_;
 
  my $opt = $device->get_option_descriptor($optnum);
  if ( $opt and ( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
@@ -550,7 +561,7 @@ sub set_option {
 }
 
 sub process_backend_option {
- my ( $device, $optnum, $optarg ) = @_;
+ ( $device, my $optnum, my $optarg ) = @_;
 
  my $opt = $device->get_option_descriptor($optnum);
 
@@ -561,7 +572,7 @@ sub process_backend_option {
 
  if ( ( $opt->{cap} & SANE_CAP_AUTOMATIC )
   and $optarg
-  and $optarg =~ /^auto$/i )
+  and $optarg =~ /^auto$/xi )
  {
   $device->set_auto($optnum);
   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
@@ -573,51 +584,51 @@ sub process_backend_option {
  }
 
  my $value;
- if ( $opt->{type} == SANE_TYPE_BOOL ) {
-  $value = 1;    # no argument means option is set
-  if ($optarg) {
-   if ( $optarg =~ /^yes$/i ) {
-    $value = 1;
-   }
-   elsif ( $optarg =~ /^no$/i ) {
-    $value = 0;
-   }
-   else {
-    printf STDERR
-      "$prog_name: option --$opt->{name}: bad option value `$optarg'\n";
-    exit(1);
+ given ( $opt->{type} ) {
+  when (SANE_TYPE_BOOL) {
+   $value = 1;    # no argument means option is set
+   if ($optarg) {
+    if ( $optarg =~ /^yes$/xi ) {
+     $value = 1;
+    }
+    elsif ( $optarg =~ /^no$/xi ) {
+     $value = 0;
+    }
+    else {
+     die "$prog_name: option --$opt->{name}: bad option value `$optarg'\n";
+    }
    }
   }
- }
- elsif ( $opt->{type} == SANE_TYPE_INT or $opt->{type} == SANE_TYPE_FIXED ) {
-  my @vector = parse_vector( $opt, $optarg );
-  $value = \@vector;
- }
- elsif ( $opt->{type} == SANE_TYPE_STRING ) {
-  $value = $optarg;
- }
- elsif ( $opt->{type} == SANE_TYPE_BUTTON ) {
-  $value = 0;    # value doesn't matter
- }
- else {
-  printf STDERR "$prog_name: duh, got unknown option type $opt->{type}\n";
-  return;
+  when ( $opt->{type} == SANE_TYPE_INT or $opt->{type} == SANE_TYPE_FIXED ) {
+   my @vector = parse_vector( $opt, $optarg );
+   $value = \@vector;
+  }
+  when (SANE_TYPE_STRING) {
+   $value = $optarg;
+  }
+  when (SANE_TYPE_BUTTON) {
+   $value = 0;    # value doesn't matter
+  }
+  default {
+   warn "$prog_name: duh, got unknown option type $opt->{type}\n";
+   return;
+  }
  }
  set_option( $device, $optnum, $value );
  return;
 }
 
 sub write_pnm_header {
- my ( $format, $width, $height, $depth ) = @_;
+ my ( $frame_format, $width, $height, $depth ) = @_;
 
  # The netpbm-package does not define raw image data with maxval > 255.
  # But writing maxval 65535 for 16bit data gives at least a chance
  # to read the image.
 
- if ($format == SANE_FRAME_RED
-  or $format == SANE_FRAME_GREEN
-  or $format == SANE_FRAME_BLUE
-  or $format == SANE_FRAME_RGB )
+ if ($frame_format == SANE_FRAME_RED
+  or $frame_format == SANE_FRAME_GREEN
+  or $frame_format == SANE_FRAME_BLUE
+  or $frame_format == SANE_FRAME_RGB )
  {
   printf "P6\n# SANE data follows\n%d %d\n%d\n", $width, $height,
     ( $depth <= 8 ) ? 255 : 65535;
@@ -690,17 +701,22 @@ sub scan_it {
      or $parm->{format} == SANE_FRAME_GREEN
      or $parm->{format} == SANE_FRAME_BLUE )
     {
-     die unless ( $parm->{depth} == 8 );
+     die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n"
+       unless ( $parm->{depth} == 8 );
      $must_buffer = 1;
      $offset      = $parm->{format} - SANE_FRAME_RED;
     }
     elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-     die unless ( ( $parm->{depth} == 8 ) or ( $parm->{depth} == 16 ) );
+     die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8 or 16)\n"
+       unless ( ( $parm->{depth} == 8 ) or ( $parm->{depth} == 16 ) );
     }
     if ($parm->{format} == SANE_FRAME_RGB
      or $parm->{format} == SANE_FRAME_GRAY )
     {
-     die
+     die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 1, 8 or 16)\n"
        unless ( ( $parm->{depth} == 1 )
       or ( $parm->{depth} == 8 )
       or ( $parm->{depth} == 16 ) );
@@ -726,9 +742,10 @@ sub scan_it {
     }
    }
    else {
-    die
-      unless ( $parm->{format} >= SANE_FRAME_RED
-     and $parm->{format} <= SANE_FRAME_BLUE );
+    die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but expected SANE_FRAME_RED, SANE_FRAME_GREEN, or SANE_FRAME_BLUE\n"
+      if ( $parm->{format} < SANE_FRAME_RED
+     or $parm->{format} > SANE_FRAME_BLUE );
     $offset = $parm->{format} - SANE_FRAME_RED;
     $image{x} = $image{y} = 0;
    }
@@ -893,7 +910,8 @@ cleanup:
 sub pass_fail {
  my ( $max, $len, $buffer ) = @_;
 
- if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+ if ( $Sane::STATUS != SANE_STATUS_GOOD )
+ {    ## no critic (ProhibitCascadingIfElse)
   print STDERR "FAIL Error: $Sane::STATUS\n";
  }
  elsif ( $len < length($buffer) ) {
@@ -1006,13 +1024,13 @@ if ( defined( $options{L} ) or defined( $options{f} ) ) {
  }
  else {
   for ( my $i = 0 ; $i < @device_list ; $i++ ) {
-   my $format = $options{f};
-   $format =~ s/%d/$device_list[$i]->{name}/g;
-   $format =~ s/%v/$device_list[$i]->{vendor}/g;
-   $format =~ s/%m/$device_list[$i]->{model}/g;
-   $format =~ s/%t/$device_list[$i]->{type}/g;
-   $format =~ s/%i/$i/g;
-   print $format;
+   my $string_format = $options{f};
+   $string_format =~ s/%d/$device_list[$i]->{name}/g;
+   $string_format =~ s/%v/$device_list[$i]->{vendor}/g;
+   $string_format =~ s/%m/$device_list[$i]->{model}/g;
+   $string_format =~ s/%t/$device_list[$i]->{type}/g;
+   $string_format =~ s/%i/$i/g;
+   print $string_format;
   }
  }
  printf "default device is `%s'\n", $ENV{'SANE_DEFAULT_DEVICE'}
@@ -1027,43 +1045,42 @@ if ( defined( $options{V} ) ) {
 }
 
 if ($help) {
- printf "Usage: %s [OPTION]...
+ printf <<'EOS', $prog_name;
+Usage: %s [OPTION]...
 
 Start image acquisition on a scanner device and write image data to
 standard output.
 
 Parameters are separated by a blank from single-character options (e.g.
--d epson) and by a \"=\" from multi-character options (e.g. --device-name=epson).
+-d epson) and by a "=" from multi-character options (e.g. --device-name=epson).
 -d, --device-name=DEVICE   use a given scanner device (e.g. hp:/dev/scanner)
     --format=pnm|tiff      file format of output file
--i, --icc-profile=PROFILE  include this ICC profile into TIFF file", $prog_name;
- printf "
+-i, --icc-profile=PROFILE  include this ICC profile into TIFF file
 -L, --list-devices         show available scanner devices
 -f, --formatted-device-list=FORMAT similar to -L, but the FORMAT of the output
                            can be specified: %%d (device name), %%v (vendor),
                            %%m (model), %%t (type), %%i (index number), and
                            %%n (newline)
 -b, --batch[=FORMAT]       working in batch mode, FORMAT is `out%%d.pnm' or
-                           `out%%d.tif' by default depending on --format";
- printf "
+                           `out%%d.tif' by default depending on --format
     --batch-start=#        page number to start naming files with
     --batch-count=#        how many pages to scan in batch mode
     --batch-increment=#    increase page number in filename by #
     --batch-double         increment page number by two, same as
                            --batch-increment=2
     --batch-prompt         ask for pressing a key before scanning a page
-    --accept-md5-only      only accept authorization requests using md5";
- printf "
+    --accept-md5-only      only accept authorization requests using md5
 -p, --progress             print progress messages
 -n, --dont-scan            only set options, don't actually scan
 -T, --test                 test backend thoroughly
 -h, --help                 display this help message and exit
 -v, --verbose              give even more status messages
 -B, --buffer-size=#        change input buffer size (in kB, default 32)
--V, --version              print version information\n";
+-V, --version              print version information
+EOS
 }
 
-if ( not $devname ) {
+unless ($devname) {
 
  # If no device name was specified explicitly, we look at the
  # environment variable SANE_DEFAULT_DEVICE.  If this variable
@@ -1124,34 +1141,36 @@ if ( defined($device) ) {
  # this myself
  for (@ARGV_old) {
   my $ch;
-  if (/--(.*)/) {
+  if (/--(.*)/x) {
    $ch = $1;
    my $i = index( $ch, '=' );
    $ch = substr( $ch, 0, $i ) if ( $i > -1 );
   }
-  elsif (/-(.)/) {
+  elsif (/-(.)/x) {
    $ch = $1;
   }
   else {
    next;
   }
   if ( defined $options{$ch} ) {
-   if ( $ch eq 'x' ) {
-    $window_val_user[0] = 1;
-    ( $window_val[0] ) = parse_vector( $window_option[0], $options{x} );
-   }
-   elsif ( $ch eq 'y' ) {
-    $window_val_user[1] = 1;
-    ( $window_val[1] ) = parse_vector( $window_option[1], $options{y} );
-   }
-   elsif ( $ch eq 'l' ) {    # tl-x
-    process_backend_option( $device, $window[2], $options{l} );
-   }
-   elsif ( $ch eq 't' ) {    # tl-y
-    process_backend_option( $device, $window[3], $options{t} );
-   }
-   else {
-    process_backend_option( $device, $option_number{$ch}, $options{$ch} );
+   given ($ch) {
+    when ('x') {
+     $window_val_user[0] = 1;
+     ( $window_val[0] ) = parse_vector( $window_option[0], $options{x} );
+    }
+    when ('y') {
+     $window_val_user[1] = 1;
+     ( $window_val[1] ) = parse_vector( $window_option[1], $options{y} );
+    }
+    when ('l') {    # tl-x
+     process_backend_option( $device, $window[2], $options{l} );
+    }
+    when ('t') {    # tl-y
+     process_backend_option( $device, $window[3], $options{t} );
+    }
+    default {
+     process_backend_option( $device, $option_number{$ch}, $options{$ch} );
+    }
    }
   }
  }
@@ -1191,7 +1210,7 @@ if ( defined($device) ) {
 
 # output device list
 if ($help) {
- printf
+ print
 "Type ``$prog_name --help -d DEVICE'' to get list of all options for DEVICE.\n\nList of available devices:";
  my @device_list = Sane->get_devices;
  if ( $Sane::STATUS == SANE_STATUS_GOOD ) {
@@ -1199,7 +1218,7 @@ if ($help) {
 
   foreach (@device_list) {
    if ( $column + length( $_->{name} ) + 1 >= 80 ) {
-    printf "\n    ";
+    print "\n    ";
     $column = 4;
    }
    if ( $column > 4 ) {
@@ -1283,9 +1302,12 @@ if ( $test == 0 ) {
 
    # write to .part file while scanning is in progress
    if (
-    $batch    ## no critic
-    and not( open( $fh, '>', $part_path ) and STDOUT->fdopen( $fh, '>' ) )
-     )        ## no critic
+    $batch
+    and not(
+     open( $fh, '>', $part_path )    ## no critic (RequireBriefOpen)
+     and STDOUT->fdopen( $fh, '>' )
+    )
+     )
    {
     print STDERR "cannot open $part_path\n";
     $device->cancel;
@@ -1304,8 +1326,13 @@ if ( $test == 0 ) {
     if ($batch) {
 
      # close output file by redirecting, do not close stdout here!
-     if ( not( open( $fh, '>', '/dev/null' ) and STDOUT->fdopen( $fh, '>' ) ) )
-     {    ## no critic
+     if (
+      not(
+       open( $fh, '>', '/dev/null' )    ## no critic (RequireBriefOpen)
+       and STDOUT->fdopen( $fh, '>' )
+      )
+       )
+     {
       printf STDERR "cannot open /dev/null\n";
       $device->cancel;
       return SANE_STATUS_ACCESS_DENIED;

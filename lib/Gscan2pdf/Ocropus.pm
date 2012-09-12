@@ -9,9 +9,10 @@ use File::Basename;
 use HTML::Entities;
 use Encode;
 
-my ( $exe, $installed, $setup );
+my ( $exe, $installed, $setup, $logger );
 
 sub setup {
+ ( my $class, $logger ) = @_;
  return $installed if $setup;
  if ( system("which ocroscript > /dev/null 2> /dev/null") == 0 ) {
   my $env = $ENV{OCROSCRIPTS};
@@ -33,15 +34,14 @@ sub setup {
    if ( defined $script ) {
     $exe       = "ocroscript $script";
     $installed = 1;
-    $main::logger->info("Using ocroscript with $script.");
+    $logger->info("Using ocroscript with $script.");
    }
    else {
-    $main::logger->warn(
-     "Found ocroscript, but no recognition scripts. Disabling.");
+    $logger->warn("Found ocroscript, but no recognition scripts. Disabling.");
    }
   }
   else {
-   $main::logger->warn("Found ocroscript, but not its scripts. Disabling.");
+   $logger->warn("Found ocroscript, but not its scripts. Disabling.");
   }
  }
  $setup = 1;
@@ -53,7 +53,7 @@ sub hocr {
  my ( $png, $cmd );
  setup() unless $setup;
 
- if ( $file !~ /\.(png|jpg|pnm)$/x ) {
+ if ( $file !~ /\.(?:png|jpg|pnm)$/x ) {
 
   # Temporary filename for new file
   $png = File::Temp->new( SUFFIX => '.png' );
@@ -70,15 +70,16 @@ sub hocr {
  else {
   $cmd = "$exe $png";
  }
- $main::logger->info($cmd);
+ $logger->info($cmd);
 
  # decode html->utf8
  my $output;
  if ( defined $pidfile ) {
-  $output = `echo $$ > $pidfile;$cmd`;
+  ( $output, undef ) =
+    Gscan2pdf::Document::open_three("echo $$ > $pidfile;$cmd");
  }
  else {
-  $output = `$cmd`;
+  ( $output, undef ) = Gscan2pdf::Document::open_three($cmd);
  }
  my $decoded = decode_entities($output);
 
