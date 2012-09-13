@@ -51,6 +51,7 @@ use warnings;
 use strict;
 use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Sane;
+use Gscan2pdf::Frontend::CLI;
 use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Scanner::Dialog;
 use Gscan2pdf::Tesseract;
@@ -70,7 +71,6 @@ use File::Copy;
 use File::Temp;             # To create temporary files
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Config::General 2.40;
-use Text::ParseWords;
 use PDF::API2;
 use Getopt::Long;
 use Set::IntSpan 1.10;      # For size method for page numbering issues
@@ -171,7 +171,6 @@ if ( defined $locale ) {
  }
 }
 
-@model = @device if (@device);
 for (@device) {
  push @device_list, { name => $_, label => $_ };
 }
@@ -377,8 +376,9 @@ $SETTING{version} = $version;
 # Initialise thread handler
 Gscan2pdf::Document->setup($logger);
 
-# Initialise SANE frontend
+# Initialise SANE frontends
 Gscan2pdf::Frontend::Sane->setup($logger);
+Gscan2pdf::Frontend::CLI->setup( $logger, $SETTING{'scan prefix'} );
 
 # Create icons for rotate buttons
 my $IconFactory = undef;
@@ -4208,86 +4208,81 @@ sub get_devices {
  $pbar->set_text( $d->get('Fetching list of devices') );
  $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
  $pbar->show;
- my $running = TRUE;
 
- # Timer will run until callback returns false
- my $timer = Glib::Timeout->add(
-  100,
-  sub {
-   if ($running) {
-    $pbar->pulse;
-    return TRUE;
-   }
-   else {
-    return FALSE;
-   }
-  }
- );
+ Gscan2pdf::Frontend::CLI->get_devices(
+  running_callback  => sub { $pbar->pulse },
+  finished_callback => sub {
+   my ($device_list) = @_;
+   $pbar->destroy;
 
- my $cmd =
-"$SETTING{'scan prefix'} scanimage --formatted-device-list=\"'%i','%d','%v %m'\n\" 2>/dev/null";
- $logger->info($cmd);
-
- # Interface to frontend
- my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";  ## no critic
- $logger->info("Forked PID $pid");
-
- # Read without blocking
- my $output = '';
- Glib::IO->add_watch(
-  fileno($read),
-  [ 'in', 'hup' ],
-  sub {
-   my ( $fileno, $condition ) = @_;
-   my ($line);
-   if ( $condition & 'in' ) {    # bit field operation. >= would also work
-    sysread $read, $line, 1024;
-    $output .= $line;
+   if ( $#{$device_list} == -1 ) {
+    $windows->destroy;
+    undef $windows;
+    show_message_dialog( $window, 'error', 'close',
+     $d->get('No devices found') );
+    return;
    }
 
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-   if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-   {                             # bit field operation. >= would also work
-    close $read;
-    $logger->info('Waiting to reap process');
-    my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-    $logger->info("Reaped PID $pid");
-    $running = FALSE;
-    $pbar->destroy;
-
-    if ( $output eq '' ) {
-     $windows->destroy;
-     undef $windows;
-     show_message_dialog( $window, 'error', 'close',
-      $d->get('No devices found') );
-     return FALSE;
+   # Note any duplicate device names and delete if necessary
+   my %seen;
+   my $i = 0;
+   while ( $i < @$device_list ) {
+    $seen{ $device_list->[$i]{name} }++;
+    if ( $seen{ $device_list->[$i]{name} } > 1 ) {
+     splice @$device_list, $i, 1;
     }
+    else {
+     $i++;
+    }
+   }
 
-    my @oldmodel = @model;
-    parse_device_list($output);
-    if (@oldmodel) {    # Update combobox
-     my $i = 0;
-     while ( $i < @oldmodel ) {
-      if ( @model and $i < @model and $oldmodel[$i] ne $model[$i] ) {
-       $combobd->insert_text( $i, $model[$i] );
-       $combobd->remove_text($i);
-      }
-      $i++;
+   # Note any duplicate model names and add the device if necessary
+   undef %seen;
+   for (@$device_list) {
+    $_->{model} = $_->{name} unless ( defined $_->{model} );
+    $seen{ $_->{model} }++;
+   }
+   for (@$device_list) {
+    if ( defined $_->{vendor} ) {
+     $_->{label} = "$_->{vendor} $_->{model}";
+    }
+    else {
+     $_->{label} = $_->{model};
+    }
+    $_->{label} .= " on $_->{name}" if ( $seen{ $_->{model} } > 1 );
+   }
+
+   if (@device_list) {    # Update combobox
+    my $i = 0;
+    while ( $i < @device_list ) {
+     if ( @$device_list
+      and $i < @$device_list
+      and $device_list[$i]{label} ne $device_list->[$i]{label} )
+     {
+      $combobd->insert_text( $i, $device_list->[$i]{label} );
+      $combobd->remove_text($i);
      }
-     while ( $i < @model ) {
-      $combobd->append_text( $model[ $i++ ] );
-     }
-     set_device();
-     $combobd->show;
-     $labeld->show;
+     $i++;
     }
-    else {    # New combobox
-     populate_device_list($hboxd);
+    while ( $i < @$device_list ) {
+     $combobd->append_text( $device_list->[ $i++ ]{label} );
     }
-    return FALSE;    # uninstall
+    @device_list = @{$device_list};
+    set_device();
+    $combobd->show;
+    $labeld->show;
    }
-   return TRUE;      # continue without uninstalling
+   else {    # New combobox
+    @device_list = @{$device_list};
+    populate_device_list($hboxd);
+   }
+
+   # # If device not set by config and there is a default device, then set it
+   # $SETTING{device} = $1
+   #   if ( not defined( $SETTING{device} )
+   #  and defined($output)
+   #  and $output =~ /default\ device\ is\ `(.*)'/x );
+
   }
  );
  return;
@@ -4855,59 +4850,6 @@ sub walk_options_tree {
  return %options;
 }
 
-sub parse_device_list {
- my ($output) = @_;
-
- # clear lists
- @device = ();
- @model  = ();
-
- $logger->info($output) if ( defined($output) );
-
- # parse out the device and model names
- my @words =
-   &parse_line( ',', 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
- while ( @words == 3 ) {
-  $output = substr( $output, index( $output, "'\n" ) + 2, length($output) );
-  $device[ $words[0] ] = $words[1];
-
-  # Convert all underscores to spaces
-  ( $model[ $words[0] ] = $words[2] ) =~ s/_/ /g;
-  @words =
-    &parse_line( ',', 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
- }
-
- # Note any duplicate device names and delete if necessary
- my %seen;
- my $i = 0;
- while ( $i < @device ) {
-  $seen{ $device[$i] }++;
-  if ( $seen{ $device[$i] } > 1 ) {
-   splice @device, $i, 1;
-   splice @model,  $i, 1;
-  }
-  else {
-   $i++;
-  }
- }
-
- # Note any duplicate model names and add the device if necessary
- undef %seen;
- foreach (@model) {
-  $seen{$_}++;
- }
- for ( my $i = 0 ; $i < @model ; $i++ ) {
-  $model[$i] .= " on $device[$i]" if ( $seen{ $model[$i] } > 1 );
- }
-
- # If device not set by config and there is a default device, then set it
- $SETTING{device} = $1
-   if ( not defined( $SETTING{device} )
-  and defined($output)
-  and $output =~ /default\ device\ is\ `(.*)'/x );
- return;
-}
-
 sub populate_device_list {
  my ($hboxd) = @_;
 
@@ -4917,8 +4859,8 @@ sub populate_device_list {
  $combobd = Gtk2::ComboBox->new_text;
 
  # read the model names into the combobox
- foreach (@model) {
-  $combobd->append_text($_);
+ foreach (@device_list) {
+  $combobd->append_text( $_->{label} );
  }
  $combobd->append_text( $d->get('Rescan for devices') ) unless ($test);
 
@@ -4927,7 +4869,7 @@ sub populate_device_list {
  $combobd->signal_connect(
   changed => sub {
    my $index = $combobd->get_active;
-   if ( $index > $#device ) {
+   if ( $index > $#device_list ) {
     $combobd->hide;
     $labeld->hide;
     get_devices($hboxd);
@@ -4937,7 +4879,7 @@ sub populate_device_list {
     # only delete the mode setting if switching devices, not on first run
     delete $SETTING{mode} if ($run);
     $run = TRUE;
-    rescan_options( $vboxd, $device[ $combobd->get_active ] );
+    rescan_options( $vboxd, $device_list[ $combobd->get_active ]{name} );
     $vboxd->show_all;
    }
   }
@@ -4955,8 +4897,8 @@ sub populate_device_list {
 sub set_device {
  my $o;
  if ( defined $SETTING{device} ) {
-  for ( my $i = 0 ; $i < @device ; $i++ ) {
-   $o = $i if ( $SETTING{device} eq $device[$i] );
+  for ( my $i = 0 ; $i < @device_list ; $i++ ) {
+   $o = $i if ( $SETTING{device} eq $device_list[$i]{name} );
   }
  }
  unless ( defined $o ) {
