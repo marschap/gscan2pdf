@@ -10,7 +10,6 @@ use Thread::Queue;
 
 use Glib qw(TRUE FALSE);
 use Sane;
-use Locale::gettext 1.05;    # For translations
 
 my $_POLL_INTERVAL;
 my $_self;
