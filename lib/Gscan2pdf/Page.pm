@@ -64,11 +64,13 @@ sub new {
  );
  if ( defined( $options{delete} ) and $options{delete} ) {
   move( $options{filename}, $self->{filename} )
-    or croak $d->get('Error importing image: ') . $!;
+    or croak
+    sprintf( $d->get('Error importing image %s: %s'), $options{filename}, $! );
  }
  else {
   copy( $options{filename}, $self->{filename} )
-    or croak $d->get('Error importing image: ') . $!;
+    or croak
+    sprintf( $d->get('Error importing image %s: %s'), $options{filename}, $! );
  }
 
  bless( $self, $class );
