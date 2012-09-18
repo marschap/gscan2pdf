@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 10;
+use Test::More tests => 11;
 use Gtk2 -init;    # Could just call init separately
 
 BEGIN {
@@ -43,6 +43,15 @@ is( $slist->pages_possible( 2, -1 ),
  1, 'pages_possible finite backwards starting in middle of range' );
 is( $slist->pages_possible( 6, -2 ),
  3, 'pages_possible finite backwards starting at end of range' );
+
+#########################
+
+$slist->renumber( 1, 1, 'all' );
+is_deeply(
+ $slist->{data},
+ [ [ 1, undef, undef ], [ 2, undef, undef ], [ 3, undef, undef ] ],
+ 'renumber start 1 step 1'
+);
 
 #########################
 

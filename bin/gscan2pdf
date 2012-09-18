@@ -982,7 +982,7 @@ $slist->signal_connect(
   else {
    push @{ $slist->{data} }, @data;
   }
-  renumber( $slist, 0 );
+  $slist->renumber;
   $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
 
   # Update the start spinbutton if necessary
@@ -1058,7 +1058,7 @@ $slist->{row_changed_signal} = $slist->get_model->signal_connect(
   $slist->manual_sort_by_column(0);
 
   # And make sure there are no duplicates
-  renumber( $slist, 0 );
+  $slist->renumber;
   $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
 
   # Update the start spinbutton if necessary
@@ -5715,7 +5715,7 @@ sub paste_selection {
    @page = ( $#{ $slist->{data} } - $#clipboard );
   }
 
-  renumber( $slist, 0 );
+  $slist->renumber;
   $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
 
   # Select new page, deselecting others. This fires the select callback,
@@ -6977,7 +6977,7 @@ sub renumber_dialog {
     # Update undo/redo buffers
     take_snapshot();
     $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-    renumber( $slist, 0, $start_new, $step_new, $SETTING{'Page range'} );
+    $slist->renumber( $start_new, $step_new, $SETTING{'Page range'} );
 
     # Note selection before sorting
     my @page = $slist->get_selected_indices;
@@ -7104,40 +7104,6 @@ sub index2page_number {
   $_ = ${ $slist->{data} }[$_][0];
  }
  return @index;
-}
-
-# Renumber pages
-
-sub renumber {
- my ( $slist, $column, $start, $step, $selection ) = @_;
-
- if ( defined($start) ) {
-  $step      = 1     unless ( defined $step );
-  $selection = 'all' unless ( defined $selection );
-
-  my @selection;
-  if ( $selection eq 'selected' ) {
-   @selection = $slist->get_selected_indices;
-  }
-  else {
-   @selection = 0 .. $#{ $slist->{data} };
-  }
-
-  for (@selection) {
-   $slist->{data}[$_][$column] = $start;
-   $start += $step;
-  }
- }
-
- # If $start and $step are undefined, just make sure that the numbering is
- # ascending.
- else {
-  for ( 1 .. $#{ $slist->{data} } ) {
-   $slist->{data}[$_][$column] = $slist->{data}[ $_ - 1 ][$column] + 1
-     if ( $slist->{data}[$_][$column] <= $slist->{data}[ $_ - 1 ][$column] );
-  }
- }
- return;
 }
 
 # Helper function to convert an array of indices into an array of Gscan2pdf::Page objects

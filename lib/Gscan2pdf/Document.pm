@@ -962,6 +962,40 @@ sub open_session {
  return;
 }
 
+# Renumber pages
+
+sub renumber {
+ my ( $self, $start, $step, $selection ) = @_;
+
+ if ( defined($start) ) {
+  $step      = 1     unless ( defined $step );
+  $selection = 'all' unless ( defined $selection );
+
+  my @selection;
+  if ( $selection eq 'selected' ) {
+   @selection = $self->get_selected_indices;
+  }
+  else {
+   @selection = 0 .. $#{ $self->{data} };
+  }
+
+  for (@selection) {
+   $self->{data}[$_][0] = $start;
+   $start += $step;
+  }
+ }
+
+ # If $start and $step are undefined, just make sure that the numbering is
+ # ascending.
+ else {
+  for ( 1 .. $#{ $self->{data} } ) {
+   $self->{data}[$_][0] = $self->{data}[ $_ - 1 ][0] + 1
+     if ( $self->{data}[$_][0] <= $self->{data}[ $_ - 1 ][0] );
+  }
+ }
+ return;
+}
+
 sub convert_to_png {
  my ($filename) = @_;
  my $image      = Image::Magick->new;
