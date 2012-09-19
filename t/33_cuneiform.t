@@ -21,7 +21,7 @@ SKIP: {
 'convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.bmp'
  );
 
- my $got = Gscan2pdf::Cuneiform->hocr( 'test.bmp', 'eng' );
+ my $got = Gscan2pdf::Cuneiform->hocr( 'test.bmp', 'eng', $logger );
 
  like( $got, qr/The quick brown fox/, 'Cuneiform returned sensible text' );
 
@@ -30,7 +30,7 @@ SKIP: {
 "convert +matte -depth 1 -pointsize 12 -density 300 label:'öÖäÄüÜß' test.bmp"
  );
 
- $got = Gscan2pdf::Cuneiform->hocr( 'test.bmp', 'ger' );
+ $got = Gscan2pdf::Cuneiform->hocr( 'test.bmp', 'ger', $logger );
  is( Encode::is_utf8( $got, 1 ), 1, "Cuneiform returned UTF8" );
  for my $c (qw( ö ä ü )) {
   my $c2 = decode_utf8($c);

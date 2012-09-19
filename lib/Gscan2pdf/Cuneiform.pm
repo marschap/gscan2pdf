@@ -74,8 +74,9 @@ sub languages {
 }
 
 sub hocr {
- my ( $class, $file, $language, $pidfile ) = @_;
+ my ( $class, $file, $language, $logger, $pidfile ) = @_;
  my ($bmp);
+ Gscan2pdf::Cuneiform->setup($logger) unless $setup;
 
  # Temporary filename for output
  my $txt = File::Temp->new( SUFFIX => '.txt' );

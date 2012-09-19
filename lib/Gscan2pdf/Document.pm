@@ -2310,7 +2310,7 @@ sub _thread_ocropus {
  my ( $self, $page, $language, $pidfile ) = @_;
  my $new = $page->clone;
  $new->{hocr} =
-   Gscan2pdf::Ocropus->hocr( $page->{filename}, $language, $pidfile );
+   Gscan2pdf::Ocropus->hocr( $page->{filename}, $language, $logger, $pidfile );
  return if $_self->{cancel};
  $new->{ocr_flag} = 1;              #FlagOCR
  $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page
@@ -2323,7 +2323,8 @@ sub _thread_cuneiform {
  my ( $self, $page, $language, $pidfile ) = @_;
  my $new = $page->clone;
  $new->{hocr} =
-   Gscan2pdf::Cuneiform->hocr( $page->{filename}, $language, $pidfile );
+   Gscan2pdf::Cuneiform->hocr( $page->{filename}, $language, $logger,
+  $pidfile );
  return if $_self->{cancel};
  $new->{ocr_flag} = 1;              #FlagOCR
  $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page
