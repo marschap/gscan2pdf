@@ -3,7 +3,6 @@ package Gscan2pdf::Dialog;
 use warnings;
 use strict;
 use Gtk2;
-use Carp;
 use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2::Gdk::Keysyms;
 

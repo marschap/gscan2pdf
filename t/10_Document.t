@@ -1,6 +1,7 @@
 use warnings;
 use strict;
-use Test::More tests => 11;
+use Test::More tests => 16;
+use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
 
 BEGIN {
@@ -43,6 +44,20 @@ is( $slist->pages_possible( 2, -1 ),
  1, 'pages_possible finite backwards starting in middle of range' );
 is( $slist->pages_possible( 6, -2 ),
  3, 'pages_possible finite backwards starting at end of range' );
+
+#########################
+
+is( $slist->valid_renumber( 1, 1, 'all' ), TRUE, 'valid_renumber all step 1' );
+is( $slist->valid_renumber( 3, -1, 'all' ),
+ TRUE, 'valid_renumber all start 3 step -1' );
+is( $slist->valid_renumber( 2, -1, 'all' ),
+ FALSE, 'valid_renumber all start 2 step -1' );
+
+$slist->select(0);
+is( $slist->valid_renumber( 1, 1, 'selected' ),
+ TRUE, 'valid_renumber selected ok' );
+is( $slist->valid_renumber( 3, 1, 'selected' ),
+ FALSE, 'valid_renumber selected nok' );
 
 #########################
 

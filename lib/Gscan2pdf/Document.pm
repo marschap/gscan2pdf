@@ -25,6 +25,7 @@ use Locale::gettext 1.05;    # For translations
 use IPC::Open3 'open3';
 use Symbol;                  # for gensym
 use Try::Tiny;
+use Set::IntSpan 1.10;       # For size method for page numbering issues
 use Readonly;
 Readonly our $POINTS_PER_INCH => 72;
 
@@ -992,6 +993,63 @@ sub renumber {
    $self->{data}[$_][0] = $self->{data}[ $_ - 1 ][0] + 1
      if ( $self->{data}[$_][0] <= $self->{data}[ $_ - 1 ][0] );
   }
+ }
+ return;
+}
+
+# Check if $start and $step give duplicate page numbers
+
+sub valid_renumber {
+ my ( $self, $start, $step, $selection ) = @_;
+
+ return FALSE if ( $step == 0 );
+
+ # if we are renumbering all pages, just make sure the numbers stay positive
+ if ( $selection eq 'all' ) {
+  return ( $start + $#{ $self->{data} } * $step > 0 ) ? TRUE : FALSE
+    if ( $step < 0 );
+  return TRUE;
+ }
+
+ # Get list of pages not in selection
+ my @selected = $self->get_selected_indices;
+ my @all      = ( 0 .. $#{ $self->{data} } );
+
+ # Convert the indices to sets of page numbers
+ @selected = $self->index2page_number(@selected);
+ @all      = $self->index2page_number(@all);
+ my $selected     = Set::IntSpan->new( \@selected );
+ my $all          = Set::IntSpan->new( \@all );
+ my $not_selected = $all->diff($selected);
+
+ # Create a set from the current settings
+ my $current = Set::IntSpan->new;
+ $current->insert( $start + $step * $_ ) for ( 0 .. $#selected );
+
+ # Are any of the new page numbers the same as those not selected?
+ return FALSE if ( $current->intersect($not_selected)->size );
+ return TRUE;
+}
+
+# helper function to return an array of page numbers given an array of page indices
+
+sub index2page_number {
+ my ( $self, @index ) = @_;
+ for (@index) {
+  $_ = ${ $self->{data} }[$_][0];
+ }
+ return @index;
+}
+
+# return array index of pages depending on which radiobutton is active
+
+sub get_page_index {
+ my ( $self, $page_range ) = @_;
+ if ( $page_range eq 'all' ) {
+  return 0 .. $#{ $self->{data} };
+ }
+ elsif ( $page_range eq 'selected' ) {
+  return $self->get_selected_indices;
  }
  return;
 }
