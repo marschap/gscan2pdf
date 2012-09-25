@@ -2,83 +2,130 @@ package Gscan2pdf::Dialog::Renumber;
 
 use strict;
 use warnings;
+use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gscan2pdf::Dialog;
 use Gscan2pdf::Document;
+use Gscan2pdf::PageRange;
 
-BEGIN {
- use Exporter ();
- our ( $VERSION, @EXPORT_OK, %EXPORT_TAGS );
+use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
+ 'changed-start' => {
+  param_types => ['Glib::UInt'],    # new start page
+ },
+ 'changed-increment' => {
+  param_types => ['Glib::Int'],     # new increment
+ },
+  },
+  properties => [
+ Glib::ParamSpec->int(
+  'start',                          # name
+  'Number of first page',           # nickname
+  'Number of first page',           # blurb
+  1,                                # min
+  999,                              # max
+  1,                                # default
+  [qw/readable writable/]           # flags
+ ),
+ Glib::ParamSpec->int(
+  'increment',                                                        # name
+  'Increment',                                                        # nickname
+  'Amount to increment page number when renumbering multiple pages',  # blurb
+  -99,                                                                # min
+  99,                                                                 # max
+  1,                                                                  # default
+  [qw/readable writable/]                                             # flags
+ ),
+ Glib::ParamSpec->scalar(
+  'document',                                                         # name
+  'Document',                                                         # nick
+  'Gscan2pdf::Document object to renumber',                           # blurb
+  [qw/readable writable/]                                             # flags
+ ),
+ Glib::ParamSpec->enum(
+  'range',                                                            # name
+  'Page Range to renumber',                                           # nickname
+  'Page Range to renumber',                                           #blurb
+  'Gscan2pdf::PageRange::Range',
+  'selected',                                                         # default
+  [qw/readable writable/]                                             #flags
+ ),
+  ];
 
- use base qw(Exporter Gscan2pdf::Dialog);
- %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
+my ( $start, $step );
 
- # your exported package globals go here,
- # as well as any optionally exported functions
- @EXPORT_OK = qw();
-}
-our @EXPORT_OK;
+# Normally, we would initialise the widget in INIT_INSTANCE and use the
+# default constructor new(). However, we have to override the default contructor
+# in order to be able to access any properties assigned in ->new(), which are
+# not available in INIT_INSTANCE. Therefore, we use the default INIT_INSTANCE,
+# and override new(). If we ever need to subclass Gscan2pdf::Scanner::Dialog,
+# then we would need to put the bulk of this code back into INIT_INSTANCE,
+# and leave just that which assigns the required properties.
 
-my $start = 1;
-my $step  = 1;
-my ( $spin_buttons, $spin_buttoni, $d, $slist, $page_range );
+# Glib::Object::new takes the class as the first argument, so below is short
+# for:
+#  my $class = shift;
+#  my $self = Glib::Object::new($class, @_);
+sub new {    ## no critic (RequireArgUnpacking)
+ my $self = Glib::Object::new(@_);
 
-sub new {
- ( my $class, $d, $slist, $page_range ) = @_;
- my $self = Gscan2pdf::Dialog->new(
-  'transient-for'  => $window,
-  title            => $d->get('Renumber'),
-  'hide-on-delete' => FALSE,
-  border_width     => $border_width
- );
+ my $d = Locale::gettext->domain(Glib::get_application_name);
+ $self->set( 'title', $d->get('Renumber') );
+
  my $vbox = $self->get('vbox');
 
  # Frame for page range
  my $frame = Gtk2::Frame->new( $d->get('Page Range') );
  $vbox->pack_start( $frame, FALSE, FALSE, 0 );
  my $pr = Gscan2pdf::PageRange->new;
- $pr->set_active($page_range)
-   if ( defined $page_range );
  $pr->signal_connect(
   changed => sub {
-   $page_range = $pr->get_active;
-   update_renumber() if ( $page_range eq 'selected' );
+   $self->set( 'range', $pr->get_active );
+   $self->update;
   }
  );
+ $pr->set_active( $self->get('range') );
  $frame->add($pr);
- push @prlist, $pr;
 
  # Frame for page numbering
  my $framex = Gtk2::Frame->new( $d->get('Page numbering') );
  $vbox->pack_start( $framex, FALSE, FALSE, 0 );
  my $vboxx = Gtk2::VBox->new;
- $vboxx->set_border_width($border_width);
+ $vboxx->set_border_width( $self->get('border_width') );
  $framex->add($vboxx);
 
  # SpinButton for starting page number
  my $hboxxs = Gtk2::HBox->new;
  $vboxx->pack_start( $hboxxs, FALSE, FALSE, 0 );
- my $labelxs = Gtk2::Label->new( $d->get('Start') );
+ my $labelxs = Gtk2::Label->new( $d->get('start') );
  $hboxxs->pack_start( $labelxs, FALSE, FALSE, 0 );
- $spin_buttons = Gtk2::SpinButton->new_with_range( 1, 99999, 1 );
+ my $spin_buttons = Gtk2::SpinButton->new_with_range( 1, 99999, 1 );
+ $spin_buttons->signal_connect(
+  'value-changed' => sub {
+   $self->set( 'start', $spin_buttons->get_value );
+   $self->update;
+  }
+ );
+ $start = $self->get('start');
+ $spin_buttons->set_value( $self->get('start') );
  $hboxxs->pack_end( $spin_buttons, FALSE, FALSE, 0 );
 
  # SpinButton for page number increment
  my $hboxi = Gtk2::HBox->new;
  $vboxx->pack_start( $hboxi, FALSE, FALSE, 0 );
- my $labelxi = Gtk2::Label->new( $d->get('Increment') );
+ my $labelxi = Gtk2::Label->new( $d->get('increment') );
  $hboxi->pack_start( $labelxi, FALSE, FALSE, 0 );
- $spin_buttoni = Gtk2::SpinButton->new_with_range( -99, 99, 1 );
+ my $spin_buttoni = Gtk2::SpinButton->new_with_range( -99, 99, 1 );
+ $spin_buttoni->signal_connect(
+  'value-changed' => sub {
+   $self->set( 'increment', $spin_buttoni->get_value );
+   $self->update;
+  }
+ );
+ $step = $self->get('increment');
+ $spin_buttoni->set_value( $self->get('increment') );
  $hboxi->pack_end( $spin_buttoni, FALSE, FALSE, 0 );
 
- $start = 1 unless ( defined $start );
- $step  = 1 unless ( defined $step );
- $spin_buttons->set_value($start);
- $spin_buttoni->set_value($step);
-
  # Check whether the settings are possible
- $spin_buttoni->signal_connect( 'value-changed' => \&update_renumber );
- $spin_buttons->signal_connect( 'value-changed' => \&update_renumber );
- update_renumber();
+ $self->update;
 
  # HBox for buttons
  my $hbox = Gtk2::HBox->new;
@@ -89,12 +136,16 @@ sub new {
  $hbox->pack_start( $obutton, TRUE, TRUE, 0 );
  $obutton->signal_connect(
   clicked => sub {
-   if ( $slist->valid_renumber( $start, $step, $page_range ) ) {
+   my $slist = $self->get('document');
+   my $start = $self->get('start');
+   my $step  = $self->get('increment');
+   my $range = $self->get('range');
+   if ( $slist->valid_renumber( $start, $step, $range ) ) {
 
     # Update undo/redo buffers
     take_snapshot();
     $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-    $slist->renumber( $start, $step, $page_range );
+    $slist->renumber( $start, $step, $range );
 
     # Note selection before sorting
     my @page = $slist->get_selected_indices;
@@ -132,7 +183,7 @@ sub new {
    }
    else {
     show_message_dialog(
-     $windowo, 'error', 'close',
+     $self, 'error', 'close',
      $d->get(
 'The current settings would result in duplicate page numbers. Please select new start and increment values.'
      )
@@ -146,44 +197,59 @@ sub new {
  $hbox->pack_end( $cbutton, FALSE, FALSE, 0 );
  $cbutton->signal_connect( clicked => sub { $self->hide; } );
 
- bless( $self, $class );
  return $self;
 }
 
 # Helper function to prevent impossible settings in renumber dialog
 
-sub update_renumber {
+sub update {
+ my ($self)    = @_;
  my $start_old = $start;
  my $step_old  = $step;
 
- $start = $spin_buttons->get_value;
- $step  = $spin_buttoni->get_value;
+ $start = $self->get('start');
+ $step  = $self->get('increment');
 
- my $dstart = $start - $start_old;
- my $dstep  = $step_new - $step;
+ my $dstart = defined($start_old) ? $start - $start_old : 0;
+ my $dstep  = defined($step_old)  ? $step - $step_old   : 0;
  if ( $dstart == 0 and $dstep == 0 ) {
   $dstart = 1;
   $dstep  = 1;
  }
 
  # Check for clash with non_selected
- while ( not $slist->valid_renumber( $start, $step, $page_range ) ) {
-  if ( $current->min < 1 ) {
-   if ( $dstart < 0 ) {
-    $dstart = 1;
+ my $slist = $self->get('document');
+ if ( defined $slist ) {
+  my $range = $self->get('range');
+  while ( not $slist->valid_renumber( $start, $step, $range ) ) {
+   my $n;
+   if ( $range eq 'all' ) {
+    $n = $#{ $slist->{data} };
    }
    else {
-    $dstep = 1;
+    my @page = $slist->get_selected_indices;
+    $n = $#page;
    }
-  }
-  $start_new += $dstart;
-  $step_new  += $dstep;
-  $step_new  += $dstep if ( $step_new == 0 );
- }
 
- $spin_buttons->set_value($start_new);
- $spin_buttoni->set_value($step_new);
- $start = $start_new;
- $step  = $step_new;
+   if ( $start + $step * $n < 1 ) {
+    if ( $dstart < 0 ) {
+     $dstart = 1;
+    }
+    else {
+     $dstep = 1;
+    }
+   }
+   $start += $dstart;
+   $step  += $dstep;
+   $step  += $dstep if ( $step == 0 );
+  }
+
+  $self->set( 'start', $start );
+  $self->get( 'increment', $step );
+ }
  return;
 }
+
+1;
+
+__END__

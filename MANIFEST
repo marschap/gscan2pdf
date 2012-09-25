@@ -25,6 +25,7 @@ lib/Gscan2pdf/Document.pm
 lib/Gscan2pdf/Frontend/Sane.pm
 lib/Gscan2pdf/Ocropus.pm
 lib/Gscan2pdf/Page.pm
+lib/Gscan2pdf/PageRange.pm
 lib/Gscan2pdf/Scanner/Dialog.pm
 lib/Gscan2pdf/Scanner/Options.pm
 lib/Gscan2pdf/Tesseract.pm
@@ -132,6 +133,7 @@ t/04_Unpaper.t
 t/05_Dialog.t
 t/061_Scanner_Dialog.t
 t/062_Scanner_Dialog.t
+t/07_Dialog_Renumber.t
 t/10_Document.t
 t/111_save_pdf.t
 t/112_save_pdf_with_text.t
