@@ -6893,6 +6893,13 @@ sub renumber_dialog {
   border_width     => $border_width
  );
 
+ # Update undo/redo buffers
+ $windowrn->signal_connect(
+  'before-renumber' => sub {
+   take_snapshot();
+  }
+ );
+
  $windowrn->show_all;
  return;
 }

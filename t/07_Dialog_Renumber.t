@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 11;
+use Test::More tests => 12;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;
 
@@ -65,6 +65,12 @@ is( $dialog->get('increment'),
 $dialog->set( 'increment', 0 );
 is( $dialog->get('start'),     4,  'start for document with negative step' );
 is( $dialog->get('increment'), -2, 'step for document with negative step' );
+$dialog->signal_connect(
+ 'before-renumber' => sub {
+  ok( 1, 'before-renumber signal fired on renumber' );
+ }
+);
+$dialog->renumber;
 
 #########################
 

@@ -20,6 +20,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  'changed-range' => {
   param_types => ['Gscan2pdf::PageRange::Range'],    # new range
  },
+ 'before-renumber' => { param_types => [], },
   },
   properties => [
  Glib::ParamSpec->int(
@@ -162,63 +163,7 @@ sub new {    ## no critic (RequireArgUnpacking)
  # Start button
  my $obutton = Gtk2::Button->new( $d->get('Renumber') );
  $hbox->pack_start( $obutton, TRUE, TRUE, 0 );
- $obutton->signal_connect(
-  clicked => sub {
-   my $slist = $self->get('document');
-   my $start = $self->get('start');
-   my $step  = $self->get('increment');
-   my $range = $self->get('range');
-   if ( $slist->valid_renumber( $start, $step, $range ) ) {
-
-    # Update undo/redo buffers
-    take_snapshot();
-    $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-    $slist->renumber( $start, $step, $range );
-
-    # Note selection before sorting
-    my @page = $slist->get_selected_indices;
-
-    # Convert to page numbers
-    for (@page) {
-     $_ = $slist->{data}[$_][0];
-    }
-
-# Block selection_changed_signal to prevent its firing changing pagerange to all
-    $slist->get_selection->signal_handler_block(
-     $slist->{selection_changed_signal} );
-
-    # Select new page, deselecting others. This fires the select callback,
-    # displaying the page
-    $slist->get_selection->unselect_all;
-    $slist->manual_sort_by_column(0);
-    $slist->get_selection->signal_handler_unblock(
-     $slist->{selection_changed_signal} );
-    $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
-
-    # Convert back to indices
-    for (@page) {
-
-     # Due to the sort, must search for new page
-     my $page = 0;
-     ++$page
-       while ( $page < $#{ $slist->{data} }
-      and $slist->{data}[$page][0] != $_ );
-     $_ = $page;
-    }
-
-    # Reselect pages
-    $slist->select(@page);
-   }
-   else {
-    show_message_dialog(
-     $self, 'error', 'close',
-     $d->get(
-'The current settings would result in duplicate page numbers. Please select new start and increment values.'
-     )
-    );
-   }
-  }
- );
+ $obutton->signal_connect( clicked => sub { $self->renumber } );
 
  # Close button
  my $cbutton = Gtk2::Button->new_from_stock('gtk-close');
@@ -289,6 +234,69 @@ sub update {
 
   $self->set( 'start',     $start );
   $self->set( 'increment', $step );
+ }
+ return;
+}
+
+sub renumber {
+ my ($self) = @_;
+ my $slist  = $self->get('document');
+ my $start  = $self->get('start');
+ my $step   = $self->get('increment');
+ my $range  = $self->get('range');
+ if ( $slist->valid_renumber( $start, $step, $range ) ) {
+
+  $self->signal_emit('before-renumber');
+
+  $slist->get_model->signal_handler_block( $slist->{row_changed_signal} )
+    if ( defined $slist->{row_changed_signal} );
+  $slist->renumber( $start, $step, $range );
+
+  # Note selection before sorting
+  my @page = $slist->get_selected_indices;
+
+  # Convert to page numbers
+  for (@page) {
+   $_ = $slist->{data}[$_][0];
+  }
+
+# Block selection_changed_signal to prevent its firing changing pagerange to all
+  $slist->get_selection->signal_handler_block(
+   $slist->{selection_changed_signal} )
+    if ( defined $slist->{selection_changed_signal} );
+
+  # Select new page, deselecting others. This fires the select callback,
+  # displaying the page
+  $slist->get_selection->unselect_all;
+  $slist->manual_sort_by_column(0);
+  $slist->get_selection->signal_handler_unblock(
+   $slist->{selection_changed_signal} )
+    if ( defined $slist->{selection_changed_signal} );
+  $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} )
+    if ( defined $slist->{row_changed_signal} );
+
+  # Convert back to indices
+  for (@page) {
+
+   # Due to the sort, must search for new page
+   my $page = 0;
+   ++$page
+     while ( $page < $#{ $slist->{data} }
+    and $slist->{data}[$page][0] != $_ );
+   $_ = $page;
+  }
+
+  # Reselect pages
+  $slist->select(@page);
+ }
+ else {
+  my $d = Locale::gettext->domain(Glib::get_application_name);
+  show_message_dialog(
+   $self, 'error', 'close',
+   $d->get(
+'The current settings would result in duplicate page numbers. Please select new start and increment values.'
+   )
+  );
  }
  return;
 }
