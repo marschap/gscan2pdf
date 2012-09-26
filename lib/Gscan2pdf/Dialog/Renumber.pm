@@ -57,7 +57,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  ),
   ];
 
-my ( $start, $step );
+my ( $start_old, $step_old );
 
 # Normally, we would initialise the widget in INIT_INSTANCE and use the
 # default constructor new(). However, we have to override the default contructor
@@ -123,7 +123,6 @@ sub new {    ## no critic (RequireArgUnpacking)
    $spin_buttons->set_value($value);
   }
  );
- $start = $self->get('start');
  $spin_buttons->set_value( $self->get('start') );
  $hboxxs->pack_end( $spin_buttons, FALSE, FALSE, 0 );
 
@@ -145,7 +144,6 @@ sub new {    ## no critic (RequireArgUnpacking)
    $spin_buttoni->set_value($value);
   }
  );
- $step = $self->get('increment');
  $spin_buttoni->set_value( $self->get('increment') );
  $hboxi->pack_end( $spin_buttoni, FALSE, FALSE, 0 );
 
@@ -189,12 +187,10 @@ sub SET_PROPERTY {
 # Helper function to prevent impossible settings in renumber dialog
 
 sub update {
- my ($self)    = @_;
- my $start_old = $start;
- my $step_old  = $step;
+ my ($self) = @_;
 
- $start = $self->get('start');
- $step  = $self->get('increment');
+ my $start = $self->get('start');
+ my $step  = $self->get('increment');
 
  my $dstart = defined($start_old) ? $start - $start_old : 0;
  my $dstep  = defined($step_old)  ? $step - $step_old   : 0;
@@ -235,6 +231,8 @@ sub update {
   $self->set( 'start',     $start );
   $self->set( 'increment', $step );
  }
+ $start_old = $start;
+ $step_old  = $step;
  return;
 }
 
