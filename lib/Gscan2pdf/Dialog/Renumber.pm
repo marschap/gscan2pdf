@@ -14,16 +14,22 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  'changed-increment' => {
   param_types => ['Glib::Int'],     # new increment
  },
+ 'changed-document' => {
+  param_types => ['Glib::Scalar'],    # new document
+ },
+ 'changed-range' => {
+  param_types => ['Gscan2pdf::PageRange::Range'],    # new range
+ },
   },
   properties => [
  Glib::ParamSpec->int(
-  'start',                          # name
-  'Number of first page',           # nickname
-  'Number of first page',           # blurb
-  1,                                # min
-  999,                              # max
-  1,                                # default
-  [qw/readable writable/]           # flags
+  'start',                                           # name
+  'Number of first page',                            # nickname
+  'Number of first page',                            # blurb
+  1,                                                 # min
+  999,                                               # max
+  1,                                                 # default
+  [qw/readable writable/]                            # flags
  ),
  Glib::ParamSpec->int(
   'increment',                                                        # name
@@ -56,7 +62,7 @@ my ( $start, $step );
 # default constructor new(). However, we have to override the default contructor
 # in order to be able to access any properties assigned in ->new(), which are
 # not available in INIT_INSTANCE. Therefore, we use the default INIT_INSTANCE,
-# and override new(). If we ever need to subclass Gscan2pdf::Scanner::Dialog,
+# and override new(). If we ever need to subclass Gscan2pdf::Dialog::Renumber,
 # then we would need to put the bulk of this code back into INIT_INSTANCE,
 # and leave just that which assigns the required properties.
 
@@ -82,6 +88,12 @@ sub new {    ## no critic (RequireArgUnpacking)
    $self->update;
   }
  );
+ $self->signal_connect(
+  'changed-range' => sub {
+   my ( $widget, $value ) = @_;
+   $pr->set_active($value);
+  }
+ );
  $pr->set_active( $self->get('range') );
  $frame->add($pr);
 
@@ -95,13 +107,19 @@ sub new {    ## no critic (RequireArgUnpacking)
  # SpinButton for starting page number
  my $hboxxs = Gtk2::HBox->new;
  $vboxx->pack_start( $hboxxs, FALSE, FALSE, 0 );
- my $labelxs = Gtk2::Label->new( $d->get('start') );
+ my $labelxs = Gtk2::Label->new( $d->get('Start') );
  $hboxxs->pack_start( $labelxs, FALSE, FALSE, 0 );
  my $spin_buttons = Gtk2::SpinButton->new_with_range( 1, 99999, 1 );
  $spin_buttons->signal_connect(
   'value-changed' => sub {
    $self->set( 'start', $spin_buttons->get_value );
    $self->update;
+  }
+ );
+ $self->signal_connect(
+  'changed-start' => sub {
+   my ( $widget, $value ) = @_;
+   $spin_buttons->set_value($value);
   }
  );
  $start = $self->get('start');
@@ -111,7 +129,7 @@ sub new {    ## no critic (RequireArgUnpacking)
  # SpinButton for page number increment
  my $hboxi = Gtk2::HBox->new;
  $vboxx->pack_start( $hboxi, FALSE, FALSE, 0 );
- my $labelxi = Gtk2::Label->new( $d->get('increment') );
+ my $labelxi = Gtk2::Label->new( $d->get('Increment') );
  $hboxi->pack_start( $labelxi, FALSE, FALSE, 0 );
  my $spin_buttoni = Gtk2::SpinButton->new_with_range( -99, 99, 1 );
  $spin_buttoni->signal_connect(
@@ -120,12 +138,22 @@ sub new {    ## no critic (RequireArgUnpacking)
    $self->update;
   }
  );
+ $self->signal_connect(
+  'changed-increment' => sub {
+   my ( $widget, $value ) = @_;
+   $spin_buttoni->set_value($value);
+  }
+ );
  $step = $self->get('increment');
  $spin_buttoni->set_value( $self->get('increment') );
  $hboxi->pack_end( $spin_buttoni, FALSE, FALSE, 0 );
 
  # Check whether the settings are possible
- $self->update;
+ $self->signal_connect(
+  'changed-document' => sub {
+   $self->update;
+  }
+ );
 
  # HBox for buttons
  my $hbox = Gtk2::HBox->new;
@@ -200,6 +228,19 @@ sub new {    ## no critic (RequireArgUnpacking)
  return $self;
 }
 
+sub SET_PROPERTY {
+ my ( $self, $pspec, $newval ) = @_;
+ my $name   = $pspec->get_name;
+ my $oldval = $self->get($name);
+ $self->{$name} = $newval;
+ if (( defined($newval) and defined($oldval) and $newval ne $oldval )
+  or ( defined($newval) xor defined($oldval) ) )
+ {
+  $self->signal_emit( "changed-$name", $newval );
+ }
+ return;
+}
+
 # Helper function to prevent impossible settings in renumber dialog
 
 sub update {
@@ -214,7 +255,9 @@ sub update {
  my $dstep  = defined($step_old)  ? $step - $step_old   : 0;
  if ( $dstart == 0 and $dstep == 0 ) {
   $dstart = 1;
-  $dstep  = 1;
+ }
+ elsif ( $dstart != 0 and $dstep != 0 ) {
+  $dstep = 0;
  }
 
  # Check for clash with non_selected
@@ -244,8 +287,8 @@ sub update {
    $step  += $dstep if ( $step == 0 );
   }
 
-  $self->set( 'start', $start );
-  $self->get( 'increment', $step );
+  $self->set( 'start',     $start );
+  $self->set( 'increment', $step );
  }
  return;
 }
