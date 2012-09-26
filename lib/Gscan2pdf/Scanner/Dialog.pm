@@ -189,7 +189,7 @@ my $tolerance = 1;
 # not available in INIT_INSTANCE. Therefore, we use the default INIT_INSTANCE,
 # and override new(). If we ever need to subclass Gscan2pdf::Scanner::Dialog,
 # then we would need to put the bulk of this code back into INIT_INSTANCE,
-# and leave just at which needed assigned properties.
+# and leave just that which assigns the required properties.
 
 # Glib::Object::new takes the class as the first argument, so below is short
 # for:
