@@ -42,7 +42,8 @@ sub get_devices {
  $logger->info($cmd);
 
  # Interface to frontend
- my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!";  ## no critic
+ my $pid = open my $read, '-|', $cmd    ## no critic (RequireBriefOpen)
+   or croak "can't open pipe: $!";
  $logger->info("Forked PID $pid");
 
  # Read without blocking
@@ -64,7 +65,7 @@ sub get_devices {
    {                             # bit field operation. >= would also work
     close $read;
     $logger->info('Waiting to reap process');
-    my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
+    $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
     $logger->info("Reaped PID $pid");
     $running = FALSE;
 
