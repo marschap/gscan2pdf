@@ -3970,7 +3970,7 @@ sub scan_dialog {
       $SETTING{$name} = $value;
      }
     }
-    rescan_options( $vboxd, $device[ $combobd->get_active ] )
+    rescan_options( $vboxd, $device_list[ $combobd->get_active ]{name} )
       if ( defined $combobd );
    }
   }
@@ -4052,7 +4052,7 @@ sub scan_dialog {
    take_snapshot();
 
    # Get selected device
-   $SETTING{device} = $device[ $combobd->get_active ];
+   $SETTING{device} = $device_list[ $combobd->get_active ]{name};
 
    # ignore artificial paper size option
    my %options = walk_options_tree();
@@ -4879,7 +4879,7 @@ sub populate_device_list {
     # only delete the mode setting if switching devices, not on first run
     delete $SETTING{mode} if ($run);
     $run = TRUE;
-    rescan_options( $vboxd, $device_list[ $combobd->get_active ]{name} );
+    rescan_options( $vboxd, $device_list[$index]{name} );
     $vboxd->show_all;
    }
   }
@@ -8567,7 +8567,7 @@ sub preferences {
     }
     else {
      $windows2->destroy if ( defined $windows2 );
-     rescan_options( $vboxd, $device[ $combobd->get_active ] )
+     rescan_options( $vboxd, $device_list[ $combobd->get_active ]{name} )
        if ( defined $windows );
     }
    }
