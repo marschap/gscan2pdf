@@ -6002,7 +6002,6 @@ sub rescan_options {
   }
  }
 
- my $output = '';
  if ($test) {
   my $i = 0;
   $i++ while ( $device[$i] ne $device );
@@ -6013,73 +6012,32 @@ sub rescan_options {
     if ( defined( $SETTING{mode} ) and -e "$filename.$SETTING{mode}" );
 
   # Slurp it from file
-  $output = Gscan2pdf::Document::slurp($filename);
+  my $output = Gscan2pdf::Document::slurp($filename);
   $vboxd->hide_all;    # merely here for consistency with normal operation
   parse_options( $vboxd, $device, options2hash($output) );
  }
  else {
-
-  # Get output from scanimage or scanadf.
-  # Inverted commas needed for strange characters in device name
-  my $cmd =
-    "$SETTING{'scan prefix'} $SETTING{frontend} --help --device-name='$device'";
-  $cmd .= " --mode='$SETTING{mode}'" if ( defined $SETTING{mode} );
-  $logger->info($cmd);
-
   # Set up ProgressBar
   my $pbar = Gtk2::ProgressBar->new;
   $pbar->set_pulse_step(.1);
   $pbar->set_text( $d->get('Updating options') );
   $vboxd->pack_start( $pbar, FALSE, FALSE, 0 );
   $vboxd->show_all;
-  my $running = TRUE;
 
-  # Timer will run until callback returns false
-  my $timer = Glib::Timeout->add(
-   100,
-   sub {
-    if ($running) {
-     $pbar->pulse;
-     return TRUE;
-    }
-    else {
-     return FALSE;
-    }
-   }
-  );
-
-  # Interface to frontend
-  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!"; ## no critic
-  $logger->info("Forked PID $pid");
-
-  # Read without blocking
-  Glib::IO->add_watch(
-   fileno($read),
-   [ 'in', 'hup' ],
-   sub {
-    my ( $fileno, $condition ) = @_;
-    my $line;
-    if ( $condition & 'in' ) {    # bit field operation. >= would also work
-     sysread $read, $line, 1024;
-     $output .= $line;
-    }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-    if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-    {                             # bit field operation. >= would also work
-     close $read;
-     $logger->info('Waiting to reap process');
-     my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-     $logger->info("Reaped PID $pid");
-     $running = FALSE;
-     $pbar->destroy;
-     $vboxd->hide_all;
-     $logger->info($output);
-     parse_options( $vboxd, $device, options2hash($output) );
-     return FALSE;                         # uninstall
-    }
-    return TRUE;                           # continue without uninstalling
+  Gscan2pdf::Frontend::CLI->find_scan_options(
+   'scan prefix'    => $SETTING{'scan prefix'},
+   frontend         => $SETTING{frontend},
+   device           => $device,
+   mode             => $SETTING{mode},
+   running_callback => sub {
+    $pbar->pulse;
+   },
+   finished_callback => sub {
+    my ($output) = @_;
+    $pbar->destroy;
+    $vboxd->hide_all;
+    $logger->info($output);
+    parse_options( $vboxd, $device, options2hash($output) );
    }
   );
  }
@@ -6569,7 +6527,6 @@ sub update_options {
   }
  }
 
- my $output = '';
  if ($test) {
   my $i = 0;
   $i++ while ( $device[$i] ne $device );
@@ -6579,73 +6536,32 @@ sub update_options {
   $filename .= ".$SETTING{mode}" if ( -e "$filename.$SETTING{mode}" );
 
   # Slurp it from file
-  $output = Gscan2pdf::Document::slurp($filename);
+  my $output = Gscan2pdf::Document::slurp($filename);
   $vboxd->hide_all;    # merely here for consistency with normal operation
   update_options_hash( $vboxd, options2hash($output) );
  }
  else {
-
-  # Get output from scanimage or scanadf.
-  # Inverted commas needed for strange characters in device name
-  my $cmd =
-    "$SETTING{'scan prefix'} $SETTING{frontend} --help --device-name='$device'";
-  $cmd .= " --mode='$SETTING{mode}'" if ( defined $SETTING{mode} );
-  $logger->info($cmd);
-
   # Set up ProgressBar
   my $pbar = Gtk2::ProgressBar->new;
   $pbar->set_pulse_step(.1);
   $pbar->set_text( $d->get('Updating options') );
   $vboxd->pack_start( $pbar, FALSE, FALSE, 0 );
   $pbar->show;
-  my $running = TRUE;
 
-  # Timer will run until callback returns false
-  my $timer = Glib::Timeout->add(
-   100,
-   sub {
-    if ($running) {
-     $pbar->pulse;
-     return TRUE;
-    }
-    else {
-     return FALSE;
-    }
-   }
-  );
-
-  # Interface to frontend
-  my $pid = open my $read, '-|', $cmd or die "can't open pipe: $!"; ## no critic
-  $logger->info("Forked PID $pid");
-
-  # Read without blocking
-  Glib::IO->add_watch(
-   fileno($read),
-   [ 'in', 'hup' ],
-   sub {
-    my ( $fileno, $condition ) = @_;
-    my $line;
-    if ( $condition & 'in' ) {    # bit field operation. >= would also work
-     sysread $read, $line, 1024;
-     $output .= $line;
-    }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-    if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-    {                             # bit field operation. >= would also work
-     close $read;
-     $logger->info('Waiting to reap process');
-     my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-     $logger->info("Reaped PID $pid");
-     $running = FALSE;
-     $pbar->destroy;
-     $vboxd->hide_all;
-     $logger->info($output);
-     update_options_hash( $vboxd, options2hash($output) );
-     return FALSE;                         # uninstall
-    }
-    return TRUE;                           # continue without uninstalling
+  Gscan2pdf::Frontend::CLI->find_scan_options(
+   'scan prefix'    => $SETTING{'scan prefix'},
+   frontend         => $SETTING{frontend},
+   device           => $device,
+   mode             => $SETTING{mode},
+   running_callback => sub {
+    $pbar->pulse;
+   },
+   finished_callback => sub {
+    my ($output) = @_;
+    $pbar->destroy;
+    $vboxd->hide_all;
+    $logger->info($output);
+    update_options_hash( $vboxd, options2hash($output) );
    }
   );
  }
