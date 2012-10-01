@@ -22,6 +22,7 @@ use Storable qw(store retrieve);
 use Archive::Tar;            # For session files
 use Proc::Killfam;
 use Locale::gettext 1.05;    # For translations
+use POSIX qw(locale_h);
 use IPC::Open3 'open3';
 use Symbol;                  # for gensym
 use Try::Tiny;
@@ -192,6 +193,7 @@ sub get_resolution {
  my $image = shift;
  my $resolution;
  my $format = $image->Get('format');
+ setlocale( LC_NUMERIC, "C" );
 
  # Imagemagick always reports PNMs as 72ppi
  if ( $format ne 'Portable anymap' ) {
