@@ -4991,32 +4991,8 @@ sub scanimage {
   $rreverse, $unpaper_flag, $ocr,    %options
  ) = @_;
 
- require IPC::Open3;
- require IO::Handle;
-
- # inverted commas needed for strange characters in device name
- $device = "--device-name='$device'";
- if ( $npages != 0 ) {
-  $npages = "--batch-count=$npages";
- }
- else {
-  $npages = "";
- }
-
- # Device-specific options
- my @options = hash2options(%options);
-
- # Add basic options
- push @options, '--batch';
- push @options, '--progress';
-
  # Make sure we are in temp directory
  chdir $session;
-
- # Create command
- my $cmd =
-   "$SETTING{'scan prefix'} $SETTING{frontend} $device @options $npages";
- $logger->info($cmd);
 
  if ($test) {
   my $rotate = 1 % 2 ? $rfacing : $rreverse;
@@ -5025,151 +5001,49 @@ sub scanimage {
  }
  else {
 
-  # flag to ignore error messages after cancelling scan
-  my $cancel = FALSE;
-
-# flag to ignore out of documents message if successfully scanned at least one page
-  my $num_scans = 0;
-
-  # Interface to scanimage
-  my ( $write, $read );
-  my $error = IO::Handle->new;    # this needed because of a bug in open3.
-  my $pid = IPC::Open3::open3( $write, $read, $error, $cmd );
-  $logger->info("Forked PID $pid");
-
-  $spbar->set_text( $d->get('Scanning') );
-  $shbox->show_all;
-  my $signal = $scbutton->signal_connect(
-   clicked => sub {
-    local $SIG{INT} = 'IGNORE';
-    $logger->info("Sending INT signal to PID $pid and its children");
-    killfam 'INT', ($pid);
-    $cancel = TRUE;
-   }
-  );
-
-  my $line;
-  Glib::IO->add_watch(
-   fileno($error),
-   [ 'in', 'hup' ],
-   sub {
-    my ( $fileno, $condition ) = @_;
-    my $buffer;
-    if ( $condition & 'in' ) {    # bit field operation. >= would also work
-
-# Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
-     sysread $error, $buffer, 1024;
-     $logger->debug($buffer) if ($buffer);
-     $line .= $buffer;
-
-     while ( $line =~ /([\r\n])/x ) {
-      my $le = $1;
-      if ( $line =~ /^Progress:\ (\d*\.\d*)%/x ) {
-       my $fraction = $1 / 100;
-       $spbar->set_fraction($fraction);
-      }
-      elsif ( $line =~ /^Scanning\ (-?\d*)\ pages/x ) {
-       $spbar->set_text(
-        $d->get('Scanning') . " $1 " . $d->get('pages') . "..." );
-      }
-      elsif ( $line =~ /^Scanning\ page\ (\d*)/x ) {
-       $spbar->set_text(
-        sprintf( $d->get('Scanning page %i...'), $1 * $step + $offset ) );
-       $spbar->set_fraction(0);
-      }
-      elsif ( $line =~ /^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ 5\)/x ) {
-       my $id = $1;
-
-       # If the scan can't be loaded then blow the scanning dialog away and
-       # show an error
-       my $rotate = $id % 2 ? $rfacing : $rreverse;
-
-       # Timer will run until callback returns false
-       my $timer = Glib::Timeout->add(
-        100,
-        sub {
-         return TRUE unless ( -e "out$id.pnm" );
-         my $index = import_scan( "out$id.pnm", $id * $step + $offset,
-          $SETTING{resolution}, TRUE, $rotate, $unpaper_flag, $ocr );
-         $num_scans++;
-         return FALSE;
-        }
-       );
-      }
-      elsif ( $line =~
-/Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x
-        )
-      {
-       $spbar->set_text( $d->get('Scanner warming up') );
-      }
-      elsif ( $line =~ /^Scanned\ page\ \d*\.\ \(scanner\ status\ =\ 7\)/x ) {
-       ;
-      }
-      elsif ( $line =~
-/^$SETTING{frontend}:\ sane_start:\ Document\ feeder\ out\ of\ documents/x
-        )
-      {
-       $scbutton->signal_handler_disconnect($signal);
-       $shbox->hide;
-       show_message_dialog( $windows, 'info', 'close',
-        $d->get('Document feeder out of documents') )
-         if ( $num_scans == 0 );
-      }
-      elsif (
-       $cancel
-       and ( $line =~
-           /^$SETTING{frontend}:\ sane_start:\ Error\ during\ device\ I\/O/x
-        or $line =~ /^$SETTING{frontend}:\ received\ signal\ 2/x
-        or $line =~ /^$SETTING{frontend}:\ trying\ to\ stop\ scanner/x )
-        )
-      {
-       ;
-      }
-      elsif ( $line =~ /^$SETTING{frontend}:\ rounded/x ) {
-       $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
-      }
-      elsif ( $line =~ /^$SETTING{frontend}:\ sane_start:\ Device\ busy/x ) {
-       $scbutton->signal_handler_disconnect($signal);
-       $shbox->hide;
-       show_message_dialog( $windows, 'error', 'close',
-        $d->get('Device busy') );
-      }
-      elsif (
-       $line =~ /^$SETTING{frontend}:\ sane_read:\ Operation\ was\ cancelled/x )
-      {
-       $scbutton->signal_handler_disconnect($signal);
-       $shbox->hide;
-       show_message_dialog( $windows, 'info', 'close',
-        $d->get('Operation cancelled') );
-      }
-      else {
-       my $text =
-         $d->get('Unknown message: ')
-         . substr( $line, 0, index( $line, "\n" ) );
-       show_message_dialog( $windows, 'warning', 'close', $text );
-      }
-      $line = substr( $line, index( $line, $le ) + 1, length($line) );
+  my $signal;
+  my @options = hash2options(%options);
+  Gscan2pdf::Frontend::CLI->scanimage(
+   device           => $device,
+   npages           => $npages,
+   options          => \@options,
+   started_callback => sub {
+    $spbar->set_text( $d->get('Scanning') );
+    $shbox->show_all;
+    $signal = $scbutton->signal_connect(
+     clicked => sub {
+      Gscan2pdf::Frontend::CLI->cancel_scan;
      }
-    }
+    );
+   },
+   running_callback => sub {
+    my ( $fraction, $text ) = @_;
+    $spbar->set_fraction($fraction) if ( defined $fraction );
+    $spbar->set_text($text)         if ( defined $text );
+   },
+   new_page_callback => sub {
+    my ($path) = @_;
+    my $id;
+    $id = $1 if ( $path =~ /^out(\d+).pnm/ );
 
-    # Only allow the hup if sure an empty buffer has been read.
-    if ( ( $condition & 'hup' ) and ( not defined($buffer) or $buffer eq '' ) )
-    {    # bit field operation. >= would also work
-     close $read;
-     $logger->info('Waiting to reap process');
-     my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-     $logger->info("Reaped PID $pid");
+    # If the scan can't be loaded then blow the scanning dialog away and
+    # show an error
+    my $rotate = $id % 2 ? $rfacing : $rreverse;
 
-     # Now finished scanning, get on with post-processing
-     $scanning = FALSE;
-     $scbutton->signal_handler_disconnect($signal);
-     $shbox->hide;
-     return FALSE;                         # uninstall
-    }
-    return TRUE;                           # continue without uninstalling
-   }
+    my $index = import_scan( $path, $id * $step + $offset,
+     $SETTING{resolution}, TRUE, $rotate, $unpaper_flag, $ocr );
+   },
+   error_callback => sub {
+    my ($text) = @_;
+    $scbutton->signal_handler_disconnect($signal);
+    $shbox->hide;
+    show_message_dialog( $windows, 'error', 'close', $test );
+   },
+   finished_callback => sub {
+    $scbutton->signal_handler_disconnect($signal);
+    $shbox->hide;
+   },
   );
-  $scanning = TRUE;
  }
  return;
 }

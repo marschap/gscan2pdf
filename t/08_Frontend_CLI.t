@@ -54,13 +54,12 @@ Gscan2pdf::Frontend::CLI->scanimage(
  new_page_callback => sub {
   my ($path) = @_;
   ok( -e $path, 'basic scan functionality' );
+  unlink $path;
   $loop->quit;
  }
 );
 $loop->run;
 
 #########################
-
-unlink "out01.pnm";
 
 __END__
