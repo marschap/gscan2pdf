@@ -10,8 +10,7 @@ BEGIN {
 
 Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
-#Log::Log4perl->easy_init($WARN);
-Log::Log4perl->easy_init($DEBUG);
+Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::CLI->setup($logger);
 
@@ -48,7 +47,17 @@ is_deeply( Gscan2pdf::Frontend::CLI->parse_device_list(''),
 
 #########################
 
-Gscan2pdf::Frontend::CLI->scanimage(device => 'test', npages => 1, finished_callback => sub {ok(-e "out01.pnm", 'basic scan functionality')});
+my $loop = Glib::MainLoop->new;
+Gscan2pdf::Frontend::CLI->scanimage(
+ device            => 'test',
+ npages            => 1,
+ new_page_callback => sub {
+  my ($path) = @_;
+  ok( -e $path, 'basic scan functionality' );
+  $loop->quit;
+ }
+);
+$loop->run;
 
 #########################
 

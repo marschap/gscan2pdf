@@ -12,13 +12,13 @@ use Proc::Killfam;
 use IPC::Open3;
 use IO::Handle;
 
-my $_POLL_INTERVAL = 100;                          # ms
+my $_POLL_INTERVAL = 100;    # ms
 my ( $_self, $logger, $d );
 
 sub setup {
  ( my $class, $logger ) = @_;
  $_self = {};
- $d      = Locale::gettext->domain(Glib::get_application_name);
+ $d     = Locale::gettext->domain(Glib::get_application_name);
  return;
 }
 
@@ -89,18 +89,16 @@ sub find_scan_options {
 
 sub scanimage {
  my ( $class, %options ) = @_;
- use Data::Dumper;
-print Dumper(\%options);
 
- $options{frontend} = 'scanimage' unless (defined $options{frontend});
- $options{prefix} = '' unless (defined $options{prefix});
+ $options{frontend} = 'scanimage' unless ( defined $options{frontend} );
+ $options{prefix}   = ''          unless ( defined $options{prefix} );
 
  # inverted commas needed for strange characters in device name
  my $device = "--device-name='$options{device}'";
 
  # Add basic options
  my @options;
- @options = @{$options{options}} if (defined $options{options});
+ @options = @{ $options{options} } if ( defined $options{options} );
  push @options, '--batch';
  push @options, '--progress';
  push @options, "--batch-count=$options{npages}" if ( $options{npages} != 0 );
@@ -123,110 +121,120 @@ print Dumper(\%options);
 
  $options{started_callback}->() if ( defined $options{started_callback} );
  if ( $_self->{abort_scan} ) {
-   local $SIG{INT} = 'IGNORE';
-   $logger->info("Sending INT signal to PID $pid and its children");
-   killfam 'INT', ($pid);
+  local $SIG{INT} = 'IGNORE';
+  $logger->info("Sending INT signal to PID $pid and its children");
+  killfam 'INT', ($pid);
  }
 
-  my $line;
-  Glib::IO->add_watch(
-   fileno($error),
-   [ 'in', 'hup' ],
-   sub {
-    my ( $fileno, $condition ) = @_;
-    my $buffer;
-    if ( $condition & 'in' ) {    # bit field operation. >= would also work
+ my $line;
+ Glib::IO->add_watch(
+  fileno($error),
+  [ 'in', 'hup' ],
+  sub {
+   my ( $fileno, $condition ) = @_;
+   my $buffer;
+   if ( $condition & 'in' ) {    # bit field operation. >= would also work
 
 # Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
-     sysread $error, $buffer, 1024;
-     $logger->debug($buffer) if ($buffer);
-     $line .= $buffer;
+    sysread $error, $buffer, 1024;
+    $logger->debug($buffer) if ($buffer);
+    $line .= $buffer;
 
-     while ( $line =~ /([\r\n])/x ) {
-      my $le = $1;
-      if ( $line =~ /^Progress:\ (\d*\.\d*)%/x ) {
-       $options{running_callback}->($1 / 100) if ( defined $options{running_callback} );
-      }
-      elsif ( $line =~ /^Scanning\ (-?\d*)\ pages/x ) {
-       $options{running_callback}->(undef,sprintf( $d->get('Scanning %i pages...'), $1 )) if ( defined $options{running_callback} );
-      }
-      elsif ( $line =~ /^Scanning\ page\ (\d*)/x ) {
-       $options{running_callback}->(0,sprintf( $d->get('Scanning page %i...'), $1 )) if ( defined $options{running_callback} );
-      }
-      elsif ( $line =~ /^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ 5\)/x ) {
-       my $id = $1;
-
-       # Timer will run until callback returns false
-       my $timer = Glib::Timeout->add(
-        $_POLL_INTERVAL,
-        sub {
-         return Glib::SOURCE_CONTINUE unless ( -e "out$id.pnm" );
-         $options{new_page_callback}->( "out$id.pnm" )
-           if ( defined $options{new_page_callback} );
-         $num_scans++;
-         return Glib::SOURCE_REMOVE;
-        }
-       );
-      }
-      elsif ( $line =~
-/Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x
-        )
-      {
-       $options{running_callback}->(0,$d->get('Scanner warming up')) if ( defined $options{running_callback} );
-      }
-      elsif ( $line =~ /^Scanned\ page\ \d*\.\ \(scanner\ status\ =\ 7\)/x ) {
-       ;
-      }
-      elsif ( $line =~
-/^$options{frontend}:\ sane_start:\ Document\ feeder\ out\ of\ documents/x
-        )
-      {
-       $options{error_callback}->($d->get('Document feeder out of documents')) if ( defined($options{error_callback}) and $num_scans == 0 );
-      }
-      elsif (
-       $_self->{abort_scan}
-       and ( $line =~
-           /^$options{frontend}:\ sane_start:\ Error\ during\ device\ I\/O/x
-        or $line =~ /^$options{frontend}:\ received\ signal\ 2/x
-        or $line =~ /^$options{frontend}:\ trying\ to\ stop\ scanner/x )
-        )
-      {
-       ;
-      }
-      elsif ( $line =~ /^$options{frontend}:\ rounded/x ) {
-       $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
-      }
-      elsif ( $line =~ /^$options{frontend}:\ sane_start:\ Device\ busy/x ) {
-       $options{error_callback}->($d->get('Device busy')) if ( defined $options{error_callback} );
-      }
-      elsif (
-       $line =~ /^$options{frontend}:\ sane_read:\ Operation\ was\ cancelled/x )
-      {
-       $options{error_callback}->($d->get('Operation cancelled')) if ( defined $options{error_callback} );
-      }
-      else {
-       $options{error_callback}->($d->get('Unknown message: ')
-         . substr( $line, 0, index( $line, "\n" ) )) if ( defined $options{error_callback} );
-      }
-      $line = substr( $line, index( $line, $le ) + 1, length($line) );
+    while ( $line =~ /([\r\n])/x ) {
+     my $le = $1;
+     if ( $line =~ /^Progress:\ (\d*\.\d*)%/x ) {
+      $options{running_callback}->( $1 / 100 )
+        if ( defined $options{running_callback} );
      }
-    }
+     elsif ( $line =~ /^Scanning\ (-?\d*)\ pages/x ) {
+      $options{running_callback}
+        ->( undef, sprintf( $d->get('Scanning %i pages...'), $1 ) )
+        if ( defined $options{running_callback} );
+     }
+     elsif ( $line =~ /^Scanning\ page\ (\d*)/x ) {
+      $options{running_callback}
+        ->( 0, sprintf( $d->get('Scanning page %i...'), $1 ) )
+        if ( defined $options{running_callback} );
+     }
+     elsif ( $line =~ /^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ 5\)/x ) {
+      my $id = $1;
 
-    # Only allow the hup if sure an empty buffer has been read.
-    if ( ( $condition & 'hup' ) and ( not defined($buffer) or $buffer eq '' ) )
-    {    # bit field operation. >= would also work
-     close $read;
-     $logger->info('Waiting to reap process');
-     my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-     $logger->info("Reaped PID $pid");
-
-     # Now finished scanning, get on with post-processing
-     $options{finished_callback}->() if ( defined $options{finished_callback} );
-     return Glib::SOURCE_REMOVE;
+      # Timer will run until callback returns false
+      my $timer = Glib::Timeout->add(
+       $_POLL_INTERVAL,
+       sub {
+        return Glib::SOURCE_CONTINUE unless ( -e "out$id.pnm" );
+        $options{new_page_callback}->("out$id.pnm")
+          if ( defined $options{new_page_callback} );
+        $num_scans++;
+        return Glib::SOURCE_REMOVE;
+       }
+      );
+     }
+     elsif ( $line =~
+      /Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x
+       )
+     {
+      $options{running_callback}->( 0, $d->get('Scanner warming up') )
+        if ( defined $options{running_callback} );
+     }
+     elsif ( $line =~ /^Scanned\ page\ \d*\.\ \(scanner\ status\ =\ 7\)/x ) {
+      ;
+     }
+     elsif ( $line =~
+      /^$options{frontend}:\ sane_start:\ Document\ feeder\ out\ of\ documents/x
+       )
+     {
+      $options{error_callback}->( $d->get('Document feeder out of documents') )
+        if ( defined( $options{error_callback} ) and $num_scans == 0 );
+     }
+     elsif (
+      $_self->{abort_scan}
+      and ( $line =~
+          /^$options{frontend}:\ sane_start:\ Error\ during\ device\ I\/O/x
+       or $line =~ /^$options{frontend}:\ received\ signal\ 2/x
+       or $line =~ /^$options{frontend}:\ trying\ to\ stop\ scanner/x )
+       )
+     {
+      ;
+     }
+     elsif ( $line =~ /^$options{frontend}:\ rounded/x ) {
+      $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
+     }
+     elsif ( $line =~ /^$options{frontend}:\ sane_start:\ Device\ busy/x ) {
+      $options{error_callback}->( $d->get('Device busy') )
+        if ( defined $options{error_callback} );
+     }
+     elsif (
+      $line =~ /^$options{frontend}:\ sane_read:\ Operation\ was\ cancelled/x )
+     {
+      $options{error_callback}->( $d->get('Operation cancelled') )
+        if ( defined $options{error_callback} );
+     }
+     else {
+      $options{error_callback}->(
+       $d->get('Unknown message: ') . substr( $line, 0, index( $line, "\n" ) ) )
+        if ( defined $options{error_callback} );
+     }
+     $line = substr( $line, index( $line, $le ) + 1, length($line) );
     }
-    return Glib::SOURCE_CONTINUE;
    }
-  );
+
+   # Only allow the hup if sure an empty buffer has been read.
+   if ( ( $condition & 'hup' ) and ( not defined($buffer) or $buffer eq '' ) )
+   {    # bit field operation. >= would also work
+    close $read;
+    $logger->info('Waiting to reap process');
+    my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
+    $logger->info("Reaped PID $pid");
+
+    # Now finished scanning, get on with post-processing
+    $options{finished_callback}->() if ( defined $options{finished_callback} );
+    return Glib::SOURCE_REMOVE;
+   }
+   return Glib::SOURCE_CONTINUE;
+  }
+ );
  return;
 }
 
