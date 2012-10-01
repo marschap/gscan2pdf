@@ -1364,10 +1364,10 @@ sub add_value {
    my ( $widget, $target, $event ) = @_;
    return FALSE
      unless ## no critic (ProhibitNegativeExpressionsInUnlessAndUntilConditions)
-      (
-       $event->state >=    ## no critic (ProhibitMismatchedOperators)
-       'button1-mask'
-      );
+     (
+    $event->state >=    ## no critic (ProhibitMismatchedOperators)
+    'button1-mask'
+     );
    my ( $x, $y ) = ( $event->x, $event->y );
    my ( $xgr, $ygr ) = ( 0, $y );
    if ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
@@ -1405,8 +1405,7 @@ sub add_value {
 
 sub to_canvas {
  my ( $canvas, $x, $y ) = @_;
- return ( $x - $canvas->{bounds}[0] ) * $canvas->{scale}[0] +
-   $canvas->{border},
+ return ( $x - $canvas->{bounds}[0] ) * $canvas->{scale}[0] + $canvas->{border},
    $canvas->{cheight} -
    ( $y - $canvas->{bounds}[1] ) * $canvas->{scale}[1] -
    $canvas->{border};
@@ -1416,8 +1415,7 @@ sub to_canvas {
 
 sub to_graph {
  my ( $canvas, $x, $y ) = @_;
- return ( $x - $canvas->{border} ) / $canvas->{scale}[0] +
-   $canvas->{bounds}[0],
+ return ( $x - $canvas->{border} ) / $canvas->{scale}[0] + $canvas->{bounds}[0],
    ( $canvas->{cheight} - $y - $canvas->{border} ) / $canvas->{scale}[1] +
    $canvas->{bounds}[1];
 }

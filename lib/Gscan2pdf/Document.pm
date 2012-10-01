@@ -216,9 +216,10 @@ sub get_resolution {
   if ( $paper_sizes->{$_}{x} > 0
    and abs( $ratio - $paper_sizes->{$_}{y} / $paper_sizes->{$_}{x} ) < 0.02 )
   {
-   $resolution = int(
-    ( ( $height > $width ) ? $height : $width ) / $paper_sizes->{$_}{y} * 25.4 +
-      0.5 );
+   $resolution =
+     int( ( ( $height > $width ) ? $height : $width ) /
+      $paper_sizes->{$_}{y} *
+      25.4 + 0.5 );
   }
  }
  return $resolution;

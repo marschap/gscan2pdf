@@ -1266,8 +1266,7 @@ if ( $test == 0 ) {
   #  }
  }
 
- printf STDERR
-   "Scanning %d pages, incrementing by %d, numbering from %d\n",
+ printf STDERR "Scanning %d pages, incrementing by %d, numbering from %d\n",
    $batch_count, $batch_increment, $batch_start_at
    if ($batch);
 

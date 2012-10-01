@@ -451,8 +451,8 @@ sub add_widget {
    @default = split /,/, $default->{$option} if ( defined $default->{$option} );
    foreach (
     sort {
-     $hashref->{$option}{options}{$a}{order} <=> $hashref->{$option}{options}
-       {$b}{order}
+     $hashref->{$option}{options}{$a}{order}
+       <=> $hashref->{$option}{options}{$b}{order}
     } keys %{ $hashref->{$option}{options} }
      )
    {

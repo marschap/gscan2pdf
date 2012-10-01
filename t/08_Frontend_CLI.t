@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 BEGIN {
  use_ok('Gscan2pdf::Frontend::CLI');
@@ -10,7 +10,8 @@ BEGIN {
 
 Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($WARN);
+#Log::Log4perl->easy_init($WARN);
+Log::Log4perl->easy_init($DEBUG);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::CLI->setup($logger);
 
@@ -44,5 +45,13 @@ is_deeply(
 
 is_deeply( Gscan2pdf::Frontend::CLI->parse_device_list(''),
  [], "parse_device_list no devices" );
+
+#########################
+
+Gscan2pdf::Frontend::CLI->scanimage(device => 'test', npages => 1, finished_callback => sub {ok(-e "out01.pnm", 'basic scan functionality')});
+
+#########################
+
+unlink "out01.pnm";
 
 __END__

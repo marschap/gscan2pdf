@@ -663,8 +663,7 @@ sub scan_it_raw {
         . "bytes/line=%d, "
         . "pixels/line=%d, "
         . "lines=%d, "
-        . "depth=%d\n",
-        , sane_strframe( $parm->{format} ),
+        . "depth=%d\n",, sane_strframe( $parm->{format} ),
         $parm->{bytes_per_line},
         $parm->{pixels_per_line},
         $parm->{lines},
