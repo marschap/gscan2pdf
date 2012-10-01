@@ -2,6 +2,7 @@ package Gscan2pdf::Frontend::CLI;
 
 use strict;
 use warnings;
+use feature "switch";
 
 use Locale::gettext 1.05;    # For translations
 use Carp;
@@ -142,79 +143,79 @@ sub scanimage {
 
     while ( $line =~ /([\r\n])/x ) {
      my $le = $1;
-     if ( $line =~ /^Progress:\ (\d*\.\d*)%/x ) {
-      $options{running_callback}->( $1 / 100 )
-        if ( defined $options{running_callback} );
-     }
-     elsif ( $line =~ /^Scanning\ (-?\d*)\ pages/x ) {
-      $options{running_callback}
-        ->( undef, sprintf( $d->get('Scanning %i pages...'), $1 ) )
-        if ( defined $options{running_callback} );
-     }
-     elsif ( $line =~ /^Scanning\ page\ (\d*)/x ) {
-      $options{running_callback}
-        ->( 0, sprintf( $d->get('Scanning page %i...'), $1 ) )
-        if ( defined $options{running_callback} );
-     }
-     elsif ( $line =~ /^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ 5\)/x ) {
-      my $id = $1;
+     given ($line) {
+      when (/^Progress:\ (\d*\.\d*)%/x) {
+       $options{running_callback}->( $1 / 100 )
+         if ( defined $options{running_callback} );
+      }
+      when (/^Scanning\ (-?\d*)\ pages/x) {
+       $options{running_callback}
+         ->( undef, sprintf( $d->get('Scanning %i pages...'), $1 ) )
+         if ( defined $options{running_callback} );
+      }
+      when (/^Scanning\ page\ (\d*)/x) {
+       $options{running_callback}
+         ->( 0, sprintf( $d->get('Scanning page %i...'), $1 ) )
+         if ( defined $options{running_callback} );
+      }
+      when (/^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ 5\)/x) {
+       my $id = $1;
 
-      # Timer will run until callback returns false
-      my $timer = Glib::Timeout->add(
-       $_POLL_INTERVAL,
-       sub {
-        return Glib::SOURCE_CONTINUE unless ( -e "out$id.pnm" );
-        $options{new_page_callback}->("out$id.pnm")
-          if ( defined $options{new_page_callback} );
-        $num_scans++;
-        return Glib::SOURCE_REMOVE;
-       }
-      );
-     }
-     elsif ( $line =~
-      /Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x
-       )
-     {
-      $options{running_callback}->( 0, $d->get('Scanner warming up') )
-        if ( defined $options{running_callback} );
-     }
-     elsif ( $line =~ /^Scanned\ page\ \d*\.\ \(scanner\ status\ =\ 7\)/x ) {
-      ;
-     }
-     elsif ( $line =~
-      /^$options{frontend}:\ sane_start:\ Document\ feeder\ out\ of\ documents/x
-       )
-     {
-      $options{error_callback}->( $d->get('Document feeder out of documents') )
-        if ( defined( $options{error_callback} ) and $num_scans == 0 );
-     }
-     elsif (
-      $_self->{abort_scan}
-      and ( $line =~
-          /^$options{frontend}:\ sane_start:\ Error\ during\ device\ I\/O/x
-       or $line =~ /^$options{frontend}:\ received\ signal\ 2/x
-       or $line =~ /^$options{frontend}:\ trying\ to\ stop\ scanner/x )
-       )
-     {
-      ;
-     }
-     elsif ( $line =~ /^$options{frontend}:\ rounded/x ) {
-      $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
-     }
-     elsif ( $line =~ /^$options{frontend}:\ sane_start:\ Device\ busy/x ) {
-      $options{error_callback}->( $d->get('Device busy') )
-        if ( defined $options{error_callback} );
-     }
-     elsif (
-      $line =~ /^$options{frontend}:\ sane_read:\ Operation\ was\ cancelled/x )
-     {
-      $options{error_callback}->( $d->get('Operation cancelled') )
-        if ( defined $options{error_callback} );
-     }
-     else {
-      $options{error_callback}->(
-       $d->get('Unknown message: ') . substr( $line, 0, index( $line, "\n" ) ) )
-        if ( defined $options{error_callback} );
+       # Timer will run until callback returns false
+       my $timer = Glib::Timeout->add(
+        $_POLL_INTERVAL,
+        sub {
+         return Glib::SOURCE_CONTINUE unless ( -e "out$id.pnm" );
+         $options{new_page_callback}->("out$id.pnm")
+           if ( defined $options{new_page_callback} );
+         $num_scans++;
+         return Glib::SOURCE_REMOVE;
+        }
+       );
+      }
+      when (
+/Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x ## no critic (ProhibitComplexRegexes)
+        )
+      {
+       $options{running_callback}->( 0, $d->get('Scanner warming up') )
+         if ( defined $options{running_callback} );
+      }
+      when (/^Scanned\ page\ \d*\.\ \(scanner\ status\ =\ 7\)/x) {
+       ;
+      }
+      when (
+/^$options{frontend}:\ sane_start:\ Document\ feeder\ out\ of\ documents/x
+        )
+      {
+       $options{error_callback}->( $d->get('Document feeder out of documents') )
+         if ( defined( $options{error_callback} ) and $num_scans == 0 );
+      }
+      when (
+       $_self->{abort_scan}
+         and ( $line =~
+           /^$options{frontend}:\ sane_start:\ Error\ during\ device\ I\/O/x
+        or $line =~ /^$options{frontend}:\ received\ signal\ 2/x
+        or $line =~ /^$options{frontend}:\ trying\ to\ stop\ scanner/x )
+        )
+      {
+       ;
+      }
+      when (/^$options{frontend}:\ rounded/x) {
+       $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
+      }
+      when (/^$options{frontend}:\ sane_start:\ Device\ busy/x) {
+       $options{error_callback}->( $d->get('Device busy') )
+         if ( defined $options{error_callback} );
+      }
+      when (/^$options{frontend}:\ sane_read:\ Operation\ was\ cancelled/x) {
+       $options{error_callback}->( $d->get('Operation cancelled') )
+         if ( defined $options{error_callback} );
+      }
+      default {
+       $options{error_callback}->( $d->get('Unknown message: ')
+          . substr( $line, 0, index( $line, "\n" ) ) )
+         if ( defined $options{error_callback} );
+      }
      }
      $line = substr( $line, index( $line, $le ) + 1, length($line) );
     }
@@ -225,7 +226,7 @@ sub scanimage {
    {    # bit field operation. >= would also work
     close $read;
     $logger->info('Waiting to reap process');
-    my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
+    $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
     $logger->info("Reaped PID $pid");
 
     # Now finished scanning, get on with post-processing
@@ -244,6 +245,7 @@ sub cancel_scan {
 
  # Then send the process a cancel signal
  $_self->{abort_scan} = TRUE;
+ return;
 }
 
 sub _run_cmd {
