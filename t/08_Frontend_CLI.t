@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 4;
+use Test::More tests => 9;
 
 BEGIN {
  use_ok('Gscan2pdf::Frontend::CLI');
@@ -49,14 +49,41 @@ is_deeply( Gscan2pdf::Frontend::CLI->parse_device_list(''),
 
 my $loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI->scanimage(
- device            => 'test',
- npages            => 1,
+ device           => 'test',
+ npages           => 1,
+ started_callback => sub {
+  ok( 1, 'scanimage starts' );
+ },
  new_page_callback => sub {
   my ($path) = @_;
-  ok( -e $path, 'basic scan functionality' );
+  ok( -e $path, 'scanimage scans' );
   unlink $path;
   $loop->quit;
- }
+ },
+ finished_callback => sub {
+  ok( 1, 'scanimage finishes' );
+ },
+);
+$loop->run;
+
+#########################
+
+$loop = Glib::MainLoop->new;
+Gscan2pdf::Frontend::CLI->scanadf(
+ device           => 'test',
+ npages           => 1,
+ started_callback => sub {
+  ok( 1, 'scanadf starts' );
+ },
+ new_page_callback => sub {
+  my ($path) = @_;
+  ok( -e $path, 'scanadf scans' );
+  unlink $path;
+  $loop->quit;
+ },
+ finished_callback => sub {
+  ok( 1, 'scanadf finishes' );
+ },
 );
 $loop->run;
 

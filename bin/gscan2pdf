@@ -5035,9 +5035,7 @@ sub scanimage {
    },
    error_callback => sub {
     my ($text) = @_;
-    $scbutton->signal_handler_disconnect($signal);
-    $shbox->hide;
-    show_message_dialog( $windows, 'error', 'close', $test );
+    show_message_dialog( $windows, 'error', 'close', $text );
    },
    finished_callback => sub {
     $scbutton->signal_handler_disconnect($signal);
@@ -5056,186 +5054,64 @@ sub scanadf {
   $rreverse, $unpaper_flag, $ocr,    %options
  ) = @_;
 
- require IPC::Open3;
- require IO::Handle;
-
- # inverted commas needed for strange characters in device name
- $device = "--device-name='$device'";
- my $end;
- if ( $npages != 0 ) {
-  $end = "--end-count=$npages";
- }
- else {
-  $end = "";
- }
- my $start = "--start-count=1";
-
- # Device-specific options
- my @options = hash2options(%options);
-
- # Add basic options
- push @options, '-o out%d.pnm';
-
  # Make sure we are in temp directory
  chdir $session;
 
- # Create command
- my $cmd =
-"$SETTING{'scan prefix'} $SETTING{frontend} $device @options $start $end > /dev/stderr";
- $logger->info($cmd);
-
  if ($test) {
-  $logger->info($cmd);
+  my $rotate = 1 % 2 ? $rfacing : $rreverse;
+  my $index = import_scan( $test_image, 1 * $step + $offset,
+   $SETTING{resolution}, FALSE, $rotate, $unpaper_flag, $ocr );
  }
  else {
-
-  # Interface to frontend
-  my ( $write, $read );
-  my $error = IO::Handle->new;    # this needed because of a bug in open3.
-  my $pid = IPC::Open3::open3( $write, $read, $error, $cmd );
-  $logger->info("Forked PID $pid");
-
-  $spbar->set_text( $d->get('Scanning') );
-  $spbar->set_pulse_step(.1);
-  $shbox->show_all;
-  my $running = TRUE;
-  my $signal  = $scbutton->signal_connect(
-   clicked => sub {
-    local $SIG{HUP} = 'IGNORE';
-    $logger->info("Sending INT signal to PID $pid and its children");
-    killfam 'HUP', ($pid);
-    $running = FALSE;
-   }
-  );
-
-  # Timer will run until callback returns false
-  my $size;
-  my $id = 1;
-  $spbar->set_text(
-   sprintf( $d->get('Scanning page %i...'), $id * $step + $offset ) );
-  my $timer = Glib::Timeout->add(
-   100,
-   sub {
-    if ($running) {
-     if ( defined $size ) {
-      if ($size) {
-       $spbar->set_fraction( ( -s "out$id.pnm" ) / $size );
-      }
-      else {
-       $spbar->pulse;
-      }
+  my $signal;
+  my @options = hash2options(%options);
+  Gscan2pdf::Frontend::CLI->scanadf(
+   device           => $device,
+   npages           => $npages,
+   options          => \@options,
+   started_callback => sub {
+    $spbar->set_text( $d->get('Scanning') );
+    $spbar->set_pulse_step(.1);
+    $shbox->show_all;
+    $signal = $scbutton->signal_connect(
+     clicked => sub {
+      Gscan2pdf::Frontend::CLI->cancel_scan;
      }
-     elsif ( -e "out$id.pnm" and ( -s "out$id.pnm" ) > 50 ) {
-      $size = get_size_from_PNM("out$id.pnm");
-     }
-     else {
+    );
+   },
+   running_callback => sub {
+    my ( $fraction, $text ) = @_;
+    if ( defined $fraction ) {
+     if ( $fraction < 0 ) {
       $spbar->pulse;
      }
-     return TRUE;
-    }
-    else {
-     return FALSE;
-    }
-   }
-  );
-
-  my $line;
-  Glib::IO->add_watch(
-   fileno($error),
-   [ 'in', 'hup' ],
-   sub {
-    my ( $fileno, $condition ) = @_;
-    my $buffer;
-    if ( $condition & 'in' ) {    # bit field operation. >= would also work
-
-# Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
-     sysread $error, $buffer, 1024;
-     $logger->debug($buffer) if ($buffer);
-     $line .= $buffer;
-
-     while ( $line =~ /\n/x ) {
-      if ( $line =~
-/Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x
-        )
-      {
-       $spbar->set_text( $d->get('Scanner warming up') );
-      }
-      elsif ( $line =~ /^Scanned document out(\d*)\.pnm/ ) {
-       $id = $1;
-
-       # Prevent the Glib::Timeout from checking the size of the file when it is
-       # about to be renamed
-       undef $size;
-
-       # If the scan can't be loaded then blow the scanning dialog away and
-       # show an error
-       my $rotate = $id % 2 ? $rfacing : $rreverse;
-
-       # Timer will run until callback returns false
-       my $timer = Glib::Timeout->add(
-        100,
-        sub {
-         return TRUE unless ( -e "out$id.pnm" );
-         my $index = import_scan( "out$id.pnm", $id * $step + $offset,
-          $SETTING{resolution}, TRUE, $rotate, $unpaper_flag, $ocr );
-         $spbar->set_text(
-          sprintf( $d->get('Scanning page %i...'), $id * $step + $offset ) );
-         $id++;
-         return FALSE;
-        }
-       );
-      }
-      elsif ( $line =~ /^Scanned \d* pages/ ) {
-       ;
-      }
-      elsif ( $line =~ /^$SETTING{frontend}: rounded/ ) {
-       $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
-      }
-      elsif ( $line =~ /^$SETTING{frontend}: sane_start: Device busy/ ) {
-       $scbutton->signal_handler_disconnect($signal);
-       $shbox->hide;
-       $running = FALSE;
-       show_message_dialog( $windows, 'error', 'close',
-        $d->get('Device busy') );
-      }
-      elsif (
-       $line =~ /^$SETTING{frontend}: sane_read: Operation was cancelled/ )
-      {
-       $scbutton->signal_handler_disconnect($signal);
-       $shbox->hide;
-       $running = FALSE;
-       show_message_dialog( $windows, 'info', 'close',
-        $d->get('Operation cancelled') );
-      }
-      else {
-       my $text =
-         $d->get('Unknown message: ')
-         . substr( $line, 0, index( $line, "\n" ) );
-       show_message_dialog( $windows, 'warning', 'close', $text );
-      }
-      $line = substr( $line, index( $line, "\n" ) + 1, length($line) );
+     else {
+      $spbar->set_fraction($fraction);
      }
     }
+    $spbar->set_text($text) if ( defined $text );
+   },
+   new_page_callback => sub {
+    my ($path) = @_;
+    my $id;
+    $id = $1 if ( $path =~ /^out(\d+).pnm/ );
 
-    # Only allow the hup if sure an empty buffer has been read.
-    if ( ( $condition & 'hup' ) and ( not defined($buffer) or $buffer eq '' ) )
-    {    # bit field operation. >= would also work
-     close $read;
-     $logger->info('Waiting to reap process');
-     my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-     $logger->info("Reaped PID $pid");
+    # If the scan can't be loaded then blow the scanning dialog away and
+    # show an error
+    my $rotate = $id % 2 ? $rfacing : $rreverse;
 
-     # Now finished scanning, set off unpaper or ocr if necessary
-     $scanning = FALSE;
-     $scbutton->signal_handler_disconnect($signal);
-     $shbox->hide;
-     $running = FALSE;
-     return FALSE;                         # uninstall
-    }
-    return TRUE;                           # continue without uninstalling
-   }
+    my $index = import_scan( $path, $id * $step + $offset,
+     $SETTING{resolution}, TRUE, $rotate, $unpaper_flag, $ocr );
+   },
+   error_callback => sub {
+    my ($text) = @_;
+    show_message_dialog( $windows, 'error', 'close', $text );
+   },
+   finished_callback => sub {
+    $scbutton->signal_handler_disconnect($signal);
+    $shbox->hide;
+   },
   );
-  $scanning = TRUE;
  }
  return;
 }
