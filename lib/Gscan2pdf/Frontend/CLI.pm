@@ -86,10 +86,29 @@ sub find_scan_options {
  return;
 }
 
+# Select wrapper method for _scanadf() and _scanimage()
+
+sub scan_pages {
+ my ( $class, %options ) = @_;
+
+ if (
+  defined( $options{frontend} )
+  and ( $options{frontend} eq 'scanadf'
+   or $options{frontend} eq 'scanadf-perl' )
+   )
+ {
+  _scanadf(%options);
+ }
+ else {
+  _scanimage(%options);
+ }
+ return;
+}
+
 # Carry out the scan with scanimage and the options passed.
 
-sub scanimage {
- my ( $class, %options ) = @_;
+sub _scanimage {
+ my (%options) = @_;
 
  $options{frontend} = 'scanimage' unless ( defined $options{frontend} );
  $options{prefix}   = ''          unless ( defined $options{prefix} );
@@ -200,8 +219,8 @@ sub scanimage {
 
 # Carry out the scan with scanadf and the options passed.
 
-sub scanadf {
- my ( $class, %options ) = @_;
+sub _scanadf {
+ my (%options) = @_;
 
  $options{frontend} = 'scanadf' unless ( defined $options{frontend} );
  $options{prefix}   = ''        unless ( defined $options{prefix} );

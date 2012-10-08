@@ -4135,26 +4135,13 @@ sub scan_dialog {
     $SETTING{'ocr language'} = $cflang[ $comboboxcl->get_active ]->[0]
       if ( $SETTING{'ocr engine'} eq 'cuneiform' );
    }
-   if ($SETTING{frontend} eq 'scanimage'
-    or $SETTING{frontend} eq 'scanimage-perl' )
-   {
-    scanimage(
-     $SETTING{device},            $npages,
-     $start - $step,              $step,
-     $rotate_facing,              $rotate_reverse,
-     $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'},
-     %options
-    );
-   }
-   else {
-    scanadf(
-     $SETTING{device},            $npages,
-     $start - $step,              $step,
-     $rotate_facing,              $rotate_reverse,
-     $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'},
-     %options
-    );
-   }
+   scan_pages(
+    $SETTING{device},            $npages,
+    $start - $step,              $step,
+    $rotate_facing,              $rotate_reverse,
+    $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'},
+    %options
+   );
   }
  );
 
@@ -4983,72 +4970,9 @@ sub update_number {
  return;
 }
 
-# Carry out the scan with scanimage and the options passed.
+# Carry out the scan with scanimage or scanadf and the options passed.
 
-sub scanimage {
- my (
-  $device,   $npages,       $offset, $step, $rfacing,
-  $rreverse, $unpaper_flag, $ocr,    %options
- ) = @_;
-
- # Make sure we are in temp directory
- chdir $session;
-
- if ($test) {
-  my $rotate = 1 % 2 ? $rfacing : $rreverse;
-  my $index = import_scan( $test_image, 1 * $step + $offset,
-   $SETTING{resolution}, FALSE, $rotate, $unpaper_flag, $ocr );
- }
- else {
-
-  my $signal;
-  my @options = hash2options(%options);
-  Gscan2pdf::Frontend::CLI->scanimage(
-   device           => $device,
-   npages           => $npages,
-   options          => \@options,
-   started_callback => sub {
-    $spbar->set_text( $d->get('Scanning') );
-    $shbox->show_all;
-    $signal = $scbutton->signal_connect(
-     clicked => sub {
-      Gscan2pdf::Frontend::CLI->cancel_scan;
-     }
-    );
-   },
-   running_callback => sub {
-    my ( $fraction, $text ) = @_;
-    $spbar->set_fraction($fraction) if ( defined $fraction );
-    $spbar->set_text($text)         if ( defined $text );
-   },
-   new_page_callback => sub {
-    my ($path) = @_;
-    my $id;
-    $id = $1 if ( $path =~ /^out(\d+).pnm/ );
-
-    # If the scan can't be loaded then blow the scanning dialog away and
-    # show an error
-    my $rotate = $id % 2 ? $rfacing : $rreverse;
-
-    my $index = import_scan( $path, $id * $step + $offset,
-     $SETTING{resolution}, TRUE, $rotate, $unpaper_flag, $ocr );
-   },
-   error_callback => sub {
-    my ($text) = @_;
-    show_message_dialog( $windows, 'error', 'close', $text );
-   },
-   finished_callback => sub {
-    $scbutton->signal_handler_disconnect($signal);
-    $shbox->hide;
-   },
-  );
- }
- return;
-}
-
-# Carry out the scan with scanadf and the options passed.
-
-sub scanadf {
+sub scan_pages {
  my (
   $device,   $npages,       $offset, $step, $rfacing,
   $rreverse, $unpaper_flag, $ocr,    %options
@@ -5065,7 +4989,9 @@ sub scanadf {
  else {
   my $signal;
   my @options = hash2options(%options);
-  Gscan2pdf::Frontend::CLI->scanadf(
+  Gscan2pdf::Frontend::CLI->scan_pages(
+   prefix           => $SETTING{'scan prefix'},
+   frontend         => $SETTING{frontend},
    device           => $device,
    npages           => $npages,
    options          => \@options,

@@ -48,7 +48,8 @@ is_deeply( Gscan2pdf::Frontend::CLI->parse_device_list(''),
 #########################
 
 my $loop = Glib::MainLoop->new;
-Gscan2pdf::Frontend::CLI->scanimage(
+Gscan2pdf::Frontend::CLI->scan_pages(
+ frontend         => 'scanimage',
  device           => 'test',
  npages           => 1,
  started_callback => sub {
@@ -69,7 +70,8 @@ $loop->run;
 #########################
 
 $loop = Glib::MainLoop->new;
-Gscan2pdf::Frontend::CLI->scanadf(
+Gscan2pdf::Frontend::CLI->scan_pages(
+ frontend         => 'scanadf',
  device           => 'test',
  npages           => 1,
  started_callback => sub {
