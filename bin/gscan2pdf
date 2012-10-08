@@ -1326,7 +1326,7 @@ unless ( defined $session ) {
   }
   catch {
    $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
-   $Gscan2pdf::Document::_self->{dir} = $session;
+   $slist->set_dir($session);
    $logger->warn(
     sprintf(
      $d->get(
@@ -1340,7 +1340,7 @@ unless ( defined $session ) {
  }
  else {
   $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
-  $Gscan2pdf::Document::_self->{dir} = "$session";
+  $slist->set_dir($session);
  }
  open $lockfh, '>', File::Spec->catfile( $session, 'lockfile' )    ## no critic
    or die "Cannot open lockfile";

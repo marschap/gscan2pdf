@@ -1,17 +1,18 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use File::Basename;    # Split filename into dir, file, ext
+use Test::More tests => 3;
 
 BEGIN {
  use_ok('Gscan2pdf::Document');
- use Gtk2 -init;    # Could just call init separately
+ use Gtk2 -init;       # Could just call init separately
 }
 
 #########################
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
-our $logger = Log::Log4perl::get_logger;
+my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Document->setup($logger);
 
 # Create test image
@@ -19,6 +20,12 @@ system('convert rose: test.ppm');
 system('convert rose: test.png');
 
 my $slist = Gscan2pdf::Document->new;
+
+# dir for temporary files
+my $dir = File::Temp->newdir;
+mkdir($dir);
+$slist->set_dir($dir);
+
 $slist->get_file_info(
  path              => 'test.ppm',
  finished_callback => sub {
@@ -28,7 +35,13 @@ $slist->get_file_info(
    first             => 1,
    last              => 1,
    finished_callback => sub {
-    system("cp $slist->{data}[0][2]{filename} test2.png");
+    is(
+     -s "$slist->{data}[0][2]{filename}",
+     -s 'test.png',
+     'PPM imported correctly'
+    );
+    is( dirname("$slist->{data}[0][2]{filename}"),
+     "$dir", 'using session directory' );
     Gtk2->main_quit;
    }
   );
@@ -36,9 +49,8 @@ $slist->get_file_info(
 );
 Gtk2->main;
 
-is( -s 'test.png', -s 'test2.png', 'PPM imported correctly' );
-
 #########################
 
-unlink 'test.ppm', 'test.png', 'test2.png';
+unlink 'test.ppm', 'test.png', <$dir/*>;
+rmdir $dir;
 Gscan2pdf::Document->quit();

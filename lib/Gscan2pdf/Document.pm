@@ -70,7 +70,6 @@ sub setup {
  share $_self->{message};
  share $_self->{progress};
  share $_self->{process_name};
- share $_self->{dir};
  share $_self->{cancel};
 
  $_self->{thread} = threads->new( \&_thread_main, $_self );
@@ -155,6 +154,7 @@ sub import_file {
    info  => $options{info},
    first => $options{first},
    last  => $options{last},
+   dir   => "$self->{dir}",
    pid   => "$pidfile"
   }
  );
@@ -1058,9 +1058,9 @@ sub get_page_index {
 }
 
 sub convert_to_png {
- my ($filename) = @_;
- my $image      = Image::Magick->new;
- my $x          = $image->Read($filename);
+ my ( $filename, $dir ) = @_;
+ my $image = Image::Magick->new;
+ my $x     = $image->Read($filename);
  $logger->warn($x) if "$x";
  return if $_self->{cancel};
 
@@ -1069,8 +1069,7 @@ sub convert_to_png {
  my $density = get_resolution($image);
 
  # Write the png
- my $png =
-   File::Temp->new( DIR => $_self->{dir}, SUFFIX => '.png', UNLINK => FALSE );
+ my $png = File::Temp->new( DIR => $dir, SUFFIX => '.png', UNLINK => FALSE );
  $image->Write(
   units    => 'PixelsPerInch',
   density  => $density,
@@ -1116,6 +1115,14 @@ sub timestamp {
  # return a time which can be string-wise compared
  return sprintf( "%04d%02d%02d%02d%02d%02d",
   $time[5], $time[4], $time[3], $time[2], $time[1], $time[0] );
+}
+
+# Set session dir
+
+sub set_dir {
+ my ( $self, $dir ) = @_;
+ $self->{dir} = $dir;
+ return;
 }
 
 sub _enqueue_request {
@@ -1308,8 +1315,12 @@ sub _thread_main {
 
    when ('import-file') {
     _thread_import_file(
-     $self,            $request->{info}, $request->{first},
-     $request->{last}, $request->{pid}
+     $self,
+     info  => $request->{info},
+     first => $request->{first},
+     last  => $request->{last},
+     dir   => $request->{dir},
+     pid   => $request->{pid}
     );
    }
 
@@ -1517,35 +1528,32 @@ sub _thread_get_file_info {
 }
 
 sub _thread_import_file {
- my (    ## no critic (ProhibitAmbiguousNames)
-  $self, $info, $first, $last,
-  $pidfile
- ) = @_;
+ my ( $self, %options ) = @_;
 
- given ( $info->{format} ) {
+ given ( $options{info}->{format} ) {
   when ('DJVU') {
 
    # Extract images from DjVu
-   if ( $last >= $first and $first > 0 ) {
-    for ( my $i = $first ; $i <= $last ; $i++ ) {
-     $self->{progress} = ( $i - 1 ) / ( $last - $first + 1 );
-     $self->{message} =
-       sprintf( $d->get("Importing page %i of %i"), $i, $last - $first + 1 );
+   if ( $options{last} >= $options{first} and $options{first} > 0 ) {
+    for ( my $i = $options{first} ; $i <= $options{last} ; $i++ ) {
+     $self->{progress} = ( $i - 1 ) / ( $options{last} - $options{first} + 1 );
+     $self->{message} = sprintf( $d->get("Importing page %i of %i"),
+      $i, $options{last} - $options{first} + 1 );
      my $tif = File::Temp->new(
-      DIR    => $self->{dir},
+      DIR    => $options{dir},
       SUFFIX => '.tif',
       UNLINK => FALSE
      );
-     my $cmd = "ddjvu -format=tiff -page=$i \"$info->{path}\" $tif";
+     my $cmd = "ddjvu -format=tiff -page=$i \"$options{info}->{path}\" $tif";
      $logger->info($cmd);
-     system("echo $$ > $pidfile;$cmd");
+     system("echo $$ > $options{pidfile};$cmd");
      return if $_self->{cancel};
      my $page = Gscan2pdf::Page->new(
       filename   => $tif,
-      dir        => $self->{dir},
+      dir        => $options{dir},
       delete     => TRUE,
       format     => 'Tagged Image File Format',
-      resolution => $info->{ppi}[ $i - 1 ],
+      resolution => $options{info}->{ppi}[ $i - 1 ],
      );
      $self->{page_queue}->enqueue( $page->freeze );
     }
@@ -1554,10 +1562,11 @@ sub _thread_import_file {
   when ('Portable Document Format') {
 
    # Extract images from PDF
-   if ( $last >= $first and $first > 0 ) {
-    my $cmd = "pdfimages -f $first -l $last \"$info->{path}\" x";
+   if ( $options{last} >= $options{first} and $options{first} > 0 ) {
+    my $cmd =
+"pdfimages -f $options{first} -l $options{last} \"$options{info}->{path}\" x";
     $logger->info($cmd);
-    my $status = system("echo $$ > $pidfile;$cmd");
+    my $status = system("echo $$ > $options{pidfile};$cmd");
     return if $_self->{cancel};
     if ($status) {
      $self->{status}  = 1;
@@ -1568,10 +1577,10 @@ sub _thread_import_file {
     my @images = glob('x-???.???');
     my $i      = 0;
     foreach (@images) {
-     my $png  = convert_to_png($_);
+     my $png = convert_to_png( $_, $options{dir} );
      my $page = Gscan2pdf::Page->new(
       filename => $png,
-      dir      => $self->{dir},
+      dir      => $options{dir},
       delete   => TRUE,
       format   => 'Portable Network Graphics',
      );
@@ -1582,25 +1591,25 @@ sub _thread_import_file {
   when ('Tagged Image File Format') {
 
    # Split the tiff into its pages and import them individually
-   if ( $last >= $first and $first > 0 ) {
-    for ( my $i = $first - 1 ; $i < $last ; $i++ ) {
-     $self->{progress} = $i / ( $last - $first + 1 );
-     $self->{message} =
-       sprintf( $d->get("Importing page %i of %i"), $i, $last - $first + 1 );
+   if ( $options{last} >= $options{first} and $options{first} > 0 ) {
+    for ( my $i = $options{first} - 1 ; $i < $options{last} ; $i++ ) {
+     $self->{progress} = $i / ( $options{last} - $options{first} + 1 );
+     $self->{message} = sprintf( $d->get("Importing page %i of %i"),
+      $i, $options{last} - $options{first} + 1 );
      my $tif = File::Temp->new(
-      DIR    => $self->{dir},
+      DIR    => $options{dir},
       SUFFIX => '.tif',
       UNLINK => FALSE
      );
-     my $cmd = "tiffcp \"$info->{path}\",$i $tif";
+     my $cmd = "tiffcp \"$options{info}->{path}\",$i $tif";
      $logger->info($cmd);
-     system("echo $$ > $pidfile;$cmd");
+     system("echo $$ > $options{pidfile};$cmd");
      return if $_self->{cancel};
      my $page = Gscan2pdf::Page->new(
       filename => $tif,
-      dir      => $self->{dir},
+      dir      => $options{dir},
       delete   => TRUE,
-      format   => $info->{format},
+      format   => $options{info}->{format},
      );
      $self->{page_queue}->enqueue( $page->freeze );
     }
@@ -1613,18 +1622,18 @@ sub _thread_import_file {
     )
   {
    my $page = Gscan2pdf::Page->new(
-    filename => $info->{path},
-    dir      => $self->{dir},
-    format   => $info->{format},
+    filename => $options{info}->{path},
+    dir      => $options{dir},
+    format   => $options{info}->{format},
    );
    $self->{page_queue}->enqueue( $page->freeze );
   }
   default {
-   my $png = convert_to_png( $info->{path} );
+   my $png = convert_to_png( $options{info}->{path}, $options{dir} );
    return if $_self->{cancel};
    my $page = Gscan2pdf::Page->new(
     filename => $png,
-    dir      => $self->{dir},
+    dir      => $options{dir},
     format   => 'Portable Network Graphics',
    );
    $self->{page_queue}->enqueue( $page->freeze );
