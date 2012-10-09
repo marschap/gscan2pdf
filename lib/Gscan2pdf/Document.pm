@@ -851,7 +851,8 @@ sub unpaper {
   {
    page    => $options{page}->freeze,
    options => $options{options},
-   pidfile => "$pidfile"
+   pidfile => "$pidfile",
+   dir     => "$self->{dir}",
   }
  );
 
@@ -1392,7 +1393,7 @@ sub _thread_main {
 
    when ('unpaper') {
     _thread_unpaper( $self, $request->{page}, $request->{options},
-     $request->{pidfile} );
+     $request->{pidfile}, $request->{dir} );
    }
 
    when ('unsharp') {
@@ -2468,7 +2469,7 @@ sub _thread_gocr {
 }
 
 sub _thread_unpaper {
- my ( $self, $page, $options, $pidfile ) = @_;
+ my ( $self, $page, $options, $pidfile, $dir ) = @_;
  my $filename = $page->{filename};
  my $in;
 
@@ -2484,7 +2485,7 @@ sub _thread_unpaper {
 
   # Temporary filename for new file
   $in = File::Temp->new(
-   DIR    => $self->{dir},
+   DIR    => $dir,
    SUFFIX => $suffix,
   );
 
@@ -2496,13 +2497,13 @@ sub _thread_unpaper {
  }
 
  my $out = File::Temp->new(
-  DIR    => $self->{dir},
+  DIR    => $dir,
   SUFFIX => '.pnm',
   UNLINK => FALSE
  );
  my $out2 = '';
  $out2 = File::Temp->new(
-  DIR    => $self->{dir},
+  DIR    => $dir,
   SUFFIX => '.pnm',
   UNLINK => FALSE
  ) if ( $options =~ /--output-pages\ 2\ /x );
@@ -2515,7 +2516,7 @@ sub _thread_unpaper {
 
  my $new = Gscan2pdf::Page->new(
   filename => $out,
-  dir      => $self->{dir},
+  dir      => $dir,
   delete   => TRUE,
   format   => 'Portable anymap',
  );
@@ -2524,7 +2525,7 @@ sub _thread_unpaper {
  unless ( $out2 eq '' ) {
   my $new2 = Gscan2pdf::Page->new(
    filename => $out2,
-   dir      => $self->{dir},
+   dir      => $dir,
    delete   => TRUE,
    format   => 'Portable anymap',
   );

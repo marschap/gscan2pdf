@@ -1,28 +1,17 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl Gscan2pdf.t'
-
-#########################
-
-# change 'tests => 1' to 'tests => last_test_to_print';
-
 use warnings;
 use strict;
-use Test::More tests => 1;
+use File::Basename;    # Split filename into dir, file, ext
+use Test::More tests => 2;
 
 BEGIN {
  use Gscan2pdf::Document;
  use Gscan2pdf::Unpaper;
- use Gtk2 -init;    # Could just call init separately
+ use Gtk2 -init;       # Could just call init separately
  use version;
 }
 
-#########################
-
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
-
 SKIP: {
- skip 'unpaper not installed', 1
+ skip 'unpaper not installed', 2
    unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
  my $unpaper = Gscan2pdf::Unpaper->new;
 
@@ -37,6 +26,12 @@ SKIP: {
  );
 
  my $slist = Gscan2pdf::Document->new;
+
+ # dir for temporary files
+ my $dir = File::Temp->newdir;
+ mkdir($dir);
+ $slist->set_dir($dir);
+
  $slist->get_file_info(
   path              => 'test.pnm',
   finished_callback => sub {
@@ -50,11 +45,11 @@ SKIP: {
       page              => $slist->{data}[0][2],
       options           => $unpaper->get_cmdline,
       finished_callback => sub {
-       $slist->save_image(
-        path              => 'test.png',
-        list_of_pages     => [ $slist->{data}[0][2] ],
-        finished_callback => sub { Gtk2->main_quit }
-       );
+       is( system("identify $slist->{data}[0][2]{filename}"),
+        0, 'valid image created' );
+       is( dirname("$slist->{data}[0][2]{filename}"),
+        "$dir", 'using session directory' );
+       Gtk2->main_quit;
       }
      );
     }
@@ -63,8 +58,7 @@ SKIP: {
  );
  Gtk2->main;
 
- is( system('identify test.png'), 0, 'valid PNG created' );
-
- unlink 'test.pnm', 'test.png';
+ unlink 'test.pnm', <$dir/*>;
+ rmdir $dir;
  Gscan2pdf::Document->quit();
 }
