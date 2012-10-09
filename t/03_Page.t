@@ -30,6 +30,7 @@ my $page = Gscan2pdf::Page->new(
  filename   => 'test.pnm',
  format     => 'Portable anymap',
  resolution => 72,
+ dir        => File::Temp->newdir,
 );
 
 $page->{hocr} = <<'EOS';

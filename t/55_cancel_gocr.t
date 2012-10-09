@@ -37,7 +37,6 @@ SKIP: {
 
  # dir for temporary files
  my $dir = File::Temp->newdir;
- mkdir($dir);
  $slist->set_dir($dir);
 
  $slist->get_file_info(

@@ -655,7 +655,8 @@ sub negate {
  my ( $self, %options ) = @_;
 
  my $sentinel =
-   _enqueue_request( 'negate', { page => $options{page}->freeze } );
+   _enqueue_request( 'negate',
+  { page => $options{page}->freeze, dir => "$self->{dir}" } );
 
  return $self->_monitor_process(
   sentinel           => $sentinel,
@@ -680,7 +681,8 @@ sub unsharp {
    radius    => $options{radius},
    sigma     => $options{sigma},
    amount    => $options{amount},
-   threshold => $options{threshold}
+   threshold => $options{threshold},
+   dir       => "$self->{dir}",
   }
  );
 
@@ -707,7 +709,8 @@ sub crop {
    x    => $options{x},
    y    => $options{y},
    w    => $options{w},
-   h    => $options{h}
+   h    => $options{h},
+   dir  => "$self->{dir}",
   }
  );
 
@@ -728,7 +731,8 @@ sub to_png {
  my ( $self, %options ) = @_;
 
  my $sentinel =
-   _enqueue_request( 'to-png', { page => $options{page}->freeze } );
+   _enqueue_request( 'to-png',
+  { page => $options{page}->freeze, dir => "$self->{dir}" } );
 
  return $self->_monitor_process(
   sentinel           => $sentinel,
@@ -1311,7 +1315,8 @@ sub _thread_main {
      x    => $request->{x},
      y    => $request->{y},
      w    => $request->{w},
-     h    => $request->{h}
+     h    => $request->{h},
+     dir  => $request->{dir},
     );
    }
 
