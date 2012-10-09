@@ -127,7 +127,7 @@ sub get_file_info {
 
  my $sentinel =
    _enqueue_request( 'get-file-info',
-  { path => $options{path}, pid => "$pidfile" } );
+  { path => $options{path}, pidfile => "$pidfile" } );
 
  return $self->_monitor_process(
   sentinel           => $sentinel,
@@ -151,11 +151,11 @@ sub import_file {
  my $sentinel = _enqueue_request(
   'import-file',
   {
-   info  => $options{info},
-   first => $options{first},
-   last  => $options{last},
-   dir   => "$self->{dir}",
-   pid   => "$pidfile"
+   info    => $options{info},
+   first   => $options{first},
+   last    => $options{last},
+   dir     => "$self->{dir}",
+   pidfile => "$pidfile"
   }
  );
 
@@ -394,7 +394,7 @@ sub save_pdf {
    list_of_pages => $options{list_of_pages},
    metadata      => $options{metadata},
    options       => $options{options},
-   pid           => "$pidfile"
+   pidfile       => "$pidfile"
   }
  );
 
@@ -427,7 +427,7 @@ sub save_djvu {
   {
    path          => $options{path},
    list_of_pages => $options{list_of_pages},
-   pid           => "$pidfile"
+   pidfile       => "$pidfile"
   }
  );
 
@@ -462,7 +462,7 @@ sub save_tiff {
    list_of_pages => $options{list_of_pages},
    options       => $options{options},
    ps            => $options{ps},
-   pid           => "$pidfile"
+   pidfile       => "$pidfile"
   }
  );
 
@@ -559,7 +559,7 @@ sub save_image {
   {
    path          => $options{path},
    list_of_pages => $options{list_of_pages},
-   pid           => "$pidfile"
+   pidfile       => "$pidfile"
   }
  );
  return $self->_monitor_process(
@@ -740,7 +740,7 @@ sub tesseract {
   {
    page     => $options{page}->freeze,
    language => $options{language},
-   pid      => "$pidfile"
+   pidfile  => "$pidfile"
   }
  );
 
@@ -769,7 +769,7 @@ sub ocropus {
   {
    page     => $options{page}->freeze,
    language => $options{language},
-   pid      => "$pidfile"
+   pidfile  => "$pidfile"
   }
  );
 
@@ -798,7 +798,7 @@ sub cuneiform {
   {
    page     => $options{page}->freeze,
    language => $options{language},
-   pid      => "$pidfile"
+   pidfile  => "$pidfile"
   }
  );
 
@@ -824,7 +824,7 @@ sub gocr {
 
  my $sentinel =
    _enqueue_request( 'gocr',
-  { page => $options{page}->freeze, pid => "$pidfile" } );
+  { page => $options{page}->freeze, pidfile => "$pidfile" } );
 
  return $self->_monitor_process(
   sentinel           => $sentinel,
@@ -851,7 +851,7 @@ sub unpaper {
   {
    page    => $options{page}->freeze,
    options => $options{options},
-   pid     => "$pidfile"
+   pidfile => "$pidfile"
   }
  );
 
@@ -880,7 +880,7 @@ sub user_defined {
   {
    page    => $options{page}->freeze,
    command => $options{command},
-   pid     => "$pidfile"
+   pidfile => "$pidfile"
   }
  );
 
@@ -1302,25 +1302,25 @@ sub _thread_main {
 
    when ('cuneiform') {
     _thread_cuneiform( $self, $request->{page}, $request->{language},
-     $request->{pid} );
+     $request->{pidfile} );
    }
 
    when ('get-file-info') {
-    _thread_get_file_info( $self, $request->{path}, $request->{pid} );
+    _thread_get_file_info( $self, $request->{path}, $request->{pidfile} );
    }
 
    when ('gocr') {
-    _thread_gocr( $self, $request->{page}, $request->{pid} );
+    _thread_gocr( $self, $request->{page}, $request->{pidfile} );
    }
 
    when ('import-file') {
     _thread_import_file(
      $self,
-     info  => $request->{info},
-     first => $request->{first},
-     last  => $request->{last},
-     dir   => $request->{dir},
-     pid   => $request->{pid}
+     info    => $request->{info},
+     first   => $request->{first},
+     last    => $request->{last},
+     dir     => $request->{dir},
+     pidfile => $request->{pidfile}
     );
    }
 
@@ -1330,7 +1330,7 @@ sub _thread_main {
 
    when ('ocropus') {
     _thread_ocropus( $self, $request->{page}, $request->{language},
-     $request->{pid} );
+     $request->{pidfile} );
    }
 
    when ('quit') {
@@ -1343,12 +1343,12 @@ sub _thread_main {
 
    when ('save-djvu') {
     _thread_save_djvu( $self, $request->{path}, $request->{list_of_pages},
-     $request->{pid} );
+     $request->{pidfile} );
    }
 
    when ('save-image') {
     _thread_save_image( $self, $request->{path}, $request->{list_of_pages},
-     $request->{pid} );
+     $request->{pidfile} );
    }
 
    when ('save-pdf') {
@@ -1358,7 +1358,7 @@ sub _thread_main {
      list_of_pages => $request->{list_of_pages},
      metadata      => $request->{metadata},
      options       => $request->{options},
-     pidfile       => $request->{pid}
+     pidfile       => $request->{pidfile}
     );
    }
 
@@ -1373,13 +1373,13 @@ sub _thread_main {
      list_of_pages => $request->{list_of_pages},
      options       => $request->{options},
      ps            => $request->{ps},
-     pidfile       => $request->{pid}
+     pidfile       => $request->{pidfile}
     );
    }
 
    when ('tesseract') {
     _thread_tesseract( $self, $request->{page}, $request->{language},
-     $request->{pid} );
+     $request->{pidfile} );
    }
 
    when ('threshold') {
@@ -1392,7 +1392,7 @@ sub _thread_main {
 
    when ('unpaper') {
     _thread_unpaper( $self, $request->{page}, $request->{options},
-     $request->{pid} );
+     $request->{pidfile} );
    }
 
    when ('unsharp') {
@@ -1408,7 +1408,7 @@ sub _thread_main {
 
    when ('user-defined') {
     _thread_user_defined( $self, $request->{page}, $request->{command},
-     $request->{pid} );
+     $request->{pidfile} );
    }
 
    default {

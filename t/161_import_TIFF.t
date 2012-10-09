@@ -1,10 +1,11 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use File::Basename;    # Split filename into dir, file, ext
+use Test::More tests => 3;
 
 BEGIN {
  use_ok('Gscan2pdf::Document');
- use Gtk2 -init;    # Could just call init separately
+ use Gtk2 -init;       # Could just call init separately
 }
 
 #########################
@@ -19,6 +20,12 @@ system('convert rose: test.tif');
 my $old = `identify -format '%m %G %g %z-bit %r' test.tif`;
 
 my $slist = Gscan2pdf::Document->new;
+
+# dir for temporary files
+my $dir = File::Temp->newdir;
+mkdir($dir);
+$slist->set_dir($dir);
+
 $slist->get_file_info(
  path              => 'test.tif',
  finished_callback => sub {
@@ -28,7 +35,10 @@ $slist->get_file_info(
    first             => 1,
    last              => 1,
    finished_callback => sub {
-    system("cp $slist->{data}[0][2]{filename} test.tif");
+    is( `identify -format '%m %G %g %z-bit %r' $slist->{data}[0][2]{filename}`,
+     $old, 'TIFF imported correctly' );
+    is( dirname("$slist->{data}[0][2]{filename}"),
+     "$dir", 'using session directory' );
     Gtk2->main_quit;
    }
   );
@@ -36,10 +46,8 @@ $slist->get_file_info(
 );
 Gtk2->main;
 
-is( `identify -format '%m %G %g %z-bit %r' test.tif`,
- $old, 'TIFF imported correctly' );
-
 #########################
 
-unlink 'test.tif';
+unlink 'test.tif', <$dir/*>;
+rmdir $dir;
 Gscan2pdf::Document->quit();
