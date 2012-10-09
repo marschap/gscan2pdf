@@ -29,6 +29,12 @@ Gscan2pdf::Document->setup($logger);
 system('convert rose: test.pnm');
 
 my $slist = Gscan2pdf::Document->new;
+
+# dir for temporary files
+my $dir = 'tmp';
+mkdir($dir);
+$slist->set_dir($dir);
+
 $slist->get_file_info(
  path              => 'test.pnm',
  finished_callback => sub {
@@ -57,5 +63,6 @@ cmp_ok( -s 'test.gs2p', '>', 0, 'Non-empty Session file created' );
 
 #########################
 
-unlink 'test.pnm';
+unlink 'test.pnm', <$dir/*>;
+rmdir $dir;
 Gscan2pdf::Document->quit();

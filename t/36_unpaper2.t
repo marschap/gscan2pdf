@@ -1,26 +1,13 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl Gscan2pdf.t'
-
-#########################
-
-# change 'tests => 1' to 'tests => last_test_to_print';
-
 use warnings;
 use strict;
-use Test::More tests => 2;
+use File::Basename;    # Split filename into dir, file, ext
+use Test::More tests => 3;
 
 BEGIN {
  use Gscan2pdf::Document;
  use Gscan2pdf::Unpaper;
- use Gtk2 -init;    # Could just call init separately
-
- #  use File::Copy;
+ use Gtk2 -init;       # Could just call init separately
 }
-
-#########################
-
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
 
 SKIP: {
  skip 'unpaper not installed', 2
@@ -43,6 +30,12 @@ SKIP: {
  system('convert 1.pnm black.pnm 2.pnm +append test.pnm');
 
  my $slist = Gscan2pdf::Document->new;
+
+ # dir for temporary files
+ my $dir = File::Temp->newdir;
+ mkdir($dir);
+ $slist->set_dir($dir);
+
  $slist->get_file_info(
   path              => 'test.pnm',
   finished_callback => sub {
@@ -56,12 +49,13 @@ SKIP: {
       page              => $slist->{data}[0][2],
       options           => $unpaper->get_cmdline,
       finished_callback => sub {
-       system(
-"cp $slist->{data}[0][2]{filename} lh.pnm;cp $slist->{data}[1][2]{filename} rh.pnm;"
-       );
+       is( system("identify $slist->{data}[0][2]{filename}"),
+        0, 'valid PNM created for LH' );
+       is( system("identify $slist->{data}[1][2]{filename}"),
+        0, 'valid PNM created for RH' );
+       is( dirname("$slist->{data}[0][2]{filename}"),
+        "$dir", 'using session directory' );
 
-#    copy( $slist->{data}[0][2]{filename}, 'lh.pnm' ) if (defined $slist->{data}[0][2]{filename}); FIXME: why does copy() not work when cp does?
-#    copy( $slist->{data}[1][2]{filename}, 'rh.pnm' ) if (defined $slist->{data}[1][2]{filename});
        Gtk2->main_quit;
       }
      );
@@ -71,9 +65,7 @@ SKIP: {
  );
  Gtk2->main;
 
- is( system('identify lh.pnm'), 0, 'valid PNM created for LH' );
- is( system('identify rh.pnm'), 0, 'valid PNM created for RH' );
-
- unlink 'test.pnm', '1.pnm', '2.pnm', 'black.pnm', 'lh.pnm', 'rh.pnm';
+ unlink 'test.pnm', '1.pnm', '2.pnm', 'black.pnm', <$dir/*>;
+ rmdir $dir;
  Gscan2pdf::Document->quit();
 }

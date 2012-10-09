@@ -1,10 +1,11 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use File::Basename;    # Split filename into dir, file, ext
+use Test::More tests => 3;
 
 BEGIN {
  use_ok('Gscan2pdf::Document');
- use Gtk2 -init;    # Could just call init separately
+ use Gtk2 -init;       # Could just call init separately
 }
 
 #########################
@@ -18,6 +19,12 @@ Gscan2pdf::Document->setup($logger);
 system('convert rose: test.jpg');
 
 my $slist = Gscan2pdf::Document->new;
+
+# dir for temporary files
+my $dir = File::Temp->newdir;
+mkdir($dir);
+$slist->set_dir($dir);
+
 $slist->get_file_info(
  path              => 'test.jpg',
  finished_callback => sub {
@@ -34,11 +41,11 @@ $slist->get_file_info(
      amount            => 100,
      threshold         => 0.5,
      finished_callback => sub {
-      $slist->save_image(
-       path              => 'test2.jpg',
-       list_of_pages     => [ $slist->{data}[0][2] ],
-       finished_callback => sub { Gtk2->main_quit }
-      );
+      is( system("identify $slist->{data}[0][2]{filename}"),
+       0, 'valid JPG created' );
+      is( dirname("$slist->{data}[0][2]{filename}"),
+       "$dir", 'using session directory' );
+      Gtk2->main_quit;
      }
     );
    }
@@ -47,9 +54,8 @@ $slist->get_file_info(
 );
 Gtk2->main;
 
-is( system('identify test2.jpg'), 0, 'valid JPG created' );
-
 #########################
 
-unlink 'test.jpg', 'test2.jpg';
+unlink 'test.jpg', <$dir/*>;
+rmdir $dir;
 Gscan2pdf::Document->quit();

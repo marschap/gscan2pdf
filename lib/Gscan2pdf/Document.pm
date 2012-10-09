@@ -394,6 +394,7 @@ sub save_pdf {
    list_of_pages => $options{list_of_pages},
    metadata      => $options{metadata},
    options       => $options{options},
+   dir           => "$self->{dir}",
    pidfile       => "$pidfile"
   }
  );
@@ -427,6 +428,7 @@ sub save_djvu {
   {
    path          => $options{path},
    list_of_pages => $options{list_of_pages},
+   dir           => "$self->{dir}",
    pidfile       => "$pidfile"
   }
  );
@@ -462,6 +464,7 @@ sub save_tiff {
    list_of_pages => $options{list_of_pages},
    options       => $options{options},
    ps            => $options{ps},
+   dir           => "$self->{dir}",
    pidfile       => "$pidfile"
   }
  );
@@ -481,9 +484,14 @@ sub save_tiff {
 sub rotate {
  my ( $self, %options ) = @_;
 
- my $sentinel =
-   _enqueue_request( 'rotate',
-  { angle => $options{angle}, page => $options{page}->freeze } );
+ my $sentinel = _enqueue_request(
+  'rotate',
+  {
+   angle => $options{angle},
+   page  => $options{page}->freeze,
+   dir   => "$self->{dir}"
+  }
+ );
 
  return $self->_monitor_process(
   sentinel           => $sentinel,
@@ -621,9 +629,14 @@ sub analyse {
 sub threshold {
  my ( $self, %options ) = @_;
 
- my $sentinel =
-   _enqueue_request( 'threshold',
-  { threshold => $options{threshold}, page => $options{page}->freeze } );
+ my $sentinel = _enqueue_request(
+  'threshold',
+  {
+   threshold => $options{threshold},
+   page      => $options{page}->freeze,
+   dir       => "$self->{dir}"
+  }
+ );
 
  return $self->_monitor_process(
   sentinel           => $sentinel,
@@ -881,6 +894,7 @@ sub user_defined {
   {
    page    => $options{page}->freeze,
    command => $options{command},
+   dir     => "$self->{dir}",
    pidfile => "$pidfile"
   }
  );
@@ -1326,7 +1340,7 @@ sub _thread_main {
    }
 
    when ('negate') {
-    _thread_negate( $self, $request->{page} );
+    _thread_negate( $self, $request->{page}, $request->{dir} );
    }
 
    when ('ocropus') {
@@ -1339,12 +1353,13 @@ sub _thread_main {
    }
 
    when ('rotate') {
-    _thread_rotate( $self, $request->{angle}, $request->{page} );
+    _thread_rotate( $self, $request->{angle}, $request->{page},
+     $request->{dir} );
    }
 
    when ('save-djvu') {
     _thread_save_djvu( $self, $request->{path}, $request->{list_of_pages},
-     $request->{pidfile} );
+     $request->{dir}, $request->{pidfile} );
    }
 
    when ('save-image') {
@@ -1359,6 +1374,7 @@ sub _thread_main {
      list_of_pages => $request->{list_of_pages},
      metadata      => $request->{metadata},
      options       => $request->{options},
+     dir           => $request->{dir},
      pidfile       => $request->{pidfile}
     );
    }
@@ -1374,6 +1390,7 @@ sub _thread_main {
      list_of_pages => $request->{list_of_pages},
      options       => $request->{options},
      ps            => $request->{ps},
+     dir           => $request->{dir},
      pidfile       => $request->{pidfile}
     );
    }
@@ -1384,11 +1401,12 @@ sub _thread_main {
    }
 
    when ('threshold') {
-    _thread_threshold( $self, $request->{threshold}, $request->{page} );
+    _thread_threshold( $self, $request->{threshold}, $request->{page},
+     $request->{dir} );
    }
 
    when ('to-png') {
-    _thread_to_png( $self, $request->{page} );
+    _thread_to_png( $self, $request->{page}, $request->{dir} );
    }
 
    when ('unpaper') {
@@ -1403,13 +1421,16 @@ sub _thread_main {
      radius    => $request->{radius},
      sigma     => $request->{sigma},
      amount    => $request->{amount},
-     threshold => $request->{threshold}
+     threshold => $request->{threshold},
+     dir       => $request->{dir},
     );
    }
 
    when ('user-defined') {
-    _thread_user_defined( $self, $request->{page}, $request->{command},
-     $request->{pidfile} );
+    _thread_user_defined(
+     $self,           $request->{page}, $request->{command},
+     $request->{dir}, $request->{pidfile}
+    );
    }
 
    default {
@@ -1719,13 +1740,13 @@ sub _thread_save_pdf {
   {
    if ( $compression !~ /(?:jpg|png)/x and $format ne 'tif' ) {
     my $ofn = $filename;
-    $filename = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif' );
+    $filename = File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
     $logger->info("Converting $ofn to $filename");
    }
    elsif ( $compression =~ /(?:jpg|png)/x ) {
     my $ofn = $filename;
     $filename = File::Temp->new(
-     DIR    => $self->{dir},
+     DIR    => $options{dir},
      SUFFIX => ".$compression"
     );
     $logger->info("Converting $ofn to $filename");
@@ -1761,8 +1782,8 @@ sub _thread_save_pdf {
    }
 
    if ( $compression !~ /(?:jpg|png)/x ) {
-    my $filename2 = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif' );
-    my $error     = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.txt' );
+    my $filename2 = File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
+    my $error     = File::Temp->new( DIR => $options{dir}, SUFFIX => '.txt' );
     my $cmd = "tiffcp -c $compression $filename $filename2";
     $logger->info($cmd);
     $status = system("echo $$ > $options{pidfile};$cmd 2>$error");
@@ -1904,7 +1925,7 @@ sub _thread_save_pdf {
 }
 
 sub _thread_save_djvu {
- my ( $self, $path, $list_of_pages, $pidfile ) = @_;
+ my ( $self, $path, $list_of_pages, $dir, $pidfile ) = @_;
 
  my $page = 0;
  my @filelist;
@@ -1916,7 +1937,7 @@ sub _thread_save_djvu {
     sprintf( $d->get("Writing page %i of %i"), $page, $#{$list_of_pages} + 1 );
 
   my $filename = $pagedata->{filename};
-  my $djvu = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.djvu' );
+  my $djvu = File::Temp->new( DIR => $dir, SUFFIX => '.djvu' );
 
   # Check the image depth to decide what sort of compression to use
   my $image = Image::Magick->new;
@@ -1934,7 +1955,7 @@ sub _thread_save_djvu {
   if ( $depth > 1 ) {
    $compression = 'c44';
    if ( $format !~ /(?:pnm|jpg)/x ) {
-    my $pnm = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pnm' );
+    my $pnm = File::Temp->new( DIR => $dir, SUFFIX => '.pnm' );
     $x = $image->Write( filename => $pnm );
     $logger->warn($x) if "$x";
     $filename = $pnm;
@@ -1947,7 +1968,7 @@ sub _thread_save_djvu {
    if ( $format !~ /(?:pnm|tif)/x
     or ( $format eq 'pnm' and $class ne 'PseudoClass' ) )
    {
-    my $pbm = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pbm' );
+    my $pbm = File::Temp->new( DIR => $dir, SUFFIX => '.pbm' );
     $x = $image->Write( filename => $pbm );
     $logger->warn($x) if "$x";
     $filename = $pbm;
@@ -1980,8 +2001,7 @@ sub _thread_save_djvu {
    my $h = $image->Get('height');
 
    # Open djvusedtxtfile
-   my $djvusedtxtfile =
-     File::Temp->new( DIR => $self->{dir}, SUFFIX => '.txt' );
+   my $djvusedtxtfile = File::Temp->new( DIR => $dir, SUFFIX => '.txt' );
    open my $fh, '>:encoding(UTF8)',    ## no critic (RequireBriefOpen)
      $djvusedtxtfile
      or croak( sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile ) );
@@ -2047,7 +2067,7 @@ sub _thread_save_tiff {
     and $options{options}->{compression} eq 'jpeg' )
     )
   {
-   my $tif = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.tif' );
+   my $tif = File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
    my $resolution = $pagedata->{resolution};
 
    # Convert to tiff
@@ -2087,7 +2107,7 @@ sub _thread_save_tiff {
   and $options{options}->{compression} eq 'jpeg' );
  my $cmd = "tiffcp $rows $compression @filelist '$options{path}'";
  $logger->info($cmd);
- my $out = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.stdout' );
+ my $out = File::Temp->new( DIR => $options{dir}, SUFFIX => '.stdout' );
  my $status = system("echo $$ > $options{pidfile};$cmd 2>$out");
  return if $_self->{cancel};
 
@@ -2112,7 +2132,7 @@ sub _thread_save_tiff {
 }
 
 sub _thread_rotate {
- my ( $self, $angle, $page ) = @_;
+ my ( $self, $angle, $page, $dir ) = @_;
  my $filename = $page->{filename};
  $logger->info("Rotating $filename by $angle degrees");
 
@@ -2133,7 +2153,7 @@ sub _thread_rotate {
   $suffix = $1;
  }
  $filename = File::Temp->new(
-  DIR    => $self->{dir},
+  DIR    => $dir,
   SUFFIX => '.' . $suffix,
   UNLINK => FALSE
  );
@@ -2233,7 +2253,7 @@ sub _thread_analyse {
 }
 
 sub _thread_threshold {
- my ( $self, $threshold, $page ) = @_;
+ my ( $self, $threshold, $page, $dir ) = @_;
  my $filename = $page->{filename};
 
  my $image = Image::Magick->new;
@@ -2248,8 +2268,7 @@ sub _thread_threshold {
  return if $_self->{cancel};
 
  # Write it
- $filename =
-   File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pbm', UNLINK => FALSE );
+ $filename = File::Temp->new( DIR => $dir, SUFFIX => '.pbm', UNLINK => FALSE );
  $x = $image->Write( filename => $filename );
  return if $_self->{cancel};
  $logger->warn($x) if "$x";
@@ -2263,7 +2282,7 @@ sub _thread_threshold {
 }
 
 sub _thread_negate {
- my ( $self, $page ) = @_;
+ my ( $self, $page, $dir ) = @_;
  my $filename = $page->{filename};
 
  my $image = Image::Magick->new;
@@ -2282,8 +2301,7 @@ sub _thread_negate {
  if ( $filename =~ /(\.\w*)$/x ) {
   $suffix = $1;
  }
- $filename =
-   File::Temp->new( DIR => $self->{dir}, SUFFIX => $suffix, UNLINK => FALSE );
+ $filename = File::Temp->new( DIR => $dir, SUFFIX => $suffix, UNLINK => FALSE );
  $x = $image->Write( depth => $depth, filename => $filename );
  return if $_self->{cancel};
  $logger->warn($x) if "$x";
@@ -2321,7 +2339,7 @@ sub _thread_unsharp {
   $suffix = $1;
  }
  $filename = File::Temp->new(
-  DIR    => $self->{dir},
+  DIR    => $options{dir},
   SUFFIX => '.' . $suffix,
   UNLINK => FALSE
  );
@@ -2366,7 +2384,7 @@ sub _thread_crop {
   $suffix = $1;
  }
  $filename = File::Temp->new(
-  DIR    => $self->{dir},
+  DIR    => $options{dir},
   SUFFIX => '.' . $suffix,
   UNLINK => FALSE
  );
@@ -2386,9 +2404,9 @@ sub _thread_crop {
 }
 
 sub _thread_to_png {
- my ( $self, $page ) = @_;
+ my ( $self, $page, $dir ) = @_;
  my $new = $page->clone;
- $new->{filename} = convert_to_png( $page->{filename} );
+ $new->{filename} = convert_to_png( $page->{filename}, $dir );
  return if $_self->{cancel};
  $new->{format} = 'Tagged Image File Format';
  my %data = ( old => $page, new => $new->freeze );
@@ -2537,14 +2555,14 @@ sub _thread_unpaper {
 }
 
 sub _thread_user_defined {
- my ( $self, $page, $cmd, $pidfile ) = @_;
+ my ( $self, $page, $cmd, $dir, $pidfile ) = @_;
  my $in = $page->{filename};
  my $suffix;
  if ( $in =~ /(\.\w*)$/x ) {
   $suffix = $1;
  }
  my $out = File::Temp->new(
-  DIR    => $self->{dir},
+  DIR    => $dir,
   SUFFIX => $suffix,
   UNLINK => FALSE
  );
@@ -2573,7 +2591,7 @@ sub _thread_user_defined {
 
  my $new = Gscan2pdf::Page->new(
   filename => $out,
-  dir      => $self->{dir},
+  dir      => $dir,
   delete   => TRUE,
   format   => $image->Get('format'),
  );

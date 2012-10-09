@@ -1,10 +1,11 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use File::Basename;    # Split filename into dir, file, ext
+use Test::More tests => 3;
 
 BEGIN {
  use_ok('Gscan2pdf::Document');
- use Gtk2 -init;    # Could just call init separately
+ use Gtk2 -init;       # Could just call init separately
 }
 
 #########################
@@ -18,6 +19,12 @@ Gscan2pdf::Document->setup($logger);
 system('convert rose: test.gif');
 
 my $slist = Gscan2pdf::Document->new;
+
+# dir for temporary files
+my $dir = File::Temp->newdir;
+mkdir($dir);
+$slist->set_dir($dir);
+
 $slist->get_file_info(
  path              => 'test.gif',
  finished_callback => sub {
@@ -34,11 +41,11 @@ $slist->get_file_info(
      w                 => 10,
      h                 => 10,
      finished_callback => sub {
-      $slist->save_image(
-       path              => 'test2.gif',
-       list_of_pages     => [ $slist->{data}[0][2] ],
-       finished_callback => sub { Gtk2->main_quit }
-      );
+      is( `identify -format '%g' $slist->{data}[0][2]{filename}`,
+       "10x10+0+0\n", 'GIF cropped correctly' );
+      is( dirname("$slist->{data}[0][2]{filename}"),
+       "$dir", 'using session directory' );
+      Gtk2->main_quit;
      }
     );
    }
@@ -47,9 +54,8 @@ $slist->get_file_info(
 );
 Gtk2->main;
 
-is( `identify -format '%g' test2.gif`, "10x10+0+0\n", 'GIF cropped correctly' );
-
 #########################
 
-unlink 'test.gif', 'test2.gif';
+unlink 'test.gif', <$dir/*>;
+rmdir $dir;
 Gscan2pdf::Document->quit();

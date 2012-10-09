@@ -29,6 +29,12 @@ Gscan2pdf::Document->setup($logger);
 system('convert rose: 1.tif');
 
 my $slist = Gscan2pdf::Document->new;
+
+# dir for temporary files
+my $dir = File::Temp->newdir;
+mkdir($dir);
+$slist->set_dir($dir);
+
 for my $i ( 1 .. 10 ) {
  copy( '1.tif', "$i.tif" ) if ( $i > 1 );
  $slist->get_file_info(

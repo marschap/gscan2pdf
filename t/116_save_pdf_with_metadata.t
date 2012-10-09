@@ -22,6 +22,12 @@ Gscan2pdf::Document->setup($logger);
 system('convert rose: test.pnm');
 
 my $slist = Gscan2pdf::Document->new;
+
+# dir for temporary files
+my $dir = File::Temp->newdir;
+mkdir($dir);
+$slist->set_dir($dir);
+
 my $metadata = { Title => 'metadata title' };
 $slist->get_file_info(
  path              => 'test.pnm',

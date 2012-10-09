@@ -34,6 +34,12 @@ my $n = 3;
 my @pages;
 
 my $slist = Gscan2pdf::Document->new;
+
+# dir for temporary files
+my $dir = File::Temp->newdir;
+mkdir($dir);
+$slist->set_dir($dir);
+
 for my $i ( 1 .. $n ) {
  copy( '1.pnm', "$i.pnm" ) if ( $i > 1 );
  $slist->get_file_info(

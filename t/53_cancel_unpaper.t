@@ -42,6 +42,12 @@ SKIP: {
  system('convert 1.pnm black.pnm 2.pnm +append test.pnm');
 
  my $slist = Gscan2pdf::Document->new;
+
+ # dir for temporary files
+ my $dir = File::Temp->newdir;
+ mkdir($dir);
+ $slist->set_dir($dir);
+
  $slist->get_file_info(
   path              => 'test.pnm',
   finished_callback => sub {

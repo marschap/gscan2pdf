@@ -1,23 +1,12 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl Gscan2pdf.t'
-
-#########################
-
-# change 'tests => 1' to 'tests => last_test_to_print';
-
 use warnings;
 use strict;
-use Test::More tests => 1;
+use File::Basename;    # Split filename into dir, file, ext
+use Test::More tests => 2;
 
 BEGIN {
  use Gscan2pdf::Document;
- use Gtk2 -init;    # Could just call init separately
+ use Gtk2 -init;       # Could just call init separately
 }
-
-#########################
-
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
@@ -27,6 +16,12 @@ Gscan2pdf::Document->setup(Log::Log4perl::get_logger);
 system('convert xc:white white.pnm');
 
 my $slist = Gscan2pdf::Document->new;
+
+# dir for temporary files
+my $dir = File::Temp->newdir;
+mkdir($dir);
+$slist->set_dir($dir);
+
 $slist->get_file_info(
  path              => 'white.pnm',
  finished_callback => sub {
@@ -42,7 +37,12 @@ $slist->get_file_info(
      finished_callback => sub {
       $slist->analyse(
        page              => $slist->{data}[0][2],
-       finished_callback => sub { Gtk2->main_quit }
+       finished_callback => sub {
+        is( $slist->{data}[0][2]{mean}, 0, 'User-defined with %i and %o' );
+        is( dirname("$slist->{data}[0][2]{filename}"),
+         "$dir", 'using session directory' );
+        Gtk2->main_quit;
+       }
       );
      }
     );
@@ -52,9 +52,8 @@ $slist->get_file_info(
 );
 Gtk2->main;
 
-is( $slist->{data}[0][2]{mean}, 0, 'User-defined with %i and %o' );
-
 #########################
 
-unlink 'white.pnm';
+unlink 'white.pnm', <$dir/*>;
+rmdir $dir;
 Gscan2pdf::Document->quit();
