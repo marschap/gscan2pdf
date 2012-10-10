@@ -22,7 +22,7 @@ BEGIN {
 Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
-our $logger = Log::Log4perl::get_logger;
+my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::Sane->setup($logger);
 
 Gscan2pdf::Frontend::Sane->open_device(

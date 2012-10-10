@@ -157,7 +157,7 @@ if ( defined $help ) {
 }
 
 Log::Log4perl::init( \$log_conf );
-our $logger = Log::Log4perl::get_logger();
+my $logger = Log::Log4perl::get_logger();
 
 $logger->info("Starting $prog_name $version");
 $logger->info("Log level $log_level");

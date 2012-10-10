@@ -16,7 +16,7 @@ Glib::set_application_name('gscan2pdf');
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
-our $logger = Log::Log4perl::get_logger;
+my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Document->setup($logger);
 
 # Create test image

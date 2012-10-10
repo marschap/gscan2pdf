@@ -21,7 +21,7 @@ BEGIN {
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
-our $logger = Log::Log4perl::get_logger;
+my $logger = Log::Log4perl::get_logger;
 
 my $output = <<EOS;
 Unable to load unicharset file /usr/share/tesseract-ocr/tessdata/.unicharset
