@@ -49,9 +49,9 @@ sub setup {
 }
 
 sub hocr {
- my ( $class, $file, $language, $logger, $pidfile ) = @_;
+ my ( $class, $file, $language, $loggr, $pidfile ) = @_;
  my ( $png, $cmd );
- Gscan2pdf::Ocropus->setup($logger) unless $setup;
+ Gscan2pdf::Ocropus->setup($loggr) unless $setup;
 
  if ( $file !~ /\.(?:png|jpg|pnm)$/x ) {
 
