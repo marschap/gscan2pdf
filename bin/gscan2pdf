@@ -1976,7 +1976,10 @@ sub open_dialog {
           $tcbutton->signal_handler_disconnect($signal) if ($signal);
           update_uimanager();
          },
-         error_callback => sub { error_opening_image() }
+         error_callback => sub {
+          my ($message) = @_;
+          show_message_dialog( $window, 'error', 'close', $message );
+         }
         );
        }
       );
@@ -2014,11 +2017,17 @@ sub open_dialog {
         $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
         update_uimanager();
        },
-       error_callback => sub { error_opening_image() }
+       error_callback => sub {
+        my ($message) = @_;
+        show_message_dialog( $window, 'error', 'close', $message );
+       }
       );
      }
     },
-    error_callback => sub { error_opening_image() },
+    error_callback => sub {
+     my ($message) = @_;
+     show_message_dialog( $window, 'error', 'close', $message );
+    }
    );
   }
  }
@@ -2028,12 +2037,6 @@ sub open_dialog {
 
  # cd back to tempdir
  chdir $session;
- return;
-}
-
-sub error_opening_image {
- show_message_dialog( $window, 'error', 'close',
-  $d->get('Error opening image') );
  return;
 }
 
@@ -2458,8 +2461,8 @@ sub save_PDF {
       $logger->debug("Finished saving $filename");
      },
      error_callback => sub {
-      show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::Document::_self->{message} );
+      my ($message) = @_;
+      show_message_dialog( $window, 'error', 'close', $message );
      }
     );
 
@@ -2919,8 +2922,8 @@ sub save_dialog {
          $logger->debug("Finished saving $filename");
         },
         error_callback => sub {
-         show_message_dialog( $window, 'error', 'close',
-          $Gscan2pdf::Document::_self->{message} );
+         my ($message) = @_;
+         show_message_dialog( $window, 'error', 'close', $message );
         }
        );
        $windowi->hide if defined $windowi;
@@ -3174,8 +3177,8 @@ sub save_image {
     $logger->debug("Finished saving $filename");
    },
    error_callback => sub {
-    show_message_dialog( $window, 'error', 'close',
-     $Gscan2pdf::Document::_self->{message} );
+    my ($message) = @_;
+    show_message_dialog( $window, 'error', 'close', $message );
    }
   );
 
@@ -3233,8 +3236,8 @@ sub save_TIFF {
    $logger->debug("Finished saving $filename");
   },
   error_callback => sub {
-   show_message_dialog( $window, 'error', 'close',
-    $Gscan2pdf::Document::_self->{message} );
+   my ($message) = @_;
+   show_message_dialog( $window, 'error', 'close', $message );
   }
  );
  return;
@@ -3326,8 +3329,8 @@ sub save_djvu {
       $logger->debug("Finished saving $filename");
      },
      error_callback => sub {
-      show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::Document::_self->{message} );
+      my ($message) = @_;
+      show_message_dialog( $window, 'error', 'close', $message );
      }
     );
 
@@ -6479,8 +6482,8 @@ sub rotate {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    error_callback => sub {
-    show_message_dialog( $window, 'error', 'close',
-     $Gscan2pdf::Document::_self->{message} );
+    my ($message) = @_;
+    show_message_dialog( $window, 'error', 'close', $message );
    },
    display_callback => sub {
     my ($new_page) = @_;
@@ -6529,8 +6532,8 @@ sub analyse {
      select_dark_pages()                           if $select_dark;
     },
     error_callback => sub {
-     show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::Document::_self->{message} );
+     my ($message) = @_;
+     show_message_dialog( $window, 'error', 'close', $message );
     },
    );
   }
@@ -6630,8 +6633,8 @@ sub threshold {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      error_callback => sub {
-      show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::Document::_self->{message} );
+      my ($message) = @_;
+      show_message_dialog( $window, 'error', 'close', $message );
      },
      display_callback => sub {
       my ($new_page) = @_;
@@ -6702,8 +6705,8 @@ sub negate {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      error_callback => sub {
-      show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::Document::_self->{message} );
+      my ($message) = @_;
+      show_message_dialog( $window, 'error', 'close', $message );
      },
      display_callback => sub {
       my ($new_page) = @_;
@@ -6845,8 +6848,8 @@ sub unsharp {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      error_callback => sub {
-      show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::Document::_self->{message} );
+      my ($message) = @_;
+      show_message_dialog( $window, 'error', 'close', $message );
      },
      display_callback => sub {
       my ($new_page) = @_;
@@ -7039,8 +7042,8 @@ sub crop {
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
      error_callback => sub {
-      show_message_dialog( $window, 'error', 'close',
-       $Gscan2pdf::Document::_self->{message} );
+      my ($message) = @_;
+      show_message_dialog( $window, 'error', 'close', $message );
      },
      display_callback => sub {
       my ($new_page) = @_;
@@ -7101,8 +7104,8 @@ sub user_defined_tool {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    error_callback => sub {
-    show_message_dialog( $window, 'error', 'close',
-     $Gscan2pdf::Document::_self->{message} );
+    my ($message) = @_;
+    show_message_dialog( $window, 'error', 'close', $message );
    },
    display_callback => sub {
     my ($new_page) = @_;
@@ -7159,8 +7162,8 @@ sub unpaper_page {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    error_callback => sub {
-    show_message_dialog( $window, 'error', 'close',
-     $Gscan2pdf::Document::_self->{message} );
+    my ($message) = @_;
+    show_message_dialog( $window, 'error', 'close', $message );
    },
    display_callback => sub {
     my ($new_page) = @_;
@@ -7253,8 +7256,8 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     error_callback => sub {
-     show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::Document::_self->{message} );
+     my ($message) = @_;
+     show_message_dialog( $window, 'error', 'close', $message );
     },
     display_callback => sub {
      my ($new_page) = @_;
@@ -7284,8 +7287,8 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     error_callback => sub {
-     show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::Document::_self->{message} );
+     my ($message) = @_;
+     show_message_dialog( $window, 'error', 'close', $message );
     },
     display_callback => sub {
      my ($new_page) = @_;
@@ -7315,8 +7318,8 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     error_callback => sub {
-     show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::Document::_self->{message} );
+     my ($message) = @_;
+     show_message_dialog( $window, 'error', 'close', $message );
     },
     display_callback => sub {
      my ($new_page) = @_;
@@ -7346,8 +7349,8 @@ sub ocr_page {
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
     },
     error_callback => sub {
-     show_message_dialog( $window, 'error', 'close',
-      $Gscan2pdf::Document::_self->{message} );
+     my ($message) = @_;
+     show_message_dialog( $window, 'error', 'close', $message );
     },
     display_callback => sub {
      my ($new_page) = @_;
@@ -7910,8 +7913,8 @@ sub compress_temp {
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
    error_callback => sub {
-    show_message_dialog( $window, 'error', 'close',
-     $Gscan2pdf::Document::_self->{message} );
+    my ($message) = @_;
+    show_message_dialog( $window, 'error', 'close', $message );
    },
   );
  }

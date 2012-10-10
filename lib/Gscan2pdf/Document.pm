@@ -1228,7 +1228,8 @@ sub _monitor_process {
    $options{started_callback}->()
      if ( $options{started_callback} and not $started_flag );
    if ( $_self->{status} ) {
-    $options{error_callback}->() if ( $options{error_callback} );
+    $options{error_callback}->( $_self->{message} )
+      if ( $options{error_callback} );
     return;
    }
    $options{add} -= $self->fetch_file if ( $options{add} );
