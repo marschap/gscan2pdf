@@ -8388,47 +8388,6 @@ sub get_selected_properties {
  return $resolution;
 }
 
-# Return file size expected by PNM header
-sub get_size_from_PNM {
- my $filename = shift;
-
- open my $fh, '<', $filename or return 0;
- my $header = <$fh>;
- my $magic_value;
- if ( $header =~ /^P(\d*)\n/ ) {
-  $magic_value = $1;
- }
- else {
-  close $fh;
-  return 0;
- }
- if ( $magic_value < 4 ) {
-  close $fh;
-  return 0;
- }
- my $line = <$fh>;
- $header .= $line;
- while ( $line =~ /^(#|\s*\n)/ ) {
-  $line = <$fh>;
-  $header .= $line;
- }
- if ( $line =~ /(\d*) (\d*)\n/ ) {
-  my ( $width, $height ) = ( $1, $2 );
-  my $hundred_percent = $width * $height *
-    ( $magic_value == 4 ? 1 / 8 : ( $magic_value == 5 ? 1 : 3 ) );
-  if ( $magic_value > 4 ) {
-   $line = <$fh>;
-   $header .= $line;
-  }
-  close $fh;
-  return length($header) + $hundred_percent;
- }
- else {
-  close $fh;
-  return 0;
- }
-}
-
 # Helper function to display a message dialog, wait for a response, and return it
 
 sub show_message_dialog {
