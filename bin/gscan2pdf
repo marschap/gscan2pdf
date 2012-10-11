@@ -3713,224 +3713,17 @@ sub scan_dialog {
   }
  );
 
- # Frame for post-processing
- my $framep = Gtk2::Frame->new( $d->get('Post-processing') );
- $vbox1->pack_start( $framep, FALSE, FALSE, 0 );
- my $vboxp = Gtk2::VBox->new;
- $vboxp->set_border_width($border_width);
- $framep->add($vboxp);
-
- # Rotate
- my $hboxr = Gtk2::HBox->new;
- $vboxp->pack_start( $hboxr, FALSE, FALSE, 0 );
- my $rbutton = Gtk2::CheckButton->new( $d->get('Rotate') );
- $tooltips->set_tip( $rbutton, $d->get('Rotate image after scanning') );
- $hboxr->pack_start( $rbutton, TRUE, TRUE, 0 );
- @side = (
-  [ 'both',    $d->get('Both sides'),   $d->get('Both sides.') ],
-  [ 'facing',  $d->get('Facing side'),  $d->get('Facing side.') ],
-  [ 'reverse', $d->get('Reverse side'), $d->get('Reverse side.') ],
- );
- my $comboboxs = combobox_from_array(@side);
- $tooltips->set_tip( $comboboxs, $d->get('Select side to rotate') );
- $hboxr->pack_start( $comboboxs, TRUE, TRUE, 0 );
- my @rotate = (
-  [ 90,  $d->get('90'),  $d->get('Rotate image 90 degrees clockwise.') ],
-  [ 180, $d->get('180'), $d->get('Rotate image 180 degrees clockwise.') ],
-  [ 270, $d->get('270'), $d->get('Rotate image 90 degrees anticlockwise.') ],
- );
- my $comboboxr = combobox_from_array(@rotate);
- $tooltips->set_tip( $comboboxr, $d->get('Select direction of rotation') );
- $hboxr->pack_end( $comboboxr, TRUE, TRUE, 0 );
-
- $hboxr = Gtk2::HBox->new;
- $vboxp->pack_start( $hboxr, FALSE, FALSE, 0 );
- my $r2button = Gtk2::CheckButton->new( $d->get('Rotate') );
- $tooltips->set_tip( $r2button, $d->get('Rotate image after scanning') );
- $hboxr->pack_start( $r2button, TRUE, TRUE, 0 );
- my @side2;
- my $comboboxs2 = Gtk2::ComboBox->new_text;
- $tooltips->set_tip( $comboboxs2, $d->get('Select side to rotate') );
- $hboxr->pack_start( $comboboxs2, TRUE, TRUE, 0 );
- my $comboboxr2 = combobox_from_array(@rotate);
- $tooltips->set_tip( $comboboxr2, $d->get('Select direction of rotation') );
- $hboxr->pack_end( $comboboxr2, TRUE, TRUE, 0 );
-
- $rbutton->signal_connect(
-  toggled => sub {
-   if ( $rbutton->get_active ) {
-    $hboxr->set_sensitive(TRUE)
-      if ( $side[ $comboboxs->get_active ]->[0] ne 'both' );
-   }
-   else {
-    $hboxr->set_sensitive(FALSE);
-   }
-  }
- );
- $comboboxs->signal_connect(
-  changed => sub {
-   if ( $side[ $comboboxs->get_active ]->[0] eq 'both' ) {
-    $hboxr->set_sensitive(FALSE);
-    $r2button->set_active(FALSE);
-   }
-   else {
-    $hboxr->set_sensitive(TRUE) if ( $rbutton->get_active );
-
-    # Empty combobox
-    while ( $comboboxs2->get_active > -1 ) {
-     $comboboxs2->remove_text(0);
-     $comboboxs2->set_active(0);
-    }
-    @side2 = ();
-    foreach (@side) {
-     push @side2, $_
-       unless ( $_->[0] eq 'both'
-      or $_->[0] eq $side[ $comboboxs->get_active ]->[0] );
-    }
-    $comboboxs2->append_text( $side2[0]->[1] );
-    $comboboxs2->set_active(0);
-   }
-  }
- );
-
- # In case it isn't set elsewhere
- combobox_set_active( $comboboxr2, 90, @rotate );
-
- if ( $SETTING{'rotate facing'} or $SETTING{'rotate reverse'} ) {
-  $rbutton->set_active(TRUE);
- }
- if ( $SETTING{'rotate facing'} == $SETTING{'rotate reverse'} ) {
-  combobox_set_active( $comboboxs, 'both', @side );
-  combobox_set_active( $comboboxr, $SETTING{'rotate facing'}, @rotate );
- }
- elsif ( $SETTING{'rotate facing'} ) {
-  combobox_set_active( $comboboxs, 'facing', @side );
-  combobox_set_active( $comboboxr, $SETTING{'rotate facing'}, @rotate );
-  if ( $SETTING{'rotate reverse'} ) {
-   $r2button->set_active(TRUE);
-   combobox_set_active( $comboboxs2, 'reverse', @side2 );
-   combobox_set_active( $comboboxr2, $SETTING{'rotate reverse'}, @rotate );
-  }
- }
- else {
-  combobox_set_active( $comboboxs, 'reverse', @side );
-  combobox_set_active( $comboboxr, $SETTING{'rotate reverse'}, @rotate );
- }
-
- # CheckButton for unpaper
- my $hboxu = Gtk2::HBox->new;
- $vboxp->pack_start( $hboxu, FALSE, FALSE, 0 );
- my $ubutton = Gtk2::CheckButton->new( $d->get('Clean up images') );
- $tooltips->set_tip( $ubutton,
-  $d->get('Clean up scanned images with unpaper') );
- $hboxu->pack_start( $ubutton, TRUE, TRUE, 0 );
- if ( not $dependencies{unpaper} ) {
-  $ubutton->set_sensitive(FALSE);
-  $ubutton->set_active(FALSE);
- }
- elsif ( $SETTING{'unpaper on scan'} ) {
-  $ubutton->set_active(TRUE);
- }
- my $button = Gtk2::Button->new( $d->get('Options') );
- $tooltips->set_tip( $button, $d->get('Set unpaper options') );
- $hboxu->pack_end( $button, TRUE, TRUE, 0 );
- $button->signal_connect(
-  clicked => sub {
-   my $windowo = Gscan2pdf::Dialog->new(
-    'transient-for' => $window,
-    title           => $d->get('unpaper options'),
-    border_width    => $border_width
-   );
-   my $vbox1 = $windowo->get('vbox');
-   $unpaper->add_options($vbox1);
-
-   # HBox for buttons
-   my $hboxb = Gtk2::HBox->new;
-   $vbox1->pack_start( $hboxb, FALSE, TRUE, 0 );
-
-   # OK button
-   my $sbutton = Gtk2::Button->new_from_stock('gtk-ok');
-   $hboxb->pack_start( $sbutton, TRUE, TRUE, 0 );
-   $sbutton->signal_connect(
-    clicked => sub {
-
-     # Update $SETTING
-     $SETTING{'unpaper options'} = $unpaper->get_options;
-
-     $windowo->destroy;
-    }
-   );
-
-   # Cancel button
-   my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
-   $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
-   $cbutton->signal_connect( clicked => sub { $windowo->destroy; } );
-
-   $windowo->show_all;
-  }
- );
-
- # CheckButton for OCR
- my $hboxo = Gtk2::HBox->new;
- $vboxp->pack_start( $hboxo, FALSE, FALSE, 0 );
- my $obutton = Gtk2::CheckButton->new( $d->get('OCR scanned pages') );
- $tooltips->set_tip( $obutton, $d->get('OCR scanned pages') );
- if ( not $dependencies{gocr}
-  and not $dependencies{tesseract}
-  and not $dependencies{ocropus}
-  and not $dependencies{cuneiform} )
- {
-  $hboxo->set_sensitive(FALSE);
-  $obutton->set_active(FALSE);
- }
- elsif ( $SETTING{'OCR on scan'} ) {
-  $obutton->set_active(TRUE);
- }
- $hboxo->pack_start( $obutton, TRUE, TRUE, 0 );
- my $comboboxe = combobox_from_array(@ocr_engine);
- $tooltips->set_tip( $comboboxe, $d->get('Select OCR engine') );
- $hboxo->pack_end( $comboboxe, TRUE, TRUE, 0 );
- my ( $comboboxtl, $hboxtl, @tesslang, $comboboxcl, $hboxcl, @cflang );
- if ( $dependencies{tesseract} ) {
-  ( $hboxtl, $comboboxtl, @tesslang ) = add_tess_languages($vboxp);
-  $comboboxe->signal_connect(
-   changed => sub {
-    if ($ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
-     or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
-    {
-     $hboxtl->show_all;
-    }
-    else {
-     $hboxtl->hide_all;
-    }
-   }
-  );
-  if ( $dependencies{cuneiform} ) {
-   ( $hboxcl, $comboboxcl, @cflang ) = add_cf_languages($vboxp);
-   $comboboxe->signal_connect(
-    changed => sub {
-     if ( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) {
-      $hboxcl->show_all;
-     }
-     else {
-      $hboxcl->hide_all;
-     }
-    }
-   );
-  }
-  $hboxtl->set_sensitive(FALSE) unless ( $obutton->get_active );
-  $obutton->signal_connect(
-   toggled => sub {
-    if ( $obutton->get_active ) {
-     $hboxtl->set_sensitive(TRUE);
-    }
-    else {
-     $hboxtl->set_sensitive(FALSE);
-    }
-   }
-  );
- }
- combobox_set_active( $comboboxe, $SETTING{'ocr engine'}, @ocr_engine );
+ my (
+  $rotate,     $side,      $side2,      $tesslang,  $cflang,
+  $rbutton,    $r2button,  $ubutton,    $obutton,   $comboboxs,
+  $comboboxs2, $comboboxr, $comboboxr2, $comboboxe, $comboboxtl,
+  $comboboxcl, $hboxtl,    $hboxcl
+ ) = add_postprocessing_options($vbox1);
+ my @rotate = @$rotate;
+ @side = @$side;
+ my @side2    = @$side2;
+ my @tesslang = @$tesslang;
+ my @cflang   = @$cflang;
 
  # Notebook page 2
  my $vbox2 = Gtk2::VBox->new;
@@ -4182,6 +3975,235 @@ sub scan_dialog {
   $sbutton->set_sensitive(FALSE);
  }
  return;
+}
+
+sub add_postprocessing_options {
+ my ($vbox) = @_;
+
+ # Frame for post-processing
+ my $framep = Gtk2::Frame->new( $d->get('Post-processing') );
+ $vbox->pack_start( $framep, FALSE, FALSE, 0 );
+ my $vboxp = Gtk2::VBox->new;
+ $vboxp->set_border_width($border_width);
+ $framep->add($vboxp);
+
+ # Rotate
+ my $hboxr = Gtk2::HBox->new;
+ $vboxp->pack_start( $hboxr, FALSE, FALSE, 0 );
+ my $rbutton = Gtk2::CheckButton->new( $d->get('Rotate') );
+ $tooltips->set_tip( $rbutton, $d->get('Rotate image after scanning') );
+ $hboxr->pack_start( $rbutton, TRUE, TRUE, 0 );
+ my @side = (
+  [ 'both',    $d->get('Both sides'),   $d->get('Both sides.') ],
+  [ 'facing',  $d->get('Facing side'),  $d->get('Facing side.') ],
+  [ 'reverse', $d->get('Reverse side'), $d->get('Reverse side.') ],
+ );
+ my $comboboxs = combobox_from_array(@side);
+ $tooltips->set_tip( $comboboxs, $d->get('Select side to rotate') );
+ $hboxr->pack_start( $comboboxs, TRUE, TRUE, 0 );
+ my @rotate = (
+  [ 90,  $d->get('90'),  $d->get('Rotate image 90 degrees clockwise.') ],
+  [ 180, $d->get('180'), $d->get('Rotate image 180 degrees clockwise.') ],
+  [ 270, $d->get('270'), $d->get('Rotate image 90 degrees anticlockwise.') ],
+ );
+ my $comboboxr = combobox_from_array(@rotate);
+ $tooltips->set_tip( $comboboxr, $d->get('Select direction of rotation') );
+ $hboxr->pack_end( $comboboxr, TRUE, TRUE, 0 );
+
+ $hboxr = Gtk2::HBox->new;
+ $vboxp->pack_start( $hboxr, FALSE, FALSE, 0 );
+ my $r2button = Gtk2::CheckButton->new( $d->get('Rotate') );
+ $tooltips->set_tip( $r2button, $d->get('Rotate image after scanning') );
+ $hboxr->pack_start( $r2button, TRUE, TRUE, 0 );
+ my @side2;
+ my $comboboxs2 = Gtk2::ComboBox->new_text;
+ $tooltips->set_tip( $comboboxs2, $d->get('Select side to rotate') );
+ $hboxr->pack_start( $comboboxs2, TRUE, TRUE, 0 );
+ my $comboboxr2 = combobox_from_array(@rotate);
+ $tooltips->set_tip( $comboboxr2, $d->get('Select direction of rotation') );
+ $hboxr->pack_end( $comboboxr2, TRUE, TRUE, 0 );
+
+ $rbutton->signal_connect(
+  toggled => sub {
+   if ( $rbutton->get_active ) {
+    $hboxr->set_sensitive(TRUE)
+      if ( $side[ $comboboxs->get_active ]->[0] ne 'both' );
+   }
+   else {
+    $hboxr->set_sensitive(FALSE);
+   }
+  }
+ );
+ $comboboxs->signal_connect(
+  changed => sub {
+   if ( $side[ $comboboxs->get_active ]->[0] eq 'both' ) {
+    $hboxr->set_sensitive(FALSE);
+    $r2button->set_active(FALSE);
+   }
+   else {
+    $hboxr->set_sensitive(TRUE) if ( $rbutton->get_active );
+
+    # Empty combobox
+    while ( $comboboxs2->get_active > -1 ) {
+     $comboboxs2->remove_text(0);
+     $comboboxs2->set_active(0);
+    }
+    @side2 = ();
+    foreach (@side) {
+     push @side2, $_
+       unless ( $_->[0] eq 'both'
+      or $_->[0] eq $side[ $comboboxs->get_active ]->[0] );
+    }
+    $comboboxs2->append_text( $side2[0]->[1] );
+    $comboboxs2->set_active(0);
+   }
+  }
+ );
+
+ # In case it isn't set elsewhere
+ combobox_set_active( $comboboxr2, 90, @rotate );
+
+ if ( $SETTING{'rotate facing'} or $SETTING{'rotate reverse'} ) {
+  $rbutton->set_active(TRUE);
+ }
+ if ( $SETTING{'rotate facing'} == $SETTING{'rotate reverse'} ) {
+  combobox_set_active( $comboboxs, 'both', @side );
+  combobox_set_active( $comboboxr, $SETTING{'rotate facing'}, @rotate );
+ }
+ elsif ( $SETTING{'rotate facing'} ) {
+  combobox_set_active( $comboboxs, 'facing', @side );
+  combobox_set_active( $comboboxr, $SETTING{'rotate facing'}, @rotate );
+  if ( $SETTING{'rotate reverse'} ) {
+   $r2button->set_active(TRUE);
+   combobox_set_active( $comboboxs2, 'reverse', @side2 );
+   combobox_set_active( $comboboxr2, $SETTING{'rotate reverse'}, @rotate );
+  }
+ }
+ else {
+  combobox_set_active( $comboboxs, 'reverse', @side );
+  combobox_set_active( $comboboxr, $SETTING{'rotate reverse'}, @rotate );
+ }
+
+ # CheckButton for unpaper
+ my $hboxu = Gtk2::HBox->new;
+ $vboxp->pack_start( $hboxu, FALSE, FALSE, 0 );
+ my $ubutton = Gtk2::CheckButton->new( $d->get('Clean up images') );
+ $tooltips->set_tip( $ubutton,
+  $d->get('Clean up scanned images with unpaper') );
+ $hboxu->pack_start( $ubutton, TRUE, TRUE, 0 );
+ if ( not $dependencies{unpaper} ) {
+  $ubutton->set_sensitive(FALSE);
+  $ubutton->set_active(FALSE);
+ }
+ elsif ( $SETTING{'unpaper on scan'} ) {
+  $ubutton->set_active(TRUE);
+ }
+ my $button = Gtk2::Button->new( $d->get('Options') );
+ $tooltips->set_tip( $button, $d->get('Set unpaper options') );
+ $hboxu->pack_end( $button, TRUE, TRUE, 0 );
+ $button->signal_connect(
+  clicked => sub {
+   my $windowo = Gscan2pdf::Dialog->new(
+    'transient-for' => $window,
+    title           => $d->get('unpaper options'),
+    border_width    => $border_width
+   );
+   my $vbox1 = $windowo->get('vbox');
+   $unpaper->add_options($vbox1);
+
+   # HBox for buttons
+   my $hboxb = Gtk2::HBox->new;
+   $vbox1->pack_start( $hboxb, FALSE, TRUE, 0 );
+
+   # OK button
+   my $sbutton = Gtk2::Button->new_from_stock('gtk-ok');
+   $hboxb->pack_start( $sbutton, TRUE, TRUE, 0 );
+   $sbutton->signal_connect(
+    clicked => sub {
+
+     # Update $SETTING
+     $SETTING{'unpaper options'} = $unpaper->get_options;
+
+     $windowo->destroy;
+    }
+   );
+
+   # Cancel button
+   my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
+   $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
+   $cbutton->signal_connect( clicked => sub { $windowo->destroy; } );
+
+   $windowo->show_all;
+  }
+ );
+
+ # CheckButton for OCR
+ my $hboxo = Gtk2::HBox->new;
+ $vboxp->pack_start( $hboxo, FALSE, FALSE, 0 );
+ my $obutton = Gtk2::CheckButton->new( $d->get('OCR scanned pages') );
+ $tooltips->set_tip( $obutton, $d->get('OCR scanned pages') );
+ if ( not $dependencies{gocr}
+  and not $dependencies{tesseract}
+  and not $dependencies{ocropus}
+  and not $dependencies{cuneiform} )
+ {
+  $hboxo->set_sensitive(FALSE);
+  $obutton->set_active(FALSE);
+ }
+ elsif ( $SETTING{'OCR on scan'} ) {
+  $obutton->set_active(TRUE);
+ }
+ $hboxo->pack_start( $obutton, TRUE, TRUE, 0 );
+ my $comboboxe = combobox_from_array(@ocr_engine);
+ $tooltips->set_tip( $comboboxe, $d->get('Select OCR engine') );
+ $hboxo->pack_end( $comboboxe, TRUE, TRUE, 0 );
+ my ( $comboboxtl, $hboxtl, @tesslang, $comboboxcl, $hboxcl, @cflang );
+ if ( $dependencies{tesseract} ) {
+  ( $hboxtl, $comboboxtl, @tesslang ) = add_tess_languages($vboxp);
+  $comboboxe->signal_connect(
+   changed => sub {
+    if ($ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
+     or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
+    {
+     $hboxtl->show_all;
+    }
+    else {
+     $hboxtl->hide_all;
+    }
+   }
+  );
+  if ( $dependencies{cuneiform} ) {
+   ( $hboxcl, $comboboxcl, @cflang ) = add_cf_languages($vboxp);
+   $comboboxe->signal_connect(
+    changed => sub {
+     if ( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) {
+      $hboxcl->show_all;
+     }
+     else {
+      $hboxcl->hide_all;
+     }
+    }
+   );
+  }
+  $hboxtl->set_sensitive(FALSE) unless ( $obutton->get_active );
+  $obutton->signal_connect(
+   toggled => sub {
+    if ( $obutton->get_active ) {
+     $hboxtl->set_sensitive(TRUE);
+    }
+    else {
+     $hboxtl->set_sensitive(FALSE);
+    }
+   }
+  );
+ }
+ combobox_set_active( $comboboxe, $SETTING{'ocr engine'}, @ocr_engine );
+ return (
+  \@rotate,    \@side,     \@side2,     \@tesslang, \@cflang,
+  $rbutton,    $r2button,  $ubutton,    $obutton,   $comboboxs,
+  $comboboxs2, $comboboxr, $comboboxr2, $comboboxe, $comboboxtl,
+  $comboboxcl, $hboxtl,    $hboxcl
+ );
 }
 
 # Run scanimage --formatted-device-list
@@ -4493,227 +4515,17 @@ sub scan_dialog2 {
  );
 
  my $vbox = $windows2->get('vbox');
-
- # Frame for post-processing
- my $framep = Gtk2::Frame->new( $d->get('Post-processing') );
- $vbox->pack_start( $framep, FALSE, FALSE, 0 );
- my $vboxp = Gtk2::VBox->new;
- $vboxp->set_border_width($border_width);
- $framep->add($vboxp);
-
- # Rotate
- my $hboxr = Gtk2::HBox->new;
- $vboxp->pack_start( $hboxr, FALSE, FALSE, 0 );
- my $rbutton = Gtk2::CheckButton->new( $d->get('Rotate') );
- $tooltips->set_tip( $rbutton, $d->get('Rotate image after scanning') );
- $hboxr->pack_start( $rbutton, TRUE, TRUE, 0 );
- my @side = (
-  [ 'both',    $d->get('Both sides'),   $d->get('Both sides.') ],
-  [ 'facing',  $d->get('Facing side'),  $d->get('Facing side.') ],
-  [ 'reverse', $d->get('Reverse side'), $d->get('Reverse side.') ],
- );
- my $comboboxs = combobox_from_array(@side);
- $tooltips->set_tip( $comboboxs, $d->get('Select side to rotate') );
- $hboxr->pack_start( $comboboxs, TRUE, TRUE, 0 );
- my @rotate = (
-  [ 90,  $d->get('90'),  $d->get('Rotate image 90 degrees clockwise.') ],
-  [ 180, $d->get('180'), $d->get('Rotate image 180 degrees clockwise.') ],
-  [ 270, $d->get('270'), $d->get('Rotate image 90 degrees anticlockwise.') ],
- );
- my $comboboxr = combobox_from_array(@rotate);
- $tooltips->set_tip( $comboboxr, $d->get('Select direction of rotation') );
- $hboxr->pack_end( $comboboxr, TRUE, TRUE, 0 );
-
- $hboxr = Gtk2::HBox->new;
- $vboxp->pack_start( $hboxr, FALSE, FALSE, 0 );
- my $r2button = Gtk2::CheckButton->new( $d->get('Rotate') );
- $tooltips->set_tip( $r2button, $d->get('Rotate image after scanning') );
- $hboxr->pack_start( $r2button, TRUE, TRUE, 0 );
- my @side2;
- my $comboboxs2 = Gtk2::ComboBox->new_text;
- $tooltips->set_tip( $comboboxs2, $d->get('Select side to rotate') );
- $hboxr->pack_start( $comboboxs2, TRUE, TRUE, 0 );
- my $comboboxr2 = combobox_from_array(@rotate);
- $tooltips->set_tip( $comboboxr2, $d->get('Select direction of rotation') );
- $hboxr->pack_end( $comboboxr2, TRUE, TRUE, 0 );
-
- $rbutton->signal_connect(
-  toggled => sub {
-   if ( $rbutton->get_active ) {
-    $hboxr->set_sensitive(TRUE)
-      if ( $side[ $comboboxs->get_active ]->[0] ne 'both' );
-   }
-   else {
-    $hboxr->set_sensitive(FALSE);
-   }
-  }
- );
- $comboboxs->signal_connect(
-  changed => sub {
-   if ( $side[ $comboboxs->get_active ]->[0] eq 'both' ) {
-    $hboxr->set_sensitive(FALSE);
-    $r2button->set_active(FALSE);
-   }
-   else {
-    $hboxr->set_sensitive(TRUE) if ( $rbutton->get_active );
-
-    # Empty combobox
-    while ( $comboboxs2->get_active > -1 ) {
-     $comboboxs2->remove_text(0);
-     $comboboxs2->set_active(0);
-    }
-    @side2 = ();
-    foreach (@side) {
-     push @side2, $_
-       unless ( $_->[0] eq 'both'
-      or $_->[0] eq $side[ $comboboxs->get_active ]->[0] );
-    }
-    $comboboxs2->append_text( $side2[0]->[1] );
-    $comboboxs2->set_active(0);
-   }
-  }
- );
-
- # In case it isn't set elsewhere
- combobox_set_active( $comboboxr2, 90, @rotate );
-
- if ( $SETTING{'rotate facing'} or $SETTING{'rotate reverse'} ) {
-  $rbutton->set_active(TRUE);
- }
- if ( $SETTING{'rotate facing'} == $SETTING{'rotate reverse'} ) {
-  combobox_set_active( $comboboxs, 'both', @side );
-  combobox_set_active( $comboboxr, $SETTING{'rotate facing'}, @rotate );
- }
- elsif ( $SETTING{'rotate facing'} ) {
-  combobox_set_active( $comboboxs, 'facing', @side );
-  combobox_set_active( $comboboxr, $SETTING{'rotate facing'}, @rotate );
-  if ( $SETTING{'rotate reverse'} ) {
-   $r2button->set_active(TRUE);
-   combobox_set_active( $comboboxs2, 'reverse', @side2 );
-   combobox_set_active( $comboboxr2, $SETTING{'rotate reverse'}, @rotate );
-  }
- }
- else {
-  combobox_set_active( $comboboxs, 'reverse', @side );
-  combobox_set_active( $comboboxr, $SETTING{'rotate reverse'}, @rotate );
- }
-
- # CheckButton for unpaper
- my $hboxu = Gtk2::HBox->new;
- $vboxp->pack_start( $hboxu, FALSE, FALSE, 0 );
- my $ubutton = Gtk2::CheckButton->new( $d->get('Clean up images') );
- $tooltips->set_tip( $ubutton,
-  $d->get('Clean up scanned images with unpaper') );
- $hboxu->pack_start( $ubutton, TRUE, TRUE, 0 );
- if ( not $dependencies{unpaper} ) {
-  $ubutton->set_sensitive(FALSE);
-  $ubutton->set_active(FALSE);
- }
- elsif ( $SETTING{'unpaper on scan'} ) {
-  $ubutton->set_active(TRUE);
- }
- my $button = Gtk2::Button->new( $d->get('Options') );
- $tooltips->set_tip( $button, $d->get('Set unpaper options') );
- $hboxu->pack_end( $button, TRUE, TRUE, 0 );
- $button->signal_connect(
-  clicked => sub {
-   my $windowo = Gscan2pdf::Dialog->new(
-    'transient-for' => $window,
-    title           => $d->get('unpaper options'),
-    border_width    => $border_width
-   );
-   my $vbox1 = $windowo->get('vbox');
-   $unpaper->add_options($vbox1);
-
-   # HBox for buttons
-   my $hboxb = Gtk2::HBox->new;
-   $vbox1->pack_start( $hboxb, FALSE, TRUE, 0 );
-
-   # OK button
-   my $sbutton = Gtk2::Button->new_from_stock('gtk-ok');
-   $hboxb->pack_start( $sbutton, TRUE, TRUE, 0 );
-   $sbutton->signal_connect(
-    clicked => sub {
-
-     # Update $SETTING
-     $SETTING{'unpaper options'} = $unpaper->get_options;
-
-     $windowo->destroy;
-    }
-   );
-
-   # Cancel button
-   my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
-   $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
-   $cbutton->signal_connect( clicked => sub { $windowo->destroy; } );
-
-   $windowo->show_all;
-  }
- );
-
- # CheckButton for OCR
- my $hboxo = Gtk2::HBox->new;
- $vboxp->pack_start( $hboxo, FALSE, FALSE, 0 );
- my $obutton = Gtk2::CheckButton->new( $d->get('OCR scanned pages') );
- $tooltips->set_tip( $obutton, $d->get('OCR scanned pages') );
- if (
-  not($dependencies{gocr}
-   or $dependencies{tesseract}
-   or $dependencies{ocropus}
-   or $dependencies{cuneiform} )
-   )
- {
-  $hboxo->set_sensitive(FALSE);
-  $obutton->set_active(FALSE);
- }
- elsif ( $SETTING{'OCR on scan'} ) {
-  $obutton->set_active(TRUE);
- }
- $hboxo->pack_start( $obutton, TRUE, TRUE, 0 );
- my $comboboxe = combobox_from_array(@ocr_engine);
- $tooltips->set_tip( $comboboxe, $d->get('Select OCR engine') );
- $hboxo->pack_end( $comboboxe, TRUE, TRUE, 0 );
- my ( $comboboxtl, $hboxtl, @tesslang, $comboboxcl, $hboxcl, @cflang );
- if ( $dependencies{tesseract} ) {
-  ( $hboxtl, $comboboxtl, @tesslang ) = add_tess_languages($vboxp);
-  $comboboxe->signal_connect(
-   changed => sub {
-    if ($ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
-     or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
-    {
-     $hboxtl->show_all;
-    }
-    else {
-     $hboxtl->hide_all;
-    }
-   }
-  );
-  if ( $dependencies{cuneiform} ) {
-   ( $hboxcl, $comboboxcl, @cflang ) = add_cf_languages($vboxp);
-   $comboboxe->signal_connect(
-    changed => sub {
-     if ( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) {
-      $hboxcl->show_all;
-     }
-     else {
-      $hboxcl->hide_all;
-     }
-    }
-   );
-  }
-  $hboxtl->set_sensitive(FALSE) unless ( $obutton->get_active );
-  $obutton->signal_connect(
-   toggled => sub {
-    if ( $obutton->get_active ) {
-     $hboxtl->set_sensitive(TRUE);
-    }
-    else {
-     $hboxtl->set_sensitive(FALSE);
-    }
-   }
-  );
- }
- combobox_set_active( $comboboxe, $SETTING{'ocr engine'}, @ocr_engine );
+ my (
+  $rotate,     $side,      $side2,      $tesslang,  $cflang,
+  $rbutton,    $r2button,  $ubutton,    $obutton,   $comboboxs,
+  $comboboxs2, $comboboxr, $comboboxr2, $comboboxe, $comboboxtl,
+  $comboboxcl, $hboxtl,    $hboxcl
+ ) = add_postprocessing_options($vbox);
+ my @rotate   = @$rotate;
+ my @side     = @$side;
+ my @side2    = @$side2;
+ my @tesslang = @$tesslang;
+ my @cflang   = @$cflang;
 
  # Show window
  $windows2->show_all;
