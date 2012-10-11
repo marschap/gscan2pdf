@@ -5190,6 +5190,18 @@ sub reset_start {
    $spin_buttons->set_value(1);
   }
  }
+ elsif ( defined $windows2 ) {
+  if ( $#{ $slist->{data} } > -1 ) {
+   my $start = $windows2->get('page-number-start');
+   my $step  = $windows2->get('page-number-increment');
+   $windows2->set( 'page-number-start',
+    $slist->{data}[ $#{ $slist->{data} } ][0] + $step )
+     if ( $start > $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
+  }
+  else {
+   $windows2->set( 'page-number-start', 1 );
+  }
+ }
  return;
 }
 
