@@ -49,6 +49,8 @@
 
 use warnings;
 use strict;
+use feature "switch";
+
 use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Sane;
 use Gscan2pdf::Frontend::CLI;
@@ -6405,7 +6407,7 @@ sub update_options_hash {
        defined($option)
    and defined( $pddo{ $option->{name} } )
 
-   and $option->{name} !~ /^page-?(?width|height)/x
+   and $option->{name} !~ /^page-?(?:width|height)/x
     )
   {
    my ( $widget, $hbox ) = add_widget_from_hash($option);
