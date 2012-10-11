@@ -12,6 +12,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Proc::Killfam;
 use IPC::Open3;
 use IO::Handle;
+use Gscan2pdf::NetPBM;
 
 my $_POLL_INTERVAL = 100;    # ms
 my ( $_self, $logger, $d );
@@ -103,51 +104,6 @@ sub scan_pages {
   _scanimage(%options);
  }
  return;
-}
-
-# Return file size expected by PNM header
-sub get_size_from_PNM {
- my $filename = shift;
-
- open my $fh, '<', $filename or return 0;
- my $header = <$fh>;
- my $magic_value;
- if ( $header =~ /^P(\d*)\n/x ) {
-  $magic_value = $1;
- }
- else {
-  close $fh;
-  return 0;
- }
- if ( $magic_value < 4 ) {
-  close $fh;
-  return 0;
- }
- my $line = <$fh>;
- $header .= $line;
- while ( $line =~ /^(\#|\s*\n)/x ) {
-  $line = <$fh>;
-  $header .= $line;
- }
- if ( $line =~ /(\d*)\ (\d*)\n/x ) {
-  my ( $width, $height ) = ( $1, $2 );
-  if ( $magic_value == 4 ) {
-   my $mod = $width % 8;
-   $width += 8 - $mod if ( $mod > 0 );
-  }
-  my $datasize = $width * $height *
-    ( $magic_value == 4 ? 1 / 8 : ( $magic_value == 5 ? 1 : 3 ) );
-  if ( $magic_value > 4 ) {
-   $line = <$fh>;
-   $header .= $line;
-  }
-  close $fh;
-  return length($header) + $datasize;
- }
- else {
-  close $fh;
-  return 0;
- }
 }
 
 # Carry out the scan with scanimage and the options passed.
@@ -303,7 +259,7 @@ sub _scanadf {
       }
      }
      elsif ( -e "out$id.pnm" and ( -s "out$id.pnm" ) > 50 ) {
-      $size = get_size_from_PNM("out$id.pnm");
+      $size = Gscan2pdf::NetPBM::file_size_from_header("out$id.pnm");
      }
      else {
       # Pulse

@@ -54,6 +54,7 @@ use feature "switch";
 use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Sane;
 use Gscan2pdf::Frontend::CLI;
+use Gscan2pdf::NetPBM;
 use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Scanner::Dialog;
 use Gscan2pdf::Tesseract;
@@ -5131,32 +5132,9 @@ sub import_scan {
    my ( $fileno, $condition ) = @_;
    if ( $condition & 'in' ) {    # bit field operation. >= would also work
     if ( $size == 0 ) {
-     my @data;
-     while (<$fh>) {
-      $size += length;
-      next if (/^#/);
-      my @cols = split;
-      @data = ( @data, @cols );
-      my $n = 4;
-      $n = 3 if ( $data[0] eq 'P4' );
-      last if ( @data == $n );
-     }
-     $logger->info("Format is $data[0]");
-     $logger->info("Header is $size");
-     my ( $format, $width, $height ) = @data;
-     if ( $format eq 'P4' ) {
-      $size += $width * $height / 8;
-     }
-     elsif ( $format eq 'P5' ) {
-      $size += $width * $height;
-     }
-     elsif ( $format eq 'P6' ) {
-      $size += $width * $height * 3;
-     }
-     else {
-      $logger->error("Unknown format $format");
-     }
+     $size = Gscan2pdf::NetPBM::file_size_from_header($ofilename);
      $logger->info("Header suggests $size");
+     return Glib::SOURCE_CONTINUE if ( $size == 0 );
      close($fh);
     }
     my $filesize = -s $ofilename;
@@ -5189,9 +5167,9 @@ sub import_scan {
      update_uimanager();
      post_process_scan( [$gpage], $rotate, $unpaper_flag, $ocr );
     }
-    return FALSE;    # uninstall
+    return Glib::SOURCE_REMOVE;
    }
-   return TRUE;      # continue without uninstalling
+   return Glib::SOURCE_CONTINUE;
   }
  );
 
