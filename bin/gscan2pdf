@@ -1721,7 +1721,14 @@ sub create_canvas {
  # Attach the text to the canvas
  for my $box ( $page->boxes ) {
   my ( $x1, $y1, $x2, $y2, $text ) = @$box;
-  boxed_text( $text, $x1, $y1, $x2, $y2, abs( $y2 - $y1 ) );
+  boxed_text(
+   text => $text,
+   x1   => $x1,
+   y1   => $y1,
+   x2   => $x2,
+   y2   => $y2,
+   size => abs( $y2 - $y1 )
+  );
  }
 
  # Remove the existing contents
@@ -2216,16 +2223,21 @@ sub get_pdf_metadata {
 # Draw text on the canvas with a box around it
 
 sub boxed_text {
- my ( $char, $x1, $y1, $x2, $y2, $size ) = @_;
- my $root = $canvas->get_root_item;
- my $g    = Goo::Canvas::Group->new($root);
- $g->translate( $x1, $y1 );
+ my (%options) = @_;
+ my $root      = $canvas->get_root_item;
+ my $g         = Goo::Canvas::Group->new($root);
+ $g->translate( $options{x1}, $options{y1} );
 
 # draw the rect first to make sure the text goes on top and receives any mouse clicks
- my $rect = Goo::Canvas::Rect->new( $g, 0, 0, $x2 - $x1, $y2 - $y1 );
+ my $rect = Goo::Canvas::Rect->new(
+  $g, 0, 0,
+  $options{x2} - $options{x1},
+  $options{y2} - $options{y1}
+ );
  my $text =
-   Goo::Canvas::Text->new( $g, $char, 0, 0, $x2 - $x1, 'nw', 'height' => $size,
-   );
+   Goo::Canvas::Text->new( $g, $options{text}, 0, 0,
+  $options{x2} - $options{x1},
+  'nw', 'height' => $options{size}, );
 
  # clicking text box produces a dialog to edit the text
  $text->signal_connect(
@@ -3905,11 +3917,15 @@ sub scan_dialog {
       if ( $SETTING{'ocr engine'} eq 'cuneiform' );
    }
    scan_pages(
-    $SETTING{device},            $npages,
-    $start - $step,              $step,
-    $rotate_facing,              $rotate_reverse,
-    $SETTING{'unpaper on scan'}, $SETTING{'OCR on scan'},
-    %options
+    device         => $SETTING{device},
+    npages         => $npages,
+    offset         => $start - $step,
+    step           => $step,
+    rotate_facing  => $rotate_facing,
+    rotate_reverse => $rotate_reverse,
+    unpaper        => $SETTING{'unpaper on scan'},
+    ocr            => $SETTING{'OCR on scan'},
+    device_options => \%options
    );
   }
  );
@@ -4565,9 +4581,14 @@ sub scan_dialog2 {
    # show an error
    $rotate = $n % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
    if ( defined $test_image ) {
-    import_scan( $test_image, $n, undef, FALSE, $rotate,
-     $SETTING{'unpaper on scan'},
-     $SETTING{'OCR on scan'} );
+    import_scan(
+     filename => $test_image,
+     page     => $n,
+     delete   => FALSE,
+     rotate   => $rotate,
+     unpaper  => $SETTING{'unpaper on scan'},
+     ocr      => $SETTING{'OCR on scan'}
+    );
    }
    else {
     $SETTING{resolution} =
@@ -4576,9 +4597,13 @@ sub scan_dialog2 {
       : $Gscan2pdf::Document::POINTS_PER_INCH;
     $logger->info("Importing scan with resolution=$SETTING{resolution}");
     import_scan(
-     File::Spec->catdir( $session, "out$n.pnm" ),
-     $n, $SETTING{resolution}, TRUE, $rotate, $SETTING{'unpaper on scan'},
-     $SETTING{'OCR on scan'}
+     filename   => File::Spec->catdir( $session, "out$n.pnm" ),
+     page       => $n,
+     resolution => $SETTING{resolution},
+     delete     => TRUE,
+     rotate     => $rotate,
+     unpaper    => $SETTING{'unpaper on scan'},
+     ocr        => $SETTING{'OCR on scan'}
     );
    }
   }
@@ -4762,27 +4787,31 @@ sub update_number {
 # Carry out the scan with scanimage or scanadf and the options passed.
 
 sub scan_pages {
- my (
-  $device,   $npages,       $offset, $step, $rfacing,
-  $rreverse, $unpaper_flag, $ocr,    %options
- ) = @_;
+ my (%options) = @_;
 
  # Make sure we are in temp directory
  chdir $session;
 
  if ($test) {
-  my $rotate = 1 % 2 ? $rfacing : $rreverse;
-  my $index = import_scan( $test_image, 1 * $step + $offset,
-   $SETTING{resolution}, FALSE, $rotate, $unpaper_flag, $ocr );
+  my $rotate = 1 % 2 ? $options{rotate_facing} : $options{rotate_reverse};
+  my $index = import_scan(
+   filename   => $test_image,
+   page       => 1 * $options{step} + $options{offset},
+   resolution => $SETTING{resolution},
+   delete     => FALSE,
+   rotate     => $rotate,
+   unpaper    => $options{unpaper},
+   ocr        => $options{ocr}
+  );
  }
  else {
   my $signal;
-  my @options = hash2options(%options);
+  my @options = hash2options( %{ $options{device_options} } );
   Gscan2pdf::Frontend::CLI->scan_pages(
    prefix           => $SETTING{'scan prefix'},
    frontend         => $SETTING{frontend},
-   device           => $device,
-   npages           => $npages,
+   device           => $options{device},
+   npages           => $options{npages},
    options          => \@options,
    started_callback => sub {
     $spbar->set_text( $d->get('Scanning') );
@@ -4813,10 +4842,17 @@ sub scan_pages {
 
     # If the scan can't be loaded then blow the scanning dialog away and
     # show an error
-    my $rotate = $id % 2 ? $rfacing : $rreverse;
+    my $rotate = $id % 2 ? $options{rotate_facing} : $options{rotate_reverse};
 
-    my $index = import_scan( $path, $id * $step + $offset,
-     $SETTING{resolution}, TRUE, $rotate, $unpaper_flag, $ocr );
+    my $index = import_scan(
+     filename   => $path,
+     page       => $id * $options{step} + $options{offset},
+     resolution => $SETTING{resolution},
+     delete     => TRUE,
+     rotate     => $rotate,
+     unpaper    => $options{unpaper},
+     ocr        => $options{ocr}
+    );
    },
    error_callback => sub {
     my ($text) = @_;
@@ -4886,12 +4922,11 @@ sub post_process_scan {
 # Take new scan and display it
 
 sub import_scan {
- my ( $ofilename, $page, $resolution, $delete, $rotate, $unpaper_flag, $ocr ) =
-   @_;
+ my %options = @_;
 
  # Interface to frontend
- open my $fh, '<', $ofilename    ## no critic (RequireBriefOpen)
-   or die "can't open $ofilename: $!\n";
+ open my $fh, '<', $options{filename}    ## no critic (RequireBriefOpen)
+   or die "can't open $options{filename}: $!\n";
 
  # Read without blocking
  my $size = 0;
@@ -4902,16 +4937,17 @@ sub import_scan {
    my ( $fileno, $condition ) = @_;
    if ( $condition & 'in' ) {    # bit field operation. >= would also work
     if ( $size == 0 ) {
-     $size = Gscan2pdf::NetPBM::file_size_from_header($ofilename);
+     $size = Gscan2pdf::NetPBM::file_size_from_header( $options{filename} );
      $logger->info("Header suggests $size");
      return Glib::SOURCE_CONTINUE if ( $size == 0 );
      close($fh);
     }
-    my $filesize = -s $ofilename;
+    my $filesize = -s $options{filename};
     $logger->info("Expecting $size, found $filesize");
     if ( $size > $filesize ) {
      my $pad = $size - $filesize;
-     open( my $fh, ">>", $ofilename ) or die "cannot open >> $ofilename: $!\n";
+     open( my $fh, ">>", $options{filename} )
+       or die "cannot open >> $options{filename}: $!\n";
      my $data = '';
      for ( 1 .. $pad * 8 ) {
       $data .= '1';
@@ -4921,21 +4957,22 @@ sub import_scan {
      $logger->info("Padded $pad bytes");
     }
     my $gpage = Gscan2pdf::Page->new(
-     filename   => $ofilename,
-     resolution => $resolution,
+     filename   => $options{filename},
+     resolution => $options{resolution},
      format     => 'Portable anymap',
-     delete     => $delete,
+     delete     => $options{delete},
      dir        => $session,
      window     => $window,
     );
-    my $index = $slist->add_page( $gpage, $page, &update_uimanager );
+    my $index = $slist->add_page( $gpage, $options{page}, &update_uimanager );
     if ( $index == -1 ) {
      show_message_dialog( $windows, 'error', 'close',
       $d->get('Unable to load image') );
     }
     else {
      update_uimanager();
-     post_process_scan( [$gpage], $rotate, $unpaper_flag, $ocr );
+     post_process_scan( [$gpage], $options{rotate}, $options{unpaper},
+      $options{ocr} );
     }
     return Glib::SOURCE_REMOVE;
    }
