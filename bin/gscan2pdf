@@ -82,6 +82,7 @@ use Fcntl qw(:flock)
   ;    # import LOCK_* constants to prevent us clobbering running instances
 use Log::Log4perl;
 use Try::Tiny;
+use Data::Dumper;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -361,10 +362,7 @@ $logger->info("Using PDF::API2 version $PDF::API2::VERSION");
 $logger->info( 'Using Sane version ' . join( '.', Sane->get_version ) );
 $logger->info("Using libsane-perl version $Sane::VERSION");
 
-if ($debug) {
- use Data::Dumper;
- $logger->debug( Dumper( \%SETTING ) );
-}
+$logger->debug( Dumper( \%SETTING ) ) if ($debug);
 
 # Just in case dependencies have changed, put put startup warning again
 if ( not defined( $SETTING{version} ) or $SETTING{version} ne $version ) {
@@ -2683,7 +2681,8 @@ sub save_dialog {
  $label = Gtk2::Label->new( $d->get('Font for non-ASCII text') );
  $hboxf->pack_start( $label, FALSE, FALSE, 0 );
  my @fonts;
- for (`fc-list : family style file`) {
+ my ($stdout) = Gscan2pdf::Document::open_three('fc-list : family style file');
+ for ( split /\n/, $stdout ) {
   if (/ttf:\ /x) {
    my ( $file, $family, $style ) = split ':';
    chomp $style;
@@ -3404,14 +3403,16 @@ sub email {
    my ($client);
    if ( defined( $ENV{KDE_FULL_SESSION} ) and $ENV{KDE_FULL_SESSION} eq 'true' )
    {
-    $client =
-`kreadconfig --file emaildefaults --group PROFILE_Default --key EmailClient| cut -d ' ' -f 1`;
+    ($client) = Gscan2pdf::Document::open_three(
+"kreadconfig --file emaildefaults --group PROFILE_Default --key EmailClient| cut -d ' ' -f 1"
+    );
    }
    elsif ( defined( $ENV{GNOME_DESKTOP_SESSION_ID} )
     and $ENV{GNOME_DESKTOP_SESSION_ID} ne '' )
    {
-    $client =
-`gconftool --get /desktop/gnome/url-handlers/mailto/command | cut -d ' ' -f 1`;
+    ($client) = Gscan2pdf::Document::open_three(
+"gconftool --get /desktop/gnome/url-handlers/mailto/command | cut -d ' ' -f 1"
+    );
    }
 
    my $mua_string;
@@ -6128,7 +6129,7 @@ sub update_options_hash {
    foreach my $widget ( $hbox->get_children ) {
     my $opt;
     $opt = $options->by_name($key) if ( defined $key );
-    if ( $widget->isa('Gtk2::Label') ) {
+    if ( $widget->isa('Gtk2::Label') ) {  ## no critic (ProhibitCascadingIfElse)
      $key = get_key( \%ddo, $widget->get_label );
     }
     elsif (
@@ -7651,8 +7652,7 @@ sub register_icon {
   $logger->warn("Unable to load icon `$path': $_");
   return;
  };
- my $set = Gtk2::IconSet->new_from_pixbuf($icon);
- $IconFactory->add( $stock_id, $set );
+ $IconFactory->add( $stock_id, Gtk2::IconSet->new_from_pixbuf($icon) );
  return;
 }
 
@@ -8126,7 +8126,7 @@ sub properties {
 
    # just can't insert these.
    for ( split '', $string ) {
-    if ( $_ lt 0 or $_ gt 9 ) {
+    if ( $_ lt '0' or $_ gt '9' ) {
      $entry->signal_stop_emission_by_name('insert-text');
      last;
     }
