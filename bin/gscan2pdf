@@ -153,8 +153,7 @@ EOS
 }
 
 if ( defined $help ) {
- system("perldoc $0") == 0 or warn $d->get("Error displaying help\n");
- exit;
+ system("perldoc $0") == 0 or die $d->get('Error displaying help'), "\n";
 }
 
 Log::Log4perl::init( \$log_conf );
@@ -1319,8 +1318,8 @@ if (@crashed) {
   $session = $crashed[$selected];
   open $lockfh, '>',    ## no critic (RequireBriefOpen)
     File::Spec->catfile( $session, 'lockfile' )
-    or die "Cannot open lockfile";
-  flock( $lockfh, LOCK_EX ) or die "Cannot lock file";
+    or die "Cannot open lockfile\n";
+  flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
   open_session();
  }
 }
@@ -1352,8 +1351,8 @@ unless ( defined $session ) {
  }
  open $lockfh, '>',    ## no critic (RequireBriefOpen)
    File::Spec->catfile( $session, 'lockfile' )
-   or die "Cannot open lockfile";
- flock( $lockfh, LOCK_EX ) or die "Cannot lock file";
+   or die "Cannot open lockfile\n";
+ flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
  $slist->save_session($session);
  $logger->info("Using $session for temporary files");
 }
@@ -4911,7 +4910,7 @@ sub import_scan {
 
  # Interface to frontend
  open my $fh, '<', $ofilename    ## no critic (RequireBriefOpen)
-   or die "can't open $ofilename: $!";
+   or die "can't open $ofilename: $!\n";
 
  # Read without blocking
  my $size = 0;
@@ -4931,7 +4930,7 @@ sub import_scan {
     $logger->info("Expecting $size, found $filesize");
     if ( $size > $filesize ) {
      my $pad = $size - $filesize;
-     open( my $fh, ">>", $ofilename ) or die "cannot open >> $ofilename: $!";
+     open( my $fh, ">>", $ofilename ) or die "cannot open >> $ofilename: $!\n";
      my $data = '';
      for ( 1 .. $pad * 8 ) {
       $data .= '1';
