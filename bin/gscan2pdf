@@ -383,29 +383,31 @@ Gscan2pdf::Frontend::CLI->setup($logger);
 
 # Create icons for rotate buttons
 my $IconFactory = undef;
-my $path;
+my $iconpath;
 if ( -d '/usr/share/gscan2pdf' ) {
- $path = '/usr/share/gscan2pdf';
+ $iconpath = '/usr/share/gscan2pdf';
 }
 else {
- $path = '.';    # FIXME: make this a big cleverer, going one dir down from bin.
+ $iconpath =
+   '.';    # FIXME: make this a big cleverer, going one dir down from bin.
 }
 init_icons(
- [ 'rotate90',  "$path/stock-rotate-90.svg" ],
- [ 'rotate180', "$path/stock-rotate-180.svg" ],
- [ 'rotate270', "$path/stock-rotate-270.svg" ],
- [ 'scanner',   "$path/scanner.svg" ],
- [ 'pdf',       "$path/pdf.svg" ],
- [ 'selection', "$path/stock-selection-all-16.png" ],
+ [ 'rotate90',  "$iconpath/stock-rotate-90.svg" ],
+ [ 'rotate180', "$iconpath/stock-rotate-180.svg" ],
+ [ 'rotate270', "$iconpath/stock-rotate-270.svg" ],
+ [ 'scanner',   "$iconpath/scanner.svg" ],
+ [ 'pdf',       "$iconpath/pdf.svg" ],
+ [ 'selection', "$iconpath/stock-selection-all-16.png" ],
 );
 
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
 my (
  $slist, $windowi, $windowe, $windows, $windows2, $windowh, $windowo, $windowrn,
- $windowu, $vboxd, $labeld, $combobd, $combobp, $vboxm, @undo_buffer,
+ $windowu, $vboxd, $labeld, $combobd, $combobp, $vbox_manual_paper,
+ @undo_buffer,
  @redo_buffer, @undo_selection, @redo_selection, %dependencies,
- %helperTag,
+ %helperTag,   $menubar,        $toolbar,
  @ocr_engine, $bscanall,       $bscannum, @clipboard, $windowd,
  $windowr,    $view,           $frames,   $duplex,    $windowp,
  $batch_scan, $print_settings, $windowc,  $current_page,
@@ -416,11 +418,8 @@ my (
  # Goo::Canvas for OCR output
  $canvas,
 
- # Notebook on scan dialog
- $notebook,
-
  # Scan button on scan dialog
- $sbutton,
+ $scan_button,
 
  # List of PageRange widgets
  @prlist,
@@ -442,7 +441,7 @@ my (
 
  # Temp::File object for PDF to be emailed
  # Define here to make sure that it doesn't get deleted until the next email
- # is created we quit
+ # is created or we quit
  $pdf,
 );
 
@@ -878,18 +877,18 @@ if ( $SETTING{'restore window'} ) {
  $window->maximize if ( $SETTING{'window_maximize'} );
 }
 
-try { $window->set_default_icon_from_file("$path/gscan2pdf.svg"); }
+try { $window->set_default_icon_from_file("$iconpath/gscan2pdf.svg"); }
 catch {
- $logger->warn("Unable to load icon `$path/gscan2pdf.svg': $@");
+ $logger->warn("Unable to load icon `$iconpath/gscan2pdf.svg': $@");
 };
 
-my $vbox = Gtk2::VBox->new;
-$window->add($vbox);
+my $main_vbox = Gtk2::VBox->new;
+$window->add($main_vbox);
 
 # Create the menu bar
-my ( $menubar, $toolbar ) = create_menu_bar($window);
-$vbox->pack_start( $menubar, FALSE, TRUE,  0 );
-$vbox->pack_start( $toolbar, FALSE, FALSE, 0 );
+create_menu_bar();
+$main_vbox->pack_start( $menubar, FALSE, TRUE,  0 );
+$main_vbox->pack_start( $toolbar, FALSE, FALSE, 0 );
 
 my $tooltips = Gtk2::Tooltips->new;
 $tooltips->enable;
@@ -897,7 +896,7 @@ $tooltips->enable;
 # HPaned for thumbnails and detail view
 my $hpaned = Gtk2::HPaned->new;
 $hpaned->set_position( $SETTING{'thumb panel'} );
-$vbox->pack_start( $hpaned, TRUE, TRUE, 0 );
+$main_vbox->pack_start( $hpaned, TRUE, TRUE, 0 );
 
 # Scrolled window for thumbnails
 my $scwin_thumbs = Gtk2::ScrolledWindow->new;
@@ -1309,16 +1308,17 @@ if (@crashed) {
  );
  my $label = Gtk2::Label->new( $d->get('Pick crashed session to restore') );
  $dialog->vbox->add($label);
- my $slist = Gtk2::Ex::Simple::List->new( $d->get('Session') => 'text', );
- push @{ $slist->{data} }, @crashed;
- $dialog->vbox->add($slist);
+ my $sessionlist = Gtk2::Ex::Simple::List->new( $d->get('Session') => 'text', );
+ push @{ $sessionlist->{data} }, @crashed;
+ $dialog->vbox->add($sessionlist);
  $dialog->show_all;
- ($selected) = $slist->get_selected_indices if ( $dialog->run eq 'ok' );
+ ($selected) = $sessionlist->get_selected_indices if ( $dialog->run eq 'ok' );
  $dialog->destroy;
 
  if ( defined $selected ) {
   $session = $crashed[$selected];
-  open $lockfh, '>', File::Spec->catfile( $session, 'lockfile' )    ## no critic
+  open $lockfh, '>',    ## no critic (RequireBriefOpen)
+    File::Spec->catfile( $session, 'lockfile' )
     or die "Cannot open lockfile";
   flock( $lockfh, LOCK_EX ) or die "Cannot lock file";
   open_session();
@@ -1350,7 +1350,8 @@ unless ( defined $session ) {
   $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
   $slist->set_dir($session);
  }
- open $lockfh, '>', File::Spec->catfile( $session, 'lockfile' )    ## no critic
+ open $lockfh, '>',    ## no critic (RequireBriefOpen)
+   File::Spec->catfile( $session, 'lockfile' )
    or die "Cannot open lockfile";
  flock( $lockfh, LOCK_EX ) or die "Cannot lock file";
  $slist->save_session($session);
@@ -1361,7 +1362,7 @@ $window->show_all;
 
 # Progress bars below window
 my $phbox = Gtk2::HBox->new;
-$vbox->pack_end( $phbox, FALSE, FALSE, 0 );
+$main_vbox->pack_end( $phbox, FALSE, FALSE, 0 );
 $phbox->show;
 my $shbox = Gtk2::HBox->new;
 $phbox->add($shbox);
@@ -1383,7 +1384,6 @@ $thbox->pack_end( $tcbutton, FALSE, FALSE, 0 );
 # Create the menu bar, initialize its menus, and return the menu bar.
 
 sub create_menu_bar {
- my ($window) = @_;
 
  # Create a Gtk2::UIManager instance
  $uimanager = Gtk2::UIManager->new;
@@ -1405,7 +1405,7 @@ sub create_menu_bar {
  $uimanager->add_ui_from_string($ui);
 
  # extract the menubar
- my $menubar = $uimanager->get_widget('/MenuBar');
+ $menubar = $uimanager->get_widget('/MenuBar');
 
  $SETTING{user_defined_tools} = [ $SETTING{user_defined_tools} ]
    if ( ref( $SETTING{user_defined_tools} ) ne 'ARRAY' );
@@ -1554,13 +1554,13 @@ sub create_menu_bar {
  }
 
  # extract the toolbar
- my $toolbar = $uimanager->get_widget('/ToolBar');
+ $toolbar = $uimanager->get_widget('/ToolBar');
 
  # turn off labels
  my $settings = $toolbar->get_settings();
  $settings->set( 'gtk-toolbar-style', 'icons' );    # only icons
 
- return ( $menubar, $toolbar );
+ return;
 }
 
 # ghost or unghost as necessary as # pages > 0 or not.
@@ -1722,7 +1722,7 @@ sub create_canvas {
  # Attach the text to the canvas
  for my $box ( $page->boxes ) {
   my ( $x1, $y1, $x2, $y2, $text ) = @$box;
-  boxed_text( $canvas, $text, $x1, $y1, $x2, $y2, abs( $y2 - $y1 ) );
+  boxed_text( $text, $x1, $y1, $x2, $y2, abs( $y2 - $y1 ) );
  }
 
  # Remove the existing contents
@@ -2102,13 +2102,13 @@ sub add_pdf_metadata {
    Gtk2::Button->new( sprintf( "%04d-%02d-%02d", $year, $month, $day ) );
  $button->signal_connect(
   clicked => sub {
-   my $window = Gscan2pdf::Dialog->new(
+   my $window_date = Gscan2pdf::Dialog->new(
     'transient-for' => $windowi,
     title           => $d->get('Select Date'),
     border_width    => $border_width
    );
-   my $vbox = $window->get('vbox');
-   $window->set_resizable(FALSE);
+   my $vbox_date = $window_date->get('vbox');
+   $window_date->set_resizable(FALSE);
 
    my $calendar = Gtk2::Calendar->new;
    $calendar->select_day($day);
@@ -2121,23 +2121,23 @@ sub add_pdf_metadata {
      use Time::Local;
      $SETTING{'date offset'} = int(
       ( timelocal( 0, 0, 0, $day, $month - 1, $year ) - time ) / 60 / 60 / 24 );
-     $window->destroy;
+     $window_date->destroy;
     }
    );
-   $vbox->pack_start( $calendar, TRUE, TRUE, 0 );
+   $vbox_date->pack_start( $calendar, TRUE, TRUE, 0 );
 
    my $today = Gtk2::Button->new( $d->get('Today') );
    $today->signal_connect(
     clicked => sub {
-     my ( $day, $month, $year ) = ( localtime() )[ 3, 4, 5 ];
+     ( $day, $month, $year ) = ( localtime() )[ 3, 4, 5 ];
      $year += 1900;
      $calendar->select_day($day);
      $calendar->select_month( $month, $year );
     }
    );
-   $vbox->pack_start( $today, TRUE, TRUE, 0 );
+   $vbox_date->pack_start( $today, TRUE, TRUE, 0 );
 
-   $window->show_all;
+   $window_date->show_all;
   }
  );
  $tooltips->set_tip( $button, $d->get('Year-Month-Day') );
@@ -2214,7 +2214,7 @@ sub get_pdf_metadata {
 # Draw text on the canvas with a box around it
 
 sub boxed_text {
- my ( $canvas, $char, $x1, $y1, $x2, $y2, $size ) = @_;
+ my ( $char, $x1, $y1, $x2, $y2, $size ) = @_;
  my $root = $canvas->get_root_item;
  my $g    = Goo::Canvas::Group->new($root);
  $g->translate( $x1, $y1 );
@@ -2237,16 +2237,14 @@ sub boxed_text {
    );
    my $textview   = Gtk2::TextView->new;
    my $textbuffer = $textview->get_buffer;
-   my $char       = $widget->get('text');
-   $textbuffer->set( text => $char );
+   $textbuffer->set( text => $widget->get('text') );
    $dialog->vbox->add($textview);
    $dialog->set_default_response('ok');
    $dialog->show_all;
 
    if ( $dialog->run eq 'ok' ) {
-    my $char = $textbuffer->get('text');
-    $widget->set( text => $char );
-    canvas2hocr($canvas);
+    $widget->set( text => $textbuffer->get('text') );
+    canvas2hocr();
    }
    $dialog->destroy;
    $canvas->pointer_ungrab( $widget, $ev->time );
@@ -2282,7 +2280,6 @@ sub boxed_text {
 # Convert the canvas into hocr
 
 sub canvas2hocr {
- my ($canvas) = @_;
  my ( $x, $y, $w, $h ) = $canvas->get_bounds;
 
  $current_page->{hocr} = <<"EOS";
@@ -2376,7 +2373,7 @@ sub save_PDF {
    my ( $dialog, $response ) = @_;
    $logger->debug("PDF save filename dialog returned $response");
    if ( $response eq 'ok' ) {
-    my $filename = $file_chooser->get_filename;
+    $filename = $file_chooser->get_filename;
     if ( $filename !~ /\.pdf$/ix ) {
      $filename = $filename . '.pdf';
      if ( -f $filename ) {
@@ -3763,7 +3760,7 @@ sub scan_dialog {
       $SETTING{$name} = $value;
      }
     }
-    rescan_options( $vboxd, $device_list[ $combobd->get_active ]{name} )
+    rescan_options( $device_list[ $combobd->get_active ]{name} )
       if ( defined $combobd );
    }
   }
@@ -3836,9 +3833,9 @@ sub scan_dialog {
  $vbox->pack_end( $hboxb, FALSE, FALSE, 0 );
 
  # Scan button
- $sbutton = Gtk2::Button->new( $d->get('Scan') );
- $hboxb->pack_start( $sbutton, TRUE, TRUE, 0 );
- $sbutton->signal_connect(
+ $scan_button = Gtk2::Button->new( $d->get('Scan') );
+ $hboxb->pack_start( $scan_button, TRUE, TRUE, 0 );
+ $scan_button->signal_connect(
   clicked => sub {
 
    # Update undo/redo buffers
@@ -3869,8 +3866,8 @@ sub scan_dialog {
     }
    }
 
-   my $start = $spin_buttons->get_value;
-   my $step  = $spin_buttoni->get_value;
+   $start = $spin_buttons->get_value;
+   $step  = $spin_buttoni->get_value;
 
    if ( not $checkx->get_active and $start == 1 and $step < 0 ) {
     show_message_dialog( $windows, 'error', 'cancel',
@@ -3969,10 +3966,10 @@ sub scan_dialog {
 
 # Has to be done after showing the window, otherwise the window doesn't get centred.
  if ($test) {
-  $sbutton->grab_focus;
+  $scan_button->grab_focus;
  }
  else {
-  $sbutton->set_sensitive(FALSE);
+  $scan_button->set_sensitive(FALSE);
  }
  return;
 }
@@ -4103,12 +4100,12 @@ sub add_postprocessing_options {
  $hboxu->pack_end( $button, TRUE, TRUE, 0 );
  $button->signal_connect(
   clicked => sub {
-   my $windowo = Gscan2pdf::Dialog->new(
+   my $windowuo = Gscan2pdf::Dialog->new(
     'transient-for' => $window,
     title           => $d->get('unpaper options'),
     border_width    => $border_width
    );
-   my $vbox1 = $windowo->get('vbox');
+   my $vbox1 = $windowuo->get('vbox');
    $unpaper->add_options($vbox1);
 
    # HBox for buttons
@@ -4124,16 +4121,16 @@ sub add_postprocessing_options {
      # Update $SETTING
      $SETTING{'unpaper options'} = $unpaper->get_options;
 
-     $windowo->destroy;
+     $windowuo->destroy;
     }
    );
 
    # Cancel button
    my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
    $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
-   $cbutton->signal_connect( clicked => sub { $windowo->destroy; } );
+   $cbutton->signal_connect( clicked => sub { $windowuo->destroy; } );
 
-   $windowo->show_all;
+   $windowuo->show_all;
   }
  );
 
@@ -4263,7 +4260,7 @@ sub get_devices {
    }
 
    if (@device_list) {    # Update combobox
-    my $i = 0;
+    $i = 0;
     while ( $i < @device_list ) {
      if ( @$device_list
       and $i < @$device_list
@@ -4366,9 +4363,9 @@ sub scan_dialog2 {
  );
  $windows2->signal_connect(
   'changed-page-number-start' => sub {
-   my ( $widget, $start ) = @_;
+   my ( $widget, $value ) = @_;
    $windows2->set( 'max-pages',
-    $slist->pages_possible( $start, $windows2->get('page-number-increment') ) );
+    $slist->pages_possible( $value, $windows2->get('page-number-increment') ) );
   }
  );
  $windows2->signal_connect(
@@ -4422,8 +4419,8 @@ sub scan_dialog2 {
 
  $windows2->signal_connect(
   'finished-process' => sub {
-   my ( $widget, $process, $signal ) = @_;
-   $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   my ( $widget, $process, $button_signal ) = @_;
+   $scbutton->signal_handler_disconnect($button_signal) if ( defined $signal );
    $shbox->hide;
 
    $windows2->scan_options( $SETTING{device} )
@@ -4586,7 +4583,7 @@ sub scan_dialog2 {
 
    # If the scan can't be loaded then blow the scanning dialog away and
    # show an error
-   my $rotate = $n % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
+   $rotate = $n % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
    if ( defined $test_image ) {
     import_scan( $test_image, $n, undef, FALSE, $rotate,
      $SETTING{'unpaper on scan'},
@@ -4621,8 +4618,8 @@ sub walk_options_tree {
 
  # Get device-specific options
  my %options;
- if ( defined $vboxm ) {
-  foreach my $hbox ( $vboxd->get_children, $vboxm->get_children ) {
+ if ( defined $vbox_manual_paper ) {
+  foreach my $hbox ( $vboxd->get_children, $vbox_manual_paper->get_children ) {
    my $key;
    if ( $hbox->isa('Gtk2::HBox') and $hbox->sensitive ) {
     foreach my $widget ( $hbox->get_children ) {
@@ -4679,7 +4676,7 @@ sub populate_device_list {
     # only delete the mode setting if switching devices, not on first run
     delete $SETTING{mode} if ($run);
     $run = TRUE;
-    rescan_options( $vboxd, $device_list[$index]{name} );
+    rescan_options( $device_list[$index]{name} );
     $vboxd->show_all;
    }
   }
@@ -4884,9 +4881,9 @@ sub post_process_scan {
  if ($rotate) {
   rotate(
    $rotate, $pages,
-   sub {
-    my ($pages) = @_;
-    post_process_scan( $pages, undef, $unpaper_flag, $ocr );
+   sub {    # finished callback
+    my ($page) = @_;
+    post_process_scan( $page, undef, $unpaper_flag, $ocr );
    }
   );
  }
@@ -4894,9 +4891,9 @@ sub post_process_scan {
   unpaper_page(
    $pages,
    $unpaper->get_cmdline,
-   sub {
-    my ($pages) = @_;
-    post_process_scan( $pages, undef, undef, $ocr );
+   sub {    # finished callback
+    my ($page) = @_;
+    post_process_scan( $page, undef, undef, $ocr );
    }
   );
  }
@@ -4973,21 +4970,21 @@ sub import_scan {
 
 sub print_dialog {
  chdir $SETTING{'cwd'};
- my $op = Gtk2::PrintOperation->new;
+ my $print_op = Gtk2::PrintOperation->new;
 
- $op->set_print_settings($print_settings)
+ $print_op->set_print_settings($print_settings)
    if ( defined $print_settings );
 
- $op->signal_connect(
+ $print_op->signal_connect(
   begin_print => sub {
    my ( $op, $context ) = @_;
 
-   my $print_settings = $op->get_print_settings;
-   my $pages          = $print_settings->get('print-pages');
+   my $settings = $op->get_print_settings;
+   my $pages    = $settings->get('print-pages');
    my @page_list;
    if ( $pages eq 'ranges' ) {
     my $page_set = Set::IntSpan->new;
-    my $ranges   = $print_settings->get('page-ranges');
+    my $ranges   = $settings->get('page-ranges');
     for ( split ',', $ranges ) {
      $page_set->I($_);
     }
@@ -5002,7 +4999,7 @@ sub print_dialog {
   }
  );
 
- $op->signal_connect(
+ $print_op->signal_connect(
   draw_page => sub {
    my ( $op, $context, $page_number ) = @_;
 
@@ -5034,9 +5031,9 @@ sub print_dialog {
   }
  );
 
- my $res = $op->run( 'print-dialog', $window );
+ my $res = $print_op->run( 'print-dialog', $window );
 
- $print_settings = $op->get_print_settings if ( $res eq 'apply' );
+ $print_settings = $print_op->get_print_settings if ( $res eq 'apply' );
  chdir $session;
  return;
 }
@@ -5181,10 +5178,10 @@ sub delete_pages {
 sub reset_start {
  if ( defined $spin_buttons ) {
   if ( $#{ $slist->{data} } > -1 ) {
-   my $start = $spin_buttons->get_value;
-   my $step  = $spin_buttoni->get_value;
+   my $start_page = $spin_buttons->get_value;
+   my $step       = $spin_buttoni->get_value;
    $spin_buttons->set_value( $slist->{data}[ $#{ $slist->{data} } ][0] + $step )
-     if ( $start > $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
+     if ( $start_page > $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
   }
   else {
    $spin_buttons->set_value(1);
@@ -5192,11 +5189,11 @@ sub reset_start {
  }
  elsif ( defined $windows2 ) {
   if ( $#{ $slist->{data} } > -1 ) {
-   my $start = $windows2->get('page-number-start');
-   my $step  = $windows2->get('page-number-increment');
+   my $start_page = $windows2->get('page-number-start');
+   my $step       = $windows2->get('page-number-increment');
    $windows2->set( 'page-number-start',
     $slist->{data}[ $#{ $slist->{data} } ][0] + $step )
-     if ( $start > $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
+     if ( $start_page > $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
   }
   else {
    $windows2->set( 'page-number-start', 1 );
@@ -5445,10 +5442,10 @@ sub check_command {
 # Rescan device-dependent scan options
 
 sub rescan_options {
- my ( $vboxd, $device ) = @_;
+ my ($device) = @_;
 
  #  Ghost the scan button whilst options being updated
- $sbutton->set_sensitive(FALSE) if ( defined $sbutton );
+ $scan_button->set_sensitive(FALSE) if ( defined $scan_button );
 
  # Empty $vboxd first
  foreach ( $vboxd->get_children ) {
@@ -5476,7 +5473,7 @@ sub rescan_options {
    );
   }
   if ( $response eq 'cancel' ) {
-   parse_options( $vboxd, $device, $options );
+   parse_options( $device, $options );
    return;
   }
  }
@@ -5493,7 +5490,7 @@ sub rescan_options {
   # Slurp it from file
   my $output = Gscan2pdf::Document::slurp($filename);
   $vboxd->hide_all;    # merely here for consistency with normal operation
-  parse_options( $vboxd, $device, options2hash($output) );
+  parse_options( $device, options2hash($output) );
  }
  else {
   # Set up ProgressBar
@@ -5516,7 +5513,7 @@ sub rescan_options {
     $pbar->destroy;
     $vboxd->hide_all;
     $logger->info($output);
-    parse_options( $vboxd, $device, options2hash($output) );
+    parse_options( $device, options2hash($output) );
    }
   );
  }
@@ -5524,13 +5521,13 @@ sub rescan_options {
 }
 
 sub parse_options {
- my ( $vboxd, $device, $options ) = @_;
+ my ( $device, $options ) = @_;
 
  # Dig out the paper sizes
  my (
   $x,            $y,            $l,            $t,
   $h,            $w,            $spin_buttonx, $spin_buttony,
-  $spin_buttonl, $spin_buttont, $spin_buttonh, $spin_buttonw
+  $spin_buttonl, $spin_buttont, $spin_buttonh, $spin_buttonw,
  );
  $x = $options->by_name('x')->{constraint}{max}
    if ( defined $options->by_name('x') );
@@ -5568,8 +5565,8 @@ sub parse_options {
   $hboxp->pack_end( $combobp, FALSE, FALSE, 0 );
 
   # Define manual paper here to reference it in callback
-  $vboxm = Gtk2::VBox->new;
-  $vboxd->pack_start( $vboxm, FALSE, FALSE, 0 );
+  $vbox_manual_paper = Gtk2::VBox->new;
+  $vboxd->pack_start( $vbox_manual_paper, FALSE, FALSE, 0 );
  }
 
  # Add remaining options
@@ -5580,12 +5577,12 @@ sub parse_options {
    if ( $option->{name} =~ /^page-?width$/x ) {
     $w            = $option->{constraint}{max};
     $spin_buttonw = $widget;
-    $vboxm->pack_start( $hbox, TRUE, TRUE, 0 );
+    $vbox_manual_paper->pack_start( $hbox, TRUE, TRUE, 0 );
    }
    elsif ( $option->{name} =~ /^page-?height$/x ) {
     $h            = $option->{constraint}{max};
     $spin_buttonh = $widget;
-    $vboxm->pack_start( $hbox, TRUE, TRUE, 0 );
+    $vbox_manual_paper->pack_start( $hbox, TRUE, TRUE, 0 );
    }
    else {
     $vboxd->pack_start( $hbox, TRUE, TRUE, 0 );
@@ -5632,7 +5629,7 @@ sub parse_options {
      changed => sub {
       $SETTING{ $option->{name} } =
         get_value( \%ddo, $option->{name}, $widget->get_active_text );
-      update_options( $vboxd, $device );
+      update_options($device);
      }
     );
    }
@@ -5670,14 +5667,14 @@ sub parse_options {
    }
   );
   ( $spin_buttonx, $spin_buttony, $spin_buttonl, $spin_buttont ) =
-    add_spinbutton( $vboxm, @info );
+    add_spinbutton( $vbox_manual_paper, @info );
   $combobp->signal_connect(
    changed => sub {
     if ( $combobp->get_active_text eq $d->get('Edit') ) {
-     edit_paper( $combobp, $options );
+     edit_paper($options);
     }
     elsif ( $combobp->get_active_text eq $d->get('Manual') ) {
-     $vboxm->show_all;
+     $vbox_manual_paper->show_all;
     }
     else {
      my $paper = $combobp->get_active_text;
@@ -5689,7 +5686,7 @@ sub parse_options {
       $spin_buttonw->set_value( $SETTING{Paper}{$paper}{x} );
       $spin_buttonh->set_value( $SETTING{Paper}{$paper}{y} );
      }
-     Glib::Idle->add( sub { $vboxm->hide; } );
+     Glib::Idle->add( sub { $vbox_manual_paper->hide; } );
     }
    }
   );
@@ -5705,9 +5702,9 @@ sub parse_options {
   $SETTING{'Paper size'} );
 
  #  Unghost the scan button
- if ( defined $sbutton ) {
-  $sbutton->set_sensitive(TRUE);
-  $sbutton->grab_focus;
+ if ( defined $scan_button ) {
+  $scan_button->set_sensitive(TRUE);
+  $scan_button->grab_focus;
  }
  return;
 }
@@ -5786,7 +5783,7 @@ sub add_spinbutton {
 
 # Paper editor
 sub edit_paper {
- my ( $combobp, $options ) = @_;
+ my ($options) = @_;
 
  if ( defined $windowd ) {
   $windowd->present;
@@ -5802,7 +5799,7 @@ sub edit_paper {
 
  # Buttons for SimpleList
  my $hboxl = Gtk2::HBox->new;
- $vbox->pack_start( $hboxl, FALSE, FALSE, 0 );
+ $vbox1->pack_start( $hboxl, FALSE, FALSE, 0 );
  my $vboxb = Gtk2::VBox->new;
  $hboxl->pack_start( $vboxb, FALSE, FALSE, 0 );
  my $dbutton = Gtk2::Button->new_from_stock('gtk-add');
@@ -5811,7 +5808,7 @@ sub edit_paper {
  $vboxb->pack_end( $rbutton, TRUE, FALSE, 0 );
 
  # Set up a SimpleList
- my $slist = Gtk2::Ex::Simple::List->new(
+ my $paper_list = Gtk2::Ex::Simple::List->new(
   $d->get('Name')   => 'text',
   $d->get('Width')  => 'int',
   $d->get('Height') => 'int',
@@ -5819,7 +5816,7 @@ sub edit_paper {
   $d->get('Top')    => 'int'
  );
  for ( keys %{ $SETTING{Paper} } ) {
-  push @{ $slist->{data} },
+  push @{ $paper_list->{data} },
     [
    $_,                     $SETTING{Paper}{$_}{x}, $SETTING{Paper}{$_}{y},
    $SETTING{Paper}{$_}{l}, $SETTING{Paper}{$_}{t}
@@ -5828,21 +5825,21 @@ sub edit_paper {
 
  # Set everything to be editable
  for ( 0 .. 4 ) {
-  $slist->set_column_editable( $_, TRUE );
+  $paper_list->set_column_editable( $_, TRUE );
  }
- $slist->get_column(0)->set_sort_column_id(0);
+ $paper_list->get_column(0)->set_sort_column_id(0);
 
  # Add button callback
  $dbutton->signal_connect(
   clicked => sub {
-   my @rows = $slist->get_selected_indices;
+   my @rows = $paper_list->get_selected_indices;
    $rows[0] = 0 unless (@rows);
-   my $name    = $slist->{data}[ $rows[0] ][0];
-   my $version = 2;
-   my $i       = 0;
-   while ( $i < @{ $slist->{data} } ) {
-    if ( $slist->{data}[$i][0] eq "$name ($version)" ) {
-     ++$version;
+   my $name          = $paper_list->{data}[ $rows[0] ][0];
+   my $paper_version = 2;
+   my $i             = 0;
+   while ( $i < @{ $paper_list->{data} } ) {
+    if ( $paper_list->{data}[$i][0] eq "$name ($paper_version)" ) {
+     ++$paper_version;
      $i = 0;
     }
     else {
@@ -5850,66 +5847,71 @@ sub edit_paper {
     }
    }
    my @line = [
-    "$name ($version)",
-    $slist->{data}[ $rows[0] ][1],
-    $slist->{data}[ $rows[0] ][2],
-    $slist->{data}[ $rows[0] ][3],
-    $slist->{data}[ $rows[0] ][4]
+    "$name ($paper_version)",
+    $paper_list->{data}[ $rows[0] ][1],
+    $paper_list->{data}[ $rows[0] ][2],
+    $paper_list->{data}[ $rows[0] ][3],
+    $paper_list->{data}[ $rows[0] ][4]
    ];
-   splice @{ $slist->{data} }, $rows[0] + 1, 0, @line;
+   splice @{ $paper_list->{data} }, $rows[0] + 1, 0, @line;
   }
  );
 
  # Remove button callback
  $rbutton->signal_connect(
   clicked => sub {
-   my @rows = $slist->get_selected_indices;
-   if ( $#rows == $#{ $slist->{data} } ) {
+   my @rows = $paper_list->get_selected_indices;
+   if ( $#rows == $#{ $paper_list->{data} } ) {
     show_message_dialog( $windowd, 'error', 'close',
      $d->get('Cannot delete all paper sizes') );
    }
    else {
     while (@rows) {
-     splice @{ $slist->{data} }, shift(@rows), 1;
+     splice @{ $paper_list->{data} }, shift(@rows), 1;
     }
    }
   }
  );
 
  # Set-up the callback to check that no two Names are the same
- $slist->get_model->signal_connect(
+ $paper_list->get_model->signal_connect(
   'row-changed' => sub {
    my ( $model, $path, $iter ) = @_;
-   for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
+   for ( my $i = 0 ; $i < @{ $paper_list->{data} } ; $i++ ) {
     if ( $i != $path->to_string
-     and $slist->{data}[ $path->to_string ][0] eq $slist->{data}[$i][0] )
+     and $paper_list->{data}[ $path->to_string ][0] eq
+     $paper_list->{data}[$i][0] )
     {
-     my $name    = $slist->{data}[ $path->to_string ][0];
-     my $version = 2;
+     my $name          = $paper_list->{data}[ $path->to_string ][0];
+     my $paper_version = 2;
      if ( $name =~ /(.*)\ \((\d+)\)/x ) {
-      $name    = $1;
-      $version = $2 + 1;
+      $name          = $1;
+      $paper_version = $2 + 1;
      }
-     $slist->{data}[ $path->to_string ][0] = "$name ($version)";
+     $paper_list->{data}[ $path->to_string ][0] = "$name ($paper_version)";
      return;
     }
    }
   }
  );
- $hboxl->pack_end( $slist, FALSE, FALSE, 0 );
+ $hboxl->pack_end( $paper_list, FALSE, FALSE, 0 );
 
  # Buttons
  my $hboxb = Gtk2::HBox->new;
- $vbox->pack_start( $hboxb, FALSE, FALSE, 0 );
+ $vbox1->pack_start( $hboxb, FALSE, FALSE, 0 );
  my $abutton = Gtk2::Button->new_from_stock('gtk-apply');
  $abutton->signal_connect(
   clicked => sub {
    delete $SETTING{Paper};
-   for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
-    $SETTING{Paper}{ $slist->{data}[$i][0] }{x} = $slist->{data}[$i][1];
-    $SETTING{Paper}{ $slist->{data}[$i][0] }{y} = $slist->{data}[$i][2];
-    $SETTING{Paper}{ $slist->{data}[$i][0] }{l} = $slist->{data}[$i][3];
-    $SETTING{Paper}{ $slist->{data}[$i][0] }{t} = $slist->{data}[$i][4];
+   for ( my $i = 0 ; $i < @{ $paper_list->{data} } ; $i++ ) {
+    $SETTING{Paper}{ $paper_list->{data}[$i][0] }{x} =
+      $paper_list->{data}[$i][1];
+    $SETTING{Paper}{ $paper_list->{data}[$i][0] }{y} =
+      $paper_list->{data}[$i][2];
+    $SETTING{Paper}{ $paper_list->{data}[$i][0] }{l} =
+      $paper_list->{data}[$i][3];
+    $SETTING{Paper}{ $paper_list->{data}[$i][0] }{t} =
+      $paper_list->{data}[$i][4];
    }
 
    # Update list in Gscan2pdf::Document so that it can be used by get_resolution
@@ -5928,9 +5930,9 @@ sub edit_paper {
       . ' '
       . join( ', ', @ignored )
    ) if (@ignored);
-   my @rows = $slist->get_selected_indices;
+   my @rows = $paper_list->get_selected_indices;
    $rows[0] = 0 unless (@rows);
-   $SETTING{'Paper size'} = $slist->{data}[ $rows[0] ][0];
+   $SETTING{'Paper size'} = $paper_list->{data}[ $rows[0] ][0];
    Gscan2pdf::Scanner::Dialog::set_combobox_by_text( $combobp,
     $SETTING{'Paper size'} );
    $windowd->hide;
@@ -5940,9 +5942,9 @@ sub edit_paper {
  my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
  $cbutton->signal_connect(
   clicked => sub {
-   my @rows = $slist->get_selected_indices;
+   my @rows = $paper_list->get_selected_indices;
    $rows[0] = 0 unless (@rows);
-   $SETTING{'Paper size'} = $slist->{data}[ $rows[0] ][0];
+   $SETTING{'Paper size'} = $paper_list->{data}[ $rows[0] ][0];
    Gscan2pdf::Scanner::Dialog::set_combobox_by_text( $combobp,
     $SETTING{'Paper size'} );
    $windowd->hide;
@@ -5973,7 +5975,7 @@ sub add_paper {
 # Update device-dependent scan options having selected a new mode
 
 sub update_options {
- my ( $vboxd, $device ) = @_;
+ my ($device) = @_;
 
  # Empty $vboxd first
  foreach ( $vboxd->get_children ) {
@@ -6000,7 +6002,7 @@ sub update_options {
    );
   }
   if ( $response eq 'cancel' ) {
-   update_options_hash( $vboxd, $options );
+   update_options_hash($options);
    return;
   }
  }
@@ -6016,7 +6018,7 @@ sub update_options {
   # Slurp it from file
   my $output = Gscan2pdf::Document::slurp($filename);
   $vboxd->hide_all;    # merely here for consistency with normal operation
-  update_options_hash( $vboxd, options2hash($output) );
+  update_options_hash( options2hash($output) );
  }
  else {
   # Set up ProgressBar
@@ -6039,7 +6041,7 @@ sub update_options {
     $pbar->destroy;
     $vboxd->hide_all;
     $logger->info($output);
-    update_options_hash( $vboxd, options2hash($output) );
+    update_options_hash( options2hash($output) );
    }
   );
  }
@@ -6100,7 +6102,7 @@ sub options2hash {
 
 sub update_options_hash {
 
- my ( $vboxd, $options ) = @_;
+ my ($options) = @_;
  my ( $hboxm, $hboxp );
 
  foreach my $hbox ( $vboxd->get_children ) {
@@ -6199,7 +6201,8 @@ sub update_options_hash {
   }
  }
 
- $vboxm->show_all if ( $combobp->get_active_text eq $d->get('Manual') );
+ $vbox_manual_paper->show_all
+   if ( $combobp->get_active_text eq $d->get('Manual') );
  $hboxm->show_all if ( defined $hboxm );
  $hboxp->show_all if ( defined $hboxp );
  $vboxd->show;
@@ -7964,7 +7967,7 @@ sub preferences {
     }
     else {
      $windows2->destroy if ( defined $windows2 );
-     rescan_options( $vboxd, $device_list[ $combobd->get_active ]{name} )
+     rescan_options( $device_list[ $combobd->get_active ]{name} )
        if ( defined $windows );
     }
    }
@@ -8034,7 +8037,7 @@ sub add_user_defined_tool_menu {
  my ($tool) = @_;
  my $action_group = Gtk2::ActionGroup->new("actions");
  $tool->{name} = "$action_group";
- my $ui = <<"EOS";
+ my $tool_ui = <<"EOS";
 <ui>
  <menubar name='MenuBar'>
   <menu action='Tools'>
@@ -8047,15 +8050,15 @@ sub add_user_defined_tool_menu {
 EOS
 
  # add the basic XML description of the GUI
- $tool->{merge_id} = $uimanager->add_ui_from_string($ui);
+ $tool->{merge_id} = $uimanager->add_ui_from_string($tool_ui);
 
- my @action_items = (
+ my @action_item = (
 
   # Fields for each action item:
   # [name, stock_id, value, label, accelerator, tooltip, callback]
   [ $tool->{name}, undef, $tool->{cmd}, undef, undef, \&user_defined_tool ],
  );
- $action_group->add_actions( \@action_items, undef );
+ $action_group->add_actions( \@action_item, undef );
 
  # Add the actiongroup to the uimanager
  $uimanager->insert_action_group( $action_group, 0 );
