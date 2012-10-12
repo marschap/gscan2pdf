@@ -1170,9 +1170,11 @@ sub _monitor_process {
  my $pid = ++$_PID;
  $self->{running_pids}{$pid} = 1;
 
- $options{queued_callback}
-   ->( $_self->{process_name}, $jobs_completed, $jobs_total )
-   if ( $options{queued_callback} );
+ $options{queued_callback}->(
+  process_name   => $_self->{process_name},
+  jobs_completed => $jobs_completed,
+  jobs_total     => $jobs_total
+ ) if ( $options{queued_callback} );
  _when_ready(
   $options{sentinel},
   undef,    # pending
@@ -1203,8 +1205,11 @@ sub _monitor_process {
     $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
    ) if ( $options{started_callback} and not $started_flag );
    $options{running_callback}->(
-    1, $_self->{process_name},
-    $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
+    process        => $_self->{process_name},
+    jobs_completed => $jobs_completed,
+    jobs_total     => $jobs_total,
+    message        => $_self->{message},
+    progress       => $_self->{progress}
    ) if ( $options{running_callback} );
   },
   sub {    # finished
