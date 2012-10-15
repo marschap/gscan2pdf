@@ -4309,13 +4309,16 @@ sub scan_dialog2 {
 
  # scan pop-up window
  $windows2 = Gscan2pdf::Scanner::Dialog->new(
-  'transient-for'  => $window,
-  title            => $d->get('Scan Document'),
-  border_width     => $border_width,
-  logger           => $logger,
-  dir              => $session,
-  'hide-on-delete' => TRUE,
-  'num-pages'      => $SETTING{'pages to scan'},
+  'transient-for'     => $window,
+  title               => $d->get('Scan Document'),
+  border_width        => $border_width,
+  logger              => $logger,
+  dir                 => $session,
+  'hide-on-delete'    => TRUE,
+  'num-pages'         => $SETTING{'pages to scan'},
+  'page-number-start' => $#{ $slist->{data} } > -1
+  ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
+  : 1,
  );
 
 # Can't set the device when creating the window, as the list does not exist then
