@@ -26,16 +26,31 @@ sub setup {
 
 sub get_devices {
  my ( $class, %options ) = @_;
- my $running = TRUE;
 
- _watch_stdout(
-"$options{prefix} scanimage --formatted-device-list=\"'%i','%d','%v','%m','%t'%n\" 2>/dev/null",
-  $options{running_callback},
+ my $running = TRUE;
+ my $timer   = Glib::Timeout->add(
+  $_POLL_INTERVAL,
   sub {
-   my ($output) = @_;
+   $options{running_callback}->() if ( defined $options{running_callback} );
+   return Glib::SOURCE_CONTINUE   if $running;
+   return Glib::SOURCE_REMOVE;
+  }
+ );
+
+ my $output = '';
+ _watch_cmd(
+"$options{prefix} scanimage --formatted-device-list=\"'%i','%d','%v','%m','%t'%n\"",
+  $options{started_callback},
+  sub {
+   my ($line) = @_;
+   $output .= $line;
+  },
+  undef,
+  sub {
    $options{finished_callback}
      ->( Gscan2pdf::Frontend::CLI->parse_device_list($output) )
      if ( defined $options{finished_callback} );
+   $running = FALSE;
   }
  );
  return;
@@ -75,7 +90,7 @@ sub find_scan_options {
  my $cmd =
 "$options{prefix} $options{frontend} --help --device-name='$options{device}'";
  $cmd .= " --mode='$options{mode}'" if ( defined $options{mode} );
- _watch_stdout(
+ _watch_cmd(
   $cmd,
   $options{running_callback},
   sub {
@@ -133,9 +148,10 @@ sub _scanimage {
 # flag to ignore out of documents message if successfully scanned at least one page
  my $num_scans = 0;
 
- _watch_stderr(
+ _watch_cmd(
   $cmd,
   $options{started_callback},
+  undef,
   sub {
    my ($line) = @_;
    given ($line) {
@@ -272,9 +288,10 @@ sub _scanadf {
   );
  }
 
- _watch_stderr(
+ _watch_cmd(
   $cmd,
   $options{started_callback},
+  undef,
   sub {
    my ($line) = @_;
    given ($line) {
@@ -342,64 +359,12 @@ sub cancel_scan {
  return;
 }
 
-sub _watch_stdout {
- my ( $cmd, $running_callback, $finished_callback ) = @_;
- my $running = TRUE;
+sub _watch_cmd {
+ my ( $cmd, $started_callback, $out_callback, $err_callback,
+  $finished_callback ) = @_;
 
- # Timer will run until callback returns false
- my $timer = Glib::Timeout->add(
-  $_POLL_INTERVAL,
-  sub {
-   if ($running) {
-    $running_callback->() if ( defined $running_callback );
-    return Glib::SOURCE_CONTINUE;
-   }
-   return Glib::SOURCE_REMOVE;
-  }
- );
-
- $logger->info($cmd);
-
- # Interface to frontend
- my $pid = open my $read, '-|', $cmd    ## no critic (RequireBriefOpen)
-   or croak "can't open pipe: $!";
- $logger->info("Forked PID $pid");
-
- # Read without blocking
- my $output = '';
- Glib::IO->add_watch(
-  fileno($read),
-  [ 'in', 'hup' ],
-  sub {
-   my ( $fileno, $condition ) = @_;
-   my ($line);
-   if ( $condition & 'in' ) {    # bit field operation. >= would also work
-    sysread $read, $line, 1024;
-    $output .= $line;
-   }
-
-# Can't have elsif here because of the possibility that both in and hup are set.
-# Only allow the hup if sure an empty buffer has been read.
-   if ( ( $condition & 'hup' ) and ( not defined($line) or $line eq '' ) )
-   {    # bit field operation. >= would also work
-    close $read;
-    $logger->info('Waiting to reap process');
-    $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-    $logger->info("Reaped PID $pid");
-    $running = FALSE;
-
-    $finished_callback->($output) if ( defined $finished_callback );
-    return Glib::SOURCE_REMOVE;
-   }
-   return Glib::SOURCE_CONTINUE;
-  }
- );
- return;
-}
-
-sub _watch_stderr {
- my ( $cmd, $started_callback, $new_line_callback, $finished_callback ) = @_;
-
+ my $out_finished = FALSE;
+ my $err_finished = FALSE;
  $logger->info($cmd);
 
  # Interface to scanimage
@@ -415,9 +380,39 @@ sub _watch_stderr {
   killfam 'INT', ($pid);
  }
 
+ _add_watch(
+  $read,
+  sub {
+   my ($line) = @_;
+   $out_callback->($line);
+  },
+  sub {
+   $out_finished = TRUE;
+   _reap_process( $out_finished,
+    ( $err_finished or not defined($err_callback) ),
+    $finished_callback );
+  }
+ ) if ( defined $out_callback );
+ _add_watch(
+  $error,
+  sub {
+   my ($line) = @_;
+   $err_callback->($line);
+  },
+  sub {
+   $err_finished = TRUE;
+   _reap_process( ( $out_finished or not defined($out_callback) ),
+    $err_finished, $finished_callback );
+  }
+ ) if ( defined $err_callback );
+ return;
+}
+
+sub _add_watch {
+ my ( $fh, $line_callback, $finished_callback ) = @_;
  my $line;
  Glib::IO->add_watch(
-  fileno($error),
+  fileno($fh),
   [ 'in', 'hup' ],
   sub {
    my ( $fileno, $condition ) = @_;
@@ -425,13 +420,13 @@ sub _watch_stderr {
    if ( $condition & 'in' ) {    # bit field operation. >= would also work
 
 # Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
-    sysread $error, $buffer, 1024;
+    sysread $fh, $buffer, 1024;
     $logger->debug($buffer) if ($buffer);
     $line .= $buffer;
 
     while ( $line =~ /([\r\n])/x ) {
      my $le = $1;
-     $new_line_callback->($line) if ( defined $new_line_callback );
+     $line_callback->($line) if ( defined $line_callback );
      $line = substr( $line, index( $line, $le ) + 1, length($line) );
     }
    }
@@ -439,18 +434,23 @@ sub _watch_stderr {
    # Only allow the hup if sure an empty buffer has been read.
    if ( ( $condition & 'hup' ) and ( not defined($buffer) or $buffer eq '' ) )
    {    # bit field operation. >= would also work
-    close $read;
-    $logger->info('Waiting to reap process');
-    $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-    $logger->info("Reaped PID $pid");
-
-    # Now finished scanning, get on with post-processing
-    $finished_callback->() if ( defined $finished_callback );
+    close $fh;
+    $finished_callback->();
     return Glib::SOURCE_REMOVE;
    }
    return Glib::SOURCE_CONTINUE;
   }
  );
+}
+
+sub _reap_process {
+ my ( $out, $err, $finished_callback ) = @_;
+ if ( $out and $err ) {
+  $logger->info('Waiting to reap process');
+  my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
+  $logger->info("Reaped PID $pid");
+  $finished_callback->() if ( defined $finished_callback );
+ }
  return;
 }
 

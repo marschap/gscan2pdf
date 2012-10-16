@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 9;
+use Test::More tests => 19;
 
 BEGIN {
  use_ok('Gscan2pdf::Frontend::CLI');
@@ -48,6 +48,69 @@ is_deeply( Gscan2pdf::Frontend::CLI->parse_device_list(''),
 #########################
 
 my $loop = Glib::MainLoop->new;
+Gscan2pdf::Frontend::CLI::_watch_cmd(
+ 'echo hello stdout',
+ sub {
+  ok( 1, 'started watching only stdout' );
+ },
+ sub {
+  my ($output) = @_;
+  is( $output, "hello stdout\n", 'stdout watching only stdout' );
+ },
+ undef,
+ sub {
+  ok( 1, 'finished watching only stdout' );
+  $loop->quit;
+ }
+);
+$loop->run;
+
+#########################
+
+$loop = Glib::MainLoop->new;
+Gscan2pdf::Frontend::CLI::_watch_cmd(
+ 'echo hello stderr 1>&2',
+ sub {
+  ok( 1, 'started watching only stderr' );
+ },
+ undef,
+ sub {
+  my ($output) = @_;
+  is( $output, "hello stderr\n", 'stderr watching only stderr' );
+ },
+ sub {
+  ok( 1, 'finished watching only stderr' );
+  $loop->quit;
+ }
+);
+$loop->run;
+
+#########################
+
+$loop = Glib::MainLoop->new;
+Gscan2pdf::Frontend::CLI::_watch_cmd(
+ 'echo hello stdout; echo hello stderr 1>&2',
+ sub {
+  ok( 1, 'started watching stdout and stderr' );
+ },
+ sub {
+  my ($output) = @_;
+  is( $output, "hello stdout\n", 'stdout watching stdout and stderr' );
+ },
+ sub {
+  my ($output) = @_;
+  is( $output, "hello stderr\n", 'stderr watching stdout and stderr' );
+ },
+ sub {
+  ok( 1, 'finished watching stdout and stderr' );
+  $loop->quit;
+ }
+);
+$loop->run;
+
+#########################
+
+$loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI->scan_pages(
  frontend         => 'scanimage',
  device           => 'test',
