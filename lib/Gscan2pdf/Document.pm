@@ -182,9 +182,11 @@ sub fetch_file {
    ++$i;
   }
  }
- elsif ( defined( my $page = $_self->{page_queue}->dequeue_nb() ) ) {
-  $self->add_page( $page->thaw );
-  ++$i;
+ else {
+  while ( defined( my $page = $_self->{page_queue}->dequeue_nb() ) ) {
+   $self->add_page( $page->thaw );
+   ++$i;
+  }
  }
  return $i;
 }

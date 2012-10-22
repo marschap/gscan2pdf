@@ -2009,8 +2009,8 @@ sub import_file {
  my ( $signal, $pid );
  $pid = $slist->import_file(
   info            => $info,
-  first           => 1,
-  last            => 1,
+  first           => $first_page,
+  last            => $last_page,
   queued_callback => sub {
    return update_tpbar(@_);
   },
