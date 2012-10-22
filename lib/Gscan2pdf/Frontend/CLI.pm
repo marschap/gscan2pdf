@@ -27,30 +27,20 @@ sub setup {
 sub get_devices {
  my ( $class, %options ) = @_;
 
- my $running = TRUE;
- my $timer   = Glib::Timeout->add(
-  $_POLL_INTERVAL,
-  sub {
-   $options{running_callback}->() if ( defined $options{running_callback} );
-   return Glib::SOURCE_CONTINUE   if $running;
-   return Glib::SOURCE_REMOVE;
-  }
- );
-
  my $output = '';
  _watch_cmd(
+  cmd =>
 "$options{prefix} scanimage --formatted-device-list=\"'%i','%d','%v','%m','%t'%n\"",
-  $options{started_callback},
-  sub {
+  started_callback => $options{started_callback},
+  running_callback => $options{running_callback},
+  out_callback     => sub {
    my ($line) = @_;
    $output .= $line;
   },
-  undef,
-  sub {
+  finished_callback => sub {
    $options{finished_callback}
      ->( Gscan2pdf::Frontend::CLI->parse_device_list($output) )
      if ( defined $options{finished_callback} );
-   $running = FALSE;
   }
  );
  return;
@@ -85,16 +75,28 @@ sub parse_device_list {
 sub find_scan_options {
  my ( $class, %options ) = @_;
 
+ $options{prefix}   = ''          unless ( defined $options{prefix} );
+ $options{frontend} = 'scanimage' unless ( defined $options{frontend} );
+
  # Get output from scanimage or scanadf.
  # Inverted commas needed for strange characters in device name
  my $cmd =
 "$options{prefix} $options{frontend} --help --device-name='$options{device}'";
  $cmd .= " --mode='$options{mode}'" if ( defined $options{mode} );
+ my $output = '';
  _watch_cmd(
-  $cmd,
-  $options{running_callback},
-  sub {
-   my ($output) = @_;
+  cmd              => $cmd,
+  running_callback => $options{running_callback},
+  out_callback     => sub {
+   my ($line) = @_;
+   $output .= $line;
+  },
+  err_callback => sub {
+   my ($line) = @_;
+   $options{error_callback}->($line)
+     if ( defined $options{error_callback} );
+  },
+  finished_callback => sub {
    $options{finished_callback}->($output)
      if ( defined $options{finished_callback} );
   }
@@ -149,10 +151,9 @@ sub _scanimage {
  my $num_scans = 0;
 
  _watch_cmd(
-  $cmd,
-  $options{started_callback},
-  undef,
-  sub {
+  cmd              => $cmd,
+  started_callback => $options{started_callback},
+  err_callback     => sub {
    my ($line) = @_;
    given ($line) {
     when (/^Progress:\ (\d*\.\d*)%/x) {
@@ -229,7 +230,7 @@ sub _scanimage {
     }
    }
   },
-  $options{finished_callback}
+  finished_callback => $options{finished_callback}
  );
  return;
 }
@@ -289,10 +290,9 @@ sub _scanadf {
  }
 
  _watch_cmd(
-  $cmd,
-  $options{started_callback},
-  undef,
-  sub {
+  cmd              => $cmd,
+  started_callback => $options{started_callback},
+  err_callback     => sub {
    my ($line) = @_;
    given ($line) {
     when (
@@ -344,7 +344,7 @@ sub _scanadf {
     }
    }
   },
-  sub {
+  finished_callback => sub {
    $options{finished_callback}->() if ( defined $options{finished_callback} );
    $running = FALSE;
   }
@@ -360,20 +360,30 @@ sub cancel_scan {
 }
 
 sub _watch_cmd {
- my ( $cmd, $started_callback, $out_callback, $err_callback,
-  $finished_callback ) = @_;
+ my (%options) = @_;
 
  my $out_finished = FALSE;
  my $err_finished = FALSE;
- $logger->info($cmd);
+ $logger->info( $options{cmd} );
+
+ if ( defined $options{running_callback} ) {
+  my $timer = Glib::Timeout->add(
+   $_POLL_INTERVAL,
+   sub {
+    $options{running_callback}->();
+    return Glib::SOURCE_REMOVE if ( $out_finished or $err_finished );
+    return Glib::SOURCE_CONTINUE;
+   }
+  );
+ }
 
  # Interface to scanimage
  my ( $write, $read );
  my $error = IO::Handle->new;    # this needed because of a bug in open3.
- my $pid = IPC::Open3::open3( $write, $read, $error, $cmd );
+ my $pid = IPC::Open3::open3( $write, $read, $error, $options{cmd} );
  $logger->info("Forked PID $pid");
 
- $started_callback->() if ( defined $started_callback );
+ $options{started_callback}->() if ( defined $options{started_callback} );
  if ( $_self->{abort_scan} ) {
   local $SIG{INT} = 'IGNORE';
   $logger->info("Sending INT signal to PID $pid and its children");
@@ -384,27 +394,29 @@ sub _watch_cmd {
   $read,
   sub {
    my ($line) = @_;
-   $out_callback->($line);
+   $options{out_callback}->($line);
   },
   sub {
    $out_finished = TRUE;
-   _reap_process( $out_finished,
-    ( $err_finished or not defined($err_callback) ),
-    $finished_callback );
+   _reap_process(
+    $out_finished,
+    ( $err_finished or not defined( $options{err_callback} ) ),
+    $options{finished_callback}
+   );
   }
- ) if ( defined $out_callback );
+ ) if ( defined $options{out_callback} );
  _add_watch(
   $error,
   sub {
    my ($line) = @_;
-   $err_callback->($line);
+   $options{err_callback}->($line);
   },
   sub {
    $err_finished = TRUE;
-   _reap_process( ( $out_finished or not defined($out_callback) ),
-    $err_finished, $finished_callback );
+   _reap_process( ( $out_finished or not defined( $options{out_callback} ) ),
+    $err_finished, $options{finished_callback} );
   }
- ) if ( defined $err_callback );
+ ) if ( defined $options{err_callback} );
  return;
 }
 
@@ -426,7 +438,8 @@ sub _add_watch {
 
     while ( $line =~ /([\r\n])/x ) {
      my $le = $1;
-     $line_callback->($line) if ( defined $line_callback );
+     $line_callback->( substr( $line, 0, index( $line, $le ) + 1 ) )
+       if ( defined $line_callback );
      $line = substr( $line, index( $line, $le ) + 1, length($line) );
     }
    }

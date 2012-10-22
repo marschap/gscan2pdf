@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 19;
+use Test::More tests => 20;
 
 BEGIN {
  use_ok('Gscan2pdf::Frontend::CLI');
@@ -49,16 +49,15 @@ is_deeply( Gscan2pdf::Frontend::CLI->parse_device_list(''),
 
 my $loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI::_watch_cmd(
- 'echo hello stdout',
- sub {
+ cmd              => 'echo hello stdout',
+ started_callback => sub {
   ok( 1, 'started watching only stdout' );
  },
- sub {
+ out_callback => sub {
   my ($output) = @_;
   is( $output, "hello stdout\n", 'stdout watching only stdout' );
  },
- undef,
- sub {
+ finished_callback => sub {
   ok( 1, 'finished watching only stdout' );
   $loop->quit;
  }
@@ -69,16 +68,15 @@ $loop->run;
 
 $loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI::_watch_cmd(
- 'echo hello stderr 1>&2',
- sub {
+ cmd              => 'echo hello stderr 1>&2',
+ started_callback => sub {
   ok( 1, 'started watching only stderr' );
  },
- undef,
- sub {
+ err_callback => sub {
   my ($output) = @_;
   is( $output, "hello stderr\n", 'stderr watching only stderr' );
  },
- sub {
+ finished_callback => sub {
   ok( 1, 'finished watching only stderr' );
   $loop->quit;
  }
@@ -89,20 +87,33 @@ $loop->run;
 
 $loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI::_watch_cmd(
- 'echo hello stdout; echo hello stderr 1>&2',
- sub {
+ cmd              => 'echo hello stdout; echo hello stderr 1>&2',
+ started_callback => sub {
   ok( 1, 'started watching stdout and stderr' );
  },
- sub {
+ out_callback => sub {
   my ($output) = @_;
   is( $output, "hello stdout\n", 'stdout watching stdout and stderr' );
  },
- sub {
+ err_callback => sub {
   my ($output) = @_;
   is( $output, "hello stderr\n", 'stderr watching stdout and stderr' );
  },
- sub {
+ finished_callback => sub {
   ok( 1, 'finished watching stdout and stderr' );
+  $loop->quit;
+ }
+);
+$loop->run;
+
+#########################
+
+$loop = Glib::MainLoop->new;
+Gscan2pdf::Frontend::CLI->find_scan_options(
+ device            => 'test',
+ finished_callback => sub {
+  my ($output) = @_;
+  like( $output, qr/mode/xi, 'find_scan_options' );
   $loop->quit;
  }
 );

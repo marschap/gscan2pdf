@@ -5535,7 +5535,14 @@ sub rescan_options {
     $vboxd->hide_all;
     $logger->info($output);
     parse_options( $device, options2hash($output) );
-   }
+   },
+   error_callback => sub {
+    my ($message) = @_;
+    show_message_dialog( $window, 'error', 'close', $message );
+    $pbar->destroy;
+    $vboxd->hide_all;
+    $logger->warn($message);
+   },
   );
  }
  return;
