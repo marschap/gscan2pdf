@@ -1,10 +1,3 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl Gscan2pdf.t'
-
-#########################
-
-# change 'tests => 1' to 'tests => last_test_to_print';
-
 use warnings;
 use strict;
 use Test::More tests => 1;
@@ -17,9 +10,6 @@ BEGIN {
 }
 
 #########################
-
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
@@ -34,7 +24,7 @@ my $n = 3;
 my @pages;
 
 my %options;
-$options{font} = `fc-list : file | grep times.ttf`;
+$options{font} = `fc-list : file | grep times.ttf | head -n 1`;
 chomp $options{font};
 $options{font} =~ s/: $//;
 
