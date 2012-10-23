@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 20;
+use Test::More tests => 23;
 
 BEGIN {
  use_ok('Gscan2pdf::Frontend::CLI');
@@ -58,7 +58,9 @@ Gscan2pdf::Frontend::CLI::_watch_cmd(
   is( $output, "hello stdout\n", 'stdout watching only stdout' );
  },
  finished_callback => sub {
-  ok( 1, 'finished watching only stdout' );
+  my ( $output, $error ) = @_;
+  is( $output, "hello stdout\n", 'stdout finished watching only stdout' );
+  is( $error,  undef,            'stderr finished watching only stdout' );
   $loop->quit;
  }
 );
@@ -77,7 +79,9 @@ Gscan2pdf::Frontend::CLI::_watch_cmd(
   is( $output, "hello stderr\n", 'stderr watching only stderr' );
  },
  finished_callback => sub {
-  ok( 1, 'finished watching only stderr' );
+  my ( $output, $error ) = @_;
+  is( $output, undef,            'stdout finished watching only stderr' );
+  is( $error,  "hello stderr\n", 'stderr finished watching only stderr' );
   $loop->quit;
  }
 );
@@ -100,7 +104,9 @@ Gscan2pdf::Frontend::CLI::_watch_cmd(
   is( $output, "hello stderr\n", 'stderr watching stdout and stderr' );
  },
  finished_callback => sub {
-  ok( 1, 'finished watching stdout and stderr' );
+  my ( $output, $error ) = @_;
+  is( $output, "hello stdout\n", 'stdout finished watching stdout and stderr' );
+  is( $error,  "hello stderr\n", 'stderr finished watching stdout and stderr' );
   $loop->quit;
  }
 );

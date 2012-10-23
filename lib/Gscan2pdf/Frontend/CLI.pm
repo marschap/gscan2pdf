@@ -27,17 +27,13 @@ sub setup {
 sub get_devices {
  my ( $class, %options ) = @_;
 
- my $output = '';
  _watch_cmd(
   cmd =>
 "$options{prefix} scanimage --formatted-device-list=\"'%i','%d','%v','%m','%t'%n\"",
-  started_callback => $options{started_callback},
-  running_callback => $options{running_callback},
-  out_callback     => sub {
-   my ($line) = @_;
-   $output .= $line;
-  },
+  started_callback  => $options{started_callback},
+  running_callback  => $options{running_callback},
   finished_callback => sub {
+   my ( $output, $error ) = @_;
    $options{finished_callback}
      ->( Gscan2pdf::Frontend::CLI->parse_device_list($output) )
      if ( defined $options{finished_callback} );
@@ -83,20 +79,16 @@ sub find_scan_options {
  my $cmd =
 "$options{prefix} $options{frontend} --help --device-name='$options{device}'";
  $cmd .= " --mode='$options{mode}'" if ( defined $options{mode} );
- my $output = '';
  _watch_cmd(
-  cmd              => $cmd,
-  running_callback => $options{running_callback},
-  out_callback     => sub {
-   my ($line) = @_;
-   $output .= $line;
-  },
-  err_callback => sub {
-   my ($line) = @_;
-   $options{error_callback}->($line)
-     if ( defined $options{error_callback} );
-  },
+  cmd               => $cmd,
+  running_callback  => $options{running_callback},
   finished_callback => sub {
+   my ( $output, $error ) = @_;
+   if ( defined($error) and $error =~ /^$options{frontend}:\ (.*)/x ) {
+    $error = $1;
+   }
+   $options{error_callback}->($error)
+     if ( defined($error) and defined( $options{error_callback} ) );
    $options{finished_callback}->($output)
      if ( defined $options{finished_callback} );
   }
@@ -389,34 +381,48 @@ sub _watch_cmd {
   $logger->info("Sending INT signal to PID $pid and its children");
   killfam 'INT', ($pid);
  }
+ my ( $stdout, $stderr );
 
  _add_watch(
   $read,
   sub {
    my ($line) = @_;
-   $options{out_callback}->($line);
+   $stdout .= $line;
+   $options{out_callback}->($line) if ( defined $options{out_callback} );
   },
   sub {
    $out_finished = TRUE;
    _reap_process(
     $out_finished,
     ( $err_finished or not defined( $options{err_callback} ) ),
-    $options{finished_callback}
+    sub {
+     $options{finished_callback}->( $stdout, $stderr )
+       if ( defined $options{finished_callback} );
+     undef $options{finished_callback};    # to prevent race condition
+    }
    );
   }
- ) if ( defined $options{out_callback} );
+ );
  _add_watch(
   $error,
   sub {
    my ($line) = @_;
-   $options{err_callback}->($line);
+   $stderr .= $line;
+   $options{err_callback}->($line) if ( defined $options{err_callback} );
   },
   sub {
    $err_finished = TRUE;
-   _reap_process( ( $out_finished or not defined( $options{out_callback} ) ),
-    $err_finished, $options{finished_callback} );
+   _reap_process(
+    ( $out_finished or not defined( $options{out_callback} ) ),
+    $err_finished,
+    sub {
+     $options{finished_callback}->( $stdout, $stderr )
+       if ( defined $options{finished_callback} );
+     undef $options{finished_callback};    # to prevent race condition
+    }
+   );
   }
- ) if ( defined $options{err_callback} );
+ );
  return;
 }
 
