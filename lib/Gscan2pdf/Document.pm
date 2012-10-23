@@ -1465,96 +1465,101 @@ sub _thread_get_file_info {
 
  $logger->info("Getting info for $filename");
  ( my $format, undef ) = open_three("file -b \"$filename\"");
+ $logger->info($format);
 
- if ( $format =~ /gzip\ compressed\ data/x ) {
-  $info{path}   = $filename;
-  $info{format} = 'session file';
-  $self->{info_queue}->enqueue( \%info );
-  return;
- }
- elsif ( $format =~ /DjVu/x ) {
-
-  # Dig out the number of pages
-  my $cmd = "djvudump \"$filename\"";
-  $logger->info($cmd);
-  ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
-  return if $_self->{cancel};
-  $logger->info($info);
-
-  my $pages = 1;
-  if ( $info =~ /\s(\d+)\s+page/x ) {
-   $pages = $1;
-  }
-
-  # Dig out and the resolution of each page
-  my (@ppi);
-  $info{format} = 'DJVU';
-  while ( $info =~ /\s(\d+)\s+dpi/x ) {
-   push @ppi, $1;
-   $logger->info("Page $#ppi is $ppi[$#ppi] ppi");
-   $info = substr( $info, index( $info, " dpi" ) + 4, length($info) );
-  }
-  if ( $pages != @ppi ) {
-   $self->{status} = 1;
-   $self->{message} =
-     $d->get('Unknown DjVu file structure. Please contact the author.');
+ given ($format) {
+  when (/gzip\ compressed\ data/x) {
+   $info{path}   = $filename;
+   $info{format} = 'session file';
+   $self->{info_queue}->enqueue( \%info );
    return;
   }
-  $info{ppi}   = \@ppi;
-  $info{pages} = $pages;
-  $info{path}  = $filename;
-  $self->{info_queue}->enqueue( \%info );
-  return;
- }
+  when (/DjVu/x) {
 
- # Get file type
- my $image = Image::Magick->new;
- my $x     = $image->Read($filename);
- return if $_self->{cancel};
- $logger->warn($x) if "$x";
+   # Dig out the number of pages
+   my $cmd = "djvudump \"$filename\"";
+   $logger->info($cmd);
+   ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
+   return if $_self->{cancel};
+   $logger->info($info);
 
- $format = $image->Get('format');
- $logger->info("Format $format") if ( defined $format );
- undef $image;
+   my $pages = 1;
+   if ( $info =~ /\s(\d+)\s+page/x ) {
+    $pages = $1;
+   }
 
- if ( not defined($format) ) {
-  $self->{status} = 1;
-  $self->{message} =
-    sprintf( $d->get("%s is not a recognised image type"), $filename );
-  return;
- }
- elsif ( $format eq 'Portable Document Format' ) {
-  my $cmd = "pdfinfo \"$filename\"";
-  $logger->info($cmd);
-  ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
-  return if $_self->{cancel};
-  $logger->info($info);
-  my $pages = 1;
-  if ( $info =~ /Pages:\s+(\d+)/x ) {
-   $pages = $1;
+   # Dig out and the resolution of each page
+   my (@ppi);
+   $info{format} = 'DJVU';
+   while ( $info =~ /\s(\d+)\s+dpi/x ) {
+    push @ppi, $1;
+    $logger->info("Page $#ppi is $ppi[$#ppi] ppi");
+    $info = substr( $info, index( $info, " dpi" ) + 4, length($info) );
+   }
+   if ( $pages != @ppi ) {
+    $self->{status} = 1;
+    $self->{message} =
+      $d->get('Unknown DjVu file structure. Please contact the author.');
+    return;
+   }
+   $info{ppi}   = \@ppi;
+   $info{pages} = $pages;
+   $info{path}  = $filename;
+   $self->{info_queue}->enqueue( \%info );
+   return;
   }
-  $logger->info("$pages pages");
-  $info{pages} = $pages;
- }
- elsif ( $format eq 'Tagged Image File Format' ) {
-  my $cmd = "tiffinfo \"$filename\"";
-  $logger->info($cmd);
-  ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
-  return if $_self->{cancel};
-  $logger->info($info);
-
-  # Count number of pages and their resolutions
-  my @ppi;
-  while ( $info =~ /Resolution:\ (\d*)/x ) {
-   push @ppi, $1;
-   $info = substr( $info, index( $info, 'Resolution' ) + 10, length($info) );
+  when (/PDF\ document/x) {
+   $format = 'Portable Document Format';
+   my $cmd = "pdfinfo \"$filename\"";
+   $logger->info($cmd);
+   ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
+   return if $_self->{cancel};
+   $logger->info($info);
+   my $pages = 1;
+   if ( $info =~ /Pages:\s+(\d+)/x ) {
+    $pages = $1;
+   }
+   $logger->info("$pages pages");
+   $info{pages} = $pages;
   }
-  my $pages = @ppi;
-  $logger->info("$pages pages");
-  $info{pages} = $pages;
- }
- else {
-  $info{pages} = 1;
+  when (/TIFF\ image data/x) {
+   $format = 'Tagged Image File Format';
+   my $cmd = "tiffinfo \"$filename\"";
+   $logger->info($cmd);
+   ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
+   return if $_self->{cancel};
+   $logger->info($info);
+
+   # Count number of pages and their resolutions
+   my @ppi;
+   while ( $info =~ /Resolution:\ (\d*)/x ) {
+    push @ppi, $1;
+    $info = substr( $info, index( $info, 'Resolution' ) + 10, length($info) );
+   }
+   my $pages = @ppi;
+   $logger->info("$pages pages");
+   $info{pages} = $pages;
+  }
+  default {
+
+   # Get file type
+   my $image = Image::Magick->new;
+   my $x     = $image->Read($filename);
+   return if $_self->{cancel};
+   $logger->warn($x) if "$x";
+
+   $format = $image->Get('format');
+   $logger->info("Format $format") if ( defined $format );
+   undef $image;
+
+   if ( not defined($format) ) {
+    $self->{status} = 1;
+    $self->{message} =
+      sprintf( $d->get("%s is not a recognised image type"), $filename );
+    return;
+   }
+   $info{pages} = 1;
+  }
  }
  $info{format} = $format;
  $info{path}   = $filename;
