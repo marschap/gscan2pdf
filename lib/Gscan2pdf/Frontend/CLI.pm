@@ -101,6 +101,8 @@ sub find_scan_options {
 sub scan_pages {
  my ( $class, %options ) = @_;
 
+ $options{prefix} = '' unless ( defined $options{prefix} );
+
  if (
   defined( $options{frontend} )
   and ( $options{frontend} eq 'scanadf'
@@ -121,7 +123,6 @@ sub _scanimage {
  my (%options) = @_;
 
  $options{frontend} = 'scanimage' unless ( defined $options{frontend} );
- $options{prefix}   = ''          unless ( defined $options{prefix} );
 
  # inverted commas needed for strange characters in device name
  my $device = "--device-name='$options{device}'";
@@ -162,20 +163,23 @@ sub _scanimage {
        ->( 0, sprintf( $d->get('Scanning page %i...'), $1 ) )
        if ( defined $options{running_callback} );
     }
-    when (/^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ 5\)/x) {
-     my $id = $1;
+    when (/^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ (\d)\)/x) {
+     my ( $id, $return ) = ( $1, $2 );
 
-     # Timer will run until callback returns false
-     my $timer = Glib::Timeout->add(
-      $_POLL_INTERVAL,
-      sub {
-       return Glib::SOURCE_CONTINUE unless ( -e "out$id.pnm" );
-       $options{new_page_callback}->("out$id.pnm")
-         if ( defined $options{new_page_callback} );
-       $num_scans++;
-       return Glib::SOURCE_REMOVE;
-      }
-     );
+     if ( $return == 5 ) {
+
+      # Timer will run until callback returns false
+      my $timer = Glib::Timeout->add(
+       $_POLL_INTERVAL,
+       sub {
+        return Glib::SOURCE_CONTINUE unless ( -e "out$id.pnm" );
+        $options{new_page_callback}->("out$id.pnm")
+          if ( defined $options{new_page_callback} );
+        $num_scans++;
+        return Glib::SOURCE_REMOVE;
+       }
+      );
+     }
     }
     when (
      /Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x ## no critic (ProhibitComplexRegexes)
@@ -183,9 +187,6 @@ sub _scanimage {
     {
      $options{running_callback}->( 0, $d->get('Scanner warming up') )
        if ( defined $options{running_callback} );
-    }
-    when (/^Scanned\ page\ \d*\.\ \(scanner\ status\ =\ 7\)/x) {
-     ;
     }
     when (
      /^$options{frontend}:\ sane_start:\ Document\ feeder\ out\ of\ documents/x
@@ -195,7 +196,7 @@ sub _scanimage {
        if ( defined( $options{error_callback} ) and $num_scans == 0 );
     }
     when (
-     $_self->{abort_scan}
+     $_self->{abort_scan} == TRUE
        and ( $line =~
          /^$options{frontend}:\ sane_start:\ Error\ during\ device\ I\/O/x
       or $line =~ /^$options{frontend}:\ received\ signal\ 2/x
@@ -207,11 +208,13 @@ sub _scanimage {
     when (/^$options{frontend}:\ rounded/x) {
      $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
     }
-    when (/^$options{frontend}:\ sane_start:\ Device\ busy/x) {
+    when (/^$options{frontend}:\ sane_(?:start|read):\ Device\ busy/x) {
      $options{error_callback}->( $d->get('Device busy') )
        if ( defined $options{error_callback} );
     }
-    when (/^$options{frontend}:\ sane_read:\ Operation\ was\ cancelled/x) {
+    when (
+     /^$options{frontend}:\ sane_(?:start|read):\ Operation\ was\ cancelled/x)
+    {
      $options{error_callback}->( $d->get('Operation cancelled') )
        if ( defined $options{error_callback} );
     }
@@ -233,7 +236,6 @@ sub _scanadf {
  my (%options) = @_;
 
  $options{frontend} = 'scanadf' unless ( defined $options{frontend} );
- $options{prefix}   = ''        unless ( defined $options{prefix} );
 
  # inverted commas needed for strange characters in device name
  my $device = "--device-name='$options{device}'";
