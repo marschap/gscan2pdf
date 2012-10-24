@@ -7968,10 +7968,10 @@ sub preferences {
    if ( $SETTING{frontend} ne $frontends[ $combob->get_active ][0] ) {
     $SETTING{frontend} = $frontends[ $combob->get_active ][0];
     if ( $SETTING{frontend} eq 'libsane-perl' ) {
-     $windows->destroy if ( defined $windows );
+     undef $windows if ( defined $windows );
     }
     else {
-     $windows2->destroy if ( defined $windows2 );
+     undef $windows2 if ( defined $windows2 );
      rescan_options( $device_list[ $combobd->get_active ]{name} )
        if ( defined $windows );
     }
