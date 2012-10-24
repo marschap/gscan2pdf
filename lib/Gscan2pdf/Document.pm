@@ -2426,7 +2426,7 @@ sub _thread_to_png {
  my $new = $page->clone;
  $new->{filename} = convert_to_png( $page->{filename}, $dir );
  return if $_self->{cancel};
- $new->{format} = 'Tagged Image File Format';
+ $new->{format} = 'Portable Network Graphics';
  my %data = ( old => $page, new => $new->freeze );
  $logger->info("Converted $page->{filename} to $data{new}{filename}");
  $self->{page_queue}->enqueue( \%data );
