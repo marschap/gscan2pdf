@@ -5427,8 +5427,10 @@ EOS
  my $translators =
    <<'EOS'; # inverted commas required around EOS because of UTF-8 in $translators
 Shushi Kurose
+Constantine Mousafiris
 vishal goswami
 Herczeg Zsolt
+stavros kakaliantis
 Zbyněk Schwarz
 Wang Dianjin
 Arthur Rodrigues
@@ -5436,16 +5438,13 @@ Wojciech Górnaś
 Utku BERBEROĞLU
 Dennis Baudys
 Oleg Koptev
-Daniel Dietric
-Adolfo Jayme Barrientos
-zeugma
+Daniel Dietrich
 Daniel
-Сергій Дубик
-Артём Воротников
+Adolfo Jayme Barrientos
+Artem Vorotnikov
 Tobias Holm
+jimpap
 Igor Zubarev
-Serkan Guldal
-maidis
 EOS
  $about->set_translator_credits($translators);
  $about->set_artists('lodp');
