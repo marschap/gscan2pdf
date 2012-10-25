@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 38;
+use Test::More tests => 40;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -110,11 +110,18 @@ $signal = $dialog->signal_connect(
    'added-profile' => sub {
     my ( $widget, $name, $profile ) = @_;
     is( $name, 'my profile', 'added-profile name' );
-    is_deeply( $profile, [ { $resolution => 52 } ], 'added-profile profile' );
+    is_deeply(
+     $profile,
+     [ { $resolution => 52 }, { mode => 'Color' } ],
+     'added-profile profile'
+    );
    }
   );
-  $dialog->add_profile( 'my profile', [ { $resolution => 52 } ] );
+  $dialog->add_profile( 'my profile',
+   [ { $resolution => 52 }, { mode => 'Color' } ] );
   $dialog->signal_handler_disconnect($signal);
+
+  ######################################
 
   $signal = $dialog->signal_connect(
    'added-profile' => sub {
@@ -122,40 +129,15 @@ $signal = $dialog->signal_connect(
     is( $name, 'old profile', 'added-profile old name' );
     is_deeply(
      $profile,
-     [ { $resolution => 52 } ],
+     [ { mode => 'Gray' }, { $resolution => 51 } ],
      'added-profile profile as hash'
     );
-   }
-  );
-  $dialog->add_profile( 'old profile', { $resolution => 52 } );
-  $dialog->signal_handler_disconnect($signal);
-
-  $signal = $dialog->signal_connect(
-   'changed-profile' => sub {
-    my ( $widget, $profile ) = @_;
     $dialog->signal_handler_disconnect($signal);
-    is( $profile, 'my profile', 'changed-profile' );
-    is_deeply(
-     $dialog->get('current-scan-options'),
-     [ { $resolution => 52 } ],
-     'current-scan-options with profile'
-    );
    }
   );
-  my $loop;
-  my $option_signal;
-  $option_signal = $dialog->signal_connect(
-   'changed-scan-option' => sub {
-    my ( $widget, $option, $value ) = @_;
-    is( $option, SANE_NAME_SCAN_RESOLUTION, 'changed-scan-option name' );
-    is( $value, 52, 'changed-scan-option value' );
-    $dialog->signal_handler_disconnect($option_signal);
-    $loop->quit;
-   }
-  );
-  $loop = Glib::MainLoop->new;
-  $dialog->set( 'profile', 'my profile' );
-  $loop->run;
+  $dialog->add_profile( 'old profile', { $resolution => 51, mode => 'Gray' } );
+
+  ######################################
 
   $dialog->signal_connect(
    'removed-profile' => sub {
@@ -165,7 +147,51 @@ $signal = $dialog->signal_connect(
   );
   $dialog->remove_profile('old profile');
 
-  $option_signal = $dialog->signal_connect(
+  ######################################
+
+  # need a new main loop because of the timeout
+  my $loop = Glib::MainLoop->new;
+  $signal = $dialog->signal_connect(
+   'changed-profile' => sub {
+    my ( $widget, $profile ) = @_;
+    $dialog->signal_handler_disconnect($signal);
+    is( $profile, 'my profile', 'changed-profile' );
+    is_deeply(
+     $dialog->get('current-scan-options'),
+     [ { $resolution => 52 }, { mode => 'Color' } ],
+     'current-scan-options with profile'
+    );
+
+    #    $dialog->signal_handler_disconnect($signal);
+    $loop->quit;
+   }
+  );
+  $dialog->set( 'profile', 'my profile' );
+  $loop->run;
+
+  ######################################
+
+  $dialog->add_profile( 'my profile2',
+   [ { $resolution => 52 }, { mode => 'Color' } ] );
+
+  $signal = $dialog->signal_connect(
+   'changed-profile' => sub {
+    my ( $widget, $profile ) = @_;
+    is( $profile, 'my profile2', 'set profile with identical options' );
+    $dialog->signal_handler_disconnect($signal);
+    $loop->quit;
+   }
+  );
+
+  # need a new main loop because of the timeout
+  $loop = Glib::MainLoop->new;
+  $dialog->set( 'profile', 'my profile2' );
+
+  #  $loop->run;
+
+  ######################################
+
+  $signal = $dialog->signal_connect(
    'changed-scan-option' => sub {
     my ( $widget, $option, $value ) = @_;
     is( $dialog->get('profile'),
@@ -175,7 +201,7 @@ $signal = $dialog->signal_connect(
      [ { $resolution => 51 } ],
      'current-scan-options without profile'
     );
-    $dialog->signal_handler_disconnect($option_signal);
+    $dialog->signal_handler_disconnect($signal);
     $loop->quit;
    }
   );
@@ -185,6 +211,49 @@ $signal = $dialog->signal_connect(
   my $options = $dialog->get('available-scan-options');
   $dialog->set_option( $options->by_name(SANE_NAME_SCAN_RESOLUTION), 51 );
   $loop->run;
+
+  ######################################
+
+  # Reset profile for next test
+  $signal = $dialog->signal_connect(
+   'changed-profile' => sub {
+    my ( $widget, $profile ) = @_;
+    is( $profile, 'my profile', 'reset profile' );
+    $dialog->signal_handler_disconnect($signal);
+    $loop->quit;
+   }
+  );
+
+  # need a new main loop because of the timeout
+  $loop = Glib::MainLoop->new;
+  $dialog->set( 'profile', 'my profile' );
+  $loop->run;
+
+  ######################################
+
+  $signal = $dialog->signal_connect(
+   'changed-profile' => sub {
+    my ( $widget, $profile ) = @_;
+    is( $profile, undef,
+     'changing an option fires the changed-profile signal if a profile is set'
+    );
+    is_deeply(
+     $dialog->get('current-scan-options'),
+     [ { $resolution => 51 } ],
+     'current-scan-options without profile (again)'
+    );
+    $dialog->signal_handler_disconnect($signal);
+    $loop->quit;
+   }
+  );
+
+  # need a new main loop because of the timeout
+  $loop    = Glib::MainLoop->new;
+  $options = $dialog->get('available-scan-options');
+  $dialog->set_option( $options->by_name(SANE_NAME_SCAN_RESOLUTION), 51 );
+  $loop->run;
+
+  ######################################
 
   $dialog->signal_connect(
    'changed-paper-formats' => sub {

@@ -222,7 +222,7 @@ sub new {    ## no critic (RequireArgUnpacking)
     $self->set( 'device', undef );    # to make sure that the device is reloaded
     $self->get_devices;
    }
-   else {
+   elsif ( $index > -1 ) {
     $self->scan_options( $device_list->[$index] );
    }
   }
@@ -230,7 +230,13 @@ sub new {    ## no critic (RequireArgUnpacking)
  $self->signal_connect(
   'changed-device' => sub {
    my ( $widget, $device ) = @_;
-   set_combobox_by_text( $self->{combobd}, $device );
+   my $device_list = $self->get('device-list');
+   for (@$device_list) {
+    if ( $_->{name} eq $device ) {
+     set_combobox_by_text( $self->{combobd}, $_->{label} );
+     return;
+    }
+   }
   }
  );
  $tooltips->set_tip( $self->{combobd},
@@ -1098,9 +1104,6 @@ sub scan_options {
 sub set_option {
  my ( $self, $option, $val ) = @_;
 
- # Unset the profile unless we are actively setting it
- $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
-
  my $current = $self->{current_scan_options};
 
  # Cache option
@@ -1204,11 +1207,15 @@ sub set_option {
    }
 
    # We can carry on applying defaults now, if necessary.
-   $self->{gui_updating} = FALSE;
    $self->signal_emit( 'finished-process', 'set_option' );
+
+   # Unset the profile unless we are actively setting it
+   $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+
    $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
-   $self->signal_emit( 'changed-current-scan-options',
-    $self->get('current-scan-options') );
+
+   #   $self->signal_emit( 'changed-current-scan-options',
+   #    $self->get('current-scan-options') );
   }
  );
  return;
@@ -1480,14 +1487,21 @@ sub set_profile {
   $self->{setting_profile} = TRUE;
 
   # Only emit the changed-profile signal when the GUI has caught up
-  $self->signal_connect(
+  my $signal;
+  $signal = $self->signal_connect(
    'changed-current-scan-options' => sub {
-    delete $self->{setting_profile};
+    $self->{setting_profile} = FALSE;
     $self->signal_emit( 'changed-profile', $name );
+    $self->signal_handler_disconnect($signal);
    }
   );
 
   $self->set( 'current-scan-options', $profile );
+ }
+
+ # no need to wait - nothing to do
+ else {
+  $self->signal_emit( 'changed-profile', $name );
  }
  return;
 }
@@ -1511,82 +1525,102 @@ sub set_current_scan_options {
   @defaults = @$profile;
  }
 
- $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
  delete $self->{current_scan_options};
 
  # Give the GUI a chance to catch up between settings,
  # in case they have to be reloaded.
- # Can't do this in Glib::Idle->add as the GUI is also idle waiting for the
- # sane thread to return, so manually flagging each loop
+ # Use the 'changed-scan-option' signal to trigger the next loop
  my $i = 0;
 
- # Timer will run until callback returns false
- my $timer = Glib::Timeout->add(
-  100,
-  sub {
+ my $signal;
+ $signal = $self->signal_connect(
+  'changed-scan-option' => sub {
+   $i = $self->set_option_widget( $i, @defaults ) if ( $i < @defaults );
 
-   # wait until the options have been loaded and the gui has stopped updating
-   my $options = $self->get('available-scan-options');
-   if ( defined($options) and not $self->{gui_updating} ) {
-    my ( $name, $val ) = each( %{ $defaults[$i] } );
-    return TRUE unless ( defined($name) and defined($val) );
-    $self->{gui_updating} = TRUE;
-    my $opt = $options->by_name($name);
+   if ( defined $i and $i < @defaults ) {
+    ++$i;
+   }
 
-    my $widget = $opt->{widget};
-    if ( ref($val) eq 'ARRAY' ) {    ## no critic (ProhibitCascadingIfElse)
-     $self->set_option( $opt, $val );
+   # Only emit the changed-current-scan-options signal when we have finished
+   else {
+    $self->signal_handler_disconnect($signal);
+    $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+    $self->signal_emit( 'changed-current-scan-options',
+     $self->get('current-scan-options') );
+   }
+  }
+ );
+ $i = $self->set_option_widget( $i, @defaults );
 
-     # when INFO_INEXACT is implemented, so that the value is reloaded,
-     # check for it here, so that the reloaded value is not overwritten.
-     $opt->{val} = $val;
-    }
-    elsif ( $widget->isa('Gtk2::CheckButton') ) {
+ # Increment $i for the next call of 'changed-scan-option' above
+ if ( defined $i ) {
+  ++$i;
+ }
+
+ # Only emit the changed-current-scan-options signal when we have finished
+ else {
+  $self->signal_handler_disconnect($signal);
+  $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+  $self->signal_emit( 'changed-current-scan-options',
+   $self->get('current-scan-options') );
+ }
+
+ return;
+}
+
+# Set option widget
+
+sub set_option_widget {
+ my ( $self, $i, @defaults ) = @_;
+
+ while ( $i < @defaults ) {
+  my ( $name, $val ) = each( %{ $defaults[$i] } );
+  my $options = $self->get('available-scan-options');
+  my $opt     = $options->by_name($name);
+
+  my $widget = $opt->{widget};
+
+  if ( ref($val) eq 'ARRAY' ) {
+   $self->set_option( $opt, $val );
+
+   # when INFO_INEXACT is implemented, so that the value is reloaded,
+   # check for it here, so that the reloaded value is not overwritten.
+   $opt->{val} = $val;
+  }
+  else {
+   given ($widget) {
+    when ( $widget->isa('Gtk2::CheckButton') ) {
      if ( $widget->get_active != $val ) {
       $widget->set_active($val);
-     }
-     else {
-      $self->{gui_updating} = FALSE;
+      return $i;
      }
     }
-    elsif ( $widget->isa('Gtk2::SpinButton') ) {
+    when ( $widget->isa('Gtk2::SpinButton') ) {
      if ( $widget->get_value != $val ) {
       $widget->set_value($val);
-     }
-     else {
-      $self->{gui_updating} = FALSE;
+      return $i;
      }
     }
-    elsif ( $widget->isa('Gtk2::ComboBox') ) {
+    when ( $widget->isa('Gtk2::ComboBox') ) {
      if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
       my $index;
       for ( my $j = 0 ; $j < @{ $opt->{constraint} } ; ++$j ) {
        $index = $j if ( $opt->{constraint}[$j] eq $val );
       }
       $widget->set_active($index) if ( defined $index );
-     }
-     else {
-      $self->{gui_updating} = FALSE;
+      return $i;
      }
     }
-    elsif ( $widget->isa('Gtk2::Entry') ) {
+    when ( $widget->isa('Gtk2::Entry') ) {
      if ( $widget->get_text ne $val ) {
       $widget->set_text($val);
-     }
-     else {
-      $self->{gui_updating} = FALSE;
+      return $i;
      }
     }
-    $i++;
-
-    # Only emit the changed-current-scan-options signal when we have finished
-    $self->signal_emit( 'changed-current-scan-options', $profile )
-      if ( $i >= @defaults );
-    return FALSE if ( $i++ >= @defaults );
    }
-   return TRUE;
   }
- );
+  ++$i;
+ }
 
  return;
 }
@@ -1846,8 +1880,9 @@ sub add_profile {
    }
   }
   elsif ( ref($profile) eq 'HASH' ) {
-   my ( $key, $value ) = each(%$profile);
-   push @{ $self->{profiles}{$name} }, { $key => $value };
+   while ( my ( $key, $value ) = each(%$profile) ) {
+    push @{ $self->{profiles}{$name} }, { $key => $value };
+   }
   }
   $self->{combobsp}->append_text($name);
   $self->signal_emit( 'added-profile', $name, $self->{profiles}{$name} );
@@ -1855,15 +1890,15 @@ sub add_profile {
  return;
 }
 
+# Remove the profile. If it is active, deselect it first.
+
 sub remove_profile {
  my ( $self, $name ) = @_;
  if ( defined($name) and defined( $self->{profiles}{$name} ) ) {
   my $i = get_combobox_by_text( $self->{combobsp}, $name );
   if ( $i > -1 ) {
+   $self->{combobsp}->set_active(-1) if ( $self->{combobsp}->get_active == $i );
    $self->{combobsp}->remove_text($i);
-   my $n = num_rows_combobox( $self->{combobsp} );
-   $i = $n if ( $i > $n );
-   $self->{combobsp}->set_active($i) if ( $i > -1 );
    $self->signal_emit( 'removed-profile', $name );
   }
  }
@@ -1906,8 +1941,7 @@ sub get_combobox_by_text {
 
 sub set_combobox_by_text {
  my ( $combobox, $text ) = @_;
- my $i = get_combobox_by_text( $combobox, $text );
- $combobox->set_active($i) if ( $i > -1 );
+ $combobox->set_active( get_combobox_by_text( $combobox, $text ) );
  return;
 }
 
