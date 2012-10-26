@@ -393,16 +393,10 @@ sub _watch_cmd {
    $options{out_callback}->($line) if ( defined $options{out_callback} );
   },
   sub {
+
+   # Don't flag this until after the callback to avoid the race condition
+   # where stdout is truncated by stderr prematurely reaping the process
    $out_finished = TRUE;
-   _reap_process(
-    $out_finished,
-    ( $err_finished or not defined( $options{err_callback} ) ),
-    sub {
-     $options{finished_callback}->( $stdout, $stderr )
-       if ( defined $options{finished_callback} );
-     undef $options{finished_callback};    # to prevent race condition
-    }
-   );
   }
  );
  _add_watch(
@@ -413,14 +407,33 @@ sub _watch_cmd {
    $options{err_callback}->($line) if ( defined $options{err_callback} );
   },
   sub {
+
+   # Don't flag this until after the callback to avoid the race condition
+   # where stderr is truncated by stdout prematurely reaping the process
    $err_finished = TRUE;
-   _reap_process(
-    ( $out_finished or not defined( $options{out_callback} ) ),
-    $err_finished,
+  }
+ );
+
+ # Watch for the process to hang up before running the finished callback
+ Glib::Child->watch_add(
+  $pid,
+  sub {
+
+   # Although the process has hung up, we may still have output to read,
+   # so wait until the _watch_add flags that the process has ended first.
+   my $timer = Glib::Timeout->add(
+    $_POLL_INTERVAL,
     sub {
-     $options{finished_callback}->( $stdout, $stderr )
-       if ( defined $options{finished_callback} );
-     undef $options{finished_callback};    # to prevent race condition
+     if ( $out_finished and $err_finished ) {
+
+      $options{finished_callback}->( $stdout, $stderr )
+        if ( defined $options{finished_callback} );
+      $logger->info('Waiting to reap process');
+      my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
+      $logger->info("Reaped PID $pid");
+      return Glib::SOURCE_REMOVE;
+     }
+     return Glib::SOURCE_CONTINUE;
     }
    );
   }
@@ -439,10 +452,10 @@ sub _add_watch {
    my $buffer;
    if ( $condition & 'in' ) {    # bit field operation. >= would also work
 
-# Only reading one buffer, rather than until sysread gives EOF because things seem to be strange for stderr
+    # Only reading one buffer, rather than until sysread gives EOF
+    # because things seem to be strange for stderr
     sysread $fh, $buffer, 1024;
-    $logger->debug($buffer) if ($buffer);
-    $line .= $buffer;
+    $line .= $buffer if ($buffer);
 
     while ( $line =~ /([\r\n])/x ) {
      my $le = $1;
@@ -462,17 +475,6 @@ sub _add_watch {
    return Glib::SOURCE_CONTINUE;
   }
  );
-}
-
-sub _reap_process {
- my ( $out, $err, $finished_callback ) = @_;
- if ( $out and $err ) {
-  $logger->info('Waiting to reap process');
-  my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-  $logger->info("Reaped PID $pid");
-  $finished_callback->() if ( defined $finished_callback );
- }
- return;
 }
 
 1;

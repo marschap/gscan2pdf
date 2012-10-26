@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 23;
+use Test::More tests => 27;
 
 BEGIN {
  use_ok('Gscan2pdf::Frontend::CLI');
@@ -115,11 +115,31 @@ $loop->run;
 #########################
 
 $loop = Glib::MainLoop->new;
+my $cmd = 'cat scanners/*';
+Gscan2pdf::Frontend::CLI::_watch_cmd(
+ cmd              => $cmd,
+ started_callback => sub {
+  ok( 1, 'started watching large amounts of stdout' );
+ },
+ finished_callback => sub {
+  my ( $output, $error ) = @_;
+  is( length($output) . "\n",
+   `$cmd | wc -c`, 'stdout finished watching large amounts of stdout' );
+  is( $error, undef, 'stderr finished watching large amounts of stdout' );
+  $loop->quit;
+ }
+);
+$loop->run;
+
+#########################
+
+$loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI->find_scan_options(
  device            => 'test',
  finished_callback => sub {
   my ($output) = @_;
-  like( $output, qr/mode/xi, 'find_scan_options' );
+  like( $output, qr/mode/xi,   'find_scan_options beginning' );
+  like( $output, qr/button/xi, 'find_scan_options end' );
   $loop->quit;
  }
 );
@@ -139,10 +159,10 @@ Gscan2pdf::Frontend::CLI->scan_pages(
   my ($path) = @_;
   ok( -e $path, 'scanimage scans' );
   unlink $path;
-  $loop->quit;
  },
  finished_callback => sub {
   ok( 1, 'scanimage finishes' );
+  $loop->quit;
  },
 );
 $loop->run;
@@ -161,10 +181,10 @@ Gscan2pdf::Frontend::CLI->scan_pages(
   my ($path) = @_;
   ok( -e $path, 'scanadf scans' );
   unlink $path;
-  $loop->quit;
  },
  finished_callback => sub {
   ok( 1, 'scanadf finishes' );
+  $loop->quit;
  },
 );
 $loop->run;
