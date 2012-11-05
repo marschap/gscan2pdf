@@ -50,10 +50,10 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  Glib::ParamSpec->enum(
   'range',                                                            # name
   'Page Range to renumber',                                           # nickname
-  'Page Range to renumber',                                           #blurb
+  'Page Range to renumber',                                           # blurb
   'Gscan2pdf::PageRange::Range',
   'selected',                                                         # default
-  [qw/readable writable/]                                             #flags
+  [qw/readable writable/]                                             # flags
  ),
   ];
 
@@ -148,9 +148,25 @@ sub new {    ## no critic (RequireArgUnpacking)
  $hboxi->pack_end( $spin_buttoni, FALSE, FALSE, 0 );
 
  # Check whether the settings are possible
+ my ( $row_signal, $selection_signal, $document );
  $self->signal_connect(
   'changed-document' => sub {
+   $document->signal_handler_disconnect($row_signal)
+     if ( defined($row_signal) and defined($document) );
+   $document->signal_handler_disconnect($selection_signal)
+     if ( defined($selection_signal) and defined($document) );
    $self->update;
+   $document   = $self->get('document');
+   $row_signal = $document->get_model->signal_connect(
+    'row-changed' => sub {
+     $self->update;
+    }
+   );
+   $selection_signal = $document->get_selection->signal_connect(
+    changed => sub {
+     $self->update;
+    }
+   );
   }
  );
 

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 12;
+use Test::More tests => 14;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;
 
@@ -35,11 +35,12 @@ is( $dialog->get('increment'), 1, 'default step for empty document' );
 
 #########################
 
-$slist               = Gscan2pdf::Document->new;
-$slist->{data}[0][0] = 1;
-$slist->{data}[1][0] = 2;
-my @selected = (1);
-$slist->select(@selected);
+$slist = Gscan2pdf::Document->new;
+@{ $slist->{data} } = ( [ 1, undef, undef ], [ 2, undef, undef ] );
+$slist->select(1);
+my @selected = $slist->get_selected_indices;
+is_deeply( \@selected, [1], 'selected' );
+
 $dialog->set( 'range',    'selected' );
 $dialog->set( 'document', $slist );
 is( $dialog->get('start'),     2, 'start for document with start clash' );
@@ -47,15 +48,16 @@ is( $dialog->get('increment'), 1, 'step for document with start clash' );
 
 #########################
 
-$slist               = Gscan2pdf::Document->new;
-$slist->{data}[0][0] = 1;
-$slist->{data}[1][0] = 3;
-$slist->{data}[2][0] = 5;
-$slist->{data}[3][0] = 7;
-@selected            = ( 2, 3 );
-$slist->select(@selected);
-$dialog->set( 'range',    'selected' );
-$dialog->set( 'document', $slist );
+@{ $slist->{data} } = (
+ [ 1, undef, undef ],
+ [ 3, undef, undef ],
+ [ 5, undef, undef ],
+ [ 7, undef, undef ]
+);
+$slist->select( 2, 3 );
+@selected = $slist->get_selected_indices;
+is_deeply( \@selected, [ 2, 3 ], 'selected' );
+$dialog->set( 'range', 'selected' );
 is( $dialog->get('start'), 4, 'start for document with start and step clash' );
 is( $dialog->get('increment'),
  1, 'step for document with start and step clash' );

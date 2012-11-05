@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 16;
+use Test::More tests => 17;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
 
@@ -24,6 +24,10 @@ is( $slist->pages_possible( 2, -1 ),
  2, 'pages_possible finite backwards in empty document' );
 
 $slist->{data}[0][0] = 2;
+$slist->select(0);
+my @selected = $slist->get_selected_indices;
+is_deeply( \@selected, [0], 'selected' );
+
 is( $slist->pages_possible( 2, 1 ), 0,
  'pages_possible 0 due to existing page' );
 is( $slist->pages_possible( 1, 1 ),
@@ -71,3 +75,5 @@ is_deeply(
 #########################
 
 Gscan2pdf::Document->quit();
+
+__END__
