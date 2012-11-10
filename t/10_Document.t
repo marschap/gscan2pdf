@@ -23,7 +23,7 @@ is( $slist->pages_possible( 1, 1 ),
 is( $slist->pages_possible( 2, -1 ),
  2, 'pages_possible finite backwards in empty document' );
 
-$slist->{data}[0][0] = 2;
+@{ $slist->{data} } = ( [ 2, undef, undef ] );
 $slist->select(0);
 my @selected = $slist->get_selected_indices;
 is_deeply( \@selected, [0], 'selected' );
@@ -39,9 +39,8 @@ $slist->{data}[0][0] = 1;
 is( $slist->pages_possible( 2, 1 ),
  -1, 'pages_possible infinite forwards in non-empty document' );
 
-$slist->{data}[0][0] = 1;
-$slist->{data}[1][0] = 3;
-$slist->{data}[2][0] = 5;
+@{ $slist->{data} } =
+  ( [ 1, undef, undef ], [ 3, undef, undef ], [ 5, undef, undef ] );
 is( $slist->pages_possible( 2, 1 ),
  1, 'pages_possible finite forwards starting in middle of range' );
 is( $slist->pages_possible( 2, -1 ),
