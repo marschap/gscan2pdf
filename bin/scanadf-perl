@@ -184,8 +184,9 @@ sub print_option {
   {
    for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
     print '|' if ( $i > 0 );
+    my $string_format = $opt->{type} == SANE_TYPE_FIXED ? '%g' : '%s';
 
-    print $opt->{constraint}[$i];
+    printf $string_format, $opt->{constraint}[$i];
    }
    if ( $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
     print_unit( $opt->{unit} );
@@ -236,7 +237,8 @@ sub print_option {
   }
  }
 
- print " [inactive]" if ( $opt->{cap} & SANE_CAP_INACTIVE );
+ print " [inactive]"
+   if ( $opt->{type} != SANE_TYPE_BUTTON and $opt->{cap} & SANE_CAP_INACTIVE );
 
  print "\n        ";
 
