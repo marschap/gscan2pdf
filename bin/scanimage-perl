@@ -17,6 +17,7 @@ my (
 );
 my $verbose           = 0;
 my $help              = 0;
+my $all               = 0;
 my $test              = 0;
 my $batch             = 0;
 my $batch_start_at    = 1;
@@ -47,6 +48,7 @@ my @args              = (
  'p|progress'        => \$progress,
  'n|dont-scan'       => \$dont_scan,
  'T|test'            => \$test,
+ 'A|all-options'     => \$all,
  'h|help'            => \$help,
  'v|verbose+'        => \$verbose,
  'B|buffer-size=i'   => \$buffer_size,
@@ -100,7 +102,7 @@ sub print_unit {
 }
 
 sub print_option {
- ( $device, my $opt_num, my $opt ) = @_;
+ ( $device, my $opt_num, my $opt, my $ro ) = @_;
 
  my $not_first = SANE_FALSE;
 
@@ -200,8 +202,9 @@ sub print_option {
   {
    for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
     print '|' if ( $i > 0 );
+    my $string_format = $opt->{type} == SANE_TYPE_FIXED ? '%g' : '%s';
 
-    print $opt->{constraint}[$i];
+    printf $string_format, $opt->{constraint}[$i];
    }
    if ( $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
     print_unit( $opt->{unit} );
@@ -992,6 +995,33 @@ cleanup:
  return;
 }
 
+# @brief print device options to stdout
+#
+# @param device struct of the opened device to describe
+# @param num_dev_options number of device options
+# @param ro SANE_TRUE to print read-only options
+sub print_options {
+ ( $device, my $num_dev_options, my $ro ) = @_;
+
+ for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
+  my $opt;
+
+  # scan area uses modified option struct
+  for ( my $j = 0 ; $j < 4 ; ++$j ) {
+   if ( $i == $window[$j] ) {
+    $opt = $window_option[$j];
+   }
+  }
+  $opt = $device->get_option_descriptor($i) if ( not defined($opt) );
+
+  print_option( $device, $i, $opt )
+    if ( $ro
+   or $opt->{cap} & SANE_CAP_SOFT_SELECT
+   or $opt->{type} == SANE_TYPE_GROUP );
+ }
+ print "\n" if ($num_dev_options);
+}
+
 # There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
 # l is not in @args. Therefore the workaround is to rename l to m for the first
 # scan and back to l for the second.
@@ -1073,6 +1103,7 @@ Parameters are separated by a blank from single-character options (e.g.
 -p, --progress             print progress messages
 -n, --dont-scan            only set options, don't actually scan
 -T, --test                 test backend thoroughly
+-A, --all-options          list all available backend options
 -h, --help                 display this help message and exit
 -v, --verbose              give even more status messages
 -B, --buffer-size=#        change input buffer size (in kB, default 32)
@@ -1190,21 +1221,14 @@ if ( defined($device) ) {
  # output device-specific help
  if ($help) {
   printf "\nOptions specific to device `%s':\n", $devname;
+  print_options( $device, $num_dev_options, SANE_FALSE );
+ }
 
-  for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-   my $opt;
-
-   # scan area uses modified option struct
-   for ( my $j = 0 ; $j < 4 ; ++$j ) {
-    if ( $i == $window[$j] ) {
-     $opt = $window_option[$j];
-    }
-   }
-   $opt = $device->get_option_descriptor($i) if ( not defined($opt) );
-
-   print_option( $device, $i, $opt );
-  }
-  print "\n" if ($num_dev_options);
+ # list all device-specific options
+ if ($all) {
+  printf( "\nAll options specific to device `%s':\n", $devname );
+  print_options( $device, $num_dev_options, SANE_TRUE );
+  exit 0;
  }
 }
 
@@ -1365,7 +1389,8 @@ else {
  $Sane::_status = test_it();
 }
 
-exit $Sane::STATUS;
+exit $Sane::STATUS if ($Sane::STATUS);
+exit;
 
 __END__
 
