@@ -18,6 +18,7 @@ Gscan2pdf::Document->setup($logger);
 # Create test image
 system('convert rose: test.pdf');
 system('convert rose: test.png');
+my $old = `identify -format '%m %G %g %z-bit %r' test.png`;
 
 my $slist = Gscan2pdf::Document->new;
 
@@ -34,11 +35,8 @@ $slist->get_file_info(
    first             => 1,
    last              => 1,
    finished_callback => sub {
-    is(
-     -s 'test.png',
-     -s "$slist->{data}[0][2]{filename}",
-     'PDF imported correctly'
-    );
+    is( `identify -format '%m %G %g %z-bit %r' $slist->{data}[0][2]{filename}`,
+     $old, 'PDF imported correctly' );
     is( dirname("$slist->{data}[0][2]{filename}"),
      "$dir", 'using session directory' );
     Gtk2->main_quit;
