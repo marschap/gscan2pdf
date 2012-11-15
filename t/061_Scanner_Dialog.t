@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 40;
+use Test::More tests => 41;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -115,11 +115,11 @@ $signal = $dialog->signal_connect(
      [ { $resolution => 52 }, { mode => 'Color' } ],
      'added-profile profile'
     );
+    $dialog->signal_handler_disconnect($signal);
    }
   );
   $dialog->add_profile( 'my profile',
    [ { $resolution => 52 }, { mode => 'Color' } ] );
-  $dialog->signal_handler_disconnect($signal);
 
   ######################################
 
@@ -151,46 +151,49 @@ $signal = $dialog->signal_connect(
 
   # need a new main loop because of the timeout
   my $loop = Glib::MainLoop->new;
+  my $flag = FALSE;
   $signal = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
-    $dialog->signal_handler_disconnect($signal);
     is( $profile, 'my profile', 'changed-profile' );
     is_deeply(
      $dialog->get('current-scan-options'),
      [ { $resolution => 52 }, { mode => 'Color' } ],
      'current-scan-options with profile'
     );
-
-    #    $dialog->signal_handler_disconnect($signal);
+    $dialog->signal_handler_disconnect($signal);
+    $flag = TRUE;
     $loop->quit;
    }
   );
   $dialog->set( 'profile', 'my profile' );
-  $loop->run;
+  $loop->run unless ($flag);
 
   ######################################
 
   $dialog->add_profile( 'my profile2',
    [ { $resolution => 52 }, { mode => 'Color' } ] );
 
+  # need a new main loop because of the timeout
+  $loop   = Glib::MainLoop->new;
+  $flag   = FALSE;
   $signal = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
     is( $profile, 'my profile2', 'set profile with identical options' );
     $dialog->signal_handler_disconnect($signal);
+    $flag = TRUE;
     $loop->quit;
    }
   );
-
-  # need a new main loop because of the timeout
-  $loop = Glib::MainLoop->new;
   $dialog->set( 'profile', 'my profile2' );
-
-  #  $loop->run;
+  $loop->run unless ($flag);
 
   ######################################
 
+  # need a new main loop because of the timeout
+  $loop   = Glib::MainLoop->new;
+  $flag   = FALSE;
   $signal = $dialog->signal_connect(
    'changed-scan-option' => sub {
     my ( $widget, $option, $value ) = @_;
@@ -202,17 +205,19 @@ $signal = $dialog->signal_connect(
      'current-scan-options without profile'
     );
     $dialog->signal_handler_disconnect($signal);
+    $flag = TRUE;
     $loop->quit;
    }
   );
+  my $options = $dialog->get('available-scan-options');
+  $dialog->set_option( $options->by_name($resolution), 51 );
+  $loop->run unless ($flag);
+
+  ######################################
 
   # need a new main loop because of the timeout
   $loop = Glib::MainLoop->new;
-  my $options = $dialog->get('available-scan-options');
-  $dialog->set_option( $options->by_name(SANE_NAME_SCAN_RESOLUTION), 51 );
-  $loop->run;
-
-  ######################################
+  $flag = FALSE;
 
   # Reset profile for next test
   $signal = $dialog->signal_connect(
@@ -220,17 +225,18 @@ $signal = $dialog->signal_connect(
     my ( $widget, $profile ) = @_;
     is( $profile, 'my profile', 'reset profile' );
     $dialog->signal_handler_disconnect($signal);
+    $flag = TRUE;
     $loop->quit;
    }
   );
-
-  # need a new main loop because of the timeout
-  $loop = Glib::MainLoop->new;
   $dialog->set( 'profile', 'my profile' );
-  $loop->run;
+  $loop->run unless ($flag);
 
   ######################################
 
+  # need a new main loop because of the timeout
+  $loop   = Glib::MainLoop->new;
+  $flag   = FALSE;
   $signal = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
@@ -243,15 +249,57 @@ $signal = $dialog->signal_connect(
      'current-scan-options without profile (again)'
     );
     $dialog->signal_handler_disconnect($signal);
+    $flag = TRUE;
     $loop->quit;
    }
   );
+  $options = $dialog->get('available-scan-options');
+  $dialog->set_option( $options->by_name($resolution), 51 );
+  $loop->run unless ($flag);
+
+  ######################################
+
+  $dialog->set(
+   'paper-formats',
+   {
+    new => {
+     l => 1,
+     y => 50,
+     x => 50,
+     t => 2,
+    }
+   }
+  );
+
+  $dialog->add_profile( 'cli geometry',
+   [ { 'Paper size' => 'new' }, { $resolution => 50 } ] );
 
   # need a new main loop because of the timeout
-  $loop    = Glib::MainLoop->new;
-  $options = $dialog->get('available-scan-options');
-  $dialog->set_option( $options->by_name(SANE_NAME_SCAN_RESOLUTION), 51 );
-  $loop->run;
+  $loop   = Glib::MainLoop->new;
+  $flag   = FALSE;
+  $signal = $dialog->signal_connect(
+   'changed-profile' => sub {
+    my ( $widget, $profile ) = @_;
+    is_deeply(
+     $dialog->get('current-scan-options'),
+     [
+      { scalar(SANE_NAME_PAGE_HEIGHT) => 52 },
+      { scalar(SANE_NAME_PAGE_WIDTH)  => 51 },
+      { scalar(SANE_NAME_SCAN_TL_X)   => 1 },
+      { scalar(SANE_NAME_SCAN_TL_Y)   => 2 },
+      { scalar(SANE_NAME_SCAN_BR_X)   => 51 },
+      { scalar(SANE_NAME_SCAN_BR_Y)   => 52 },
+      { $resolution                   => 50 }
+     ],
+     'CLI geometry option names'
+    );
+    $dialog->signal_handler_disconnect($signal);
+    $flag = TRUE;
+    $loop->quit;
+   }
+  );
+  $dialog->set( 'profile', 'cli geometry' );
+  $loop->run unless ($flag);
 
   ######################################
 
@@ -264,10 +312,10 @@ $signal = $dialog->signal_connect(
   $dialog->set(
    'paper-formats',
    {
-    A4 => {
+    new2 => {
      l => 0,
-     y => 297,
-     x => 210,
+     y => 10,
+     x => 10,
      t => 0,
     }
    }
@@ -276,10 +324,10 @@ $signal = $dialog->signal_connect(
   $dialog->signal_connect(
    'changed-paper' => sub {
     my ( $widget, $paper ) = @_;
-    is( $paper, 'A4', 'changed-paper' );
+    is( $paper, 'new2', 'changed-paper' );
    }
   );
-  $dialog->set( 'paper', 'A4' );
+  $dialog->set( 'paper', 'new2' );
 
   my $s_signal;
   $s_signal = $dialog->signal_connect(
@@ -316,6 +364,7 @@ $signal = $dialog->signal_connect(
    'new-scan' => sub {
     my ( $widget, $n ) = @_;
     is( $n, 2, 'new_scan' );
+    $flag = TRUE;
     Gtk2->main_quit;
    }
   );

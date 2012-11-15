@@ -16,8 +16,6 @@ my $window = Gtk2::Window->new;
 Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
-
-#Log::Log4perl->easy_init($DEBUG);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::Sane->setup($logger);
 

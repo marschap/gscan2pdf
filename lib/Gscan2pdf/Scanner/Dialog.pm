@@ -1506,6 +1506,25 @@ sub set_profile {
  return;
 }
 
+# roll my own Data::Dumper to walk the reference tree without printing the results
+
+sub my_dumper {
+ my ($ref) = @_;
+ given ( ref $ref ) {
+  when ('ARRAY') {
+   for (@$ref) {
+    my_dumper($_);
+   }
+  }
+  when ('HASH') {
+   while ( my ( $key, $val ) = each(%$ref) ) {
+    my_dumper($val);
+   }
+  }
+ }
+ return;
+}
+
 # Set options to profile referenced by hashref
 
 sub set_current_scan_options {
@@ -1514,15 +1533,15 @@ sub set_current_scan_options {
  return unless ( defined $profile );
 
  # Move them first to a dummy array, as otherwise it would be self-modifying
- my @defaults;
+ my $defaults;
 
  # Config::General flattens arrays with 1 entry to scalars,
  # so we must check for this
  if ( ref($profile) ne 'ARRAY' ) {
-  push @defaults, $profile;
+  push @$defaults, $profile;
  }
  else {
-  @defaults = @$profile;
+  @$defaults = @$profile;
  }
 
  delete $self->{current_scan_options};
@@ -1535,30 +1554,32 @@ sub set_current_scan_options {
  my $signal;
  $signal = $self->signal_connect(
   'changed-scan-option' => sub {
-   $i = $self->set_option_widget( $i, @defaults ) if ( $i < @defaults );
+   my ( $widget, $name, $val ) = @_;
 
-   if ( defined $i and $i < @defaults ) {
-    ++$i;
-   }
+   # for reasons I don't understand, without walking the reference tree,
+   # parts of $default are undef
+   my_dumper($defaults);
+   my ( $ename, $eval ) = each( %{ $defaults->[$i] } );
 
-   # Only emit the changed-current-scan-options signal when we have finished
-   else {
-    $self->signal_handler_disconnect($signal);
-    $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
-    $self->signal_emit( 'changed-current-scan-options',
-     $self->get('current-scan-options') );
+   # don't check $eval against $val, just in case they are different
+   if ( $ename eq $name ) {
+    $i++;
+    $i = $self->set_option_widget( $i, $defaults ) if ( $i < @$defaults );
+
+    # Only emit the changed-current-scan-options signal when we have finished
+    unless ( defined $i and $i < @$defaults ) {
+     $self->signal_handler_disconnect($signal);
+     $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+     $self->signal_emit( 'changed-current-scan-options',
+      $self->get('current-scan-options') );
+    }
    }
   }
  );
- $i = $self->set_option_widget( $i, @defaults );
-
- # Increment $i for the next call of 'changed-scan-option' above
- if ( defined $i ) {
-  ++$i;
- }
+ $i = $self->set_option_widget( $i, $defaults );
 
  # Only emit the changed-current-scan-options signal when we have finished
- else {
+ unless ( defined $i and $i < @$defaults ) {
   $self->signal_handler_disconnect($signal);
   $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
   $self->signal_emit( 'changed-current-scan-options',
@@ -1568,17 +1589,70 @@ sub set_current_scan_options {
  return;
 }
 
+# Extract a option value from a profile
+
+sub _get_option_from_profile {
+ my ( $name, $profile ) = @_;
+
+ # for reasons I don't understand, without walking the reference tree,
+ # parts of $profile are undef
+ my_dumper($profile);
+ for (@$profile) {
+  my ( $key, $val ) = each(%$_);
+  return $val if ( $key eq $name );
+ }
+ return;
+}
+
 # Set option widget
 
 sub set_option_widget {
- my ( $self, $i, @defaults ) = @_;
+ my ( $self, $i, $profile ) = @_;
 
- while ( $i < @defaults ) {
-  my ( $name, $val ) = each( %{ $defaults[$i] } );
+ while ( $i < @$profile ) {
+
+  # for reasons I don't understand, without walking the reference tree,
+  # parts of $profile are undef
+  my_dumper( $profile->[$i] );
+  my ( $name, $val ) = each( %{ $profile->[$i] } );
+
+  if ( $name eq 'Paper size' ) {
+   $self->set( 'paper', $val );
+   return $self->set_option_widget( $i + 1, $profile );
+  }
+
+  # As scanimage and scanadf rename the geometry options,
+  # we have to map them back to the original names
+  given ($name) {
+   when ('l') {
+    $name = SANE_NAME_SCAN_TL_X;
+    $profile->[$i] = { $name => $val };
+   }
+   when ('t') {
+    $name = SANE_NAME_SCAN_TL_Y;
+    $profile->[$i] = { $name => $val };
+   }
+   when ('x') {
+    $name = 'br-x';
+    my $l = _get_option_from_profile( 'l', $profile );
+    $l = _get_option_from_profile( SANE_NAME_SCAN_TL_X, $profile )
+      unless ( defined $l );
+    $val += $l if ( defined $l );
+    $profile->[$i] = { $name => $val };
+   }
+   when ('y') {
+    $name = 'br-y';
+    my $t = _get_option_from_profile( 't', $profile );
+    $t = _get_option_from_profile( SANE_NAME_SCAN_TL_Y, $profile )
+      unless ( defined $t );
+    $val += $t if ( defined $t );
+    $profile->[$i] = { $name => $val };
+   }
+  }
+
   my $options = $self->get('available-scan-options');
   my $opt     = $options->by_name($name);
-
-  my $widget = $opt->{widget};
+  my $widget  = $opt->{widget};
 
   if ( ref($val) eq 'ARRAY' ) {
    $self->set_option( $opt, $val );

@@ -168,7 +168,6 @@ sub _scanimage {
 
      if ( $return == 5 ) {
 
-      # Timer will run until callback returns false
       my $timer = Glib::Timeout->add(
        $_POLL_INTERVAL,
        sub {
