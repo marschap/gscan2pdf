@@ -4,7 +4,7 @@ use Test::More tests => 3;
 
 #########################
 
-ok( !system('perl bin/scanimage-perl --device=test --test &> /dev/null'),
+ok( !system('perl bin/scanimage-perl --device=test --test > /dev/null 2>&1'),
  'test' );
 
 #########################
@@ -33,5 +33,4 @@ SKIP: {
  @output  = split( "\n", $output );
  @example = split( "\n", $example );
  is_deeply( \@output, \@example, "all options" );
-
 }
