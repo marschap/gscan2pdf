@@ -530,7 +530,7 @@ sub get_cmdline {
  my $cmd = 'unpaper ' . join( ' ', @items ) . ' --overwrite ';
  $cmd .=
    version->parse( $self->version ) > ## no critic (ProhibitMismatchedOperators)
-   '0.3.0'
+   '0.3'
    ? '%s %s %s'
    : '--input-file-sequence %s --output-file-sequence %s %s';
  return $cmd;
