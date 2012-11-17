@@ -280,19 +280,19 @@ $signal = $dialog->signal_connect(
   $signal = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
-    is_deeply(
-     $dialog->get('current-scan-options'),
-     [
-      { scalar(SANE_NAME_PAGE_HEIGHT) => 52 },
-      { scalar(SANE_NAME_PAGE_WIDTH)  => 51 },
-      { scalar(SANE_NAME_SCAN_TL_X)   => 1 },
-      { scalar(SANE_NAME_SCAN_TL_Y)   => 2 },
-      { scalar(SANE_NAME_SCAN_BR_X)   => 51 },
-      { scalar(SANE_NAME_SCAN_BR_Y)   => 52 },
-      { $resolution                   => 50 }
-     ],
-     'CLI geometry option names'
-    );
+    my $options = $dialog->get('available-scan-options');
+    my $expected;
+    push @$expected, { scalar(SANE_NAME_PAGE_HEIGHT) => 52 }
+      if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
+    push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 51 }
+      if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
+    push @$expected, { scalar(SANE_NAME_SCAN_TL_X) => 1 },
+      { scalar(SANE_NAME_SCAN_TL_Y) => 2 },
+      { scalar(SANE_NAME_SCAN_BR_X) => 51 },
+      { scalar(SANE_NAME_SCAN_BR_Y) => 52 },
+      { $resolution                 => 50 };
+    is_deeply( $dialog->get('current-scan-options'),
+     $expected, 'CLI geometry option names' );
     $dialog->signal_handler_disconnect($signal);
     $flag = TRUE;
     $loop->quit;
