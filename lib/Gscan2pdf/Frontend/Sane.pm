@@ -206,8 +206,8 @@ sub set_option {
 sub _new_page {
  my ( $dir, $format, $n ) = @_;
  my $path = sprintf $format, $n;
- return _enqueue_request( 'scan-page',
-  { path => File::Spec->catdir( $dir, $path ) } );
+ $path = File::Spec->catdir( $dir, $path ) if ( defined $dir );
+ return _enqueue_request( 'scan-page', { path => $path } );
 }
 
 sub scan_pages {
