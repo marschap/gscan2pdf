@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.0.6
+Version: 1.1.0
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -84,9 +84,13 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Fri Jul 20 2012 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sun Nov 18 2012 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes #682818 (Presets aren't working)
+  - Added depends: libtry-tiny-perl
   - New upstream release
   - New upstream release
+    Closes: #670640 (Can't call method get_cmdline)
   - Recommend tesseract OR gocr OR cuneiform, rather than AND
     Closes: #682100 gscan2pdf Recommends cuneiform which is in non-free
   - Fix updating widgets in scanimage dialog
