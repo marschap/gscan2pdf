@@ -529,8 +529,7 @@ sub get_cmdline {
  }
  my $cmd = 'unpaper ' . join( ' ', @items ) . ' --overwrite ';
  $cmd .=
-   version->parse( $self->version ) > ## no critic (ProhibitMismatchedOperators)
-   '0.3'
+   version->parse( $self->version ) > version->parse('v0.3')
    ? '%s %s %s'
    : '--input-file-sequence %s --output-file-sequence %s %s';
  return $cmd;
@@ -540,6 +539,7 @@ sub version {
  unless ( defined $version ) {
   ( $version, undef ) = Gscan2pdf::Document::open_three('unpaper --version');
   chomp($version);
+  $version = "v$version";
  }
  return $version;
 }

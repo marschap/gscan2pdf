@@ -17,7 +17,7 @@ is(
  $unpaper->get_cmdline,
 'unpaper --output-pages 1 --white-threshold 0.9 --layout single --black-threshold 0.33 --deskew-scan-direction left,right --border-margin 0,0 --overwrite '
    . (
-  version->parse( $unpaper->version ) > '0.3'
+  version->parse( $unpaper->version ) > version->parse('v0.3')
   ? '%s %s %s'
   : '--input-file-sequence %s --output-file-sequence %s %s'
    ),
@@ -30,7 +30,7 @@ is(
  $unpaper->get_cmdline,
 'unpaper --output-pages 1 --white-threshold 0.9 --layout double --black-threshold 0.33 --deskew-scan-direction left,right --border-margin 0,0 --overwrite '
    . (
-  version->parse( $unpaper->version ) > '0.3'
+  version->parse( $unpaper->version ) > version->parse('v0.3')
   ? '%s %s %s'
   : '--input-file-sequence %s --output-file-sequence %s %s'
    ),
@@ -71,7 +71,7 @@ is(
  $unpaper->get_cmdline,
  'unpaper --white-threshold 0.8 --black-threshold 0.35 --overwrite '
    . (
-  version->parse( $unpaper->version ) > '0.3'
+  version->parse( $unpaper->version ) > version->parse('v0.3')
   ? '%s %s %s'
   : '--input-file-sequence %s --output-file-sequence %s %s'
    ),
