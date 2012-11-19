@@ -1138,73 +1138,7 @@ sub set_option {
   },
   finished_callback => sub {
    my ($data) = @_;
-
-   if ($data) {
-
-    # walk the widget tree and update them from the hash
-    my @options = @{$data};
-    $logger->debug( "Sane->get_option_descriptor returned: ",
-     Dumper( \@options ) );
-
-    my ( $group, $vbox );
-    my $num_dev_options = $#options + 1;
-    for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-     my $widget = $options->by_index($i)->{widget};
-
-     # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
-     if ( defined $widget ) {
-      my $opt   = $options[$i];
-      my $value = $opt->{val};
-      $widget->signal_handler_block( $widget->{signal} );
-
-      # HBox for option
-      my $hbox = $widget->parent;
-      $hbox->set_sensitive( ( not $opt->{cap} & SANE_CAP_INACTIVE )
-         and $opt->{cap} & SANE_CAP_SOFT_SELECT );
-
-      if ( $opt->{max_values} < 2 ) {
-
-       # CheckButton
-       if ( $opt->{type} == SANE_TYPE_BOOL )
-       {    ## no critic (ProhibitCascadingIfElse)
-        $widget->set_active($value)
-          if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
-       }
-
-       # SpinButton
-       elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-        my ( $step, $page ) = $widget->get_increments;
-        $step = 1;
-        $step = $opt->{constraint}{quant} if ( $opt->{constraint}{quant} );
-        $widget->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
-        $widget->set_increments( $step, $page );
-        $widget->set_value($value)
-          if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
-       }
-
-       # ComboBox
-       elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
-        or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
-       {
-        $widget->get_model->clear;
-        my $index = 0;
-        for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
-         $widget->append_text( $d_sane->get( $opt->{constraint}[$i] ) );
-         $index = $i if ( defined $value and $opt->{constraint}[$i] eq $value );
-        }
-        $widget->set_active($index) if ( defined $index );
-       }
-
-       # Entry
-       elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-        $widget->set_text($value)
-          if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
-       }
-      }
-      $widget->signal_handler_unblock( $widget->{signal} );
-     }
-    }
-   }
+   $self->update_options($data) if ($data);
 
    # We can carry on applying defaults now, if necessary.
    $self->signal_emit( 'finished-process', 'set_option' );
@@ -1218,6 +1152,75 @@ sub set_option {
    #    $self->get('current-scan-options') );
   }
  );
+ return;
+}
+
+# If setting an option triggers a reload, we need to update the options
+
+sub update_options {
+ my ( $self, $options ) = @_;
+
+ # walk the widget tree and update them from the hash
+ $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
+
+ my ( $group, $vbox );
+ my $num_dev_options = $#{$options} + 1;
+ for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
+  my $widget = $self->get('available-scan-options')->by_index($i)->{widget};
+
+  # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
+  if ( defined $widget ) {
+   my $opt   = $options->[$i];
+   my $value = $opt->{val};
+   $widget->signal_handler_block( $widget->{signal} );
+
+   # HBox for option
+   my $hbox = $widget->parent;
+   $hbox->set_sensitive( ( not $opt->{cap} & SANE_CAP_INACTIVE )
+      and $opt->{cap} & SANE_CAP_SOFT_SELECT );
+
+   if ( $opt->{max_values} < 2 ) {
+
+    # CheckButton
+    if ( $opt->{type} == SANE_TYPE_BOOL )
+    {    ## no critic (ProhibitCascadingIfElse)
+     $widget->set_active($value)
+       if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
+    }
+
+    # SpinButton
+    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
+     my ( $step, $page ) = $widget->get_increments;
+     $step = 1;
+     $step = $opt->{constraint}{quant} if ( $opt->{constraint}{quant} );
+     $widget->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
+     $widget->set_increments( $step, $page );
+     $widget->set_value($value)
+       if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
+    }
+
+    # ComboBox
+    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+     or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
+    {
+     $widget->get_model->clear;
+     my $index = 0;
+     for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
+      $widget->append_text( $d_sane->get( $opt->{constraint}[$i] ) );
+      $index = $i if ( defined $value and $opt->{constraint}[$i] eq $value );
+     }
+     $widget->set_active($index) if ( defined $index );
+    }
+
+    # Entry
+    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
+     $widget->set_text($value)
+       if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
+    }
+   }
+   $widget->signal_handler_unblock( $widget->{signal} );
+  }
+ }
  return;
 }
 
