@@ -771,304 +771,7 @@ sub scan_options {
     sub {    # finished callback
      my ($data) = @_;
      my $options = Gscan2pdf::Scanner::Options->new_from_data($data);
-     $logger->debug( "Sane->get_option_descriptor returned: ",
-      Dumper($options) );
-
-     my ( $group, $vbox, $hboxp );
-     my $num_dev_options = $options->num_options;
-
-     # We have hereby removed the active profile and paper,
-     # so update the properties without triggering the signals
-     $self->{profile}       = undef;
-     $self->{paper_formats} = undef;
-     $self->{paper}         = undef;
-
-     delete
-       $self->{combobp};    # So we don't carry over from one device to another
-     for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-      my $opt = $options->by_index($i);
-
-      # Notebook page for group
-      if ( $opt->{type} == SANE_TYPE_GROUP or not defined($vbox) ) {
-       $vbox = Gtk2::VBox->new;
-       $group =
-           $opt->{type} == SANE_TYPE_GROUP
-         ? $d_sane->get( $opt->{title} )
-         : $d->get('Scan Options');
-       $self->{notebook}->append_page( $vbox, $group );
-       next;
-      }
-
-      next if ( !( $opt->{cap} & SANE_CAP_SOFT_DETECT ) );
-
-      # Widget
-      my ( $widget, $val );
-      $val = $opt->{val};
-
-      if (
-           ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
-       and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
-       and ( ( $opt->{name} eq SANE_NAME_SCAN_TL_X )
-        or ( $opt->{name} eq SANE_NAME_SCAN_TL_Y )
-        or ( $opt->{name} eq SANE_NAME_SCAN_BR_X )
-        or ( $opt->{name} eq SANE_NAME_SCAN_BR_Y )
-        or ( $opt->{name} eq SANE_NAME_PAGE_HEIGHT )
-        or ( $opt->{name} eq SANE_NAME_PAGE_WIDTH ) )
-        )
-      {
-
-       # Define HBox for paper size here
-       # so that it can be put before first geometry option
-       if ( not defined($hboxp) ) {
-        $hboxp = Gtk2::HBox->new;
-        $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
-       }
-      }
-
-      # HBox for option
-      my $hbox = Gtk2::HBox->new;
-      $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
-      $hbox->set_sensitive(FALSE)
-        if ( $opt->{cap} & SANE_CAP_INACTIVE
-       or not $opt->{cap} & SANE_CAP_SOFT_SELECT );
-
-      if ( $opt->{max_values} < 2 ) {
-
-       # Label
-       if ( $opt->{type} != SANE_TYPE_BUTTON ) {
-        my $label = Gtk2::Label->new( $d_sane->get( $opt->{title} ) );
-        $hbox->pack_start( $label, FALSE, FALSE, 0 );
-       }
-
-       # CheckButton
-       if ( $opt->{type} == SANE_TYPE_BOOL )
-       {    ## no critic (ProhibitCascadingIfElse)
-        $widget = Gtk2::CheckButton->new;
-        $widget->set_active(TRUE) if ($val);
-        $widget->{signal} = $widget->signal_connect(
-         toggled => sub {
-          my $value = $widget->get_active;
-          $self->set_option( $opt, $value );
-         }
-        );
-       }
-
-       # Button
-       elsif ( $opt->{type} == SANE_TYPE_BUTTON ) {
-        $widget = Gtk2::Button->new( $d_sane->get( $opt->{title} ) );
-        $widget->{signal} = $widget->signal_connect(
-         clicked => sub {
-          $self->set_option( $opt, $val );
-         }
-        );
-       }
-
-       # SpinButton
-       elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-        my $step = 1;
-        $step = $opt->{constraint}{quant} if ( $opt->{constraint}{quant} );
-        $widget = Gtk2::SpinButton->new_with_range( $opt->{constraint}{min},
-         $opt->{constraint}{max}, $step );
-
-        # Set the default
-        $widget->set_value($val)
-          if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE );
-        $widget->{signal} = $widget->signal_connect(
-         'value-changed' => sub {
-          my $value = $widget->get_value;
-          $self->set_option( $opt, $value );
-         }
-        );
-       }
-
-       # ComboBox
-       elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
-        or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
-       {
-        $widget = Gtk2::ComboBox->new_text;
-        my $index = 0;
-        for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
-         $widget->append_text( $d_sane->get( $opt->{constraint}[$i] ) );
-         $index = $i if ( defined $val and $opt->{constraint}[$i] eq $val );
-        }
-
-        # Set the default
-        $widget->set_active($index) if ( defined $index );
-        $widget->{signal} = $widget->signal_connect(
-         changed => sub {
-          my $i = $widget->get_active;
-          $self->set_option( $opt, $opt->{constraint}[$i] );
-         }
-        );
-       }
-
-       # Entry
-       elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-        $widget = Gtk2::Entry->new;
-
-        # Set the default
-        $widget->set_text($val)
-          if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE );
-        $widget->{signal} = $widget->signal_connect(
-         activate => sub {
-          my $value = $widget->get_text;
-          $self->set_option( $opt, $value );
-         }
-        );
-       }
-      }
-      else {    # $opt->{max_values} > 1
-       $widget = Gtk2::Button->new( $d_sane->get( $opt->{title} ) );
-       $widget->{signal} = $widget->signal_connect(
-        clicked => sub {
-         if ($opt->{type} == SANE_TYPE_FIXED
-          or $opt->{type} == SANE_TYPE_INT )
-         {
-          if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-           main::show_message_dialog(
-            $self, 'info', 'close',
-            $d->get(
-'Multiple unconstrained values are not currently supported. Please file a bug.'
-            )
-           );
-          }
-          else {
-           $self->set_options($opt);
-          }
-         }
-         else {
-          main::show_message_dialog(
-           $self, 'info', 'close',
-           $d->get(
-'Multiple non-numerical values are not currently supported. Please file a bug.'
-           )
-          );
-         }
-        }
-       );
-      }
-
-      if ( defined $widget ) {
-       $opt->{widget} = $widget;
-       if ( $opt->{type} == SANE_TYPE_BUTTON or $opt->{max_values} > 1 ) {
-        $hbox->pack_end( $widget, TRUE, TRUE, 0 );
-       }
-       else {
-        $hbox->pack_end( $widget, FALSE, FALSE, 0 );
-       }
-       $tooltips->set_tip( $widget, $d_sane->get( $opt->{desc} ) );
-
-       # Look-up to hide/show the box if necessary
-       $options->{box}{ $opt->{name} } = $hbox
-         if ( $opt->{name} eq SANE_NAME_SCAN_BR_X
-        or $opt->{name} eq SANE_NAME_SCAN_BR_Y
-        or $opt->{name} eq SANE_NAME_SCAN_TL_X
-        or $opt->{name} eq SANE_NAME_SCAN_TL_Y
-        or $opt->{name} eq SANE_NAME_PAGE_HEIGHT
-        or $opt->{name} eq SANE_NAME_PAGE_WIDTH );
-
-# Only define the paper size once the rest of the geometry widget have been created
-       if (
-            defined( $options->{box}{ scalar(SANE_NAME_SCAN_BR_X) } )
-        and defined( $options->{box}{ scalar(SANE_NAME_SCAN_BR_Y) } )
-        and defined( $options->{box}{ scalar(SANE_NAME_SCAN_TL_X) } )
-        and defined( $options->{box}{ scalar(SANE_NAME_SCAN_TL_Y) } )
-        and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
-         or defined( $options->{box}{ scalar(SANE_NAME_PAGE_HEIGHT) } ) )
-        and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
-         or defined( $options->{box}{ scalar(SANE_NAME_PAGE_WIDTH) } ) )
-        and not defined( $self->{combobp} )
-         )
-       {
-
-        # Paper list
-        my $label = Gtk2::Label->new( $d->get('Paper size') );
-        $hboxp->pack_start( $label, FALSE, FALSE, 0 );
-
-        $self->{combobp} = Gtk2::ComboBox->new_text;
-        $self->{combobp}->append_text( $d->get('Manual') );
-        $self->{combobp}->append_text( $d->get('Edit') );
-        $tooltips->set_tip( $self->{combobp},
-         $d->get('Selects or edits the paper size') );
-        $hboxp->pack_end( $self->{combobp}, FALSE, FALSE, 0 );
-        $self->{combobp}->set_active(0);
-        $self->{combobp}->signal_connect(
-         changed => sub {
-
-          if ( $self->{combobp}->get_active_text eq $d->get('Edit') ) {
-           $self->edit_paper;
-          }
-          elsif ( $self->{combobp}->get_active_text eq $d->get('Manual') ) {
-           for (
-            ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
-             SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
-             SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
-            )
-             )
-           {
-            $options->{box}{$_}->show_all if ( defined $options->{box}{$_} );
-           }
-          }
-          else {
-           my $paper   = $self->{combobp}->get_active_text;
-           my $formats = $self->get('paper-formats');
-           if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
-            and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) ) )
-           {
-            $options->by_name(SANE_NAME_PAGE_HEIGHT)->{widget}
-              ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
-            $options->by_name(SANE_NAME_PAGE_WIDTH)->{widget}
-              ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
-           }
-
-           $options->by_name(SANE_NAME_SCAN_TL_X)->{widget}
-             ->set_value( $formats->{$paper}{l} );
-           $options->by_name(SANE_NAME_SCAN_TL_Y)->{widget}
-             ->set_value( $formats->{$paper}{t} );
-           $options->by_name(SANE_NAME_SCAN_BR_X)->{widget}
-             ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
-           $options->by_name(SANE_NAME_SCAN_BR_Y)->{widget}
-             ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
-           Glib::Idle->add(
-            sub {
-             for (
-              ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
-               SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
-               SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
-              )
-               )
-             {
-              $options->{box}{$_}->hide_all if ( defined $options->{box}{$_} );
-             }
-            }
-           );
-
-           # Do this last, as it fires the changed-paper signal
-           $self->set( 'paper', $paper );
-          }
-         }
-        );
-       }
-
-      }
-      else {
-       $logger->warn("Unknown type $opt->{type}");
-      }
-     }
-
-     # Set defaults
-     my $sane_device = Gscan2pdf::Frontend::Sane->device();
-
-     # Show new pages
-     for ( my $i = 1 ; $i < $self->{notebook}->get_n_pages ; $i++ ) {
-      $self->{notebook}->get_nth_page($i)->show_all;
-     }
-
-     # Give the GUI a chance to catch up before resizing.
-     Glib::Idle->add( sub { $self->resize( 100, 100 ); } );
-
-     $self->{sbutton}->set_sensitive(TRUE);
-     $self->{sbutton}->grab_focus;
+     $self->initialise_options($options);
 
      $self->signal_emit( 'finished-process', 'find_scan_options' );
 
@@ -1094,6 +797,308 @@ sub scan_options {
   }
  );
 
+ return;
+}
+
+sub initialise_options {
+ my ( $self, $options ) = @_;
+ $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
+
+ my ( $group, $vbox, $hboxp );
+ my $num_dev_options = $options->num_options;
+
+ # We have hereby removed the active profile and paper,
+ # so update the properties without triggering the signals
+ $self->{profile}       = undef;
+ $self->{paper_formats} = undef;
+ $self->{paper}         = undef;
+
+ delete $self->{combobp};    # So we don't carry over from one device to another
+ for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
+  my $opt = $options->by_index($i);
+
+  # Notebook page for group
+  if ( $opt->{type} == SANE_TYPE_GROUP or not defined($vbox) ) {
+   $vbox = Gtk2::VBox->new;
+   $group =
+       $opt->{type} == SANE_TYPE_GROUP
+     ? $d_sane->get( $opt->{title} )
+     : $d->get('Scan Options');
+   $self->{notebook}->append_page( $vbox, $group );
+   next;
+  }
+
+  next if ( !( $opt->{cap} & SANE_CAP_SOFT_DETECT ) );
+
+  # Widget
+  my ( $widget, $val );
+  $val = $opt->{val};
+
+  if (
+       ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
+   and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
+   and ( ( $opt->{name} eq SANE_NAME_SCAN_TL_X )
+    or ( $opt->{name} eq SANE_NAME_SCAN_TL_Y )
+    or ( $opt->{name} eq SANE_NAME_SCAN_BR_X )
+    or ( $opt->{name} eq SANE_NAME_SCAN_BR_Y )
+    or ( $opt->{name} eq SANE_NAME_PAGE_HEIGHT )
+    or ( $opt->{name} eq SANE_NAME_PAGE_WIDTH ) )
+    )
+  {
+
+   # Define HBox for paper size here
+   # so that it can be put before first geometry option
+   if ( not defined($hboxp) ) {
+    $hboxp = Gtk2::HBox->new;
+    $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
+   }
+  }
+
+  # HBox for option
+  my $hbox = Gtk2::HBox->new;
+  $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
+  $hbox->set_sensitive(FALSE)
+    if ( $opt->{cap} & SANE_CAP_INACTIVE
+   or not $opt->{cap} & SANE_CAP_SOFT_SELECT );
+
+  if ( $opt->{max_values} < 2 ) {
+
+   # Label
+   if ( $opt->{type} != SANE_TYPE_BUTTON ) {
+    my $label = Gtk2::Label->new( $d_sane->get( $opt->{title} ) );
+    $hbox->pack_start( $label, FALSE, FALSE, 0 );
+   }
+
+   # CheckButton
+   if ( $opt->{type} == SANE_TYPE_BOOL )
+   {    ## no critic (ProhibitCascadingIfElse)
+    $widget = Gtk2::CheckButton->new;
+    $widget->set_active(TRUE) if ($val);
+    $widget->{signal} = $widget->signal_connect(
+     toggled => sub {
+      my $value = $widget->get_active;
+      $self->set_option( $opt, $value );
+     }
+    );
+   }
+
+   # Button
+   elsif ( $opt->{type} == SANE_TYPE_BUTTON ) {
+    $widget = Gtk2::Button->new( $d_sane->get( $opt->{title} ) );
+    $widget->{signal} = $widget->signal_connect(
+     clicked => sub {
+      $self->set_option( $opt, $val );
+     }
+    );
+   }
+
+   # SpinButton
+   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
+    my $step = 1;
+    $step = $opt->{constraint}{quant} if ( $opt->{constraint}{quant} );
+    $widget = Gtk2::SpinButton->new_with_range( $opt->{constraint}{min},
+     $opt->{constraint}{max}, $step );
+
+    # Set the default
+    $widget->set_value($val)
+      if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE );
+    $widget->{signal} = $widget->signal_connect(
+     'value-changed' => sub {
+      my $value = $widget->get_value;
+      $self->set_option( $opt, $value );
+     }
+    );
+   }
+
+   # ComboBox
+   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+    or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
+   {
+    $widget = Gtk2::ComboBox->new_text;
+    my $index = 0;
+    for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
+     $widget->append_text( $d_sane->get( $opt->{constraint}[$i] ) );
+     $index = $i if ( defined $val and $opt->{constraint}[$i] eq $val );
+    }
+
+    # Set the default
+    $widget->set_active($index) if ( defined $index );
+    $widget->{signal} = $widget->signal_connect(
+     changed => sub {
+      my $i = $widget->get_active;
+      $self->set_option( $opt, $opt->{constraint}[$i] );
+     }
+    );
+   }
+
+   # Entry
+   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
+    $widget = Gtk2::Entry->new;
+
+    # Set the default
+    $widget->set_text($val)
+      if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE );
+    $widget->{signal} = $widget->signal_connect(
+     activate => sub {
+      my $value = $widget->get_text;
+      $self->set_option( $opt, $value );
+     }
+    );
+   }
+  }
+  else {    # $opt->{max_values} > 1
+   $widget = Gtk2::Button->new( $d_sane->get( $opt->{title} ) );
+   $widget->{signal} = $widget->signal_connect(
+    clicked => sub {
+     if ($opt->{type} == SANE_TYPE_FIXED
+      or $opt->{type} == SANE_TYPE_INT )
+     {
+      if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
+       main::show_message_dialog(
+        $self, 'info', 'close',
+        $d->get(
+'Multiple unconstrained values are not currently supported. Please file a bug.'
+        )
+       );
+      }
+      else {
+       $self->set_options($opt);
+      }
+     }
+     else {
+      main::show_message_dialog(
+       $self, 'info', 'close',
+       $d->get(
+'Multiple non-numerical values are not currently supported. Please file a bug.'
+       )
+      );
+     }
+    }
+   );
+  }
+
+  if ( defined $widget ) {
+   $opt->{widget} = $widget;
+   if ( $opt->{type} == SANE_TYPE_BUTTON or $opt->{max_values} > 1 ) {
+    $hbox->pack_end( $widget, TRUE, TRUE, 0 );
+   }
+   else {
+    $hbox->pack_end( $widget, FALSE, FALSE, 0 );
+   }
+   $tooltips->set_tip( $widget, $d_sane->get( $opt->{desc} ) );
+
+   # Look-up to hide/show the box if necessary
+   $options->{box}{ $opt->{name} } = $hbox
+     if ( $opt->{name} eq SANE_NAME_SCAN_BR_X
+    or $opt->{name} eq SANE_NAME_SCAN_BR_Y
+    or $opt->{name} eq SANE_NAME_SCAN_TL_X
+    or $opt->{name} eq SANE_NAME_SCAN_TL_Y
+    or $opt->{name} eq SANE_NAME_PAGE_HEIGHT
+    or $opt->{name} eq SANE_NAME_PAGE_WIDTH );
+
+   # Only define the paper size once the rest of the geometry widget
+   # has been created
+   if (
+        defined( $options->{box}{ scalar(SANE_NAME_SCAN_BR_X) } )
+    and defined( $options->{box}{ scalar(SANE_NAME_SCAN_BR_Y) } )
+    and defined( $options->{box}{ scalar(SANE_NAME_SCAN_TL_X) } )
+    and defined( $options->{box}{ scalar(SANE_NAME_SCAN_TL_Y) } )
+    and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
+     or defined( $options->{box}{ scalar(SANE_NAME_PAGE_HEIGHT) } ) )
+    and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
+     or defined( $options->{box}{ scalar(SANE_NAME_PAGE_WIDTH) } ) )
+    and not defined( $self->{combobp} )
+     )
+   {
+
+    # Paper list
+    my $label = Gtk2::Label->new( $d->get('Paper size') );
+    $hboxp->pack_start( $label, FALSE, FALSE, 0 );
+
+    $self->{combobp} = Gtk2::ComboBox->new_text;
+    $self->{combobp}->append_text( $d->get('Manual') );
+    $self->{combobp}->append_text( $d->get('Edit') );
+    $tooltips->set_tip( $self->{combobp},
+     $d->get('Selects or edits the paper size') );
+    $hboxp->pack_end( $self->{combobp}, FALSE, FALSE, 0 );
+    $self->{combobp}->set_active(0);
+    $self->{combobp}->signal_connect(
+     changed => sub {
+
+      if ( $self->{combobp}->get_active_text eq $d->get('Edit') ) {
+       $self->edit_paper;
+      }
+      elsif ( $self->{combobp}->get_active_text eq $d->get('Manual') ) {
+       for (
+        ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+         SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+         SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
+        )
+         )
+       {
+        $options->{box}{$_}->show_all if ( defined $options->{box}{$_} );
+       }
+      }
+      else {
+       my $paper   = $self->{combobp}->get_active_text;
+       my $formats = $self->get('paper-formats');
+       if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
+        and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) ) )
+       {
+        $options->by_name(SANE_NAME_PAGE_HEIGHT)->{widget}
+          ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
+        $options->by_name(SANE_NAME_PAGE_WIDTH)->{widget}
+          ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
+       }
+
+       $options->by_name(SANE_NAME_SCAN_TL_X)->{widget}
+         ->set_value( $formats->{$paper}{l} );
+       $options->by_name(SANE_NAME_SCAN_TL_Y)->{widget}
+         ->set_value( $formats->{$paper}{t} );
+       $options->by_name(SANE_NAME_SCAN_BR_X)->{widget}
+         ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
+       $options->by_name(SANE_NAME_SCAN_BR_Y)->{widget}
+         ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
+       Glib::Idle->add(
+        sub {
+         for (
+          ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+           SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+           SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
+          )
+           )
+         {
+          $options->{box}{$_}->hide_all if ( defined $options->{box}{$_} );
+         }
+        }
+       );
+
+       # Do this last, as it fires the changed-paper signal
+       $self->set( 'paper', $paper );
+      }
+     }
+    );
+   }
+
+  }
+  else {
+   $logger->warn("Unknown type $opt->{type}");
+  }
+ }
+
+ # Set defaults
+ my $sane_device = Gscan2pdf::Frontend::Sane->device();
+
+ # Show new pages
+ for ( my $i = 1 ; $i < $self->{notebook}->get_n_pages ; $i++ ) {
+  $self->{notebook}->get_nth_page($i)->show_all;
+ }
+
+ # Give the GUI a chance to catch up before resizing.
+ Glib::Idle->add( sub { $self->resize( 100, 100 ); } );
+
+ $self->{sbutton}->set_sensitive(TRUE);
+ $self->{sbutton}->grab_focus;
  return;
 }
 
