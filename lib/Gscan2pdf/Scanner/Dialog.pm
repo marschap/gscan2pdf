@@ -1567,7 +1567,7 @@ sub set_current_scan_options {
     $i = $self->set_option_widget( $i, $defaults ) if ( $i < @$defaults );
 
     # Only emit the changed-current-scan-options signal when we have finished
-    unless ( defined $i and $i < @$defaults ) {
+    if ( not defined($i) or $i > $#{$defaults} ) {
      $self->signal_handler_disconnect($signal);
      $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
      $self->signal_emit( 'changed-current-scan-options',
@@ -1579,7 +1579,7 @@ sub set_current_scan_options {
  $i = $self->set_option_widget( $i, $defaults );
 
  # Only emit the changed-current-scan-options signal when we have finished
- unless ( defined $i and $i < @$defaults ) {
+ if ( not defined($i) or $i > $#{$defaults} ) {
   $self->signal_handler_disconnect($signal);
   $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
   $self->signal_emit( 'changed-current-scan-options',
