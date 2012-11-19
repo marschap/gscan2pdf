@@ -8301,14 +8301,14 @@ C<apt-get update>
 
 C<apt-get install gscan2pdf>
 
-If you add my key to your list of trusted keys, then you will no longer get
+If you add the key for my ppa to your list of trusted keys, then you will no longer get
 the "not authenticated" warnings. Fetch the key:
 
-C<gpg --keyserver subkeys.pgp.net --recv-keys 4DD7CC93>
+C<gpg --keyserver keyserver.ubuntu.com --recv-keys 5BC3E400>
 
 Then add it to the apt keyring:
 
-C<gpg --export --armor 4DD7CC93 | sudo apt-key add ->
+C<gpg --export --armor 5BC3E400 | sudo apt-key add ->
 
 =head2 RPMs
 
