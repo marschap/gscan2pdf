@@ -812,7 +812,7 @@ sub _extended_pagenumber_checkbox_callback {
  return;
 }
 
-sub _initialise_options {
+sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  my ( $self, $options ) = @_;
  $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
 
