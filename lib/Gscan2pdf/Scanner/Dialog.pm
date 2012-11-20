@@ -1215,7 +1215,7 @@ sub update_options {
     if ( $opt->{type} == SANE_TYPE_BOOL )
     {    ## no critic (ProhibitCascadingIfElse)
      $widget->set_active($value)
-       if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
+       if ( _value_for_active_option( $value, $opt ) );
     }
 
     # SpinButton
@@ -1226,7 +1226,7 @@ sub update_options {
      $widget->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
      $widget->set_increments( $step, $page );
      $widget->set_value($value)
-       if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
+       if ( _value_for_active_option( $value, $opt ) );
     }
 
     # ComboBox
@@ -1245,13 +1245,18 @@ sub update_options {
     # Entry
     elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
      $widget->set_text($value)
-       if ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
+       if ( _value_for_active_option( $value, $opt ) );
     }
    }
    $widget->signal_handler_unblock( $widget->{signal} );
   }
  }
  return;
+}
+
+sub _value_for_active_option {
+ my ( $value, $opt ) = @_;
+ return defined $value and not $opt->{cap} & SANE_CAP_INACTIVE;
 }
 
 # display Goo::Canvas with graph
