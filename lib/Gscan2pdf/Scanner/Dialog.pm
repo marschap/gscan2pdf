@@ -834,20 +834,17 @@ sub _initialise_options {
    next;
   }
 
-  next if ( !( $opt->{cap} & SANE_CAP_SOFT_DETECT ) );
+  next unless ( $opt->{cap} & SANE_CAP_SOFT_DETECT );
 
   # Widget
   my ( $widget, $val );
   $val = $opt->{val};
 
-  if ( _geometry_option($opt) ) {
-
-   # Define HBox for paper size here
-   # so that it can be put before first geometry option
-   if ( not defined($hboxp) ) {
-    $hboxp = Gtk2::HBox->new;
-    $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
-   }
+  # Define HBox for paper size here
+  # so that it can be put before first geometry option
+  if ( _geometry_option($opt) and not defined($hboxp) ) {
+   $hboxp = Gtk2::HBox->new;
+   $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
   }
 
   # HBox for option
