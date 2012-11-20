@@ -804,6 +804,13 @@ sub initialise_options {
  my ( $self, $options ) = @_;
  $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
 
+ my $SANE_NAME_SCAN_TL_X   = SANE_NAME_SCAN_TL_X;
+ my $SANE_NAME_SCAN_TL_Y   = SANE_NAME_SCAN_TL_Y;
+ my $SANE_NAME_SCAN_BR_X   = SANE_NAME_SCAN_BR_X;
+ my $SANE_NAME_SCAN_BR_Y   = SANE_NAME_SCAN_BR_Y;
+ my $SANE_NAME_PAGE_HEIGHT = SANE_NAME_PAGE_HEIGHT;
+ my $SANE_NAME_PAGE_WIDTH  = SANE_NAME_PAGE_WIDTH;
+
  my ( $group, $vbox, $hboxp );
  my $num_dev_options = $options->num_options;
 
@@ -837,12 +844,9 @@ sub initialise_options {
   if (
        ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
    and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
-   and ( ( $opt->{name} eq SANE_NAME_SCAN_TL_X )
-    or ( $opt->{name} eq SANE_NAME_SCAN_TL_Y )
-    or ( $opt->{name} eq SANE_NAME_SCAN_BR_X )
-    or ( $opt->{name} eq SANE_NAME_SCAN_BR_Y )
-    or ( $opt->{name} eq SANE_NAME_PAGE_HEIGHT )
-    or ( $opt->{name} eq SANE_NAME_PAGE_WIDTH ) )
+   and ( $opt->{name} =~
+/^(?:$SANE_NAME_SCAN_TL_X|$SANE_NAME_SCAN_TL_Y|$SANE_NAME_SCAN_BR_X|$SANE_NAME_SCAN_BR_Y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x
+   )
     )
   {
 
@@ -989,24 +993,21 @@ sub initialise_options {
 
    # Look-up to hide/show the box if necessary
    $options->{box}{ $opt->{name} } = $hbox
-     if ( $opt->{name} eq SANE_NAME_SCAN_BR_X
-    or $opt->{name} eq SANE_NAME_SCAN_BR_Y
-    or $opt->{name} eq SANE_NAME_SCAN_TL_X
-    or $opt->{name} eq SANE_NAME_SCAN_TL_Y
-    or $opt->{name} eq SANE_NAME_PAGE_HEIGHT
-    or $opt->{name} eq SANE_NAME_PAGE_WIDTH );
+     if ( $opt->{name} =~
+/^(?:$SANE_NAME_SCAN_TL_X|$SANE_NAME_SCAN_TL_Y|$SANE_NAME_SCAN_BR_X|$SANE_NAME_SCAN_BR_Y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x
+     );
 
    # Only define the paper size once the rest of the geometry widget
    # has been created
    if (
-        defined( $options->{box}{ scalar(SANE_NAME_SCAN_BR_X) } )
-    and defined( $options->{box}{ scalar(SANE_NAME_SCAN_BR_Y) } )
-    and defined( $options->{box}{ scalar(SANE_NAME_SCAN_TL_X) } )
-    and defined( $options->{box}{ scalar(SANE_NAME_SCAN_TL_Y) } )
+        defined( $options->{box}{$SANE_NAME_SCAN_BR_X} )
+    and defined( $options->{box}{$SANE_NAME_SCAN_BR_Y} )
+    and defined( $options->{box}{$SANE_NAME_SCAN_TL_X} )
+    and defined( $options->{box}{$SANE_NAME_SCAN_TL_Y} )
     and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
-     or defined( $options->{box}{ scalar(SANE_NAME_PAGE_HEIGHT) } ) )
+     or defined( $options->{box}{$SANE_NAME_PAGE_HEIGHT} ) )
     and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
-     or defined( $options->{box}{ scalar(SANE_NAME_PAGE_WIDTH) } ) )
+     or defined( $options->{box}{$SANE_NAME_PAGE_WIDTH} ) )
     and not defined( $self->{combobp} )
      )
    {
