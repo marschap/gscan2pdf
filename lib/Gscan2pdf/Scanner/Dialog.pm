@@ -945,31 +945,8 @@ sub _initialise_options {
   else {    # $opt->{max_values} > 1
    $widget = Gtk2::Button->new( $d_sane->get( $opt->{title} ) );
    $widget->{signal} = $widget->signal_connect(
-    clicked => sub {
-     if ($opt->{type} == SANE_TYPE_FIXED
-      or $opt->{type} == SANE_TYPE_INT )
-     {
-      if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-       main::show_message_dialog(
-        $self, 'info', 'close',
-        $d->get(
-'Multiple unconstrained values are not currently supported. Please file a bug.'
-        )
-       );
-      }
-      else {
-       $self->set_options($opt);
-      }
-     }
-     else {
-      main::show_message_dialog(
-       $self, 'info', 'close',
-       $d->get(
-'Multiple non-numerical values are not currently supported. Please file a bug.'
-       )
-      );
-     }
-    }
+    clicked => \&_multiple_values_button_callback,
+    [ $self, $opt ]
    );
   }
 
@@ -1106,6 +1083,35 @@ sub _create_paper_widget {
      $self->set( 'paper', $paper );
     }
    }
+  );
+ }
+ return;
+}
+
+sub _multiple_values_button_callback {
+ my ( $widget, $data ) = @_;
+ my ( $dialog, $opt )  = @$data;
+ if ($opt->{type} == SANE_TYPE_FIXED
+  or $opt->{type} == SANE_TYPE_INT )
+ {
+  if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
+   main::show_message_dialog(
+    $dialog, 'info', 'close',
+    $d->get(
+'Multiple unconstrained values are not currently supported. Please file a bug.'
+    )
+   );
+  }
+  else {
+   $dialog->set_options($opt);
+  }
+ }
+ else {
+  main::show_message_dialog(
+   $dialog, 'info', 'close',
+   $d->get(
+'Multiple non-numerical values are not currently supported. Please file a bug.'
+   )
   );
  }
  return;
