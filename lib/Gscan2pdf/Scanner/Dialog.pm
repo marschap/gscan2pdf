@@ -180,6 +180,12 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  ),
   ];
 
+my $SANE_NAME_SCAN_TL_X   = SANE_NAME_SCAN_TL_X;
+my $SANE_NAME_SCAN_TL_Y   = SANE_NAME_SCAN_TL_Y;
+my $SANE_NAME_SCAN_BR_X   = SANE_NAME_SCAN_BR_X;
+my $SANE_NAME_SCAN_BR_Y   = SANE_NAME_SCAN_BR_Y;
+my $SANE_NAME_PAGE_HEIGHT = SANE_NAME_PAGE_HEIGHT;
+my $SANE_NAME_PAGE_WIDTH  = SANE_NAME_PAGE_WIDTH;
 my ( $d, $d_sane, $logger, $tooltips );
 my $tolerance = 1;
 
@@ -804,13 +810,6 @@ sub initialise_options {
  my ( $self, $options ) = @_;
  $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
 
- my $SANE_NAME_SCAN_TL_X   = SANE_NAME_SCAN_TL_X;
- my $SANE_NAME_SCAN_TL_Y   = SANE_NAME_SCAN_TL_Y;
- my $SANE_NAME_SCAN_BR_X   = SANE_NAME_SCAN_BR_X;
- my $SANE_NAME_SCAN_BR_Y   = SANE_NAME_SCAN_BR_Y;
- my $SANE_NAME_PAGE_HEIGHT = SANE_NAME_PAGE_HEIGHT;
- my $SANE_NAME_PAGE_WIDTH  = SANE_NAME_PAGE_WIDTH;
-
  my ( $group, $vbox, $hboxp );
  my $num_dev_options = $options->num_options;
 
@@ -997,89 +996,7 @@ sub initialise_options {
 /^(?:$SANE_NAME_SCAN_TL_X|$SANE_NAME_SCAN_TL_Y|$SANE_NAME_SCAN_BR_X|$SANE_NAME_SCAN_BR_Y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x
      );
 
-   # Only define the paper size once the rest of the geometry widget
-   # has been created
-   if (
-        defined( $options->{box}{$SANE_NAME_SCAN_BR_X} )
-    and defined( $options->{box}{$SANE_NAME_SCAN_BR_Y} )
-    and defined( $options->{box}{$SANE_NAME_SCAN_TL_X} )
-    and defined( $options->{box}{$SANE_NAME_SCAN_TL_Y} )
-    and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
-     or defined( $options->{box}{$SANE_NAME_PAGE_HEIGHT} ) )
-    and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
-     or defined( $options->{box}{$SANE_NAME_PAGE_WIDTH} ) )
-    and not defined( $self->{combobp} )
-     )
-   {
-
-    # Paper list
-    my $label = Gtk2::Label->new( $d->get('Paper size') );
-    $hboxp->pack_start( $label, FALSE, FALSE, 0 );
-
-    $self->{combobp} = Gtk2::ComboBox->new_text;
-    $self->{combobp}->append_text( $d->get('Manual') );
-    $self->{combobp}->append_text( $d->get('Edit') );
-    $tooltips->set_tip( $self->{combobp},
-     $d->get('Selects or edits the paper size') );
-    $hboxp->pack_end( $self->{combobp}, FALSE, FALSE, 0 );
-    $self->{combobp}->set_active(0);
-    $self->{combobp}->signal_connect(
-     changed => sub {
-
-      if ( $self->{combobp}->get_active_text eq $d->get('Edit') ) {
-       $self->edit_paper;
-      }
-      elsif ( $self->{combobp}->get_active_text eq $d->get('Manual') ) {
-       for (
-        ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
-         SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
-         SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
-        )
-         )
-       {
-        $options->{box}{$_}->show_all if ( defined $options->{box}{$_} );
-       }
-      }
-      else {
-       my $paper   = $self->{combobp}->get_active_text;
-       my $formats = $self->get('paper-formats');
-       if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
-        and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) ) )
-       {
-        $options->by_name(SANE_NAME_PAGE_HEIGHT)->{widget}
-          ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
-        $options->by_name(SANE_NAME_PAGE_WIDTH)->{widget}
-          ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
-       }
-
-       $options->by_name(SANE_NAME_SCAN_TL_X)->{widget}
-         ->set_value( $formats->{$paper}{l} );
-       $options->by_name(SANE_NAME_SCAN_TL_Y)->{widget}
-         ->set_value( $formats->{$paper}{t} );
-       $options->by_name(SANE_NAME_SCAN_BR_X)->{widget}
-         ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
-       $options->by_name(SANE_NAME_SCAN_BR_Y)->{widget}
-         ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
-       Glib::Idle->add(
-        sub {
-         for (
-          ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
-           SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
-           SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
-          )
-           )
-         {
-          $options->{box}{$_}->hide_all if ( defined $options->{box}{$_} );
-         }
-        }
-       );
-
-       # Do this last, as it fires the changed-paper signal
-       $self->set( 'paper', $paper );
-      }
-     }
-    );
-   }
+   $self->_create_paper_widget( $options, $hboxp );
 
   }
   else {
@@ -1100,6 +1017,94 @@ sub initialise_options {
 
  $self->{sbutton}->set_sensitive(TRUE);
  $self->{sbutton}->grab_focus;
+ return;
+}
+
+sub _create_paper_widget {
+ my ( $self, $options, $hboxp ) = @_;
+
+ # Only define the paper size once the rest of the geometry widgets
+ # have been created
+ if (
+      defined( $options->{box}{$SANE_NAME_SCAN_BR_X} )
+  and defined( $options->{box}{$SANE_NAME_SCAN_BR_Y} )
+  and defined( $options->{box}{$SANE_NAME_SCAN_TL_X} )
+  and defined( $options->{box}{$SANE_NAME_SCAN_TL_Y} )
+  and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
+   or defined( $options->{box}{$SANE_NAME_PAGE_HEIGHT} ) )
+  and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
+   or defined( $options->{box}{$SANE_NAME_PAGE_WIDTH} ) )
+  and not defined( $self->{combobp} )
+   )
+ {
+  # Paper list
+  my $label = Gtk2::Label->new( $d->get('Paper size') );
+  $hboxp->pack_start( $label, FALSE, FALSE, 0 );
+
+  $self->{combobp} = Gtk2::ComboBox->new_text;
+  $self->{combobp}->append_text( $d->get('Manual') );
+  $self->{combobp}->append_text( $d->get('Edit') );
+  $tooltips->set_tip( $self->{combobp},
+   $d->get('Selects or edits the paper size') );
+  $hboxp->pack_end( $self->{combobp}, FALSE, FALSE, 0 );
+  $self->{combobp}->set_active(0);
+  $self->{combobp}->signal_connect(
+   changed => sub {
+
+    if ( $self->{combobp}->get_active_text eq $d->get('Edit') ) {
+     $self->edit_paper;
+    }
+    elsif ( $self->{combobp}->get_active_text eq $d->get('Manual') ) {
+     for (
+      ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+       SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+       SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
+      )
+       )
+     {
+      $options->{box}{$_}->show_all if ( defined $options->{box}{$_} );
+     }
+    }
+    else {
+     my $paper   = $self->{combobp}->get_active_text;
+     my $formats = $self->get('paper-formats');
+     if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
+      and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) ) )
+     {
+      $options->by_name(SANE_NAME_PAGE_HEIGHT)->{widget}
+        ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
+      $options->by_name(SANE_NAME_PAGE_WIDTH)->{widget}
+        ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
+     }
+
+     $options->by_name(SANE_NAME_SCAN_TL_X)->{widget}
+       ->set_value( $formats->{$paper}{l} );
+     $options->by_name(SANE_NAME_SCAN_TL_Y)->{widget}
+       ->set_value( $formats->{$paper}{t} );
+     $options->by_name(SANE_NAME_SCAN_BR_X)->{widget}
+       ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
+     $options->by_name(SANE_NAME_SCAN_BR_Y)->{widget}
+       ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
+     Glib::Idle->add(
+      sub {
+       for (
+        ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+         SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+         SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
+        )
+         )
+       {
+        $options->{box}{$_}->hide_all if ( defined $options->{box}{$_} );
+       }
+      }
+     );
+
+     # Do this last, as it fires the changed-paper signal
+     $self->set( 'paper', $paper );
+    }
+   }
+  );
+ }
  return;
 }
 
