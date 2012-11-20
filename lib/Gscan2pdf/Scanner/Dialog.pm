@@ -443,27 +443,8 @@ sub new {    ## no critic (RequireArgUnpacking)
 
 # Have to put the extended pagenumber checkbox here to reference simple controls
  $checkx->signal_connect(
-  toggled => sub {
-   if ( $checkx->get_active ) {
-    $frames->hide_all;
-    $self->{framex}->show_all;
-   }
-   else {
-    if ( $spin_buttoni->get_value == 1 ) {
-     $buttons->set_active(TRUE);
-    }
-    elsif ( $spin_buttoni->get_value > 0 ) {
-     $buttond->set_active(TRUE);
-     $combobs->set_active(0);
-    }
-    else {
-     $buttond->set_active(TRUE);
-     $combobs->set_active(1);
-    }
-    $frames->show_all;
-    $self->{framex}->hide_all;
-   }
-  }
+  toggled => \&_extended_pagenumber_checkbox_callback,
+  [ $self, $frames, $spin_buttoni, $buttons, $buttond, $combobs ]
  );
 
  # Scan profiles
@@ -803,6 +784,31 @@ sub scan_options {
   }
  );
 
+ return;
+}
+
+sub _extended_pagenumber_checkbox_callback {
+ my ( $widget, $data ) = @_;
+ my ( $dialog, $frames, $spin_buttoni, $buttons, $buttond, $combobs ) = @$data;
+ if ( $widget->get_active ) {
+  $frames->hide_all;
+  $dialog->{framex}->show_all;
+ }
+ else {
+  if ( $spin_buttoni->get_value == 1 ) {
+   $buttons->set_active(TRUE);
+  }
+  elsif ( $spin_buttoni->get_value > 0 ) {
+   $buttond->set_active(TRUE);
+   $combobs->set_active(0);
+  }
+  else {
+   $buttond->set_active(TRUE);
+   $combobs->set_active(1);
+  }
+  $frames->show_all;
+  $dialog->{framex}->hide_all;
+ }
  return;
 }
 
