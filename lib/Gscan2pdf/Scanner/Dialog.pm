@@ -777,7 +777,7 @@ sub scan_options {
     sub {    # finished callback
      my ($data) = @_;
      my $options = Gscan2pdf::Scanner::Options->new_from_data($data);
-     $self->initialise_options($options);
+     $self->_initialise_options($options);
 
      $self->signal_emit( 'finished-process', 'find_scan_options' );
 
@@ -806,7 +806,7 @@ sub scan_options {
  return;
 }
 
-sub initialise_options {
+sub _initialise_options {
  my ( $self, $options ) = @_;
  $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
 
@@ -840,14 +840,7 @@ sub initialise_options {
   my ( $widget, $val );
   $val = $opt->{val};
 
-  if (
-       ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
-   and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
-   and ( $opt->{name} =~
-/^(?:$SANE_NAME_SCAN_TL_X|$SANE_NAME_SCAN_TL_Y|$SANE_NAME_SCAN_BR_X|$SANE_NAME_SCAN_BR_Y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x
-   )
-    )
-  {
+  if ( _geometry_option($opt) ) {
 
    # Define HBox for paper size here
    # so that it can be put before first geometry option
@@ -992,9 +985,7 @@ sub initialise_options {
 
    # Look-up to hide/show the box if necessary
    $options->{box}{ $opt->{name} } = $hbox
-     if ( $opt->{name} =~
-/^(?:$SANE_NAME_SCAN_TL_X|$SANE_NAME_SCAN_TL_Y|$SANE_NAME_SCAN_BR_X|$SANE_NAME_SCAN_BR_Y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x
-     );
+     if ( _geometry_option($opt) );
 
    $self->_create_paper_widget( $options, $hboxp );
 
@@ -1018,6 +1009,18 @@ sub initialise_options {
  $self->{sbutton}->set_sensitive(TRUE);
  $self->{sbutton}->grab_focus;
  return;
+}
+
+# Return true if we have a valid geometry option
+
+sub _geometry_option {
+ my ($opt) = @_;
+ return
+       ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
+   and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
+   and ( $opt->{name} =~
+/^(?:$SANE_NAME_SCAN_TL_X|$SANE_NAME_SCAN_TL_Y|$SANE_NAME_SCAN_BR_X|$SANE_NAME_SCAN_BR_Y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x
+   );
 }
 
 sub _create_paper_widget {
