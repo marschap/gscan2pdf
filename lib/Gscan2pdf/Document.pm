@@ -1528,6 +1528,9 @@ sub _thread_get_file_info {
 
 sub _thread_import_file {
  my ( $self, %options ) = @_;
+ my $PNG = 'Portable Network Graphics';
+ my $JPG = 'Joint Photographic Experts Group JFIF format';
+ my $GIF = 'CompuServe graphics interchange format';
 
  given ( $options{info}->{format} ) {
   when ('DJVU') {
@@ -1613,10 +1616,7 @@ sub _thread_import_file {
     }
    }
   }
-  when (
-/(?:Portable\ Network\ Graphics|Joint\ Photographic\ Experts\ Group\ JFIF\ format|CompuServe\ graphics\ interchange\ format)/x
-    )
-  {
+  when (/(?:$PNG|$JPG|$GIF)/x) {
    my $page = Gscan2pdf::Page->new(
     filename => $options{info}->{path},
     dir      => $options{dir},
