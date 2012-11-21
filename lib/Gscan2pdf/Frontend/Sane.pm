@@ -540,21 +540,7 @@ sub _thread_scan_page_to_fh {
   } while ( !$parm->{last_frame} );
  }
 
- if ($must_buffer) {
-  if ( $parm->{lines} > 0 ) {
-   $image{height} = $parm->{lines};
-  }
-  else {
-   $image{height} = @{ $image{data} } / $parm->{pixels_per_line};
-   $image{height} /= 3
-     if ( $parm->{format} == SANE_FRAME_RED
-    or $parm->{format} == SANE_FRAME_GREEN
-    or $parm->{format} == SANE_FRAME_BLUE );
-  }
-  _thread_write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
-   $image{height}, $parm->{depth} );
-  for ( @{ $image{data} } ) { print $fh; }
- }
+ _write_buffer_to_fh( $fh, $parm, \%image ) if ($must_buffer);
 
 cleanup:
  my $expected_bytes = $parm->{bytes_per_line} * $parm->{lines} * (
@@ -682,6 +668,24 @@ sub _buffer_scan {
  }
  $offset += $number_frames * $len;
  return $offset;
+}
+
+sub _write_buffer_to_fh {
+ my ( $fh, $parm, $image ) = @_;
+ if ( $parm->{lines} > 0 ) {
+  $image->{height} = $parm->{lines};
+ }
+ else {
+  $image->{height} = @{ $image->{data} } / $parm->{pixels_per_line};
+  $image->{height} /= 3
+    if ( $parm->{format} == SANE_FRAME_RED
+   or $parm->{format} == SANE_FRAME_GREEN
+   or $parm->{format} == SANE_FRAME_BLUE );
+ }
+ _thread_write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
+  $image->{height}, $parm->{depth} );
+ for ( @{ $image->{data} } ) { print $fh; }
+ return;
 }
 
 1;
