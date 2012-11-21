@@ -497,11 +497,7 @@ sub _thread_scan_page_to_fh {
    }
 
    ( $must_buffer, $offset ) = _initialise_scan( $fh, $first_frame, $parm );
-   my $hundred_percent = $parm->{bytes_per_line} * $parm->{lines} * (
-    ( $parm->{format} == SANE_FRAME_RGB or $parm->{format} == SANE_FRAME_GRAY )
-    ? 1
-    : 3
-   );
+   my $hundred_percent = _scan_data_size($parm);
 
    while (1) {
 
@@ -649,11 +645,23 @@ sub _initialise_scan {
  return ( $must_buffer, $offset );
 }
 
+# Return size of final scan (ignoring header)
+
+sub _scan_data_size {
+ my ($parm) = @_;
+ return $parm->{bytes_per_line} * $parm->{lines} * (
+  ( $parm->{format} == SANE_FRAME_RGB or $parm->{format} == SANE_FRAME_GRAY )
+  ? 1
+  : 3
+ );
+}
+
 # We're either scanning a multi-frame image or the
 # scanner doesn't know what the eventual image height
 # will be (common for hand-held scanners).  In either
 # case, we need to buffer all data before we can write
 # the header
+
 sub _buffer_scan {
  my ( $offset, $parm, $image, $len, $buffer ) = @_;
 
