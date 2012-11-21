@@ -469,33 +469,7 @@ sub _thread_scan_page_to_fh {
     goto cleanup;
    }
 
-   if ($first_frame) {
-    if ( $parm->{lines} >= 0 ) {
-     $logger->info(
-      sprintf "$prog_name: scanning image of size %dx%d pixels at "
-        . "%d bits/pixel",
-      $parm->{pixels_per_line},
-      $parm->{lines},
-      8 * $parm->{bytes_per_line} / $parm->{pixels_per_line}
-     );
-    }
-    else {
-     $logger->info(
-      sprintf "$prog_name: scanning image %d pixels wide and "
-        . "variable height at %d bits/pixel",
-      $parm->{pixels_per_line},
-      8 * $parm->{bytes_per_line} / $parm->{pixels_per_line}
-     );
-    }
-
-    $logger->info(
-     sprintf "$prog_name: acquiring %s frame",
-     $parm->{format} <= SANE_FRAME_BLUE
-     ? $format_name[ $parm->{format} ]
-     : "Unknown"
-    );
-   }
-
+   _log_frame_info( $first_frame, $parm, \@format_name );
    ( $must_buffer, $offset ) = _initialise_scan( $fh, $first_frame, $parm );
    my $hundred_percent = _scan_data_size($parm);
 
@@ -599,6 +573,37 @@ sub _thread_scan_page {
 sub _thread_cancel {
  my ($self) = @_;
  $self->{device_handle}->cancel if ( defined $self->{device_handle} );
+ return;
+}
+
+sub _log_frame_info {
+ my ( $first_frame, $parm, $format_name ) = @_;
+ if ($first_frame) {
+  if ( $parm->{lines} >= 0 ) {
+   $logger->info(
+    sprintf "$prog_name: scanning image of size %dx%d pixels at "
+      . "%d bits/pixel",
+    $parm->{pixels_per_line},
+    $parm->{lines},
+    8 * $parm->{bytes_per_line} / $parm->{pixels_per_line}
+   );
+  }
+  else {
+   $logger->info(
+    sprintf "$prog_name: scanning image %d pixels wide and "
+      . "variable height at %d bits/pixel",
+    $parm->{pixels_per_line},
+    8 * $parm->{bytes_per_line} / $parm->{pixels_per_line}
+   );
+  }
+
+  $logger->info(
+   sprintf "$prog_name: acquiring %s frame",
+   $parm->{format} <= SANE_FRAME_BLUE
+   ? $format_name->[ $parm->{format} ]
+   : "Unknown"
+  );
+ }
  return;
 }
 
