@@ -428,8 +428,9 @@ sub _watch_cmd {
       $options{finished_callback}->( $stdout, $stderr )
         if ( defined $options{finished_callback} );
       $logger->info('Waiting to reap process');
-      my $pid = waitpid( -1, &WNOHANG );    # So we don't leave zombies
-      $logger->info("Reaped PID $pid");
+
+      # So we don't leave zombies
+      $logger->info( "Reaped PID ", waitpid( -1, &WNOHANG ) );
       return Glib::SOURCE_REMOVE;
      }
      return Glib::SOURCE_CONTINUE;
@@ -474,6 +475,7 @@ sub _add_watch {
    return Glib::SOURCE_CONTINUE;
   }
  );
+ return;
 }
 
 1;
