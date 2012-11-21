@@ -218,53 +218,32 @@ sub scan_pages {
  $_self->{scan_progress} = 0;
  my $sentinel = _new_page( $options{dir}, $options{format}, $options{start} );
 
- my $n2      = 1;
- my $npages2 = $options{npages};
-
+ my $n = 1;
  my $started;
  Glib::Timeout->add(
   $_POLL_INTERVAL,
   sub {
-   if ( not $$sentinel ) {
-    unless ($started) {
-     $options{started_callback}->() if ( defined $options{started_callback} );
-     $started = 1;
-    }
-    $options{running_callback}->( $_self->{scan_progress} )
-      if ( defined $options{running_callback} );
-    return Glib::SOURCE_CONTINUE;
-   }
-   else {
+   if ($$sentinel) {
 
     # Check status of scan
-    if (
-     not $_self->{abort_scan}
+    $options{new_page_callback}->( $options{start} )
+      if (
+         defined( $options{new_page_callback} )
+     and not $_self->{abort_scan}
      and ( $_self->{status} == SANE_STATUS_GOOD
       or $_self->{status} == SANE_STATUS_EOF )
-      )
-    {
-     $options{new_page_callback}->( $options{start} )
-       if ( defined $options{new_page_callback} );
-    }
+      );
 
     # Stop the process unless everything OK and more scans required
-    unless  ## no critic (ProhibitNegativeExpressionsInUnlessAndUntilConditions)
-      (
-         not $_self->{abort_scan}
-     and ( $options{npages} == -1 or --$options{npages} )
-     and ( $_self->{status} == SANE_STATUS_GOOD
-      or $_self->{status} == SANE_STATUS_EOF )
+    if (
+        $_self->{abort_scan}
+     or ( $options{npages} != -1 and --$options{npages} )
+     or ( $_self->{status} != SANE_STATUS_GOOD
+      and $_self->{status} != SANE_STATUS_EOF )
       )
     {
      _enqueue_request('cancel');
-     if (
-         $_self->{status} == SANE_STATUS_GOOD
-      or $_self->{status} == SANE_STATUS_EOF
-      or ( $_self->{status} == SANE_STATUS_NO_DOCS
-       and $options{npages} < 1
-       and $n2 > 1 )
-       )
-     {
+     if ( _scanned_enough_pages( $options{npages}, $n ) ) {
       $options{finished_callback}->()
         if ( defined $options{finished_callback} );
      }
@@ -276,13 +255,33 @@ sub scan_pages {
     }
 
     $options{start} += $options{step};
-    $n2++;
+    $n++;
     $sentinel = _new_page( $options{dir}, $options{format}, $options{start} );
+    return Glib::SOURCE_CONTINUE;
+   }
+   else {
+    unless ($started) {
+     $options{started_callback}->() if ( defined $options{started_callback} );
+     $started = 1;
+    }
+    $options{running_callback}->( $_self->{scan_progress} )
+      if ( defined $options{running_callback} );
     return Glib::SOURCE_CONTINUE;
    }
   }
  );
  return;
+}
+
+sub _scanned_enough_pages {
+ my ( $ntodo, $ndone ) = @_;
+ return (
+       $_self->{status} == SANE_STATUS_GOOD
+    or $_self->{status} == SANE_STATUS_EOF
+    or ( $_self->{status} == SANE_STATUS_NO_DOCS
+   and $ntodo < 1
+   and $ndone > 1 )
+ );
 }
 
 # Flag the scan routine to abort
