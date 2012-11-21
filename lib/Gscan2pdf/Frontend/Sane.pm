@@ -530,31 +530,9 @@ sub _thread_scan_page_to_fh {
     }
 
     if ($must_buffer) {
-
-     # We're either scanning a multi-frame image or the
-     # scanner doesn't know what the eventual image height
-     # will be (common for hand-held scanners).  In either
-     # case, we need to buffer all data before we can write
-     # the image
-     if ($parm->{format} == SANE_FRAME_RED
-      or $parm->{format} == SANE_FRAME_GREEN
-      or $parm->{format} == SANE_FRAME_BLUE )
-     {
-      for ( my $i = 0 ; $i < $len ; ++$i ) {
-       $image{data}[ $offset + 3 * $i ] = substr( $buffer, $i, 1 );
-      }
-      $offset += 3 * $len;
-     }
-     elsif ( $parm->{format} == SANE_FRAME_RGB
-      or $parm->{format} == SANE_FRAME_GRAY )
-     {
-      for ( my $i = 0 ; $i < $len ; ++$i ) {
-       $image{data}[ $offset + $i ] = substr( $buffer, $i, 1 );
-      }
-      $offset += $len;
-     }
+     $offset = _buffer_scan( $offset, $parm, \%image, $len, $buffer );
     }
-    else {    # ! must_buffer
+    else {
      print $fh $buffer;
     }
    }
@@ -683,6 +661,27 @@ sub _initialise_scan {
   $offset = $parm->{format} - SANE_FRAME_RED;
  }
  return ( $must_buffer, $offset );
+}
+
+# We're either scanning a multi-frame image or the
+# scanner doesn't know what the eventual image height
+# will be (common for hand-held scanners).  In either
+# case, we need to buffer all data before we can write
+# the header
+sub _buffer_scan {
+ my ( $offset, $parm, $image, $len, $buffer ) = @_;
+
+ # $parm->{format} == SANE_FRAME_RED or SANE_FRAME_GREEN or SANE_FRAME_BLUE
+ my $number_frames = 3;
+ $number_frames = 1
+   if ( $parm->{format} == SANE_FRAME_RGB
+  or $parm->{format} == SANE_FRAME_GRAY );
+
+ for ( my $i = 0 ; $i < $len ; ++$i ) {
+  $image->{data}[ $offset + $number_frames * $i ] = substr( $buffer, $i, 1 );
+ }
+ $offset += $number_frames * $len;
+ return $offset;
 }
 
 1;
