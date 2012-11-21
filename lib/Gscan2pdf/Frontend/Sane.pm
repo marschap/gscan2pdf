@@ -496,44 +496,7 @@ sub _thread_scan_page_to_fh {
     );
    }
 
-   if ($first_frame) {
-    if ($parm->{format} == SANE_FRAME_RED
-     or $parm->{format} == SANE_FRAME_GREEN
-     or $parm->{format} == SANE_FRAME_BLUE )
-    {
-     die "Red/Green/Blue frames require depth=8\n"
-       unless ( $parm->{depth} == 8 );
-     $must_buffer = 1;
-     $offset      = $parm->{format} - SANE_FRAME_RED;
-    }
-    elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-     die "RGB frames require depth=8 or 16\n"
-       unless ( ( $parm->{depth} == 8 ) or ( $parm->{depth} == 16 ) );
-    }
-    if ($parm->{format} == SANE_FRAME_RGB
-     or $parm->{format} == SANE_FRAME_GRAY )
-    {
-     die "Valid depths are 1, 8 or 16\n"
-       unless ( ( $parm->{depth} == 1 )
-      or ( $parm->{depth} == 8 )
-      or ( $parm->{depth} == 16 ) );
-     if ( $parm->{lines} < 0 ) {
-      $must_buffer = 1;
-      $offset      = 0;
-     }
-     else {
-      _thread_write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
-       $parm->{lines}, $parm->{depth} );
-     }
-    }
-   }
-   else {
-    die "Encountered unknown format\n"
-      if ( $parm->{format} < SANE_FRAME_RED
-     or $parm->{format} > SANE_FRAME_BLUE );
-    $offset = $parm->{format} - SANE_FRAME_RED;
-    $image{x} = $image{y} = 0;
-   }
+   ( $must_buffer, $offset ) = _initialise_scan( $fh, $first_frame, $parm );
    my $hundred_percent = $parm->{bytes_per_line} * $parm->{lines} * (
     ( $parm->{format} == SANE_FRAME_RGB or $parm->{format} == SANE_FRAME_GRAY )
     ? 1
@@ -677,6 +640,49 @@ sub _thread_cancel {
  my ($self) = @_;
  $self->{device_handle}->cancel if ( defined $self->{device_handle} );
  return;
+}
+
+sub _initialise_scan {
+ my ( $fh, $first_frame, $parm ) = @_;
+ my ( $must_buffer, $offset );
+ if ($first_frame) {
+  if ($parm->{format} == SANE_FRAME_RED
+   or $parm->{format} == SANE_FRAME_GREEN
+   or $parm->{format} == SANE_FRAME_BLUE )
+  {
+   die "Red/Green/Blue frames require depth=8\n"
+     unless ( $parm->{depth} == 8 );
+   $must_buffer = 1;
+   $offset      = $parm->{format} - SANE_FRAME_RED;
+  }
+  elsif ( $parm->{format} == SANE_FRAME_RGB ) {
+   die "RGB frames require depth=8 or 16\n"
+     unless ( ( $parm->{depth} == 8 ) or ( $parm->{depth} == 16 ) );
+  }
+  if ($parm->{format} == SANE_FRAME_RGB
+   or $parm->{format} == SANE_FRAME_GRAY )
+  {
+   die "Valid depths are 1, 8 or 16\n"
+     unless ( ( $parm->{depth} == 1 )
+    or ( $parm->{depth} == 8 )
+    or ( $parm->{depth} == 16 ) );
+   if ( $parm->{lines} < 0 ) {
+    $must_buffer = 1;
+    $offset      = 0;
+   }
+   else {
+    _thread_write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
+     $parm->{lines}, $parm->{depth} );
+   }
+  }
+ }
+ else {
+  die "Encountered unknown format\n"
+    if ( $parm->{format} < SANE_FRAME_RED
+   or $parm->{format} > SANE_FRAME_BLUE );
+  $offset = $parm->{format} - SANE_FRAME_RED;
+ }
+ return ( $must_buffer, $offset );
 }
 
 1;
