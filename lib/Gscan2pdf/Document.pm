@@ -1664,114 +1664,39 @@ sub _thread_save_pdf {
 
   # Get the size and resolution. Resolution is dots per inch, width
   # and height are in inches.
-  my $resolution = $pagedata->{resolution};
-  my $w          = $image->Get('width') / $resolution;
-  my $h          = $image->Get('height') / $resolution;
+  my $w = $image->Get('width') / $pagedata->{resolution};
+  my $h = $image->Get('height') / $pagedata->{resolution};
   $pagedata->{w} = $w;
   $pagedata->{h} = $h;
 
-  # The output resolution is normally the same as the input
-  # resolution.
-  my $output_resolution = $resolution;
-
   # Automatic mode
-  my $depth;
-  my $compression;
   my $type;
   if ( not defined( $options{options}->{compression} )
    or $options{options}->{compression} eq 'auto' )
   {
-   $depth = $image->Get('depth');
-   $logger->info("Depth of $filename is $depth");
-   if ( $depth == 1 ) {
-    $compression = 'lzw';
+   $pagedata->{depth} = $image->Get('depth');
+   $logger->info("Depth of $filename is $pagedata->{depth}");
+   if ( $pagedata->{depth} == 1 ) {
+    $pagedata->{compression} = 'lzw';
    }
    else {
     $type = $image->Get('type');
     $logger->info("Type of $filename is $type");
     if ( $type =~ /TrueColor/x ) {
-     $compression = 'jpg';
+     $pagedata->{compression} = 'jpg';
     }
     else {
-     $compression = 'png';
+     $pagedata->{compression} = 'png';
     }
    }
-   $logger->info("Selecting $compression compression");
+   $logger->info("Selecting $pagedata->{compression} compression");
   }
   else {
-   $compression = $options{options}->{compression};
+   $pagedata->{compression} = $options{options}->{compression};
   }
 
-  # Convert file if necessary
-  my $format;
-  if ( $filename =~ /\.(\w*)$/x ) {
-   $format = $1;
-  }
-  if (( $compression ne 'none' and $compression ne $format )
-   or $options{options}->{downsample}
-   or $compression eq 'jpg' )
-  {
-   if ( $compression !~ /(?:jpg|png)/x and $format ne 'tif' ) {
-    my $ofn = $filename;
-    $filename = File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
-    $logger->info("Converting $ofn to $filename");
-   }
-   elsif ( $compression =~ /(?:jpg|png)/x ) {
-    my $ofn = $filename;
-    $filename = File::Temp->new(
-     DIR    => $options{dir},
-     SUFFIX => ".$compression"
-    );
-    $logger->info("Converting $ofn to $filename");
-   }
-
-   $depth = $image->Get('depth') if ( not defined($depth) );
-   if ( $options{options}->{downsample} ) {
-    $output_resolution = $options{options}->{'downsample dpi'};
-    my $w_pixels = $w * $output_resolution;
-    my $h_pixels = $h * $output_resolution;
-
-    $logger->info("Resizing $filename to $w_pixels x $h_pixels");
-    $status = $image->Resize( width => $w_pixels,, height => $h_pixels );
-    $logger->warn($status) if "$status";
-   }
-   $status = $image->Set( quality => $options{options}->{quality} )
-     if ( defined( $options{options}->{quality} ) and $compression eq 'jpg' );
-   $logger->warn($status) if "$status";
-
-   if (( $compression !~ /(?:jpg|png)/x and $format ne 'tif' )
-    or ( $compression =~ /(?:jpg|png)/x )
-    or $options{options}->{downsample} )
-   {
-
-# depth required because resize otherwise increases depth to maintain information
-    $logger->info("Writing temporary image $filename with depth $depth");
-    $status = $image->Write( filename => $filename, depth => $depth );
-    return if $_self->{cancel};
-    $logger->warn($status) if "$status";
-    if ( $filename =~ /\.(\w*)$/x ) {
-     $format = $1;
-    }
-   }
-
-   if ( $compression !~ /(?:jpg|png)/x ) {
-    my $filename2 = File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
-    my $error     = File::Temp->new( DIR => $options{dir}, SUFFIX => '.txt' );
-    my $cmd = "tiffcp -c $compression $filename $filename2";
-    $logger->info($cmd);
-    $status = system("echo $$ > $options{pidfile};$cmd 2>$error");
-    return if $_self->{cancel};
-    if ($status) {
-     my $output = slurp($error);
-     $logger->info($output);
-     $self->{status} = 1;
-     $self->{message} =
-       sprintf( $d->get("Error compressing image: %s"), $output );
-     return;
-    }
-    $filename = $filename2;
-   }
-  }
+  ( $filename, my $format, my $output_resolution ) =
+    _convert_image_for_pdf( $self, $pagedata, $image, %options );
 
   $logger->info(
    "Defining page at ",
@@ -1836,6 +1761,104 @@ sub _thread_save_pdf {
  $pdf->save;
  $pdf->end;
  return;
+}
+
+# Convert file if necessary
+
+sub _convert_image_for_pdf {
+ my ( $self, $pagedata, $image, %options ) = @_;
+ my $filename    = $pagedata->{filename};
+ my $compression = $pagedata->{compression};
+
+ my $format;
+ if ( $filename =~ /\.(\w*)$/x ) {
+  $format = $1;
+ }
+
+ # The output resolution is normally the same as the input
+ # resolution.
+ my $output_resolution = $pagedata->{resolution};
+
+ if (( $compression ne 'none' and $compression ne $format )
+  or $options{options}->{downsample}
+  or $compression eq 'jpg' )
+ {
+  if ( $compression !~ /(?:jpg|png)/x and $format ne 'tif' ) {
+   my $ofn = $filename;
+   $filename = File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
+   $logger->info("Converting $ofn to $filename");
+  }
+  elsif ( $compression =~ /(?:jpg|png)/x ) {
+   my $ofn = $filename;
+   $filename = File::Temp->new(
+    DIR    => $options{dir},
+    SUFFIX => ".$compression"
+   );
+   $logger->info("Converting $ofn to $filename");
+  }
+
+  if ( $options{options}->{downsample} ) {
+   $output_resolution = $options{options}->{'downsample dpi'};
+   my $w_pixels = $pagedata->{w} * $output_resolution;
+   my $h_pixels = $pagedata->{h} * $output_resolution;
+
+   $logger->info("Resizing $filename to $w_pixels x $h_pixels");
+   my $status = $image->Resize( width => $w_pixels, height => $h_pixels );
+   $logger->warn($status) if "$status";
+  }
+  if ( defined( $options{options}->{quality} ) and $compression eq 'jpg' ) {
+   my $status = $image->Set( quality => $options{options}->{quality} );
+   $logger->warn($status) if "$status";
+  }
+
+  $format =
+    _write_image_object( $image, $filename, $format, $pagedata,
+   $options{options}->{downsample} );
+
+  if ( $compression !~ /(?:jpg|png)/x ) {
+   my $filename2 = File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
+   my $error     = File::Temp->new( DIR => $options{dir}, SUFFIX => '.txt' );
+   my $cmd = "tiffcp -c $compression $filename $filename2";
+   $logger->info($cmd);
+   my $status = system("echo $$ > $options{pidfile};$cmd 2>$error");
+   return if $_self->{cancel};
+   if ($status) {
+    my $output = slurp($error);
+    $logger->info($output);
+    $self->{status} = 1;
+    $self->{message} =
+      sprintf( $d->get("Error compressing image: %s"), $output );
+    return;
+   }
+   $filename = $filename2;
+  }
+ }
+ return $filename, $format, $output_resolution;
+}
+
+sub _write_image_object {
+ my ( $image, $filename, $format, $pagedata, $downsample ) = @_;
+ my $compression = $pagedata->{compression};
+ if (( $compression !~ /(?:jpg|png)/x and $format ne 'tif' )
+  or ( $compression =~ /(?:jpg|png)/x )
+  or $downsample )
+ {
+
+  # depth required because resize otherwise increases depth
+  # to maintain information
+  $pagedata->{depth} = $image->Get('depth')
+    if ( not defined( $pagedata->{depth} ) );
+  $logger->info(
+   "Writing temporary image $filename with depth $pagedata->{depth}");
+  my $status =
+    $image->Write( filename => $filename, depth => $pagedata->{depth} );
+  return if $_self->{cancel};
+  $logger->warn($status) if "$status";
+  if ( $filename =~ /\.(\w*)$/x ) {
+   $format = $1;
+  }
+ }
+ return $format;
 }
 
 # Add OCR as text behind the scan
