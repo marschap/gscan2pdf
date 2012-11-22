@@ -1650,8 +1650,10 @@ sub _thread_save_pdf {
  $pdf->info( %{ $options{metadata} } ) if defined( $options{metadata} );
 
  my $corecache = $pdf->corefont('Times-Roman');
- $ttfcache = $pdf->ttfont( $options{options}->{font}, -unicodemap => 1 )
-   if ( defined $options{options}->{font} );
+ if ( defined $options{options}->{font} ) {
+  $ttfcache = $pdf->ttfont( $options{options}->{font}, -unicodemap => 1 );
+  $logger->info("Using $options{options}->{font} for non-ASCII text");
+ }
 
  foreach my $pagedata ( @{ $options{list_of_pages} } ) {
   ++$pagenr;
@@ -1670,6 +1672,8 @@ sub _thread_save_pdf {
   my $resolution = $pagedata->{resolution};
   my $w          = $image->Get('width') / $resolution;
   my $h          = $image->Get('height') / $resolution;
+  $pagedata->{w} = $w;
+  $pagedata->{h} = $h;
 
   # The output resolution is normally the same as the input
   # resolution.
@@ -1782,66 +1786,7 @@ sub _thread_save_pdf {
   my $page = $pdf->page;
   $page->mediabox( $w * $POINTS_PER_INCH, $h * $POINTS_PER_INCH );
 
-  # Add OCR as text behind the scan
-  if ( defined( $pagedata->{hocr} ) ) {
-   $logger->info('Embedding OCR output behind image');
-   $logger->info("Using $options{options}->{font} for non-ASCII text")
-     if ( defined $options{options}->{font} );
-   my $font;
-   my $text = $page->text;
-   for my $box ( $pagedata->boxes ) {
-    my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
-    if ( $txt =~ /([[:^ascii:]])/x and defined( $options{options}->{font} ) ) {
-     $logger->debug("non-ascii text is '$1' in '$txt'") if ( defined $1 );
-     $font = $ttfcache;
-    }
-    else {
-     $font = $corecache;
-    }
-    ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution )
-      if ( $x1 == 0 and $y1 == 0 and not defined($x2) );
-    if ( abs( $h * $resolution - $y2 + $y1 ) > 5
-     and abs( $w * $resolution - $x2 + $x1 ) > 5 )
-    {
-
-     # Box is smaller than the page. We know the text position.
-     # Set the text position.
-     # Translate x1 and y1 to inches and then to points. Invert the
-     # y coordinate (since the PDF coordinates are bottom to top
-     # instead of top to bottom) and subtract $size, since the text
-     # will end up above the given point instead of below.
-     my $size = ( $y2 - $y1 ) / $resolution * $POINTS_PER_INCH;
-     $text->font( $font, $size );
-     $text->translate( $x1 / $resolution * $POINTS_PER_INCH,
-      ( $h - ( $y1 / $resolution ) ) * $POINTS_PER_INCH - $size );
-     $text->text( $txt, utf8 => 1 );
-    }
-    else {
-
-     # Box is the same size as the page. We don't know the text position.
-     # Start at the top of the page (PDF coordinate system starts
-     # at the bottom left of the page)
-     my $size = 1;
-     $text->font( $font, $size );
-     my $y = $h * $POINTS_PER_INCH - $size;
-     foreach my $line ( split( "\n", $txt ) ) {
-      my $x = 0;
-
-      # Add a word at a time in order to linewrap
-      foreach my $word ( split( ' ', $line ) ) {
-       if ( length($word) * $size + $x > $w * $POINTS_PER_INCH ) {
-        $x = 0;
-        $y -= $size;
-       }
-       $text->translate( $x, $y );
-       $word = ' ' . $word if ( $x > 0 );
-       $x += $text->text( $word, utf8 => 1 );
-      }
-      $y -= $size;
-     }
-    }
-   }
-  }
+  _add_text_to_PDF( $page, $pagedata, $ttfcache, $corecache );
 
   # Add scan
   my $gfx = $page->gfx;
@@ -1895,6 +1840,74 @@ sub _thread_save_pdf {
  $self->{message} = $d->get('Closing PDF');
  $pdf->save;
  $pdf->end;
+ return;
+}
+
+# Add OCR as text behind the scan
+
+sub _add_text_to_PDF {
+ my ( $page, $data, $ttfcache, $corecache ) = @_;
+ if ( defined( $data->{hocr} ) ) {
+  my $h          = $data->{h};
+  my $w          = $data->{w};
+  my $resolution = $data->{resolution};
+
+  $logger->info('Embedding OCR output behind image');
+  my $font;
+  my $text = $page->text;
+  for my $box ( $data->boxes ) {
+   my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
+   if ( $txt =~ /([[:^ascii:]])/x and defined($ttfcache) ) {
+    $logger->debug("non-ascii text is '$1' in '$txt'") if ( defined $1 );
+    $font = $ttfcache;
+   }
+   else {
+    $font = $corecache;
+   }
+   ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution )
+     if ( $x1 == 0 and $y1 == 0 and not defined($x2) );
+   if ( abs( $h * $resolution - $y2 + $y1 ) > 5
+    and abs( $w * $resolution - $x2 + $x1 ) > 5 )
+   {
+
+    # Box is smaller than the page. We know the text position.
+    # Set the text position.
+    # Translate x1 and y1 to inches and then to points. Invert the
+    # y coordinate (since the PDF coordinates are bottom to top
+    # instead of top to bottom) and subtract $size, since the text
+    # will end up above the given point instead of below.
+    my $size = ( $y2 - $y1 ) / $resolution * $POINTS_PER_INCH;
+    $text->font( $font, $size );
+    $text->translate( $x1 / $resolution * $POINTS_PER_INCH,
+     ( $h - ( $y1 / $resolution ) ) * $POINTS_PER_INCH - $size );
+    $text->text( $txt, utf8 => 1 );
+   }
+   else {
+
+    # Box is the same size as the page. We don't know the text position.
+    # Start at the top of the page (PDF coordinate system starts
+    # at the bottom left of the page)
+    my $size = 1;
+    $text->font( $font, $size );
+    my $y = $h * $POINTS_PER_INCH - $size;
+    foreach my $line ( split( "\n", $txt ) ) {
+     my $x = 0;
+
+     # Add a word at a time in order to linewrap
+     foreach my $word ( split( ' ', $line ) ) {
+      if ( length($word) * $size + $x > $w * $POINTS_PER_INCH ) {
+       $x = 0;
+       $y -= $size;
+      }
+      $text->translate( $x, $y );
+      $word = ' ' . $word if ( $x > 0 );
+      $x += $text->text( $word, utf8 => 1 );
+     }
+     $y -= $size;
+    }
+   }
+  }
+ }
  return;
 }
 
