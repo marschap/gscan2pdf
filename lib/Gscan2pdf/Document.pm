@@ -1940,6 +1940,12 @@ sub _thread_save_djvu {
   my $class = $image->Get('class');
   my $compression;
 
+  # Get the size
+  $pagedata->{w}           = $image->Get('width');
+  $pagedata->{h}           = $image->Get('height');
+  $pagedata->{pidfile}     = $pidfile;
+  $pagedata->{page_number} = $page;
+
   # c44 can only use pnm and jpg
   my $format;
   if ( $filename =~ /\.(\w*)$/x ) {
@@ -1969,8 +1975,8 @@ sub _thread_save_djvu {
   }
 
   # Create the djvu
-  my $resolution = $pagedata->{resolution};
-  my $cmd = sprintf "$compression -dpi %d $filename $djvu", $resolution;
+  my $cmd = sprintf "$compression -dpi %d $filename $djvu",
+    $pagedata->{resolution};
   $logger->info($cmd);
   my ( $status, $size ) =
     ( system("echo $$ > $pidfile;$cmd"), -s "$djvu" )
@@ -1985,47 +1991,7 @@ sub _thread_save_djvu {
    return;
   }
   push @filelist, $djvu;
-
-  # Add OCR to text layer
-  if ( defined( $pagedata->{hocr} ) ) {
-
-   # Get the size
-   my $w = $image->Get('width');
-   my $h = $image->Get('height');
-
-   # Open djvusedtxtfile
-   my $djvusedtxtfile = File::Temp->new( DIR => $dir, SUFFIX => '.txt' );
-   open my $fh, '>:encoding(UTF8)',    ## no critic (RequireBriefOpen)
-     $djvusedtxtfile
-     or croak( sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile ) );
-   print $fh "(page 0 0 $w $h\n";
-
-   # Write the text boxes
-   for my $box ( $pagedata->boxes ) {
-    my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
-    ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution )
-      if ( $x1 == 0 and $y1 == 0 and not defined($x2) );
-
-    # Escape any inverted commas
-    $txt =~ s/\\/\\\\/gx;
-    $txt =~ s/"/\\\"/gx;
-    printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2,
-      $h - $y1, $txt;
-   }
-   print $fh ")";
-   close $fh;
-
-   # Write djvusedtxtfile
-   $cmd = "djvused '$djvu' -e 'select 1; set-txt $djvusedtxtfile' -s";
-   $logger->info($cmd);
-   $status = system("echo $$ > $pidfile;$cmd");
-   return if $_self->{cancel};
-   if ($status) {
-    $self->{status}  = 1;
-    $self->{message} = $d->get('Error adding text layer to DjVu');
-    $logger->error("Error adding text layer to DjVu page $page");
-   }
-  }
+  _add_text_to_DJVU( $self, $djvu, $dir, $pagedata );
  }
  $self->{progress} = 1;
  $self->{message}  = $d->get('Closing DjVu');
@@ -2037,6 +2003,53 @@ sub _thread_save_djvu {
   $self->{status}  = 1;
   $self->{message} = $d->get('Error closing DjVu');
   $logger->error("Error closing DjVu");
+ }
+ return;
+}
+
+# Add OCR to text layer
+
+sub _add_text_to_DJVU {
+ my ( $self, $djvu, $dir, $pagedata ) = @_;
+ if ( defined( $pagedata->{hocr} ) ) {
+
+  # Get the size
+  my $w          = $pagedata->{w};
+  my $h          = $pagedata->{h};
+  my $resolution = $pagedata->{resolution};
+
+  # Open djvusedtxtfile
+  my $djvusedtxtfile = File::Temp->new( DIR => $dir, SUFFIX => '.txt' );
+  open my $fh, '>:encoding(UTF8)',    ## no critic (RequireBriefOpen)
+    $djvusedtxtfile
+    or croak( sprintf( $d->get("Can't open file: %s"), $djvusedtxtfile ) );
+  print $fh "(page 0 0 $w $h\n";
+
+  # Write the text boxes
+  for my $box ( $pagedata->boxes ) {
+   my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
+   ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution )
+     if ( $x1 == 0 and $y1 == 0 and not defined($x2) );
+
+   # Escape any inverted commas
+   $txt =~ s/\\/\\\\/gx;
+   $txt =~ s/"/\\\"/gx;
+   printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2, $h - $y1, $txt;
+  }
+  print $fh ")";
+  close $fh;
+
+  # Write djvusedtxtfile
+  my $cmd = "djvused '$djvu' -e 'select 1; set-txt $djvusedtxtfile' -s";
+  $logger->info($cmd);
+  my $status = system("echo $$ > $pagedata->{pidfile};$cmd");
+  return if $_self->{cancel};
+  if ($status) {
+   $self->{status}  = 1;
+   $self->{message} = $d->get('Error adding text layer to DjVu');
+   $logger->error(
+    "Error adding text layer to DjVu page $pagedata->{page_number}");
+  }
  }
  return;
 }
