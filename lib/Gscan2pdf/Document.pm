@@ -1121,7 +1121,6 @@ sub _enqueue_request {
 
 sub _monitor_process {
  my ( $self, %options ) = @_;
- my $started_flag;
 
  # Get new process ID
  my $pid = ++$_PID;
@@ -1132,83 +1131,101 @@ sub _monitor_process {
   jobs_completed => $jobs_completed,
   jobs_total     => $jobs_total
  ) if ( $options{queued_callback} );
- _when_ready(
-  $options{sentinel},
-  undef,    # pending
-  sub {     # running
-   if ( exists $self->{cancel_cb}{$pid} ) {
-    if ( not defined( $self->{cancel_cb}{$pid} )
-     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
-    {
-     if ( defined $options{pidfile} ) {
-      _cancel_process( slurp( $options{pidfile} ) );
-     }
-     else {
-      _cancel_process();
-     }
-     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
-     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
 
-     # Flag that the callbacks have been done here
-     # so they are not repeated here or in finished
-     $self->{cancel_cb}{$pid} = 1;
-     delete $self->{running_pids}{$pid};
-    }
-    return;
+ Glib::Timeout->add(
+  $_POLL_INTERVAL,
+  sub {
+   if ( ${ $options{sentinel} } == 2 ) {
+    $jobs_completed++;
+    $self->_monitor_process_finished_callback( $pid, \%options );
+    return Glib::SOURCE_REMOVE;
    }
-   $self->fetch_file( $options{add} ) if ( $options{add} );
-   $started_flag = $options{started_callback}->(
-    1, $_self->{process_name},
-    $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
-   ) if ( $options{started_callback} and not $started_flag );
-   $options{running_callback}->(
-    process        => $_self->{process_name},
-    jobs_completed => $jobs_completed,
-    jobs_total     => $jobs_total,
-    message        => $_self->{message},
-    progress       => $_self->{progress}
-   ) if ( $options{running_callback} );
-  },
-  sub {    # finished
-   if ( exists $self->{cancel_cb}{$pid} ) {
-    if ( not defined( $self->{cancel_cb}{$pid} )
-     or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
-    {
-     if ( defined $options{pidfile} ) {
-      _cancel_process( slurp( $options{pidfile} ) );
-     }
-     else {
-      _cancel_process();
-     }
-     $options{cancelled_callback}->() if ( $options{cancelled_callback} );
-     $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
-    }
-    delete $self->{cancel_cb}{$pid};
-    delete $self->{running_pids}{$pid};
-    return;
+   elsif ( ${ $options{sentinel} } == 1 ) {
+    $self->_monitor_process_running_callback( $pid, \%options );
+    return Glib::SOURCE_CONTINUE;
    }
-   $options{started_callback}->()
-     if ( $options{started_callback} and not $started_flag );
-   if ( $_self->{status} ) {
-    $options{error_callback}->( $_self->{message} )
-      if ( $options{error_callback} );
-    return;
-   }
-   $options{add} -= $self->fetch_file if ( $options{add} );
-   my $data;
-   if ( $options{info} ) {
-    $data = $_self->{info_queue}->dequeue;
-   }
-   elsif ( $options{update_slist} ) {
-    $data = $self->update_page( $options{display_callback} );
-   }
-   $options{finished_callback}->( $data, $_self->{requests}->pending )
-     if $options{finished_callback};
-   delete $self->{cancel_cb}{$pid};
-   delete $self->{running_pids}{$pid};
-  },
+   return Glib::SOURCE_CONTINUE;
+  }
  );
  return $pid;
+}
+
+sub _monitor_process_running_callback {
+ my ( $self, $pid, $options ) = @_;
+ if ( exists $self->{cancel_cb}{$pid} ) {
+  if ( not defined( $self->{cancel_cb}{$pid} )
+   or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+  {
+   if ( defined $options->{pidfile} ) {
+    _cancel_process( slurp( $options->{pidfile} ) );
+   }
+   else {
+    _cancel_process();
+   }
+   $options->{cancelled_callback}->() if ( $options->{cancelled_callback} );
+   $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+
+   # Flag that the callbacks have been done here
+   # so they are not repeated here or in finished
+   $self->{cancel_cb}{$pid} = 1;
+   delete $self->{running_pids}{$pid};
+  }
+  return;
+ }
+ $self->fetch_file( $options->{add} ) if ( $options->{add} );
+ $options->{started_flag} = $options->{started_callback}->(
+  1, $_self->{process_name},
+  $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
+ ) if ( $options->{started_callback} and not $options->{started_flag} );
+ $options->{running_callback}->(
+  process        => $_self->{process_name},
+  jobs_completed => $jobs_completed,
+  jobs_total     => $jobs_total,
+  message        => $_self->{message},
+  progress       => $_self->{progress}
+ ) if ( $options->{running_callback} );
+ return;
+}
+
+sub _monitor_process_finished_callback {
+ my ( $self, $pid, $options ) = @_;
+ if ( exists $self->{cancel_cb}{$pid} ) {
+  if ( not defined( $self->{cancel_cb}{$pid} )
+   or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
+  {
+   if ( defined $options->{pidfile} ) {
+    _cancel_process( slurp( $options->{pidfile} ) );
+   }
+   else {
+    _cancel_process();
+   }
+   $options->{cancelled_callback}->() if ( $options->{cancelled_callback} );
+   $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+  }
+  delete $self->{cancel_cb}{$pid};
+  delete $self->{running_pids}{$pid};
+  return;
+ }
+ $options->{started_callback}->()
+   if ( $options->{started_callback} and not $options->{started_flag} );
+ if ( $_self->{status} ) {
+  $options->{error_callback}->( $_self->{message} )
+    if ( $options->{error_callback} );
+  return;
+ }
+ $options->{add} -= $self->fetch_file if ( $options->{add} );
+ my $data;
+ if ( $options->{info} ) {
+  $data = $_self->{info_queue}->dequeue;
+ }
+ elsif ( $options->{update_slist} ) {
+  $data = $self->update_page( $options->{display_callback} );
+ }
+ $options->{finished_callback}->( $data, $_self->{requests}->pending )
+   if $options->{finished_callback};
+ delete $self->{cancel_cb}{$pid};
+ delete $self->{running_pids}{$pid};
+ return;
 }
 
 sub _cancel_process {
@@ -1227,28 +1244,6 @@ sub _cancel_process {
   local $SIG{HUP} = 'IGNORE';
   killfam 'HUP', ($pid);
  }
- return;
-}
-
-sub _when_ready {
- my ( $sentinel, $pending_callback, $running_callback, $finished_callback ) =
-   @_;
- Glib::Timeout->add(
-  $_POLL_INTERVAL,
-  sub {
-   if ( $$sentinel == 2 ) {
-    $jobs_completed++;
-    $finished_callback->() if ($finished_callback);
-    return Glib::SOURCE_REMOVE;
-   }
-   elsif ( $$sentinel == 1 ) {
-    $running_callback->() if ($running_callback);
-    return Glib::SOURCE_CONTINUE;
-   }
-   $pending_callback->() if ($pending_callback);
-   return Glib::SOURCE_CONTINUE;
-  }
- );
  return;
 }
 
