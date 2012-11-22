@@ -1883,30 +1883,36 @@ sub _add_text_to_PDF {
     $text->text( $txt, utf8 => 1 );
    }
    else {
-
-    # Box is the same size as the page. We don't know the text position.
-    # Start at the top of the page (PDF coordinate system starts
-    # at the bottom left of the page)
     my $size = 1;
     $text->font( $font, $size );
-    my $y = $h * $POINTS_PER_INCH - $size;
-    foreach my $line ( split( "\n", $txt ) ) {
-     my $x = 0;
-
-     # Add a word at a time in order to linewrap
-     foreach my $word ( split( ' ', $line ) ) {
-      if ( length($word) * $size + $x > $w * $POINTS_PER_INCH ) {
-       $x = 0;
-       $y -= $size;
-      }
-      $text->translate( $x, $y );
-      $word = ' ' . $word if ( $x > 0 );
-      $x += $text->text( $word, utf8 => 1 );
-     }
-     $y -= $size;
-    }
+    _wrap_text_to_page( $txt, $size, $text, $h, $w );
    }
   }
+ }
+ return;
+}
+
+# Box is the same size as the page. We don't know the text position.
+# Start at the top of the page (PDF coordinate system starts
+# at the bottom left of the page)
+
+sub _wrap_text_to_page {
+ my ( $txt, $size, $text_box, $h, $w ) = @_;
+ my $y = $h * $POINTS_PER_INCH - $size;
+ foreach my $line ( split( "\n", $txt ) ) {
+  my $x = 0;
+
+  # Add a word at a time in order to linewrap
+  foreach my $word ( split( ' ', $line ) ) {
+   if ( length($word) * $size + $x > $w * $POINTS_PER_INCH ) {
+    $x = 0;
+    $y -= $size;
+   }
+   $text_box->translate( $x, $y );
+   $word = ' ' . $word if ( $x > 0 );
+   $x += $text_box->text( $word, utf8 => 1 );
+  }
+  $y -= $size;
  }
  return;
 }
