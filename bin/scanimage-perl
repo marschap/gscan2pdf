@@ -707,59 +707,7 @@ sub scan_it {
       : "Unknown";
    }
 
-   if ($first_frame) {
-    if ($parm->{format} == SANE_FRAME_RED
-     or $parm->{format} == SANE_FRAME_GREEN
-     or $parm->{format} == SANE_FRAME_BLUE )
-    {
-     die # FIXME: compare message with SANE source, and give them patch if necessary
-"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n"
-       unless ( $parm->{depth} == 8 );
-     $must_buffer = 1;
-     $offset      = $parm->{format} - SANE_FRAME_RED;
-    }
-    elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-     die # FIXME: compare message with SANE source, and give them patch if necessary
-"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8 or 16)\n"
-       unless ( ( $parm->{depth} == 8 ) or ( $parm->{depth} == 16 ) );
-    }
-    if ($parm->{format} == SANE_FRAME_RGB
-     or $parm->{format} == SANE_FRAME_GRAY )
-    {
-     die # FIXME: compare message with SANE source, and give them patch if necessary
-"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 1, 8 or 16)\n"
-       unless ( ( $parm->{depth} == 1 )
-      or ( $parm->{depth} == 8 )
-      or ( $parm->{depth} == 16 ) );
-     if ( $parm->{lines} < 0 ) {
-      $must_buffer = 1;
-      $offset      = 0;
-     }
-     else {
-
-      #     if ($output_format == OUTPUT_TIFF) {
-      #       sanei_write_tiff_header ($parm->{format},
-      #                                $parm->{pixels_per_line}, $parm->{lines},
-      #                                $parm->{depth}, $resolution_value,
-      #                                icc_profile);
-      #     else {
-      write_pnm_header(
-       $parm->{format}, $parm->{pixels_per_line},
-       $parm->{lines},  $parm->{depth}
-      );
-
-      #      }
-     }
-    }
-   }
-   else {
-    die # FIXME: compare message with SANE source, and give them patch if necessary
-"Error: frame format $parm->{format}, but expected SANE_FRAME_RED, SANE_FRAME_GREEN, or SANE_FRAME_BLUE\n"
-      if ( $parm->{format} < SANE_FRAME_RED
-     or $parm->{format} > SANE_FRAME_BLUE );
-    $offset = $parm->{format} - SANE_FRAME_RED;
-    $image{x} = $image{y} = 0;
-   }
+   ( $must_buffer, $offset ) = initialise_scan( $parm, $first_frame );
    my $hundred_percent = $parm->{bytes_per_line} * $parm->{lines} * (
     ( $parm->{format} == SANE_FRAME_RGB or $parm->{format} == SANE_FRAME_GRAY )
     ? 1
@@ -916,6 +864,64 @@ cleanup:
   printf STDERR "%s: read %u bytes in total\n", $prog_name, $total_bytes;
  }
  return;
+}
+
+sub initialise_scan {
+ my ( $parm, $first_frame ) = @_;
+ my ( $must_buffer, $offset );
+ if ($first_frame) {
+  if ($parm->{format} == SANE_FRAME_RED
+   or $parm->{format} == SANE_FRAME_GREEN
+   or $parm->{format} == SANE_FRAME_BLUE )
+  {
+   die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n"
+     unless ( $parm->{depth} == 8 );
+   $must_buffer = 1;
+   $offset      = $parm->{format} - SANE_FRAME_RED;
+  }
+  elsif ( $parm->{format} == SANE_FRAME_RGB ) {
+   die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8 or 16)\n"
+     unless ( ( $parm->{depth} == 8 ) or ( $parm->{depth} == 16 ) );
+  }
+  if ($parm->{format} == SANE_FRAME_RGB
+   or $parm->{format} == SANE_FRAME_GRAY )
+  {
+   die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 1, 8 or 16)\n"
+     unless ( ( $parm->{depth} == 1 )
+    or ( $parm->{depth} == 8 )
+    or ( $parm->{depth} == 16 ) );
+   if ( $parm->{lines} < 0 ) {
+    $must_buffer = 1;
+    $offset      = 0;
+   }
+   else {
+
+    #     if ($output_format == OUTPUT_TIFF) {
+    #       sanei_write_tiff_header ($parm->{format},
+    #                                $parm->{pixels_per_line}, $parm->{lines},
+    #                                $parm->{depth}, $resolution_value,
+    #                                icc_profile);
+    #     else {
+    write_pnm_header(
+     $parm->{format}, $parm->{pixels_per_line},
+     $parm->{lines},  $parm->{depth}
+    );
+
+    #      }
+   }
+  }
+ }
+ else {
+  die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but expected SANE_FRAME_RED, SANE_FRAME_GREEN, or SANE_FRAME_BLUE\n"
+    if ( $parm->{format} < SANE_FRAME_RED
+   or $parm->{format} > SANE_FRAME_BLUE );
+  $offset = $parm->{format} - SANE_FRAME_RED;
+ }
+ return $must_buffer, $offset;
 }
 
 sub scan_pages {    ## no critic (ProhibitExcessComplexity)
