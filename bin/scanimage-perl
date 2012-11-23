@@ -141,11 +141,7 @@ sub print_option {
  }
 
  # print the option
- if ($opt->{name} eq "x"
-  or $opt->{name} eq "y"
-  or $opt->{name} eq "t"
-  or $opt->{name} eq "l" )
- {
+ if ( $opt->{name} =~ /^(?:x|y|t|l)$/x ) {
   printf "    -%s", $opt->{name};
  }
  else {
