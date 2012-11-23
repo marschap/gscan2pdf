@@ -1240,6 +1240,50 @@ sub list_devices {
  return;
 }
 
+sub open_device {
+ unless ($devname) {
+
+  # If no device name was specified explicitly, we look at the
+  # environment variable SANE_DEFAULT_DEVICE.  If this variable
+  # is not set, we open the first device we find (if any):
+  if ( defined( $ENV{'SANE_DEFAULT_DEVICE'} ) ) {
+   $devname = $ENV{'SANE_DEFAULT_DEVICE'};
+  }
+  else {
+   my @device_list = Sane->get_devices;
+   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+    print STDERR "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
+    exit(1);
+   }
+   if ( $#device_list == -1 ) {
+    print STDERR "$prog_name: no SANE devices found\n";
+    exit(1);
+   }
+   $devname = $device_list[0]{name};
+  }
+ }
+
+ $device = Sane::Device->open($devname);
+ if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+  print STDERR "$prog_name: open of device $devname failed: $Sane::STATUS\n";
+  print STDERR "\nYou seem to have specified a UNIX device name, "
+    . "or filename instead of selecting\nthe SANE scanner or "
+    . "image acquisition device you want to use. As an example,\n"
+    . "you might want \"epson:/dev/sg0\" or "
+    . "\"hp:/dev/usbscanner0\". If any supported\ndevices are "
+    . "installed in your system, you should be able to see a "
+    . "list with\n\"$prog_name --list-devices\".\n"
+    if ( $devname =~ /^\// );
+  if ($help) {
+   undef $device;
+  }
+  else {
+   exit(1);
+  }
+ }
+ return;
+}
+
 # There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
 # l is not in @args. Therefore the workaround is to rename l to m for the first
 # scan and back to l for the second.
@@ -1300,46 +1344,7 @@ Parameters are separated by a blank from single-character options (e.g.
 EOS
 }
 
-unless ($devname) {
-
- # If no device name was specified explicitly, we look at the
- # environment variable SANE_DEFAULT_DEVICE.  If this variable
- # is not set, we open the first device we find (if any):
- if ( defined( $ENV{'SANE_DEFAULT_DEVICE'} ) ) {
-  $devname = $ENV{'SANE_DEFAULT_DEVICE'};
- }
- else {
-  my @device_list = Sane->get_devices;
-  if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-   print STDERR "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
-   exit(1);
-  }
-  if ( $#device_list == -1 ) {
-   print STDERR "$prog_name: no SANE devices found\n";
-   exit(1);
-  }
-  $devname = $device_list[0]{name};
- }
-}
-
-$device = Sane::Device->open($devname);
-if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
- print STDERR "$prog_name: open of device $devname failed: $Sane::STATUS\n";
- print STDERR "\nYou seem to have specified a UNIX device name, "
-   . "or filename instead of selecting\nthe SANE scanner or "
-   . "image acquisition device you want to use. As an example,\n"
-   . "you might want \"epson:/dev/sg0\" or "
-   . "\"hp:/dev/usbscanner0\". If any supported\ndevices are "
-   . "installed in your system, you should be able to see a "
-   . "list with\n\"$prog_name --list-devices\".\n"
-   if ( $devname =~ /^\// );
- if ($help) {
-  undef $device;
- }
- else {
-  exit(1);
- }
-}
+open_device();
 
 if ( defined($device) ) {
  fetch_options($device);
