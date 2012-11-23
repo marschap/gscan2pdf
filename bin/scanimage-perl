@@ -1206,7 +1206,31 @@ sub process_arguments {
  return;
 }
 
-sub list_devices {
+sub list_device_names {
+ print
+"Type ``$prog_name --help -d DEVICE'' to get list of all options for DEVICE.\n\nList of available devices:";
+ my @device_list = Sane->get_devices;
+ if ( $Sane::STATUS == SANE_STATUS_GOOD ) {
+  my $column = 80;
+
+  foreach (@device_list) {
+   if ( $column + length( $_->{name} ) + 1 >= 80 ) {
+    print "\n    ";
+    $column = 4;
+   }
+   if ( $column > 4 ) {
+    print ' ';
+    $column += 1;
+   }
+   print $_->{name};
+   $column += length( $_->{name} );
+  }
+ }
+ print "\n";
+ return;
+}
+
+sub list_devices_verbose {
  my @device_list = Sane->get_devices;
  if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
   print STDERR "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
@@ -1297,7 +1321,7 @@ for (@ARGV) {
 GetOptions(@args);
 
 if ( defined( $options{L} ) or defined( $options{f} ) ) {
- list_devices();
+ list_devices_verbose();
  exit(0);
 }
 
@@ -1366,26 +1390,7 @@ if ( defined($device) ) {
 
 # output device list
 if ($help) {
- print
-"Type ``$prog_name --help -d DEVICE'' to get list of all options for DEVICE.\n\nList of available devices:";
- my @device_list = Sane->get_devices;
- if ( $Sane::STATUS == SANE_STATUS_GOOD ) {
-  my $column = 80;
-
-  foreach (@device_list) {
-   if ( $column + length( $_->{name} ) + 1 >= 80 ) {
-    print "\n    ";
-    $column = 4;
-   }
-   if ( $column > 4 ) {
-    print ' ';
-    $column += 1;
-   }
-   print $_->{name};
-   $column += length( $_->{name} );
-  }
- }
- print "\n";
+ list_device_names();
  exit(0);
 }
 
@@ -1415,8 +1420,7 @@ else {
  test_it();
 }
 
-exit $Sane::STATUS if ($Sane::STATUS);
-exit;
+exit $Sane::STATUS;
 
 __END__
 
