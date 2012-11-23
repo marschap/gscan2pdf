@@ -732,7 +732,7 @@ sub scan_it {
     }
 
     $offset =
-      write_buffer( $parm, $buffer, $len, \%image, $offset, $must_buffer );
+      buffer_data( $parm, $buffer, $len, \%image, $offset, $must_buffer );
 
     if ( $verbose and $parm->{depth} == 8 ) {
      for ( split( //, $buffer ) ) {
@@ -752,44 +752,7 @@ sub scan_it {
  }
 
  if ($must_buffer) {
-  if ( $parm->{lines} > 0 ) {
-   $image{height} = $parm->{lines};
-  }
-  else {
-   $image{height} = @{ $image{data} } / $parm->{pixels_per_line};
-   $image{height} /= 3
-     if ( $parm->{format} == SANE_FRAME_RED
-    or $parm->{format} == SANE_FRAME_GREEN
-    or $parm->{format} == SANE_FRAME_BLUE );
-  }
-
-#  if ($output_format == OUTPUT_TIFF) {
-#   sanei_write_tiff_header ($parm->{format}, $parm->{pixels_per_line},
-#                             $parm->{lines}, $parm->{depth}, $resolution_value,
-#                             icc_profile);
-#  }
-#  else {
-  write_pnm_header(
-   $parm->{format}, $parm->{pixels_per_line},
-   $image{height},  $parm->{depth}
-  );
-
-  #  }
-  #  if (($output_format == OUTPUT_TIFF) or ($image{Bpp} == 1)
-  #      or ($image{Bpp} == 3)) {
-  #   print $image{data};
-  #  }
-  #  else { # $image{Bpp} == 2 or $image{Bpp} == 6 assumed
-##if !defined(WORDS_BIGENDIAN)
-#   for (my $i = 0; $i < $image{Bpp} * $image{height} * $image{width}; $i += 2) {
-#    my $LSB = $image{data}[$i];
-#    $image{data}[$i] = $image{data}[$i + 1];
-#    $image{data}[$i + 1] = $LSB;
-#   }
-##endif
-  for ( @{ $image{data} } ) { print; }
-
-  #  }
+  write_buffer( \%image, $parm );
  }
 
  # flush the output buffer
@@ -870,7 +833,7 @@ sub initialise_scan {
  return $must_buffer, $offset;
 }
 
-sub write_buffer {    ## no critic (ProhibitManyArgs)
+sub buffer_data {    ## no critic (ProhibitManyArgs)
  my ( $parm, $buffer, $len, $image, $offset, $must_buffer ) = @_;
  if ($must_buffer) {
 
@@ -929,6 +892,49 @@ sub write_buffer {    ## no critic (ProhibitManyArgs)
   #    }
  }
  return $offset;
+}
+
+sub write_buffer {
+ my ( $image, $parm ) = @_;
+ if ( $parm->{lines} > 0 ) {
+  $image->{height} = $parm->{lines};
+ }
+ else {
+  $image->{height} = @{ $image->{data} } / $parm->{pixels_per_line};
+  $image->{height} /= 3
+    if ( $parm->{format} == SANE_FRAME_RED
+   or $parm->{format} == SANE_FRAME_GREEN
+   or $parm->{format} == SANE_FRAME_BLUE );
+ }
+
+#  if ($output_format == OUTPUT_TIFF) {
+#   sanei_write_tiff_header ($parm->{format}, $parm->{pixels_per_line},
+#                             $parm->{lines}, $parm->{depth}, $resolution_value,
+#                             icc_profile);
+#  }
+#  else {
+ write_pnm_header(
+  $parm->{format},  $parm->{pixels_per_line},
+  $image->{height}, $parm->{depth}
+ );
+
+ #  }
+ #  if (($output_format == OUTPUT_TIFF) or ($image->{Bpp} == 1)
+ #      or ($image->{Bpp} == 3)) {
+ #   print $image->{data};
+ #  }
+ #  else { # $image->{Bpp} == 2 or $image->{Bpp} == 6 assumed
+##if !defined(WORDS_BIGENDIAN)
+#   for (my $i = 0; $i < $image->{Bpp} * $image->{height} * $image->{width}; $i += 2) {
+#    my $LSB = $image->{data}[$i];
+#    $image->{data}[$i] = $image->{data}[$i + 1];
+#    $image->{data}[$i + 1] = $LSB;
+#   }
+##endif
+ for ( @{ $image->{data} } ) { print; }
+
+ #  }
+ return;
 }
 
 sub scan_pages {    ## no critic (ProhibitExcessComplexity)
