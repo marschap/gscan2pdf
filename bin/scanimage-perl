@@ -468,41 +468,7 @@ sub fetch_options {
    and ( $opt->{unit} == SANE_UNIT_DPI )
    and ( $opt->{name} eq SANE_NAME_SCAN_RESOLUTION ) );
 
-  # Keep track of top-left corner options (if they exist at
-  # all) and replace the bottom-right corner options by a
-  # width/height option (if they exist at all).
-  if ( ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
-   and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL ) )
-  {
-   given ( $opt->{name} ) {
-    when (SANE_NAME_SCAN_BR_X) {
-     $window[0]                 = $i;
-     $opt->{name}               = 'x';
-     $window_option[0]          = $opt;
-     $window_option[0]->{title} = 'Scan width';
-     $window_option[0]->{desc}  = 'Width of scan-area.';
-     $window_option[0]->{name}  = 'x';
-    }
-    when (SANE_NAME_SCAN_BR_Y) {
-     $window[1]                 = $i;
-     $opt->{name}               = 'y';
-     $window_option[1]          = $opt;
-     $window_option[1]->{title} = 'Scan height';
-     $window_option[1]->{desc}  = 'Height of scan-area.';
-     $window_option[1]->{name}  = 'y';
-    }
-    when (SANE_NAME_SCAN_TL_X) {
-     $window[2]                = $i;
-     $window_option[2]         = $opt;
-     $window_option[2]->{name} = 'l';
-    }
-    when (SANE_NAME_SCAN_TL_Y) {
-     $window[3]                = $i;
-     $window_option[3]         = $opt;
-     $window_option[3]->{name} = 't';
-    }
-   }
-  }
+  update_geometry( $opt, $i );
 
   if ( $opt->{type} == SANE_TYPE_BOOL ) {
    push @args, "$opt->{name}:s";
@@ -523,6 +489,46 @@ sub fetch_options {
    if ( $window[ $i + 2 ] ) {
     my $pos = $device->get_option( $window[ $i + 2 ] );
     $window_val[$i] -= $pos;
+   }
+  }
+ }
+ return;
+}
+
+# Keep track of top-left corner options (if they exist at
+# all) and replace the bottom-right corner options by a
+# width/height option (if they exist at all).
+sub update_geometry {
+ my ( $opt, $i ) = @_;
+ if ( ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
+  and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL ) )
+ {
+  given ( $opt->{name} ) {
+   when (SANE_NAME_SCAN_BR_X) {
+    $window[0]                 = $i;
+    $opt->{name}               = 'x';
+    $window_option[0]          = $opt;
+    $window_option[0]->{title} = 'Scan width';
+    $window_option[0]->{desc}  = 'Width of scan-area.';
+    $window_option[0]->{name}  = 'x';
+   }
+   when (SANE_NAME_SCAN_BR_Y) {
+    $window[1]                 = $i;
+    $opt->{name}               = 'y';
+    $window_option[1]          = $opt;
+    $window_option[1]->{title} = 'Scan height';
+    $window_option[1]->{desc}  = 'Height of scan-area.';
+    $window_option[1]->{name}  = 'y';
+   }
+   when (SANE_NAME_SCAN_TL_X) {
+    $window[2]                = $i;
+    $window_option[2]         = $opt;
+    $window_option[2]->{name} = 'l';
+   }
+   when (SANE_NAME_SCAN_TL_Y) {
+    $window[3]                = $i;
+    $window_option[3]         = $opt;
+    $window_option[3]->{name} = 't';
    }
   }
  }
