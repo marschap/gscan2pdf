@@ -1206,19 +1206,7 @@ sub process_arguments {
  return;
 }
 
-# There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
-# l is not in @args. Therefore the workaround is to rename l to m for the first
-# scan and back to l for the second.
-for (@ARGV) {
- $_ = '-m' if ( $_ eq '-l' );
- $_ = '-u' if ( $_ eq '-t' );
-}
-
-# make a first pass through the options with error printing and argument
-# permutation disabled:
-GetOptions(@args);
-
-if ( defined( $options{L} ) or defined( $options{f} ) ) {
+sub list_devices {
  my @device_list = Sane->get_devices;
  if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
   print STDERR "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
@@ -1249,6 +1237,23 @@ if ( defined( $options{L} ) or defined( $options{f} ) ) {
  }
  printf "default device is `%s'\n", $ENV{'SANE_DEFAULT_DEVICE'}
    if ( defined( $ENV{'SANE_DEFAULT_DEVICE'} ) );
+ return;
+}
+
+# There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
+# l is not in @args. Therefore the workaround is to rename l to m for the first
+# scan and back to l for the second.
+for (@ARGV) {
+ $_ = '-m' if ( $_ eq '-l' );
+ $_ = '-u' if ( $_ eq '-t' );
+}
+
+# make a first pass through the options with error printing and argument
+# permutation disabled:
+GetOptions(@args);
+
+if ( defined( $options{L} ) or defined( $options{f} ) ) {
+ list_devices();
  exit(0);
 }
 
