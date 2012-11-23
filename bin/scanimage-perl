@@ -910,6 +910,114 @@ cleanup:
  return;
 }
 
+sub scan_pages {    ## no critic (ProhibitExcessComplexity)
+ my $n = $batch_start_at;
+
+ if ( $batch and ( not defined($format) or $format eq '' ) ) {
+
+  #  if ($output_format == OUTPUT_TIFF) {
+  #   $format = "out%d.tif";
+  #  }
+  #  else {
+  $format = "out%d.pnm";
+
+  #  }
+ }
+
+ printf STDERR "Scanning %d pages, incrementing by %d, numbering from %d\n",
+   $batch_count, $batch_increment, $batch_start_at
+   if ($batch);
+
+ {    # extra braces to get last to work
+  do {
+   my ( $path, $part_path, $fh );
+   if ($batch) {    # format is NULL unless batch mode
+    $path = sprintf $format, $n;
+    $part_path = "$path.part";
+   }
+
+   if ($batch) {
+    if ($batch_prompt) {
+     printf STDERR "Place document no. %d on the scanner.\n", $n;
+     printf STDERR "Press <RETURN> to continue.\n";
+     printf STDERR "Press Ctrl + D to terminate.\n";
+
+     if ( not defined(<>) ) {
+      printf STDERR "Batch terminated, %d pages scanned\n",
+        ( $n - $batch_increment );
+      last;    # get out of this loop
+     }
+    }
+    printf STDERR "Scanning page %d\n", $n;
+   }
+
+   $device->start;
+   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+    print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
+    last;
+   }
+
+   # write to .part file while scanning is in progress
+   if (
+    $batch
+    and not(
+     open( $fh, '>', $part_path )    ## no critic (RequireBriefOpen)
+     and STDOUT->fdopen( $fh, '>' )
+    )
+     )
+   {
+    print STDERR "cannot open $part_path\n";
+    $device->cancel;
+    exit SANE_STATUS_ACCESS_DENIED;
+   }
+
+   scan_it();
+   if ($batch) {
+    printf STDERR "Scanned page %d.",         $n;
+    printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
+   }
+
+   if ( $Sane::STATUS == SANE_STATUS_EOF ) {
+    if ($batch) {
+
+     # close output file by redirecting, do not close stdout here!
+     if (
+      open( $fh, '>', '/dev/null' )    ## no critic (RequireBriefOpen)
+      and STDOUT->fdopen( $fh, '>' )
+       )
+     {
+
+      # let the fully scanned file show up
+      if ( not rename( $part_path, $path ) ) {
+       print STDERR "cannot rename $part_path to $path\n";
+       $device->cancel;
+       return SANE_STATUS_ACCESS_DENIED;
+      }
+     }
+     else {
+      printf STDERR "cannot open /dev/null\n";
+      $device->cancel;
+      return SANE_STATUS_ACCESS_DENIED;
+     }
+    }
+   }
+   elsif ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+    if ($batch) {
+     close($fh);
+     unlink($part_path);
+    }
+    last;
+   }
+   $n += $batch_increment;
+    } while ( ( $batch and ( $batch_count == -1 or --$batch_count ) )
+   and
+   ( $Sane::STATUS == SANE_STATUS_GOOD or $Sane::STATUS == SANE_STATUS_EOF ) );
+ }
+
+ $device->cancel;
+ return;
+}
+
 sub pass_fail {
  my ( $max, $len, $buffer ) = @_;
 
@@ -1278,112 +1386,7 @@ else {
 }
 
 if ( $test == 0 ) {
- my $n = $batch_start_at;
-
- if ( $batch and ( not defined($format) or $format eq '' ) ) {
-
-  #  if ($output_format == OUTPUT_TIFF) {
-  #   $format = "out%d.tif";
-  #  }
-  #  else {
-  $format = "out%d.pnm";
-
-  #  }
- }
-
- printf STDERR "Scanning %d pages, incrementing by %d, numbering from %d\n",
-   $batch_count, $batch_increment, $batch_start_at
-   if ($batch);
-
- {
-  do {    # extra braces to get last to work.
-   my ( $path, $part_path, $fh );
-   if ($batch) {    # format is NULL unless batch mode
-    $path = sprintf $format, $n;
-    $part_path = "$path.part";
-   }
-
-   if ($batch) {
-    if ($batch_prompt) {
-     printf STDERR "Place document no. %d on the scanner.\n", $n;
-     printf STDERR "Press <RETURN> to continue.\n";
-     printf STDERR "Press Ctrl + D to terminate.\n";
-
-     if ( not defined(<>) ) {
-      printf STDERR "Batch terminated, %d pages scanned\n",
-        ( $n - $batch_increment );
-      last;    # get out of this loop
-     }
-    }
-    printf STDERR "Scanning page %d\n", $n;
-   }
-
-   $device->start;
-   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-    print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
-    last;
-   }
-
-   # write to .part file while scanning is in progress
-   if (
-    $batch
-    and not(
-     open( $fh, '>', $part_path )    ## no critic (RequireBriefOpen)
-     and STDOUT->fdopen( $fh, '>' )
-    )
-     )
-   {
-    print STDERR "cannot open $part_path\n";
-    $device->cancel;
-    exit SANE_STATUS_ACCESS_DENIED;
-   }
-
-   scan_it();
-   if ($batch) {
-    printf STDERR "Scanned page %d.",         $n;
-    printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
-   }
-
-   if ( $Sane::STATUS == SANE_STATUS_EOF ) {
-    if ($batch) {
-
-     # close output file by redirecting, do not close stdout here!
-     if (
-      not(
-       open( $fh, '>', '/dev/null' )    ## no critic (RequireBriefOpen)
-       and STDOUT->fdopen( $fh, '>' )
-      )
-       )
-     {
-      printf STDERR "cannot open /dev/null\n";
-      $device->cancel;
-      return SANE_STATUS_ACCESS_DENIED;
-     }
-     else {
-
-      # let the fully scanned file show up
-      if ( not rename( $part_path, $path ) ) {
-       print STDERR "cannot rename $part_path to $path\n";
-       $device->cancel;
-       return SANE_STATUS_ACCESS_DENIED;
-      }
-     }
-    }
-   }
-   elsif ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-    if ($batch) {
-     close($fh);
-     unlink($part_path);
-    }
-    last;
-   }
-   $n += $batch_increment;
-    } while ( ( $batch and ( $batch_count == -1 or --$batch_count ) )
-   and
-   ( $Sane::STATUS == SANE_STATUS_GOOD or $Sane::STATUS == SANE_STATUS_EOF ) );
- }
-
- $device->cancel;
+ scan_pages();
 }
 else {
  test_it();
