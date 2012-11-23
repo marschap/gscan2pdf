@@ -1343,9 +1343,7 @@ if ( $test == 0 ) {
     printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
    }
 
-   if ( $Sane::STATUS == SANE_STATUS_GOOD ) { }
-   elsif ( $Sane::STATUS == SANE_STATUS_EOF ) {
-    $Sane::_status = SANE_STATUS_GOOD;
+   if ( $Sane::STATUS == SANE_STATUS_EOF ) {
     if ($batch) {
 
      # close output file by redirecting, do not close stdout here!
@@ -1371,7 +1369,7 @@ if ( $test == 0 ) {
      }
     }
    }
-   else {
+   elsif ( $Sane::STATUS != SANE_STATUS_GOOD ) {
     if ($batch) {
      close($fh);
      unlink($part_path);
@@ -1380,13 +1378,14 @@ if ( $test == 0 ) {
    }
    $n += $batch_increment;
     } while ( ( $batch and ( $batch_count == -1 or --$batch_count ) )
-   and SANE_STATUS_GOOD == $Sane::STATUS );
+   and
+   ( $Sane::STATUS == SANE_STATUS_GOOD or $Sane::STATUS == SANE_STATUS_EOF ) );
  }
 
  $device->cancel;
 }
 else {
- $Sane::_status = test_it();
+ test_it();
 }
 
 exit $Sane::STATUS if ($Sane::STATUS);
