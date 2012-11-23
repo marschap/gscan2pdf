@@ -104,8 +104,6 @@ sub print_unit {
 sub print_option {
  ( $device, my $opt_num, my $opt, my $ro ) = @_;
 
- my $not_first = SANE_FALSE;
-
  if ( $opt->{type} == SANE_TYPE_GROUP ) {
   printf( "  %s:\n", $opt->{title} );
   return;
@@ -154,7 +152,50 @@ sub print_option {
   printf "    --%s", $opt->{name};
  }
 
- # print the option choices
+ print_option_choices($opt);
+ print_current_option_value( $opt, $opt_num );
+
+ if ( $opt->{cap} & SANE_CAP_INACTIVE ) {
+  print " [inactive]";
+ }
+ elsif ( $opt->{cap} & SANE_CAP_HARD_SELECT ) {
+  print " [hardware]";
+ }
+ elsif ( not( $opt->{cap} & SANE_CAP_SOFT_SELECT )
+  and $opt->{cap} & SANE_CAP_SOFT_DETECT )
+ {
+  print " [read-only]";
+ }
+
+ print "\n        ";
+
+ my $column     = 8;
+ my $last_break = 0;
+ my $start      = 0;
+ for ( my $pos = 0 ; $pos < length( $opt->{desc} ) ; ++$pos ) {
+  ++$column;
+  if ( substr( $opt->{desc}, $pos, 1 ) eq ' ' ) {
+   $last_break = $pos;
+  }
+  elsif ( substr( $opt->{desc}, $pos, 1 ) eq "\n" ) {
+   $column     = 80;
+   $last_break = $pos;
+  }
+  if ( $column >= 79 and $last_break ) {
+   print substr( $opt->{desc}, $start++, 1 ) while ( $start < $last_break );
+   $start = $last_break + 1;    # skip blank
+   print "\n        ";
+   $column = 8 + $pos - $start;
+  }
+ }
+ print substr( $opt->{desc}, $start++, 1 )
+   while ( $start < length( $opt->{desc} ) );
+ print "\n";
+ return;
+}
+
+sub print_option_choices {      ## no critic (ProhibitExcessComplexity)
+ my ($opt) = @_;
  if ( $opt->{type} == SANE_TYPE_BOOL ) {
   print "[=(";
   print "auto|" if ( $opt->{cap} & SANE_CAP_AUTOMATIC );
@@ -164,7 +205,6 @@ sub print_option {
   print ' ';
   if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) {
    print "auto|";
-   $not_first = SANE_TRUE;
   }
   if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
    if ( $opt->{type} == SANE_TYPE_INT ) {
@@ -212,45 +252,6 @@ sub print_option {
    }
   }
  }
-
- print_current_option_value( $opt, $opt_num );
-
- if ( $opt->{cap} & SANE_CAP_INACTIVE ) {
-  print " [inactive]";
- }
- elsif ( $opt->{cap} & SANE_CAP_HARD_SELECT ) {
-  print " [hardware]";
- }
- elsif ( not( $opt->{cap} & SANE_CAP_SOFT_SELECT )
-  and $opt->{cap} & SANE_CAP_SOFT_DETECT )
- {
-  print " [read-only]";
- }
-
- print "\n        ";
-
- my $column     = 8;
- my $last_break = 0;
- my $start      = 0;
- for ( my $pos = 0 ; $pos < length( $opt->{desc} ) ; ++$pos ) {
-  ++$column;
-  if ( substr( $opt->{desc}, $pos, 1 ) eq ' ' ) {
-   $last_break = $pos;
-  }
-  elsif ( substr( $opt->{desc}, $pos, 1 ) eq "\n" ) {
-   $column     = 80;
-   $last_break = $pos;
-  }
-  if ( $column >= 79 and $last_break ) {
-   print substr( $opt->{desc}, $start++, 1 ) while ( $start < $last_break );
-   $start = $last_break + 1;    # skip blank
-   print "\n        ";
-   $column = 8 + $pos - $start;
-  }
- }
- print substr( $opt->{desc}, $start++, 1 )
-   while ( $start < length( $opt->{desc} ) );
- print "\n";
  return;
 }
 
