@@ -671,41 +671,7 @@ sub scan_it {
  my $parm;
  {
   do {    # extra braces to get last to work.
-   if ( not $first_frame ) {
-    $device->start;
-    if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-     printf STDERR "$prog_name: sane_start: $Sane::STATUS\n";
-     goto cleanup;
-    }
-   }
-
-   $parm = $device->get_parameters;
-   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-    printf STDERR "$prog_name: sane_get_parameters: $Sane::STATUS\n";
-    goto cleanup;
-   }
-
-   if ($verbose) {
-    if ($first_frame) {
-     if ( $parm->{lines} >= 0 ) {
-      printf STDERR "$prog_name: scanning image of size %dx%d pixels at "
-        . "%d bits/pixel\n",
-        $parm->{pixels_per_line}, $parm->{lines},
-        8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
-     }
-     else {
-      printf STDERR "$prog_name: scanning image %d pixels wide and "
-        . "variable height at %d bits/pixel\n",
-        $parm->{pixels_per_line},
-        8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
-     }
-    }
-
-    printf STDERR "$prog_name: acquiring %s frame\n",
-      $parm->{format} <= SANE_FRAME_BLUE
-      ? $format_name[ $parm->{format} ]
-      : "Unknown";
-   }
+   log_frame_info( $parm, $first_frame, @format_name );
 
    ( $must_buffer, $offset ) = initialise_scan( $parm, $first_frame );
    my $hundred_percent = $parm->{bytes_per_line} * $parm->{lines} * (
@@ -771,6 +737,46 @@ cleanup:
  }
  elsif ($verbose) {
   printf STDERR "%s: read %u bytes in total\n", $prog_name, $total_bytes;
+ }
+ return;
+}
+
+sub log_frame_info {
+ my ( $parm, $first_frame, @format_name ) = @_;
+ if ( not $first_frame ) {
+  $device->start;
+  if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+   printf STDERR "$prog_name: sane_start: $Sane::STATUS\n";
+   goto cleanup;
+  }
+ }
+
+ $parm = $device->get_parameters;
+ if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+  printf STDERR "$prog_name: sane_get_parameters: $Sane::STATUS\n";
+  goto cleanup;
+ }
+
+ if ($verbose) {
+  if ($first_frame) {
+   if ( $parm->{lines} >= 0 ) {
+    printf STDERR "$prog_name: scanning image of size %dx%d pixels at "
+      . "%d bits/pixel\n",
+      $parm->{pixels_per_line}, $parm->{lines},
+      8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
+   }
+   else {
+    printf STDERR "$prog_name: scanning image %d pixels wide and "
+      . "variable height at %d bits/pixel\n",
+      $parm->{pixels_per_line},
+      8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
+   }
+  }
+
+  printf STDERR "$prog_name: acquiring %s frame\n",
+    $parm->{format} <= SANE_FRAME_BLUE
+    ? $format_name[ $parm->{format} ]
+    : "Unknown";
  }
  return;
 }
