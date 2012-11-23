@@ -1020,6 +1020,7 @@ sub print_options {
    or $opt->{type} == SANE_TYPE_GROUP );
  }
  print "\n" if ($num_dev_options);
+ return;
 }
 
 # There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
