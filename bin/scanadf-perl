@@ -1032,6 +1032,30 @@ sub print_options {
  return;
 }
 
+sub list_device_names {
+ printf
+"Type ``$prog_name --help -d DEVICE'' to get list of all options for DEVICE.\n\nList of available devices:";
+ my @device_list = Sane->get_devices;
+ if ( $Sane::STATUS == SANE_STATUS_GOOD ) {
+  my $column = 80;
+
+  foreach (@device_list) {
+   if ( $column + length( $_->{name} ) + 1 >= 80 ) {
+    printf "\n    ";
+    $column = 4;
+   }
+   if ( $column > 4 ) {
+    print ' ';
+    $column += 1;
+   }
+   print $_->{name};
+   $column += length( $_->{name} );
+  }
+ }
+ print "\n";
+ return;
+}
+
 # There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
 # l is not in @args. Therefore the workaround is to rename l to m for the first
 # scan and back to l for the second.
@@ -1131,26 +1155,7 @@ if ( defined($device) ) {
 }
 
 if ($help) {
- printf
-"Type ``$prog_name --help -d DEVICE'' to get list of all options for DEVICE.\n\nList of available devices:";
- my @device_list = Sane->get_devices;
- if ( $Sane::STATUS == SANE_STATUS_GOOD ) {
-  my $column = 80;
-
-  foreach (@device_list) {
-   if ( $column + length( $_->{name} ) + 1 >= 80 ) {
-    printf "\n    ";
-    $column = 4;
-   }
-   if ( $column > 4 ) {
-    print ' ';
-    $column += 1;
-   }
-   print $_->{name};
-   $column += length( $_->{name} );
-  }
- }
- print "\n";
+ list_device_names();
  exit(0);
 }
 
