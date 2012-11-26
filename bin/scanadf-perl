@@ -1007,6 +1007,31 @@ sub process_arguments {
  return;
 }
 
+sub print_options {
+ printf "\nOptions specific to device `%s':\n", $devname;
+
+ for ( my $i = 0 ; $i < $num_dev_options ; ++$i ) {
+  my $short_name = '';
+
+  my $opt = 0;
+  for ( my $j = 0 ; $j < 4 ; ++$j ) {
+   if ( $i == $window[$j] ) {
+    $short_name = substr( "xylt", $j, 1 );
+    $opt = $window_option[$j] if ( $j < 2 );
+   }
+  }
+  $opt = $device->get_option_descriptor($i) if ( !$opt );
+
+  printf "  %s:\n", $opt->{title} if ( $opt->{type} == SANE_TYPE_GROUP );
+
+  next if ( !( $opt->{cap} & SANE_CAP_SOFT_SELECT ) );
+
+  print_option( $device, $i, $short_name );
+ }
+ print "\n" if ($num_dev_options);
+ return;
+}
+
 # There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
 # l is not in @args. Therefore the workaround is to rename l to m for the first
 # scan and back to l for the second.
@@ -1101,27 +1126,7 @@ if ( defined($device) ) {
  process_arguments();
 
  if ($help) {
-  printf "\nOptions specific to device `%s':\n", $devname;
-
-  for ( my $i = 0 ; $i < $num_dev_options ; ++$i ) {
-   my $short_name = '';
-
-   my $opt = 0;
-   for ( my $j = 0 ; $j < 4 ; ++$j ) {
-    if ( $i == $window[$j] ) {
-     $short_name = substr( "xylt", $j, 1 );
-     $opt = $window_option[$j] if ( $j < 2 );
-    }
-   }
-   $opt = $device->get_option_descriptor($i) if ( !$opt );
-
-   printf "  %s:\n", $opt->{title} if ( $opt->{type} == SANE_TYPE_GROUP );
-
-   next if ( !( $opt->{cap} & SANE_CAP_SOFT_SELECT ) );
-
-   print_option( $device, $i, $short_name );
-  }
-  print "\n" if ($num_dev_options);
+  print_options();
  }
 }
 
