@@ -675,23 +675,7 @@ sub scan_it_raw {
  }
 
  if ($must_buffer) {
-  if ( $parm->{lines} > 0 ) {
-   $image{height} = $parm->{lines};
-  }
-  else {
-   $image{height} = @{ $image{data} } / $parm->{pixels_per_line};
-   $image{height} /= 3
-     if ( $parm->{format} == SANE_FRAME_RED
-    or $parm->{format} == SANE_FRAME_GREEN
-    or $parm->{format} == SANE_FRAME_BLUE );
-  }
-  if ( $raw == SANE_FALSE ) {
-
-   # if we're writing raw, we skip the header
-   write_pnm_header_to_file( $fp, $parm->{format}, $parm->{pixels_per_line},
-    $image{height}, $parm->{depth} );
-  }
-  for ( @{ $image{data} } ) { print $fp $_; }
+  write_buffer( $fp, \%image, $parm );
  }
 
  if ($fp) {
@@ -881,6 +865,28 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
   print $fp $buffer;
  }
  return $offset;
+}
+
+sub write_buffer {
+ my ( $fp, $image, $parm ) = @_;
+ if ( $parm->{lines} > 0 ) {
+  $image->{height} = $parm->{lines};
+ }
+ else {
+  $image->{height} = @{ $image->{data} } / $parm->{pixels_per_line};
+  $image->{height} /= 3
+    if ( $parm->{format} == SANE_FRAME_RED
+   or $parm->{format} == SANE_FRAME_GREEN
+   or $parm->{format} == SANE_FRAME_BLUE );
+ }
+ if ( $raw == SANE_FALSE ) {
+
+  # if we're writing raw, we skip the header
+  write_pnm_header_to_file( $fp, $parm->{format}, $parm->{pixels_per_line},
+   $image->{height}, $parm->{depth} );
+ }
+ for ( @{ $image->{data} } ) { print $fp $_; }
+ return;
 }
 
 sub scan_docs {
