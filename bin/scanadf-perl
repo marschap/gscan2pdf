@@ -640,7 +640,8 @@ sub scan_it_raw {
    unless ( open $fp, '>', $fname )    ## no critic (RequireBriefOpen)
    {
     print STDERR "Error opening output `$fname': $@\n";
-    $Sane::_status = SANE_STATUS_IO_ERROR;
+    $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
+      SANE_STATUS_IO_ERROR;
     goto cleanup;
    }
 
@@ -720,7 +721,8 @@ sub scan_it_raw {
      or $parm->{format} == $SANE_FRAME_G42D )
     {
      if ( !$parm->{last_frame} ) {
-      $Sane::_status = SANE_STATUS_INVAL;
+      $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
+        SANE_STATUS_INVAL;
       printf STDERR "$prog_name: bad %s frame: must be last_frame\n",
         sane_strframe( $parm->{format} );
       goto cleanup;
@@ -737,7 +739,8 @@ sub scan_it_raw {
      printf STDERR "$prog_name: unknown frame format $parm->{format}\n"
        if ($verbose);
      if ( !$parm->{last_frame} ) {
-      $Sane::_status = SANE_STATUS_INVAL;
+      $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
+        SANE_STATUS_INVAL;
       printf STDERR "$prog_name: bad %s frame: must be last_frame\n",
         sane_strframe( $parm->{format} );
       goto cleanup;
@@ -850,7 +853,8 @@ cleanup:
 sub scan_docs {
  my ( $start, $end, $outfmt, $script ) = @_;
 
- $Sane::_status = SANE_STATUS_GOOD;
+ $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
+   SANE_STATUS_GOOD;
  my $scannedPages = 0;
 
  while ( $end < 0 || $start <= $end ) {
@@ -860,7 +864,8 @@ sub scan_docs {
 
   # does the filename already exist?
   if ( $no_overwrite and -r $fname ) {
-   $Sane::_status = SANE_STATUS_INVAL;
+   $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
+     SANE_STATUS_INVAL;
    print STDERR "Filename $fname already exists; will not overwrite\n";
   }
 
@@ -871,13 +876,15 @@ sub scan_docs {
   if ( $Sane::STATUS == SANE_STATUS_NO_DOCS ) {
 
    # out of paper in the hopper; this is our normal exit
-   $Sane::_status = SANE_STATUS_GOOD;
+   $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
+     SANE_STATUS_GOOD;
    last;
   }
   elsif ( $Sane::STATUS == SANE_STATUS_EOF ) {
 
    # done with this doc
-   $Sane::_status = SANE_STATUS_GOOD;
+   $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
+     SANE_STATUS_GOOD;
    print STDERR "Scanned document $fname\n";
    $scannedPages++;
    $start++;
