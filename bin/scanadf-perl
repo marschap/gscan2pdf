@@ -638,59 +638,7 @@ sub scan_it_raw {
  my $parm;
  {
   do {    # extra braces to get last to work.
-   $device->start;
-   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-    print STDERR "$prog_name: sane_start: $Sane::STATUS\n"
-      if ( $Sane::STATUS != SANE_STATUS_NO_DOCS );
-    goto cleanup;
-   }
-
-   $parm = $device->get_parameters;
-   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-    print STDERR "$prog_name: sane_get_parameters: $Sane::STATUS\n";
-    goto cleanup;
-   }
-
-   unless ( open $fp, '>', $fname )    ## no critic (RequireBriefOpen)
-   {
-    print STDERR "Error opening output `$fname': $@\n";
-    $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
-      SANE_STATUS_IO_ERROR;
-    goto cleanup;
-   }
-
-   if ($verbose) {
-    if ($first_frame) {
-     if ( sane_isbasicframe( $parm->{format} ) ) {
-      if ( $parm->{lines} >= 0 ) {
-       printf STDERR "$prog_name: scanning image of size %dx%d pixels at "
-         . "%d bits/pixel\n",
-         $parm->{pixels_per_line}, $parm->{lines},
-         8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
-      }
-      else {
-       printf STDERR "$prog_name: scanning image %d pixels wide and "
-         . "variable height at %d bits/pixel\n",
-         $parm->{pixels_per_line},
-         8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
-      }
-     }
-     else {
-      printf STDERR "$prog_name: receiving %s frame "
-        . "bytes/line=%d, "
-        . "pixels/line=%d, "
-        . "lines=%d, "
-        . "depth=%d\n",, sane_strframe( $parm->{format} ),
-        $parm->{bytes_per_line},
-        $parm->{pixels_per_line},
-        $parm->{lines},
-        $parm->{depth};
-     }
-    }
-
-    printf STDERR "$prog_name: acquiring %s frame\n",
-      sane_strframe( $parm->{format} );
-   }
+   log_frame_info( $parm, $fp, $fname, $first_frame );
 
    if ($first_frame) {
     if ($parm->{format} == SANE_FRAME_RED
@@ -861,6 +809,64 @@ sub scan_it_raw {
 
 cleanup:
  close $fp if ($fp);
+ return;
+}
+
+sub log_frame_info {
+ my ( $parm, $fp, $fname, $first_frame ) = @_;
+ $device->start;
+ if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+  print STDERR "$prog_name: sane_start: $Sane::STATUS\n"
+    if ( $Sane::STATUS != SANE_STATUS_NO_DOCS );
+  goto cleanup;
+ }
+
+ $parm = $device->get_parameters;
+ if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+  print STDERR "$prog_name: sane_get_parameters: $Sane::STATUS\n";
+  goto cleanup;
+ }
+
+ unless ( open $fp, '>', $fname )    ## no critic (RequireBriefOpen)
+ {
+  print STDERR "Error opening output `$fname': $@\n";
+  $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
+    SANE_STATUS_IO_ERROR;
+  goto cleanup;
+ }
+
+ if ($verbose) {
+  if ($first_frame) {
+   if ( sane_isbasicframe( $parm->{format} ) ) {
+    if ( $parm->{lines} >= 0 ) {
+     printf STDERR "$prog_name: scanning image of size %dx%d pixels at "
+       . "%d bits/pixel\n",
+       $parm->{pixels_per_line}, $parm->{lines},
+       8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
+    }
+    else {
+     printf STDERR "$prog_name: scanning image %d pixels wide and "
+       . "variable height at %d bits/pixel\n",
+       $parm->{pixels_per_line},
+       8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
+    }
+   }
+   else {
+    printf STDERR "$prog_name: receiving %s frame "
+      . "bytes/line=%d, "
+      . "pixels/line=%d, "
+      . "lines=%d, "
+      . "depth=%d\n",, sane_strframe( $parm->{format} ),
+      $parm->{bytes_per_line},
+      $parm->{pixels_per_line},
+      $parm->{lines},
+      $parm->{depth};
+   }
+  }
+
+  printf STDERR "$prog_name: acquiring %s frame\n",
+    sane_strframe( $parm->{format} );
+ }
  return;
 }
 
