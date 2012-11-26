@@ -941,6 +941,72 @@ sub scan_docs {
  return;
 }
 
+sub process_arguments {
+
+ # re-enable error printing and arg permutation
+ Getopt::Long::Configure('no_pass_through');
+
+ # There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
+ # l is not in @args. Therefore the workaround is to rename l to m for the first
+ # scan and back to l for the second.
+ for (@ARGV) {
+  $_ = '-l' if ( $_ eq '-m' );
+  $_ = '-t' if ( $_ eq '-u' );
+ }
+ my @ARGV_old = @ARGV;
+ exit 1 if ( !GetOptions(@args) );
+
+ # As it isn't possible to get the argument order from Getopt::Long 2.37, do
+ # this myself
+ for (@ARGV_old) {
+  my $ch;
+  if (/--(.*)/x) {
+   $ch = $1;
+   my $i = index( $ch, '=' );
+   $ch = substr( $ch, 0, $i ) if ( $i > -1 );
+  }
+  elsif (/-(.)/x) {
+   $ch = $1;
+  }
+  else {
+   next;
+  }
+  if ( defined $options{$ch} ) {
+   given ($ch) {
+    when ('x') {
+     $window_val_user[0] = 1;
+     ( $window_val[0] ) = parse_vector( $window_option[0], $options{x} );
+    }
+    when ('y') {
+     $window_val_user[1] = 1;
+     ( $window_val[1] ) = parse_vector( $window_option[1], $options{y} );
+    }
+    when ('l') {    # tl-x
+     process_backend_option( $device, $window[2], $options{l} );
+    }
+    when ('t') {    # tl-y
+     process_backend_option( $device, $window[3], $options{t} );
+    }
+    default {
+     process_backend_option( $device, $option_number{$ch}, $options{$ch} );
+    }
+   }
+  }
+ }
+
+ for ( my $index = 0 ; $index < 2 ; ++$index ) {
+  if ( $window[$index] and defined( $window_val[$index] ) ) {
+   my $val = $window_val[$index] - 1;
+   if ( $window[ $index + 2 ] ) {
+    my $pos = $device->get_option( $window[ $index + 2 ] );
+    $val = $pos + $window_val[$index] if ( defined $pos );
+   }
+   set_option( $device, $window[$index], $val );
+  }
+ }
+ return;
+}
+
 # There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
 # l is not in @args. Therefore the workaround is to rename l to m for the first
 # scan and back to l for the second.
@@ -1032,68 +1098,8 @@ if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
 
 if ( defined($device) ) {
  fetch_options($device);
+ process_arguments();
 
- # re-enable error printing and arg permutation
- Getopt::Long::Configure('no_pass_through');
-
- # There seems to be a bug in Getopt::Long 2.37 where l is treated as L whilst
- # l is not in @args. Therefore the workaround is to rename l to m for the first
- # scan and back to l for the second.
- for (@ARGV) {
-  $_ = '-l' if ( $_ eq '-m' );
-  $_ = '-t' if ( $_ eq '-u' );
- }
- my @ARGV_old = @ARGV;
- exit 1 if ( !GetOptions(@args) );
-
- # As it isn't possible to get the argument order from Getopt::Long 2.37, do
- # this myself
- for (@ARGV_old) {
-  my $ch;
-  if (/--(.*)/x) {
-   $ch = $1;
-   my $i = index( $ch, '=' );
-   $ch = substr( $ch, 0, $i ) if ( $i > -1 );
-  }
-  elsif (/-(.)/x) {
-   $ch = $1;
-  }
-  else {
-   next;
-  }
-  if ( defined $options{$ch} ) {
-   given ($ch) {
-    when ('x') {
-     $window_val_user[0] = 1;
-     ( $window_val[0] ) = parse_vector( $window_option[0], $options{x} );
-    }
-    when ('y') {
-     $window_val_user[1] = 1;
-     ( $window_val[1] ) = parse_vector( $window_option[1], $options{y} );
-    }
-    when ('l') {    # tl-x
-     process_backend_option( $device, $window[2], $options{l} );
-    }
-    when ('t') {    # tl-y
-     process_backend_option( $device, $window[3], $options{t} );
-    }
-    default {
-     process_backend_option( $device, $option_number{$ch}, $options{$ch} );
-    }
-   }
-  }
- }
-
- for ( my $index = 0 ; $index < 2 ; ++$index ) {
-  if ( $window[$index] and defined( $window_val[$index] ) ) {
-   my $val = $window_val[$index] - 1;
-   if ( $window[ $index + 2 ] ) {
-    my $pos = $device->get_option( $window[ $index + 2 ] );
-    $val = $pos + $window_val[$index] if ( defined $pos );
-   }
-   set_option( $device, $window[$index], $val );
-  }
- }
  if ($help) {
   printf "\nOptions specific to device `%s':\n", $devname;
 
