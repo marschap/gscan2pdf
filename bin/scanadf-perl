@@ -654,40 +654,8 @@ sub scan_it_raw {
      last;
     }
 
-    if ($must_buffer) {
-
-     # We're either scanning a multi-frame image or the
-     # scanner doesn't know what the eventual image height
-     # will be (common for hand-held scanners).  In either
-     # case, we need to buffer all data before we can write
-     # the image
-     if ($parm->{format} == SANE_FRAME_RED
-      or $parm->{format} == SANE_FRAME_GREEN
-      or $parm->{format} == SANE_FRAME_BLUE )
-     {
-      for ( my $i = 0 ; $i < $len ; ++$i ) {
-       $image{data}[ $offset + 3 * $i ] = substr( $buffer, $i, 1 );
-      }
-      $offset += 3 * $len;
-     }
-     elsif ( $parm->{format} == SANE_FRAME_RGB
-      or $parm->{format} == SANE_FRAME_GRAY )
-     {
-      for ( my $i = 0 ; $i < $len ; ++$i ) {
-       $image{data}[ $offset + $i ] = substr( $buffer, $i, 1 );
-      }
-      $offset += $len;
-     }
-     else {
-
-      # optional frametypes are never buffered
-      printf STDERR "$prog_name: ERROR: trying to buffer %s frametype\n",
-        sane_strframe( $parm->{format} );
-     }
-    }
-    else {
-     print $fp $buffer;
-    }
+    $offset =
+      buffer_data( $fp, $parm, $buffer, $len, \%image, $offset, $must_buffer );
 
     if ( $verbose && $parm->{depth} == 8 ) {
      for ( split( //, $buffer ) ) {
@@ -874,6 +842,45 @@ sub initialise_scan {    ## no critic (ProhibitExcessComplexity)
   $offset = $parm->{format} - SANE_FRAME_RED;
  }
  return $must_buffer, $offset;
+}
+
+sub buffer_data {    ## no critic (ProhibitManyArgs)
+ my ( $fp, $parm, $buffer, $len, $image, $offset, $must_buffer ) = @_;
+ if ($must_buffer) {
+
+  # We're either scanning a multi-frame image or the
+  # scanner doesn't know what the eventual image height
+  # will be (common for hand-held scanners).  In either
+  # case, we need to buffer all data before we can write
+  # the image
+  if ($parm->{format} == SANE_FRAME_RED
+   or $parm->{format} == SANE_FRAME_GREEN
+   or $parm->{format} == SANE_FRAME_BLUE )
+  {
+   for ( my $i = 0 ; $i < $len ; ++$i ) {
+    $image->{data}[ $offset + 3 * $i ] = substr( $buffer, $i, 1 );
+   }
+   $offset += 3 * $len;
+  }
+  elsif ( $parm->{format} == SANE_FRAME_RGB
+   or $parm->{format} == SANE_FRAME_GRAY )
+  {
+   for ( my $i = 0 ; $i < $len ; ++$i ) {
+    $image->{data}[ $offset + $i ] = substr( $buffer, $i, 1 );
+   }
+   $offset += $len;
+  }
+  else {
+
+   # optional frametypes are never buffered
+   printf STDERR "$prog_name: ERROR: trying to buffer %s frametype\n",
+     sane_strframe( $parm->{format} );
+  }
+ }
+ else {
+  print $fp $buffer;
+ }
+ return $offset;
 }
 
 sub scan_docs {
