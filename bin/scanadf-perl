@@ -640,83 +640,7 @@ sub scan_it_raw {
   do {    # extra braces to get last to work.
    log_frame_info( $parm, $fp, $fname, $first_frame );
 
-   if ($first_frame) {
-    if ($parm->{format} == SANE_FRAME_RED
-     or $parm->{format} == SANE_FRAME_GREEN
-     or $parm->{format} == SANE_FRAME_BLUE )
-    {
-     die # FIXME: compare message with SANE source, and give them patch if necessary
-"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n"
-       unless ( $parm->{depth} == 8 );
-     $must_buffer = 1;
-     $offset      = $parm->{format} - SANE_FRAME_RED;
-    }
-    elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-     die # FIXME: compare message with SANE source, and give them patch if necessary
-"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n"
-       unless ( $parm->{depth} == 8 );
-    }
-    if ($parm->{format} == SANE_FRAME_RGB
-     or $parm->{format} == SANE_FRAME_GRAY )
-    {
-     die # FIXME: compare message with SANE source, and give them patch if necessary
-"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 1 or 8)\n"
-       unless ( ( $parm->{depth} == 1 ) || ( $parm->{depth} == 8 ) );
-
-     # if we're writing raw, we skip the header and never
-     # have to buffer a single frame format.
-     if ( $raw == SANE_FALSE ) {
-      if ( $parm->{lines} < 0 ) {
-       $must_buffer = 1;
-       $offset      = 0;
-      }
-      else {
-       write_pnm_header_to_file( $fp, $parm->{format}, $parm->{pixels_per_line},
-        $parm->{lines}, $parm->{depth} );
-      }
-     }
-    }
-    elsif ( $parm->{format} == $SANE_FRAME_TEXT
-     or $parm->{format} == $SANE_FRAME_JPEG
-     or $parm->{format} == $SANE_FRAME_G31D
-     or $parm->{format} == $SANE_FRAME_G32D
-     or $parm->{format} == $SANE_FRAME_G42D )
-    {
-     if ( !$parm->{last_frame} ) {
-      $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
-        SANE_STATUS_INVAL;
-      printf STDERR "$prog_name: bad %s frame: must be last_frame\n",
-        sane_strframe( $parm->{format} );
-      goto cleanup;
-     }
-    }
-
-    # write them out without a header; don't buffer
-    else {
-
-     # Default action for unknown frametypes; write them out
-     # without a header; issue a warning in verbose mode.
-     # Since we're not writing a header, there's no need to
-     # buffer.
-     printf STDERR "$prog_name: unknown frame format $parm->{format}\n"
-       if ($verbose);
-     if ( !$parm->{last_frame} ) {
-      $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
-        SANE_STATUS_INVAL;
-      printf STDERR "$prog_name: bad %s frame: must be last_frame\n",
-        sane_strframe( $parm->{format} );
-      goto cleanup;
-     }
-    }
-   }
-   else {
-    die # FIXME: compare message with SANE source, and give them patch if necessary
-"Error: frame format $parm->{format}, but expected SANE_FRAME_RED, SANE_FRAME_GREEN, or SANE_FRAME_BLUE\n"
-      if ( $parm->{format} < SANE_FRAME_RED
-     or $parm->{format} > SANE_FRAME_BLUE );
-    $offset = $parm->{format} - SANE_FRAME_RED;
-    $image{x} = $image{y} = 0;
-   }
+   my ( $must_buffer, $offset ) = initialise_scan( $parm, $first_frame, $fp );
 
    while (1) {
     my ( $buffer, $len ) = $device->read($buffer_size);
@@ -868,6 +792,88 @@ sub log_frame_info {
     sane_strframe( $parm->{format} );
  }
  return;
+}
+
+sub initialise_scan {    ## no critic (ProhibitExcessComplexity)
+ my ( $parm, $first_frame, $fp ) = @_;
+ my ( $must_buffer, $offset );
+ if ($first_frame) {
+  if ($parm->{format} == SANE_FRAME_RED
+   or $parm->{format} == SANE_FRAME_GREEN
+   or $parm->{format} == SANE_FRAME_BLUE )
+  {
+   die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n"
+     unless ( $parm->{depth} == 8 );
+   $must_buffer = 1;
+   $offset      = $parm->{format} - SANE_FRAME_RED;
+  }
+  elsif ( $parm->{format} == SANE_FRAME_RGB ) {
+   die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n"
+     unless ( $parm->{depth} == 8 );
+  }
+  if ($parm->{format} == SANE_FRAME_RGB
+   or $parm->{format} == SANE_FRAME_GRAY )
+  {
+   die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 1 or 8)\n"
+     unless ( ( $parm->{depth} == 1 ) || ( $parm->{depth} == 8 ) );
+
+   # if we're writing raw, we skip the header and never
+   # have to buffer a single frame format.
+   if ( $raw == SANE_FALSE ) {
+    if ( $parm->{lines} < 0 ) {
+     $must_buffer = 1;
+     $offset      = 0;
+    }
+    else {
+     write_pnm_header_to_file( $fp, $parm->{format}, $parm->{pixels_per_line},
+      $parm->{lines}, $parm->{depth} );
+    }
+   }
+  }
+  elsif ( $parm->{format} == $SANE_FRAME_TEXT
+   or $parm->{format} == $SANE_FRAME_JPEG
+   or $parm->{format} == $SANE_FRAME_G31D
+   or $parm->{format} == $SANE_FRAME_G32D
+   or $parm->{format} == $SANE_FRAME_G42D )
+  {
+   if ( !$parm->{last_frame} ) {
+    $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
+      SANE_STATUS_INVAL;
+    printf STDERR "$prog_name: bad %s frame: must be last_frame\n",
+      sane_strframe( $parm->{format} );
+    goto cleanup;
+   }
+  }
+
+  # write them out without a header; don't buffer
+  else {
+
+   # Default action for unknown frametypes; write them out
+   # without a header; issue a warning in verbose mode.
+   # Since we're not writing a header, there's no need to
+   # buffer.
+   printf STDERR "$prog_name: unknown frame format $parm->{format}\n"
+     if ($verbose);
+   if ( !$parm->{last_frame} ) {
+    $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
+      SANE_STATUS_INVAL;
+    printf STDERR "$prog_name: bad %s frame: must be last_frame\n",
+      sane_strframe( $parm->{format} );
+    goto cleanup;
+   }
+  }
+ }
+ else {
+  die # FIXME: compare message with SANE source, and give them patch if necessary
+"Error: frame format $parm->{format}, but expected SANE_FRAME_RED, SANE_FRAME_GREEN, or SANE_FRAME_BLUE\n"
+    if ( $parm->{format} < SANE_FRAME_RED
+   or $parm->{format} > SANE_FRAME_BLUE );
+  $offset = $parm->{format} - SANE_FRAME_RED;
+ }
+ return $must_buffer, $offset;
 }
 
 sub scan_docs {
