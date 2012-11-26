@@ -125,9 +125,6 @@ sub print_unit {
 sub print_option {
  ( $device, my $opt_num, my $short_name ) = @_;
 
- my $not_first = SANE_FALSE;
- my $maxwindow = 0;
-
  my $opt = $device->get_option_descriptor($opt_num);
 
  if ($short_name) {
@@ -137,63 +134,7 @@ sub print_option {
   printf "    --%s", $opt->{name};
  }
 
- if ( $opt->{type} == SANE_TYPE_BOOL ) {
-  print "[=(";
-  print "auto|" if ( $opt->{cap} & SANE_CAP_AUTOMATIC );
-  print "yes|no)]";
- }
- elsif ( $opt->{type} != SANE_TYPE_BUTTON ) {
-  print ' ';
-  if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) {
-   print "auto|";
-   $not_first = SANE_TRUE;
-  }
-  if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-   if ( $opt->{type} == SANE_TYPE_INT ) {
-    print "<int>";
-   }
-   elsif ( $opt->{type} == SANE_TYPE_FIXED ) {
-    print "<float>";
-   }
-   elsif ( $opt->{type} == SANE_TYPE_STRING ) {
-    print "<string>";
-   }
-   print ",..." if ( $opt->{max_values} > 1 );
-  }
-  elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-   my $string_format = "%g..%g";
-   $string_format = "%d..%d" if ( $opt->{type} == SANE_TYPE_INT );
-   if ( $opt->{name} eq SANE_NAME_SCAN_BR_X ) {
-    $maxwindow = $opt->{constraint}{max} - $tl_x;
-    printf $string_format, $opt->{constraint}{min}, $maxwindow;
-   }
-   elsif ( $opt->{name} eq SANE_NAME_SCAN_BR_Y ) {
-    $maxwindow = $opt->{constraint}{max} - $tl_y;
-    printf $string_format, $opt->{constraint}{min}, $maxwindow;
-   }
-   else {
-    printf $string_format, $opt->{constraint}{min}, $opt->{constraint}{max};
-   }
-   print_unit( $opt->{unit} );
-   print ",..." if ( $opt->{max_values} > 1 );
-   print " (in steps of $opt->{constraint}{quant})"
-     if ( $opt->{constraint}{quant} );
-  }
-  elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
-   or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
-  {
-   for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
-    print '|' if ( $i > 0 );
-    my $string_format = $opt->{type} == SANE_TYPE_FIXED ? '%g' : '%s';
-
-    printf $string_format, $opt->{constraint}[$i];
-   }
-   if ( $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
-    print_unit( $opt->{unit} );
-    print ",..." if ( $opt->{max_values} > 1 );
-   }
-  }
- }
+ print_option_choices($opt);
  if ( $opt->{max_values} == 1 ) {
 
   # print current option value
@@ -266,6 +207,67 @@ sub print_option {
     while ( $start < length( $opt->{desc} ) );
  }
  print "\n";
+ return;
+}
+
+sub print_option_choices {       ## no critic (ProhibitExcessComplexity)
+ my ($opt) = @_;
+ if ( $opt->{type} == SANE_TYPE_BOOL ) {
+  print "[=(";
+  print "auto|" if ( $opt->{cap} & SANE_CAP_AUTOMATIC );
+  print "yes|no)]";
+ }
+ elsif ( $opt->{type} != SANE_TYPE_BUTTON ) {
+  print ' ';
+  if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) {
+   print "auto|";
+  }
+  if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
+   if ( $opt->{type} == SANE_TYPE_INT ) {
+    print "<int>";
+   }
+   elsif ( $opt->{type} == SANE_TYPE_FIXED ) {
+    print "<float>";
+   }
+   elsif ( $opt->{type} == SANE_TYPE_STRING ) {
+    print "<string>";
+   }
+   print ",..." if ( $opt->{max_values} > 1 );
+  }
+  elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
+   my $string_format = "%g..%g";
+   $string_format = "%d..%d" if ( $opt->{type} == SANE_TYPE_INT );
+   if ( $opt->{name} eq SANE_NAME_SCAN_BR_X ) {
+    printf $string_format, $opt->{constraint}{min},
+      $opt->{constraint}{max} - $tl_x;
+   }
+   elsif ( $opt->{name} eq SANE_NAME_SCAN_BR_Y ) {
+    printf $string_format, $opt->{constraint}{min},
+      $opt->{constraint}{max} - $tl_y;
+   }
+   else {
+    printf $string_format, $opt->{constraint}{min}, $opt->{constraint}{max};
+   }
+   print_unit( $opt->{unit} );
+   print ",..." if ( $opt->{max_values} > 1 );
+   print " (in steps of $opt->{constraint}{quant})"
+     if ( $opt->{constraint}{quant} );
+  }
+  elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+   or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
+  {
+   for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
+    print '|' if ( $i > 0 );
+    my $string_format = $opt->{type} == SANE_TYPE_FIXED ? '%g' : '%s';
+
+    printf $string_format, $opt->{constraint}[$i];
+   }
+   if ( $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
+    print_unit( $opt->{unit} );
+    print ",..." if ( $opt->{max_values} > 1 );
+   }
+  }
+ }
  return;
 }
 
