@@ -135,48 +135,7 @@ sub print_option {
  }
 
  print_option_choices($opt);
- if ( $opt->{max_values} == 1 ) {
-
-  # print current option value
-  if ( !( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
-   my $val = $device->get_option($opt_num);
-   print " [";
-   if ( $opt->{type} == SANE_TYPE_BOOL ) {
-    print( $val ? "yes" : "no" );
-   }
-   elsif ( $opt->{type} == SANE_TYPE_INT or $opt->{type} == SANE_TYPE_FIXED ) {
-    my $string_format = "%g";
-    $string_format = "%d" if ( $opt->{type} == SANE_TYPE_INT );
-    given ( $opt->{name} ) {
-     when (SANE_NAME_SCAN_TL_X) {
-      $tl_x = $val;
-      printf $string_format, $tl_x;
-     }
-     when (SANE_NAME_SCAN_TL_Y) {
-      $tl_y = $val;
-      printf $string_format, $tl_y;
-     }
-     when (SANE_NAME_SCAN_BR_X) {
-      $br_x = $val;
-      $w_x  = $br_x - $tl_x;
-      printf $string_format, $w_x;
-     }
-     when (SANE_NAME_SCAN_BR_Y) {
-      $br_y = $val;
-      $h_y  = $br_y - $tl_y;
-      printf $string_format, $h_y;
-     }
-     default {
-      printf $string_format, $val;
-     }
-    }
-   }
-   elsif ( $opt->{type} == SANE_TYPE_STRING ) {
-    print $val;
-   }
-   print ']';
-  }
- }
+ print_current_option_value( $opt, $opt_num );
 
  print " [inactive]"
    if ( $opt->{type} != SANE_TYPE_BUTTON and $opt->{cap} & SANE_CAP_INACTIVE );
@@ -266,6 +225,53 @@ sub print_option_choices {       ## no critic (ProhibitExcessComplexity)
     print_unit( $opt->{unit} );
     print ",..." if ( $opt->{max_values} > 1 );
    }
+  }
+ }
+ return;
+}
+
+sub print_current_option_value {
+ my ( $opt, $opt_num ) = @_;
+ if ( $opt->{max_values} == 1 ) {
+
+  # print current option value
+  if ( !( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
+   my $val = $device->get_option($opt_num);
+   print " [";
+   if ( $opt->{type} == SANE_TYPE_BOOL ) {
+    print( $val ? "yes" : "no" );
+   }
+   elsif ( $opt->{type} == SANE_TYPE_INT or $opt->{type} == SANE_TYPE_FIXED ) {
+    my $string_format = "%g";
+    $string_format = "%d" if ( $opt->{type} == SANE_TYPE_INT );
+    given ( $opt->{name} ) {
+     when (SANE_NAME_SCAN_TL_X) {
+      $tl_x = $val;
+      printf $string_format, $tl_x;
+     }
+     when (SANE_NAME_SCAN_TL_Y) {
+      $tl_y = $val;
+      printf $string_format, $tl_y;
+     }
+     when (SANE_NAME_SCAN_BR_X) {
+      $br_x = $val;
+      $w_x  = $br_x - $tl_x;
+      printf $string_format, $w_x;
+     }
+     when (SANE_NAME_SCAN_BR_Y) {
+      $br_y = $val;
+      $h_y  = $br_y - $tl_y;
+      printf $string_format, $h_y;
+     }
+     default {
+      printf $string_format, $val;
+     }
+    }
+   }
+   elsif ( $opt->{type} == SANE_TYPE_STRING ) {
+    print $val;
+   }
+   print ']';
   }
  }
  return;
