@@ -6,7 +6,7 @@ use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
 
 BEGIN {
- use_ok('Gscan2pdf::Scanner::Dialog');
+ use_ok('Gscan2pdf::Dialog::Scan::Sane');
 }
 
 #########################
@@ -20,14 +20,14 @@ my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::Sane->setup($logger);
 
 ok(
- my $dialog = Gscan2pdf::Scanner::Dialog->new(
+ my $dialog = Gscan2pdf::Dialog::Scan::Sane->new(
   title           => 'title',
   'transient-for' => $window,
   'logger'        => $logger
  ),
  'Created dialog'
 );
-isa_ok( $dialog, 'Gscan2pdf::Scanner::Dialog' );
+isa_ok( $dialog, 'Gscan2pdf::Dialog::Scan::Sane' );
 
 is( $dialog->get('device'),                '',       'device' );
 is( $dialog->get('device-list'),           undef,    'device-list' );
@@ -43,6 +43,12 @@ my $signal = $dialog->signal_connect(
  'changed-device-list' => sub {
   ok( 1, 'changed-device-list' );
 
+  is_deeply(
+   $dialog->get('device-list'),
+   [ { 'name' => 'test', 'model' => 'test', 'label' => 'test' } ],
+   'add model field if missing'
+  );
+
   my $signal;
   $signal = $dialog->signal_connect(
    'changed-device' => sub {
@@ -55,11 +61,6 @@ my $signal = $dialog->signal_connect(
  }
 );
 $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
-is_deeply(
- $dialog->get('device-list'),
- [ { 'name' => 'test', 'model' => 'test', 'label' => 'test' } ],
- 'add model field if missing'
-);
 
 $dialog->signal_connect(
  'changed-num-pages' => sub {
@@ -201,7 +202,7 @@ $signal = $dialog->signal_connect(
      undef, 'changing an option deselects the current profile' );
     is_deeply(
      $dialog->get('current-scan-options'),
-     [ { $resolution => 51 } ],
+     [ { mode => 'Color' }, { $resolution => 51 } ],
      'current-scan-options without profile'
     );
     $dialog->signal_handler_disconnect($signal);
@@ -245,7 +246,7 @@ $signal = $dialog->signal_connect(
     );
     is_deeply(
      $dialog->get('current-scan-options'),
-     [ { $resolution => 51 } ],
+     [ { mode => 'Color' }, { $resolution => 51 } ],
      'current-scan-options without profile (again)'
     );
     $dialog->signal_handler_disconnect($signal);

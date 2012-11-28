@@ -6,7 +6,7 @@ use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
 
 BEGIN {
- use_ok('Gscan2pdf::Scanner::Dialog');
+ use_ok('Gscan2pdf::Dialog::Scan::Sane');
 }
 
 #########################
@@ -20,14 +20,14 @@ my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::Sane->setup($logger);
 
 ok(
- my $dialog = Gscan2pdf::Scanner::Dialog->new(
+ my $dialog = Gscan2pdf::Dialog::Scan::Sane->new(
   title           => 'title',
   'transient-for' => $window,
   'logger'        => $logger
  ),
  'Created dialog'
 );
-isa_ok( $dialog, 'Gscan2pdf::Scanner::Dialog' );
+isa_ok( $dialog, 'Gscan2pdf::Dialog::Scan::Sane' );
 
 my $signal;
 $signal = $dialog->signal_connect(

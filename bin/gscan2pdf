@@ -56,7 +56,7 @@ use Gscan2pdf::Frontend::Sane;
 use Gscan2pdf::Frontend::CLI;
 use Gscan2pdf::NetPBM;
 use Gscan2pdf::Scanner::Options;
-use Gscan2pdf::Scanner::Dialog;
+use Gscan2pdf::Dialog::Scan::Sane;
 use Gscan2pdf::Tesseract;
 use Gscan2pdf::Ocropus;
 use Gscan2pdf::Cuneiform;
@@ -3763,14 +3763,14 @@ sub scan_dialog {
   }
  );
  if ( defined $SETTING{'default profile'} ) {
-  Gscan2pdf::Scanner::Dialog::set_combobox_by_text( $combobsp,
+  Gscan2pdf::Dialog::Scan::Sane::set_combobox_by_text( $combobsp,
    $SETTING{'default profile'} );
  }
- elsif ( Gscan2pdf::Scanner::Dialog::num_rows_combobox($combobsp) > -1 ) {
+ elsif ( Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp) > -1 ) {
   $combobsp->set_active(0);
  }
  $combobsp->set_active(
-  Gscan2pdf::Scanner::Dialog::num_rows_combobox($combobsp) );
+  Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp) );
  $vboxsp->pack_start( $combobsp, FALSE, FALSE, 0 );
  my $hboxsp = Gtk2::HBox->new;
  $vboxsp->pack_end( $hboxsp, FALSE, FALSE, 0 );
@@ -3802,7 +3802,7 @@ sub scan_dialog {
     $combobsp->append_text($profile);
     $SETTING{profile}{$profile} = \%options;
     $combobsp->set_active(
-     Gscan2pdf::Scanner::Dialog::num_rows_combobox($combobsp) );
+     Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp) );
    }
    $dialog->destroy;
   }
@@ -3817,7 +3817,7 @@ sub scan_dialog {
    if ( $i > -1 ) {
     delete $SETTING{profile}{ $combobsp->get_active_text };
     $combobsp->remove_text($i);
-    my $n = Gscan2pdf::Scanner::Dialog::num_rows_combobox($combobsp);
+    my $n = Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp);
     $i = $n if ( $i > $n );
     $combobsp->set_active($i) if ( $i > -1 );
    }
@@ -4313,7 +4313,7 @@ sub scan_dialog2 {
  $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all' );
 
  # scan pop-up window
- $windows2 = Gscan2pdf::Scanner::Dialog->new(
+ $windows2 = Gscan2pdf::Dialog::Scan::Sane->new(
   'transient-for'     => $window,
   title               => $d->get('Scan Document'),
   border_width        => $border_width,
@@ -5731,7 +5731,7 @@ sub parse_options {
 
  # Give the GUI a chance to catch up before resizing.
  Glib::Idle->add( sub { $windows->resize( 100, 100 ); } );
- Gscan2pdf::Scanner::Dialog::set_combobox_by_text( $combobp,
+ Gscan2pdf::Dialog::Scan::Sane::set_combobox_by_text( $combobp,
   $SETTING{'Paper size'} );
 
  #  Unghost the scan button
@@ -5963,7 +5963,7 @@ sub edit_paper {
    my @rows = $paper_list->get_selected_indices;
    $rows[0] = 0 unless (@rows);
    $SETTING{'Paper size'} = $paper_list->{data}[ $rows[0] ][0];
-   Gscan2pdf::Scanner::Dialog::set_combobox_by_text( $combobp,
+   Gscan2pdf::Dialog::Scan::Sane::set_combobox_by_text( $combobp,
     $SETTING{'Paper size'} );
    $windowd->hide;
   },
@@ -5971,7 +5971,7 @@ sub edit_paper {
    my @rows = $paper_list->get_selected_indices;
    $rows[0] = 0 unless (@rows);
    $SETTING{'Paper size'} = $paper_list->{data}[ $rows[0] ][0];
-   Gscan2pdf::Scanner::Dialog::set_combobox_by_text( $combobp,
+   Gscan2pdf::Dialog::Scan::Sane::set_combobox_by_text( $combobp,
     $SETTING{'Paper size'} );
    $windowd->hide;
   }
