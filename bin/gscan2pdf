@@ -4641,7 +4641,7 @@ sub walk_options_tree {
       $key = get_key( \%ddo, $widget->get_label );
      }
      elsif ( $widget->isa('Gtk2::ComboBox') ) {
-      if ( $key eq 'Paper size' ) {
+      if ( $key eq 'Paper size' ) {    ## no critic (ProhibitDeepNests)
        $SETTING{$key} = $widget->get_active_text;
       }
       else {
