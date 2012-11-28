@@ -7696,7 +7696,7 @@ sub expand_tildes {
 
 # Preferences dialog
 
-sub preferences {
+sub preferences {    ## no critic (ProhibitExcessComplexity)
 
  if ( defined $windowr ) {
   $windowr->present;
