@@ -5930,11 +5930,8 @@ sub edit_paper {
  $hboxl->pack_end( $paper_list, FALSE, FALSE, 0 );
 
  # Buttons
- my $hboxb = Gtk2::HBox->new;
- $vbox1->pack_start( $hboxb, FALSE, FALSE, 0 );
- my $abutton = Gtk2::Button->new_from_stock('gtk-apply');
- $abutton->signal_connect(
-  clicked => sub {
+ my $hboxb = _hbox_with_apply_cancel_buttons(
+  sub {
    delete $SETTING{Paper};
    for ( my $i = 0 ; $i < @{ $paper_list->{data} } ; $i++ ) {
     $SETTING{Paper}{ $paper_list->{data}[$i][0] }{x} =
@@ -5969,12 +5966,8 @@ sub edit_paper {
    Gscan2pdf::Scanner::Dialog::set_combobox_by_text( $combobp,
     $SETTING{'Paper size'} );
    $windowd->hide;
-  }
- );
- $hboxb->pack_start( $abutton, TRUE, FALSE, 0 );
- my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
- $cbutton->signal_connect(
-  clicked => sub {
+  },
+  sub {
    my @rows = $paper_list->get_selected_indices;
    $rows[0] = 0 unless (@rows);
    $SETTING{'Paper size'} = $paper_list->{data}[ $rows[0] ][0];
@@ -5983,7 +5976,7 @@ sub edit_paper {
    $windowd->hide;
   }
  );
- $hboxb->pack_end( $cbutton, TRUE, FALSE, 0 );
+ $vbox1->pack_start( $hboxb, FALSE, FALSE, 0 );
  $windowd->show_all;
  return;
 }
@@ -6429,14 +6422,8 @@ sub threshold {
  $hboxt->pack_end( $spinbutton, FALSE, TRUE, 0 );
 
  # HBox for buttons
- my $hboxb = Gtk2::HBox->new;
- $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
-
- # Apply button
- my $abutton = Gtk2::Button->new_from_stock('gtk-apply');
- $hboxb->pack_start( $abutton, TRUE, TRUE, 0 );
- $abutton->signal_connect(
-  clicked => sub {
+ my $hboxb = _hbox_with_apply_cancel_buttons(
+  sub {
 
    # Update undo/redo buffers
    take_snapshot();
@@ -6474,15 +6461,10 @@ sub threshold {
      },
     );
    }
-    }
-
+  },
+  sub { $windowt->destroy }
  );
-
- # Cancel button
- my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
- $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton->signal_connect( clicked => sub { $windowt->destroy } );
-
+ $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
  $windowt->show_all;
  return;
 }
@@ -6504,14 +6486,8 @@ sub negate {
  add_page_range($vbox);
 
  # HBox for buttons
- my $hboxb = Gtk2::HBox->new;
- $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
-
- # Apply button
- my $abutton = Gtk2::Button->new_from_stock('gtk-apply');
- $hboxb->pack_start( $abutton, TRUE, TRUE, 0 );
- $abutton->signal_connect(
-  clicked => sub {
+ my $hboxb = _hbox_with_apply_cancel_buttons(
+  sub {
 
    # Update undo/redo buffers
    take_snapshot();
@@ -6544,15 +6520,10 @@ sub negate {
      },
     );
    }
-
-  }
+  },
+  sub { $windowt->destroy }
  );
-
- # Cancel button
- my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
- $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton->signal_connect( clicked => sub { $windowt->destroy } );
-
+ $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
  $windowt->show_all;
  return;
 }
@@ -6636,14 +6607,8 @@ sub unsharp {
  $hbox->pack_end( $spinbuttont, FALSE, TRUE, 0 );
 
  # HBox for buttons
- my $hboxb = Gtk2::HBox->new;
- $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
-
- # Apply button
- my $abutton = Gtk2::Button->new_from_stock('gtk-apply');
- $hboxb->pack_start( $abutton, TRUE, TRUE, 0 );
- $abutton->signal_connect(
-  clicked => sub {
+ my $hboxb = _hbox_with_apply_cancel_buttons(
+  sub {
 
    # Update undo/redo buffers
    take_snapshot();
@@ -6685,15 +6650,9 @@ sub unsharp {
      },
     );
    }
-
-  }
+  },
+  sub { $windowum->destroy }
  );
-
- # Cancel button
- my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
- $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton->signal_connect( clicked => sub { $windowum->destroy } );
-
  $windowum->show_all;
  return;
 }
@@ -6831,14 +6790,8 @@ sub crop {
    if ( defined $SETTING{selection}[3] );
 
  # HBox for buttons
- my $hboxb = Gtk2::HBox->new;
- $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
-
- # Apply button
- my $abutton = Gtk2::Button->new_from_stock('gtk-apply');
- $hboxb->pack_start( $abutton, TRUE, TRUE, 0 );
- $abutton->signal_connect(
-  clicked => sub {
+ my $hboxb = _hbox_with_apply_cancel_buttons(
+  sub {
 
    return unless ( @{ $SETTING{selection} } );
 
@@ -6878,14 +6831,10 @@ sub crop {
     );
    }
 
-  }
+  },
+  sub { $windowc->hide }
  );
-
- # Cancel button
- my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
- $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton->signal_connect( clicked => sub { $windowc->hide } );
-
+ $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
  $windowc->show_all;
  return;
 }
@@ -7963,12 +7912,8 @@ sub preferences {
  $vbox->pack_start( $cbv, TRUE, TRUE, 0 );
 
  # Apply button
- $hbox = Gtk2::HBox->new;
- $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
- $button = Gtk2::Button->new_from_stock('gtk-apply');
- $hbox->pack_start( $button, TRUE, TRUE, 0 );
- $button->signal_connect(
-  clicked => sub {
+ $hbox = _hbox_with_apply_cancel_buttons(
+  sub {
    $windowr->hide;
    if ( $SETTING{frontend} ne $frontends[ $combob->get_active ][0] ) {
     $SETTING{frontend} = $frontends[ $combob->get_active ][0];
@@ -8013,19 +7958,31 @@ sub preferences {
 
    # Store viewer preferences
    $SETTING{'view files toggle'} = $cbv->get_active;
+  },
+  sub {
+   $windowr->hide;
   }
  );
+ $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+ $windowr->show_all;
+ return;
+}
+
+sub _hbox_with_apply_cancel_buttons {
+ my ( $apply_callback, $cancel_callback ) = @_;
+
+ my $hbox = Gtk2::HBox->new;
+
+ # Apply button
+ my $button = Gtk2::Button->new_from_stock('gtk-apply');
+ $hbox->pack_start( $button, TRUE, TRUE, 0 );
+ $button->signal_connect( clicked => $apply_callback );
 
  # Cancel button
  $button = Gtk2::Button->new_from_stock('gtk-cancel');
  $hbox->pack_end( $button, TRUE, TRUE, 0 );
- $button->signal_connect(
-  clicked => sub {
-   $windowr->hide;
-  }
- );
- $windowr->show_all;
- return;
+ $button->signal_connect( clicked => $cancel_callback );
+ return $hbox;
 }
 
 # Return list of user-defined tools
