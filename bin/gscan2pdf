@@ -1433,7 +1433,7 @@ sub create_menu_bar {
  $logger->info("Found cuneiform")     if ( $dependencies{cuneiform} );
  $logger->info("Found cjb2 (djvu)")   if ( $dependencies{djvu} );
  $logger->info("Found libtiff")       if ( $dependencies{libtiff} );
- $logger->info("Found unpaper v$dependencies{unpaper}")
+ $logger->info("Found unpaper $dependencies{unpaper}")
    if ( $dependencies{unpaper} );
 
  # OCR engine options
