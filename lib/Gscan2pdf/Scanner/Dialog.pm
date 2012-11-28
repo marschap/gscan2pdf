@@ -197,12 +197,9 @@ my $tolerance = 1;
 # then we would need to put the bulk of this code back into INIT_INSTANCE,
 # and leave just that which assigns the required properties.
 
-# Glib::Object::new takes the class as the first argument, so below is short
-# for:
-#  my $class = shift;
-#  my $self = Glib::Object::new($class, @_);
-sub new {    ## no critic (RequireArgUnpacking)
- my $self = Glib::Object::new(@_);
+sub new {
+ my ( $class, @arguments ) = @_;
+ my $self = Glib::Object::new( $class, @arguments );
 
  my $vbox = $self->get('vbox');
  $tooltips = Gtk2::Tooltips->new;
