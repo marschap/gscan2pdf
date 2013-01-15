@@ -71,5 +71,6 @@ SKIP: {
   0, 'can create a valid JPG after cancelling previous process' );
 
  unlink 'test.tif', 'test.jpg';
- Gscan2pdf::Document->quit();
 }
+
+Gscan2pdf::Document->quit();
