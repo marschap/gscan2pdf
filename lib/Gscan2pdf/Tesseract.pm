@@ -7,6 +7,7 @@ use Carp;
 use File::Temp;    # To create temporary files
 use File::Basename;
 use Gscan2pdf::Document;    # for slurp
+use version;
 
 my ( %languages, $installed, $setup, $version, $tessdata, $datasuffix,
  $logger );
@@ -16,12 +17,18 @@ sub setup {
  return $installed if $setup;
 
  my ( $exe, undef ) = Gscan2pdf::Document::open_three('which tesseract');
- if ( defined $exe ) {
-  $installed = 1;
+ return unless ( defined $exe );
+ $installed = 1;
+
+# if we have 3.02.01 or better, we can use --list-langs and not bother with tessdata
+ ( undef, $version ) = Gscan2pdf::Document::open_three("tesseract -v");
+ $version = $1 if ( $version =~ /^tesseract ([\d\.]+)/ );
+ if ( version->parse("v$version") > version->parse('v3.02') ) {
+  $logger->info("Found tesseract version $version.");
+  $setup = 1;
+  return $installed;
  }
- else {
-  return;
- }
+
  my ( $out, undef ) = Gscan2pdf::Document::open_three("tesseract '' '' -l ''");
  ( $tessdata, $version, $datasuffix ) = parse_tessdata($out);
 
@@ -131,24 +138,33 @@ sub languages {
    ukr        => 'Ukranian',
    vie        => 'Vietnamese',
   );
-  for ( glob "$tessdata/*$datasuffix" ) {
 
-   # Weed out the empty language files
-   if ( not -z $_ ) {
-    my $code;
-    if (/ ([\w\-]*) $datasuffix $/x) {
-     $code = $1;
-     $logger->info("Found tesseract language $code");
-     if ( defined $iso639{$code} ) {
-      $languages{$code} = $iso639{$code};
-     }
-     else {
-      $languages{$code} = $code;
+  my @codes;
+  if ( version->parse("v$version") > version->parse('v3.02') ) {
+   my ( undef, $codes ) =
+     Gscan2pdf::Document::open_three("tesseract --list-langs");
+   @codes = split "\n", $codes;
+   shift @codes if ( $codes[0] =~ /^List of available languages/ );
+  }
+  else {
+   for ( glob "$tessdata/*$datasuffix" ) {
+
+    # Weed out the empty language files
+    if ( not -z $_ ) {
+     if (/ ([\w\-]*) $datasuffix $/x) {
+      push @codes, $1;
      }
     }
-    else {
-     $logger->info("Found unknown language file: $_");
-    }
+   }
+  }
+
+  for (@codes) {
+   $logger->info("Found tesseract language $_");
+   if ( defined $iso639{$_} ) {
+    $languages{$_} = $iso639{$_};
+   }
+   else {
+    $languages{$_} = $_;
    }
   }
  }
@@ -163,7 +179,8 @@ sub hocr {
  Gscan2pdf::Tesseract->setup($logger) unless $setup;
 
  # Temporary filename for output
- my $suffix = $version >= 3 ? '.html' : '.txt';
+ my $suffix =
+   version->parse("v$version") >= version->parse("v3") ? '.html' : '.txt';
  my $txt = File::Temp->new( SUFFIX => $suffix );
  ( $name, $path, undef ) = fileparse( $txt, $suffix );
 
@@ -178,7 +195,7 @@ sub hocr {
  else {
   $tif = $file;
  }
- if ( $version >= 3 ) {
+ if ( version->parse("v$version") >= version->parse("v3") ) {
   $cmd =
 "echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $language +hocr.config;rm hocr.config";
  }
