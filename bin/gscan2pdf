@@ -3426,22 +3426,22 @@ sub email {
    # Create the PDF
    my ( $signal, $pid );
    $pid = $slist->save_pdf(
-    $pdf->filename,
-    \@list_of_pages,
-    get_pdf_metadata(),
-    \%options,
-    sub {    # queued
+    path            => $pdf->filename,
+    list_of_pages   => \@list_of_pages,
+    metadata        => get_pdf_metadata(),
+    options         => \%options,
+    queued_callback => sub {
      return update_tpbar(@_);
     },
-    sub {    # started
+    started_callback => sub {
      my ( $thread, $process, $completed, $total ) = @_;
      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
      return TRUE if ( defined $signal );
     },
-    sub {    # running
+    running_callback => sub {
      return update_tpbar(@_);
     },
-    sub {    # finished
+    finished_callback => sub {
      my ( $new_page, $pending ) = @_;
      $thbox->hide_all unless $pending;
      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
@@ -3454,7 +3454,7 @@ sub email {
       $d->get('Error creating email') )
        if ( system($mua_string) );
     },
-    sub {    # error
+    error_callback => sub {
      my ($message) = @_;
      show_message_dialog( $window, 'error', 'close', $message );
     }
