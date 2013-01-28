@@ -6,15 +6,22 @@ use warnings;
 use Carp;
 use File::Temp;             # To create temporary files
 use Gscan2pdf::Document;    # for slurp
+use version;
 
-my ( %languages, $installed, $setup, $logger );
+my ( %languages, $version, $setup, $logger );
 
 sub setup {
  ( my $class, $logger ) = @_;
- return $installed if $setup;
- $installed = 1 if ( system("which cuneiform > /dev/null 2> /dev/null") == 0 );
+ return $version if $setup;
+
+ my ( $out, $err ) = Gscan2pdf::Document::open_three('which cuneiform');
+ return unless ( defined $out );
+
+ ( $out, $err ) = Gscan2pdf::Document::open_three("cuneiform");
+ $version = $1 if ( $out =~ /^Cuneiform for Linux ([\d\.]+)/ );
+
  $setup = 1;
- return $installed;
+ return $version;
 }
 
 sub languages {
@@ -81,7 +88,9 @@ sub hocr {
  # Temporary filename for output
  my $txt = File::Temp->new( SUFFIX => '.txt' );
 
- if ( $file !~ /\.bmp$/x ) {
+ if ( version->parse("v$version") < version->parse('v1.1.0')
+  and $file !~ /\.bmp$/x )
+ {
 
   # Temporary filename for new file
   $bmp = File::Temp->new( SUFFIX => '.bmp' );

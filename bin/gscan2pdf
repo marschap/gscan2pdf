@@ -1430,9 +1430,10 @@ sub create_menu_bar {
  $logger->info("Found xdg-email")     if ( $dependencies{xdg} );
  $logger->info("Found gocr")          if ( $dependencies{gocr} );
  $logger->info("Found tesseract")     if ( $dependencies{tesseract} );
- $logger->info("Found cuneiform")     if ( $dependencies{cuneiform} );
- $logger->info("Found cjb2 (djvu)")   if ( $dependencies{djvu} );
- $logger->info("Found libtiff")       if ( $dependencies{libtiff} );
+ $logger->info("Found cuneiform v$dependencies{cuneiform}")
+   if ( $dependencies{cuneiform} );
+ $logger->info("Found cjb2 (djvu)") if ( $dependencies{djvu} );
+ $logger->info("Found libtiff")     if ( $dependencies{libtiff} );
  $logger->info("Found unpaper $dependencies{unpaper}")
    if ( $dependencies{unpaper} );
 
