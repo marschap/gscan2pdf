@@ -35,6 +35,7 @@ is( $suffix,   '.unicharset',                       'v2 suffix' );
 
 $output = <<EOS;
 Error openning data file /usr/share/tesseract-ocr/tessdata/.traineddata
+
 EOS
 
 ( $tessdata, $version, $suffix ) =
@@ -44,10 +45,10 @@ is( $version,  3,                                   'v3' );
 is( $suffix,   '.traineddata',                      'v3 suffix' );
 
 $output = <<EOS;
-Error opening data file /usr/share/tesseract-ocr/tessdata/.traineddata
 Tesseract Open Source OCR Engine v3.01 with Leptonica
-Image file  cannot be opened!
-Error during processing.
+Cannot open input file:
+Error opening data file /usr/share/tesseract-ocr/tessdata/.traineddata
+
 EOS
 
 ( $tessdata, $version, $suffix ) =
@@ -57,9 +58,11 @@ is( $version,  3.01,                                'v3.01' );
 is( $suffix,   '.traineddata',                      'v3.01 suffix' );
 
 $output = <<'EOS';
-Tesseract couldn't load any languages!
 Tesseract Open Source OCR Engine v3.02 with Leptonica
 Cannot open input file:
+Tesseract couldn't load any languages!
+
+
 EOS
 
 ( $tessdata, $version, $suffix ) =
