@@ -34,7 +34,7 @@
 #    test dist sudo dpkg -i gscan2pdf-x.x.x_all.deb
 # 3. git status
 #    git tag vx.x.x
-#    git push --tags ssh://ra28145@gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf/gscan2pdf master
+#    git push --tags ssh://ra28145@git.code.sf.net/p/gscan2pdf/code master
 # 4. make remote-html
 # 5. create version directory in https://sourceforge.net/projects/gscan2pdf/files/gscan2pdf
 #    make file_releases
@@ -8310,15 +8310,15 @@ C<rpm -i gscan2pdf-version.rpm>
 =head2 From source
 
 The source is hosted in the files section of the gscan2pdf project on
-Sourceforge (L<http://sourceforge.net/project/showfiles.php?group_id=174140>).
+Sourceforge (L<http://sourceforge.net/projects/gscan2pdf/files/>).
 
 =head2 From the repository
 
 gscan2pdf uses Git for its Revision Control System. You can browse the
-tree at http://gscan2pdf.git.sourceforge.net/git/gitweb.cgi?p=gscan2pdf
+tree at L<http://sourceforge.net/p/gscan2pdf/code/>.
 
 Git users can clone the complete tree with
-C<git clone git://gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf/gscan2pdf>
+C<git clone git://git.code.sf.net/p/gscan2pdf/code>
 
 =head1 Building gscan2pdf from source
 
@@ -8492,7 +8492,7 @@ You do not need to be a Debian user, or set up an account to do this.
 =back
 
 Alternatively, there is a bug tracker for the gscan2pdf project on
-Sourceforge (L<https://sourceforge.net/tracker/?group_id=174140&atid=868098>).
+Sourceforge (L<http://sourceforge.net/p/gscan2pdf/_list/tickets?source=navbar>).
 
 Please include the log file created by C<gscan2pdf --log=log> with any new bug report.
 
@@ -8860,7 +8860,7 @@ Sourceforge for hosting the project.
 =for html <hr />
  <a href="http://sourceforge.net/projects/gscan2pdf">
  <img src="http://sflogo.sourceforge.net/sflogo.php?group_id=174140&amp;type=14" width="150" height="40" alt="Get gscan2pdf at SourceForge.net. Fast, secure and Free Open Source software downloads" /></a>
- <a href="http://sourceforge.net/donate/index.php?group_id=174140">
+ <a href="http://sourceforge.net/p/gscan2pdf/donate/">
  <img src="http://sourceforge.net/images/project-support.jpg" width="88" height="32" border="0" alt="Support This Project"></a>
 
 =cut
