@@ -90,7 +90,7 @@ use Locale::gettext 1.05;    # For translations
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
-my $version   = '1.1.0';
+my $version   = '1.1.1';
 
 # Window parameters
 my $border_width = 6;
@@ -305,9 +305,6 @@ if (
 $SETTING{'SANE version'} = join( '.', Sane->get_version );
 $SETTING{'libsane-perl version'} = $Sane::VERSION;
 
-# Update list in Gscan2pdf::Document so that it can be used by get_resolution
-Gscan2pdf::Document->set_paper_sizes( $SETTING{Paper} );
-
 # Set up test mode and make sure file has absolute path and is readable
 if ( keys %{$test} ) {
  $SETTING{frontend} = 'scanimage-perl';
@@ -377,6 +374,9 @@ Gscan2pdf::Document->setup($logger);
 # Initialise SANE frontends
 Gscan2pdf::Frontend::Sane->setup($logger);
 Gscan2pdf::Frontend::CLI->setup($logger);
+
+# Update list in Gscan2pdf::Document so that it can be used by get_resolution
+Gscan2pdf::Document->set_paper_sizes( $SETTING{Paper} );
 
 # Create icons for rotate buttons
 my $IconFactory = undef;
@@ -8134,9 +8134,11 @@ sub properties {
   'insert-text' => sub {
    my ( $widget, $string, $len, $position ) = @_;
 
-   # just can't insert these.
+   # only allow a valid positive real number
    for ( split '', $string ) {
-    if ( $_ lt '0' or $_ gt '9' ) {
+    if (( $_ ne '.' and ( $_ lt '0' or $_ gt '9' ) )
+     or ( $_ eq '.' and $entry->get_text =~ /\./ ) )
+    {
      $entry->signal_stop_emission_by_name('insert-text');
      last;
     }
@@ -8196,7 +8198,9 @@ sub get_selected_properties {
    last;
   }
  }
- return $resolution;
+
+ # round the value to a sensible number of significant figures
+ return $resolution eq '' ? '' : sprintf( "%g", $resolution );
 }
 
 # Helper function to display a message dialog, wait for a response, and return it

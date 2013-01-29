@@ -5,7 +5,6 @@ use Gtk2 -init;    # Could just call init separately
 
 BEGIN {
  use_ok('Gscan2pdf::Document');
- use PDF::API2;
 }
 
 #########################
@@ -46,7 +45,11 @@ $slist->get_file_info(
 );
 Gtk2->main;
 
-is( system('identify test.pdf'), 0, 'valid PDF created' );
+is(
+ `pdfinfo test.pdf | grep 'Page size:'`,
+ "Page size:      70 x 46 pts\n",
+ 'valid PDF created'
+);
 
 #########################
 

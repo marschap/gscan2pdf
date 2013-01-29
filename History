@@ -5,6 +5,10 @@
 * Fixed bug sending PDF as email
   Closes bug 152 (No eMail gscan2pdf 1.1 Suse 12.2)
 * Don't need to convert image to .bmp for cuneiform 1.1.0
+* Ensure the image resolution, and therefore the page size, is either taken
+  from the file or inferred from the page dimensions.
+  Closes Launchpad bug 889549
+  (gscan2pdf gimp integration creates page size error)
 
 
 1.1.0 (18.11.2012):

@@ -22,11 +22,11 @@ use Storable qw(store retrieve);
 use Archive::Tar;            # For session files
 use Proc::Killfam;
 use Locale::gettext 1.05;    # For translations
-use POSIX qw(locale_h);
 use IPC::Open3 'open3';
 use Symbol;                  # for gensym
 use Try::Tiny;
 use Set::IntSpan 1.10;       # For size method for page numbering issues
+use PDF::API2;
 use Readonly;
 Readonly our $POINTS_PER_INCH => 72;
 
@@ -98,8 +98,11 @@ sub new {
  return $self;
 }
 
+# Set the paper sizes in the manager and worker threads
+
 sub set_paper_sizes {
  ( my $class, $paper_sizes ) = @_;
+ _enqueue_request( 'paper_sizes', { paper_sizes => $paper_sizes } );
  return;
 }
 
@@ -191,42 +194,6 @@ sub fetch_file {
  return $i;
 }
 
-sub get_resolution {
- my $image = shift;
- my $resolution;
- my $format = $image->Get('format');
- setlocale( LC_NUMERIC, "C" );
-
- # Imagemagick always reports PNMs as 72ppi
- if ( $format ne 'Portable anymap' ) {
-  $resolution = $image->Get('x-resolution');
-  return $resolution if ($resolution);
-
-  $resolution = $image->Get('y-resolution');
-  return $resolution if ($resolution);
- }
-
- # Guess the resolution from the shape
- my $height = $image->Get('height');
- my $width  = $image->Get('width');
- my $ratio  = $height / $width;
- $ratio = 1 / $ratio if ( $ratio < 1 );
- $resolution = $POINTS_PER_INCH;
-
- # FIXME: add test to make sure this is working
- for ( keys %$paper_sizes ) {
-  if ( $paper_sizes->{$_}{x} > 0
-   and abs( $ratio - $paper_sizes->{$_}{y} / $paper_sizes->{$_}{x} ) < 0.02 )
-  {
-   $resolution =
-     int( ( ( $height > $width ) ? $height : $width ) /
-      $paper_sizes->{$_}{y} *
-      25.4 + 0.5 );
-  }
- }
- return $resolution;
-}
-
 # Check how many pages could be scanned
 
 sub pages_possible {
@@ -292,10 +259,10 @@ sub add_page {
  $self->get_model->signal_handler_block( $self->{row_changed_signal} )
    if defined( $self->{row_changed_signal} );
  my $thumb = get_pixbuf( $page->{filename}, $self->{heightt}, $self->{widtht} );
+ my $resolution = $page->resolution($paper_sizes);
  push @{ $self->{data} }, [ $pagenum, $thumb, $page ];
  $logger->info(
-  "Added $page->{filename} at page $pagenum with resolution $page->{resolution}"
- );
+  "Added $page->{filename} at page $pagenum with resolution $resolution");
 
 # Block selection_changed_signal to prevent its firing changing pagerange to all
  $self->get_selection->signal_handler_block( $self->{selection_changed_signal} )
@@ -527,6 +494,10 @@ sub update_page {
 
   $self->get_model->signal_handler_block( $self->{row_changed_signal} )
     if defined( $self->{row_changed_signal} );
+  my $resolution = $new->resolution($paper_sizes);
+  $logger->info(
+"Replaced $self->{data}[$i][2]->{filename} at page $self->{data}[$i][0] with $new->{filename}, resolution $resolution"
+  );
   $self->{data}[$i][1] =
     get_pixbuf( $new->{filename}, $self->{heightt}, $self->{widtht} );
   $self->{data}[$i][2] = $new;
@@ -539,6 +510,11 @@ sub update_page {
     $self->{data}[$i][0] + 1,
     get_pixbuf( $new->{filename}, $self->{heightt}, $self->{widtht} ), $new
      ];
+   $logger->info(
+    "Inserted $new->{filename} at page ",
+    $self->{data}[ $i + 1 ][0],
+    " with  resolution $resolution"
+   );
    push @out, $new;
   }
 
@@ -1078,27 +1054,6 @@ sub get_page_index {
  return;
 }
 
-sub convert_to_png {
- my ( $filename, $dir ) = @_;
- my $image = Image::Magick->new;
- my $x     = $image->Read($filename);
- $logger->warn($x) if "$x";
- return if $_self->{cancel};
-
- # FIXME: most of the time we already know this -
- # pull it from $page->{resolution} rather than asking IM
- my $density = get_resolution($image);
-
- # Write the png
- my $png = File::Temp->new( DIR => $dir, SUFFIX => '.png', UNLINK => FALSE );
- $image->Write(
-  units    => 'PixelsPerInch',
-  density  => $density,
-  filename => $png
- );
- return $png;
-}
-
 # Have to roll my own slurp sub to support utf8
 
 sub slurp {
@@ -1361,6 +1316,10 @@ sub _thread_main {
      $request->{pidfile} );
    }
 
+   when ('paper_sizes') {
+    _thread_paper_sizes( $self, $request->{paper_sizes} );
+   }
+
    when ('quit') {
     last;
    }
@@ -1617,14 +1576,13 @@ sub _thread_import_file {
     my @images = glob('x-???.???');
     my $i      = 0;
     foreach (@images) {
-     my $png = convert_to_png( $_, $options{dir} );
      my $page = Gscan2pdf::Page->new(
-      filename => $png,
+      filename => $_,
       dir      => $options{dir},
       delete   => TRUE,
-      format   => 'Portable Network Graphics',
+      format   => $_,
      );
-     $self->{page_queue}->enqueue( $page->freeze );
+     $self->{page_queue}->enqueue( $page->to_png($paper_sizes)->freeze );
     }
    }
   }
@@ -1655,8 +1613,6 @@ sub _thread_import_file {
     }
    }
   }
-
-  # only 1-bit Portable anymap is properly supported, so convert ANY pnm to png
   when (
 /(?:Portable\ Network\ Graphics|Joint\ Photographic\ Experts\ Group\ JFIF\ format|CompuServe\ graphics\ interchange\ format)/x
     )
@@ -1668,15 +1624,15 @@ sub _thread_import_file {
    );
    $self->{page_queue}->enqueue( $page->freeze );
   }
+
+  # only 1-bit Portable anymap is properly supported, so convert ANY pnm to png
   default {
-   my $png = convert_to_png( $options{info}->{path}, $options{dir} );
-   return if $_self->{cancel};
    my $page = Gscan2pdf::Page->new(
-    filename => $png,
+    filename => $options{info}->{path},
     dir      => $options{dir},
-    format   => 'Portable Network Graphics',
+    format   => $options{info}->{format},
    );
-   $self->{page_queue}->enqueue( $page->freeze );
+   $self->{page_queue}->enqueue( $page->to_png($paper_sizes)->freeze );
   }
  }
  return;
@@ -2423,10 +2379,8 @@ sub _thread_crop {
 
 sub _thread_to_png {
  my ( $self, $page, $dir ) = @_;
- my $new = $page->clone;
- $new->{filename} = convert_to_png( $page->{filename}, $dir );
+ my $new = $page->to_png($paper_sizes);
  return if $_self->{cancel};
- $new->{format} = 'Portable Network Graphics';
  my %data = ( old => $page, new => $new->freeze );
  $logger->info("Converted $page->{filename} to $data{new}{filename}");
  $self->{page_queue}->enqueue( \%data );
@@ -2615,6 +2569,11 @@ sub _thread_user_defined {
  );
  my %data = ( old => $page, new => $new->freeze );
  $self->{page_queue}->enqueue( \%data );
+ return;
+}
+
+sub _thread_paper_sizes {
+ ( my $self, $paper_sizes ) = @_;
  return;
 }
 

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 6;
+use Test::More tests => 9;
 
 BEGIN {
  use_ok('Gscan2pdf::Page');
@@ -117,6 +117,56 @@ EOS
 
 @boxes = ( [ 1, 15, 420, 60, 'The quick brown fox' ] );
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from cuneiform 1.0.0' );
+
+#########################
+
+my %paper_sizes = (
+ A4 => {
+  x => 210,
+  y => 297,
+  l => 0,
+  t => 0,
+ },
+ 'US Letter' => {
+  x => 216,
+  y => 279,
+  l => 0,
+  t => 0,
+ },
+ 'US Legal' => {
+  x => 216,
+  y => 356,
+  l => 0,
+  t => 0,
+ },
+);
+
+system('convert -size 210x297 xc:white test.pnm');
+$page = Gscan2pdf::Page->new(
+ filename => 'test.pnm',
+ format   => 'Portable anymap',
+ dir      => File::Temp->newdir,
+);
+is_deeply(
+ $page->matching_paper_sizes( \%paper_sizes ),
+ { A4 => 25 },
+ 'basic portrait'
+);
+system('convert -size 297x210 xc:white test.pnm');
+$page = Gscan2pdf::Page->new(
+ filename => 'test.pnm',
+ format   => 'Portable anymap',
+ dir      => File::Temp->newdir,
+);
+is_deeply(
+ $page->matching_paper_sizes( \%paper_sizes ),
+ { A4 => 25 },
+ 'basic landscape'
+);
+
+#########################
+
+is( $page->resolution( \%paper_sizes ), 25, 'resolution' );
 
 #########################
 

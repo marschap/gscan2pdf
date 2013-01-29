@@ -12,6 +12,7 @@ use HTML::Entities;
 use Image::Magick;
 use Encode;
 use Locale::gettext 1.05;    # For translations
+use POSIX qw(locale_h);
 
 BEGIN {
  use Exporter ();
@@ -39,14 +40,6 @@ sub new {
  $logger->info("New page filename $options{filename}, format $options{format}");
  for ( keys %options ) {
   $self->{$_} = $options{$_};
- }
-
- # get the resolution if necessary
- unless ( defined( $self->{resolution} ) ) {
-  my $image = Image::Magick->new;
-  my $x     = $image->Read( $options{filename} );
-  $logger->warn($x) if "$x";
-  $self->{resolution} = Gscan2pdf::Document::get_resolution($image);
  }
 
  # copy or move image to session directory
@@ -167,6 +160,93 @@ sub boxes {
   push @boxes, [ 0, 0, $self->{w}, $self->{h}, decode_utf8( $self->{hocr} ) ];
  }
  return @boxes;
+}
+
+sub to_png {
+ my ( $self, $page_sizes ) = @_;
+
+ # Write the png
+ my $png =
+   File::Temp->new( DIR => $self->{dir}, SUFFIX => '.png', UNLINK => FALSE );
+ $self->im_object->Write(
+  units    => 'PixelsPerInch',
+  density  => $self->resolution($page_sizes),
+  filename => $png
+ );
+ my $new = Gscan2pdf::Page->new(
+  filename   => $png,
+  format     => 'Portable Network Graphics',
+  dir        => $self->{dir},
+  resolution => $self->resolution($page_sizes),
+ );
+ return $new;
+}
+
+sub resolution {
+ my ( $self, $paper_sizes ) = @_;
+ return $self->{resolution} if defined( $self->{resolution} );
+ my $image  = $self->im_object;
+ my $format = $image->Get('format');
+ setlocale( LC_NUMERIC, "C" );
+
+ # Imagemagick always reports PNMs as 72ppi
+ if ( $format ne 'Portable anymap' ) {
+  $self->{resolution} = $image->Get('x-resolution');
+
+  $self->{resolution} = $image->Get('y-resolution')
+    unless ( defined $self->{resolution} );
+
+  if ( $self->{resolution} ) {
+   $self->{resolution} *= 2.54
+     unless ( $image->Get('units') eq 'PixelsPerInch' );
+   return $self->{resolution};
+  }
+ }
+
+ # Return the first match based on the format
+ for ( values %{ $self->matching_paper_sizes($paper_sizes) } ) {
+  $self->{resolution} = $_;
+  return $self->{resolution};
+ }
+
+ # Default to 72
+ $self->{resolution} = $Gscan2pdf::Document::POINTS_PER_INCH;
+ return $self->{resolution};
+}
+
+# Given paper width and height (mm), and hash of paper sizes,
+# returns hash of matching resolutions (pixels per inch)
+
+sub matching_paper_sizes {
+ my ( $self, $paper_sizes ) = @_;
+ unless ( defined( $self->{height} ) and defined( $self->{width} ) ) {
+  my $image = $self->im_object;
+  $self->{width}  = $image->Get('width');
+  $self->{height} = $image->Get('height');
+ }
+ my $ratio = $self->{height} / $self->{width};
+ $ratio = 1 / $ratio if ( $ratio < 1 );
+ my %matching;
+ for ( keys %$paper_sizes ) {
+  if ( $paper_sizes->{$_}{x} > 0
+   and abs( $ratio - $paper_sizes->{$_}{y} / $paper_sizes->{$_}{x} ) < 0.02 )
+  {
+   $matching{$_} =
+     ( ( $self->{height} > $self->{width} ) ? $self->{height} : $self->{width} )
+     / $paper_sizes->{$_}{y} * 25.4;
+  }
+ }
+ return \%matching;
+}
+
+# returns Image::Magick object
+
+sub im_object {
+ my ($self) = @_;
+ my $image  = Image::Magick->new;
+ my $x      = $image->Read( $self->{filename} );
+ $logger->warn($x) if "$x";
+ return $image;
 }
 
 1;
