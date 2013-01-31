@@ -22,7 +22,9 @@ sub setup {
 
 # if we have 3.02.01 or better, we can use --list-langs and not bother with tessdata
  my ( $out, $err ) = Gscan2pdf::Document::open_three("tesseract -v");
- $version = $1 if ( $err =~ /^tesseract ([\d\.]+)/ );
+ if ( $err =~ /^tesseract\ ([\d\.]+)/x ) {
+  $version = $1;
+ }
  if ( $version and version->parse("v$version") > version->parse('v3.02') ) {
   $logger->info("Found tesseract version $version.");
   $setup = 1;
@@ -143,7 +145,7 @@ sub languages {
    my ( undef, $codes ) =
      Gscan2pdf::Document::open_three("tesseract --list-langs");
    @codes = split "\n", $codes;
-   shift @codes if ( $codes[0] =~ /^List of available languages/ );
+   shift @codes if ( $codes[0] =~ /^List\ of\ available\ languages/x );
   }
   else {
    for ( glob "$tessdata/*$datasuffix" ) {
