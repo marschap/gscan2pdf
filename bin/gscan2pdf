@@ -5427,24 +5427,24 @@ EOS
  $about->set_website('http://gscan2pdf.sf.net');
  my $translators =
    <<'EOS'; # inverted commas required around EOS because of UTF-8 in $translators
-Shushi Kurose
 Constantine Mousafiris
+Shushi Kurose
 vishal goswami
+Prescott_SK
+Diego Verga
 Herczeg Zsolt
 stavros kakaliantis
 Zbyněk Schwarz
 Wang Dianjin
-Arthur Rodrigues
 Wojciech Górnaś
+Arthur Rodrigues
 Utku BERBEROĞLU
 Dennis Baudys
-Oleg Koptev
+tzem
 Daniel Dietrich
 Daniel
 Adolfo Jayme Barrientos
-Artem Vorotnikov
-Tobias Holm
-jimpap
+Christoph Steinbrink
 Igor Zubarev
 EOS
  $about->set_translator_credits($translators);
