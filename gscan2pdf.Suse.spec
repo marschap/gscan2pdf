@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.1.0
+Version: 1.1.1
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -83,9 +83,10 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sun Nov 18 2012 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sat Feb 02 2013 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
   - New upstream release
-    Closes #682818 (Presets aren't working)
+  - New upstream release
+    Closes: #682818 (Presets aren't working)
   - Added depends: libtry-tiny-perl
   - New upstream release
   - New upstream release
