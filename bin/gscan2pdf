@@ -90,7 +90,7 @@ use Locale::gettext 1.05;    # For translations
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
-my $version   = '1.1.1';
+my $version   = '1.2.0';
 
 # Window parameters
 my $border_width = 6;
@@ -2677,8 +2677,12 @@ sub save_dialog {
   @pdf_compression ) = add_pdf_compression($vboxp);
 
  # Font for non-ASCII text
+ my $scwinf = Gtk2::ScrolledWindow->new;
+ $scwinf->set_policy( 'automatic', 'automatic' );
+ $vbox->pack_start( $scwinf, TRUE, TRUE, 0 );
  my $hboxf = Gtk2::HBox->new;
- $vbox->pack_start( $hboxf, TRUE, TRUE, 0 );
+ $scwinf->add_with_viewport($hboxf);
+ $scwinf->get_child->set_shadow_type('none');
  $label = Gtk2::Label->new( $d->get('Font for non-ASCII text') );
  $hboxf->pack_start( $label, FALSE, FALSE, 0 );
  my @fonts;
