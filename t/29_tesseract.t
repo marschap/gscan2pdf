@@ -90,11 +90,11 @@ SKIP: {
 
  # Create test image
  system(
-'convert +matte -depth 1 -colorspace Gray -pointsize 12 -density 300 label:"The quick brown fox" test.tif'
+'convert +matte -depth 1 -colorspace Gray -pointsize 12 -density 300 label:"The quick brown fox" test.png'
  );
 
  my ( $got, $messages ) =
-   Gscan2pdf::Tesseract->hocr( 'test.tif', 'eng', $logger );
+   Gscan2pdf::Tesseract->hocr( 'test.png', 'eng', $logger );
 
  like( $got, qr/The/,   'Tesseract returned "The"' );
  like( $got, qr/quick/, 'Tesseract returned "quick"' );
@@ -107,17 +107,17 @@ SKIP: {
 
  # Create test image
  system(
-"convert +matte -depth 1 -colorspace Gray -pointsize 12 -density 300 label:'öÖäÄüÜß' test.tif"
+"convert +matte -depth 1 -colorspace Gray -pointsize 12 -density 300 label:'öÖäÄüÜß' test.png"
  );
 
- ( $got, $messages ) = Gscan2pdf::Tesseract->hocr( 'test.tif', 'deu', $logger );
+ ( $got, $messages ) = Gscan2pdf::Tesseract->hocr( 'test.png', 'deu', $logger );
  is( Encode::is_utf8( $got, 1 ), 1, "Tesseract returned UTF8" );
  for my $c (qw( ö ä ü ß )) {
   my $c2 = decode_utf8($c);
   like( $got, qr/$c2/, "Tesseract returned $c" );
  }
 
- unlink 'test.tif';
+ unlink 'test.png';
 }
 
 __END__

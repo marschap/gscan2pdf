@@ -19,7 +19,7 @@ SKIP: {
 
  # Create test image
  system(
-'convert +matte -depth 1 -colorspace Gray -pointsize 12 -density 300 label:"The quick brown fox" test.tif'
+'convert +matte -depth 1 -colorspace Gray -pointsize 12 -density 300 label:"The quick brown fox" test.png'
  );
 
  my $slist = Gscan2pdf::Document->new;
@@ -29,7 +29,7 @@ SKIP: {
  $slist->set_dir($dir);
 
  $slist->get_file_info(
-  path              => 'test.tif',
+  path              => 'test.png',
   finished_callback => sub {
    my ($info) = @_;
    $slist->import_file(
@@ -58,7 +58,7 @@ SKIP: {
  );
  Gtk2->main;
 
- unlink 'test.tif', <$dir/*>;
+ unlink 'test.png', <$dir/*>;
  rmdir $dir;
 }
 

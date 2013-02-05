@@ -185,7 +185,9 @@ sub hocr {
  my $txt = File::Temp->new( SUFFIX => $suffix );
  ( $name, $path, undef ) = fileparse( $txt, $suffix );
 
- if ( $file !~ /\.tif$/x ) {
+ if ( version->parse("v$version") < version->parse("v3")
+  and $file !~ /\.tif$/x )
+ {
 
   # Temporary filename for new file
   $tif = File::Temp->new( SUFFIX => '.tif' );
