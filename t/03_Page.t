@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 BEGIN {
  use_ok('Gscan2pdf::Page');
@@ -52,6 +52,40 @@ my @boxes = (
  [ 355, 14, 420, 48, 'fox' ]
 );
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from tesseract 3.00' );
+
+#########################
+
+$page->{hocr} = <<'EOS';
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <title></title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name='ocr-system' content='tesseract 3.02.01' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocrx_word'/>
+ </head>
+ <body>
+  <div class='ocr_page' id='page_1' title='image "test.png"; bbox 0 0 494 57; ppageno 0'>
+   <div class='ocr_carea' id='block_1_1' title="bbox 1 9 490 55">
+    <p class='ocr_par' dir='ltr' id='par_1' title="bbox 1 9 490 55">
+     <span class='ocr_line' id='line_1' title="bbox 1 9 490 55"><span class='ocrx_word' id='word_1' title="bbox 1 9 88 45"><strong>The</strong></span> <span class='ocrx_word' id='word_2' title="bbox 106 9 235 55">quick</span> <span class='ocrx_word' id='word_3' title="bbox 253 9 397 45"><strong>brown</strong></span> <span class='ocrx_word' id='word_4' title="bbox 416 9 490 45"><strong>fox</strong></span> 
+     </span>
+    </p>
+   </div>
+  </div>
+ </body>
+</html>
+EOS
+
+@boxes = (
+ [ 1,   9, 88,  45, 'The' ],
+ [ 106, 9, 235, 55, 'quick' ],
+ [ 253, 9, 397, 45, 'brown' ],
+ [ 416, 9, 490, 45, 'fox' ]
+);
+is_deeply( [ $page->boxes ], \@boxes, 'Boxes from tesseract 3.02.01' );
 
 #########################
 
