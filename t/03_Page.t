@@ -149,7 +149,7 @@ $page = Gscan2pdf::Page->new(
 );
 is_deeply(
  $page->matching_paper_sizes( \%paper_sizes ),
- { A4 => 25 },
+ { A4 => 25.4 },
  'basic portrait'
 );
 system('convert -size 297x210 xc:white test.pnm');
@@ -160,13 +160,13 @@ $page = Gscan2pdf::Page->new(
 );
 is_deeply(
  $page->matching_paper_sizes( \%paper_sizes ),
- { A4 => 25 },
+ { A4 => 25.4 },
  'basic landscape'
 );
 
 #########################
 
-is( $page->resolution( \%paper_sizes ), 25, 'resolution' );
+is( $page->resolution( \%paper_sizes ), 25.4, 'resolution' );
 
 #########################
 
