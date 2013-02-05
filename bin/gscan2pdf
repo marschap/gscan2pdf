@@ -5393,18 +5393,19 @@ sub about {
  $about->set_program_name($prog_name);
  $about->set_version($version);
  my $authors = <<'EOS';
-Torsten Schönfeld
+Frederik Elwert
+Klaus Ethgen
+Andy Fingerhut
+Leon Fisk
 John Goerzen
-Chris Mayo
 David Hampton
 Sascha Hunold
-Jakub Wilk
-Frederik Elwert
-Roy Shahbazian
-Klaus Ethgen
 Matthijs Kooijman
+Chris Mayo
+Torsten Schönfeld
+Roy Shahbazian
 Jarl Stefansson
-Andy Fingerhut
+Jakub Wilk
 EOS
  $about->set_authors( "Jeff Ratcliffe\n\n"
     . $d->get('Patches gratefully received from:')
