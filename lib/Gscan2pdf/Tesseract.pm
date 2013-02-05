@@ -35,7 +35,7 @@ sub setup {
  ( $tessdata, $version, $datasuffix ) = parse_tessdata( $out . $err );
 
  unless ( defined $tessdata ) {
-  if ( defined($version) and $version > 3.01 ) {
+  if ( $version and version->parse("v$version") > version->parse('v3.01') ) {
    my ( $lib, undef ) = Gscan2pdf::Document::open_three("ldd $exe");
    if ( $lib =~ /libtesseract\.so.\d+\ =>\ ([\/a-zA-Z0-9\-\.\_]+)\ /x ) {
     ( $out, undef ) = Gscan2pdf::Document::open_three("strings $1");
