@@ -1523,9 +1523,9 @@ sub _thread_get_file_info {
 
 sub _thread_import_file {
  my ( $self, %options ) = @_;
- my $PNG = 'Portable Network Graphics';
- my $JPG = 'Joint Photographic Experts Group JFIF format';
- my $GIF = 'CompuServe graphics interchange format';
+ my $PNG = qr/Portable\ Network\ Graphics/x;
+ my $JPG = qr/Joint\ Photographic\ Experts\ Group\ JFIF\ format/x;
+ my $GIF = qr/CompuServe\ graphics\ interchange\ format/x;
 
  given ( $options{info}->{format} ) {
   when ('DJVU') {
