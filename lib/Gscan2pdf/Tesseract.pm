@@ -17,7 +17,7 @@ sub setup {
  return $installed if $setup;
 
  my ( $exe, undef ) = Gscan2pdf::Document::open_three('which tesseract');
- return unless ( defined($exe) and $exe ne '' );
+ return if ( not defined($exe) or $exe eq '' );
  $installed = 1;
 
 # if we have 3.02.01 or better, we can use --list-langs and not bother with tessdata

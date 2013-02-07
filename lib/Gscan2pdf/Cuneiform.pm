@@ -15,7 +15,7 @@ sub setup {
  return $version if $setup;
 
  my ( $out, $err ) = Gscan2pdf::Document::open_three('which cuneiform');
- return unless ( defined($out) and $out ne '' );
+ return if ( not defined($out) or $out eq '' );
 
  ( $out, $err ) = Gscan2pdf::Document::open_three("cuneiform");
  if ( $out =~ /^Cuneiform\ for\ Linux\ ([\d\.]+)/x ) {
