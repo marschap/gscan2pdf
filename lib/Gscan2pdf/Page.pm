@@ -193,7 +193,9 @@ sub resolution {
  setlocale( LC_NUMERIC, "C" );
 
  # Imagemagick always reports PNMs as 72ppi
- if ( $format ne 'Portable anymap' ) {
+ # Some versions of imagemagick report colour PNM as Portable pixmap (PPM)
+ # B&W are Portable anymap
+ if ( $format !~ /^Portable\ ...map/x ) {
   $self->{resolution} = $image->Get('x-resolution');
 
   $self->{resolution} = $image->Get('y-resolution')
