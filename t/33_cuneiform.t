@@ -18,24 +18,24 @@ SKIP: {
 
  # Create test image
  system(
-'convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.bmp'
+'convert +matte -depth 1 -pointsize 12 -density 300 label:"The quick brown fox" test.png'
  );
 
- my $got = Gscan2pdf::Cuneiform->hocr( 'test.bmp', 'eng', $logger );
+ my $got = Gscan2pdf::Cuneiform->hocr( 'test.png', 'eng', $logger );
 
  like( $got, qr/The quick brown fox/, 'Cuneiform returned sensible text' );
 
  # Create test image
  system(
-"convert +matte -depth 1 -pointsize 12 -density 300 label:'öÖäÄüÜß' test.bmp"
+"convert +matte -depth 1 -pointsize 12 -density 300 label:'öÖäÄüÜß' test.png"
  );
 
- $got = Gscan2pdf::Cuneiform->hocr( 'test.bmp', 'ger', $logger );
+ $got = Gscan2pdf::Cuneiform->hocr( 'test.png', 'ger', $logger );
  is( Encode::is_utf8( $got, 1 ), 1, "Cuneiform returned UTF8" );
  for my $c (qw( ö ä ü )) {
   my $c2 = decode_utf8($c);
   like( $got, qr/$c2/, "Cuneiform returned $c" );
  }
 
- unlink 'test.bmp';
+ unlink 'test.png';
 }
