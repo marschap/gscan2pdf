@@ -90,7 +90,7 @@ use Locale::gettext 1.05;    # For translations
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
-my $version   = '1.2.0';
+my $version   = '1.1.2';
 
 # Window parameters
 my $border_width = 6;
