@@ -446,7 +446,7 @@ sub scan_options {
      $self->signal_emit( 'started-process', $d->get('Retrieving options') );
     },
     sub {    # running callback
-     $self->signal_emit( 'changed-progress', -1 );
+     $self->signal_emit( 'changed-progress', -1, undef );
     },
     sub {    # finished callback
      my ($data) = @_;
@@ -857,7 +857,7 @@ sub set_option {
     $option->{name} );
   },
   running_callback => sub {
-   $self->signal_emit( 'changed-progress', -1 );
+   $self->signal_emit( 'changed-progress', -1, undef );
   },
   finished_callback => sub {
    my ($data) = @_;
