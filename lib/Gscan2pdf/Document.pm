@@ -1417,6 +1417,13 @@ sub _thread_main {
 sub _thread_get_file_info {
  my ( $self, $filename, $pidfile, %info ) = @_;
 
+ $self->{status} = 0;
+ if ( not -e $filename ) {
+  $self->{status} = 1;
+  $self->{message} = sprintf( $d->get("File %s not found"), $filename );
+  return;
+ }
+
  $logger->info("Getting info for $filename");
  ( my $format, undef ) = open_three("file -b \"$filename\"");
  $logger->info($format);
