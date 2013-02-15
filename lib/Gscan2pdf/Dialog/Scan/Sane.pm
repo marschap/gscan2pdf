@@ -694,6 +694,7 @@ sub _create_paper_widget {
   and not defined( $self->{combobp} )
    )
  {
+
   # Paper list
   my $label = Gtk2::Label->new( $d->get('Paper size') );
   $hboxp->pack_start( $label, FALSE, FALSE, 0 );
@@ -1102,10 +1103,10 @@ sub add_value {
    my ( $widget, $target, $event ) = @_;
    return FALSE
      unless ## no critic (ProhibitNegativeExpressionsInUnlessAndUntilConditions)
-     (
-    $event->state >=    ## no critic (ProhibitMismatchedOperators)
-    'button1-mask'
-     );
+      (
+       $event->state >=    ## no critic (ProhibitMismatchedOperators)
+       'button1-mask'
+      );
    my ( $x, $y ) = ( $event->x, $event->y );
    my ( $xgr, $ygr ) = ( 0, $y );
    if ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
@@ -1427,8 +1428,13 @@ sub scan {
 
  # Get selected number of pages
  my $npages = $self->get('num-pages');
- my $start  = $self->get('page-number-start');
- my $step   = $self->get('page-number-increment');
+
+ # Gscan2pdf::Frontend::Sane uses -1 for all
+ # Gscan2pdf::Dialog::Sane uses 0 for all, as -1 puts 999 in spinbox
+ $npages = -1 if ( $npages == 0 );
+
+ my $start = $self->get('page-number-start');
+ my $step  = $self->get('page-number-increment');
  $npages = $self->get('max-pages')
    if ( $npages > 0 and $step < 0 );
 
