@@ -3,7 +3,10 @@
 * Added missing arguments to 'changed-progress' signal emission.
 * Fix bug preventing import after error.
   Closes bug 155 (can't enter correct file name after incorrect file name)
-* Fixed bug causing only one page to be scanned when all requested
+* Fixed bug introduced in v1.1.2 causing only one page to be scanned
+  when all requested
+* Fixed bug introduced in v1.1.2 causing two pages to be scanned
+  when only one requested
 
 
 1.1.2 (10.02.2013):

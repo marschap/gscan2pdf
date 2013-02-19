@@ -62,20 +62,22 @@ my $signal = $dialog->signal_connect(
 );
 $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
 
-$dialog->signal_connect(
+my $c_signal;
+$c_signal = $dialog->signal_connect(
  'changed-num-pages' => sub {
   my ( $widget, $n, $signal ) = @_;
   is( $n, 0, 'changed-num-pages' );
-  $dialog->signal_handler_disconnect($signal);
- },
- $signal
+  $dialog->signal_handler_disconnect($c_signal);
+ }
 );
 $dialog->set( 'num-pages', 0 );
 
-$dialog->signal_connect(
+my $p_signal;
+$p_signal = $dialog->signal_connect(
  'changed-page-number-start' => sub {
   my ( $widget, $n ) = @_;
   is( $n, 2, 'changed-page-number-start' );
+  $dialog->signal_handler_disconnect($p_signal);
  }
 );
 $dialog->set( 'page-number-start', 2 );
@@ -89,12 +91,14 @@ $signal = $dialog->signal_connect(
 );
 $dialog->set( 'page-number-increment', 2 );
 
-$dialog->signal_connect(
+my $s_signal;
+$s_signal = $dialog->signal_connect(
  'changed-side-to-scan' => sub {
   my ( $widget, $side ) = @_;
   is( $side, 'reverse', 'changed-side-to-scan' );
   is( $dialog->get('page-number-increment'),
    -2, 'reverse side gives increment -2' );
+  $dialog->signal_handler_disconnect($s_signal);
  }
 );
 $dialog->set( 'side-to-scan', 'reverse' );
@@ -361,14 +365,24 @@ $signal = $dialog->signal_connect(
   #       $dialog->signal_handler_disconnect($e_signal);
   #      }
   #     );
+  my $n;
   $dialog->signal_connect(
    'new-scan' => sub {
-    my ( $widget, $n ) = @_;
-    is( $n, 2, 'new_scan' );
-    $flag = TRUE;
-    Gtk2->main_quit;
+    ( my $widget, $n ) = @_;
    }
   );
+  $dialog->signal_connect(
+   'finished-process' => sub {
+    my ( $widget, $process ) = @_;
+    if ( $process eq 'scan_pages' ) {
+     is( $n, 1, 'new-scan emitted once' );
+     Gtk2->main_quit;
+    }
+   }
+  );
+  $dialog->set( 'num-pages',         1 );
+  $dialog->set( 'page-number-start', 1 );
+  $dialog->set( 'side-to-scan',      'facing' );
   $dialog->scan;
  }
 );

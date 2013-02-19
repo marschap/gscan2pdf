@@ -237,7 +237,7 @@ sub scan_pages {
     # Stop the process unless everything OK and more scans required
     if (
         $_self->{abort_scan}
-     or ( $options{npages} != -1 and --$options{npages} )
+     or ( $options{npages} != -1 and not --$options{npages} )
      or ( $_self->{status} != SANE_STATUS_GOOD
       and $_self->{status} != SANE_STATUS_EOF )
       )
