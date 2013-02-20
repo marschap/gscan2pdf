@@ -81,6 +81,7 @@ sub find_scan_options {
  $cmd .= " --mode='$options{mode}'" if ( defined $options{mode} );
  _watch_cmd(
   cmd               => $cmd,
+  started_callback  => $options{started_callback},
   running_callback  => $options{running_callback},
   finished_callback => sub {
    my ( $output, $error ) = @_;

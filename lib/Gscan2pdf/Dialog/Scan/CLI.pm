@@ -1,4 +1,6 @@
-package Gscan2pdf::Dialog::Scan::Sane;
+package Gscan2pdf::Dialog::Scan::CLI;
+
+# TODO: put the test code in to use the --help output from other people's scanners
 
 use warnings;
 use strict;
@@ -17,6 +19,20 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, properties => [
   'Logger',                              # nick
   'Log::Log4perl::get_logger object',    # blurb
   [qw/readable writable/]                # flags
+ ),
+ Glib::ParamSpec->string(
+  'prefix',                                             # name
+  'Prefix',                                             # nick
+  'Prefix for command line calls',                                        # blurb
+  '',                                                   # default
+  [qw/readable writable/]                               # flags
+ ),
+ Glib::ParamSpec->string(
+  'frontend',                                             # name
+  'Frontend',                                             # nick
+  '(scanimage|scanadf)(-perl)?',                                        # blurb
+  '',                                                   # default
+  [qw/readable writable/]                               # flags
  ),
 ];
 
@@ -382,7 +398,7 @@ sub get_devices {
  my $pbar;
  my $hboxd = $self->{hboxd};
  Gscan2pdf::Frontend::CLI->get_devices(
-  prefix            => $SETTING{'scan prefix'},
+  prefix            => $self->get('prefix'),
   started_callback  => sub {
 
    # Set up ProgressBar
@@ -399,100 +415,6 @@ sub get_devices {
    my ($device_list) = @_;
    $pbar->destroy;
    my @device_list = @{$device_list};
-   use Data::Dumper;
-   $logger->info( "Sane->get_devices returned: ", Dumper( \@device_list ) );
-   if ( @device_list == 0 ) {
-    my $parent = $self->get('transient-for');
-    $self->destroy;
-    undef $self;
-    main::show_message_dialog( $parent, 'error', 'close',
-     $d->get('No devices found') );
-    return FALSE;
-   }
-   $self->set( 'device-list', \@device_list );
-   $hboxd->show_all;
-
-   # Note any duplicate device names and delete if necessary
-   my %seen;
-   my $i = 0;
-   while ( $i < @$device_list ) {
-    $seen{ $device_list->[$i]{name} }++;
-    if ( $seen{ $device_list->[$i]{name} } > 1 ) {
-     splice @$device_list, $i, 1;
-    }
-    else {
-     $i++;
-    }
-   }
-
-   # Note any duplicate model names and add the device if necessary
-   undef %seen;
-   for (@$device_list) {
-    $_->{model} = $_->{name} unless ( defined $_->{model} );
-    $seen{ $_->{model} }++;
-   }
-   for (@$device_list) {
-    if ( defined $_->{vendor} ) {
-     $_->{label} = "$_->{vendor} $_->{model}";
-    }
-    else {
-     $_->{label} = $_->{model};
-    }
-    $_->{label} .= " on $_->{name}" if ( $seen{ $_->{model} } > 1 );
-   }
-
-   if (@device_list) {    # Update combobox
-    $i = 0;
-    while ( $i < @device_list ) {
-     if ( @$device_list
-      and $i < @$device_list
-      and $device_list[$i]{label} ne $device_list->[$i]{label} )
-     {
-      $combobd->insert_text( $i, $device_list->[$i]{label} );
-      $combobd->remove_text($i);
-     }
-     $i++;
-    }
-    while ( $i < @$device_list ) {
-     $combobd->append_text( $device_list->[ $i++ ]{label} );
-    }
-    @device_list = @{$device_list};
-    set_device();
-    $combobd->show;
-    $labeld->show;
-   }
-   else {    # New combobox
-    @device_list = @{$device_list};
-    populate_device_list($hboxd);
-   }
-
-   # # If device not set by config and there is a default device, then set it
-   # $SETTING{device} = $1
-   #   if ( not defined( $SETTING{device} )
-   #  and defined($output)
-   #  and $output =~ /default\ device\ is\ `(.*)'/x );
-
-  }
- );
- Gscan2pdf::Frontend::Sane->get_devices(
-  sub {
-
-   # Set up ProgressBar
-   $pbar = Gtk2::ProgressBar->new;
-   $pbar->set_pulse_step(.1);
-   $pbar->set_text( $d->get('Fetching list of devices') );
-   $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
-   $hboxd->hide_all;
-   $hboxd->show;
-   $pbar->show;
-  },
-  sub {
-   $pbar->pulse;
-  },
-  sub {
-   my ($data) = @_;
-   $pbar->destroy;
-   my @device_list = @{$data};
    use Data::Dumper;
    $logger->info( "Sane->get_devices returned: ", Dumper( \@device_list ) );
    if ( @device_list == 0 ) {
@@ -523,27 +445,34 @@ sub scan_options {
  # Ghost the scan button whilst options being updated
  $self->{sbutton}->set_sensitive(FALSE) if ( defined $self->{sbutton} );
 
- my $signal;
- Gscan2pdf::Frontend::Sane->open_device(
-  device_name      => $self->get('device'),
-  started_callback => sub {
-   $self->signal_emit( 'started-process', $d->get('Opening device') );
+ my $pbar;
+ my $hboxd = $self->{hboxd};
+  Gscan2pdf::Frontend::CLI->find_scan_options(
+   prefix            => $self->get('prefix'),
+   frontend         => $self->get('frontend'),
+   device           => $self->get('device'),
+#   mode             => $SETTING{mode},
+  started_callback  => sub {
+
+   # Set up ProgressBar
+   $pbar = Gtk2::ProgressBar->new;
+   $pbar->set_pulse_step(.1);
+   $pbar->set_text( $d->get('Fetching list of devices') );
+   $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
+   $hboxd->hide_all;
+   $hboxd->show;
+   $pbar->show;
   },
-  running_callback => sub {
-   $self->signal_emit( 'changed-progress', -1, undef );
-  },
-  finished_callback => sub {
-   $self->signal_emit( 'finished-process', 'open_device' );
-   Gscan2pdf::Frontend::Sane->find_scan_options(
-    sub {    # started callback
-     $self->signal_emit( 'started-process', $d->get('Retrieving options') );
-    },
-    sub {    # running callback
-     $self->signal_emit( 'changed-progress', -1, undef );
-    },
-    sub {    # finished callback
-     my ($data) = @_;
-     my $options = Gscan2pdf::Scanner::Options->new_from_data($data);
+   running_callback => sub {
+    $pbar->pulse;
+   },
+   finished_callback => sub {
+    my ($output) = @_;
+    $pbar->destroy;
+    $logger->info($output);
+#    parse_options( $self->get('device'), options2hash($output) );
+
+     my $options = Gscan2pdf::Scanner::Options->new_from_data($output);
      $self->_initialise_options($options);
 
      $self->signal_emit( 'finished-process', 'find_scan_options' );
@@ -551,25 +480,15 @@ sub scan_options {
      # This fires the reloaded-scan-options signal,
      # so don't set this until we have finished
      $self->set( 'available-scan-options', $options );
-    },
-    sub {    # error callback
-     my ($message) = @_;
+   },
+   error_callback => sub {
+    my ($message) = @_;
      my $parent = $self->get('transient-for');
-     $self->destroy;
-     main::show_message_dialog( $parent, 'error', 'close',
-      $d->get( 'Error retrieving scanner options: ' . $message ) );
-    }
-   );
-  },
-  error_callback => sub {
-   my ($message) = @_;
-   my $parent = $self->get('transient-for');
-   $self->destroy;
-   main::show_message_dialog( $parent, 'error', 'close',
-    $d->get( 'Error opening device: ' . $message ) );
-  }
- );
-
+    main::show_message_dialog( $parent, 'error', 'close', $message );
+    $pbar->destroy;
+    $logger->warn($message);
+   },
+  );
  return;
 }
 

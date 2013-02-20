@@ -57,6 +57,7 @@ use Gscan2pdf::Frontend::CLI;
 use Gscan2pdf::NetPBM;
 use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Dialog::Scan::Sane;
+use Gscan2pdf::Dialog::Scan::CLI;
 use Gscan2pdf::Tesseract;
 use Gscan2pdf::Ocropus;
 use Gscan2pdf::Cuneiform;
@@ -3493,388 +3494,250 @@ sub scan_dialog {
   return;
  }
 
+ # If device not set by config and there is a default device, then set it
+ $SETTING{device} = $ENV{'SANE_DEFAULT_DEVICE'}
+   if ( not defined( $SETTING{device} )
+  and defined( $ENV{'SANE_DEFAULT_DEVICE'} ) );
+
+ $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all' );
+
  # scan pop-up window
- $windows = Gscan2pdf::Dialog->new(
-  'transient-for'  => $window,
-  title            => $d->get('Scan Document'),
-  'hide-on-delete' => TRUE,
-  border_width     => $border_width
+ $windows = Gscan2pdf::Dialog::Scan::CLI->new(
+  'transient-for'     => $window,
+  title               => $d->get('Scan Document'),
+  border_width        => $border_width,
+  logger              => $logger,
+  dir                 => $session,
+  'hide-on-delete'    => TRUE,
+  'num-pages'         => $SETTING{'pages to scan'},
+  'page-number-start' => $#{ $slist->{data} } > -1
+  ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
+  : 1,
+  prefix            => $SETTING{'scan prefix'},
+   frontend         => $SETTING{'frontend'},
  );
- my $vbox = $windows->get('vbox');
 
- # HBox for devices
- my $hboxd = Gtk2::HBox->new;
- $vbox->pack_start( $hboxd, FALSE, FALSE, 0 );
+# Can't set the device when creating the window, as the list does not exist then
+ $windows->signal_connect(
+  'changed-device-list' => sub {
+   my ( $widget, $device_list ) = @_;
+   if ( defined $device_list ) {
 
- # Notebook to collate options
- my $notebook = Gtk2::Notebook->new;
- $notebook->set_scrollable(TRUE);
- $vbox->pack_start( $notebook, TRUE, TRUE, 0 );
-
- # Notebook page 1
- my $vbox1 = Gtk2::VBox->new;
- $notebook->append_page( $vbox1, $d->get('Page Options') );
-
- # Frame for # pages
- my $framen = Gtk2::Frame->new( $d->get('# Pages') );
- $vbox1->pack_start( $framen, FALSE, FALSE, 0 );
- my $vboxn = Gtk2::VBox->new;
- $vboxn->set_border_width($border_width);
- $framen->add($vboxn);
-
- #the first radio button has to set the group,
- #which is undef for the first button
- # All button
- $bscanall = Gtk2::RadioButton->new( undef, $d->get('All') );
- $tooltips->set_tip( $bscanall, $d->get('Scan all pages') );
- $vboxn->pack_start( $bscanall, TRUE, TRUE, 0 );
- $bscanall->signal_connect(
-  clicked => sub {
-   $batch_scan->set_active(0) if ( defined $batch_scan );
+    # Only set default device if it hasn't been specified on the command line
+    # and it is in the the device list
+    if ( defined( $SETTING{device} ) and not @device_list ) {
+     for (@$device_list) {
+      if ( $SETTING{device} eq $_->{name} ) {
+       $windows->set( 'device', $SETTING{device} );
+       return;
+      }
+     }
+    }
+    $windows->set( 'device', $device_list->[0]{name} );
+   }
   }
  );
 
- # Entry button
- my $hboxn = Gtk2::HBox->new;
- $vboxn->pack_start( $hboxn, TRUE, TRUE, 0 );
- $bscannum = Gtk2::RadioButton->new( $bscanall->get_group, "#:" );
- $tooltips->set_tip( $bscannum, $d->get('Set number of pages to scan') );
- $hboxn->pack_start( $bscannum, FALSE, FALSE, 0 );
-
- # Number of pages
- $spin_buttonn = Gtk2::SpinButton->new_with_range( 1, 999, 1 );
- $tooltips->set_tip( $spin_buttonn, $d->get('Set number of pages to scan') );
- $hboxn->pack_end( $spin_buttonn, FALSE, FALSE, 0 );
+ # Update default device
+ $windows->signal_connect(
+  'changed-device' => sub {
+   my ( $widget, $device ) = @_;
+   $SETTING{device} = $device
+     if ( defined($device) and $device ne '' );
+  }
+ );
 
  # Set default
- if ( $SETTING{'pages to scan'} eq 'all' ) {
-  $bscanall->set_active(TRUE);
- }
- else {
-  $bscannum->set_active(TRUE);
-  $spin_buttonn->set_value( $SETTING{'pages to scan'} );
- }
-
- # Toggle to switch between basic and extended modes
- my $checkx = Gtk2::CheckButton->new( $d->get('Extended page numbering') );
- $vbox1->pack_start( $checkx, FALSE, FALSE, 0 );
-
- # Frame for extended mode
- my $framex = Gtk2::Frame->new( $d->get('Page number') );
- $vbox1->pack_start( $framex, FALSE, FALSE, 0 );
- my $vboxx = Gtk2::VBox->new;
- $vboxx->set_border_width($border_width);
- $framex->add($vboxx);
-
- # SpinButton for starting page number
- my $hboxxs = Gtk2::HBox->new;
- $vboxx->pack_start( $hboxxs, FALSE, FALSE, 0 );
- my $labelxs = Gtk2::Label->new( $d->get('Start') );
- $hboxxs->pack_start( $labelxs, FALSE, FALSE, 0 );
- $start = 1;
- $spin_buttons = Gtk2::SpinButton->new_with_range( 1, 99999, 1 );
- $hboxxs->pack_end( $spin_buttons, FALSE, FALSE, 0 );
-
- # SpinButton for page number increment
- my $hboxi = Gtk2::HBox->new;
- $vboxx->pack_start( $hboxi, FALSE, FALSE, 0 );
- my $labelxi = Gtk2::Label->new( $d->get('Increment') );
- $hboxi->pack_start( $labelxi, FALSE, FALSE, 0 );
- $spin_buttoni = Gtk2::SpinButton->new_with_range( -99, 99, 1 );
- my $step = 1;
- $spin_buttoni->set_value($step);
- $hboxi->pack_end( $spin_buttoni, FALSE, FALSE, 0 );
- $spin_buttoni->signal_connect(
-  'value-changed' => sub {
-   $spin_buttoni->set_value( -$step ) if ( $spin_buttoni->get_value == 0 );
-   $step = $spin_buttoni->get_value;
-  }
- );
-
- # Check whether the start page exists
- $spin_buttons->signal_connect( 'value-changed' => \&update_start );
-
- # Setting this here to fire callback running update_start
- $spin_buttons->set_value($start);
-
- # Callback on changing number of pages
- $spin_buttonn->signal_connect(
-  'value-changed' => sub {
-   $bscannum->set_active(TRUE);    # Set the radiobutton active
-   my $n = $spin_buttonn->get_value;
-   $batch_scan->set_active(0) if ( defined($batch_scan) and $n > 1 );
+ $windows->signal_connect(
+  'changed-num-pages' => sub {
+   ( my $widget, $SETTING{'pages to scan'} ) = @_;
 
    # Check that there is room in the list for the number of pages
    update_number();
   }
  );
-
- # Frame for standard mode
- $frames = Gtk2::Frame->new( $d->get('Source document') );
- $vbox1->pack_start( $frames, FALSE, FALSE, 0 );
- my $vboxs = Gtk2::VBox->new;
- $vboxs->set_border_width($border_width);
- $frames->add($vboxs);
-
- # Single sided button
- my $buttons = Gtk2::RadioButton->new( undef, $d->get('Single sided') );
- $tooltips->set_tip( $buttons, $d->get('Source document is single-sided') );
- $vboxs->pack_start( $buttons, TRUE, TRUE, 0 );
- $buttons->signal_connect(
-  clicked => sub {
-   $spin_buttoni->set_value(1);
+ $windows->signal_connect(
+  'changed-page-number-start' => sub {
+   my ( $widget, $value ) = @_;
+   $windows->set( 'max-pages',
+    $slist->pages_possible( $value, $windows->get('page-number-increment') ) );
+  }
+ );
+ $windows->signal_connect(
+  'changed-page-number-increment' => sub {
+   my ( $widget, $step ) = @_;
+   $windows->set( 'max-pages',
+    $slist->pages_possible( $windows->get('page-number-start'), $step ) );
   }
  );
 
- # Double sided button
- my $buttond =
-   Gtk2::RadioButton->new( $buttons->get_group, $d->get('Double sided') );
- $tooltips->set_tip( $buttond, $d->get('Source document is double-sided') );
- $vboxs->pack_start( $buttond, FALSE, FALSE, 0 );
+ $windows->signal_connect(
+  'changed-side-to-scan' => sub {
+   my ( $widget, $side ) = @_;
+   if ( $#{ $slist->{data} } > -1 ) {
+    $windows->set( 'page-number-start',
+     $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
+   }
+   else {
+    $windows->set( 'page-number-start', 1 );
+   }
+  }
+ );
 
- # Facing/reverse page button
- my $hboxs = Gtk2::HBox->new;
- $vboxs->pack_start( $hboxs, TRUE, TRUE, 0 );
- my $labels = Gtk2::Label->new( $d->get('Side to scan') );
- $hboxs->pack_start( $labels, FALSE, FALSE, 0 );
+ my $signal;
+ $windows->signal_connect(
+  'started-process' => sub {
+   my ( $widget, $message ) = @_;
+   $spbar->set_fraction(0);
+   $spbar->set_text($message);
+   $shbox->show_all;
+   $signal = $scbutton->signal_connect(
+    clicked => sub {
+     $windows->cancel_scan;
+    }
+   );
+  }
+ );
 
- my $combobs = Gtk2::ComboBox->new_text;
- my @side = ( $d->get('Facing'), $d->get('Reverse') );
- foreach (@side) {
-  $combobs->append_text($_);
+ $windows->signal_connect(
+  'changed-progress' => sub {
+   my ( $widget, $progress, $message ) = @_;
+   if ( $progress == -1 ) {
+    $spbar->pulse;
+   }
+   else {
+    $spbar->set_fraction($progress);
+   }
+   $spbar->set_text($message) if ( defined $message );
+  }
+ );
+
+ $windows->signal_connect(
+  'finished-process' => sub {
+   my ( $widget, $process, $button_signal ) = @_;
+   $scbutton->signal_handler_disconnect($button_signal)
+     if ( defined $button_signal );
+   $shbox->hide;
+
+   $windows->scan_options( $SETTING{device} )
+     if ( $SETTING{'cycle sane handle'} and $process eq 'scan_pages' );
+  },
+  $signal
+ );
+
+ $windows->signal_connect(
+  'process-error' => sub {
+   my ( $widget, $msg ) = @_;
+   $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   $shbox->hide;
+   show_message_dialog( $windows, 'error', 'close', $d_sane->get($msg) );
+  }
+ );
+
+ $windows->signal_connect(
+  'changed-scan-option' => sub {
+   my ( $widget, $option, $value ) = @_;
+
+   # Note resolution
+   $SETTING{resolution} = $value
+     if ( $option eq SANE_NAME_SCAN_RESOLUTION );
+  }
+ );
+
+ # Profiles
+ my @profiles = keys %{ $SETTING{profile} };
+ foreach my $profile (@profiles) {
+  $windows->add_profile( $profile, $SETTING{profile}{$profile} );
  }
- $combobs->signal_connect(
-  changed => sub {
-   $buttond->set_active(TRUE);    # Set the radiobutton active
-   if ( $combobs->get_active == 0 ) {
-    $spin_buttoni->set_value(2);
-   }
-   else {
-    $spin_buttoni->set_value(-2);
-   }
-   if ( $#{ $slist->{data} } > -1 ) {
-    $spin_buttons->set_value( $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
-   }
-   else {
-    $spin_buttons->set_value(1);
-   }
+ $windows->signal_connect(
+  'changed-profile' => sub {
+   my ( $widget, $profile ) = @_;
+   $SETTING{'default profile'} = $profile;
   }
  );
- $tooltips->set_tip( $combobs,
-  $d->get('Sets which side of a double-sided document is scanned') );
- $combobs->set_active(0);
-
- # Have to do this here because setting the facing combobox switches it
- $buttons->set_active(TRUE);
- $hboxs->pack_end( $combobs, FALSE, FALSE, 0 );
-
- # Have to put the double-sided callback here to reference page side
- $buttond->signal_connect(
-  clicked => sub {
-   if ( $combobs->get_active == 0 ) {
-    $spin_buttoni->set_value(2);
-   }
-   else {
-    $spin_buttoni->set_value(-2);
-   }
-   if ( $#{ $slist->{data} } > -1 ) {
-    $spin_buttons->set_value( $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
-   }
-   else {
-    $spin_buttons->set_value(1);
-   }
+ $windows->signal_connect(
+  'added-profile' => sub {
+   my ( $widget, $name, $profile ) = @_;
+   $SETTING{profile}{$name} = $profile;
+  }
+ );
+ $windows->signal_connect(
+  'removed-profile' => sub {
+   my ( $widget, $profile ) = @_;
+   delete $SETTING{profile}{$profile};
   }
  );
 
-# Have to put the extended pagenumber checkbox here to reference simple controls
- $checkx->signal_connect(
-  toggled => sub {
-   if ( $checkx->get_active ) {
-    $frames->hide_all;
-    $framex->show_all;
-   }
-   else {
-    if ( $spin_buttoni->get_value == 1 ) {
-     $buttons->set_active(TRUE);
-    }
-    elsif ( $spin_buttoni->get_value > 0 ) {
-     $buttond->set_active(TRUE);
-     $combobs->set_active(0);
-    }
-    else {
-     $buttond->set_active(TRUE);
-     $combobs->set_active(1);
-    }
-    $frames->show_all;
-    $framex->hide_all;
-   }
+ # Update the default profile when the scan options change
+ $windows->signal_connect(
+  'changed-current-scan-options' => sub {
+   my ( $widget, $option_array ) = @_;
+   $SETTING{'default-scan-options'} = $option_array;
   }
  );
 
+ # Can't set the paper or profile until the options have been loaded
+ $windows->signal_connect(
+  'reloaded-scan-options' => sub {
+   $windows->set( 'paper-formats', $SETTING{Paper} );
+   $windows->set( 'paper',         $SETTING{'Paper size'} )
+     if ( defined $SETTING{'Paper size'} );
+
+   if ( defined $SETTING{'default profile'} ) {
+    $windows->set( 'profile', $SETTING{'default profile'} );
+   }
+   elsif ( defined $SETTING{'default-scan-options'} ) {
+    $windows->set( 'current-scan-options', $SETTING{'default-scan-options'} );
+   }
+   elsif (@profiles) {
+    $windows->set( 'profile', $profiles[0] );
+   }
+  }
+ );
+ $windows->signal_connect(
+  'changed-paper-formats' => sub {
+   my ( $widget, $formats ) = @_;
+   $SETTING{Paper} = $formats;
+  }
+ );
+ $windows->signal_connect(
+  'changed-paper' => sub {
+   my ( $widget, $paper ) = @_;
+   $SETTING{'Paper size'} = $paper;
+  }
+ );
+
+ my $vbox = $windows->get('vbox');
  my (
   $rotate,     $side,      $side2,      $tesslang,  $cflang,
   $rbutton,    $r2button,  $ubutton,    $obutton,   $comboboxs,
   $comboboxs2, $comboboxr, $comboboxr2, $comboboxe, $comboboxtl,
   $comboboxcl, $hboxtl,    $hboxcl
- ) = add_postprocessing_options($vbox1);
- my @rotate = @$rotate;
- @side = @$side;
+ ) = add_postprocessing_options($vbox);
+ my @rotate   = @$rotate;
+ my @side     = @$side;
  my @side2    = @$side2;
  my @tesslang = @$tesslang;
  my @cflang   = @$cflang;
 
- # Notebook page 2
- my $vbox2 = Gtk2::VBox->new;
- $notebook->append_page( $vbox2, $d->get('Scan Options') );
-
- # Frame for device-dependent options
- my $framed = Gtk2::Frame->new( $d->get('Device-dependent options') );
- $vbox2->pack_start( $framed, FALSE, FALSE, 0 );
- $vboxd = Gtk2::VBox->new;
- $vboxd->set_border_width($border_width);
- $framed->add($vboxd);
-
- # Scan profiles
- my $framesp = Gtk2::Frame->new( $d->get('Scan profiles') );
- $vbox2->pack_start( $framesp, FALSE, FALSE, 0 );
- my $vboxsp = Gtk2::VBox->new;
- $vboxsp->set_border_width($border_width);
- $framesp->add($vboxsp);
- my $combobsp = Gtk2::ComboBox->new_text;
- foreach my $profile ( keys %{ $SETTING{profile} } ) {
-  $combobsp->append_text($profile);
- }
- $combobsp->signal_connect(
-  changed => sub {
-   my $profile = $combobsp->get_active_text;
-   if ( defined $profile ) {
-    $logger->debug( "Setting profile $profile: ",
-     Dumper( $SETTING{profile}{$profile} ) );
-    if ( ref( $SETTING{profile}{$profile} ) eq 'HASH' ) {
-     while ( my ( $key, $value ) = each %{ $SETTING{profile}{$profile} } ) {
-      $SETTING{$key} = $value;
-     }
-    }
-    elsif ( ref( $SETTING{profile}{$profile} ) eq 'ARRAY' ) {
-     for ( @{ $SETTING{profile}{$profile} } ) {
-      my ( $name, $value ) = each %$_;
-      $SETTING{$name} = $value;
-     }
-    }
-    rescan_options( $device_list[ $combobd->get_active ]{name} )
-      if ( defined $combobd );
-   }
-  }
- );
- if ( defined $SETTING{'default profile'} ) {
-  Gscan2pdf::Dialog::Scan::Sane::set_combobox_by_text( $combobsp,
-   $SETTING{'default profile'} );
- }
- elsif ( Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp) > -1 ) {
-  $combobsp->set_active(0);
- }
- $combobsp->set_active(
-  Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp) );
- $vboxsp->pack_start( $combobsp, FALSE, FALSE, 0 );
- my $hboxsp = Gtk2::HBox->new;
- $vboxsp->pack_end( $hboxsp, FALSE, FALSE, 0 );
-
- # Save button
- my $vbutton = Gtk2::Button->new_from_stock('gtk-save');
- $vbutton->signal_connect(
-  clicked => sub {
-   my $dialog = Gtk2::Dialog->new(
-    $d->get('Name of scan profile'), $windows,
-    'destroy-with-parent',
-    'gtk-save'   => 'ok',
-    'gtk-cancel' => 'cancel'
+ # Show window
+ $windows->show_all;
+ $hboxtl->hide_all
+   if (
+  defined($hboxtl)
+  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
+   or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
    );
-   my $hbox  = Gtk2::HBox->new;
-   my $label = Gtk2::Label->new( $d->get('Name of scan profile') );
-   $hbox->pack_start( $label, FALSE, FALSE, 0 );
-   my $entry = Gtk2::Entry->new;
-   $entry->set_activates_default(TRUE);
-   $hbox->pack_end( $entry, TRUE, TRUE, 0 );
-   $dialog->vbox->add($hbox);
-   $dialog->set_default_response('ok');
-   $dialog->show_all;
+ $hboxcl->hide_all
+   if ( defined($hboxcl)
+  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
 
-   if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/x ) {
-    my $profile = $entry->get_text;
-    $SETTING{'default profile'} = $profile;
-    my %options = walk_options_tree();
-    $combobsp->append_text($profile);
-    $SETTING{profile}{$profile} = \%options;
-    $combobsp->set_active(
-     Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp) );
-   }
-   $dialog->destroy;
-  }
- );
- $hboxsp->pack_start( $vbutton, TRUE, TRUE, 0 );
-
- # Delete button
- my $dbutton = Gtk2::Button->new_from_stock('gtk-delete');
- $dbutton->signal_connect(
-  clicked => sub {
-   my $i = $combobsp->get_active;
-   if ( $i > -1 ) {
-    delete $SETTING{profile}{ $combobsp->get_active_text };
-    $combobsp->remove_text($i);
-    my $n = Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp);
-    $i = $n if ( $i > $n );
-    $combobsp->set_active($i) if ( $i > -1 );
-   }
-  }
- );
- $hboxsp->pack_start( $dbutton, FALSE, FALSE, 0 );
-
- # HBox for buttons
- my $hboxb = Gtk2::HBox->new;
- $vbox->pack_end( $hboxb, FALSE, FALSE, 0 );
-
- # Scan button
- $scan_button = Gtk2::Button->new( $d->get('Scan') );
- $hboxb->pack_start( $scan_button, TRUE, TRUE, 0 );
- $scan_button->signal_connect(
-  clicked => sub {
+ $windows->signal_connect(
+  'new-scan' => sub {
+   my ( $widget, $n ) = @_;
 
    # Update undo/redo buffers
    take_snapshot();
-
-   # Get selected device
-   $SETTING{device} = $device_list[ $combobd->get_active ]{name};
-
-   # ignore artificial paper size option
-   my %options = walk_options_tree();
-   delete $options{'Paper size'} if ( defined $options{'Paper size'} );
-
-   # Get selected number of pages
-   my $npages;
-   if ( $bscannum->get_active ) {
-    $SETTING{'pages to scan'} = $spin_buttonn->get_value;
-    $npages = $SETTING{'pages to scan'};
-   }
-   else {
-    $SETTING{'pages to scan'} = 'all';
-    if ( $step < 0 ) {
-     $npages =
-       $slist->pages_possible( $spin_buttons->get_value,
-      $spin_buttoni->get_value );
-    }
-    else {
-     $npages = 0;
-    }
-   }
-
-   $start = $spin_buttons->get_value;
-   $step  = $spin_buttoni->get_value;
-
-   if ( not $checkx->get_active and $start == 1 and $step < 0 ) {
-    show_message_dialog( $windows, 'error', 'cancel',
-     $d->get('Must scan facing pages first') );
-    return TRUE;
-   }
 
    $SETTING{'rotate facing'}  = 0;
    $SETTING{'rotate reverse'} = 0;
@@ -3900,19 +3763,6 @@ sub scan_dialog {
    }
    $logger->info("rotate facing $SETTING{'rotate facing'}");
    $logger->info("rotate reverse $SETTING{'rotate reverse'}");
-   my $rotate_facing  = $SETTING{'rotate facing'};
-   my $rotate_reverse = $SETTING{'rotate reverse'};
-   $logger->info( $duplex ? "" : "non-", "duplex mode" );
-   if ( not $duplex ) {
-    if ( $step > 0 ) {
-     $rotate_reverse = $SETTING{'rotate facing'};
-    }
-    else {
-     $rotate_facing = $SETTING{'rotate reverse'};
-    }
-   }
-   $logger->info("rotate_facing $rotate_facing");
-   $logger->info("rotate_reverse $rotate_reverse");
 
    $SETTING{'unpaper on scan'} = $ubutton->get_active;
    $logger->info("unpaper $SETTING{'unpaper on scan'}");
@@ -3926,58 +3776,541 @@ sub scan_dialog {
     $SETTING{'ocr language'} = $cflang[ $comboboxcl->get_active ]->[0]
       if ( $SETTING{'ocr engine'} eq 'cuneiform' );
    }
-   scan_pages(
-    device         => $SETTING{device},
-    npages         => $npages,
-    offset         => $start - $step,
-    step           => $step,
-    rotate_facing  => $rotate_facing,
-    rotate_reverse => $rotate_reverse,
-    unpaper        => $SETTING{'unpaper on scan'},
-    ocr            => $SETTING{'OCR on scan'},
-    device_options => \%options
-   );
+
+   # If the scan can't be loaded then blow the scanning dialog away and
+   # show an error
+   $rotate = $n % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
+   if ( defined $test_image ) {
+    import_scan(
+     filename => $test_image,
+     page     => $n,
+     delete   => FALSE,
+     rotate   => $rotate,
+     unpaper  => $SETTING{'unpaper on scan'},
+     ocr      => $SETTING{'OCR on scan'}
+    );
+   }
+   else {
+    $SETTING{resolution} =
+      defined( $SETTING{resolution} )
+      ? $SETTING{resolution}
+      : $Gscan2pdf::Document::POINTS_PER_INCH;
+    $logger->info("Importing scan with resolution=$SETTING{resolution}");
+    import_scan(
+     filename   => File::Spec->catdir( $session, "out$n.pnm" ),
+     page       => $n,
+     resolution => $SETTING{resolution},
+     delete     => TRUE,
+     rotate     => $rotate,
+     unpaper    => $SETTING{'unpaper on scan'},
+     ocr        => $SETTING{'OCR on scan'}
+    );
+   }
   }
  );
 
- # Cancel button
- my $cbutton = Gtk2::Button->new_from_stock('gtk-close');
- $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
- $cbutton->signal_connect( clicked => sub { $windows->hide; } );
-
- if ($test) {
-  parse_device_list( $test->{output} );
-  populate_device_list($hboxd);
- }
- elsif ( not @device ) {
-  get_devices($hboxd);
+ if (@device_list) {
+  $windows->set( 'device-list', \@device_list );
  }
  else {
-  populate_device_list($hboxd);
+  $windows->get_devices;
  }
 
- # Show window
- $windows->show_all;
- $framex->hide_all;
- $hboxtl->hide_all
-   if (
-  defined($hboxtl)
-  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
-   or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
-   );
- $hboxcl->hide_all
-   if ( defined($hboxcl)
-  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
-
-# Has to be done after showing the window, otherwise the window doesn't get centred.
- if ($test) {
-  $scan_button->grab_focus;
- }
- else {
-  $scan_button->set_sensitive(FALSE);
- }
  return;
 }
+
+# sub scan_dialog {
+
+#  if ( defined $windows ) {
+#   $windows->present;
+#   return;
+#  }
+
+#  # scan pop-up window
+#  $windows = Gscan2pdf::Dialog->new(
+#   'transient-for'  => $window,
+#   title            => $d->get('Scan Document'),
+#   'hide-on-delete' => TRUE,
+#   border_width     => $border_width
+#  );
+#  my $vbox = $windows->get('vbox');
+
+#  # HBox for devices
+#  my $hboxd = Gtk2::HBox->new;
+#  $vbox->pack_start( $hboxd, FALSE, FALSE, 0 );
+
+#  # Notebook to collate options
+#  my $notebook = Gtk2::Notebook->new;
+#  $notebook->set_scrollable(TRUE);
+#  $vbox->pack_start( $notebook, TRUE, TRUE, 0 );
+
+#  # Notebook page 1
+#  my $vbox1 = Gtk2::VBox->new;
+#  $notebook->append_page( $vbox1, $d->get('Page Options') );
+
+#  # Frame for # pages
+#  my $framen = Gtk2::Frame->new( $d->get('# Pages') );
+#  $vbox1->pack_start( $framen, FALSE, FALSE, 0 );
+#  my $vboxn = Gtk2::VBox->new;
+#  $vboxn->set_border_width($border_width);
+#  $framen->add($vboxn);
+
+#  #the first radio button has to set the group,
+#  #which is undef for the first button
+#  # All button
+#  $bscanall = Gtk2::RadioButton->new( undef, $d->get('All') );
+#  $tooltips->set_tip( $bscanall, $d->get('Scan all pages') );
+#  $vboxn->pack_start( $bscanall, TRUE, TRUE, 0 );
+#  $bscanall->signal_connect(
+#   clicked => sub {
+#    $batch_scan->set_active(0) if ( defined $batch_scan );
+#   }
+#  );
+
+#  # Entry button
+#  my $hboxn = Gtk2::HBox->new;
+#  $vboxn->pack_start( $hboxn, TRUE, TRUE, 0 );
+#  $bscannum = Gtk2::RadioButton->new( $bscanall->get_group, "#:" );
+#  $tooltips->set_tip( $bscannum, $d->get('Set number of pages to scan') );
+#  $hboxn->pack_start( $bscannum, FALSE, FALSE, 0 );
+
+#  # Number of pages
+#  $spin_buttonn = Gtk2::SpinButton->new_with_range( 1, 999, 1 );
+#  $tooltips->set_tip( $spin_buttonn, $d->get('Set number of pages to scan') );
+#  $hboxn->pack_end( $spin_buttonn, FALSE, FALSE, 0 );
+
+#  # Set default
+#  if ( $SETTING{'pages to scan'} eq 'all' ) {
+#   $bscanall->set_active(TRUE);
+#  }
+#  else {
+#   $bscannum->set_active(TRUE);
+#   $spin_buttonn->set_value( $SETTING{'pages to scan'} );
+#  }
+
+#  # Toggle to switch between basic and extended modes
+#  my $checkx = Gtk2::CheckButton->new( $d->get('Extended page numbering') );
+#  $vbox1->pack_start( $checkx, FALSE, FALSE, 0 );
+
+#  # Frame for extended mode
+#  my $framex = Gtk2::Frame->new( $d->get('Page number') );
+#  $vbox1->pack_start( $framex, FALSE, FALSE, 0 );
+#  my $vboxx = Gtk2::VBox->new;
+#  $vboxx->set_border_width($border_width);
+#  $framex->add($vboxx);
+
+#  # SpinButton for starting page number
+#  my $hboxxs = Gtk2::HBox->new;
+#  $vboxx->pack_start( $hboxxs, FALSE, FALSE, 0 );
+#  my $labelxs = Gtk2::Label->new( $d->get('Start') );
+#  $hboxxs->pack_start( $labelxs, FALSE, FALSE, 0 );
+#  $start = 1;
+#  $spin_buttons = Gtk2::SpinButton->new_with_range( 1, 99999, 1 );
+#  $hboxxs->pack_end( $spin_buttons, FALSE, FALSE, 0 );
+
+#  # SpinButton for page number increment
+#  my $hboxi = Gtk2::HBox->new;
+#  $vboxx->pack_start( $hboxi, FALSE, FALSE, 0 );
+#  my $labelxi = Gtk2::Label->new( $d->get('Increment') );
+#  $hboxi->pack_start( $labelxi, FALSE, FALSE, 0 );
+#  $spin_buttoni = Gtk2::SpinButton->new_with_range( -99, 99, 1 );
+#  my $step = 1;
+#  $spin_buttoni->set_value($step);
+#  $hboxi->pack_end( $spin_buttoni, FALSE, FALSE, 0 );
+#  $spin_buttoni->signal_connect(
+#   'value-changed' => sub {
+#    $spin_buttoni->set_value( -$step ) if ( $spin_buttoni->get_value == 0 );
+#    $step = $spin_buttoni->get_value;
+#   }
+#  );
+
+#  # Check whether the start page exists
+#  $spin_buttons->signal_connect( 'value-changed' => \&update_start );
+
+#  # Setting this here to fire callback running update_start
+#  $spin_buttons->set_value($start);
+
+#  # Callback on changing number of pages
+#  $spin_buttonn->signal_connect(
+#   'value-changed' => sub {
+#    $bscannum->set_active(TRUE);    # Set the radiobutton active
+#    my $n = $spin_buttonn->get_value;
+#    $batch_scan->set_active(0) if ( defined($batch_scan) and $n > 1 );
+
+#    # Check that there is room in the list for the number of pages
+#    update_number();
+#   }
+#  );
+
+#  # Frame for standard mode
+#  $frames = Gtk2::Frame->new( $d->get('Source document') );
+#  $vbox1->pack_start( $frames, FALSE, FALSE, 0 );
+#  my $vboxs = Gtk2::VBox->new;
+#  $vboxs->set_border_width($border_width);
+#  $frames->add($vboxs);
+
+#  # Single sided button
+#  my $buttons = Gtk2::RadioButton->new( undef, $d->get('Single sided') );
+#  $tooltips->set_tip( $buttons, $d->get('Source document is single-sided') );
+#  $vboxs->pack_start( $buttons, TRUE, TRUE, 0 );
+#  $buttons->signal_connect(
+#   clicked => sub {
+#    $spin_buttoni->set_value(1);
+#   }
+#  );
+
+#  # Double sided button
+#  my $buttond =
+#    Gtk2::RadioButton->new( $buttons->get_group, $d->get('Double sided') );
+#  $tooltips->set_tip( $buttond, $d->get('Source document is double-sided') );
+#  $vboxs->pack_start( $buttond, FALSE, FALSE, 0 );
+
+#  # Facing/reverse page button
+#  my $hboxs = Gtk2::HBox->new;
+#  $vboxs->pack_start( $hboxs, TRUE, TRUE, 0 );
+#  my $labels = Gtk2::Label->new( $d->get('Side to scan') );
+#  $hboxs->pack_start( $labels, FALSE, FALSE, 0 );
+
+#  my $combobs = Gtk2::ComboBox->new_text;
+#  my @side = ( $d->get('Facing'), $d->get('Reverse') );
+#  foreach (@side) {
+#   $combobs->append_text($_);
+#  }
+#  $combobs->signal_connect(
+#   changed => sub {
+#    $buttond->set_active(TRUE);    # Set the radiobutton active
+#    if ( $combobs->get_active == 0 ) {
+#     $spin_buttoni->set_value(2);
+#    }
+#    else {
+#     $spin_buttoni->set_value(-2);
+#    }
+#    if ( $#{ $slist->{data} } > -1 ) {
+#     $spin_buttons->set_value( $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
+#    }
+#    else {
+#     $spin_buttons->set_value(1);
+#    }
+#   }
+#  );
+#  $tooltips->set_tip( $combobs,
+#   $d->get('Sets which side of a double-sided document is scanned') );
+#  $combobs->set_active(0);
+
+#  # Have to do this here because setting the facing combobox switches it
+#  $buttons->set_active(TRUE);
+#  $hboxs->pack_end( $combobs, FALSE, FALSE, 0 );
+
+#  # Have to put the double-sided callback here to reference page side
+#  $buttond->signal_connect(
+#   clicked => sub {
+#    if ( $combobs->get_active == 0 ) {
+#     $spin_buttoni->set_value(2);
+#    }
+#    else {
+#     $spin_buttoni->set_value(-2);
+#    }
+#    if ( $#{ $slist->{data} } > -1 ) {
+#     $spin_buttons->set_value( $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
+#    }
+#    else {
+#     $spin_buttons->set_value(1);
+#    }
+#   }
+#  );
+
+# # Have to put the extended pagenumber checkbox here to reference simple controls
+#  $checkx->signal_connect(
+#   toggled => sub {
+#    if ( $checkx->get_active ) {
+#     $frames->hide_all;
+#     $framex->show_all;
+#    }
+#    else {
+#     if ( $spin_buttoni->get_value == 1 ) {
+#      $buttons->set_active(TRUE);
+#     }
+#     elsif ( $spin_buttoni->get_value > 0 ) {
+#      $buttond->set_active(TRUE);
+#      $combobs->set_active(0);
+#     }
+#     else {
+#      $buttond->set_active(TRUE);
+#      $combobs->set_active(1);
+#     }
+#     $frames->show_all;
+#     $framex->hide_all;
+#    }
+#   }
+#  );
+
+#  my (
+#   $rotate,     $side,      $side2,      $tesslang,  $cflang,
+#   $rbutton,    $r2button,  $ubutton,    $obutton,   $comboboxs,
+#   $comboboxs2, $comboboxr, $comboboxr2, $comboboxe, $comboboxtl,
+#   $comboboxcl, $hboxtl,    $hboxcl
+#  ) = add_postprocessing_options($vbox1);
+#  my @rotate = @$rotate;
+#  @side = @$side;
+#  my @side2    = @$side2;
+#  my @tesslang = @$tesslang;
+#  my @cflang   = @$cflang;
+
+#  # Notebook page 2
+#  my $vbox2 = Gtk2::VBox->new;
+#  $notebook->append_page( $vbox2, $d->get('Scan Options') );
+
+#  # Frame for device-dependent options
+#  my $framed = Gtk2::Frame->new( $d->get('Device-dependent options') );
+#  $vbox2->pack_start( $framed, FALSE, FALSE, 0 );
+#  $vboxd = Gtk2::VBox->new;
+#  $vboxd->set_border_width($border_width);
+#  $framed->add($vboxd);
+
+#  # Scan profiles
+#  my $framesp = Gtk2::Frame->new( $d->get('Scan profiles') );
+#  $vbox2->pack_start( $framesp, FALSE, FALSE, 0 );
+#  my $vboxsp = Gtk2::VBox->new;
+#  $vboxsp->set_border_width($border_width);
+#  $framesp->add($vboxsp);
+#  my $combobsp = Gtk2::ComboBox->new_text;
+#  foreach my $profile ( keys %{ $SETTING{profile} } ) {
+#   $combobsp->append_text($profile);
+#  }
+#  $combobsp->signal_connect(
+#   changed => sub {
+#    my $profile = $combobsp->get_active_text;
+#    if ( defined $profile ) {
+#     $logger->debug( "Setting profile $profile: ",
+#      Dumper( $SETTING{profile}{$profile} ) );
+#     if ( ref( $SETTING{profile}{$profile} ) eq 'HASH' ) {
+#      while ( my ( $key, $value ) = each %{ $SETTING{profile}{$profile} } ) {
+#       $SETTING{$key} = $value;
+#      }
+#     }
+#     elsif ( ref( $SETTING{profile}{$profile} ) eq 'ARRAY' ) {
+#      for ( @{ $SETTING{profile}{$profile} } ) {
+#       my ( $name, $value ) = each %$_;
+#       $SETTING{$name} = $value;
+#      }
+#     }
+#     rescan_options( $device_list[ $combobd->get_active ]{name} )
+#       if ( defined $combobd );
+#    }
+#   }
+#  );
+#  if ( defined $SETTING{'default profile'} ) {
+#   Gscan2pdf::Dialog::Scan::Sane::set_combobox_by_text( $combobsp,
+#    $SETTING{'default profile'} );
+#  }
+#  elsif ( Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp) > -1 ) {
+#   $combobsp->set_active(0);
+#  }
+#  $combobsp->set_active(
+#   Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp) );
+#  $vboxsp->pack_start( $combobsp, FALSE, FALSE, 0 );
+#  my $hboxsp = Gtk2::HBox->new;
+#  $vboxsp->pack_end( $hboxsp, FALSE, FALSE, 0 );
+
+#  # Save button
+#  my $vbutton = Gtk2::Button->new_from_stock('gtk-save');
+#  $vbutton->signal_connect(
+#   clicked => sub {
+#    my $dialog = Gtk2::Dialog->new(
+#     $d->get('Name of scan profile'), $windows,
+#     'destroy-with-parent',
+#     'gtk-save'   => 'ok',
+#     'gtk-cancel' => 'cancel'
+#    );
+#    my $hbox  = Gtk2::HBox->new;
+#    my $label = Gtk2::Label->new( $d->get('Name of scan profile') );
+#    $hbox->pack_start( $label, FALSE, FALSE, 0 );
+#    my $entry = Gtk2::Entry->new;
+#    $entry->set_activates_default(TRUE);
+#    $hbox->pack_end( $entry, TRUE, TRUE, 0 );
+#    $dialog->vbox->add($hbox);
+#    $dialog->set_default_response('ok');
+#    $dialog->show_all;
+
+#    if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/x ) {
+#     my $profile = $entry->get_text;
+#     $SETTING{'default profile'} = $profile;
+#     my %options = walk_options_tree();
+#     $combobsp->append_text($profile);
+#     $SETTING{profile}{$profile} = \%options;
+#     $combobsp->set_active(
+#      Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp) );
+#    }
+#    $dialog->destroy;
+#   }
+#  );
+#  $hboxsp->pack_start( $vbutton, TRUE, TRUE, 0 );
+
+#  # Delete button
+#  my $dbutton = Gtk2::Button->new_from_stock('gtk-delete');
+#  $dbutton->signal_connect(
+#   clicked => sub {
+#    my $i = $combobsp->get_active;
+#    if ( $i > -1 ) {
+#     delete $SETTING{profile}{ $combobsp->get_active_text };
+#     $combobsp->remove_text($i);
+#     my $n = Gscan2pdf::Dialog::Scan::Sane::num_rows_combobox($combobsp);
+#     $i = $n if ( $i > $n );
+#     $combobsp->set_active($i) if ( $i > -1 );
+#    }
+#   }
+#  );
+#  $hboxsp->pack_start( $dbutton, FALSE, FALSE, 0 );
+
+#  # HBox for buttons
+#  my $hboxb = Gtk2::HBox->new;
+#  $vbox->pack_end( $hboxb, FALSE, FALSE, 0 );
+
+#  # Scan button
+#  $scan_button = Gtk2::Button->new( $d->get('Scan') );
+#  $hboxb->pack_start( $scan_button, TRUE, TRUE, 0 );
+#  $scan_button->signal_connect(
+#   clicked => sub {
+
+#    # Update undo/redo buffers
+#    take_snapshot();
+
+#    # Get selected device
+#    $SETTING{device} = $device_list[ $combobd->get_active ]{name};
+
+#    # ignore artificial paper size option
+#    my %options = walk_options_tree();
+#    delete $options{'Paper size'} if ( defined $options{'Paper size'} );
+
+#    # Get selected number of pages
+#    my $npages;
+#    if ( $bscannum->get_active ) {
+#     $SETTING{'pages to scan'} = $spin_buttonn->get_value;
+#     $npages = $SETTING{'pages to scan'};
+#    }
+#    else {
+#     $SETTING{'pages to scan'} = 'all';
+#     if ( $step < 0 ) {
+#      $npages =
+#        $slist->pages_possible( $spin_buttons->get_value,
+#       $spin_buttoni->get_value );
+#     }
+#     else {
+#      $npages = 0;
+#     }
+#    }
+
+#    $start = $spin_buttons->get_value;
+#    $step  = $spin_buttoni->get_value;
+
+#    if ( not $checkx->get_active and $start == 1 and $step < 0 ) {
+#     show_message_dialog( $windows, 'error', 'cancel',
+#      $d->get('Must scan facing pages first') );
+#     return TRUE;
+#    }
+
+#    $SETTING{'rotate facing'}  = 0;
+#    $SETTING{'rotate reverse'} = 0;
+#    if ( $rbutton->get_active ) {
+#     if ( $side[ $comboboxs->get_active ]->[0] eq 'both' ) {
+#      $SETTING{'rotate facing'}  = $rotate[ $comboboxr->get_active ]->[0];
+#      $SETTING{'rotate reverse'} = $SETTING{'rotate facing'};
+#     }
+#     elsif ( $side[ $comboboxs->get_active ]->[0] eq 'facing' ) {
+#      $SETTING{'rotate facing'} = $rotate[ $comboboxr->get_active ]->[0];
+#     }
+#     else {
+#      $SETTING{'rotate reverse'} = $rotate[ $comboboxr->get_active ]->[0];
+#     }
+#     if ( $r2button->get_active ) {
+#      if ( $side2[ $comboboxs2->get_active ]->[0] eq 'facing' ) {
+#       $SETTING{'rotate facing'} = $rotate[ $comboboxr2->get_active ]->[0];
+#      }
+#      else {
+#       $SETTING{'rotate reverse'} = $rotate[ $comboboxr2->get_active ]->[0];
+#      }
+#     }
+#    }
+#    $logger->info("rotate facing $SETTING{'rotate facing'}");
+#    $logger->info("rotate reverse $SETTING{'rotate reverse'}");
+#    my $rotate_facing  = $SETTING{'rotate facing'};
+#    my $rotate_reverse = $SETTING{'rotate reverse'};
+#    $logger->info( $duplex ? "" : "non-", "duplex mode" );
+#    if ( not $duplex ) {
+#     if ( $step > 0 ) {
+#      $rotate_reverse = $SETTING{'rotate facing'};
+#     }
+#     else {
+#      $rotate_facing = $SETTING{'rotate reverse'};
+#     }
+#    }
+#    $logger->info("rotate_facing $rotate_facing");
+#    $logger->info("rotate_reverse $rotate_reverse");
+
+#    $SETTING{'unpaper on scan'} = $ubutton->get_active;
+#    $logger->info("unpaper $SETTING{'unpaper on scan'}");
+#    $SETTING{'OCR on scan'} = $obutton->get_active;
+#    $logger->info("OCR $SETTING{'OCR on scan'}");
+#    if ( $SETTING{'OCR on scan'} ) {
+#     $SETTING{'ocr engine'}   = $ocr_engine[ $comboboxe->get_active ]->[0];
+#     $SETTING{'ocr language'} = $tesslang[ $comboboxtl->get_active ]->[0]
+#       if ( $SETTING{'ocr engine'} eq 'tesseract'
+#      or $SETTING{'ocr engine'} eq 'ocropus' );
+#     $SETTING{'ocr language'} = $cflang[ $comboboxcl->get_active ]->[0]
+#       if ( $SETTING{'ocr engine'} eq 'cuneiform' );
+#    }
+#    scan_pages(
+#     device         => $SETTING{device},
+#     npages         => $npages,
+#     offset         => $start - $step,
+#     step           => $step,
+#     rotate_facing  => $rotate_facing,
+#     rotate_reverse => $rotate_reverse,
+#     unpaper        => $SETTING{'unpaper on scan'},
+#     ocr            => $SETTING{'OCR on scan'},
+#     device_options => \%options
+#    );
+#   }
+#  );
+
+#  # Cancel button
+#  my $cbutton = Gtk2::Button->new_from_stock('gtk-close');
+#  $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
+#  $cbutton->signal_connect( clicked => sub { $windows->hide; } );
+
+#  if ($test) {
+#   parse_device_list( $test->{output} );
+#   populate_device_list($hboxd);
+#  }
+#  elsif ( not @device ) {
+#   get_devices($hboxd);
+#  }
+#  else {
+#   populate_device_list($hboxd);
+#  }
+
+#  # Show window
+#  $windows->show_all;
+#  $framex->hide_all;
+#  $hboxtl->hide_all
+#    if (
+#   defined($hboxtl)
+#   and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
+#    or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
+#    );
+#  $hboxcl->hide_all
+#    if ( defined($hboxcl)
+#   and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
+
+# # Has to be done after showing the window, otherwise the window doesn't get centred.
+#  if ($test) {
+#   $scan_button->grab_focus;
+#  }
+#  else {
+#   $scan_button->set_sensitive(FALSE);
+#  }
+#  return;
+# }
 
 sub add_postprocessing_options {
  my ($vbox) = @_;
@@ -4206,98 +4539,6 @@ sub add_postprocessing_options {
   $comboboxs2, $comboboxr, $comboboxr2, $comboboxe, $comboboxtl,
   $comboboxcl, $hboxtl,    $hboxcl
  );
-}
-
-# Run scanimage --formatted-device-list
-
-sub get_devices {
- my $hboxd = shift;
-
- # Set up ProgressBar
- my $pbar = Gtk2::ProgressBar->new;
- $pbar->set_pulse_step(.1);
- $pbar->set_text( $d->get('Fetching list of devices') );
- $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
- $pbar->show;
-
- Gscan2pdf::Frontend::CLI->get_devices(
-  prefix            => $SETTING{'scan prefix'},
-  running_callback  => sub { $pbar->pulse },
-  finished_callback => sub {
-   my ($device_list) = @_;
-   $pbar->destroy;
-
-   if ( $#{$device_list} == -1 ) {
-    $windows->destroy;
-    undef $windows;
-    show_message_dialog( $window, 'error', 'close',
-     $d->get('No devices found') );
-    return;
-   }
-
-   # Note any duplicate device names and delete if necessary
-   my %seen;
-   my $i = 0;
-   while ( $i < @$device_list ) {
-    $seen{ $device_list->[$i]{name} }++;
-    if ( $seen{ $device_list->[$i]{name} } > 1 ) {
-     splice @$device_list, $i, 1;
-    }
-    else {
-     $i++;
-    }
-   }
-
-   # Note any duplicate model names and add the device if necessary
-   undef %seen;
-   for (@$device_list) {
-    $_->{model} = $_->{name} unless ( defined $_->{model} );
-    $seen{ $_->{model} }++;
-   }
-   for (@$device_list) {
-    if ( defined $_->{vendor} ) {
-     $_->{label} = "$_->{vendor} $_->{model}";
-    }
-    else {
-     $_->{label} = $_->{model};
-    }
-    $_->{label} .= " on $_->{name}" if ( $seen{ $_->{model} } > 1 );
-   }
-
-   if (@device_list) {    # Update combobox
-    $i = 0;
-    while ( $i < @device_list ) {
-     if ( @$device_list
-      and $i < @$device_list
-      and $device_list[$i]{label} ne $device_list->[$i]{label} )
-     {
-      $combobd->insert_text( $i, $device_list->[$i]{label} );
-      $combobd->remove_text($i);
-     }
-     $i++;
-    }
-    while ( $i < @$device_list ) {
-     $combobd->append_text( $device_list->[ $i++ ]{label} );
-    }
-    @device_list = @{$device_list};
-    set_device();
-    $combobd->show;
-    $labeld->show;
-   }
-   else {    # New combobox
-    @device_list = @{$device_list};
-    populate_device_list($hboxd);
-   }
-
-   # # If device not set by config and there is a default device, then set it
-   # $SETTING{device} = $1
-   #   if ( not defined( $SETTING{device} )
-   #  and defined($output)
-   #  and $output =~ /default\ device\ is\ `(.*)'/x );
-
-  }
- );
- return;
 }
 
 # Scan
