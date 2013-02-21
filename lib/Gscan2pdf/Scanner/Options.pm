@@ -50,7 +50,8 @@ sub num_options {
 
 sub delete_by_index {
  my ( $self, $i ) = @_;
- delete $self->{hash}{ $self->{array}[$i]{name} };
+ delete $self->{hash}{ $self->{array}[$i]{name} }
+   if ( defined $self->{array}[$i]{name} );
  undef $self->{array}[$i];
  return;
 }
@@ -146,114 +147,151 @@ sub supports_paper {
 # parse the scanimage/scanadf output into an array and a hash
 
 sub options2hash {
-
  my ($output) = @_;
- my ( @options, %hash );
- while (
+
+ # Remove everything above the options
+ if (
   $output =~ /
+                       [\S\s]* # output header
+                       Options\ specific\ to\ device .*:\n # line above options
+                       ([\S\s]*) # options
+                /x
+   )
+ {
+  $output = $1;
+ }
+ else {
+  return;
+ }
+
+ my ( @options, %hash );
+
+ while (1) {
+  my %option;
+  my $values = qr/(?:(?:\ |\[=\()([^\[].*?)(?:\)\])?)?/x;
+
+  # parse group
+  if (
+   $output =~ /
+                      ^\ \ # two-character indent
+                      (.*) # the title
+                      :\n  # a colon at the end of the line
+                      ([\S\s]*) # the rest of the output
+                    /x
+    )
+  {
+   $option{title} = $1;
+
+   # Remove everything on the option line and above.
+   $output = $2;
+  }
+
+  # parse option
+  elsif (
+   $output =~ /
+                      ^\ {4,} # four-character indent
                       -+        # at least one dash
                       ([\w\-]+) # the option name
-                      \ ?       # an optional space
-                      (.*)      # possible values
-                      \         # a space
-                      \[(.*)\]  # the default value, surrounded by square brackets
+                      $values      # optionally followed by the possible values
+                      (?:\ \[([\S\s]*?)\])?  # optionally a space, followed by the default value in square brackets
                       \ *\n     # the rest of the line
                       ([\S\s]*) # the rest of the output
                     /x
-   )
- {
-  my %option;
-  $option{name} = $1;
-  my $values = $2;
-  $option{default} = $3;
-  $hash{ $option{name} } = \%option;
+    )
+  {
+   $option{name} = $1;
+   parse_values( \%option, $2 );
+   $option{default} = $3 if ( defined $3 );
+
+   # Remove everything on the option line and above.
+   $output = $4;
+
+   $hash{ $option{name} } = \%option;
+
+   # Parse tooltips from option description based on an 8-character indent.
+   my $tip = '';
+   while (
+    $output =~ /
+                       ^\ {8,}   # 8-character indent
+                       (.*)\n    # text
+                       ([\S\s]*) # rest of output
+                     /x
+     )
+   {
+    if ( $tip eq '' ) {
+     $tip = $1;
+    }
+    else {
+     $tip = "$tip $1";
+    }
+
+    # Remove everything on the description line and above.
+    $output = $2;
+   }
+
+   $option{tip} = $tip;
+  }
+  else {
+   last;
+  }
   push @options, \%option;
   $option{index} = $#options;
+ }
+ return \@options, \%hash;
+}
 
-  # Remove everything on the option line and above.
-  $output = $4;
+# parse out range, step and units from the values string
 
-  # Strip out the extra characters by e.g. [=(yes|no)]
-  $values = $1
-    if (
-   $values =~ /
-                                 \[   # an opening square bracket
-                                 =    # an equals sign
-                                 \(   # an opening round bracket
-                                 (.*) # the options
-                                 \)   # a closing round bracket
-                                 \]   # a closing square bracket
-                               /x
-    );
-
-  if (
-   $values =~ /
+sub parse_values {
+ my ( $option, $values ) = @_;
+ if (
+  defined($values)
+  and $values =~ /
                     (-?\d*\.?\d*)          # min value, possibly negative or floating
                     \.\.                   # two dots
                     (\d*\.?\d*)            # max value, possible floating
                     (pel|bit|mm|dpi|%|us)? # optional unit
                   /x
-    )
-  {
-   $option{constraint}{min} = $1;
-   $option{constraint}{max} = $2;
-   $option{unit} = $3 if ( defined $3 );
-   $option{constraint}{step} = $1
-     if (
-    $values =~ /
+   )
+ {
+  $option->{constraint}{min} = $1;
+  $option->{constraint}{max} = $2;
+  $option->{unit} = $3 if ( defined $3 );
+  $option->{constraint}{step} = $1
+    if (
+   $values =~ /
                        \(              # opening round bracket
                        in\ steps\ of\  # text
                        (\d*\.?\d+)     # step
                        \)              # closing round bracket
                      /x
-     );
-  }
-  else {
-   my @array;
-   while ( defined $values ) {
-    my $i = index( $values, '|' );
-    my $value;
-    if ( $i > -1 ) {
-     $value  = substr( $values, 0,      $i );
-     $values = substr( $values, $i + 1, length($values) );
-    }
-    else {
-     if ( $values =~ /(pel|bit|mm|dpi|%|us)$/x ) {
-      $option{unit} = $1;
-      $values = substr( $values, 0, index( $values, $option{unit} ) );
-     }
-     $value = $values;
-     undef $values;
-    }
-    push @array, $value if ( $value ne '' );
-   }
-   $option{values} = [@array] if (@array);
-  }
-
-  # Parse tooltips from option description based on an 8-character indent.
-  my $tip = '';
-  while (
-   $output =~ /
-                       ^\ {8,}   # 8-character indent
-                       (.*)\n    # text
-                       ([\S\s]*) # rest of output
-                     /x
-    )
-  {
-   if ( $tip eq '' ) {
-    $tip = $1;
+    );
+ }
+ elsif ( defined($values) and $values eq '<string>' ) {
+  $option->{values} = $values;
+ }
+ else {
+  my @array;
+  while ( defined $values ) {
+   my $i = index( $values, '|' );
+   my $value;
+   if ( $i > -1 ) {
+    $value  = substr( $values, 0,      $i );
+    $values = substr( $values, $i + 1, length($values) );
    }
    else {
-    $tip = "$tip $1";
+    if ( $values =~ /(pel|bit|mm|dpi|%|us)$/x ) {
+     $option->{unit} = $1;
+     $values = substr( $values, 0, index( $values, $option->{unit} ) );
+    }
+    $value = $values;
+    undef $values;
    }
-
-   # Remove everything on the description line and above.
-   $output = $2;
+   push @array, $value if ( $value ne '' );
   }
-
-  $option{tip} = $tip;
+  $option->{values} = [@array] if (@array);
  }
- return \@options, \%hash;
+ return;
 }
 
 1;

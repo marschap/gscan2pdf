@@ -20,15 +20,19 @@ my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
 my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
  {
+  index => 0,
+  title => 'Scan mode',
+ },
+ {
   name      => 'mode',
-  index     => 0,
+  index     => 1,
   'tip'     => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
   'default' => 'Color',
   'values'  => [ 'Lineart', 'Grayscale', 'Color' ],
  },
  {
   name       => 'resolution',
-  index      => 1,
+  index      => 2,
   'tip'      => 'Sets the resolution of the scanned image.',
   'default'  => '75',
   constraint => {
@@ -38,8 +42,12 @@ my @that     = (
   'unit' => 'dpi',
  },
  {
+  index => 3,
+  title => 'Advanced',
+ },
+ {
   name       => 'contrast',
-  index      => 2,
+  index      => 4,
   'tip'      => 'Controls the contrast of the acquired image.',
   'default'  => 'inactive',
   constraint => {
@@ -49,7 +57,7 @@ my @that     = (
  },
  {
   name  => 'compression',
-  index => 3,
+  index => 5,
   'tip' =>
 'Selects the scanner compression method for faster scans, possibly at the expense of image quality.',
   'default' => 'JPEG',
@@ -57,7 +65,7 @@ my @that     = (
  },
  {
   name  => 'jpeg-compression-factor',
-  index => 4,
+  index => 6,
   'tip' =>
 'Sets the scanner JPEG compression factor.  Larger numbers mean better compression, and smaller numbers mean better image quality.',
   'default'  => '10',
@@ -68,7 +76,7 @@ my @that     = (
  },
  {
   name  => 'batch-scan',
-  index => 5,
+  index => 7,
   'tip' =>
 'Guarantees that a "no documents" condition will be returned after the last scanned page, to prevent endless flatbed scans after a batch scan. For some models, option changes in the middle of a batch scan don\'t take effect until after the last page.',
   'default' => 'no',
@@ -76,7 +84,7 @@ my @that     = (
  },
  {
   name  => 'source',
-  index => 6,
+  index => 8,
   'tip' =>
 'Selects the desired scan source for models with both flatbed and automatic document feeder (ADF) capabilities.  The "Auto" setting means that the ADF will be used if it\'s loaded, and the flatbed (if present) will be used otherwise.',
   'default' => 'Auto',
@@ -84,15 +92,19 @@ my @that     = (
  },
  {
   name  => 'duplex',
-  index => 7,
+  index => 9,
   'tip' =>
 'Enables scanning on both sides of the page for models with duplex-capable document feeders.  For pages printed in "book"-style duplex mode, one side will be scanned upside-down.  This feature is experimental.',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ],
  },
  {
+  index => 10,
+  title => 'Geometry',
+ },
+ {
   name  => 'length-measurement',
-  index => 8,
+  index => 11,
   'tip' =>
 'Selects how the scanned image length is measured and reported, which is impossible to know in advance for scrollfed scans.',
   'default' => 'Padded',
@@ -100,7 +112,7 @@ my @that     = (
  },
  {
   name       => 'l',
-  index      => 9,
+  index      => 12,
   'tip'      => 'Top-left x position of scan area.',
   'default'  => 0,
   constraint => {
@@ -111,7 +123,7 @@ my @that     = (
  },
  {
   name       => 't',
-  index      => 10,
+  index      => 13,
   'tip'      => 'Top-left y position of scan area.',
   'default'  => 0,
   constraint => {
@@ -122,7 +134,7 @@ my @that     = (
  },
  {
   name       => 'x',
-  index      => 11,
+  index      => 14,
   'tip'      => 'Width of scan-area.',
   'default'  => 215.9,
   constraint => {
@@ -133,7 +145,7 @@ my @that     = (
  },
  {
   name       => 'y',
-  index      => 12,
+  index      => 15,
   'tip'      => 'Height of scan-area.',
   'default'  => 381,
   constraint => {

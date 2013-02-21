@@ -20,15 +20,19 @@ my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
 my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
  {
+  index => 0,
+  title => 'Scan Mode',
+ },
+ {
   name      => 'mode',
-  index     => 0,
+  index     => 1,
   'tip'     => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
   'default' => 'Color',
   'values'  => [ 'Lineart', 'Gray', 'Color' ]
  },
  {
   name  => 'depth',
-  index => 1,
+  index => 2,
   'tip' =>
 'Number of bits per sample, typical values are 1 for "line-art" and 8 for multibit scans.',
   'default' => '8',
@@ -36,14 +40,14 @@ my @that     = (
  },
  {
   name      => 'source',
-  index     => 2,
+  index     => 3,
   'tip'     => 'Selects the scan source (such as a document-feeder).',
   'default' => 'inactive',
   'values'  => [ 'Normal', 'Transparency', 'Negative' ]
  },
  {
   name       => 'resolution',
-  index      => 3,
+  index      => 4,
   'tip'      => 'Sets the resolution of the scanned image.',
   'default'  => '50',
   constraint => {
@@ -54,14 +58,18 @@ my @that     = (
  },
  {
   name      => 'preview',
-  index     => 4,
+  index     => 5,
   'tip'     => 'Request a preview-quality scan.',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ],
  },
  {
+  index => 6,
+  title => 'Geometry',
+ },
+ {
   name       => 'l',
-  index      => 5,
+  index      => 7,
   'tip'      => 'Top-left x position of scan area.',
   'default'  => 0,
   constraint => {
@@ -72,7 +80,7 @@ my @that     = (
  },
  {
   name       => 't',
-  index      => 6,
+  index      => 8,
   'tip'      => 'Top-left y position of scan area.',
   'default'  => 0,
   constraint => {
@@ -83,7 +91,7 @@ my @that     = (
  },
  {
   name       => 'x',
-  index      => 7,
+  index      => 9,
   'tip'      => 'Width of scan-area.',
   'default'  => 103,
   constraint => {
@@ -94,7 +102,7 @@ my @that     = (
  },
  {
   name       => 'y',
-  index      => 8,
+  index      => 10,
   'tip'      => 'Height of scan-area.',
   'default'  => 76.21,
   constraint => {
@@ -104,8 +112,12 @@ my @that     = (
   'unit' => 'mm',
  },
  {
+  index => 11,
+  title => 'Enhancement',
+ },
+ {
   name       => 'brightness',
-  index      => 9,
+  index      => 12,
   'tip'      => 'Controls the brightness of the acquired image.',
   'default'  => '0',
   constraint => {
@@ -117,7 +129,7 @@ my @that     = (
  },
  {
   name       => 'contrast',
-  index      => 10,
+  index      => 13,
   'tip'      => 'Controls the contrast of the acquired image.',
   'default'  => '0',
   constraint => {
@@ -129,7 +141,7 @@ my @that     = (
  },
  {
   name  => 'custom-gamma',
-  index => 11,
+  index => 14,
   'tip' =>
     'Determines whether a builtin or a custom gamma-table should be used.',
   'default' => 'no',
@@ -137,7 +149,7 @@ my @that     = (
  },
  {
   name  => 'gamma-table',
-  index => 12,
+  index => 15,
   'tip' =>
 'Gamma-correction table.  In color mode this option equally affects the red, green, and blue channels simultaneously (i.e., it is an intensity gamma table).',
   'default'  => 'inactive',
@@ -148,7 +160,7 @@ my @that     = (
  },
  {
   name       => 'red-gamma-table',
-  index      => 13,
+  index      => 16,
   'tip'      => 'Gamma-correction table for the red band.',
   'default'  => 'inactive',
   constraint => {
@@ -158,7 +170,7 @@ my @that     = (
  },
  {
   name       => 'green-gamma-table',
-  index      => 14,
+  index      => 17,
   'tip'      => 'Gamma-correction table for the green band.',
   'default'  => 'inactive',
   constraint => {
@@ -168,7 +180,7 @@ my @that     = (
  },
  {
   name       => 'blue-gamma-table',
-  index      => 15,
+  index      => 18,
   'tip'      => 'Gamma-correction table for the blue band.',
   'default'  => 'inactive',
   constraint => {
@@ -177,15 +189,19 @@ my @that     = (
   },
  },
  {
+  index => 19,
+  title => 'Device-Settings',
+ },
+ {
   name      => 'lamp-switch',
-  index     => 16,
+  index     => 20,
   'tip'     => 'Manually switching the lamp(s).',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name       => 'lampoff-time',
-  index      => 17,
+  index      => 21,
   'tip'      => 'Lampoff-time in seconds.',
   'default'  => '300',
   constraint => {
@@ -196,14 +212,14 @@ my @that     = (
  },
  {
   name      => 'lamp-off-at-exit',
-  index     => 18,
+  index     => 22,
   'tip'     => 'Turn off lamp when program exits',
   'default' => 'yes',
   'values'  => [ 'yes', 'no' ],
  },
  {
   name       => 'warmup-time',
-  index      => 19,
+  index      => 23,
   'tip'      => 'Warmup-time in seconds.',
   'default'  => 'inactive',
   constraint => {
@@ -214,27 +230,31 @@ my @that     = (
  },
  {
   name      => 'calibration-cache',
-  index     => 20,
+  index     => 24,
   'tip'     => 'Enables or disables calibration data cache.',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'speedup-switch',
-  index     => 21,
+  index     => 25,
   'tip'     => 'Enables or disables speeding up sensor movement.',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ],
  },
  {
   name      => 'calibrate',
-  index     => 22,
+  index     => 26,
   'tip'     => 'Performs calibration',
   'default' => 'inactive',
  },
  {
+  index => 27,
+  title => 'Analog frontend',
+ },
+ {
   name       => 'red-gain',
-  index      => 23,
+  index      => 28,
   'tip'      => 'Red gain value of the AFE',
   'default'  => '-1',
   constraint => {
@@ -245,7 +265,7 @@ my @that     = (
  },
  {
   name       => 'green-gain',
-  index      => 24,
+  index      => 29,
   'tip'      => 'Green gain value of the AFE',
   'default'  => '-1',
   constraint => {
@@ -256,7 +276,7 @@ my @that     = (
  },
  {
   name       => 'blue-gain',
-  index      => 25,
+  index      => 30,
   'tip'      => 'Blue gain value of the AFE',
   'default'  => '-1',
   constraint => {
@@ -267,7 +287,7 @@ my @that     = (
  },
  {
   name       => 'red-offset',
-  index      => 26,
+  index      => 31,
   'tip'      => 'Red offset value of the AFE',
   'default'  => '-1',
   constraint => {
@@ -278,7 +298,7 @@ my @that     = (
  },
  {
   name       => 'green-offset',
-  index      => 27,
+  index      => 32,
   'tip'      => 'Green offset value of the AFE',
   'default'  => '-1',
   constraint => {
@@ -289,7 +309,7 @@ my @that     = (
  },
  {
   name       => 'blue-offset',
-  index      => 28,
+  index      => 33,
   'tip'      => 'Blue offset value of the AFE',
   'default'  => '-1',
   constraint => {
@@ -300,7 +320,7 @@ my @that     = (
  },
  {
   name       => 'redlamp-off',
-  index      => 29,
+  index      => 34,
   'tip'      => 'Defines red lamp off parameter',
   'default'  => '-1',
   constraint => {
@@ -311,7 +331,7 @@ my @that     = (
  },
  {
   name       => 'greenlamp-off',
-  index      => 30,
+  index      => 35,
   'tip'      => 'Defines green lamp off parameter',
   'default'  => '-1',
   constraint => {
@@ -322,7 +342,7 @@ my @that     = (
  },
  {
   name       => 'bluelamp-off',
-  index      => 31,
+  index      => 36,
   'tip'      => 'Defines blue lamp off parameter',
   'default'  => '-1',
   constraint => {
@@ -330,6 +350,10 @@ my @that     = (
    'max'  => 16363,
    'step' => 1,
   },
+ },
+ {
+  index => 37,
+  title => 'Buttons',
  },
 );
 is_deeply( $options->{array}, \@that, 'canonLiDE25' );

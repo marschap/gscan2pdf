@@ -20,22 +20,26 @@ my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
 my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
  {
+  index => 0,
+  title => 'Scan Mode',
+ },
+ {
   name      => 'source',
-  index     => 0,
+  index     => 1,
   'tip'     => 'Selects the scan source (such as a document-feeder).',
   'default' => 'ADF Front',
   'values'  => [ 'ADF Front', 'ADF Back', 'ADF Duplex' ]
  },
  {
   name      => 'mode',
-  index     => 1,
+  index     => 2,
   'tip'     => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
   'default' => 'Gray',
   'values'  => [ 'Gray', 'Color' ]
  },
  {
   name       => 'resolution',
-  index      => 2,
+  index      => 3,
   'tip'      => 'Sets the horizontal resolution of the scanned image.',
   'default'  => '600',
   constraint => {
@@ -47,7 +51,7 @@ my @that     = (
  },
  {
   name       => 'y-resolution',
-  index      => 3,
+  index      => 4,
   'tip'      => 'Sets the vertical resolution of the scanned image.',
   'default'  => '600',
   constraint => {
@@ -58,8 +62,12 @@ my @that     = (
   'unit' => 'dpi',
  },
  {
+  index => 5,
+  title => 'Geometry',
+ },
+ {
   name       => 'l',
-  index      => 4,
+  index      => 6,
   'tip'      => 'Top-left x position of scan area.',
   'default'  => 0,
   constraint => {
@@ -71,7 +79,7 @@ my @that     = (
  },
  {
   name       => 't',
-  index      => 5,
+  index      => 7,
   'tip'      => 'Top-left y position of scan area.',
   'default'  => 0,
   constraint => {
@@ -83,7 +91,7 @@ my @that     = (
  },
  {
   name       => 'x',
-  index      => 6,
+  index      => 8,
   'tip'      => 'Width of scan-area.',
   'default'  => 215.872,
   constraint => {
@@ -95,7 +103,7 @@ my @that     = (
  },
  {
   name       => 'y',
-  index      => 7,
+  index      => 9,
   'tip'      => 'Height of scan-area.',
   'default'  => 279.364,
   constraint => {
@@ -107,7 +115,7 @@ my @that     = (
  },
  {
   name       => 'pagewidth',
-  index      => 8,
+  index      => 10,
   'tip'      => 'Must be set properly to align scanning window',
   'default'  => '215.872',
   constraint => {
@@ -119,7 +127,7 @@ my @that     = (
  },
  {
   name       => 'pageheight',
-  index      => 9,
+  index      => 11,
   'tip'      => 'Must be set properly to eject pages',
   'default'  => '279.364',
   constraint => {
@@ -130,15 +138,23 @@ my @that     = (
   'unit' => 'mm',
  },
  {
+  index => 12,
+  title => 'Enhancement',
+ },
+ {
   name      => 'rif',
-  index     => 10,
+  index     => 13,
   'tip'     => 'Reverse image format',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
+  index => 14,
+  title => 'Advanced',
+ },
+ {
   name  => 'dropoutcolor',
-  index => 11,
+  index => 15,
   'tip' =>
 'One-pass scanners use only one color during gray or binary scanning, useful for colored paper or ink',
   'default' => 'Default',
@@ -146,7 +162,7 @@ my @that     = (
  },
  {
   name  => 'sleeptimer',
-  index => 12,
+  index => 16,
   'tip' =>
     'Time in minutes until the internal power supply switches to sleep mode',
   'default'  => '0',
@@ -156,11 +172,15 @@ my @that     = (
    'step' => 1,
   },
  },
+ {
+  index => 17,
+  title => 'Sensors and Buttons',
+ },
 );
 is_deeply( $options->{array}, \@that, 'fujitsu' );
 
-is( $options->num_options,               13,       'number of options' );
-is( $options->by_index(0)->{name},       'source', 'by_index' );
+is( $options->num_options,               18,       'number of options' );
+is( $options->by_index(1)->{name},       'source', 'by_index' );
 is( $options->by_name('source')->{name}, 'source', 'by_name' );
 
 is(
@@ -255,15 +275,16 @@ is(
  'paper too tall'
 );
 
-$options->delete_by_index(0);
-is( $options->by_index(0),       undef, 'delete_by_index' );
+$options->delete_by_index(1);
+is( $options->by_index(1),       undef, 'delete_by_index' );
 is( $options->by_name('source'), undef, 'delete_by_index got hash too' );
 
 $options->delete_by_name('mode');
 is( $options->by_name('mode'), undef, 'delete_by_name' );
-is( $options->by_index(1),     undef, 'delete_by_name got array too' );
+is( $options->by_index(2),     undef, 'delete_by_name got array too' );
 
 $output = <<'END';
+Options specific to device `fujitsu:libusb:002:004':
   Geometry:
     -l 0..224.846mm (in steps of 0.0211639) [0]
         Top-left x position of scan area.

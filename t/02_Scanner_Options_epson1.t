@@ -20,15 +20,19 @@ my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
 my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
  {
+  index => 0,
+  title => 'Scan Mode',
+ },
+ {
   name      => 'mode',
-  index     => 0,
+  index     => 1,
   'tip'     => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
   'default' => 'Binary',
   'values'  => [ 'Binary', 'Gray', 'Color' ]
  },
  {
   name  => 'depth',
-  index => 1,
+  index => 2,
   'tip' =>
 'Number of bits per sample, typical values are 1 for "line-art" and 8 for multibit scans.',
   'default' => 'inactive',
@@ -36,7 +40,7 @@ my @that     = (
  },
  {
   name      => 'halftoning',
-  index     => 2,
+  index     => 3,
   'tip'     => 'Selects the halftone.',
   'default' => 'Halftone A (Hard Tone)',
   'values'  => [
@@ -55,14 +59,14 @@ my @that     = (
  },
  {
   name      => 'dropout',
-  index     => 3,
+  index     => 4,
   'tip'     => 'Selects the dropout.',
   'default' => 'None',
   'values'  => [ 'None', 'Red', 'Green', 'Blue' ]
  },
  {
   name       => 'brightness',
-  index      => 4,
+  index      => 5,
   'tip'      => 'Selects the brightness.',
   'default'  => '0',
   constraint => {
@@ -72,7 +76,7 @@ my @that     = (
  },
  {
   name       => 'sharpness',
-  index      => 5,
+  index      => 6,
   'tip'      => '',
   'default'  => '0',
   constraint => {
@@ -82,7 +86,7 @@ my @that     = (
  },
  {
   name  => 'gamma-correction',
-  index => 6,
+  index => 7,
   'tip' =>
 'Selects the gamma correction value from a list of pre-defined devices or the user defined table, which can be downloaded to the scanner',
   'default' => 'Default',
@@ -96,7 +100,7 @@ my @that     = (
  },
  {
   name  => 'color-correction',
-  index => 7,
+  index => 8,
   'tip' => 'Sets the color correction table for the selected output device.',
   'default' => 'CRT monitors',
   'values'  => [
@@ -110,7 +114,7 @@ my @that     = (
  },
  {
   name      => 'resolution',
-  index     => 8,
+  index     => 9,
   'tip'     => 'Sets the resolution of the scanned image.',
   'default' => '50',
   'values'  => [
@@ -124,7 +128,7 @@ my @that     = (
  },
  {
   name       => 'threshold',
-  index      => 9,
+  index      => 10,
   'tip'      => 'Select minimum-brightness to get a white point',
   'default'  => 'inactive',
   constraint => {
@@ -133,36 +137,40 @@ my @that     = (
   },
  },
  {
+  index => 11,
+  title => 'Advanced',
+ },
+ {
   name      => 'mirror',
-  index     => 10,
+  index     => 12,
   'tip'     => 'Mirror the image.',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'speed',
-  index     => 11,
+  index     => 13,
   'tip'     => 'Determines the speed at which the scan proceeds.',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'auto-area-segmentation',
-  index     => 12,
+  index     => 14,
   'tip'     => '',
   'default' => 'yes',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'short-resolution',
-  index     => 13,
+  index     => 15,
   'tip'     => 'Display short resolution list',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name       => 'zoom',
-  index      => 14,
+  index      => 16,
   'tip'      => 'Defines the zoom factor the scanner will use',
   'default'  => 'inactive',
   constraint => {
@@ -172,7 +180,7 @@ my @that     = (
  },
  {
   name       => 'red-gamma-table',
-  index      => 15,
+  index      => 17,
   'tip'      => 'Gamma-correction table for the red band.',
   'default'  => 'inactive',
   constraint => {
@@ -182,7 +190,7 @@ my @that     = (
  },
  {
   name       => 'green-gamma-table',
-  index      => 16,
+  index      => 18,
   'tip'      => 'Gamma-correction table for the green band.',
   'default'  => 'inactive',
   constraint => {
@@ -192,7 +200,7 @@ my @that     = (
  },
  {
   name       => 'blue-gamma-table',
-  index      => 17,
+  index      => 19,
   'tip'      => 'Gamma-correction table for the blue band.',
   'default'  => 'inactive',
   constraint => {
@@ -202,15 +210,19 @@ my @that     = (
  },
  {
   name  => 'wait-for-button',
-  index => 18,
+  index => 20,
   'tip' =>
 'After sending the scan command, wait until the button on the scanner is pressed to actually start the scan process.',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
+  index => 21,
+  title => 'Color correction coefficients',
+ },
+ {
   name       => 'cct-1',
-  index      => 19,
+  index      => 22,
   'tip'      => 'Controls green level',
   'default'  => 'inactive',
   constraint => {
@@ -220,7 +232,7 @@ my @that     = (
  },
  {
   name       => 'cct-2',
-  index      => 20,
+  index      => 23,
   'tip'      => 'Adds to red based on green level',
   'default'  => 'inactive',
   constraint => {
@@ -230,7 +242,7 @@ my @that     = (
  },
  {
   name       => 'cct-3',
-  index      => 21,
+  index      => 24,
   'tip'      => 'Adds to blue based on green level',
   'default'  => 'inactive',
   constraint => {
@@ -240,7 +252,7 @@ my @that     = (
  },
  {
   name       => 'cct-4',
-  index      => 22,
+  index      => 25,
   'tip'      => 'Adds to green based on red level',
   'default'  => 'inactive',
   constraint => {
@@ -250,7 +262,7 @@ my @that     = (
  },
  {
   name       => 'cct-5',
-  index      => 23,
+  index      => 26,
   'tip'      => 'Controls red level',
   'default'  => 'inactive',
   constraint => {
@@ -260,7 +272,7 @@ my @that     = (
  },
  {
   name       => 'cct-6',
-  index      => 24,
+  index      => 27,
   'tip'      => 'Adds to blue based on red level',
   'default'  => 'inactive',
   constraint => {
@@ -270,7 +282,7 @@ my @that     = (
  },
  {
   name       => 'cct-7',
-  index      => 25,
+  index      => 28,
   'tip'      => 'Adds to green based on blue level',
   'default'  => 'inactive',
   constraint => {
@@ -280,7 +292,7 @@ my @that     = (
  },
  {
   name       => 'cct-8',
-  index      => 26,
+  index      => 29,
   'tip'      => 'Adds to red based on blue level',
   'default'  => 'inactive',
   constraint => {
@@ -290,7 +302,7 @@ my @that     = (
  },
  {
   name       => 'cct-9',
-  index      => 27,
+  index      => 30,
   'tip'      => 'Controls blue level',
   'default'  => 'inactive',
   constraint => {
@@ -299,22 +311,30 @@ my @that     = (
   },
  },
  {
+  index => 31,
+  title => 'Preview',
+ },
+ {
   name      => 'preview',
-  index     => 28,
+  index     => 32,
   'tip'     => 'Request a preview-quality scan.',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'preview-speed',
-  index     => 29,
+  index     => 33,
   'tip'     => '',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
+  index => 34,
+  title => 'Geometry',
+ },
+ {
   name       => 'l',
-  index      => 30,
+  index      => 35,
   'tip'      => 'Top-left x position of scan area.',
   'default'  => 0,
   constraint => {
@@ -325,7 +345,7 @@ my @that     = (
  },
  {
   name       => 't',
-  index      => 31,
+  index      => 36,
   'tip'      => 'Top-left y position of scan area.',
   'default'  => 0,
   constraint => {
@@ -336,7 +356,7 @@ my @that     = (
  },
  {
   name       => 'x',
-  index      => 32,
+  index      => 37,
   'tip'      => 'Width of scan-area.',
   'default'  => 215.9,
   constraint => {
@@ -347,7 +367,7 @@ my @that     = (
  },
  {
   name       => 'y',
-  index      => 33,
+  index      => 38,
   'tip'      => 'Height of scan-area.',
   'default'  => 297.18,
   constraint => {
@@ -358,35 +378,39 @@ my @that     = (
  },
  {
   name      => 'quick-format',
-  index     => 34,
+  index     => 39,
   'tip'     => '',
   'default' => 'Max',
   'values'  => [ 'CD', 'A5 portrait', 'A5 landscape', 'Letter', 'A4', 'Max' ]
  },
  {
+  index => 40,
+  title => 'Optional equipment',
+ },
+ {
   name      => 'source',
-  index     => 35,
+  index     => 41,
   'tip'     => 'Selects the scan source (such as a document-feeder).',
   'default' => 'Flatbed',
   'values'  => [ 'Flatbed', 'Transparency Unit' ]
  },
  {
   name      => 'auto-eject',
-  index     => 36,
+  index     => 42,
   'tip'     => 'Eject document after scanning',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'film-type',
-  index     => 37,
+  index     => 43,
   'tip'     => '',
   'default' => 'inactive',
   'values'  => [ 'Positive Film', 'Negative Film' ]
  },
  {
   name  => 'focus-position',
-  index => 38,
+  index => 44,
   'tip' =>
     'Sets the focus position to either the glass or 2.5mm above the glass',
   'default' => 'Focus on glass',
@@ -394,20 +418,20 @@ my @that     = (
  },
  {
   name      => 'bay',
-  index     => 39,
+  index     => 45,
   'tip'     => 'Select bay to scan',
   'default' => 'inactive',
   'values'  => [ ' 1 ', ' 2 ', ' 3 ', ' 4 ', ' 5 ', ' 6 ' ]
  },
  {
   name      => 'eject',
-  index     => 40,
+  index     => 46,
   'tip'     => 'Eject the sheet in the ADF',
   'default' => 'inactive',
  },
  {
   name      => 'adf_mode',
-  index     => 41,
+  index     => 47,
   'tip'     => 'Selects the ADF mode (simplex/duplex)',
   'default' => 'inactive',
   'values'  => [ 'Simplex', 'Duplex' ]

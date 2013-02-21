@@ -20,8 +20,12 @@ my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
 my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
  {
+  index => 0,
+  title => 'Mode',
+ },
+ {
   name      => 'mode',
-  index     => 0,
+  index     => 1,
   'tip'     => 'Select the scan mode',
   'default' => '24bit Color',
   'values'  => [
@@ -34,7 +38,7 @@ my @that     = (
  },
  {
   name      => 'resolution',
-  index     => 1,
+  index     => 2,
   'tip'     => 'Sets the resolution of the scanned image.',
   'default' => '200',
   'values'  => [
@@ -44,14 +48,14 @@ my @that     = (
  },
  {
   name      => 'source',
-  index     => 2,
+  index     => 3,
   'tip'     => 'Selects the scan source (such as a document-feeder).',
   'default' => 'Automatic Document Feeder',
   'values'  => [ 'FlatBed', 'Automatic Document Feeder' ]
  },
  {
   name       => 'brightness',
-  index      => 3,
+  index      => 4,
   'tip'      => 'Controls the brightness of the acquired image.',
   'default'  => 'inactive',
   constraint => {
@@ -63,7 +67,7 @@ my @that     = (
  },
  {
   name       => 'contrast',
-  index      => 4,
+  index      => 5,
   'tip'      => 'Controls the contrast of the acquired image.',
   'default'  => 'inactive',
   constraint => {
@@ -74,8 +78,12 @@ my @that     = (
   'unit' => '%',
  },
  {
+  index => 6,
+  title => 'Geometry',
+ },
+ {
   name       => 'l',
-  index      => 5,
+  index      => 7,
   'tip'      => 'Top-left x position of scan area.',
   'default'  => 0,
   constraint => {
@@ -87,7 +95,7 @@ my @that     = (
  },
  {
   name       => 't',
-  index      => 6,
+  index      => 8,
   'tip'      => 'Top-left y position of scan area.',
   'default'  => 0,
   constraint => {
@@ -99,7 +107,7 @@ my @that     = (
  },
  {
   name       => 'x',
-  index      => 7,
+  index      => 9,
   'tip'      => 'Width of scan-area.',
   'default'  => 209.981,
   constraint => {
@@ -111,7 +119,7 @@ my @that     = (
  },
  {
   name       => 'y',
-  index      => 8,
+  index      => 10,
   'tip'      => 'Height of scan-area.',
   'default'  => 296.973,
   constraint => {

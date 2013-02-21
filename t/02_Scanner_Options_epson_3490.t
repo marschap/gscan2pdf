@@ -20,8 +20,12 @@ my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
 my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
  {
+  index => 0,
+  title => 'Scan Mode',
+ },
+ {
   name      => 'resolution',
-  index     => 0,
+  index     => 1,
   'tip'     => 'Sets the resolution of the scanned image.',
   'default' => '300',
   'values'  => [
@@ -32,21 +36,21 @@ my @that     = (
  },
  {
   name      => 'preview',
-  index     => 1,
+  index     => 2,
   'tip'     => 'Request a preview-quality scan.',
   'default' => 'no',
   'values'  => [ 'auto', 'yes', 'no' ]
  },
  {
   name      => 'mode',
-  index     => 2,
+  index     => 3,
   'tip'     => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
   'default' => 'Color',
   'values'  => [ 'auto', 'Color', 'Gray', 'Lineart' ]
  },
  {
   name  => 'preview-mode',
-  index => 3,
+  index => 4,
   'tip' =>
 'Select the mode for previews. Greyscale previews usually give the best combination of speed and detail.',
   'default' => 'Auto',
@@ -54,21 +58,25 @@ my @that     = (
  },
  {
   name      => 'high-quality',
-  index     => 4,
+  index     => 5,
   'tip'     => 'Highest quality but lower speed',
   'default' => 'no',
   'values'  => [ 'auto', 'yes', 'no' ]
  },
  {
   name      => 'source',
-  index     => 5,
+  index     => 6,
   'tip'     => 'Selects the scan source (such as a document-feeder).',
   'default' => 'Flatbed',
   'values'  => [ 'auto', 'Flatbed', 'Transparency Adapter' ]
  },
  {
+  index => 7,
+  title => 'Geometry',
+ },
+ {
   name       => 'l',
-  index      => 6,
+  index      => 8,
   'tip'      => 'Top-left x position of scan area.',
   'default'  => 0,
   constraint => {
@@ -79,7 +87,7 @@ my @that     = (
  },
  {
   name       => 't',
-  index      => 7,
+  index      => 9,
   'tip'      => 'Top-left y position of scan area.',
   'default'  => 0,
   constraint => {
@@ -90,7 +98,7 @@ my @that     = (
  },
  {
   name       => 'x',
-  index      => 8,
+  index      => 10,
   'tip'      => 'Width of scan-area.',
   'default'  => 216,
   constraint => {
@@ -101,7 +109,7 @@ my @that     = (
  },
  {
   name       => 'y',
-  index      => 9,
+  index      => 11,
   'tip'      => 'Height of scan-area.',
   'default'  => 297,
   constraint => {
@@ -112,15 +120,19 @@ my @that     = (
  },
  {
   name  => 'predef-window',
-  index => 10,
+  index => 12,
   'tip' =>
 'Provides standard scanning areas for photographs, printed pages and the like.',
   'default' => 'None',
   'values'  => [ 'None', '6x4 (inch)', '8x10 (inch)', '8.5x11 (inch)' ]
  },
  {
+  index => 13,
+  title => 'Enhancement',
+ },
+ {
   name  => 'depth',
-  index => 11,
+  index => 14,
   'tip' =>
 'Number of bits per sample, typical values are 1 for "line-art" and 8 for multibit scans.',
   'default' => '8',
@@ -129,21 +141,21 @@ my @that     = (
  },
  {
   name      => 'quality-cal',
-  index     => 12,
+  index     => 15,
   'tip'     => 'Do a quality white-calibration',
   'default' => 'yes',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name  => 'halftoning',
-  index => 13,
+  index => 16,
   'tip' => 'Selects whether the acquired image should be halftoned (dithered).',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name  => 'halftone-pattern',
-  index => 14,
+  index => 17,
   'tip' =>
     'Defines the halftoning (dithering) pattern for scanning halftoned images.',
   'default' => 'inactive',
@@ -151,7 +163,7 @@ my @that     = (
  },
  {
   name  => 'custom-gamma',
-  index => 15,
+  index => 18,
   'tip' =>
     'Determines whether a builtin or a custom gamma-table should be used.',
   'default' => 'no',
@@ -159,14 +171,14 @@ my @that     = (
  },
  {
   name      => 'analog-gamma-bind',
-  index     => 16,
+  index     => 19,
   'tip'     => 'In RGB-mode use same values for each color',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name       => 'analog-gamma',
-  index      => 17,
+  index      => 20,
   'tip'      => 'Analog gamma-correction',
   'default'  => 'inactive',
   constraint => {
@@ -176,7 +188,7 @@ my @that     = (
  },
  {
   name       => 'analog-gamma-r',
-  index      => 18,
+  index      => 21,
   'tip'      => 'Analog gamma-correction for red',
   'default'  => '1.79999',
   constraint => {
@@ -186,7 +198,7 @@ my @that     = (
  },
  {
   name       => 'analog-gamma-g',
-  index      => 19,
+  index      => 22,
   'tip'      => 'Analog gamma-correction for green',
   'default'  => '1.79999',
   constraint => {
@@ -196,7 +208,7 @@ my @that     = (
  },
  {
   name       => 'analog-gamma-b',
-  index      => 20,
+  index      => 23,
   'tip'      => 'Analog gamma-correction for blue',
   'default'  => '1.79999',
   constraint => {
@@ -206,7 +218,7 @@ my @that     = (
  },
  {
   name  => 'gamma-table',
-  index => 21,
+  index => 24,
   'tip' =>
 'Gamma-correction table.  In color mode this option equally affects the red, green, and blue channels simultaneously (i.e., it is an intensity gamma table).',
   'default'  => 'inactive',
@@ -218,7 +230,7 @@ my @that     = (
  },
  {
   name       => 'red-gamma-table',
-  index      => 22,
+  index      => 25,
   'tip'      => 'Gamma-correction table for the red band.',
   'default'  => 'inactive',
   constraint => {
@@ -229,7 +241,7 @@ my @that     = (
  },
  {
   name       => 'green-gamma-table',
-  index      => 23,
+  index      => 26,
   'tip'      => 'Gamma-correction table for the green band.',
   'default'  => 'inactive',
   constraint => {
@@ -240,7 +252,7 @@ my @that     = (
  },
  {
   name       => 'blue-gamma-table',
-  index      => 24,
+  index      => 27,
   'tip'      => 'Gamma-correction table for the blue band.',
   'default'  => 'inactive',
   constraint => {
@@ -251,14 +263,14 @@ my @that     = (
  },
  {
   name      => 'negative',
-  index     => 25,
+  index     => 28,
   'tip'     => 'Swap black and white',
   'default' => 'inactive',
   'values'  => [ 'auto', 'yes', 'no' ]
  },
  {
   name       => 'threshold',
-  index      => 26,
+  index      => 29,
   'tip'      => 'Select minimum-brightness to get a white point',
   'default'  => 'inactive',
   constraint => {
@@ -270,7 +282,7 @@ my @that     = (
  },
  {
   name       => 'brightness',
-  index      => 27,
+  index      => 30,
   'tip'      => 'Controls the brightness of the acquired image.',
   'default'  => '0',
   constraint => {
@@ -282,7 +294,7 @@ my @that     = (
  },
  {
   name       => 'contrast',
-  index      => 28,
+  index      => 31,
   'tip'      => 'Controls the contrast of the acquired image.',
   'default'  => '0',
   constraint => {
@@ -293,8 +305,12 @@ my @that     = (
   'unit' => '%',
  },
  {
+  index => 32,
+  title => 'Advanced',
+ },
+ {
   name  => 'rgb-lpr',
-  index => 29,
+  index => 33,
   'tip' =>
 'Number of scan lines to request in a SCSI read. Changing this parameter allows you to tune the speed at which data is read from the scanner during scans. If this is set too low, the scanner will have to stop periodically in the middle of a scan; if it\'s set too high, X-based frontends may stop responding to X events and your system could bog down.',
   'default'  => '4',
@@ -306,7 +322,7 @@ my @that     = (
  },
  {
   name  => 'gs-lpr',
-  index => 30,
+  index => 34,
   'tip' =>
 'Number of scan lines to request in a SCSI read. Changing this parameter allows you to tune the speed at which data is read from the scanner during scans. If this is set too low, the scanner will have to stop periodically in the middle of a scan; if it\'s set too high, X-based frontends may stop responding to X events and your system could bog down.',
   'default'  => 'inactive',

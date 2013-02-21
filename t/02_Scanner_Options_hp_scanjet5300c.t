@@ -20,8 +20,12 @@ my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
 my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
  {
+  index => 0,
+  title => 'Scan mode',
+ },
+ {
   name      => 'mode',
-  index     => 0,
+  index     => 1,
   'tip'     => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
   'default' => 'Color',
   'values' =>
@@ -29,7 +33,7 @@ my @that     = (
  },
  {
   name       => 'resolution',
-  index      => 1,
+  index      => 2,
   'tip'      => 'Sets the resolution of the scanned image.',
   'default'  => '150',
   constraint => {
@@ -41,7 +45,7 @@ my @that     = (
  },
  {
   name       => 'speed',
-  index      => 2,
+  index      => 3,
   'tip'      => 'Determines the speed at which the scan proceeds.',
   'default'  => '0',
   constraint => {
@@ -52,21 +56,25 @@ my @that     = (
  },
  {
   name      => 'preview',
-  index     => 3,
+  index     => 4,
   'tip'     => 'Request a preview-quality scan.',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'source',
-  index     => 4,
+  index     => 5,
   'tip'     => 'Selects the scan source (such as a document-feeder).',
   'default' => 'Normal',
   'values'  => [ 'Normal', 'ADF' ]
  },
  {
+  index => 6,
+  title => 'Geometry',
+ },
+ {
   name       => 'l',
-  index      => 5,
+  index      => 7,
   'tip'      => 'Top-left x position of scan area.',
   'default'  => 0,
   constraint => {
@@ -77,7 +85,7 @@ my @that     = (
  },
  {
   name       => 't',
-  index      => 6,
+  index      => 8,
   'tip'      => 'Top-left y position of scan area.',
   'default'  => 0,
   constraint => {
@@ -88,7 +96,7 @@ my @that     = (
  },
  {
   name       => 'x',
-  index      => 7,
+  index      => 9,
   'tip'      => 'Width of scan-area.',
   'default'  => 216,
   constraint => {
@@ -99,7 +107,7 @@ my @that     = (
  },
  {
   name       => 'y',
-  index      => 8,
+  index      => 10,
   'tip'      => 'Height of scan-area.',
   'default'  => 296,
   constraint => {
@@ -109,8 +117,12 @@ my @that     = (
   'unit' => 'mm',
  },
  {
+  index => 11,
+  title => 'Enhancement',
+ },
+ {
   name       => 'brightness',
-  index      => 9,
+  index      => 12,
   'tip'      => 'Controls the brightness of the acquired image.',
   'default'  => '0',
   constraint => {
@@ -122,7 +134,7 @@ my @that     = (
  },
  {
   name       => 'contrast',
-  index      => 10,
+  index      => 13,
   'tip'      => 'Controls the contrast of the acquired image.',
   'default'  => '0',
   constraint => {
@@ -134,21 +146,31 @@ my @that     = (
  },
  {
   name      => 'quality-scan',
-  index     => 11,
+  index     => 14,
   'tip'     => 'Turn on quality scanning (slower but better).',
   'default' => 'yes',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'quality-cal',
-  index     => 12,
+  index     => 15,
   'tip'     => 'Do a quality white-calibration',
   'default' => 'yes',
   'values'  => [ 'yes', 'no' ]
  },
  {
+  name  => 'gamma-table',
+  index => 16,
+  'tip' =>
+'Gamma-correction table.  In color mode this option equally affects the red, green, and blue channels simultaneously (i.e., it is an intensity gamma table).',
+  constraint => {
+   'min' => 0,
+   'max' => 255,
+  },
+ },
+ {
   name       => 'red-gamma-table',
-  index      => 13,
+  index      => 17,
   'tip'      => 'Gamma-correction table for the red band.',
   'default'  => 'inactive',
   constraint => {
@@ -158,7 +180,7 @@ my @that     = (
  },
  {
   name       => 'green-gamma-table',
-  index      => 14,
+  index      => 18,
   'tip'      => 'Gamma-correction table for the green band.',
   'default'  => 'inactive',
   constraint => {
@@ -168,7 +190,7 @@ my @that     = (
  },
  {
   name       => 'blue-gamma-table',
-  index      => 15,
+  index      => 19,
   'tip'      => 'Gamma-correction table for the blue band.',
   'default'  => 'inactive',
   constraint => {
@@ -178,7 +200,7 @@ my @that     = (
  },
  {
   name       => 'frame',
-  index      => 16,
+  index      => 20,
   'tip'      => 'Selects the number of the frame to scan',
   'default'  => 'inactive',
   constraint => {
@@ -188,11 +210,20 @@ my @that     = (
  },
  {
   name  => 'power-save-time',
-  index => 17,
+  index => 21,
   'tip' =>
 'Allows control of the scanner\'s power save timer, dimming or turning off the light.',
   'default' => '65535',
   'values'  => ['<int>']
+ },
+ {
+  name  => 'nvram-values',
+  index => 22,
+  'tip' =>
+'Allows access obtaining the scanner\'s NVRAM values as pretty printed text.',
+  'default' =>
+"Vendor: HP      \nModel: ScanJet 5300C   \nFirmware: 4.00\nSerial: 3119ME\nManufacturing date: 0-0-0\nFirst scan date: 65535-0-0\nFlatbed scans: 65547\nPad scans: -65536\nADF simplex scans: 136183808",
+  'values' => '<string>'
  },
 );
 is_deeply( $options->{array}, \@that, 'hp_scanjet5300c' );

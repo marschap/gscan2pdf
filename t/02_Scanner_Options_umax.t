@@ -20,22 +20,26 @@ my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
 my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
  {
+  index => 0,
+  title => 'Scan Mode',
+ },
+ {
   name      => 'mode',
-  index     => 0,
+  index     => 1,
   'tip'     => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
   'default' => 'Color',
   'values'  => [ 'Lineart', 'Gray', 'Color' ]
  },
  {
   name      => 'source',
-  index     => 1,
+  index     => 2,
   'tip'     => 'Selects the scan source (such as a document-feeder).',
   'default' => 'Flatbed',
   'values'  => ['Flatbed']
  },
  {
   name       => 'resolution',
-  index      => 2,
+  index      => 3,
   'tip'      => 'Sets the resolution of the scanned image.',
   'default'  => '100',
   constraint => {
@@ -47,7 +51,7 @@ my @that     = (
  },
  {
   name       => 'y-resolution',
-  index      => 3,
+  index      => 4,
   'tip'      => 'Sets the vertical resolution of the scanned image.',
   'default'  => 'inactive',
   constraint => {
@@ -59,21 +63,25 @@ my @that     = (
  },
  {
   name      => 'resolution-bind',
-  index     => 4,
+  index     => 5,
   'tip'     => 'Use same values for X and Y resolution',
   'default' => 'yes',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'negative',
-  index     => 5,
+  index     => 6,
   'tip'     => 'Swap black and white',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
+  index => 7,
+  title => 'Geometry',
+ },
+ {
   name       => 'l',
-  index      => 6,
+  index      => 8,
   'tip'      => 'Top-left x position of scan area.',
   'default'  => 0,
   constraint => {
@@ -84,7 +92,7 @@ my @that     = (
  },
  {
   name       => 't',
-  index      => 7,
+  index      => 9,
   'tip'      => 'Top-left y position of scan area.',
   'default'  => 0,
   constraint => {
@@ -95,7 +103,7 @@ my @that     = (
  },
  {
   name       => 'x',
-  index      => 8,
+  index      => 10,
   'tip'      => 'Width of scan-area.',
   'default'  => 215.9,
   constraint => {
@@ -106,7 +114,7 @@ my @that     = (
  },
  {
   name       => 'y',
-  index      => 9,
+  index      => 11,
   'tip'      => 'Height of scan-area.',
   'default'  => 297.18,
   constraint => {
@@ -116,8 +124,12 @@ my @that     = (
   'unit' => 'mm',
  },
  {
+  index => 12,
+  title => 'Enhancement',
+ },
+ {
   name  => 'depth',
-  index => 10,
+  index => 13,
   'tip' =>
 'Number of bits per sample, typical values are 1 for "line-art" and 8 for multibit scans.',
   'default' => '8',
@@ -126,35 +138,35 @@ my @that     = (
  },
  {
   name      => 'quality-cal',
-  index     => 11,
+  index     => 14,
   'tip'     => 'Do a quality white-calibration',
   'default' => 'yes',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'double-res',
-  index     => 12,
+  index     => 15,
   'tip'     => 'Use lens that doubles optical resolution',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'warmup',
-  index     => 13,
+  index     => 16,
   'tip'     => 'Warmup lamp before scanning',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'rgb-bind',
-  index     => 14,
+  index     => 17,
   'tip'     => 'In RGB-mode use same values for each color',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name       => 'brightness',
-  index      => 15,
+  index      => 18,
   'tip'      => 'Controls the brightness of the acquired image.',
   'default'  => 'inactive',
   constraint => {
@@ -166,7 +178,7 @@ my @that     = (
  },
  {
   name       => 'contrast',
-  index      => 16,
+  index      => 19,
   'tip'      => 'Controls the contrast of the acquired image.',
   'default'  => 'inactive',
   constraint => {
@@ -178,7 +190,7 @@ my @that     = (
  },
  {
   name       => 'threshold',
-  index      => 17,
+  index      => 20,
   'tip'      => 'Select minimum-brightness to get a white point',
   'default'  => 'inactive',
   constraint => {
@@ -189,7 +201,7 @@ my @that     = (
  },
  {
   name       => 'highlight',
-  index      => 18,
+  index      => 21,
   'tip'      => 'Selects what radiance level should be considered "white".',
   'default'  => 'inactive',
   constraint => {
@@ -200,7 +212,7 @@ my @that     = (
  },
  {
   name  => 'highlight-r',
-  index => 19,
+  index => 22,
   'tip' => 'Selects what red radiance level should be considered "full red".',
   'default'  => '100',
   constraint => {
@@ -211,7 +223,7 @@ my @that     = (
  },
  {
   name  => 'highlight-g',
-  index => 20,
+  index => 23,
   'tip' =>
     'Selects what green radiance level should be considered "full green".',
   'default'  => '100',
@@ -223,7 +235,7 @@ my @that     = (
  },
  {
   name  => 'highlight-b',
-  index => 21,
+  index => 24,
   'tip' => 'Selects what blue radiance level should be considered "full blue".',
   'default'  => '100',
   constraint => {
@@ -234,7 +246,7 @@ my @that     = (
  },
  {
   name       => 'shadow',
-  index      => 22,
+  index      => 25,
   'tip'      => 'Selects what radiance level should be considered "black".',
   'default'  => 'inactive',
   constraint => {
@@ -245,7 +257,7 @@ my @that     = (
  },
  {
   name       => 'shadow-r',
-  index      => 23,
+  index      => 26,
   'tip'      => 'Selects what red radiance level should be considered "black".',
   'default'  => 'inactive',
   constraint => {
@@ -256,7 +268,7 @@ my @that     = (
  },
  {
   name  => 'shadow-g',
-  index => 24,
+  index => 27,
   'tip' => 'Selects what green radiance level should be considered "black".',
   'default'  => 'inactive',
   constraint => {
@@ -267,7 +279,7 @@ my @that     = (
  },
  {
   name      => 'shadow-b',
-  index     => 25,
+  index     => 28,
   'tip'     => 'Selects what blue radiance level should be considered "black".',
   'default' => 'inactive',
   constraint => {
@@ -278,7 +290,7 @@ my @that     = (
  },
  {
   name       => 'analog-gamma',
-  index      => 26,
+  index      => 29,
   'tip'      => 'Analog gamma-correction',
   'default'  => 'inactive',
   constraint => {
@@ -289,7 +301,7 @@ my @that     = (
  },
  {
   name       => 'analog-gamma-r',
-  index      => 27,
+  index      => 30,
   'tip'      => 'Analog gamma-correction for red',
   'default'  => 'inactive',
   constraint => {
@@ -300,7 +312,7 @@ my @that     = (
  },
  {
   name       => 'analog-gamma-g',
-  index      => 28,
+  index      => 31,
   'tip'      => 'Analog gamma-correction for green',
   'default'  => 'inactive',
   constraint => {
@@ -311,7 +323,7 @@ my @that     = (
  },
  {
   name       => 'analog-gamma-b',
-  index      => 29,
+  index      => 32,
   'tip'      => 'Analog gamma-correction for blue',
   'default'  => 'inactive',
   constraint => {
@@ -322,15 +334,52 @@ my @that     = (
  },
  {
   name  => 'custom-gamma',
-  index => 30,
+  index => 33,
   'tip' =>
     'Determines whether a builtin or a custom gamma-table should be used.',
   'default' => 'yes',
   'values'  => [ 'yes', 'no' ]
  },
  {
+  name       => 'gamma-table',
+  index      => 34,
+  constraint => {
+   'min' => 0,
+   'max' => 255,
+  },
+  'tip' =>
+'Gamma-correction table.  In color mode this option equally affects the red, green, and blue channels simultaneously (i.e., it is an intensity gamma table).',
+ },
+ {
+  name       => 'red-gamma-table',
+  index      => 35,
+  constraint => {
+   'min' => 0,
+   'max' => 255,
+  },
+  'tip' => 'Gamma-correction table for the red band.',
+ },
+ {
+  name       => 'green-gamma-table',
+  index      => 36,
+  constraint => {
+   'min' => 0,
+   'max' => 255,
+  },
+  'tip' => 'Gamma-correction table for the green band.',
+ },
+ {
+  name       => 'blue-gamma-table',
+  index      => 37,
+  constraint => {
+   'min' => 0,
+   'max' => 255,
+  },
+  'tip' => 'Gamma-correction table for the blue band.',
+ },
+ {
   name  => 'halftone-size',
-  index => 31,
+  index => 38,
   'tip' =>
 'Sets the size of the halftoning (dithering) pattern used when scanning halftoned images.',
   'default' => 'inactive',
@@ -339,7 +388,7 @@ my @that     = (
  },
  {
   name  => 'halftone-pattern',
-  index => 32,
+  index => 39,
   'tip' =>
     'Defines the halftoning (dithering) pattern for scanning halftoned images.',
   'default'  => 'inactive',
@@ -349,8 +398,12 @@ my @that     = (
   },
  },
  {
+  index => 40,
+  title => 'Advanced',
+ },
+ {
   name       => 'cal-exposure-time',
-  index      => 33,
+  index      => 41,
   'tip'      => 'Define exposure-time for calibration',
   'default'  => 'inactive',
   constraint => {
@@ -361,7 +414,7 @@ my @that     = (
  },
  {
   name       => 'cal-exposure-time-r',
-  index      => 34,
+  index      => 42,
   'tip'      => 'Define exposure-time for red calibration',
   'default'  => 'inactive',
   constraint => {
@@ -372,7 +425,7 @@ my @that     = (
  },
  {
   name       => 'cal-exposure-time-g',
-  index      => 35,
+  index      => 43,
   'tip'      => 'Define exposure-time for green calibration',
   'default'  => 'inactive',
   constraint => {
@@ -383,7 +436,7 @@ my @that     = (
  },
  {
   name       => 'cal-exposure-time-b',
-  index      => 36,
+  index      => 44,
   'tip'      => 'Define exposure-time for blue calibration',
   'default'  => 'inactive',
   constraint => {
@@ -394,7 +447,7 @@ my @that     = (
  },
  {
   name       => 'scan-exposure-time',
-  index      => 37,
+  index      => 45,
   'tip'      => 'Define exposure-time for scan',
   'default'  => 'inactive',
   constraint => {
@@ -405,7 +458,7 @@ my @that     = (
  },
  {
   name       => 'scan-exposure-time-r',
-  index      => 38,
+  index      => 46,
   'tip'      => 'Define exposure-time for red scan',
   'default'  => 'inactive',
   constraint => {
@@ -416,7 +469,7 @@ my @that     = (
  },
  {
   name       => 'scan-exposure-time-g',
-  index      => 39,
+  index      => 47,
   'tip'      => 'Define exposure-time for green scan',
   'default'  => 'inactive',
   constraint => {
@@ -427,7 +480,7 @@ my @that     = (
  },
  {
   name       => 'scan-exposure-time-b',
-  index      => 40,
+  index      => 48,
   'tip'      => 'Define exposure-time for blue scan',
   'default'  => 'inactive',
   constraint => {
@@ -438,42 +491,42 @@ my @that     = (
  },
  {
   name      => 'disable-pre-focus',
-  index     => 41,
+  index     => 49,
   'tip'     => 'Do not calibrate focus',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'manual-pre-focus',
-  index     => 42,
+  index     => 50,
   'tip'     => '',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'fix-focus-position',
-  index     => 43,
+  index     => 51,
   'tip'     => '',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'lens-calibration-in-doc-position',
-  index     => 44,
+  index     => 52,
   'tip'     => 'Calibrate lens focus in document position',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'holder-focus-position-0mm',
-  index     => 45,
+  index     => 53,
   'tip'     => 'Use 0mm holder focus position instead of 0.6mm',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name       => 'cal-lamp-density',
-  index      => 46,
+  index      => 54,
   'tip'      => 'Define lamp density for calibration',
   'default'  => 'inactive',
   constraint => {
@@ -484,7 +537,7 @@ my @that     = (
  },
  {
   name       => 'scan-lamp-density',
-  index      => 47,
+  index      => 55,
   'tip'      => 'Define lamp density for scan',
   'default'  => 'inactive',
   constraint => {
@@ -495,68 +548,68 @@ my @that     = (
  },
  {
   name      => 'select-exposure-time',
-  index     => 48,
+  index     => 56,
   'tip'     => 'Enable selection of exposure-time',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name  => 'select-calibration-exposure-time',
-  index => 49,
+  index => 57,
   'tip' => 'Allow different settings for calibration and scan exposure times',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'select-lamp-density',
-  index     => 50,
+  index     => 58,
   'tip'     => 'Enable selection of lamp density',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'lamp-on',
-  index     => 51,
+  index     => 59,
   'tip'     => 'Turn on scanner lamp',
   'default' => 'inactive',
  },
  {
   name      => 'lamp-off',
-  index     => 52,
+  index     => 60,
   'tip'     => 'Turn off scanner lamp',
   'default' => 'inactive',
  },
  {
   name      => 'lamp-off-at-exit',
-  index     => 53,
+  index     => 61,
   'tip'     => 'Turn off lamp when program exits',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'batch-scan-start',
-  index     => 54,
+  index     => 62,
   'tip'     => 'set for first scan of batch',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'batch-scan-loop',
-  index     => 55,
+  index     => 63,
   'tip'     => 'set for middle scans of batch',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name      => 'batch-scan-end',
-  index     => 56,
+  index     => 64,
   'tip'     => 'set for last scan of batch',
   'default' => 'inactive',
   'values'  => [ 'yes', 'no' ]
  },
  {
   name       => 'batch-scan-next-tl-y',
-  index      => 57,
+  index      => 65,
   'tip'      => 'Set top left Y position for next scan',
   'default'  => 'inactive',
   constraint => {
@@ -567,7 +620,7 @@ my @that     = (
  },
  {
   name      => 'preview',
-  index     => 58,
+  index     => 66,
   'tip'     => 'Request a preview-quality scan.',
   'default' => 'no',
   'values'  => [ 'yes', 'no' ]
