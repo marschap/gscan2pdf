@@ -8,6 +8,7 @@
 use warnings;
 use strict;
 use Test::More tests => 9;
+use Sane 0.05;    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 #########################
@@ -24,22 +25,23 @@ my @that     = (
   title => 'Scan mode',
  },
  {
-  name      => 'mode',
-  index     => 1,
-  'tip'     => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
-  'default' => 'Color',
-  'values'  => [ 'Lineart', 'Grayscale', 'Color' ],
+  name   => 'mode',
+  index  => 1,
+  'desc' => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
+  'val'  => 'Color',
+  'constraint' => [ 'Lineart', 'Grayscale', 'Color' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   name       => 'resolution',
   index      => 2,
-  'tip'      => 'Sets the resolution of the scanned image.',
-  'default'  => '75',
+  'desc'     => 'Sets the resolution of the scanned image.',
+  'val'      => '75',
   constraint => {
    'min' => 75,
    'max' => 600,
   },
-  'unit' => 'dpi',
+  'unit' => SANE_UNIT_DPI,
  },
  {
   index => 3,
@@ -48,55 +50,61 @@ my @that     = (
  {
   name       => 'contrast',
   index      => 4,
-  'tip'      => 'Controls the contrast of the acquired image.',
-  'default'  => 'inactive',
+  'desc'     => 'Controls the contrast of the acquired image.',
+  'val'      => 'inactive',
   constraint => {
    'min' => 0,
    'max' => 100,
   },
+  'unit' => SANE_UNIT_NONE,
  },
  {
   name  => 'compression',
   index => 5,
-  'tip' =>
+  'desc' =>
 'Selects the scanner compression method for faster scans, possibly at the expense of image quality.',
-  'default' => 'JPEG',
-  'values'  => [ 'None', 'JPEG' ],
+  'val'        => 'JPEG',
+  'constraint' => [ 'None', 'JPEG' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   name  => 'jpeg-compression-factor',
   index => 6,
-  'tip' =>
+  'desc' =>
 'Sets the scanner JPEG compression factor.  Larger numbers mean better compression, and smaller numbers mean better image quality.',
-  'default'  => '10',
+  'val'      => '10',
   constraint => {
    'min' => 0,
    'max' => 100,
   },
+  'unit' => SANE_UNIT_NONE,
  },
  {
   name  => 'batch-scan',
   index => 7,
-  'tip' =>
+  'desc' =>
 'Guarantees that a "no documents" condition will be returned after the last scanned page, to prevent endless flatbed scans after a batch scan. For some models, option changes in the middle of a batch scan don\'t take effect until after the last page.',
-  'default' => 'no',
-  'values'  => [ 'yes', 'no' ],
+  'val'        => 'no',
+  'constraint' => [ 'yes', 'no' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   name  => 'source',
   index => 8,
-  'tip' =>
+  'desc' =>
 'Selects the desired scan source for models with both flatbed and automatic document feeder (ADF) capabilities.  The "Auto" setting means that the ADF will be used if it\'s loaded, and the flatbed (if present) will be used otherwise.',
-  'default' => 'Auto',
-  'values'  => [ 'Auto', 'Flatbed', 'ADF' ],
+  'val'        => 'Auto',
+  'constraint' => [ 'Auto', 'Flatbed', 'ADF' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   name  => 'duplex',
   index => 9,
-  'tip' =>
+  'desc' =>
 'Enables scanning on both sides of the page for models with duplex-capable document feeders.  For pages printed in "book"-style duplex mode, one side will be scanned upside-down.  This feature is experimental.',
-  'default' => 'inactive',
-  'values'  => [ 'yes', 'no' ],
+  'val'        => 'inactive',
+  'constraint' => [ 'yes', 'no' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   index => 10,
@@ -105,54 +113,55 @@ my @that     = (
  {
   name  => 'length-measurement',
   index => 11,
-  'tip' =>
+  'desc' =>
 'Selects how the scanned image length is measured and reported, which is impossible to know in advance for scrollfed scans.',
-  'default' => 'Padded',
-  'values'  => [ 'Unknown', 'Approximate', 'Padded' ],
+  'val'        => 'Padded',
+  'constraint' => [ 'Unknown', 'Approximate', 'Padded' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   name       => 'l',
   index      => 12,
-  'tip'      => 'Top-left x position of scan area.',
-  'default'  => 0,
+  'desc'     => 'Top-left x position of scan area.',
+  'val'      => 0,
   constraint => {
    'min' => 0,
    'max' => 215.9,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 't',
   index      => 13,
-  'tip'      => 'Top-left y position of scan area.',
-  'default'  => 0,
+  'desc'     => 'Top-left y position of scan area.',
+  'val'      => 0,
   constraint => {
    'min' => 0,
    'max' => 381,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 'x',
   index      => 14,
-  'tip'      => 'Width of scan-area.',
-  'default'  => 215.9,
+  'desc'     => 'Width of scan-area.',
+  'val'      => 215.9,
   constraint => {
    'min' => 0,
    'max' => 215.9,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 'y',
   index      => 15,
-  'tip'      => 'Height of scan-area.',
-  'default'  => 381,
+  'desc'     => 'Height of scan-area.',
+  'val'      => 381,
   constraint => {
    'min' => 0,
    'max' => 381,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  }
 );
 is_deeply( $options->{array}, \@that, 'officejet_5500' );

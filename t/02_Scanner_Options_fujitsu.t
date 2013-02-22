@@ -8,6 +8,7 @@
 use warnings;
 use strict;
 use Test::More tests => 23;
+use Sane 0.05;    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 #########################
@@ -24,42 +25,44 @@ my @that     = (
   title => 'Scan Mode',
  },
  {
-  name      => 'source',
-  index     => 1,
-  'tip'     => 'Selects the scan source (such as a document-feeder).',
-  'default' => 'ADF Front',
-  'values'  => [ 'ADF Front', 'ADF Back', 'ADF Duplex' ]
+  name         => 'source',
+  index        => 1,
+  'desc'       => 'Selects the scan source (such as a document-feeder).',
+  'val'        => 'ADF Front',
+  'constraint' => [ 'ADF Front', 'ADF Back', 'ADF Duplex' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
-  name      => 'mode',
-  index     => 2,
-  'tip'     => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
-  'default' => 'Gray',
-  'values'  => [ 'Gray', 'Color' ]
+  name   => 'mode',
+  index  => 2,
+  'desc' => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
+  'val'  => 'Gray',
+  'constraint' => [ 'Gray', 'Color' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   name       => 'resolution',
   index      => 3,
-  'tip'      => 'Sets the horizontal resolution of the scanned image.',
-  'default'  => '600',
+  'desc'     => 'Sets the horizontal resolution of the scanned image.',
+  'val'      => '600',
   constraint => {
    'min'  => 100,
    'max'  => 600,
    'step' => 1,
   },
-  'unit' => 'dpi',
+  'unit' => SANE_UNIT_DPI,
  },
  {
   name       => 'y-resolution',
   index      => 4,
-  'tip'      => 'Sets the vertical resolution of the scanned image.',
-  'default'  => '600',
+  'desc'     => 'Sets the vertical resolution of the scanned image.',
+  'val'      => '600',
   constraint => {
    'min'  => 50,
    'max'  => 600,
    'step' => 1,
   },
-  'unit' => 'dpi',
+  'unit' => SANE_UNIT_DPI,
  },
  {
   index => 5,
@@ -68,85 +71,86 @@ my @that     = (
  {
   name       => 'l',
   index      => 6,
-  'tip'      => 'Top-left x position of scan area.',
-  'default'  => 0,
+  'desc'     => 'Top-left x position of scan area.',
+  'val'      => 0,
   constraint => {
    'min'  => 0,
    'max'  => 224.846,
    'step' => 0.0211639,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 't',
   index      => 7,
-  'tip'      => 'Top-left y position of scan area.',
-  'default'  => 0,
+  'desc'     => 'Top-left y position of scan area.',
+  'val'      => 0,
   constraint => {
    'min'  => 0,
    'max'  => 863.489,
    'step' => 0.0211639,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 'x',
   index      => 8,
-  'tip'      => 'Width of scan-area.',
-  'default'  => 215.872,
+  'desc'     => 'Width of scan-area.',
+  'val'      => 215.872,
   constraint => {
    'min'  => 0,
    'max'  => 224.846,
    'step' => 0.0211639,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 'y',
   index      => 9,
-  'tip'      => 'Height of scan-area.',
-  'default'  => 279.364,
+  'desc'     => 'Height of scan-area.',
+  'val'      => 279.364,
   constraint => {
    'min'  => 0,
    'max'  => 863.489,
    'step' => 0.0211639,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 'pagewidth',
   index      => 10,
-  'tip'      => 'Must be set properly to align scanning window',
-  'default'  => '215.872',
+  'desc'     => 'Must be set properly to align scanning window',
+  'val'      => '215.872',
   constraint => {
    'min'  => 0,
    'max'  => 224.846,
    'step' => 0.0211639,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 'pageheight',
   index      => 11,
-  'tip'      => 'Must be set properly to eject pages',
-  'default'  => '279.364',
+  'desc'     => 'Must be set properly to eject pages',
+  'val'      => '279.364',
   constraint => {
    'min'  => 0,
    'max'  => 863.489,
    'step' => 0.0211639,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   index => 12,
   title => 'Enhancement',
  },
  {
-  name      => 'rif',
-  index     => 13,
-  'tip'     => 'Reverse image format',
-  'default' => 'no',
-  'values'  => [ 'yes', 'no' ]
+  name         => 'rif',
+  index        => 13,
+  'desc'       => 'Reverse image format',
+  'val'        => 'no',
+  'constraint' => [ 'yes', 'no' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   index => 14,
@@ -155,22 +159,24 @@ my @that     = (
  {
   name  => 'dropoutcolor',
   index => 15,
-  'tip' =>
+  'desc' =>
 'One-pass scanners use only one color during gray or binary scanning, useful for colored paper or ink',
-  'default' => 'Default',
-  'values'  => [ 'Default', 'Red', 'Green', 'Blue' ]
+  'val'        => 'Default',
+  'constraint' => [ 'Default', 'Red', 'Green', 'Blue' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   name  => 'sleeptimer',
   index => 16,
-  'tip' =>
+  'desc' =>
     'Time in minutes until the internal power supply switches to sleep mode',
-  'default'  => '0',
+  'val'      => '0',
   constraint => {
    'min'  => 0,
    'max'  => 60,
    'step' => 1,
   },
+  'unit' => SANE_UNIT_NONE,
  },
  {
   index => 17,

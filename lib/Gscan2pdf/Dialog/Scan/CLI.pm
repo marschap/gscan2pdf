@@ -21,18 +21,18 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, properties => [
   [qw/readable writable/]                # flags
  ),
  Glib::ParamSpec->string(
-  'prefix',                                             # name
-  'Prefix',                                             # nick
-  'Prefix for command line calls',                                        # blurb
-  '',                                                   # default
-  [qw/readable writable/]                               # flags
+  'prefix',                              # name
+  'Prefix',                              # nick
+  'Prefix for command line calls',       # blurb
+  '',                                    # default
+  [qw/readable writable/]                # flags
  ),
  Glib::ParamSpec->string(
-  'frontend',                                             # name
-  'Frontend',                                             # nick
-  '(scanimage|scanadf)(-perl)?',                                        # blurb
-  '',                                                   # default
-  [qw/readable writable/]                               # flags
+  'frontend',                            # name
+  'Frontend',                            # nick
+  '(scanimage|scanadf)(-perl)?',         # blurb
+  '',                                    # default
+  [qw/readable writable/]                # flags
  ),
 ];
 
@@ -398,8 +398,8 @@ sub get_devices {
  my $pbar;
  my $hboxd = $self->{hboxd};
  Gscan2pdf::Frontend::CLI->get_devices(
-  prefix            => $self->get('prefix'),
-  started_callback  => sub {
+  prefix           => $self->get('prefix'),
+  started_callback => sub {
 
    # Set up ProgressBar
    $pbar = Gtk2::ProgressBar->new;
@@ -447,12 +447,13 @@ sub scan_options {
 
  my $pbar;
  my $hboxd = $self->{hboxd};
-  Gscan2pdf::Frontend::CLI->find_scan_options(
-   prefix            => $self->get('prefix'),
-   frontend         => $self->get('frontend'),
-   device           => $self->get('device'),
-#   mode             => $SETTING{mode},
-  started_callback  => sub {
+ Gscan2pdf::Frontend::CLI->find_scan_options(
+  prefix   => $self->get('prefix'),
+  frontend => $self->get('frontend'),
+  device   => $self->get('device'),
+
+  #   mode             => $SETTING{mode},
+  started_callback => sub {
 
    # Set up ProgressBar
    $pbar = Gtk2::ProgressBar->new;
@@ -463,32 +464,33 @@ sub scan_options {
    $hboxd->show;
    $pbar->show;
   },
-   running_callback => sub {
-    $pbar->pulse;
-   },
-   finished_callback => sub {
-    my ($output) = @_;
-    $pbar->destroy;
-    $logger->info($output);
-#    parse_options( $self->get('device'), options2hash($output) );
+  running_callback => sub {
+   $pbar->pulse;
+  },
+  finished_callback => sub {
+   my ($output) = @_;
+   $pbar->destroy;
+   $logger->info($output);
 
-     my $options = Gscan2pdf::Scanner::Options->new_from_data($output);
-     $self->_initialise_options($options);
+   #    parse_options( $self->get('device'), options2hash($output) );
 
-     $self->signal_emit( 'finished-process', 'find_scan_options' );
+   my $options = Gscan2pdf::Scanner::Options->new_from_data($output);
+   $self->_initialise_options($options);
 
-     # This fires the reloaded-scan-options signal,
-     # so don't set this until we have finished
-     $self->set( 'available-scan-options', $options );
-   },
-   error_callback => sub {
-    my ($message) = @_;
-     my $parent = $self->get('transient-for');
-    main::show_message_dialog( $parent, 'error', 'close', $message );
-    $pbar->destroy;
-    $logger->warn($message);
-   },
-  );
+   $self->signal_emit( 'finished-process', 'find_scan_options' );
+
+   # This fires the reloaded-scan-options signal,
+   # so don't set this until we have finished
+   $self->set( 'available-scan-options', $options );
+  },
+  error_callback => sub {
+   my ($message) = @_;
+   my $parent = $self->get('transient-for');
+   main::show_message_dialog( $parent, 'error', 'close', $message );
+   $pbar->destroy;
+   $logger->warn($message);
+  },
+ );
  return;
 }
 
@@ -535,17 +537,15 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
   my $opt = $options->by_index($i);
 
   # Notebook page for group
-  if ( $opt->{type} == SANE_TYPE_GROUP or not defined($vbox) ) {
+  if ( defined( $opt->{title} ) or not defined($vbox) ) {
    $vbox = Gtk2::VBox->new;
    $group =
-       $opt->{type} == SANE_TYPE_GROUP
+     defined( $opt->{title} )
      ? $d_sane->get( $opt->{title} )
      : $d->get('Scan Options');
    $self->{notebook}->append_page( $vbox, $group );
    next;
   }
-
-  next unless ( $opt->{cap} & SANE_CAP_SOFT_DETECT );
 
   # Widget
   my ( $widget, $val );

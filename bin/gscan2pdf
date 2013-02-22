@@ -3513,8 +3513,8 @@ sub scan_dialog {
   'page-number-start' => $#{ $slist->{data} } > -1
   ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
   : 1,
-  prefix            => $SETTING{'scan prefix'},
-   frontend         => $SETTING{'frontend'},
+  prefix   => $SETTING{'scan prefix'},
+  frontend => $SETTING{'frontend'},
  );
 
 # Can't set the device when creating the window, as the list does not exist then
@@ -6002,7 +6002,7 @@ sub add_widget_from_hash {
 
  # HBox for option
  my $hbox = Gtk2::HBox->new;
- $hbox->set_sensitive(FALSE) if ( $option->{default} =~ /inactive/ );
+ $hbox->set_sensitive(FALSE) if ( $option->{val} =~ /inactive/ );
 
  # Label
  my $label = Gtk2::Label->new( $ddo{ $option->{name} }{string} );
@@ -6019,27 +6019,27 @@ sub add_widget_from_hash {
   $widget = Gtk2::SpinButton->new_with_range( $option->{constraint}{min},
    $option->{constraint}{max}, $step );
 
-  # Set the default
-  $widget->set_value( $option->{default} )
-    unless ( $option->{default} =~ /inactive/ );
+  # Set the value
+  $widget->set_value( $option->{val} )
+    unless ( $option->{val} =~ /inactive/ );
  }
 
  # ComboBox
  else {
   $widget = Gtk2::ComboBox->new_text;
 
-  my $index = default2index( $option->{default}, @{ $option->{values} } );
-  foreach ( @{ $option->{values} } ) {
+  my $index = default2index( $option->{val}, @{ $option->{constraint} } );
+  foreach ( @{ $option->{constraint} } ) {
    add_to_options( $option->{name}, $_ );
    $widget->append_text( $ddo{ $option->{name} }{values}{$_} );
   }
 
-  # Set the default
+  # Set the value
   $widget->set_active($index) if ( defined $index );
  }
 
  $hbox->pack_end( $widget, FALSE, FALSE, 0 );
- $tooltips->set_tip( $widget, $option->{tip} );
+ $tooltips->set_tip( $widget, $option->{desc} );
  return ( $widget, $hbox );
 }
 
@@ -6324,7 +6324,7 @@ sub update_options {
  return;
 }
 
-# return the options, updated with the user defaults
+# return the options, updated with the user values
 
 sub options2hash {
 
@@ -6334,21 +6334,21 @@ sub options2hash {
  for ( 0 .. $options->num_options - 1 ) {
   my $option = $options->by_index($_);
 
-  # Set default from config
+  # Set value from config
   if (
    defined( $SETTING{ $option->{name} } )
-   and $option->{default} ne 'inactive'
+   and $option->{val} ne 'inactive'
 
-   # only set the default if it is an option
+   # only set the value if it is an option
    and (
     defined( $option->{constraint}{max} )
     or defined(
-     default2index( $SETTING{ $option->{name} }, @{ $option->{values} } )
+     default2index( $SETTING{ $option->{name} }, @{ $option->{constraint} } )
     )
    )
     )
   {
-   $option->{default} = $SETTING{ $option->{name} };
+   $option->{val} = $SETTING{ $option->{name} };
   }
 
   # in the case that we've switched devices and the new device doesn't support
@@ -6397,7 +6397,7 @@ sub update_options_hash {
      and $key ne 'mode'
      and $key ne 'Paper size'
      and defined($opt)
-     and defined( $opt->{values} )
+     and defined( $opt->{constraint} )
       )
     {
 
@@ -6413,7 +6413,7 @@ sub update_options_hash {
       $widget->append_text( $ddo{$key}{values}{$_} );
      }
 
-     # Set the default
+     # Set the value
      $widget->set_active($index) if ( defined $index );
 
      # Set the ghosting
@@ -6438,7 +6438,7 @@ sub update_options_hash {
     {
      $widget->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
 
-     # Set the default
+     # Set the value
      if ( $opt->{val} =~ /inactive/ ) {
       $hbox->set_sensitive(FALSE);
      }

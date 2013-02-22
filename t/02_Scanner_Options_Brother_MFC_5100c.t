@@ -8,6 +8,7 @@
 use warnings;
 use strict;
 use Test::More tests => 2;
+use Sane 0.05;    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 #########################
@@ -24,53 +25,55 @@ my @that     = (
   title => 'Mode',
  },
  {
-  name      => 'mode',
-  index     => 1,
-  'tip'     => 'Select the scan mode',
-  'default' => '24bit Color',
-  'values' =>
-    [ 'Black & White', 'Gray[Error Diffusion]', 'True Gray', '24bit Color' ]
+  name   => 'mode',
+  index  => 1,
+  'desc' => 'Select the scan mode',
+  'val'  => '24bit Color',
+  'constraint' =>
+    [ 'Black & White', 'Gray[Error Diffusion]', 'True Gray', '24bit Color' ],
+  'unit' => SANE_UNIT_NONE,
  },
  {
-  name      => 'resolution',
-  index     => 2,
-  'tip'     => 'Sets the resolution of the scanned image.',
-  'default' => '200',
-  'values'  => [
+  name         => 'resolution',
+  index        => 2,
+  'desc'       => 'Sets the resolution of the scanned image.',
+  'val'        => '200',
+  'constraint' => [
    '100', '150', '200', '300', '400', '600', '1200', '2400', '4800', '9600'
   ],
-  'unit' => 'dpi',
+  'unit' => SANE_UNIT_DPI,
  },
  {
-  name      => 'source',
-  index     => 3,
-  'tip'     => 'Selects the scan source (such as a document-feeder).',
-  'default' => 'Automatic Document Feeder',
-  'values'  => [ 'FlatBed', 'Automatic Document Feeder' ]
+  name         => 'source',
+  index        => 3,
+  'desc'       => 'Selects the scan source (such as a document-feeder).',
+  'val'        => 'Automatic Document Feeder',
+  'constraint' => [ 'FlatBed', 'Automatic Document Feeder' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   name       => 'brightness',
   index      => 4,
-  'tip'      => 'Controls the brightness of the acquired image.',
-  'default'  => 'inactive',
+  'desc'     => 'Controls the brightness of the acquired image.',
+  'val'      => 'inactive',
   constraint => {
    'min'  => -50,
    'max'  => 50,
    'step' => 1,
   },
-  'unit' => '%',
+  'unit' => SANE_UNIT_PERCENT,
  },
  {
   name       => 'contrast',
   index      => 5,
-  'tip'      => 'Controls the contrast of the acquired image.',
-  'default'  => 'inactive',
+  'desc'     => 'Controls the contrast of the acquired image.',
+  'val'      => 'inactive',
   constraint => {
    'min'  => -50,
    'max'  => 50,
    'step' => 1,
   },
-  'unit' => '%',
+  'unit' => SANE_UNIT_PERCENT,
  },
  {
   index => 6,
@@ -79,50 +82,50 @@ my @that     = (
  {
   name       => 'l',
   index      => 7,
-  'tip'      => 'Top-left x position of scan area.',
-  'default'  => 0,
+  'desc'     => 'Top-left x position of scan area.',
+  'val'      => 0,
   constraint => {
    'min'  => 0,
    'max'  => 208,
    'step' => 0.0999908,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 't',
   index      => 8,
-  'tip'      => 'Top-left y position of scan area.',
-  'default'  => 0,
+  'desc'     => 'Top-left y position of scan area.',
+  'val'      => 0,
   constraint => {
    'min'  => 0,
    'max'  => 355.6,
    'step' => 0.0999908,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 'x',
   index      => 9,
-  'tip'      => 'Width of scan-area.',
-  'default'  => 207.981,
+  'desc'     => 'Width of scan-area.',
+  'val'      => 207.981,
   constraint => {
    'min'  => 0,
    'max'  => 208,
    'step' => 0.0999908,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 'y',
   index      => 10,
-  'tip'      => 'Height of scan-area.',
-  'default'  => 296.973,
+  'desc'     => 'Height of scan-area.',
+  'val'      => 296.973,
   constraint => {
    'min'  => 0,
    'max'  => 355.6,
    'step' => 0.0999908,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  }
 );
 is_deeply( $options->{array}, \@that, 'Brother_MFC_5100c' );

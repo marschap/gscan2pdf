@@ -3,8 +3,9 @@ package Gscan2pdf::Scanner::Options;
 use strict;
 use warnings;
 use Carp;
-use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
-use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
+use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
+use Sane 0.05;              # For enums
+use feature "switch";
 
 use Glib::Object::Subclass Glib::Object::;
 
@@ -193,7 +194,7 @@ sub options2hash {
                       -+        # at least one dash
                       ([\w\-]+) # the option name
                       $values      # optionally followed by the possible values
-                      (?:\ \[([\S\s]*?)\])?  # optionally a space, followed by the default value in square brackets
+                      (?:\ \[([\S\s]*?)\])?  # optionally a space, followed by the current value in square brackets
                       \ *\n     # the rest of the line
                       ([\S\s]*) # the rest of the output
                     /x
@@ -201,15 +202,15 @@ sub options2hash {
   {
    $option{name} = $1;
    parse_values( \%option, $2 );
-   $option{default} = $3 if ( defined $3 );
+   $option{val} = $3 if ( defined $3 );
 
    # Remove everything on the option line and above.
    $output = $4;
 
    $hash{ $option{name} } = \%option;
 
-   # Parse tooltips from option description based on an 8-character indent.
-   my $tip = '';
+   # Parse option description based on an 8-character indent.
+   my $desc = '';
    while (
     $output =~ /
                        ^\ {8,}   # 8-character indent
@@ -218,18 +219,18 @@ sub options2hash {
                      /x
      )
    {
-    if ( $tip eq '' ) {
-     $tip = $1;
+    if ( $desc eq '' ) {
+     $desc = $1;
     }
     else {
-     $tip = "$tip $1";
+     $desc = "$desc $1";
     }
 
     # Remove everything on the description line and above.
     $output = $2;
    }
 
-   $option{tip} = $tip;
+   $option{desc} = $desc;
   }
   else {
    last;
@@ -244,19 +245,21 @@ sub options2hash {
 
 sub parse_values {
  my ( $option, $values ) = @_;
+ my $units = qr/(pel|bit|mm|dpi|%|us)/x;
+ $option->{unit} = SANE_UNIT_NONE;
  if (
   defined($values)
   and $values =~ /
                     (-?\d*\.?\d*)          # min value, possibly negative or floating
                     \.\.                   # two dots
                     (\d*\.?\d*)            # max value, possible floating
-                    (pel|bit|mm|dpi|%|us)? # optional unit
+                    $units? # optional unit
                   /x
    )
  {
   $option->{constraint}{min} = $1;
   $option->{constraint}{max} = $2;
-  $option->{unit} = $3 if ( defined $3 );
+  $option->{unit} = unit2enum($3) if ( defined $3 );
   $option->{constraint}{step} = $1
     if (
    $values =~ /
@@ -268,7 +271,7 @@ sub parse_values {
     );
  }
  elsif ( defined($values) and $values eq '<string>' ) {
-  $option->{values} = $values;
+  $option->{constraint} = $values;
  }
  else {
   my @array;
@@ -280,16 +283,42 @@ sub parse_values {
     $values = substr( $values, $i + 1, length($values) );
    }
    else {
-    if ( $values =~ /(pel|bit|mm|dpi|%|us)$/x ) {
-     $option->{unit} = $1;
-     $values = substr( $values, 0, index( $values, $option->{unit} ) );
+    if ( $values =~ /$units$/x ) {
+     my $unit = $1;
+     $option->{unit} = unit2enum($unit);
+     $values = substr( $values, 0, index( $values, $unit ) );
     }
     $value = $values;
     undef $values;
    }
    push @array, $value if ( $value ne '' );
   }
-  $option->{values} = [@array] if (@array);
+  $option->{constraint} = [@array] if (@array);
+ }
+ return;
+}
+
+sub unit2enum {
+ my ($unit) = @_;
+ given ($unit) {
+  when ('pel') {
+   return SANE_UNIT_PIXEL;
+  }
+  when ('bit') {
+   return SANE_UNIT_BIT;
+  }
+  when ('mm') {
+   return SANE_UNIT_MM;
+  }
+  when ('dpi') {
+   return SANE_UNIT_DPI;
+  }
+  when ('%') {
+   return SANE_UNIT_PERCENT;
+  }
+  when ('us') {
+   return SANE_UNIT_MICROSECOND;
+  }
  }
  return;
 }

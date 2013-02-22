@@ -8,6 +8,7 @@
 use warnings;
 use strict;
 use Test::More tests => 2;
+use Sane 0.05;    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 #########################
@@ -24,49 +25,53 @@ my @that     = (
   title => 'Scan mode',
  },
  {
-  name      => 'mode',
-  index     => 1,
-  'tip'     => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
-  'default' => 'Color',
-  'values' =>
-    [ 'Lineart', 'Dithered', 'Gray', '12bit Gray', 'Color', '12bit Color' ]
+  name   => 'mode',
+  index  => 1,
+  'desc' => 'Selects the scan mode (e.g., lineart, monochrome, or color).',
+  'val'  => 'Color',
+  'constraint' =>
+    [ 'Lineart', 'Dithered', 'Gray', '12bit Gray', 'Color', '12bit Color' ],
+  'unit' => SANE_UNIT_NONE,
  },
  {
   name       => 'resolution',
   index      => 2,
-  'tip'      => 'Sets the resolution of the scanned image.',
-  'default'  => '150',
+  'desc'     => 'Sets the resolution of the scanned image.',
+  'val'      => '150',
   constraint => {
    'min'  => 100,
    'max'  => 1200,
    'step' => 5,
   },
-  'unit' => 'dpi',
+  'unit' => SANE_UNIT_DPI,
  },
  {
   name       => 'speed',
   index      => 3,
-  'tip'      => 'Determines the speed at which the scan proceeds.',
-  'default'  => '0',
+  'desc'     => 'Determines the speed at which the scan proceeds.',
+  'val'      => '0',
   constraint => {
    'min'  => 0,
    'max'  => 4,
    'step' => 1,
   },
+  'unit' => SANE_UNIT_NONE,
  },
  {
-  name      => 'preview',
-  index     => 4,
-  'tip'     => 'Request a preview-quality scan.',
-  'default' => 'no',
-  'values'  => [ 'yes', 'no' ]
+  name         => 'preview',
+  index        => 4,
+  'desc'       => 'Request a preview-quality scan.',
+  'val'        => 'no',
+  'constraint' => [ 'yes', 'no' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
-  name      => 'source',
-  index     => 5,
-  'tip'     => 'Selects the scan source (such as a document-feeder).',
-  'default' => 'Normal',
-  'values'  => [ 'Normal', 'ADF' ]
+  name         => 'source',
+  index        => 5,
+  'desc'       => 'Selects the scan source (such as a document-feeder).',
+  'val'        => 'Normal',
+  'constraint' => [ 'Normal', 'ADF' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   index => 6,
@@ -75,46 +80,46 @@ my @that     = (
  {
   name       => 'l',
   index      => 7,
-  'tip'      => 'Top-left x position of scan area.',
-  'default'  => 0,
+  'desc'     => 'Top-left x position of scan area.',
+  'val'      => 0,
   constraint => {
    'min' => 0,
    'max' => 216,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 't',
   index      => 8,
-  'tip'      => 'Top-left y position of scan area.',
-  'default'  => 0,
+  'desc'     => 'Top-left y position of scan area.',
+  'val'      => 0,
   constraint => {
    'min' => 0,
    'max' => 296,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 'x',
   index      => 9,
-  'tip'      => 'Width of scan-area.',
-  'default'  => 216,
+  'desc'     => 'Width of scan-area.',
+  'val'      => 216,
   constraint => {
    'min' => 0,
    'max' => 216,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   name       => 'y',
   index      => 10,
-  'tip'      => 'Height of scan-area.',
-  'default'  => 296,
+  'desc'     => 'Height of scan-area.',
+  'val'      => 296,
   constraint => {
    'min' => 0,
    'max' => 296,
   },
-  'unit' => 'mm',
+  'unit' => SANE_UNIT_MM,
  },
  {
   index => 11,
@@ -123,107 +128,116 @@ my @that     = (
  {
   name       => 'brightness',
   index      => 12,
-  'tip'      => 'Controls the brightness of the acquired image.',
-  'default'  => '0',
+  'desc'     => 'Controls the brightness of the acquired image.',
+  'val'      => '0',
   constraint => {
    'min'  => -100,
    'max'  => 100,
    'step' => 1,
   },
-  'unit' => '%',
+  'unit' => SANE_UNIT_PERCENT,
  },
  {
   name       => 'contrast',
   index      => 13,
-  'tip'      => 'Controls the contrast of the acquired image.',
-  'default'  => '0',
+  'desc'     => 'Controls the contrast of the acquired image.',
+  'val'      => '0',
   constraint => {
    'min'  => -100,
    'max'  => 100,
    'step' => 1,
   },
-  'unit' => '%',
+  'unit' => SANE_UNIT_PERCENT,
  },
  {
-  name      => 'quality-scan',
-  index     => 14,
-  'tip'     => 'Turn on quality scanning (slower but better).',
-  'default' => 'yes',
-  'values'  => [ 'yes', 'no' ]
+  name         => 'quality-scan',
+  index        => 14,
+  'desc'       => 'Turn on quality scanning (slower but better).',
+  'val'        => 'yes',
+  'constraint' => [ 'yes', 'no' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
-  name      => 'quality-cal',
-  index     => 15,
-  'tip'     => 'Do a quality white-calibration',
-  'default' => 'yes',
-  'values'  => [ 'yes', 'no' ]
+  name         => 'quality-cal',
+  index        => 15,
+  'desc'       => 'Do a quality white-calibration',
+  'val'        => 'yes',
+  'constraint' => [ 'yes', 'no' ],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   name  => 'gamma-table',
   index => 16,
-  'tip' =>
+  'desc' =>
 'Gamma-correction table.  In color mode this option equally affects the red, green, and blue channels simultaneously (i.e., it is an intensity gamma table).',
   constraint => {
    'min' => 0,
    'max' => 255,
   },
+  'unit' => SANE_UNIT_NONE,
  },
  {
   name       => 'red-gamma-table',
   index      => 17,
-  'tip'      => 'Gamma-correction table for the red band.',
-  'default'  => 'inactive',
+  'desc'     => 'Gamma-correction table for the red band.',
+  'val'      => 'inactive',
   constraint => {
    'min' => 0,
    'max' => 255,
   },
+  'unit' => SANE_UNIT_NONE,
  },
  {
   name       => 'green-gamma-table',
   index      => 18,
-  'tip'      => 'Gamma-correction table for the green band.',
-  'default'  => 'inactive',
+  'desc'     => 'Gamma-correction table for the green band.',
+  'val'      => 'inactive',
   constraint => {
    'min' => 0,
    'max' => 255,
   },
+  'unit' => SANE_UNIT_NONE,
  },
  {
   name       => 'blue-gamma-table',
   index      => 19,
-  'tip'      => 'Gamma-correction table for the blue band.',
-  'default'  => 'inactive',
+  'desc'     => 'Gamma-correction table for the blue band.',
+  'val'      => 'inactive',
   constraint => {
    'min' => 0,
    'max' => 255,
   },
+  'unit' => SANE_UNIT_NONE,
  },
  {
   name       => 'frame',
   index      => 20,
-  'tip'      => 'Selects the number of the frame to scan',
-  'default'  => 'inactive',
+  'desc'     => 'Selects the number of the frame to scan',
+  'val'      => 'inactive',
   constraint => {
    'min' => 0,
    'max' => 0,
   },
+  'unit' => SANE_UNIT_NONE,
  },
  {
   name  => 'power-save-time',
   index => 21,
-  'tip' =>
+  'desc' =>
 'Allows control of the scanner\'s power save timer, dimming or turning off the light.',
-  'default' => '65535',
-  'values'  => ['<int>']
+  'val'        => '65535',
+  'constraint' => ['<int>'],
+  'unit'       => SANE_UNIT_NONE,
  },
  {
   name  => 'nvram-values',
   index => 22,
-  'tip' =>
+  'desc' =>
 'Allows access obtaining the scanner\'s NVRAM values as pretty printed text.',
-  'default' =>
+  'val' =>
 "Vendor: HP      \nModel: ScanJet 5300C   \nFirmware: 4.00\nSerial: 3119ME\nManufacturing date: 0-0-0\nFirst scan date: 65535-0-0\nFlatbed scans: 65547\nPad scans: -65536\nADF simplex scans: 136183808",
-  'values' => '<string>'
+  'constraint' => '<string>',
+  'unit'       => SANE_UNIT_NONE,
  },
 );
 is_deeply( $options->{array}, \@that, 'hp_scanjet5300c' );
