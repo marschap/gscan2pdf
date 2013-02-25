@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.1.2
+Version: 1.1.3
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -84,7 +84,8 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sun Feb 10 2013 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Mon Feb 25 2013 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
   - New upstream release
   - New upstream release
   - New upstream release
