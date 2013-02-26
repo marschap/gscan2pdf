@@ -8240,33 +8240,20 @@ gscan2pdf is available on Sourceforge
 If you are using Debian, you should find that sid has the latest version already
 packaged.
 
-If you are using a Ubuntu-based system, just add the following line to your
-"F</etc/apt/sources.list>" file:
+If you are using a Ubuntu-based system, you can automatically keep up to date
+with the latest version via the ppa:
 
-C<deb http://ppa.launchpad.net/jeffreyratcliffe/ubuntu E<lt>releaseE<gt> main>
-
-C<deb-src http://ppa.launchpad.net/jeffreyratcliffe/ubuntu E<lt>releaseE<gt> main>
-
-where C<E<lt>releaseE<gt>> is the version of Ubuntu you are using.
+C<sudo apt-add-repository ppa:jeffreyratcliffe/ppa>
 
 If you are you are using Synaptic, then use menu
 I<Edit/Reload Package Information>, search for gscan2pdf in the package list,
-and lo and behold, you can install the nice shiny new version automatically.
+and lo and behold, you can install the nice shiny new version.
 
 From the command line:
 
-C<apt-get update>
+C<sudo apt-get update>
 
-C<apt-get install gscan2pdf>
-
-If you add the key for my ppa to your list of trusted keys, then you will no longer get
-the "not authenticated" warnings. Fetch the key:
-
-C<gpg --keyserver keyserver.ubuntu.com --recv-keys 5BC3E400>
-
-Then add it to the apt keyring:
-
-C<gpg --export --armor 5BC3E400 | sudo apt-key add ->
+C<sudo apt-get install gscan2pdf>
 
 =head2 RPMs
 
