@@ -3311,8 +3311,14 @@ sub email {
 "kreadconfig --file emaildefaults --group PROFILE_Default --key EmailClient| cut -d ' ' -f 1"
     );
    }
-   elsif ( defined( $ENV{GNOME_DESKTOP_SESSION_ID} )
-    and $ENV{GNOME_DESKTOP_SESSION_ID} ne '' )
+   elsif (
+    (
+     defined( $ENV{GNOME_DESKTOP_SESSION_ID} )
+     and $ENV{GNOME_DESKTOP_SESSION_ID} ne ''
+    )
+    or ( defined( $ENV{XDG_CURRENT_DESKTOP} )
+     and $ENV{XDG_CURRENT_DESKTOP} eq 'XFCE' )
+     )
    {
     ($client) = Gscan2pdf::Document::open_three(
 "gconftool --get /desktop/gnome/url-handlers/mailto/command | cut -d ' ' -f 1"
