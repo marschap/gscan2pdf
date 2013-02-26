@@ -348,15 +348,18 @@ sub new {
  $self->{sbutton} = Gtk2::Button->new( $d->get('Scan') );
  $hboxb->pack_start( $self->{sbutton}, TRUE, TRUE, 0 );
  $self->{sbutton}->signal_connect( clicked => sub { $self->scan; } );
+ $self->{sbutton}->grab_focus;
 
  # Cancel button
  my $cbutton = Gtk2::Button->new_from_stock('gtk-close');
  $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
  $cbutton->signal_connect( clicked => sub { $self->hide; } );
 
- # FIXME: this has to be done somewhere else
- # Has to be done in idle cycles to wait for the options to finish building
- Glib::Idle->add( sub { $self->{sbutton}->grab_focus; } );
+ $self->signal_connect(
+  check_resize => sub {
+   Glib::Idle->add( sub { $self->resize( 100, 100 ); } );
+  }
+ );
  return $self;
 }
 
@@ -656,9 +659,6 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  for ( my $i = 1 ; $i < $self->{notebook}->get_n_pages ; $i++ ) {
   $self->{notebook}->get_nth_page($i)->show_all;
  }
-
- # Give the GUI a chance to catch up before resizing.
- Glib::Idle->add( sub { $self->resize( 100, 100 ); } );
 
  $self->{sbutton}->set_sensitive(TRUE);
  $self->{sbutton}->grab_focus;
