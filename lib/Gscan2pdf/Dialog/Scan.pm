@@ -2,7 +2,7 @@ package Gscan2pdf::Dialog::Scan;
 
 use warnings;
 use strict;
-use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
+use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gscan2pdf::Dialog;
 use feature "switch";
 use Data::Dumper;
@@ -69,48 +69,49 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   param_types => ['Glib::String'],                      # process name
  },
  'process-error' => {
-  param_types => ['Glib::Scalar'],                      # error message
+  param_types => [ 'Glib::String', 'Glib::String' ]
+  ,    # process name, error message
  },
  show => \&show,
   },
   properties => [
  Glib::ParamSpec->string(
-  'device',                                             # name
-  'Device',                                             # nick
-  'Device name',                                        # blurb
-  '',                                                   # default
-  [qw/readable writable/]                               # flags
+  'device',                  # name
+  'Device',                  # nick
+  'Device name',             # blurb
+  '',                        # default
+  [qw/readable writable/]    # flags
  ),
  Glib::ParamSpec->scalar(
-  'device-list',                                        # name
-  'Device list',                                        # nick
-  'Array of hashes of available devices',               # blurb
-  [qw/readable writable/]                               # flags
+  'device-list',                             # name
+  'Device list',                             # nick
+  'Array of hashes of available devices',    # blurb
+  [qw/readable writable/]                    # flags
  ),
  Glib::ParamSpec->scalar(
-  'dir',                                                # name
-  'Directory',                                          # nick
-  'Directory in which to store scans',                  # blurb
-  [qw/readable writable/]                               # flags
+  'dir',                                     # name
+  'Directory',                               # nick
+  'Directory in which to store scans',       # blurb
+  [qw/readable writable/]                    # flags
  ),
  Glib::ParamSpec->scalar(
-  'logger',                                             # name
-  'Logger',                                             # nick
-  'Log::Log4perl::get_logger object',                   # blurb
-  [qw/readable writable/]                               # flags
+  'logger',                                  # name
+  'Logger',                                  # nick
+  'Log::Log4perl::get_logger object',        # blurb
+  [qw/readable writable/]                    # flags
  ),
  Glib::ParamSpec->scalar(
-  'profile',                                            # name
-  'Profile',                                            # nick
-  'Name of current profile',                            # blurb
-  [qw/readable writable/]                               # flags
+  'profile',                                 # name
+  'Profile',                                 # nick
+  'Name of current profile',                 # blurb
+  [qw/readable writable/]                    # flags
  ),
  Glib::ParamSpec->string(
-  'paper',                                              # name
-  'Paper',                                              # nick
-  'Name of currently selected paper format',            # blurb
-  '',                                                   # default
-  [qw/readable writable/]                               # flags
+  'paper',                                      # name
+  'Paper',                                      # nick
+  'Name of currently selected paper format',    # blurb
+  '',                                           # default
+  [qw/readable writable/]                       # flags
  ),
  Glib::ParamSpec->scalar(
   'paper-formats',                                                   # name
@@ -285,14 +286,19 @@ sub set_device {
    for ( my $i = 0 ; $i < @$device_list ; $i++ ) {
     $o = $i if ( $device eq $device_list->[$i]{name} );
    }
-   $o = 0 unless ( defined $o );
 
    # Set the device dependent options after the number of pages
    #  to scan so that the source button callback can ghost the
    #  all button.
    # This then fires the callback, updating the options,
    #  so no need to do it further down.
-   $self->{combobd}->set_active($o);
+   if ( defined $o ) {
+    $self->{combobd}->set_active($o);
+   }
+   else {
+    $self->signal_emit( 'process-error', 'open_device',
+     sprintf( $d->get('Error: unknown device: %s'), $device ) );
+   }
   }
  }
  return;

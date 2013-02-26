@@ -631,8 +631,8 @@ my @action_items = (
  # Tools menu
  [ 'Tools', undef, $d->get('_Tools') ],
  [
-  'Threshold', undef, $d->get('_Threshold'), undef,
-  $d->get('Change each pixel above this threshold to black'),
+  'Threshold', undef, $d->get('_Threshold'),
+  undef, $d->get('Change each pixel above this threshold to black'),
   \&threshold
  ],
  [
@@ -2518,7 +2518,8 @@ sub add_pdf_compression {
  # Compression options
  my @compression = (
   [
-   'auto', $d->get('Automatic'),
+   'auto',
+   $d->get('Automatic'),
    $d->get('Let gscan2pdf which type of compression to use.')
   ],
   [
@@ -2687,13 +2688,14 @@ sub save_dialog {
  $hboxf->pack_start( $label, FALSE, FALSE, 0 );
  my @fonts;
  my ($stdout) = Gscan2pdf::Document::open_three('fc-list : family style file');
+
  for ( split /\n/, $stdout ) {
   if (/ttf:\ /x) {
    my ( $file, $family, $style ) = split ':';
    chomp $style;
    $family =~ s/^\ //x;
-   $style  =~ s/^style=//x;
-   $style  =~ s/,.*$//x;
+   $style =~ s/^style=//x;
+   $style =~ s/,.*$//x;
    my $font = "$family $style";
    push @fonts, [ $file, $font, $font ];
    $SETTING{'pdf font'} = $file
@@ -4436,10 +4438,16 @@ sub scan_dialog2 {
 
  $windows2->signal_connect(
   'process-error' => sub {
-   my ( $widget, $msg ) = @_;
+   my ( $widget, $process, $msg ) = @_;
    $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
    $shbox->hide;
-   show_message_dialog( $windows2, 'error', 'close', $d_sane->get($msg) );
+   if ( $process =~ /^(?:get_devices|find_scan_options)$/x ) {
+    undef $windows2;
+    show_message_dialog( $window, 'error', 'close', $msg );
+   }
+   else {
+    show_message_dialog( $windows2, 'error', 'close', $d_sane->get($msg) );
+   }
   }
  );
 

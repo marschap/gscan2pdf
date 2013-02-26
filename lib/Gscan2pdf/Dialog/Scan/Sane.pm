@@ -406,11 +406,7 @@ sub get_devices {
    use Data::Dumper;
    $logger->info( "Sane->get_devices returned: ", Dumper( \@device_list ) );
    if ( @device_list == 0 ) {
-    my $parent = $self->get('transient-for');
-    $self->destroy;
-    undef $self;
-    main::show_message_dialog( $parent, 'error', 'close',
-     $d->get('No devices found') );
+    $self->signal_emit( 'process-error', 'get_devices', 'No devices found' );
     return FALSE;
    }
    $self->set( 'device-list', \@device_list );
@@ -464,18 +460,14 @@ sub scan_options {
     },
     sub {    # error callback
      my ($message) = @_;
-     my $parent = $self->get('transient-for');
-     $self->destroy;
-     main::show_message_dialog( $parent, 'error', 'close',
+     $self->signal_emit( 'process-error', 'find_scan_options',
       $d->get( 'Error retrieving scanner options: ' . $message ) );
     }
    );
   },
   error_callback => sub {
    my ($message) = @_;
-   my $parent = $self->get('transient-for');
-   $self->destroy;
-   main::show_message_dialog( $parent, 'error', 'close',
+   $self->signal_emit( 'process-error', 'open_device',
     $d->get( 'Error opening device: ' . $message ) );
   }
  );
@@ -1103,10 +1095,10 @@ sub add_value {
    my ( $widget, $target, $event ) = @_;
    return FALSE
      unless ## no critic (ProhibitNegativeExpressionsInUnlessAndUntilConditions)
-      (
-       $event->state >=    ## no critic (ProhibitMismatchedOperators)
-       'button1-mask'
-      );
+     (
+    $event->state >=    ## no critic (ProhibitMismatchedOperators)
+    'button1-mask'
+     );
    my ( $x, $y ) = ( $event->x, $event->y );
    my ( $xgr, $ygr ) = ( 0, $y );
    if ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
@@ -1469,7 +1461,7 @@ sub scan {
   },
   error_callback => sub {
    my ($msg) = @_;
-   $self->signal_emit( 'process-error', $msg );
+   $self->signal_emit( 'process-error', 'scan_pages', $msg );
   }
  );
  return;

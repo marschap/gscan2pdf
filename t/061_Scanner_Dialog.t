@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 41;
+use Test::More tests => 42;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -356,15 +356,6 @@ $signal = $dialog->signal_connect(
     $dialog->signal_handler_disconnect($f_signal);
    }
   );
-
-  # FIXME: figure out how to emit this
-  #     my $e_signal;
-  #     $e_signal = $dialog->signal_connect(
-  #      'process-error' => sub {
-  #       ok( 1, 'process-error' );
-  #       $dialog->signal_handler_disconnect($e_signal);
-  #      }
-  #     );
   my $n;
   $dialog->signal_connect(
    'new-scan' => sub {
@@ -384,6 +375,18 @@ $signal = $dialog->signal_connect(
   $dialog->set( 'page-number-start', 1 );
   $dialog->set( 'side-to-scan',      'facing' );
   $dialog->scan;
+
+  my $e_signal;
+  $e_signal = $dialog->signal_connect(
+   'process-error' => sub {
+    my ( $widget, $process, $message ) = @_;
+    is( $process, 'open_device', 'caught error opening device' );
+    $dialog->signal_handler_disconnect($e_signal);
+   }
+  );
+
+  # setting an unknown device should throw an error
+  $dialog->set( 'device', 'error' );
  }
 );
 Gtk2->main;
