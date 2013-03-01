@@ -360,7 +360,9 @@ sub set_paper_formats {
  my $options = $self->get('available-scan-options');
 
  for ( keys %$formats ) {
-  if ( $options->supports_paper( $formats->{$_}, $tolerance ) ) {
+  if ( defined( $self->{combobp} )
+   and $options->supports_paper( $formats->{$_}, $tolerance ) )
+  {
    $self->{combobp}->prepend_text($_);
   }
   else {
@@ -645,7 +647,8 @@ sub get_combobox_by_text {
 
 sub set_combobox_by_text {
  my ( $combobox, $text ) = @_;
- $combobox->set_active( get_combobox_by_text( $combobox, $text ) );
+ $combobox->set_active( get_combobox_by_text( $combobox, $text ) )
+   if ( defined $combobox );
  return;
 }
 

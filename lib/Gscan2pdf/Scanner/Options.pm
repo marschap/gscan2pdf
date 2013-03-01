@@ -9,6 +9,8 @@ use feature "switch";
 
 use Glib::Object::Subclass Glib::Object::;
 
+my $units = qr/(pel|bit|mm|dpi|%|us)/x;
+
 sub new_from_data {
  my ( $class, $options ) = @_;
  my $self = $class->new();
@@ -169,6 +171,8 @@ sub options2hash {
 
  while (1) {
   my %option;
+  $option{unit}            = SANE_UNIT_NONE;
+  $option{constraint_type} = SANE_CONSTRAINT_NONE;
   my $values = qr/(?:(?:\ |\[=\()([^\[].*?)(?:\)\])?)?/x;
 
   # parse group
@@ -181,7 +185,12 @@ sub options2hash {
                     /x
     )
   {
-   $option{title} = $1;
+   $option{title}      = $1;
+   $option{type}       = SANE_TYPE_GROUP;
+   $option{cap}        = 0;
+   $option{max_values} = 0;
+   $option{name}       = '';
+   $option{desc}       = '';
 
    # Remove everything on the option line and above.
    $output = $2;
@@ -200,14 +209,53 @@ sub options2hash {
                     /x
     )
   {
+
+   # scanimage & scanadf only display options if SANE_CAP_SOFT_DETECT is set
+   $option{cap} = SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT;
+
    $option{name} = $1;
-   parse_values( \%option, $2 );
-   $option{val} = $3 if ( defined $3 );
+   if ( defined $3 ) {
+    if ( $3 eq 'inactive' ) {
+     $option{cap} += SANE_CAP_INACTIVE;
+    }
+    else {
+     $option{val} = $3;
+    }
+    $option{max_values} = 1;
+   }
+   else {
+    $option{type}       = SANE_TYPE_BUTTON;
+    $option{max_values} = 0;
+   }
+
+   # parse the constraint after the current value
+   # in order to be able to reset boolean values
+   parse_constraint( \%option, $2 );
 
    # Remove everything on the option line and above.
    $output = $4;
 
    $hash{ $option{name} } = \%option;
+
+   $option{title} = $option{name};
+   $option{title} =~ s/[-_]/ /gx;     # dashes and underscores to spaces
+   $option{title} =~
+     s/\b(adf|cct|jpeg)\b/\U$1/gx;    # upper case comment abbreviations
+   $option{title} =~ s/(^\w)/\U$1/xg; # capitalise at the beginning of the line
+   given ( $option{title} ) {
+    when ('L') {
+     $option{title} = 'Top-left x';
+    }
+    when ('T') {
+     $option{title} = 'Top-left y';
+    }
+    when ('X') {
+     $option{title} = 'Width';
+    }
+    when ('Y') {
+     $option{title} = 'Height';
+    }
+   }
 
    # Parse option description based on an 8-character indent.
    my $desc = '';
@@ -236,64 +284,131 @@ sub options2hash {
    last;
   }
   push @options, \%option;
-  $option{index} = $#options;
+  $option{index} = $#options + 1;
  }
+ unshift @options, { index => 0 } if (@options);
  return \@options, \%hash;
 }
 
 # parse out range, step and units from the values string
 
-sub parse_values {
+sub parse_constraint {
  my ( $option, $values ) = @_;
- my $units = qr/(pel|bit|mm|dpi|%|us)/x;
- $option->{unit} = SANE_UNIT_NONE;
+ $option->{type} = SANE_TYPE_INT;
+ $option->{type} = SANE_TYPE_FIXED
+   if ( defined( $option->{val} ) and $option->{val} =~ /\./x );
  if (
   defined($values)
   and $values =~ /
-                    (-?\d*\.?\d*)          # min value, possibly negative or floating
+                    (-?\d+\.?\d*)          # min value, possibly negative or floating
                     \.\.                   # two dots
-                    (\d*\.?\d*)            # max value, possible floating
+                    (\d+\.?\d*)            # max value, possible floating
                     $units? # optional unit
+                    (,\.\.\.)? # multiple values
                   /x
    )
  {
   $option->{constraint}{min} = $1;
   $option->{constraint}{max} = $2;
-  $option->{unit} = unit2enum($3) if ( defined $3 );
-  $option->{constraint}{step} = $1
+  $option->{constraint_type} = SANE_CONSTRAINT_RANGE;
+  $option->{unit}       = unit2enum($3) if ( defined $3 );
+  $option->{max_values} = 255           if ( defined $4 );
+  $option->{constraint}{quant} = $1
     if (
    $values =~ /
                        \(              # opening round bracket
                        in\ steps\ of\  # text
-                       (\d*\.?\d+)     # step
+                       (\d+\.?\d*)     # step
                        \)              # closing round bracket
                      /x
     );
+  $option->{type} = SANE_TYPE_FIXED
+    if (
+      $option->{constraint}{min} =~ /\./x
+   or $option->{constraint}{max} =~ /\./x
+   or ( defined( $option->{constraint}{quant} )
+    and $option->{constraint}{quant} =~ /\./x )
+    );
  }
- elsif ( defined($values) and $values eq '<string>' ) {
-  $option->{constraint} = $values;
+ elsif ( defined($values) and $values =~ /^<(\w+)>(,\.\.\.)?$/x ) {
+  if ( $1 eq 'float' ) {
+   $option->{type} = SANE_TYPE_FIXED;
+  }
+  elsif ( $1 eq 'string' ) {
+   $option->{type} = SANE_TYPE_STRING;
+  }
+  $option->{max_values} = 255 if ( defined $2 );
+ }
+
+ # if we haven't got a boolean, and there is no constraint, we have a button
+ elsif ( not defined($values) ) {
+  $option->{type}       = SANE_TYPE_BUTTON;
+  $option->{max_values} = 0;
  }
  else {
-  my @array;
-  while ( defined $values ) {
-   my $i = index( $values, '|' );
-   my $value;
-   if ( $i > -1 ) {
-    $value  = substr( $values, 0,      $i );
-    $values = substr( $values, $i + 1, length($values) );
-   }
-   else {
-    if ( $values =~ /$units$/x ) {
-     my $unit = $1;
-     $option->{unit} = unit2enum($unit);
-     $values = substr( $values, 0, index( $values, $unit ) );
-    }
-    $value = $values;
-    undef $values;
-   }
-   push @array, $value if ( $value ne '' );
+  parse_list_constraint( $option, $values );
+ }
+ return;
+}
+
+sub parse_list_constraint {
+ my ( $option, $values ) = @_;
+ if ( $values =~ /,\.\.\./x ) {
+  $option->{max_values} = 255;
+  $values = substr( $values, 0, length($values) - 4 );
+ }
+ my @array;
+ while ( defined $values ) {
+  my $i = index( $values, '|' );
+  my $value;
+  if ( $i > -1 ) {
+   $value  = substr( $values, 0,      $i );
+   $values = substr( $values, $i + 1, length($values) );
   }
-  $option->{constraint} = [@array] if (@array);
+  else {
+   if ( $values =~ /$units$/x ) {
+    my $unit = $1;
+    $option->{unit} = unit2enum($unit);
+    $values = substr( $values, 0, index( $values, $unit ) );
+   }
+   $value = $values;
+   undef $values;
+  }
+  push @array, $value if ( $value ne '' );
+ }
+ if (@array) {
+  if ( $array[0] eq 'auto' ) {
+   $option->{cap} += SANE_CAP_AUTOMATIC;
+   shift @array;
+  }
+  if ( @array == 2 and $array[0] eq 'yes' and $array[1] eq 'no' ) {
+   $option->{type} = SANE_TYPE_BOOL;
+   if ( defined $option->{val} ) {
+    if ( $option->{val} eq 'yes' ) {
+     $option->{val} = SANE_TRUE;
+    }
+    else {
+     $option->{val} = SANE_FALSE;
+    }
+   }
+  }
+  else {
+
+   # Can't check before because 'auto' would mess things up
+   for (@array) {
+    if (/[[:alpha:]]/x) {
+     $option->{type} = SANE_TYPE_STRING;
+    }
+    elsif (/\./x) {
+     $option->{type} = SANE_TYPE_FIXED;
+    }
+   }
+   $option->{constraint} = [@array];
+   $option->{constraint_type} =
+     $option->{type} == SANE_TYPE_STRING
+     ? SANE_CONSTRAINT_STRING_LIST
+     : SANE_CONSTRAINT_WORD_LIST;
+  }
  }
  return;
 }

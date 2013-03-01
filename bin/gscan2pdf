@@ -6014,8 +6014,8 @@ sub add_widget_from_hash {
  # SpinButton
  if ( defined $option->{constraint}{max} ) {
   my $step = 1;
-  $step = $option->{constraint}{step}
-    if ( defined $option->{constraint}{step} );
+  $step = $option->{constraint}{quant}
+    if ( defined $option->{constraint}{quant} );
   $widget = Gtk2::SpinButton->new_with_range( $option->{constraint}{min},
    $option->{constraint}{max}, $step );
 

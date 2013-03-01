@@ -537,7 +537,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
   my $opt = $options->by_index($i);
 
   # Notebook page for group
-  if ( defined( $opt->{title} ) or not defined($vbox) ) {
+  if ( $opt->{type} == SANE_TYPE_GROUP or not defined($vbox) ) {
    $vbox = Gtk2::VBox->new;
    $group =
      defined( $opt->{title} )
@@ -546,6 +546,8 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    $self->{notebook}->append_page( $vbox, $group );
    next;
   }
+
+  next unless ( $opt->{cap} & SANE_CAP_SOFT_DETECT );
 
   # Widget
   my ( $widget, $val );
