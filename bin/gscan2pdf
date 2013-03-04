@@ -4442,6 +4442,7 @@ sub scan_dialog2 {
    $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
    $shbox->hide;
    if ( $process =~ /^(?:get_devices|find_scan_options)$/x ) {
+    $windows2->hide;
     undef $windows2;
     show_message_dialog( $window, 'error', 'close', $msg );
    }
