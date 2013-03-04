@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 9;
+use Test::More tests => 10;
 use Sane 0.05;    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
@@ -331,4 +331,9 @@ is(
  ),
  0,
  'paper too tall'
+);
+is(
+ Gscan2pdf::Scanner::Options->device,
+ 'hpaio:/usb/officejet_5500_series?serial=MY42QF209H96',
+ 'device name'
 );

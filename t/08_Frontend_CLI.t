@@ -137,9 +137,9 @@ $loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI->find_scan_options(
  device            => 'test',
  finished_callback => sub {
-  my ($output) = @_;
-  like( $output, qr/mode/xi,   'find_scan_options beginning' );
-  like( $output, qr/button/xi, 'find_scan_options end' );
+  my ($options) = @_;
+  is( $options->by_name('source')->{name}, 'source', 'by_name' );
+  is( $options->by_name('button')->{name}, 'button', 'by_name' );
   $loop->quit;
  }
 );

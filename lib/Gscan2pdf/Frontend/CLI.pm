@@ -13,6 +13,7 @@ use Proc::Killfam;
 use IPC::Open3;
 use IO::Handle;
 use Gscan2pdf::NetPBM;
+use Gscan2pdf::Scanner::Options;
 
 my $_POLL_INTERVAL = 100;    # ms
 my ( $_self, $logger, $d );
@@ -90,7 +91,9 @@ sub find_scan_options {
    }
    $options{error_callback}->($error)
      if ( defined($error) and defined( $options{error_callback} ) );
-   $options{finished_callback}->($output)
+   my $options = Gscan2pdf::Scanner::Options->new_from_data($output);
+   $_self->{device_name} = Gscan2pdf::Scanner::Options->device;
+   $options{finished_callback}->($options)
      if ( defined $options{finished_callback} );
   }
  );
@@ -351,6 +354,10 @@ sub _scanadf {
 sub cancel_scan {
  $_self->{abort_scan} = TRUE;
  return;
+}
+
+sub device {
+ return $_self->{device_name};
 }
 
 sub _watch_cmd {

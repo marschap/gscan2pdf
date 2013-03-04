@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 23;
+use Test::More tests => 24;
 use Sane 0.05;    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
@@ -490,3 +490,5 @@ is(
  0,
  'page-width paper too tall'
 );
+is( Gscan2pdf::Scanner::Options->device,
+ 'fujitsu:libusb:002:004', 'device name' );

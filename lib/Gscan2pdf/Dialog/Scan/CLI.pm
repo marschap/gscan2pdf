@@ -390,7 +390,7 @@ sub SET_PROPERTY {
  return;
 }
 
-# Run Sane->get_devices
+# Run scanimage --formatted-device-list
 
 sub get_devices {
  my ($self) = @_;
@@ -416,7 +416,8 @@ sub get_devices {
    $pbar->destroy;
    my @device_list = @{$device_list};
    use Data::Dumper;
-   $logger->info( "Sane->get_devices returned: ", Dumper( \@device_list ) );
+   $logger->info( "scanimage --formatted-device-list: ",
+    Dumper( \@device_list ) );
    if ( @device_list == 0 ) {
     my $parent = $self->get('transient-for');
     $self->destroy;
@@ -468,13 +469,9 @@ sub scan_options {
    $pbar->pulse;
   },
   finished_callback => sub {
-   my ($output) = @_;
+   my ($options) = @_;
    $pbar->destroy;
-   $logger->info($output);
-
-   #    parse_options( $self->get('device'), options2hash($output) );
-
-   my $options = Gscan2pdf::Scanner::Options->new_from_data($output);
+   $logger->info($options);
    $self->_initialise_options($options);
 
    $self->signal_emit( 'finished-process', 'find_scan_options' );
@@ -521,7 +518,7 @@ sub _extended_pagenumber_checkbox_callback {
 
 sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  my ( $self, $options ) = @_;
- $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
+ $logger->debug( "scanimage --help returned: ", Dumper($options) );
 
  my ( $group, $vbox, $hboxp );
  my $num_dev_options = $options->num_options;
@@ -664,7 +661,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  }
 
  # Set defaults
- my $sane_device = Gscan2pdf::Frontend::Sane->device();
+ my $sane_device = Gscan2pdf::Frontend::CLI->device;
 
  # Show new pages
  for ( my $i = 1 ; $i < $self->{notebook}->get_n_pages ; $i++ ) {
@@ -861,7 +858,6 @@ sub set_option {
  }
  $self->{current_scan_options} = $current;
 
- my $signal;
  my $options = $self->get('available-scan-options');
  Gscan2pdf::Frontend::Sane->set_option(
   index            => $option->{index},

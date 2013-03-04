@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Sane 0.05;    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
@@ -184,3 +184,4 @@ my @that     = (
  }
 );
 is_deeply( $options->{array}, \@that, 'brother' );
+is( Gscan2pdf::Scanner::Options->device, 'brother2:net1;dev0', 'device name' );

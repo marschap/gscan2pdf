@@ -10,6 +10,7 @@ use feature "switch";
 use Glib::Object::Subclass Glib::Object::;
 
 my $units = qr/(pel|bit|mm|dpi|%|us)/x;
+my $device;
 
 sub new_from_data {
  my ( $class, $options ) = @_;
@@ -30,7 +31,8 @@ sub new_from_data {
   }
  }
  else {
-  ( $self->{array}, $self->{hash} ) = options2hash($options);
+  ( $self->{array}, $self->{hash} ) =
+    Gscan2pdf::Scanner::Options->options2hash($options);
  }
  $self->parse_geometry;
  return $self;
@@ -64,6 +66,10 @@ sub delete_by_name {
  undef $self->{array}[ $self->{hash}{$name}{index} ];
  delete $self->{hash}{$name};
  return;
+}
+
+sub device {
+ return $device;
 }
 
 # Parse out the geometry from libsane-perl or scanimage option names
@@ -150,18 +156,19 @@ sub supports_paper {
 # parse the scanimage/scanadf output into an array and a hash
 
 sub options2hash {
- my ($output) = @_;
+ my ( $class, $output ) = @_;
 
  # Remove everything above the options
  if (
   $output =~ /
                        [\S\s]* # output header
-                       Options\ specific\ to\ device .*:\n # line above options
+                       Options\ specific\ to\ device\ `(.+)':\n # line above options
                        ([\S\s]*) # options
                 /x
    )
  {
-  $output = $1;
+  $device = $1;
+  $output = $2;
  }
  else {
   return;
