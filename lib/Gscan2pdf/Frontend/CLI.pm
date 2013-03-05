@@ -14,6 +14,7 @@ use IPC::Open3;
 use IO::Handle;
 use Gscan2pdf::NetPBM;
 use Gscan2pdf::Scanner::Options;
+use Cwd;
 
 my $_POLL_INTERVAL = 100;    # ms
 my ( $_self, $logger, $d );
@@ -79,7 +80,10 @@ sub find_scan_options {
  # Inverted commas needed for strange characters in device name
  my $cmd =
 "$options{prefix} $options{frontend} --help --device-name='$options{device}'";
- $cmd .= " --mode='$options{mode}'" if ( defined $options{mode} );
+
+ # for ( @{$options{options}} ) {
+ #   $cmd .= " --$options{options}";
+ # }
  _watch_cmd(
   cmd               => $cmd,
   started_callback  => $options{started_callback},
@@ -149,6 +153,7 @@ sub _scanimage {
 
  _watch_cmd(
   cmd              => $cmd,
+  dir              => $options{dir},
   started_callback => $options{started_callback},
   err_callback     => sub {
    my ($line) = @_;
@@ -176,7 +181,7 @@ sub _scanimage {
        $_POLL_INTERVAL,
        sub {
         return Glib::SOURCE_CONTINUE unless ( -e "out$id.pnm" );
-        $options{new_page_callback}->("out$id.pnm")
+        $options{new_page_callback}->($id)
           if ( defined $options{new_page_callback} );
         $num_scans++;
         return Glib::SOURCE_REMOVE;
@@ -288,6 +293,7 @@ sub _scanadf {
 
  _watch_cmd(
   cmd              => $cmd,
+  dir              => $options{dir},
   started_callback => $options{started_callback},
   err_callback     => sub {
    my ($line) = @_;
@@ -307,7 +313,7 @@ sub _scanadf {
       $_POLL_INTERVAL,
       sub {
        return Glib::SOURCE_CONTINUE unless ( -e "out$id.pnm" );
-       $options{new_page_callback}->("out$id.pnm")
+       $options{new_page_callback}->($id)
          if ( defined $options{new_page_callback} );
        return Glib::SOURCE_REMOVE;
       }
@@ -378,11 +384,18 @@ sub _watch_cmd {
   );
  }
 
+ # Make sure we are in temp directory
+ my $cwd = getcwd;
+ chdir $options{dir} if ( defined $options{dir} );
+
  # Interface to scanimage
  my ( $write, $read );
  my $error = IO::Handle->new;    # this needed because of a bug in open3.
  my $pid = IPC::Open3::open3( $write, $read, $error, $options{cmd} );
  $logger->info("Forked PID $pid");
+
+ # change back to original directory
+ chdir $cwd;
 
  $options{started_callback}->() if ( defined $options{started_callback} );
  if ( $_self->{abort_scan} ) {

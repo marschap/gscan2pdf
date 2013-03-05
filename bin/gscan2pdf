@@ -3513,8 +3513,9 @@ sub scan_dialog {
   'page-number-start' => $#{ $slist->{data} } > -1
   ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
   : 1,
-  prefix   => $SETTING{'scan prefix'},
-  frontend => $SETTING{'frontend'},
+  prefix            => $SETTING{'scan prefix'},
+  frontend          => $SETTING{'frontend'},
+  'reload-triggers' => { mode => 1 },
  );
 
 # Can't set the device when creating the window, as the list does not exist then

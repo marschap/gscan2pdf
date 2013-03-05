@@ -14,6 +14,13 @@ use feature "switch";
 # logger duplicated from Gscan2pdf::Dialog::Scan
 # to ensure that SET_PROPERTIES gets called in both places
 use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, properties => [
+ Glib::ParamSpec->string(
+  'frontend',                       # name
+  'Frontend',                       # nick
+  '(scanimage|scanadf)(-perl)?',    # blurb
+  '',                               # default
+  [qw/readable writable/]           # flags
+ ),
  Glib::ParamSpec->scalar(
   'logger',                              # name
   'Logger',                              # nick
@@ -27,12 +34,11 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, properties => [
   '',                                    # default
   [qw/readable writable/]                # flags
  ),
- Glib::ParamSpec->string(
-  'frontend',                            # name
-  'Frontend',                            # nick
-  '(scanimage|scanadf)(-perl)?',         # blurb
-  '',                                    # default
-  [qw/readable writable/]                # flags
+ Glib::ParamSpec->scalar(
+  'reload-triggers',                                               # name
+  'Reload triggers',                                               # nick
+  'Hash of option names that cause the options to be reloaded',    # blurb
+  [qw/readable writable/]                                          # flags
  ),
 ];
 
@@ -449,11 +455,10 @@ sub scan_options {
  my $pbar;
  my $hboxd = $self->{hboxd};
  Gscan2pdf::Frontend::CLI->find_scan_options(
-  prefix   => $self->get('prefix'),
-  frontend => $self->get('frontend'),
-  device   => $self->get('device'),
-
-  #   mode             => $SETTING{mode},
+  prefix           => $self->get('prefix'),
+  frontend         => $self->get('frontend'),
+  device           => $self->get('device'),
+  options          => $self->{current_scan_options},
   started_callback => sub {
 
    # Set up ProgressBar
@@ -858,33 +863,58 @@ sub set_option {
  }
  $self->{current_scan_options} = $current;
 
- my $options = $self->get('available-scan-options');
- Gscan2pdf::Frontend::Sane->set_option(
-  index            => $option->{index},
-  value            => $val,
-  started_callback => sub {
-   $self->signal_emit( 'started-process', sprintf $d->get('Setting option %s'),
-    $option->{name} );
-  },
-  running_callback => sub {
-   $self->signal_emit( 'changed-progress', -1, undef );
-  },
-  finished_callback => sub {
-   my ($data) = @_;
-   $self->update_options($data) if ($data);
-
-   # We can carry on applying defaults now, if necessary.
-   $self->signal_emit( 'finished-process', 'set_option' );
-
-   # Unset the profile unless we are actively setting it
-   $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
-
-   $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
-
-   #   $self->signal_emit( 'changed-current-scan-options',
-   #    $self->get('current-scan-options') );
+ my $options         = $self->get('available-scan-options');
+ my $reload_triggers = $self->get('reload-triggers');
+ my @reloadables;
+ for (@$current) {
+  my ( $key, $value ) = @_;
+  if ( defined $reload_triggers->{$key} ) {
+   push @reloadables, { $key => $value };
   }
- );
+ }
+ if (@reloadables) {
+  my $pbar;
+  my $hboxd = $self->{hboxd};
+  Gscan2pdf::Frontend::CLI->find_scan_options(
+   prefix           => $self->get('prefix'),
+   frontend         => $self->get('frontend'),
+   device           => $self->get('device'),
+   options          => \@reloadables,
+   started_callback => sub {
+
+    # Set up ProgressBar
+    $pbar = Gtk2::ProgressBar->new;
+    $pbar->set_pulse_step(.1);
+    $pbar->set_text( $d->get('Fetching list of devices') );
+    $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
+    $hboxd->hide_all;
+    $hboxd->show;
+    $pbar->show;
+   },
+   running_callback => sub {
+    $pbar->pulse;
+   },
+   finished_callback => sub {
+    my ($options) = @_;
+    $pbar->destroy;
+    $logger->info($options);
+    $self->update_options($options) if ($options);
+
+    $self->signal_emit( 'finished-process', 'find_scan_options' );
+
+    # This fires the reloaded-scan-options signal,
+    # so don't set this until we have finished
+    $self->set( 'available-scan-options', $options );
+   },
+   error_callback => sub {
+    my ($message) = @_;
+    my $parent = $self->get('transient-for');
+    main::show_message_dialog( $parent, 'error', 'close', $message );
+    $pbar->destroy;
+    $logger->warn($message);
+   },
+  );
+ }
  return;
 }
 
@@ -1449,7 +1479,8 @@ sub scan {
  }
 
  my $i = 1;
- Gscan2pdf::Frontend::Sane->scan_pages(
+ Gscan2pdf::Frontend::CLI->scan_pages(
+  device           => $self->get('device'),
   dir              => $self->get('dir'),
   format           => "out%d.pnm",
   npages           => $npages,
