@@ -406,7 +406,9 @@ sub get_devices {
    use Data::Dumper;
    $logger->info( "Sane->get_devices returned: ", Dumper( \@device_list ) );
    if ( @device_list == 0 ) {
-    $self->signal_emit( 'process-error', 'get_devices', 'No devices found' );
+    $self->signal_emit( 'process-error', $d->get('No devices found') );
+    $self->destroy;
+    undef $self;
     return FALSE;
    }
    $self->set( 'device-list', \@device_list );
@@ -460,15 +462,15 @@ sub scan_options {
     },
     sub {    # error callback
      my ($message) = @_;
-     $self->signal_emit( 'process-error', 'find_scan_options',
-      $d->get( 'Error retrieving scanner options: ' . $message ) );
+     $self->signal_emit( 'process-error', $d->get( 'Error retrieving scanner options: ' . $message ) );
+     $self->destroy;
     }
    );
   },
   error_callback => sub {
    my ($message) = @_;
-   $self->signal_emit( 'process-error', 'open_device',
-    $d->get( 'Error opening device: ' . $message ) );
+   $self->signal_emit( 'process-error', $d->get( 'Error opening device: ' . $message ) );
+   $self->destroy;
   }
  );
 
@@ -1349,7 +1351,7 @@ sub set_option_widget {
     $profile->[$i] = { $name => $val };
    }
    when ('x') {
-    $name = 'br-x';
+    $name = SANE_NAME_SCAN_BR_X;
     my $l = _get_option_from_profile( 'l', $profile );
     $l = _get_option_from_profile( SANE_NAME_SCAN_TL_X, $profile )
       unless ( defined $l );
@@ -1357,7 +1359,7 @@ sub set_option_widget {
     $profile->[$i] = { $name => $val };
    }
    when ('y') {
-    $name = 'br-y';
+    $name = SANE_NAME_SCAN_BR_Y;
     my $t = _get_option_from_profile( 't', $profile );
     $t = _get_option_from_profile( SANE_NAME_SCAN_TL_Y, $profile )
       unless ( defined $t );
@@ -1431,8 +1433,7 @@ sub scan {
    if ( $npages > 0 and $step < 0 );
 
  if ( $start == 1 and $step < 0 ) {
-  main::show_message_dialog( $self, 'error', 'cancel',
-   $d->get('Must scan facing pages first') );
+  $self->signal_emit( 'process-error', $d->get('Must scan facing pages first') );
   return TRUE;
  }
 

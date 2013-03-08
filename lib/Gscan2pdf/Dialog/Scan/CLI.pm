@@ -42,10 +42,6 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, properties => [
  ),
 ];
 
-my $SANE_NAME_SCAN_TL_X   = SANE_NAME_SCAN_TL_X;
-my $SANE_NAME_SCAN_TL_Y   = SANE_NAME_SCAN_TL_Y;
-my $SANE_NAME_SCAN_BR_X   = SANE_NAME_SCAN_BR_X;
-my $SANE_NAME_SCAN_BR_Y   = SANE_NAME_SCAN_BR_Y;
 my $SANE_NAME_PAGE_HEIGHT = SANE_NAME_PAGE_HEIGHT;
 my $SANE_NAME_PAGE_WIDTH  = SANE_NAME_PAGE_WIDTH;
 my ( $d, $d_sane, $logger, $tooltips );
@@ -425,11 +421,9 @@ sub get_devices {
    $logger->info( "scanimage --formatted-device-list: ",
     Dumper( \@device_list ) );
    if ( @device_list == 0 ) {
-    my $parent = $self->get('transient-for');
+    $self->signal_emit( 'process-error', $d->get('No devices found') );
     $self->destroy;
     undef $self;
-    main::show_message_dialog( $parent, 'error', 'close',
-     $d->get('No devices found') );
     return FALSE;
    }
    $self->set( 'device-list', \@device_list );
@@ -464,7 +458,7 @@ sub scan_options {
    # Set up ProgressBar
    $pbar = Gtk2::ProgressBar->new;
    $pbar->set_pulse_step(.1);
-   $pbar->set_text( $d->get('Fetching list of devices') );
+   $pbar->set_text( $d->get('Updating options') );
    $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
    $hboxd->hide_all;
    $hboxd->show;
@@ -487,9 +481,8 @@ sub scan_options {
   },
   error_callback => sub {
    my ($message) = @_;
-   my $parent = $self->get('transient-for');
-   main::show_message_dialog( $parent, 'error', 'close', $message );
    $pbar->destroy;
+   $self->signal_emit( 'process-error', $message );
    $logger->warn($message);
   },
  );
@@ -689,7 +682,7 @@ sub _geometry_option {
        ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
    and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
    and ( $opt->{name} =~
-/^(?:$SANE_NAME_SCAN_TL_X|$SANE_NAME_SCAN_TL_Y|$SANE_NAME_SCAN_BR_X|$SANE_NAME_SCAN_BR_Y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x
+/^(?:l|t|x|y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x
    );
 }
 
@@ -699,10 +692,10 @@ sub _create_paper_widget {
  # Only define the paper size once the rest of the geometry widgets
  # have been created
  if (
-      defined( $options->{box}{$SANE_NAME_SCAN_BR_X} )
-  and defined( $options->{box}{$SANE_NAME_SCAN_BR_Y} )
-  and defined( $options->{box}{$SANE_NAME_SCAN_TL_X} )
-  and defined( $options->{box}{$SANE_NAME_SCAN_TL_Y} )
+      defined( $options->{box}{x} )
+  and defined( $options->{box}{y} )
+  and defined( $options->{box}{l} )
+  and defined( $options->{box}{t} )
   and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
    or defined( $options->{box}{$SANE_NAME_PAGE_HEIGHT} ) )
   and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
@@ -729,8 +722,8 @@ sub _create_paper_widget {
     }
     elsif ( $self->{combobp}->get_active_text eq $d->get('Manual') ) {
      for (
-      ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
-       SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+      ( 'l', 't',
+       'x', 'y',
        SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
       )
        )
@@ -750,19 +743,19 @@ sub _create_paper_widget {
         ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
      }
 
-     $options->by_name(SANE_NAME_SCAN_TL_X)->{widget}
+     $options->by_name('l')->{widget}
        ->set_value( $formats->{$paper}{l} );
-     $options->by_name(SANE_NAME_SCAN_TL_Y)->{widget}
+     $options->by_name('t')->{widget}
        ->set_value( $formats->{$paper}{t} );
-     $options->by_name(SANE_NAME_SCAN_BR_X)->{widget}
+     $options->by_name('x')->{widget}
        ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
-     $options->by_name(SANE_NAME_SCAN_BR_Y)->{widget}
+     $options->by_name('y')->{widget}
        ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
      Glib::Idle->add(
       sub {
        for (
-        ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
-         SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+        ( 'l', 't',
+         'x', 'y',
          SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
         )
          )
@@ -842,6 +835,8 @@ sub _pack_widget {
 
 sub set_option {
  my ( $self, $option, $val ) = @_;
+print "set_option $option->{name} $val\n";
+ $self->update_widget( $option->{name}, $val );
 
  my $current = $self->{current_scan_options};
 
@@ -862,6 +857,8 @@ sub set_option {
   $j--;
  }
  $self->{current_scan_options} = $current;
+use Data::Dumper;
+print Dumper($current);
 
  my $options         = $self->get('available-scan-options');
  my $reload_triggers = $self->get('reload-triggers');
@@ -885,7 +882,7 @@ sub set_option {
     # Set up ProgressBar
     $pbar = Gtk2::ProgressBar->new;
     $pbar->set_pulse_step(.1);
-    $pbar->set_text( $d->get('Fetching list of devices') );
+    $pbar->set_text( $d->get('Updating options') );
     $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
     $hboxd->hide_all;
     $hboxd->show;
@@ -905,36 +902,32 @@ sub set_option {
     # This fires the reloaded-scan-options signal,
     # so don't set this until we have finished
     $self->set( 'available-scan-options', $options );
+    $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
    },
    error_callback => sub {
     my ($message) = @_;
-    my $parent = $self->get('transient-for');
-    main::show_message_dialog( $parent, 'error', 'close', $message );
+    $self->signal_emit( 'process-error', $message );
     $pbar->destroy;
     $logger->warn($message);
    },
   );
  }
+ else {
+print "signal_emit $option->{name}, $val\n";
+  $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
+ }
  return;
 }
 
-# If setting an option triggers a reload, we need to update the options
-
-sub update_options {
- my ( $self, $options ) = @_;
-
- # walk the widget tree and update them from the hash
- $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
+sub update_widget {
+ my ( $self, $name, $value ) = @_;
 
  my ( $group, $vbox );
- my $num_dev_options = $#{$options} + 1;
- for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-  my $widget = $self->get('available-scan-options')->by_index($i)->{widget};
+ my $opt = $self->get('available-scan-options')->by_name($name);
+ my $widget = $opt->{widget};
 
-  # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
-  if ( defined $widget ) {
-   my $opt   = $options->[$i];
-   my $value = $opt->{val};
+ # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
+ if ( defined $widget ) {
    $widget->signal_handler_block( $widget->{signal} );
 
    # HBox for option
@@ -982,7 +975,23 @@ sub update_options {
     }
    }
    $widget->signal_handler_unblock( $widget->{signal} );
-  }
+ }
+ return;
+}
+
+# If setting an option triggers a reload, we need to update the options
+
+sub update_options {
+ my ( $self, $options ) = @_;
+
+ # walk the widget tree and update them from the hash
+ $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
+
+ my ( $group, $vbox );
+ my $num_dev_options = $#{$options} + 1;
+ for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
+  my $opt   = $options->[$i];
+  $self->update_widget( $opt->{name}, $opt->{val} );
  }
  return;
 }
@@ -1271,6 +1280,8 @@ sub my_dumper {
 
 sub set_current_scan_options {
  my ( $self, $profile ) = @_;
+use Data::Dumper;
+print "in set_current_scan_options ", Dumper($profile);
 
  return unless ( defined $profile );
 
@@ -1288,6 +1299,11 @@ sub set_current_scan_options {
 
  delete $self->{current_scan_options};
 
+ # As scanimage and scanadf rename the geometry options,
+ # we have to map them back to the original names
+ map_geometry_names($defaults);
+print "after mapping ", Dumper($defaults);
+
  # Give the GUI a chance to catch up between settings,
  # in case they have to be reloaded.
  # Use the 'changed-scan-option' signal to trigger the next loop
@@ -1297,14 +1313,17 @@ sub set_current_scan_options {
  $changed_scan_signal = $self->signal_connect(
   'changed-scan-option' => sub {
    my ( $widget, $name, $val ) = @_;
+print "signal changed-scan-option $name\n";
 
    # for reasons I don't understand, without walking the reference tree,
    # parts of $default are undef
    my_dumper($defaults);
    my ( $ename, $eval ) = each( %{ $defaults->[$i] } );
+print "waiting for changed-scan-option $ename\n";
 
    # don't check $eval against $val, just in case they are different
    if ( $ename eq $name ) {
+print "found changed-scan-option $ename\n";
     $i++;
     $i =
       $self->_set_option_emit_signal( $i, $defaults, $changed_scan_signal,
@@ -1339,6 +1358,7 @@ sub set_current_scan_options {
 
 sub _set_option_emit_signal {
  my ( $self, $i, $defaults, $signal1, $signal2 ) = @_;
+print "_set_option_emit_signal $i\n";
  $i = $self->set_option_widget( $i, $defaults ) if ( $i < @$defaults );
 
  # Only emit the changed-current-scan-options signal when we have finished
@@ -1378,43 +1398,18 @@ sub set_option_widget {
   # parts of $profile are undef
   my_dumper( $profile->[$i] );
   my ( $name, $val ) = each( %{ $profile->[$i] } );
+print "set_option_widget $name $val\n";
 
   if ( $name eq 'Paper size' ) {
+print "set_option_widget setting paper to $val\n";
    $self->set( 'paper', $val );
    return $self->set_option_widget( $i + 1, $profile );
   }
 
-  # As scanimage and scanadf rename the geometry options,
-  # we have to map them back to the original names
-  given ($name) {
-   when ('l') {
-    $name = SANE_NAME_SCAN_TL_X;
-    $profile->[$i] = { $name => $val };
-   }
-   when ('t') {
-    $name = SANE_NAME_SCAN_TL_Y;
-    $profile->[$i] = { $name => $val };
-   }
-   when ('x') {
-    $name = 'br-x';
-    my $l = _get_option_from_profile( 'l', $profile );
-    $l = _get_option_from_profile( SANE_NAME_SCAN_TL_X, $profile )
-      unless ( defined $l );
-    $val += $l if ( defined $l );
-    $profile->[$i] = { $name => $val };
-   }
-   when ('y') {
-    $name = 'br-y';
-    my $t = _get_option_from_profile( 't', $profile );
-    $t = _get_option_from_profile( SANE_NAME_SCAN_TL_Y, $profile )
-      unless ( defined $t );
-    $val += $t if ( defined $t );
-    $profile->[$i] = { $name => $val };
-   }
-  }
-
   my $options = $self->get('available-scan-options');
   my $opt     = $options->by_name($name);
+use Data::Dumper;
+print Dumper($opt);
   my $widget  = $opt->{widget};
 
   if ( ref($val) eq 'ARRAY' ) {
@@ -1427,6 +1422,7 @@ sub set_option_widget {
   else {
    given ($widget) {
     when ( $widget->isa('Gtk2::CheckButton') ) {
+     $val = SANE_FALSE if ($val eq '');
      if ( $widget->get_active != $val ) {
       $widget->set_active($val);
       return $i;
@@ -1462,6 +1458,45 @@ sub set_option_widget {
  return;
 }
 
+# As scanimage and scanadf rename the geometry options,
+# we have to map them back to the original names
+sub map_geometry_names {
+ my ($profile) = @_;
+ for my $i (0..$#{$profile}) {
+   # for reasons I don't understand, without walking the reference tree,
+   # parts of $profile are undef
+   my_dumper($profile);
+  my ($name, $val) = each %{$profile->[$i]};
+  given ($name) {
+   when (SANE_NAME_SCAN_TL_X) {
+    $name = 'l';
+    $profile->[$i] = { $name => $val };
+   }
+   when (SANE_NAME_SCAN_TL_Y) {
+    $name = 't';
+    $profile->[$i] = { $name => $val };
+   }
+   when (SANE_NAME_SCAN_BR_X) {
+    $name = 'x';
+    my $l = _get_option_from_profile( 'l', $profile );
+    $l = _get_option_from_profile( SANE_NAME_SCAN_TL_X, $profile )
+      unless ( defined $l );
+    $val -= $l if ( defined $l );
+    $profile->[$i] = { $name => $val };
+   }
+   when (SANE_NAME_SCAN_BR_Y) {
+    $name = 'y';
+    my $t = _get_option_from_profile( 't', $profile );
+    $t = _get_option_from_profile( SANE_NAME_SCAN_TL_Y, $profile )
+      unless ( defined $t );
+    $val -= $t if ( defined $t );
+    $profile->[$i] = { $name => $val };
+   }
+  }
+}
+ return;
+}
+
 sub scan {
  my ($self) = @_;
 
@@ -1469,13 +1504,21 @@ sub scan {
  my $npages = $self->get('num-pages');
  my $start  = $self->get('page-number-start');
  my $step   = $self->get('page-number-increment');
+print "npages $npages step $step\n";
  $npages = $self->get('max-pages')
    if ( $npages > 0 and $step < 0 );
+print "npages $npages step $step\n";
 
  if ( $start == 1 and $step < 0 ) {
-  main::show_message_dialog( $self, 'error', 'cancel',
-   $d->get('Must scan facing pages first') );
+  $self->signal_emit( 'process-error', $d->get('Must scan facing pages first') );
   return TRUE;
+ }
+
+ # Remove paper size from options
+ my @options;
+ for (@{$self->{current_scan_options}}) {
+  my ( $key, $val ) = each(%$_);
+  push @options, { $key => $val } unless ($key eq 'Paper size');
  }
 
  my $i = 1;
@@ -1483,6 +1526,7 @@ sub scan {
   device           => $self->get('device'),
   dir              => $self->get('dir'),
   format           => "out%d.pnm",
+  options => \@options,
   npages           => $npages,
   start            => $start,
   step             => $step,

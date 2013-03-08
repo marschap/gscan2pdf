@@ -15,6 +15,7 @@ use IO::Handle;
 use Gscan2pdf::NetPBM;
 use Gscan2pdf::Scanner::Options;
 use Cwd;
+use File::Spec;
 
 my $_POLL_INTERVAL = 100;    # ms
 my ( $_self, $logger, $d );
@@ -74,7 +75,7 @@ sub find_scan_options {
  my ( $class, %options ) = @_;
 
  $options{prefix}   = ''          unless ( defined $options{prefix} );
- $options{frontend} = 'scanimage' unless ( defined $options{frontend} );
+ $options{frontend} = 'scanimage' unless ( defined($options{frontend}) and $options{frontend} ne '' );
 
  # Get output from scanimage or scanadf.
  # Inverted commas needed for strange characters in device name
@@ -137,10 +138,20 @@ sub _scanimage {
 
  # Add basic options
  my @options;
- @options = @{ $options{options} } if ( defined $options{options} );
+ for ( @{ $options{options} } ) {
+  my ($key, $value) = each(%$_);
+  if ($key =~ /^(?:x|y|t|l)$/) {
+   push @options, "-$key $value";
+  }
+  else {
+   push @options, "--$key='$value'";
+  }
+ }
  push @options, '--batch';
  push @options, '--progress';
+ push @options, "--batch-start=$options{start}" if ( $options{start} != 0 );
  push @options, "--batch-count=$options{npages}" if ( $options{npages} != 0 );
+ push @options, "--batch-increment=$options{step}" if ( $options{step} != 1 );
 
  # Create command
  my $cmd = "$options{prefix} $options{frontend} $device @options";
@@ -148,7 +159,8 @@ sub _scanimage {
  # flag to ignore error messages after cancelling scan
  $_self->{abort_scan} = FALSE;
 
-# flag to ignore out of documents message if successfully scanned at least one page
+ # flag to ignore out of documents message
+ # if successfully scanned at least one page
  my $num_scans = 0;
 
  _watch_cmd(
@@ -164,7 +176,7 @@ sub _scanimage {
     }
     when (/^Scanning\ (-?\d*)\ pages/x) {
      $options{running_callback}
-       ->( undef, sprintf( $d->get('Scanning %i pages...'), $1 ) )
+       ->( 0, sprintf( $d->get('Scanning %i pages...'), $1 ) )
        if ( defined $options{running_callback} );
     }
     when (/^Scanning\ page\ (\d*)/x) {
@@ -174,13 +186,12 @@ sub _scanimage {
     }
     when (/^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ (\d)\)/x) {
      my ( $id, $return ) = ( $1, $2 );
-
      if ( $return == 5 ) {
-
       my $timer = Glib::Timeout->add(
        $_POLL_INTERVAL,
        sub {
-        return Glib::SOURCE_CONTINUE unless ( -e "out$id.pnm" );
+        my $path = defined($options{dir}) ? File::Spec->catfile( $options{dir}, "out$id.pnm" ) : "out$id.pnm";
+        return Glib::SOURCE_CONTINUE unless ( -e $path );
         $options{new_page_callback}->($id)
           if ( defined $options{new_page_callback} );
         $num_scans++;
