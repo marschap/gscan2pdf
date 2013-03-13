@@ -682,8 +682,7 @@ sub _geometry_option {
        ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
    and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
    and ( $opt->{name} =~
-/^(?:l|t|x|y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x
-   );
+  /^(?:l|t|x|y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x );
 }
 
 sub _create_paper_widget {
@@ -721,12 +720,7 @@ sub _create_paper_widget {
      $self->edit_paper;
     }
     elsif ( $self->{combobp}->get_active_text eq $d->get('Manual') ) {
-     for (
-      ( 'l', 't',
-       'x', 'y',
-       SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
-      )
-       )
+     for ( ( 'l', 't', 'x', 'y', SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH ) )
      {
       $options->{box}{$_}->show_all if ( defined $options->{box}{$_} );
      }
@@ -743,10 +737,8 @@ sub _create_paper_widget {
         ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
      }
 
-     $options->by_name('l')->{widget}
-       ->set_value( $formats->{$paper}{l} );
-     $options->by_name('t')->{widget}
-       ->set_value( $formats->{$paper}{t} );
+     $options->by_name('l')->{widget}->set_value( $formats->{$paper}{l} );
+     $options->by_name('t')->{widget}->set_value( $formats->{$paper}{t} );
      $options->by_name('x')->{widget}
        ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
      $options->by_name('y')->{widget}
@@ -754,11 +746,7 @@ sub _create_paper_widget {
      Glib::Idle->add(
       sub {
        for (
-        ( 'l', 't',
-         'x', 'y',
-         SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
-        )
-         )
+        ( 'l', 't', 'x', 'y', SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH ) )
        {
         $options->{box}{$_}->hide_all if ( defined $options->{box}{$_} );
        }
@@ -923,58 +911,58 @@ sub update_widget {
  my ( $self, $name, $value ) = @_;
 
  my ( $group, $vbox );
- my $opt = $self->get('available-scan-options')->by_name($name);
+ my $opt    = $self->get('available-scan-options')->by_name($name);
  my $widget = $opt->{widget};
 
  # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
  if ( defined $widget ) {
-   $widget->signal_handler_block( $widget->{signal} );
+  $widget->signal_handler_block( $widget->{signal} );
 
-   # HBox for option
-   my $hbox = $widget->parent;
-   $hbox->set_sensitive( ( not $opt->{cap} & SANE_CAP_INACTIVE )
-      and $opt->{cap} & SANE_CAP_SOFT_SELECT );
+  # HBox for option
+  my $hbox = $widget->parent;
+  $hbox->set_sensitive( ( not $opt->{cap} & SANE_CAP_INACTIVE )
+     and $opt->{cap} & SANE_CAP_SOFT_SELECT );
 
-   if ( $opt->{max_values} < 2 ) {
+  if ( $opt->{max_values} < 2 ) {
 
-    # CheckButton
-    if ( $opt->{type} == SANE_TYPE_BOOL )
-    {    ## no critic (ProhibitCascadingIfElse)
-     $widget->set_active($value)
-       if ( _value_for_active_option( $value, $opt ) );
-    }
-
-    # SpinButton
-    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-     my ( $step, $page ) = $widget->get_increments;
-     $step = 1;
-     $step = $opt->{constraint}{quant} if ( $opt->{constraint}{quant} );
-     $widget->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
-     $widget->set_increments( $step, $page );
-     $widget->set_value($value)
-       if ( _value_for_active_option( $value, $opt ) );
-    }
-
-    # ComboBox
-    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
-     or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
-    {
-     $widget->get_model->clear;
-     my $index = 0;
-     for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
-      $widget->append_text( $d_sane->get( $opt->{constraint}[$i] ) );
-      $index = $i if ( defined $value and $opt->{constraint}[$i] eq $value );
-     }
-     $widget->set_active($index) if ( defined $index );
-    }
-
-    # Entry
-    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-     $widget->set_text($value)
-       if ( _value_for_active_option( $value, $opt ) );
-    }
+   # CheckButton
+   if ( $opt->{type} == SANE_TYPE_BOOL )
+   {    ## no critic (ProhibitCascadingIfElse)
+    $widget->set_active($value)
+      if ( _value_for_active_option( $value, $opt ) );
    }
-   $widget->signal_handler_unblock( $widget->{signal} );
+
+   # SpinButton
+   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
+    my ( $step, $page ) = $widget->get_increments;
+    $step = 1;
+    $step = $opt->{constraint}{quant} if ( $opt->{constraint}{quant} );
+    $widget->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
+    $widget->set_increments( $step, $page );
+    $widget->set_value($value)
+      if ( _value_for_active_option( $value, $opt ) );
+   }
+
+   # ComboBox
+   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+    or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
+   {
+    $widget->get_model->clear;
+    my $index = 0;
+    for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
+     $widget->append_text( $d_sane->get( $opt->{constraint}[$i] ) );
+     $index = $i if ( defined $value and $opt->{constraint}[$i] eq $value );
+    }
+    $widget->set_active($index) if ( defined $index );
+   }
+
+   # Entry
+   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
+    $widget->set_text($value)
+      if ( _value_for_active_option( $value, $opt ) );
+   }
+  }
+  $widget->signal_handler_unblock( $widget->{signal} );
  }
  return;
 }
@@ -990,7 +978,7 @@ sub update_options {
  my ( $group, $vbox );
  my $num_dev_options = $#{$options} + 1;
  for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-  my $opt   = $options->[$i];
+  my $opt = $options->[$i];
   $self->update_widget( $opt->{name}, $opt->{val} );
  }
  return;
@@ -1422,7 +1410,7 @@ print Dumper($opt);
   else {
    given ($widget) {
     when ( $widget->isa('Gtk2::CheckButton') ) {
-     $val = SANE_FALSE if ($val eq '');
+     $val = SANE_FALSE if ( $val eq '' );
      if ( $widget->get_active != $val ) {
       $widget->set_active($val);
       return $i;
@@ -1462,11 +1450,12 @@ print Dumper($opt);
 # we have to map them back to the original names
 sub map_geometry_names {
  my ($profile) = @_;
- for my $i (0..$#{$profile}) {
-   # for reasons I don't understand, without walking the reference tree,
-   # parts of $profile are undef
-   my_dumper($profile);
-  my ($name, $val) = each %{$profile->[$i]};
+ for my $i ( 0 .. $#{$profile} ) {
+
+  # for reasons I don't understand, without walking the reference tree,
+  # parts of $profile are undef
+  my_dumper($profile);
+  my ( $name, $val ) = each %{ $profile->[$i] };
   given ($name) {
    when (SANE_NAME_SCAN_TL_X) {
     $name = 'l';
@@ -1493,7 +1482,7 @@ sub map_geometry_names {
     $profile->[$i] = { $name => $val };
    }
   }
-}
+ }
  return;
 }
 
@@ -1507,18 +1496,19 @@ sub scan {
 print "npages $npages step $step\n";
  $npages = $self->get('max-pages')
    if ( $npages > 0 and $step < 0 );
-print "npages $npages step $step\n";
+ print "npages $npages step $step\n";
 
  if ( $start == 1 and $step < 0 ) {
-  $self->signal_emit( 'process-error', $d->get('Must scan facing pages first') );
+  $self->signal_emit( 'process-error',
+   $d->get('Must scan facing pages first') );
   return TRUE;
  }
 
  # Remove paper size from options
  my @options;
- for (@{$self->{current_scan_options}}) {
+ for ( @{ $self->{current_scan_options} } ) {
   my ( $key, $val ) = each(%$_);
-  push @options, { $key => $val } unless ($key eq 'Paper size');
+  push @options, { $key => $val } unless ( $key eq 'Paper size' );
  }
 
  my $i = 1;
@@ -1526,7 +1516,7 @@ print "npages $npages step $step\n";
   device           => $self->get('device'),
   dir              => $self->get('dir'),
   format           => "out%d.pnm",
-  options => \@options,
+  options          => \@options,
   npages           => $npages,
   start            => $start,
   step             => $step,

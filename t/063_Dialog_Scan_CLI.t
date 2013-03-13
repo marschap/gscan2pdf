@@ -63,13 +63,13 @@ my $signal = $dialog->signal_connect(
 );
 $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
 
-$dialog->signal_connect(
+my $csignal;
+$csignal = $dialog->signal_connect(
  'changed-num-pages' => sub {
   my ( $widget, $n, $signal ) = @_;
   is( $n, 0, 'changed-num-pages' );
-  $dialog->signal_handler_disconnect($signal);
- },
- $signal
+  $dialog->signal_handler_disconnect($csignal);
+ }
 );
 $dialog->set( 'num-pages', 0 );
 
@@ -290,8 +290,8 @@ $signal = $dialog->signal_connect(
       if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
     push @$expected, { scalar(SANE_NAME_SCAN_TL_X) => 1 },
       { scalar(SANE_NAME_SCAN_TL_Y) => 2 },
-      { x => 50 },
-      { y => 50 },
+      { x                           => 50 },
+      { y                           => 50 },
       { $resolution                 => 50 };
     is_deeply( $dialog->get('current-scan-options'),
      $expected, 'CLI geometry option names' );
@@ -370,7 +370,7 @@ $signal = $dialog->signal_connect(
     Gtk2->main_quit;
    }
   );
-  $dialog->set( 'num-pages', 1 );
+  $dialog->set( 'num-pages',             1 );
   $dialog->set( 'page-number-increment', 1 );
   $dialog->scan;
  }

@@ -462,14 +462,16 @@ sub scan_options {
     },
     sub {    # error callback
      my ($message) = @_;
-     $self->signal_emit( 'process-error', $d->get( 'Error retrieving scanner options: ' . $message ) );
+     $self->signal_emit( 'process-error',
+      $d->get( 'Error retrieving scanner options: ' . $message ) );
      $self->destroy;
     }
    );
   },
   error_callback => sub {
    my ($message) = @_;
-   $self->signal_emit( 'process-error', $d->get( 'Error opening device: ' . $message ) );
+   $self->signal_emit( 'process-error',
+    $d->get( 'Error opening device: ' . $message ) );
    $self->destroy;
   }
  );
@@ -1433,7 +1435,8 @@ sub scan {
    if ( $npages > 0 and $step < 0 );
 
  if ( $start == 1 and $step < 0 ) {
-  $self->signal_emit( 'process-error', $d->get('Must scan facing pages first') );
+  $self->signal_emit( 'process-error',
+   $d->get('Must scan facing pages first') );
   return TRUE;
  }
 

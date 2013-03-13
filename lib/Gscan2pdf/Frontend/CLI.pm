@@ -74,8 +74,9 @@ sub parse_device_list {
 sub find_scan_options {
  my ( $class, %options ) = @_;
 
- $options{prefix}   = ''          unless ( defined $options{prefix} );
- $options{frontend} = 'scanimage' unless ( defined($options{frontend}) and $options{frontend} ne '' );
+ $options{prefix} = '' unless ( defined $options{prefix} );
+ $options{frontend} = 'scanimage'
+   unless ( defined( $options{frontend} ) and $options{frontend} ne '' );
 
  # Get output from scanimage or scanadf.
  # Inverted commas needed for strange characters in device name
@@ -139,8 +140,8 @@ sub _scanimage {
  # Add basic options
  my @options;
  for ( @{ $options{options} } ) {
-  my ($key, $value) = each(%$_);
-  if ($key =~ /^(?:x|y|t|l)$/) {
+  my ( $key, $value ) = each(%$_);
+  if ( $key =~ /^(?:x|y|t|l)$/ ) {
    push @options, "-$key $value";
   }
   else {
@@ -190,7 +191,10 @@ sub _scanimage {
       my $timer = Glib::Timeout->add(
        $_POLL_INTERVAL,
        sub {
-        my $path = defined($options{dir}) ? File::Spec->catfile( $options{dir}, "out$id.pnm" ) : "out$id.pnm";
+        my $path =
+          defined( $options{dir} )
+          ? File::Spec->catfile( $options{dir}, "out$id.pnm" )
+          : "out$id.pnm";
         return Glib::SOURCE_CONTINUE unless ( -e $path );
         $options{new_page_callback}->($id)
           if ( defined $options{new_page_callback} );
