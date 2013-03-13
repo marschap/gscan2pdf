@@ -887,6 +887,9 @@ print Dumper($current);
 
     $self->signal_emit( 'finished-process', 'find_scan_options' );
 
+    # Unset the profile unless we are actively setting it
+    $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+
     # This fires the reloaded-scan-options signal,
     # so don't set this until we have finished
     $self->set( 'available-scan-options', $options );
@@ -901,6 +904,10 @@ print Dumper($current);
   );
  }
  else {
+
+  # Unset the profile unless we are actively setting it
+  $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+
 print "signal_emit $option->{name}, $val\n";
   $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
  }
