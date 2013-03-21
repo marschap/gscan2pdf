@@ -290,7 +290,7 @@ $signal = $dialog->signal_connect(
     push @$expected, { scalar(SANE_NAME_PAGE_HEIGHT) => 52 }
       if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
     push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 51 }
-      if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
+      if ( defined $options->by_name(SANE_NAME_PAGE_WIDTH) );
     push @$expected, { scalar(SANE_NAME_SCAN_TL_X) => 1 },
       { scalar(SANE_NAME_SCAN_TL_Y) => 2 },
       { scalar(SANE_NAME_SCAN_BR_X) => 51 },

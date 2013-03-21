@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 41;
+use Test::More tests => 40;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -15,8 +15,7 @@ my $window = Gtk2::Window->new;
 
 Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
-#Log::Log4perl->easy_init($WARN);
-Log::Log4perl->easy_init($DEBUG);
+Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::CLI->setup($logger);
 
@@ -237,27 +236,27 @@ $signal = $dialog->signal_connect(
   ######################################
 
   # need a new main loop because of the timeout
-#  $loop   = Glib::MainLoop->new;
-#  $flag   = FALSE;
-#  $signal = $dialog->signal_connect(
-#   'changed-profile' => sub {
-#    my ( $widget, $profile ) = @_;
-#    is( $profile, undef,
-#     'changing an option fires the changed-profile signal if a profile is set'
-#    );
-#    is_deeply(
-#     $dialog->get('current-scan-options'),
-#     [ { mode => 'Color' }, { $resolution => 51 } ],
-#     'current-scan-options without profile (again)'
-#    );
-#    $dialog->signal_handler_disconnect($signal);
-#    $flag = TRUE;
-#    $loop->quit;
-#   }
-#  );
+  $loop   = Glib::MainLoop->new;
+  $flag   = FALSE;
+  $signal = $dialog->signal_connect(
+   'changed-profile' => sub {
+    my ( $widget, $profile ) = @_;
+    is( $profile, undef,
+     'changing an option fires the changed-profile signal if a profile is set'
+    );
+    is_deeply(
+     $dialog->get('current-scan-options'),
+     [ { mode => 'Color' }, { $resolution => 51 } ],
+     'current-scan-options without profile (again)'
+    );
+    $dialog->signal_handler_disconnect($signal);
+    $flag = TRUE;
+    $loop->quit;
+   }
+  );
   $options = $dialog->get('available-scan-options');
   $dialog->set_option( $options->by_name($resolution), 51 );
-#  $loop->run unless ($flag);
+  $loop->run unless ($flag);
 
   ######################################
 
@@ -287,7 +286,7 @@ $signal = $dialog->signal_connect(
     push @$expected, { scalar(SANE_NAME_PAGE_HEIGHT) => 52 }
       if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
     push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 51 }
-      if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
+      if ( defined $options->by_name(SANE_NAME_PAGE_WIDTH) );
     push @$expected, { l => 1 },
       { t           => 2 },
       { x           => 50 },
@@ -343,14 +342,6 @@ $signal = $dialog->signal_connect(
    'changed-progress' => sub {
     ok( 1, 'changed-progress' );
     $dialog->signal_handler_disconnect($c_signal);
-   }
-  );
-  my $f_signal;
-  $f_signal = $dialog->signal_connect(
-   'finished-process' => sub {
-    my ( $widget, $process ) = @_;
-    is( $process, 'set_option', 'finished-process set_option' );
-    $dialog->signal_handler_disconnect($f_signal);
    }
   );
 

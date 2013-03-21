@@ -156,7 +156,8 @@ Gscan2pdf::Frontend::CLI->scan_pages(
   ok( 1, 'scanimage starts' );
  },
  new_page_callback => sub {
-  my ($path) = @_;
+  my ($n) = @_;
+  my $path = sprintf( "out%d.pnm", $n );
   ok( -e $path, 'scanimage scans' );
   unlink $path;
  },
@@ -178,7 +179,8 @@ Gscan2pdf::Frontend::CLI->scan_pages(
   ok( 1, 'scanadf starts' );
  },
  new_page_callback => sub {
-  my ($path) = @_;
+  my ($n) = @_;
+  my $path = sprintf( "out%d.pnm", $n );
   ok( -e $path, 'scanadf scans' );
   unlink $path;
  },

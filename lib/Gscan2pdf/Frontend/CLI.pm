@@ -150,9 +150,12 @@ sub _scanimage {
  }
  push @options, '--batch';
  push @options, '--progress';
- push @options, "--batch-start=$options{start}" if ( $options{start} != 0 );
- push @options, "--batch-count=$options{npages}" if ( $options{npages} != 0 );
- push @options, "--batch-increment=$options{step}" if ( $options{step} != 1 );
+ push @options, "--batch-start=$options{start}"
+   if ( defined( $options{start} ) and $options{start} != 0 );
+ push @options, "--batch-count=$options{npages}"
+   if ( defined( $options{npages} ) and $options{npages} != 0 );
+ push @options, "--batch-increment=$options{step}"
+   if ( defined( $options{step} ) and $options{step} != 1 );
 
  # Create command
  my $cmd = "$options{prefix} $options{frontend} $device @options";

@@ -739,10 +739,8 @@ sub _create_paper_widget {
 
      $options->by_name('l')->{widget}->set_value( $formats->{$paper}{l} );
      $options->by_name('t')->{widget}->set_value( $formats->{$paper}{t} );
-     $options->by_name('x')->{widget}
-       ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
-     $options->by_name('y')->{widget}
-       ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
+     $options->by_name('x')->{widget}->set_value( $formats->{$paper}{x} );
+     $options->by_name('y')->{widget}->set_value( $formats->{$paper}{y} );
      Glib::Idle->add(
       sub {
        for (
@@ -823,7 +821,6 @@ sub _pack_widget {
 
 sub set_option {
  my ( $self, $option, $val ) = @_;
-print "set_option $option->{name} $val\n";
  $self->update_widget( $option->{name}, $val );
 
  my $current = $self->{current_scan_options};
@@ -845,8 +842,6 @@ print "set_option $option->{name} $val\n";
   $j--;
  }
  $self->{current_scan_options} = $current;
-use Data::Dumper;
-print Dumper($current);
 
  my $options         = $self->get('available-scan-options');
  my $reload_triggers = $self->get('reload-triggers');
@@ -908,7 +903,6 @@ print Dumper($current);
   # Unset the profile unless we are actively setting it
   $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
 
-print "signal_emit $option->{name}, $val\n";
   $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
  }
  return;
@@ -1275,8 +1269,6 @@ sub my_dumper {
 
 sub set_current_scan_options {
  my ( $self, $profile ) = @_;
-use Data::Dumper;
-print "in set_current_scan_options ", Dumper($profile);
 
  return unless ( defined $profile );
 
@@ -1297,7 +1289,6 @@ print "in set_current_scan_options ", Dumper($profile);
  # As scanimage and scanadf rename the geometry options,
  # we have to map them back to the original names
  map_geometry_names($defaults);
-print "after mapping ", Dumper($defaults);
 
  # Give the GUI a chance to catch up between settings,
  # in case they have to be reloaded.
@@ -1308,17 +1299,14 @@ print "after mapping ", Dumper($defaults);
  $changed_scan_signal = $self->signal_connect(
   'changed-scan-option' => sub {
    my ( $widget, $name, $val ) = @_;
-print "signal changed-scan-option $name\n";
 
    # for reasons I don't understand, without walking the reference tree,
    # parts of $default are undef
    my_dumper($defaults);
    my ( $ename, $eval ) = each( %{ $defaults->[$i] } );
-print "waiting for changed-scan-option $ename\n";
 
    # don't check $eval against $val, just in case they are different
    if ( $ename eq $name ) {
-print "found changed-scan-option $ename\n";
     $i++;
     $i =
       $self->_set_option_emit_signal( $i, $defaults, $changed_scan_signal,
@@ -1353,11 +1341,13 @@ print "found changed-scan-option $ename\n";
 
 sub _set_option_emit_signal {
  my ( $self, $i, $defaults, $signal1, $signal2 ) = @_;
-print "_set_option_emit_signal $i\n";
  $i = $self->set_option_widget( $i, $defaults ) if ( $i < @$defaults );
 
  # Only emit the changed-current-scan-options signal when we have finished
- if ( not defined($i) or $i > $#{$defaults} ) {
+ if ( ( not defined($i) or $i > $#{$defaults} )
+  and $self->signal_handler_is_connected($signal1)
+  and $self->signal_handler_is_connected($signal2) )
+ {
   $self->signal_handler_disconnect($signal1);
   $self->signal_handler_disconnect($signal2);
   $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
@@ -1393,18 +1383,14 @@ sub set_option_widget {
   # parts of $profile are undef
   my_dumper( $profile->[$i] );
   my ( $name, $val ) = each( %{ $profile->[$i] } );
-print "set_option_widget $name $val\n";
 
   if ( $name eq 'Paper size' ) {
-print "set_option_widget setting paper to $val\n";
    $self->set( 'paper', $val );
    return $self->set_option_widget( $i + 1, $profile );
   }
 
   my $options = $self->get('available-scan-options');
   my $opt     = $options->by_name($name);
-use Data::Dumper;
-print Dumper($opt);
   my $widget  = $opt->{widget};
 
   if ( ref($val) eq 'ARRAY' ) {
@@ -1500,10 +1486,8 @@ sub scan {
  my $npages = $self->get('num-pages');
  my $start  = $self->get('page-number-start');
  my $step   = $self->get('page-number-increment');
-print "npages $npages step $step\n";
  $npages = $self->get('max-pages')
    if ( $npages > 0 and $step < 0 );
- print "npages $npages step $step\n";
 
  if ( $start == 1 and $step < 0 ) {
   $self->signal_emit( 'process-error',
