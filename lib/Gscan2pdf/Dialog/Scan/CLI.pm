@@ -1495,9 +1495,18 @@ sub scan {
   return TRUE;
  }
 
+ # As scanimage and scanadf rename the geometry options,
+ # we have to map them back to the original names
+ my $options = $self->{current_scan_options};
+ map_geometry_names($options);
+
  # Remove paper size from options
  my @options;
- for ( @{ $self->{current_scan_options} } ) {
+ for (@$options) {
+
+  # for reasons I don't understand, without walking the reference tree,
+  # parts of $_ are undef
+  my_dumper($_);
   my ( $key, $val ) = each(%$_);
   push @options, { $key => $val } unless ( $key eq 'Paper size' );
  }
