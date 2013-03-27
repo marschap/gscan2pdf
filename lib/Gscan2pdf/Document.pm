@@ -1083,6 +1083,13 @@ sub open_three {
  return ( slurp($reader), slurp($err) );
 }
 
+# Check that a command exists
+
+sub check_command {
+ my ($cmd) = @_;
+ return system("which $cmd >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
+}
+
 # Compute a timestamp
 
 sub timestamp {

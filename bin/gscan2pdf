@@ -1414,16 +1414,16 @@ sub create_menu_bar {
 
  # Check for presence of various packages
  $dependencies{perlmagick}  = try { require Image::Magick };
- $dependencies{imagemagick} = check_command('convert');
- $dependencies{scanadf}     = check_command('scanadf');
- $dependencies{xdg}         = check_command('xdg-email');
- $dependencies{gocr}        = check_command('gocr');
+ $dependencies{imagemagick} = Gscan2pdf::Document::check_command('convert');
+ $dependencies{scanadf}     = Gscan2pdf::Document::check_command('scanadf');
+ $dependencies{xdg}         = Gscan2pdf::Document::check_command('xdg-email');
+ $dependencies{gocr}        = Gscan2pdf::Document::check_command('gocr');
  $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup($logger);
  $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup($logger);
  $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup($logger);
- $dependencies{djvu}        = check_command('cjb2');
+ $dependencies{djvu}        = Gscan2pdf::Document::check_command('cjb2');
  $dependencies{unpaper}     = Gscan2pdf::Unpaper->version;
- $dependencies{libtiff}     = check_command('tiffcp');
+ $dependencies{libtiff}     = Gscan2pdf::Document::check_command('tiffcp');
  $logger->info("Found Image::Magick") if ( $dependencies{perlmagick} );
  $logger->info("Found ImageMagick")   if ( $dependencies{imagemagick} );
  $logger->info("Found scanadf")       if ( $dependencies{scanadf} );
@@ -5466,12 +5466,6 @@ EOS
  $about->run;
  $about->destroy;
  return;
-}
-
-# Check that a command exists
-
-sub check_command {
- return system("which $_[0] >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
 }
 
 # Rescan device-dependent scan options
