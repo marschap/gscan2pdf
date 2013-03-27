@@ -48,6 +48,9 @@ sub new {
   'Joint Photographic Experts Group JFIF format' => '.jpg',
   'Tagged Image File Format'                     => '.tif',
   'Portable anymap'                              => '.pnm',
+  'Portable pixmap format (color)'               => '.ppm',
+  'Portable graymap format (gray scale)'         => '.pgm',
+  'Portable bitmap format (black and white)'     => '.pbm',
   'CompuServe graphics interchange format'       => '.gif',
  );
  $self->{filename} = File::Temp->new(
