@@ -1,11 +1,11 @@
 use warnings;
 use strict;
-use File::Basename;    # Split filename into dir, file, ext
+use File::Temp;
 use Test::More tests => 1;
 
 BEGIN {
  use Gscan2pdf::Document;
- use Gtk2 -init;       # Could just call init separately
+ use Gtk2 -init;    # Could just call init separately
 }
 
 #########################

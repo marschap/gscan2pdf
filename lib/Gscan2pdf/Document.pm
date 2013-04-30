@@ -57,6 +57,13 @@ my $jobs_completed = 0;
 my $jobs_total     = 0;
 my ( $_self, $d, $logger, $paper_sizes );
 
+my %format = (
+ 'pnm' => 'Portable anymap',
+ 'ppm' => 'Portable pixmap format (color)',
+ 'pgm' => 'Portable graymap format (gray scale)',
+ 'pbm' => 'Portable bitmap format (black and white)',
+);
+
 sub setup {
  ( my $class, $logger ) = @_;
  $_self = {};
@@ -181,14 +188,26 @@ sub fetch_file {
  if ($n) {
   while ( $i < $n ) {
    my $page = $_self->{page_queue}->dequeue;
-   $self->add_page( $page->thaw );
-   ++$i;
+   if ( ref($page) eq '' ) {
+    $n = $page;
+    return $self->fetch_file($n);
+   }
+   else {
+    $self->add_page( $page->thaw );
+    ++$i;
+   }
   }
  }
  else {
   while ( defined( my $page = $_self->{page_queue}->dequeue_nb() ) ) {
-   $self->add_page( $page->thaw );
-   ++$i;
+   if ( ref($page) eq '' ) {
+    $n = $page;
+    return $self->fetch_file($n);
+   }
+   else {
+    $self->add_page( $page->thaw );
+    ++$i;
+   }
   }
  }
  return $i;
@@ -1586,13 +1605,13 @@ sub _thread_import_file {
 
     # Import each image
     my @images = glob('x-???.???');
-    my $i      = 0;
+    $self->{page_queue}->enqueue( $#images + 1 );
     foreach (@images) {
      my $page = Gscan2pdf::Page->new(
       filename => $_,
       dir      => $options{dir},
       delete   => TRUE,
-      format   => $_,
+      format   => $format{ substr( $_, length($_) - 3, 3 ) },
      );
      $self->{page_queue}->enqueue( $page->to_png($paper_sizes)->freeze );
     }

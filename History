@@ -3,6 +3,8 @@
 * Don't lose extension if user-defined tool converts pnm to pbm, ppm or pgm.
   Closes Launchpad bug 889549 (again)
   (gscan2pdf gimp integration creates page size error)
+* Allow thread to import different number of pages than requested.
+  Closes LP: #1163739 (Import of pdf no longer working)
 
 
 1.1.3 (25.02.2013):
