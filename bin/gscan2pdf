@@ -4609,9 +4609,11 @@ sub scan_dialog2 {
     );
    }
    else {
+    my $options = $windows2->get('available-scan-options');
+    my $opt     = $options->by_name(SANE_NAME_SCAN_RESOLUTION);
     $SETTING{resolution} =
-      defined( $SETTING{resolution} )
-      ? $SETTING{resolution}
+      ( defined($opt) and defined( $opt->{val} ) )
+      ? $opt->{val}
       : $Gscan2pdf::Document::POINTS_PER_INCH;
     $logger->info("Importing scan with resolution=$SETTING{resolution}");
     import_scan(

@@ -5,6 +5,9 @@
   (gscan2pdf gimp integration creates page size error)
 * Allow thread to import different number of pages than requested.
   Closes LP: #1163739 (Import of pdf no longer working)
+* Take the resolution directly from the scanner when scanning rather than
+  assuming that the system value is up-to-date.
+  Closes bug 134 (reduces PDF to half size of scan)
 
 
 1.1.3 (25.02.2013):
