@@ -2531,9 +2531,16 @@ sub _thread_gocr {
 
  my $new = $page->clone;
 
- my $cmd = "gocr $pnm";
+ # Temporary filename for output
+ my $txt = File::Temp->new( SUFFIX => '.txt' );
+
+ # Using temporary txt file, as perl munges charset encoding
+ # if text is passed by stdin/stdout
+ my $cmd = "gocr $pnm -o $txt";
  $logger->info($cmd);
- ( $new->{hocr}, undef ) = open_three("echo $$ > $pidfile;$cmd");
+ system("echo $$ > $pidfile;$cmd");
+ ( $new->{hocr}, undef ) = Gscan2pdf::Document::slurp($txt);
+
  return if $_self->{cancel};
  $new->{ocr_flag} = 1;              #FlagOCR
  $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page

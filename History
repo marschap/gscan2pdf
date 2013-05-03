@@ -8,6 +8,8 @@
 * Take the resolution directly from the scanner when scanning rather than
   assuming that the system value is up-to-date.
   Closes bug 134 (reduces PDF to half size of scan)
+* Fixed UTF8 handling with gocr
+  Thanks to patch from Pablo Saratxaga
 
 
 1.1.3 (25.02.2013):
