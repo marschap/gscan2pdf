@@ -1,10 +1,11 @@
 use warnings;
 use strict;
+use File::Basename;    # Split filename into dir, file, ext
 use Test::More tests => 2;
 
 BEGIN {
  use Gscan2pdf::Document;
- use Gtk2 -init;    # Could just call init separately
+ use Gtk2 -init;       # Could just call init separately
 }
 
 #########################
@@ -14,7 +15,7 @@ Log::Log4perl->easy_init($WARN);
 
 Gscan2pdf::Document->setup(Log::Log4perl::get_logger);
 my $slist = Gscan2pdf::Document->new;
-$slist->open_session('tmp');
+$slist->open_session( undef, 'test2.gs2p' );
 
 like(
  `file $slist->{data}[0][2]{filename}`,
@@ -29,4 +30,5 @@ is(
 
 #########################
 
+unlink 'test2.gs2p';
 Gscan2pdf::Document->quit;

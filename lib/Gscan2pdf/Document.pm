@@ -945,10 +945,11 @@ sub save_session {
 sub open_session {
  my ( $self, $dir, $filename, $error_callback ) = @_;
  if ( defined $filename ) {
-  my $tar = Archive::Tar->new( $filename, TRUE );
+  my $tar          = Archive::Tar->new( $filename, TRUE );
   my @filenamelist = $tar->list_files;
+  my @sessionfile  = grep { /\/session$/x } @filenamelist;
   $tar->extract;
-  $dir = dirname( $filenamelist[0] );
+  $dir = dirname( $sessionfile[0] );
  }
  my $sessionref = retrieve( File::Spec->catfile( $dir, 'session' ) );
  my %session = %$sessionref;
@@ -959,16 +960,6 @@ sub open_session {
  my @selection = @{ $session{selection} };
  delete $session{selection};
  for my $pagenum ( sort { $a <=> $b } ( keys(%session) ) ) {
-
-# If we are opening a session file, then the session directory will be different
-# If this is a crashed session, then we can use the same one
-  unless ( defined( $session{$pagenum}{dir} )
-   and $session{$pagenum}{dir} eq $dir )
-  {
-   $session{$pagenum}{filename} =
-     File::Spec->catfile( $dir, basename( $session{$pagenum}{filename} ) );
-   $session{$pagenum}{dir} = $dir;
-  }
 
   # Populate the SimpleList
   try {

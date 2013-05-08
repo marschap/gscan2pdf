@@ -1,10 +1,11 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use File::Basename;    # Split filename into dir, file, ext
+use Test::More tests => 4;
 
 BEGIN {
  use Gscan2pdf::Document;
- use Gtk2 -init;    # Could just call init separately
+ use Gtk2 -init;       # Could just call init separately
 }
 
 #########################
@@ -27,7 +28,40 @@ is(
  'Basic OCR output extracted'
 );
 
+# Add another image to test behaviour with multiple saves
+system('convert rose: test.pnm');
+
+# different dir for temporary files
+my $dir = 'tmp2';
+mkdir $dir unless ( -e $dir );
+$slist->set_dir($dir);
+
+$slist->get_file_info(
+ path              => 'test.pnm',
+ finished_callback => sub {
+  my ($info) = @_;
+  $slist->import_file(
+   info              => $info,
+   first             => 1,
+   last              => 1,
+   finished_callback => sub {
+    $slist->save_session( dirname( $slist->{data}[1][2]{filename} ),
+     'test2.gs2p' );
+    Gtk2->main_quit;
+   }
+  );
+ }
+);
+Gtk2->main;
+
+is(
+ `file test2.gs2p`,
+ "test2.gs2p: gzip compressed data\n",
+ 'Session file created'
+);
+cmp_ok( -s 'test2.gs2p', '>', 0, 'Non-empty Session file created' );
+
 #########################
 
-unlink 'test.gs2p';
+unlink 'test.gs2p', 'test.pnm', <tmp/*>, <$dir/*>;
 Gscan2pdf::Document->quit;

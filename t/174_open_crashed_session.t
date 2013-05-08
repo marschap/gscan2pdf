@@ -1,7 +1,6 @@
 use warnings;
 use strict;
-use Storable qw(store retrieve);
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 BEGIN {
  use Gscan2pdf::Document;
@@ -13,25 +12,24 @@ BEGIN {
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 
-my $sessionref = retrieve( File::Spec->catfile( 'tmp', 'session' ) );
-unlink "$sessionref->{1}{filename}";
-
 Gscan2pdf::Document->setup(Log::Log4perl::get_logger);
 my $slist = Gscan2pdf::Document->new;
-$slist->open_session(
- 'tmp', undef,
- sub {
-  my ($msg) = @_;
-  is(
-   $msg,
-   'Error importing page 1. Ignoring.',
-   'trap error on opening non-existent file'
-  );
- }
+$slist->open_session('tmp2');
+
+like(
+ `file $slist->{data}[0][2]{filename}`,
+ qr/PNG image data, 70 x 46, 8-bit\/color RGB, non-interlaced/,
+ 'PNG extracted with expected size'
+);
+is(
+ $slist->{data}[0][2]{hocr},
+ 'The quick brown fox',
+ 'Basic OCR output extracted'
 );
 
 #########################
 
-unlink <tmp/*>;
+unlink <tmp/*>, <tmp2/*>;
 rmdir 'tmp';
+rmdir 'tmp2';
 Gscan2pdf::Document->quit;
