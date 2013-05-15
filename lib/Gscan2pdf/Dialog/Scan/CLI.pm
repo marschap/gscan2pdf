@@ -843,13 +843,12 @@ sub set_option {
  }
  $self->{current_scan_options} = $current;
 
- my $options         = $self->get('available-scan-options');
  my $reload_triggers = $self->get('reload-triggers');
  my @reloadables;
  for (@$current) {
-  my ( $key, $value ) = @_;
+  my ( $key, $value ) = each(%$_);
   if ( defined $reload_triggers->{$key} ) {
-   push @reloadables, { $key => $value };
+   push @reloadables, $_;
   }
  }
  if (@reloadables) {
