@@ -76,7 +76,7 @@ sub find_scan_options {
 
  $options{prefix} = '' unless ( defined $options{prefix} );
  $options{frontend} = 'scanimage'
-   unless ( defined( $options{frontend} ) and $options{frontend} ne '' );
+   if ( not defined( $options{frontend} ) or $options{frontend} eq '' );
 
  # Get output from scanimage or scanadf.
  # Inverted commas needed for strange characters in device name
