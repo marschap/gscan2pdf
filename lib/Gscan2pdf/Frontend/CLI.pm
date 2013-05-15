@@ -141,7 +141,7 @@ sub _scanimage {
  my @options;
  for ( @{ $options{options} } ) {
   my ( $key, $value ) = each(%$_);
-  if ( $key =~ /^(?:x|y|t|l)$/ ) {
+  if ( $key =~ /^(?:x|y|t|l)$/x ) {
    push @options, "-$key $value";
   }
   else {
