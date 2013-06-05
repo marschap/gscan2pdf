@@ -10,6 +10,9 @@
   Closes bug 134 (reduces PDF to half size of scan)
 * Fixed UTF8 handling with gocr
   Thanks to patch from Pablo Saratxaga
+* Fixed import of multipage TIFFs
+  Closes Launchpad bug 1181019
+  (importing existing multipage tif file loads only the first one)
 
 
 1.1.3 (25.02.2013):

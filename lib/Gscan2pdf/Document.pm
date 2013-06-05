@@ -1509,7 +1509,7 @@ sub _thread_get_file_info {
    $logger->info("$pages pages");
    $info{pages} = $pages;
   }
-  when (/TIFF\ image data/x) {
+  when (/TIFF\ image\ data/x) {
    $format = 'Tagged Image File Format';
    my $cmd = "tiffinfo \"$filename\"";
    $logger->info($cmd);
@@ -1517,13 +1517,8 @@ sub _thread_get_file_info {
    return if $_self->{cancel};
    $logger->info($info);
 
-   # Count number of pages and their resolutions
-   my @ppi;
-   while ( $info =~ /Resolution:\ (\d*)/x ) {
-    push @ppi, $1;
-    $info = substr( $info, index( $info, 'Resolution' ) + 10, length($info) );
-   }
-   my $pages = @ppi;
+   # Count number of pages
+   my $pages = () = $info =~ /TIFF\ Directory\ at\ offset/xg;
    $logger->info("$pages pages");
    $info{pages} = $pages;
   }
