@@ -40,12 +40,15 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  'changed-scan-option' => {
   param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, value
  },
+ 'changed-option-visibility' => {
+  param_types => ['Glib::Scalar'],    # array of options to hide
+ },
  'changed-current-scan-options' => {
-  param_types => ['Glib::Scalar'],                      # profile array
+  param_types => ['Glib::Scalar'],    # profile array
  },
  'reloaded-scan-options' => {},
  'changed-profile'       => {
-  param_types => ['Glib::Scalar'],                      # name
+  param_types => ['Glib::Scalar'],    # name
  },
  'added-profile' => {
   param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, profile array
@@ -177,6 +180,12 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   'Array of scan options making up current profile',    # blurb
   [qw/readable writable/]                               # flags
  ),
+ Glib::ParamSpec->scalar(
+  'hidden-scan-options',                                # name
+  'Hidden scan options',                                # nick
+  'Array of scan options to hide from the user',        # blurb
+  [qw/readable writable/]                               # flags
+ ),
   ];
 
 my ( $d, $d_sane, $logger );
@@ -256,9 +265,14 @@ sub SET_PROPERTY {
    when ('current_scan_options') {
     $self->set_current_scan_options($newval)
    }
+   when ('hidden_scan_options') {
+    $self->signal_emit( 'changed-option-visibility', $newval );
+   }
+   default {
+    $self->SUPER::SET_PROPERTY( $pspec, $newval );
+   }
   }
  }
- $self->SUPER::SET_PROPERTY( $pspec, $newval );
  return;
 }
 
@@ -571,7 +585,6 @@ sub set_profile {
  my ( $self, $name ) = @_;
  set_combobox_by_text( $self->{combobsp}, $name );
  if ( defined($name) and $name ne '' ) {
-  my $profile = $self->{profiles}{$name};
 
   # If we are setting the profile, don't unset the profile name
   $self->{setting_profile} = TRUE;
@@ -586,7 +599,7 @@ sub set_profile {
    }
   );
 
-  $self->set( 'current-scan-options', $profile );
+  $self->set( 'current-scan-options', $self->{profiles}{$name} );
  }
 
  # no need to wait - nothing to do

@@ -531,6 +531,18 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
   my $opt = $options->by_index($i);
 
+  my $hidden = $self->get('hidden-scan-options');
+  if ( defined $hidden ) {
+   my $listed;
+   for (@$hidden) {
+    if ( $_ = $opt->{name} or $_ = $opt->{title} ) {
+     $listed = TRUE;
+     last;
+    }
+   }
+   next if $listed;
+  }
+
   # Notebook page for group
   if ( $opt->{type} == SANE_TYPE_GROUP or not defined($vbox) ) {
    $vbox = Gtk2::VBox->new;
@@ -665,6 +677,21 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  for ( my $i = 1 ; $i < $self->{notebook}->get_n_pages ; $i++ ) {
   $self->{notebook}->get_nth_page($i)->show_all;
  }
+
+ # Callback for option visibility
+ $self->signal_connect(
+  'changed-option-visibility' => sub {
+   my ( $widget, $hidden_options ) = @_;
+   for (@$hidden_options) {
+    my $opt = $options->by_name($_);
+    $opt = $options->by_title($_) unless ( defined $opt );
+    if ( defined $opt ) {
+     $opt->{widget}->parent->destroy;
+     undef $opt->{widget};
+    }
+   }
+  }
+ );
 
  # Give the GUI a chance to catch up before resizing.
  Glib::Idle->add( sub { $self->resize( 100, 100 ); } );
@@ -1282,8 +1309,6 @@ sub set_current_scan_options {
  else {
   @$defaults = @$profile;
  }
-
- delete $self->{current_scan_options};
 
  # As scanimage and scanadf rename the geometry options,
  # we have to map them back to the original names

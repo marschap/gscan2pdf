@@ -443,6 +443,9 @@ my (
  # Define here to make sure that it doesn't get deleted until the next email
  # is created or we quit
  $pdf,
+
+ # Simple::List in preferences dialog
+ $option_visibility_list,
 );
 
 my @action_items = (
@@ -3693,6 +3696,9 @@ sub scan_dialog {
    elsif (@profiles) {
     $windows->set( 'profile', $profiles[0] );
    }
+
+   # if the preferences window exists, then update the option list to show/hide
+   _fill_option_visibility_list();
   }
  );
  $windows->signal_connect(
@@ -7962,9 +7968,16 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  );
  my $vbox = $windowr->get('vbox');
 
+ # Notebook for scan and general options
+ my $notebook = Gtk2::Notebook->new;
+ $vbox->pack_start( $notebook, TRUE, TRUE, 0 );
+ my $vbox1 = Gtk2::VBox->new;
+ $notebook->append_page( $vbox1, $d->get('Scan options') );
+ $vbox1->set_border_width($border_width);
+
  # Frontends
  my $hbox = Gtk2::HBox->new;
- $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+ $vbox1->pack_start( $hbox, FALSE, FALSE, 0 );
  my $label = Gtk2::Label->new( $d->get('Frontend') );
  $hbox->pack_start( $label, FALSE, FALSE, 0 );
  my @frontends = (
@@ -8008,15 +8021,103 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  );
  combobox_set_active( $combob, $SETTING{frontend}, @frontends );
  $hbox->pack_end( $combob, TRUE, TRUE, 0 );
+ $tooltips->set_tip( $hbox, $d->get("Interface used for scanner access") );
 
  # Cycle SANE handle after scan
  $cbcsh->set_active( $SETTING{'cycle sane handle'} )
    if ( defined $SETTING{'cycle sane handle'} );
- $vbox->pack_start( $cbcsh, TRUE, TRUE, 0 );
+ $vbox1->pack_start( $cbcsh, FALSE, FALSE, 0 );
+
+ # scan command prefix
+ $hbox = Gtk2::HBox->new;
+ $vbox1->pack_start( $hbox, FALSE, FALSE, 0 );
+ $label = Gtk2::Label->new( $d->get('Scan command prefix') );
+ $hbox->pack_start( $label, FALSE, FALSE, 0 );
+ my $preentry = Gtk2::Entry->new;
+ $hbox->add($preentry);
+ $preentry->set_text( $SETTING{'scan prefix'} )
+   if defined( $SETTING{'scan prefix'} );
+
+ # Cache options?
+ my $cbc = Gtk2::CheckButton->new_with_label(
+  $d->get('Cache device-dependent options') );
+ $cbc->set_active(TRUE) if ( $SETTING{'cache options'} );
+ $vbox1->pack_start( $cbc, FALSE, FALSE, 0 );
+
+ # Clear options cache
+ my $button =
+   Gtk2::Button->new( $d->get('Clear device-dependent options cache') );
+ $vbox1->pack_start( $button, FALSE, FALSE, 0 );
+ $button->signal_connect(
+  clicked => sub {
+   delete $SETTING{cache} if ( defined $SETTING{cache} );
+  }
+ );
+
+ # Option visibility
+ my $frame = Gtk2::Frame->new( $d->get('Option visibility') );
+ $vbox1->pack_start( $frame, TRUE, TRUE, 0 );
+ my $vvbox = Gtk2::VBox->new;
+ $vvbox->set_border_width($border_width);
+ $frame->add($vvbox);
+ my $scwin = Gtk2::ScrolledWindow->new;
+ $vvbox->pack_start( $scwin, TRUE, TRUE, 0 );
+ $scwin->set_policy(qw/never automatic/);
+ $option_visibility_list = Gtk2::Ex::Simple::List->new(
+  $d->get('Title')  => 'text',
+  $d->get('Type')   => 'text',
+  $d->get('Show')   => 'bool',
+  $d->get('Reload') => 'bool'
+ );
+ $option_visibility_list->get_selection->set_mode('multiple');
+ $scwin->add($option_visibility_list);
+ my $bhbox = Gtk2::HBox->new;
+ $vvbox->pack_start( $bhbox, FALSE, FALSE, 0 );
+ my $sbutton = Gtk2::Button->new( $d->get('Show') );
+ $sbutton->signal_connect(
+  clicked => sub {
+
+   for ( $option_visibility_list->get_selected_indices ) {
+    $option_visibility_list->{data}[$_][2] = TRUE;
+   }
+  }
+ );
+ $bhbox->pack_start( $sbutton, TRUE, TRUE, 0 );
+ my $hbutton = Gtk2::Button->new( $d->get('Hide') );
+ $hbutton->signal_connect(
+  clicked => sub {
+   for ( $option_visibility_list->get_selected_indices ) {
+    $option_visibility_list->{data}[$_][2] = FALSE;
+   }
+  }
+ );
+ $bhbox->pack_start( $hbutton, TRUE, TRUE, 0 );
+ my $show_not_listed =
+   Gtk2::CheckButton->new_with_label( $d->get('Show options not listed') );
+ $vvbox->pack_start( $show_not_listed, FALSE, FALSE, 0 );
+
+ # fill the list
+ _fill_option_visibility_list();
+
+ my $vbox2 = Gtk2::VBox->new;
+ $notebook->append_page( $vbox2, $d->get('General options') );
+ $vbox2->set_border_width($border_width);
+
+ # Restore window setting
+ my $cbw = Gtk2::CheckButton->new_with_label(
+  $d->get('Restore window settings on startup') );
+ $cbw->set_active(TRUE) if ( $SETTING{'restore window'} );
+ $vbox2->pack_start( $cbw, TRUE, TRUE, 0 );
+
+ # View saved files
+ my $cbv = Gtk2::CheckButton->new_with_label( $d->get('View files on saving') );
+ $cbv->set_active( $SETTING{'view files toggle'} )
+   if ( defined $SETTING{'view files toggle'} );
+ $vbox2->pack_start( $cbv, TRUE, TRUE, 0 );
 
  # Default filename
  $hbox = Gtk2::HBox->new;
- $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+ $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
  $label = Gtk2::Label->new( $d->get('Default filename for PDFs') );
  $hbox->pack_start( $label, FALSE, FALSE, 0 );
  my $fileentry = Gtk2::Entry->new;
@@ -8030,41 +8131,9 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $fileentry->set_text( $SETTING{'default filename'} )
    if defined( $SETTING{'default filename'} );
 
- # scan command prefix
- $hbox = Gtk2::HBox->new;
- $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
- $label = Gtk2::Label->new( $d->get('Scan command prefix') );
- $hbox->pack_start( $label, FALSE, FALSE, 0 );
- my $preentry = Gtk2::Entry->new;
- $hbox->add($preentry);
- $preentry->set_text( $SETTING{'scan prefix'} )
-   if defined( $SETTING{'scan prefix'} );
-
- # Restore window setting
- my $cbw = Gtk2::CheckButton->new_with_label(
-  $d->get('Restore window settings on startup') );
- $cbw->set_active(TRUE) if ( $SETTING{'restore window'} );
- $vbox->pack_start( $cbw, TRUE, TRUE, 0 );
-
- # Cache options?
- my $cbc = Gtk2::CheckButton->new_with_label(
-  $d->get('Cache device-dependent options') );
- $cbc->set_active(TRUE) if ( $SETTING{'cache options'} );
- $vbox->pack_start( $cbc, TRUE, TRUE, 0 );
-
- # Clear options cache
- my $button =
-   Gtk2::Button->new( $d->get('Clear device-dependent options cache') );
- $vbox->pack_start( $button, TRUE, TRUE, 0 );
- $button->signal_connect(
-  clicked => sub {
-   delete $SETTING{cache} if ( defined $SETTING{cache} );
-  }
- );
-
  # Temporary directory settings
  $hbox = Gtk2::HBox->new;
- $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+ $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
  $label = Gtk2::Label->new( $d->get('Temporary directory') );
  $hbox->pack_start( $label, FALSE, FALSE, 0 );
  my $tmpentry = Gtk2::Entry->new;
@@ -8090,7 +8159,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
 
  # Blank page standard deviation threshold
  $hbox = Gtk2::HBox->new;
- $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+ $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
  $label = Gtk2::Label->new( $d->get('Blank threshold') );
  $hbox->pack_start( $label, FALSE, FALSE, 0 );
  my $spinbuttonb = Gtk2::SpinButton->new_with_range( 0, 1, 0.001 );
@@ -8101,7 +8170,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
 
  # Dark page mean threshold
  $hbox = Gtk2::HBox->new;
- $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+ $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
  $label = Gtk2::Label->new( $d->get('Dark threshold') );
  $hbox->pack_start( $label, FALSE, FALSE, 0 );
  my $spinbuttond = Gtk2::SpinButton->new_with_range( 0, 1, 0.01 );
@@ -8112,7 +8181,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
 
  # OCR output
  $hbox = Gtk2::HBox->new;
- $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+ $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
  $label = Gtk2::Label->new( $d->get('OCR output') );
  $hbox->pack_start( $label, FALSE, FALSE, 0 );
  my @array = (
@@ -8136,8 +8205,8 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $hbox->pack_end( $comboo, TRUE, TRUE, 0 );
 
  # User-defined tools
- my $frame = Gtk2::Frame->new( $d->get('User-defined tools') );
- $vbox->pack_start( $frame, TRUE, TRUE, 0 );
+ $frame = Gtk2::Frame->new( $d->get('User-defined tools') );
+ $vbox2->pack_start( $frame, TRUE, TRUE, 0 );
  my $vboxt = Gtk2::VBox->new;
  $vboxt->set_border_width($border_width);
  $frame->add($vboxt);
@@ -8156,12 +8225,6 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
   }
  );
 
- # View saved files
- my $cbv = Gtk2::CheckButton->new_with_label( $d->get('View files on saving') );
- $cbv->set_active( $SETTING{'view files toggle'} )
-   if ( defined $SETTING{'view files toggle'} );
- $vbox->pack_start( $cbv, TRUE, TRUE, 0 );
-
  # Apply button
  $hbox = _hbox_with_apply_cancel_buttons(
   sub {
@@ -8175,6 +8238,14 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
      undef $windows2 if ( defined $windows2 );
      rescan_options( $device_list[ $combobd->get_active ]{name} )
        if ( defined $windows );
+    }
+   }
+   else {
+    if ( defined $windows ) {
+     $windows->set( 'hidden-scan-options', _option_visibility_list2array() );
+    }
+    elsif ( defined $windows2 ) {
+     $windows2->set( 'hidden-scan-options', _option_visibility_list2array() );
     }
    }
    $SETTING{'cycle sane handle'} = $cbcsh->get_active;
@@ -8214,9 +8285,30 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
    $windowr->hide;
   }
  );
- $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+ $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
  $windowr->show_all;
  return;
+}
+
+sub _fill_option_visibility_list {
+ if ( defined($option_visibility_list) and defined($windows) ) {
+  @{ $option_visibility_list->{data} } = ();
+  my $options = $windows->get('available-scan-options');
+  for ( my $i = 1 ; $i < $options->num_options ; ++$i ) {
+   my $opt = $options->by_index($i);
+   push @{ $option_visibility_list->{data} },
+     [ $opt->{title}, $opt->{type}, TRUE, FALSE ];
+  }
+ }
+ return;
+}
+
+sub _option_visibility_list2array {
+ my @array;
+ for ( @{ $option_visibility_list->{data} } ) {
+  push @array, $_->[0] unless $_->[2];
+ }
+ return \@array;
 }
 
 sub _hbox_with_apply_cancel_buttons {

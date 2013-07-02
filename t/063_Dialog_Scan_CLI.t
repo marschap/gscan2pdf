@@ -282,7 +282,7 @@ $signal = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
     my $options = $dialog->get('available-scan-options');
-    my $expected;
+    my $expected = [ { 'Paper size' => 'new' } ];
     push @$expected, { scalar(SANE_NAME_PAGE_HEIGHT) => 52 }
       if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
     push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 51 }

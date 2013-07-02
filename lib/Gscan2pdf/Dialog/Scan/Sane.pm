@@ -1243,8 +1243,6 @@ sub set_current_scan_options {
   @$defaults = @$profile;
  }
 
- delete $self->{current_scan_options};
-
  # Give the GUI a chance to catch up between settings,
  # in case they have to be reloaded.
  # Use the 'changed-scan-option' signal to trigger the next loop
