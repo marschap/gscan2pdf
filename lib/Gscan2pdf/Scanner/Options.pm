@@ -48,6 +48,14 @@ sub by_name {
  return defined($name) ? $self->{hash}{$name} : undef;
 }
 
+sub by_title {
+ my ( $self, $title ) = @_;
+ for ( @{ $self->{array} } ) {
+  return $_ if ( defined( $_->{title} ) and $_->{title} eq $title );
+ }
+ return;
+}
+
 sub num_options {
  my ($self) = @_;
  return $#{ $self->{array} } + 1;

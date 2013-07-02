@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 24;
+use Test::More tests => 25;
 use Sane 0.05;    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
@@ -277,9 +277,10 @@ my @that     = (
 );
 is_deeply( $options->{array}, \@that, 'fujitsu' );
 
-is( $options->num_options,               19,       'number of options' );
-is( $options->by_index(2)->{name},       'source', 'by_index' );
-is( $options->by_name('source')->{name}, 'source', 'by_name' );
+is( $options->num_options,                19,       'number of options' );
+is( $options->by_index(2)->{name},        'source', 'by_index' );
+is( $options->by_name('source')->{name},  'source', 'by_name' );
+is( $options->by_title('Source')->{name}, 'source', 'by_title' );
 
 is(
  $options->supports_paper(
