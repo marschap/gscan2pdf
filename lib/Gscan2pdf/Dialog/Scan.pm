@@ -519,7 +519,9 @@ sub edit_paper {
       )
       . ' '
       . join( ', ', @{ $self->{ignored_paper_formats} } )
-   ) if ( @{ $self->{ignored_paper_formats} } );
+     )
+     if ( $self->{ignored_paper_formats}
+    and @{ $self->{ignored_paper_formats} } );
 
    # Set the combobox back from Edit to the previous value
    set_combobox_by_text( $combobp, $self->get('paper') );
