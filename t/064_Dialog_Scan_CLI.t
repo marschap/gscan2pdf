@@ -21,30 +21,42 @@ Gscan2pdf::Frontend::CLI->setup($logger);
 
 ok(
  my $dialog = Gscan2pdf::Dialog::Scan::CLI->new(
-  title           => 'title',
-  'transient-for' => $window,
-  'logger'        => $logger
+  title                  => 'title',
+  'transient-for'        => $window,
+  'logger'               => $logger,
+  'visible-scan-options' => { mode => 1 },
  ),
  'Created dialog'
 );
 isa_ok( $dialog, 'Gscan2pdf::Dialog::Scan::CLI' );
 
-is( $dialog->get('hidden-scan-options'), undef, 'initial hidden-scan-options' );
+is_deeply(
+ $dialog->get('visible-scan-options'),
+ { mode => 1 },
+ 'initial visible-scan-options'
+);
 
 my $signal;
 $signal = $dialog->signal_connect(
  'changed-option-visibility' => sub {
   ok( 1, 'changed-option-visibility' );
 
-  is_deeply( $dialog->get('hidden-scan-options'),
-   ['mode'], 'updated hidden-scan-options' );
+  is_deeply(
+   $dialog->get('visible-scan-options'),
+   { mode => 0 },
+   'updated visible-scan-options'
+  );
   $dialog->signal_handler_disconnect($signal);
 
-  $dialog->set( 'hidden-scan-options', undef );
-  is( $dialog->get('hidden-scan-options'), undef, 'reset hidden-scan-options' );
+  $dialog->set( 'visible-scan-options', { mode => 1 } );
+  is_deeply(
+   $dialog->get('visible-scan-options'),
+   { mode => 1 },
+   'reset visible-scan-options'
+  );
  }
 );
-$dialog->set( 'hidden-scan-options', ['mode'] );
+$dialog->set( 'visible-scan-options', { mode => 0 } );
 
 $dialog->signal_connect(
  'changed-device-list' => sub {
@@ -75,10 +87,10 @@ $signal = $dialog->signal_connect(
 
   my $options = $dialog->get('available-scan-options');
   my $option  = $options->by_name('mode');
-  isnt( $option->{widget}, undef, 'mode widget exists' );
+  is( $option->{widget}->visible, TRUE, 'mode widget visible' );
 
-  $dialog->set( 'hidden-scan-options', ['Mode'] );
-  is( $option->{widget}, undef, 'mode widget removed by title' );
+  $dialog->set( 'visible-scan-options', { mode => 0 } );
+  is( $option->{widget}->visible, '', 'mode widget hidden by title' );
   Gtk2->main_quit;
  }
 );

@@ -261,7 +261,39 @@ my %default_settings = (
    t => 0,
   },
  },
- user_defined_tools => ['gimp %i']
+ user_defined_tools => ['gimp %i'],
+
+ # show the options marked with 1, hide those with 0
+ # for the others, see the value of default-option-visibility
+ 'visible-scan-options' => {
+  mode                => 1,
+  compression         => 1,
+  resolution          => 1,
+  brightness          => 1,
+  gain                => 1,
+  contrast            => 1,
+  threshold           => 1,
+  speed               => 1,
+  'batch-scan'        => 1,
+  'wait-for-button'   => 1,
+  'button-wait'       => 1,
+  'calibration-cache' => 1,
+  source              => 1,
+  pagewidth           => 1,
+  pageheight          => 1,
+  'page-width'        => 1,
+  'page-height'       => 1,
+  'overscan-top'      => 1,
+  'overscan-bottom'   => 1,
+  adf_mode            => 1,
+  'adf-mode'          => 1,
+  'Paper size'        => 1,
+  x                   => 1,
+  y                   => 1,
+  l                   => 1,
+  t                   => 1,
+ },
+ 'scan-reload-triggers' => qw(mode),
 );
 delete $SETTING{frontend}
   if (
@@ -3516,9 +3548,10 @@ sub scan_dialog {
   'page-number-start' => $#{ $slist->{data} } > -1
   ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
   : 1,
-  prefix            => $SETTING{'scan prefix'},
-  frontend          => $SETTING{'frontend'},
-  'reload-triggers' => { mode => 1 },
+  prefix                 => $SETTING{'scan prefix'},
+  frontend               => $SETTING{'frontend'},
+  'visible-scan-options' => $SETTING{'visible-scan-options'},
+  'reload-triggers'      => $SETTING{'scan-reload-triggers'},
  );
 
 # Can't set the device when creating the window, as the list does not exist then
@@ -3696,9 +3729,6 @@ sub scan_dialog {
    elsif (@profiles) {
     $windows->set( 'profile', $profiles[0] );
    }
-
-   # if the preferences window exists, then update the option list to show/hide
-   _fill_option_visibility_list();
   }
  );
  $windows->signal_connect(
@@ -8092,12 +8122,47 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
   }
  );
  $bhbox->pack_start( $hbutton, TRUE, TRUE, 0 );
+ my $fbutton = Gtk2::Button->new( $d->get('List current optionts') );
+ $fbutton->signal_connect(
+  clicked => sub {
+   if ( defined $windows ) {
+    @{ $option_visibility_list->{data} } = ();
+    my $options = $windows->get('available-scan-options');
+    for ( my $i = 1 ; $i < $options->num_options ; ++$i ) {
+     my $opt = $options->by_index($i);
+     push @{ $option_visibility_list->{data} },
+       [ $opt->{title}, $opt->{type}, TRUE, FALSE ];
+    }
+    push @{ $option_visibility_list->{data} },
+      [ 'Paper size', undef, TRUE, FALSE ];
+   }
+   else {
+    show_message_dialog( $windowr, 'error',
+     'close',
+     $d->get('No scanner currently open with command line frontend.') );
+   }
+   return;
+  }
+ );
+ $bhbox->pack_start( $fbutton, TRUE, TRUE, 0 );
  my $show_not_listed =
    Gtk2::CheckButton->new_with_label( $d->get('Show options not listed') );
  $vvbox->pack_start( $show_not_listed, FALSE, FALSE, 0 );
 
  # fill the list
- _fill_option_visibility_list();
+ if ( defined $SETTING{'visible-scan-options'} ) {
+  my %reload;
+  $SETTING{'scan-reload-triggers'} = [ $SETTING{'scan-reload-triggers'} ]
+    if ( ref( $SETTING{'scan-reload-triggers'} ) ne 'ARRAY' );
+  for ( @{ $SETTING{'scan-reload-triggers'} } ) {
+   $reload{$_} = 1;
+  }
+  for ( sort { $a cmp $b } keys %{ $SETTING{'visible-scan-options'} } ) {
+   push @{ $option_visibility_list->{data} },
+     [ $_, undef, $SETTING{'visible-scan-options'}{$_},
+    defined( $reload{$_} ) ];
+  }
+ }
 
  my $vbox2 = Gtk2::VBox->new;
  $notebook->append_page( $vbox2, $d->get('General options') );
@@ -8242,10 +8307,10 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
    }
    else {
     if ( defined $windows ) {
-     $windows->set( 'hidden-scan-options', _option_visibility_list2array() );
+     $windows->set( 'visible-scan-options', _option_visibility_list2array() );
     }
     elsif ( defined $windows2 ) {
-     $windows2->set( 'hidden-scan-options', _option_visibility_list2array() );
+     $windows2->set( 'visible-scan-options', _option_visibility_list2array() );
     }
    }
    $SETTING{'cycle sane handle'} = $cbcsh->get_active;
@@ -8287,19 +8352,6 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  );
  $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
  $windowr->show_all;
- return;
-}
-
-sub _fill_option_visibility_list {
- if ( defined($option_visibility_list) and defined($windows) ) {
-  @{ $option_visibility_list->{data} } = ();
-  my $options = $windows->get('available-scan-options');
-  for ( my $i = 1 ; $i < $options->num_options ; ++$i ) {
-   my $opt = $options->by_index($i);
-   push @{ $option_visibility_list->{data} },
-     [ $opt->{title}, $opt->{type}, TRUE, FALSE ];
-  }
- }
  return;
 }
 

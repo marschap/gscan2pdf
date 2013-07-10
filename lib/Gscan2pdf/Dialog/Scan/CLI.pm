@@ -518,7 +518,6 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  my ( $self, $options ) = @_;
  $logger->debug( "scanimage --help returned: ", Dumper($options) );
 
- my ( $group, $vbox, $hboxp );
  my $num_dev_options = $options->num_options;
 
  # We have hereby removed the active profile and paper,
@@ -527,30 +526,20 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  $self->{paper_formats} = undef;
  $self->{paper}         = undef;
 
+ # Default tab
+ my $vbox = Gtk2::VBox->new;
+ $self->{notebook}->append_page( $vbox, $d->get('Scan Options') );
+
  delete $self->{combobp};    # So we don't carry over from one device to another
  for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
   my $opt = $options->by_index($i);
 
-  my $hidden = $self->get('hidden-scan-options');
-  if ( defined $hidden ) {
-   my $listed;
-   for (@$hidden) {
-    if ( $_ = $opt->{name} or $_ = $opt->{title} ) {
-     $listed = TRUE;
-     last;
-    }
-   }
-   next if $listed;
-  }
-
   # Notebook page for group
-  if ( $opt->{type} == SANE_TYPE_GROUP or not defined($vbox) ) {
+  if ( $opt->{type} == SANE_TYPE_GROUP ) {
    $vbox = Gtk2::VBox->new;
-   $group =
-     defined( $opt->{title} )
-     ? $d_sane->get( $opt->{title} )
-     : $d->get('Scan Options');
-   $self->{notebook}->append_page( $vbox, $group );
+   my $i =
+     $self->{notebook}->append_page( $vbox, $d_sane->get( $opt->{title} ) );
+   $opt->{widget} = $vbox;
    next;
   }
 
@@ -562,9 +551,9 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
   # Define HBox for paper size here
   # so that it can be put before first geometry option
-  if ( _geometry_option($opt) and not defined($hboxp) ) {
-   $hboxp = Gtk2::HBox->new;
-   $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
+  if ( _geometry_option($opt) and not defined( $self->{hboxp} ) ) {
+   $self->{hboxp} = Gtk2::HBox->new;
+   $vbox->pack_start( $self->{hboxp}, FALSE, FALSE, 0 );
   }
 
   # HBox for option
@@ -667,31 +656,21 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    );
   }
 
-  $self->_pack_widget( $widget, [ $options, $opt, $hbox, $hboxp ] );
+  $self->_pack_widget( $widget, [ $options, $opt, $hbox ] );
  }
 
  # Set defaults
  my $sane_device = Gscan2pdf::Frontend::CLI->device;
 
- # Show new pages
- for ( my $i = 1 ; $i < $self->{notebook}->get_n_pages ; $i++ ) {
-  $self->{notebook}->get_nth_page($i)->show_all;
- }
-
  # Callback for option visibility
  $self->signal_connect(
   'changed-option-visibility' => sub {
-   my ( $widget, $hidden_options ) = @_;
-   for (@$hidden_options) {
-    my $opt = $options->by_name($_);
-    $opt = $options->by_title($_) unless ( defined $opt );
-    if ( defined $opt ) {
-     $opt->{widget}->parent->destroy;
-     undef $opt->{widget};
-    }
-   }
+   my ( $widget, $visible_options ) = @_;
+   $self->_update_option_visibility( $options, $visible_options );
   }
  );
+ $self->_update_option_visibility( $options,
+  $self->get('visible-scan-options') );
 
  # Give the GUI a chance to catch up before resizing.
  Glib::Idle->add( sub { $self->resize( 100, 100 ); } );
@@ -701,19 +680,92 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  return;
 }
 
+sub _update_option_visibility {
+ my ( $self, $options, $visible_options ) = @_;
+
+ # Show all notebook tabs
+ for ( my $i = 1 ; $i < $self->{notebook}->get_n_pages ; $i++ ) {
+  $self->{notebook}->get_nth_page($i)->show_all;
+ }
+
+ my $num_dev_options = $options->num_options;
+ for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
+  my $opt = $options->{array}[$i];
+  my $show;
+  if ( defined $visible_options->{ $opt->{name} } ) {
+   $show = $visible_options->{ $opt->{name} };
+  }
+  elsif ( defined $visible_options->{ $opt->{title} } ) {
+   $show = $visible_options->{ $opt->{title} };
+  }
+  my $container =
+    $opt->{type} == SANE_TYPE_GROUP ? $opt->{widget} : $opt->{widget}->parent;
+  my $geometry = _geometry_option($opt);
+  if ($show) {
+   $container->show_all;
+
+   # Find associated group
+   unless ( $opt->{type} == SANE_TYPE_GROUP ) {
+    my $j = $i;
+    while ( --$j > 0 and $options->{array}[$j]{type} != SANE_TYPE_GROUP ) {
+    }
+    if ( $j > 0 and not $options->{array}[$j]{widget}->visible ) {
+     my $group = $options->{array}[$j]{widget};
+     unless ( $group->visible ) {
+      $group->remove($container);
+      my $move_paper =
+        (    $geometry
+         and defined( $self->{hboxp} )
+         and $self->{hboxp}->parent eq $group );
+      $group->remove( $self->{hboxp} ) if ($move_paper);
+
+      # Find visible group
+      while (
+       --$j > 0
+       and ( $options->{array}[$j]{type} != SANE_TYPE_GROUP
+        or ( not $options->{array}[$j]{widget}->visible ) )
+        )
+      {
+      }
+      if ( $j > 0 ) {
+       $group = $options->{array}[$j]{widget};
+      }
+      else {
+       $group = $self->{notebook}->get_nth_page(1);
+      }
+      $group->pack_start( $self->{hboxp}, FALSE, FALSE, 0 ) if ($move_paper);
+      $group->pack_start( $container, FALSE, FALSE, 0 );
+     }
+    }
+   }
+  }
+  else {
+   $container->hide_all;
+  }
+ }
+ if ( defined $visible_options->{'Paper size'} ) {
+  $self->{hboxp}->show_all;
+ }
+ else {
+  $self->{hboxp}->hide_all;
+ }
+ return;
+}
+
 # Return true if we have a valid geometry option
 
 sub _geometry_option {
  my ($opt) = @_;
- return
-       ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
-   and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
-   and ( $opt->{name} =~
-  /^(?:l|t|x|y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x );
+ return (
+        ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
+    and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
+    and ( $opt->{name} =~
+   /^(?:l|t|x|y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x )
+ );
 }
 
 sub _create_paper_widget {
- my ( $self, $options, $hboxp ) = @_;
+ my ( $self, $options ) = @_;
 
  # Only define the paper size once the rest of the geometry widgets
  # have been created
@@ -731,14 +783,14 @@ sub _create_paper_widget {
  {
   # Paper list
   my $label = Gtk2::Label->new( $d->get('Paper size') );
-  $hboxp->pack_start( $label, FALSE, FALSE, 0 );
+  $self->{hboxp}->pack_start( $label, FALSE, FALSE, 0 );
 
   $self->{combobp} = Gtk2::ComboBox->new_text;
   $self->{combobp}->append_text( $d->get('Manual') );
   $self->{combobp}->append_text( $d->get('Edit') );
   $tooltips->set_tip( $self->{combobp},
    $d->get('Selects or edits the paper size') );
-  $hboxp->pack_end( $self->{combobp}, FALSE, FALSE, 0 );
+  $self->{hboxp}->pack_end( $self->{combobp}, FALSE, FALSE, 0 );
   $self->{combobp}->set_active(0);
   $self->{combobp}->signal_connect(
    changed => sub {
@@ -817,8 +869,8 @@ sub _multiple_values_button_callback {
 }
 
 sub _pack_widget {
- my ( $self, $widget, $data ) = @_;
- my ( $options, $opt, $hbox, $hboxp ) = @$data;
+ my ( $self,    $widget, $data ) = @_;
+ my ( $options, $opt,    $hbox ) = @$data;
  if ( defined $widget ) {
   $opt->{widget} = $widget;
   if ( $opt->{type} == SANE_TYPE_BUTTON or $opt->{max_values} > 1 ) {
@@ -833,7 +885,7 @@ sub _pack_widget {
   $options->{box}{ $opt->{name} } = $hbox
     if ( _geometry_option($opt) );
 
-  $self->_create_paper_widget( $options, $hboxp );
+  $self->_create_paper_widget($options);
 
  }
  else {
@@ -871,21 +923,16 @@ sub set_option {
  $self->{current_scan_options} = $current;
 
  my $reload_triggers = $self->get('reload-triggers');
- my @reloadables;
- for (@$current) {
-  my ( $key, $value ) = each(%$_);
-  if ( defined $reload_triggers->{$key} ) {
-   push @reloadables, $_;
-  }
- }
- if (@reloadables) {
+ $reload_triggers = [$reload_triggers]
+   if ( ref($reload_triggers) ne 'ARRAY' );
+ if (@$reload_triggers) {
   my $pbar;
   my $hboxd = $self->{hboxd};
   Gscan2pdf::Frontend::CLI->find_scan_options(
    prefix           => $self->get('prefix'),
    frontend         => $self->get('frontend'),
    device           => $self->get('device'),
-   options          => \@reloadables,
+   options          => $reload_triggers,
    started_callback => sub {
 
     # Set up ProgressBar
@@ -1003,9 +1050,9 @@ sub update_options {
  $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
 
  my ( $group, $vbox );
- my $num_dev_options = $#{$options} + 1;
+ my $num_dev_options = $options->num_options;
  for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-  my $opt = $options->[$i];
+  my $opt = $options->{array}[$i];
   $self->update_widget( $opt->{name}, $opt->{val} );
  }
  return;

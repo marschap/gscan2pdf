@@ -181,10 +181,10 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->scalar(
-  'hidden-scan-options',                                # name
-  'Hidden scan options',                                # nick
-  'Array of scan options to hide from the user',        # blurb
-  [qw/readable writable/]                               # flags
+  'visible-scan-options',                                  # name
+  'Visible scan options',                                  # nick
+  'Hash of scan options to show or hide from the user',    # blurb
+  [qw/readable writable/]                                  # flags
  ),
   ];
 
@@ -265,7 +265,7 @@ sub SET_PROPERTY {
    when ('current_scan_options') {
     $self->set_current_scan_options($newval)
    }
-   when ('hidden_scan_options') {
+   when ('visible_scan_options') {
     $self->signal_emit( 'changed-option-visibility', $newval );
    }
    default {

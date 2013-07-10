@@ -884,7 +884,7 @@ sub update_options {
  $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
 
  my ( $group, $vbox );
- my $num_dev_options = $#{$options} + 1;
+ my $num_dev_options = $options->num_options;
  for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
   my $widget = $self->get('available-scan-options')->by_index($i)->{widget};
 
