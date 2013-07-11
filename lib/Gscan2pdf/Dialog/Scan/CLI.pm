@@ -958,9 +958,6 @@ sub set_option {
     # Unset the profile unless we are actively setting it
     $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
 
-    # This fires the reloaded-scan-options signal,
-    # so don't set this until we have finished
-    $self->set( 'available-scan-options', $options );
     $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
    },
    error_callback => sub {
@@ -1052,7 +1049,7 @@ sub update_options {
  my ( $group, $vbox );
  my $num_dev_options = $options->num_options;
  for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-  my $opt = $options->{array}[$i];
+  my $opt = $options->by_index($i);
   $self->update_widget( $opt->{name}, $opt->{val} );
  }
  return;

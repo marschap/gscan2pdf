@@ -282,16 +282,12 @@ $signal = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
     my $options = $dialog->get('available-scan-options');
-    my $expected = [ { 'Paper size' => 'new' } ];
+    my $expected = [ { 'Paper size' => 'new' }, { $resolution => 50 } ];
     push @$expected, { scalar(SANE_NAME_PAGE_HEIGHT) => 52 }
       if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
     push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 51 }
       if ( defined $options->by_name(SANE_NAME_PAGE_WIDTH) );
-    push @$expected, { l => 1 },
-      { t           => 2 },
-      { x           => 50 },
-      { y           => 50 },
-      { $resolution => 50 };
+    push @$expected, { l => 1 }, { t => 2 }, { x => 50 }, { y => 50 };
     is_deeply( $dialog->get('current-scan-options'),
      $expected, 'CLI geometry option names' );
     $dialog->signal_handler_disconnect($signal);

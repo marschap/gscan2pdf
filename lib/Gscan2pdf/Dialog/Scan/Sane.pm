@@ -858,7 +858,8 @@ sub set_option {
   },
   finished_callback => sub {
    my ($data) = @_;
-   $self->update_options($data) if ($data);
+   $self->update_options( Gscan2pdf::Scanner::Options->new_from_data($data) )
+     if ($data);
 
    # We can carry on applying defaults now, if necessary.
    $self->signal_emit( 'finished-process', 'set_option' );
@@ -890,7 +891,7 @@ sub update_options {
 
   # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
   if ( defined $widget ) {
-   my $opt   = $options->[$i];
+   my $opt   = $options->by_index($i);
    my $value = $opt->{val};
    $widget->signal_handler_block( $widget->{signal} );
 
