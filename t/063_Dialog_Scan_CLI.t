@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 40;
+use Test::More tests => 42;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -150,6 +150,13 @@ $signal = $dialog->signal_connect(
 
   ######################################
 
+  my $reloaded;
+  $dialog->signal_connect(
+   'reloaded-scan-options' => sub {
+    $reloaded = TRUE;
+   }
+  );
+
   # need a new main loop because of the timeout
   my $loop = Glib::MainLoop->new;
   my $flag = FALSE;
@@ -162,6 +169,7 @@ $signal = $dialog->signal_connect(
      [ { $resolution => 52 }, { mode => 'Color' } ],
      'current-scan-options with profile'
     );
+    is( $reloaded, undef, 'reloaded-scan-options not called' );
     $dialog->signal_handler_disconnect($signal);
     $flag = TRUE;
     $loop->quit;
@@ -235,6 +243,8 @@ $signal = $dialog->signal_connect(
 
   ######################################
 
+  $dialog->set( 'reload-triggers', qw(mode) );
+
   # need a new main loop because of the timeout
   $loop   = Glib::MainLoop->new;
   $flag   = FALSE;
@@ -246,7 +256,7 @@ $signal = $dialog->signal_connect(
     );
     is_deeply(
      $dialog->get('current-scan-options'),
-     [ { mode => 'Color' }, { $resolution => 51 } ],
+     [ { $resolution => 52 }, { mode => 'Gray' } ],
      'current-scan-options without profile (again)'
     );
     $dialog->signal_handler_disconnect($signal);
@@ -255,8 +265,10 @@ $signal = $dialog->signal_connect(
    }
   );
   $options = $dialog->get('available-scan-options');
-  $dialog->set_option( $options->by_name($resolution), 51 );
+  $dialog->set_option( $options->by_name('mode'), 'Gray' );
   $loop->run unless ($flag);
+
+  is( $reloaded, TRUE, 'reloaded-scan-options called' );
 
   ######################################
 

@@ -924,51 +924,57 @@ sub set_option {
  $self->{current_scan_options} = $current;
 
  my $reload_triggers = $self->get('reload-triggers');
- $reload_triggers = [$reload_triggers]
-   if ( ref($reload_triggers) ne 'ARRAY' );
- if (@$reload_triggers) {
-  my $pbar;
-  my $hboxd = $self->{hboxd};
-  Gscan2pdf::Frontend::CLI->find_scan_options(
-   prefix           => $self->get('prefix'),
-   frontend         => $self->get('frontend'),
-   device           => $self->get('device'),
-   options          => $reload_triggers,
-   started_callback => sub {
+ if ( defined $reload_triggers ) {
+  $reload_triggers = [$reload_triggers]
+    if ( ref($reload_triggers) ne 'ARRAY' );
+  for (@$reload_triggers) {
+   if ( $_ eq $option->{name} or $_ eq $option->{title} ) {
+    my $pbar;
+    my $hboxd = $self->{hboxd};
+    Gscan2pdf::Frontend::CLI->find_scan_options(
+     prefix           => $self->get('prefix'),
+     frontend         => $self->get('frontend'),
+     device           => $self->get('device'),
+     options          => $reload_triggers,
+     started_callback => sub {
 
-    # Set up ProgressBar
-    $pbar = Gtk2::ProgressBar->new;
-    $pbar->set_pulse_step(.1);
-    $pbar->set_text( $d->get('Updating options') );
-    $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
-    $hboxd->hide_all;
-    $hboxd->show;
-    $pbar->show;
-   },
-   running_callback => sub {
-    $pbar->pulse;
-   },
-   finished_callback => sub {
-    my ($options) = @_;
-    $pbar->destroy;
-    $hboxd->show_all;
-    $logger->info($options);
-    $self->update_options($options) if ($options);
+      # Set up ProgressBar
+      $pbar = Gtk2::ProgressBar->new;
+      $pbar->set_pulse_step(.1);
+      $pbar->set_text( $d->get('Updating options') );
+      $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
+      $hboxd->hide_all;
+      $hboxd->show;
+      $pbar->show;
+     },
+     running_callback => sub {
+      $pbar->pulse;
+     },
+     finished_callback => sub {
+      my ($options) = @_;
+      $pbar->destroy;
+      $hboxd->show_all;
+      $logger->info($options);
+      $self->update_options($options) if ($options);
 
-    $self->signal_emit( 'finished-process', 'find_scan_options' );
+      $self->signal_emit( 'finished-process', 'find_scan_options' );
 
-    # Unset the profile unless we are actively setting it
-    $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+      # Unset the profile unless we are actively setting it
+      $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
 
-    $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
-   },
-   error_callback => sub {
-    my ($message) = @_;
-    $self->signal_emit( 'process-error', $message );
-    $pbar->destroy;
-    $logger->warn($message);
-   },
-  );
+      $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
+      $self->signal_emit('reloaded-scan-options');
+     },
+     error_callback => sub {
+      my ($message) = @_;
+      $self->signal_emit( 'process-error', $message );
+      $pbar->destroy;
+      $logger->warn($message);
+     },
+    );
+    last;
+   }
+  }
  }
  else {
 
