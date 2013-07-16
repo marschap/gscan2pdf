@@ -470,6 +470,7 @@ sub scan_options {
   finished_callback => sub {
    my ($options) = @_;
    $pbar->destroy;
+   $hboxd->show_all;
    $logger->info($options);
    $self->_initialise_options($options);
 
@@ -950,6 +951,7 @@ sub set_option {
    finished_callback => sub {
     my ($options) = @_;
     $pbar->destroy;
+    $hboxd->show_all;
     $logger->info($options);
     $self->update_options($options) if ($options);
 
