@@ -8085,7 +8085,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  );
 
  # Option visibility
- my $frame = Gtk2::Frame->new( $d->get('Option visibility') );
+ my $frame = Gtk2::Frame->new( $d->get('Option visibility & control') );
  $vbox1->pack_start( $frame, TRUE, TRUE, 0 );
  my $vvbox = Gtk2::VBox->new;
  $vvbox->set_border_width($border_width);
@@ -8306,11 +8306,18 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     }
    }
    else {
+    $SETTING{'visible-scan-options'} = ();
+    $SETTING{'scan-reload-triggers'} = ();
+    for ( @{ $option_visibility_list->{data} } ) {
+     $SETTING{'visible-scan-options'}{ $_->[0] } = $_->[2];
+     push @{ $SETTING{'scan-reload-triggers'} }, $_->[0] if ( $_->[3] );
+    }
     if ( defined $windows ) {
-     $windows->set( 'visible-scan-options', _option_visibility_list2array() );
+     $windows->set( 'visible-scan-options', $SETTING{'visible-scan-options'} );
+     $windows->set( 'reload-triggers',      $SETTING{'scan-reload-triggers'} );
     }
     elsif ( defined $windows2 ) {
-     $windows2->set( 'visible-scan-options', _option_visibility_list2array() );
+     $windows2->set( 'visible-scan-options', $SETTING{'visible-scan-options'} );
     }
    }
    $SETTING{'cycle sane handle'} = $cbcsh->get_active;
@@ -8353,14 +8360,6 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
  $windowr->show_all;
  return;
-}
-
-sub _option_visibility_list2array {
- my @array;
- for ( @{ $option_visibility_list->{data} } ) {
-  push @array, $_->[0] unless $_->[2];
- }
- return \@array;
 }
 
 sub _hbox_with_apply_cancel_buttons {
