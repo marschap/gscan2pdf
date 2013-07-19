@@ -706,37 +706,24 @@ sub _update_option_visibility {
    $container->show_all;
 
    # Find associated group
-   unless ( $opt->{type} == SANE_TYPE_GROUP ) {
-    my $j = $i;
-    while ( --$j > 0 and $options->{array}[$j]{type} != SANE_TYPE_GROUP ) {
-    }
-    if ( $j > 0 and not $options->{array}[$j]{widget}->visible ) {
-     my $group = $options->{array}[$j]{widget};
-     unless ( $group->visible ) {
-      $group->remove($container);
-      my $move_paper =
-        (    $geometry
-         and defined( $self->{hboxp} )
-         and $self->{hboxp}->parent eq $group );
-      $group->remove( $self->{hboxp} ) if ($move_paper);
+   next if ( $opt->{type} == SANE_TYPE_GROUP );
+   my $j = $i;
+   while ( --$j > 0 and $options->{array}[$j]{type} != SANE_TYPE_GROUP ) {
+   }
+   if ( $j > 0 and not $options->{array}[$j]{widget}->visible ) {
+    my $group = $options->{array}[$j]{widget};
+    unless ( $group->visible ) {
+     $group->remove($container);
+     my $move_paper =
+       (    $geometry
+        and defined( $self->{hboxp} )
+        and $self->{hboxp}->parent eq $group );
+     $group->remove( $self->{hboxp} ) if ($move_paper);
 
-      # Find visible group
-      while (
-       --$j > 0
-       and ( $options->{array}[$j]{type} != SANE_TYPE_GROUP
-        or ( not $options->{array}[$j]{widget}->visible ) )
-        )
-      {
-      }
-      if ( $j > 0 ) {
-       $group = $options->{array}[$j]{widget};
-      }
-      else {
-       $group = $self->{notebook}->get_nth_page(1);
-      }
-      $group->pack_start( $self->{hboxp}, FALSE, FALSE, 0 ) if ($move_paper);
-      $group->pack_start( $container, FALSE, FALSE, 0 );
-     }
+     # Find visible group
+     $group = $self->_find_visible_group( $options, $j );
+     $group->pack_start( $self->{hboxp}, FALSE, FALSE, 0 ) if ($move_paper);
+     $group->pack_start( $container, FALSE, FALSE, 0 );
     }
    }
   }
@@ -751,6 +738,20 @@ sub _update_option_visibility {
   $self->{hboxp}->hide_all;
  }
  return;
+}
+
+sub _find_visible_group {
+ my ( $self, $options, $option_number ) = @_;
+ while (
+  --$option_number > 0
+  and ( $options->{array}[$option_number]{type} != SANE_TYPE_GROUP
+   or ( not $options->{array}[$option_number]{widget}->visible ) )
+   )
+ {
+ }
+ return $options->{array}[$option_number]{widget}
+   if ( $option_number > 0 );
+ return $self->{notebook}->get_nth_page(1);
 }
 
 # Return true if we have a valid geometry option
