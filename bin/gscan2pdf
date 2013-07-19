@@ -436,22 +436,19 @@ init_icons(
 # in the menu callbacks
 my (
  $slist, $windowi, $windowe, $windows, $windows2, $windowh, $windowo, $windowrn,
- $windowu, $vboxd, $labeld, $combobd, $combobp, $vbox_manual_paper,
+ $windowu,
  @undo_buffer,
  @redo_buffer, @undo_selection, @redo_selection, %dependencies,
  %helperTag,   $menubar,        $toolbar,
- @ocr_engine, $bscanall,       $bscannum, @clipboard, $windowd,
- $windowr,    $view,           $frames,   $duplex,    $windowp,
- $batch_scan, $print_settings, $windowc,  $current_page,
+ @ocr_engine,  @clipboard,
+ $windowr,        $view,    $windowp,
+ $print_settings, $windowc, $current_page,
 
- # Spin buttons on scan dialog
- $spin_buttons, $start, $spin_buttoni, $spin_buttonn,
+ # start page on scan dialog
+ $start,
 
  # Goo::Canvas for OCR output
  $canvas,
-
- # Scan button on scan dialog
- $scan_button,
 
  # List of PageRange widgets
  @prlist,
@@ -1204,107 +1201,6 @@ $window->signal_connect_after(
 $SETTING{'cwd'} = getcwd unless ( defined( $SETTING{'cwd'} ) );
 
 my $unpaper = Gscan2pdf::Unpaper->new( $SETTING{'unpaper options'} );
-
-# Set up the strings for the possible device-dependent options
-my %ddo;
-my %pddo = (
- 'mode' => {
-  string => $d->get('Mode'),
-  values => {
-   'Lineart'       => $d->get('Lineart'),
-   'Grayscale',    => $d->get('Grayscale'),
-   'Gray'          => $d->get('Gray'),
-   'Color'         => $d->get('Color'),
-   'Black & White' => $d->get('Black & White'),
-   'True Gray'     => $d->get('True Gray'),
-   'Binary'        => $d->get('Binary'),
-   'auto'          => $d->get('Auto'),
-   'Halftone'      => $d->get('Halftone'),
-   '24bit Color'   => $d->get('24bit Color'),
-  }
- },
- 'compression' => {
-  string => $d->get('Compression'),
-  values => {
-   'None' => $d->get('None'),
-   'JPEG' => $d->get('JPEG'),
-  },
- },
- 'resolution' => { string => $d->get('Resolution') },
- 'brightness' => { string => $d->get('Brightness') },
- 'gain'       => { string => $d->get('Gain') },
- 'contrast'   => { string => $d->get('Contrast') },
- 'threshold'  => { string => $d->get('Threshold') },
- 'speed'      => {
-  string => $d->get('Speed'),
-  values => {
-   'yes' => $d->get('Yes'),
-   'no'  => $d->get('No'),
-  },
- },
- 'batch-scan' => {
-  string => $d->get('Batch scan'),
-  values => {
-   'yes' => $d->get('Yes'),
-   'no'  => $d->get('No'),
-  },
- },
- 'wait-for-button' => {
-  string => $d->get('Wait for button'),
-  values => {
-   'yes' => $d->get('Yes'),
-   'no'  => $d->get('No'),
-  },
- },
- 'button-wait' => {
-  string => $d->get('Wait for button'),
-  values => {
-   'yes' => $d->get('Yes'),
-   'no'  => $d->get('No'),
-  },
- },
- 'calibration-cache' => {
-  string => $d->get('Cache calibration'),
-  values => {
-   'yes' => $d->get('Yes'),
-   'no'  => $d->get('No'),
-  },
- },
- 'source' => {
-  string => $d->get('Source'),
-  values => {
-   'Normal'                    => $d->get('Normal'),
-   'ADF'                       => $d->get('ADF'),
-   'Automatic Document Feeder' => $d->get('Automatic Document Feeder'),
-   'XPA'                       => $d->get('XPA'),
-   'auto'                      => $d->get('Auto'),
-   'Auto'                      => $d->get('Auto'),
-   'Flatbed'                   => $d->get('Flatbed'),
-   'Transparency Adapter'      => $d->get('Transparency Adapter'),
-   'Transparency Unit'         => $d->get('Transparency Unit'),
-  },
- },
- 'pagewidth'       => { string => $d->get('Page Width') },
- 'pageheight'      => { string => $d->get('Page Height') },
- 'page-width'      => { string => $d->get('Page Width') },
- 'page-height'     => { string => $d->get('Page Height') },
- 'overscan-top'    => { string => $d->get('Top Overscan') },
- 'overscan-bottom' => { string => $d->get('Bottom Overscan') },
- 'adf_mode'        => {
-  string => $d->get('ADF Mode'),
-  values => {
-   'Simplex' => $d->get('Simplex'),
-   'Duplex'  => $d->get('Duplex'),
-  },
- },
- 'adf-mode' => {
-  string => $d->get('ADF Mode'),
-  values => {
-   'Simplex' => $d->get('Simplex'),
-   'Duplex'  => $d->get('Duplex'),
-  },
- },
-);
 
 update_uimanager();
 
@@ -4430,22 +4326,16 @@ sub scan_dialog2 {
 # or row-changed signal of simplelist
 
 sub update_start {
- return unless ( defined($spin_buttons) or defined($windows2) );
- my ( $value, $step );
- if ( defined $windows2 ) {
-  $value = $windows2->get('page-number-start');
-  $start = $windows2->get('page-number-start') unless ( defined $start );
-  $step  = $value - $start;
-  $step  = $windows2->get('page-number-increment') if ( $step == 0 );
- }
- else {
-  $value = $spin_buttons->get_value;
-  $step  = $value - $start;
-  $step  = $spin_buttoni->get_value if ( $step == 0 );
- }
+ return unless ( defined($windows) or defined($windows2) );
+ my $dialog = defined($windows) ? $windows : $windows2;
+ my $value = $dialog->get('page-number-start');
+ $start = $dialog->get('page-number-start') unless ( defined $start );
+ my $step = $value - $start;
+ $step = $dialog->get('page-number-increment') if ( $step == 0 );
  my $exists = TRUE;
  my $i = $step > 0 ? 0 : $#{ $slist->{data} };
  $start = $value;
+
  while ($exists) {
   if ($i < 0
    or $i > $#{ $slist->{data} }
@@ -4465,9 +4355,7 @@ sub update_start {
    $i += $step > 0 ? 1 : -1;
   }
  }
- $spin_buttons->set_value($value)
-   if ( defined($spin_buttons) and $start != $value );
- $windows2->set( 'page-number-start', $value ) if ( defined $windows2 );
+ $dialog->set( 'page-number-start', $value );
  $start = $value;
 
  update_number();
@@ -4477,21 +4365,12 @@ sub update_start {
 # Update the number of pages to scan spinbutton if necessary
 
 sub update_number {
- return unless ( defined($spin_buttons) or defined($windows2) );
- if ( defined $windows2 ) {
-  my $n = $slist->pages_possible(
-   $windows2->get('page-number-start'),
-   $windows2->get('page-number-increment')
-  );
-  $windows2->set( 'num-pages', $n )
-    if ( $n > 0 and $n < $windows2->get('num-pages') );
- }
- else {
-  my $n =
-    $slist->pages_possible( $spin_buttons->get_value,
-   $spin_buttoni->get_value );
-  $spin_buttonn->set_value($n) if ( $n > 0 and $n < $spin_buttonn->get_value );
- }
+ return unless ( defined($windows) or defined($windows2) );
+ my $dialog = defined($windows) ? $windows : $windows2;
+ my $n = $slist->pages_possible( $dialog->get('page-number-start'),
+  $dialog->get('page-number-increment') );
+ $dialog->set( 'num-pages', $n )
+   if ( $n > 0 and $n < $dialog->get('num-pages') );
  return;
 }
 
@@ -4797,28 +4676,16 @@ sub delete_pages {
 # Reset start page number after delete or new
 
 sub reset_start {
- if ( defined $spin_buttons ) {
-  if ( $#{ $slist->{data} } > -1 ) {
-   my $start_page = $spin_buttons->get_value;
-   my $step       = $spin_buttoni->get_value;
-   $spin_buttons->set_value( $slist->{data}[ $#{ $slist->{data} } ][0] + $step )
-     if ( $start_page > $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
-  }
-  else {
-   $spin_buttons->set_value(1);
-  }
+ my $dialog = defined($windows) ? $windows : $windows2;
+ if ( $#{ $slist->{data} } > -1 ) {
+  my $start_page = $dialog->get('page-number-start');
+  my $step       = $dialog->get('page-number-increment');
+  $dialog->set( 'page-number-start',
+   $slist->{data}[ $#{ $slist->{data} } ][0] + $step )
+    if ( $start_page > $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
  }
- elsif ( defined $windows2 ) {
-  if ( $#{ $slist->{data} } > -1 ) {
-   my $start_page = $windows2->get('page-number-start');
-   my $step       = $windows2->get('page-number-increment');
-   $windows2->set( 'page-number-start',
-    $slist->{data}[ $#{ $slist->{data} } ][0] + $step )
-     if ( $start_page > $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
-  }
-  else {
-   $windows2->set( 'page-number-start', 1 );
-  }
+ else {
+  $dialog->set( 'page-number-start', 1 );
  }
  return;
 }
