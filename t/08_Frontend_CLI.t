@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 27;
+use Test::More tests => 29;
 
 BEGIN {
  use_ok('Gscan2pdf::Frontend::CLI');
@@ -140,6 +140,23 @@ Gscan2pdf::Frontend::CLI->find_scan_options(
   my ($options) = @_;
   is( $options->by_name('source')->{name}, 'source', 'by_name' );
   is( $options->by_name('button')->{name}, 'button', 'by_name' );
+  is( $options->by_name('mode')->{val},
+   'Gray', 'find_scan_options default option' );
+  $loop->quit;
+ }
+);
+$loop->run;
+
+#########################
+
+$loop = Glib::MainLoop->new;
+Gscan2pdf::Frontend::CLI->find_scan_options(
+ device            => 'test',
+ options           => [ { mode => 'Color' } ],
+ finished_callback => sub {
+  my ($options) = @_;
+  is( $options->by_name('mode')->{val},
+   'Color', 'find_scan_options with option' );
   $loop->quit;
  }
 );

@@ -80,12 +80,8 @@ sub find_scan_options {
 
  # Get output from scanimage or scanadf.
  # Inverted commas needed for strange characters in device name
- my $cmd =
-"$options{prefix} $options{frontend} --help --device-name='$options{device}'";
+ my $cmd = _create_scanimage_cmd( \%options );
 
- # for ( @{$options{options}} ) {
- #   $cmd .= " --$options{options}";
- # }
  _watch_cmd(
   cmd               => $cmd,
   started_callback  => $options{started_callback},
@@ -132,7 +128,7 @@ sub scan_pages {
 sub _scanimage {
  my (%options) = @_;
 
- my $cmd = _create_scanimage_cmd(%options);
+ my $cmd = _create_scanimage_cmd( \%options, TRUE );
 
  # flag to ignore error messages after cancelling scan
  $_self->{abort_scan} = FALSE;
@@ -233,9 +229,12 @@ sub _scanimage {
 # Helper sub to create the scanimage command
 
 sub _create_scanimage_cmd {
- my (%options) = @_;
+ my ( $options, $scan ) = @_;
+ my %options = %$options;
 
  $options{frontend} = 'scanimage' unless ( defined $options{frontend} );
+
+ my $help = $scan ? '' : '--help';
 
  # inverted commas needed for strange characters in device name
  my $device = "--device-name='$options{device}'";
@@ -251,17 +250,19 @@ sub _create_scanimage_cmd {
    push @options, "--$key='$value'";
   }
  }
- push @options, '--batch';
- push @options, '--progress';
- push @options, "--batch-start=$options{start}"
-   if ( defined( $options{start} ) and $options{start} != 0 );
- push @options, "--batch-count=$options{npages}"
-   if ( defined( $options{npages} ) and $options{npages} != 0 );
- push @options, "--batch-increment=$options{step}"
-   if ( defined( $options{step} ) and $options{step} != 1 );
+ unless ($help) {
+  push @options, '--batch';
+  push @options, '--progress';
+  push @options, "--batch-start=$options{start}"
+    if ( defined( $options{start} ) and $options{start} != 0 );
+  push @options, "--batch-count=$options{npages}"
+    if ( defined( $options{npages} ) and $options{npages} != 0 );
+  push @options, "--batch-increment=$options{step}"
+    if ( defined( $options{step} ) and $options{step} != 1 );
+ }
 
  # Create command
- return "$options{prefix} $options{frontend} $device @options";
+ return "$options{prefix} $options{frontend} $help $device @options";
 }
 
 # Carry out the scan with scanadf and the options passed.
