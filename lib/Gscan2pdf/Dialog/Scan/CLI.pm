@@ -902,6 +902,7 @@ sub _pack_widget {
 
 sub set_option {
  my ( $self, $option, $val ) = @_;
+ $option->{val} = $val;
  $self->update_widget( $option->{name}, $val );
 
  my $current = $self->{current_scan_options};
@@ -925,18 +926,20 @@ sub set_option {
  $self->{current_scan_options} = $current;
 
  my $reload_triggers = $self->get('reload-triggers');
+ my $reloaded;
  if ( defined $reload_triggers ) {
   $reload_triggers = [$reload_triggers]
     if ( ref($reload_triggers) ne 'ARRAY' );
   for (@$reload_triggers) {
    if ( $_ eq $option->{name} or $_ eq $option->{title} ) {
+    $reloaded = TRUE;
     my $pbar;
     my $hboxd = $self->{hboxd};
     Gscan2pdf::Frontend::CLI->find_scan_options(
      prefix           => $self->get('prefix'),
      frontend         => $self->get('frontend'),
      device           => $self->get('device'),
-     options          => $reload_triggers,
+     options          => $current,
      started_callback => sub {
 
       # Set up ProgressBar
@@ -977,7 +980,7 @@ sub set_option {
    }
   }
  }
- else {
+ unless ($reloaded) {
 
   # Unset the profile unless we are actively setting it
   $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
@@ -1059,7 +1062,8 @@ sub update_options {
  my $num_dev_options = $options->num_options;
  for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
   my $opt = $options->by_index($i);
-  $self->update_widget( $opt->{name}, $opt->{val} );
+  $self->update_widget( $opt->{name}, $opt->{val} )
+    if ( defined( $opt->{name} ) and $opt->{name} ne '' );
  }
  return;
 }
@@ -1351,6 +1355,10 @@ sub set_current_scan_options {
 
  return unless ( defined $profile );
 
+ # As scanimage and scanadf rename the geometry options,
+ # we have to map them back to the original names
+ map_geometry_names($profile);
+
  # Move them first to a dummy array, as otherwise it would be self-modifying
  my $defaults;
 
@@ -1362,10 +1370,6 @@ sub set_current_scan_options {
  else {
   @$defaults = @$profile;
  }
-
- # As scanimage and scanadf rename the geometry options,
- # we have to map them back to the original names
- map_geometry_names($defaults);
 
  # Give the GUI a chance to catch up between settings,
  # in case they have to be reloaded.

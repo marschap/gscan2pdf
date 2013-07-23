@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 42;
+use Test::More tests => 45;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -99,13 +99,21 @@ $dialog->signal_connect(
 );
 $dialog->set( 'side-to-scan', 'reverse' );
 
+my $reloads = 0;
+$dialog->signal_connect(
+ 'reloaded-scan-options' => sub {
+  ++$reloads;
+ }
+);
+
 $signal = $dialog->signal_connect(
  'reloaded-scan-options' => sub {
-  ok( 1, 'reloaded-scan-options' );
+  is( $reloads, 1, 'reloaded-scan-options' );
   $dialog->signal_handler_disconnect($signal);
 
   # So that it can be used in hash
   my $resolution = SANE_NAME_SCAN_RESOLUTION;
+  my $brx        = SANE_NAME_SCAN_BR_X;
 
   $signal = $dialog->signal_connect(
    'added-profile' => sub {
@@ -150,13 +158,6 @@ $signal = $dialog->signal_connect(
 
   ######################################
 
-  my $reloaded;
-  $dialog->signal_connect(
-   'reloaded-scan-options' => sub {
-    $reloaded = TRUE;
-   }
-  );
-
   # need a new main loop because of the timeout
   my $loop = Glib::MainLoop->new;
   my $flag = FALSE;
@@ -169,7 +170,7 @@ $signal = $dialog->signal_connect(
      [ { $resolution => 52 }, { mode => 'Color' } ],
      'current-scan-options with profile'
     );
-    is( $reloaded, undef, 'reloaded-scan-options not called' );
+    is( $reloads, 1, 'reloaded-scan-options not called' );
     $dialog->signal_handler_disconnect($signal);
     $flag = TRUE;
     $loop->quit;
@@ -243,8 +244,6 @@ $signal = $dialog->signal_connect(
 
   ######################################
 
-  $dialog->set( 'reload-triggers', qw(mode) );
-
   # need a new main loop because of the timeout
   $loop   = Glib::MainLoop->new;
   $flag   = FALSE;
@@ -268,7 +267,48 @@ $signal = $dialog->signal_connect(
   $dialog->set_option( $options->by_name('mode'), 'Gray' );
   $loop->run unless ($flag);
 
-  is( $reloaded, TRUE, 'reloaded-scan-options called' );
+  ######################################
+
+  $dialog->set( 'reload-triggers', qw(mode) );
+
+  # need a new main loop because of the timeout
+  $loop = Glib::MainLoop->new;
+  $flag = FALSE;
+  $dialog->signal_connect(
+   'reloaded-scan-options' => sub {
+    is_deeply(
+     $dialog->get('current-scan-options'),
+     [ { $resolution => 52 }, { mode => 'Color' } ],
+     'setting a option with a reload trigger to a non-default value stays set'
+    );
+    $flag = TRUE;
+    $loop->quit;
+   }
+  );
+  $options = $dialog->get('available-scan-options');
+  $dialog->set_option( $options->by_name('mode'), 'Color' );
+  $loop->run unless ($flag);
+
+  ######################################
+
+  # need a new main loop because of the timeout
+  $loop   = Glib::MainLoop->new;
+  $flag   = FALSE;
+  $signal = $dialog->signal_connect(
+   'changed-scan-option' => sub {
+    my ( $widget, $option, $value ) = @_;
+    is_deeply(
+     $dialog->get('current-scan-options'),
+     [ { x => 11 } ],
+     'map option names'
+    );
+    $dialog->signal_handler_disconnect($signal);
+    $flag = TRUE;
+    $loop->quit;
+   }
+  );
+  $dialog->set( 'current-scan-options', [ { $brx => 11 } ] );
+  $loop->run unless ($flag);
 
   ######################################
 
@@ -294,12 +334,13 @@ $signal = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
     my $options = $dialog->get('available-scan-options');
-    my $expected = [ { 'Paper size' => 'new' }, { $resolution => 50 } ];
+    my $expected = [ { 'Paper size' => 'new' } ];
     push @$expected, { scalar(SANE_NAME_PAGE_HEIGHT) => 52 }
       if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
     push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 51 }
       if ( defined $options->by_name(SANE_NAME_PAGE_WIDTH) );
-    push @$expected, { l => 1 }, { t => 2 }, { x => 50 }, { y => 50 };
+    push @$expected, { l => 1 }, { t => 2 }, { x => 50 }, { y => 50 },
+      { $resolution => 50 };
     is_deeply( $dialog->get('current-scan-options'),
      $expected, 'CLI geometry option names' );
     $dialog->signal_handler_disconnect($signal);
@@ -375,5 +416,9 @@ $signal = $dialog->signal_connect(
  }
 );
 Gtk2->main;
+
+is( $reloads, 2, 'Final number of calls reloaded-scan-options' );
+is( $dialog->get('available-scan-options')->by_name('mode')->{val},
+ 'Color', 'reloaded option still set to non-default value' );
 
 __END__
