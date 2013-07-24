@@ -5675,122 +5675,47 @@ sub unpaper {
 sub ocr_page {
  my ($pages) = @_;
 
+ my ( $signal, $pid );
+ my %options = (
+  queued_callback => sub {
+   return update_tpbar(@_);
+  },
+  started_callback => sub {
+   my ( $thread, $process, $completed, $total ) = @_;
+   $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+   return TRUE if ( defined $signal );
+  },
+  finished_callback => sub {
+   my ( $new_page, $pending ) = @_;
+   $thbox->hide_all unless $pending;
+   $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+  },
+  error_callback => sub {
+   my ($message) = @_;
+   show_message_dialog( $window, 'error', 'close', $message );
+  },
+  display_callback => sub {
+   my ($new_page) = @_;
+   my @page = $slist->get_selected_indices;
+   create_canvas($new_page)
+     if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
+  }
+ );
+ $options{language} = $SETTING{'ocr language'}
+   unless ( $SETTING{'ocr engine'} eq 'gocr' );
  for my $page ( @{$pages} ) {
-  my ( $signal, $pid );
+  $options{page} = $page;
   if ( $SETTING{'ocr engine'} eq 'gocr' ) {
-   $pid = $slist->gocr(
-    page            => $page,
-    queued_callback => sub {
-     return update_tpbar(@_);
-    },
-    started_callback => sub {
-     my ( $thread, $process, $completed, $total ) = @_;
-     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
-     return TRUE if ( defined $signal );
-    },
-    finished_callback => sub {
-     my ( $new_page, $pending ) = @_;
-     $thbox->hide_all unless $pending;
-     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
-    },
-    error_callback => sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    },
-    display_callback => sub {
-     my ($new_page) = @_;
-     my @page = $slist->get_selected_indices;
-     create_canvas($new_page)
-       if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
-    }
-   );
+   $pid = $slist->gocr(%options);
   }
   elsif ( $SETTING{'ocr engine'} eq 'tesseract' ) {
-   $pid = $slist->tesseract(
-    page            => $page,
-    language        => $SETTING{'ocr language'},
-    queued_callback => sub {
-     return update_tpbar(@_);
-    },
-    started_callback => sub {
-     my ( $thread, $process, $completed, $total ) = @_;
-     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
-     return TRUE if ( defined $signal );
-    },
-    finished_callback => sub {
-     my ( $new_page, $pending ) = @_;
-     $thbox->hide_all unless $pending;
-     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
-    },
-    error_callback => sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    },
-    display_callback => sub {
-     my ($new_page) = @_;
-     my @page = $slist->get_selected_indices;
-     create_canvas($new_page)
-       if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
-    }
-   );
+   $pid = $slist->tesseract(%options);
   }
   elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
-   $pid = $slist->ocropus(
-    page            => $page,
-    language        => $SETTING{'ocr language'},
-    queued_callback => sub {
-     return update_tpbar(@_);
-    },
-    started_callback => sub {
-     my ( $thread, $process, $completed, $total ) = @_;
-     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
-     return TRUE if ( defined $signal );
-    },
-    finished_callback => sub {
-     my ( $new_page, $pending ) = @_;
-     $thbox->hide_all unless $pending;
-     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
-    },
-    error_callback => sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    },
-    display_callback => sub {
-     my ($new_page) = @_;
-     my @page = $slist->get_selected_indices;
-     create_canvas($new_page)
-       if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
-    }
-   );
+   $pid = $slist->ocropus(%options);
   }
   else {    # cuneiform
-   $pid = $slist->cuneiform(
-    page            => $page,
-    language        => $SETTING{'ocr language'},
-    queued_callback => sub {
-     return update_tpbar(@_);
-    },
-    started_callback => sub {
-     my ( $thread, $process, $completed, $total ) = @_;
-     $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
-     return TRUE if ( defined $signal );
-    },
-    finished_callback => sub {
-     my ( $new_page, $pending ) = @_;
-     $thbox->hide_all unless $pending;
-     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
-    },
-    error_callback => sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    },
-    display_callback => sub {
-     my ($new_page) = @_;
-     my @page = $slist->get_selected_indices;
-     create_canvas($new_page)
-       if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
-    }
-   );
+   $pid = $slist->cuneiform(%options);
   }
  }
  return;
