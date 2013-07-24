@@ -766,22 +766,28 @@ sub _geometry_option {
  );
 }
 
+# Return true if all the geometry widgets have been created
+
+sub _geometry_widgets_created {
+ my ($options) = @_;
+ return (
+        defined( $options->{box}{x} )
+    and defined( $options->{box}{y} )
+    and defined( $options->{box}{l} )
+    and defined( $options->{box}{t} )
+    and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
+   or defined( $options->{box}{$SANE_NAME_PAGE_HEIGHT} ) )
+    and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
+   or defined( $options->{box}{$SANE_NAME_PAGE_WIDTH} ) )
+ );
+}
+
 sub _create_paper_widget {
  my ( $self, $options ) = @_;
 
  # Only define the paper size once the rest of the geometry widgets
  # have been created
- if (
-      defined( $options->{box}{x} )
-  and defined( $options->{box}{y} )
-  and defined( $options->{box}{l} )
-  and defined( $options->{box}{t} )
-  and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
-   or defined( $options->{box}{$SANE_NAME_PAGE_HEIGHT} ) )
-  and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
-   or defined( $options->{box}{$SANE_NAME_PAGE_WIDTH} ) )
-  and not defined( $self->{combobp} )
-   )
+ if ( _geometry_widgets_created($options) and not defined( $self->{combobp} ) )
  {
   # Paper list
   my $label = Gtk2::Label->new( $d->get('Paper size') );
@@ -816,12 +822,19 @@ sub _create_paper_widget {
         ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
       $options->by_name(SANE_NAME_PAGE_WIDTH)->{widget}
         ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
+
+      # Update the options and widgets, otherwise the new max will be ignored
+      for (qw( l t x y )) {
+       my $opt = $options->by_name($_);
+       $opt->{constraint}{max} = $formats->{$paper}{$_};
+       $opt->{widget}
+         ->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
+      }
      }
 
-     $options->by_name('l')->{widget}->set_value( $formats->{$paper}{l} );
-     $options->by_name('t')->{widget}->set_value( $formats->{$paper}{t} );
-     $options->by_name('x')->{widget}->set_value( $formats->{$paper}{x} );
-     $options->by_name('y')->{widget}->set_value( $formats->{$paper}{y} );
+     for (qw( l t x y )) {
+      $options->by_name($_)->{widget}->set_value( $formats->{$paper}{$_} );
+     }
      Glib::Idle->add(
       sub {
        for (

@@ -339,7 +339,7 @@ $signal = $dialog->signal_connect(
       if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
     push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 51 }
       if ( defined $options->by_name(SANE_NAME_PAGE_WIDTH) );
-    push @$expected, { l => 1 }, { t => 2 }, { x => 50 }, { y => 50 },
+    push @$expected, { y => 50 }, { l => 1 }, { t => 2 }, { x => 50 },
       { $resolution => 50 };
     is_deeply( $dialog->get('current-scan-options'),
      $expected, 'CLI geometry option names' );
