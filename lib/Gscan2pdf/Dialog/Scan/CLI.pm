@@ -5,34 +5,45 @@ package Gscan2pdf::Dialog::Scan::CLI;
 use warnings;
 use strict;
 use Gscan2pdf::Dialog::Scan;
+use Gscan2pdf::Frontend::CLI;
 use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
-use Gscan2pdf::Frontend::CLI;
-use Locale::gettext 1.05;    # For translations
+use Locale::gettext 1.05;  # For translations
 use feature "switch";
 
 # logger duplicated from Gscan2pdf::Dialog::Scan
 # to ensure that SET_PROPERTIES gets called in both places
-use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, properties => [
+use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, signals => {
+ 'changed-cache-options' => {
+  param_types => ['Glib::Boolean'],    # new value
+ },
+ 'changed-options-cache' => {
+  param_types => ['Glib::Scalar'],     # new value
+ },
+ 'fetched-options-cache' => {
+  param_types => [ 'Glib::String', 'Glib::String' ],    # device, cache key
+ },
+  },
+  properties => [
  Glib::ParamSpec->string(
-  'frontend',                       # name
-  'Frontend',                       # nick
-  '(scanimage|scanadf)(-perl)?',    # blurb
-  '',                               # default
-  [qw/readable writable/]           # flags
+  'frontend',                                           # name
+  'Frontend',                                           # nick
+  '(scanimage|scanadf)(-perl)?',                        # blurb
+  '',                                                   # default
+  [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->scalar(
-  'logger',                              # name
-  'Logger',                              # nick
-  'Log::Log4perl::get_logger object',    # blurb
-  [qw/readable writable/]                # flags
+  'logger',                                             # name
+  'Logger',                                             # nick
+  'Log::Log4perl::get_logger object',                   # blurb
+  [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->string(
-  'prefix',                              # name
-  'Prefix',                              # nick
-  'Prefix for command line calls',       # blurb
-  '',                                    # default
-  [qw/readable writable/]                # flags
+  'prefix',                                             # name
+  'Prefix',                                             # nick
+  'Prefix for command line calls',                      # blurb
+  '',                                                   # default
+  [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->scalar(
   'reload-triggers',                                               # name
@@ -40,7 +51,20 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, properties => [
   'Hash of option names that cause the options to be reloaded',    # blurb
   [qw/readable writable/]                                          # flags
  ),
-];
+ Glib::ParamSpec->boolean(
+  'cache-options',                                                 # name
+  'Cache options',                                                 # nickname
+  'Whether to cache options',                                      # blurb
+  FALSE,                                                           # default
+  [qw/readable writable/]                                          # flags
+ ),
+ Glib::ParamSpec->scalar(
+  'options-cache',                                                 # name
+  'Options cache',                                                 # nick
+  'Hash containing cache of scanner options',                      # blurb
+  [qw/readable writable/]                                          # flags
+ ),
+  ];
 
 my $SANE_NAME_PAGE_HEIGHT = SANE_NAME_PAGE_HEIGHT;
 my $SANE_NAME_PAGE_WIDTH  = SANE_NAME_PAGE_WIDTH;
@@ -387,6 +411,12 @@ sub SET_PROPERTY {
   or ( defined($newval) xor defined($oldval) ) )
  {
   if ( $name eq 'logger' ) { $logger = $self->get('logger') }
+  elsif ( $name eq 'cache_options' ) {
+   $self->signal_emit( 'changed-cache-options', $newval );
+  }
+  elsif ( $name eq 'options_cache' ) {
+   $self->signal_emit( 'changed-options-cache', $newval );
+  }
  }
  $self->SUPER::SET_PROPERTY( $pspec, $newval );
  return;
@@ -447,7 +477,45 @@ sub scan_options {
  $self->{sbutton}->set_sensitive(FALSE) if ( defined $self->{sbutton} );
 
  my $pbar;
- my $hboxd = $self->{hboxd};
+ my $hboxd     = $self->{hboxd};
+ my $cache_key = '';
+ if ( $self->get('cache-options') ) {
+
+  # grep the reload triggers from the current options
+  my $reload_triggers = $self->get('reload-triggers');
+  for ( @{ $self->{current_scan_options} } ) {
+   my ( $key, $value ) = each(%$_);
+   if ( defined $reload_triggers ) {
+    $reload_triggers = [$reload_triggers]
+      if ( ref($reload_triggers) ne 'ARRAY' );
+    for (@$reload_triggers) {
+     if (/^$key$/ix) {
+      $cache_key .= ',' unless ( $cache_key eq '' );
+      $cache_key .= "$key,$value";
+      last;
+     }
+    }
+   }
+  }
+  $cache_key = 'default' if ( $cache_key eq '' );
+
+  my $cache = $self->get('options-cache');
+  if ( defined $cache->{ $self->get('device') }{$cache_key} ) {
+   my $options = $cache->{ $self->get('device') }{$cache_key};
+   $self->signal_emit( 'fetched-options-cache', $self->get('device'),
+    $cache_key );
+   $logger->info($options);
+   $self->_initialise_options($options);
+
+   $self->signal_emit( 'finished-process', 'find_scan_options' );
+
+   # This fires the reloaded-scan-options signal,
+   # so don't set this until we have finished
+   $self->set( 'available-scan-options', $options );
+   return;
+  }
+ }
+
  Gscan2pdf::Frontend::CLI->find_scan_options(
   prefix           => $self->get('prefix'),
   frontend         => $self->get('frontend'),
@@ -472,6 +540,16 @@ sub scan_options {
    $pbar->destroy;
    $hboxd->show_all;
    $logger->info($options);
+   if ( $self->get('cache-options') ) {
+    my $cache = $self->get('options-cache');
+    if ( defined $cache ) {
+     $cache->{ $self->get('device') }{$cache_key} = $options;
+     $self->signal_emit( 'changed-options-cache', $cache );
+    }
+    else {
+     $self->set( 'options-cache', $options );
+    }
+   }
    $self->_initialise_options($options);
 
    $self->signal_emit( 'finished-process', 'find_scan_options' );
