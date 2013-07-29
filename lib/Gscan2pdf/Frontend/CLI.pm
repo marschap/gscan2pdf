@@ -127,6 +127,8 @@ sub scan_pages {
 
 sub _scanimage {
  my (%options) = @_;
+ $options{frontend} = 'scanimage'
+   if ( not defined( $options{frontend} ) or $options{frontend} eq '' );
 
  my $cmd = _create_scanimage_cmd( \%options, TRUE );
 

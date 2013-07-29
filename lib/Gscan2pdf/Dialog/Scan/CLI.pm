@@ -1030,7 +1030,7 @@ sub set_option {
      prefix           => $self->get('prefix'),
      frontend         => $self->get('frontend'),
      device           => $self->get('device'),
-     options          => $current,
+     options          => $self->map_options($current),
      started_callback => sub {
 
       # Set up ProgressBar
@@ -1651,6 +1651,30 @@ sub map_geometry_names {
  return;
 }
 
+# Remove paper size from options,
+# change boolean values from TRUE and FALSE to yes and no
+sub map_options {
+ my ( $self, $old ) = @_;
+ my $new;
+ my $options = $self->get('available-scan-options');
+ for (@$old) {
+
+  # for reasons I don't understand, without walking the reference tree,
+  # parts of $_ are undef
+  my_dumper($_);
+  my ( $key, $val ) = each(%$_);
+  unless ( $key eq 'Paper size' ) {
+   my $opt = $options->by_name($key);
+   use Data::Dumper;
+   if ( defined( $opt->{type} ) and $opt->{type} == SANE_TYPE_BOOL ) {
+    $val = $val ? 'yes' : 'no';
+   }
+   push @$new, { $key => $val };
+  }
+ }
+ return $new;
+}
+
 sub scan {
  my ($self) = @_;
 
@@ -1672,23 +1696,12 @@ sub scan {
  my $options = $self->{current_scan_options};
  map_geometry_names($options);
 
- # Remove paper size from options
- my @options;
- for (@$options) {
-
-  # for reasons I don't understand, without walking the reference tree,
-  # parts of $_ are undef
-  my_dumper($_);
-  my ( $key, $val ) = each(%$_);
-  push @options, { $key => $val } unless ( $key eq 'Paper size' );
- }
-
  my $i = 1;
  Gscan2pdf::Frontend::CLI->scan_pages(
   device           => $self->get('device'),
   dir              => $self->get('dir'),
   format           => "out%d.pnm",
-  options          => \@options,
+  options          => $self->map_options($options),
   npages           => $npages,
   start            => $start,
   step             => $step,

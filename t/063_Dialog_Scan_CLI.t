@@ -412,6 +412,7 @@ $signal = $dialog->signal_connect(
   );
   $dialog->set( 'num-pages',             1 );
   $dialog->set( 'page-number-increment', 1 );
+  $dialog->set_option( $options->by_name('enable-test-options'), TRUE );
   $dialog->scan;
  }
 );
