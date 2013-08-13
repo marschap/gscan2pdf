@@ -282,7 +282,9 @@ for my $paper ( keys %{ $SETTING{Paper} } ) {
  }
  else {
   for (qw(x y t l)) {
-   unless ( defined $SETTING{Paper}{$paper}{$_} ) {
+   unless ( ref( $SETTING{Paper}{$paper} ) eq "HASH"
+    and defined( $SETTING{Paper}{$paper}{$_} ) )
+   {
     delete $SETTING{Paper}{$paper};
     last;
    }
