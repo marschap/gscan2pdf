@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 
@@ -45,7 +45,24 @@ $signal = $dialog->signal_connect(
   my ( $widget, $cache ) = @_;
   $dialog->signal_handler_disconnect($signal);
   ok( 1, 'changed options-cache' );
-  Gtk2->main_quit;
+
+  $dialog = Gscan2pdf::Dialog::Scan::CLI->new(
+   title           => 'title',
+   'transient-for' => $window,
+   'logger'        => $logger,
+   'cache-options' => TRUE,
+   'options-cache' => $cache,
+  );
+  $signal = $dialog->signal_connect(
+   'fetched-options-cache' => sub {
+    my ( $widget, $device, $cache_key ) = @_;
+    $dialog->signal_handler_disconnect($signal);
+    ok( 1, 'fetched-options-cache' );
+    Gtk2->main_quit;
+   }
+  );
+  $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
+  $dialog->set( 'device', 'test' );
  }
 );
 $dialog->set( 'device-list', [ { 'name' => 'test' } ] );

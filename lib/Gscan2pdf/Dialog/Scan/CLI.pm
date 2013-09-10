@@ -8,6 +8,7 @@ use Gscan2pdf::Dialog::Scan;
 use Gscan2pdf::Frontend::CLI;
 use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
+use Storable qw(dclone);   # For cloning the options cache
 use Locale::gettext 1.05;  # For translations
 use feature "switch";
 
@@ -501,7 +502,8 @@ sub scan_options {
 
   my $cache = $self->get('options-cache');
   if ( defined $cache->{ $self->get('device') }{$cache_key} ) {
-   my $options = $cache->{ $self->get('device') }{$cache_key};
+   my $options = Gscan2pdf::Scanner::Options->new_from_data(
+    $cache->{ $self->get('device') }{$cache_key} );
    $self->signal_emit( 'fetched-options-cache', $self->get('device'),
     $cache_key );
    $logger->info($options);
@@ -542,12 +544,17 @@ sub scan_options {
    $logger->info($options);
    if ( $self->get('cache-options') ) {
     my $cache = $self->get('options-cache');
+
+    # We only store the array part of the options object
+    # as we have to recreate the object anyway when we retrieve it
+    my $clone = dclone( $options->{array} );
     if ( defined $cache ) {
-     $cache->{ $self->get('device') }{$cache_key} = $options;
+     $cache->{ $self->get('device') }{$cache_key} = $clone;
      $self->signal_emit( 'changed-options-cache', $cache );
     }
     else {
-     $self->set( 'options-cache', $options );
+     $cache->{ $self->get('device') }{$cache_key} = $clone;
+     $self->set( 'options-cache', $cache );
     }
    }
    $self->_initialise_options($options);
@@ -1665,7 +1672,6 @@ sub map_options {
   my ( $key, $val ) = each(%$_);
   unless ( $key eq 'Paper size' ) {
    my $opt = $options->by_name($key);
-   use Data::Dumper;
    if ( defined( $opt->{type} ) and $opt->{type} == SANE_TYPE_BOOL ) {
     $val = $val ? 'yes' : 'no';
    }

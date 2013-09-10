@@ -3448,6 +3448,8 @@ sub scan_dialog {
   frontend               => $SETTING{'frontend'},
   'visible-scan-options' => $SETTING{'visible-scan-options'},
   'reload-triggers'      => $SETTING{'scan-reload-triggers'},
+  'cache-options'        => $SETTING{'cache options'},
+  'options-cache'        => $SETTING{cache},
  );
 
 # Can't set the device when creating the window, as the list does not exist then
@@ -3637,6 +3639,12 @@ sub scan_dialog {
   'changed-paper' => sub {
    my ( $widget, $paper ) = @_;
    $SETTING{'Paper size'} = $paper;
+  }
+ );
+ $windows->signal_connect(
+  'changed-options-cache' => sub {
+   my ( $widget, $cache ) = @_;
+   $SETTING{cache} = $cache;
   }
  );
 

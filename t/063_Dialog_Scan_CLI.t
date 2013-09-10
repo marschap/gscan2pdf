@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 45;
+use Test::More tests => 46;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -375,6 +375,16 @@ $signal = $dialog->signal_connect(
    'changed-paper' => sub {
     my ( $widget, $paper ) = @_;
     is( $paper, 'new2', 'changed-paper' );
+
+    my $options = $dialog->get('available-scan-options');
+    my $expected = [ { 'Paper size' => 'new' }, { $resolution => 50 } ];
+    push @$expected, { scalar(SANE_NAME_PAGE_HEIGHT) => 10 }
+      if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
+    push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 10 }
+      if ( defined $options->by_name(SANE_NAME_PAGE_WIDTH) );
+    push @$expected, { l => 0 }, { t => 0 }, { x => 10 }, { y => 10 };
+    is_deeply( $dialog->get('current-scan-options'),
+     $expected, 'CLI geometry option names after setting paper' );
    }
   );
   $dialog->set( 'paper', 'new2' );
