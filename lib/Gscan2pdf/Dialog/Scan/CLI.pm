@@ -464,6 +464,32 @@ sub get_devices {
  return;
 }
 
+# Return cache key based on reload triggers and current options
+
+sub cache_key {
+ my ($self) = @_;
+ my $cache_key = '';
+
+ # grep the reload triggers from the current options
+ my $reload_triggers = $self->get('reload-triggers');
+ for ( @{ $self->{current_scan_options} } ) {
+  my ( $key, $value ) = each(%$_);
+  if ( defined $reload_triggers ) {
+   $reload_triggers = [$reload_triggers]
+     if ( ref($reload_triggers) ne 'ARRAY' );
+   for (@$reload_triggers) {
+    if (/^$key$/ix) {
+     $cache_key .= ',' unless ( $cache_key eq '' );
+     $cache_key .= "$key,$value";
+     last;
+    }
+   }
+  }
+ }
+ $cache_key = 'default' if ( $cache_key eq '' );
+ return $cache_key;
+}
+
 # Scan device-dependent scan options
 
 sub scan_options {
@@ -481,24 +507,7 @@ sub scan_options {
  my $hboxd     = $self->{hboxd};
  my $cache_key = '';
  if ( $self->get('cache-options') ) {
-
-  # grep the reload triggers from the current options
-  my $reload_triggers = $self->get('reload-triggers');
-  for ( @{ $self->{current_scan_options} } ) {
-   my ( $key, $value ) = each(%$_);
-   if ( defined $reload_triggers ) {
-    $reload_triggers = [$reload_triggers]
-      if ( ref($reload_triggers) ne 'ARRAY' );
-    for (@$reload_triggers) {
-     if (/^$key$/ix) {
-      $cache_key .= ',' unless ( $cache_key eq '' );
-      $cache_key .= "$key,$value";
-      last;
-     }
-    }
-   }
-  }
-  $cache_key = 'default' if ( $cache_key eq '' );
+  $cache_key = $self->cache_key();
 
   my $cache = $self->get('options-cache');
   if ( defined $cache->{ $self->get('device') }{$cache_key} ) {
@@ -550,12 +559,12 @@ sub scan_options {
     my $clone = dclone( $options->{array} );
     if ( defined $cache ) {
      $cache->{ $self->get('device') }{$cache_key} = $clone;
-     $self->signal_emit( 'changed-options-cache', $cache );
     }
     else {
      $cache->{ $self->get('device') }{$cache_key} = $clone;
      $self->set( 'options-cache', $cache );
     }
+    $self->signal_emit( 'changed-options-cache', $cache );
    }
    $self->_initialise_options($options);
 
@@ -1028,9 +1037,35 @@ sub set_option {
  if ( defined $reload_triggers ) {
   $reload_triggers = [$reload_triggers]
     if ( ref($reload_triggers) ne 'ARRAY' );
+
   for (@$reload_triggers) {
    if ( $_ eq $option->{name} or $_ eq $option->{title} ) {
     $reloaded = TRUE;
+
+    my $cache_key = '';
+    if ( $self->get('cache-options') ) {
+     $cache_key = $self->cache_key();
+
+     my $cache = $self->get('options-cache');
+     if ( defined $cache->{ $self->get('device') }{$cache_key} ) {
+      my $options = Gscan2pdf::Scanner::Options->new_from_data(
+       $cache->{ $self->get('device') }{$cache_key} );
+      $self->signal_emit( 'fetched-options-cache', $self->get('device'),
+       $cache_key );
+      $logger->info($options);
+
+      $self->update_options( $options, TRUE ) if ($options);
+
+      $self->signal_emit( 'finished-process', 'find_scan_options' );
+
+      # Unset the profile unless we are actively setting it
+      $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+
+      $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
+      $self->signal_emit('reloaded-scan-options');
+     }
+    }
+
     my $pbar;
     my $hboxd = $self->{hboxd};
     Gscan2pdf::Frontend::CLI->find_scan_options(
@@ -1057,6 +1092,24 @@ sub set_option {
       $pbar->destroy;
       $hboxd->show_all;
       $logger->info($options);
+      if ( $self->get('cache-options') ) {
+       my $cache = $self->get('options-cache');
+
+       # We only store the array part of the options object
+       # as we have to recreate the object anyway when we retrieve it
+       my $clone = dclone( $options->{array} );
+
+       # Prune the options or parts of options that have not changed
+
+       if ( defined $cache ) {
+        $cache->{ $self->get('device') }{$cache_key} = $clone;
+       }
+       else {
+        $cache->{ $self->get('device') }{$cache_key} = $clone;
+        $self->set( 'options-cache', $cache );
+       }
+       $self->signal_emit( 'changed-options-cache', $cache );
+      }
       $self->update_options($options) if ($options);
 
       $self->signal_emit( 'finished-process', 'find_scan_options' );
@@ -1151,7 +1204,7 @@ sub update_widget {
 # If setting an option triggers a reload, we need to update the options
 
 sub update_options {
- my ( $self, $options ) = @_;
+ my ( $self, $options, $from_cache ) = @_;
 
  # walk the widget tree and update them from the hash
  $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
@@ -1160,8 +1213,23 @@ sub update_options {
  my $num_dev_options = $options->num_options;
  for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
   my $opt = $options->by_index($i);
-  $self->update_widget( $opt->{name}, $opt->{val} )
-    if ( defined( $opt->{name} ) and $opt->{name} ne '' );
+  if ( defined( $opt->{name} ) and $opt->{name} ne '' ) {
+
+   # If we are loading from the cache, then both the current options,
+   # and the widgets could be different
+   if ($from_cache) {
+    my $old_opt = $self->get('available-scan-options')->by_name( $opt->{name} );
+    $self->set_option( $old_opt, $opt->{val} )
+      if (
+     ( defined( $old_opt->{val} ) or defined( $opt->{val} ) )
+     and ( ( defined( $old_opt->{val} ) xor defined( $opt->{val} ) )
+      or ( $old_opt->{val} ne $opt->{val} ) )
+      );
+   }
+   else {
+    $self->update_widget( $opt->{name}, $opt->{val} );
+   }
+  }
  }
  return;
 }

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 7;
+use Test::More tests => 9;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 
@@ -20,9 +20,10 @@ Gscan2pdf::Frontend::CLI->setup($logger);
 
 ok(
  my $dialog = Gscan2pdf::Dialog::Scan::CLI->new(
-  title           => 'title',
-  'transient-for' => $window,
-  'logger'        => $logger,
+  title             => 'title',
+  'transient-for'   => $window,
+  'logger'          => $logger,
+  'reload-triggers' => qw(mode),
  ),
  'Created dialog'
 );
@@ -46,23 +47,59 @@ $signal = $dialog->signal_connect(
   $dialog->signal_handler_disconnect($signal);
   ok( 1, 'changed options-cache' );
 
-  $dialog = Gscan2pdf::Dialog::Scan::CLI->new(
-   title           => 'title',
-   'transient-for' => $window,
-   'logger'        => $logger,
-   'cache-options' => TRUE,
-   'options-cache' => $cache,
-  );
   $signal = $dialog->signal_connect(
-   'fetched-options-cache' => sub {
-    my ( $widget, $device, $cache_key ) = @_;
+   'reloaded-scan-options' => sub {
     $dialog->signal_handler_disconnect($signal);
-    ok( 1, 'fetched-options-cache' );
-    Gtk2->main_quit;
+
+    my $options = $dialog->get('available-scan-options');
+    $dialog->set_option( $options->by_name('mode'), 'Color' );
+
+    $signal = $dialog->signal_connect(
+     'changed-options-cache' => sub {
+      my ( $widget, $cache ) = @_;
+      $dialog->signal_handler_disconnect($signal);
+      ok( 1, 'changed options-cache after set mode' );
+
+      $dialog = Gscan2pdf::Dialog::Scan::CLI->new(
+       title             => 'title',
+       'transient-for'   => $window,
+       'logger'          => $logger,
+       'reload-triggers' => qw(mode),
+       'cache-options'   => TRUE,
+       'options-cache'   => $cache,
+      );
+      $signal = $dialog->signal_connect(
+       'fetched-options-cache' => sub {
+        my ( $widget, $device, $cache_key ) = @_;
+        $dialog->signal_handler_disconnect($signal);
+        ok( 1, 'fetched-options-cache' );
+
+        $signal = $dialog->signal_connect(
+         'fetched-options-cache' => sub {
+          my ( $widget, $device, $cache_key ) = @_;
+          $dialog->signal_handler_disconnect($signal);
+          ok( 1, 'fetched-options-cache for set mode' );
+          Gtk2->main_quit;
+         }
+        );
+
+        my $signal2;
+        $signal2 = $dialog->signal_connect(
+         'reloaded-scan-options' => sub {
+          $dialog->signal_handler_disconnect($signal2);
+          my $options = $dialog->get('available-scan-options');
+          $dialog->set_option( $options->by_name('mode'), 'Color' );
+         }
+        );
+
+       }
+      );
+      $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
+      $dialog->set( 'device', 'test' );
+     }
+    );
    }
   );
-  $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
-  $dialog->set( 'device', 'test' );
  }
 );
 $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
