@@ -1640,7 +1640,13 @@ sub set_option_widget {
   my $opt     = $options->by_name($name);
   my $widget  = $opt->{widget};
 
-  if ( ref($val) eq 'ARRAY' ) {
+  # If the option is inactive, then remove it from the profile
+  if ( $opt->{cap} & SANE_CAP_INACTIVE ) {
+   splice @$profile, $i, 1;
+   $self->{current_scan_options} = $profile;
+   return $i;
+  }
+  elsif ( ref($val) eq 'ARRAY' ) {
    $self->set_option( $opt, $val );
 
    # when INFO_INEXACT is implemented, so that the value is reloaded,
