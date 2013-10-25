@@ -1221,7 +1221,9 @@ sub update_options {
     my $old_opt = $self->get('available-scan-options')->by_name( $opt->{name} );
     $self->set_option( $old_opt, $opt->{val} )
       if (
-     ( defined( $old_opt->{val} ) or defined( $opt->{val} ) )
+     not(( $old_opt->{cap} & SANE_CAP_INACTIVE )
+      or ( $opt->{cap} & SANE_CAP_INACTIVE ) )
+     and ( defined( $old_opt->{val} ) or defined( $opt->{val} ) )
      and ( ( defined( $old_opt->{val} ) xor defined( $opt->{val} ) )
       or ( $old_opt->{val} ne $opt->{val} ) )
       );
