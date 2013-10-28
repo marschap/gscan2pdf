@@ -367,7 +367,8 @@ sub new {
    if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/x ) {
     my $profile = $entry->get_text;
     $self->add_profile( $profile, $self->get('current-scan-options') );
-    $self->{combobsp}->set_active( num_rows_combobox( $self->{combobsp} ) );
+    $self->{combobsp}->set_active(
+     Gscan2pdf::Dialog::Scan::num_rows_combobox( $self->{combobsp} ) );
    }
    $dialog->destroy;
   }
