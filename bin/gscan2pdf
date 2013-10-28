@@ -8786,6 +8786,38 @@ scanner device on the command line:
 
 C<gscan2pdf --device <device>>
 
+=head2 How can I search for text in the OCR layer of the finished PDF or DJVU file?
+
+pdftotext or djvutxt can extract the text layer from PDF or DJVU files. See the
+respective man pages for details.
+
+Having opened a PDF or DJVU file in evince or Acrobat Reader, the search
+function will typically find the page with the requested text and highlight it.
+
+There are various tools for searching or indexing files, including PDF and DJVU:
+
+=over
+
+=item *
+(meta) Tracker (L<https://projects.gnome.org/tracker/>)
+
+=item *
+plone (L<http://plone.org/>)
+
+=item *
+pdfgrep (L<http://pdfgrep.sourceforge.net/>
+
+=item *
+swish-e (L<http://www.swish-e.org/>)
+
+=item *
+recoll (L<http://www.lesbonscomptes.com/recoll/>)
+
+=item *
+terrier (L<http://www.lesbonscomptes.com/recoll/>)
+
+=back
+
 =head1 See Also
 
  Xsane
