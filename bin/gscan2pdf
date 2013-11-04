@@ -6356,6 +6356,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $button->signal_connect(
   clicked => sub {
    delete $SETTING{cache} if ( defined $SETTING{cache} );
+   $windows->set( 'options-cache', undef ) if ( defined $windows );
   }
  );
 
@@ -6597,6 +6598,8 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
    $SETTING{'default filename'}  = $fileentry->get_text;
    $SETTING{'scan prefix'}       = $preentry->get_text;
    $SETTING{'cache options'}     = $cbc->get_active;
+   $windows->set( 'cache-options', $SETTING{'cache options'} )
+     if ( defined $windows );
    delete $SETTING{cache}
      if ( defined $SETTING{cache} and not $SETTING{'cache options'} );
    $SETTING{'restore window'} = $cbw->get_active;

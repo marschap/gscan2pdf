@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 8;
+use Test::More tests => 9;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 
@@ -38,19 +38,26 @@ $dialog->signal_connect(
  }
 );
 
-my $signal;
+my ( $signal, $signal2 );
 $signal = $dialog->signal_connect(
- 'reloaded-scan-options' => sub {
+ 'changed-options-cache' => sub {
   $dialog->signal_handler_disconnect($signal);
-  is( defined $dialog->get('current-scan-options'),
-   FALSE, 'cached default Gray - no scan option set' );
+  is( $#{ $dialog->get('current-scan-options') },
+   -1, 'cached default Gray - no scan option set' );
 
   $signal = $dialog->signal_connect(
-   'reloaded-scan-options' => sub {
+   'changed-options-cache' => sub {
     $dialog->signal_handler_disconnect($signal);
     is( $#{ $dialog->get('current-scan-options') },
      0, 'cached Color - 1 scan option set' );
 
+    $signal2 = $dialog->signal_connect(
+     'fetched-options-cache' => sub {
+      my ( $widget, $device, $cache_key ) = @_;
+      $dialog->signal_handler_disconnect($signal2);
+      pass('fetched-options-cache');
+     }
+    );
     $signal = $dialog->signal_connect(
      'reloaded-scan-options' => sub {
       $dialog->signal_handler_disconnect($signal);
