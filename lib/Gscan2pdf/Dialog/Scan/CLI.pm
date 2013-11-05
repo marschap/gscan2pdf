@@ -1264,14 +1264,28 @@ sub update_options {
    # and the widgets could be different
    if ( defined($updated_option) and $opt->{name} ne $updated_option->{name} ) {
     my $old_opt = $self->get('available-scan-options')->by_name( $opt->{name} );
-    $self->set_option( $old_opt, $opt->{val} )
-      if (
+    if (
      not(( $old_opt->{cap} & SANE_CAP_INACTIVE )
       or ( $opt->{cap} & SANE_CAP_INACTIVE ) )
      and ( defined( $old_opt->{val} ) or defined( $opt->{val} ) )
      and ( ( defined( $old_opt->{val} ) xor defined( $opt->{val} ) )
       or ( $old_opt->{val} ne $opt->{val} ) )
-      );
+      )
+    {
+
+     # Don't update if the old option is still available
+     my $val = quotemeta( $old_opt->{val} ); # quote any possible metacharacters
+     unless (
+      (
+          $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+       or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST
+      )
+      and grep { /^$val$/x } @{ $opt->{constraint} }
+       )
+     {
+      $self->set_option( $old_opt, $opt->{val} );
+     }
+    }
    }
    else {
     $self->update_widget( $opt->{name}, $opt->{val} );
