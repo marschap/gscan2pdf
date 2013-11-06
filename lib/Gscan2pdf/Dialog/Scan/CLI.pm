@@ -465,35 +465,18 @@ sub get_devices {
  return;
 }
 
-# Return cache key based on reload triggers and current options
+# Return cache key based on reload triggers and given options
 
 sub cache_key {
- my ($self) = @_;
+ my ( $self, $options ) = @_;
  my $cache_key = '';
 
- # grep the reload triggers from the current options
  my $reload_triggers = $self->get('reload-triggers');
  if ( defined $reload_triggers ) {
   $reload_triggers = [$reload_triggers]
     if ( ref($reload_triggers) ne 'ARRAY' );
 
-  # for reasons I don't understand, without walking the reference tree,
-  # parts of $default are undef
-  my_dumper( $self->{current_scan_options} );
-
-  for ( @{ $self->{current_scan_options} } ) {
-   my ( $key, $value ) = each(%$_);
-   for (@$reload_triggers) {
-    if (/^$key$/ix) {
-     $cache_key .= ',' unless ( $cache_key eq '' );
-     $cache_key .= "$key,$value";
-     last;
-    }
-   }
-  }
-  if ( $cache_key eq '' ) {
-
-   my $options = $self->get('available-scan-options');
+  if ( defined $options ) {
 
    for my $opt ( @{ $options->{array} } ) {
     for (@$reload_triggers) {
@@ -505,7 +488,25 @@ sub cache_key {
     }
    }
   }
+  else {
 
+   # for reasons I don't understand, without walking the reference tree,
+   # parts of $default are undef
+   my_dumper( $self->{current_scan_options} );
+
+   # grep the reload triggers from the current options
+   for ( @{ $self->{current_scan_options} } ) {
+    my ( $key, $value ) = each(%$_);
+    for (@$reload_triggers) {
+     if (/^$key$/ix) {
+      $cache_key .= ',' unless ( $cache_key eq '' );
+      $cache_key .= "$key,$value";
+      last;
+     }
+    }
+   }
+
+  }
  }
 
  $cache_key = 'default' if ( $cache_key eq '' );
@@ -525,11 +526,10 @@ sub scan_options {
  # Ghost the scan button whilst options being updated
  $self->{sbutton}->set_sensitive(FALSE) if ( defined $self->{sbutton} );
 
- my $pbar;
- my $hboxd     = $self->{hboxd};
- my $cache_key = '';
+ my ( $pbar, $cache_key );
+ my $hboxd = $self->{hboxd};
  if ( $self->get('cache-options') ) {
-  $cache_key = $self->cache_key();
+  $cache_key = $self->cache_key;
 
   my $cache = $self->get('options-cache');
   if ( defined $cache->{ $self->get('device') }{$cache_key} ) {
@@ -576,24 +576,29 @@ sub scan_options {
    if ( $self->get('cache-options') ) {
     my $cache = $self->get('options-cache');
 
+    # Don't assume that the options we have are those we are looking for yet
+    # Recalculating cache_key based on contents of options
+    $cache_key = $self->cache_key($options) unless ( $cache_key eq 'default' );
+
     # We only store the array part of the options object
     # as we have to recreate the object anyway when we retrieve it
-    my $clone = dclone( $options->{array} );
+    my $clone  = dclone( $options->{array} );
+    my $device = $self->get('device');
     if ( defined $cache ) {
-     $cache->{ $self->get('device') }{$cache_key} = $clone;
+     $cache->{$device}{$cache_key} = $clone;
     }
     else {
-     $cache->{ $self->get('device') }{$cache_key} = $clone;
+     $cache->{$device}{$cache_key} = $clone;
      if ( $cache_key eq 'default' ) {
-      $self->{options_cache} =
-        $cache;    # set the cache, but don't emit the signal
-     }
-     else {
-      $self->set( 'options-cache', $cache );
+
+     # For default settings, additionally store the cache under the option names
+      $cache_key = $self->cache_key($options);
+      $cache->{$device}{$cache_key} = $cache->{$device}{default};
+
      }
     }
-    $self->signal_emit( 'changed-options-cache', $cache )
-      unless ( $cache_key eq 'default' );
+    $self->set( 'options-cache', $cache );
+    $self->signal_emit( 'changed-options-cache', $cache );
    }
    $self->_initialise_options($options);
 
@@ -602,17 +607,6 @@ sub scan_options {
    # This fires the reloaded-scan-options signal,
    # so don't set this until we have finished
    $self->set( 'available-scan-options', $options );
-
-   # For default settings, now we have all the options, additionally store
-   # the cache under the option names
-   if ( $self->get('cache-options') and $cache_key eq 'default' ) {
-    my $device = $self->get('device');
-    my $cache  = $self->get('options-cache');
-    $cache_key = $self->cache_key;
-    $cache->{$device}{$cache_key} = $cache->{$device}{default};
-    $self->set( 'options-cache', $cache );
-    $self->signal_emit( 'changed-options-cache', $cache );
-   }
   },
   error_callback => sub {
    my ($message) = @_;

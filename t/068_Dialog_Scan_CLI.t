@@ -46,50 +46,56 @@ $signal = $dialog->signal_connect(
    -1, 'cached default Gray - no scan option set' );
 
   $signal = $dialog->signal_connect(
-   'changed-scan-option' => sub {
-    my ( $widget, $option, $value ) = @_;
+   'reloaded-scan-options' => sub {
     $dialog->signal_handler_disconnect($signal);
-    is( $option, 'source', 'setting source' );
-    is(
-     $value,
-     'Automatic Document Feeder',
-     'setting source to Automatic Document Feeder'
-    );
 
     $signal = $dialog->signal_connect(
-     'reloaded-scan-options' => sub {
+     'changed-scan-option' => sub {
+      my ( $widget, $option, $value ) = @_;
       $dialog->signal_handler_disconnect($signal);
-      my $options = $dialog->get('available-scan-options');
-      is( $options->by_name('mode')->{val}, 'Color', 'set mode to Color' );
+      is( $option, 'source', 'setting source' );
       is(
-       $options->by_name('source')->{val},
+       $value,
        'Automatic Document Feeder',
-       'source still Automatic Document Feeder'
+       'setting source to Automatic Document Feeder'
       );
+
       $signal = $dialog->signal_connect(
        'reloaded-scan-options' => sub {
         $dialog->signal_handler_disconnect($signal);
         my $options = $dialog->get('available-scan-options');
-        is( $options->by_name('mode')->{val}, 'Gray', 'set mode to Gray' );
+        is( $options->by_name('mode')->{val}, 'Color', 'set mode to Color' );
         is(
          $options->by_name('source')->{val},
          'Automatic Document Feeder',
          'source still Automatic Document Feeder'
         );
-        Gtk2->main_quit;
+        $signal = $dialog->signal_connect(
+         'reloaded-scan-options' => sub {
+          $dialog->signal_handler_disconnect($signal);
+          my $options = $dialog->get('available-scan-options');
+          is( $options->by_name('mode')->{val}, 'Gray', 'set mode to Gray' );
+          is(
+           $options->by_name('source')->{val},
+           'Automatic Document Feeder',
+           'source still Automatic Document Feeder'
+          );
+          Gtk2->main_quit;
+         }
+        );
+        $dialog->set_option(
+         $dialog->get('available-scan-options')->by_name('mode'), 'Gray' );
        }
       );
       $dialog->set_option(
-       $dialog->get('available-scan-options')->by_name('mode'), 'Gray' );
+       $dialog->get('available-scan-options')->by_name('mode'), 'Color' );
      }
     );
     $dialog->set_option(
-     $dialog->get('available-scan-options')->by_name('mode'), 'Color' );
+     $dialog->get('available-scan-options')->by_name('source'),
+     'Automatic Document Feeder' );
    }
   );
-  $dialog->set_option(
-   $dialog->get('available-scan-options')->by_name('source'),
-   'Automatic Document Feeder' );
  }
 );
 $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
