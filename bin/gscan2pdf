@@ -1312,6 +1312,35 @@ $thbox->pack_end( $tcbutton, FALSE, FALSE, 0 );
 
 ### Subroutines
 
+# Check for presence of various packages
+
+sub check_dependencies {
+ $dependencies{perlmagick}  = try { require Image::Magick };
+ $dependencies{imagemagick} = Gscan2pdf::Document::check_command('convert');
+ $dependencies{scanadf}     = Gscan2pdf::Document::check_command('scanadf');
+ $dependencies{xdg}         = Gscan2pdf::Document::check_command('xdg-email');
+ $dependencies{gocr}        = Gscan2pdf::Document::check_command('gocr');
+ $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup($logger);
+ $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup($logger);
+ $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup($logger);
+ $dependencies{djvu}        = Gscan2pdf::Document::check_command('cjb2');
+ $dependencies{unpaper}     = Gscan2pdf::Unpaper->version;
+ $dependencies{libtiff}     = Gscan2pdf::Document::check_command('tiffcp');
+ $logger->info("Found Image::Magick") if ( $dependencies{perlmagick} );
+ $logger->info("Found ImageMagick")   if ( $dependencies{imagemagick} );
+ $logger->info("Found scanadf")       if ( $dependencies{scanadf} );
+ $logger->info("Found xdg-email")     if ( $dependencies{xdg} );
+ $logger->info("Found gocr")          if ( $dependencies{gocr} );
+ $logger->info("Found tesseract")     if ( $dependencies{tesseract} );
+ $logger->info("Found cuneiform v$dependencies{cuneiform}")
+   if ( $dependencies{cuneiform} );
+ $logger->info("Found cjb2 (djvu)") if ( $dependencies{djvu} );
+ $logger->info("Found libtiff")     if ( $dependencies{libtiff} );
+ $logger->info("Found unpaper $dependencies{unpaper}")
+   if ( $dependencies{unpaper} );
+ return;
+}
+
 # Create the menu bar, initialize its menus, and return the menu bar.
 
 sub create_menu_bar {
@@ -1347,29 +1376,7 @@ sub create_menu_bar {
  }
 
  # Check for presence of various packages
- $dependencies{perlmagick}  = try { require Image::Magick };
- $dependencies{imagemagick} = Gscan2pdf::Document::check_command('convert');
- $dependencies{scanadf}     = Gscan2pdf::Document::check_command('scanadf');
- $dependencies{xdg}         = Gscan2pdf::Document::check_command('xdg-email');
- $dependencies{gocr}        = Gscan2pdf::Document::check_command('gocr');
- $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup($logger);
- $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup($logger);
- $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup($logger);
- $dependencies{djvu}        = Gscan2pdf::Document::check_command('cjb2');
- $dependencies{unpaper}     = Gscan2pdf::Unpaper->version;
- $dependencies{libtiff}     = Gscan2pdf::Document::check_command('tiffcp');
- $logger->info("Found Image::Magick") if ( $dependencies{perlmagick} );
- $logger->info("Found ImageMagick")   if ( $dependencies{imagemagick} );
- $logger->info("Found scanadf")       if ( $dependencies{scanadf} );
- $logger->info("Found xdg-email")     if ( $dependencies{xdg} );
- $logger->info("Found gocr")          if ( $dependencies{gocr} );
- $logger->info("Found tesseract")     if ( $dependencies{tesseract} );
- $logger->info("Found cuneiform v$dependencies{cuneiform}")
-   if ( $dependencies{cuneiform} );
- $logger->info("Found cjb2 (djvu)") if ( $dependencies{djvu} );
- $logger->info("Found libtiff")     if ( $dependencies{libtiff} );
- $logger->info("Found unpaper $dependencies{unpaper}")
-   if ( $dependencies{unpaper} );
+ check_dependencies();
 
  # OCR engine options
  push @ocr_engine,
