@@ -3767,19 +3767,10 @@ sub scan_dialog {
  return;
 }
 
-sub add_postprocessing_options {
+sub add_postprocessing_rotate {
  my ($vbox) = @_;
-
- # Frame for post-processing
- my $framep = Gtk2::Frame->new( $d->get('Post-processing') );
- $vbox->pack_start( $framep, FALSE, FALSE, 0 );
- my $vboxp = Gtk2::VBox->new;
- $vboxp->set_border_width($border_width);
- $framep->add($vboxp);
-
- # Rotate
  my $hboxr = Gtk2::HBox->new;
- $vboxp->pack_start( $hboxr, FALSE, FALSE, 0 );
+ $vbox->pack_start( $hboxr, FALSE, FALSE, 0 );
  my $rbutton = Gtk2::CheckButton->new( $d->get('Rotate') );
  $tooltips->set_tip( $rbutton, $d->get('Rotate image after scanning') );
  $hboxr->pack_start( $rbutton, TRUE, TRUE, 0 );
@@ -3801,7 +3792,7 @@ sub add_postprocessing_options {
  $hboxr->pack_end( $comboboxr, TRUE, TRUE, 0 );
 
  $hboxr = Gtk2::HBox->new;
- $vboxp->pack_start( $hboxr, FALSE, FALSE, 0 );
+ $vbox->pack_start( $hboxr, FALSE, FALSE, 0 );
  my $r2button = Gtk2::CheckButton->new( $d->get('Rotate') );
  $tooltips->set_tip( $r2button, $d->get('Rotate image after scanning') );
  $hboxr->pack_start( $r2button, TRUE, TRUE, 0 );
@@ -3873,6 +3864,27 @@ sub add_postprocessing_options {
   combobox_set_active( $comboboxs, 'reverse', @side );
   combobox_set_active( $comboboxr, $SETTING{'rotate reverse'}, @rotate );
  }
+ return (
+  \@rotate,   \@side,      \@side2,    $rbutton, $r2button,
+  $comboboxs, $comboboxs2, $comboboxr, $comboboxr2
+ );
+}
+
+sub add_postprocessing_options {
+ my ($vbox) = @_;
+
+ # Frame for post-processing
+ my $framep = Gtk2::Frame->new( $d->get('Post-processing') );
+ $vbox->pack_start( $framep, FALSE, FALSE, 0 );
+ my $vboxp = Gtk2::VBox->new;
+ $vboxp->set_border_width($border_width);
+ $framep->add($vboxp);
+
+ # Rotate
+ my (
+  $rotate,    $side,       $side2,     $rbutton, $r2button,
+  $comboboxs, $comboboxs2, $comboboxr, $comboboxr2
+ ) = add_postprocessing_rotate($vboxp);
 
  # CheckButton for unpaper
  my $hboxu = Gtk2::HBox->new;
@@ -3989,7 +4001,7 @@ sub add_postprocessing_options {
  }
  combobox_set_active( $comboboxe, $SETTING{'ocr engine'}, @ocr_engine );
  return (
-  \@rotate,    \@side,     \@side2,     \@tesslang, \@cflang,
+  $rotate,     $side,      $side2,      \@tesslang, \@cflang,
   $rbutton,    $r2button,  $ubutton,    $obutton,   $comboboxs,
   $comboboxs2, $comboboxr, $comboboxr2, $comboboxe, $comboboxtl,
   $comboboxcl, $hboxtl,    $hboxcl
