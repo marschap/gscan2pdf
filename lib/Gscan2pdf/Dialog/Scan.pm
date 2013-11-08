@@ -75,7 +75,8 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   param_types => [ 'Glib::String', 'Glib::String' ]
   ,    # process name, error message
  },
- show => \&show,
+ show                  => \&show,
+ 'clicked-scan-button' => {},
   },
   properties => [
  Glib::ParamSpec->string(

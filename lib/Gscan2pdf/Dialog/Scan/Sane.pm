@@ -348,7 +348,12 @@ sub new {
  # Scan button
  $self->{sbutton} = Gtk2::Button->new( $d->get('Scan') );
  $hboxb->pack_start( $self->{sbutton}, TRUE, TRUE, 0 );
- $self->{sbutton}->signal_connect( clicked => sub { $self->scan; } );
+ $self->{sbutton}->signal_connect(
+  clicked => sub {
+   $self->signal_emit('clicked-scan-button');
+   $self->scan;
+  }
+ );
  $self->{sbutton}->grab_focus;
 
  # Cancel button

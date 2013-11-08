@@ -3470,26 +3470,10 @@ sub scan_dialog {
   );
  }
 
-# Can't set the device when creating the window, as the list does not exist then
+ # Can't set the device when creating the window,
+ # as the list does not exist then
  $windows->signal_connect(
-  'changed-device-list' => sub {
-   my ( $widget, $device_list ) = @_;
-   if ( defined $device_list ) {
-
-    # Only set default device if it hasn't been specified on the command line
-    # and it is in the the device list
-    if ( defined( $SETTING{device} ) and not @device_list ) {
-     for (@$device_list) {
-      if ( $SETTING{device} eq $_->{name} ) {
-       $windows->set( 'device', $SETTING{device} );
-       return;
-      }
-     }
-    }
-    $windows->set( 'device', $device_list->[0]{name} );
-   }
-  }
- );
+  'changed-device-list' => \&changed_device_list_callback );
 
  # Update default device
  $windows->signal_connect(
@@ -3566,32 +3550,13 @@ sub scan_dialog {
  );
 
  $windows->signal_connect(
-  'finished-process' => sub {
-   my ( $widget, $process, $button_signal ) = @_;
-   $scbutton->signal_handler_disconnect($button_signal)
-     if ( defined $button_signal );
-   $shbox->hide;
-
-   $windows->scan_options( $SETTING{device} )
-     if ( $SETTING{'cycle sane handle'} and $process eq 'scan_pages' );
-  },
+  'finished-process' => \&finished_process_callback,
   $signal
  );
 
  $windows->signal_connect(
-  'process-error' => sub {
-   my ( $widget, $process, $msg ) = @_;
-   $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
-   $shbox->hide;
-   if ( $process =~ /^(?:get_devices|find_scan_options)$/x ) {
-    $windows->hide;
-    undef $windows;
-    show_message_dialog( $window, 'error', 'close', $msg );
-   }
-   else {
-    show_message_dialog( $windows, 'error', 'close', $d_sane->get($msg) );
-   }
-  }
+  'process-error' => \&process_error_callback,
+  $signal
  );
 
  $windows->signal_connect(
@@ -3605,8 +3570,7 @@ sub scan_dialog {
  );
 
  # Profiles
- my @profiles = keys %{ $SETTING{profile} };
- foreach my $profile (@profiles) {
+ for my $profile ( keys %{ $SETTING{profile} } ) {
   $windows->add_profile( $profile, $SETTING{profile}{$profile} );
  }
  $windows->signal_connect(
@@ -3638,22 +3602,7 @@ sub scan_dialog {
 
  # Can't set the paper or profile until the options have been loaded
  $windows->signal_connect(
-  'reloaded-scan-options' => sub {
-   $windows->set( 'paper-formats', $SETTING{Paper} );
-   $windows->set( 'paper',         $SETTING{'Paper size'} )
-     if ( defined $SETTING{'Paper size'} );
-
-   if ( defined $SETTING{'default profile'} ) {
-    $windows->set( 'profile', $SETTING{'default profile'} );
-   }
-   elsif ( defined $SETTING{'default-scan-options'} ) {
-    $windows->set( 'current-scan-options', $SETTING{'default-scan-options'} );
-   }
-   elsif (@profiles) {
-    $windows->set( 'profile', $profiles[0] );
-   }
-  }
- );
+  'reloaded-scan-options' => \&reloaded_scan_options_callback );
  $windows->signal_connect(
   'changed-paper-formats' => sub {
    my ( $widget, $formats ) = @_;
@@ -3667,109 +3616,11 @@ sub scan_dialog {
   }
  );
 
- my $vbox = $windows->get('vbox');
- my (
-  $rotate,     $side,      $side2,      $tesslang,  $cflang,
-  $rbutton,    $r2button,  $ubutton,    $obutton,   $comboboxs,
-  $comboboxs2, $comboboxr, $comboboxr2, $comboboxe, $comboboxtl,
-  $comboboxcl, $hboxtl,    $hboxcl
- ) = add_postprocessing_options($vbox);
- my @rotate   = @$rotate;
- my @side     = @$side;
- my @side2    = @$side2;
- my @tesslang = @$tesslang;
- my @cflang   = @$cflang;
+ $windows->signal_connect( 'new-scan' => \&new_scan_callback );
 
- # Show window
+ add_postprocessing_options($windows);
+
  $windows->show_all;
- $hboxtl->hide_all
-   if (
-  defined($hboxtl)
-  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
-   or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
-   );
- $hboxcl->hide_all
-   if ( defined($hboxcl)
-  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
-
- $windows->signal_connect(
-  'new-scan' => sub {
-   my ( $widget, $n ) = @_;
-
-   # Update undo/redo buffers
-   take_snapshot();
-
-   $SETTING{'rotate facing'}  = 0;
-   $SETTING{'rotate reverse'} = 0;
-   if ( $rbutton->get_active ) {
-    if ( $side[ $comboboxs->get_active ]->[0] eq 'both' ) {
-     $SETTING{'rotate facing'}  = $rotate[ $comboboxr->get_active ]->[0];
-     $SETTING{'rotate reverse'} = $SETTING{'rotate facing'};
-    }
-    elsif ( $side[ $comboboxs->get_active ]->[0] eq 'facing' ) {
-     $SETTING{'rotate facing'} = $rotate[ $comboboxr->get_active ]->[0];
-    }
-    else {
-     $SETTING{'rotate reverse'} = $rotate[ $comboboxr->get_active ]->[0];
-    }
-    if ( $r2button->get_active ) {
-     if ( $side2[ $comboboxs2->get_active ]->[0] eq 'facing' ) {
-      $SETTING{'rotate facing'} = $rotate[ $comboboxr2->get_active ]->[0];
-     }
-     else {
-      $SETTING{'rotate reverse'} = $rotate[ $comboboxr2->get_active ]->[0];
-     }
-    }
-   }
-   $logger->info("rotate facing $SETTING{'rotate facing'}");
-   $logger->info("rotate reverse $SETTING{'rotate reverse'}");
-
-   $SETTING{'unpaper on scan'} = $ubutton->get_active;
-   $logger->info("unpaper $SETTING{'unpaper on scan'}");
-   $SETTING{'OCR on scan'} = $obutton->get_active;
-   $logger->info("OCR $SETTING{'OCR on scan'}");
-   if ( $SETTING{'OCR on scan'} ) {
-    $SETTING{'ocr engine'}   = $ocr_engine[ $comboboxe->get_active ]->[0];
-    $SETTING{'ocr language'} = $tesslang[ $comboboxtl->get_active ]->[0]
-      if ( $SETTING{'ocr engine'} eq 'tesseract'
-     or $SETTING{'ocr engine'} eq 'ocropus' );
-    $SETTING{'ocr language'} = $cflang[ $comboboxcl->get_active ]->[0]
-      if ( $SETTING{'ocr engine'} eq 'cuneiform' );
-   }
-
-   # If the scan can't be loaded then blow the scanning dialog away and
-   # show an error
-   $rotate = $n % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
-   if ( defined $test_image ) {
-    import_scan(
-     filename => $test_image,
-     page     => $n,
-     delete   => FALSE,
-     rotate   => $rotate,
-     unpaper  => $SETTING{'unpaper on scan'},
-     ocr      => $SETTING{'OCR on scan'}
-    );
-   }
-   else {
-    my $options = $windows->get('available-scan-options');
-    my $opt     = $options->by_name(SANE_NAME_SCAN_RESOLUTION);
-    $SETTING{resolution} =
-      ( defined($opt) and defined( $opt->{val} ) )
-      ? $opt->{val}
-      : $Gscan2pdf::Document::POINTS_PER_INCH;
-    $logger->info("Importing scan with resolution=$SETTING{resolution}");
-    import_scan(
-     filename   => File::Spec->catdir( $session, "out$n.pnm" ),
-     page       => $n,
-     resolution => $SETTING{resolution},
-     delete     => TRUE,
-     rotate     => $rotate,
-     unpaper    => $SETTING{'unpaper on scan'},
-     ocr        => $SETTING{'OCR on scan'}
-    );
-   }
-  }
- );
 
  if (@device_list) {
   $windows->set( 'device-list', \@device_list );
@@ -3777,7 +3628,109 @@ sub scan_dialog {
  else {
   $windows->get_devices;
  }
+ return;
+}
 
+sub finished_process_callback {
+ my ( $widget, $process, $button_signal, $signal ) = @_;
+ $scbutton->signal_handler_disconnect($button_signal)
+   if ( defined $button_signal );
+ $shbox->hide;
+
+ $widget->scan_options( $SETTING{device} )
+   if ( $SETTING{'cycle sane handle'} and $process eq 'scan_pages' );
+ return;
+}
+
+sub process_error_callback {
+ my ( $widget, $process, $msg, $signal ) = @_;
+ $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
+ $shbox->hide;
+ if ( $process =~ /^(?:get_devices|find_scan_options)$/x ) {
+  $widget->hide;
+  undef $widget;
+  show_message_dialog( $window, 'error', 'close', $msg );
+ }
+ else {
+  show_message_dialog( $widget, 'error', 'close', $d_sane->get($msg) );
+ }
+ return;
+}
+
+sub changed_device_list_callback {
+ my ( $widget, $device_list ) = @_;
+ if ( defined $device_list ) {
+
+  # Only set default device if it hasn't been specified on the command line
+  # and it is in the the device list
+  if ( defined( $SETTING{device} ) and not @device_list ) {
+   for (@$device_list) {
+    if ( $SETTING{device} eq $_->{name} ) {
+     $windows->set( 'device', $SETTING{device} );
+     return;
+    }
+   }
+  }
+  $windows->set( 'device', $device_list->[0]{name} );
+ }
+ return;
+}
+
+sub reloaded_scan_options_callback {
+ $windows->set( 'paper-formats', $SETTING{Paper} );
+ $windows->set( 'paper',         $SETTING{'Paper size'} )
+   if ( defined $SETTING{'Paper size'} );
+
+ my @profiles = keys %{ $SETTING{profile} };
+ if ( defined $SETTING{'default profile'} ) {
+  $windows->set( 'profile', $SETTING{'default profile'} );
+ }
+ elsif ( defined $SETTING{'default-scan-options'} ) {
+  $windows->set( 'current-scan-options', $SETTING{'default-scan-options'} );
+ }
+ elsif (@profiles) {
+  $windows->set( 'profile', $profiles[0] );
+ }
+ return;
+}
+
+sub new_scan_callback {
+ my ( $widget, $n ) = @_;
+
+ # Update undo/redo buffers
+ take_snapshot();
+
+ # If the scan can't be loaded then blow the scanning dialog away and
+ # show an error
+ my $rotate = $n % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
+ if ( defined $test_image ) {
+  import_scan(
+   filename => $test_image,
+   page     => $n,
+   delete   => FALSE,
+   rotate   => $rotate,
+   unpaper  => $SETTING{'unpaper on scan'},
+   ocr      => $SETTING{'OCR on scan'}
+  );
+ }
+ else {
+  my $options = $windows->get('available-scan-options');
+  my $opt     = $options->by_name(SANE_NAME_SCAN_RESOLUTION);
+  $SETTING{resolution} =
+    ( defined($opt) and defined( $opt->{val} ) )
+    ? $opt->{val}
+    : $Gscan2pdf::Document::POINTS_PER_INCH;
+  $logger->info("Importing scan with resolution=$SETTING{resolution}");
+  import_scan(
+   filename   => File::Spec->catdir( $session, "out$n.pnm" ),
+   page       => $n,
+   resolution => $SETTING{resolution},
+   delete     => TRUE,
+   rotate     => $rotate,
+   unpaper    => $SETTING{'unpaper on scan'},
+   ocr        => $SETTING{'OCR on scan'}
+  );
+ }
  return;
 }
 
@@ -3884,8 +3837,77 @@ sub add_postprocessing_rotate {
  );
 }
 
-sub add_postprocessing_options {
+sub add_postprocessing_ocr {
  my ($vbox) = @_;
+ my $hboxo = Gtk2::HBox->new;
+ $vbox->pack_start( $hboxo, FALSE, FALSE, 0 );
+ my $obutton = Gtk2::CheckButton->new( $d->get('OCR scanned pages') );
+ $tooltips->set_tip( $obutton, $d->get('OCR scanned pages') );
+ if ( not $dependencies{gocr}
+  and not $dependencies{tesseract}
+  and not $dependencies{ocropus}
+  and not $dependencies{cuneiform} )
+ {
+  $hboxo->set_sensitive(FALSE);
+  $obutton->set_active(FALSE);
+ }
+ elsif ( $SETTING{'OCR on scan'} ) {
+  $obutton->set_active(TRUE);
+ }
+ $hboxo->pack_start( $obutton, TRUE, TRUE, 0 );
+ my $comboboxe = combobox_from_array(@ocr_engine);
+ $tooltips->set_tip( $comboboxe, $d->get('Select OCR engine') );
+ $hboxo->pack_end( $comboboxe, TRUE, TRUE, 0 );
+ my ( $comboboxtl, $hboxtl, @tesslang, $comboboxcl, $hboxcl, @cflang );
+ if ( $dependencies{tesseract} ) {
+  ( $hboxtl, $comboboxtl, @tesslang ) = add_tess_languages($vbox);
+  $comboboxe->signal_connect(
+   changed => sub {
+    if ($ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
+     or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
+    {
+     $hboxtl->show_all;
+    }
+    else {
+     $hboxtl->hide_all;
+    }
+   }
+  );
+  if ( $dependencies{cuneiform} ) {
+   ( $hboxcl, $comboboxcl, @cflang ) = add_cf_languages($vbox);
+   $comboboxe->signal_connect(
+    changed => sub {
+     if ( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) {
+      $hboxcl->show_all;
+     }
+     else {
+      $hboxcl->hide_all;
+     }
+    }
+   );
+  }
+  $hboxtl->set_sensitive(FALSE) unless ( $obutton->get_active );
+  $obutton->signal_connect(
+   toggled => sub {
+    if ( $obutton->get_active ) {
+     $hboxtl->set_sensitive(TRUE);
+    }
+    else {
+     $hboxtl->set_sensitive(FALSE);
+    }
+   }
+  );
+ }
+ combobox_set_active( $comboboxe, $SETTING{'ocr engine'}, @ocr_engine );
+ return (
+  $obutton, $comboboxe,  $hboxtl,    $comboboxtl,
+  $hboxcl,  $comboboxcl, \@tesslang, \@cflang
+ );
+}
+
+sub add_postprocessing_options {
+ my ($self) = @_;
+ my $vbox = $self->get('vbox');
 
  # Frame for post-processing
  my $framep = Gtk2::Frame->new( $d->get('Post-processing') );
@@ -3953,73 +3975,69 @@ sub add_postprocessing_options {
   }
  );
 
- # CheckButton for OCR
- my $hboxo = Gtk2::HBox->new;
- $vboxp->pack_start( $hboxo, FALSE, FALSE, 0 );
- my $obutton = Gtk2::CheckButton->new( $d->get('OCR scanned pages') );
- $tooltips->set_tip( $obutton, $d->get('OCR scanned pages') );
- if ( not $dependencies{gocr}
-  and not $dependencies{tesseract}
-  and not $dependencies{ocropus}
-  and not $dependencies{cuneiform} )
- {
-  $hboxo->set_sensitive(FALSE);
-  $obutton->set_active(FALSE);
- }
- elsif ( $SETTING{'OCR on scan'} ) {
-  $obutton->set_active(TRUE);
- }
- $hboxo->pack_start( $obutton, TRUE, TRUE, 0 );
- my $comboboxe = combobox_from_array(@ocr_engine);
- $tooltips->set_tip( $comboboxe, $d->get('Select OCR engine') );
- $hboxo->pack_end( $comboboxe, TRUE, TRUE, 0 );
- my ( $comboboxtl, $hboxtl, @tesslang, $comboboxcl, $hboxcl, @cflang );
- if ( $dependencies{tesseract} ) {
-  ( $hboxtl, $comboboxtl, @tesslang ) = add_tess_languages($vboxp);
-  $comboboxe->signal_connect(
-   changed => sub {
-    if ($ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
-     or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
-    {
-     $hboxtl->show_all;
+ my (
+  $obutton, $comboboxe,  $hboxtl,   $comboboxtl,
+  $hboxcl,  $comboboxcl, $tesslang, $cflang
+ ) = add_postprocessing_ocr($vboxp);
+
+ $self->signal_connect(
+  'clicked-scan-button' => sub {
+   $SETTING{'rotate facing'}  = 0;
+   $SETTING{'rotate reverse'} = 0;
+   if ( $rbutton->get_active ) {
+    if ( $side->[ $comboboxs->get_active ][0] eq 'both' ) {
+     $SETTING{'rotate facing'}  = $rotate->[ $comboboxr->get_active ][0];
+     $SETTING{'rotate reverse'} = $SETTING{'rotate facing'};
+    }
+    elsif ( $side->[ $comboboxs->get_active ][0] eq 'facing' ) {
+     $SETTING{'rotate facing'} = $rotate->[ $comboboxr->get_active ][0];
     }
     else {
-     $hboxtl->hide_all;
+     $SETTING{'rotate reverse'} = $rotate->[ $comboboxr->get_active ][0];
     }
-   }
-  );
-  if ( $dependencies{cuneiform} ) {
-   ( $hboxcl, $comboboxcl, @cflang ) = add_cf_languages($vboxp);
-   $comboboxe->signal_connect(
-    changed => sub {
-     if ( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) {
-      $hboxcl->show_all;
+    if ( $r2button->get_active ) {
+     if ( $side2->[ $comboboxs2->get_active ][0] eq 'facing' ) {
+      $SETTING{'rotate facing'} = $rotate->[ $comboboxr2->get_active ][0];
      }
      else {
-      $hboxcl->hide_all;
+      $SETTING{'rotate reverse'} = $rotate->[ $comboboxr2->get_active ][0];
      }
     }
-   );
-  }
-  $hboxtl->set_sensitive(FALSE) unless ( $obutton->get_active );
-  $obutton->signal_connect(
-   toggled => sub {
-    if ( $obutton->get_active ) {
-     $hboxtl->set_sensitive(TRUE);
-    }
-    else {
-     $hboxtl->set_sensitive(FALSE);
-    }
    }
-  );
- }
- combobox_set_active( $comboboxe, $SETTING{'ocr engine'}, @ocr_engine );
- return (
-  $rotate,     $side,      $side2,      \@tesslang, \@cflang,
-  $rbutton,    $r2button,  $ubutton,    $obutton,   $comboboxs,
-  $comboboxs2, $comboboxr, $comboboxr2, $comboboxe, $comboboxtl,
-  $comboboxcl, $hboxtl,    $hboxcl
+   $logger->info("rotate facing $SETTING{'rotate facing'}");
+   $logger->info("rotate reverse $SETTING{'rotate reverse'}");
+
+   $SETTING{'unpaper on scan'} = $ubutton->get_active;
+   $logger->info("unpaper $SETTING{'unpaper on scan'}");
+   $SETTING{'OCR on scan'} = $obutton->get_active;
+   $logger->info("OCR $SETTING{'OCR on scan'}");
+   if ( $SETTING{'OCR on scan'} ) {
+    $SETTING{'ocr engine'}   = $ocr_engine[ $comboboxe->get_active ]->[0];
+    $SETTING{'ocr language'} = $tesslang->[ $comboboxtl->get_active ][0]
+      if ( $SETTING{'ocr engine'} eq 'tesseract'
+     or $SETTING{'ocr engine'} eq 'ocropus' );
+    $SETTING{'ocr language'} = $cflang->[ $comboboxcl->get_active ][0]
+      if ( $SETTING{'ocr engine'} eq 'cuneiform' );
+   }
+
+  }
  );
+
+ $self->signal_connect(
+  show => sub {
+   $hboxtl->hide_all
+     if (
+    defined($hboxtl)
+    and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
+     or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
+     );
+   $hboxcl->hide_all
+     if ( defined($hboxcl)
+    and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
+  }
+ );
+
+ return;
 }
 
 # Called either from changed-value signal of spinbutton,
