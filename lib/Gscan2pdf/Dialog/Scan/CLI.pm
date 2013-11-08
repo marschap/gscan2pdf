@@ -453,7 +453,8 @@ sub get_devices {
    $logger->info( "scanimage --formatted-device-list: ",
     Dumper( \@device_list ) );
    if ( @device_list == 0 ) {
-    $self->signal_emit( 'process-error', $d->get('No devices found') );
+    $self->signal_emit( 'process-error', 'get_devices',
+     $d->get('No devices found') );
     $self->destroy;
     undef $self;
     return FALSE;
@@ -611,7 +612,7 @@ sub scan_options {
   error_callback => sub {
    my ($message) = @_;
    $pbar->destroy;
-   $self->signal_emit( 'process-error', $message );
+   $self->signal_emit( 'process-error', 'find_scan_options', $message );
    $logger->warn($message);
   },
  );
@@ -1165,7 +1166,7 @@ sub set_option {
     },
     error_callback => sub {
      my ($message) = @_;
-     $self->signal_emit( 'process-error', $message );
+     $self->signal_emit( 'process-error', 'find_scan_options', $message );
      $pbar->destroy;
      $logger->warn($message);
     },
@@ -1821,7 +1822,7 @@ sub scan {
    if ( $npages > 0 and $step < 0 );
 
  if ( $start == 1 and $step < 0 ) {
-  $self->signal_emit( 'process-error',
+  $self->signal_emit( 'process-error', 'scan',
    $d->get('Must scan facing pages first') );
   return TRUE;
  }
@@ -1858,7 +1859,7 @@ sub scan {
   },
   error_callback => sub {
    my ($msg) = @_;
-   $self->signal_emit( 'process-error', $msg );
+   $self->signal_emit( 'process-error', 'scan_pages', $msg );
   }
  );
  return;

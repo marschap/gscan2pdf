@@ -33,7 +33,7 @@ $dialog->set( 'cache-options', TRUE );
 
 $dialog->signal_connect(
  'process-error' => sub {
-  my ( $widget, $msg ) = @_;
+  my ( $widget, $process, $msg ) = @_;
   Gtk2->main_quit;
  }
 );

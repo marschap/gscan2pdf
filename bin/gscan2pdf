@@ -435,7 +435,7 @@ init_icons(
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
 my (
- $slist, $windowi, $windowe, $windows, $windows2, $windowh, $windowo, $windowrn,
+ $slist, $windowi, $windowe, $windows, $windowh, $windowo, $windowrn,
  $windowu,
  @undo_buffer,
  @redo_buffer, @undo_selection, @redo_selection, %dependencies,
@@ -495,12 +495,9 @@ my @action_items = (
   $d->get('Open image file(s)'), \&open_dialog
  ],
  [
-  'Scan',
-  'scanner',
-  $d->get('S_can'),
-  '<control>g',
-  $d->get('Scan document'),
-  sub { $SETTING{frontend} eq 'libsane-perl' ? scan_dialog2() : scan_dialog() }
+  'Scan',                   'scanner',
+  $d->get('S_can'),         '<control>g',
+  $d->get('Scan document'), \&scan_dialog
  ],
  [
   'Save',          'gtk-save', $d->get('Save'), '<control>s',
@@ -3440,7 +3437,7 @@ sub scan_dialog {
  $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all' );
 
  # scan pop-up window
- $windows = Gscan2pdf::Dialog::Scan::CLI->new(
+ my %options = (
   'transient-for'     => $window,
   title               => $d->get('Scan Document'),
   border_width        => $border_width,
@@ -3451,13 +3448,27 @@ sub scan_dialog {
   'page-number-start' => $#{ $slist->{data} } > -1
   ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
   : 1,
-  prefix                 => $SETTING{'scan prefix'},
-  frontend               => $SETTING{'frontend'},
-  'visible-scan-options' => $SETTING{'visible-scan-options'},
-  'reload-triggers'      => $SETTING{'scan-reload-triggers'},
-  'cache-options'        => $SETTING{'cache options'},
-  'options-cache'        => $SETTING{cache},
  );
+ if ( $SETTING{frontend} eq 'libsane-perl' ) {
+  $windows = Gscan2pdf::Dialog::Scan::Sane->new(%options);
+ }
+ else {
+  $windows = Gscan2pdf::Dialog::Scan::CLI->new(
+   %options,
+   prefix                 => $SETTING{'scan prefix'},
+   frontend               => $SETTING{'frontend'},
+   'visible-scan-options' => $SETTING{'visible-scan-options'},
+   'reload-triggers'      => $SETTING{'scan-reload-triggers'},
+   'cache-options'        => $SETTING{'cache options'},
+   'options-cache'        => $SETTING{cache},
+  );
+  $windows->signal_connect(
+   'changed-options-cache' => sub {
+    my ( $widget, $cache ) = @_;
+    $SETTING{cache} = $cache;
+   }
+  );
+ }
 
 # Can't set the device when creating the window, as the list does not exist then
  $windows->signal_connect(
@@ -3569,10 +3580,17 @@ sub scan_dialog {
 
  $windows->signal_connect(
   'process-error' => sub {
-   my ( $widget, $msg ) = @_;
+   my ( $widget, $process, $msg ) = @_;
    $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
    $shbox->hide;
-   show_message_dialog( $windows, 'error', 'close', $d_sane->get($msg) );
+   if ( $process =~ /^(?:get_devices|find_scan_options)$/x ) {
+    $windows->hide;
+    undef $windows;
+    show_message_dialog( $window, 'error', 'close', $msg );
+   }
+   else {
+    show_message_dialog( $windows, 'error', 'close', $d_sane->get($msg) );
+   }
   }
  );
 
@@ -3646,12 +3664,6 @@ sub scan_dialog {
   'changed-paper' => sub {
    my ( $widget, $paper ) = @_;
    $SETTING{'Paper size'} = $paper;
-  }
- );
- $windows->signal_connect(
-  'changed-options-cache' => sub {
-   my ( $widget, $cache ) = @_;
-   $SETTING{cache} = $cache;
   }
  );
 
@@ -3739,9 +3751,11 @@ sub scan_dialog {
     );
    }
    else {
+    my $options = $windows->get('available-scan-options');
+    my $opt     = $options->by_name(SANE_NAME_SCAN_RESOLUTION);
     $SETTING{resolution} =
-      defined( $SETTING{resolution} )
-      ? $SETTING{resolution}
+      ( defined($opt) and defined( $opt->{val} ) )
+      ? $opt->{val}
       : $Gscan2pdf::Document::POINTS_PER_INCH;
     $logger->info("Importing scan with resolution=$SETTING{resolution}");
     import_scan(
@@ -4008,357 +4022,15 @@ sub add_postprocessing_options {
  );
 }
 
-# Scan
-
-sub scan_dialog2 {
-
- if ( defined $windows2 ) {
-  $windows2->present;
-  return;
- }
-
- # If device not set by config and there is a default device, then set it
- $SETTING{device} = $ENV{'SANE_DEFAULT_DEVICE'}
-   if ( not defined( $SETTING{device} )
-  and defined( $ENV{'SANE_DEFAULT_DEVICE'} ) );
-
- $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all' );
-
- # scan pop-up window
- $windows2 = Gscan2pdf::Dialog::Scan::Sane->new(
-  'transient-for'     => $window,
-  title               => $d->get('Scan Document'),
-  border_width        => $border_width,
-  logger              => $logger,
-  dir                 => $session,
-  'hide-on-delete'    => TRUE,
-  'num-pages'         => $SETTING{'pages to scan'},
-  'page-number-start' => $#{ $slist->{data} } > -1
-  ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
-  : 1,
- );
-
-# Can't set the device when creating the window, as the list does not exist then
- $windows2->signal_connect(
-  'changed-device-list' => sub {
-   my ( $widget, $device_list ) = @_;
-   if ( defined $device_list ) {
-
-    # Only set default device if it hasn't been specified on the command line
-    # and it is in the the device list
-    if ( defined( $SETTING{device} ) and not @device_list ) {
-     for (@$device_list) {
-      if ( $SETTING{device} eq $_->{name} ) {
-       $windows2->set( 'device', $SETTING{device} );
-       return;
-      }
-     }
-    }
-    $windows2->set( 'device', $device_list->[0]{name} );
-   }
-  }
- );
-
- # Update default device
- $windows2->signal_connect(
-  'changed-device' => sub {
-   my ( $widget, $device ) = @_;
-   $SETTING{device} = $device
-     if ( defined($device) and $device ne '' );
-  }
- );
-
- # Set default
- $windows2->signal_connect(
-  'changed-num-pages' => sub {
-   ( my $widget, $SETTING{'pages to scan'} ) = @_;
-
-   # Check that there is room in the list for the number of pages
-   update_number();
-  }
- );
- $windows2->signal_connect(
-  'changed-page-number-start' => sub {
-   my ( $widget, $value ) = @_;
-   $windows2->set( 'max-pages',
-    $slist->pages_possible( $value, $windows2->get('page-number-increment') ) );
-  }
- );
- $windows2->signal_connect(
-  'changed-page-number-increment' => sub {
-   my ( $widget, $step ) = @_;
-   $windows2->set( 'max-pages',
-    $slist->pages_possible( $windows2->get('page-number-start'), $step ) );
-  }
- );
-
- $windows2->signal_connect(
-  'changed-side-to-scan' => sub {
-   my ( $widget, $side ) = @_;
-   if ( $#{ $slist->{data} } > -1 ) {
-    $windows2->set( 'page-number-start',
-     $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
-   }
-   else {
-    $windows2->set( 'page-number-start', 1 );
-   }
-  }
- );
-
- my $signal;
- $windows2->signal_connect(
-  'started-process' => sub {
-   my ( $widget, $message ) = @_;
-   $spbar->set_fraction(0);
-   $spbar->set_text($message);
-   $shbox->show_all;
-   $signal = $scbutton->signal_connect(
-    clicked => sub {
-     $windows2->cancel_scan;
-    }
-   );
-  }
- );
-
- $windows2->signal_connect(
-  'changed-progress' => sub {
-   my ( $widget, $progress, $message ) = @_;
-   if ( $progress == -1 ) {
-    $spbar->pulse;
-   }
-   else {
-    $spbar->set_fraction($progress);
-   }
-   $spbar->set_text($message) if ( defined $message );
-  }
- );
-
- $windows2->signal_connect(
-  'finished-process' => sub {
-   my ( $widget, $process, $button_signal ) = @_;
-   $scbutton->signal_handler_disconnect($button_signal)
-     if ( defined $button_signal );
-   $shbox->hide;
-
-   $windows2->scan_options( $SETTING{device} )
-     if ( $SETTING{'cycle sane handle'} and $process eq 'scan_pages' );
-  },
-  $signal
- );
-
- $windows2->signal_connect(
-  'process-error' => sub {
-   my ( $widget, $process, $msg ) = @_;
-   $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
-   $shbox->hide;
-   if ( $process =~ /^(?:get_devices|find_scan_options)$/x ) {
-    $windows2->hide;
-    undef $windows2;
-    show_message_dialog( $window, 'error', 'close', $msg );
-   }
-   else {
-    show_message_dialog( $windows2, 'error', 'close', $d_sane->get($msg) );
-   }
-  }
- );
-
- $windows2->signal_connect(
-  'changed-scan-option' => sub {
-   my ( $widget, $option, $value ) = @_;
-
-   # Note resolution
-   $SETTING{resolution} = $value
-     if ( $option eq SANE_NAME_SCAN_RESOLUTION );
-  }
- );
-
- # Profiles
- my @profiles = keys %{ $SETTING{profile} };
- foreach my $profile (@profiles) {
-  $windows2->add_profile( $profile, $SETTING{profile}{$profile} );
- }
- $windows2->signal_connect(
-  'changed-profile' => sub {
-   my ( $widget, $profile ) = @_;
-   $SETTING{'default profile'} = $profile;
-  }
- );
- $windows2->signal_connect(
-  'added-profile' => sub {
-   my ( $widget, $name, $profile ) = @_;
-   $SETTING{profile}{$name} = $profile;
-  }
- );
- $windows2->signal_connect(
-  'removed-profile' => sub {
-   my ( $widget, $profile ) = @_;
-   delete $SETTING{profile}{$profile};
-  }
- );
-
- # Update the default profile when the scan options change
- $windows2->signal_connect(
-  'changed-current-scan-options' => sub {
-   my ( $widget, $option_array ) = @_;
-   $SETTING{'default-scan-options'} = $option_array;
-  }
- );
-
- # Can't set the paper or profile until the options have been loaded
- $windows2->signal_connect(
-  'reloaded-scan-options' => sub {
-   $windows2->set( 'paper-formats', $SETTING{Paper} );
-   $windows2->set( 'paper',         $SETTING{'Paper size'} )
-     if ( defined $SETTING{'Paper size'} );
-
-   if ( defined $SETTING{'default profile'} ) {
-    $windows2->set( 'profile', $SETTING{'default profile'} );
-   }
-   elsif ( defined $SETTING{'default-scan-options'} ) {
-    $windows2->set( 'current-scan-options', $SETTING{'default-scan-options'} );
-   }
-   elsif (@profiles) {
-    $windows2->set( 'profile', $profiles[0] );
-   }
-  }
- );
- $windows2->signal_connect(
-  'changed-paper-formats' => sub {
-   my ( $widget, $formats ) = @_;
-   $SETTING{Paper} = $formats;
-  }
- );
- $windows2->signal_connect(
-  'changed-paper' => sub {
-   my ( $widget, $paper ) = @_;
-   $SETTING{'Paper size'} = $paper;
-  }
- );
-
- my $vbox = $windows2->get('vbox');
- my (
-  $rotate,     $side,      $side2,      $tesslang,  $cflang,
-  $rbutton,    $r2button,  $ubutton,    $obutton,   $comboboxs,
-  $comboboxs2, $comboboxr, $comboboxr2, $comboboxe, $comboboxtl,
-  $comboboxcl, $hboxtl,    $hboxcl
- ) = add_postprocessing_options($vbox);
- my @rotate   = @$rotate;
- my @side     = @$side;
- my @side2    = @$side2;
- my @tesslang = @$tesslang;
- my @cflang   = @$cflang;
-
- # Show window
- $windows2->show_all;
- $hboxtl->hide_all
-   if (
-  defined($hboxtl)
-  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
-   or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
-   );
- $hboxcl->hide_all
-   if ( defined($hboxcl)
-  and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
-
- $windows2->signal_connect(
-  'new-scan' => sub {
-   my ( $widget, $n ) = @_;
-
-   # Update undo/redo buffers
-   take_snapshot();
-
-   $SETTING{'rotate facing'}  = 0;
-   $SETTING{'rotate reverse'} = 0;
-   if ( $rbutton->get_active ) {
-    if ( $side[ $comboboxs->get_active ]->[0] eq 'both' ) {
-     $SETTING{'rotate facing'}  = $rotate[ $comboboxr->get_active ]->[0];
-     $SETTING{'rotate reverse'} = $SETTING{'rotate facing'};
-    }
-    elsif ( $side[ $comboboxs->get_active ]->[0] eq 'facing' ) {
-     $SETTING{'rotate facing'} = $rotate[ $comboboxr->get_active ]->[0];
-    }
-    else {
-     $SETTING{'rotate reverse'} = $rotate[ $comboboxr->get_active ]->[0];
-    }
-    if ( $r2button->get_active ) {
-     if ( $side2[ $comboboxs2->get_active ]->[0] eq 'facing' ) {
-      $SETTING{'rotate facing'} = $rotate[ $comboboxr2->get_active ]->[0];
-     }
-     else {
-      $SETTING{'rotate reverse'} = $rotate[ $comboboxr2->get_active ]->[0];
-     }
-    }
-   }
-   $logger->info("rotate facing $SETTING{'rotate facing'}");
-   $logger->info("rotate reverse $SETTING{'rotate reverse'}");
-
-   $SETTING{'unpaper on scan'} = $ubutton->get_active;
-   $logger->info("unpaper $SETTING{'unpaper on scan'}");
-   $SETTING{'OCR on scan'} = $obutton->get_active;
-   $logger->info("OCR $SETTING{'OCR on scan'}");
-   if ( $SETTING{'OCR on scan'} ) {
-    $SETTING{'ocr engine'}   = $ocr_engine[ $comboboxe->get_active ]->[0];
-    $SETTING{'ocr language'} = $tesslang[ $comboboxtl->get_active ]->[0]
-      if ( $SETTING{'ocr engine'} eq 'tesseract'
-     or $SETTING{'ocr engine'} eq 'ocropus' );
-    $SETTING{'ocr language'} = $cflang[ $comboboxcl->get_active ]->[0]
-      if ( $SETTING{'ocr engine'} eq 'cuneiform' );
-   }
-
-   # If the scan can't be loaded then blow the scanning dialog away and
-   # show an error
-   $rotate = $n % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
-   if ( defined $test_image ) {
-    import_scan(
-     filename => $test_image,
-     page     => $n,
-     delete   => FALSE,
-     rotate   => $rotate,
-     unpaper  => $SETTING{'unpaper on scan'},
-     ocr      => $SETTING{'OCR on scan'}
-    );
-   }
-   else {
-    my $options = $windows2->get('available-scan-options');
-    my $opt     = $options->by_name(SANE_NAME_SCAN_RESOLUTION);
-    $SETTING{resolution} =
-      ( defined($opt) and defined( $opt->{val} ) )
-      ? $opt->{val}
-      : $Gscan2pdf::Document::POINTS_PER_INCH;
-    $logger->info("Importing scan with resolution=$SETTING{resolution}");
-    import_scan(
-     filename   => File::Spec->catdir( $session, "out$n.pnm" ),
-     page       => $n,
-     resolution => $SETTING{resolution},
-     delete     => TRUE,
-     rotate     => $rotate,
-     unpaper    => $SETTING{'unpaper on scan'},
-     ocr        => $SETTING{'OCR on scan'}
-    );
-   }
-  }
- );
-
- if (@device_list) {
-  $windows2->set( 'device-list', \@device_list );
- }
- else {
-  $windows2->get_devices;
- }
-
- return;
-}
-
 # Called either from changed-value signal of spinbutton,
 # or row-changed signal of simplelist
 
 sub update_start {
- return unless ( defined($windows) or defined($windows2) );
- my $dialog = defined($windows) ? $windows : $windows2;
- my $value = $dialog->get('page-number-start');
- $start = $dialog->get('page-number-start') unless ( defined $start );
+ return unless ( defined $windows );
+ my $value = $windows->get('page-number-start');
+ $start = $windows->get('page-number-start') unless ( defined $start );
  my $step = $value - $start;
- $step = $dialog->get('page-number-increment') if ( $step == 0 );
+ $step = $windows->get('page-number-increment') if ( $step == 0 );
  my $exists = TRUE;
  my $i = $step > 0 ? 0 : $#{ $slist->{data} };
  $start = $value;
@@ -4382,7 +4054,7 @@ sub update_start {
    $i += $step > 0 ? 1 : -1;
   }
  }
- $dialog->set( 'page-number-start', $value );
+ $windows->set( 'page-number-start', $value );
  $start = $value;
 
  update_number();
@@ -4392,12 +4064,11 @@ sub update_start {
 # Update the number of pages to scan spinbutton if necessary
 
 sub update_number {
- return unless ( defined($windows) or defined($windows2) );
- my $dialog = defined($windows) ? $windows : $windows2;
- my $n = $slist->pages_possible( $dialog->get('page-number-start'),
-  $dialog->get('page-number-increment') );
- $dialog->set( 'num-pages', $n )
-   if ( $n > 0 and $n < $dialog->get('num-pages') );
+ return unless ( defined $windows );
+ my $n = $slist->pages_possible( $windows->get('page-number-start'),
+  $windows->get('page-number-increment') );
+ $windows->set( 'num-pages', $n )
+   if ( $n > 0 and $n < $windows->get('num-pages') );
  return;
 }
 
@@ -4703,16 +4374,15 @@ sub delete_pages {
 # Reset start page number after delete or new
 
 sub reset_start {
- my $dialog = defined($windows) ? $windows : $windows2;
  if ( $#{ $slist->{data} } > -1 ) {
-  my $start_page = $dialog->get('page-number-start');
-  my $step       = $dialog->get('page-number-increment');
-  $dialog->set( 'page-number-start',
+  my $start_page = $windows->get('page-number-start');
+  my $step       = $windows->get('page-number-increment');
+  $windows->set( 'page-number-start',
    $slist->{data}[ $#{ $slist->{data} } ][0] + $step )
     if ( $start_page > $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
  }
  else {
-  $dialog->set( 'page-number-start', 1 );
+  $windows->set( 'page-number-start', 1 );
  }
  return;
 }
@@ -6332,18 +6002,6 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  my $combob = combobox_from_array(@frontends);
  my $cbcsh =
    Gtk2::CheckButton->new_with_label( $d->get('Cycle SANE handle after scan') );
- $combob->signal_connect(
-  changed => sub {
-
-   if ( $frontends[ $combob->get_active ][0] eq 'libsane-perl' ) {
-    $cbcsh->set_sensitive(TRUE);
-   }
-   else {
-    $cbcsh->set_sensitive(FALSE);
-   }
-  }
- );
- combobox_set_active( $combob, $SETTING{frontend}, @frontends );
  $hbox->pack_end( $combob, TRUE, TRUE, 0 );
  $tooltips->set_tip( $hbox, $d->get("Interface used for scanner access") );
 
@@ -6353,12 +6011,12 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $vbox1->pack_start( $cbcsh, FALSE, FALSE, 0 );
 
  # scan command prefix
- $hbox = Gtk2::HBox->new;
- $vbox1->pack_start( $hbox, FALSE, FALSE, 0 );
+ my $hboxp = Gtk2::HBox->new;
+ $vbox1->pack_start( $hboxp, FALSE, FALSE, 0 );
  $label = Gtk2::Label->new( $d->get('Scan command prefix') );
- $hbox->pack_start( $label, FALSE, FALSE, 0 );
+ $hboxp->pack_start( $label, FALSE, FALSE, 0 );
  my $preentry = Gtk2::Entry->new;
- $hbox->add($preentry);
+ $hboxp->add($preentry);
  $preentry->set_text( $SETTING{'scan prefix'} )
    if defined( $SETTING{'scan prefix'} );
 
@@ -6369,10 +6027,10 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $vbox1->pack_start( $cbc, FALSE, FALSE, 0 );
 
  # Clear options cache
- my $button =
+ my $buttonc =
    Gtk2::Button->new( $d->get('Clear device-dependent options cache') );
- $vbox1->pack_start( $button, FALSE, FALSE, 0 );
- $button->signal_connect(
+ $vbox1->pack_start( $buttonc, FALSE, FALSE, 0 );
+ $buttonc->signal_connect(
   clicked => sub {
    delete $SETTING{cache} if ( defined $SETTING{cache} );
    $windows->set( 'options-cache', undef ) if ( defined $windows );
@@ -6380,11 +6038,11 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  );
 
  # Option visibility
- my $frame = Gtk2::Frame->new( $d->get('Option visibility & control') );
- $vbox1->pack_start( $frame, TRUE, TRUE, 0 );
+ my $oframe = Gtk2::Frame->new( $d->get('Option visibility & control') );
+ $vbox1->pack_start( $oframe, TRUE, TRUE, 0 );
  my $vvbox = Gtk2::VBox->new;
  $vvbox->set_border_width($border_width);
- $frame->add($vvbox);
+ $oframe->add($vvbox);
  my $scwin = Gtk2::ScrolledWindow->new;
  $vvbox->pack_start( $scwin, TRUE, TRUE, 0 );
  $scwin->set_policy(qw/never automatic/);
@@ -6459,6 +6117,26 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
   }
  }
 
+ $combob->signal_connect(
+  changed => sub {
+   if ( $frontends[ $combob->get_active ][0] eq 'libsane-perl' ) {
+    $cbcsh->set_sensitive(TRUE);
+    $hboxp->set_sensitive(FALSE);
+    $cbc->set_sensitive(FALSE);
+    $buttonc->set_sensitive(FALSE);
+    $oframe->set_sensitive(FALSE);
+   }
+   else {
+    $cbcsh->set_sensitive(FALSE);
+    $hboxp->set_sensitive(TRUE);
+    $cbc->set_sensitive(TRUE);
+    $buttonc->set_sensitive(TRUE);
+    $oframe->set_sensitive(TRUE);
+   }
+  }
+ );
+ combobox_set_active( $combob, $SETTING{frontend}, @frontends );
+
  my $vbox2 = Gtk2::VBox->new;
  $notebook->append_page( $vbox2, $d->get('General options') );
  $vbox2->set_border_width($border_width);
@@ -6499,7 +6177,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  my $tmpentry = Gtk2::Entry->new;
  $hbox->add($tmpentry);
  $tmpentry->set_text( dirname($session) );
- $button = Gtk2::Button->new( $d->get('Browse') );
+ my $button = Gtk2::Button->new( $d->get('Browse') );
  $button->signal_connect(
   clicked => sub {
    my $file_chooser = Gtk2::FileChooserDialog->new(
@@ -6565,7 +6243,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $hbox->pack_end( $comboo, TRUE, TRUE, 0 );
 
  # User-defined tools
- $frame = Gtk2::Frame->new( $d->get('User-defined tools') );
+ my $frame = Gtk2::Frame->new( $d->get('User-defined tools') );
  $vbox2->pack_start( $frame, TRUE, TRUE, 0 );
  my $vboxt = Gtk2::VBox->new;
  $vboxt->set_border_width($border_width);
@@ -6591,12 +6269,8 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
    $windowr->hide;
    if ( $SETTING{frontend} ne $frontends[ $combob->get_active ][0] ) {
     $SETTING{frontend} = $frontends[ $combob->get_active ][0];
-    if ( $SETTING{frontend} eq 'libsane-perl' ) {
-     undef $windows if ( defined $windows );
-    }
-    else {
-     undef $windows2 if ( defined $windows2 );
-    }
+    $windows->hide;
+    undef $windows;
    }
    else {
     $SETTING{'visible-scan-options'} = ();
@@ -6605,12 +6279,9 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
      $SETTING{'visible-scan-options'}{ $_->[0] } = $_->[2];
      push @{ $SETTING{'scan-reload-triggers'} }, $_->[0] if ( $_->[3] );
     }
-    if ( defined $windows ) {
+    if ( $SETTING{frontend} ne 'libsane-perl' ) {
      $windows->set( 'visible-scan-options', $SETTING{'visible-scan-options'} );
      $windows->set( 'reload-triggers',      $SETTING{'scan-reload-triggers'} );
-    }
-    elsif ( defined $windows2 ) {
-     $windows2->set( 'visible-scan-options', $SETTING{'visible-scan-options'} );
     }
    }
    $SETTING{'cycle sane handle'} = $cbcsh->get_active;

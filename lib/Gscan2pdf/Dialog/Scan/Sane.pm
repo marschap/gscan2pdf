@@ -407,7 +407,8 @@ sub get_devices {
    use Data::Dumper;
    $logger->info( "Sane->get_devices returned: ", Dumper( \@device_list ) );
    if ( @device_list == 0 ) {
-    $self->signal_emit( 'process-error', $d->get('No devices found') );
+    $self->signal_emit( 'process-error', 'get_devices',
+     $d->get('No devices found') );
     $self->destroy;
     undef $self;
     return FALSE;
@@ -463,7 +464,7 @@ sub scan_options {
     },
     sub {    # error callback
      my ($message) = @_;
-     $self->signal_emit( 'process-error',
+     $self->signal_emit( 'process-error', 'find_scan_options',
       $d->get( 'Error retrieving scanner options: ' . $message ) );
      $self->destroy;
     }
@@ -471,7 +472,7 @@ sub scan_options {
   },
   error_callback => sub {
    my ($message) = @_;
-   $self->signal_emit( 'process-error',
+   $self->signal_emit( 'process-error', 'open_device',
     $d->get( 'Error opening device: ' . $message ) );
    $self->destroy;
   }
@@ -1435,7 +1436,7 @@ sub scan {
    if ( $npages > 0 and $step < 0 );
 
  if ( $start == 1 and $step < 0 ) {
-  $self->signal_emit( 'process-error',
+  $self->signal_emit( 'process-error', 'scan',
    $d->get('Must scan facing pages first') );
   return TRUE;
  }
