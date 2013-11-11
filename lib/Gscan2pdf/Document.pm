@@ -943,10 +943,10 @@ sub save_session {
 }
 
 sub open_session {
- my ( $self, $dir, $filename, @filenamelist ) = @_;
+ my ( $self, $dir, $filename, $error_callback ) = @_;
  if ( defined $filename ) {
   my $tar = Archive::Tar->new( $filename, TRUE );
-  @filenamelist = $tar->list_files;
+  my @filenamelist = $tar->list_files;
   $tar->extract;
   $dir = dirname( $filenamelist[0] );
  }
@@ -971,10 +971,17 @@ sub open_session {
   }
 
   # Populate the SimpleList
-  my $page = Gscan2pdf::Page->new( %{ $session{$pagenum} } );
-  my $thumb =
-    get_pixbuf( $page->{filename}, $self->{heightt}, $self->{widtht} );
-  push @{ $self->{data} }, [ $pagenum, $thumb, $page ];
+  try {
+   my $page = Gscan2pdf::Page->new( %{ $session{$pagenum} } );
+   my $thumb =
+     get_pixbuf( $page->{filename}, $self->{heightt}, $self->{widtht} );
+   push @{ $self->{data} }, [ $pagenum, $thumb, $page ];
+  }
+  catch {
+   $error_callback->(
+    sprintf( $d->get("Error importing page %d. Ignoring."), $pagenum ) )
+     if $error_callback;
+  };
  }
  $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
    if defined( $self->{row_changed_signal} );

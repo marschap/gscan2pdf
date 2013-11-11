@@ -1752,7 +1752,14 @@ sub add_filter {
 sub open_session {
  my ($filename) = @_;
  $logger->info("Restoring session in $session");
- $slist->open_session( $session, $filename );
+ $slist->open_session(
+  $session,
+  $filename,
+  sub {
+   my ($message) = @_;
+   show_message_dialog( $window, 'error', 'close', $message );
+  }
+ );
  update_uimanager();
  return;
 }
