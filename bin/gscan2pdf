@@ -3392,13 +3392,7 @@ sub scan_dialog {
   'changed-device-list' => \&changed_device_list_callback );
 
  # Update default device
- $windows->signal_connect(
-  'changed-device' => sub {
-   my ( $widget, $device ) = @_;
-   $SETTING{device} = $device
-     if ( defined($device) and $device ne '' );
-  }
- );
+ $windows->signal_connect( 'changed-device' => \&changed_device_callback );
 
  # Set default
  $windows->signal_connect(
@@ -3425,17 +3419,7 @@ sub scan_dialog {
  );
 
  $windows->signal_connect(
-  'changed-side-to-scan' => sub {
-   my ( $widget, $side ) = @_;
-   if ( $#{ $slist->{data} } > -1 ) {
-    $windows->set( 'page-number-start',
-     $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
-   }
-   else {
-    $windows->set( 'page-number-start', 1 );
-   }
-  }
- );
+  'changed-side-to-scan' => \&changed_side_to_scan_callback );
 
  my $signal;
  $windows->signal_connect(
@@ -3466,24 +3450,35 @@ sub scan_dialog {
  );
 
  $windows->signal_connect(
-  'finished-process' => \&finished_process_callback,
-  $signal
- );
+  'finished-process' => sub {
+   my ( $widget, $process, $button_signal ) = @_;
+   $scbutton->signal_handler_disconnect($button_signal)
+     if ( defined $button_signal );
+   $shbox->hide;
 
- $windows->signal_connect(
-  'process-error' => \&process_error_callback,
-  $signal
- );
-
- $windows->signal_connect(
-  'changed-scan-option' => sub {
-   my ( $widget, $option, $value ) = @_;
-
-   # Note resolution
-   $SETTING{resolution} = $value
-     if ( $option eq SANE_NAME_SCAN_RESOLUTION );
+   $widget->scan_options( $SETTING{device} )
+     if ( $SETTING{'cycle sane handle'} and $process eq 'scan_pages' );
   }
  );
+
+ $windows->signal_connect(
+  'process-error' => sub {
+   my ( $widget, $process, $msg ) = @_;
+   $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   $shbox->hide;
+   if ( $process =~ /^(?:get_devices|find_scan_options)$/x ) {
+    $widget->hide;
+    undef $widget;
+    show_message_dialog( $window, 'error', 'close', $msg );
+   }
+   else {
+    show_message_dialog( $widget, 'error', 'close', $d_sane->get($msg) );
+   }
+  }
+ );
+
+ $windows->signal_connect(
+  'changed-scan-option' => \&changed_scan_option_callback );
 
  # Profiles
  for my $profile ( keys %{ $SETTING{profile} } ) {
@@ -3547,29 +3542,10 @@ sub scan_dialog {
  return;
 }
 
-sub finished_process_callback {
- my ( $widget, $process, $button_signal, $signal ) = @_;
- $scbutton->signal_handler_disconnect($button_signal)
-   if ( defined $button_signal );
- $shbox->hide;
-
- $widget->scan_options( $SETTING{device} )
-   if ( $SETTING{'cycle sane handle'} and $process eq 'scan_pages' );
- return;
-}
-
-sub process_error_callback {
- my ( $widget, $process, $msg, $signal ) = @_;
- $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
- $shbox->hide;
- if ( $process =~ /^(?:get_devices|find_scan_options)$/x ) {
-  $widget->hide;
-  undef $widget;
-  show_message_dialog( $window, 'error', 'close', $msg );
- }
- else {
-  show_message_dialog( $widget, 'error', 'close', $d_sane->get($msg) );
- }
+sub changed_device_callback {
+ my ( $widget, $device ) = @_;
+ $SETTING{device} = $device
+   if ( defined($device) and $device ne '' );
  return;
 }
 
@@ -3592,6 +3568,18 @@ sub changed_device_list_callback {
  return;
 }
 
+sub changed_side_to_scan_callback {
+ my ( $widget, $side ) = @_;
+ if ( $#{ $slist->{data} } > -1 ) {
+  $windows->set( 'page-number-start',
+   $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
+ }
+ else {
+  $windows->set( 'page-number-start', 1 );
+ }
+ return;
+}
+
 sub reloaded_scan_options_callback {
  $windows->set( 'paper-formats', $SETTING{Paper} );
  $windows->set( 'paper',         $SETTING{'Paper size'} )
@@ -3607,6 +3595,15 @@ sub reloaded_scan_options_callback {
  elsif (@profiles) {
   $windows->set( 'profile', $profiles[0] );
  }
+ return;
+}
+
+sub changed_scan_option_callback {
+ my ( $widget, $option, $value ) = @_;
+
+ # Note resolution
+ $SETTING{resolution} = $value
+   if ( $option eq SANE_NAME_SCAN_RESOLUTION );
  return;
 }
 
