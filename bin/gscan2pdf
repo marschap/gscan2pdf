@@ -2286,135 +2286,61 @@ EOS
  return;
 }
 
-# Throw up file selector and save selected pages as PDF under given name.
+# Save selected pages as PDF under given name.
 
 sub save_PDF {
+ my ($filename) = @_;
 
- # cd back to cwd to save
- chdir $SETTING{'cwd'};
+ # Compile list of pages
+ my @list_of_pages;
+ my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+ for (@pagelist) {
+  push @list_of_pages, $slist->{data}[$_][2];
+ }
 
- # Set up file selector
- my $file_chooser = Gtk2::FileChooserDialog->new(
-  $d->get('PDF filename'),
-  $windowi, 'save',
-  'gtk-cancel' => 'cancel',
-  'gtk-save'   => 'ok'
+ # Compile options
+ my %options = (
+  compression      => $SETTING{'pdf compression'},
+  downsample       => $SETTING{downsample},
+  'downsample dpi' => $SETTING{'downsample dpi'},
+  quality          => $SETTING{quality},
+  font             => $SETTING{'pdf font'},
  );
 
- my ( $dday, $dmonth, $dyear ) =
-   ( localtime( time + $SETTING{'date offset'} * 24 * 60 * 60 ) )[ 3, 4, 5 ];
- $dyear += 1900;
- $dmonth = sprintf( "%02d", $dmonth + 1 );
- $dday   = sprintf( "%02d", $dday );
- my ( $tday, $tmonth, $tyear ) = ( localtime(time) )[ 3, 4, 5 ];
- $tyear += 1900;
- $tmonth = sprintf( "%02d", $tmonth + 1 );
- $tday   = sprintf( "%02d", $tday );
-
- my $filename = $SETTING{'default filename'};
- $filename =~ s/%a/$SETTING{author}/g;
- $filename =~ s/%t/$SETTING{title}/g;
- $filename =~ s/%y/$dyear/g;
- $filename =~ s/%Y/$tyear/g;
- $filename =~ s/%m/$dmonth/g;
- $filename =~ s/%M/$tmonth/g;
- $filename =~ s/%d/$dday/g;
- $filename =~ s/%D/$tday/g;
-
- $file_chooser->set_current_name($filename);
- $file_chooser->set_default_response('ok');
- $file_chooser->set_current_folder( $SETTING{'cwd'} );
- add_filter( $file_chooser, $d->get('PDF files'), 'pdf' );
- $file_chooser->set_do_overwrite_confirmation(TRUE);
- $file_chooser->signal_connect(
-  response => sub {
-   my ( $dialog, $response ) = @_;
-   $logger->debug("PDF save filename dialog returned $response");
-   if ( $response eq 'ok' ) {
-    $filename = $file_chooser->get_filename;
-    if ( $filename !~ /\.pdf$/ix ) {
-     $filename = $filename . '.pdf';
-     if ( -f $filename ) {
-
-      # File exists; get the file chooser to ask the user to confirm.
-      $file_chooser->set_filename($filename);
-
-      # Give the name change time to take effect.
-      Glib::Idle->add( sub { $file_chooser->response('ok'); } );
-      return;
-     }
-    }
-
-    # Check that the file can be written
-    if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
-     show_message_dialog( $file_chooser, 'error', 'close',
-      sprintf( $d->get("File %s is read-only"), $filename ) );
-     return;
-    }
-
-    # Update cwd
-    $SETTING{'cwd'} = dirname($filename);
-
-    # Compile list of pages
-    my @list_of_pages;
-    my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
-    for (@pagelist) {
-     push @list_of_pages, $slist->{data}[$_][2];
-    }
-
-    # Compile options
-    my %options = (
-     compression      => $SETTING{'pdf compression'},
-     downsample       => $SETTING{downsample},
-     'downsample dpi' => $SETTING{'downsample dpi'},
-     quality          => $SETTING{quality},
-     font             => $SETTING{'pdf font'},
-    );
-
-    # Create the PDF
-    $logger->debug("Started saving $filename");
-    my ( $signal, $pid );
-    $pid = $slist->save_pdf(
-     path            => $filename,
-     list_of_pages   => \@list_of_pages,
-     metadata        => get_pdf_metadata(),
-     options         => \%options,
-     queued_callback => sub {
-      return update_tpbar(@_);
-     },
-     started_callback => sub {
-      my ( $thread, $process, $completed, $total ) = @_;
-      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
-      return TRUE if ( defined $signal );
-     },
-     running_callback => sub {
-      return update_tpbar(@_);
-     },
-     finished_callback => sub {
-      my ( $new_page, $pending ) = @_;
-      $thbox->hide_all unless $pending;
-      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
-      mark_pages(@pagelist);
-      system("xdg-open \"$filename\" &")
-        if ( defined( $SETTING{'view files toggle'} )
-       and $SETTING{'view files toggle'} );
-      $logger->debug("Finished saving $filename");
-     },
-     error_callback => sub {
-      my ($message) = @_;
-      show_message_dialog( $window, 'error', 'close', $message );
-     }
-    );
-
-    $windowi->hide if defined $windowi;
-   }
-   $file_chooser->destroy;
+ # Create the PDF
+ $logger->debug("Started saving $filename");
+ my ( $signal, $pid );
+ $pid = $slist->save_pdf(
+  path            => $filename,
+  list_of_pages   => \@list_of_pages,
+  metadata        => get_pdf_metadata(),
+  options         => \%options,
+  queued_callback => sub {
+   return update_tpbar(@_);
+  },
+  started_callback => sub {
+   my ( $thread, $process, $completed, $total ) = @_;
+   $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+   return TRUE if ( defined $signal );
+  },
+  running_callback => sub {
+   return update_tpbar(@_);
+  },
+  finished_callback => sub {
+   my ( $new_page, $pending ) = @_;
+   $thbox->hide_all unless $pending;
+   $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   mark_pages(@pagelist);
+   system("xdg-open \"$filename\" &")
+     if ( defined( $SETTING{'view files toggle'} )
+    and $SETTING{'view files toggle'} );
+   $logger->debug("Finished saving $filename");
+  },
+  error_callback => sub {
+   my ($message) = @_;
+   show_message_dialog( $window, 'error', 'close', $message );
   }
  );
- $file_chooser->show;
-
- # cd back to tempdir
- chdir $session;
  return;
 }
 
@@ -2656,45 +2582,12 @@ sub save_dialog {
  # Fill image type ComboBox
  my $combobi = combobox_from_array(@type);
  $combobi->signal_connect(
-  changed => sub {
-   if ( $type[ $combobi->get_active ][0] eq 'pdf' ) {
-    $vboxp->show_all;
-    $hboxf->show_all;
-    if ( $pdf_compression[ $combob->get_active ][0] eq 'jpg' ) {
-     $hboxpq->show_all;
-    }
-    else {
-     $hboxpq->hide_all;
-     $windowi->resize( 100, 100 );    # Doesn't matter that 200x200 is too small
-    }
-   }
-   else {
-    $vboxp->hide_all;
-    $hboxf->hide_all;
-    $windowi->resize( 100, 100 );     # Doesn't matter that 200x200 is too small
-   }
-   if ($type[ $combobi->get_active ][0] eq 'tif'
-    or $type[ $combobi->get_active ][0] eq 'ps' )
-   {
-    $hboxc->show_all;
-   }
-   else {
-    $hboxc->hide_all;
-    $windowi->resize( 100, 100 );     # Doesn't matter that 200x200 is too small
-   }
-   if (
-    $type[ $combobi->get_active ][0] eq 'jpg'
-    or ( $type[ $combobi->get_active ][0] eq 'tif'
-     and $tiff_compression[ $combobtc->get_active ][0] eq 'jpeg' )
-     )
-   {
-    $hboxtq->show_all;
-   }
-   else {
-    $hboxtq->hide_all;
-    $windowi->resize( 100, 100 );     # Doesn't matter that 200x200 is too small
-   }
-  }
+  changed => \&image_type_changed_callback,
+  [
+   \@type,    $vboxp,  $hboxf, \@pdf_compression,
+   $combob,   $hboxpq, $hboxc, \@tiff_compression,
+   $combobtc, $hboxtq
+  ]
  );
  combobox_set_active( $combobi, $SETTING{'image type'}, @type );
  $hboxi->pack_end( $combobi, FALSE, FALSE, 0 );
@@ -2707,304 +2600,15 @@ sub save_dialog {
  my $sbutton = Gtk2::Button->new_from_stock('gtk-save');
  $hboxb->pack_start( $sbutton, TRUE, TRUE, 0 );
  $sbutton->signal_connect(
-  clicked => sub {
-
-   # dig out the image type, compression and quality
-   $SETTING{'image type'} = $type[ $combobi->get_active ][0];
-
-   given ( $SETTING{'image type'} ) {
-    when ('pdf') {
-
-     # dig out the compression
-     $SETTING{'downsample'}      = $buttond->get_active;
-     $SETTING{'downsample dpi'}  = $spinbuttond->get_value;
-     $SETTING{'pdf compression'} = $pdf_compression[ $combob->get_active ][0];
-     $SETTING{'quality'}         = $spinbuttonpq->get_value;
-
-     $SETTING{'pdf font'} = $fonts[ $combof->get_active ][0];
-
-     update_PDF_settings( $entrya, $entryt, $entrys, $entryk );
-     save_PDF();
-    }
-    when ('djvu') {
-     save_djvu();
-    }
-    when ('tif') {
-     $SETTING{'tiff compression'} =
-       $tiff_compression[ $combobtc->get_active ][0];
-     $SETTING{'quality'} = $spinbuttontq->get_value;
-
-     # cd back to cwd to save
-     chdir $SETTING{'cwd'};
-
-     # Set up file selector
-     my $file_chooser = Gtk2::FileChooserDialog->new(
-      $d->get('TIFF filename'),
-      $windowi, 'save',
-      'gtk-cancel' => 'cancel',
-      'gtk-save'   => 'ok'
-     );
-     $file_chooser->set_default_response('ok');
-     $file_chooser->set_current_folder( $SETTING{'cwd'} );
-     add_filter( $file_chooser, $d->get('Image files'),
-      $SETTING{'image type'} );
-     $file_chooser->set_do_overwrite_confirmation(TRUE);
-     $file_chooser->signal_connect(
-      response => sub {
-       my ( $dialog, $response ) = @_;
-       if ( $response eq 'ok' ) {
-        my $filename = $file_chooser->get_filename;
-        if ( $filename !~ /\.tif$/ix ) {
-         $filename = $filename . '.tif';
-         if ( -f $filename ) {
-
-          # File exists; get the file chooser to ask the user to confirm.
-          $file_chooser->set_filename($filename);
-
-          # Give the name change time to take effect.
-          Glib::Idle->add( sub { $file_chooser->response('ok'); } );
-          return;
-         }
-        }
-
-        # Check that the file can be written
-        if ( not -w dirname($filename)
-         or ( -f $filename and not -w $filename ) )
-        {
-         show_message_dialog( $file_chooser, 'error', 'close',
-          sprintf( $d->get("File %s is read-only"), $filename ) );
-         return;
-        }
-
-        # Update cwd
-        $SETTING{'cwd'} = dirname($filename);
-
-        $windowi->hide if defined $windowi;
-        save_TIFF($filename);
-       }
-       $file_chooser->destroy;
-      }
-     );
-     $file_chooser->show;
-
-     # cd back to tempdir
-     chdir $session;
-    }
-    when ('txt') {
-
-     # cd back to cwd to save
-     chdir $SETTING{'cwd'};
-
-     # Set up file selector
-     my $file_chooser = Gtk2::FileChooserDialog->new(
-      $d->get('Text filename'),
-      $windowi, 'save',
-      'gtk-cancel' => 'cancel',
-      'gtk-save'   => 'ok'
-     );
-     $file_chooser->set_default_response('ok');
-     $file_chooser->set_current_folder( $SETTING{'cwd'} );
-     $file_chooser->set_do_overwrite_confirmation(TRUE);
-     add_filter( $file_chooser, $d->get('Text files'), 'txt' );
-     $file_chooser->signal_connect(
-      response => sub {
-       my ( $dialog, $response ) = @_;
-       if ( $response eq 'ok' ) {
-        my $filename = $file_chooser->get_filename;
-        if ( $filename !~ /\.txt$/ix ) {
-         $filename = $filename . '.txt';
-         if ( -f $filename ) {
-
-          # File exists; get the file chooser to ask the user to confirm.
-          $file_chooser->set_filename($filename);
-
-          # Give the name change time to take effect.
-          Glib::Idle->add( sub { $file_chooser->response('ok'); } );
-          return;
-         }
-        }
-
-        # Check that the file can be written
-        if ( not -w dirname($filename)
-         or ( -f $filename and not -w $filename ) )
-        {
-         show_message_dialog( $file_chooser, 'error', 'close',
-          sprintf( $d->get("File %s is read-only"), $filename ) );
-         return;
-        }
-
-        # Update cwd
-        $SETTING{'cwd'} = dirname($filename);
-
-        # Compile list of pages
-        my @list_of_pages;
-        my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
-        for (@pagelist) {
-         push @list_of_pages, $slist->{data}[$_][2];
-        }
-
-        my ( $signal, $pid );
-        $pid = $slist->save_text(
-         path            => $filename,
-         list_of_pages   => \@list_of_pages,
-         queued_callback => sub {
-          return update_tpbar(@_);
-         },
-         started_callback => sub {
-          my ( $thread, $process, $completed, $total ) = @_;
-          $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
-          return TRUE if ( defined $signal );
-         },
-         running_callback => sub {
-          return update_tpbar(@_);
-         },
-         finished_callback => sub {
-          my ( $new_page, $pending ) = @_;
-          $thbox->hide_all unless $pending;
-          $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
-          mark_pages(@pagelist);
-          system("xdg-open \"$filename\" &")
-            if ( defined( $SETTING{'view files toggle'} )
-           and $SETTING{'view files toggle'} );
-          $logger->debug("Finished saving $filename");
-         },
-         error_callback => sub {
-          my ($message) = @_;
-          show_message_dialog( $window, 'error', 'close', $message );
-         }
-        );
-        $windowi->hide if defined $windowi;
-       }
-       $file_chooser->destroy;
-      }
-     );
-     $file_chooser->show;
-
-     # cd back to tempdir
-     chdir $session;
-    }
-    when ('ps') {
-     $SETTING{'tiff compression'} =
-       $tiff_compression[ $combobtc->get_active ][0];
-     $SETTING{'quality'} = $spinbuttontq->get_value;
-
-     # cd back to cwd to save
-     chdir $SETTING{'cwd'};
-
-     # Set up file selector
-     my $file_chooser = Gtk2::FileChooserDialog->new(
-      $d->get('PS filename'),
-      $windowi, 'save',
-      'gtk-cancel' => 'cancel',
-      'gtk-save'   => 'ok'
-     );
-     $file_chooser->set_default_response('ok');
-     $file_chooser->set_current_folder( $SETTING{'cwd'} );
-     add_filter( $file_chooser, $d->get('Postscript files'), 'ps' );
-     $file_chooser->set_do_overwrite_confirmation(TRUE);
-     $file_chooser->signal_connect(
-      response => sub {
-       my ( $dialog, $response ) = @_;
-       if ( $response eq 'ok' ) {
-        my $filename = $file_chooser->get_filename;
-        if ( $filename !~ /\.ps$/ix ) {
-         $filename = $filename . '.ps';
-         if ( -f $filename ) {
-
-          # File exists; get the file chooser to ask the user to confirm.
-          $file_chooser->set_filename($filename);
-
-          # Give the name change time to take effect.
-          Glib::Idle->add( sub { $file_chooser->response('ok'); } );
-          return;
-         }
-        }
-
-        # Check that the file can be written
-        if ( not -w dirname($filename)
-         or ( -f $filename and not -w $filename ) )
-        {
-         show_message_dialog( $file_chooser, 'error', 'close',
-          sprintf( $d->get("File %s is read-only"), $filename ) );
-         return;
-        }
-
-        # Update cwd
-        $SETTING{'cwd'} = dirname($filename);
-
-        # Create the PS
-        my $tif = File::Temp->new( DIR => $session, SUFFIX => '.tif' );
-        $windowi->hide if defined $windowi;
-        save_TIFF( $tif->filename, $filename );
-       }
-       $file_chooser->destroy;
-      }
-     );
-     $file_chooser->show;
-
-     # cd back to tempdir
-     chdir $session;
-    }
-    when ('session') {
-
-     # cd back to cwd to save
-     chdir $SETTING{'cwd'};
-
-     # Set up file selector
-     my $file_chooser = Gtk2::FileChooserDialog->new(
-      $d->get('gscan2pdf session filename'),
-      $windowi, 'save',
-      'gtk-cancel' => 'cancel',
-      'gtk-save'   => 'ok'
-     );
-     $file_chooser->set_default_response('ok');
-     $file_chooser->set_current_folder( $SETTING{'cwd'} );
-     add_filter( $file_chooser, $d->get('gscan2pdf session files'), 'gs2p' );
-     $file_chooser->set_do_overwrite_confirmation(TRUE);
-     $file_chooser->signal_connect(
-      response => sub {
-       my ( $dialog, $response ) = @_;
-       if ( $response eq 'ok' ) {
-        my $filename = $file_chooser->get_filename;
-        if ( $filename !~ /\.gs2p$/ix ) {
-         $filename = $filename . '.gs2p';
-         if ( -f $filename ) {
-
-          # File exists; get the file chooser to ask the user to confirm.
-          $file_chooser->set_filename($filename);
-
-          # Give the name change time to take effect.
-          Glib::Idle->add( sub { $file_chooser->response('ok'); } );
-          return;
-         }
-        }
-
-        # Check that the file can be written
-        if ( not -w dirname($filename)
-         or ( -f $filename and not -w $filename ) )
-        {
-         show_message_dialog( $file_chooser, 'error', 'close',
-          sprintf( $d->get("File %s is read-only"), $filename ) );
-         return;
-        }
-
-        # Update cwd
-        $SETTING{'cwd'} = dirname($filename);
-        $slist->save_session( $session, $filename );
-       }
-       $file_chooser->destroy;
-      }
-     );
-     $file_chooser->show;
-
-     # cd back to tempdir
-     chdir $session;
-    }
-    default {
-     save_image();
-    }
-   }
-  }
+  clicked => \&save_button_clicked_callback,
+  [
+   \@type,        $combobi,           $buttond,
+   $spinbuttond,  \@pdf_compression,  $combob,
+   $spinbuttonpq, \@fonts,            $combof,
+   $entrya,       $entryt,            $entrys,
+   $entryk,       \@tiff_compression, $combobtc,
+   $spinbuttontq
+  ]
  );
 
  # Cancel button
@@ -3029,6 +2633,318 @@ sub save_dialog {
   $hboxf->hide_all;
  }
  $windowi->resize( 100, 100 );    # Doesn't matter that 200x200 is too small
+ return;
+}
+
+sub image_type_changed_callback {
+ my ( $widget, $data ) = @_;
+ my (
+  $type,     $vboxp,  $hboxf, $pdf_compression,
+  $combob,   $hboxpq, $hboxc, $tiff_compression,
+  $combobtc, $hboxtq
+ ) = @$data;
+ if ( $type->[ $widget->get_active ][0] eq 'pdf' ) {
+  $vboxp->show_all;
+  $hboxf->show_all;
+  if ( $pdf_compression->[ $combob->get_active ][0] eq 'jpg' ) {
+   $hboxpq->show_all;
+  }
+  else {
+   $hboxpq->hide_all;
+   $windowi->resize( 100, 100 );    # Doesn't matter that 200x200 is too small
+  }
+ }
+ else {
+  $vboxp->hide_all;
+  $hboxf->hide_all;
+  $windowi->resize( 100, 100 );     # Doesn't matter that 200x200 is too small
+ }
+ if ($type->[ $widget->get_active ][0] eq 'tif'
+  or $type->[ $widget->get_active ][0] eq 'ps' )
+ {
+  $hboxc->show_all;
+ }
+ else {
+  $hboxc->hide_all;
+  $windowi->resize( 100, 100 );     # Doesn't matter that 200x200 is too small
+ }
+ if (
+  $type->[ $widget->get_active ][0] eq 'jpg'
+  or ( $type->[ $widget->get_active ][0] eq 'tif'
+   and $tiff_compression->[ $combobtc->get_active ][0] eq 'jpeg' )
+   )
+ {
+  $hboxtq->show_all;
+ }
+ else {
+  $hboxtq->hide_all;
+  $windowi->resize( 100, 100 );     # Doesn't matter that 200x200 is too small
+ }
+ return;
+}
+
+sub save_button_clicked_callback {
+ my ( $widget, $data ) = @_;
+ my (
+  $type,            $combobi,          $buttond,      $spinbuttond,
+  $pdf_compression, $combob,           $spinbuttonpq, $fonts,
+  $combof,          $entrya,           $entryt,       $entrys,
+  $entryk,          $tiff_compression, $combobtc,     $spinbuttontq
+ ) = @$data;
+
+ # dig out the image type, compression and quality
+ $SETTING{'image type'} = $type->[ $combobi->get_active ][0];
+
+ given ( $SETTING{'image type'} ) {
+  when ('pdf') {
+
+   # dig out the compression
+   $SETTING{'downsample'}      = $buttond->get_active;
+   $SETTING{'downsample dpi'}  = $spinbuttond->get_value;
+   $SETTING{'pdf compression'} = $pdf_compression->[ $combob->get_active ][0];
+   $SETTING{'quality'}         = $spinbuttonpq->get_value;
+
+   $SETTING{'pdf font'} = $fonts->[ $combof->get_active ][0];
+
+   update_PDF_settings( $entrya, $entryt, $entrys, $entryk );
+
+   # cd back to cwd to save
+   chdir $SETTING{'cwd'};
+
+   # Set up file selector
+   my $file_chooser = Gtk2::FileChooserDialog->new(
+    $d->get('PDF filename'),
+    $windowi, 'save',
+    'gtk-cancel' => 'cancel',
+    'gtk-save'   => 'ok'
+   );
+
+   my ( $dday, $dmonth, $dyear ) =
+     ( localtime( time + $SETTING{'date offset'} * 24 * 60 * 60 ) )[ 3, 4, 5 ];
+   $dyear += 1900;
+   $dmonth = sprintf( "%02d", $dmonth + 1 );
+   $dday   = sprintf( "%02d", $dday );
+   my ( $tday, $tmonth, $tyear ) = ( localtime(time) )[ 3, 4, 5 ];
+   $tyear += 1900;
+   $tmonth = sprintf( "%02d", $tmonth + 1 );
+   $tday   = sprintf( "%02d", $tday );
+
+   my $filename = $SETTING{'default filename'};
+   $filename =~ s/%a/$SETTING{author}/g;
+   $filename =~ s/%t/$SETTING{title}/g;
+   $filename =~ s/%y/$dyear/g;
+   $filename =~ s/%Y/$tyear/g;
+   $filename =~ s/%m/$dmonth/g;
+   $filename =~ s/%M/$tmonth/g;
+   $filename =~ s/%d/$dday/g;
+   $filename =~ s/%D/$tday/g;
+
+   $file_chooser->set_current_name($filename);
+   $file_chooser->set_default_response('ok');
+   $file_chooser->set_current_folder( $SETTING{'cwd'} );
+   add_filter( $file_chooser, $d->get('PDF files'), 'pdf' );
+   $file_chooser->set_do_overwrite_confirmation(TRUE);
+   $file_chooser->signal_connect(
+    response => \&file_chooser_response_callback,
+    'pdf'
+   );
+   $file_chooser->show;
+
+   # cd back to tempdir
+   chdir $session;
+  }
+  when ('djvu') {
+
+   # cd back to cwd to save
+   chdir $SETTING{'cwd'};
+
+   # Set up file selector
+   my $file_chooser = Gtk2::FileChooserDialog->new(
+    $d->get('DjVu filename'),
+    $windowi, 'save',
+    'gtk-cancel' => 'cancel',
+    'gtk-save'   => 'ok'
+   );
+   $file_chooser->set_default_response('ok');
+   $file_chooser->set_current_folder( $SETTING{'cwd'} );
+   add_filter( $file_chooser, $d->get('DjVu files'), 'djvu' );
+   $file_chooser->set_do_overwrite_confirmation(TRUE);
+   $file_chooser->signal_connect(
+    response => \&file_chooser_response_callback,
+    'djvu'
+   );
+   $file_chooser->show;
+
+   # cd back to tempdir
+   chdir $session;
+  }
+  when ('tif') {
+   $SETTING{'tiff compression'} =
+     $tiff_compression->[ $combobtc->get_active ][0];
+   $SETTING{'quality'} = $spinbuttontq->get_value;
+
+   # cd back to cwd to save
+   chdir $SETTING{'cwd'};
+
+   # Set up file selector
+   my $file_chooser = Gtk2::FileChooserDialog->new(
+    $d->get('TIFF filename'),
+    $windowi, 'save',
+    'gtk-cancel' => 'cancel',
+    'gtk-save'   => 'ok'
+   );
+   $file_chooser->set_default_response('ok');
+   $file_chooser->set_current_folder( $SETTING{'cwd'} );
+   add_filter( $file_chooser, $d->get('Image files'), $SETTING{'image type'} );
+   $file_chooser->set_do_overwrite_confirmation(TRUE);
+   $file_chooser->signal_connect(
+    response => \&file_chooser_response_callback,
+    'tif'
+   );
+   $file_chooser->show;
+
+   # cd back to tempdir
+   chdir $session;
+  }
+  when ('txt') {
+
+   # cd back to cwd to save
+   chdir $SETTING{'cwd'};
+
+   # Set up file selector
+   my $file_chooser = Gtk2::FileChooserDialog->new(
+    $d->get('Text filename'),
+    $windowi, 'save',
+    'gtk-cancel' => 'cancel',
+    'gtk-save'   => 'ok'
+   );
+   $file_chooser->set_default_response('ok');
+   $file_chooser->set_current_folder( $SETTING{'cwd'} );
+   $file_chooser->set_do_overwrite_confirmation(TRUE);
+   add_filter( $file_chooser, $d->get('Text files'), 'txt' );
+   $file_chooser->signal_connect(
+    response => \&file_chooser_response_callback,
+    'txt'
+   );
+   $file_chooser->show;
+
+   # cd back to tempdir
+   chdir $session;
+  }
+  when ('ps') {
+   $SETTING{'tiff compression'} =
+     $tiff_compression->[ $combobtc->get_active ][0];
+   $SETTING{'quality'} = $spinbuttontq->get_value;
+
+   # cd back to cwd to save
+   chdir $SETTING{'cwd'};
+
+   # Set up file selector
+   my $file_chooser = Gtk2::FileChooserDialog->new(
+    $d->get('PS filename'),
+    $windowi, 'save',
+    'gtk-cancel' => 'cancel',
+    'gtk-save'   => 'ok'
+   );
+   $file_chooser->set_default_response('ok');
+   $file_chooser->set_current_folder( $SETTING{'cwd'} );
+   add_filter( $file_chooser, $d->get('Postscript files'), 'ps' );
+   $file_chooser->set_do_overwrite_confirmation(TRUE);
+   $file_chooser->signal_connect(
+    response => \&file_chooser_response_callback,
+    'ps'
+   );
+   $file_chooser->show;
+
+   # cd back to tempdir
+   chdir $session;
+  }
+  when ('session') {
+
+   # cd back to cwd to save
+   chdir $SETTING{'cwd'};
+
+   # Set up file selector
+   my $file_chooser = Gtk2::FileChooserDialog->new(
+    $d->get('gscan2pdf session filename'),
+    $windowi, 'save',
+    'gtk-cancel' => 'cancel',
+    'gtk-save'   => 'ok'
+   );
+   $file_chooser->set_default_response('ok');
+   $file_chooser->set_current_folder( $SETTING{'cwd'} );
+   add_filter( $file_chooser, $d->get('gscan2pdf session files'), 'gs2p' );
+   $file_chooser->set_do_overwrite_confirmation(TRUE);
+   $file_chooser->signal_connect(
+    response => \&file_chooser_response_callback,
+    'gs2p'
+   );
+   $file_chooser->show;
+
+   # cd back to tempdir
+   chdir $session;
+  }
+  default {
+   save_image();
+  }
+ }
+ return;
+}
+
+sub file_chooser_response_callback {
+ my ( $dialog, $response, $type ) = @_;
+ $logger->debug("PDF save filename dialog returned $response");
+ if ( $response eq 'ok' ) {
+  my $filename = $dialog->get_filename;
+  if ( $filename !~ /\.$type$/ix ) {
+   $filename = "$filename.$type";
+   if ( -f $filename ) {
+
+    # File exists; get the file chooser to ask the user to confirm.
+    $dialog->set_filename($filename);
+
+    # Give the name change time to take effect.
+    Glib::Idle->add( sub { $dialog->response('ok'); } );
+    return;
+   }
+  }
+
+  # Check that the file can be written
+  if ( not -w dirname($filename)
+   or ( -f $filename and not -w $filename ) )
+  {
+   show_message_dialog( $dialog, 'error', 'close',
+    sprintf( $d->get("File %s is read-only"), $filename ) );
+   return;
+  }
+
+  # Update cwd
+  $SETTING{'cwd'} = dirname($filename);
+
+  given ($type) {
+   when ('pdf') {
+    save_PDF($filename);
+   }
+   when ('djvu') {
+    save_djvu($filename);
+   }
+   when ('tif') {
+    save_TIFF($filename);
+   }
+   when ('txt') {
+    save_txt($filename);
+   }
+   when ('ps') {
+    my $tif = File::Temp->new( DIR => $session, SUFFIX => '.tif' );
+    save_TIFF( $tif->filename, $filename );
+   }
+   when ('gs2p') {
+    $slist->save_session( $session, $filename );
+   }
+  }
+  $windowi->hide if defined $windowi;
+ }
+ $dialog->destroy;
  return;
 }
 
@@ -3188,101 +3104,94 @@ sub save_TIFF {
 }
 
 sub save_djvu {
+ my ($filename) = @_;
 
- # cd back to cwd to save
- chdir $SETTING{'cwd'};
-
- # Set up file selector
- my $file_chooser = Gtk2::FileChooserDialog->new(
-  $d->get('DjVu filename'),
-  $windowi, 'save',
-  'gtk-cancel' => 'cancel',
-  'gtk-save'   => 'ok'
- );
- $file_chooser->set_default_response('ok');
- $file_chooser->set_current_folder( $SETTING{'cwd'} );
- add_filter( $file_chooser, $d->get('DjVu files'), 'djvu' );
- $file_chooser->set_do_overwrite_confirmation(TRUE);
- $file_chooser->signal_connect(
-  response => sub {
-   my ( $dialog, $response ) = @_;
-   if ( $response eq 'ok' ) {
-    my $filename = $file_chooser->get_filename;
-    if ( $filename !~ /\.djvu$/ix ) {
-     $filename = $filename . '.djvu';
-     if ( -f $filename ) {
-
-      # File exists; get the file chooser to ask the user to confirm.
-      $file_chooser->set_filename($filename);
-
-      # Give the name change time to take effect.
-      Glib::Idle->add( sub { $file_chooser->response('ok'); } );
-      return;
-     }
-    }
-
-    # Check that the file can be written
-    if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
-     show_message_dialog( $file_chooser, 'error', 'close',
-      sprintf( $d->get("File %s is read-only"), $filename ) );
-     return;
-    }
-
-    # Update cwd
-    $SETTING{'cwd'} = dirname($filename);
-
-    # Compile list of pages
-    my @list_of_pages;
-    my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
-    for (@pagelist) {
-     push @list_of_pages, $slist->{data}[$_][2];
-    }
-
-    # cd back to tempdir
-    chdir $session;
-
-    # Create the DjVu
-    $logger->debug("Started saving $filename");
-    my ( $signal, $pid );
-    $pid = $slist->save_djvu(
-     path            => $filename,
-     list_of_pages   => \@list_of_pages,
-     queued_callback => sub {
-      return update_tpbar(@_);
-     },
-     started_callback => sub {
-      my ( $thread, $process, $completed, $total ) = @_;
-      $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
-      return TRUE if ( defined $signal );
-     },
-     running_callback => sub {
-      return update_tpbar(@_);
-     },
-     finished_callback => sub {
-      my ( $new_page, $pending ) = @_;
-      $thbox->hide_all unless $pending;
-      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
-      mark_pages(@pagelist);
-      system("xdg-open \"$filename\" &")
-        if ( defined( $SETTING{'view files toggle'} )
-       and $SETTING{'view files toggle'} );
-      $logger->debug("Finished saving $filename");
-     },
-     error_callback => sub {
-      my ($message) = @_;
-      show_message_dialog( $window, 'error', 'close', $message );
-     }
-    );
-
-    $windowi->hide if defined $windowi;
-   }
-   $file_chooser->destroy;
-  }
- );
- $file_chooser->show;
+ # Compile list of pages
+ my @list_of_pages;
+ my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+ for (@pagelist) {
+  push @list_of_pages, $slist->{data}[$_][2];
+ }
 
  # cd back to tempdir
  chdir $session;
+
+ # Create the DjVu
+ $logger->debug("Started saving $filename");
+ my ( $signal, $pid );
+ $pid = $slist->save_djvu(
+  path            => $filename,
+  list_of_pages   => \@list_of_pages,
+  queued_callback => sub {
+   return update_tpbar(@_);
+  },
+  started_callback => sub {
+   my ( $thread, $process, $completed, $total ) = @_;
+   $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+   return TRUE if ( defined $signal );
+  },
+  running_callback => sub {
+   return update_tpbar(@_);
+  },
+  finished_callback => sub {
+   my ( $new_page, $pending ) = @_;
+   $thbox->hide_all unless $pending;
+   $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   mark_pages(@pagelist);
+   system("xdg-open \"$filename\" &")
+     if ( defined( $SETTING{'view files toggle'} )
+    and $SETTING{'view files toggle'} );
+   $logger->debug("Finished saving $filename");
+  },
+  error_callback => sub {
+   my ($message) = @_;
+   show_message_dialog( $window, 'error', 'close', $message );
+  }
+ );
+
+ return;
+}
+
+sub save_txt {
+ my ($filename) = @_;
+
+ # Compile list of pages
+ my @list_of_pages;
+ my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+ for (@pagelist) {
+  push @list_of_pages, $slist->{data}[$_][2];
+ }
+
+ my ( $signal, $pid );
+ $pid = $slist->save_text(
+  path            => $filename,
+  list_of_pages   => \@list_of_pages,
+  queued_callback => sub {
+   return update_tpbar(@_);
+  },
+  started_callback => sub {
+   my ( $thread, $process, $completed, $total ) = @_;
+   $signal = setup_tpbar( $thread, $process, $completed, $total, $pid );
+   return TRUE if ( defined $signal );
+  },
+  running_callback => sub {
+   return update_tpbar(@_);
+  },
+  finished_callback => sub {
+   my ( $new_page, $pending ) = @_;
+   $thbox->hide_all unless $pending;
+   $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   mark_pages(@pagelist);
+   system("xdg-open \"$filename\" &")
+     if ( defined( $SETTING{'view files toggle'} )
+    and $SETTING{'view files toggle'} );
+   $logger->debug("Finished saving $filename");
+  },
+  error_callback => sub {
+   my ($message) = @_;
+   show_message_dialog( $window, 'error', 'close', $message );
+  }
+ );
  return;
 }
 
