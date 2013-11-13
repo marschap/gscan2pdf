@@ -106,277 +106,17 @@ my $d      = Locale::gettext->domain($prog_name);
 my $d_sane = Locale::gettext->domain('sane-backends');
 
 my $debug = FALSE;
-my ( $test, $help, $log, $log_level, @device,
- $locale, @device_list, $test_image );
-my @args = (
- 'device=s'     => \@device,
- 'test=s%'      => \$test,
- 'test-image=s' => \$test_image,
- 'locale=s'     => \$locale,
- 'help'         => \$help,
- 'log=s'        => \$log,
- 'debug'        => sub { $log_level = 'DEBUG'; $debug = TRUE },
- 'info'  => sub { $log_level = 'INFO' },
- 'warn'  => sub { $log_level = 'WARN' },
- 'error' => sub { $log_level = 'ERROR' },
- 'fatal' => sub { $log_level = 'FATAL' },
- 'version' => sub { warn "$prog_name $version\n"; exit 0 },
+my (
+ $test,   $help,        $log,        $log_level, @device,
+ $locale, @device_list, $test_image, $logger
 );
-exit 1 unless ( GetOptions(@args) );
-$Sane::DEBUG = $debug;
+parse_arguments();
 
-if ( not defined($log_level) ) {
- if ( defined $log ) {
-  $log_level = 'DEBUG';
-  $debug     = TRUE;
- }
- else {
-  $log_level = 'ERROR';
- }
-}
-my $log_conf = <<'EOS';
- log4perl.appender.Screen        = Log::Log4perl::Appender::Screen
- log4perl.appender.Screen.layout = Log::Log4perl::Layout::SimpleLayout
-EOS
-
-if ( defined $log ) {
- $log_conf .= <<"EOS";
- log4perl.appender.Logfile          = Log::Log4perl::Appender::File
- log4perl.appender.Logfile.filename = $log
- log4perl.appender.Logfile.mode     = write
- log4perl.appender.Logfile.layout   = Log::Log4perl::Layout::SimpleLayout
- log4perl.category                  = $log_level, Logfile, Screen
-EOS
-}
-else {
- $log_conf .= <<"EOS";
- log4perl.category                  = $log_level, Screen
-EOS
-}
-
-if ( defined $help ) {
- system("perldoc $0") == 0 or die $d->get('Error displaying help'), "\n";
-}
-
-Log::Log4perl::init( \$log_conf );
-my $logger = Log::Log4perl::get_logger();
-
-$logger->info("Starting $prog_name $version");
-$logger->info("Log level $log_level");
-
-if ( defined $locale ) {
- if ( $locale =~ /^\//x ) {
-  $d->dir($locale);
- }
- else {
-  $d->dir( getcwd . "/$locale" );
- }
-}
-
-for (@device) {
- push @device_list, { name => $_, label => $_ };
-}
-
-# Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
-# scanimage
-setlocale( LC_NUMERIC, "C" );
-$logger->info( "Using ", setlocale(LC_CTYPE), " locale" );
-$logger->info( "Startup LC_NUMERIC ", setlocale(LC_NUMERIC) );
-
-# Read config file
+my ( %SETTING, $conf );
 my $rc = "$ENV{'HOME'}/.$prog_name";
-$logger->info("Reading config from $ENV{'HOME'}/.$prog_name");
-system("touch $rc") unless ( -r $rc );
-my $conf;
-our %SETTING;
-try {
- $conf = Config::General->new(
-  -ConfigFile  => $rc,
-  -SplitPolicy => 'equalsign',
-  -UTF8        => 1,
- );
-}
-catch {
- $logger->error(
-  $d->get(
-   "Error: unable to load settings.\nBacking up settings\nReverting to defaults"
-  )
- );
- move( $rc, "$rc.old" );
-}
-finally {
- %SETTING = $conf->getall unless (@_);
-};
+read_config_file($rc);
 
-my %default_settings = (
- 'window_width'      => 800,
- 'window_height'     => 600,
- 'window_maximize'   => TRUE,
- 'thumb panel'       => 100,
- 'Page range'        => 'all',
- 'layout'            => 'single',
- 'downsample'        => FALSE,
- 'downsample dpi'    => 150,
- 'threshold tool'    => 80,
- 'unsharp radius'    => 0,
- 'unsharp sigma'     => 1,
- 'unsharp amount'    => 1,
- 'unsharp threshold' => 0.05,
- 'cache options'     => TRUE,
- 'restore window'    => TRUE,
- 'startup warning'   => FALSE,
- 'date offset'       => 0,
- 'pdf compression'   => 'auto',
- 'quality'           => 75,
- 'pages to scan'     => 1,
- 'unpaper on scan'   => TRUE,
- 'OCR on scan'       => TRUE,
- 'frontend'          => 'libsane-perl',
- 'rotate facing'     => 0,
- 'rotate reverse'    => 0,
- 'default filename'  => '%a %y-%m-%d',
- 'scan prefix'       => '',
- 'Blank threshold'   => 0.005,         # Blank page standard deviation threshold
- 'Dark threshold'    => 0.12,          # Dark page mean threshold
- 'ocr engine'        => 'ocropus',
- 'OCR output' =>
-   'replace',    # When a page is re-OCRed, replace old text with new text
- 'Paper' => {
-  $d->get('A4') => {
-   x => 210,
-   y => 297,
-   l => 0,
-   t => 0,
-  },
-  $d->get('US Letter') => {
-   x => 216,
-   y => 279,
-   l => 0,
-   t => 0,
-  },
-  $d->get('US Legal') => {
-   x => 216,
-   y => 356,
-   l => 0,
-   t => 0,
-  },
- },
- user_defined_tools => ['gimp %i'],
-
- # show the options marked with 1, hide those with 0
- # for the others, see the value of default-option-visibility
- 'visible-scan-options' => {
-  mode                => 1,
-  compression         => 1,
-  resolution          => 1,
-  brightness          => 1,
-  gain                => 1,
-  contrast            => 1,
-  threshold           => 1,
-  speed               => 1,
-  'batch-scan'        => 1,
-  'wait-for-button'   => 1,
-  'button-wait'       => 1,
-  'calibration-cache' => 1,
-  source              => 1,
-  pagewidth           => 1,
-  pageheight          => 1,
-  'page-width'        => 1,
-  'page-height'       => 1,
-  'overscan-top'      => 1,
-  'overscan-bottom'   => 1,
-  adf_mode            => 1,
-  'adf-mode'          => 1,
-  'Paper size'        => 1,
-  x                   => 1,
-  y                   => 1,
-  l                   => 1,
-  t                   => 1,
- },
- 'scan-reload-triggers' => qw(mode),
-);
-delete $SETTING{frontend}
-  if (
- defined $SETTING{frontend}
- and ( $SETTING{frontend} eq 'scanimage-perl'
-  or $SETTING{frontend} eq 'scanadf-perl'
-  or $SETTING{frontend} eq 'scanimage.pl'
-  or $SETTING{frontend} eq
-  'scanadf.pl' )    # these frontends are just for testing purposes
-  );
-for ( keys(%default_settings) ) {
- $SETTING{$_} = $default_settings{$_} unless ( defined $SETTING{$_} );
-}
-
-# Remove invalid paper sizes
-for my $paper ( keys %{ $SETTING{Paper} } ) {
- if ( $paper eq '<>' or $paper eq '</>' ) {
-  delete $SETTING{Paper}{$paper};
- }
- else {
-  for (qw(x y t l)) {
-   unless ( ref( $SETTING{Paper}{$paper} ) eq "HASH"
-    and defined( $SETTING{Paper}{$paper}{$_} ) )
-   {
-    delete $SETTING{Paper}{$paper};
-    last;
-   }
-  }
- }
-}
-
-# Delete the options cache if there is a new version of SANE
-if (
- (
-  defined( $SETTING{'SANE version'} )
-  and $SETTING{'SANE version'} ne join( '.', Sane->get_version )
- )
- or ( defined( $SETTING{'libsane-perl version'} )
-  and $SETTING{'libsane-perl version'} ne $Sane::VERSION )
-  )
-{
- delete $SETTING{cache} if ( defined $SETTING{cache} );
-}
-$SETTING{'SANE version'} = join( '.', Sane->get_version );
-$SETTING{'libsane-perl version'} = $Sane::VERSION;
-
-# Set up test mode and make sure file has absolute path and is readable
-if ( keys %{$test} ) {
- $SETTING{frontend} = 'scanimage-perl';
- for my $file ( keys %{$test} ) {
-  my $device = $test->{$file};
-  delete $test->{$file};
-
-  # Find a way of emulating the nonsense \n that some people seem to get
-  $device =~ s/\\n/\n/g;
-  $logger->debug("'$file','$device'");
-  $file = getcwd . "/$file" if ( $file !~ /^\//x );
-  if ( !-r $file ) {
-   $logger->fatal( sprintf( $d->get("Cannot read file: %s"), $file ) );
-   exit 1;
-  }
-  push @{ $test->{file} }, $file;
-  $test->{output} = '' unless ( defined( $test->{output} ) );
-  $test->{output} .=
-    "'$#{$test->{file}}','$device','" . basename($file) . "'\n";
- }
-}
-
-# GetOptions leaves $test as a reference to an empty hash.
-else {
- undef $test;
-}
-
-if ( defined $test_image ) {
- $test_image = expand_tildes($test_image);
- if ( -r $test_image ) {
-  $logger->info("Using test image $test_image");
- }
- else {
-  $logger->fatal( sprintf( $d->get("Cannot read file: %s"), $test_image ) );
-  exit 1;
- }
-}
+set_up_test_mode();
 
 $logger->info("Perl version $^V");
 $logger->info("Glib-Perl version $Glib::VERSION");
@@ -414,7 +154,7 @@ Gscan2pdf::Frontend::CLI->setup($logger);
 Gscan2pdf::Document->set_paper_sizes( $SETTING{Paper} );
 
 # Create icons for rotate buttons
-my $IconFactory = undef;
+my $IconFactory;
 my $iconpath;
 if ( -d '/usr/share/gscan2pdf' ) {
  $iconpath = '/usr/share/gscan2pdf';
@@ -475,252 +215,849 @@ my (
 
  # Simple::List in preferences dialog
  $option_visibility_list,
+
+ # Declare the XML structure
+ $uimanager,
 );
 
-my @action_items = (
+# Create the window
+my $window = create_main_window();
 
- # Fields for each action item:
- # [name, stock_id, value, label, accelerator, tooltip, callback]
+my $main_vbox = Gtk2::VBox->new;
+$window->add($main_vbox);
 
- # File menu
- [ 'File', undef, $d->get('_File') ],
- [
-  'New',                       'gtk-new',
-  $d->get('_New'),             '<control>n',
-  $d->get('Clears all pages'), \&new
- ],
- [
-  'Open',                        'gtk-open',
-  $d->get('_Open'),              '<control>o',
-  $d->get('Open image file(s)'), \&open_dialog
- ],
- [
-  'Scan',                   'scanner',
-  $d->get('S_can'),         '<control>g',
-  $d->get('Scan document'), \&scan_dialog
- ],
- [
-  'Save',          'gtk-save', $d->get('Save'), '<control>s',
-  $d->get('Save'), \&save_dialog
- ],
- [
-  'Email as PDF',                          'gtk-edit',
-  $d->get('_Email as PDF'),                '<control>e',
-  $d->get('Attach as PDF to a new email'), \&email
- ],
- [
-  'Print',          'gtk-print', $d->get('_Print'), '<control>p',
-  $d->get('Print'), \&print_dialog
- ],
- [
-  'Compress',                           undef,
-  $d->get('_Compress temporary files'), undef,
-  $d->get('Compress temporary files'),  \&compress_temp
- ],
- [
-  'Quit',           'gtk-quit',
-  $d->get('_Quit'), '<control>q',
-  $d->get('Quit'), sub { Gtk2->main_quit if quit(); }
- ],
+# Create the menu bar
+create_menu_bar();
+$main_vbox->pack_start( $menubar, FALSE, TRUE,  0 );
+$main_vbox->pack_start( $toolbar, FALSE, FALSE, 0 );
 
- # Edit menu
- [ 'Edit', undef, $d->get('_Edit') ],
- [
-  'Undo', 'gtk-undo', $d->get('_Undo'), '<control>z', $d->get('Undo'), \&undo
- ],
- [
-  'Redo',           'gtk-redo',
-  $d->get('_Redo'), '<shift><control>z',
-  $d->get('Redo'),  \&unundo
- ],
- [
-  'Cut',                    'gtk-cut',
-  $d->get('Cu_t'),          '<control>x',
-  $d->get('Cut selection'), \&cut_selection
- ],
- [
-  'Copy',                    'gtk-copy',
-  $d->get('_Copy'),          '<control>c',
-  $d->get('Copy selection'), \&copy_selection
- ],
- [
-  'Paste',                    'gtk-paste',
-  $d->get('_Paste'),          '<control>v',
-  $d->get('Paste selection'), \&paste_selection
- ],
- [
-  'Delete',                         'gtk-delete',
-  $d->get('_Delete'),               undef,
-  $d->get('Delete selected pages'), \&delete_pages
- ],
- [
-  'Renumber',                'gtk-sort-ascending',
-  $d->get('_Renumber'),      '<control>r',
-  $d->get('Renumber pages'), \&renumber_dialog
- ],
- [ 'Select', undef, $d->get('_Select') ],
- [
-  'Select All',                'gtk-select-all',
-  $d->get('_All'),             '<control>a',
-  $d->get('Select all pages'), \&select_all
- ],
- [
-  'Select Odd', undef, $d->get('_Odd'), '<control>1',
-  $d->get('Select all odd-numbered pages'),
-  sub { select_odd_even(0); }
- ],
- [
-  'Select Even', undef, $d->get('_Even'), '<control>2',
-  $d->get('Select all evenly-numbered pages'),
-  sub { select_odd_even(1); }
- ],
- [
-  'Select Blank',                                      'gtk-select-blank',
-  $d->get('_Blank'),                                   '<control>b',
-  $d->get('Select pages with low standard deviation'), \&analyse_select_blank
- ],
- [
-  'Select Dark',                'gtk-select-blank',
-  $d->get('_Dark'),             '<control>d',
-  $d->get('Select dark pages'), \&analyse_select_dark
- ],
- [
-  'Select Modified',
-  'gtk-select-modified',
-  $d->get('_Modified'),
-  '<control>m',
-  $d->get('Select modified pages since last OCR'),
-  \&select_modified_since_ocr
- ],
- [
-  'Select No OCR',                            undef,
-  $d->get('_No OCR'),                         undef,
-  $d->get('Select pages with no OCR output'), \&select_no_ocr
- ],
- [
-  'Clear OCR',                                     'gtk-clear',
-  $d->get('_Clear OCR'),                           undef,
-  $d->get('Clear OCR output from selected pages'), \&clear_ocr
- ],
- [
-  'Properties',                     'gtk-properties',
-  $d->get('Propert_ies'),           undef,
-  $d->get('Edit image properties'), \&properties
- ],
- [
-  'Preferences',               'gtk-preferences',
-  $d->get('Prefere_nces'),     undef,
-  $d->get('Edit preferences'), \&preferences
- ],
+my $tooltips = Gtk2::Tooltips->new;
+$tooltips->enable;
 
- # View menu
- [ 'View', undef, $d->get('_View') ],
- [
-  'Zoom 100',            'gtk-zoom-100',
-  $d->get('Zoom _100%'), undef,
-  $d->get('Zoom to 100%'), sub { $view->set_zoom(1.0); }
- ],
- [
-  'Zoom to fit',           'gtk-zoom-fit',
-  $d->get('Zoom to _fit'), undef,
-  $d->get('Zoom to fit'), sub { $view->set_fitting(TRUE); }
- ],
- [
-  'Zoom in',           'gtk-zoom-in',
-  $d->get('Zoom _in'), 'plus',
-  $d->get('Zoom in'), sub { $view->zoom_in; }
- ],
- [
-  'Zoom out',           'gtk-zoom-out',
-  $d->get('Zoom _out'), 'minus',
-  $d->get('Zoom out'), sub { $view->zoom_out; }
- ],
- [
-  'Rotate 90',
-  'rotate90',
-  $d->get('Rotate 90 clockwise'),
-  '<control><shift>R',
-  $d->get('Rotate 90 clockwise'),
-  sub { rotate( 90, [ indices2pages( $slist->get_selected_indices ) ] ) }
- ],
- [
-  'Rotate 180',
-  'rotate180',
-  $d->get('Rotate 180'),
-  '<control><shift>F',
-  $d->get('Rotate 180'),
-  sub { rotate( 180, [ indices2pages( $slist->get_selected_indices ) ] ) }
- ],
- [
-  'Rotate 270',
-  'rotate270',
-  $d->get('Rotate 90 anticlockwise'),
-  '<control><shift>C',
-  $d->get('Rotate 90 anticlockwise'),
-  sub { rotate( 270, [ indices2pages( $slist->get_selected_indices ) ] ) }
- ],
+# HPaned for thumbnails and detail view
+my $hpaned = Gtk2::HPaned->new;
+$hpaned->set_position( $SETTING{'thumb panel'} );
+$main_vbox->pack_start( $hpaned, TRUE, TRUE, 0 );
 
- # Tools menu
- [ 'Tools', undef, $d->get('_Tools') ],
- [
-  'Threshold', undef, $d->get('_Threshold'),
-  undef, $d->get('Change each pixel above this threshold to black'),
-  \&threshold
- ],
- [
-  'Negate', undef, $d->get('_Negate'), undef,
-  $d->get('Converts black to white and vice versa'), \&negate
- ],
- [
-  'Unsharp',                        undef,
-  $d->get('_Unsharp Mask'),         undef,
-  $d->get('Apply an unsharp mask'), \&unsharp
- ],
- [
-  'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef,
-  $d->get('Crop pages'), \&crop
- ],
- [
-  'unpaper',                                       undef,
-  $d->get('_Clean up'),                            undef,
-  $d->get('Clean up scanned images with unpaper'), \&unpaper
- ],
- [
-  'OCR', undef, $d->get('_OCR'), undef,
-  $d->get('Optical Character Recognition'), \&OCR
- ],
- [ 'User-defined', undef, $d->get('U_ser-defined') ],
+# Scrolled window for thumbnails
+my $scwin_thumbs = Gtk2::ScrolledWindow->new;
 
- # Help menu
- [ 'Help menu', undef, $d->get('_Help') ],
- [
-  'Help',          'gtk-help', $d->get('_Help'), '<control>h',
-  $d->get('Help'), \&view_pod
- ],
- [ 'About', 'gtk-about', $d->get('_About'), undef, $d->get('_About'), \&about ],
+# resize = FALSE to stop the panel expanding on being resized (Debian #507032)
+$hpaned->pack1( $scwin_thumbs, FALSE, TRUE );
+$scwin_thumbs->set_policy( 'automatic', 'automatic' );
+$scwin_thumbs->set_shadow_type('etched-in');
+
+# Set up a SimpleList
+$slist = Gscan2pdf::Document->new;
+
+my $target_entry = {
+ target => 'Glib::Scalar',    # some string representing the drag type
+ flags  => 'same-widget',     # Gtk2::TargetFlags
+ info   => 1,                 # some app-defined integer identifier
+};
+$slist->drag_source_set( 'button1-mask', [ 'copy', 'move' ], $target_entry );
+$slist->drag_dest_set(
+ [ 'motion', 'highlight' ],
+ [ 'copy',   'move' ],
+ $target_entry
 );
 
-my @image_tools = (
- [
-  'DraggerTool',                'gtk-refresh',
-  $d->get('_Drag'),             undef,
-  $d->get('Use the hand tool'), 10
- ],
- [
-  'SelectorTool',                                'selection',
-  $d->get('_Select'),                            undef,
-  $d->get('Use the rectangular selection tool'), 20
- ],
- [
-  'PainterTool',                   'gtk-media-play',
-  $d->get('_Paint'),               undef,
-  $d->get('Use the painter tool'), 30
- ]
+$slist->signal_connect(
+ 'drag-data-get' => sub {
+  my ( $tree, $context, $sel ) = @_;
+  $sel->set( $sel->target, 8, 'data' );
+ }
 );
 
-# Declare the XML structure
-my $uimanager;
-my $ui = <<'EOS';
+$slist->signal_connect(
+ 'drag-data-delete' => sub {
+  my ( $tree, $context ) = @_;
+  my $model = $tree->get_model;
+  my @data  = $tree->get_selection->get_selected_rows;
+
+  for ( reverse @data ) {
+   my $iter = $model->get_iter($_);
+   my $info = $model->get( $iter, 0 );
+   $model->remove($iter);
+  }
+
+  $tree->get_selection->unselect_all;
+ }
+);
+
+$slist->signal_connect( 'drag-data-received' => \&drag_data_received_callback );
+
+# Callback for dropped signal.
+$slist->signal_connect(
+ drag_drop => sub {
+  my ( $tree, $context, $x, $y, $when ) = @_;
+  if ( my $targ = $context->targets ) {
+   $tree->drag_get_data( $context, $targ, $when );
+   return TRUE;
+  }
+  return FALSE;
+ }
+);
+
+# If dragged below the bottom of the window, scroll it.
+$slist->signal_connect( 'drag-motion' => \&drag_motion_callback );
+
+# Set up callback for right mouse clicks.
+$slist->signal_connect( button_press_event   => \&handle_clicks );
+$slist->signal_connect( button_release_event => \&handle_clicks );
+
+# Set the page number to be editable
+$slist->set_column_editable( 0, TRUE );
+
+# Set-up the callback when the page number has been edited.
+$slist->{row_changed_signal} = $slist->get_model->signal_connect(
+ 'row-changed' => sub {
+  $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
+
+  # Sort pages
+  $slist->manual_sort_by_column(0);
+
+  # And make sure there are no duplicates
+  $slist->renumber;
+  $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
+
+  # Update the start spinbutton if necessary
+  update_start();
+ }
+);
+
+$scwin_thumbs->add($slist);
+
+# Notebook for detail view and OCR output
+my $vnotebook = Gtk2::Notebook->new;
+$hpaned->pack2( $vnotebook, TRUE, TRUE );
+
+# ImageView for detail view
+$view = Gtk2::ImageView->new;
+my $dragger  = Gtk2::ImageView::Tool::Dragger->new($view);
+my $selector = Gtk2::ImageView::Tool::Selector->new($view);
+my $painter  = Gtk2::ImageView::Tool::Painter->new($view);
+$vnotebook->append_page( $view, $d->get('Image') );
+
+$view->signal_connect(
+ button_press_event => sub {
+  my ( $widget, $event ) = @_;
+  handle_clicks( $widget, $event );
+ }
+);
+$view->signal_connect( button_release_event => \&handle_clicks );
+$view->signal_connect(
+ 'zoom-changed' => sub {
+  $canvas->set_scale( $view->get_zoom ) if ( defined $canvas );
+ }
+);
+
+# Callback if the selection changes
+$selector->{selection_changed_signal} = $selector->signal_connect(
+ 'selection-changed' => sub {
+  my $sel = $selector->get_selection;
+  if ( defined $sel ) {
+   $SETTING{selection} = [ $sel->values ];
+   if ( defined $sb_selector_x ) {
+    $sb_selector_x->set_value( $SETTING{selection}[0] );
+    $sb_selector_y->set_value( $SETTING{selection}[1] );
+    $sb_selector_w->set_value( $SETTING{selection}[2] );
+    $sb_selector_h->set_value( $SETTING{selection}[3] );
+   }
+  }
+ }
+);
+
+# ScrolledWindow for Goo::Canvas for OCR output
+my $scwin_buffer = Gtk2::ScrolledWindow->new;
+$scwin_buffer->set_policy( 'automatic', 'automatic' );
+$scwin_buffer->set_shadow_type('etched-in');
+$vnotebook->append_page( $scwin_buffer, $d->get('OCR Output') );
+
+# Set up call back for list selection to update detail view
+$slist->{selection_changed_signal} = $slist->get_selection->signal_connect(
+ changed => \&selection_changed_callback );
+
+# _after ensures that Editables get first bite
+$window->signal_connect_after(
+ key_press_event => sub {
+  my ( $widget, $event ) = @_;
+
+  # Let the keypress propagate
+  return FALSE
+    unless ( $event->keyval ==
+   $Gtk2::Gdk::Keysyms{Delete} )    ## no critic (ProhibitPackageVars)
+    ;
+
+  delete_pages();
+  return TRUE;
+ }
+);
+
+# If defined in the config file, set the current directory
+$SETTING{'cwd'} = getcwd unless ( defined( $SETTING{'cwd'} ) );
+
+my $unpaper = Gscan2pdf::Unpaper->new( $SETTING{'unpaper options'} );
+
+update_uimanager();
+
+create_temp_directory();
+
+$window->show_all;
+
+# Progress bars below window
+my $phbox = Gtk2::HBox->new;
+$main_vbox->pack_end( $phbox, FALSE, FALSE, 0 );
+$phbox->show;
+my $shbox = Gtk2::HBox->new;
+$phbox->add($shbox);
+my $spbar = Gtk2::ProgressBar->new;
+$shbox->add($spbar);
+my $scbutton = Gtk2::Button->new;
+$scbutton->set_image( Gtk2::Image->new_from_stock( 'gtk-cancel', 'button' ) );
+$shbox->pack_end( $scbutton, FALSE, FALSE, 0 );
+my $thbox = Gtk2::HBox->new;
+$phbox->add($thbox);
+my $tpbar = Gtk2::ProgressBar->new;
+$thbox->add($tpbar);
+my $tcbutton = Gtk2::Button->new;
+$tcbutton->set_image( Gtk2::Image->new_from_stock( 'gtk-cancel', 'button' ) );
+$thbox->pack_end( $tcbutton, FALSE, FALSE, 0 );
+
+### Subroutines
+
+sub parse_arguments {
+ my @args = (
+  'device=s'     => \@device,
+  'test=s%'      => \$test,
+  'test-image=s' => \$test_image,
+  'locale=s'     => \$locale,
+  'help'         => \$help,
+  'log=s'        => \$log,
+  'debug'        => sub { $log_level = 'DEBUG'; $debug = TRUE },
+  'info'  => sub { $log_level = 'INFO' },
+  'warn'  => sub { $log_level = 'WARN' },
+  'error' => sub { $log_level = 'ERROR' },
+  'fatal' => sub { $log_level = 'FATAL' },
+  'version' => sub { warn "$prog_name $version\n"; exit 0 },
+ );
+ exit 1 unless ( GetOptions(@args) );
+ $Sane::DEBUG = $debug;
+
+ if ( not defined($log_level) ) {
+  if ( defined $log ) {
+   $log_level = 'DEBUG';
+   $debug     = TRUE;
+  }
+  else {
+   $log_level = 'ERROR';
+  }
+ }
+ my $log_conf = <<'EOS';
+ log4perl.appender.Screen        = Log::Log4perl::Appender::Screen
+ log4perl.appender.Screen.layout = Log::Log4perl::Layout::SimpleLayout
+EOS
+
+ if ( defined $log ) {
+  $log_conf .= <<"EOS";
+ log4perl.appender.Logfile          = Log::Log4perl::Appender::File
+ log4perl.appender.Logfile.filename = $log
+ log4perl.appender.Logfile.mode     = write
+ log4perl.appender.Logfile.layout   = Log::Log4perl::Layout::SimpleLayout
+ log4perl.category                  = $log_level, Logfile, Screen
+EOS
+ }
+ else {
+  $log_conf .= <<"EOS";
+ log4perl.category                  = $log_level, Screen
+EOS
+ }
+
+ if ( defined $help ) {
+  system("perldoc $0") == 0 or die $d->get('Error displaying help'), "\n";
+ }
+
+ Log::Log4perl::init( \$log_conf );
+ $logger = Log::Log4perl::get_logger();
+
+ $logger->info("Starting $prog_name $version");
+ $logger->info("Log level $log_level");
+
+ if ( defined $locale ) {
+  if ( $locale =~ /^\//x ) {
+   $d->dir($locale);
+  }
+  else {
+   $d->dir( getcwd . "/$locale" );
+  }
+ }
+
+ for (@device) {
+  push @device_list, { name => $_, label => $_ };
+ }
+
+ # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
+ # scanimage
+ setlocale( LC_NUMERIC, "C" );
+ $logger->info( "Using ", setlocale(LC_CTYPE), " locale" );
+ $logger->info( "Startup LC_NUMERIC ", setlocale(LC_NUMERIC) );
+ return;
+}
+
+# Perl-Critic is confused by @_ in finally{} See P::C bug #79138
+sub read_config_file {    ## no critic (RequireArgUnpacking)
+ my ($filename) = @_;
+ $logger->info("Reading config from $filename");
+ system("touch $filename") unless ( -r $filename );
+ try {
+  $conf = Config::General->new(
+   -ConfigFile  => $filename,
+   -SplitPolicy => 'equalsign',
+   -UTF8        => 1,
+  );
+ }
+ catch {
+  $logger->error(
+   $d->get(
+"Error: unable to load settings.\nBacking up settings\nReverting to defaults"
+   )
+  );
+  move( $filename, "$filename.old" );
+ }
+ finally {
+  %SETTING = $conf->getall unless (@_);
+ };
+
+ my %default_settings = (
+  'window_width'      => 800,
+  'window_height'     => 600,
+  'window_maximize'   => TRUE,
+  'thumb panel'       => 100,
+  'Page range'        => 'all',
+  'layout'            => 'single',
+  'downsample'        => FALSE,
+  'downsample dpi'    => 150,
+  'threshold tool'    => 80,
+  'unsharp radius'    => 0,
+  'unsharp sigma'     => 1,
+  'unsharp amount'    => 1,
+  'unsharp threshold' => 0.05,
+  'cache options'     => TRUE,
+  'restore window'    => TRUE,
+  'startup warning'   => FALSE,
+  'date offset'       => 0,
+  'pdf compression'   => 'auto',
+  'quality'           => 75,
+  'pages to scan'     => 1,
+  'unpaper on scan'   => TRUE,
+  'OCR on scan'       => TRUE,
+  'frontend'          => 'libsane-perl',
+  'rotate facing'     => 0,
+  'rotate reverse'    => 0,
+  'default filename'  => '%a %y-%m-%d',
+  'scan prefix'       => '',
+  'Blank threshold' => 0.005,       # Blank page standard deviation threshold
+  'Dark threshold'  => 0.12,        # Dark page mean threshold
+  'ocr engine'      => 'ocropus',
+  'OCR output' =>
+    'replace',    # When a page is re-OCRed, replace old text with new text
+  'Paper' => {
+   $d->get('A4') => {
+    x => 210,
+    y => 297,
+    l => 0,
+    t => 0,
+   },
+   $d->get('US Letter') => {
+    x => 216,
+    y => 279,
+    l => 0,
+    t => 0,
+   },
+   $d->get('US Legal') => {
+    x => 216,
+    y => 356,
+    l => 0,
+    t => 0,
+   },
+  },
+  user_defined_tools => ['gimp %i'],
+
+  # show the options marked with 1, hide those with 0
+  # for the others, see the value of default-option-visibility
+  'visible-scan-options' => {
+   mode                => 1,
+   compression         => 1,
+   resolution          => 1,
+   brightness          => 1,
+   gain                => 1,
+   contrast            => 1,
+   threshold           => 1,
+   speed               => 1,
+   'batch-scan'        => 1,
+   'wait-for-button'   => 1,
+   'button-wait'       => 1,
+   'calibration-cache' => 1,
+   source              => 1,
+   pagewidth           => 1,
+   pageheight          => 1,
+   'page-width'        => 1,
+   'page-height'       => 1,
+   'overscan-top'      => 1,
+   'overscan-bottom'   => 1,
+   adf_mode            => 1,
+   'adf-mode'          => 1,
+   'Paper size'        => 1,
+   x                   => 1,
+   y                   => 1,
+   l                   => 1,
+   t                   => 1,
+  },
+  'scan-reload-triggers' => qw(mode),
+ );
+ delete $SETTING{frontend}
+   if (
+  defined $SETTING{frontend}
+  and ( $SETTING{frontend} eq 'scanimage-perl'
+   or $SETTING{frontend} eq 'scanadf-perl'
+   or $SETTING{frontend} eq 'scanimage.pl'
+   or $SETTING{frontend} eq
+   'scanadf.pl' )    # these frontends are just for testing purposes
+   );
+ for ( keys(%default_settings) ) {
+  $SETTING{$_} = $default_settings{$_} unless ( defined $SETTING{$_} );
+ }
+
+ remove_invalid_paper( $SETTING{Paper} );
+
+ # Delete the options cache if there is a new version of SANE
+ if (
+  (
+   defined( $SETTING{'SANE version'} )
+   and $SETTING{'SANE version'} ne join( '.', Sane->get_version )
+  )
+  or ( defined( $SETTING{'libsane-perl version'} )
+   and $SETTING{'libsane-perl version'} ne $Sane::VERSION )
+   )
+ {
+  delete $SETTING{cache} if ( defined $SETTING{cache} );
+ }
+ $SETTING{'SANE version'} = join( '.', Sane->get_version );
+ $SETTING{'libsane-perl version'} = $Sane::VERSION;
+ return;
+}
+
+sub remove_invalid_paper {
+ my ($hashref) = @_;
+ for my $paper ( keys %$hashref ) {
+  if ( $paper eq '<>' or $paper eq '</>' ) {
+   delete $hashref->{$paper};
+  }
+  else {
+   for (qw(x y t l)) {
+    unless ( ref( $hashref->{$paper} ) eq "HASH"
+     and defined( $hashref->{$paper}{$_} ) )
+    {
+     delete $hashref->{$paper};
+     last;
+    }
+   }
+  }
+ }
+ return;
+}
+
+sub set_up_test_mode {
+
+ # Set up test mode and make sure file has absolute path and is readable
+ if ( keys %{$test} ) {
+  $SETTING{frontend} = 'scanimage-perl';
+  for my $file ( keys %{$test} ) {
+   my $device = $test->{$file};
+   delete $test->{$file};
+
+   # Find a way of emulating the nonsense \n that some people seem to get
+   $device =~ s/\\n/\n/g;
+   $logger->debug("'$file','$device'");
+   $file = getcwd . "/$file" if ( $file !~ /^\//x );
+   if ( !-r $file ) {
+    $logger->fatal( sprintf( $d->get("Cannot read file: %s"), $file ) );
+    exit 1;
+   }
+   push @{ $test->{file} }, $file;
+   $test->{output} = '' unless ( defined( $test->{output} ) );
+   $test->{output} .=
+     "'$#{$test->{file}}','$device','" . basename($file) . "'\n";
+  }
+ }
+
+ # GetOptions leaves $test as a reference to an empty hash.
+ else {
+  undef $test;
+ }
+
+ if ( defined $test_image ) {
+  $test_image = expand_tildes($test_image);
+  if ( -r $test_image ) {
+   $logger->info("Using test image $test_image");
+  }
+  else {
+   $logger->fatal( sprintf( $d->get("Cannot read file: %s"), $test_image ) );
+   exit 1;
+  }
+ }
+ return;
+}
+
+sub create_main_window {
+ my $widget = Gtk2::Window->new;
+ $widget->set_title("$prog_name v$version");
+ $widget->signal_connect(
+  'delete-event' => sub {
+   if ( quit() ) {
+    Gtk2->main_quit;
+   }
+   else {
+    return TRUE;
+   }
+  }
+ );
+
+ # Note when the window is maximised or not.
+ $widget->signal_connect(
+  window_state_event => sub {
+   my ( $w, $event ) = @_;
+   if ( $event->new_window_state & ['maximized'] ) {
+    $SETTING{'window_maximize'} = TRUE;
+   }
+   else {
+    $SETTING{'window_maximize'} = FALSE;
+   }
+  }
+ );
+
+ # If defined in the config file, set the window state, size and position
+ if ( $SETTING{'restore window'} ) {
+  $widget->set_default_size( $SETTING{'window_width'},
+   $SETTING{'window_height'} );
+  $widget->move( $SETTING{'window_x'}, $SETTING{'window_y'} )
+    if ( defined( $SETTING{'window_x'} ) and defined( $SETTING{'window_y'} ) );
+  $widget->maximize if ( $SETTING{'window_maximize'} );
+ }
+
+ try { $widget->set_default_icon_from_file("$iconpath/gscan2pdf.svg"); }
+ catch {
+  $logger->warn("Unable to load icon `$iconpath/gscan2pdf.svg': $@");
+ };
+
+ return $widget;
+}
+
+# Check for presence of various packages
+
+sub check_dependencies {
+ $dependencies{perlmagick}  = try { require Image::Magick };
+ $dependencies{imagemagick} = Gscan2pdf::Document::check_command('convert');
+ $dependencies{scanadf}     = Gscan2pdf::Document::check_command('scanadf');
+ $dependencies{xdg}         = Gscan2pdf::Document::check_command('xdg-email');
+ $dependencies{gocr}        = Gscan2pdf::Document::check_command('gocr');
+ $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup($logger);
+ $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup($logger);
+ $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup($logger);
+ $dependencies{djvu}        = Gscan2pdf::Document::check_command('cjb2');
+ $dependencies{unpaper}     = Gscan2pdf::Unpaper->version;
+ $dependencies{libtiff}     = Gscan2pdf::Document::check_command('tiffcp');
+ $logger->info("Found Image::Magick") if ( $dependencies{perlmagick} );
+ $logger->info("Found ImageMagick")   if ( $dependencies{imagemagick} );
+ $logger->info("Found scanadf")       if ( $dependencies{scanadf} );
+ $logger->info("Found xdg-email")     if ( $dependencies{xdg} );
+ $logger->info("Found gocr")          if ( $dependencies{gocr} );
+ $logger->info("Found tesseract")     if ( $dependencies{tesseract} );
+ $logger->info("Found cuneiform v$dependencies{cuneiform}")
+   if ( $dependencies{cuneiform} );
+ $logger->info("Found cjb2 (djvu)") if ( $dependencies{djvu} );
+ $logger->info("Found libtiff")     if ( $dependencies{libtiff} );
+ $logger->info("Found unpaper $dependencies{unpaper}")
+   if ( $dependencies{unpaper} );
+
+ # OCR engine options
+ push @ocr_engine,
+   [ 'gocr', $d->get('GOCR'), $d->get('Process image with GOCR.') ]
+   if ( $dependencies{gocr} );
+ push @ocr_engine,
+   [
+  'tesseract', $d->get('Tesseract'),
+  $d->get('Process image with Tesseract.')
+   ],
+   if ( $dependencies{tesseract} );
+ push @ocr_engine,
+   [ 'ocropus', $d->get('Ocropus'), $d->get('Process image with Ocropus.') ],
+   if ( $dependencies{ocropus} );
+ push @ocr_engine,
+   [
+  'cuneiform', $d->get('Cuneiform'),
+  $d->get('Process image with Cuneiform.')
+   ],
+   if ( $dependencies{cuneiform} );
+ return;
+}
+
+# Create the menu bar, initialize its menus, and return the menu bar.
+
+sub create_menu_bar {
+
+ # Create a Gtk2::UIManager instance
+ $uimanager = Gtk2::UIManager->new;
+
+ # extract the accelgroup and add it to the window
+ my $accelgroup = $uimanager->get_accel_group;
+ $window->add_accel_group($accelgroup);
+
+ my @action_items = (
+
+  # Fields for each action item:
+  # [name, stock_id, value, label, accelerator, tooltip, callback]
+
+  # File menu
+  [ 'File', undef, $d->get('_File') ],
+  [
+   'New',                       'gtk-new',
+   $d->get('_New'),             '<control>n',
+   $d->get('Clears all pages'), \&new
+  ],
+  [
+   'Open',                        'gtk-open',
+   $d->get('_Open'),              '<control>o',
+   $d->get('Open image file(s)'), \&open_dialog
+  ],
+  [
+   'Scan',                   'scanner',
+   $d->get('S_can'),         '<control>g',
+   $d->get('Scan document'), \&scan_dialog
+  ],
+  [
+   'Save',          'gtk-save', $d->get('Save'), '<control>s',
+   $d->get('Save'), \&save_dialog
+  ],
+  [
+   'Email as PDF',                          'gtk-edit',
+   $d->get('_Email as PDF'),                '<control>e',
+   $d->get('Attach as PDF to a new email'), \&email
+  ],
+  [
+   'Print',          'gtk-print', $d->get('_Print'), '<control>p',
+   $d->get('Print'), \&print_dialog
+  ],
+  [
+   'Compress',                           undef,
+   $d->get('_Compress temporary files'), undef,
+   $d->get('Compress temporary files'),  \&compress_temp
+  ],
+  [
+   'Quit',           'gtk-quit',
+   $d->get('_Quit'), '<control>q',
+   $d->get('Quit'), sub { Gtk2->main_quit if quit(); }
+  ],
+
+  # Edit menu
+  [ 'Edit', undef, $d->get('_Edit') ],
+  [
+   'Undo',          'gtk-undo', $d->get('_Undo'), '<control>z',
+   $d->get('Undo'), \&undo
+  ],
+  [
+   'Redo',           'gtk-redo',
+   $d->get('_Redo'), '<shift><control>z',
+   $d->get('Redo'),  \&unundo
+  ],
+  [
+   'Cut',                    'gtk-cut',
+   $d->get('Cu_t'),          '<control>x',
+   $d->get('Cut selection'), \&cut_selection
+  ],
+  [
+   'Copy',                    'gtk-copy',
+   $d->get('_Copy'),          '<control>c',
+   $d->get('Copy selection'), \&copy_selection
+  ],
+  [
+   'Paste',                    'gtk-paste',
+   $d->get('_Paste'),          '<control>v',
+   $d->get('Paste selection'), \&paste_selection
+  ],
+  [
+   'Delete',                         'gtk-delete',
+   $d->get('_Delete'),               undef,
+   $d->get('Delete selected pages'), \&delete_pages
+  ],
+  [
+   'Renumber',                'gtk-sort-ascending',
+   $d->get('_Renumber'),      '<control>r',
+   $d->get('Renumber pages'), \&renumber_dialog
+  ],
+  [ 'Select', undef, $d->get('_Select') ],
+  [
+   'Select All',                'gtk-select-all',
+   $d->get('_All'),             '<control>a',
+   $d->get('Select all pages'), \&select_all
+  ],
+  [
+   'Select Odd', undef, $d->get('_Odd'), '<control>1',
+   $d->get('Select all odd-numbered pages'),
+   sub { select_odd_even(0); }
+  ],
+  [
+   'Select Even', undef, $d->get('_Even'), '<control>2',
+   $d->get('Select all evenly-numbered pages'),
+   sub { select_odd_even(1); }
+  ],
+  [
+   'Select Blank', 'gtk-select-blank', $d->get('_Blank'), '<control>b',
+   $d->get('Select pages with low standard deviation'),
+   \&analyse_select_blank
+  ],
+  [
+   'Select Dark',                'gtk-select-blank',
+   $d->get('_Dark'),             '<control>d',
+   $d->get('Select dark pages'), \&analyse_select_dark
+  ],
+  [
+   'Select Modified',
+   'gtk-select-modified',
+   $d->get('_Modified'),
+   '<control>m',
+   $d->get('Select modified pages since last OCR'),
+   \&select_modified_since_ocr
+  ],
+  [
+   'Select No OCR',                            undef,
+   $d->get('_No OCR'),                         undef,
+   $d->get('Select pages with no OCR output'), \&select_no_ocr
+  ],
+  [
+   'Clear OCR',                                     'gtk-clear',
+   $d->get('_Clear OCR'),                           undef,
+   $d->get('Clear OCR output from selected pages'), \&clear_ocr
+  ],
+  [
+   'Properties',                     'gtk-properties',
+   $d->get('Propert_ies'),           undef,
+   $d->get('Edit image properties'), \&properties
+  ],
+  [
+   'Preferences',               'gtk-preferences',
+   $d->get('Prefere_nces'),     undef,
+   $d->get('Edit preferences'), \&preferences
+  ],
+
+  # View menu
+  [ 'View', undef, $d->get('_View') ],
+  [
+   'Zoom 100',            'gtk-zoom-100',
+   $d->get('Zoom _100%'), undef,
+   $d->get('Zoom to 100%'), sub { $view->set_zoom(1.0); }
+  ],
+  [
+   'Zoom to fit',           'gtk-zoom-fit',
+   $d->get('Zoom to _fit'), undef,
+   $d->get('Zoom to fit'), sub { $view->set_fitting(TRUE); }
+  ],
+  [
+   'Zoom in',           'gtk-zoom-in',
+   $d->get('Zoom _in'), 'plus',
+   $d->get('Zoom in'), sub { $view->zoom_in; }
+  ],
+  [
+   'Zoom out',           'gtk-zoom-out',
+   $d->get('Zoom _out'), 'minus',
+   $d->get('Zoom out'), sub { $view->zoom_out; }
+  ],
+  [
+   'Rotate 90',
+   'rotate90',
+   $d->get('Rotate 90 clockwise'),
+   '<control><shift>R',
+   $d->get('Rotate 90 clockwise'),
+   sub { rotate( 90, [ indices2pages( $slist->get_selected_indices ) ] ) }
+  ],
+  [
+   'Rotate 180',
+   'rotate180',
+   $d->get('Rotate 180'),
+   '<control><shift>F',
+   $d->get('Rotate 180'),
+   sub { rotate( 180, [ indices2pages( $slist->get_selected_indices ) ] ) }
+  ],
+  [
+   'Rotate 270',
+   'rotate270',
+   $d->get('Rotate 90 anticlockwise'),
+   '<control><shift>C',
+   $d->get('Rotate 90 anticlockwise'),
+   sub { rotate( 270, [ indices2pages( $slist->get_selected_indices ) ] ) }
+  ],
+
+  # Tools menu
+  [ 'Tools', undef, $d->get('_Tools') ],
+  [
+   'Threshold', undef, $d->get('_Threshold'),
+   undef, $d->get('Change each pixel above this threshold to black'),
+   \&threshold
+  ],
+  [
+   'Negate', undef, $d->get('_Negate'), undef,
+   $d->get('Converts black to white and vice versa'), \&negate
+  ],
+  [
+   'Unsharp',                        undef,
+   $d->get('_Unsharp Mask'),         undef,
+   $d->get('Apply an unsharp mask'), \&unsharp
+  ],
+  [
+   'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef,
+   $d->get('Crop pages'), \&crop
+  ],
+  [
+   'unpaper',                                       undef,
+   $d->get('_Clean up'),                            undef,
+   $d->get('Clean up scanned images with unpaper'), \&unpaper
+  ],
+  [
+   'OCR', undef, $d->get('_OCR'), undef,
+   $d->get('Optical Character Recognition'), \&OCR
+  ],
+  [ 'User-defined', undef, $d->get('U_ser-defined') ],
+
+  # Help menu
+  [ 'Help menu', undef, $d->get('_Help') ],
+  [
+   'Help',          'gtk-help', $d->get('_Help'), '<control>h',
+   $d->get('Help'), \&view_pod
+  ],
+  [
+   'About', 'gtk-about', $d->get('_About'), undef, $d->get('_About'), \&about
+  ],
+ );
+
+ my @image_tools = (
+  [
+   'DraggerTool',                'gtk-refresh',
+   $d->get('_Drag'),             undef,
+   $d->get('Use the hand tool'), 10
+  ],
+  [
+   'SelectorTool',                                'selection',
+   $d->get('_Select'),                            undef,
+   $d->get('Use the rectangular selection tool'), 20
+  ],
+  [
+   'PainterTool',                   'gtk-media-play',
+   $d->get('_Paint'),               undef,
+   $d->get('Use the painter tool'), 30
+  ]
+ );
+
+ my $ui = <<'EOS';
 <ui>
  <menubar name='MenuBar'>
   <menu action='File'>
@@ -870,485 +1207,6 @@ my $ui = <<'EOS';
 </ui>
 EOS
 
-# Create the window
-my $window = Gtk2::Window->new;
-$window->set_title("$prog_name v$version");
-$window->signal_connect(
- 'delete-event' => sub {
-  if ( quit() ) {
-   Gtk2->main_quit;
-  }
-  else {
-   return TRUE;
-  }
- }
-);
-
-# Note when the window is maximised or not.
-$window->signal_connect(
- window_state_event => sub {
-  my ( $w, $event ) = @_;
-  if ( $event->new_window_state & ['maximized'] ) {
-   $SETTING{'window_maximize'} = TRUE;
-  }
-  else {
-   $SETTING{'window_maximize'} = FALSE;
-  }
- }
-);
-
-# If defined in the config file, set the window state, size and position
-if ( $SETTING{'restore window'} ) {
- $window->set_default_size( $SETTING{'window_width'},
-  $SETTING{'window_height'} );
- $window->move( $SETTING{'window_x'}, $SETTING{'window_y'} )
-   if ( defined( $SETTING{'window_x'} ) and defined( $SETTING{'window_y'} ) );
- $window->maximize if ( $SETTING{'window_maximize'} );
-}
-
-try { $window->set_default_icon_from_file("$iconpath/gscan2pdf.svg"); }
-catch {
- $logger->warn("Unable to load icon `$iconpath/gscan2pdf.svg': $@");
-};
-
-my $main_vbox = Gtk2::VBox->new;
-$window->add($main_vbox);
-
-# Create the menu bar
-create_menu_bar();
-$main_vbox->pack_start( $menubar, FALSE, TRUE,  0 );
-$main_vbox->pack_start( $toolbar, FALSE, FALSE, 0 );
-
-my $tooltips = Gtk2::Tooltips->new;
-$tooltips->enable;
-
-# HPaned for thumbnails and detail view
-my $hpaned = Gtk2::HPaned->new;
-$hpaned->set_position( $SETTING{'thumb panel'} );
-$main_vbox->pack_start( $hpaned, TRUE, TRUE, 0 );
-
-# Scrolled window for thumbnails
-my $scwin_thumbs = Gtk2::ScrolledWindow->new;
-
-# resize = FALSE to stop the panel expanding on being resized (Debian #507032)
-$hpaned->pack1( $scwin_thumbs, FALSE, TRUE );
-$scwin_thumbs->set_policy( 'automatic', 'automatic' );
-$scwin_thumbs->set_shadow_type('etched-in');
-
-# Set up a SimpleList
-$slist = Gscan2pdf::Document->new;
-
-my $target_entry = {
- target => 'Glib::Scalar',    # some string representing the drag type
- flags  => 'same-widget',     # Gtk2::TargetFlags
- info   => 1,                 # some app-defined integer identifier
-};
-$slist->drag_source_set( 'button1-mask', [ 'copy', 'move' ], $target_entry );
-$slist->drag_dest_set(
- [ 'motion', 'highlight' ],
- [ 'copy',   'move' ],
- $target_entry
-);
-
-$slist->signal_connect(
- 'drag-data-get' => sub {
-  my ( $tree, $context, $sel ) = @_;
-  $sel->set( $sel->target, 8, 'data' );
- }
-);
-
-$slist->signal_connect(
- 'drag-data-delete' => sub {
-  my ( $tree, $context ) = @_;
-  my $model = $tree->get_model;
-  my @data  = $tree->get_selection->get_selected_rows;
-
-  for ( reverse @data ) {
-   my $iter = $model->get_iter($_);
-   my $info = $model->get( $iter, 0 );
-   $model->remove($iter);
-  }
-
-  $tree->get_selection->unselect_all;
- }
-);
-
-$slist->signal_connect(
- 'drag-data-received' => sub {
-  my ( $tree, $context, $x, $y, $sel ) = @_;
-  my ( $path, $how ) = $tree->get_dest_row_at_pos( $x, $y );
-  my $model = $tree->get_model;
-  my $data = $sel->data or return;
-  my $delete =
-    $context->action == 'move';    ## no critic (ProhibitMismatchedOperators)
-
-  my @rows = $tree->get_selection->get_selected_rows or return;
-  my @data;
-  for (@rows) {
-   my $iter = $model->get_iter($_);
-   my @info = $model->get($iter);
-   my $suffix;
-   $suffix = $1 if ( $info[2]->{filename} =~ /(\.\w*)$/x );
-   my $new = File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
-
-   # quotes required to prevent File::Temp objects from being clobbered
-   copy( "$info[2]->{filename}", "$new" )
-     or show_message_dialog( $window, 'error', 'close',
-    $d->get('Error copying page') );
-
-   $info[2]->{filename} = $new;
-   push @data, [@info];
-  }
-
-  # Block row-changed signal so that the list can be updated before the sort
-  # takes over.
-  $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-
-  if ($path) {
-   if ( $how eq 'after' or $how eq 'into-or-after' ) {
-    splice @{ $slist->{data} }, $path->to_string + 1, 0, @data;
-   }
-   else {
-    splice @{ $slist->{data} }, $path->to_string, 0, @data;
-   }
-  }
-  else {
-   push @{ $slist->{data} }, @data;
-  }
-  $slist->renumber;
-  $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
-
-  # Update the start spinbutton if necessary
-  update_start();
-
-  $context->finish( 1, $delete, time );
- }
-);
-
-# Callback for dropped signal.
-$slist->signal_connect(
- drag_drop => sub {
-  my ( $tree, $context, $x, $y, $when ) = @_;
-  if ( my $targ = $context->targets ) {
-   $tree->drag_get_data( $context, $targ, $when );
-   return TRUE;
-  }
-  return FALSE;
- }
-);
-
-# If dragged below the bottom of the window, scroll it.
-$slist->signal_connect(
- 'drag-motion' => sub {
-  my ( $tree, $context, $x, $y, $t ) = @_;
-  my ( $path, $how ) = $tree->get_dest_row_at_pos( $x, $y ) or return;
-  my $scroll = $tree->parent;
-
-  # Add the marker showing the drop in the tree
-  $tree->set_drag_dest_row( $path, $how );
-
-  # Make move the default
-  my @action;
-  if ( $context->actions == 'copy' )  ## no critic (ProhibitMismatchedOperators)
-  {
-   @action = ('copy');
-  }
-  else {
-   @action = ('move');
-  }
-  $context->status( @action, $t );
-
-  my $adj = $scroll->get_vadjustment;
-  my ( $value, $step ) = ( $adj->value, $adj->step_increment );
-
-  if ( $y > $adj->page_size - $step / 2 ) {
-   my $v = $value + $step;
-   my $m = $adj->upper - $adj->page_size;
-   $adj->set_value( $v > $m ? $m : $v );
-  }
-  elsif ( $y < $step / 2 ) {
-   my $v = $value - $step;
-   my $m = $adj->lower;
-   $adj->set_value( $v < $m ? $m : $v );
-  }
-
-  return FALSE;
- }
-);
-
-# Set up callback for right mouse clicks.
-$slist->signal_connect( button_press_event   => \&handle_clicks );
-$slist->signal_connect( button_release_event => \&handle_clicks );
-
-# Set the page number to be editable
-$slist->set_column_editable( 0, TRUE );
-
-# Set-up the callback when the page number has been edited.
-$slist->{row_changed_signal} = $slist->get_model->signal_connect(
- 'row-changed' => sub {
-  $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-
-  # Sort pages
-  $slist->manual_sort_by_column(0);
-
-  # And make sure there are no duplicates
-  $slist->renumber;
-  $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
-
-  # Update the start spinbutton if necessary
-  update_start();
- }
-);
-
-$scwin_thumbs->add($slist);
-
-# Notebook for detail view and OCR output
-my $vnotebook = Gtk2::Notebook->new;
-$hpaned->pack2( $vnotebook, TRUE, TRUE );
-
-# ImageView for detail view
-$view = Gtk2::ImageView->new;
-my $dragger  = Gtk2::ImageView::Tool::Dragger->new($view);
-my $selector = Gtk2::ImageView::Tool::Selector->new($view);
-my $painter  = Gtk2::ImageView::Tool::Painter->new($view);
-$vnotebook->append_page( $view, $d->get('Image') );
-
-$view->signal_connect(
- button_press_event => sub {
-  my ( $widget, $event ) = @_;
-  handle_clicks( $widget, $event );
- }
-);
-$view->signal_connect( button_release_event => \&handle_clicks );
-$view->signal_connect(
- 'zoom-changed' => sub {
-  $canvas->set_scale( $view->get_zoom ) if ( defined $canvas );
- }
-);
-
-# Callback if the selection changes
-$selector->{selection_changed_signal} = $selector->signal_connect(
- 'selection-changed' => sub {
-  my $sel = $selector->get_selection;
-  if ( defined $sel ) {
-   $SETTING{selection} = [ $sel->values ];
-   if ( defined $sb_selector_x ) {
-    $sb_selector_x->set_value( $SETTING{selection}[0] );
-    $sb_selector_y->set_value( $SETTING{selection}[1] );
-    $sb_selector_w->set_value( $SETTING{selection}[2] );
-    $sb_selector_h->set_value( $SETTING{selection}[3] );
-   }
-  }
- }
-);
-
-# ScrolledWindow for Goo::Canvas for OCR output
-my $scwin_buffer = Gtk2::ScrolledWindow->new;
-$scwin_buffer->set_policy( 'automatic', 'automatic' );
-$scwin_buffer->set_shadow_type('etched-in');
-$vnotebook->append_page( $scwin_buffer, $d->get('OCR Output') );
-
-# Set up call back for list selection to update detail view
-$slist->{selection_changed_signal} = $slist->get_selection->signal_connect(
- changed => sub {
-  my @page = $slist->get_selected_indices;
-
-  # Display the new image
-  $scwin_buffer->remove($_) for ( $scwin_buffer->get_children );
-  if (@page) {
-
-   my $path = Gtk2::TreePath->new_from_indices( $page[0] );
-   $slist->scroll_to_cell($path);
-   my $sel = $selector->get_selection;
-   display_image( $slist->{data}[ $page[0] ][2] );
-   $selector->set_selection($sel) if ( defined $sel );
-  }
-  else {
-   $view->set_pixbuf(undef);
-   undef $current_page;
-  }
-
-  # If no pages are selected, but some exist, PageRange widgets default to all
-  if ( $#page == -1 and $#{ $slist->{data} } > -1 ) {
-   $SETTING{'Page range'} = 'all';
-   foreach (@prlist) {
-    $_->set_active( $SETTING{'Page range'} );
-   }
-  }
- }
-);
-
-# _after ensures that Editables get first bite
-$window->signal_connect_after(
- key_press_event => sub {
-  my ( $widget, $event ) = @_;
-
-  # Let the keypress propagate
-  return FALSE
-    unless ( $event->keyval ==
-   $Gtk2::Gdk::Keysyms{Delete} )    ## no critic (ProhibitPackageVars)
-    ;
-
-  delete_pages();
-  return TRUE;
- }
-);
-
-# If defined in the config file, set the current directory
-$SETTING{'cwd'} = getcwd unless ( defined( $SETTING{'cwd'} ) );
-
-my $unpaper = Gscan2pdf::Unpaper->new( $SETTING{'unpaper options'} );
-
-update_uimanager();
-
-# Look for crashed sessions
-if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
- $tmpdir = $SETTING{TMPDIR};
-}
-else {
- $tmpdir = File::Spec->tmpdir;
-}
-$logger->info("Checking $tmpdir for crashed sessions");
-my ( @sessions, @crashed, $selected ) =
-  glob File::Spec->catfile( $tmpdir, 'gscan2pdf-????' );
-
-# Forget those used by running sessions
-for (@sessions) {
- if (
-  open $lockfh,
-  '>',
-  File::Spec->catfile( $_, 'lockfile' ) and flock( $lockfh, LOCK_EX | LOCK_NB )
-   )
- {
-  push @crashed, $_;
-  flock( $lockfh, LOCK_UN );
-  close $lockfh;
- }
-}
-
-# Allow user to pick a crashed session to restore
-if (@crashed) {
- my $dialog = Gtk2::Dialog->new(
-  $d->get('Pick crashed session to restore'),
-  $window, 'modal',
-  'gtk-ok'     => 'ok',
-  'gtk-cancel' => 'cancel'
- );
- my $label = Gtk2::Label->new( $d->get('Pick crashed session to restore') );
- $dialog->vbox->add($label);
- my $sessionlist = Gtk2::Ex::Simple::List->new( $d->get('Session') => 'text', );
- push @{ $sessionlist->{data} }, @crashed;
- $dialog->vbox->add($sessionlist);
- $dialog->show_all;
- ($selected) = $sessionlist->get_selected_indices if ( $dialog->run eq 'ok' );
- $dialog->destroy;
-
- if ( defined $selected ) {
-  $session = $crashed[$selected];
-  open $lockfh, '>',    ## no critic (RequireBriefOpen)
-    File::Spec->catfile( $session, 'lockfile' )
-    or die "Cannot open lockfile\n";
-  flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
-  open_session();
- }
-}
-
-# Create temporary directory if necessary
-unless ( defined $session ) {
- if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
-  mkdir( $SETTING{TMPDIR} ) if ( not -d $SETTING{TMPDIR} );
-  try {
-   $session = File::Temp->newdir( 'gscan2pdf-XXXX', DIR => $SETTING{TMPDIR} );
-  }
-  catch {
-   $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
-   $slist->set_dir($session);
-   $logger->warn(
-    sprintf(
-     $d->get(
-"Warning: unable to use %s for temporary storage. Defaulting to %s instead."
-     ),
-     $SETTING{TMPDIR},
-     dirname($session)
-    )
-   );
-  };
- }
- else {
-  $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
-  $slist->set_dir($session);
- }
- open $lockfh, '>',    ## no critic (RequireBriefOpen)
-   File::Spec->catfile( $session, 'lockfile' )
-   or die "Cannot open lockfile\n";
- flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
- $slist->save_session($session);
- $logger->info("Using $session for temporary files");
-}
-
-$window->show_all;
-
-# Progress bars below window
-my $phbox = Gtk2::HBox->new;
-$main_vbox->pack_end( $phbox, FALSE, FALSE, 0 );
-$phbox->show;
-my $shbox = Gtk2::HBox->new;
-$phbox->add($shbox);
-my $spbar = Gtk2::ProgressBar->new;
-$shbox->add($spbar);
-my $scbutton = Gtk2::Button->new;
-$scbutton->set_image( Gtk2::Image->new_from_stock( 'gtk-cancel', 'button' ) );
-$shbox->pack_end( $scbutton, FALSE, FALSE, 0 );
-my $thbox = Gtk2::HBox->new;
-$phbox->add($thbox);
-my $tpbar = Gtk2::ProgressBar->new;
-$thbox->add($tpbar);
-my $tcbutton = Gtk2::Button->new;
-$tcbutton->set_image( Gtk2::Image->new_from_stock( 'gtk-cancel', 'button' ) );
-$thbox->pack_end( $tcbutton, FALSE, FALSE, 0 );
-
-### Subroutines
-
-# Check for presence of various packages
-
-sub check_dependencies {
- $dependencies{perlmagick}  = try { require Image::Magick };
- $dependencies{imagemagick} = Gscan2pdf::Document::check_command('convert');
- $dependencies{scanadf}     = Gscan2pdf::Document::check_command('scanadf');
- $dependencies{xdg}         = Gscan2pdf::Document::check_command('xdg-email');
- $dependencies{gocr}        = Gscan2pdf::Document::check_command('gocr');
- $dependencies{tesseract}   = Gscan2pdf::Tesseract->setup($logger);
- $dependencies{ocropus}     = Gscan2pdf::Ocropus->setup($logger);
- $dependencies{cuneiform}   = Gscan2pdf::Cuneiform->setup($logger);
- $dependencies{djvu}        = Gscan2pdf::Document::check_command('cjb2');
- $dependencies{unpaper}     = Gscan2pdf::Unpaper->version;
- $dependencies{libtiff}     = Gscan2pdf::Document::check_command('tiffcp');
- $logger->info("Found Image::Magick") if ( $dependencies{perlmagick} );
- $logger->info("Found ImageMagick")   if ( $dependencies{imagemagick} );
- $logger->info("Found scanadf")       if ( $dependencies{scanadf} );
- $logger->info("Found xdg-email")     if ( $dependencies{xdg} );
- $logger->info("Found gocr")          if ( $dependencies{gocr} );
- $logger->info("Found tesseract")     if ( $dependencies{tesseract} );
- $logger->info("Found cuneiform v$dependencies{cuneiform}")
-   if ( $dependencies{cuneiform} );
- $logger->info("Found cjb2 (djvu)") if ( $dependencies{djvu} );
- $logger->info("Found libtiff")     if ( $dependencies{libtiff} );
- $logger->info("Found unpaper $dependencies{unpaper}")
-   if ( $dependencies{unpaper} );
- return;
-}
-
-# Create the menu bar, initialize its menus, and return the menu bar.
-
-sub create_menu_bar {
-
- # Create a Gtk2::UIManager instance
- $uimanager = Gtk2::UIManager->new;
-
- # extract the accelgroup and add it to the window
- my $accelgroup = $uimanager->get_accel_group;
- $window->add_accel_group($accelgroup);
-
  # Create the basic Gtk2::ActionGroup instance
  # and fill it with Gtk2::Action instances
  my $actions_basic = Gtk2::ActionGroup->new("actions_basic");
@@ -1374,26 +1232,6 @@ sub create_menu_bar {
 
  # Check for presence of various packages
  check_dependencies();
-
- # OCR engine options
- push @ocr_engine,
-   [ 'gocr', $d->get('GOCR'), $d->get('Process image with GOCR.') ]
-   if ( $dependencies{gocr} );
- push @ocr_engine,
-   [
-  'tesseract', $d->get('Tesseract'),
-  $d->get('Process image with Tesseract.')
-   ],
-   if ( $dependencies{tesseract} );
- push @ocr_engine,
-   [ 'ocropus', $d->get('Ocropus'), $d->get('Process image with Ocropus.') ],
-   if ( $dependencies{ocropus} );
- push @ocr_engine,
-   [
-  'cuneiform', $d->get('Cuneiform'),
-  $d->get('Process image with Cuneiform.')
-   ],
-   if ( $dependencies{cuneiform} );
 
  # Ghost save image item if imagemagick not available
  my $msg = '';
@@ -1598,6 +1436,211 @@ sub update_uimanager {
 
  # If the scan dialog has already been drawn, update the start page spinbutton
  update_start();
+ return;
+}
+
+sub drag_data_received_callback {
+ my ( $tree, $context, $x, $y, $sel ) = @_;
+ my ( $path, $how ) = $tree->get_dest_row_at_pos( $x, $y );
+ my $model = $tree->get_model;
+ my $data = $sel->data or return;
+ my $delete =
+   $context->action == 'move';    ## no critic (ProhibitMismatchedOperators)
+
+ my @rows = $tree->get_selection->get_selected_rows or return;
+ my @data;
+ for (@rows) {
+  my $iter = $model->get_iter($_);
+  my @info = $model->get($iter);
+  my $suffix;
+  $suffix = $1 if ( $info[2]->{filename} =~ /(\.\w*)$/x );
+  my $new = File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
+
+  # quotes required to prevent File::Temp objects from being clobbered
+  copy( "$info[2]->{filename}", "$new" )
+    or show_message_dialog( $window, 'error', 'close',
+   $d->get('Error copying page') );
+
+  $info[2]->{filename} = $new;
+  push @data, [@info];
+ }
+
+ # Block row-changed signal so that the list can be updated before the sort
+ # takes over.
+ $tree->get_model->signal_handler_block( $tree->{row_changed_signal} );
+
+ if ($path) {
+  if ( $how eq 'after' or $how eq 'into-or-after' ) {
+   splice @{ $tree->{data} }, $path->to_string + 1, 0, @data;
+  }
+  else {
+   splice @{ $tree->{data} }, $path->to_string, 0, @data;
+  }
+ }
+ else {
+  push @{ $tree->{data} }, @data;
+ }
+ $tree->renumber;
+ $tree->get_model->signal_handler_unblock( $tree->{row_changed_signal} );
+
+ # Update the start spinbutton if necessary
+ update_start();
+
+ $context->finish( 1, $delete, time );
+ return;
+}
+
+sub selection_changed_callback {
+ my @page = $slist->get_selected_indices;
+
+ # Display the new image
+ $scwin_buffer->remove($_) for ( $scwin_buffer->get_children );
+ if (@page) {
+
+  my $path = Gtk2::TreePath->new_from_indices( $page[0] );
+  $slist->scroll_to_cell($path);
+  my $sel = $selector->get_selection;
+  display_image( $slist->{data}[ $page[0] ][2] );
+  $selector->set_selection($sel) if ( defined $sel );
+ }
+ else {
+  $view->set_pixbuf(undef);
+  undef $current_page;
+ }
+
+ # If no pages are selected, but some exist, PageRange widgets default to all
+ if ( $#page == -1 and $#{ $slist->{data} } > -1 ) {
+  $SETTING{'Page range'} = 'all';
+  foreach (@prlist) {
+   $_->set_active( $SETTING{'Page range'} );
+  }
+ }
+ return;
+}
+
+sub drag_motion_callback {
+ my ( $tree, $context, $x, $y, $t ) = @_;
+ my ( $path, $how ) = $tree->get_dest_row_at_pos( $x, $y ) or return;
+ my $scroll = $tree->parent;
+
+ # Add the marker showing the drop in the tree
+ $tree->set_drag_dest_row( $path, $how );
+
+ # Make move the default
+ my @action;
+ if ( $context->actions == 'copy' )   ## no critic (ProhibitMismatchedOperators)
+ {
+  @action = ('copy');
+ }
+ else {
+  @action = ('move');
+ }
+ $context->status( @action, $t );
+
+ my $adj = $scroll->get_vadjustment;
+ my ( $value, $step ) = ( $adj->value, $adj->step_increment );
+
+ if ( $y > $adj->page_size - $step / 2 ) {
+  my $v = $value + $step;
+  my $m = $adj->upper - $adj->page_size;
+  $adj->set_value( $v > $m ? $m : $v );
+ }
+ elsif ( $y < $step / 2 ) {
+  my $v = $value - $step;
+  my $m = $adj->lower;
+  $adj->set_value( $v < $m ? $m : $v );
+ }
+
+ return FALSE;
+}
+
+sub create_temp_directory {
+
+ # Look for crashed sessions
+ if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
+  $tmpdir = $SETTING{TMPDIR};
+ }
+ else {
+  $tmpdir = File::Spec->tmpdir;
+ }
+ $logger->info("Checking $tmpdir for crashed sessions");
+ my ( @sessions, @crashed, $selected ) =
+   glob File::Spec->catfile( $tmpdir, 'gscan2pdf-????' );
+
+ # Forget those used by running sessions
+ for (@sessions) {
+  if (
+   open $lockfh,
+   '>',
+   File::Spec->catfile( $_, 'lockfile' ) and flock( $lockfh, LOCK_EX | LOCK_NB )
+    )
+  {
+   push @crashed, $_;
+   flock( $lockfh, LOCK_UN );
+   close $lockfh;
+  }
+ }
+
+ # Allow user to pick a crashed session to restore
+ if (@crashed) {
+  my $dialog = Gtk2::Dialog->new(
+   $d->get('Pick crashed session to restore'),
+   $window, 'modal',
+   'gtk-ok'     => 'ok',
+   'gtk-cancel' => 'cancel'
+  );
+  my $label = Gtk2::Label->new( $d->get('Pick crashed session to restore') );
+  $dialog->vbox->add($label);
+  my $sessionlist =
+    Gtk2::Ex::Simple::List->new( $d->get('Session') => 'text', );
+  push @{ $sessionlist->{data} }, @crashed;
+  $dialog->vbox->add($sessionlist);
+  $dialog->show_all;
+  ($selected) = $sessionlist->get_selected_indices if ( $dialog->run eq 'ok' );
+  $dialog->destroy;
+
+  if ( defined $selected ) {
+   $session = $crashed[$selected];
+   open $lockfh, '>',    ## no critic (RequireBriefOpen)
+     File::Spec->catfile( $session, 'lockfile' )
+     or die "Cannot open lockfile\n";
+   flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
+   open_session();
+  }
+ }
+
+ # Create temporary directory if necessary
+ unless ( defined $session ) {
+  if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
+   mkdir( $SETTING{TMPDIR} ) if ( not -d $SETTING{TMPDIR} );
+   try {
+    $session = File::Temp->newdir( 'gscan2pdf-XXXX', DIR => $SETTING{TMPDIR} );
+   }
+   catch {
+    $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
+    $slist->set_dir($session);
+    $logger->warn(
+     sprintf(
+      $d->get(
+"Warning: unable to use %s for temporary storage. Defaulting to %s instead."
+      ),
+      $SETTING{TMPDIR},
+      dirname($session)
+     )
+    );
+   };
+  }
+  else {
+   $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
+   $slist->set_dir($session);
+  }
+  open $lockfh, '>',    ## no critic (RequireBriefOpen)
+    File::Spec->catfile( $session, 'lockfile' )
+    or die "Cannot open lockfile\n";
+  flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
+  $slist->save_session($session);
+  $logger->info("Using $session for temporary files");
+ }
  return;
 }
 
