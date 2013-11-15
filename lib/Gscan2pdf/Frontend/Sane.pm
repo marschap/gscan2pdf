@@ -343,14 +343,12 @@ sub _thread_open_device {
  undef $self->{device_handle} if ( defined( $self->{device_handle} ) );
 
  $self->{device_handle} = Sane::Device->open($device_name);
- $logger->debug("opening device: $Sane::STATUS");
+ $logger->debug("opening device '$device_name': $Sane::STATUS");
  if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-  $logger->error("opening device: $Sane::STATUS");
+  $logger->error("opening device '$device_name': $Sane::STATUS");
   return;
  }
- else {
-  $self->{device_name} = $device_name;
- }
+ $self->{device_name} = $device_name;
  return;
 }
 
