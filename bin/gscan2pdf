@@ -3495,6 +3495,7 @@ sub scan_dialog {
  $windows->signal_connect(
   'finished-process' => sub {
    my ( $widget, $process, $button_signal ) = @_;
+   $logger->info("signal 'finished-process' emitted with data: $process");
    $scbutton->signal_handler_disconnect($button_signal)
      if ( defined $button_signal );
    $shbox->hide;
@@ -3507,6 +3508,7 @@ sub scan_dialog {
  $windows->signal_connect(
   'process-error' => sub {
    my ( $widget, $process, $msg ) = @_;
+   $logger->info("signal 'process-error' emitted with data: $process $msg");
    $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
    $shbox->hide;
    if ( $process =~ /^(?:get_devices|find_scan_options)$/x ) {
@@ -3587,6 +3589,7 @@ sub scan_dialog {
 
 sub changed_device_callback {
  my ( $widget, $device ) = @_;
+ $logger->info("signal 'changed-device' emitted with data: '$device'");
  $SETTING{device} = $device
    if ( defined($device) and $device ne '' );
  return;
@@ -3594,6 +3597,8 @@ sub changed_device_callback {
 
 sub changed_device_list_callback {
  my ( $widget, $device_list ) = @_;
+ $logger->info(
+  "signal 'changed-device-list' emitted with data: " . Dumper($device_list) );
  if ( defined $device_list ) {
 
   # Only set default device if it hasn't been specified on the command line

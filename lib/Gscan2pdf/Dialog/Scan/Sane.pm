@@ -65,7 +65,7 @@ sub new {
     $self->get_devices;
    }
    elsif ( $index > -1 ) {
-    $self->scan_options( $device_list->[$index] );
+    $self->set( 'device', $device_list->[$index]{name} );
    }
   }
  );
@@ -77,6 +77,7 @@ sub new {
     if ( $_->{name} eq $device ) {
      Gscan2pdf::Dialog::Scan::set_combobox_by_text( $self->{combobd},
       $_->{label} );
+     $self->scan_options;
      return;
     }
    }

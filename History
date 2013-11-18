@@ -13,6 +13,9 @@
 * Fixed import of multipage TIFFs
   Closes Launchpad bug 1181019
   (importing existing multipage tif file loads only the first one)
+* Actually change the device when the device combobox is changed.
+  Closes debian bug #729589
+  (Can not scan using a Canon LiDE 210 with version 1.1.3-1)
 
 
 1.1.3 (25.02.2013):

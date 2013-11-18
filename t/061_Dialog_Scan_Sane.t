@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 42;
+use Test::More tests => 43;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -39,88 +39,62 @@ is( $dialog->get('page-number-increment'), 1,        'page-number-increment' );
 is( $dialog->get('side-to-scan'),          'facing', 'side-to-scan' );
 is( $dialog->get('available-scan-options'), undef, 'available-scan-options' );
 
-my $signal = $dialog->signal_connect(
- 'changed-device-list' => sub {
-  ok( 1, 'changed-device-list' );
-
-  is_deeply(
-   $dialog->get('device-list'),
-   [ { 'name' => 'test', 'model' => 'test', 'label' => 'test' } ],
-   'add model field if missing'
-  );
-
-  my $signal;
-  $signal = $dialog->signal_connect(
-   'changed-device' => sub {
-    my ( $widget, $name ) = @_;
-    is( $name, 'test', 'changed-device' );
-    $dialog->signal_handler_disconnect($signal);
-   }
-  );
-  $dialog->set( 'device', 'test' );
- }
-);
-$dialog->set( 'device-list', [ { 'name' => 'test' } ] );
-
-my $c_signal;
-$c_signal = $dialog->signal_connect(
+$dialog->{signal} = $dialog->signal_connect(
  'changed-num-pages' => sub {
   my ( $widget, $n, $signal ) = @_;
+  $dialog->signal_handler_disconnect( $dialog->{signal} );
   is( $n, 0, 'changed-num-pages' );
-  $dialog->signal_handler_disconnect($c_signal);
  }
 );
 $dialog->set( 'num-pages', 0 );
 
-my $p_signal;
-$p_signal = $dialog->signal_connect(
+$dialog->{signal} = $dialog->signal_connect(
  'changed-page-number-start' => sub {
   my ( $widget, $n ) = @_;
+  $dialog->signal_handler_disconnect( $dialog->{signal} );
   is( $n, 2, 'changed-page-number-start' );
-  $dialog->signal_handler_disconnect($p_signal);
  }
 );
 $dialog->set( 'page-number-start', 2 );
 
-$signal = $dialog->signal_connect(
+$dialog->{signal} = $dialog->signal_connect(
  'changed-page-number-increment' => sub {
   my ( $widget, $n ) = @_;
+  $dialog->signal_handler_disconnect( $dialog->{signal} );
   is( $n, 2, 'changed-page-number-increment' );
-  $dialog->signal_handler_disconnect($signal);
  }
 );
 $dialog->set( 'page-number-increment', 2 );
 
-my $s_signal;
-$s_signal = $dialog->signal_connect(
+$dialog->{signal} = $dialog->signal_connect(
  'changed-side-to-scan' => sub {
   my ( $widget, $side ) = @_;
+  $dialog->signal_handler_disconnect( $dialog->{signal} );
   is( $side, 'reverse', 'changed-side-to-scan' );
   is( $dialog->get('page-number-increment'),
    -2, 'reverse side gives increment -2' );
-  $dialog->signal_handler_disconnect($s_signal);
  }
 );
 $dialog->set( 'side-to-scan', 'reverse' );
 
-$signal = $dialog->signal_connect(
+$dialog->{reloaded_signal} = $dialog->signal_connect(
  'reloaded-scan-options' => sub {
+  $dialog->signal_handler_disconnect( $dialog->{reloaded_signal} );
   ok( 1, 'reloaded-scan-options' );
-  $dialog->signal_handler_disconnect($signal);
 
   # So that it can be used in hash
   my $resolution = SANE_NAME_SCAN_RESOLUTION;
 
-  $signal = $dialog->signal_connect(
+  $dialog->{signal} = $dialog->signal_connect(
    'added-profile' => sub {
     my ( $widget, $name, $profile ) = @_;
+    $dialog->signal_handler_disconnect( $dialog->{signal} );
     is( $name, 'my profile', 'added-profile name' );
     is_deeply(
      $profile,
      [ { $resolution => 52 }, { mode => 'Color' } ],
      'added-profile profile'
     );
-    $dialog->signal_handler_disconnect($signal);
    }
   );
   $dialog->add_profile( 'my profile',
@@ -128,16 +102,16 @@ $signal = $dialog->signal_connect(
 
   ######################################
 
-  $signal = $dialog->signal_connect(
+  $dialog->{signal} = $dialog->signal_connect(
    'added-profile' => sub {
     my ( $widget, $name, $profile ) = @_;
+    $dialog->signal_handler_disconnect( $dialog->{signal} );
     is( $name, 'old profile', 'added-profile old name' );
     is_deeply(
      $profile,
      [ { mode => 'Gray' }, { $resolution => 51 } ],
      'added-profile profile as hash'
     );
-    $dialog->signal_handler_disconnect($signal);
    }
   );
   $dialog->add_profile( 'old profile', { $resolution => 51, mode => 'Gray' } );
@@ -157,16 +131,16 @@ $signal = $dialog->signal_connect(
   # need a new main loop because of the timeout
   my $loop = Glib::MainLoop->new;
   my $flag = FALSE;
-  $signal = $dialog->signal_connect(
+  $dialog->{signal} = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
+    $dialog->signal_handler_disconnect( $dialog->{signal} );
     is( $profile, 'my profile', 'changed-profile' );
     is_deeply(
      $dialog->get('current-scan-options'),
      [ { $resolution => 52 }, { mode => 'Color' } ],
      'current-scan-options with profile'
     );
-    $dialog->signal_handler_disconnect($signal);
     $flag = TRUE;
     $loop->quit;
    }
@@ -180,13 +154,13 @@ $signal = $dialog->signal_connect(
    [ { $resolution => 52 }, { mode => 'Color' } ] );
 
   # need a new main loop because of the timeout
-  $loop   = Glib::MainLoop->new;
-  $flag   = FALSE;
-  $signal = $dialog->signal_connect(
+  $loop             = Glib::MainLoop->new;
+  $flag             = FALSE;
+  $dialog->{signal} = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
+    $dialog->signal_handler_disconnect( $dialog->{signal} );
     is( $profile, 'my profile2', 'set profile with identical options' );
-    $dialog->signal_handler_disconnect($signal);
     $flag = TRUE;
     $loop->quit;
    }
@@ -197,11 +171,12 @@ $signal = $dialog->signal_connect(
   ######################################
 
   # need a new main loop because of the timeout
-  $loop   = Glib::MainLoop->new;
-  $flag   = FALSE;
-  $signal = $dialog->signal_connect(
+  $loop             = Glib::MainLoop->new;
+  $flag             = FALSE;
+  $dialog->{signal} = $dialog->signal_connect(
    'changed-scan-option' => sub {
     my ( $widget, $option, $value ) = @_;
+    $dialog->signal_handler_disconnect( $dialog->{signal} );
     is( $dialog->get('profile'),
      undef, 'changing an option deselects the current profile' );
     is_deeply(
@@ -209,7 +184,6 @@ $signal = $dialog->signal_connect(
      [ { mode => 'Color' }, { $resolution => 51 } ],
      'current-scan-options without profile'
     );
-    $dialog->signal_handler_disconnect($signal);
     $flag = TRUE;
     $loop->quit;
    }
@@ -225,11 +199,11 @@ $signal = $dialog->signal_connect(
   $flag = FALSE;
 
   # Reset profile for next test
-  $signal = $dialog->signal_connect(
+  $dialog->{signal} = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
+    $dialog->signal_handler_disconnect( $dialog->{signal} );
     is( $profile, 'my profile', 'reset profile' );
-    $dialog->signal_handler_disconnect($signal);
     $flag = TRUE;
     $loop->quit;
    }
@@ -240,11 +214,12 @@ $signal = $dialog->signal_connect(
   ######################################
 
   # need a new main loop because of the timeout
-  $loop   = Glib::MainLoop->new;
-  $flag   = FALSE;
-  $signal = $dialog->signal_connect(
+  $loop             = Glib::MainLoop->new;
+  $flag             = FALSE;
+  $dialog->{signal} = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
+    $dialog->signal_handler_disconnect( $dialog->{signal} );
     is( $profile, undef,
      'changing an option fires the changed-profile signal if a profile is set'
     );
@@ -253,7 +228,6 @@ $signal = $dialog->signal_connect(
      [ { mode => 'Color' }, { $resolution => 51 } ],
      'current-scan-options without profile (again)'
     );
-    $dialog->signal_handler_disconnect($signal);
     $flag = TRUE;
     $loop->quit;
    }
@@ -280,11 +254,12 @@ $signal = $dialog->signal_connect(
    [ { 'Paper size' => 'new' }, { $resolution => 50 } ] );
 
   # need a new main loop because of the timeout
-  $loop   = Glib::MainLoop->new;
-  $flag   = FALSE;
-  $signal = $dialog->signal_connect(
+  $loop             = Glib::MainLoop->new;
+  $flag             = FALSE;
+  $dialog->{signal} = $dialog->signal_connect(
    'changed-profile' => sub {
     my ( $widget, $profile ) = @_;
+    $dialog->signal_handler_disconnect( $dialog->{signal} );
     my $options = $dialog->get('available-scan-options');
     my $expected = [ { 'Paper size' => 'new' } ];
     push @$expected, { scalar(SANE_NAME_PAGE_HEIGHT) => 52 }
@@ -298,7 +273,6 @@ $signal = $dialog->signal_connect(
       { $resolution                 => 50 };
     is_deeply( $dialog->get('current-scan-options'),
      $expected, 'CLI geometry option names' );
-    $dialog->signal_handler_disconnect($signal);
     $flag = TRUE;
     $loop->quit;
    }
@@ -337,23 +311,23 @@ $signal = $dialog->signal_connect(
   my $s_signal;
   $s_signal = $dialog->signal_connect(
    'started-process' => sub {
-    ok( 1, 'started-process' );
     $dialog->signal_handler_disconnect($s_signal);
+    ok( 1, 'started-process' );
    }
   );
   my $c_signal;
   $c_signal = $dialog->signal_connect(
    'changed-progress' => sub {
-    ok( 1, 'changed-progress' );
     $dialog->signal_handler_disconnect($c_signal);
+    ok( 1, 'changed-progress' );
    }
   );
   my $f_signal;
   $f_signal = $dialog->signal_connect(
    'finished-process' => sub {
     my ( $widget, $process ) = @_;
-    is( $process, 'set_option', 'finished-process set_option' );
     $dialog->signal_handler_disconnect($f_signal);
+    is( $process, 'set_option', 'finished-process set_option' );
    }
   );
   my $n;
@@ -367,7 +341,30 @@ $signal = $dialog->signal_connect(
     my ( $widget, $process ) = @_;
     if ( $process eq 'scan_pages' ) {
      is( $n, 1, 'new-scan emitted once' );
-     Gtk2->main_quit;
+
+     # changing device via the combobox should really change the device!
+     $dialog->{signal} = $dialog->signal_connect(
+      'changed-device' => sub {
+       my ( $widget, $name ) = @_;
+       $dialog->signal_handler_disconnect( $dialog->{signal} );
+       is( $name, 'test:1', 'changed-device via combobox' );
+
+       my $e_signal;
+       $e_signal = $dialog->signal_connect(
+        'process-error' => sub {
+         my ( $widget, $process, $message ) = @_;
+         $dialog->signal_handler_disconnect($e_signal);
+         is( $process, 'open_device', 'caught error opening device' );
+         Gtk2->main_quit;
+        }
+       );
+
+       # setting an unknown device should throw an error
+       $dialog->set( 'device', 'error' );
+
+      }
+     );
+     $dialog->{combobd}->set_active(1);
     }
    }
   );
@@ -375,20 +372,34 @@ $signal = $dialog->signal_connect(
   $dialog->set( 'page-number-start', 1 );
   $dialog->set( 'side-to-scan',      'facing' );
   $dialog->scan;
-
-  my $e_signal;
-  $e_signal = $dialog->signal_connect(
-   'process-error' => sub {
-    my ( $widget, $process, $message ) = @_;
-    is( $process, 'open_device', 'caught error opening device' );
-    $dialog->signal_handler_disconnect($e_signal);
-   }
-  );
-
-  # setting an unknown device should throw an error
-  $dialog->set( 'device', 'error' );
  }
 );
+$dialog->{signal} = $dialog->signal_connect(
+ 'changed-device-list' => sub {
+  $dialog->signal_handler_disconnect( $dialog->{signal} );
+  ok( 1, 'changed-device-list' );
+
+  is_deeply(
+   $dialog->get('device-list'),
+   [
+    { 'name' => 'test:0', 'model' => 'test:0', 'label' => 'test:0' },
+    { 'name' => 'test:1', 'model' => 'test:1', 'label' => 'test:1' }
+   ],
+   'add model field if missing'
+  );
+
+  $dialog->{signal} = $dialog->signal_connect(
+   'changed-device' => sub {
+    my ( $widget, $name ) = @_;
+    $dialog->signal_handler_disconnect( $dialog->{signal} );
+    is( $name, 'test:0', 'changed-device' );
+   }
+  );
+  $dialog->set( 'device', 'test:0' );
+ }
+);
+$dialog->set( 'device-list',
+ [ { 'name' => 'test:0' }, { 'name' => 'test:1' } ] );
 Gtk2->main;
 
 Gscan2pdf::Frontend::Sane->quit;
