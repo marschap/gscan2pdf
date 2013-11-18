@@ -62,20 +62,21 @@ $dialog->{signal} = $dialog->signal_connect(
   my ( $widget, $n ) = @_;
   $dialog->signal_handler_disconnect( $dialog->{signal} );
   is( $n, 2, 'changed-page-number-increment' );
+
+  $dialog->{signal} = $dialog->signal_connect(
+   'changed-side-to-scan' => sub {
+    my ( $widget, $side ) = @_;
+    $dialog->signal_handler_disconnect( $dialog->{signal} );
+    is( $side, 'reverse', 'changed-side-to-scan' );
+    is( $dialog->get('page-number-increment'),
+     -2, 'reverse side gives increment -2' );
+   }
+  );
+  $dialog->set( 'side-to-scan', 'reverse' );
+
  }
 );
 $dialog->set( 'page-number-increment', 2 );
-
-$dialog->{signal} = $dialog->signal_connect(
- 'changed-side-to-scan' => sub {
-  my ( $widget, $side ) = @_;
-  $dialog->signal_handler_disconnect( $dialog->{signal} );
-  is( $side, 'reverse', 'changed-side-to-scan' );
-  is( $dialog->get('page-number-increment'),
-   -2, 'reverse side gives increment -2' );
- }
-);
-$dialog->set( 'side-to-scan', 'reverse' );
 
 $dialog->{reloaded_signal} = $dialog->signal_connect(
  'reloaded-scan-options' => sub {

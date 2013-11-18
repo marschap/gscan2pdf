@@ -91,7 +91,7 @@ use Locale::gettext 1.05;    # For translations
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
-my $version   = '1.1.3';
+my $version   = '1.2.0';
 
 # Window parameters
 my $border_width = 6;
@@ -6977,6 +6977,11 @@ obviously ghosted out.
 In 0.9.27, Perl bindings for SANE were introduced and two further frontends,
 scanimage-perl and scanadf-perl (scanimage and scanadf transliterated from C into
 Perl) were added.
+
+Before 1.2.0, options available through CLI frontends like scanimage were made
+visible as users asked for them. In 1.2.0, all options can be shown or hidden
+via Edit/Preferences, along with the ability to specify which options trigger a
+reload.
 
 =head4 Default filename for PDF files
 
