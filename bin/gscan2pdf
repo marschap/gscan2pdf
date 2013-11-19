@@ -424,6 +424,9 @@ my $tcbutton = Gtk2::Button->new;
 $tcbutton->set_image( Gtk2::Image->new_from_stock( 'gtk-cancel', 'button' ) );
 $thbox->pack_end( $tcbutton, FALSE, FALSE, 0 );
 
+# Open scan dialog in background
+scan_dialog(TRUE) if ('auto-open-scan-dialog');
+
 ### Subroutines
 
 sub parse_arguments {
@@ -561,7 +564,8 @@ sub read_config_file {    ## no critic (RequireArgUnpacking)
   'ocr engine'      => 'ocropus',
   'OCR output' =>
     'replace',    # When a page is re-OCRed, replace old text with new text
-  'Paper' => {
+  'auto-open-scan-dialog' => TRUE,
+  'Paper'                 => {
    $d->get('A4') => {
     x => 210,
     y => 297,
@@ -3388,9 +3392,10 @@ sub email {
 # Scan
 
 sub scan_dialog {
+ my ($hidden) = @_;
 
  if ( defined $windows ) {
-  $windows->present;
+  $windows->show_all;
   return;
  }
 
@@ -3485,18 +3490,7 @@ sub scan_dialog {
   }
  );
 
- $windows->signal_connect(
-  'changed-progress' => sub {
-   my ( $widget, $progress, $message ) = @_;
-   if ( $progress == -1 ) {
-    $spbar->pulse;
-   }
-   else {
-    $spbar->set_fraction($progress);
-   }
-   $spbar->set_text($message) if ( defined $message );
-  }
- );
+ $windows->signal_connect( 'changed-progress' => \&changed_progress_callback );
 
  $windows->signal_connect(
   'finished-process' => sub {
@@ -3582,7 +3576,7 @@ sub scan_dialog {
 
  add_postprocessing_options($windows);
 
- $windows->show_all;
+ $windows->show_all unless $hidden;
 
  if (@device_list) {
   $windows->set( 'device-list', \@device_list );
@@ -3658,6 +3652,18 @@ sub changed_scan_option_callback {
  # Note resolution
  $SETTING{resolution} = $value
    if ( $option eq SANE_NAME_SCAN_RESOLUTION );
+ return;
+}
+
+sub changed_progress_callback {
+ my ( $widget, $progress, $message ) = @_;
+ if ( $progress == -1 ) {
+  $spbar->pulse;
+ }
+ else {
+  $spbar->set_fraction($progress);
+ }
+ $spbar->set_text($message) if ( defined $message );
  return;
 }
 
@@ -5954,6 +5960,20 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $notebook->append_page( $vbox1, $d->get('Scan options') );
  $vbox1->set_border_width($border_width);
 
+ my $cbo =
+   Gtk2::CheckButton->new_with_label(
+  $d->get('Open scan dialog at program start') );
+ $tooltips->set_tip(
+  $cbo,
+  $d->get(
+       "Automatically open the scan dialog in the background at program start. "
+     . "This saves time clicking the scan button and waiting for the program to find the list of scanners"
+  )
+ );
+ $cbo->set_active( $SETTING{'auto-open-scan-dialog'} )
+   if ( defined $SETTING{'auto-open-scan-dialog'} );
+ $vbox1->pack_start( $cbo, TRUE, TRUE, 0 );
+
  # Frontends
  my $hbox = Gtk2::HBox->new;
  $vbox1->pack_start( $hbox, FALSE, FALSE, 0 );
@@ -6269,10 +6289,11 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
      $windows->set( 'reload-triggers',      $SETTING{'scan-reload-triggers'} );
     }
    }
-   $SETTING{'cycle sane handle'} = $cbcsh->get_active;
-   $SETTING{'default filename'}  = $fileentry->get_text;
-   $SETTING{'scan prefix'}       = $preentry->get_text;
-   $SETTING{'cache options'}     = $cbc->get_active;
+   $SETTING{'auto-open-scan-dialog'} = $cbo->get_active;
+   $SETTING{'cycle sane handle'}     = $cbcsh->get_active;
+   $SETTING{'default filename'}      = $fileentry->get_text;
+   $SETTING{'scan prefix'}           = $preentry->get_text;
+   $SETTING{'cache options'}         = $cbc->get_active;
    $windows->set( 'cache-options', $SETTING{'cache options'} )
      if ( defined $windows );
    delete $SETTING{cache}
