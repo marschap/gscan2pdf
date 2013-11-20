@@ -8,18 +8,18 @@ msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2012-10-25 08:12+0200\n"
-"PO-Revision-Date: 2012-04-13 10:56+0000\n"
-"Last-Translator: Arthur Rodrigues <Unknown>\n"
+"PO-Revision-Date: 2013-10-30 17:07+0000\n"
+"Last-Translator: Rodrigo Zimmermann <bilufe@yahoo.com.br>\n"
 "Language-Team: Brazilian Portuguese <pt_BR@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2013-01-31 15:40+0000\n"
-"X-Generator: Launchpad (build 16455)\n"
+"X-Launchpad-Export-Date: 2013-11-19 09:22+0000\n"
+"X-Generator: Launchpad (build 16831)\n"
 
 #: bin/gscan2pdf:157
 msgid "Error displaying help"
-msgstr ""
+msgstr "Ocorreu um erro ao exibir a ajuda"
 
 #: bin/gscan2pdf:201
 msgid ""
@@ -226,19 +226,19 @@ msgstr "Selecione as páginas OCR modificadas pela última vez"
 
 #: bin/gscan2pdf:565
 msgid "_No OCR"
-msgstr ""
+msgstr "_Nenhum OCR"
 
 #: bin/gscan2pdf:566
 msgid "Select pages with no OCR output"
-msgstr ""
+msgstr "Selecionar páginas sem saída OCR"
 
 #: bin/gscan2pdf:570
 msgid "_Clear OCR"
-msgstr ""
+msgstr "Limpar O_CR"
 
 #: bin/gscan2pdf:571
 msgid "Clear OCR output from selected pages"
-msgstr ""
+msgstr "Limpar saída OCR das páginas selecionadas"
 
 #: bin/gscan2pdf:575
 msgid "Propert_ies"
@@ -569,7 +569,7 @@ msgstr "Duplex"
 
 #: bin/gscan2pdf:1301 bin/gscan2pdf:1306
 msgid "Pick crashed session to restore"
-msgstr ""
+msgstr "Escolher sessão problemática a restaurar"
 
 #: bin/gscan2pdf:1308 bin/gscan2pdf:2609
 msgid "Session"
@@ -580,6 +580,8 @@ msgstr "Sessão"
 msgid ""
 "Warning: unable to use %s for temporary storage. Defaulting to %s instead."
 msgstr ""
+"Aviso: Não foi possível usar %s para armazenamento temporário. Escolhendo %s "
+"por padrão."
 
 #: bin/gscan2pdf:1441
 msgid "GOCR"
@@ -611,7 +613,7 @@ msgstr "Cuneiforme"
 
 #: bin/gscan2pdf:1455
 msgid "Process image with Cuneiform."
-msgstr ""
+msgstr "Processar imagem com Cuneiformes."
 
 #: bin/gscan2pdf:1461
 msgid "Save image and Save as PDF both require imagemagick\n"
@@ -643,7 +645,7 @@ msgstr "unpaper não encontrado\n"
 
 #: bin/gscan2pdf:1534
 msgid "OCR requires gocr, tesseract, ocropus, or cuneiform\n"
-msgstr ""
+msgstr "OCR necessita dos pacotes gocr, tesseract, ocropus, ou cuneiform\n"
 
 #: bin/gscan2pdf:1539
 msgid "Warning: missing packages"
@@ -658,6 +660,8 @@ msgid ""
 "Some pages have not been saved.\n"
 "Do you really want to clear all pages?"
 msgstr ""
+"Algumas páginas não foram salvas.\n"
+"Você realmente deseja limpar todas as páginas?"
 
 #: bin/gscan2pdf:1828 bin/gscan2pdf:1858
 #, perl-format
@@ -667,7 +671,7 @@ msgstr "Processo %i de %i (%s)"
 #: bin/gscan2pdf:1867
 #, perl-format
 msgid "Process %i of %i"
-msgstr ""
+msgstr "Processo %i de %i"
 
 #: bin/gscan2pdf:1895
 msgid "Open image"
@@ -688,7 +692,7 @@ msgstr "Páginas a serem extraídas"
 #: lib/Gscan2pdf/Dialog.pm:56 lib/Gscan2pdf/Dialog/Renumber.pm:80
 #: lib/Gscan2pdf/Scanner/Dialog.pm:201 t/05_Dialog.t:28
 msgid "vbox"
-msgstr ""
+msgstr "vbox"
 
 #: bin/gscan2pdf:1946
 msgid "First page to extract"
@@ -770,7 +774,7 @@ msgstr "Reduzir para"
 
 #: bin/gscan2pdf:2501
 msgid "PPI"
-msgstr ""
+msgstr "PPI"
 
 #: bin/gscan2pdf:2520
 msgid "Automatic"
@@ -914,7 +918,7 @@ msgstr "tiff"
 
 #: bin/gscan2pdf:2681
 msgid "Font for non-ASCII text"
-msgstr ""
+msgstr "Fonte para texto não-ASCII"
 
 #: bin/gscan2pdf:2790
 msgid "TIFF filename"
@@ -934,7 +938,7 @@ msgstr "Nome de arquivo PS"
 
 #: bin/gscan2pdf:2951
 msgid "Postscript files"
-msgstr ""
+msgstr "Arquivos PostScript"
 
 #: bin/gscan2pdf:3003
 msgid "gscan2pdf session filename"
@@ -942,7 +946,7 @@ msgstr "Nome de arquivo da sessão gscan2pdf"
 
 #: bin/gscan2pdf:3010
 msgid "gscan2pdf session files"
-msgstr ""
+msgstr "Arquivos de sessão do gscan2pdf"
 
 #: bin/gscan2pdf:3093
 #, perl-format
@@ -963,7 +967,7 @@ msgstr "Nome de arquivo DjVu"
 
 #: bin/gscan2pdf:3252
 msgid "DjVu files"
-msgstr ""
+msgstr "Arquivos DjVu"
 
 #: bin/gscan2pdf:3349
 msgid "Email as PDF"
@@ -971,7 +975,7 @@ msgstr "Enviar por e-mail como PDF"
 
 #: bin/gscan2pdf:3454
 msgid "Error creating email"
-msgstr ""
+msgstr "Erro ao criar email"
 
 #: bin/gscan2pdf:3490 bin/gscan2pdf:4313
 msgid "Scan Document"
