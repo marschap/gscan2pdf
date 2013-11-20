@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: gscan2pdf 0.9.9\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2012-10-25 08:12+0200\n"
-"PO-Revision-Date: 2010-07-12 19:48+0000\n"
+"PO-Revision-Date: 2013-05-12 16:50+0000\n"
 "Last-Translator: peteradleralberti <Unknown>\n"
 "Language-Team: Danish <dansk@klid.dk>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2013-01-31 15:40+0000\n"
-"X-Generator: Launchpad (build 16455)\n"
+"X-Launchpad-Export-Date: 2013-11-19 09:22+0000\n"
+"X-Generator: Launchpad (build 16831)\n"
 
 #: bin/gscan2pdf:157
 msgid "Error displaying help"
@@ -46,7 +46,7 @@ msgstr "US Legal"
 #: bin/gscan2pdf:323 bin/gscan2pdf:344
 #, perl-format
 msgid "Cannot read file: %s"
-msgstr ""
+msgstr "Kan ikke læse filen: %s"
 
 #: bin/gscan2pdf:451
 msgid "_File"
@@ -94,7 +94,7 @@ msgstr ""
 
 #: bin/gscan2pdf:481
 msgid "Print"
-msgstr ""
+msgstr "Udskriv"
 
 #: bin/gscan2pdf:485
 msgid "_Compress temporary files"
@@ -399,7 +399,7 @@ msgstr "Fejl ved kopiering af side"
 
 #: bin/gscan2pdf:1082
 msgid "Image"
-msgstr ""
+msgstr "Billede"
 
 #: bin/gscan2pdf:1117
 msgid "OCR Output"
@@ -580,6 +580,8 @@ msgstr "Session"
 msgid ""
 "Warning: unable to use %s for temporary storage. Defaulting to %s instead."
 msgstr ""
+"Advarsel: ude af stand til at bruge %s til midlertidig lagerplads. Bruger "
+"istedet standardværdien %s."
 
 #: bin/gscan2pdf:1441
 msgid "GOCR"
@@ -671,7 +673,7 @@ msgstr ""
 
 #: bin/gscan2pdf:1903 bin/gscan2pdf:2797 bin/gscan2pdf:3113
 msgid "Image files"
-msgstr ""
+msgstr "Billedfiler"
 
 #: bin/gscan2pdf:1940
 msgid "Pages to extract"
@@ -740,7 +742,7 @@ msgstr ""
 
 #: bin/gscan2pdf:2252 bin/gscan2pdf:2258 bin/gscan2pdf:2332
 msgid "text"
-msgstr ""
+msgstr "tekst"
 
 #: bin/gscan2pdf:2352
 msgid "PDF filename"
@@ -748,7 +750,7 @@ msgstr "PDF filnavn"
 
 #: bin/gscan2pdf:2381
 msgid "PDF files"
-msgstr ""
+msgstr "PDF-filer"
 
 #: bin/gscan2pdf:2405 bin/gscan2pdf:2823 bin/gscan2pdf:2880 bin/gscan2pdf:2976
 #: bin/gscan2pdf:3035 bin/gscan2pdf:3087 bin/gscan2pdf:3275
@@ -766,7 +768,7 @@ msgstr "Nedsampling til"
 
 #: bin/gscan2pdf:2501
 msgid "PPI"
-msgstr ""
+msgstr "PPI"
 
 #: bin/gscan2pdf:2520
 msgid "Automatic"
@@ -922,7 +924,7 @@ msgstr "Tekstfilnavn"
 
 #: bin/gscan2pdf:2856
 msgid "Text files"
-msgstr ""
+msgstr "Tekstfiler"
 
 #: bin/gscan2pdf:2944
 msgid "PS filename"
@@ -930,7 +932,7 @@ msgstr "PS filnavn"
 
 #: bin/gscan2pdf:2951
 msgid "Postscript files"
-msgstr ""
+msgstr "Postscript-filer"
 
 #: bin/gscan2pdf:3003
 msgid "gscan2pdf session filename"
@@ -959,7 +961,7 @@ msgstr "DjVu filnavn"
 
 #: bin/gscan2pdf:3252
 msgid "DjVu files"
-msgstr ""
+msgstr "DjVu-filer"
 
 #: bin/gscan2pdf:3349
 msgid "Email as PDF"
@@ -1229,7 +1231,7 @@ msgstr "Gør scan-til-PDF processen nemmere"
 
 #: bin/gscan2pdf:5408
 msgid "Copyright 2006--2012 Jeffrey Ratcliffe"
-msgstr ""
+msgstr "Copyright 2006--2012 Jeffrey Ratcliffe"
 
 #: bin/gscan2pdf:5492 bin/gscan2pdf:6028
 msgid "The options cache seems to be empty. Reload device-dependent options?"
@@ -1383,15 +1385,15 @@ msgstr ""
 
 #: bin/gscan2pdf:6774
 msgid "The width of the crop."
-msgstr ""
+msgstr "Bredden af beskæringen"
 
 #: bin/gscan2pdf:6785
 msgid "The height of the crop."
-msgstr ""
+msgstr "Højden af beskæringen"
 
 #: bin/gscan2pdf:6906
 msgid "label"
-msgstr ""
+msgstr "etiket"
 
 #: bin/gscan2pdf:7007
 msgid "unpaper"
@@ -1446,7 +1448,7 @@ msgstr "Operationen kan ikke fortrydes. Er du sikker?"
 
 #: bin/gscan2pdf:7753
 msgid "Preferences"
-msgstr ""
+msgstr "Indstillinger"
 
 #: bin/gscan2pdf:7762
 msgid "Frontend"
@@ -1498,7 +1500,7 @@ msgstr ""
 
 #: bin/gscan2pdf:7814
 msgid "Default filename for PDFs"
-msgstr ""
+msgstr "Standardfilnavn for PDF-filer"
 
 #: bin/gscan2pdf:7820
 msgid ""
@@ -1534,7 +1536,7 @@ msgstr ""
 
 #: bin/gscan2pdf:7867
 msgid "Browse"
-msgstr ""
+msgstr "Gennemse"
 
 #: bin/gscan2pdf:7871
 msgid "Select temporary directory"
@@ -1562,7 +1564,7 @@ msgstr ""
 
 #: bin/gscan2pdf:7915
 msgid "Replace"
-msgstr ""
+msgstr "Erstat"
 
 #: bin/gscan2pdf:7917
 msgid ""
@@ -1619,7 +1621,7 @@ msgstr ""
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:78 lib/Gscan2pdf/Dialog/Renumber.pm:162
 msgid "Renumber"
-msgstr ""
+msgstr "Omnummerér"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:98 lib/Gscan2pdf/Dialog/Renumber.pm:207
 #: lib/Gscan2pdf/Dialog/Renumber.pm:244
@@ -1628,7 +1630,7 @@ msgstr ""
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:102
 msgid "Page numbering"
-msgstr ""
+msgstr "Sidenummerering"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:105 lib/Gscan2pdf/Scanner/Dialog.pm:254
 msgid "border_width"
@@ -1660,11 +1662,11 @@ msgstr ""
 
 #: lib/Gscan2pdf/Document.pm:83
 msgid "Thumbnails"
-msgstr ""
+msgstr "Miniaturer"
 
 #: lib/Gscan2pdf/Document.pm:1502
 msgid "Unknown DjVu file structure. Please contact the author."
-msgstr ""
+msgstr "Ukendt struktur i DjVu-filen. Vær venlig at kontakte ophavsmanden."
 
 #: lib/Gscan2pdf/Document.pm:1558
 #, perl-format
@@ -1674,7 +1676,7 @@ msgstr ""
 #: lib/Gscan2pdf/Document.pm:1580 lib/Gscan2pdf/Document.pm:1637
 #, perl-format
 msgid "Importing page %i of %i"
-msgstr ""
+msgstr "Importerer side %i af %i"
 
 #: lib/Gscan2pdf/Document.pm:1613
 msgid "Error extracting images from PDF"
@@ -1682,12 +1684,12 @@ msgstr ""
 
 #: lib/Gscan2pdf/Document.pm:1692
 msgid "Setting up PDF"
-msgstr ""
+msgstr "Sætter PDF op"
 
 #: lib/Gscan2pdf/Document.pm:1703
 #, perl-format
 msgid "Saving page %i of %i"
-msgstr ""
+msgstr "Gemmer side %i af %i"
 
 #: lib/Gscan2pdf/Document.pm:1814 lib/Gscan2pdf/Document.pm:2136
 #, perl-format
@@ -1706,21 +1708,21 @@ msgstr ""
 
 #: lib/Gscan2pdf/Document.pm:1939
 msgid "Closing PDF"
-msgstr ""
+msgstr "Lukker PDF"
 
 #: lib/Gscan2pdf/Document.pm:1955
 #, perl-format
 msgid "Writing page %i of %i"
-msgstr ""
+msgstr "Skriver side %i af %i"
 
 #: lib/Gscan2pdf/Document.pm:2006
 msgid "Error writing DjVu"
-msgstr ""
+msgstr "Fejl under skrivning af DjVu"
 
 #: lib/Gscan2pdf/Document.pm:2025 lib/Gscan2pdf/Document.pm:2227
 #, perl-format
 msgid "Can't open file: %s"
-msgstr ""
+msgstr "Kan ikke åbne fil: %s"
 
 #: lib/Gscan2pdf/Document.pm:2050
 msgid "Error adding text layer to DjVu"
@@ -1728,20 +1730,20 @@ msgstr ""
 
 #: lib/Gscan2pdf/Document.pm:2056
 msgid "Closing DjVu"
-msgstr ""
+msgstr "Lukker DjVu"
 
 #: lib/Gscan2pdf/Document.pm:2063
 msgid "Error closing DjVu"
-msgstr ""
+msgstr "Fejl under lukning af DjVu"
 
 #: lib/Gscan2pdf/Document.pm:2078
 #, perl-format
 msgid "Converting image %i of %i to TIFF"
-msgstr ""
+msgstr "Konverterer billede %i af %i til TIFF"
 
 #: lib/Gscan2pdf/Document.pm:2105
 msgid "Error writing TIFF"
-msgstr ""
+msgstr "Fejl under skrivning af TIFF"
 
 #: lib/Gscan2pdf/Document.pm:2121
 msgid "Concatenating TIFFs"
@@ -1758,7 +1760,7 @@ msgstr ""
 #: lib/Gscan2pdf/Frontend/CLI.pm:158
 #, perl-format
 msgid "Scanning %i pages..."
-msgstr ""
+msgstr "Skanner %i sider..."
 
 #: lib/Gscan2pdf/Frontend/CLI.pm:163
 #, perl-format
