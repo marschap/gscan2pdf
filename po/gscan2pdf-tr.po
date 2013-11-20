@@ -8,18 +8,18 @@ msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2012-10-25 08:12+0200\n"
-"PO-Revision-Date: 2012-09-15 15:58+0000\n"
+"PO-Revision-Date: 2013-07-08 09:30+0000\n"
 "Last-Translator: Utku BERBEROĞLU <Unknown>\n"
 "Language-Team: Turkish <tr@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2013-01-31 15:40+0000\n"
-"X-Generator: Launchpad (build 16455)\n"
+"X-Launchpad-Export-Date: 2013-11-19 09:22+0000\n"
+"X-Generator: Launchpad (build 16831)\n"
 
 #: bin/gscan2pdf:157
 msgid "Error displaying help"
-msgstr ""
+msgstr "Yardım görüntülemede hata"
 
 #: bin/gscan2pdf:201
 msgid ""
@@ -226,15 +226,15 @@ msgstr "Son OKT işleminden beri değiştirilen sayfaları seç."
 
 #: bin/gscan2pdf:565
 msgid "_No OCR"
-msgstr ""
+msgstr "OKT yapma."
 
 #: bin/gscan2pdf:566
 msgid "Select pages with no OCR output"
-msgstr ""
+msgstr "OKT çıktısı olmayan sayfaları seç"
 
 #: bin/gscan2pdf:570
 msgid "_Clear OCR"
-msgstr ""
+msgstr "_OKT'yi temizle."
 
 #: bin/gscan2pdf:571
 msgid "Clear OCR output from selected pages"
@@ -1500,7 +1500,7 @@ msgstr "Scanadf'yi ön uç olarak kullanarak tara"
 
 #: bin/gscan2pdf:7791
 msgid "Cycle SANE handle after scan"
-msgstr ""
+msgstr "Taramadan sonra SANE işlemesini yinele."
 
 #: bin/gscan2pdf:7814
 msgid "Default filename for PDFs"
@@ -1605,7 +1605,7 @@ msgstr "Kullanıcı tanımlı araçlar"
 
 #: bin/gscan2pdf:7954
 msgid "View files on saving"
-msgstr ""
+msgstr "Kaydederken dosyaları göster."
 
 #: bin/gscan2pdf:8000
 msgid ""
@@ -1646,11 +1646,11 @@ msgstr ""
 #: lib/Gscan2pdf/Dialog/Renumber.pm:98 lib/Gscan2pdf/Dialog/Renumber.pm:207
 #: lib/Gscan2pdf/Dialog/Renumber.pm:244
 msgid "range"
-msgstr ""
+msgstr "aralık"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:102
 msgid "Page numbering"
-msgstr ""
+msgstr "Sayfa numaralandırma"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:105 lib/Gscan2pdf/Scanner/Dialog.pm:254
 msgid "border_width"
@@ -1668,17 +1668,19 @@ msgstr ""
 #: t/07_Dialog_Renumber.t:46 t/07_Dialog_Renumber.t:60
 #: t/07_Dialog_Renumber.t:67
 msgid "increment"
-msgstr ""
+msgstr "artış"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:205 lib/Gscan2pdf/Dialog/Renumber.pm:241
 msgid "document"
-msgstr ""
+msgstr "belge"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:295
 msgid ""
 "The current settings would result in duplicate page numbers. Please select "
 "new start and increment values."
 msgstr ""
+"Şu anki ayarlar yinelenen sayfa numaraları ile sonuçlanabilir. Lütfen yeni "
+"başlangıç seçin ve değerleri arttırın."
 
 #: lib/Gscan2pdf/Document.pm:83
 msgid "Thumbnails"
@@ -1700,11 +1702,11 @@ msgstr "Sayfa içe aktarılıyor %i/%i"
 
 #: lib/Gscan2pdf/Document.pm:1613
 msgid "Error extracting images from PDF"
-msgstr ""
+msgstr "PDF'deki görüntüleri ayrıştırmada hata."
 
 #: lib/Gscan2pdf/Document.pm:1692
 msgid "Setting up PDF"
-msgstr ""
+msgstr "PDF'yi Ayarlama"
 
 #: lib/Gscan2pdf/Document.pm:1703
 #, perl-format
@@ -1724,7 +1726,7 @@ msgstr "PDF görüntü nesnesi oluşturmada hata: %s"
 #: lib/Gscan2pdf/Document.pm:1930
 #, perl-format
 msgid "Error embedding file image in %s format to PDF: %s"
-msgstr ""
+msgstr "%s biçemli resim dosyası PDF'ye gömülürken hata: %s"
 
 #: lib/Gscan2pdf/Document.pm:1939
 msgid "Closing PDF"
@@ -1759,23 +1761,23 @@ msgstr ""
 #: lib/Gscan2pdf/Document.pm:2078
 #, perl-format
 msgid "Converting image %i of %i to TIFF"
-msgstr ""
+msgstr "Resim TIFF'e dönüştürülüyor. %i/%i"
 
 #: lib/Gscan2pdf/Document.pm:2105
 msgid "Error writing TIFF"
-msgstr ""
+msgstr "TIFF yazılırken hata"
 
 #: lib/Gscan2pdf/Document.pm:2121
 msgid "Concatenating TIFFs"
-msgstr ""
+msgstr "TIFF'ler birleştiriliyor."
 
 #: lib/Gscan2pdf/Document.pm:2140
 msgid "Converting to PS"
-msgstr ""
+msgstr "PS'ye çeviriliyor."
 
 #: lib/Gscan2pdf/Document.pm:2200 lib/Gscan2pdf/Document.pm:2215
 msgid "Error saving image"
-msgstr ""
+msgstr "Görüntüyü kaydetmede hata."
 
 #: lib/Gscan2pdf/Frontend/CLI.pm:158
 #, perl-format
