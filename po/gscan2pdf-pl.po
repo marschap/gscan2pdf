@@ -8,18 +8,18 @@ msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2012-10-25 08:12+0200\n"
-"PO-Revision-Date: 2012-05-01 06:54+0000\n"
-"Last-Translator: Wojciech Górnaś <Unknown>\n"
+"PO-Revision-Date: 2013-03-17 20:02+0000\n"
+"Last-Translator: Piotr Strębski <strebski@o2.pl>\n"
 "Language-Team: Polish <none@none.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2013-01-31 15:40+0000\n"
-"X-Generator: Launchpad (build 16455)\n"
+"X-Launchpad-Export-Date: 2013-11-19 09:22+0000\n"
+"X-Generator: Launchpad (build 16831)\n"
 
 #: bin/gscan2pdf:157
 msgid "Error displaying help"
-msgstr ""
+msgstr "Wystąpił błąd podczas wyświetlania pomocy"
 
 #: bin/gscan2pdf:201
 msgid ""
@@ -342,7 +342,7 @@ msgstr "Kadruj strony"
 
 #: bin/gscan2pdf:653
 msgid "_Clean up"
-msgstr ""
+msgstr "_Posprzątaj"
 
 #: bin/gscan2pdf:654 bin/gscan2pdf:4085
 msgid "Clean up scanned images with unpaper"
@@ -386,11 +386,11 @@ msgstr "Zaznaczenie prostokątne"
 
 #: bin/gscan2pdf:684
 msgid "_Paint"
-msgstr ""
+msgstr "_Maluj"
 
 #: bin/gscan2pdf:685
 msgid "Use the painter tool"
-msgstr ""
+msgstr "Użyj narzędzia malarza"
 
 #: bin/gscan2pdf:965 lib/Gscan2pdf/Document.pm:2594
 #: lib/Gscan2pdf/Document.pm:2595
@@ -747,7 +747,7 @@ msgstr "Edycja tekstu"
 
 #: bin/gscan2pdf:2252 bin/gscan2pdf:2258 bin/gscan2pdf:2332
 msgid "text"
-msgstr ""
+msgstr "tekst"
 
 #: bin/gscan2pdf:2352
 msgid "PDF filename"
@@ -1083,7 +1083,7 @@ msgstr "Musi skanować strony czołowe jako pierwsze"
 
 #: bin/gscan2pdf:3977
 msgid "Post-processing"
-msgstr ""
+msgstr "Przetwarzanie końcowe"
 
 #: bin/gscan2pdf:3986 bin/gscan2pdf:4008
 msgid "Rotate"
@@ -1151,7 +1151,7 @@ msgstr "Wybierz kierunek obrotu"
 
 #: bin/gscan2pdf:4083
 msgid "Clean up images"
-msgstr ""
+msgstr "Czyszczenie obrazów"
 
 #: bin/gscan2pdf:4094
 msgid "Options"
@@ -1372,7 +1372,7 @@ msgstr "Kadrowanie"
 
 #: bin/gscan2pdf:6745
 msgid "x"
-msgstr ""
+msgstr "x"
 
 #: bin/gscan2pdf:6751
 msgid "The x-position of the left hand edge of the crop."
@@ -1380,7 +1380,7 @@ msgstr "Położenie lewej krawędzi obszaru kadrowania"
 
 #: bin/gscan2pdf:6757
 msgid "y"
-msgstr ""
+msgstr "y"
 
 #: bin/gscan2pdf:6763
 msgid "The y-position of the top edge of the crop."
@@ -1448,15 +1448,15 @@ msgstr "Tej operacji nie można cofnąć. Chcesz kontynuować?"
 
 #: bin/gscan2pdf:7753
 msgid "Preferences"
-msgstr ""
+msgstr "Preferencje"
 
 #: bin/gscan2pdf:7762
 msgid "Frontend"
-msgstr ""
+msgstr "Interfejs"
 
 #: bin/gscan2pdf:7766
 msgid "libsane-perl"
-msgstr ""
+msgstr "libsane-perl"
 
 #: bin/gscan2pdf:7767
 msgid "Scan using the perl bindings for SANE."
@@ -1464,7 +1464,7 @@ msgstr ""
 
 #: bin/gscan2pdf:7770
 msgid "scanimage"
-msgstr ""
+msgstr "scanimage"
 
 #: bin/gscan2pdf:7771
 msgid "Scan using the scanimage frontend."
@@ -1472,7 +1472,7 @@ msgstr ""
 
 #: bin/gscan2pdf:7775
 msgid "scanimage-perl"
-msgstr ""
+msgstr "scanimage-perl"
 
 #: bin/gscan2pdf:7776
 msgid "Scan using the scanimage-perl frontend."
@@ -1480,7 +1480,7 @@ msgstr ""
 
 #: bin/gscan2pdf:7779
 msgid "scanadf-perl"
-msgstr ""
+msgstr "scanadf-perl"
 
 #: bin/gscan2pdf:7780
 msgid "Scan using the scanadf-perl frontend."
@@ -1488,7 +1488,7 @@ msgstr ""
 
 #: bin/gscan2pdf:7785
 msgid "scanadf"
-msgstr ""
+msgstr "scanadf"
 
 #: bin/gscan2pdf:7786
 msgid "Scan using the scanadf frontend."
@@ -1631,12 +1631,12 @@ msgstr ""
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:78 lib/Gscan2pdf/Dialog/Renumber.pm:162
 msgid "Renumber"
-msgstr ""
+msgstr "Przenumerowanie"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:98 lib/Gscan2pdf/Dialog/Renumber.pm:207
 #: lib/Gscan2pdf/Dialog/Renumber.pm:244
 msgid "range"
-msgstr ""
+msgstr "zakres"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:102
 msgid "Page numbering"
@@ -1658,11 +1658,11 @@ msgstr ""
 #: t/07_Dialog_Renumber.t:46 t/07_Dialog_Renumber.t:60
 #: t/07_Dialog_Renumber.t:67
 msgid "increment"
-msgstr ""
+msgstr "przyrost"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:205 lib/Gscan2pdf/Dialog/Renumber.pm:241
 msgid "document"
-msgstr ""
+msgstr "dokument"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:295
 msgid ""
@@ -1672,7 +1672,7 @@ msgstr ""
 
 #: lib/Gscan2pdf/Document.pm:83
 msgid "Thumbnails"
-msgstr ""
+msgstr "Miniatury"
 
 #: lib/Gscan2pdf/Document.pm:1502
 msgid "Unknown DjVu file structure. Please contact the author."
@@ -1723,7 +1723,7 @@ msgstr "Zamykanie pliku PDF"
 #: lib/Gscan2pdf/Document.pm:1955
 #, perl-format
 msgid "Writing page %i of %i"
-msgstr ""
+msgstr "Zapisywanie strony %i z %i"
 
 #: lib/Gscan2pdf/Document.pm:2006
 msgid "Error writing DjVu"
@@ -1770,7 +1770,7 @@ msgstr "Błąd przy zapisywaniu obrazu"
 #: lib/Gscan2pdf/Frontend/CLI.pm:158
 #, perl-format
 msgid "Scanning %i pages..."
-msgstr ""
+msgstr "Skanowanie %i stron..."
 
 #: lib/Gscan2pdf/Frontend/CLI.pm:163
 #, perl-format
@@ -1800,7 +1800,7 @@ msgstr "Nieznany komunikat: "
 #: lib/Gscan2pdf/Page.pm:68 lib/Gscan2pdf/Page.pm:73
 #, perl-format
 msgid "Error importing image %s: %s"
-msgstr ""
+msgstr "Błąd importowania obrazu %s: %s"
 
 #: lib/Gscan2pdf/PageRange.pm:33
 msgid "Selected"
@@ -1835,7 +1835,7 @@ msgstr ""
 
 #: lib/Gscan2pdf/Scanner/Dialog.pm:749 t/061_Scanner_Dialog.t:32
 msgid "device"
-msgstr ""
+msgstr "urządzenie"
 
 #: lib/Gscan2pdf/Scanner/Dialog.pm:751
 msgid "Opening device"
@@ -2080,4 +2080,4 @@ msgstr ""
 
 #: t/061_Scanner_Dialog.t:171 t/062_Scanner_Dialog.t:73
 msgid "profile"
-msgstr ""
+msgstr "profil"
