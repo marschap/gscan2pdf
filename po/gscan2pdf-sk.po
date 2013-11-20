@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2012-10-25 08:12+0200\n"
-"PO-Revision-Date: 2012-12-02 11:58+0000\n"
-"Last-Translator: Prescott_SK <prescott66@gmail.com>\n"
+"PO-Revision-Date: 2013-10-10 13:08+0000\n"
+"Last-Translator: zdpo <zdposter@gmail.com>\n"
 "Language-Team: Slovak <sk@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2013-01-31 15:41+0000\n"
-"X-Generator: Launchpad (build 16455)\n"
+"X-Launchpad-Export-Date: 2013-11-19 09:22+0000\n"
+"X-Generator: Launchpad (build 16831)\n"
 
 #: bin/gscan2pdf:157
 msgid "Error displaying help"
@@ -58,7 +58,7 @@ msgstr "_Nový"
 
 #: bin/gscan2pdf:455
 msgid "Clears all pages"
-msgstr "Zmazať všetky strany"
+msgstr "Zmaže všetky strany"
 
 #: bin/gscan2pdf:459
 msgid "_Open"
@@ -66,7 +66,7 @@ msgstr "_Otvoriť"
 
 #: bin/gscan2pdf:460
 msgid "Open image file(s)"
-msgstr "Otvoriť súbor(y) obrázku(ov)"
+msgstr "Otvorí súbor(y) obrázku(ov)"
 
 #: bin/gscan2pdf:465
 msgid "S_can"
@@ -74,7 +74,7 @@ msgstr "S_kenovať"
 
 #: bin/gscan2pdf:467
 msgid "Scan document"
-msgstr "Naskenovať dokument"
+msgstr "Skenovať dokument"
 
 #: bin/gscan2pdf:471 bin/gscan2pdf:472 bin/gscan2pdf:2582
 msgid "Save"
@@ -86,7 +86,7 @@ msgstr "Odoslať _e-mailom ako PDF"
 
 #: bin/gscan2pdf:477
 msgid "Attach as PDF to a new email"
-msgstr "Pripojiť ako pdf k novému e-mailu"
+msgstr "Pripojí ako pdf k novému e-mailu"
 
 #: bin/gscan2pdf:480
 msgid "_Print"
@@ -234,11 +234,11 @@ msgstr "Vybrať stránky bez výstupu OCR"
 
 #: bin/gscan2pdf:570
 msgid "_Clear OCR"
-msgstr "_Vymazať OCR"
+msgstr "_Zmazať OCR"
 
 #: bin/gscan2pdf:571
 msgid "Clear OCR output from selected pages"
-msgstr "Vymazať výstup OCR z vybraných stránok"
+msgstr "Zmazať výstup OCR z vybraných stránok"
 
 #: bin/gscan2pdf:575
 msgid "Propert_ies"
@@ -549,11 +549,11 @@ msgstr "Výška strany"
 
 #: bin/gscan2pdf:1253
 msgid "Top Overscan"
-msgstr ""
+msgstr "Horné preskenovanie"
 
 #: bin/gscan2pdf:1254
 msgid "Bottom Overscan"
-msgstr ""
+msgstr "Dolné preskenovanie"
 
 #: bin/gscan2pdf:1256 bin/gscan2pdf:1263
 msgid "ADF Mode"
@@ -641,7 +641,7 @@ msgstr "Aplikácia unpaper chýba\n"
 
 #: bin/gscan2pdf:1534
 msgid "OCR requires gocr, tesseract, ocropus, or cuneiform\n"
-msgstr ""
+msgstr "OCR vyžaduje nástroj gocr, tesseract, ocropus alebo cuneiform\n"
 
 #: bin/gscan2pdf:1539
 msgid "Warning: missing packages"
@@ -656,24 +656,26 @@ msgid ""
 "Some pages have not been saved.\n"
 "Do you really want to clear all pages?"
 msgstr ""
+"Niektoré strany neboli uložené.\n"
+"Naozaj chcete zmazať strany?"
 
 #: bin/gscan2pdf:1828 bin/gscan2pdf:1858
 #, perl-format
 msgid "Process %i of %i (%s)"
-msgstr ""
+msgstr "Spracovanie %i z %i (%s)"
 
 #: bin/gscan2pdf:1867
 #, perl-format
 msgid "Process %i of %i"
-msgstr ""
+msgstr "Spracovanie %i z %i"
 
 #: bin/gscan2pdf:1895
 msgid "Open image"
-msgstr ""
+msgstr "Otvoriť obrázok"
 
 #: bin/gscan2pdf:1903 bin/gscan2pdf:2797 bin/gscan2pdf:3113
 msgid "Image files"
-msgstr ""
+msgstr "Súbory obrázkov"
 
 #: bin/gscan2pdf:1940
 msgid "Pages to extract"
@@ -686,7 +688,7 @@ msgstr "Extrahovať strany"
 #: lib/Gscan2pdf/Dialog.pm:56 lib/Gscan2pdf/Dialog/Renumber.pm:80
 #: lib/Gscan2pdf/Scanner/Dialog.pm:201 t/05_Dialog.t:28
 msgid "vbox"
-msgstr ""
+msgstr "vbox"
 
 #: bin/gscan2pdf:1946
 msgid "First page to extract"
@@ -738,7 +740,7 @@ msgstr "Kľúčové slová"
 
 #: bin/gscan2pdf:2245
 msgid "Editing text"
-msgstr ""
+msgstr "Upravovanie textu"
 
 #: bin/gscan2pdf:2252 bin/gscan2pdf:2258 bin/gscan2pdf:2332
 msgid "text"
@@ -912,7 +914,7 @@ msgstr "tiff"
 
 #: bin/gscan2pdf:2681
 msgid "Font for non-ASCII text"
-msgstr ""
+msgstr "Písmo pre ne-ASCII text"
 
 #: bin/gscan2pdf:2790
 msgid "TIFF filename"
@@ -973,11 +975,11 @@ msgstr "Chyba pri vytváraní emailu"
 
 #: bin/gscan2pdf:3490 bin/gscan2pdf:4313
 msgid "Scan Document"
-msgstr "Naskenovať dokument"
+msgstr "Skenovať dokument"
 
 #: bin/gscan2pdf:3507 lib/Gscan2pdf/Scanner/Dialog.pm:248
 msgid "Page Options"
-msgstr "Možnosti strany"
+msgstr "Voľby strany"
 
 #: bin/gscan2pdf:3510 lib/Gscan2pdf/Scanner/Dialog.pm:251
 msgid "# Pages"
@@ -1008,12 +1010,12 @@ msgstr "Číslo strany"
 #: bin/gscan2pdf:3563 lib/Gscan2pdf/Dialog/Renumber.pm:111
 #: lib/Gscan2pdf/Scanner/Dialog.pm:321
 msgid "Start"
-msgstr "Spustiť"
+msgstr "Začiatok"
 
 #: bin/gscan2pdf:3572 lib/Gscan2pdf/Dialog/Renumber.pm:132
 #: lib/Gscan2pdf/Scanner/Dialog.pm:340
 msgid "Increment"
-msgstr "Inkrementálne"
+msgstr "Pripočítať"
 
 #: bin/gscan2pdf:3604 lib/Gscan2pdf/Scanner/Dialog.pm:372
 msgid "Source document"
@@ -1150,7 +1152,7 @@ msgstr "Vyčistiť obrázky"
 
 #: bin/gscan2pdf:4094
 msgid "Options"
-msgstr "Možnosti"
+msgstr "Voľby"
 
 #: bin/gscan2pdf:4095
 msgid "Set unpaper options"
@@ -1158,7 +1160,7 @@ msgstr "Nastaviť unpaper voľby"
 
 #: bin/gscan2pdf:4101
 msgid "unpaper options"
-msgstr "unpaper možnosti"
+msgstr ""
 
 #: bin/gscan2pdf:4136 bin/gscan2pdf:4137
 msgid "OCR scanned pages"
@@ -1174,7 +1176,7 @@ msgstr "Získava sa zoznam zariadení"
 
 #: bin/gscan2pdf:4225 lib/Gscan2pdf/Scanner/Dialog.pm:654
 msgid "No devices found"
-msgstr "Žiadne zariadenia neboli nájdené"
+msgstr "Nenašli sa žiadne zariadenia"
 
 #: bin/gscan2pdf:4367 bin/gscan2pdf:4732 bin/gscan2pdf:4777 bin/gscan2pdf:5214
 #: lib/Gscan2pdf/Scanner/Dialog.pm:343 lib/Gscan2pdf/Scanner/Dialog.pm:348
@@ -1236,6 +1238,8 @@ msgstr "Autorské práva 2006--2012 Jeffrey Ratcliffe"
 #: bin/gscan2pdf:5492 bin/gscan2pdf:6028
 msgid "The options cache seems to be empty. Reload device-dependent options?"
 msgstr ""
+"Vyrovnávacia pamäť volieb sa zdá byť prázdna. Znovu načítať voľby pre dané "
+"zariadenie?"
 
 #: bin/gscan2pdf:5519 bin/gscan2pdf:6054
 msgid "Updating options"
@@ -1454,7 +1458,7 @@ msgstr "Nastavenia"
 
 #: bin/gscan2pdf:7762
 msgid "Frontend"
-msgstr ""
+msgstr "Rozhranie"
 
 #: bin/gscan2pdf:7766
 msgid "libsane-perl"
@@ -1462,7 +1466,7 @@ msgstr ""
 
 #: bin/gscan2pdf:7767
 msgid "Scan using the perl bindings for SANE."
-msgstr ""
+msgstr "Skenovať použitím väzieb perl pre SANE."
 
 #: bin/gscan2pdf:7770
 msgid "scanimage"
@@ -1470,7 +1474,7 @@ msgstr ""
 
 #: bin/gscan2pdf:7771
 msgid "Scan using the scanimage frontend."
-msgstr ""
+msgstr "Skenovať použitím rozhrania scanimage."
 
 #: bin/gscan2pdf:7775
 msgid "scanimage-perl"
@@ -1478,7 +1482,7 @@ msgstr ""
 
 #: bin/gscan2pdf:7776
 msgid "Scan using the scanimage-perl frontend."
-msgstr ""
+msgstr "Skenovať použitím rozhrania scanimage-perl."
 
 #: bin/gscan2pdf:7779
 msgid "scanadf-perl"
@@ -1486,7 +1490,7 @@ msgstr ""
 
 #: bin/gscan2pdf:7780
 msgid "Scan using the scanadf-perl frontend."
-msgstr ""
+msgstr "Skenovať použitím rozhrania scanadf-perl"
 
 #: bin/gscan2pdf:7785
 msgid "scanadf"
@@ -1494,11 +1498,11 @@ msgstr ""
 
 #: bin/gscan2pdf:7786
 msgid "Scan using the scanadf frontend."
-msgstr ""
+msgstr "Skenovať použitím rozhrania scanadf."
 
 #: bin/gscan2pdf:7791
 msgid "Cycle SANE handle after scan"
-msgstr ""
+msgstr "Cyklovať ovládanie SANE po skenovaní"
 
 #: bin/gscan2pdf:7814
 msgid "Default filename for PDFs"
@@ -1515,10 +1519,18 @@ msgid ""
 "%d\t document's day\n"
 "%D\t today's day"
 msgstr ""
+"%a\t autor\n"
+"%t\t názov\n"
+"%y\t rok vydania dokumentu\n"
+"%Y\t aktuálny rok\n"
+"%m\t mesiac vydania dokumentu\n"
+"%M\t aktuálny mesiac\n"
+"%d\t deň vydania dokumentu\n"
+"%D\t aktuálny deň"
 
 #: bin/gscan2pdf:7830
 msgid "Scan command prefix"
-msgstr ""
+msgstr "Predpona príkazu na skenovanie"
 
 #: bin/gscan2pdf:7839
 msgid "Restore window settings on startup"
@@ -1526,11 +1538,11 @@ msgstr "Obnoviť nastavenia okien po spustení"
 
 #: bin/gscan2pdf:7845
 msgid "Cache device-dependent options"
-msgstr ""
+msgstr "Ukladať voľby zariadenia do vyrovnávacej pamäte"
 
 #: bin/gscan2pdf:7851
 msgid "Clear device-dependent options cache"
-msgstr ""
+msgstr "Zmazať vyrovnávaciu pamäť volieb zariadenia"
 
 #: bin/gscan2pdf:7862
 msgid "Temporary directory"
@@ -1575,11 +1587,11 @@ msgstr "Nahradiť obsah vyrovnávacej pamäte textu s výstupom OCR."
 
 #: bin/gscan2pdf:7920
 msgid "Prepend"
-msgstr ""
+msgstr "Predradiť"
 
 #: bin/gscan2pdf:7921
 msgid "Prepend the OCR output to the text buffer."
-msgstr ""
+msgstr "Predradiť výstup OCR do textového zásobníka."
 
 #: bin/gscan2pdf:7924
 msgid "Append"
@@ -1613,6 +1625,12 @@ msgid ""
 "\n"
 "%r resolution"
 msgstr ""
+"Použite %i a %o pre rešpektujúc vystupné a výstupné názvy súborov, alebo iba "
+"%i ak budú obrázky upravené na mieste.\n"
+"\n"
+"Ďalšou dostupnou premennou je:\n"
+"\n"
+"%r rozlíšenie"
 
 #: bin/gscan2pdf:8119
 msgid "Properties"
@@ -1671,7 +1689,7 @@ msgstr "Miniatúry"
 
 #: lib/Gscan2pdf/Document.pm:1502
 msgid "Unknown DjVu file structure. Please contact the author."
-msgstr ""
+msgstr "Neznáma štruktúra súborov DjVu. Prosím, kontaktuje autora."
 
 #: lib/Gscan2pdf/Document.pm:1558
 #, perl-format
@@ -1752,7 +1770,7 @@ msgstr "Chyba pri zapisovaní súboru TIFF"
 
 #: lib/Gscan2pdf/Document.pm:2121
 msgid "Concatenating TIFFs"
-msgstr ""
+msgstr "Zlúčené obrázky TIFF"
 
 #: lib/Gscan2pdf/Document.pm:2140
 msgid "Converting to PS"
