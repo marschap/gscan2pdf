@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.1.3
+Version: 1.2.0
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -83,7 +83,14 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Mon Feb 25 2013 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sat Nov 23 2013 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #701581
+    (Thunderbird detection (for send email) does not work reliably on XFCE)
+    Closes: #729589
+    (Can not scan using a Canon LiDE 210 with version 1.1.3-1)
+    Closes: #717479
+    (Background-scanning for devices and options)
   - New upstream release
   - New upstream release
   - New upstream release
