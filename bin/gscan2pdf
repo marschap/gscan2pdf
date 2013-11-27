@@ -3657,11 +3657,11 @@ sub changed_scan_option_callback {
 
 sub changed_progress_callback {
  my ( $widget, $progress, $message ) = @_;
- if ( $progress == -1 ) {
-  $spbar->pulse;
+ if ( defined $progress ) {
+  $spbar->set_fraction($progress);
  }
  else {
-  $spbar->set_fraction($progress);
+  $spbar->pulse;
  }
  $spbar->set_text($message) if ( defined $message );
  return;

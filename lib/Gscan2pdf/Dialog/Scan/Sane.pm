@@ -114,7 +114,7 @@ sub scan_options {
    $self->signal_emit( 'started-process', $d->get('Opening device') );
   },
   running_callback => sub {
-   $self->signal_emit( 'changed-progress', -1, undef );
+   $self->signal_emit( 'changed-progress', undef, undef );
   },
   finished_callback => sub {
    $self->signal_emit( 'finished-process', 'open_device' );
@@ -123,7 +123,7 @@ sub scan_options {
      $self->signal_emit( 'started-process', $d->get('Retrieving options') );
     },
     sub {    # running callback
-     $self->signal_emit( 'changed-progress', -1, undef );
+     $self->signal_emit( 'changed-progress', undef, undef );
     },
     sub {    # finished callback
      my ($data) = @_;
@@ -479,7 +479,7 @@ sub set_option {
     $option->{name} );
   },
   running_callback => sub {
-   $self->signal_emit( 'changed-progress', -1, undef );
+   $self->signal_emit( 'changed-progress', undef, undef );
   },
   finished_callback => sub {
    my ($data) = @_;
