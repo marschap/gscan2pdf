@@ -188,6 +188,15 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   'Hash of scan options to show or hide from the user',    # blurb
   [qw/readable writable/]                                  # flags
  ),
+ Glib::ParamSpec->float(
+  'progress-pulse-step',                                   # name
+  'Progress pulse step',                                   # nick
+  'Pulse step of progress bar',                            # blurb
+  0.0,                                                     # minimum
+  1.0,                                                     # maximum
+  0.1,                                                     # default_value
+  [qw/readable writable/]                                  # flags
+ ),
   ];
 
 my ( $d, $d_sane, $logger, $tooltips );

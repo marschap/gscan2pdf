@@ -64,7 +64,7 @@ sub get_devices {
 
    # Set up ProgressBar
    $pbar = Gtk2::ProgressBar->new;
-   $pbar->set_pulse_step(.1);
+   $pbar->set_pulse_step( $self->get('progress-pulse-step') );
    $pbar->set_text( $d->get('Fetching list of devices') );
    $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
    $hboxd->hide_all;
