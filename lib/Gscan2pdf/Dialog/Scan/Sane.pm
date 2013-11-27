@@ -169,8 +169,8 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  $self->{paper}         = undef;
 
  delete $self->{combobp};    # So we don't carry over from one device to another
- for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-  my $opt = $options->by_index($i);
+ for ( 1 .. $num_dev_options - 1 ) {
+  my $opt = $options->by_index($_);
 
   # Notebook page for group
   if ( $opt->{type} == SANE_TYPE_GROUP or not defined($vbox) ) {
@@ -261,9 +261,9 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    {
     $widget = Gtk2::ComboBox->new_text;
     my $index = 0;
-    for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
-     $widget->append_text( $d_sane->get( $opt->{constraint}[$i] ) );
-     if ( defined $val and $opt->{constraint}[$i] eq $val ) { $index = $i; }
+    for ( 0 .. $#{ $opt->{constraint} } ) {
+     $widget->append_text( $d_sane->get( $opt->{constraint}[$_] ) );
+     if ( defined $val and $opt->{constraint}[$_] eq $val ) { $index = $_; }
     }
 
     # Set the default
@@ -307,8 +307,8 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  my $sane_device = Gscan2pdf::Frontend::Sane->device();
 
  # Show new pages
- for ( my $i = 1 ; $i < $self->{notebook}->get_n_pages ; $i++ ) {
-  $self->{notebook}->get_nth_page($i)->show_all;
+ for ( 1 .. $self->{notebook}->get_n_pages - 1 ) {
+  $self->{notebook}->get_nth_page($_)->show_all;
  }
 
  $self->{sbutton}->set_sensitive(TRUE);
@@ -512,12 +512,12 @@ sub update_options {
 
  my ( $group, $vbox );
  my $num_dev_options = $options->num_options;
- for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-  my $widget = $self->get('available-scan-options')->by_index($i)->{widget};
+ for ( 1 .. $num_dev_options - 1 ) {
+  my $widget = $self->get('available-scan-options')->by_index($_)->{widget};
 
   # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
   if ( defined $widget ) {
-   my $opt   = $options->by_index($i);
+   my $opt   = $options->by_index($_);
    my $value = $opt->{val};
    $widget->signal_handler_block( $widget->{signal} );
 
@@ -554,10 +554,10 @@ sub update_options {
     {
      $widget->get_model->clear;
      my $index = 0;
-     for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
-      $widget->append_text( $d_sane->get( $opt->{constraint}[$i] ) );
-      if ( defined $value and $opt->{constraint}[$i] eq $value ) {
-       $index = $i;
+     for ( 0 .. $#{ $opt->{constraint} } ) {
+      $widget->append_text( $d_sane->get( $opt->{constraint}[$_] ) );
+      if ( defined $value and $opt->{constraint}[$_] eq $value ) {
+       $index = $_;
       }
      }
      if ( defined $index ) { $widget->set_active($index); }
@@ -718,8 +718,8 @@ sub set_option_widget {
     when ( $widget->isa('Gtk2::ComboBox') ) {
      if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
       my $index;
-      for ( my $j = 0 ; $j < @{ $opt->{constraint} } ; ++$j ) {
-       if ( $opt->{constraint}[$j] eq $val ) { $index = $j; }
+      for ( 0 .. $#{ $opt->{constraint} } ) {
+       if ( $opt->{constraint}[$_] eq $val ) { $index = $_; }
       }
       if ( defined $index ) { $widget->set_active($index); }
       return $i;
