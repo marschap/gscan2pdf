@@ -419,7 +419,7 @@ sub _create_paper_widget {
 
 sub _pack_widget {
  my ( $self, $widget, $data ) = @_;
- my ( $options, $opt, $hbox, $hboxp ) = @$data;
+ my ( $options, $opt, $hbox, $hboxp ) = @{$data};
  if ( defined $widget ) {
   $opt->{widget} = $widget;
   if ( $opt->{type} == SANE_TYPE_BUTTON or $opt->{max_values} > 1 ) {
@@ -452,7 +452,7 @@ sub set_option {
  my $current = $self->{current_scan_options};
 
  # Cache option
- push @$current, { $option->{name} => $val };
+ push @{$current}, { $option->{name} => $val };
 
  # Note any duplicate options, keeping only the last entry.
  my %seen;
@@ -463,7 +463,7 @@ sub set_option {
     keys( %{ $current->[$j] } );
   $seen{$opt}++;
   if ( $seen{$opt} > 1 ) {
-   splice @$current, $j, 1;
+   splice @{$current}, $j, 1;
   }
   $j--;
  }
@@ -589,10 +589,10 @@ sub set_current_scan_options {
  # Config::General flattens arrays with 1 entry to scalars,
  # so we must check for this
  if ( ref($profile) ne 'ARRAY' ) {
-  push @$defaults, $profile;
+  push @{$defaults}, $profile;
  }
  else {
-  @$defaults = @$profile;
+  @{$defaults} = @{$profile};
  }
 
  # Give the GUI a chance to catch up between settings,
@@ -647,7 +647,7 @@ sub set_current_scan_options {
 sub set_option_widget {
  my ( $self, $i, $profile ) = @_;
 
- while ( $i < @$profile ) {
+ while ( $i < @{$profile} ) {
 
   # for reasons I don't understand, without walking the reference tree,
   # parts of $profile are undef
