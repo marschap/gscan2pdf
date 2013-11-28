@@ -101,7 +101,9 @@ sub scan_options {
 
  # Remove any existing pages
  while ( $self->{notebook}->get_n_pages > 1 ) {
-  $self->{notebook}->remove_page(-1);
+
+  # -1 = last page
+  $self->{notebook}->remove_page(-1);    ## no critic (ProhibitMagicNumbers)
  }
 
  # Ghost the scan button whilst options being updated
@@ -458,7 +460,7 @@ sub set_option {
  my %seen;
 
  my $j = $#{$current};
- while ( $j > -1 ) {
+ while ( $j > -1 ) {    ## no critic (ProhibitMagicNumbers)
   my ($opt) =
     keys( %{ $current->[$j] } );
   $seen{$opt}++;
