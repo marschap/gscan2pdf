@@ -237,7 +237,7 @@ sub scan_pages {
     # Stop the process unless everything OK and more scans required
     if (
         $_self->{abort_scan}
-     or ( $options{npages} != -1 and not --$options{npages} )
+     or ( $options{npages} and ++$n > $options{npages} )
      or ( $_self->{status} != SANE_STATUS_GOOD
       and $_self->{status} != SANE_STATUS_EOF )
       )
@@ -255,7 +255,6 @@ sub scan_pages {
     }
 
     $options{start} += $options{step};
-    $n++;
     $sentinel = _new_page( $options{dir}, $options{format}, $options{start} );
     return Glib::SOURCE_CONTINUE;
    }
@@ -274,13 +273,12 @@ sub scan_pages {
 }
 
 sub _scanned_enough_pages {
- my ( $ntodo, $ndone ) = @_;
+ my ( $nrequired, $ndone ) = @_;
  return (
        $_self->{status} == SANE_STATUS_GOOD
     or $_self->{status} == SANE_STATUS_EOF
     or ( $_self->{status} == SANE_STATUS_NO_DOCS
-   and $ntodo < 1
-   and $ndone > 1 )
+   and $nrequired < $ndone )
  );
 }
 

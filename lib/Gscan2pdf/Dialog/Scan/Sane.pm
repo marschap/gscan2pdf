@@ -745,10 +745,6 @@ sub scan {
  # Get selected number of pages
  my $npages = $self->get('num-pages');
 
- # Gscan2pdf::Frontend::Sane uses -1 for all
- # Gscan2pdf::Dialog::Sane uses 0 for all, as -1 puts 999 in spinbox
- if ( $npages == 0 ) { $npages = -1; }
-
  my $start = $self->get('page-number-start');
  my $step  = $self->get('page-number-increment');
  if ( $npages > 0 and $step < 0 ) { $npages = $self->get('max-pages'); }
