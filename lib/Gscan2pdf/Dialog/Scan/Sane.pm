@@ -520,62 +520,62 @@ sub update_options {
   my $widget = $self->get('available-scan-options')->by_index($_)->{widget};
 
   # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
-  if ( defined $widget ) {
-   my $opt   = $options->by_index($_);
-   my $value = $opt->{val};
-   $widget->signal_handler_block( $widget->{signal} );
+  if ( not defined($widget) ) { next; }
 
-   # HBox for option
-   my $hbox = $widget->parent;
-   $hbox->set_sensitive( ( not $opt->{cap} & SANE_CAP_INACTIVE )
-      and $opt->{cap} & SANE_CAP_SOFT_SELECT );
+  my $opt   = $options->by_index($_);
+  my $value = $opt->{val};
+  $widget->signal_handler_block( $widget->{signal} );
 
-   if ( $opt->{max_values} < 2 ) {
+  # HBox for option
+  my $hbox = $widget->parent;
+  $hbox->set_sensitive( ( not $opt->{cap} & SANE_CAP_INACTIVE )
+     and $opt->{cap} & SANE_CAP_SOFT_SELECT );
 
-    # CheckButton
-    if ( $opt->{type} == SANE_TYPE_BOOL )
-    {    ## no critic (ProhibitCascadingIfElse)
-     if ( $self->value_for_active_option( $value, $opt ) ) {
-      $widget->set_active($value);
-     }
-    }
+  if ( $opt->{max_values} < 2 ) {
 
-    # SpinButton
-    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-     my ( $step, $page ) = $widget->get_increments;
-     $step = 1;
-     if ( $opt->{constraint}{quant} ) { $step = $opt->{constraint}{quant}; }
-     $widget->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
-     $widget->set_increments( $step, $page );
-     if ( $self->value_for_active_option( $value, $opt ) ) {
-      $widget->set_value($value);
-     }
-    }
-
-    # ComboBox
-    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
-     or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
-    {
-     $widget->get_model->clear;
-     my $index = 0;
-     for ( 0 .. $#{ $opt->{constraint} } ) {
-      $widget->append_text( $d_sane->get( $opt->{constraint}[$_] ) );
-      if ( defined $value and $opt->{constraint}[$_] eq $value ) {
-       $index = $_;
-      }
-     }
-     if ( defined $index ) { $widget->set_active($index); }
-    }
-
-    # Entry
-    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-     if ( $self->value_for_active_option( $value, $opt ) ) {
-      $widget->set_text($value);
-     }
+   # CheckButton
+   if ( $opt->{type} == SANE_TYPE_BOOL )
+   {    ## no critic (ProhibitCascadingIfElse)
+    if ( $self->value_for_active_option( $value, $opt ) ) {
+     $widget->set_active($value);
     }
    }
-   $widget->signal_handler_unblock( $widget->{signal} );
+
+   # SpinButton
+   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
+    my ( $step, $page ) = $widget->get_increments;
+    $step = 1;
+    if ( $opt->{constraint}{quant} ) { $step = $opt->{constraint}{quant}; }
+    $widget->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
+    $widget->set_increments( $step, $page );
+    if ( $self->value_for_active_option( $value, $opt ) ) {
+     $widget->set_value($value);
+    }
+   }
+
+   # ComboBox
+   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+    or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
+   {
+    $widget->get_model->clear;
+    my $index = 0;
+    for ( 0 .. $#{ $opt->{constraint} } ) {
+     $widget->append_text( $d_sane->get( $opt->{constraint}[$_] ) );
+     if ( defined $value and $opt->{constraint}[$_] eq $value ) {
+      $index = $_;
+     }
+    }
+    if ( defined $index ) { $widget->set_active($index); }
+   }
+
+   # Entry
+   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
+    if ( $self->value_for_active_option( $value, $opt ) ) {
+     $widget->set_text($value);
+    }
+   }
   }
+  $widget->signal_handler_unblock( $widget->{signal} );
  }
  return;
 }
