@@ -3,6 +3,8 @@ package Gscan2pdf::NetPBM;
 use strict;
 use warnings;
 
+our $VERSION = '1.2.0';
+
 # Return file size expected by PNM header
 
 sub file_size_from_header {

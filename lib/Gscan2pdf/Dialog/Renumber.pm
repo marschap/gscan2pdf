@@ -57,6 +57,8 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  ),
   ];
 
+our $VERSION = '1.2.0';
+
 my ( $start_old, $step_old );
 
 # Normally, we would initialise the widget in INIT_INSTANCE and use the

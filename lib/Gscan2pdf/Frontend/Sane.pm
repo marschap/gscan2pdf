@@ -11,6 +11,8 @@ use Thread::Queue;
 use Glib qw(TRUE FALSE);
 use Sane;
 
+our $VERSION = '1.2.0';
+
 my $_POLL_INTERVAL;
 my $_self;
 my $buffer_size = ( 32 * 1024 );    # default size

@@ -9,6 +9,8 @@ use File::Basename;
 use Gscan2pdf::Document;    # for slurp
 use version;
 
+our $VERSION = '1.2.0';
+
 my ( %languages, $installed, $setup, $version, $tessdata, $datasuffix,
  $logger );
 

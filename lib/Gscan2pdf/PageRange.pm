@@ -26,6 +26,8 @@ use Glib::Object::Subclass Gtk2::VBox::,
  ),
   ];
 
+our $VERSION = '1.2.0';
+
 sub INIT_INSTANCE {
  my $self    = shift;
  my $d       = Locale::gettext->domain(Glib::get_application_name);

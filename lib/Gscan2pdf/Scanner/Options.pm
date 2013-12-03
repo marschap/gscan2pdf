@@ -9,6 +9,8 @@ use feature "switch";
 
 use Glib::Object::Subclass Glib::Object::;
 
+our $VERSION = '1.2.0';
+
 my $units = qr/(pel|bit|mm|dpi|%|us)/x;
 my $device;
 

@@ -17,6 +17,8 @@ use Gscan2pdf::Scanner::Options;
 use Cwd;
 use File::Spec;
 
+our $VERSION = '1.2.0';
+
 my $_POLL_INTERVAL = 100;    # ms
 my ( $_self, $logger, $d );
 

@@ -9,6 +9,8 @@ use File::Basename;
 use HTML::Entities;
 use Encode;
 
+our $VERSION = '1.2.0';
+
 my ( $exe, $installed, $setup, $logger );
 
 sub setup {
