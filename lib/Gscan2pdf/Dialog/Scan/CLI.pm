@@ -161,7 +161,7 @@ sub cache_key {
 
    for my $opt ( @{ $options->{array} } ) {
     for ( @{$reload_triggers} ) {
-     if ( defined( $opt->{name} ) and /^$opt->{name}$/ix ) {
+     if ( defined( $opt->{name} ) and /^$opt->{name}$/ixsm ) {
       if ( $cache_key ne '' ) { $cache_key .= ',' }
       $cache_key .= "$opt->{name},$opt->{val}";
       last;
@@ -179,7 +179,7 @@ sub cache_key {
    for ( @{ $self->{current_scan_options} } ) {
     my ( $key, $value ) = each( %{$_} );
     for ( @{$reload_triggers} ) {
-     if (/^$key$/ix) {
+     if (/^$key$/ixsm) {
       if ( $cache_key ne '' ) { $cache_key .= ',' }
       $cache_key .= "$key,$value";
       last;
@@ -550,7 +550,7 @@ sub _geometry_option {
         ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
     and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
     and ( $opt->{name} =~
-   /^(?:l|t|x|y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/x )
+   /^(?:l|t|x|y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/xsm )
  );
 }
 
@@ -909,7 +909,7 @@ sub update_options {
            $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
         or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST
        )
-       and grep { /^$val$/x } @{ $opt->{constraint} }
+       and grep { /^$val$/xsm } @{ $opt->{constraint} }
       )
        )
      {
