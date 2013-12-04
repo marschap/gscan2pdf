@@ -153,15 +153,16 @@ sub cache_key {
 
  my $reload_triggers = $self->get('reload-triggers');
  if ( defined $reload_triggers ) {
-  $reload_triggers = [$reload_triggers]
-    if ( ref($reload_triggers) ne 'ARRAY' );
+  if ( ref($reload_triggers) ne 'ARRAY' ) {
+   $reload_triggers = [$reload_triggers];
+  }
 
   if ( defined $options ) {
 
    for my $opt ( @{ $options->{array} } ) {
     for (@$reload_triggers) {
      if ( defined( $opt->{name} ) and /^$opt->{name}$/ix ) {
-      $cache_key .= ',' unless ( $cache_key eq '' );
+      if ( $cache_key ne '' ) { $cache_key .= ',' }
       $cache_key .= "$opt->{name},$opt->{val}";
       last;
      }
@@ -179,7 +180,7 @@ sub cache_key {
     my ( $key, $value ) = each(%$_);
     for (@$reload_triggers) {
      if (/^$key$/ix) {
-      $cache_key .= ',' unless ( $cache_key eq '' );
+      if ( $cache_key ne '' ) { $cache_key .= ',' }
       $cache_key .= "$key,$value";
       last;
      }
@@ -189,7 +190,7 @@ sub cache_key {
   }
  }
 
- $cache_key = 'default' if ( $cache_key eq '' );
+ if ( $cache_key eq '' ) { $cache_key = 'default' }
  return $cache_key;
 }
 
@@ -204,7 +205,7 @@ sub scan_options {
  }
 
  # Ghost the scan button whilst options being updated
- $self->{sbutton}->set_sensitive(FALSE) if ( defined $self->{sbutton} );
+ if ( defined $self->{sbutton} ) { $self->{sbutton}->set_sensitive(FALSE) }
 
  my ( $pbar, $cache_key );
  my $hboxd = $self->{hboxd};
@@ -258,7 +259,7 @@ sub scan_options {
 
     # Don't assume that the options we have are those we are looking for yet
     # Recalculating cache_key based on contents of options
-    $cache_key = $self->cache_key($options) unless ( $cache_key eq 'default' );
+    if ( $cache_key ne 'default' ) { $cache_key = $self->cache_key($options) }
 
     # We only store the array part of the options object
     # as we have to recreate the object anyway when we retrieve it
@@ -327,7 +328,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    next;
   }
 
-  next unless ( $opt->{cap} & SANE_CAP_SOFT_DETECT );
+  if ( not $opt->{cap} & SANE_CAP_SOFT_DETECT ) { next }
 
   # Widget
   my ( $widget, $val );
@@ -343,9 +344,11 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
   # HBox for option
   my $hbox = Gtk2::HBox->new;
   $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
-  $hbox->set_sensitive(FALSE)
-    if ( $opt->{cap} & SANE_CAP_INACTIVE
-   or not $opt->{cap} & SANE_CAP_SOFT_SELECT );
+  if ( $opt->{cap} & SANE_CAP_INACTIVE
+   or not $opt->{cap} & SANE_CAP_SOFT_SELECT )
+  {
+   $hbox->set_sensitive(FALSE);
+  }
 
   if ( $opt->{max_values} < 2 ) {
 
@@ -359,7 +362,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    if ( $opt->{type} == SANE_TYPE_BOOL )
    {    ## no critic (ProhibitCascadingIfElse)
     $widget = Gtk2::CheckButton->new;
-    $widget->set_active(TRUE) if ($val);
+    if ($val) { $widget->set_active(TRUE) }
     $widget->{signal} = $widget->signal_connect(
      toggled => sub {
       my $value = $widget->get_active;
@@ -381,13 +384,14 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    # SpinButton
    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
     my $step = 1;
-    $step = $opt->{constraint}{quant} if ( $opt->{constraint}{quant} );
+    if ( $opt->{constraint}{quant} ) { $step = $opt->{constraint}{quant} }
     $widget = Gtk2::SpinButton->new_with_range( $opt->{constraint}{min},
      $opt->{constraint}{max}, $step );
 
     # Set the default
-    $widget->set_value($val)
-      if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE );
+    if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE ) {
+     $widget->set_value($val);
+    }
     $widget->{signal} = $widget->signal_connect(
      'value-changed' => sub {
       my $value = $widget->get_value;
@@ -404,11 +408,11 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
     my $index = 0;
     for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
      $widget->append_text( $d_sane->get( $opt->{constraint}[$i] ) );
-     $index = $i if ( defined $val and $opt->{constraint}[$i] eq $val );
+     if ( defined $val and $opt->{constraint}[$i] eq $val ) { $index = $i }
     }
 
     # Set the default
-    $widget->set_active($index) if ( defined $index );
+    if ( defined $index ) { $widget->set_active($index) }
     $widget->{signal} = $widget->signal_connect(
      changed => sub {
       my $i = $widget->get_active;
@@ -422,8 +426,9 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
     $widget = Gtk2::Entry->new;
 
     # Set the default
-    $widget->set_text($val)
-      if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE );
+    if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE ) {
+     $widget->set_text($val);
+    }
     $widget->{signal} = $widget->signal_connect(
      activate => sub {
       my $value = $widget->get_text;
@@ -495,17 +500,17 @@ sub _update_option_visibility {
    }
    if ( $j > 0 and not $options->{array}[$j]{widget}->visible ) {
     my $group = $options->{array}[$j]{widget};
-    unless ( $group->visible ) {
+    if ( not $group->visible ) {
      $group->remove($container);
      my $move_paper =
        (    $geometry
         and defined( $self->{hboxp} )
         and $self->{hboxp}->parent eq $group );
-     $group->remove( $self->{hboxp} ) if ($move_paper);
+     if ($move_paper) { $group->remove( $self->{hboxp} ) }
 
      # Find visible group
      $group = $self->_find_visible_group( $options, $j );
-     $group->pack_start( $self->{hboxp}, FALSE, FALSE, 0 ) if ($move_paper);
+     if ($move_paper) { $group->pack_start( $self->{hboxp}, FALSE, FALSE, 0 ) }
      $group->pack_start( $container, FALSE, FALSE, 0 );
     }
    }
@@ -592,7 +597,7 @@ sub _create_paper_widget {
     elsif ( $self->{combobp}->get_active_text eq $d->get('Manual') ) {
      for ( ( 'l', 't', 'x', 'y', SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH ) )
      {
-      $options->{box}{$_}->show_all if ( defined $options->{box}{$_} );
+      if ( defined $options->{box}{$_} ) { $options->{box}{$_}->show_all }
      }
     }
     else {
@@ -623,7 +628,7 @@ sub _create_paper_widget {
        for (
         ( 'l', 't', 'x', 'y', SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH ) )
        {
-        $options->{box}{$_}->hide_all if ( defined $options->{box}{$_} );
+        if ( defined $options->{box}{$_} ) { $options->{box}{$_}->hide_all }
        }
       }
      );
@@ -651,8 +656,7 @@ sub _pack_widget {
   $tooltips->set_tip( $widget, $d_sane->get( $opt->{desc} ) );
 
   # Look-up to hide/show the box if necessary
-  $options->{box}{ $opt->{name} } = $hbox
-    if ( _geometry_option($opt) );
+  if ( _geometry_option($opt) ) { $options->{box}{ $opt->{name} } = $hbox }
 
   $self->_create_paper_widget($options);
 
@@ -696,8 +700,9 @@ sub set_option {
  my $reload_triggers = $self->get('reload-triggers');
  my $reload_flag;
  if ( defined $reload_triggers ) {
-  $reload_triggers = [$reload_triggers]
-    if ( ref($reload_triggers) ne 'ARRAY' );
+  if ( ref($reload_triggers) ne 'ARRAY' ) {
+   $reload_triggers = [$reload_triggers];
+  }
 
   for (@$reload_triggers) {
    if ( $_ eq $option->{name} or $_ eq $option->{title} ) {
@@ -723,12 +728,12 @@ sub set_option {
      $cache_key );
     $logger->info($options);
 
-    $self->update_options( $options, $option ) if ($options);
+    if ($options) { $self->update_options( $options, $option ) }
 
     $self->signal_emit( 'finished-process', 'find_scan_options' );
 
     # Unset the profile unless we are actively setting it
-    $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+    if ( not $self->{setting_profile} ) { $self->set( 'profile', undef ) }
 
     $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
     $self->signal_emit('reloaded-scan-options');
@@ -736,7 +741,7 @@ sub set_option {
   }
 
   # Reload from the scanner
-  unless ($reload_flag) {
+  if ( not $reload_flag ) {
    my $pbar;
    my $hboxd = $self->{hboxd};
    Gscan2pdf::Frontend::CLI->find_scan_options(
@@ -779,12 +784,12 @@ sub set_option {
       }
       $self->signal_emit( 'changed-options-cache', $cache );
      }
-     $self->update_options($options) if ($options);
+     if ($options) { $self->update_options($options) }
 
      $self->signal_emit( 'finished-process', 'find_scan_options' );
 
      # Unset the profile unless we are actively setting it
-     $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+     if ( not $self->{setting_profile} ) { $self->set( 'profile', undef ) }
 
      $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
      $self->signal_emit('reloaded-scan-options');
@@ -800,7 +805,7 @@ sub set_option {
  }
 
  # Unset the profile unless we are actively setting it
- $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+ if ( not $self->{setting_profile} ) { $self->set( 'profile', undef ) }
 
  $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
  return;
@@ -827,19 +832,21 @@ sub update_widget {
    # CheckButton
    if ( $opt->{type} == SANE_TYPE_BOOL )
    {    ## no critic (ProhibitCascadingIfElse)
-    $widget->set_active($value)
-      if ( $self->value_for_active_option( $value, $opt ) );
+    if ( $self->value_for_active_option( $value, $opt ) ) {
+     $widget->set_active($value);
+    }
    }
 
    # SpinButton
    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
     my ( $step, $page ) = $widget->get_increments;
     $step = 1;
-    $step = $opt->{constraint}{quant} if ( $opt->{constraint}{quant} );
+    if ( $opt->{constraint}{quant} ) { $step = $opt->{constraint}{quant} }
     $widget->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
     $widget->set_increments( $step, $page );
-    $widget->set_value($value)
-      if ( $self->value_for_active_option( $value, $opt ) );
+    if ( $self->value_for_active_option( $value, $opt ) ) {
+     $widget->set_value($value);
+    }
    }
 
    # ComboBox
@@ -850,15 +857,16 @@ sub update_widget {
     my $index = 0;
     for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
      $widget->append_text( $d_sane->get( $opt->{constraint}[$i] ) );
-     $index = $i if ( defined $value and $opt->{constraint}[$i] eq $value );
+     if ( defined $value and $opt->{constraint}[$i] eq $value ) { $index = $i }
     }
-    $widget->set_active($index) if ( defined $index );
+    if ( defined $index ) { $widget->set_active($index) }
    }
 
    # Entry
    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-    $widget->set_text($value)
-      if ( $self->value_for_active_option( $value, $opt ) );
+    if ( $self->value_for_active_option( $value, $opt ) ) {
+     $widget->set_text($value);
+    }
    }
   }
   $widget->signal_handler_unblock( $widget->{signal} );
@@ -895,12 +903,14 @@ sub update_options {
 
      # Don't update if the old option is still available
      my $val = quotemeta( $old_opt->{val} ); # quote any possible metacharacters
-     unless (
-      (
-          $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
-       or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST
+     if (
+      not(
+       (
+           $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
+        or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST
+       )
+       and grep { /^$val$/x } @{ $opt->{constraint} }
       )
-      and grep { /^$val$/x } @{ $opt->{constraint} }
        )
      {
       $self->set_option( $old_opt, $opt->{val} );
@@ -920,7 +930,7 @@ sub update_options {
 sub set_current_scan_options {
  my ( $self, $profile ) = @_;
 
- return unless ( defined $profile );
+ if ( not defined($profile) ) { return }
 
  # As scanimage and scanadf rename the geometry options,
  # we have to map them back to the original names
@@ -1022,7 +1032,7 @@ sub set_option_widget {
   else {
    given ($widget) {
     when ( $widget->isa('Gtk2::CheckButton') ) {
-     $val = SANE_FALSE if ( $val eq '' );
+     if ( $val eq '' ) { $val = SANE_FALSE }
      if ( $widget->get_active != $val ) {
       $widget->set_active($val);
       return $i;
@@ -1038,9 +1048,9 @@ sub set_option_widget {
      if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
       my $index;
       for ( my $j = 0 ; $j < @{ $opt->{constraint} } ; ++$j ) {
-       $index = $j if ( $opt->{constraint}[$j] eq $val );
+       if ( $opt->{constraint}[$j] eq $val ) { $index = $j }
       }
-      $widget->set_active($index) if ( defined $index );
+      if ( defined $index ) { $widget->set_active($index) }
       return $i;
      }
     }
@@ -1080,17 +1090,19 @@ sub map_geometry_names {
    when (SANE_NAME_SCAN_BR_X) {
     $name = 'x';
     my $l = $self->get_option_from_profile( 'l', $profile );
-    $l = $self->get_option_from_profile( SANE_NAME_SCAN_TL_X, $profile )
-      unless ( defined $l );
-    $val -= $l if ( defined $l );
+    if ( not defined($l) ) {
+     $l = $self->get_option_from_profile( SANE_NAME_SCAN_TL_X, $profile );
+    }
+    if ( defined $l ) { $val -= $l }
     $profile->[$i] = { $name => $val };
    }
    when (SANE_NAME_SCAN_BR_Y) {
     $name = 'y';
     my $t = $self->get_option_from_profile( 't', $profile );
-    $t = $self->get_option_from_profile( SANE_NAME_SCAN_TL_Y, $profile )
-      unless ( defined $t );
-    $val -= $t if ( defined $t );
+    if ( not defined($t) ) {
+     $t = $self->get_option_from_profile( SANE_NAME_SCAN_TL_Y, $profile );
+    }
+    if ( defined $t ) { $val -= $t }
     $profile->[$i] = { $name => $val };
    }
   }
@@ -1110,7 +1122,7 @@ sub map_options {
   # parts of $_ are undef
   Gscan2pdf::Dialog::Scan::my_dumper($_);
   my ( $key, $val ) = each(%$_);
-  unless ( $key eq 'Paper size' ) {
+  if ( $key ne 'Paper size' ) {
    my $opt = $options->by_name($key);
    if ( defined( $opt->{type} ) and $opt->{type} == SANE_TYPE_BOOL ) {
     $val = $val ? 'yes' : 'no';
@@ -1128,8 +1140,7 @@ sub scan {
  my $npages = $self->get('num-pages');
  my $start  = $self->get('page-number-start');
  my $step   = $self->get('page-number-increment');
- $npages = $self->get('max-pages')
-   if ( $npages > 0 and $step < 0 );
+ if ( $npages > 0 and $step < 0 ) { $npages = $self->get('max-pages') }
 
  if ( $start == 1 and $step < 0 ) {
   $self->signal_emit( 'process-error', 'scan',
