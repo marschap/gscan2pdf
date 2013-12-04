@@ -160,7 +160,7 @@ sub cache_key {
   if ( defined $options ) {
 
    for my $opt ( @{ $options->{array} } ) {
-    for (@$reload_triggers) {
+    for ( @{$reload_triggers} ) {
      if ( defined( $opt->{name} ) and /^$opt->{name}$/ix ) {
       if ( $cache_key ne '' ) { $cache_key .= ',' }
       $cache_key .= "$opt->{name},$opt->{val}";
@@ -177,8 +177,8 @@ sub cache_key {
 
    # grep the reload triggers from the current options
    for ( @{ $self->{current_scan_options} } ) {
-    my ( $key, $value ) = each(%$_);
-    for (@$reload_triggers) {
+    my ( $key, $value ) = each( %{$_} );
+    for ( @{$reload_triggers} ) {
      if (/^$key$/ix) {
       if ( $cache_key ne '' ) { $cache_key .= ',' }
       $cache_key .= "$key,$value";
@@ -644,7 +644,7 @@ sub _create_paper_widget {
 
 sub _pack_widget {
  my ( $self,    $widget, $data ) = @_;
- my ( $options, $opt,    $hbox ) = @$data;
+ my ( $options, $opt,    $hbox ) = @{$data};
  if ( defined $widget ) {
   $opt->{widget} = $widget;
   if ( $opt->{type} == SANE_TYPE_BUTTON or $opt->{max_values} > 1 ) {
@@ -679,7 +679,7 @@ sub set_option {
  my $current = $self->{current_scan_options};
 
  # Cache option
- push @$current, { $option->{name} => $val };
+ push @{$current}, { $option->{name} => $val };
 
  # Note any duplicate options, keeping only the last entry.
  my %seen;
@@ -690,7 +690,7 @@ sub set_option {
     keys( %{ $current->[$j] } );
   $seen{$opt}++;
   if ( $seen{$opt} > 1 ) {
-   splice @$current, $j, 1;
+   splice @{$current}, $j, 1;
   }
   $j--;
  }
@@ -704,7 +704,7 @@ sub set_option {
    $reload_triggers = [$reload_triggers];
   }
 
-  for (@$reload_triggers) {
+  for ( @{$reload_triggers} ) {
    if ( $_ eq $option->{name} or $_ eq $option->{title} ) {
     $reload_flag = TRUE;
     last;
@@ -942,10 +942,10 @@ sub set_current_scan_options {
  # Config::General flattens arrays with 1 entry to scalars,
  # so we must check for this
  if ( ref($profile) ne 'ARRAY' ) {
-  push @$defaults, $profile;
+  push @{$defaults}, $profile;
  }
  else {
-  @$defaults = @$profile;
+  @{$defaults} = @{$profile};
  }
 
  # Give the GUI a chance to catch up between settings,
@@ -1000,7 +1000,7 @@ sub set_current_scan_options {
 sub set_option_widget {
  my ( $self, $i, $profile ) = @_;
 
- while ( $i < @$profile ) {
+ while ( $i < @{$profile} ) {
 
   # for reasons I don't understand, without walking the reference tree,
   # parts of $profile are undef
@@ -1018,7 +1018,7 @@ sub set_option_widget {
 
   # If the option is inactive, then remove it from the profile
   if ( $opt->{cap} & SANE_CAP_INACTIVE ) {
-   splice @$profile, $i, 1;
+   splice @{$profile}, $i, 1;
    $self->{current_scan_options} = $profile;
    return $i;
   }
@@ -1116,18 +1116,18 @@ sub map_options {
  my ( $self, $old ) = @_;
  my $new;
  my $options = $self->get('available-scan-options');
- for (@$old) {
+ for ( @{$old} ) {
 
   # for reasons I don't understand, without walking the reference tree,
   # parts of $_ are undef
   Gscan2pdf::Dialog::Scan::my_dumper($_);
-  my ( $key, $val ) = each(%$_);
+  my ( $key, $val ) = each( %{$_} );
   if ( $key ne 'Paper size' ) {
    my $opt = $options->by_name($key);
    if ( defined( $opt->{type} ) and $opt->{type} == SANE_TYPE_BOOL ) {
     $val = $val ? 'yes' : 'no';
    }
-   push @$new, { $key => $val };
+   push @{$new}, { $key => $val };
   }
  }
  return $new;
