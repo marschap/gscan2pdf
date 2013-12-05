@@ -12,6 +12,8 @@ use Storable qw(dclone);     # For cloning the options cache
 use Locale::gettext 1.05;    # For translations
 use feature "switch";
 
+my $EMPTY = q{};
+
 # logger duplicated from Gscan2pdf::Dialog::Scan
 # to ensure that SET_PROPERTIES gets called in both places
 use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, signals => {
@@ -30,7 +32,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, signals => {
   'frontend',                                           # name
   'Frontend',                                           # nick
   '(scanimage|scanadf)(-perl)?',                        # blurb
-  '',                                                   # default
+  'scanimage',                                          # default
   [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->scalar(
@@ -43,7 +45,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, signals => {
   'prefix',                                             # name
   'Prefix',                                             # nick
   'Prefix for command line calls',                      # blurb
-  '',                                                   # default
+  $EMPTY,                                               # default
   [qw/readable writable/]                               # flags
  ),
  Glib::ParamSpec->scalar(
@@ -149,7 +151,7 @@ sub get_devices {
 
 sub cache_key {
  my ( $self, $options ) = @_;
- my $cache_key = '';
+ my $cache_key = $EMPTY;
 
  my $reload_triggers = $self->get('reload-triggers');
  if ( defined $reload_triggers ) {
@@ -162,7 +164,7 @@ sub cache_key {
    for my $opt ( @{ $options->{array} } ) {
     for ( @{$reload_triggers} ) {
      if ( defined( $opt->{name} ) and /^$opt->{name}$/ixsm ) {
-      if ( $cache_key ne '' ) { $cache_key .= ',' }
+      if ( $cache_key ne $EMPTY ) { $cache_key .= ',' }
       $cache_key .= "$opt->{name},$opt->{val}";
       last;
      }
@@ -180,7 +182,7 @@ sub cache_key {
     my ( $key, $value ) = each( %{$_} );
     for ( @{$reload_triggers} ) {
      if (/^$key$/ixsm) {
-      if ( $cache_key ne '' ) { $cache_key .= ',' }
+      if ( $cache_key ne $EMPTY ) { $cache_key .= ',' }
       $cache_key .= "$key,$value";
       last;
      }
@@ -190,7 +192,7 @@ sub cache_key {
   }
  }
 
- if ( $cache_key eq '' ) { $cache_key = 'default' }
+ if ( $cache_key eq $EMPTY ) { $cache_key = 'default' }
  return $cache_key;
 }
 
@@ -713,7 +715,7 @@ sub set_option {
 
   # Try to reload from the cache
   $reload_flag = FALSE;
-  my $cache_key = '';
+  my $cache_key = $EMPTY;
   if ( $self->get('cache-options') ) {
    $cache_key = $self->cache_key();
 
@@ -884,7 +886,7 @@ sub update_options {
  my $num_dev_options = $options->num_options;
  for ( 1 .. $num_dev_options - 1 ) {
   my $opt = $options->by_index($_);
-  if ( defined( $opt->{name} ) and $opt->{name} ne '' ) {
+  if ( defined( $opt->{name} ) and $opt->{name} ne $EMPTY ) {
 
    # If we are loading from the cache, then both the current options,
    # and the widgets could be different
@@ -1030,7 +1032,7 @@ sub set_option_widget {
   else {
    given ($widget) {
     when ( $widget->isa('Gtk2::CheckButton') ) {
-     if ( $val eq '' ) { $val = SANE_FALSE }
+     if ( $val eq $EMPTY ) { $val = SANE_FALSE }
      if ( $widget->get_active != $val ) {
       $widget->set_active($val);
       return $i;
