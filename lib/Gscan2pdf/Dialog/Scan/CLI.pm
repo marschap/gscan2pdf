@@ -201,7 +201,9 @@ sub scan_options {
 
  # Remove any existing pages
  while ( $self->{notebook}->get_n_pages > 1 ) {
-  $self->{notebook}->remove_page(-1);
+
+  # -1 = last page
+  $self->{notebook}->remove_page(-1);    ## no critic (ProhibitMagicNumbers)
  }
 
  # Ghost the scan button whilst options being updated
@@ -460,9 +462,6 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
  $self->_update_option_visibility( $options,
   $self->get('visible-scan-options') );
 
- # Give the GUI a chance to catch up before resizing.
- Glib::Idle->add( sub { $self->resize( 100, 100 ); } );
-
  $self->{sbutton}->set_sensitive(TRUE);
  $self->{sbutton}->grab_focus;
  return;
@@ -684,7 +683,7 @@ sub set_option {
  my %seen;
 
  my $j = $#{$current};
- while ( $j > -1 ) {
+ while ( $j > -1 ) {    ## no critic (ProhibitMagicNumbers)
   my ($opt) =
     keys( %{ $current->[$j] } );
   $seen{$opt}++;
