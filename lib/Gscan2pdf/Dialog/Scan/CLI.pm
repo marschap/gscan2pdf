@@ -11,6 +11,7 @@ use Gscan2pdf::Frontend::CLI;
 use Storable qw(dclone);     # For cloning the options cache
 use Locale::gettext 1.05;    # For translations
 use feature "switch";
+use List::MoreUtils qw{any};
 
 my $EMPTY = q{};
 my $COMMA = q{,};
@@ -910,7 +911,7 @@ sub update_options {
            $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
         or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST
        )
-       and grep { /^$val$/xsm } @{ $opt->{constraint} }
+       and any { /^$val$/xsm } @{ $opt->{constraint} }
       )
        )
      {
