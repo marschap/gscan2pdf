@@ -153,45 +153,45 @@ sub get_devices {
 
 sub cache_key {
  my ( $self, $options ) = @_;
- my $cache_key = $EMPTY;
 
  my $reload_triggers = $self->get('reload-triggers');
- if ( defined $reload_triggers ) {
-  if ( ref($reload_triggers) ne 'ARRAY' ) {
-   $reload_triggers = [$reload_triggers];
-  }
+ if ( not defined($reload_triggers) ) { return 'default' }
 
-  if ( defined $options ) {
+ if ( ref($reload_triggers) ne 'ARRAY' ) {
+  $reload_triggers = [$reload_triggers];
+ }
 
-   for my $opt ( @{ $options->{array} } ) {
-    for ( @{$reload_triggers} ) {
-     if ( defined( $opt->{name} ) and /^$opt->{name}$/ixsm ) {
-      if ( $cache_key ne $EMPTY ) { $cache_key .= $COMMA }
-      $cache_key .= "$opt->{name},$opt->{val}";
-      last;
-     }
+ my $cache_key = $EMPTY;
+ if ( defined $options ) {
+
+  for my $opt ( @{ $options->{array} } ) {
+   for ( @{$reload_triggers} ) {
+    if ( defined( $opt->{name} ) and /^$opt->{name}$/ixsm ) {
+     if ( $cache_key ne $EMPTY ) { $cache_key .= $COMMA }
+     $cache_key .= "$opt->{name},$opt->{val}";
+     last;
     }
    }
   }
-  else {
+ }
+ else {
 
-   # for reasons I don't understand, without walking the reference tree,
-   # parts of $default are undef
-   Gscan2pdf::Dialog::Scan::my_dumper( $self->{current_scan_options} );
+  # for reasons I don't understand, without walking the reference tree,
+  # parts of $default are undef
+  Gscan2pdf::Dialog::Scan::my_dumper( $self->{current_scan_options} );
 
-   # grep the reload triggers from the current options
-   for ( @{ $self->{current_scan_options} } ) {
-    my ( $key, $value ) = each( %{$_} );
-    for ( @{$reload_triggers} ) {
-     if (/^$key$/ixsm) {
-      if ( $cache_key ne $EMPTY ) { $cache_key .= $COMMA }
-      $cache_key .= "$key,$value";
-      last;
-     }
+  # grep the reload triggers from the current options
+  for ( @{ $self->{current_scan_options} } ) {
+   my ( $key, $value ) = each( %{$_} );
+   for ( @{$reload_triggers} ) {
+    if (/^$key$/ixsm) {
+     if ( $cache_key ne $EMPTY ) { $cache_key .= $COMMA }
+     $cache_key .= "$key,$value";
+     last;
     }
    }
-
   }
+
  }
 
  if ( $cache_key eq $EMPTY ) { $cache_key = 'default' }
