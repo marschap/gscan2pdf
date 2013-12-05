@@ -13,6 +13,7 @@ use Locale::gettext 1.05;    # For translations
 use feature "switch";
 
 my $EMPTY = q{};
+my $COMMA = q{,};
 
 # logger duplicated from Gscan2pdf::Dialog::Scan
 # to ensure that SET_PROPERTIES gets called in both places
@@ -164,7 +165,7 @@ sub cache_key {
    for my $opt ( @{ $options->{array} } ) {
     for ( @{$reload_triggers} ) {
      if ( defined( $opt->{name} ) and /^$opt->{name}$/ixsm ) {
-      if ( $cache_key ne $EMPTY ) { $cache_key .= ',' }
+      if ( $cache_key ne $EMPTY ) { $cache_key .= $COMMA }
       $cache_key .= "$opt->{name},$opt->{val}";
       last;
      }
@@ -182,7 +183,7 @@ sub cache_key {
     my ( $key, $value ) = each( %{$_} );
     for ( @{$reload_triggers} ) {
      if (/^$key$/ixsm) {
-      if ( $cache_key ne $EMPTY ) { $cache_key .= ',' }
+      if ( $cache_key ne $EMPTY ) { $cache_key .= $COMMA }
       $cache_key .= "$key,$value";
       last;
      }
