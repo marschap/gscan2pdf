@@ -17,7 +17,7 @@ my $device;
 sub new_from_data {
  my ( $class, $options ) = @_;
  my $self = $class->new();
- croak "Error: no options supplied" unless ( defined $options );
+ if ( not defined($options) ) { croak "Error: no options supplied" }
  if ( ref($options) eq 'ARRAY' ) {
 
   # do a two level clone to allow us to add extra keys to the option hashes
@@ -25,11 +25,12 @@ sub new_from_data {
   $self->{array} = \@options;
   for my $i ( 0 .. $#{$options} ) {
    my %option;
-   %option = %{ $options->[$i] } if ( defined $options->[$i] );
+   if ( defined $options->[$i] ) { %option = %{ $options->[$i] } }
    $option{index} = $i;
    push @options, \%option;
-   $self->{hash}{ $options[$i]{name} } = $options[$i]
-     if ( defined( $options[$i]{name} ) and $options[$i]{name} ne '' );
+   if ( defined( $options[$i]{name} ) and $options[$i]{name} ne '' ) {
+    $self->{hash}{ $options[$i]{name} } = $options[$i];
+   }
   }
  }
  else {
@@ -65,8 +66,9 @@ sub num_options {
 
 sub delete_by_index {
  my ( $self, $i ) = @_;
- delete $self->{hash}{ $self->{array}[$i]{name} }
-   if ( defined $self->{array}[$i]{name} );
+ if ( defined $self->{array}[$i]{name} ) {
+  delete $self->{hash}{ $self->{array}[$i]{name} };
+ }
  undef $self->{array}[$i];
  return;
 }
@@ -102,28 +104,32 @@ sub parse_geometry {
  if ( defined $self->{hash}{ scalar(SANE_NAME_SCAN_TL_X) } ) {
   $self->{geometry}{l} =
     $self->{hash}{ scalar(SANE_NAME_SCAN_TL_X) }{constraint}{min};
-  $self->{geometry}{x} =
-    $self->{hash}{ scalar(SANE_NAME_SCAN_BR_X) }{constraint}{max} -
-    $self->{geometry}{l}
-    if ( defined $self->{hash}{ scalar(SANE_NAME_SCAN_BR_X) } );
+  if ( defined $self->{hash}{ scalar(SANE_NAME_SCAN_BR_X) } ) {
+   $self->{geometry}{x} =
+     $self->{hash}{ scalar(SANE_NAME_SCAN_BR_X) }{constraint}{max} -
+     $self->{geometry}{l};
+  }
  }
  elsif ( defined $self->{hash}{l} ) {
   $self->{geometry}{l} = $self->{hash}{l}{constraint}{min};
-  $self->{geometry}{x} = $self->{hash}{x}{constraint}{max}
-    if ( defined $self->{hash}{x}{constraint}{max} );
+  if ( defined $self->{hash}{x}{constraint}{max} ) {
+   $self->{geometry}{x} = $self->{hash}{x}{constraint}{max};
+  }
  }
  if ( defined $self->{hash}{ scalar(SANE_NAME_SCAN_TL_Y) } ) {
   $self->{geometry}{t} =
     $self->{hash}{ scalar(SANE_NAME_SCAN_TL_Y) }{constraint}{min};
-  $self->{geometry}{y} =
-    $self->{hash}{ scalar(SANE_NAME_SCAN_BR_Y) }{constraint}{max} -
-    $self->{geometry}{t}
-    if ( defined $self->{hash}{ scalar(SANE_NAME_SCAN_BR_Y) } );
+  if ( defined $self->{hash}{ scalar(SANE_NAME_SCAN_BR_Y) } ) {
+   $self->{geometry}{y} =
+     $self->{hash}{ scalar(SANE_NAME_SCAN_BR_Y) }{constraint}{max} -
+     $self->{geometry}{t};
+  }
  }
  elsif ( defined $self->{hash}{t} ) {
   $self->{geometry}{t} = $self->{hash}{t}{constraint}{min};
-  $self->{geometry}{y} = $self->{hash}{y}{constraint}{max}
-    if ( defined $self->{hash}{y}{constraint}{max} );
+  if ( defined $self->{hash}{y}{constraint}{max} ) {
+   $self->{geometry}{y} = $self->{hash}{y}{constraint}{max};
+  }
  }
  return;
 }
@@ -132,13 +138,13 @@ sub supports_paper {
  my ( $self, $paper, $tolerance ) = @_;
 
  # Check the geometry against the paper size
- unless (   ## no critic (ProhibitNegativeExpressionsInUnlessAndUntilConditions)
-      defined( $self->{geometry}{l} )
-  and defined( $self->{geometry}{x} )
-  and defined( $self->{geometry}{t} )
-  and defined( $self->{geometry}{y} )
-  and $self->{geometry}{l} <= $paper->{l} + $tolerance
-  and $self->{geometry}{t} <= $paper->{t} + $tolerance
+ if (
+  not( defined( $self->{geometry}{l} )
+   and defined( $self->{geometry}{x} )
+   and defined( $self->{geometry}{t} )
+   and defined( $self->{geometry}{y} )
+   and $self->{geometry}{l} <= $paper->{l} + $tolerance
+   and $self->{geometry}{t} <= $paper->{t} + $tolerance )
    )
  {
   return 0;
@@ -304,7 +310,7 @@ sub options2hash {
   push @options, \%option;
   $option{index} = $#options + 1;
  }
- unshift @options, { index => 0 } if (@options);
+ if (@options) { unshift @options, { index => 0 } }
  return \@options, \%hash;
 }
 
@@ -313,8 +319,9 @@ sub options2hash {
 sub parse_constraint {
  my ( $option, $values ) = @_;
  $option->{type} = SANE_TYPE_INT;
- $option->{type} = SANE_TYPE_FIXED
-   if ( defined( $option->{val} ) and $option->{val} =~ /\./xsm );
+ if ( defined( $option->{val} ) and $option->{val} =~ /\./xsm ) {
+  $option->{type} = SANE_TYPE_FIXED;
+ }
  if (
   defined($values)
   and $values =~ /
@@ -329,24 +336,28 @@ sub parse_constraint {
   $option->{constraint}{min} = $1;
   $option->{constraint}{max} = $2;
   $option->{constraint_type} = SANE_CONSTRAINT_RANGE;
-  $option->{unit}       = unit2enum($3) if ( defined $3 );
-  $option->{max_values} = 255           if ( defined $4 );
-  $option->{constraint}{quant} = $1
-    if (
+  if ( defined $3 ) { $option->{unit}       = unit2enum($3) }
+  if ( defined $4 ) { $option->{max_values} = 255 }
+  if (
    $values =~ /
                        \(              # opening round bracket
                        in\ steps\ of\  # text
                        (\d+\.?\d*)     # step
                        \)              # closing round bracket
                      /xsm
-    );
-  $option->{type} = SANE_TYPE_FIXED
-    if (
+    )
+  {
+   $option->{constraint}{quant} = $1;
+  }
+  if (
       $option->{constraint}{min} =~ /\./xsm
    or $option->{constraint}{max} =~ /\./xsm
    or ( defined( $option->{constraint}{quant} )
     and $option->{constraint}{quant} =~ /\./xsm )
-    );
+    )
+  {
+   $option->{type} = SANE_TYPE_FIXED;
+  }
  }
  elsif ( defined($values) and $values =~ /^<(\w+)>(,\.\.\.)?$/xsm ) {
   if ( $1 eq 'float' ) {
@@ -355,7 +366,7 @@ sub parse_constraint {
   elsif ( $1 eq 'string' ) {
    $option->{type} = SANE_TYPE_STRING;
   }
-  $option->{max_values} = 255 if ( defined $2 );
+  if ( defined $2 ) { $option->{max_values} = 255 }
  }
 
  # if we haven't got a boolean, and there is no constraint, we have a button
@@ -392,7 +403,7 @@ sub parse_list_constraint {
    $value = $values;
    undef $values;
   }
-  push @array, $value if ( $value ne '' );
+  if ( $value ne '' ) { push @array, $value }
  }
  if (@array) {
   if ( $array[0] eq 'auto' ) {
