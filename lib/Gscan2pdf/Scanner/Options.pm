@@ -11,7 +11,7 @@ use Glib::Object::Subclass Glib::Object::;
 
 our $VERSION = '1.2.0';
 
-my $units = qr/(pel|bit|mm|dpi|%|us)/x;
+my $units = qr{(pel|bit|mm|dpi|%|us)}xsm;
 my $device;
 
 sub new_from_data {
@@ -171,10 +171,10 @@ sub options2hash {
  # Remove everything above the options
  if (
   $output =~ /
-                       [\S\s]* # output header
+                       .* # output header
                        Options\ specific\ to\ device\ `(.+)':\n # line above options
-                       ([\S\s]*) # options
-                /x
+                       (.*) # options
+                /xsm
    )
  {
   $device = $1;
@@ -190,16 +190,16 @@ sub options2hash {
   my %option;
   $option{unit}            = SANE_UNIT_NONE;
   $option{constraint_type} = SANE_CONSTRAINT_NONE;
-  my $values = qr/(?:(?:\ |\[=\()([^\[].*?)(?:\)\])?)?/x;
+  my $values = qr{(?:(?:\ |\[=\()([^\[].*?)(?:\)\])?)?}xsm;
 
   # parse group
   if (
    $output =~ /
-                      ^\ \ # two-character indent
-                      (.*) # the title
+                      \A\ \ # two-character indent
+                      ([^\n]*) # the title
                       :\n  # a colon at the end of the line
-                      ([\S\s]*) # the rest of the output
-                    /x
+                      (.*) # the rest of the output
+                    /xsm
     )
   {
    $option{title}      = $1;
@@ -216,14 +216,14 @@ sub options2hash {
   # parse option
   elsif (
    $output =~ /
-                      ^\ {4,} # four-character indent
+                      \A\ {4,} # four-character indent
                       -+        # at least one dash
                       ([\w\-]+) # the option name
                       $values      # optionally followed by the possible values
-                      (?:\ \[([\S\s]*?)\])?  # optionally a space, followed by the current value in square brackets
+                      (?:\ \[(.*?)\])?  # optionally a space, followed by the current value in square brackets
                       \ *\n     # the rest of the line
-                      ([\S\s]*) # the rest of the output
-                    /x
+                      (.*) # the rest of the output
+                    /xsm
     )
   {
 
@@ -255,10 +255,11 @@ sub options2hash {
    $hash{ $option{name} } = \%option;
 
    $option{title} = $option{name};
-   $option{title} =~ s/[-_]/ /gx;     # dashes and underscores to spaces
+   $option{title} =~ s/[-_]/ /xsmg;     # dashes and underscores to spaces
    $option{title} =~
-     s/\b(adf|cct|jpeg)\b/\U$1/gx;    # upper case comment abbreviations
-   $option{title} =~ s/(^\w)/\U$1/xg; # capitalise at the beginning of the line
+     s/\b(adf|cct|jpeg)\b/\U$1/xsmg;    # upper case comment abbreviations
+   $option{title} =~
+     s/(^\w)/\U$1/xsmg;    # capitalise at the beginning of the line
    given ( $option{title} ) {
     when ('L') {
      $option{title} = 'Top-left x';
@@ -278,10 +279,10 @@ sub options2hash {
    my $desc = '';
    while (
     $output =~ /
-                       ^\ {8,}   # 8-character indent
-                       (.*)\n    # text
-                       ([\S\s]*) # rest of output
-                     /x
+                       \A\ {8,}   # 8-character indent
+                       ([^\n]*)\n    # text
+                       (.*) # rest of output
+                     /xsm
      )
    {
     if ( $desc eq '' ) {
@@ -313,7 +314,7 @@ sub parse_constraint {
  my ( $option, $values ) = @_;
  $option->{type} = SANE_TYPE_INT;
  $option->{type} = SANE_TYPE_FIXED
-   if ( defined( $option->{val} ) and $option->{val} =~ /\./x );
+   if ( defined( $option->{val} ) and $option->{val} =~ /\./xsm );
  if (
   defined($values)
   and $values =~ /
@@ -322,7 +323,7 @@ sub parse_constraint {
                     (\d+\.?\d*)            # max value, possible floating
                     $units? # optional unit
                     (,\.\.\.)? # multiple values
-                  /x
+                  /xsm
    )
  {
   $option->{constraint}{min} = $1;
@@ -337,17 +338,17 @@ sub parse_constraint {
                        in\ steps\ of\  # text
                        (\d+\.?\d*)     # step
                        \)              # closing round bracket
-                     /x
+                     /xsm
     );
   $option->{type} = SANE_TYPE_FIXED
     if (
-      $option->{constraint}{min} =~ /\./x
-   or $option->{constraint}{max} =~ /\./x
+      $option->{constraint}{min} =~ /\./xsm
+   or $option->{constraint}{max} =~ /\./xsm
    or ( defined( $option->{constraint}{quant} )
-    and $option->{constraint}{quant} =~ /\./x )
+    and $option->{constraint}{quant} =~ /\./xsm )
     );
  }
- elsif ( defined($values) and $values =~ /^<(\w+)>(,\.\.\.)?$/x ) {
+ elsif ( defined($values) and $values =~ /^<(\w+)>(,\.\.\.)?$/xsm ) {
   if ( $1 eq 'float' ) {
    $option->{type} = SANE_TYPE_FIXED;
   }
@@ -370,7 +371,7 @@ sub parse_constraint {
 
 sub parse_list_constraint {
  my ( $option, $values ) = @_;
- if ( $values =~ /,\.\.\./x ) {
+ if ( $values =~ /,\.\.\./xsm ) {
   $option->{max_values} = 255;
   $values = substr( $values, 0, length($values) - 4 );
  }
@@ -383,7 +384,7 @@ sub parse_list_constraint {
    $values = substr( $values, $i + 1, length($values) );
   }
   else {
-   if ( $values =~ /$units$/x ) {
+   if ( $values =~ /$units$/xsm ) {
     my $unit = $1;
     $option->{unit} = unit2enum($unit);
     $values = substr( $values, 0, index( $values, $unit ) );
@@ -413,10 +414,10 @@ sub parse_list_constraint {
 
    # Can't check before because 'auto' would mess things up
    for (@array) {
-    if (/[[:alpha:]]/x) {
+    if (/[[:alpha:]]/xsm) {
      $option->{type} = SANE_TYPE_STRING;
     }
-    elsif (/\./x) {
+    elsif (/\./xsm) {
      $option->{type} = SANE_TYPE_FIXED;
     }
    }
