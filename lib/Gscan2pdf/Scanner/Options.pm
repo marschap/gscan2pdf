@@ -6,6 +6,8 @@ use Carp;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Sane 0.05;              # For enums
 use feature "switch";
+use Readonly;
+Readonly my $MAX_VALUES => 255;
 
 use Glib::Object::Subclass Glib::Object::;
 
@@ -13,6 +15,7 @@ our $VERSION = '1.2.0';
 
 my $units = qr{(pel|bit|mm|dpi|%|us)}xsm;
 my $EMPTY = q{};
+my $list  = ',...';
 my $device;
 
 sub new_from_data {
@@ -330,7 +333,7 @@ sub parse_constraint {
                     \.\.                   # two dots
                     (\d+\.?\d*)            # max value, possible floating
                     $units? # optional unit
-                    (,\.\.\.)? # multiple values
+                    ($list)? # multiple values
                   /xsm
    )
  {
@@ -338,7 +341,7 @@ sub parse_constraint {
   $option->{constraint}{max} = $2;
   $option->{constraint_type} = SANE_CONSTRAINT_RANGE;
   if ( defined $3 ) { $option->{unit}       = unit2enum($3) }
-  if ( defined $4 ) { $option->{max_values} = 255 }
+  if ( defined $4 ) { $option->{max_values} = $MAX_VALUES }
   if (
    $values =~ /
                        \(              # opening round bracket
@@ -360,14 +363,14 @@ sub parse_constraint {
    $option->{type} = SANE_TYPE_FIXED;
   }
  }
- elsif ( defined($values) and $values =~ /^<(\w+)>(,\.\.\.)?$/xsm ) {
+ elsif ( defined($values) and $values =~ /^<(\w+)>($list)?$/xsm ) {
   if ( $1 eq 'float' ) {
    $option->{type} = SANE_TYPE_FIXED;
   }
   elsif ( $1 eq 'string' ) {
    $option->{type} = SANE_TYPE_STRING;
   }
-  if ( defined $2 ) { $option->{max_values} = 255 }
+  if ( defined $2 ) { $option->{max_values} = $MAX_VALUES }
  }
 
  # if we haven't got a boolean, and there is no constraint, we have a button
@@ -383,17 +386,16 @@ sub parse_constraint {
 
 sub parse_list_constraint {
  my ( $option, $values ) = @_;
- if ( $values =~ /,\.\.\./xsm ) {
-  $option->{max_values} = 255;
-  $values = substr( $values, 0, length($values) - 4 );
+ if ( $values =~ /$list/xsm ) {
+  $option->{max_values} = $MAX_VALUES;
+  $values = substr( $values, 0, length($values) - length($list) );
  }
  my @array;
  while ( defined $values ) {
-  my $i = index( $values, q{|} );
   my $value;
-  if ( $i > -1 ) {
-   $value  = substr( $values, 0,      $i );
-   $values = substr( $values, $i + 1, length($values) );
+  if ( $values =~ /(.*?)\|(.*)/xsm ) {
+   $value  = $1;
+   $values = $2;
   }
   else {
    if ( $values =~ /$units$/xsm ) {
