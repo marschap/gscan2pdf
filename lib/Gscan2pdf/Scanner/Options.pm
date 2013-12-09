@@ -12,6 +12,7 @@ use Glib::Object::Subclass Glib::Object::;
 our $VERSION = '1.2.0';
 
 my $units = qr{(pel|bit|mm|dpi|%|us)}xsm;
+my $EMPTY = q{};
 my $device;
 
 sub new_from_data {
@@ -28,7 +29,7 @@ sub new_from_data {
    if ( defined $options->[$i] ) { %option = %{ $options->[$i] } }
    $option{index} = $i;
    push @options, \%option;
-   if ( defined( $options[$i]{name} ) and $options[$i]{name} ne '' ) {
+   if ( defined( $options[$i]{name} ) and $options[$i]{name} ne $EMPTY ) {
     $self->{hash}{ $options[$i]{name} } = $options[$i];
    }
   }
@@ -212,8 +213,8 @@ sub options2hash {
    $option{type}       = SANE_TYPE_GROUP;
    $option{cap}        = 0;
    $option{max_values} = 0;
-   $option{name}       = '';
-   $option{desc}       = '';
+   $option{name}       = $EMPTY;
+   $option{desc}       = $EMPTY;
 
    # Remove everything on the option line and above.
    $output = $2;
@@ -282,7 +283,7 @@ sub options2hash {
    }
 
    # Parse option description based on an 8-character indent.
-   my $desc = '';
+   my $desc = $EMPTY;
    while (
     $output =~ /
                        \A\ {8,}   # 8-character indent
@@ -291,7 +292,7 @@ sub options2hash {
                      /xsm
      )
    {
-    if ( $desc eq '' ) {
+    if ( $desc eq $EMPTY ) {
      $desc = $1;
     }
     else {
@@ -388,7 +389,7 @@ sub parse_list_constraint {
  }
  my @array;
  while ( defined $values ) {
-  my $i = index( $values, '|' );
+  my $i = index( $values, q{|} );
   my $value;
   if ( $i > -1 ) {
    $value  = substr( $values, 0,      $i );
@@ -403,7 +404,7 @@ sub parse_list_constraint {
    $value = $values;
    undef $values;
   }
-  if ( $value ne '' ) { push @array, $value }
+  if ( $value ne $EMPTY ) { push @array, $value }
  }
  if (@array) {
   if ( $array[0] eq 'auto' ) {
@@ -457,7 +458,7 @@ sub unit2enum {
   when ('dpi') {
    return SANE_UNIT_DPI;
   }
-  when ('%') {
+  when (q{%}) {
    return SANE_UNIT_PERCENT;
   }
   when ('us') {
