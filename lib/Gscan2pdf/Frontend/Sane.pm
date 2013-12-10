@@ -10,19 +10,23 @@ use Thread::Queue;
 
 use Glib qw(TRUE FALSE);
 use Sane;
+use Readonly;
+Readonly my $BUFFER_SIZE    => ( 32 * 1024 );     # default size
+Readonly my $_POLL_INTERVAL => 100;               # ms
+Readonly my $_8_BIT         => 8;
+Readonly my $MAXVAL_8_BIT   => 2**$_8_BIT - 1;
+Readonly my $_16_BIT        => 16;
+Readonly my $MAXVAL_16_BIT  => 2**$_16_BIT - 1;
 
 our $VERSION = '1.2.0';
 
-my $_POLL_INTERVAL;
 my $_self;
-my $buffer_size = ( 32 * 1024 );    # default size
 my ( $prog_name, $logger );
 
 sub setup {
  ( my $class, $logger ) = @_;
- $_POLL_INTERVAL = 100;                          # ms
- $_self          = {};
- $prog_name      = Glib::get_application_name;
+ $_self     = {};
+ $prog_name = Glib::get_application_name;
 
  $_self->{requests} = Thread::Queue->new;
  share $_self->{device_list};
@@ -445,7 +449,7 @@ sub _thread_write_pnm_header {
   or $format == SANE_FRAME_RGB )
  {
   printf $fh "P6\n# SANE data follows\n%d %d\n%d\n", $width, $height,
-    ( $depth <= 8 ) ? 255 : 65535;
+    ( $depth > $_8_BIT ) ? $MAXVAL_16_BIT : $MAXVAL_8_BIT;
  }
  else {
   if ( $depth == 1 ) {
@@ -453,7 +457,7 @@ sub _thread_write_pnm_header {
   }
   else {
    printf $fh "P5\n# SANE data follows\n%d %d\n%d\n", $width, $height,
-     ( $depth <= 8 ) ? 255 : 65535;
+     ( $depth > $_8_BIT ) ? $MAXVAL_16_BIT : $MAXVAL_8_BIT;
   }
  }
  return;
@@ -464,8 +468,6 @@ sub _thread_scan_page_to_fh {
  my $first_frame = 1;
  my $offset      = 0;
  my $must_buffer = 0;
- my $min         = 0xff;
- my $max         = 0;
  my %image;
  my @format_name = ( "gray", "RGB", "red", "green", "blue" );
  my $total_bytes = 0;
@@ -499,16 +501,16 @@ sub _thread_scan_page_to_fh {
     return;
    }
 
-   my ( $buffer, $len ) = $device->read($buffer_size);
+   my ( $buffer, $len ) = $device->read($BUFFER_SIZE);
    $total_bytes += $len;
    my $progr = $total_bytes / $hundred_percent;
    if ( $progr > 1 ) { $progr = 1 }
    $_self->{scan_progress} = $progr;
 
    if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-    if ( $parm->{depth} == 8 ) {
+    if ( $parm->{depth} == $_8_BIT ) {
      $logger->info( sprintf "$prog_name: min/max graylevel value = %d/%d",
-      $min, $max );
+      $MAXVAL_8_BIT, 0 );
     }
     if ( $Sane::STATUS != SANE_STATUS_EOF ) {
      $logger->info("$prog_name: sane_read: $Sane::STATUS");
@@ -531,11 +533,8 @@ sub _thread_scan_page_to_fh {
  if ($must_buffer) { _write_buffer_to_fh( $fh, $parm, \%image ) }
 
 cleanup:
- my $expected_bytes = $parm->{bytes_per_line} * $parm->{lines} * (
-  ( $parm->{format} == SANE_FRAME_RGB or $parm->{format} == SANE_FRAME_GRAY )
-  ? 1
-  : 3
- );
+ my $expected_bytes =
+   $parm->{bytes_per_line} * $parm->{lines} * _number_frames($parm);
  if ( $parm->{lines} < 0 ) { $expected_bytes = 0 }
  if ( $total_bytes > $expected_bytes and $expected_bytes != 0 ) {
   $logger->info(
@@ -603,7 +602,7 @@ sub _log_frame_info {
       . "%d bits/pixel",
     $parm->{pixels_per_line},
     $parm->{lines},
-    8 * $parm->{bytes_per_line} / $parm->{pixels_per_line}
+    $_8_BIT * $parm->{bytes_per_line} / $parm->{pixels_per_line}
    );
   }
   else {
@@ -611,7 +610,7 @@ sub _log_frame_info {
     sprintf "$prog_name: scanning image %d pixels wide and "
       . "variable height at %d bits/pixel",
     $parm->{pixels_per_line},
-    8 * $parm->{bytes_per_line} / $parm->{pixels_per_line}
+    $_8_BIT * $parm->{bytes_per_line} / $parm->{pixels_per_line}
    );
   }
 
@@ -633,25 +632,25 @@ sub _initialise_scan {
    or $parm->{format} == SANE_FRAME_GREEN
    or $parm->{format} == SANE_FRAME_BLUE )
   {
-   if ( $parm->{depth} != 8 ) {
-    die "Red/Green/Blue frames require depth=8\n";
+   if ( $parm->{depth} != $_8_BIT ) {
+    die "Red/Green/Blue frames require depth=$_8_BIT\n";
    }
    $must_buffer = 1;
    $offset      = $parm->{format} - SANE_FRAME_RED;
   }
   elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-   if ( ( $parm->{depth} != 8 ) and ( $parm->{depth} != 16 ) ) {
-    die "RGB frames require depth=8 or 16\n";
+   if ( ( $parm->{depth} != $_8_BIT ) and ( $parm->{depth} != $_16_BIT ) ) {
+    die "RGB frames require depth=$_8_BIT or $_16_BIT\n";
    }
   }
   if ($parm->{format} == SANE_FRAME_RGB
    or $parm->{format} == SANE_FRAME_GRAY )
   {
    if ( ( $parm->{depth} != 1 )
-    and ( $parm->{depth} != 8 )
-    and ( $parm->{depth} != 16 ) )
+    and ( $parm->{depth} != $_8_BIT )
+    and ( $parm->{depth} != $_16_BIT ) )
    {
-    die "Valid depths are 1, 8 or 16\n";
+    die "Valid depths are 1, $_8_BIT or $_16_BIT\n";
    }
    if ( $parm->{lines} < 0 ) {
     $must_buffer = 1;
@@ -676,11 +675,19 @@ sub _initialise_scan {
 
 sub _scan_data_size {
  my ($parm) = @_;
- return $parm->{bytes_per_line} * $parm->{lines} * (
-  ( $parm->{format} == SANE_FRAME_RGB or $parm->{format} == SANE_FRAME_GRAY )
-  ? 1
-  : 3
- );
+ return $parm->{bytes_per_line} * $parm->{lines} * _number_frames($parm);
+}
+
+# Return number of frames
+
+sub _number_frames {
+ my ($parm) = @_;
+ return (
+       $parm->{format} == SANE_FRAME_RGB
+    or $parm->{format} == SANE_FRAME_GRAY
+   )
+   ? 1
+   : 3;    ## no critic (ProhibitMagicNumbers)
 }
 
 # We're either scanning a multi-frame image or the
@@ -692,14 +699,7 @@ sub _scan_data_size {
 sub _buffer_scan {
  my ( $offset, $parm, $image, $len, $buffer ) = @_;
 
- # $parm->{format} == SANE_FRAME_RED or SANE_FRAME_GREEN or SANE_FRAME_BLUE
- my $number_frames = 3;
- if ($parm->{format} == SANE_FRAME_RGB
-  or $parm->{format} == SANE_FRAME_GRAY )
- {
-  $number_frames = 1;
- }
-
+ my $number_frames = _number_frames($parm);
  for ( my $i = 0 ; $i < $len ; ++$i ) {
   $image->{data}[ $offset + $number_frames * $i ] = substr( $buffer, $i, 1 );
  }
@@ -714,12 +714,7 @@ sub _write_buffer_to_fh {
  }
  else {
   $image->{height} = @{ $image->{data} } / $parm->{pixels_per_line};
-  if ($parm->{format} == SANE_FRAME_RED
-   or $parm->{format} == SANE_FRAME_GREEN
-   or $parm->{format} == SANE_FRAME_BLUE )
-  {
-   $image->{height} /= 3;
-  }
+  $image->{height} /= _number_frames($parm);
  }
  _thread_write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
   $image->{height}, $parm->{depth} );
