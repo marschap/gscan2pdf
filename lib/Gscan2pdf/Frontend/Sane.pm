@@ -379,16 +379,16 @@ sub _thread_get_options {
   $logger->error("unable to determine option count");
   return;
  }
- for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-  my $opt = $self->{device_handle}->get_option_descriptor($i);
-  $options[$i] = $opt;
+ for ( 1 .. $num_dev_options - 1 ) {
+  my $opt = $self->{device_handle}->get_option_descriptor($_);
+  $options[$_] = $opt;
   if (
    not(( $opt->{cap} & SANE_CAP_INACTIVE )
     or ( $opt->{type} == SANE_TYPE_BUTTON )
     or ( $opt->{type} == SANE_TYPE_GROUP ) )
     )
   {
-   $opt->{val} = $self->{device_handle}->get_option($i);
+   $opt->{val} = $self->{device_handle}->get_option($_);
   }
  }
 
@@ -421,13 +421,13 @@ sub _thread_set_option {
   }
 
   my @options;
-  for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
-   my $opt = $self->{device_handle}->get_option_descriptor($i);
-   $options[$i] = $opt;
+  for ( 1 .. $num_dev_options - 1 ) {
+   my $opt = $self->{device_handle}->get_option_descriptor($_);
+   $options[$_] = $opt;
    if ( not $opt->{cap} & SANE_CAP_SOFT_DETECT ) { next }
 
    if ( $opt->{type} != SANE_TYPE_BUTTON ) {
-    $opt->{val} = $self->{device_handle}->get_option($i);
+    $opt->{val} = $self->{device_handle}->get_option($_);
    }
   }
 
@@ -700,8 +700,8 @@ sub _buffer_scan {
  my ( $offset, $parm, $image, $len, $buffer ) = @_;
 
  my $number_frames = _number_frames($parm);
- for ( my $i = 0 ; $i < $len ; ++$i ) {
-  $image->{data}[ $offset + $number_frames * $i ] = substr( $buffer, $i, 1 );
+ for ( 0 .. $len - 1 ) {
+  $image->{data}[ $offset + $number_frames * $_ ] = substr( $buffer, $_, 1 );
  }
  $offset += $number_frames * $len;
  return $offset;
