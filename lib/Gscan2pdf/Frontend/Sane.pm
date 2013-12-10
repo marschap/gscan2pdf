@@ -564,7 +564,7 @@ sub _thread_scan_page {
  }
 
  my $fh;
- if ( not open( $fh, ">", $path ) ) {    ## no critic (RequireBriefOpen)
+ if ( not open( $fh, ">", $path ) ) {
   $self->{device_handle}->cancel;
   $self->{status} = SANE_STATUS_ACCESS_DENIED;
   return;
