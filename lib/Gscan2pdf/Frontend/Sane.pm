@@ -59,7 +59,7 @@ sub _when_ready {
  Glib::Timeout->add(
   $_POLL_INTERVAL,
   sub {
-   if ($$sentinel) {
+   if ( ${$sentinel} ) {
     $ready_callback->();
     return Glib::SOURCE_REMOVE;
    }
@@ -235,7 +235,7 @@ sub scan_pages {
  Glib::Timeout->add(
   $_POLL_INTERVAL,
   sub {
-   if ($$sentinel) {
+   if ( ${$sentinel} ) {
 
     # Check status of scan
     if (
@@ -392,7 +392,7 @@ sub _thread_get_options {
   }
  }
 
- $$options = shared_clone \@options;
+ ${$options} = shared_clone \@options;
  return;
 }
 
@@ -431,7 +431,7 @@ sub _thread_set_option {
    }
   }
 
-  $$new_options = shared_clone \@options;
+  ${$new_options} = shared_clone \@options;
  }
  return;
 }
