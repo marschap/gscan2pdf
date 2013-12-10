@@ -86,11 +86,11 @@ sub get_devices {
  _when_ready(
   $sentinel,
   sub {
-   $started_callback->() unless ($started);
+   if ( not $started ) { $started_callback->() }
    $finished_callback->( $_self->{device_list} );
   },
   sub {
-   unless ($started) {
+   if ( not $started ) {
     $started_callback->();
     $started = 1;
    }
@@ -118,22 +118,26 @@ sub open_device {
  _when_ready(
   $sentinel,
   sub {
-   $options{started_callback}->()
-     if ( not $started and defined( $options{started_callback} ) );
+   if ( not $started and defined( $options{started_callback} ) ) {
+    $options{started_callback}->();
+   }
    if ( $_self->{status} == SANE_STATUS_GOOD ) {
-    $options{finished_callback}->() if ( defined $options{finished_callback} );
+    if ( defined $options{finished_callback} ) {
+     $options{finished_callback}->();
+    }
    }
    else {
-    $options{error_callback}->( Sane::strstatus( $_self->{status} ) )
-      if ( defined $options{error_callback} );
+    if ( defined $options{error_callback} ) {
+     $options{error_callback}->( Sane::strstatus( $_self->{status} ) );
+    }
    }
   },
   sub {
-   unless ($started) {
-    $options{started_callback}->() if ( defined $options{started_callback} );
+   if ( not $started ) {
+    if ( defined $options{started_callback} ) { $options{started_callback}->() }
     $started = 1;
    }
-   $options{running_callback}->() if ( defined $options{running_callback} );
+   if ( defined $options{running_callback} ) { $options{running_callback}->() }
   }
  );
  return;
@@ -153,7 +157,7 @@ sub find_scan_options {
  _when_ready(
   $sentinel,
   sub {
-   $started_callback->() unless ($started);
+   if ( not $started ) { $started_callback->() }
    if ( $_self->{status} == SANE_STATUS_GOOD ) {
     $finished_callback->($option_array);
    }
@@ -162,7 +166,7 @@ sub find_scan_options {
    }
   },
   sub {
-   unless ($started) {
+   if ( not $started ) {
     $started_callback->();
     $started = 1;
    }
@@ -189,17 +193,19 @@ sub set_option {
  _when_ready(
   $sentinel,
   sub {
-   $options{started_callback}->()
-     if ( not $started and defined( $options{started_callback} ) );
-   $options{finished_callback}->($option_array)
-     if ( defined $options{finished_callback} );
+   if ( not $started and defined( $options{started_callback} ) ) {
+    $options{started_callback}->();
+   }
+   if ( defined $options{finished_callback} ) {
+    $options{finished_callback}->($option_array);
+   }
   },
   sub {
-   unless ($started) {
-    $options{started_callback}->() if ( defined $options{started_callback} );
+   if ( not $started ) {
+    if ( defined $options{started_callback} ) { $options{started_callback}->() }
     $started = 1;
    }
-   $options{running_callback}->() if ( defined $options{running_callback} );
+   if ( defined $options{running_callback} ) { $options{running_callback}->() }
   }
  );
  return;
@@ -208,7 +214,7 @@ sub set_option {
 sub _new_page {
  my ( $dir, $format, $n ) = @_;
  my $path = sprintf $format, $n;
- $path = File::Spec->catdir( $dir, $path ) if ( defined $dir );
+ if ( defined $dir ) { $path = File::Spec->catdir( $dir, $path ) }
  return _enqueue_request( 'scan-page', { path => $path } );
 }
 
@@ -228,13 +234,15 @@ sub scan_pages {
    if ($$sentinel) {
 
     # Check status of scan
-    $options{new_page_callback}->( $options{start} )
-      if (
+    if (
          defined( $options{new_page_callback} )
      and not $_self->{abort_scan}
      and ( $_self->{status} == SANE_STATUS_GOOD
       or $_self->{status} == SANE_STATUS_EOF )
-      );
+      )
+    {
+     $options{new_page_callback}->( $options{start} );
+    }
 
     # Stop the process unless everything OK and more scans required
     if (
@@ -246,12 +254,14 @@ sub scan_pages {
     {
      _enqueue_request('cancel');
      if ( _scanned_enough_pages( $options{npages}, $n ) ) {
-      $options{finished_callback}->()
-        if ( defined $options{finished_callback} );
+      if ( defined $options{finished_callback} ) {
+       $options{finished_callback}->();
+      }
      }
      else {
-      $options{error_callback}->( Sane::strstatus( $_self->{status} ) )
-        if ( defined $options{error_callback} );
+      if ( defined $options{error_callback} ) {
+       $options{error_callback}->( Sane::strstatus( $_self->{status} ) );
+      }
      }
      return Glib::SOURCE_REMOVE;
     }
@@ -261,12 +271,15 @@ sub scan_pages {
     return Glib::SOURCE_CONTINUE;
    }
    else {
-    unless ($started) {
-     $options{started_callback}->() if ( defined $options{started_callback} );
+    if ( not $started ) {
+     if ( defined $options{started_callback} ) {
+      $options{started_callback}->();
+     }
      $started = 1;
     }
-    $options{running_callback}->( $_self->{scan_progress} )
-      if ( defined $options{running_callback} );
+    if ( defined $options{running_callback} ) {
+     $options{running_callback}->( $_self->{scan_progress} );
+    }
     return Glib::SOURCE_CONTINUE;
    }
   }
@@ -340,7 +353,7 @@ sub _thread_open_device {
  my ( $self, $device_name ) = @_;
 
  # close the handle
- undef $self->{device_handle} if ( defined( $self->{device_handle} ) );
+ if ( defined( $self->{device_handle} ) ) { undef $self->{device_handle} }
 
  $self->{device_handle} = Sane::Device->open($device_name);
  $logger->debug("opening device '$device_name': $Sane::STATUS");
@@ -365,12 +378,14 @@ sub _thread_get_options {
  for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
   my $opt = $self->{device_handle}->get_option_descriptor($i);
   $options[$i] = $opt;
-  $opt->{val} = $self->{device_handle}->get_option($i)
-    if (
+  if (
    not(( $opt->{cap} & SANE_CAP_INACTIVE )
     or ( $opt->{type} == SANE_TYPE_BUTTON )
     or ( $opt->{type} == SANE_TYPE_GROUP ) )
-    );
+    )
+  {
+   $opt->{val} = $self->{device_handle}->get_option($i);
+  }
  }
 
  $$options = shared_clone \@options;
@@ -405,10 +420,11 @@ sub _thread_set_option {
   for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
    my $opt = $self->{device_handle}->get_option_descriptor($i);
    $options[$i] = $opt;
-   next if ( !( $opt->{cap} & SANE_CAP_SOFT_DETECT ) );
+   if ( not $opt->{cap} & SANE_CAP_SOFT_DETECT ) { next }
 
-   $opt->{val} = $self->{device_handle}->get_option($i)
-     if ( $opt->{type} != SANE_TYPE_BUTTON );
+   if ( $opt->{type} != SANE_TYPE_BUTTON ) {
+    $opt->{val} = $self->{device_handle}->get_option($i);
+   }
   }
 
   $$new_options = shared_clone \@options;
@@ -454,65 +470,65 @@ sub _thread_scan_page_to_fh {
  my @format_name = ( "gray", "RGB", "red", "green", "blue" );
  my $total_bytes = 0;
 
- my $parm;
- {
-  do {    # extra braces to get last to work.
-   if ( not $first_frame ) {
-    $device->start;
-    if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-     $logger->info("$prog_name: sane_start: $Sane::STATUS");
-     goto cleanup;
-    }
-   }
-
-   $parm = $device->get_parameters;
+ my ( $parm, $last_frame );
+ while ( not $last_frame ) {
+  if ( not $first_frame ) {
+   $device->start;
    if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-    $logger->info("$prog_name: sane_get_parameters: $Sane::STATUS");
+    $logger->info("$prog_name: sane_start: $Sane::STATUS");
     goto cleanup;
    }
+  }
 
-   _log_frame_info( $first_frame, $parm, \@format_name );
-   ( $must_buffer, $offset ) = _initialise_scan( $fh, $first_frame, $parm );
-   my $hundred_percent = _scan_data_size($parm);
+  $parm = $device->get_parameters;
+  if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+   $logger->info("$prog_name: sane_get_parameters: $Sane::STATUS");
+   goto cleanup;
+  }
 
-   while (1) {
+  _log_frame_info( $first_frame, $parm, \@format_name );
+  ( $must_buffer, $offset ) = _initialise_scan( $fh, $first_frame, $parm );
+  my $hundred_percent = _scan_data_size($parm);
 
-    # Pick up flag from cancel_scan()
-    if ( $_self->{abort_scan} ) {
-     $device->cancel;
-     $logger->info('Scan cancelled');
+  while (1) {
+
+   # Pick up flag from cancel_scan()
+   if ( $_self->{abort_scan} ) {
+    $device->cancel;
+    $logger->info('Scan cancelled');
+    return;
+   }
+
+   my ( $buffer, $len ) = $device->read($buffer_size);
+   $total_bytes += $len;
+   my $progr = $total_bytes / $hundred_percent;
+   if ( $progr > 1 ) { $progr = 1 }
+   $_self->{scan_progress} = $progr;
+
+   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
+    if ( $parm->{depth} == 8 ) {
+     $logger->info( sprintf "$prog_name: min/max graylevel value = %d/%d",
+      $min, $max );
+    }
+    if ( $Sane::STATUS != SANE_STATUS_EOF ) {
+     $logger->info("$prog_name: sane_read: $Sane::STATUS");
      return;
     }
-
-    my ( $buffer, $len ) = $device->read($buffer_size);
-    $total_bytes += $len;
-    my $progr = $total_bytes / $hundred_percent;
-    $progr = 1 if ( $progr > 1 );
-    $_self->{scan_progress} = $progr;
-
-    if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-     $logger->info( sprintf "$prog_name: min/max graylevel value = %d/%d",
-      $min, $max )
-       if ( $parm->{depth} == 8 );
-     if ( $Sane::STATUS != SANE_STATUS_EOF ) {
-      $logger->info("$prog_name: sane_read: $Sane::STATUS");
-      return;
-     }
-     last;
-    }
-
-    if ($must_buffer) {
-     $offset = _buffer_scan( $offset, $parm, \%image, $len, $buffer );
-    }
-    else {
-     print $fh $buffer;
-    }
+    last;
    }
-   $first_frame = 0;
-  } while ( !$parm->{last_frame} );
+
+   if ($must_buffer) {
+    $offset = _buffer_scan( $offset, $parm, \%image, $len, $buffer );
+   }
+   else {
+    print $fh $buffer;
+   }
+  }
+  $first_frame = 0;
+  $last_frame  = $parm->{last_frame};
  }
 
- _write_buffer_to_fh( $fh, $parm, \%image ) if ($must_buffer);
+ if ($must_buffer) { _write_buffer_to_fh( $fh, $parm, \%image ) }
 
 cleanup:
  my $expected_bytes = $parm->{bytes_per_line} * $parm->{lines} * (
@@ -520,7 +536,7 @@ cleanup:
   ? 1
   : 3
  );
- $expected_bytes = 0 if ( $parm->{lines} < 0 );
+ if ( $parm->{lines} < 0 ) { $expected_bytes = 0 }
  if ( $total_bytes > $expected_bytes and $expected_bytes != 0 ) {
   $logger->info(
    sprintf "%s: WARNING: read more data than announced by backend " . "(%u/%u)",
@@ -536,7 +552,7 @@ cleanup:
 sub _thread_scan_page {
  my ( $self, $path ) = @_;
 
- unless ( defined $self->{device_handle} ) {
+ if ( not defined( $self->{device_handle} ) ) {
   $logger->info("$prog_name: must open device before starting scan");
   return;
  }
@@ -574,7 +590,7 @@ sub _thread_scan_page {
 
 sub _thread_cancel {
  my ($self) = @_;
- $self->{device_handle}->cancel if ( defined $self->{device_handle} );
+ if ( defined $self->{device_handle} ) { $self->{device_handle}->cancel }
  return;
 }
 
@@ -617,22 +633,26 @@ sub _initialise_scan {
    or $parm->{format} == SANE_FRAME_GREEN
    or $parm->{format} == SANE_FRAME_BLUE )
   {
-   die "Red/Green/Blue frames require depth=8\n"
-     unless ( $parm->{depth} == 8 );
+   if ( $parm->{depth} != 8 ) {
+    die "Red/Green/Blue frames require depth=8\n";
+   }
    $must_buffer = 1;
    $offset      = $parm->{format} - SANE_FRAME_RED;
   }
   elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-   die "RGB frames require depth=8 or 16\n"
-     unless ( ( $parm->{depth} == 8 ) or ( $parm->{depth} == 16 ) );
+   if ( ( $parm->{depth} != 8 ) and ( $parm->{depth} != 16 ) ) {
+    die "RGB frames require depth=8 or 16\n";
+   }
   }
   if ($parm->{format} == SANE_FRAME_RGB
    or $parm->{format} == SANE_FRAME_GRAY )
   {
-   die "Valid depths are 1, 8 or 16\n"
-     unless ( ( $parm->{depth} == 1 )
-    or ( $parm->{depth} == 8 )
-    or ( $parm->{depth} == 16 ) );
+   if ( ( $parm->{depth} != 1 )
+    and ( $parm->{depth} != 8 )
+    and ( $parm->{depth} != 16 ) )
+   {
+    die "Valid depths are 1, 8 or 16\n";
+   }
    if ( $parm->{lines} < 0 ) {
     $must_buffer = 1;
     $offset      = 0;
@@ -674,9 +694,11 @@ sub _buffer_scan {
 
  # $parm->{format} == SANE_FRAME_RED or SANE_FRAME_GREEN or SANE_FRAME_BLUE
  my $number_frames = 3;
- $number_frames = 1
-   if ( $parm->{format} == SANE_FRAME_RGB
-  or $parm->{format} == SANE_FRAME_GRAY );
+ if ($parm->{format} == SANE_FRAME_RGB
+  or $parm->{format} == SANE_FRAME_GRAY )
+ {
+  $number_frames = 1;
+ }
 
  for ( my $i = 0 ; $i < $len ; ++$i ) {
   $image->{data}[ $offset + $number_frames * $i ] = substr( $buffer, $i, 1 );
@@ -692,10 +714,12 @@ sub _write_buffer_to_fh {
  }
  else {
   $image->{height} = @{ $image->{data} } / $parm->{pixels_per_line};
-  $image->{height} /= 3
-    if ( $parm->{format} == SANE_FRAME_RED
+  if ($parm->{format} == SANE_FRAME_RED
    or $parm->{format} == SANE_FRAME_GREEN
-   or $parm->{format} == SANE_FRAME_BLUE );
+   or $parm->{format} == SANE_FRAME_BLUE )
+  {
+   $image->{height} /= 3;
+  }
  }
  _thread_write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
   $image->{height}, $parm->{depth} );
