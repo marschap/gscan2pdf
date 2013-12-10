@@ -573,7 +573,11 @@ sub _thread_scan_page {
  _thread_scan_page_to_fh( $self->{device_handle}, $fh );
  $self->{status} = $Sane::STATUS + 0;
 
- close $fh;
+ if ( not close($fh) ) {
+  $self->{device_handle}->cancel;
+  $self->{status} = SANE_STATUS_ACCESS_DENIED;
+  return;
+ }
 
  $logger->info( sprintf "Scanned page %s. (scanner status = %d)",
   $path, $Sane::STATUS );
