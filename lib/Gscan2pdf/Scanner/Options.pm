@@ -386,28 +386,15 @@ sub parse_constraint {
 
 sub parse_list_constraint {
  my ( $option, $values ) = @_;
- if ( $values =~ /$list/xsm ) {
+ if ( $values =~ /(.*)$list/xsm ) {
+  $values = $1;
   $option->{max_values} = $MAX_VALUES;
-  $values = substr( $values, 0, length($values) - length($list) );
  }
- my @array;
- while ( defined $values ) {
-  my $value;
-  if ( $values =~ /(.*?)\|(.*)/xsm ) {
-   $value  = $1;
-   $values = $2;
-  }
-  else {
-   if ( $values =~ /$units$/xsm ) {
-    my $unit = $1;
-    $option->{unit} = unit2enum($unit);
-    $values = substr( $values, 0, index( $values, $unit ) );
-   }
-   $value = $values;
-   undef $values;
-  }
-  if ( $value ne $EMPTY ) { push @array, $value }
+ if ( $values =~ /(.*)$units$/xsm ) {
+  $values = $1;
+  $option->{unit} = unit2enum($2);
  }
+ my @array = split( /\|+/sm, $values );
  if (@array) {
   if ( $array[0] eq 'auto' ) {
    $option->{cap} += SANE_CAP_AUTOMATIC;
