@@ -92,7 +92,7 @@ sub find_scan_options {
   running_callback  => $options{running_callback},
   finished_callback => sub {
    my ( $output, $error ) = @_;
-   if ( defined($error) and $error =~ /^$options{frontend}:\ (.*)/x ) {
+   if ( defined($error) and $error =~ /^$options{frontend}:\ (.*)/xsm ) {
     $error = $1;
    }
    if ( defined($error) and defined( $options{error_callback} ) ) {
@@ -153,24 +153,24 @@ sub _scanimage {
   err_callback     => sub {
    my ($line) = @_;
    given ($line) {
-    when (/^Progress:\ (\d*\.\d*)%/x) {
+    when (/^Progress:\ (\d*\.\d*)%/xsm) {
      if ( defined $options{running_callback} ) {
       $options{running_callback}->( $1 / 100 );
      }
     }
-    when (/^Scanning\ (-?\d*)\ pages/x) {
+    when (/^Scanning\ (-?\d*)\ pages/xsm) {
      if ( defined $options{running_callback} ) {
       $options{running_callback}
         ->( 0, sprintf( $d->get('Scanning %i pages...'), $1 ) );
      }
     }
-    when (/^Scanning\ page\ (\d*)/x) {
+    when (/^Scanning\ page\ (\d*)/xsm) {
      if ( defined $options{running_callback} ) {
       $options{running_callback}
         ->( 0, sprintf( $d->get('Scanning page %i...'), $1 ) );
      }
     }
-    when (/^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ (\d)\)/x) {
+    when (/^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ (\d)\)/xsm) {
      my ( $id, $return ) = ( $1, $2 );
      if ( $return == 5 ) {
       my $timer = Glib::Timeout->add(
@@ -191,7 +191,7 @@ sub _scanimage {
      }
     }
     when (
-     /Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x ## no critic (ProhibitComplexRegexes)
+/Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/xsm ## no critic (ProhibitComplexRegexes)
       )
     {
      if ( defined $options{running_callback} ) {
@@ -199,7 +199,7 @@ sub _scanimage {
      }
     }
     when (
-     /^$options{frontend}:\ sane_start:\ Document\ feeder\ out\ of\ documents/x
+/^$options{frontend}:\ sane_start:\ Document\ feeder\ out\ of\ documents/xsm
       )
     {
      if ( defined( $options{error_callback} ) and $num_scans == 0 ) {
@@ -209,23 +209,23 @@ sub _scanimage {
     when (
      $_self->{abort_scan} == TRUE
        and ( $line =~
-         /^$options{frontend}:\ sane_start:\ Error\ during\ device\ I\/O/x
-      or $line =~ /^$options{frontend}:\ received\ signal\ 2/x
-      or $line =~ /^$options{frontend}:\ trying\ to\ stop\ scanner/x )
+         /^$options{frontend}:\ sane_start:\ Error\ during\ device\ I\/O/xsm
+      or $line =~ /^$options{frontend}:\ received\ signal\ 2/xsm
+      or $line =~ /^$options{frontend}:\ trying\ to\ stop\ scanner/xsm )
       )
     {
      ;
     }
-    when (/^$options{frontend}:\ rounded/x) {
+    when (/^$options{frontend}:\ rounded/xsm) {
      $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
     }
-    when (/^$options{frontend}:\ sane_(?:start|read):\ Device\ busy/x) {
+    when (/^$options{frontend}:\ sane_(?:start|read):\ Device\ busy/xsm) {
      if ( defined $options{error_callback} ) {
       $options{error_callback}->( $d->get('Device busy') );
      }
     }
     when (
-     /^$options{frontend}:\ sane_(?:start|read):\ Operation\ was\ cancelled/x)
+     /^$options{frontend}:\ sane_(?:start|read):\ Operation\ was\ cancelled/xsm)
     {
      if ( defined $options{error_callback} ) {
       $options{error_callback}->( $d->get('Operation cancelled') );
@@ -261,7 +261,7 @@ sub _create_scanimage_cmd {
  my @options;
  for ( @{ $options{options} } ) {
   my ( $key, $value ) = each(%$_);
-  if ( $key =~ /^(?:x|y|t|l)$/x ) {
+  if ( $key =~ /^(?:x|y|t|l)$/xsm ) {
    push @options, "-$key $value";
   }
   else {
@@ -347,14 +347,14 @@ sub _scanadf {
    my ($line) = @_;
    given ($line) {
     when (
-     /Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x ## no critic (ProhibitComplexRegexes)
+/Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/xsm ## no critic (ProhibitComplexRegexes)
       )
     {
      if ( defined $options{running_callback} ) {
       $options{running_callback}->( 0, $d->get('Scanner warming up') );
      }
     }
-    when (/^Scanned\ document\ out(\d*)\.pnm/x) {
+    when (/^Scanned\ document\ out(\d*)\.pnm/xsm) {
      $id = $1;
 
      # Timer will run until callback returns false
@@ -374,19 +374,19 @@ sub _scanadf {
      undef $size;
 
     }
-    when (/^Scanned\ \d*\ pages/x) {
+    when (/^Scanned\ \d*\ pages/xsm) {
      ;
     }
-    when (/^$options{frontend}:\ rounded/x) {
+    when (/^$options{frontend}:\ rounded/xsm) {
      $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
     }
-    when (/^$options{frontend}:\ sane_start:\ Device\ busy/x) {
+    when (/^$options{frontend}:\ sane_start:\ Device\ busy/xsm) {
      if ( defined $options{error_callback} ) {
       $options{error_callback}->( $d->get('Device busy') );
      }
      $running = FALSE;
     }
-    when (/^$options{frontend}:\ sane_read:\ Operation\ was\ cancelled/x) {
+    when (/^$options{frontend}:\ sane_read:\ Operation\ was\ cancelled/xsm) {
      if ( defined $options{error_callback} ) {
       $options{error_callback}->( $d->get('Operation cancelled') );
      }
@@ -534,7 +534,7 @@ sub _add_watch {
     sysread $fh, $buffer, 1024;
     if ($buffer) { $line .= $buffer }
 
-    while ( $line =~ /([\r\n])/x ) {
+    while ( $line =~ /([\r\n])/xsm ) {
      my $le = $1;
      if ( defined $line_callback ) {
       $line_callback->( substr( $line, 0, index( $line, $le ) + 1 ) );
