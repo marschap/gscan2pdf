@@ -39,9 +39,10 @@ sub get_devices {
   running_callback  => $options{running_callback},
   finished_callback => sub {
    my ( $output, $error ) = @_;
-   $options{finished_callback}
-     ->( Gscan2pdf::Frontend::CLI->parse_device_list($output) )
-     if ( defined $options{finished_callback} );
+   if ( defined $options{finished_callback} ) {
+    $options{finished_callback}
+      ->( Gscan2pdf::Frontend::CLI->parse_device_list($output) );
+   }
   }
  );
  return;
@@ -52,7 +53,7 @@ sub parse_device_list {
 
  my (@device_list);
 
- $logger->info($output) if ( defined($output) );
+ if ( defined($output) ) { $logger->info($output) }
 
  # parse out the device and model names
  my @words =
@@ -76,9 +77,10 @@ sub parse_device_list {
 sub find_scan_options {
  my ( $class, %options ) = @_;
 
- $options{prefix} = '' unless ( defined $options{prefix} );
- $options{frontend} = 'scanimage'
-   if ( not defined( $options{frontend} ) or $options{frontend} eq '' );
+ if ( not defined( $options{prefix} ) ) { $options{prefix} = '' }
+ if ( not defined( $options{frontend} ) or $options{frontend} eq '' ) {
+  $options{frontend} = 'scanimage';
+ }
 
  # Get output from scanimage or scanadf.
  # Inverted commas needed for strange characters in device name
@@ -93,12 +95,14 @@ sub find_scan_options {
    if ( defined($error) and $error =~ /^$options{frontend}:\ (.*)/x ) {
     $error = $1;
    }
-   $options{error_callback}->($error)
-     if ( defined($error) and defined( $options{error_callback} ) );
+   if ( defined($error) and defined( $options{error_callback} ) ) {
+    $options{error_callback}->($error);
+   }
    my $options = Gscan2pdf::Scanner::Options->new_from_data($output);
    $_self->{device_name} = Gscan2pdf::Scanner::Options->device;
-   $options{finished_callback}->($options)
-     if ( defined $options{finished_callback} );
+   if ( defined $options{finished_callback} ) {
+    $options{finished_callback}->($options);
+   }
   }
  );
  return;
@@ -109,7 +113,7 @@ sub find_scan_options {
 sub scan_pages {
  my ( $class, %options ) = @_;
 
- $options{prefix} = '' unless ( defined $options{prefix} );
+ if ( not defined( $options{prefix} ) ) { $options{prefix} = '' }
 
  if (
   defined( $options{frontend} )
@@ -129,8 +133,9 @@ sub scan_pages {
 
 sub _scanimage {
  my (%options) = @_;
- $options{frontend} = 'scanimage'
-   if ( not defined( $options{frontend} ) or $options{frontend} eq '' );
+ if ( not defined( $options{frontend} ) or $options{frontend} eq '' ) {
+  $options{frontend} = 'scanimage';
+ }
 
  my $cmd = _create_scanimage_cmd( \%options, TRUE );
 
@@ -149,18 +154,21 @@ sub _scanimage {
    my ($line) = @_;
    given ($line) {
     when (/^Progress:\ (\d*\.\d*)%/x) {
-     $options{running_callback}->( $1 / 100 )
-       if ( defined $options{running_callback} );
+     if ( defined $options{running_callback} ) {
+      $options{running_callback}->( $1 / 100 );
+     }
     }
     when (/^Scanning\ (-?\d*)\ pages/x) {
-     $options{running_callback}
-       ->( 0, sprintf( $d->get('Scanning %i pages...'), $1 ) )
-       if ( defined $options{running_callback} );
+     if ( defined $options{running_callback} ) {
+      $options{running_callback}
+        ->( 0, sprintf( $d->get('Scanning %i pages...'), $1 ) );
+     }
     }
     when (/^Scanning\ page\ (\d*)/x) {
-     $options{running_callback}
-       ->( 0, sprintf( $d->get('Scanning page %i...'), $1 ) )
-       if ( defined $options{running_callback} );
+     if ( defined $options{running_callback} ) {
+      $options{running_callback}
+        ->( 0, sprintf( $d->get('Scanning page %i...'), $1 ) );
+     }
     }
     when (/^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ (\d)\)/x) {
      my ( $id, $return ) = ( $1, $2 );
@@ -172,9 +180,10 @@ sub _scanimage {
           defined( $options{dir} )
           ? File::Spec->catfile( $options{dir}, "out$id.pnm" )
           : "out$id.pnm";
-        return Glib::SOURCE_CONTINUE unless ( -e $path );
-        $options{new_page_callback}->($id)
-          if ( defined $options{new_page_callback} );
+        if ( not -e $path ) { return Glib::SOURCE_CONTINUE }
+        if ( defined $options{new_page_callback} ) {
+         $options{new_page_callback}->($id);
+        }
         $num_scans++;
         return Glib::SOURCE_REMOVE;
        }
@@ -185,15 +194,17 @@ sub _scanimage {
      /Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x ## no critic (ProhibitComplexRegexes)
       )
     {
-     $options{running_callback}->( 0, $d->get('Scanner warming up') )
-       if ( defined $options{running_callback} );
+     if ( defined $options{running_callback} ) {
+      $options{running_callback}->( 0, $d->get('Scanner warming up') );
+     }
     }
     when (
      /^$options{frontend}:\ sane_start:\ Document\ feeder\ out\ of\ documents/x
       )
     {
-     $options{error_callback}->( $d->get('Document feeder out of documents') )
-       if ( defined( $options{error_callback} ) and $num_scans == 0 );
+     if ( defined( $options{error_callback} ) and $num_scans == 0 ) {
+      $options{error_callback}->( $d->get('Document feeder out of documents') );
+     }
     }
     when (
      $_self->{abort_scan} == TRUE
@@ -209,19 +220,22 @@ sub _scanimage {
      $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
     }
     when (/^$options{frontend}:\ sane_(?:start|read):\ Device\ busy/x) {
-     $options{error_callback}->( $d->get('Device busy') )
-       if ( defined $options{error_callback} );
+     if ( defined $options{error_callback} ) {
+      $options{error_callback}->( $d->get('Device busy') );
+     }
     }
     when (
      /^$options{frontend}:\ sane_(?:start|read):\ Operation\ was\ cancelled/x)
     {
-     $options{error_callback}->( $d->get('Operation cancelled') )
-       if ( defined $options{error_callback} );
+     if ( defined $options{error_callback} ) {
+      $options{error_callback}->( $d->get('Operation cancelled') );
+     }
     }
     default {
-     $options{error_callback}->(
-      $d->get('Unknown message: ') . substr( $line, 0, index( $line, "\n" ) ) )
-       if ( defined $options{error_callback} );
+     if ( defined $options{error_callback} ) {
+      $options{error_callback}->( $d->get('Unknown message: ')
+         . substr( $line, 0, index( $line, "\n" ) ) );
+     }
     }
    }
   },
@@ -236,7 +250,7 @@ sub _create_scanimage_cmd {
  my ( $options, $scan ) = @_;
  my %options = %$options;
 
- $options{frontend} = 'scanimage' unless ( defined $options{frontend} );
+ if ( not defined( $options{frontend} ) ) { $options{frontend} = 'scanimage' }
 
  my $help = $scan ? '' : '--help';
 
@@ -254,15 +268,18 @@ sub _create_scanimage_cmd {
    push @options, "--$key='$value'";
   }
  }
- unless ($help) {
+ if ( not $help ) {
   push @options, '--batch';
   push @options, '--progress';
-  push @options, "--batch-start=$options{start}"
-    if ( defined( $options{start} ) and $options{start} != 0 );
-  push @options, "--batch-count=$options{npages}"
-    if ( defined( $options{npages} ) and $options{npages} != 0 );
-  push @options, "--batch-increment=$options{step}"
-    if ( defined( $options{step} ) and $options{step} != 1 );
+  if ( defined( $options{start} ) and $options{start} != 0 ) {
+   push @options, "--batch-start=$options{start}";
+  }
+  if ( defined( $options{npages} ) and $options{npages} != 0 ) {
+   push @options, "--batch-count=$options{npages}";
+  }
+  if ( defined( $options{step} ) and $options{step} != 1 ) {
+   push @options, "--batch-increment=$options{step}";
+  }
  }
 
  # Create command
@@ -274,16 +291,16 @@ sub _create_scanimage_cmd {
 sub _scanadf {
  my (%options) = @_;
 
- $options{frontend} = 'scanadf' unless ( defined $options{frontend} );
+ if ( not defined( $options{frontend} ) ) { $options{frontend} = 'scanadf' }
 
  # inverted commas needed for strange characters in device name
  my $device = "--device-name='$options{device}'";
 
  # Add basic options
  my @options;
- @options = @{ $options{options} } if ( defined $options{options} );
+ if ( defined $options{options} ) { @options = @{ $options{options} } }
  push @options, "--start-count=1";
- push @options, "--end-count=$options{npages}" if ( $options{npages} != 0 );
+ if ( $options{npages} != 0 ) { push @options, "--end-count=$options{npages}" }
  push @options, '-o out%d.pnm';
 
  # Create command
@@ -333,8 +350,9 @@ sub _scanadf {
      /Scanner\ warming\ up\ -\ waiting\ \d*\ seconds|wait\ for\ lamp\ warm-up/x ## no critic (ProhibitComplexRegexes)
       )
     {
-     $options{running_callback}->( 0, $d->get('Scanner warming up') )
-       if ( defined $options{running_callback} );
+     if ( defined $options{running_callback} ) {
+      $options{running_callback}->( 0, $d->get('Scanner warming up') );
+     }
     }
     when (/^Scanned\ document\ out(\d*)\.pnm/x) {
      $id = $1;
@@ -343,9 +361,10 @@ sub _scanadf {
      my $timer = Glib::Timeout->add(
       $_POLL_INTERVAL,
       sub {
-       return Glib::SOURCE_CONTINUE unless ( -e "out$id.pnm" );
-       $options{new_page_callback}->($id)
-         if ( defined $options{new_page_callback} );
+       if ( not -e "out$id.pnm" ) { return Glib::SOURCE_CONTINUE }
+       if ( defined $options{new_page_callback} ) {
+        $options{new_page_callback}->($id);
+       }
        return Glib::SOURCE_REMOVE;
       }
      );
@@ -362,24 +381,29 @@ sub _scanadf {
      $logger->info( substr( $line, 0, index( $line, "\n" ) + 1 ) );
     }
     when (/^$options{frontend}:\ sane_start:\ Device\ busy/x) {
-     $options{error_callback}->( $d->get('Device busy') )
-       if ( defined $options{error_callback} );
+     if ( defined $options{error_callback} ) {
+      $options{error_callback}->( $d->get('Device busy') );
+     }
      $running = FALSE;
     }
     when (/^$options{frontend}:\ sane_read:\ Operation\ was\ cancelled/x) {
-     $options{error_callback}->( $d->get('Operation cancelled') )
-       if ( defined $options{error_callback} );
+     if ( defined $options{error_callback} ) {
+      $options{error_callback}->( $d->get('Operation cancelled') );
+     }
      $running = FALSE;
     }
     default {
-     $options{error_callback}->(
-      $d->get('Unknown message: ') . substr( $line, 0, index( $line, "\n" ) ) )
-       if ( defined $options{error_callback} );
+     if ( defined $options{error_callback} ) {
+      $options{error_callback}->( $d->get('Unknown message: ')
+         . substr( $line, 0, index( $line, "\n" ) ) );
+     }
     }
    }
   },
   finished_callback => sub {
-   $options{finished_callback}->() if ( defined $options{finished_callback} );
+   if ( defined $options{finished_callback} ) {
+    $options{finished_callback}->();
+   }
    $running = FALSE;
   }
  );
@@ -417,7 +441,7 @@ sub _watch_cmd {
 
  # Make sure we are in temp directory
  my $cwd = getcwd;
- chdir $options{dir} if ( defined $options{dir} );
+ if ( defined $options{dir} ) { chdir $options{dir} }
 
  # Interface to scanimage
  my ( $write, $read );
@@ -428,7 +452,7 @@ sub _watch_cmd {
  # change back to original directory
  chdir $cwd;
 
- $options{started_callback}->() if ( defined $options{started_callback} );
+ if ( defined $options{started_callback} ) { $options{started_callback}->() }
  if ( $_self->{abort_scan} ) {
   local $SIG{INT} = 'IGNORE';
   $logger->info("Sending INT signal to PID $pid and its children");
@@ -441,7 +465,7 @@ sub _watch_cmd {
   sub {
    my ($line) = @_;
    $stdout .= $line;
-   $options{out_callback}->($line) if ( defined $options{out_callback} );
+   if ( defined $options{out_callback} ) { $options{out_callback}->($line) }
   },
   sub {
 
@@ -455,7 +479,7 @@ sub _watch_cmd {
   sub {
    my ($line) = @_;
    $stderr .= $line;
-   $options{err_callback}->($line) if ( defined $options{err_callback} );
+   if ( defined $options{err_callback} ) { $options{err_callback}->($line) }
   },
   sub {
 
@@ -477,8 +501,9 @@ sub _watch_cmd {
     sub {
      if ( $out_finished and $err_finished ) {
 
-      $options{finished_callback}->( $stdout, $stderr )
-        if ( defined $options{finished_callback} );
+      if ( defined $options{finished_callback} ) {
+       $options{finished_callback}->( $stdout, $stderr );
+      }
       $logger->info('Waiting to reap process');
 
       # So we don't leave zombies
@@ -507,12 +532,13 @@ sub _add_watch {
     # Only reading one buffer, rather than until sysread gives EOF
     # because things seem to be strange for stderr
     sysread $fh, $buffer, 1024;
-    $line .= $buffer if ($buffer);
+    if ($buffer) { $line .= $buffer }
 
     while ( $line =~ /([\r\n])/x ) {
      my $le = $1;
-     $line_callback->( substr( $line, 0, index( $line, $le ) + 1 ) )
-       if ( defined $line_callback );
+     if ( defined $line_callback ) {
+      $line_callback->( substr( $line, 0, index( $line, $le ) + 1 ) );
+     }
      $line = substr( $line, index( $line, $le ) + 1, length($line) );
     }
    }
