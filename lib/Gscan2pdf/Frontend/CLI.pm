@@ -24,6 +24,8 @@ Readonly my $_1KB             => 1024;
 
 our $VERSION = '1.2.0';
 
+my $EMPTY = q{};
+my $COMMA = q{,};
 my ( $_self, $logger, $d );
 
 sub setup {
@@ -61,7 +63,7 @@ sub parse_device_list {
 
  # parse out the device and model names
  my @words =
-   &parse_line( ',', 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
+   &parse_line( $COMMA, 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
  while (@words) {
   $output = substr( $output, index( $output, "'\n" ) + 2, length($output) );
   shift @words;
@@ -73,7 +75,7 @@ sub parse_device_list {
    type   => shift @words
     };
   @words =
-    &parse_line( ',', 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
+    &parse_line( $COMMA, 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
  }
 
  return \@device_list;
@@ -82,8 +84,8 @@ sub parse_device_list {
 sub find_scan_options {
  my ( $class, %options ) = @_;
 
- if ( not defined( $options{prefix} ) ) { $options{prefix} = '' }
- if ( not defined( $options{frontend} ) or $options{frontend} eq '' ) {
+ if ( not defined( $options{prefix} ) ) { $options{prefix} = $EMPTY }
+ if ( not defined( $options{frontend} ) or $options{frontend} eq $EMPTY ) {
   $options{frontend} = 'scanimage';
  }
 
@@ -118,7 +120,7 @@ sub find_scan_options {
 sub scan_pages {
  my ( $class, %options ) = @_;
 
- if ( not defined( $options{prefix} ) ) { $options{prefix} = '' }
+ if ( not defined( $options{prefix} ) ) { $options{prefix} = $EMPTY }
 
  if (
   defined( $options{frontend} )
@@ -138,7 +140,7 @@ sub scan_pages {
 
 sub _scanimage {
  my (%options) = @_;
- if ( not defined( $options{frontend} ) or $options{frontend} eq '' ) {
+ if ( not defined( $options{frontend} ) or $options{frontend} eq $EMPTY ) {
   $options{frontend} = 'scanimage';
  }
 
@@ -257,7 +259,7 @@ sub _create_scanimage_cmd {
 
  if ( not defined( $options{frontend} ) ) { $options{frontend} = 'scanimage' }
 
- my $help = $scan ? '' : '--help';
+ my $help = $scan ? $EMPTY : '--help';
 
  # inverted commas needed for strange characters in device name
  my $device = "--device-name='$options{device}'";
@@ -555,7 +557,8 @@ sub _add_watch {
    }
 
    # Only allow the hup if sure an empty buffer has been read.
-   if ( ( $condition & 'hup' ) and ( not defined($buffer) or $buffer eq '' ) )
+   if ( ( $condition & 'hup' )
+    and ( not defined($buffer) or $buffer eq $EMPTY ) )
    {    # bit field operation. >= would also work
     close $fh;
     $finished_callback->();
