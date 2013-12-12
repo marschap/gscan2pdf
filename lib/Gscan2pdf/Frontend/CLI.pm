@@ -255,7 +255,7 @@ sub _scanimage {
 
 sub _create_scanimage_cmd {
  my ( $options, $scan ) = @_;
- my %options = %$options;
+ my %options = %{$options};
 
  if ( not defined( $options{frontend} ) ) { $options{frontend} = 'scanimage' }
 
@@ -267,7 +267,7 @@ sub _create_scanimage_cmd {
  # Add basic options
  my @options;
  for ( @{ $options{options} } ) {
-  my ( $key, $value ) = each(%$_);
+  my ( $key, $value ) = each( %{$_} );
   if ( $key =~ /^(?:x|y|t|l)$/xsm ) {
    push @options, "-$key $value";
   }
