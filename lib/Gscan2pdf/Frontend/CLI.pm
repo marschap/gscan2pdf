@@ -16,10 +16,14 @@ use Gscan2pdf::NetPBM;
 use Gscan2pdf::Scanner::Options;
 use Cwd;
 use File::Spec;
+use Readonly;
+Readonly my $_POLL_INTERVAL   => 100;    # ms
+Readonly my $_100             => 100;
+Readonly my $_SANE_STATUS_EOF => 5;      # or we could use Sane
+Readonly my $_1KB             => 1024;
 
 our $VERSION = '1.2.0';
 
-my $_POLL_INTERVAL = 100;    # ms
 my ( $_self, $logger, $d );
 
 sub setup {
@@ -58,14 +62,15 @@ sub parse_device_list {
  # parse out the device and model names
  my @words =
    &parse_line( ',', 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
- while ( @words == 5 ) {
+ while (@words) {
   $output = substr( $output, index( $output, "'\n" ) + 2, length($output) );
+  shift @words;
   push @device_list,
     {
-   name   => $words[1],
-   vendor => $words[2],
-   model  => $words[3],
-   type   => $words[4]
+   name   => shift @words,
+   vendor => shift @words,
+   model  => shift @words,
+   type   => shift @words
     };
   @words =
     &parse_line( ',', 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
@@ -155,7 +160,7 @@ sub _scanimage {
    given ($line) {
     when (/^Progress:\ (\d*\.\d*)%/xsm) {
      if ( defined $options{running_callback} ) {
-      $options{running_callback}->( $1 / 100 );
+      $options{running_callback}->( $1 / $_100 );
      }
     }
     when (/^Scanning\ (-?\d*)\ pages/xsm) {
@@ -172,7 +177,7 @@ sub _scanimage {
     }
     when (/^Scanned\ page\ (\d*)\.\ \(scanner\ status\ =\ (\d)\)/xsm) {
      my ( $id, $return ) = ( $1, $2 );
-     if ( $return == 5 ) {
+     if ( $return == $_SANE_STATUS_EOF ) {
       my $timer = Glib::Timeout->add(
        $_POLL_INTERVAL,
        sub {
@@ -322,15 +327,19 @@ sub _scanadf {
       }
       else {
        # Pulse
-       $options{running_callback}->(-1);
+       $options{running_callback}->();
       }
      }
-     elsif ( -e "out$id.pnm" and ( -s "out$id.pnm" ) > 50 ) {
+
+     # 50 is enough of the file for the header to be complete
+     elsif ( -e "out$id.pnm"
+      and ( -s "out$id.pnm" ) > 50 )    ## no critic (ProhibitMagicNumbers)
+     {
       $size = Gscan2pdf::NetPBM::file_size_from_header("out$id.pnm");
      }
      else {
       # Pulse
-      $options{running_callback}->(-1);
+      $options{running_callback}->();
      }
      return Glib::SOURCE_CONTINUE;
     }
@@ -506,8 +515,10 @@ sub _watch_cmd {
       }
       $logger->info('Waiting to reap process');
 
-      # So we don't leave zombies
-      $logger->info( "Reaped PID ", waitpid( -1, &WNOHANG ) );
+      # -1 indicates a non-blocking wait for all pending zombie processes
+      $logger->info( "Reaped PID ",
+       waitpid( -1, &WNOHANG ) )    ## no critic (ProhibitMagicNumbers)
+        ;
       return Glib::SOURCE_REMOVE;
      }
      return Glib::SOURCE_CONTINUE;
@@ -531,7 +542,7 @@ sub _add_watch {
 
     # Only reading one buffer, rather than until sysread gives EOF
     # because things seem to be strange for stderr
-    sysread $fh, $buffer, 1024;
+    sysread $fh, $buffer, $_1KB;
     if ($buffer) { $line .= $buffer }
 
     while ( $line =~ /([\r\n])/xsm ) {
