@@ -280,7 +280,7 @@ sub INIT_INSTANCE {
  $vboxn->pack_start( $bscanall, TRUE, TRUE, 0 );
  $bscanall->signal_connect(
   clicked => sub {
-   $self->set( 'num-pages', 0 ) if ( $bscanall->get_active );
+   if ( $bscanall->get_active ) { $self->set( 'num-pages', 0 ) }
   }
  );
 
@@ -297,8 +297,9 @@ sub INIT_INSTANCE {
  $hboxn->pack_end( $spin_buttonn, FALSE, FALSE, 0 );
  $bscannum->signal_connect(
   clicked => sub {
-   $self->set( 'num-pages', $spin_buttonn->get_value )
-     if ( $bscannum->get_active );
+   if ( $bscannum->get_active ) {
+    $self->set( 'num-pages', $spin_buttonn->get_value );
+   }
   }
  );
  $self->signal_connect(
@@ -362,7 +363,7 @@ sub INIT_INSTANCE {
  $spin_buttoni->signal_connect(
   'value-changed' => sub {
    my $value = $spin_buttoni->get_value;
-   $value = -$self->get('page-number-increment') if ( $value == 0 );
+   if ( $value == 0 ) { $value = -$self->get('page-number-increment') }
    $spin_buttoni->set_value($value);
    $self->set( 'page-number-increment', $value );
   }
@@ -462,7 +463,7 @@ sub INIT_INSTANCE {
  $self->{combobsp}->signal_connect(
   changed => sub {
    my $profile = $self->{combobsp}->get_active_text;
-   $self->set( 'profile', $profile ) if ( defined $profile );
+   if ( defined $profile ) { $self->set( 'profile', $profile ) }
   }
  );
  $vboxsp->pack_start( $self->{combobsp}, FALSE, FALSE, 0 );
@@ -637,7 +638,7 @@ sub set_device {
   my $device_list = $self->get('device_list');
   if ( defined $device_list ) {
    for ( my $i = 0 ; $i < @{$device_list} ; $i++ ) {
-    $o = $i if ( $device eq $device_list->[$i]{name} );
+    if ( $device eq $device_list->[$i]{name} ) { $o = $i }
    }
 
    # Set the device dependent options after the number of pages
@@ -676,7 +677,7 @@ sub set_device_list {
  # Note any duplicate model names and add the device if necessary
  undef %seen;
  for ( @{$device_list} ) {
-  $_->{model} = $_->{name} unless ( defined $_->{model} );
+  if ( not defined( $_->{model} ) ) { $_->{model} = $_->{name} }
   $seen{ $_->{model} }++;
  }
  for ( @{$device_list} ) {
@@ -686,7 +687,7 @@ sub set_device_list {
   else {
    $_->{label} = $_->{model};
   }
-  $_->{label} .= " on $_->{name}" if ( $seen{ $_->{model} } > 1 );
+  if ( $seen{ $_->{model} } > 1 ) { $_->{label} .= " on $_->{name}" }
  }
 
  $self->{combobd}->signal_handler_block( $self->{combobd_changed_signal} );
@@ -776,7 +777,7 @@ sub edit_paper {
  $dbutton->signal_connect(
   clicked => sub {
    my @rows = $slist->get_selected_indices;
-   $rows[0] = 0 if ( !@rows );
+   if ( !@rows ) { $rows[0] = 0 }
    my $name    = $slist->{data}[ $rows[0] ][0];
    my $version = 2;
    my $i       = 0;
@@ -861,22 +862,24 @@ sub edit_paper {
    }
 
    # Remove all formats, leaving Manual and Edit
-   $combobp->remove_text(0) while ( $combobp->get_active > 1 );
+   while ( $combobp->get_active > 1 ) { $combobp->remove_text(0) }
 
    # Add new definitions
    $self->set( 'paper-formats', \%formats );
-   main::show_message_dialog(
-    $window,
-    'warning',
-    'close',
-    $d->get(
+   if ( $self->{ignored_paper_formats}
+    and @{ $self->{ignored_paper_formats} } )
+   {
+    main::show_message_dialog(
+     $window,
+     'warning',
+     'close',
+     $d->get(
 'The following paper sizes are too big to be scanned by the selected device:'
-      )
-      . ' '
-      . join( ', ', @{ $self->{ignored_paper_formats} } )
-     )
-     if ( $self->{ignored_paper_formats}
-    and @{ $self->{ignored_paper_formats} } );
+       )
+       . ' '
+       . join( ', ', @{ $self->{ignored_paper_formats} } )
+    );
+   }
 
    # Set the combobox back from Edit to the previous value
    set_combobox_by_text( $combobp, $self->get('paper') );
@@ -955,7 +958,9 @@ sub remove_profile {
  if ( defined($name) and defined( $self->{profiles}{$name} ) ) {
   my $i = get_combobox_by_text( $self->{combobsp}, $name );
   if ( $i > -1 ) {
-   $self->{combobsp}->set_active(-1) if ( $self->{combobsp}->get_active == $i );
+   if ( $self->{combobsp}->get_active == $i ) {
+    $self->{combobsp}->set_active(-1);
+   }
    $self->{combobsp}->remove_text($i);
    $self->signal_emit( 'removed-profile', $name );
   }
@@ -965,7 +970,7 @@ sub remove_profile {
 
 sub get_combobox_num_items {
  my ($combobox) = @_;
- return unless ( defined $combobox );
+ if ( not defined($combobox) ) { return }
  my $i = 0;
  $combobox->get_model->foreach(
   sub {
@@ -978,7 +983,7 @@ sub get_combobox_num_items {
 
 sub get_combobox_by_text {
  my ( $combobox, $text ) = @_;
- return -1 unless ( defined($combobox) and defined($text) );
+ if ( not( defined($combobox) and defined($text) ) ) { return -1 }
  my $o = -1;
  my $i = 0;
  $combobox->get_model->foreach(
@@ -999,8 +1004,9 @@ sub get_combobox_by_text {
 
 sub set_combobox_by_text {
  my ( $combobox, $text ) = @_;
- $combobox->set_active( get_combobox_by_text( $combobox, $text ) )
-   if ( defined $combobox );
+ if ( defined $combobox ) {
+  $combobox->set_active( get_combobox_by_text( $combobox, $text ) );
+ }
  return;
 }
 
@@ -1212,12 +1218,16 @@ sub add_value {
  $item->signal_connect(
   'motion-notify-event' => sub {
    my ( $widget, $target, $event ) = @_;
-   return FALSE
-     unless ## no critic (ProhibitNegativeExpressionsInUnlessAndUntilConditions)
-     (
-    $event->state >=    ## no critic (ProhibitMismatchedOperators)
-    'button1-mask'
-     );
+   if (
+    not(
+     $event->state >=    ## no critic (ProhibitMismatchedOperators)
+     'button1-mask'
+    )
+     )
+   {
+    return FALSE;
+   }
+
    my ( $x, $y ) = ( $event->x, $event->y );
    my ( $xgr, $ygr ) = ( 0, $y );
    if ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
@@ -1276,8 +1286,8 @@ sub update_graph {
  # Calculate bounds of graph
  my @bounds;
  for ( @{ $canvas->{val} } ) {
-  $bounds[1] = $_ if ( not defined $bounds[1] or $_ < $bounds[1] );
-  $bounds[3] = $_ if ( not defined $bounds[3] or $_ > $bounds[3] );
+  if ( not defined $bounds[1] or $_ < $bounds[1] ) { $bounds[1] = $_ }
+  if ( not defined $bounds[3] or $_ > $bounds[3] ) { $bounds[3] = $_ }
  }
  my $opt = $canvas->{opt};
  $bounds[0] = 0;
@@ -1343,7 +1353,7 @@ sub my_dumper {
 
 sub set_option_emit_signal {
  my ( $self, $i, $defaults, $signal1, $signal2 ) = @_;
- $i = $self->set_option_widget( $i, $defaults ) if ( $i < @{$defaults} );
+ if ( $i < @{$defaults} ) { $i = $self->set_option_widget( $i, $defaults ) }
 
  # Only emit the changed-current-scan-options signal when we have finished
  if ( ( not defined($i) or $i > $#{$defaults} )
@@ -1352,7 +1362,7 @@ sub set_option_emit_signal {
  {
   $self->signal_handler_disconnect($signal1);
   $self->signal_handler_disconnect($signal2);
-  $self->set( 'profile', undef ) unless ( $self->{setting_profile} );
+  if ( not $self->{setting_profile} ) { $self->set( 'profile', undef ) }
   $self->signal_emit( 'changed-current-scan-options',
    $self->get('current-scan-options') );
  }
