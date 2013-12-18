@@ -63,7 +63,7 @@ sub parse_device_list {
 
  # parse out the device and model names
  my @words =
-   &parse_line( $COMMA, 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
+   parse_line( $COMMA, 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
  while (@words) {
   $output = substr( $output, index( $output, "'\n" ) + 2, length($output) );
   shift @words;
@@ -75,7 +75,7 @@ sub parse_device_list {
    type   => shift @words
     };
   @words =
-    &parse_line( $COMMA, 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
+    parse_line( $COMMA, 0, substr( $output, 0, index( $output, "'\n" ) + 1 ) );
  }
 
  return \@device_list;
@@ -519,7 +519,7 @@ sub _watch_cmd {
 
       # -1 indicates a non-blocking wait for all pending zombie processes
       $logger->info( "Reaped PID ",
-       waitpid( -1, &WNOHANG ) )    ## no critic (ProhibitMagicNumbers)
+       waitpid( -1, WNOHANG ) )    ## no critic (ProhibitMagicNumbers)
         ;
       return Glib::SOURCE_REMOVE;
      }
