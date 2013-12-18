@@ -225,7 +225,7 @@ sub INIT_INSTANCE {
   changed => sub {
    my $index       = $self->{combobd}->get_active;
    my $device_list = $self->get('device-list');
-   if ( $index > $#$device_list ) {
+   if ( $index > $#{$device_list} ) {
     $self->{combobd}->hide;
     $labeld->hide;
     $self->set( 'device', undef );    # to make sure that the device is reloaded
@@ -240,7 +240,7 @@ sub INIT_INSTANCE {
   'changed-device' => sub {
    my ( $widget, $device ) = @_;
    my $device_list = $self->get('device-list');
-   for (@$device_list) {
+   for ( @{$device_list} ) {
     if ( $_->{name} eq $device ) {
      Gscan2pdf::Dialog::Scan::set_combobox_by_text( $self->{combobd},
       $_->{label} );
@@ -636,7 +636,7 @@ sub set_device {
   my $o;
   my $device_list = $self->get('device_list');
   if ( defined $device_list ) {
-   for ( my $i = 0 ; $i < @$device_list ; $i++ ) {
+   for ( my $i = 0 ; $i < @{$device_list} ; $i++ ) {
     $o = $i if ( $device eq $device_list->[$i]{name} );
    }
 
@@ -663,10 +663,10 @@ sub set_device_list {
  # Note any duplicate device names and delete if necessary
  my %seen;
  my $i = 0;
- while ( $i < @$device_list ) {
+ while ( $i < @{$device_list} ) {
   $seen{ $device_list->[$i]{name} }++;
   if ( $seen{ $device_list->[$i]{name} } > 1 ) {
-   splice @$device_list, $i, 1;
+   splice @{$device_list}, $i, 1;
   }
   else {
    $i++;
@@ -675,11 +675,11 @@ sub set_device_list {
 
  # Note any duplicate model names and add the device if necessary
  undef %seen;
- for (@$device_list) {
+ for ( @{$device_list} ) {
   $_->{model} = $_->{name} unless ( defined $_->{model} );
   $seen{ $_->{model} }++;
  }
- for (@$device_list) {
+ for ( @{$device_list} ) {
   if ( defined $_->{vendor} ) {
    $_->{label} = "$_->{vendor} $_->{model}";
   }
@@ -697,7 +697,7 @@ sub set_device_list {
  }
 
  # read the model names into the combobox
- for ( my $j = 0 ; $j < @$device_list ; $j++ ) {
+ for ( my $j = 0 ; $j < @{$device_list} ; $j++ ) {
   $self->{combobd}->insert_text( $j, $device_list->[$j]{label} );
  }
 
@@ -712,7 +712,7 @@ sub set_paper_formats {
  $self->{ignored_paper_formats} = ();
  my $options = $self->get('available-scan-options');
 
- for ( keys %$formats ) {
+ for ( keys %{$formats} ) {
   if ( defined( $self->{combobp} )
    and $options->supports_paper( $formats->{$_}, $tolerance ) )
   {
@@ -758,7 +758,7 @@ sub edit_paper {
   $d->get('Left')   => 'int',
   $d->get('Top')    => 'int'
  );
- for ( keys %$formats ) {
+ for ( keys %{$formats} ) {
   push @{ $slist->{data} },
     [
    $_,                $formats->{$_}{x}, $formats->{$_}{y},
@@ -905,12 +905,12 @@ sub add_profile {
  if ( defined($name) and defined($profile) ) {
   $self->{profiles}{$name} = ();
   if ( ref($profile) eq 'ARRAY' ) {
-   for (@$profile) {
+   for ( @{$profile} ) {
     push @{ $self->{profiles}{$name} }, $_;
    }
   }
   elsif ( ref($profile) eq 'HASH' ) {
-   while ( my ( $key, $value ) = each(%$profile) ) {
+   while ( my ( $key, $value ) = each( %{$profile} ) ) {
     push @{ $self->{profiles}{$name} }, { $key => $value };
    }
   }
@@ -1006,7 +1006,8 @@ sub set_combobox_by_text {
 
 sub _extended_pagenumber_checkbox_callback {
  my ( $widget, $data ) = @_;
- my ( $dialog, $frames, $spin_buttoni, $buttons, $buttond, $combobs ) = @$data;
+ my ( $dialog, $frames, $spin_buttoni, $buttons, $buttond, $combobs ) =
+   @{$data};
  if ( $widget->get_active ) {
   $frames->hide_all;
   $dialog->{framex}->show_all;
@@ -1031,7 +1032,7 @@ sub _extended_pagenumber_checkbox_callback {
 
 sub multiple_values_button_callback {
  my ( $widget, $data ) = @_;
- my ( $dialog, $opt )  = @$data;
+ my ( $dialog, $opt )  = @{$data};
  if ($opt->{type} == SANE_TYPE_FIXED
   or $opt->{type} == SANE_TYPE_INT )
  {
@@ -1325,12 +1326,12 @@ sub my_dumper {
  my ($ref) = @_;
  given ( ref $ref ) {
   when ('ARRAY') {
-   for (@$ref) {
+   for ( @{$ref} ) {
     my_dumper($_);
    }
   }
   when ('HASH') {
-   while ( my ( $key, $val ) = each(%$ref) ) {
+   while ( my ( $key, $val ) = each( %{$ref} ) ) {
     my_dumper($val);
    }
   }
@@ -1342,7 +1343,7 @@ sub my_dumper {
 
 sub set_option_emit_signal {
  my ( $self, $i, $defaults, $signal1, $signal2 ) = @_;
- $i = $self->set_option_widget( $i, $defaults ) if ( $i < @$defaults );
+ $i = $self->set_option_widget( $i, $defaults ) if ( $i < @{$defaults} );
 
  # Only emit the changed-current-scan-options signal when we have finished
  if ( ( not defined($i) or $i > $#{$defaults} )
@@ -1366,8 +1367,8 @@ sub get_option_from_profile {
  # for reasons I don't understand, without walking the reference tree,
  # parts of $profile are undef
  my_dumper($profile);
- for (@$profile) {
-  my ( $key, $val ) = each(%$_);
+ for ( @{$profile} ) {
+  my ( $key, $val ) = each( %{$_} );
   return $val if ( $key eq $name );
  }
  return;
