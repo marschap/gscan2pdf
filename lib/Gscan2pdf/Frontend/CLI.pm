@@ -437,6 +437,7 @@ sub _watch_cmd {
 
  my $out_finished = FALSE;
  my $err_finished = FALSE;
+ my $error_flag   = FALSE;
  $logger->info( $options{cmd} );
 
  if ( defined $options{running_callback} ) {
@@ -469,7 +470,7 @@ sub _watch_cmd {
   $logger->info("Sending INT signal to PID $pid and its children");
   killfam 'INT', ($pid);
  }
- my ( $stdout, $stderr );
+ my ( $stdout, $stderr, $error_message );
 
  _add_watch(
   $read,
@@ -483,6 +484,10 @@ sub _watch_cmd {
    # Don't flag this until after the callback to avoid the race condition
    # where stdout is truncated by stderr prematurely reaping the process
    $out_finished = TRUE;
+  },
+  sub {
+   ($error_message) = @_;
+   $error_flag = TRUE;
   }
  );
  _add_watch(
@@ -497,6 +502,10 @@ sub _watch_cmd {
    # Don't flag this until after the callback to avoid the race condition
    # where stderr is truncated by stdout prematurely reaping the process
    $err_finished = TRUE;
+  },
+  sub {
+   ($error_message) = @_;
+   $error_flag = TRUE;
   }
  );
 
@@ -510,7 +519,13 @@ sub _watch_cmd {
    my $timer = Glib::Timeout->add(
     $_POLL_INTERVAL,
     sub {
-     if ( $out_finished and $err_finished ) {
+     if ($error_flag) {
+      if ( defined $options{error_callback} ) {
+       $options{error_callback}->($error_message);
+      }
+      return Glib::SOURCE_REMOVE;
+     }
+     elsif ( $out_finished and $err_finished ) {
 
       if ( defined $options{finished_callback} ) {
        $options{finished_callback}->( $stdout, $stderr );
@@ -532,7 +547,7 @@ sub _watch_cmd {
 }
 
 sub _add_watch {
- my ( $fh, $line_callback, $finished_callback ) = @_;
+ my ( $fh, $line_callback, $finished_callback, $error_callback ) = @_;
  my $line;
  Glib::IO->add_watch(
   fileno($fh),
@@ -557,11 +572,17 @@ sub _add_watch {
    }
 
    # Only allow the hup if sure an empty buffer has been read.
-   if ( ( $condition & 'hup' )
-    and ( not defined($buffer) or $buffer eq $EMPTY ) )
-   {    # bit field operation. >= would also work
-    close $fh;
-    $finished_callback->();
+   if (
+    ( $condition & 'hup' )    # bit field operation. >= would also work
+    and ( not defined($buffer) or $buffer eq $EMPTY )
+     )
+   {
+    if ( close $fh ) {
+     $finished_callback->();
+    }
+    elsif ( defined $error_callback ) {
+     $error_callback->('Error closing filehandle');
+    }
     return Glib::SOURCE_REMOVE;
    }
    return Glib::SOURCE_CONTINUE;
