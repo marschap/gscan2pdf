@@ -7,12 +7,23 @@ use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Gscan2pdf::Dialog;
 use feature "switch";
 use Data::Dumper;
+my ( $_MAX_PAGES, $_MAX_INCREMENT, $_DOUBLE_INCREMENT, $_CANVAS_SIZE,
+ $_CANVAS_BORDER, $_CANVAS_POINT_SIZE, $_CANVAS_MIN_WIDTH, $_NO_INDEX );
 
 # need to register this with Glib before we can use it below
 BEGIN {
  use Gscan2pdf::Scanner::Options;
  Glib::Type->register_enum( 'Gscan2pdf::Scanner::Dialog::Side',
   qw(facing reverse) );
+ use Readonly;
+ Readonly $_MAX_PAGES         => 999;
+ Readonly $_MAX_INCREMENT     => 99;
+ Readonly $_DOUBLE_INCREMENT  => 2;
+ Readonly $_CANVAS_SIZE       => 200;
+ Readonly $_CANVAS_BORDER     => 10;
+ Readonly $_CANVAS_POINT_SIZE => 10;
+ Readonly $_CANVAS_MIN_WIDTH  => 1;
+ Readonly $_NO_INDEX          => -1;
 }
 
 # from http://gtk2-perl.sourceforge.net/doc/subclassing_widgets_in_perl.html
@@ -129,7 +140,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   'Number of pages',                  # nickname
   'Number of pages to be scanned',    # blurb
   0,                                  # min 0 implies all
-  999,                                # max
+  $_MAX_PAGES,                        # max
   1,                                  # default
   [qw/readable writable/]             # flags
  ),
@@ -139,7 +150,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
 'Maximum number of pages that can be scanned with current page-number-start and page-number-increment'
   ,                                   # blurb
   -1,                                 # min -1 implies all
-  999,                                # max
+  $_MAX_PAGES,                        # max
   0,                                  # default
   [qw/readable writable/]             # flags
  ),
@@ -148,7 +159,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   'Starting page number',                       # nickname
   'Page number of first page to be scanned',    # blurb
   1,                                            # min
-  999,                                          # max
+  $_MAX_PAGES,                                  # max
   1,                                            # default
   [qw/readable writable/]                       # flags
  ),
@@ -156,8 +167,8 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   'page-number-increment',                                           # name
   'Page number increment',                                           # nickname
   'Amount to increment page number when scanning multiple pages',    # blurb
-  -99,                                                               # min
-  99,                                                                # max
+  -$_MAX_INCREMENT,                                                  # min
+  $_MAX_INCREMENT,                                                   # max
   1,                                                                 # default
   [qw/readable writable/]                                            # flags
  ),
@@ -231,7 +242,7 @@ sub INIT_INSTANCE {
     $self->set( 'device', undef );    # to make sure that the device is reloaded
     $self->get_devices;
    }
-   elsif ( $index > -1 ) {
+   elsif ( $index > $_NO_INDEX ) {
     $self->set( 'device', $device_list->[$index]{name} );
    }
   }
@@ -292,7 +303,7 @@ sub INIT_INSTANCE {
  $hboxn->pack_start( $bscannum, FALSE, FALSE, 0 );
 
  # Number of pages
- my $spin_buttonn = Gtk2::SpinButton->new_with_range( 1, 999, 1 );
+ my $spin_buttonn = Gtk2::SpinButton->new_with_range( 1, $_MAX_PAGES, 1 );
  $tooltips->set_tip( $spin_buttonn, $d->get('Set number of pages to scan') );
  $hboxn->pack_end( $spin_buttonn, FALSE, FALSE, 0 );
  $bscannum->signal_connect(
@@ -338,7 +349,7 @@ sub INIT_INSTANCE {
  $vboxx->pack_start( $hboxxs, FALSE, FALSE, 0 );
  my $labelxs = Gtk2::Label->new( $d->get('Start') );
  $hboxxs->pack_start( $labelxs, FALSE, FALSE, 0 );
- my $spin_buttons = Gtk2::SpinButton->new_with_range( 1, 99999, 1 );
+ my $spin_buttons = Gtk2::SpinButton->new_with_range( 1, $_MAX_PAGES, 1 );
  $hboxxs->pack_end( $spin_buttons, FALSE, FALSE, 0 );
  $spin_buttons->signal_connect(
   'value-changed' => sub {
@@ -357,7 +368,8 @@ sub INIT_INSTANCE {
  $vboxx->pack_start( $hboxi, FALSE, FALSE, 0 );
  my $labelxi = Gtk2::Label->new( $d->get('Increment') );
  $hboxi->pack_start( $labelxi, FALSE, FALSE, 0 );
- my $spin_buttoni = Gtk2::SpinButton->new_with_range( -99, 99, 1 );
+ my $spin_buttoni =
+   Gtk2::SpinButton->new_with_range( -$_MAX_INCREMENT, $_MAX_INCREMENT, 1 );
  $spin_buttoni->set_value( $self->get('page-number-increment') );
  $hboxi->pack_end( $spin_buttoni, FALSE, FALSE, 0 );
  $spin_buttoni->signal_connect(
@@ -429,7 +441,8 @@ sub INIT_INSTANCE {
  $self->signal_connect(
   'changed-side-to-scan' => sub {
    my ( $widget, $value ) = @_;
-   $self->set( 'page-number-increment', $value eq 'facing' ? 2 : -2 );
+   $self->set( 'page-number-increment',
+    $value eq 'facing' ? $_DOUBLE_INCREMENT : -$_DOUBLE_INCREMENT );
   }
  );
  $tooltips->set_tip( $combobs,
@@ -443,7 +456,8 @@ sub INIT_INSTANCE {
  # Have to put the double-sided callback here to reference page side
  $buttond->signal_connect(
   clicked => sub {
-   $spin_buttoni->set_value( $combobs->get_active == 0 ? 2 : -2 );
+   $spin_buttoni->set_value(
+    $combobs->get_active == 0 ? $_DOUBLE_INCREMENT : -$_DOUBLE_INCREMENT );
   }
  );
 
@@ -493,8 +507,7 @@ sub INIT_INSTANCE {
    if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/xsm ) {
     my $profile = $entry->get_text;
     $self->add_profile( $profile, $self->get('current-scan-options') );
-    $self->{combobsp}->set_active(
-     Gscan2pdf::Dialog::Scan::num_rows_combobox( $self->{combobsp} ) );
+    $self->{combobsp}->set_active( num_rows_combobox( $self->{combobsp} ) - 1 );
    }
    $dialog->destroy;
   }
@@ -532,7 +545,7 @@ sub INIT_INSTANCE {
 
  $self->signal_connect(
   check_resize => sub {
-   Glib::Idle->add( sub { $self->resize( 100, 100 ); } );
+   Glib::Idle->add( sub { $self->resize( 1, 1 ); } );
   }
  );
  return $self;
@@ -626,7 +639,7 @@ sub show {
 # Get number of rows in combobox
 sub num_rows_combobox {
  my ($combobox) = @_;
- my $i = -1;
+ my $i = 0;
  $combobox->get_model->foreach( sub { $i++; return FALSE } );
  return $i;
 }
@@ -768,7 +781,7 @@ sub edit_paper {
  }
 
  # Set everything to be editable
- for ( 0 .. 4 ) {
+ for ( 0 .. $#{ $slist->get_columns } ) {
   $slist->set_column_editable( $_, TRUE );
  }
  $slist->get_column(0)->set_sort_column_id(0);
@@ -777,7 +790,7 @@ sub edit_paper {
  $dbutton->signal_connect(
   clicked => sub {
    my @rows = $slist->get_selected_indices;
-   if ( !@rows ) { $rows[0] = 0 }
+   if ( not @rows ) { $rows[0] = 0 }
    my $name    = $slist->{data}[ $rows[0] ][0];
    my $version = 2;
    my $i       = 0;
@@ -790,14 +803,11 @@ sub edit_paper {
      ++$i;
     }
    }
-   my @line = [
-    "$name ($version)",
-    $slist->{data}[ $rows[0] ][1],
-    $slist->{data}[ $rows[0] ][2],
-    $slist->{data}[ $rows[0] ][3],
-    $slist->{data}[ $rows[0] ][4]
-   ];
-   splice @{ $slist->{data} }, $rows[0] + 1, 0, @line;
+   my @line = ("$name ($version)");
+   for ( 1 .. $#{ $slist->get_columns } ) {
+    push @line, $slist->{data}[ $rows[0] ][$_];
+   }
+   splice @{ $slist->{data} }, $rows[0] + 1, 0, \@line;
   }
  );
 
@@ -854,11 +864,11 @@ sub edit_paper {
  $abutton->signal_connect(
   clicked => sub {
    my %formats;
-   for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
-    $formats{ $slist->{data}[$i][0] }{x} = $slist->{data}[$i][1];
-    $formats{ $slist->{data}[$i][0] }{y} = $slist->{data}[$i][2];
-    $formats{ $slist->{data}[$i][0] }{l} = $slist->{data}[$i][3];
-    $formats{ $slist->{data}[$i][0] }{t} = $slist->{data}[$i][4];
+   for my $i ( 0 .. $#{ $slist->{data} } ) {
+    my $j = 0;
+    for (qw( x y l t)) {
+     $formats{ $slist->{data}[$i][0] }{$_} = $slist->{data}[$i][ ++$j ];
+    }
    }
 
    # Remove all formats, leaving Manual and Edit
@@ -957,9 +967,9 @@ sub remove_profile {
  my ( $self, $name ) = @_;
  if ( defined($name) and defined( $self->{profiles}{$name} ) ) {
   my $i = get_combobox_by_text( $self->{combobsp}, $name );
-  if ( $i > -1 ) {
+  if ( $i > $_NO_INDEX ) {
    if ( $self->{combobsp}->get_active == $i ) {
-    $self->{combobsp}->set_active(-1);
+    $self->{combobsp}->set_active($_NO_INDEX);
    }
    $self->{combobsp}->remove_text($i);
    $self->signal_emit( 'removed-profile', $name );
@@ -983,8 +993,8 @@ sub get_combobox_num_items {
 
 sub get_combobox_by_text {
  my ( $combobox, $text ) = @_;
- if ( not( defined($combobox) and defined($text) ) ) { return -1 }
- my $o = -1;
+ if ( not( defined($combobox) and defined($text) ) ) { return $_NO_INDEX }
+ my $o = $_NO_INDEX;
  my $i = 0;
  $combobox->get_model->foreach(
   sub {
@@ -1084,9 +1094,8 @@ sub set_options {
  );
  my $vbox   = $window->vbox;
  my $canvas = Goo::Canvas->new;
- my ( $cwidth, $cheight ) = ( 200, 200 );
- $canvas->set_size_request( $cwidth, $cheight );
- $canvas->{border} = 10;
+ $canvas->set_size_request( $_CANVAS_SIZE, $_CANVAS_SIZE );
+ $canvas->{border} = $_CANVAS_BORDER;
  $vbox->add($canvas);
  my $root = $canvas->get_root_item;
 
@@ -1179,7 +1188,7 @@ sub set_options {
 sub add_value {
  my ( $root, $canvas ) = @_;
  my $item = Goo::Canvas::Rect->new(
-  $root, 0, 0, 10, 10,
+  $root, 0, 0, $_CANVAS_POINT_SIZE, $_CANVAS_POINT_SIZE,
   'fill-color' => 'black',
   'line-width' => 0,
  );
@@ -1254,7 +1263,7 @@ sub add_value {
    }
    $canvas->{val}[ $widget->{index} ] = $ygr;
    ( $x, $y ) = to_canvas( $canvas, $xgr, $ygr );
-   $widget->set( y => $y - 10 / 2 );
+   $widget->set( y => $y - $_CANVAS_POINT_SIZE / 2 );
    return TRUE;
   }
  );
@@ -1284,28 +1293,28 @@ sub update_graph {
  my ($canvas) = @_;
 
  # Calculate bounds of graph
- my @bounds;
+ my ( @xbounds, @ybounds );
  for ( @{ $canvas->{val} } ) {
-  if ( not defined $bounds[1] or $_ < $bounds[1] ) { $bounds[1] = $_ }
-  if ( not defined $bounds[3] or $_ > $bounds[3] ) { $bounds[3] = $_ }
+  if ( not defined $ybounds[0] or $_ < $ybounds[0] ) { $ybounds[0] = $_ }
+  if ( not defined $ybounds[1] or $_ > $ybounds[1] ) { $ybounds[1] = $_ }
  }
  my $opt = $canvas->{opt};
- $bounds[0] = 0;
- $bounds[2] = $#{ $canvas->{val} };
- if ( $bounds[0] >= $bounds[2] ) {
-  $bounds[0] = -0.5;
-  $bounds[2] = 0.5;
+ $xbounds[0] = 0;
+ $xbounds[1] = $#{ $canvas->{val} };
+ if ( $xbounds[0] >= $xbounds[1] ) {
+  $xbounds[0] = -$_CANVAS_MIN_WIDTH / 2;
+  $xbounds[1] = $_CANVAS_MIN_WIDTH / 2;
  }
  if ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-  $bounds[1] = $opt->{constraint}{min};
-  $bounds[3] = $opt->{constraint}{max};
+  $ybounds[0] = $opt->{constraint}{min};
+  $ybounds[1] = $opt->{constraint}{max};
  }
  elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
-  $bounds[1] = $opt->{constraint}[0];
-  $bounds[3] = $opt->{constraint}[ $#{ $opt->{constraint} } ];
+  $ybounds[0] = $opt->{constraint}[0];
+  $ybounds[1] = $opt->{constraint}[ $#{ $opt->{constraint} } ];
  }
  my ( $vwidth, $vheight ) =
-   ( $bounds[2] - $bounds[0], $bounds[3] - $bounds[1] );
+   ( $xbounds[1] - $xbounds[0], $ybounds[1] - $ybounds[0] );
 
  # Calculate bounds of canvas
  my ( $x, $y, $cwidth, $cheight ) = $canvas->allocation->values;
@@ -1317,7 +1326,7 @@ sub update_graph {
  );
 
  $canvas->{scale}   = \@scale;
- $canvas->{bounds}  = \@bounds;
+ $canvas->{bounds}  = [ $xbounds[0], $ybounds[0], $xbounds[1], $xbounds[1] ];
  $canvas->{cheight} = $cheight;
 
  # Update canvas
@@ -1325,7 +1334,7 @@ sub update_graph {
   my $item = $canvas->{items}[$i];
   $item->{index} = $i;
   my ( $xc, $yc ) = to_canvas( $canvas, $i, $canvas->{val}[$i] );
-  $item->set( x => $xc - 10 / 2, y => $yc - 10 / 2 );
+  $item->set( x => $xc - $_CANVAS_BORDER / 2, y => $yc - $_CANVAS_BORDER / 2 );
  }
  return;
 }
