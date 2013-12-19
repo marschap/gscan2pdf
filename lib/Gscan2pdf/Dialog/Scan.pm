@@ -7,8 +7,11 @@ use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Gscan2pdf::Dialog;
 use feature "switch";
 use Data::Dumper;
-my ( $_MAX_PAGES, $_MAX_INCREMENT, $_DOUBLE_INCREMENT, $_CANVAS_SIZE,
- $_CANVAS_BORDER, $_CANVAS_POINT_SIZE, $_CANVAS_MIN_WIDTH, $_NO_INDEX );
+my (
+ $_MAX_PAGES,        $_MAX_INCREMENT, $_DOUBLE_INCREMENT,
+ $_CANVAS_SIZE,      $_CANVAS_BORDER, $_CANVAS_POINT_SIZE,
+ $_CANVAS_MIN_WIDTH, $_NO_INDEX,      $EMPTY
+);
 
 # need to register this with Glib before we can use it below
 BEGIN {
@@ -24,6 +27,7 @@ BEGIN {
  Readonly $_CANVAS_POINT_SIZE => 10;
  Readonly $_CANVAS_MIN_WIDTH  => 1;
  Readonly $_NO_INDEX          => -1;
+ $EMPTY = q{};
 }
 
 # from http://gtk2-perl.sourceforge.net/doc/subclassing_widgets_in_perl.html
@@ -95,7 +99,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   'device',                  # name
   'Device',                  # nick
   'Device name',             # blurb
-  '',                        # default
+  $EMPTY,                    # default
   [qw/readable writable/]    # flags
  ),
  Glib::ParamSpec->scalar(
@@ -126,7 +130,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
   'paper',                                      # name
   'Paper',                                      # nick
   'Name of currently selected paper format',    # blurb
-  '',                                           # default
+  $EMPTY,                                       # default
   [qw/readable writable/]                       # flags
  ),
  Glib::ParamSpec->scalar(
@@ -298,7 +302,7 @@ sub INIT_INSTANCE {
  # Entry button
  my $hboxn = Gtk2::HBox->new;
  $vboxn->pack_start( $hboxn, TRUE, TRUE, 0 );
- my $bscannum = Gtk2::RadioButton->new( $bscanall->get_group, "#:" );
+ my $bscannum = Gtk2::RadioButton->new( $bscanall->get_group, q{#:} );
  $tooltips->set_tip( $bscannum, $d->get('Set number of pages to scan') );
  $hboxn->pack_start( $bscannum, FALSE, FALSE, 0 );
 
@@ -639,7 +643,7 @@ sub show {
 
 sub set_device {
  my ( $self, $device ) = @_;
- if ( defined($device) and $device ne '' ) {
+ if ( defined($device) and $device ne $EMPTY ) {
   my $o;
   my $device_list = $self->get('device_list');
   if ( defined $device_list ) {
@@ -879,7 +883,7 @@ sub edit_paper {
      $d->get(
 'The following paper sizes are too big to be scanned by the selected device:'
        )
-       . ' '
+       . q{ }
        . join( ', ', @{ $self->{ignored_paper_formats} } )
     );
    }
@@ -929,7 +933,7 @@ sub add_profile {
 sub set_profile {
  my ( $self, $name ) = @_;
  set_combobox_by_text( $self->{combobsp}, $name );
- if ( defined($name) and $name ne '' ) {
+ if ( defined($name) and $name ne $EMPTY ) {
 
   # If we are setting the profile, don't unset the profile name
   $self->{setting_profile} = TRUE;
