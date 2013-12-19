@@ -507,7 +507,8 @@ sub INIT_INSTANCE {
    if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/xsm ) {
     my $profile = $entry->get_text;
     $self->add_profile( $profile, $self->get('current-scan-options') );
-    $self->{combobsp}->set_active( num_rows_combobox( $self->{combobsp} ) - 1 );
+    $self->{combobsp}
+      ->set_active( get_combobox_num_rows( $self->{combobsp} ) - 1 );
    }
    $dialog->destroy;
   }
@@ -636,22 +637,14 @@ sub show {
  return;
 }
 
-# Get number of rows in combobox
-sub num_rows_combobox {
- my ($combobox) = @_;
- my $i = 0;
- $combobox->get_model->foreach( sub { $i++; return FALSE } );
- return $i;
-}
-
 sub set_device {
  my ( $self, $device ) = @_;
  if ( defined($device) and $device ne '' ) {
   my $o;
   my $device_list = $self->get('device_list');
   if ( defined $device_list ) {
-   for ( my $i = 0 ; $i < @{$device_list} ; $i++ ) {
-    if ( $device eq $device_list->[$i]{name} ) { $o = $i }
+   for ( 0 .. $#{$device_list} ) {
+    if ( $device eq $device_list->[$_]{name} ) { $o = $_ }
    }
 
    # Set the device dependent options after the number of pages
@@ -706,13 +699,13 @@ sub set_device_list {
  $self->{combobd}->signal_handler_block( $self->{combobd_changed_signal} );
 
  # Remove all entries apart from rescan
- for ( my $j = get_combobox_num_items( $self->{combobd} ) ; $j > 1 ; $j-- ) {
+ for ( get_combobox_num_rows( $self->{combobd} ) .. 2 ) {
   $self->{combobd}->remove_text(0);
  }
 
  # read the model names into the combobox
- for ( my $j = 0 ; $j < @{$device_list} ; $j++ ) {
-  $self->{combobd}->insert_text( $j, $device_list->[$j]{label} );
+ for ( 0 .. $#{$device_list} ) {
+  $self->{combobd}->insert_text( $_, $device_list->[$_]{label} );
  }
 
  $self->{combobd}->signal_handler_unblock( $self->{combobd_changed_signal} );
@@ -831,9 +824,9 @@ sub edit_paper {
  $slist->get_model->signal_connect(
   'row-changed' => sub {
    my ( $model, $path, $iter ) = @_;
-   for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
-    if ( $i != $path->to_string
-     and $slist->{data}[ $path->to_string ][0] eq $slist->{data}[$i][0] )
+   for ( 0 .. $#{ $slist->{data} } ) {
+    if ( $_ != $path->to_string
+     and $slist->{data}[ $path->to_string ][0] eq $slist->{data}[$_][0] )
     {
      my $name    = $slist->{data}[ $path->to_string ][0];
      my $version = 2;
@@ -978,7 +971,7 @@ sub remove_profile {
  return;
 }
 
-sub get_combobox_num_items {
+sub get_combobox_num_rows {
  my ($combobox) = @_;
  if ( not defined($combobox) ) { return }
  my $i = 0;
@@ -1250,14 +1243,14 @@ sub add_value {
    }
    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
     ( $xgr, $ygr ) = to_graph( $canvas, 0, $y );
-    for ( my $i = 1 ; $i < @{ $opt->{constraint} } ; $i++ ) {
-     if ( $ygr < ( $opt->{constraint}[$i] + $opt->{constraint}[ $i - 1 ] ) / 2 )
+    for ( 1 .. $#{ $opt->{constraint} } ) {
+     if ( $ygr < ( $opt->{constraint}[$_] + $opt->{constraint}[ $_ - 1 ] ) / 2 )
      {
-      $ygr = $opt->{constraint}[ $i - 1 ];
+      $ygr = $opt->{constraint}[ $_ - 1 ];
       last;
      }
-     elsif ( $i == $#{ $opt->{constraint} } ) {
-      $ygr = $opt->{constraint}[$i];
+     elsif ( $_ == $#{ $opt->{constraint} } ) {
+      $ygr = $opt->{constraint}[$_];
      }
     }
    }
@@ -1330,10 +1323,10 @@ sub update_graph {
  $canvas->{cheight} = $cheight;
 
  # Update canvas
- for ( my $i = 0 ; $i <= $#{ $canvas->{items} } ; $i++ ) {
-  my $item = $canvas->{items}[$i];
-  $item->{index} = $i;
-  my ( $xc, $yc ) = to_canvas( $canvas, $i, $canvas->{val}[$i] );
+ for ( 0 .. $#{ $canvas->{items} } ) {
+  my $item = $canvas->{items}[$_];
+  $item->{index} = $_;
+  my ( $xc, $yc ) = to_canvas( $canvas, $_, $canvas->{val}[$_] );
   $item->set( x => $xc - $_CANVAS_BORDER / 2, y => $yc - $_CANVAS_BORDER / 2 );
  }
  return;
