@@ -490,7 +490,7 @@ sub INIT_INSTANCE {
    $dialog->set_default_response('ok');
    $dialog->show_all;
 
-   if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/x ) {
+   if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/xsm ) {
     my $profile = $entry->get_text;
     $self->add_profile( $profile, $self->get('current-scan-options') );
     $self->{combobsp}->set_active(
@@ -551,13 +551,13 @@ sub SET_PROPERTY {
     "Setting $name from "
       . (
      defined($oldval)
-     ? ( ref($oldval) =~ /(?:HASH|ARRAY)/x ? Dumper($oldval) : $oldval )
+     ? ( ref($oldval) =~ /(?:HASH|ARRAY)/xsm ? Dumper($oldval) : $oldval )
      : 'undef'
       )
       . ' to '
       . (
      defined($newval)
-     ? ( ref($newval) =~ /(?:HASH|ARRAY)/x ? Dumper($newval) : $newval )
+     ? ( ref($newval) =~ /(?:HASH|ARRAY)/xsm ? Dumper($newval) : $newval )
      : 'undef'
       )
    );
@@ -833,7 +833,7 @@ sub edit_paper {
                      \ \( # space, opening bracket
                      (\d+) # version
                      \) # closing bracket
-                   /x
+                   /xsm
        )
      {
       $name    = $1;
