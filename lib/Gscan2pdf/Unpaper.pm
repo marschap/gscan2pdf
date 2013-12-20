@@ -423,7 +423,7 @@ sub add_widget {
    my %default;
    if ( defined $default->{$option} ) {
 
-    foreach ( split /,/, $default->{$option} ) {
+    foreach ( split /,/sm, $default->{$option} ) {
      $default{$_} = TRUE;
     }
    }
@@ -458,7 +458,7 @@ sub add_widget {
    $widget->add($vboxf);
    my @default;
    if ( defined $default->{$option} ) {
-    @default = split /,/, $default->{$option};
+    @default = split /,/sm, $default->{$option};
    }
    foreach (
     sort {
