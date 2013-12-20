@@ -45,12 +45,12 @@ sub INIT_INSTANCE {
   $self->{button}{$nick} = Gtk2::RadioButton->new( $group, $buttons{$nick} );
   $self->{button}{$nick}->signal_connect(
    'toggled' => sub {
-    $self->set_active($nick) if ( $self->{button}{$nick}->get_active );
+    if ( $self->{button}{$nick}->get_active ) { $self->set_active($nick) }
    }
   );
   $vbox->pack_start( $self->{button}{$nick}, TRUE, TRUE, 0 );
-  $group = $self->{button}{$nick}->get_group unless ($group);
-  $self->{active} = $nick unless ( $self->{active} );
+  if ( not $group ) { $group = $self->{button}{$nick}->get_group }
+  if ( not $self->{active} ) { $self->{active} = $nick }
  }
  return;
 }
