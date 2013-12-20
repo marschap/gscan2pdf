@@ -150,10 +150,12 @@ sub new {
  my ( $row_signal, $selection_signal, $document );
  $self->signal_connect(
   'changed-document' => sub {
-   $document->signal_handler_disconnect($row_signal)
-     if ( defined($row_signal) and defined($document) );
-   $document->signal_handler_disconnect($selection_signal)
-     if ( defined($selection_signal) and defined($document) );
+   if ( defined($row_signal) and defined($document) ) {
+    $document->signal_handler_disconnect($row_signal);
+   }
+   if ( defined($selection_signal) and defined($document) ) {
+    $document->signal_handler_disconnect($selection_signal);
+   }
    $self->update;
    $document   = $self->get('document');
    $row_signal = $document->get_model->signal_connect(
@@ -240,7 +242,7 @@ sub update {
    }
    $start += $dstart;
    $step  += $dstep;
-   $step  += $dstep if ( $step == 0 );
+   if ( $step == 0 ) { $step += $dstep }
   }
 
   $self->set( 'start',     $start );
@@ -261,8 +263,9 @@ sub renumber {
 
   $self->signal_emit('before-renumber');
 
-  $slist->get_model->signal_handler_block( $slist->{row_changed_signal} )
-    if ( defined $slist->{row_changed_signal} );
+  if ( defined $slist->{row_changed_signal} ) {
+   $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
+  }
   $slist->renumber( $start, $step, $range );
 
   # Note selection before sorting
@@ -274,28 +277,33 @@ sub renumber {
   }
 
 # Block selection_changed_signal to prevent its firing changing pagerange to all
-  $slist->get_selection->signal_handler_block(
-   $slist->{selection_changed_signal} )
-    if ( defined $slist->{selection_changed_signal} );
+  if ( defined $slist->{selection_changed_signal} ) {
+   $slist->get_selection->signal_handler_block(
+    $slist->{selection_changed_signal} );
+  }
 
   # Select new page, deselecting others. This fires the select callback,
   # displaying the page
   $slist->get_selection->unselect_all;
   $slist->manual_sort_by_column(0);
-  $slist->get_selection->signal_handler_unblock(
-   $slist->{selection_changed_signal} )
-    if ( defined $slist->{selection_changed_signal} );
-  $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} )
-    if ( defined $slist->{row_changed_signal} );
+  if ( defined $slist->{selection_changed_signal} ) {
+   $slist->get_selection->signal_handler_unblock(
+    $slist->{selection_changed_signal} );
+  }
+  if ( defined $slist->{row_changed_signal} ) {
+   $slist->get_model->signal_handler_unblock( $slist->{row_changed_signal} );
+  }
 
   # Convert back to indices
   for (@page) {
 
    # Due to the sort, must search for new page
    my $page = 0;
-   ++$page
-     while ( $page < $#{ $slist->{data} }
-    and $slist->{data}[$page][0] != $_ );
+   while ( $page < $#{ $slist->{data} }
+    and $slist->{data}[$page][0] != $_ )
+   {
+    ++$page;
+   }
    $_ = $page;
   }
 
