@@ -6,8 +6,9 @@ use warnings;
 use Carp;
 use File::Temp;    # To create temporary files
 use File::Basename;
-use Gscan2pdf::Document;    # for slurp
+use Gscan2pdf::Document;             # for slurp
 use version;
+use English qw( -no_match_vars );    # for $PROCESS_ID
 
 our $VERSION = '1.2.0';
 my $EMPTY = q{};
@@ -215,7 +216,7 @@ sub hocr {
  $logger->info($cmd);
 
  # File in which to store the process ID so that it can be killed if necessary
- if ( defined $pidfile ) { $cmd = "echo $$ > $pidfile;$cmd" }
+ if ( defined $pidfile ) { $cmd = "echo $PROCESS_ID > $pidfile;$cmd" }
 
  my ( $out, $err ) = Gscan2pdf::Document::open_three($cmd);
  my $warnings = $out . $err;
