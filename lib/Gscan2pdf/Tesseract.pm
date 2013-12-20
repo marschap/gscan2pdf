@@ -73,7 +73,7 @@ sub parse_tessdata {
  }
  elsif ( $output =~ /Error\ openn?ing\ data\ file\ ([^\n]+)/xsm ) {
   $output = $1;
-  if ( not defined($v) ) { $v = 3 }
+  if ( not defined($v) ) { $v = 3 }    ## no critic (ProhibitMagicNumbers)
   $suffix = '.traineddata';
  }
  elsif ( defined($v) and version->parse("v$v") > version->parse('v3.01') ) {
