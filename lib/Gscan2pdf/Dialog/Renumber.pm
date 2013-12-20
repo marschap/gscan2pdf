@@ -6,6 +6,9 @@ use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gscan2pdf::Dialog;
 use Gscan2pdf::Document;
 use Gscan2pdf::PageRange;
+use Readonly;
+Readonly my $_MAX_PAGES     => 999;
+Readonly my $_MAX_INCREMENT => 99;
 
 use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  'changed-start' => {
@@ -109,7 +112,7 @@ sub new {
  $vboxx->pack_start( $hboxxs, FALSE, FALSE, 0 );
  my $labelxs = Gtk2::Label->new( $d->get('Start') );
  $hboxxs->pack_start( $labelxs, FALSE, FALSE, 0 );
- my $spin_buttons = Gtk2::SpinButton->new_with_range( 1, 99999, 1 );
+ my $spin_buttons = Gtk2::SpinButton->new_with_range( 1, $_MAX_PAGES, 1 );
  $spin_buttons->signal_connect(
   'value-changed' => sub {
    $self->set( 'start', $spin_buttons->get_value );
@@ -130,7 +133,8 @@ sub new {
  $vboxx->pack_start( $hboxi, FALSE, FALSE, 0 );
  my $labelxi = Gtk2::Label->new( $d->get('Increment') );
  $hboxi->pack_start( $labelxi, FALSE, FALSE, 0 );
- my $spin_buttoni = Gtk2::SpinButton->new_with_range( -99, 99, 1 );
+ my $spin_buttoni =
+   Gtk2::SpinButton->new_with_range( -$_MAX_INCREMENT, $_MAX_INCREMENT, 1 );
  $spin_buttoni->signal_connect(
   'value-changed' => sub {
    $self->set( 'increment', $spin_buttoni->get_value );
