@@ -34,10 +34,14 @@ my ( $d, $logger );
 sub new {
  my ( $class, %options ) = @_;
  my $self = {};
- $d = Locale::gettext->domain(Glib::get_application_name) unless ( defined $d );
+ if ( not defined($d) ) {
+  $d = Locale::gettext->domain(Glib::get_application_name);
+ }
 
- croak "Error: filename not supplied" unless ( defined $options{filename} );
- croak "Error: format not supplied"   unless ( defined $options{format} );
+ if ( not defined( $options{filename} ) ) {
+  croak "Error: filename not supplied";
+ }
+ if ( not defined( $options{format} ) ) { croak "Error: format not supplied" }
 
  $logger->info("New page filename $options{filename}, format $options{format}");
  for ( keys %options ) {
@@ -95,10 +99,12 @@ sub clone {
 sub freeze {
  my ($self) = @_;
  my $new = $self->clone;
- $new->{filename} = $self->{filename}->filename
-   if ( ref( $new->{filename} ) eq 'File::Temp' );
- $new->{dir} = $self->{dir}->dirname
-   if ( ref( $new->{dir} ) eq 'File::Temp::Dir' );
+ if ( ref( $new->{filename} ) eq 'File::Temp' ) {
+  $new->{filename} = $self->{filename}->filename;
+ }
+ if ( ref( $new->{dir} ) eq 'File::Temp::Dir' ) {
+  $new->{dir} = $self->{dir}->dirname;
+ }
  return $new;
 }
 
@@ -160,8 +166,9 @@ sub boxes {
     undef $x1;
     undef $text;
    }
-   push @boxes, [ $x1, $y1, $x2, $y2, $text ]
-     if ( defined($x1) and defined($text) );
+   if ( defined($x1) and defined($text) ) {
+    push @boxes, [ $x1, $y1, $x2, $y2, $text ];
+   }
   }
  }
  else {
@@ -203,12 +210,14 @@ sub resolution {
  if ( $format !~ /^Portable\ ...map/x ) {
   $self->{resolution} = $image->Get('x-resolution');
 
-  $self->{resolution} = $image->Get('y-resolution')
-    unless ( defined $self->{resolution} );
+  if ( not defined( $self->{resolution} ) ) {
+   $self->{resolution} = $image->Get('y-resolution');
+  }
 
   if ( $self->{resolution} ) {
-   $self->{resolution} *= 2.54
-     unless ( $image->Get('units') eq 'PixelsPerInch' );
+   if ( not $image->Get('units') eq 'PixelsPerInch' ) {
+    $self->{resolution} *= 2.54;
+   }
    return $self->{resolution};
   }
  }
@@ -229,13 +238,13 @@ sub resolution {
 
 sub matching_paper_sizes {
  my ( $self, $paper_sizes ) = @_;
- unless ( defined( $self->{height} ) and defined( $self->{width} ) ) {
+ if ( not( defined( $self->{height} ) and defined( $self->{width} ) ) ) {
   my $image = $self->im_object;
   $self->{width}  = $image->Get('width');
   $self->{height} = $image->Get('height');
  }
  my $ratio = $self->{height} / $self->{width};
- $ratio = 1 / $ratio if ( $ratio < 1 );
+ if ( $ratio < 1 ) { $ratio = 1 / $ratio }
  my %matching;
  for ( keys %$paper_sizes ) {
   if ( $paper_sizes->{$_}{x} > 0
@@ -255,7 +264,7 @@ sub im_object {
  my ($self) = @_;
  my $image  = Image::Magick->new;
  my $x      = $image->Read( $self->{filename} );
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
  return $image;
 }
 
