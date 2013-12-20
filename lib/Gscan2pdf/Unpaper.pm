@@ -10,6 +10,8 @@ use Gtk2;
 use Locale::gettext 1.05;    # For translations
 use version;
 use Gscan2pdf::Document;
+use Readonly;
+Readonly my $border_width => 6;
 
 BEGIN {
  use Exporter ();
@@ -18,7 +20,7 @@ BEGIN {
  $VERSION = '1.2.0';
 
  use base qw(Exporter);
- %EXPORT_TAGS = ();          # eg: TAG => [ qw!name1 name2! ],
+ %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,
  # as well as any optionally exported functions
@@ -26,10 +28,8 @@ BEGIN {
 }
 our @EXPORT_OK;
 
-# Window parameters
-my $border_width = 6;
-my $COMMA        = q{,};
-my $SPACE        = q{ };
+my $COMMA = q{,};
+my $SPACE = q{ };
 my ( $d, $version );
 
 sub new {
@@ -385,13 +385,13 @@ sub add_widget {
 
    # Add text and tooltips
    my @tooltip;
-   my $i = -1;
+   my $i = 0;
    my $o = 0;
    foreach ( keys %{ $hashref->{$option}{options} } ) {
     $widget->append_text( $hashref->{$option}{options}{$_}{string} );
     push @tooltip, $hashref->{$option}{options}{$_}{tooltip};
-    $hashref->{$option}{options}{$_}{index} = ++$i;
     if ( $_ eq $default->{$option} ) { $o = $i }
+    $hashref->{$option}{options}{$_}{index} = $i++;
    }
    $widget->signal_connect(
     changed => sub {
