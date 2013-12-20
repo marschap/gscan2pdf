@@ -24,7 +24,7 @@ sub setup {
 
 # if we have 3.02.01 or better, we can use --list-langs and not bother with tessdata
  my ( $out, $err ) = Gscan2pdf::Document::open_three("tesseract -v");
- if ( $err =~ /^tesseract\ ([\d\.]+)/x ) {
+ if ( $err =~ /^tesseract\ ([\d\.]+)/xsm ) {
   $version = $1;
  }
  if ( $version and version->parse("v$version") > version->parse('v3.02') ) {
@@ -39,7 +39,7 @@ sub setup {
  unless ( defined $tessdata ) {
   if ( $version and version->parse("v$version") > version->parse('v3.01') ) {
    my ( $lib, undef ) = Gscan2pdf::Document::open_three("ldd $exe");
-   if ( $lib =~ /libtesseract\.so.\d+\ =>\ ([\/a-zA-Z0-9\-\.\_]+)\ /x ) {
+   if ( $lib =~ /libtesseract\.so.\d+\ =>\ ([\/a-zA-Z0-9\-\.\_]+)\ /xsm ) {
     ( $out, undef ) = Gscan2pdf::Document::open_three("strings $1");
     $tessdata = parse_strings($out);
    }
@@ -61,15 +61,15 @@ sub parse_tessdata {
  my @output = @_;
  my $output = join ",", @output;
  my ( $v, $suffix );
- if ( $output =~ /\ v(\d\.\d\d)\ /x ) {
+ if ( $output =~ /\ v(\d\.\d\d)\ /xsm ) {
   $v = $1 + 0;
  }
- if ( $output =~ /Unable\ to\ load\ unicharset\ file\ (.+)/x ) {
+ if ( $output =~ /Unable\ to\ load\ unicharset\ file\ ([^\n]+)/xsm ) {
   $output = $1;
   $v      = 2 unless defined $v;
   $suffix = '.unicharset';
  }
- elsif ( $output =~ /Error\ openn?ing\ data\ file\ (.+)/x ) {
+ elsif ( $output =~ /Error\ openn?ing\ data\ file\ ([^\n]+)/xsm ) {
   $output = $1;
   $v      = 3 unless defined $v;
   $suffix = '.traineddata';
@@ -80,15 +80,15 @@ sub parse_tessdata {
  else {
   return;
  }
- $output =~ s/\/ $suffix $//x;
+ $output =~ s/\/ $suffix $//xsm;
  return $output, $v, $suffix;
 }
 
 sub parse_strings {
  my ($strings) = @_;
- my @strings = split "\n", $strings;
+ my @strings = split /\n/xsm, $strings;
  for (@strings) {
-  return $_ . "tessdata" if (/\/ share \//x);
+  return $_ . "tessdata" if (/\/ share \//xsm);
  }
  return;
 }
@@ -146,15 +146,15 @@ sub languages {
   if ( version->parse("v$version") > version->parse('v3.02') ) {
    my ( undef, $codes ) =
      Gscan2pdf::Document::open_three("tesseract --list-langs");
-   @codes = split "\n", $codes;
-   shift @codes if ( $codes[0] =~ /^List\ of\ available\ languages/x );
+   @codes = split /\n/xsm, $codes;
+   shift @codes if ( $codes[0] =~ /^List\ of\ available\ languages/xsm );
   }
   else {
    for ( glob "$tessdata/*$datasuffix" ) {
 
     # Weed out the empty language files
     if ( not -z $_ ) {
-     if (/ ([\w\-]*) $datasuffix $/x) {
+     if (/ ([\w\-]*) $datasuffix $/xsm) {
       push @codes, $1;
      }
     }
@@ -188,7 +188,7 @@ sub hocr {
  ( $name, $path, undef ) = fileparse( $txt, $suffix );
 
  if ( version->parse("v$version") < version->parse("v3")
-  and $file !~ /\.tif$/x )
+  and $file !~ /\.tif$/xsm )
  {
 
   # Temporary filename for new file
@@ -219,8 +219,8 @@ sub hocr {
  my $warnings = $out . $err;
  my $leading  = 'Tesseract Open Source OCR Engine';
  my $trailing = 'with Leptonica';
- $warnings =~ s/$leading v\d\.\d\d $trailing\n//x;
- $warnings =~ s/^Page\ 0\n//x;
+ $warnings =~ s/$leading v\d\.\d\d $trailing\n//xsm;
+ $warnings =~ s/^Page\ 0\n//xsm;
  $logger->debug( 'Warnings from Tesseract: ', $warnings );
 
  return Gscan2pdf::Document::slurp($txt), $warnings;
