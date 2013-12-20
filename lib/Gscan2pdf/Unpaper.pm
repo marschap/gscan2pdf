@@ -272,7 +272,7 @@ sub add_options {
   # Ensure that at least one checkbutton stays active
   $button->signal_connect(
    toggled => sub {
-    $button->set_active(TRUE) if ( count_active_children($dframe) == 0 );
+    if ( count_active_children($dframe) == 0 ) { $button->set_active(TRUE) }
    }
   );
  }
@@ -294,7 +294,7 @@ sub add_options {
    }
    else {
     $babutton->set_sensitive(TRUE);
-    $bframe->set_sensitive(TRUE) if ( !( $babutton->get_active ) );
+    if ( not $babutton->get_active ) { $bframe->set_sensitive(TRUE) }
    }
   }
  );
@@ -352,7 +352,7 @@ sub count_active_children {
  my ($frame) = @_;
  my $n = 0;
  for ( $frame->get_child->get_children ) {
-  $n++ if ( $_->get_active );
+  if ( $_->get_active ) { $n++ }
  }
  return $n;
 }
@@ -366,9 +366,11 @@ sub add_widget {
  $tooltips->enable;
 
  my $widget;
- $default->{$option} = $hashref->{$option}{default}
-   if ( defined( $hashref->{$option}{default} )
-  and not defined( $default->{$option} ) );
+ if ( defined( $hashref->{$option}{default} )
+  and not defined( $default->{$option} ) )
+ {
+  $default->{$option} = $hashref->{$option}{default};
+ }
 
  given ( $hashref->{$option}{type} ) {
   when ('ComboBox') {
@@ -387,12 +389,13 @@ sub add_widget {
     $widget->append_text( $hashref->{$option}{options}{$_}{string} );
     push @tooltip, $hashref->{$option}{options}{$_}{tooltip};
     $hashref->{$option}{options}{$_}{index} = ++$i;
-    $o = $i if ( $_ eq $default->{$option} );
+    if ( $_ eq $default->{$option} ) { $o = $i }
    }
    $widget->signal_connect(
     changed => sub {
-     $tooltips->set_tip( $widget, $tooltip[ $widget->get_active ] )
-       if ( defined $tooltip[ $widget->get_active ] );
+     if ( defined $tooltip[ $widget->get_active ] ) {
+      $tooltips->set_tip( $widget, $tooltip[ $widget->get_active ] );
+     }
     }
    );
 
@@ -405,7 +408,9 @@ sub add_widget {
    $widget = Gtk2::CheckButton->new( $hashref->{$option}{string} );
    $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
    $vbox->pack_start( $widget, TRUE, TRUE, 0 );
-   $widget->set_active( $default->{$option} ) if defined( $default->{$option} );
+   if ( defined $default->{$option} ) {
+    $widget->set_active( $default->{$option} );
+   }
   }
 
   when ('CheckButtonGroup') {
@@ -424,7 +429,7 @@ sub add_widget {
    }
    foreach ( keys %{ $hashref->{$option}{options} } ) {
     my $button = $self->add_widget( $vboxf, $hashref->{$option}{options}, $_ );
-    $button->set_active(TRUE) if ( defined $default{$_} );
+    if ( defined $default{$_} ) { $button->set_active(TRUE) }
    }
   }
 
@@ -440,7 +445,9 @@ sub add_widget {
    );
    $hbox->pack_end( $widget, FALSE, FALSE, 0 );
    $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
-   $widget->set_value( $default->{$option} ) if ( defined $default->{$option} );
+   if ( defined $default->{$option} ) {
+    $widget->set_value( $default->{$option} );
+   }
   }
 
   when ('SpinButtonGroup') {
@@ -450,7 +457,9 @@ sub add_widget {
    $vboxf->set_border_width($border_width);
    $widget->add($vboxf);
    my @default;
-   @default = split /,/, $default->{$option} if ( defined $default->{$option} );
+   if ( defined $default->{$option} ) {
+    @default = split /,/, $default->{$option};
+   }
    foreach (
     sort {
      $hashref->{$option}{options}{$a}{order}
@@ -459,7 +468,7 @@ sub add_widget {
      )
    {
     my $button = $self->add_widget( $vboxf, $hashref->{$option}{options}, $_ );
-    $button->set_value( shift @default ) if (@default);
+    if (@default) { $button->set_value( shift @default ) }
    }
   }
  }
@@ -479,8 +488,9 @@ sub get_options {
     when ('ComboBox') {
      my $i = $hashref->{$option}{widget}->get_active;
      for ( keys %{ $hashref->{$option}{options} } ) {
-      $default->{$option} = $_
-        if ( $hashref->{$option}{options}{$_}{index} == $i );
+      if ( $hashref->{$option}{options}{$_}{index} == $i ) {
+       $default->{$option} = $_;
+      }
      }
     }
     when ('CheckButton') {
@@ -493,17 +503,18 @@ sub get_options {
     when ('CheckButtonGroup') {
      my @items;
      foreach ( keys %{ $hashref->{$option}{options} } ) {
-      push @items, $_
-        if ( $hashref->{$option}{options}{$_}{widget}->get_active );
+      if ( $hashref->{$option}{options}{$_}{widget}->get_active ) {
+       push @items, $_;
+      }
      }
-     $default->{$option} = join ',', @items if (@items);
+     if (@items) { $default->{$option} = join ',', @items }
     }
     when ('SpinButtonGroup') {
      my @items;
      foreach ( keys %{ $hashref->{$option}{options} } ) {
       push @items, $hashref->{$option}{options}{$_}{widget}->get_value;
      }
-     $default->{$option} = join ',', @items if (@items);
+     if (@items) { $default->{$option} = join ',', @items }
     }
    }
   }
@@ -521,12 +532,14 @@ sub get_cmdline {
  my @items;
  foreach my $option ( keys %{$hashref} ) {
   if ( $hashref->{$option}{type} eq 'CheckButton' ) {
-   push @items, "--$option"
-     if ( defined $default->{$option} and $default->{$option} );
+   if ( defined $default->{$option} and $default->{$option} ) {
+    push @items, "--$option";
+   }
   }
   else {
-   push @items, "--$option $default->{$option}"
-     if ( defined $default->{$option} );
+   if ( defined $default->{$option} ) {
+    push @items, "--$option $default->{$option}";
+   }
   }
  }
  my $cmd = 'unpaper ' . join( ' ', @items ) . ' --overwrite ';
@@ -538,7 +551,7 @@ sub get_cmdline {
 }
 
 sub version {
- unless ( defined $version ) {
+ if ( not defined($version) ) {
   if ( Gscan2pdf::Document::check_command('unpaper') ) {
    ( $version, undef ) = Gscan2pdf::Document::open_three('unpaper --version');
    chomp($version);
