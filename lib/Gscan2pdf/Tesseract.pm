@@ -36,7 +36,7 @@ sub setup {
  ( $out, $err ) = Gscan2pdf::Document::open_three("tesseract '' '' -l ''");
  ( $tessdata, $version, $datasuffix ) = parse_tessdata( $out . $err );
 
- unless ( defined $tessdata ) {
+ if ( not defined($tessdata) ) {
   if ( $version and version->parse("v$version") > version->parse('v3.01') ) {
    my ( $lib, undef ) = Gscan2pdf::Document::open_three("ldd $exe");
    if ( $lib =~ /libtesseract\.so.\d+\ =>\ ([\/a-zA-Z0-9\-\.\_]+)\ /xsm ) {
@@ -66,12 +66,12 @@ sub parse_tessdata {
  }
  if ( $output =~ /Unable\ to\ load\ unicharset\ file\ ([^\n]+)/xsm ) {
   $output = $1;
-  $v      = 2 unless defined $v;
+  if ( not defined($v) ) { $v = 2 }
   $suffix = '.unicharset';
  }
  elsif ( $output =~ /Error\ openn?ing\ data\ file\ ([^\n]+)/xsm ) {
   $output = $1;
-  $v      = 3 unless defined $v;
+  if ( not defined($v) ) { $v = 3 }
   $suffix = '.traineddata';
  }
  elsif ( defined($v) and version->parse("v$v") > version->parse('v3.01') ) {
@@ -94,7 +94,7 @@ sub parse_strings {
 }
 
 sub languages {
- unless (%languages) {
+ if ( not %languages ) {
   my %iso639 = (
    ara        => 'Arabic',
    bul        => 'Bulgarian',
@@ -147,7 +147,7 @@ sub languages {
    my ( undef, $codes ) =
      Gscan2pdf::Document::open_three("tesseract --list-langs");
    @codes = split /\n/xsm, $codes;
-   shift @codes if ( $codes[0] =~ /^List\ of\ available\ languages/xsm );
+   if ( $codes[0] =~ /^List\ of\ available\ languages/xsm ) { shift @codes }
   }
   else {
    for ( glob "$tessdata/*$datasuffix" ) {
@@ -179,7 +179,7 @@ sub hocr {
  # can't use the package-wide logger variable as we are in a thread here.
  ( my $class, my $file, my $language, $logger, my $pidfile ) = @_;
  my ( $tif, $cmd, $name, $path );
- Gscan2pdf::Tesseract->setup($logger) unless $setup;
+ if ( not $setup ) { Gscan2pdf::Tesseract->setup($logger) }
 
  # Temporary filename for output
  my $suffix =
@@ -213,7 +213,7 @@ sub hocr {
  $logger->info($cmd);
 
  # File in which to store the process ID so that it can be killed if necessary
- $cmd = "echo $$ > $pidfile;$cmd" if ( defined $pidfile );
+ if ( defined $pidfile ) { $cmd = "echo $$ > $pidfile;$cmd" }
 
  my ( $out, $err ) = Gscan2pdf::Document::open_three($cmd);
  my $warnings = $out . $err;
