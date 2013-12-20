@@ -28,6 +28,8 @@ our @EXPORT_OK;
 
 # Window parameters
 my $border_width = 6;
+my $COMMA        = q{,};
+my $SPACE        = q{ };
 my ( $d, $version );
 
 sub new {
@@ -507,14 +509,14 @@ sub get_options {
        push @items, $_;
       }
      }
-     if (@items) { $default->{$option} = join ',', @items }
+     if (@items) { $default->{$option} = join $COMMA, @items }
     }
     when ('SpinButtonGroup') {
      my @items;
      foreach ( keys %{ $hashref->{$option}{options} } ) {
       push @items, $hashref->{$option}{options}{$_}{widget}->get_value;
      }
-     if (@items) { $default->{$option} = join ',', @items }
+     if (@items) { $default->{$option} = join $COMMA, @items }
     }
    }
   }
@@ -542,7 +544,7 @@ sub get_cmdline {
    }
   }
  }
- my $cmd = 'unpaper ' . join( ' ', @items ) . ' --overwrite ';
+ my $cmd = 'unpaper ' . join( $SPACE, @items ) . ' --overwrite ';
  $cmd .=
    version->parse( $self->version ) > version->parse('v0.3')
    ? '%s %s %s'
