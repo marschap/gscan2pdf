@@ -10,6 +10,8 @@ use Gscan2pdf::Document;    # for slurp
 use version;
 
 our $VERSION = '1.2.0';
+my $EMPTY = q{};
+my $COMMA = q{,};
 
 my ( %languages, $installed, $setup, $version, $tessdata, $datasuffix,
  $logger );
@@ -19,7 +21,7 @@ sub setup {
  return $installed if $setup;
 
  my ( $exe, undef ) = Gscan2pdf::Document::open_three('which tesseract');
- return if ( not defined($exe) or $exe eq '' );
+ return if ( not defined($exe) or $exe eq $EMPTY );
  $installed = 1;
 
 # if we have 3.02.01 or better, we can use --list-langs and not bother with tessdata
@@ -59,7 +61,7 @@ sub setup {
 
 sub parse_tessdata {
  my @output = @_;
- my $output = join ",", @output;
+ my $output = join $COMMA, @output;
  my ( $v, $suffix );
  if ( $output =~ /\ v(\d\.\d\d)\ /xsm ) {
   $v = $1 + 0;
