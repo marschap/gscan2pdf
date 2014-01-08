@@ -920,7 +920,7 @@ sub user_defined {
 # If a filename is given, zip it up as a session file
 
 sub save_session {
- my ( $self, $dir, $filename ) = @_;
+ my ( $self, $filename ) = @_;
 
  my ( %session, @filenamelist );
  for my $i ( 0 .. $#{ $self->{data} } ) {
@@ -932,10 +932,10 @@ sub save_session {
      unless ( $key eq 'filename' );
   }
  }
- push @filenamelist, File::Spec->catfile( $dir, 'session' );
+ push @filenamelist, File::Spec->catfile( $self->{dir}, 'session' );
  my @selection = $self->get_selected_indices;
  @{ $session{selection} } = @selection;
- store( \%session, File::Spec->catfile( $dir, 'session' ) );
+ store( \%session, File::Spec->catfile( $self->{dir}, 'session' ) );
  if ( defined $filename ) {
   my $tar = Archive::Tar->new;
   $tar->add_files(@filenamelist);
@@ -945,15 +945,18 @@ sub save_session {
 }
 
 sub open_session {
- my ( $self, $dir, $filename, $error_callback ) = @_;
+ my ( $self, $filename, $error_callback ) = @_;
+ my $sesdir = $self->{dir};
  if ( defined $filename ) {
   my $tar          = Archive::Tar->new( $filename, TRUE );
   my @filenamelist = $tar->list_files;
   my @sessionfile  = grep { /\/session$/x } @filenamelist;
-  $tar->extract;
-  $dir = dirname( $sessionfile[0] );
+  $sesdir = File::Spec->catfile( $self->{dir}, dirname( $sessionfile[0] ) );
+  for (@filenamelist) {
+   $tar->extract_file( $_, File::Spec->catfile( $sesdir, basename($_) ) );
+  }
  }
- my $sessionref = retrieve( File::Spec->catfile( $dir, 'session' ) );
+ my $sessionref = retrieve( File::Spec->catfile( $sesdir, 'session' ) );
  my %session = %$sessionref;
 
  # Block the row-changed signal whilst adding the scan (row) and sorting it.
@@ -962,6 +965,18 @@ sub open_session {
  my @selection = @{ $session{selection} };
  delete $session{selection};
  for my $pagenum ( sort { $a <=> $b } ( keys(%session) ) ) {
+
+  # don't reuse session directory
+  $session{$pagenum}{dir} = $self->{dir};
+
+  # if we have untarred, don't waste space by copying
+  if ( defined $filename ) { $session{$pagenum}{delete} = TRUE }
+
+  # correct the path now that it is relative to the current session dir
+  if ( defined $filename ) {
+   $session{$pagenum}{filename} =
+     File::Spec->catfile( $sesdir, basename( $session{$pagenum}{filename} ) );
+  }
 
   # Populate the SimpleList
   try {

@@ -15,7 +15,9 @@ Log::Log4perl->easy_init($WARN);
 
 Gscan2pdf::Document->setup(Log::Log4perl::get_logger);
 my $slist = Gscan2pdf::Document->new;
-$slist->open_session( undef, 'test.gs2p' );
+my $dir   = File::Temp->newdir;
+$slist->set_dir($dir);
+$slist->open_session('test.gs2p');
 
 like(
  `file $slist->{data}[0][2]{filename}`,
@@ -31,11 +33,6 @@ is(
 # Add another image to test behaviour with multiple saves
 system('convert rose: test.pnm');
 
-# different dir for temporary files
-my $dir = 'tmp2';
-mkdir $dir unless ( -e $dir );
-$slist->set_dir($dir);
-
 $slist->get_file_info(
  path              => 'test.pnm',
  finished_callback => sub {
@@ -45,8 +42,7 @@ $slist->get_file_info(
    first             => 1,
    last              => 1,
    finished_callback => sub {
-    $slist->save_session( dirname( $slist->{data}[1][2]{filename} ),
-     'test2.gs2p' );
+    $slist->save_session('test2.gs2p');
     Gtk2->main_quit;
    }
   );
@@ -63,5 +59,5 @@ cmp_ok( -s 'test2.gs2p', '>', 0, 'Non-empty Session file created' );
 
 #########################
 
-unlink 'test.gs2p', 'test.pnm', <tmp/*>, <$dir/*>;
 Gscan2pdf::Document->quit;
+unlink 'test.gs2p', 'test.pnm';

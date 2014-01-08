@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 use Test::More tests => 2;
+use File::Path qw(remove_tree);
 
 BEGIN {
  use Gscan2pdf::Document;
@@ -14,7 +15,9 @@ Log::Log4perl->easy_init($WARN);
 
 Gscan2pdf::Document->setup(Log::Log4perl::get_logger);
 my $slist = Gscan2pdf::Document->new;
-$slist->open_session('tmp2');
+my $dir = File::Spec->catfile( File::Spec->tmpdir, 'gscan2pdf-tmp' );
+$slist->set_dir($dir);
+$slist->open_session;
 
 like(
  `file $slist->{data}[0][2]{filename}`,
@@ -29,7 +32,5 @@ is(
 
 #########################
 
-unlink <tmp/*>, <tmp2/*>;
-rmdir 'tmp';
-rmdir 'tmp2';
 Gscan2pdf::Document->quit;
+remove_tree($dir);

@@ -41,6 +41,7 @@ sub new {
  if ( not defined( $options{filename} ) ) {
   croak "Error: filename not supplied";
  }
+ if ( not -f $options{filename} )       { croak "Error: filename not found" }
  if ( not defined( $options{format} ) ) { croak "Error: format not supplied" }
 
  $logger->info("New page filename $options{filename}, format $options{format}");

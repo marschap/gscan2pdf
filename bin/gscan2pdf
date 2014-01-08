@@ -1643,7 +1643,7 @@ sub create_temp_directory {
     File::Spec->catfile( $session, 'lockfile' )
     or die "Cannot open lockfile\n";
   flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
-  $slist->save_session($session);
+  $slist->save_session;
   $logger->info("Using $session for temporary files");
  }
  return;
@@ -1801,7 +1801,6 @@ sub open_session {
  my ($filename) = @_;
  $logger->info("Restoring session in $session");
  $slist->open_session(
-  $session,
   $filename,
   sub {
    my ($message) = @_;
@@ -2987,7 +2986,7 @@ sub file_chooser_response_callback {
     save_TIFF( $tif->filename, $filename );
    }
    when ('gs2p') {
-    $slist->save_session( $session, $filename );
+    $slist->save_session($filename);
    }
   }
   $windowi->hide if defined $windowi;
@@ -5764,7 +5763,7 @@ sub take_snapshot {
  $uimanager->get_widget('/ToolBar/Undo')->set_sensitive(TRUE);
 
  # Save session
- $slist->save_session($session);
+ $slist->save_session;
  return;
 }
 

@@ -1,11 +1,11 @@
 use warnings;
 use strict;
 use Test::More tests => 2;
+use File::Basename;    # Split filename into dir, file, ext
 
 BEGIN {
  use Gscan2pdf::Document;
- use Gtk2 -init;        # Could just call init separately
- use File::Basename;    # Split filename into dir, file, ext
+ use Gtk2 -init;       # Could just call init separately
 }
 
 #########################
@@ -19,12 +19,7 @@ Gscan2pdf::Document->setup($logger);
 system('convert rose: test.pnm');
 
 my $slist = Gscan2pdf::Document->new;
-
-# dir for temporary files
-my $dir = 'tmp';
-mkdir $dir unless ( -e $dir );
-$slist->set_dir($dir);
-
+$slist->set_dir( File::Temp->newdir );
 $slist->get_file_info(
  path              => 'test.pnm',
  finished_callback => sub {
@@ -35,8 +30,7 @@ $slist->get_file_info(
    last              => 1,
    finished_callback => sub {
     $slist->{data}[0][2]{hocr} = 'The quick brown fox';
-    $slist->save_session( dirname( $slist->{data}[0][2]{filename} ),
-     'test.gs2p' );
+    $slist->save_session('test.gs2p');
     Gtk2->main_quit;
    }
   );
@@ -53,6 +47,5 @@ cmp_ok( -s 'test.gs2p', '>', 0, 'Non-empty Session file created' );
 
 #########################
 
-unlink 'test.pnm', <$dir/*>;
-rmdir $dir;
 Gscan2pdf::Document->quit();
+unlink 'test.pnm';
