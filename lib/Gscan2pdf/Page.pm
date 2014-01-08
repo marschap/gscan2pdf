@@ -253,7 +253,7 @@ sub matching_paper_sizes {
  my $ratio = $self->{height} / $self->{width};
  if ( $ratio < 1 ) { $ratio = 1 / $ratio }
  my %matching;
- for ( keys %$paper_sizes ) {
+ for ( keys %{$paper_sizes} ) {
   if ( $paper_sizes->{$_}{x} > 0
    and abs( $ratio - $paper_sizes->{$_}{y} / $paper_sizes->{$_}{x} ) <
    $PAGE_TOLERANCE )
