@@ -113,7 +113,7 @@ sub thaw {
  my ($self) = @_;
  my $new = $self->clone;
  my $suffix;
- if ( $new->{filename} =~ /\.(\w*)$/x ) {
+ if ( $new->{filename} =~ /\.(\w*)$/xsm ) {
   $suffix = $1;
  }
  my $filename = File::Temp->new( DIR => $new->{dir}, SUFFIX => ".$suffix" );
@@ -134,7 +134,7 @@ sub boxes {
    decode_utf8(
   encode_utf8( HTML::Entities::decode_entities( $self->{hocr} ) ) );
 
- if ( $self->{hocr} =~ /<body>([\s\S]*)<\/body>/x ) {
+ if ( $self->{hocr} =~ /<body>([\s\S]*)<\/body>/xsm ) {
   my $p = HTML::TokeParser->new( \$self->{hocr} );
   my ( $x1, $y1, $x2, $y2, $text );
   while ( my $token = $p->get_token ) {
@@ -146,7 +146,7 @@ sub boxes {
       or $token->[2]{class} eq 'ocr_word'
       or $token->[2]{class} eq 'ocrx_word' )
      and defined( $token->[2]{title} )
-     and $token->[2]{title} =~ /bbox\ (\d+)\ (\d+)\ (\d+)\ (\d+)/x
+     and $token->[2]{title} =~ /bbox\ (\d+)\ (\d+)\ (\d+)\ (\d+)/xsm
       )
     {
      ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
@@ -159,7 +159,7 @@ sub boxes {
      undef $text;
     }
    }
-   if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/x ) {
+   if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/xsm ) {
     $text = $token->[1];
     chomp($text);
    }
@@ -208,7 +208,7 @@ sub resolution {
  # Imagemagick always reports PNMs as 72ppi
  # Some versions of imagemagick report colour PNM as Portable pixmap (PPM)
  # B&W are Portable anymap
- if ( $format !~ /^Portable\ ...map/x ) {
+ if ( $format !~ /^Portable\ ...map/xsm ) {
   $self->{resolution} = $image->Get('x-resolution');
 
   if ( not defined( $self->{resolution} ) ) {
