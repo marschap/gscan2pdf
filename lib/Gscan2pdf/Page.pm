@@ -13,6 +13,11 @@ use Image::Magick;
 use Encode;
 use Locale::gettext 1.05;    # For translations
 use POSIX qw(locale_h);
+use Readonly;
+Readonly my $CM_PER_INCH    => 2.54;
+Readonly my $MM_PER_CM      => 10;
+Readonly my $MM_PER_INCH    => $CM_PER_INCH * $MM_PER_CM;
+Readonly my $PAGE_TOLERANCE => 0.02;
 
 BEGIN {
  use Exporter ();
@@ -21,7 +26,7 @@ BEGIN {
  $VERSION = '1.2.0';
 
  use base qw(Exporter);
- %EXPORT_TAGS = ();          # eg: TAG => [ qw!name1 name2! ],
+ %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,
  # as well as any optionally exported functions
@@ -217,7 +222,7 @@ sub resolution {
 
   if ( $self->{resolution} ) {
    if ( not $image->Get('units') eq 'PixelsPerInch' ) {
-    $self->{resolution} *= 2.54;
+    $self->{resolution} *= $CM_PER_INCH;
    }
    return $self->{resolution};
   }
@@ -249,11 +254,12 @@ sub matching_paper_sizes {
  my %matching;
  for ( keys %$paper_sizes ) {
   if ( $paper_sizes->{$_}{x} > 0
-   and abs( $ratio - $paper_sizes->{$_}{y} / $paper_sizes->{$_}{x} ) < 0.02 )
+   and abs( $ratio - $paper_sizes->{$_}{y} / $paper_sizes->{$_}{x} ) <
+   $PAGE_TOLERANCE )
   {
    $matching{$_} =
      ( ( $self->{height} > $self->{width} ) ? $self->{height} : $self->{width} )
-     / $paper_sizes->{$_}{y} * 25.4;
+     / $paper_sizes->{$_}{y} * $MM_PER_INCH;
   }
  }
  return \%matching;
