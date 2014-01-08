@@ -11,8 +11,9 @@ use HTML::TokeParser;
 use HTML::Entities;
 use Image::Magick;
 use Encode;
-use Locale::gettext 1.05;    # For translations
+use Locale::gettext 1.05;            # For translations
 use POSIX qw(locale_h);
+use English qw( -no_match_vars );    # for $ERRNO
 use Readonly;
 Readonly my $CM_PER_INCH    => 2.54;
 Readonly my $MM_PER_CM      => 10;
@@ -72,13 +73,13 @@ sub new {
  );
  if ( defined( $options{delete} ) and $options{delete} ) {
   move( $options{filename}, $self->{filename} )
-    or croak
-    sprintf( $d->get('Error importing image %s: %s'), $options{filename}, $! );
+    or croak sprintf( $d->get('Error importing image %s: %s'),
+   $options{filename}, $ERRNO );
  }
  else {
   copy( $options{filename}, $self->{filename} )
-    or croak
-    sprintf( $d->get('Error importing image %s: %s'), $options{filename}, $! );
+    or croak sprintf( $d->get('Error importing image %s: %s'),
+   $options{filename}, $ERRNO );
  }
 
  bless( $self, $class );
