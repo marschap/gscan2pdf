@@ -20,7 +20,7 @@ sub file_size_from_header {
  open my $fh, '<', $filename or return 0;
  my $header = <$fh>;
  my $magic_value;
- if ( $header =~ /^P(\d*)\n/x ) {
+ if ( $header =~ /^P(\d)\n/xsm ) {
   $magic_value = $1;
  }
  else {
@@ -33,11 +33,11 @@ sub file_size_from_header {
  }
  my $line = <$fh>;
  $header .= $line;
- while ( $line =~ /^(\#|\s*\n)/x ) {
+ while ( $line =~ /^(\#|\s*\n)/xsm ) {
   $line = <$fh>;
   $header .= $line;
  }
- if ( $line =~ /(\d*)\ (\d*)\n/x ) {
+ if ( $line =~ /(\d*)\ (\d*)\n/xsm ) {
   my ( $width, $height ) = ( $1, $2 );
   if ( $magic_value == $BINARY_BITMAP ) {
    my $mod = $width % $BITS_PER_BYTE;
