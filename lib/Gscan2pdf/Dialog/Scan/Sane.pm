@@ -509,7 +509,7 @@ sub set_option {
 # If setting an option triggers a reload, we need to update the options
 
 sub update_options {
- my ( $self, $new_options, $error_callback ) = @_;
+ my ( $self, $new_options ) = @_;
 
  # walk the widget tree and update them from the hash
  $logger->debug( "Sane->get_option_descriptor returned: ",
@@ -526,8 +526,8 @@ sub update_options {
 
   my $new_opt = $new_options->by_index($_);
   my $opt     = $options->by_index($_);
-  if ( $new_opt->{name} ne $opt->{name} and defined($error_callback) ) {
-   $error_callback->(
+  if ( $new_opt->{name} ne $opt->{name} ) {
+   $logger->error(
     'Error updating options: reloaded options are numbered differently');
    return;
   }
