@@ -24,11 +24,11 @@ sub file_size_from_header {
   $magic_value = $1;
  }
  else {
-  close $fh;
+  close $fh or return 0;
   return 0;
  }
  if ( $magic_value < $BINARY_BITMAP ) {
-  close $fh;
+  close $fh or return 0;
   return 0;
  }
  my $line = <$fh>;
@@ -41,7 +41,7 @@ sub file_size_from_header {
   my ( $width, $height ) = ( $1, $2 );
   if ( $magic_value == $BINARY_BITMAP ) {
    my $mod = $width % $BITS_PER_BYTE;
-   $width += $BITS_PER_BYTE - $mod if ( $mod > 0 );
+   if ( $mod > 0 ) { $width += $BITS_PER_BYTE - $mod }
   }
   my $datasize = $width * $height * (
    $magic_value == $BINARY_BITMAP ? $BITMAP_BYTES_PER_PIXEL
@@ -54,11 +54,11 @@ sub file_size_from_header {
    $line = <$fh>;
    $header .= $line;
   }
-  close $fh;
+  close $fh or return 0;
   return length($header) + $datasize;
  }
  else {
-  close $fh;
+  close $fh or return 0;
   return 0;
  }
 }
