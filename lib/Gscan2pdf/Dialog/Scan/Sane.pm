@@ -509,22 +509,37 @@ sub set_option {
 # If setting an option triggers a reload, we need to update the options
 
 sub update_options {
- my ( $self, $options ) = @_;
+ my ( $self, $new_options, $error_callback ) = @_;
 
  # walk the widget tree and update them from the hash
- $logger->debug( "Sane->get_option_descriptor returned: ", Dumper($options) );
+ $logger->debug( "Sane->get_option_descriptor returned: ",
+  Dumper($new_options) );
 
  my ( $group, $vbox );
- my $num_dev_options = $options->num_options;
+ my $num_dev_options = $new_options->num_options;
+ my $options         = $self->get('available-scan-options');
  for ( 1 .. $num_dev_options - 1 ) {
-  my $widget = $self->get('available-scan-options')->by_index($_)->{widget};
+  my $widget = $options->by_index($_)->{widget};
 
-  # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
+  # could be undefined for !($new_opt->{cap} & SANE_CAP_SOFT_DETECT)
   if ( not defined($widget) ) { next; }
 
-  my $opt   = $options->by_index($_);
-  my $value = $opt->{val};
+  my $new_opt = $new_options->by_index($_);
+  my $opt     = $options->by_index($_);
+  if ( $new_opt->{name} ne $opt->{name} and defined($error_callback) ) {
+   $error_callback->(
+    'Error updating options: reloaded options are numbered differently');
+   return;
+  }
+
+  # We've got to block the signal handler for the widget to prevent infinite
+  # loops of the widget updating the option, updating the widget, etc., but
+  # therefore we must update the options manually
+  for (qw(val cap max_values type constraint_type constraint)) {
+   $opt->{$_} = $new_opt->{$_};
+  }
   $widget->signal_handler_block( $widget->{signal} );
+  my $value = $opt->{val};
 
   # HBox for option
   my $hbox = $widget->parent;

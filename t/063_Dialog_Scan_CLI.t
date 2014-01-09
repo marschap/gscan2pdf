@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 46;
+use Test::More tests => 47;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -258,6 +258,9 @@ $signal = $dialog->signal_connect(
      [ { $resolution => 52 }, { mode => 'Gray' } ],
      'current-scan-options without profile (again)'
     );
+    my $reloaded_options = $dialog->get('available-scan-options');
+    is( $reloaded_options->by_name($resolution)->{val},
+     52, 'option value updated when reloaded' );
     $dialog->signal_handler_disconnect($signal);
     $flag = TRUE;
     $loop->quit;
