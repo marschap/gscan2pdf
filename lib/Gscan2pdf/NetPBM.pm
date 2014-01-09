@@ -2,6 +2,13 @@ package Gscan2pdf::NetPBM;
 
 use strict;
 use warnings;
+use Readonly;
+Readonly my $BINARY_BITMAP           => 4;
+Readonly my $BINARY_GRAYMAP          => 5;
+Readonly my $BITS_PER_BYTE           => 8;
+Readonly my $BITMAP_BYTES_PER_PIXEL  => 1 / $BITS_PER_BYTE;
+Readonly my $GRAYMAP_BYTES_PER_PIXEL => 1;
+Readonly my $PIXMAP_BYTES_PER_PIXEL  => 3;
 
 our $VERSION = '1.2.0';
 
@@ -20,7 +27,7 @@ sub file_size_from_header {
   close $fh;
   return 0;
  }
- if ( $magic_value < 4 ) {
+ if ( $magic_value < $BINARY_BITMAP ) {
   close $fh;
   return 0;
  }
@@ -32,13 +39,18 @@ sub file_size_from_header {
  }
  if ( $line =~ /(\d*)\ (\d*)\n/x ) {
   my ( $width, $height ) = ( $1, $2 );
-  if ( $magic_value == 4 ) {
-   my $mod = $width % 8;
-   $width += 8 - $mod if ( $mod > 0 );
+  if ( $magic_value == $BINARY_BITMAP ) {
+   my $mod = $width % $BITS_PER_BYTE;
+   $width += $BITS_PER_BYTE - $mod if ( $mod > 0 );
   }
-  my $datasize = $width * $height *
-    ( $magic_value == 4 ? 1 / 8 : ( $magic_value == 5 ? 1 : 3 ) );
-  if ( $magic_value > 4 ) {
+  my $datasize = $width * $height * (
+   $magic_value == $BINARY_BITMAP ? $BITMAP_BYTES_PER_PIXEL
+   : (
+      $magic_value == $BINARY_GRAYMAP ? $GRAYMAP_BYTES_PER_PIXEL
+    : $PIXMAP_BYTES_PER_PIXEL
+   )
+  );
+  if ( $magic_value > $BINARY_BITMAP ) {
    $line = <$fh>;
    $header .= $line;
   }
