@@ -8,6 +8,7 @@ use File::Temp;    # To create temporary files
 use File::Basename;
 use HTML::Entities;
 use Encode;
+use English qw( -no_match_vars );    # for $PROCESS_ID
 
 our $VERSION = '1.2.0';
 
@@ -19,10 +20,9 @@ sub setup {
  if ( system("which ocroscript > /dev/null 2> /dev/null") == 0 ) {
   my $env = $ENV{OCROSCRIPTS};
 
-  unless ( defined $env ) {
+  if ( not defined($env) ) {
    for (qw(/usr /usr/local)) {
-    $env = "$_/share/ocropus/scripts"
-      if ( -d "$_/share/ocropus/scripts" );
+    if ( -d "$_/share/ocropus/scripts" ) { $env = "$_/share/ocropus/scripts" }
    }
   }
   if ( defined $env ) {
@@ -53,9 +53,9 @@ sub setup {
 sub hocr {
  my ( $class, $file, $language, $loggr, $pidfile ) = @_;
  my ( $png, $cmd );
- Gscan2pdf::Ocropus->setup($loggr) unless $setup;
+ if ( not $setup ) { Gscan2pdf::Ocropus->setup($loggr) }
 
- if ( $file !~ /\.(?:png|jpg|pnm)$/x ) {
+ if ( $file !~ /\.(?:png|jpg|pnm)$/xsm ) {
 
   # Temporary filename for new file
   $png = File::Temp->new( SUFFIX => '.png' );
@@ -78,7 +78,7 @@ sub hocr {
  my $output;
  if ( defined $pidfile ) {
   ( $output, undef ) =
-    Gscan2pdf::Document::open_three("echo $$ > $pidfile;$cmd");
+    Gscan2pdf::Document::open_three("echo $PROCESS_ID > $pidfile;$cmd");
  }
  else {
   ( $output, undef ) = Gscan2pdf::Document::open_three($cmd);
