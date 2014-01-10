@@ -354,7 +354,7 @@ sub manual_sort_by_column {
  my $sortfunc = $sortfuncs{ $self->get_model->get_column_type($sortcol) };
 
  # Deep copy the tied data so we can sort it. Otherwise, very bad things happen.
- my @data = map { [@$_] } @{ $self->{data} };
+ my @data = map { [ @{$_} ] } @{ $self->{data} };
  @data = sort { $sortfunc->( $a->[$sortcol], $b->[$sortcol] ) } @data;
 
  @{ $self->{data} } = @data;
@@ -975,7 +975,7 @@ sub open_session {
   }
  }
  my $sessionref = retrieve( File::Spec->catfile( $sesdir, 'session' ) );
- my %session = %$sessionref;
+ my %session = %{$sessionref};
 
  # Block the row-changed signal whilst adding the scan (row) and sorting it.
  if ( defined $self->{row_changed_signal} ) {
@@ -1952,7 +1952,7 @@ sub _add_text_to_PDF {
   my $font;
   my $text = $page->text;
   for my $box ( $data->boxes ) {
-   my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
+   my ( $x1, $y1, $x2, $y2, $txt ) = @{$box};
    if ( $txt =~ /([[:^ascii:]])/xsm and defined($ttfcache) ) {
     if ( defined $1 ) { $logger->debug("non-ascii text is '$1' in '$txt'") }
     $font = $ttfcache;
@@ -2124,7 +2124,7 @@ sub _add_text_to_DJVU {
 
   # Write the text boxes
   for my $box ( $pagedata->boxes ) {
-   my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
+   my ( $x1, $y1, $x2, $y2, $txt ) = @{$box};
    if ( $x1 == 0 and $y1 == 0 and not defined($x2) ) {
     ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution );
    }
