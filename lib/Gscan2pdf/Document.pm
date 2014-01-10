@@ -963,7 +963,7 @@ sub open_session {
  if ( defined $filename ) {
   my $tar          = Archive::Tar->new( $filename, TRUE );
   my @filenamelist = $tar->list_files;
-  my @sessionfile  = grep { /\/session$/x } @filenamelist;
+  my @sessionfile  = grep { /\/session$/xsm } @filenamelist;
   $sesdir = File::Spec->catfile( $self->{dir}, dirname( $sessionfile[0] ) );
   for (@filenamelist) {
    $tar->extract_file( $_, File::Spec->catfile( $sesdir, basename($_) ) );
@@ -1496,13 +1496,13 @@ sub _thread_get_file_info {
  $logger->info($format);
 
  given ($format) {
-  when (/gzip\ compressed\ data/x) {
+  when (/gzip\ compressed\ data/xsm) {
    $info{path}   = $filename;
    $info{format} = 'session file';
    $self->{info_queue}->enqueue( \%info );
    return;
   }
-  when (/DjVu/x) {
+  when (/DjVu/xsm) {
 
    # Dig out the number of pages
    my $cmd = "djvudump \"$filename\"";
@@ -1512,14 +1512,14 @@ sub _thread_get_file_info {
    $logger->info($info);
 
    my $pages = 1;
-   if ( $info =~ /\s(\d+)\s+page/x ) {
+   if ( $info =~ /\s(\d+)\s+page/xsm ) {
     $pages = $1;
    }
 
    # Dig out and the resolution of each page
    my (@ppi);
    $info{format} = 'DJVU';
-   while ( $info =~ /\s(\d+)\s+dpi/x ) {
+   while ( $info =~ /\s(\d+)\s+dpi/xsm ) {
     push @ppi, $1;
     $logger->info("Page $#ppi is $ppi[$#ppi] ppi");
     $info = substr( $info, index( $info, " dpi" ) + 4, length($info) );
@@ -1536,7 +1536,7 @@ sub _thread_get_file_info {
    $self->{info_queue}->enqueue( \%info );
    return;
   }
-  when (/PDF\ document/x) {
+  when (/PDF\ document/xsm) {
    $format = 'Portable Document Format';
    my $cmd = "pdfinfo \"$filename\"";
    $logger->info($cmd);
@@ -1544,13 +1544,13 @@ sub _thread_get_file_info {
    return if $_self->{cancel};
    $logger->info($info);
    my $pages = 1;
-   if ( $info =~ /Pages:\s+(\d+)/x ) {
+   if ( $info =~ /Pages:\s+(\d+)/xsm ) {
     $pages = $1;
    }
    $logger->info("$pages pages");
    $info{pages} = $pages;
   }
-  when (/TIFF\ image\ data/x) {
+  when (/TIFF\ image\ data/xsm) {
    $format = 'Tagged Image File Format';
    my $cmd = "tiffinfo \"$filename\"";
    $logger->info($cmd);
@@ -1559,7 +1559,7 @@ sub _thread_get_file_info {
    $logger->info($info);
 
    # Count number of pages
-   my $pages = () = $info =~ /TIFF\ Directory\ at\ offset/xg;
+   my $pages = () = $info =~ /TIFF\ Directory\ at\ offset/xsmg;
    $logger->info("$pages pages");
    $info{pages} = $pages;
   }
@@ -1592,9 +1592,9 @@ sub _thread_get_file_info {
 
 sub _thread_import_file {
  my ( $self, %options ) = @_;
- my $PNG = qr/Portable\ Network\ Graphics/x;
- my $JPG = qr/Joint\ Photographic\ Experts\ Group\ JFIF\ format/x;
- my $GIF = qr/CompuServe\ graphics\ interchange\ format/x;
+ my $PNG = qr/Portable\ Network\ Graphics/xsm;
+ my $JPG = qr/Joint\ Photographic\ Experts\ Group\ JFIF\ format/xsm;
+ my $GIF = qr/CompuServe\ graphics\ interchange\ format/xsm;
 
  given ( $options{info}->{format} ) {
   when ('DJVU') {
@@ -1680,7 +1680,7 @@ sub _thread_import_file {
     }
    }
   }
-  when (/(?:$PNG|$JPG|$GIF)/x) {
+  when (/(?:$PNG|$JPG|$GIF)/xsm) {
    my $page = Gscan2pdf::Page->new(
     filename => $options{info}->{path},
     dir      => $options{dir},
@@ -1752,7 +1752,7 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
    else {
     $type = $image->Get('type');
     $logger->info("Type of $filename is $type");
-    if ( $type =~ /TrueColor/x ) {
+    if ( $type =~ /TrueColor/xsm ) {
      $pagedata->{compression} = 'jpg';
     }
     else {
@@ -1843,7 +1843,7 @@ sub _convert_image_for_pdf {
  my $compression = $pagedata->{compression};
 
  my $format;
- if ( $filename =~ /\.(\w*)$/x ) {
+ if ( $filename =~ /\.(\w*)$/xsm ) {
   $format = $1;
  }
 
@@ -1855,12 +1855,12 @@ sub _convert_image_for_pdf {
   or $options{options}->{downsample}
   or $compression eq 'jpg' )
  {
-  if ( $compression !~ /(?:jpg|png)/x and $format ne 'tif' ) {
+  if ( $compression !~ /(?:jpg|png)/xsm and $format ne 'tif' ) {
    my $ofn = $filename;
    $filename = File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
    $logger->info("Converting $ofn to $filename");
   }
-  elsif ( $compression =~ /(?:jpg|png)/x ) {
+  elsif ( $compression =~ /(?:jpg|png)/xsm ) {
    my $ofn = $filename;
    $filename = File::Temp->new(
     DIR    => $options{dir},
@@ -1887,7 +1887,7 @@ sub _convert_image_for_pdf {
     _write_image_object( $image, $filename, $format, $pagedata,
    $options{options}->{downsample} );
 
-  if ( $compression !~ /(?:jpg|png)/x ) {
+  if ( $compression !~ /(?:jpg|png)/xsm ) {
    my $filename2 = File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
    my $error     = File::Temp->new( DIR => $options{dir}, SUFFIX => '.txt' );
    my $cmd = "tiffcp -c $compression $filename $filename2";
@@ -1911,8 +1911,8 @@ sub _convert_image_for_pdf {
 sub _write_image_object {
  my ( $image, $filename, $format, $pagedata, $downsample ) = @_;
  my $compression = $pagedata->{compression};
- if (( $compression !~ /(?:jpg|png)/x and $format ne 'tif' )
-  or ( $compression =~ /(?:jpg|png)/x )
+ if (( $compression !~ /(?:jpg|png)/xsm and $format ne 'tif' )
+  or ( $compression =~ /(?:jpg|png)/xsm )
   or $downsample )
  {
 
@@ -1927,7 +1927,7 @@ sub _write_image_object {
     $image->Write( filename => $filename, depth => $pagedata->{depth} );
   return if $_self->{cancel};
   if ("$status") { $logger->warn($status) }
-  if ( $filename =~ /\.(\w*)$/x ) {
+  if ( $filename =~ /\.(\w*)$/xsm ) {
    $format = $1;
   }
  }
@@ -1948,7 +1948,7 @@ sub _add_text_to_PDF {
   my $text = $page->text;
   for my $box ( $data->boxes ) {
    my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
-   if ( $txt =~ /([[:^ascii:]])/x and defined($ttfcache) ) {
+   if ( $txt =~ /([[:^ascii:]])/xsm and defined($ttfcache) ) {
     if ( defined $1 ) { $logger->debug("non-ascii text is '$1' in '$txt'") }
     $font = $ttfcache;
    }
@@ -2040,12 +2040,12 @@ sub _thread_save_djvu {
 
   # c44 can only use pnm and jpg
   my $format;
-  if ( $filename =~ /\.(\w*)$/x ) {
+  if ( $filename =~ /\.(\w*)$/xsm ) {
    $format = $1;
   }
   if ( $depth > 1 ) {
    $compression = 'c44';
-   if ( $format !~ /(?:pnm|jpg)/x ) {
+   if ( $format !~ /(?:pnm|jpg)/xsm ) {
     my $pnm = File::Temp->new( DIR => $dir, SUFFIX => '.pnm' );
     $x = $image->Write( filename => $pnm );
     if ("$x") { $logger->warn($x) }
@@ -2056,7 +2056,7 @@ sub _thread_save_djvu {
   # cjb2 can only use pnm and tif
   else {
    $compression = 'cjb2';
-   if ( $format !~ /(?:pnm|tif)/x
+   if ( $format !~ /(?:pnm|tif)/xsm
     or ( $format eq 'pnm' and $class ne 'PseudoClass' ) )
    {
     my $pbm = File::Temp->new( DIR => $dir, SUFFIX => '.pbm' );
@@ -2125,8 +2125,8 @@ sub _add_text_to_DJVU {
    }
 
    # Escape any inverted commas
-   $txt =~ s/\\/\\\\/gx;
-   $txt =~ s/"/\\\"/gx;
+   $txt =~ s/\\/\\\\/gxsm;
+   $txt =~ s/"/\\\"/gxsm;
    printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2, $h - $y1, $txt;
   }
   print $fh ")";
@@ -2161,7 +2161,7 @@ sub _thread_save_tiff {
 
   my $filename = $pagedata->{filename};
   if (
-   $filename !~ /\.tif/x
+   $filename !~ /\.tif/xsm
    or ( defined( $options{options}->{compression} )
     and $options{options}->{compression} eq 'jpeg' )
     )
@@ -2254,7 +2254,7 @@ sub _thread_rotate {
  return if $_self->{cancel};
  if ("$x") { $logger->warn($x) }
  my $suffix;
- if ( $filename =~ /\.(\w*)$/x ) {
+ if ( $filename =~ /\.(\w*)$/xsm ) {
   $suffix = $1;
  }
  $filename = File::Temp->new(
@@ -2403,7 +2403,7 @@ sub _thread_negate {
 
  # Write it
  my $suffix;
- if ( $filename =~ /(\.\w*)$/x ) {
+ if ( $filename =~ /(\.\w*)$/xsm ) {
   $suffix = $1;
  }
  $filename = File::Temp->new( DIR => $dir, SUFFIX => $suffix, UNLINK => FALSE );
@@ -2440,7 +2440,7 @@ sub _thread_unsharp {
 
  # Write it
  my $suffix;
- if ( $filename =~ /\.(\w*)$/x ) {
+ if ( $filename =~ /\.(\w*)$/xsm ) {
   $suffix = $1;
  }
  $filename = File::Temp->new(
@@ -2485,7 +2485,7 @@ sub _thread_crop {
 
  # Write it
  my $suffix;
- if ( $filename =~ /\.(\w*)$/x ) {
+ if ( $filename =~ /\.(\w*)$/xsm ) {
   $suffix = $1;
  }
  $filename = File::Temp->new(
@@ -2562,7 +2562,7 @@ sub _thread_cuneiform {
 sub _thread_gocr {
  my ( $self, $page, $pidfile ) = @_;
  my $pnm;
- if ( $page->{filename} !~ /\.pnm$/x ) {
+ if ( $page->{filename} !~ /\.pnm$/xsm ) {
 
   # Temporary filename for new file
   $pnm = File::Temp->new( SUFFIX => '.pnm' );
@@ -2601,7 +2601,7 @@ sub _thread_unpaper {
  my $filename = $page->{filename};
  my $in;
 
- if ( $filename !~ /\.pnm$/x ) {
+ if ( $filename !~ /\.pnm$/xsm ) {
   my $image = Image::Magick->new;
   my $x     = $image->Read($filename);
   if ("$x") { $logger->warn($x) }
@@ -2630,7 +2630,7 @@ sub _thread_unpaper {
   UNLINK => FALSE
  );
  my $out2 = '';
- if ( $options =~ /--output-pages\ 2\ /x ) {
+ if ( $options =~ /--output-pages\ 2\ /xsm ) {
   $out2 = File::Temp->new(
    DIR    => $dir,
    SUFFIX => '.pnm',
@@ -2670,7 +2670,7 @@ sub _thread_user_defined {
  my ( $self, $page, $cmd, $dir, $pidfile ) = @_;
  my $in = $page->{filename};
  my $suffix;
- if ( $in =~ /(\.\w*)$/x ) {
+ if ( $in =~ /(\.\w*)$/xsm ) {
   $suffix = $1;
  }
  my $out = File::Temp->new(
@@ -2679,8 +2679,8 @@ sub _thread_user_defined {
   UNLINK => FALSE
  );
 
- if ( $cmd =~ s/%o/$out/gx ) {
-  $cmd =~ s/%i/$in/gx;
+ if ( $cmd =~ s/%o/$out/gxsm ) {
+  $cmd =~ s/%i/$in/gxsm;
  }
  else {
   if ( not copy( $in, $out ) ) {
@@ -2689,9 +2689,9 @@ sub _thread_user_defined {
    $d->get('Error copying page');
    return;
   }
-  $cmd =~ s/%i/$out/gx;
+  $cmd =~ s/%i/$out/gxsm;
  }
- $cmd =~ s/%r/$page->{resolution}/gx;
+ $cmd =~ s/%r/$page->{resolution}/gxsm;
  $logger->info($cmd);
  system("echo $$ > $pidfile;$cmd");
  return if $_self->{cancel};
