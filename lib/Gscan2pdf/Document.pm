@@ -1124,7 +1124,7 @@ sub slurp {
  else {
   open my $fh, '<:encoding(UTF8)', $file or die "Error: cannot open $file\n";
   $text = <$fh>;
-  close $fh;
+  close $fh or die "Error: cannot close $file\n";
  }
  return $text;
 }
@@ -2135,7 +2135,8 @@ sub _add_text_to_DJVU {
    printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2, $h - $y1, $txt;
   }
   print $fh ")";
-  close $fh;
+  close $fh
+    or croak( sprintf( $d->get("Can't close file: %s"), $djvusedtxtfile ) );
 
   # Write djvusedtxtfile
   my $cmd = "djvused '$djvu' -e 'select 1; set-txt $djvusedtxtfile' -s";
@@ -2323,7 +2324,10 @@ sub _thread_save_text {
   print $fh $_->{hocr};
   return if $_self->{cancel};
  }
- close $fh;
+ if ( not close($fh) ) {
+  $self->{status} = 1;
+  $self->{message} = sprintf( $d->get("Can't close file: %s"), $path );
+ }
  return;
 }
 
