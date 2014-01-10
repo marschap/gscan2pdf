@@ -19,14 +19,15 @@ use File::Temp;        # To create temporary files
 use File::Basename;    # Split filename into dir, file, ext
 use File::Copy;
 use Storable qw(store retrieve);
-use Archive::Tar;            # For session files
+use Archive::Tar;                    # For session files
 use Proc::Killfam;
-use Locale::gettext 1.05;    # For translations
+use Locale::gettext 1.05;            # For translations
 use IPC::Open3 'open3';
-use Symbol;                  # for gensym
+use Symbol;                          # for gensym
 use Try::Tiny;
-use Set::IntSpan 1.10;       # For size method for page numbering issues
+use Set::IntSpan 1.10;               # For size method for page numbering issues
 use PDF::API2;
+use English qw( -no_match_vars );    # for $PROCESS_ID, $INPUT_RECORD_SEPARATOR
 use Readonly;
 Readonly our $POINTS_PER_INCH => 72;
 
@@ -37,7 +38,7 @@ BEGIN {
  $VERSION = '1.2.0';
 
  use base qw(Exporter Gtk2::Ex::Simple::List);
- %EXPORT_TAGS = ();          # eg: TAG => [ qw!name1 name2! ],
+ %EXPORT_TAGS = ();                  # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,
  # as well as any optionally exported functions
@@ -1112,7 +1113,7 @@ sub get_page_index {
 sub slurp {
  my ($file) = @_;
 
- local $/ = undef;
+ local $INPUT_RECORD_SEPARATOR = undef;
  my ($text);
 
  if ( ref($file) eq 'GLOB' ) {
@@ -1509,7 +1510,7 @@ sub _thread_get_file_info {
    # Dig out the number of pages
    my $cmd = "djvudump \"$filename\"";
    $logger->info($cmd);
-   ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
+   ( my $info, undef ) = open_three("echo $PROCESS_ID > $pidfile;$cmd");
    return if $_self->{cancel};
    $logger->info($info);
 
@@ -1542,7 +1543,7 @@ sub _thread_get_file_info {
    $format = 'Portable Document Format';
    my $cmd = "pdfinfo \"$filename\"";
    $logger->info($cmd);
-   ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
+   ( my $info, undef ) = open_three("echo $PROCESS_ID > $pidfile;$cmd");
    return if $_self->{cancel};
    $logger->info($info);
    my $pages = 1;
@@ -1556,7 +1557,7 @@ sub _thread_get_file_info {
    $format = 'Tagged Image File Format';
    my $cmd = "tiffinfo \"$filename\"";
    $logger->info($cmd);
-   ( my $info, undef ) = open_three("echo $$ > $pidfile;$cmd");
+   ( my $info, undef ) = open_three("echo $PROCESS_ID > $pidfile;$cmd");
    return if $_self->{cancel};
    $logger->info($info);
 
@@ -1614,7 +1615,7 @@ sub _thread_import_file {
      );
      my $cmd = "ddjvu -format=tiff -page=$i \"$options{info}->{path}\" $tif";
      $logger->info($cmd);
-     system("echo $$ > $options{pidfile};$cmd");
+     system("echo $PROCESS_ID > $options{pidfile};$cmd");
      return if $_self->{cancel};
      my $page = Gscan2pdf::Page->new(
       filename   => $tif,
@@ -1634,7 +1635,7 @@ sub _thread_import_file {
     my $cmd =
 "pdfimages -f $options{first} -l $options{last} \"$options{info}->{path}\" x";
     $logger->info($cmd);
-    my $status = system("echo $$ > $options{pidfile};$cmd");
+    my $status = system("echo $PROCESS_ID > $options{pidfile};$cmd");
     return if $_self->{cancel};
     if ($status) {
      $self->{status}  = 1;
@@ -1670,7 +1671,7 @@ sub _thread_import_file {
      );
      my $cmd = "tiffcp \"$options{info}->{path}\",$i $tif";
      $logger->info($cmd);
-     system("echo $$ > $options{pidfile};$cmd");
+     system("echo $PROCESS_ID > $options{pidfile};$cmd");
      return if $_self->{cancel};
      my $page = Gscan2pdf::Page->new(
       filename => $tif,
@@ -1894,7 +1895,7 @@ sub _convert_image_for_pdf {
    my $error     = File::Temp->new( DIR => $options{dir}, SUFFIX => '.txt' );
    my $cmd = "tiffcp -c $compression $filename $filename2";
    $logger->info($cmd);
-   my $status = system("echo $$ > $options{pidfile};$cmd 2>$error");
+   my $status = system("echo $PROCESS_ID > $options{pidfile};$cmd 2>$error");
    return if $_self->{cancel};
    if ($status) {
     my $output = slurp($error);
@@ -2073,7 +2074,7 @@ sub _thread_save_djvu {
     $pagedata->{resolution};
   $logger->info($cmd);
   my ( $status, $size ) =
-    ( system("echo $$ > $pidfile;$cmd"), -s "$djvu" )
+    ( system("echo $PROCESS_ID > $pidfile;$cmd"), -s "$djvu" )
     ;    # quotes needed to prevent -s clobbering File::Temp object
   return if $_self->{cancel};
   if ( $status != 0 or not $size ) {
@@ -2091,7 +2092,7 @@ sub _thread_save_djvu {
  $self->{message}  = $d->get('Closing DjVu');
  my $cmd = "djvm -c '$path' @filelist";
  $logger->info($cmd);
- my $status = system("echo $$ > $pidfile;$cmd");
+ my $status = system("echo $PROCESS_ID > $pidfile;$cmd");
  return if $_self->{cancel};
  if ($status) {
   $self->{status}  = 1;
@@ -2137,7 +2138,7 @@ sub _add_text_to_DJVU {
   # Write djvusedtxtfile
   my $cmd = "djvused '$djvu' -e 'select 1; set-txt $djvusedtxtfile' -s";
   $logger->info($cmd);
-  my $status = system("echo $$ > $pagedata->{pidfile};$cmd");
+  my $status = system("echo $PROCESS_ID > $pagedata->{pidfile};$cmd");
   return if $_self->{cancel};
   if ($status) {
    $self->{status}  = 1;
@@ -2182,7 +2183,7 @@ sub _thread_save_tiff {
    my $cmd =
      "convert -units PixelsPerInch -density $resolution $depth $filename $tif";
    $logger->info($cmd);
-   my $status = system("echo $$ > $options{pidfile};$cmd");
+   my $status = system("echo $PROCESS_ID > $options{pidfile};$cmd");
    return if $_self->{cancel};
 
    if ($status) {
@@ -2215,7 +2216,7 @@ sub _thread_save_tiff {
  my $cmd = "tiffcp $rows $compression @filelist '$options{path}'";
  $logger->info($cmd);
  my $out = File::Temp->new( DIR => $options{dir}, SUFFIX => '.stdout' );
- my $status = system("echo $$ > $options{pidfile};$cmd 2>$out");
+ my $status = system("echo $PROCESS_ID > $options{pidfile};$cmd 2>$out");
  return if $_self->{cancel};
 
  if ($status) {
@@ -2282,7 +2283,7 @@ sub _thread_save_image {
   my $cmd =
 "convert $list_of_pages->[0]{filename} -density $list_of_pages->[0]{resolution} '$path'";
   $logger->info($cmd);
-  my $status = system("echo $$ > $pidfile;$cmd");
+  my $status = system("echo $PROCESS_ID > $pidfile;$cmd");
   return if $_self->{cancel};
   if ($status) {
    $self->{status}  = 1;
@@ -2297,7 +2298,7 @@ sub _thread_save_image {
    my $cmd = sprintf "convert %s -density %d \"%s\"",
      $_->{filename}, $_->{resolution},
      $current_filename;
-   my $status = system("echo $$ > $pidfile;$cmd");
+   my $status = system("echo $PROCESS_ID > $pidfile;$cmd");
    return if $_self->{cancel};
    if ($status) {
     $self->{status}  = 1;
@@ -2587,7 +2588,7 @@ sub _thread_gocr {
  # if text is passed by stdin/stdout
  my $cmd = "gocr $pnm -o $txt";
  $logger->info($cmd);
- system("echo $$ > $pidfile;$cmd");
+ system("echo $PROCESS_ID > $pidfile;$cmd");
  ( $new->{hocr}, undef ) = Gscan2pdf::Document::slurp($txt);
 
  return if $_self->{cancel};
@@ -2643,7 +2644,7 @@ sub _thread_unpaper {
  # --overwrite needed because $out exists with 0 size
  my $cmd = sprintf "$options;", $in, $out, $out2;
  $logger->info($cmd);
- system("echo $$ > $pidfile;$cmd");
+ system("echo $PROCESS_ID > $pidfile;$cmd");
  return if $_self->{cancel};
 
  my $new = Gscan2pdf::Page->new(
@@ -2695,7 +2696,7 @@ sub _thread_user_defined {
  }
  $cmd =~ s/%r/$page->{resolution}/gxsm;
  $logger->info($cmd);
- system("echo $$ > $pidfile;$cmd");
+ system("echo $PROCESS_ID > $pidfile;$cmd");
  return if $_self->{cancel};
 
  # Get file type
