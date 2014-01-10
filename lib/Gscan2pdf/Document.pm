@@ -1996,7 +1996,7 @@ sub _add_text_to_PDF {
 sub _wrap_text_to_page {
  my ( $txt, $size, $text_box, $h, $w ) = @_;
  my $y = $h * $POINTS_PER_INCH - $size;
- foreach my $line ( split( "\n", $txt ) ) {
+ foreach my $line ( split( /\n/xsm, $txt ) ) {
   my $x = 0;
 
   # Add a word at a time in order to linewrap
