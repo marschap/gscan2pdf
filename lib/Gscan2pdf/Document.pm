@@ -57,6 +57,8 @@ my $_PID           = 0;      # flag to identify which process to cancel
 
 my $jobs_completed = 0;
 my $jobs_total     = 0;
+my $EMPTY          = q{};
+my $SPACE          = q{ };
 my ( $_self, $d, $logger, $paper_sizes );
 
 my %format = (
@@ -88,7 +90,7 @@ sub setup {
 sub new {
  my ( $class, %options ) = @_;
  my $self = Gtk2::Ex::Simple::List->new(
-  '#'                   => 'int',
+  q{#}                  => 'int',
   $d->get('Thumbnails') => 'pixbuf',
   'Page Data'           => 'hstring',
  );
@@ -191,7 +193,7 @@ sub fetch_file {
  if ($n) {
   while ( $i < $n ) {
    my $page = $_self->{page_queue}->dequeue;
-   if ( ref($page) eq '' ) {
+   if ( ref($page) eq $EMPTY ) {
     $n = $page;
     return $self->fetch_file($n);
    }
@@ -203,7 +205,7 @@ sub fetch_file {
  }
  else {
   while ( defined( my $page = $_self->{page_queue}->dequeue_nb() ) ) {
-   if ( ref($page) eq '' ) {
+   if ( ref($page) eq $EMPTY ) {
     $n = $page;
     return $self->fetch_file($n);
    }
@@ -952,7 +954,7 @@ sub save_session {
  if ( defined $filename ) {
   my $tar = Archive::Tar->new;
   $tar->add_files(@filenamelist);
-  $tar->write( $filename, TRUE, '' );
+  $tar->write( $filename, TRUE, $EMPTY );
  }
  return;
 }
@@ -1995,13 +1997,13 @@ sub _wrap_text_to_page {
   my $x = 0;
 
   # Add a word at a time in order to linewrap
-  foreach my $word ( split( ' ', $line ) ) {
+  foreach my $word ( split( $SPACE, $line ) ) {
    if ( length($word) * $size + $x > $w * $POINTS_PER_INCH ) {
     $x = 0;
     $y -= $size;
    }
    $text_box->translate( $x, $y );
-   if ( $x > 0 ) { $word = ' ' . $word }
+   if ( $x > 0 ) { $word = $SPACE . $word }
    $x += $text_box->text( $word, utf8 => 1 );
   }
   $y -= $size;
@@ -2170,7 +2172,7 @@ sub _thread_save_tiff {
    my $resolution = $pagedata->{resolution};
 
    # Convert to tiff
-   my $depth = '';
+   my $depth = $EMPTY;
    if ( defined( $options{options}->{compression} )
     and $options{options}->{compression} eq 'jpeg' )
    {
@@ -2193,7 +2195,7 @@ sub _thread_save_tiff {
   push @filelist, $filename;
  }
 
- my $compression = "";
+ my $compression = $EMPTY;
  if ( defined $options{options}->{compression} ) {
   $compression = "-c $options{options}->{compression}";
   if ( $compression eq 'jpeg' ) {
@@ -2204,7 +2206,7 @@ sub _thread_save_tiff {
  # Create the tiff
  $self->{progress} = 1;
  $self->{message}  = $d->get('Concatenating TIFFs');
- my $rows = '';
+ my $rows = $EMPTY;
  if ( defined( $options{options}->{compression} )
   and $options{options}->{compression} eq 'jpeg' )
  {
@@ -2259,7 +2261,7 @@ sub _thread_rotate {
  }
  $filename = File::Temp->new(
   DIR    => $dir,
-  SUFFIX => '.' . $suffix,
+  SUFFIX => ".$suffix",
   UNLINK => FALSE
  );
  $x = $image->Write( filename => $filename, depth => $depth );
@@ -2367,9 +2369,9 @@ sub _thread_threshold {
  if ("$x") { $logger->warn($x) }
 
  # Threshold the image
- $image->BlackThreshold( threshold => $threshold . '%' );
+ $image->BlackThreshold( threshold => "$threshold%" );
  return if $_self->{cancel};
- $image->WhiteThreshold( threshold => $threshold . '%' );
+ $image->WhiteThreshold( threshold => "$threshold%" );
  return if $_self->{cancel};
 
  # Write it
@@ -2445,7 +2447,7 @@ sub _thread_unsharp {
  }
  $filename = File::Temp->new(
   DIR    => $options{dir},
-  SUFFIX => '.' . $suffix,
+  SUFFIX => ".$suffix",
   UNLINK => FALSE
  );
  $x = $image->Write( filename => $filename );
@@ -2490,7 +2492,7 @@ sub _thread_crop {
  }
  $filename = File::Temp->new(
   DIR    => $options{dir},
-  SUFFIX => '.' . $suffix,
+  SUFFIX => ".$suffix",
   UNLINK => FALSE
  );
  $logger->info(
@@ -2629,7 +2631,7 @@ sub _thread_unpaper {
   SUFFIX => '.pnm',
   UNLINK => FALSE
  );
- my $out2 = '';
+ my $out2 = $EMPTY;
  if ( $options =~ /--output-pages\ 2\ /xsm ) {
   $out2 = File::Temp->new(
    DIR    => $dir,
@@ -2652,7 +2654,7 @@ sub _thread_unpaper {
  );
  $new->{dirty_time} = timestamp();    #flag as dirty
  my %data = ( old => $page, new => $new->freeze );
- if ( $out2 ne '' ) {
+ if ( $out2 ne $EMPTY ) {
   my $new2 = Gscan2pdf::Page->new(
    filename => $out2,
    dir      => $dir,
