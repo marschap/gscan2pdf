@@ -100,8 +100,8 @@ sub new {
  }
 
  # Default thumbnail sizes
- $self->{heightt} = 100 unless ( defined $self->{heightt} );
- $self->{widtht}  = 100 unless ( defined $self->{widtht} );
+ if ( not defined( $self->{heightt} ) ) { $self->{heightt} = 100 }
+ if ( not defined( $self->{widtht} ) )  { $self->{widtht}  = 100 }
 
  bless( $self, $class );
  return $self;
@@ -126,8 +126,9 @@ sub quit {
 
 sub cancel {
  my ( $self, $pid, $callback ) = @_;
- $self->{cancel_cb}{$pid} = $callback
-   if ( defined $self->{running_pids}{$pid} );
+ if ( defined $self->{running_pids}{$pid} ) {
+  $self->{cancel_cb}{$pid} = $callback;
+ }
  return;
 }
 
@@ -274,11 +275,12 @@ sub add_page {
  my ( $self, $page, $pagenum, $success_cb ) = @_;
 
  # Add to the page list
- $pagenum = $#{ $self->{data} } + 2 if ( not defined($pagenum) );
+ if ( not defined($pagenum) ) { $pagenum = $#{ $self->{data} } + 2 }
 
  # Block the row-changed signal whilst adding the scan (row) and sorting it.
- $self->get_model->signal_handler_block( $self->{row_changed_signal} )
-   if defined( $self->{row_changed_signal} );
+ if ( defined $self->{row_changed_signal} ) {
+  $self->get_model->signal_handler_block( $self->{row_changed_signal} );
+ }
  my $thumb = get_pixbuf( $page->{filename}, $self->{heightt}, $self->{widtht} );
  my $resolution = $page->resolution($paper_sizes);
  push @{ $self->{data} }, [ $pagenum, $thumb, $page ];
@@ -286,15 +288,19 @@ sub add_page {
   "Added $page->{filename} at page $pagenum with resolution $resolution");
 
 # Block selection_changed_signal to prevent its firing changing pagerange to all
- $self->get_selection->signal_handler_block( $self->{selection_changed_signal} )
-   if defined( $self->{selection_changed_signal} );
+ if ( defined $self->{selection_changed_signal} ) {
+  $self->get_selection->signal_handler_block(
+   $self->{selection_changed_signal} );
+ }
  $self->get_selection->unselect_all;
  $self->manual_sort_by_column(0);
- $self->get_selection->signal_handler_unblock(
-  $self->{selection_changed_signal} )
-   if defined( $self->{selection_changed_signal} );
- $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
-   if defined( $self->{row_changed_signal} );
+ if ( defined $self->{selection_changed_signal} ) {
+  $self->get_selection->signal_handler_unblock(
+   $self->{selection_changed_signal} );
+ }
+ if ( defined $self->{row_changed_signal} ) {
+  $self->get_model->signal_handler_unblock( $self->{row_changed_signal} );
+ }
 
  my @page;
 
@@ -303,13 +309,15 @@ sub add_page {
 
  # $page[0] < $#{$self -> {data}} needed to prevent infinite loop in case of
  # error importing.
- ++$page[0]
-   while ( $page[0] < $#{ $self->{data} }
-  and $self->{data}[ $page[0] ][0] != $pagenum );
+ while ( $page[0] < $#{ $self->{data} }
+  and $self->{data}[ $page[0] ][0] != $pagenum )
+ {
+  ++$page[0];
+ }
 
  $self->select(@page);
 
- $success_cb->() if ($success_cb);
+ if ($success_cb) { $success_cb->() }
 
  return $page[0];
 }
@@ -503,9 +511,11 @@ sub update_page {
 
  # find old page
  my $i = 0;
- $i++
-   while ( $i <= $#{ $self->{data} }
-  and $self->{data}[$i][2]{filename} ne $data->{old}{filename} );
+ while ( $i <= $#{ $self->{data} }
+  and $self->{data}[$i][2]{filename} ne $data->{old}{filename} )
+ {
+  $i++;
+ }
 
  # if found, replace with new one
  if ( $i <= $#{ $self->{data} } ) {
@@ -513,8 +523,9 @@ sub update_page {
 # Move the temp file from the thread to a temp object that will be automatically cleared up
   my $new = $data->{new}->thaw;
 
-  $self->get_model->signal_handler_block( $self->{row_changed_signal} )
-    if defined( $self->{row_changed_signal} );
+  if ( defined $self->{row_changed_signal} ) {
+   $self->get_model->signal_handler_block( $self->{row_changed_signal} );
+  }
   my $resolution = $new->resolution($paper_sizes);
   $logger->info(
 "Replaced $self->{data}[$i][2]->{filename} at page $self->{data}[$i][0] with $new->{filename}, resolution $resolution"
@@ -539,11 +550,12 @@ sub update_page {
    push @out, $new;
   }
 
-  $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
-    if defined( $self->{row_changed_signal} );
+  if ( defined $self->{row_changed_signal} ) {
+   $self->get_model->signal_handler_unblock( $self->{row_changed_signal} );
+  }
   my @selected = $self->get_selected_indices;
-  $self->select(@selected) if ( @selected and $i == $selected[0] );
-  $display_callback->( $self->{data}[$i][2] ) if ($display_callback);
+  if ( @selected and $i == $selected[0] ) { $self->select(@selected) }
+  if ($display_callback) { $display_callback->( $self->{data}[$i][2] ) }
  }
 
  return \@out;
@@ -928,8 +940,9 @@ sub save_session {
     $self->{data}[$i][2]{filename}->filename;
   push @filenamelist, $self->{data}[$i][2]{filename}->filename;
   for my $key ( keys( %{ $self->{data}[$i][2] } ) ) {
-   $session{ $self->{data}[$i][0] }{$key} = $self->{data}[$i][2]{$key}
-     unless ( $key eq 'filename' );
+   if ( $key ne 'filename' ) {
+    $session{ $self->{data}[$i][0] }{$key} = $self->{data}[$i][2]{$key};
+   }
   }
  }
  push @filenamelist, File::Spec->catfile( $self->{dir}, 'session' );
@@ -960,8 +973,9 @@ sub open_session {
  my %session = %$sessionref;
 
  # Block the row-changed signal whilst adding the scan (row) and sorting it.
- $self->get_model->signal_handler_block( $self->{row_changed_signal} )
-   if defined( $self->{row_changed_signal} );
+ if ( defined $self->{row_changed_signal} ) {
+  $self->get_model->signal_handler_block( $self->{row_changed_signal} );
+ }
  my @selection = @{ $session{selection} };
  delete $session{selection};
  for my $pagenum ( sort { $a <=> $b } ( keys(%session) ) ) {
@@ -986,13 +1000,15 @@ sub open_session {
    push @{ $self->{data} }, [ $pagenum, $thumb, $page ];
   }
   catch {
-   $error_callback->(
-    sprintf( $d->get("Error importing page %d. Ignoring."), $pagenum ) )
-     if $error_callback;
+   if ($error_callback) {
+    $error_callback->(
+     sprintf( $d->get("Error importing page %d. Ignoring."), $pagenum ) );
+   }
   };
  }
- $self->get_model->signal_handler_unblock( $self->{row_changed_signal} )
-   if defined( $self->{row_changed_signal} );
+ if ( defined $self->{row_changed_signal} ) {
+  $self->get_model->signal_handler_unblock( $self->{row_changed_signal} );
+ }
  $self->select(@selection);
  return;
 }
@@ -1003,8 +1019,8 @@ sub renumber {
  my ( $self, $start, $step, $selection ) = @_;
 
  if ( defined($start) ) {
-  $step      = 1     unless ( defined $step );
-  $selection = 'all' unless ( defined $selection );
+  if ( not defined($step) )      { $step      = 1 }
+  if ( not defined($selection) ) { $selection = 'all' }
 
   my @selection;
   if ( $selection eq 'selected' ) {
@@ -1024,8 +1040,9 @@ sub renumber {
  # ascending.
  else {
   for ( 1 .. $#{ $self->{data} } ) {
-   $self->{data}[$_][0] = $self->{data}[ $_ - 1 ][0] + 1
-     if ( $self->{data}[$_][0] <= $self->{data}[ $_ - 1 ][0] );
+   if ( $self->{data}[$_][0] <= $self->{data}[ $_ - 1 ][0] ) {
+    $self->{data}[$_][0] = $self->{data}[ $_ - 1 ][0] + 1;
+   }
   }
  }
  return;
@@ -1058,7 +1075,7 @@ sub valid_renumber {
 
  # Create a set from the current settings
  my $current = Set::IntSpan->new;
- $current->insert( $start + $step * $_ ) for ( 0 .. $#selected );
+ for ( 0 .. $#selected ) { $current->insert( $start + $step * $_ ) }
 
  # Are any of the new page numbers the same as those not selected?
  return FALSE if ( $current->intersect($not_selected)->size );
@@ -1167,11 +1184,13 @@ sub _monitor_process {
  my $pid = ++$_PID;
  $self->{running_pids}{$pid} = 1;
 
- $options{queued_callback}->(
-  process_name   => $_self->{process_name},
-  jobs_completed => $jobs_completed,
-  jobs_total     => $jobs_total
- ) if ( $options{queued_callback} );
+ if ( $options{queued_callback} ) {
+  $options{queued_callback}->(
+   process_name   => $_self->{process_name},
+   jobs_completed => $jobs_completed,
+   jobs_total     => $jobs_total
+  );
+ }
 
  Glib::Timeout->add(
   $_POLL_INTERVAL,
@@ -1203,8 +1222,8 @@ sub _monitor_process_running_callback {
    else {
     _cancel_process();
    }
-   $options->{cancelled_callback}->() if ( $options->{cancelled_callback} );
-   $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+   if ( $options->{cancelled_callback} ) { $options->{cancelled_callback}->() }
+   if ( $self->{cancel_cb}{$pid} )       { $self->{cancel_cb}{$pid}->() }
 
    # Flag that the callbacks have been done here
    # so they are not repeated here or in finished
@@ -1213,18 +1232,22 @@ sub _monitor_process_running_callback {
   }
   return;
  }
- $self->fetch_file( $options->{add} ) if ( $options->{add} );
- $options->{started_flag} = $options->{started_callback}->(
-  1, $_self->{process_name},
-  $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
- ) if ( $options->{started_callback} and not $options->{started_flag} );
- $options->{running_callback}->(
-  process        => $_self->{process_name},
-  jobs_completed => $jobs_completed,
-  jobs_total     => $jobs_total,
-  message        => $_self->{message},
-  progress       => $_self->{progress}
- ) if ( $options->{running_callback} );
+ if ( $options->{add} ) { $self->fetch_file( $options->{add} ) }
+ if ( $options->{started_callback} and not $options->{started_flag} ) {
+  $options->{started_flag} = $options->{started_callback}->(
+   1, $_self->{process_name},
+   $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
+  );
+ }
+ if ( $options->{running_callback} ) {
+  $options->{running_callback}->(
+   process        => $_self->{process_name},
+   jobs_completed => $jobs_completed,
+   jobs_total     => $jobs_total,
+   message        => $_self->{message},
+   progress       => $_self->{progress}
+  );
+ }
  return;
 }
 
@@ -1240,21 +1263,23 @@ sub _monitor_process_finished_callback {
    else {
     _cancel_process();
    }
-   $options->{cancelled_callback}->() if ( $options->{cancelled_callback} );
-   $self->{cancel_cb}{$pid}->() if ( $self->{cancel_cb}{$pid} );
+   if ( $options->{cancelled_callback} ) { $options->{cancelled_callback}->() }
+   if ( $self->{cancel_cb}{$pid} )       { $self->{cancel_cb}{$pid}->() }
   }
   delete $self->{cancel_cb}{$pid};
   delete $self->{running_pids}{$pid};
   return;
  }
- $options->{started_callback}->()
-   if ( $options->{started_callback} and not $options->{started_flag} );
+ if ( $options->{started_callback} and not $options->{started_flag} ) {
+  $options->{started_callback}->();
+ }
  if ( $_self->{status} ) {
-  $options->{error_callback}->( $_self->{message} )
-    if ( $options->{error_callback} );
+  if ( $options->{error_callback} ) {
+   $options->{error_callback}->( $_self->{message} );
+  }
   return;
  }
- $options->{add} -= $self->fetch_file if ( $options->{add} );
+ if ( $options->{add} ) { $options->{add} -= $self->fetch_file }
  my $data;
  if ( $options->{info} ) {
   $data = $_self->{info_queue}->dequeue;
@@ -1262,8 +1287,9 @@ sub _monitor_process_finished_callback {
  elsif ( $options->{update_slist} ) {
   $data = $self->update_page( $options->{display_callback} );
  }
- $options->{finished_callback}->( $data, $_self->{requests}->pending )
-   if $options->{finished_callback};
+ if ( $options->{finished_callback} ) {
+  $options->{finished_callback}->( $data, $_self->{requests}->pending );
+ }
  delete $self->{cancel_cb}{$pid};
  delete $self->{running_pids}{$pid};
  return;
@@ -1543,10 +1569,10 @@ sub _thread_get_file_info {
    my $image = Image::Magick->new;
    my $x     = $image->Read($filename);
    return if $_self->{cancel};
-   $logger->warn($x) if "$x";
+   if ("$x") { $logger->warn($x) }
 
    $format = $image->Get('format');
-   $logger->info("Format $format") if ( defined $format );
+   if ( defined $format ) { $logger->info("Format $format") }
    undef $image;
 
    if ( not defined($format) ) {
@@ -1686,7 +1712,7 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
  # Create PDF with PDF::API2
  $self->{message} = $d->get('Setting up PDF');
  my $pdf = PDF::API2->new( -file => $options{path} );
- $pdf->info( %{ $options{metadata} } ) if defined( $options{metadata} );
+ if ( defined $options{metadata} ) { $pdf->info( %{ $options{metadata} } ) }
 
  my $corecache = $pdf->corefont('Times-Roman');
  if ( defined $options{options}->{font} ) {
@@ -1704,7 +1730,7 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
   my $image    = Image::Magick->new;
   my $status   = $image->Read($filename);
   return if $_self->{cancel};
-  $logger->warn($status) if "$status";
+  if ("$status") { $logger->warn($status) }
 
   # Get the size and resolution. Resolution is dots per inch, width
   # and height are in inches.
@@ -1796,7 +1822,9 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
      $format, $_ );
    }
    finally {
-    $logger->info("Adding $filename at $output_resolution PPI") unless (@_);
+    if ( not @_ ) {
+     $logger->info("Adding $filename at $output_resolution PPI");
+    }
    };
   }
   return if $_self->{cancel};
@@ -1848,11 +1876,11 @@ sub _convert_image_for_pdf {
 
    $logger->info("Resizing $filename to $w_pixels x $h_pixels");
    my $status = $image->Resize( width => $w_pixels, height => $h_pixels );
-   $logger->warn($status) if "$status";
+   if ("$status") { $logger->warn($status) }
   }
   if ( defined( $options{options}->{quality} ) and $compression eq 'jpg' ) {
    my $status = $image->Set( quality => $options{options}->{quality} );
-   $logger->warn($status) if "$status";
+   if ("$status") { $logger->warn($status) }
   }
 
   $format =
@@ -1890,14 +1918,15 @@ sub _write_image_object {
 
   # depth required because resize otherwise increases depth
   # to maintain information
-  $pagedata->{depth} = $image->Get('depth')
-    if ( not defined( $pagedata->{depth} ) );
+  if ( not defined( $pagedata->{depth} ) ) {
+   $pagedata->{depth} = $image->Get('depth');
+  }
   $logger->info(
    "Writing temporary image $filename with depth $pagedata->{depth}");
   my $status =
     $image->Write( filename => $filename, depth => $pagedata->{depth} );
   return if $_self->{cancel};
-  $logger->warn($status) if "$status";
+  if ("$status") { $logger->warn($status) }
   if ( $filename =~ /\.(\w*)$/x ) {
    $format = $1;
   }
@@ -1920,14 +1949,15 @@ sub _add_text_to_PDF {
   for my $box ( $data->boxes ) {
    my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
    if ( $txt =~ /([[:^ascii:]])/x and defined($ttfcache) ) {
-    $logger->debug("non-ascii text is '$1' in '$txt'") if ( defined $1 );
+    if ( defined $1 ) { $logger->debug("non-ascii text is '$1' in '$txt'") }
     $font = $ttfcache;
    }
    else {
     $font = $corecache;
    }
-   ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution )
-     if ( $x1 == 0 and $y1 == 0 and not defined($x2) );
+   if ( $x1 == 0 and $y1 == 0 and not defined($x2) ) {
+    ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution );
+   }
    if ( abs( $h * $resolution - $y2 + $y1 ) > 5
     and abs( $w * $resolution - $x2 + $x1 ) > 5 )
    {
@@ -1971,7 +2001,7 @@ sub _wrap_text_to_page {
     $y -= $size;
    }
    $text_box->translate( $x, $y );
-   $word = ' ' . $word if ( $x > 0 );
+   if ( $x > 0 ) { $word = ' ' . $word }
    $x += $text_box->text( $word, utf8 => 1 );
   }
   $y -= $size;
@@ -1997,7 +2027,7 @@ sub _thread_save_djvu {
   # Check the image depth to decide what sort of compression to use
   my $image = Image::Magick->new;
   my $x     = $image->Read($filename);
-  $logger->warn($x) if "$x";
+  if ("$x") { $logger->warn($x) }
   my $depth = $image->Get('depth');
   my $class = $image->Get('class');
   my $compression;
@@ -2018,7 +2048,7 @@ sub _thread_save_djvu {
    if ( $format !~ /(?:pnm|jpg)/x ) {
     my $pnm = File::Temp->new( DIR => $dir, SUFFIX => '.pnm' );
     $x = $image->Write( filename => $pnm );
-    $logger->warn($x) if "$x";
+    if ("$x") { $logger->warn($x) }
     $filename = $pnm;
    }
   }
@@ -2031,7 +2061,7 @@ sub _thread_save_djvu {
    {
     my $pbm = File::Temp->new( DIR => $dir, SUFFIX => '.pbm' );
     $x = $image->Write( filename => $pbm );
-    $logger->warn($x) if "$x";
+    if ("$x") { $logger->warn($x) }
     $filename = $pbm;
    }
   }
@@ -2044,7 +2074,7 @@ sub _thread_save_djvu {
     ( system("echo $$ > $pidfile;$cmd"), -s "$djvu" )
     ;    # quotes needed to prevent -s clobbering File::Temp object
   return if $_self->{cancel};
-  unless ( $status == 0 and $size ) {
+  if ( $status != 0 or not $size ) {
    $self->{status}  = 1;
    $self->{message} = $d->get('Error writing DjVu');
    $logger->error(
@@ -2090,8 +2120,9 @@ sub _add_text_to_DJVU {
   # Write the text boxes
   for my $box ( $pagedata->boxes ) {
    my ( $x1, $y1, $x2, $y2, $txt ) = @$box;
-   ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution )
-     if ( $x1 == 0 and $y1 == 0 and not defined($x2) );
+   if ( $x1 == 0 and $y1 == 0 and not defined($x2) ) {
+    ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution );
+   }
 
    # Escape any inverted commas
    $txt =~ s/\\/\\\\/gx;
@@ -2140,9 +2171,11 @@ sub _thread_save_tiff {
 
    # Convert to tiff
    my $depth = '';
-   $depth = '-depth 8'
-     if ( defined( $options{options}->{compression} )
-    and $options{options}->{compression} eq 'jpeg' );
+   if ( defined( $options{options}->{compression} )
+    and $options{options}->{compression} eq 'jpeg' )
+   {
+    $depth = '-depth 8';
+   }
 
    my $cmd =
      "convert -units PixelsPerInch -density $resolution $depth $filename $tif";
@@ -2163,16 +2196,20 @@ sub _thread_save_tiff {
  my $compression = "";
  if ( defined $options{options}->{compression} ) {
   $compression = "-c $options{options}->{compression}";
-  $compression .= ":$options{options}->{quality}" if ( $compression eq 'jpeg' );
+  if ( $compression eq 'jpeg' ) {
+   $compression .= ":$options{options}->{quality}";
+  }
  }
 
  # Create the tiff
  $self->{progress} = 1;
  $self->{message}  = $d->get('Concatenating TIFFs');
  my $rows = '';
- $rows = '-r 16'
-   if ( defined( $options{options}->{compression} )
-  and $options{options}->{compression} eq 'jpeg' );
+ if ( defined( $options{options}->{compression} )
+  and $options{options}->{compression} eq 'jpeg' )
+ {
+  $rows = '-r 16';
+ }
  my $cmd = "tiffcp $rows $compression @filelist '$options{path}'";
  $logger->info($cmd);
  my $out = File::Temp->new( DIR => $options{dir}, SUFFIX => '.stdout' );
@@ -2208,14 +2245,14 @@ sub _thread_rotate {
  my $image = Image::Magick->new;
  my $x     = $image->Read($filename);
  return if $_self->{cancel};
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
 
  # workaround for those versions of imagemagick that produce 16bit output
  # with rotate
  my $depth = $image->Get('depth');
  $x = $image->Rotate($angle);
  return if $_self->{cancel};
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
  my $suffix;
  if ( $filename =~ /\.(\w*)$/x ) {
   $suffix = $1;
@@ -2227,7 +2264,7 @@ sub _thread_rotate {
  );
  $x = $image->Write( filename => $filename, depth => $depth );
  return if $_self->{cancel};
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
  my $new = $page->freeze;
  $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
  $new->{dirty_time} = timestamp();            #flag as dirty
@@ -2272,7 +2309,7 @@ sub _thread_save_image {
 sub _thread_save_text {
  my ( $self, $path, $list_of_pages, $fh ) = @_;
 
- unless ( open $fh, ">", $path ) {    ## no critic (RequireBriefOpen)
+ if ( not open( $fh, ">", $path ) ) {
   $self->{status} = 1;
   $self->{message} = sprintf( $d->get("Can't open file: %s"), $path );
   return;
@@ -2292,15 +2329,15 @@ sub _thread_analyse {
  my $image = Image::Magick->new;
  my $x     = $image->Read( $page->{filename} );
  return if $_self->{cancel};
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
 
  my ( $depth, $min, $max, $mean, $stddev ) = $image->Statistics();
- $logger->warn("image->Statistics() failed") unless defined $depth;
+ if ( not defined($depth) ) { $logger->warn("image->Statistics() failed") }
  $logger->info("std dev: $stddev mean: $mean");
  return if $_self->{cancel};
  my $maxQ = -1 + ( 1 << $depth );
  $mean = $maxQ ? $mean / $maxQ : 0;
- $stddev = 0 if $stddev eq "nan";
+ if ( $stddev eq "nan" ) { $stddev = 0 }
 
 # my $quantum_depth = $image->QuantumDepth;
 # warn "image->QuantumDepth failed" unless defined $quantum_depth;
@@ -2327,7 +2364,7 @@ sub _thread_threshold {
  my $image = Image::Magick->new;
  my $x     = $image->Read($filename);
  return if $_self->{cancel};
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
 
  # Threshold the image
  $image->BlackThreshold( threshold => $threshold . '%' );
@@ -2339,7 +2376,7 @@ sub _thread_threshold {
  $filename = File::Temp->new( DIR => $dir, SUFFIX => '.pbm', UNLINK => FALSE );
  $x = $image->Write( filename => $filename );
  return if $_self->{cancel};
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
 
  my $new = $page->freeze;
  $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
@@ -2356,7 +2393,7 @@ sub _thread_negate {
  my $image = Image::Magick->new;
  my $x     = $image->Read($filename);
  return if $_self->{cancel};
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
 
  my $depth = $image->Get('depth');
 
@@ -2372,7 +2409,7 @@ sub _thread_negate {
  $filename = File::Temp->new( DIR => $dir, SUFFIX => $suffix, UNLINK => FALSE );
  $x = $image->Write( depth => $depth, filename => $filename );
  return if $_self->{cancel};
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
  $logger->info("Negating to $filename");
 
  my $new = $page->freeze;
@@ -2390,7 +2427,7 @@ sub _thread_unsharp {
  my $image = Image::Magick->new;
  my $x     = $image->Read($filename);
  return if $_self->{cancel};
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
 
  # Unsharp the image
  $image->UnsharpMask(
@@ -2413,7 +2450,7 @@ sub _thread_unsharp {
  );
  $x = $image->Write( filename => $filename );
  return if $_self->{cancel};
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
  $logger->info(
 "Wrote $filename with unsharp mask: r=$options{radius}, s=$options{sigma}, a=$options{amount}, t=$options{threshold}"
  );
@@ -2433,7 +2470,7 @@ sub _thread_crop {
  my $image = Image::Magick->new;
  my $e     = $image->Read($filename);
  return if $_self->{cancel};
- $logger->warn($e) if "$e";
+ if ("$e") { $logger->warn($e) }
 
  # Crop the image
  $e = $image->Crop(
@@ -2444,7 +2481,7 @@ sub _thread_crop {
  );
  $image->Set( page => '0x0+0+0' );
  return if $_self->{cancel};
- $logger->warn($e) if "$e";
+ if ("$e") { $logger->warn($e) }
 
  # Write it
  my $suffix;
@@ -2461,7 +2498,7 @@ sub _thread_crop {
  );
  $e = $image->Write( filename => $filename );
  return if $_self->{cancel};
- $logger->warn($e) if "$e";
+ if ("$e") { $logger->warn($e) }
 
  my $new = $options{page}->freeze;
  $new->{filename}   = $filename->filename;    # can't queue File::Temp objects
@@ -2567,12 +2604,12 @@ sub _thread_unpaper {
  if ( $filename !~ /\.pnm$/x ) {
   my $image = Image::Magick->new;
   my $x     = $image->Read($filename);
-  $logger->warn($x) if "$x";
+  if ("$x") { $logger->warn($x) }
   my $depth = $image->Get('depth');
 
 # Unforunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
   my $suffix = ".pbm";
-  $suffix = ".pnm" if ( $depth > 1 );
+  if ( $depth > 1 ) { $suffix = ".pnm" }
 
   # Temporary filename for new file
   $in = File::Temp->new(
@@ -2593,11 +2630,13 @@ sub _thread_unpaper {
   UNLINK => FALSE
  );
  my $out2 = '';
- $out2 = File::Temp->new(
-  DIR    => $dir,
-  SUFFIX => '.pnm',
-  UNLINK => FALSE
- ) if ( $options =~ /--output-pages\ 2\ /x );
+ if ( $options =~ /--output-pages\ 2\ /x ) {
+  $out2 = File::Temp->new(
+   DIR    => $dir,
+   SUFFIX => '.pnm',
+   UNLINK => FALSE
+  );
+ }
 
  # --overwrite needed because $out exists with 0 size
  my $cmd = sprintf "$options;", $in, $out, $out2;
@@ -2613,7 +2652,7 @@ sub _thread_unpaper {
  );
  $new->{dirty_time} = timestamp();    #flag as dirty
  my %data = ( old => $page, new => $new->freeze );
- unless ( $out2 eq '' ) {
+ if ( $out2 ne '' ) {
   my $new2 = Gscan2pdf::Page->new(
    filename => $out2,
    dir      => $dir,
@@ -2644,7 +2683,7 @@ sub _thread_user_defined {
   $cmd =~ s/%i/$in/gx;
  }
  else {
-  unless ( copy( $in, $out ) ) {
+  if ( not copy( $in, $out ) ) {
    $self->{status}  = 1;
    $self->{message} = $d->get('Error copying page');
    $d->get('Error copying page');
@@ -2660,7 +2699,7 @@ sub _thread_user_defined {
  # Get file type
  my $image = Image::Magick->new;
  my $x     = $image->Read($out);
- $logger->warn($x) if "$x";
+ if ("$x") { $logger->warn($x) }
 
  my $new = Gscan2pdf::Page->new(
   filename => $out,
