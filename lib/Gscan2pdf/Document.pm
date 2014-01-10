@@ -1605,7 +1605,7 @@ sub _thread_import_file {
 
    # Extract images from DjVu
    if ( $options{last} >= $options{first} and $options{first} > 0 ) {
-    for ( my $i = $options{first} ; $i <= $options{last} ; $i++ ) {
+    for my $i ( $options{first} .. $options{last} ) {
      $self->{progress} = ( $i - 1 ) / ( $options{last} - $options{first} + 1 );
      $self->{message} = sprintf( $d->get("Importing page %i of %i"),
       $i, $options{last} - $options{first} + 1 );
@@ -1662,7 +1662,7 @@ sub _thread_import_file {
 
    # Split the tiff into its pages and import them individually
    if ( $options{last} >= $options{first} and $options{first} > 0 ) {
-    for ( my $i = $options{first} - 1 ; $i < $options{last} ; $i++ ) {
+    for my $i ( $options{first} - 1 .. $options{last} - 1 ) {
      $self->{progress} = $i / ( $options{last} - $options{first} + 1 );
      $self->{message} = sprintf( $d->get("Importing page %i of %i"),
       $i, $options{last} - $options{first} + 1 );
