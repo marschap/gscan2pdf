@@ -30,6 +30,10 @@ use PDF::API2;
 use English qw( -no_match_vars );    # for $PROCESS_ID, $INPUT_RECORD_SEPARATOR
 use Readonly;
 Readonly our $POINTS_PER_INCH => 72;
+Readonly my $_POLL_INTERVAL   => 100;    # ms
+Readonly my $THUMBNAIL        => 100;    # pixels
+Readonly my $YEAR             => 5;
+Readonly my $BOX_TOLERANCE    => 5;
 
 BEGIN {
  use Exporter ();
@@ -38,7 +42,7 @@ BEGIN {
  $VERSION = '1.2.0';
 
  use base qw(Exporter Gtk2::Ex::Simple::List);
- %EXPORT_TAGS = ();                  # eg: TAG => [ qw!name1 name2! ],
+ %EXPORT_TAGS = ();                      # eg: TAG => [ qw!name1 name2! ],
 
  # your exported package globals go here,
  # as well as any optionally exported functions
@@ -53,9 +57,7 @@ BEGIN {
 }
 our @EXPORT_OK;
 
-my $_POLL_INTERVAL = 100;    # ms
 my $_PID           = 0;      # flag to identify which process to cancel
-
 my $jobs_completed = 0;
 my $jobs_total     = 0;
 my $EMPTY          = q{};
@@ -103,8 +105,8 @@ sub new {
  }
 
  # Default thumbnail sizes
- if ( not defined( $self->{heightt} ) ) { $self->{heightt} = 100 }
- if ( not defined( $self->{widtht} ) )  { $self->{widtht}  = 100 }
+ if ( not defined( $self->{heightt} ) ) { $self->{heightt} = $THUMBNAIL }
+ if ( not defined( $self->{widtht} ) )  { $self->{widtht}  = $THUMBNAIL }
 
  bless( $self, $class );
  return $self;
@@ -240,13 +242,13 @@ sub pages_possible {
   # Empty document, or checked beyond end of document, allow infinite pages
   elsif (
    (
-       $#{ $self->{data} } == -1
+    @{ $self->{data} } == 0
     or $self->{data}[ $#{ $self->{data} } ][0] < $start
    )
    and $step > 0
     )
   {
-   return -1;
+   return -1;    ## no critic (ProhibitMagicNumbers)
   }
 
   # Found existing page
@@ -1150,8 +1152,7 @@ sub timestamp {
  my @time = localtime();
 
  # return a time which can be string-wise compared
- return sprintf( "%04d%02d%02d%02d%02d%02d",
-  $time[5], $time[4], $time[3], $time[2], $time[1], $time[0] );
+ return sprintf( "%04d%02d%02d%02d%02d%02d", reverse @time[ 0 .. $YEAR ] );
 }
 
 # Set session dir
@@ -1522,10 +1523,10 @@ sub _thread_get_file_info {
    # Dig out and the resolution of each page
    my (@ppi);
    $info{format} = 'DJVU';
-   while ( $info =~ /\s(\d+)\s+dpi/xsm ) {
+   while ( $info =~ /\s(\d+)\s+dpi(.*)/xsm ) {
     push @ppi, $1;
+    $info = $2;
     $logger->info("Page $#ppi is $ppi[$#ppi] ppi");
-    $info = substr( $info, index( $info, " dpi" ) + 4, length($info) );
    }
    if ( $pages != @ppi ) {
     $self->{status} = 1;
@@ -1646,11 +1647,12 @@ sub _thread_import_file {
     my @images = glob('x-???.???');
     $self->{page_queue}->enqueue( $#images + 1 );
     foreach (@images) {
+     my ($ext) = /([^.]+)$/xsm;
      my $page = Gscan2pdf::Page->new(
       filename => $_,
       dir      => $options{dir},
       delete   => TRUE,
-      format   => $format{ substr( $_, length($_) - 3, 3 ) },
+      format   => $format{$ext},
      );
      $self->{page_queue}->enqueue( $page->to_png($paper_sizes)->freeze );
     }
@@ -1961,8 +1963,8 @@ sub _add_text_to_PDF {
    if ( $x1 == 0 and $y1 == 0 and not defined($x2) ) {
     ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution );
    }
-   if ( abs( $h * $resolution - $y2 + $y1 ) > 5
-    and abs( $w * $resolution - $x2 + $x1 ) > 5 )
+   if ( abs( $h * $resolution - $y2 + $y1 ) > $BOX_TOLERANCE
+    and abs( $w * $resolution - $x2 + $x1 ) > $BOX_TOLERANCE )
    {
 
     # Box is smaller than the page. We know the text position.
@@ -2338,7 +2340,7 @@ sub _thread_analyse {
  if ( not defined($depth) ) { $logger->warn("image->Statistics() failed") }
  $logger->info("std dev: $stddev mean: $mean");
  return if $_self->{cancel};
- my $maxQ = -1 + ( 1 << $depth );
+ my $maxQ = ( 1 << $depth ) - 1;
  $mean = $maxQ ? $mean / $maxQ : 0;
  if ( $stddev eq "nan" ) { $stddev = 0 }
 
