@@ -11,7 +11,7 @@ Readonly my $MAX_VALUES => 255;
 
 use Glib::Object::Subclass Glib::Object::;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.1';
 
 my $units = qr{(pel|bit|mm|dpi|%|us)}xsm;
 my $EMPTY = q{};

@@ -27,8 +27,8 @@
 #    Upload .pot
 #    Update translators in credits (https://launchpad.net/gscan2pdf/+topcontributors)
 #    Check a locale with LC_ALL=de_DE LC_MESSAGES=de_DE LC_CTYPE=de_DE LANG=de_DE LANGUAGE=de_DE bin/gscan2pdf --log=log --locale=<wherever the locale directory is>
-#    Check $version. If necessary bump with something like
-#     xargs sed -i "s/\$VERSION = '1\.2\.0'/\$VERSION = '1.2.0'/" < MANIFEST
+#    Check $VERSION. If necessary bump with something like
+#     xargs sed -i "s/\$VERSION = '1\.2\.0'/\$VERSION = '1.2.1'/" < MANIFEST
 #    Make appropriate updates to debian/changelog
 # 2. perl Makefile.PL
 #    make rpmdist debdist
@@ -92,7 +92,7 @@ use Locale::gettext 1.05;    # For translations
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
-my $version   = '1.2.0';
+my $VERSION   = '1.2.0';
 
 # Window parameters
 my $border_width = 6;
@@ -138,11 +138,11 @@ $logger->info("Using libsane-perl version $Sane::VERSION");
 $logger->debug( Dumper( \%SETTING ) ) if ($debug);
 
 # Just in case dependencies have changed, put put startup warning again
-if ( not defined( $SETTING{version} ) or $SETTING{version} ne $version ) {
+if ( not defined( $SETTING{version} ) or $SETTING{version} ne $VERSION ) {
  $SETTING{'startup warning'} = TRUE;
  delete $SETTING{cache} if ( defined $SETTING{cache} );
 }
-$SETTING{version} = $version;
+$SETTING{version} = $VERSION;
 
 # Initialise thread handler
 Gscan2pdf::Document->setup($logger);
@@ -443,7 +443,7 @@ sub parse_arguments {
   'warn'  => sub { $log_level = 'WARN' },
   'error' => sub { $log_level = 'ERROR' },
   'fatal' => sub { $log_level = 'FATAL' },
-  'version' => sub { warn "$prog_name $version\n"; exit 0 },
+  'version' => sub { warn "$prog_name $VERSION\n"; exit 0 },
  );
  exit 1 unless ( GetOptions(@args) );
  $Sane::DEBUG = $debug;
@@ -484,7 +484,7 @@ EOS
  Log::Log4perl::init( \$log_conf );
  $logger = Log::Log4perl::get_logger();
 
- $logger->info("Starting $prog_name $version");
+ $logger->info("Starting $prog_name $VERSION");
  $logger->info("Log level $log_level");
 
  if ( defined $locale ) {
@@ -716,7 +716,7 @@ sub set_up_test_mode {
 
 sub create_main_window {
  my $widget = Gtk2::Window->new;
- $widget->set_title("$prog_name v$version");
+ $widget->set_title("$prog_name v$VERSION");
  $widget->signal_connect(
   'delete-event' => sub {
    if ( quit() ) {
@@ -2203,7 +2203,7 @@ sub get_pdf_metadata {
  $h{CreationDate} =
    sprintf( "D:%4i%02i%02i000000+00'00'", $year, $month, $day );
  $h{ModDate}  = sprintf( "D:%4i%02i%02i000000+00'00'", $year, $month, $day );
- $h{Creator}  = "$prog_name v$version";
+ $h{Creator}  = "$prog_name v$VERSION";
  $h{Producer} = "PDF::API2";
  $h{Title}    = $SETTING{title} if defined $SETTING{title};
  $h{Subject}  = $SETTING{subject} if defined $SETTING{subject};
@@ -4541,7 +4541,7 @@ sub about {
  # Gtk2::AboutDialog->set_url_hook ($func, $data=undef);
  # Gtk2::AboutDialog->set_email_hook ($func, $data=undef);
  $about->set_program_name($prog_name);
- $about->set_version($version);
+ $about->set_version($VERSION);
  my $authors = <<'EOS';
 Frederik Elwert
 Klaus Ethgen
