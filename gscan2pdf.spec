@@ -84,7 +84,9 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sat Nov 23 2013 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sun Jan 12 2014 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #734854 (gscan2pdf wrong resolution)
   - New upstream release
     Closes: #701581
     (Thunderbird detection (for send email) does not work reliably on XFCE)
