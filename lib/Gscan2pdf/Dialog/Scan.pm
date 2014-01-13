@@ -638,6 +638,9 @@ sub show {
  my $self = shift;
  $self->signal_chain_from_overridden;
  $self->{framex}->hide_all;
+ if ( $self->{combobp}->get_active_text ne $d->get('Manual') ) {
+  $self->hide_geometry( $self->get('available-scan-options') );
+ }
  return;
 }
 

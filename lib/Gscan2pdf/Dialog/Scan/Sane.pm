@@ -399,25 +399,27 @@ sub create_paper_widget {
        ->set_value( $formats->{$paper}{x} + $formats->{$paper}{l} );
      $options->by_name(SANE_NAME_SCAN_BR_Y)->{widget}
        ->set_value( $formats->{$paper}{y} + $formats->{$paper}{t} );
-     Glib::Idle->add(
-      sub {
-       for (
-        ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
-         SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
-         SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
-        )
-         )
-       {
-        if ( defined $options->{box}{$_} ) { $options->{box}{$_}->hide_all; }
-       }
-      }
-     );
+     Glib::Idle->add( sub { $self->hide_geometry($options) } );
 
      # Do this last, as it fires the changed-paper signal
      $self->set( 'paper', $paper );
     }
    }
   );
+ }
+ return;
+}
+
+sub hide_geometry {
+ my ( $self, $options ) = @_;
+ for (
+  ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+   SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+   SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
+  )
+   )
+ {
+  if ( defined $options->{box}{$_} ) { $options->{box}{$_}->hide_all; }
  }
  return;
 }
