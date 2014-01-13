@@ -341,7 +341,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
   # Define HBox for paper size here
   # so that it can be put before first geometry option
-  if ( _geometry_option($opt) and not defined( $self->{hboxp} ) ) {
+  if ( $self->_geometry_option($opt) and not defined( $self->{hboxp} ) ) {
    $self->{hboxp} = Gtk2::HBox->new;
    $vbox->pack_start( $self->{hboxp}, FALSE, FALSE, 0 );
   }
@@ -450,7 +450,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    );
   }
 
-  $self->_pack_widget( $widget, [ $options, $opt, $hbox ] );
+  $self->pack_widget( $widget, [ $options, $opt, $hbox ] );
  }
 
  # Set defaults
@@ -491,7 +491,7 @@ sub _update_option_visibility {
   }
   my $container =
     $opt->{type} == SANE_TYPE_GROUP ? $opt->{widget} : $opt->{widget}->parent;
-  my $geometry = _geometry_option($opt);
+  my $geometry = $self->_geometry_option($opt);
   if ($show) {
    $container->show_all;
 
@@ -547,7 +547,7 @@ sub _find_visible_group {
 # Return true if we have a valid geometry option
 
 sub _geometry_option {
- my ($opt) = @_;
+ my ( $self, $opt ) = @_;
  return (
         ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
     and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
@@ -572,7 +572,7 @@ sub _geometry_widgets_created {
  );
 }
 
-sub _create_paper_widget {
+sub create_paper_widget {
  my ( $self, $options ) = @_;
 
  # Only define the paper size once the rest of the geometry widgets
@@ -640,31 +640,6 @@ sub _create_paper_widget {
     }
    }
   );
- }
- return;
-}
-
-sub _pack_widget {
- my ( $self,    $widget, $data ) = @_;
- my ( $options, $opt,    $hbox ) = @{$data};
- if ( defined $widget ) {
-  $opt->{widget} = $widget;
-  if ( $opt->{type} == SANE_TYPE_BUTTON or $opt->{max_values} > 1 ) {
-   $hbox->pack_end( $widget, TRUE, TRUE, 0 );
-  }
-  else {
-   $hbox->pack_end( $widget, FALSE, FALSE, 0 );
-  }
-  $tooltips->set_tip( $widget, $d_sane->get( $opt->{desc} ) );
-
-  # Look-up to hide/show the box if necessary
-  if ( _geometry_option($opt) ) { $options->{box}{ $opt->{name} } = $hbox }
-
-  $self->_create_paper_widget($options);
-
- }
- else {
-  $logger->warn("Unknown type $opt->{type}");
  }
  return;
 }

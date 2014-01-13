@@ -716,6 +716,33 @@ sub set_device_list {
  return;
 }
 
+sub pack_widget {
+ my ( $self, $widget, $data ) = @_;
+ my ( $options, $opt, $hbox, $hboxp ) = @{$data};
+ if ( defined $widget ) {
+  $opt->{widget} = $widget;
+  if ( $opt->{type} == SANE_TYPE_BUTTON or $opt->{max_values} > 1 ) {
+   $hbox->pack_end( $widget, TRUE, TRUE, 0 );
+  }
+  else {
+   $hbox->pack_end( $widget, FALSE, FALSE, 0 );
+  }
+  $tooltips->set_tip( $widget, $d_sane->get( $opt->{desc} ) );
+
+  # Look-up to hide/show the box if necessary
+  if ( $self->_geometry_option($opt) ) {
+   $options->{box}{ $opt->{name} } = $hbox;
+  }
+
+  $self->create_paper_widget( $options, $hboxp );
+
+ }
+ else {
+  $logger->warn("Unknown type $opt->{type}");
+ }
+ return;
+}
+
 # Add paper size to combobox if scanner large enough
 
 sub set_paper_formats {

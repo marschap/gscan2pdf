@@ -195,7 +195,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
   # Define HBox for paper size here
   # so that it can be put before first geometry option
-  if ( _geometry_option($opt) and not defined($hboxp) ) {
+  if ( $self->_geometry_option($opt) and not defined($hboxp) ) {
    $hboxp = Gtk2::HBox->new;
    $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
   }
@@ -304,7 +304,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    );
   }
 
-  $self->_pack_widget( $widget, [ $options, $opt, $hbox, $hboxp ] );
+  $self->pack_widget( $widget, [ $options, $opt, $hbox, $hboxp ] );
  }
 
  # Set defaults
@@ -323,7 +323,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 # Return true if we have a valid geometry option
 
 sub _geometry_option {
- my ($opt) = @_;
+ my ( $self, $opt ) = @_;
  return
        ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
    and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
@@ -332,7 +332,7 @@ sub _geometry_option {
    );
 }
 
-sub _create_paper_widget {
+sub create_paper_widget {
  my ( $self, $options, $hboxp ) = @_;
 
  # Only define the paper size once the rest of the geometry widgets
@@ -417,31 +417,6 @@ sub _create_paper_widget {
     }
    }
   );
- }
- return;
-}
-
-sub _pack_widget {
- my ( $self, $widget, $data ) = @_;
- my ( $options, $opt, $hbox, $hboxp ) = @{$data};
- if ( defined $widget ) {
-  $opt->{widget} = $widget;
-  if ( $opt->{type} == SANE_TYPE_BUTTON or $opt->{max_values} > 1 ) {
-   $hbox->pack_end( $widget, TRUE, TRUE, 0 );
-  }
-  else {
-   $hbox->pack_end( $widget, FALSE, FALSE, 0 );
-  }
-  $tooltips->set_tip( $widget, $d_sane->get( $opt->{desc} ) );
-
-  # Look-up to hide/show the box if necessary
-  if ( _geometry_option($opt) ) { $options->{box}{ $opt->{name} } = $hbox; }
-
-  $self->_create_paper_widget( $options, $hboxp );
-
- }
- else {
-  $logger->warn("Unknown type $opt->{type}");
  }
  return;
 }
