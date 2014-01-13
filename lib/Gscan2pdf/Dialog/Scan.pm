@@ -778,7 +778,8 @@ sub edit_paper {
  }
 
  # Set everything to be editable
- for ( 0 .. $#{ $slist->get_columns } ) {
+ my @columns = $slist->get_columns;
+ for ( 0 .. $#columns ) {
   $slist->set_column_editable( $_, TRUE );
  }
  $slist->get_column(0)->set_sort_column_id(0);
