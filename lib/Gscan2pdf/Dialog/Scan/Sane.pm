@@ -324,12 +324,13 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
 sub _geometry_option {
  my ( $self, $opt ) = @_;
- return
-       ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
-   and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
-   and ( $opt->{name} =~
+ return (
+        ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
+    and ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
+    and ( $opt->{name} =~
 /^(?:$SANE_NAME_SCAN_TL_X|$SANE_NAME_SCAN_TL_Y|$SANE_NAME_SCAN_BR_X|$SANE_NAME_SCAN_BR_Y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/xms
-   );
+    )
+ );
 }
 
 sub create_paper_widget {

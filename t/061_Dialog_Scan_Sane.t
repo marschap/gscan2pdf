@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 44;
+use Test::More tests => 45;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -192,6 +192,13 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
   my $options = $dialog->get('available-scan-options');
   $dialog->set_option( $options->by_name($resolution), 51 );
   $loop->run unless ($flag);
+  my @geometry_widgets = keys %{ $options->{box} };
+  cmp_ok(
+   $#geometry_widgets == 3,
+   '||',
+   $#geometry_widgets == 5,
+   'Only 4 or 6 options should be flagged as geometry'
+  );
 
   ######################################
 
