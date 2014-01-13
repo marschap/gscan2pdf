@@ -8,7 +8,7 @@ use File::Temp;             # To create temporary files
 use Gscan2pdf::Document;    # for slurp
 use version;
 
-our $VERSION = '1.2.1';
+our $VERSION = '1.2.2';
 
 my ( %languages, $version, $setup, $logger );
 

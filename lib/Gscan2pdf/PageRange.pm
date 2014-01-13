@@ -26,7 +26,7 @@ use Glib::Object::Subclass Gtk2::VBox::,
  ),
   ];
 
-our $VERSION = '1.2.1';
+our $VERSION = '1.2.2';
 
 sub INIT_INSTANCE {
  my $self    = shift;

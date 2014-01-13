@@ -28,7 +28,7 @@
 #    Update translators in credits (https://launchpad.net/gscan2pdf/+topcontributors)
 #    Check a locale with LC_ALL=de_DE LC_MESSAGES=de_DE LC_CTYPE=de_DE LANG=de_DE LANGUAGE=de_DE bin/gscan2pdf --log=log --locale=<wherever the locale directory is>
 #    Check $VERSION. If necessary bump with something like
-#     xargs sed -i "s/^\(\$VERSION *= \)'1\.2\.0'/\1'1.2.1'/" < MANIFEST
+#     xargs sed -i "s/\(\$VERSION *= \)'1\.2\.1'/\1'1.2.2'/" < MANIFEST
 #    Make appropriate updates to debian/changelog
 # 2.  perl Makefile.PL
 #     make rpmdist debdist
@@ -96,7 +96,7 @@ use Locale::gettext 1.05;    # For translations
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
-my $VERSION   = '1.2.1';
+my $VERSION   = '1.2.2';
 
 # Window parameters
 my $border_width = 6;
