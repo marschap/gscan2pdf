@@ -138,6 +138,47 @@ sub parse_geometry {
  return;
 }
 
+sub synonyms {
+ my ($name) = @_;
+ my @synonyms = (
+  [ scalar(SANE_NAME_PAGE_HEIGHT), 'pageheight' ],
+  [ scalar(SANE_NAME_PAGE_WIDTH),  'pagewidth' ],
+  [ scalar(SANE_NAME_SCAN_TL_X),   'l' ],
+  [ scalar(SANE_NAME_SCAN_TL_Y),   't' ],
+  [ scalar(SANE_NAME_SCAN_BR_X),   'x' ],
+  [ scalar(SANE_NAME_SCAN_BR_Y),   'y' ]
+ );
+ for my $synonym (@synonyms) {
+  given ($name) {
+   when ( @{$synonym} ) {
+    return $synonym;
+   }
+  }
+ }
+ return [$name];
+}
+
+# Note any duplicate options, keeping only the last entry.
+sub prune_duplicates {
+ my ($arrayref) = @_;
+ my %seen;
+
+ my $j = $#{$arrayref};
+ while ( $j > -1 ) {    ## no critic (ProhibitMagicNumbers)
+  my ($opt) = keys( %{ $arrayref->[$j] } );
+  $seen{$opt}++;
+  my $synonyms = synonyms($opt);
+  for ( @{$synonyms} ) {
+   if ( defined( $seen{$_} ) and $seen{$_} > 1 ) {
+    splice @{$arrayref}, $j, 1;
+    last;
+   }
+  }
+  $j--;
+ }
+ return $arrayref;
+}
+
 sub supports_paper {
  my ( $self, $paper, $tolerance ) = @_;
 

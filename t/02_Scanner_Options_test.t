@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 3;
+use Test::More tests => 15;
 use Sane 0.05;    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
@@ -729,3 +729,64 @@ my @that     = (
 );
 is_deeply( $options->{array}, \@that, 'test' );
 is( Gscan2pdf::Scanner::Options->device, 'test:0', 'device name' );
+
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms(SANE_NAME_PAGE_HEIGHT),
+ [ SANE_NAME_PAGE_HEIGHT, 'pageheight' ],
+ 'synonyms for SANE_NAME_PAGE_HEIGHT'
+);
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms('pageheight'),
+ [ SANE_NAME_PAGE_HEIGHT, 'pageheight' ],
+ 'synonyms for pageheight'
+);
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms(SANE_NAME_PAGE_WIDTH),
+ [ SANE_NAME_PAGE_WIDTH, 'pagewidth' ],
+ 'synonyms for SANE_NAME_PAGE_WIDTH'
+);
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms('pagewidth'),
+ [ SANE_NAME_PAGE_WIDTH, 'pagewidth' ],
+ 'synonyms for pagewidth'
+);
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms(SANE_NAME_SCAN_TL_X),
+ [ SANE_NAME_SCAN_TL_X, 'l' ],
+ 'synonyms for SANE_NAME_SCAN_TL_X'
+);
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms('l'),
+ [ SANE_NAME_SCAN_TL_X, 'l' ],
+ 'synonyms for l'
+);
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms(SANE_NAME_SCAN_TL_Y),
+ [ SANE_NAME_SCAN_TL_Y, 't' ],
+ 'synonyms for SANE_NAME_SCAN_TL_Y'
+);
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms('t'),
+ [ SANE_NAME_SCAN_TL_Y, 't' ],
+ 'synonyms for t'
+);
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms(SANE_NAME_SCAN_BR_X),
+ [ SANE_NAME_SCAN_BR_X, 'x' ],
+ 'synonyms for SANE_NAME_SCAN_BR_X'
+);
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms('x'),
+ [ SANE_NAME_SCAN_BR_X, 'x' ],
+ 'synonyms for x'
+);
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms(SANE_NAME_SCAN_BR_Y),
+ [ SANE_NAME_SCAN_BR_Y, 'y' ],
+ 'synonyms for SANE_NAME_SCAN_BR_Y'
+);
+is_deeply(
+ Gscan2pdf::Scanner::Options::synonyms('y'),
+ [ SANE_NAME_SCAN_BR_Y, 'y' ],
+ 'synonyms for y'
+);

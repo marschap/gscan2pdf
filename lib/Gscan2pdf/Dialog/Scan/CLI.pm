@@ -662,19 +662,8 @@ sub set_option {
  push @{$current}, { $option->{name} => $val };
 
  # Note any duplicate options, keeping only the last entry.
- my %seen;
-
- my $j = $#{$current};
- while ( $j > -1 ) {    ## no critic (ProhibitMagicNumbers)
-  my ($opt) =
-    keys( %{ $current->[$j] } );
-  $seen{$opt}++;
-  if ( $seen{$opt} > 1 ) {
-   splice @{$current}, $j, 1;
-  }
-  $j--;
- }
- $self->{current_scan_options} = $current;
+ $self->{current_scan_options} =
+   Gscan2pdf::Scanner::Options::prune_duplicates($current);
 
  # Do we need to reload?
  my $reload_triggers = $self->get('reload-triggers');
