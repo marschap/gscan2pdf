@@ -95,7 +95,10 @@ sub SET_PROPERTY {
  if (( defined($newval) and defined($oldval) and $newval ne $oldval )
   or ( defined($newval) xor defined($oldval) ) )
  {
-  if ( $name eq 'logger' ) { $logger = $self->get('logger') }
+  if ( $name eq 'logger' ) {
+   $logger = $newval;
+   $logger->debug('Set logger in Gscan2pdf::Dialog::Scan::CLI');
+  }
   elsif ( $name eq 'cache_options' ) {
    $self->signal_emit( 'changed-cache-options', $newval );
   }

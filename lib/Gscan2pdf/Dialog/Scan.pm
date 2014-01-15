@@ -561,7 +561,14 @@ sub SET_PROPERTY {
  my $name   = $pspec->get_name;
  my $oldval = $self->get($name);
  $self->{$name} = $newval;
- if (( defined($newval) and defined($oldval) and $newval ne $oldval )
+
+ # Have to set logger separately as it has already been set in the subclassed
+ # widget
+ if ( $name eq 'logger' ) {
+  $logger = $newval;
+  $logger->debug('Set logger in Gscan2pdf::Dialog::Scan');
+ }
+ elsif ( ( defined($newval) and defined($oldval) and $newval ne $oldval )
   or ( defined($newval) xor defined($oldval) ) )
  {
   if ( defined $logger ) {
@@ -589,7 +596,6 @@ sub SET_PROPERTY {
     $self->set_device_list($newval);
     $self->signal_emit( 'changed-device-list', $newval )
    }
-   when ('logger') { $logger = $self->get('logger') }
    when ('num_pages') { $self->signal_emit( 'changed-num-pages', $newval ) }
    when ('page_number_start') {
     $self->signal_emit( 'changed-page-number-start', $newval )
