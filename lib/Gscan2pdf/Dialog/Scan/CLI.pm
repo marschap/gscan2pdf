@@ -336,7 +336,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    next;
   }
 
-  if ( not $opt->{cap} & SANE_CAP_SOFT_DETECT ) { next }
+  if ( not( $opt->{cap} & SANE_CAP_SOFT_DETECT ) ) { next }
 
   # Widget
   my ( $widget, $val );

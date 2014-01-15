@@ -112,7 +112,7 @@ sub scan_options {
  }
 
  # Ghost the scan button whilst options being updated
- if ( defined $self->{sbutton} ) { $self->{sbutton}->set_sensitive(FALSE); }
+ if ( defined $self->{sbutton} ) { $self->{sbutton}->set_sensitive(FALSE) }
 
  my $signal;
  Gscan2pdf::Frontend::Sane->open_device(
@@ -158,7 +158,6 @@ sub scan_options {
    $self->destroy;
   }
  );
-
  return;
 }
 
@@ -190,7 +189,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    next;
   }
 
-  if ( not( $opt->{cap} & SANE_CAP_SOFT_DETECT ) ) { next; }
+  if ( not( $opt->{cap} & SANE_CAP_SOFT_DETECT ) ) { next }
 
   # Widget
   my ( $widget, $val );
@@ -224,7 +223,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    if ( $opt->{type} == SANE_TYPE_BOOL )
    {    ## no critic (ProhibitCascadingIfElse)
     $widget = Gtk2::CheckButton->new;
-    if ($val) { $widget->set_active(TRUE); }
+    if ($val) { $widget->set_active(TRUE) }
     $widget->{signal} = $widget->signal_connect(
      toggled => sub {
       my $value = $widget->get_active;
@@ -246,7 +245,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
    # SpinButton
    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
     my $step = 1;
-    if ( $opt->{constraint}{quant} ) { $step = $opt->{constraint}{quant}; }
+    if ( $opt->{constraint}{quant} ) { $step = $opt->{constraint}{quant} }
     $widget = Gtk2::SpinButton->new_with_range( $opt->{constraint}{min},
      $opt->{constraint}{max}, $step );
 
@@ -270,11 +269,11 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
     my $index = 0;
     for ( 0 .. $#{ $opt->{constraint} } ) {
      $widget->append_text( $d_sane->get( $opt->{constraint}[$_] ) );
-     if ( defined $val and $opt->{constraint}[$_] eq $val ) { $index = $_; }
+     if ( defined $val and $opt->{constraint}[$_] eq $val ) { $index = $_ }
     }
 
     # Set the default
-    if ( defined $index ) { $widget->set_active($index); }
+    if ( defined $index ) { $widget->set_active($index) }
     $widget->{signal} = $widget->signal_connect(
      changed => sub {
       my $i = $widget->get_active;
@@ -541,7 +540,7 @@ sub update_options {
    elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
     my ( $step, $page ) = $widget->get_increments;
     $step = 1;
-    if ( $opt->{constraint}{quant} ) { $step = $opt->{constraint}{quant}; }
+    if ( $opt->{constraint}{quant} ) { $step = $opt->{constraint}{quant} }
     $widget->set_range( $opt->{constraint}{min}, $opt->{constraint}{max} );
     $widget->set_increments( $step, $page );
     if ( $self->value_for_active_option( $value, $opt ) ) {
@@ -557,11 +556,9 @@ sub update_options {
     my $index = 0;
     for ( 0 .. $#{ $opt->{constraint} } ) {
      $widget->append_text( $d_sane->get( $opt->{constraint}[$_] ) );
-     if ( defined $value and $opt->{constraint}[$_] eq $value ) {
-      $index = $_;
-     }
+     if ( defined $value and $opt->{constraint}[$_] eq $value ) { $index = $_ }
     }
-    if ( defined $index ) { $widget->set_active($index); }
+    if ( defined $index ) { $widget->set_active($index) }
    }
 
    # Entry
@@ -581,7 +578,7 @@ sub update_options {
 sub set_current_scan_options {
  my ( $self, $profile ) = @_;
 
- if ( not defined($profile) ) { return; }
+ if ( not defined($profile) ) { return }
 
  # Move them first to a dummy array, as otherwise it would be self-modifying
  my $defaults;
@@ -719,9 +716,9 @@ sub set_option_widget {
      if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
       my $index;
       for ( 0 .. $#{ $opt->{constraint} } ) {
-       if ( $opt->{constraint}[$_] eq $val ) { $index = $_; }
+       if ( $opt->{constraint}[$_] eq $val ) { $index = $_ }
       }
-      if ( defined $index ) { $widget->set_active($index); }
+      if ( defined $index ) { $widget->set_active($index) }
       return $i;
      }
     }
@@ -744,10 +741,9 @@ sub scan {
 
  # Get selected number of pages
  my $npages = $self->get('num-pages');
-
- my $start = $self->get('page-number-start');
- my $step  = $self->get('page-number-increment');
- if ( $npages > 0 and $step < 0 ) { $npages = $self->get('max-pages'); }
+ my $start  = $self->get('page-number-start');
+ my $step   = $self->get('page-number-increment');
+ if ( $npages > 0 and $step < 0 ) { $npages = $self->get('max-pages') }
 
  if ( $start == 1 and $step < 0 ) {
   $self->signal_emit( 'process-error', 'scan',
