@@ -974,8 +974,15 @@ sub open_session {
    $tar->extract_file( $_, File::Spec->catfile( $sesdir, basename($_) ) );
   }
  }
- my $sessionref = retrieve( File::Spec->catfile( $sesdir, 'session' ) );
- my %session = %{$sessionref};
+ my $sessionfile = File::Spec->catfile( $sesdir, 'session' );
+ if ( not -r $sessionfile ) {
+  if ($error_callback) {
+   $error_callback->("Error: Unable to read $sessionfile");
+  }
+  return;
+ }
+ my $sessionref = retrieve($sessionfile);
+ my %session    = %{$sessionref};
 
  # Block the row-changed signal whilst adding the scan (row) and sorting it.
  if ( defined $self->{row_changed_signal} ) {

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use File::Path qw(remove_tree);
 
 BEGIN {
@@ -29,6 +29,13 @@ is(
  'The quick brown fox',
  'Basic OCR output extracted'
 );
+
+#########################
+
+$slist = Gscan2pdf::Document->new;
+unlink File::Spec->catfile( $dir, 'session' );
+$slist->set_dir($dir);
+$slist->open_session( undef, sub { pass('trapped missing session file') } );
 
 #########################
 

@@ -74,10 +74,11 @@ use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
 use Gtk2 -init;    # Could just call init separately
 use Gtk2::Gdk::Keysyms;
-use Cwd;                    # To obtain current working directory
-use File::Basename;         # Split filename into dir, file, ext
+use Cwd;               # To obtain current working directory
+use File::Basename;    # Split filename into dir, file, ext
 use File::Copy;
-use File::Temp;             # To create temporary files
+use File::Temp;        # To create temporary files
+use File::Path qw(remove_tree);
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Config::General 2.40;
 use PDF::API2;
@@ -1585,9 +1586,45 @@ sub create_temp_directory {
     )
   {
    push @crashed, $_;
-   flock( $lockfh, LOCK_UN );
-   close $lockfh;
+   flock( $lockfh, LOCK_UN ) or die "Unlocking error on $lockfh ($!)";
+   close $lockfh or warn "Error closing $lockfh ($!)";
   }
+ }
+
+ # Flag those with no session file
+ my @missing;
+ for ( 0 .. $#crashed ) {
+  if ( not -r File::Spec->catfile( $crashed[$_], 'session' ) ) {
+   push @missing, $crashed[$_];
+   splice @crashed, $_, 1;
+  }
+ }
+ if (@missing) {
+  my $dialog = Gtk2::Dialog->new(
+   $d->get('Crashed sessions'),
+   $window, 'modal',
+   'gtk-delete' => 'ok',
+   'gtk-cancel' => 'cancel'
+  );
+  my $text = Gtk2::TextView->new;
+  $text->set_wrap_mode('word');
+  $text->get_buffer->set_text(
+   $d->get(
+        'The following list of sessions cannot be restored.'
+      . ' Please retrieve any images you require from them.'
+      . ' Selected sessions will be deleted.'
+   )
+  );
+  $dialog->vbox->add($text);
+  my $sessionlist =
+    Gtk2::Ex::Simple::List->new( $d->get('Session') => 'text', );
+  push @{ $sessionlist->{data} }, @missing;
+  $dialog->vbox->add($sessionlist);
+  $dialog->show_all;
+  my @selected = $sessionlist->get_selected_indices if ( $dialog->run eq 'ok' );
+  for (@selected) { $_ = $missing[$_] }
+  $dialog->destroy;
+  if (@selected) { remove_tree(@selected) }
  }
 
  # Allow user to pick a crashed session to restore
