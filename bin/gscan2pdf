@@ -5686,7 +5686,9 @@ sub quit {
 # kill all threads
 
 sub kill_threads {
+ $logger->info("Killing Sane thread(s)");
  Gscan2pdf::Frontend::Sane->quit();
+ $logger->info("Killing document thread(s)");
  Gscan2pdf::Document->quit();
  return;
 }
@@ -5909,8 +5911,8 @@ sub register_icon {
 sub kill_subs {
 
  foreach ( keys %helperTag ) {
-  killfam 'TERM', ($_);
   $logger->info("Sending TERM signal to PID $_ and its children");
+  killfam 'TERM', ($_);
  }
  return;
 }
