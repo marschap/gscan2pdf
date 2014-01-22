@@ -962,18 +962,27 @@ sub save_session {
  return;
 }
 
-sub open_session {
+sub open_session_file {
  my ( $self, $filename, $error_callback ) = @_;
- my $sesdir = $self->{dir};
- if ( defined $filename ) {
-  my $tar          = Archive::Tar->new( $filename, TRUE );
-  my @filenamelist = $tar->list_files;
-  my @sessionfile  = grep { /\/session$/xsm } @filenamelist;
-  $sesdir = File::Spec->catfile( $self->{dir}, dirname( $sessionfile[0] ) );
-  for (@filenamelist) {
-   $tar->extract_file( $_, File::Spec->catfile( $sesdir, basename($_) ) );
+ if ( not defined($filename) ) {
+  if ($error_callback) {
+   $error_callback->("Error: session file not supplied.");
   }
+  return;
  }
+ my $tar          = Archive::Tar->new( $filename, TRUE );
+ my @filenamelist = $tar->list_files;
+ my @sessionfile  = grep { /\/session$/xsm } @filenamelist;
+ my $sesdir = File::Spec->catfile( $self->{dir}, dirname( $sessionfile[0] ) );
+ for (@filenamelist) {
+  $tar->extract_file( $_, File::Spec->catfile( $sesdir, basename($_) ) );
+ }
+ $self->open_session( $sesdir, TRUE, $error_callback );
+ return;
+}
+
+sub open_session {
+ my ( $self, $sesdir, $delete, $error_callback ) = @_;
  my $sessionfile = File::Spec->catfile( $sesdir, 'session' );
  if ( not -r $sessionfile ) {
   if ($error_callback) {
@@ -993,13 +1002,11 @@ sub open_session {
  for my $pagenum ( sort { $a <=> $b } ( keys(%session) ) ) {
 
   # don't reuse session directory
-  $session{$pagenum}{dir} = $self->{dir};
-
-  # if we have untarred, don't waste space by copying
-  if ( defined $filename ) { $session{$pagenum}{delete} = TRUE }
+  $session{$pagenum}{dir}    = $self->{dir};
+  $session{$pagenum}{delete} = $delete;
 
   # correct the path now that it is relative to the current session dir
-  if ( defined $filename ) {
+  if ( $sesdir ne $self->{dir} ) {
    $session{$pagenum}{filename} =
      File::Spec->catfile( $sesdir, basename( $session{$pagenum}{filename} ) );
   }

@@ -17,7 +17,7 @@ Gscan2pdf::Document->setup(Log::Log4perl::get_logger);
 my $slist = Gscan2pdf::Document->new;
 my $dir = File::Spec->catfile( File::Spec->tmpdir, 'gscan2pdf-tmp' );
 $slist->set_dir($dir);
-$slist->open_session;
+$slist->open_session($dir);
 
 like(
  `file $slist->{data}[0][2]{filename}`,
@@ -35,7 +35,8 @@ is(
 $slist = Gscan2pdf::Document->new;
 unlink File::Spec->catfile( $dir, 'session' );
 $slist->set_dir($dir);
-$slist->open_session( undef, sub { pass('trapped missing session file') } );
+$slist->open_session( undef, undef,
+ sub { pass('trapped missing session file') } );
 
 #########################
 

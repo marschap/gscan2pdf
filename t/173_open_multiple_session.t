@@ -19,7 +19,7 @@ my $slist = Gscan2pdf::Document->new;
 # use fixed name in temporary directory to be able to pick it up as a crashed
 # session in the next test
 $slist->set_dir( File::Spec->catfile( File::Spec->tmpdir, 'gscan2pdf-tmp' ) );
-$slist->open_session('test2.gs2p');
+$slist->open_session_file('test2.gs2p');
 
 # allow up to pick it up as a crashed session in next test
 $slist->save_session;

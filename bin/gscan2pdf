@@ -841,6 +841,11 @@ sub create_menu_bar {
    $d->get('Open image file(s)'), \&open_dialog
   ],
   [
+   'Open crashed session',           undef,
+   $d->get('Open c_rashed session'), undef,
+   $d->get('Open crashed session'),  \&open_session_action
+  ],
+  [
    'Scan',                   'scanner',
    $d->get('S_can'),         '<control>g',
    $d->get('Scan document'), \&scan_dialog
@@ -1073,6 +1078,7 @@ sub create_menu_bar {
   <menu action='File'>
    <menuitem action='New'/>
    <menuitem action='Open'/>
+   <menuitem action='Open crashed session'/>
    <menuitem action='Scan'/>
    <menuitem action='Save'/>
    <menuitem action='Email as PDF'/>
@@ -1651,7 +1657,7 @@ sub create_temp_directory {
      File::Spec->catfile( $session, 'lockfile' )
      or die "Cannot open lockfile\n";
    flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
-   open_session();
+   open_session($session);
   }
  }
 
@@ -1837,11 +1843,48 @@ sub add_filter {
  return;
 }
 
-sub open_session {
+sub open_session_file {
  my ($filename) = @_;
  $logger->info("Restoring session in $session");
- $slist->open_session(
+ $slist->open_session_file(
   $filename,
+  sub {
+   my ($message) = @_;
+   show_message_dialog( $window, 'error', 'close', $message );
+  }
+ );
+ update_uimanager();
+ return;
+}
+
+sub open_session_action {
+ my ($action) = @_;
+ my $file_chooser = Gtk2::FileChooserDialog->new(
+  $d->get('Open crashed session'),
+  $window, 'select-folder',
+  'gtk-cancel' => 'cancel',
+  'gtk-ok'     => 'ok'
+ );
+ $file_chooser->set_default_response('ok');
+ $file_chooser->set_current_folder( $SETTING{'cwd'} );
+
+ if ( 'ok' eq $file_chooser->run ) {
+
+  # Update undo/redo buffers
+  take_snapshot();
+
+  my @filename = $file_chooser->get_filenames;
+  open_session( $filename[0] );
+ }
+ $file_chooser->destroy;
+ return;
+}
+
+sub open_session {
+ my ($sesdir) = @_;
+ $logger->info("Restoring session in $session");
+ $slist->open_session(
+  $sesdir, FALSE,
   sub {
    my ($message) = @_;
    show_message_dialog( $window, 'error', 'close', $message );
@@ -1965,7 +2008,7 @@ sub open_dialog {
     finished_callback => sub {
      my ( $info, $pending ) = @_;
      if ( $info->{format} eq 'session file' ) {
-      open_session( $info->{path} );
+      open_session_file( $info->{path} );
      }
      elsif ( $info->{pages} > 1 ) {
       my $windowq = Gscan2pdf::Dialog->new(
