@@ -1571,6 +1571,43 @@ sub drag_motion_callback {
 }
 
 sub create_temp_directory {
+ find_crashed_sessions();
+
+ # Create temporary directory if necessary
+ unless ( defined $session ) {
+  if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
+   mkdir( $SETTING{TMPDIR} ) if ( not -d $SETTING{TMPDIR} );
+   try {
+    $session = File::Temp->newdir( 'gscan2pdf-XXXX', DIR => $SETTING{TMPDIR} );
+   }
+   catch {
+    $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
+    $logger->warn(
+     sprintf(
+      $d->get(
+"Warning: unable to use %s for temporary storage. Defaulting to %s instead."
+      ),
+      $SETTING{TMPDIR},
+      dirname($session)
+     )
+    );
+   };
+  }
+  else {
+   $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
+  }
+  $slist->set_dir($session);
+  open $lockfh, '>',    ## no critic (RequireBriefOpen)
+    File::Spec->catfile( $session, 'lockfile' )
+    or die "Cannot open lockfile\n";
+  flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
+  $slist->save_session;
+  $logger->info("Using $session for temporary files");
+ }
+ return;
+}
+
+sub find_crashed_sessions {
 
  # Look for crashed sessions
  if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
@@ -1592,8 +1629,8 @@ sub create_temp_directory {
     )
   {
    push @crashed, $_;
-   flock( $lockfh, LOCK_UN ) or die "Unlocking error on $lockfh ($!)";
-   close $lockfh or warn "Error closing $lockfh ($!)";
+   flock( $lockfh, LOCK_UN ) or die "Unlocking error on $lockfh ($!)\n";
+   close $lockfh or warn "Error closing $lockfh ($!)\n";
   }
  }
 
@@ -1627,10 +1664,13 @@ sub create_temp_directory {
   push @{ $sessionlist->{data} }, @missing;
   $dialog->vbox->add($sessionlist);
   $dialog->show_all;
-  my @selected = $sessionlist->get_selected_indices if ( $dialog->run eq 'ok' );
-  for (@selected) { $_ = $missing[$_] }
+
+  if ( $dialog->run eq 'ok' ) {
+   my @selected = $sessionlist->get_selected_indices;
+   for (@selected) { $_ = $missing[$_] }
+   if (@selected) { remove_tree(@selected) }
+  }
   $dialog->destroy;
-  if (@selected) { remove_tree(@selected) }
  }
 
  # Allow user to pick a crashed session to restore
@@ -1659,38 +1699,6 @@ sub create_temp_directory {
    flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
    open_session($session);
   }
- }
-
- # Create temporary directory if necessary
- unless ( defined $session ) {
-  if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
-   mkdir( $SETTING{TMPDIR} ) if ( not -d $SETTING{TMPDIR} );
-   try {
-    $session = File::Temp->newdir( 'gscan2pdf-XXXX', DIR => $SETTING{TMPDIR} );
-   }
-   catch {
-    $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
-    $logger->warn(
-     sprintf(
-      $d->get(
-"Warning: unable to use %s for temporary storage. Defaulting to %s instead."
-      ),
-      $SETTING{TMPDIR},
-      dirname($session)
-     )
-    );
-   };
-  }
-  else {
-   $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
-  }
-  $slist->set_dir($session);
-  open $lockfh, '>',    ## no critic (RequireBriefOpen)
-    File::Spec->catfile( $session, 'lockfile' )
-    or die "Cannot open lockfile\n";
-  flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
-  $slist->save_session;
-  $logger->info("Using $session for temporary files");
  }
  return;
 }
