@@ -1664,7 +1664,6 @@ sub create_temp_directory {
    }
    catch {
     $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
-    $slist->set_dir($session);
     $logger->warn(
      sprintf(
       $d->get(
@@ -1678,8 +1677,8 @@ sub create_temp_directory {
   }
   else {
    $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
-   $slist->set_dir($session);
   }
+  $slist->set_dir($session);
   open $lockfh, '>',    ## no critic (RequireBriefOpen)
     File::Spec->catfile( $session, 'lockfile' )
     or die "Cannot open lockfile\n";
@@ -6331,18 +6330,20 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     if ( $SETTING{frontend} ne 'libsane-perl' ) {
      $windows->set( 'visible-scan-options', $SETTING{'visible-scan-options'} );
      $windows->set( 'reload-triggers',      $SETTING{'scan-reload-triggers'} );
+     $SETTING{'scan prefix'}   = $preentry->get_text;
+     $SETTING{'cache options'} = $cbc->get_active;
+     if ( defined $windows ) {
+      $windows->set( 'prefix',        $SETTING{'scan prefix'} );
+      $windows->set( 'cache-options', $SETTING{'cache options'} );
+     }
+     delete $SETTING{cache}
+       if ( defined $SETTING{cache} and not $SETTING{'cache options'} );
     }
    }
    $SETTING{'auto-open-scan-dialog'} = $cbo->get_active;
    $SETTING{'cycle sane handle'}     = $cbcsh->get_active;
    $SETTING{'default filename'}      = $fileentry->get_text;
-   $SETTING{'scan prefix'}           = $preentry->get_text;
-   $SETTING{'cache options'}         = $cbc->get_active;
-   $windows->set( 'cache-options', $SETTING{'cache options'} )
-     if ( defined $windows );
-   delete $SETTING{cache}
-     if ( defined $SETTING{cache} and not $SETTING{'cache options'} );
-   $SETTING{'restore window'} = $cbw->get_active;
+   $SETTING{'restore window'}        = $cbw->get_active;
 
    my @tmpdirs = File::Spec->splitdir($session);
    pop @tmpdirs;    # Remove the top level
