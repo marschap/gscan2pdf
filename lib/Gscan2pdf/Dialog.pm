@@ -37,7 +37,7 @@ use Glib::Object::Subclass Gtk2::Window::,
  ),
   ];
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.2.3';
 
 sub INIT_INSTANCE {
  my $self = shift;

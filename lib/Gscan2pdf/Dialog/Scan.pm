@@ -214,7 +214,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
  ),
   ];
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.2.3';
 
 my ( $d, $d_sane, $logger, $tooltips );
 my $tolerance = 1;
@@ -573,7 +573,7 @@ sub SET_PROPERTY {
  {
   if ( defined $logger ) {
    $logger->debug(
-    "Setting $name from "
+    "Started setting $name from "
       . (
      defined($oldval)
      ? ( ref($oldval) =~ /(?:HASH|ARRAY)/xsm ? Dumper($oldval) : $oldval )
@@ -635,6 +635,22 @@ sub SET_PROPERTY {
    default {
     $self->SUPER::SET_PROPERTY( $pspec, $newval );
    }
+  }
+  if ( defined $logger ) {
+   $logger->debug(
+    "Finished setting $name from "
+      . (
+     defined($oldval)
+     ? ( ref($oldval) =~ /(?:HASH|ARRAY)/xsm ? Dumper($oldval) : $oldval )
+     : 'undef'
+      )
+      . ' to '
+      . (
+     defined($newval)
+     ? ( ref($newval) =~ /(?:HASH|ARRAY)/xsm ? Dumper($newval) : $newval )
+     : 'undef'
+      )
+   );
   }
  }
  return;
