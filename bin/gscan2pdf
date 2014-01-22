@@ -431,7 +431,7 @@ $tcbutton->set_image( Gtk2::Image->new_from_stock( 'gtk-cancel', 'button' ) );
 $thbox->pack_end( $tcbutton, FALSE, FALSE, 0 );
 
 # Open scan dialog in background
-scan_dialog(TRUE) if ('auto-open-scan-dialog');
+scan_dialog(TRUE) if ( $SETTING{'auto-open-scan-dialog'} );
 
 ### Subroutines
 
