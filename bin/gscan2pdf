@@ -1697,6 +1697,7 @@ sub find_crashed_sessions {
      File::Spec->catfile( $session, 'lockfile' )
      or die "Cannot open lockfile\n";
    flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
+   $slist->set_dir($session);
    open_session($session);
   }
  }
