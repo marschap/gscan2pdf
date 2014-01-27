@@ -1523,14 +1523,6 @@ sub selection_changed_callback {
   $view->set_pixbuf(undef);
   undef $current_page;
  }
-
- # If no pages are selected, but some exist, PageRange widgets default to all
- if ( $#page == -1 and $#{ $slist->{data} } > -1 ) {
-  $SETTING{'Page range'} = 'all';
-  foreach (@prlist) {
-   $_->set_active( $SETTING{'Page range'} );
-  }
- }
  return;
 }
 
@@ -2432,7 +2424,14 @@ sub save_PDF {
 
  # Compile list of pages
  my @list_of_pages;
- my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+ my @pagelist = $slist->get_page_index(
+  $SETTING{'Page range'},
+  sub {
+   my ($message) = @_;
+   show_message_dialog( $window, 'error', 'close', $message );
+  }
+ );
+ if ( not @pagelist ) { return }
  for (@pagelist) {
   push @list_of_pages, $slist->{data}[$_][2];
  }
@@ -3131,7 +3130,14 @@ sub save_image {
 
   # Compile list of pages
   my @list_of_pages;
-  my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+  my @pagelist = $slist->get_page_index(
+   $SETTING{'Page range'},
+   sub {
+    my ($message) = @_;
+    show_message_dialog( $window, 'error', 'close', $message );
+   }
+  );
+  if ( not @pagelist ) { return }
   for (@pagelist) {
    push @list_of_pages, $slist->{data}[$_][2];
   }
@@ -3195,7 +3201,14 @@ sub save_TIFF {
 
  # Compile list of pages
  my @list_of_pages;
- my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+ my @pagelist = $slist->get_page_index(
+  $SETTING{'Page range'},
+  sub {
+   my ($message) = @_;
+   show_message_dialog( $window, 'error', 'close', $message );
+  }
+ );
+ if ( not @pagelist ) { return }
  for (@pagelist) {
   push @list_of_pages, $slist->{data}[$_][2];
  }
@@ -3247,7 +3260,14 @@ sub save_djvu {
 
  # Compile list of pages
  my @list_of_pages;
- my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+ my @pagelist = $slist->get_page_index(
+  $SETTING{'Page range'},
+  sub {
+   my ($message) = @_;
+   show_message_dialog( $window, 'error', 'close', $message );
+  }
+ );
+ if ( not @pagelist ) { return }
  for (@pagelist) {
   push @list_of_pages, $slist->{data}[$_][2];
  }
@@ -3296,7 +3316,14 @@ sub save_txt {
 
  # Compile list of pages
  my @list_of_pages;
- my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+ my @pagelist = $slist->get_page_index(
+  $SETTING{'Page range'},
+  sub {
+   my ($message) = @_;
+   show_message_dialog( $window, 'error', 'close', $message );
+  }
+ );
+ if ( not @pagelist ) { return }
  for (@pagelist) {
   push @list_of_pages, $slist->{data}[$_][2];
  }
@@ -3377,7 +3404,14 @@ sub email {
 
    # Compile list of pages
    my @list_of_pages;
-   my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+   my @pagelist = $slist->get_page_index(
+    $SETTING{'Page range'},
+    sub {
+     my ($message) = @_;
+     show_message_dialog( $window, 'error', 'close', $message );
+    }
+   );
+   if ( not @pagelist ) { return }
    for (@pagelist) {
     push @list_of_pages, $slist->{data}[$_][2];
    }
@@ -4894,8 +4928,15 @@ sub threshold {
 
    $SETTING{'threshold tool'} = $spinbutton->get_value;
 
-   my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
-   my $page     = 0;
+   my @pagelist = $slist->get_page_index(
+    $SETTING{'Page range'},
+    sub {
+     my ($message) = @_;
+     show_message_dialog( $window, 'error', 'close', $message );
+    }
+   );
+   if ( not @pagelist ) { return }
+   my $page = 0;
    for my $i (@pagelist) {
     $page++;
     my ( $signal, $pid );
@@ -4956,7 +4997,14 @@ sub negate {
    # Update undo/redo buffers
    take_snapshot();
 
-   my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+   my @pagelist = $slist->get_page_index(
+    $SETTING{'Page range'},
+    sub {
+     my ($message) = @_;
+     show_message_dialog( $window, 'error', 'close', $message );
+    }
+   );
+   if ( not @pagelist ) { return }
    for my $i (@pagelist) {
     my ( $signal, $pid );
     $pid = $slist->negate(
@@ -5082,7 +5130,14 @@ sub unsharp {
    $SETTING{'unsharp amount'}    = $spinbuttona->get_value;
    $SETTING{'unsharp threshold'} = $spinbuttont->get_value;
 
-   my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+   my @pagelist = $slist->get_page_index(
+    $SETTING{'Page range'},
+    sub {
+     my ($message) = @_;
+     show_message_dialog( $window, 'error', 'close', $message );
+    }
+   );
+   if ( not @pagelist ) { return }
    for my $i (@pagelist) {
     my ( $signal, $pid );
     $pid = $slist->unsharp(
@@ -5262,7 +5317,14 @@ sub crop {
    # Update undo/redo buffers
    take_snapshot();
 
-   my @pagelist = $slist->get_page_index( $SETTING{'Page range'} );
+   my @pagelist = $slist->get_page_index(
+    $SETTING{'Page range'},
+    sub {
+     my ($message) = @_;
+     show_message_dialog( $window, 'error', 'close', $message );
+    }
+   );
+   if ( not @pagelist ) { return }
    for my $i (@pagelist) {
     my ( $signal, $pid );
     $pid = $slist->crop(
@@ -5434,9 +5496,17 @@ sub unpaper {
    $SETTING{'unpaper options'} = $unpaper->get_options;
 
    # run unpaper
-   my @pages =
-     indices2pages( $slist->get_page_index( $SETTING{'Page range'} ) );
-   unpaper_page( \@pages, $unpaper->get_cmdline );
+   my @pagelist = indices2pages(
+    $slist->get_page_index(
+     $SETTING{'Page range'},
+     sub {
+      my ($message) = @_;
+      show_message_dialog( $window, 'error', 'close', $message );
+     }
+    )
+   );
+   if ( not @pagelist ) { return }
+   unpaper_page( \@pagelist, $unpaper->get_cmdline );
 
    $windowu->hide;
   }
@@ -5660,14 +5730,17 @@ sub OCR {
      if ( $SETTING{'ocr engine'} eq 'cuneiform' );
 
    # fill $pagelist with filenames depending on which radiobutton is active
-   my @pages =
-     indices2pages( $slist->get_page_index( $SETTING{'Page range'} ) );
-   if ( not @pages ) {
-    show_message_dialog( $windowo, 'error', 'close',
-     $d->get('No page selected') );
-    return;
-   }
-   ocr_page( \@pages );
+   my @pagelist = indices2pages(
+    $slist->get_page_index(
+     $SETTING{'Page range'},
+     sub {
+      my ($message) = @_;
+      show_message_dialog( $window, 'error', 'close', $message );
+     }
+    )
+   );
+   if ( not @pagelist ) { return }
+   ocr_page( \@pagelist );
    $windowo->hide;
   }
  );

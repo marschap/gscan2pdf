@@ -1114,14 +1114,25 @@ sub index2page_number {
 # return array index of pages depending on which radiobutton is active
 
 sub get_page_index {
- my ( $self, $page_range ) = @_;
+ my ( $self, $page_range, $error_callback ) = @_;
+ my @index;
  if ( $page_range eq 'all' ) {
-  return 0 .. $#{ $self->{data} };
+  if ( $#{ $self->{data} } > -1 ) {
+   return 0 .. $#{ $self->{data} };
+  }
+  else {
+   $error_callback->( $d->get('No pages to process') );
+   return;
+  }
  }
  elsif ( $page_range eq 'selected' ) {
-  return $self->get_selected_indices;
+  @index = $self->get_selected_indices;
+  if ( @index == 0 ) {
+   $error_callback->( $d->get('No pages selected') );
+   return;
+  }
  }
- return;
+ return @index;
 }
 
 # Have to roll my own slurp sub to support utf8

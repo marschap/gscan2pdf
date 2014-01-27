@@ -1,8 +1,10 @@
-1.2.3 (22.01.2014):
+1.2.3 (27.01.2014):
 
 * Deal with crashed sessions with no session file
 * Fixed bug setting TMPDIR in preferences
 * Added menu item 'Open crashed session'
+* Don't process empty lists of pages
+  Closes bug #165 "all or selected? a surprise that can bite like snake"
 
 
 1.2.2 (13.01.2014):

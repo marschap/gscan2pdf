@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 17;
+use Test::More tests => 22;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
 
@@ -23,10 +23,20 @@ is( $slist->pages_possible( 1, 1 ),
 is( $slist->pages_possible( 2, -1 ),
  2, 'pages_possible finite backwards in empty document' );
 
+my @selected = $slist->get_page_index( 'all', sub { pass('error in all') } );
+is_deeply( \@selected, [], 'no pages' );
+
 @{ $slist->{data} } = ( [ 2, undef, undef ] );
+@selected =
+  $slist->get_page_index( 'selected', sub { pass('error in selected') } );
+is_deeply( \@selected, [], 'none selected' );
+
 $slist->select(0);
-my @selected = $slist->get_selected_indices;
+@selected =
+  $slist->get_page_index( 'selected', sub { fail('no error in selected') } );
 is_deeply( \@selected, [0], 'selected' );
+@selected = $slist->get_page_index( 'all', sub { fail('no error in all') } );
+is_deeply( \@selected, [0], 'all' );
 
 is( $slist->pages_possible( 2, 1 ), 0,
  'pages_possible 0 due to existing page' );
