@@ -49,6 +49,7 @@
 #    gscan2pdf-announce@lists.sourceforge.net, gscan2pdf-help@lists.sourceforge.net, gnome-announce-list@gnome.org, sane-devel@lists.alioth.debian.org
 #     sudo DIST=sid pbuilder update
 #     DIST=sid pdebuild
+#     lintian -iI --pedantic .changes
 #    check contents with dpkg-deb --contents
 #     dput ftp-master
 

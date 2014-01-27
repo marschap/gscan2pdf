@@ -1,24 +1,12 @@
-gscan2pdf (1.2.3) unstable; urgency=low
-
-  * New upstream release
-
- -- Jeffrey Ratcliffe <jjr@debian.org>  Mon, 27 Jan 2014 22:18:41 +0100
-
-gscan2pdf (1.2.2) unstable; urgency=low
-
-  * New upstream release
-  * Added depends: liblist-moreutils-perl
-
- -- Jeffrey Ratcliffe <jjr@debian.org>  Mon, 13 Jan 2014 21:53:51 +0100
-
-gscan2pdf (1.2.1) unstable; urgency=low
+gscan2pdf (1.2.3-1) unstable; urgency=low
 
   * New upstream release
     Closes: #734854 (gscan2pdf wrong resolution)
+  * Added depends: liblist-moreutils-perl
 
- -- Jeffrey Ratcliffe <jjr@debian.org>  Sun, 12 Jan 2014 00:27:37 +0100
+ -- Jeffrey Ratcliffe <jjr@debian.org>  Mon, 27 Jan 2014 22:18:41 +0100
 
-gscan2pdf (1.2.0) unstable; urgency=low
+gscan2pdf (1.2.0-1) unstable; urgency=low
 
   * New upstream release
     Closes: #701581
@@ -30,44 +18,25 @@ gscan2pdf (1.2.0) unstable; urgency=low
 
  -- Jeffrey Ratcliffe <jjr@debian.org>  Sat, 23 Nov 2013 23:07:51 +0100
 
-gscan2pdf (1.1.3) unstable; urgency=low
+gscan2pdf (1.1.3-1) unstable; urgency=low
 
   * New upstream release
+    Closes: #723784 (gscan2pdf: New upstream version available)
+  * Removed all patches
+    Removed Build-Depends: quilt
+    Updated rules not to use quilt
+  * Bumped standards to 3.9.4 (no changes required)
 
- -- Jeffrey Ratcliffe <jjr@debian.org>  Mon, 25 Feb 2013 11:17:12 +0100
+ -- Jeffrey Ratcliffe <jjr@debian.org>  Tue, 08 Oct 2013 09:38:10 +0200
 
-gscan2pdf (1.1.2) unstable; urgency=low
+gscan2pdf (1.0.4-5) unstable; urgency=low
 
-  * New upstream release
-
- -- Jeffrey Ratcliffe <jjr@debian.org>  Sun, 10 Feb 2013 12:24:24 +0100
-
-gscan2pdf (1.1.1) unstable; urgency=low
-
-  * New upstream release
-
- -- Jeffrey Ratcliffe <jjr@debian.org>  Sat, 02 Feb 2013 10:32:51 +0100
-
-gscan2pdf (1.1.0) unstable; urgency=low
-
-  * New upstream release
+  * Add support for unpaper > 0.3
+    Closes: #680158 (Incompatible with unpaper 0.4.2)
+  * Fix applying default settings with CLI frontends
     Closes: #682818 (Presets aren't working)
-  * Added depends: libtry-tiny-perl
 
- -- Jeffrey Ratcliffe <jjr@debian.org>  Sun, 18 Nov 2012 20:54:51 +0100
-
-gscan2pdf (1.0.6) unstable; urgency=low
-
-  * New upstream release
-
- -- Jeffrey Ratcliffe <jjr@debian.org>  Fri, 20 Jul 2012 22:26:19 +0200
-
-gscan2pdf (1.0.5) unstable; urgency=low
-
-  * New upstream release
-    Closes: #670640 (Can't call method get_cmdline)
-
- -- Jeffrey Ratcliffe <jjr@debian.org>  Sun, 15 Jul 2012 12:18:16 +0200
+ -- Jeffrey Ratcliffe <jjr@debian.org>  Tue, 31 Jul 2012 16:14:59 +0200
 
 gscan2pdf (1.0.4-4) unstable; urgency=low
 
