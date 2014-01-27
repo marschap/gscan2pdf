@@ -1844,16 +1844,16 @@ sub add_filter {
  return;
 }
 
+sub error_callback {
+ my ($message) = @_;
+ show_message_dialog( $window, 'error', 'close', $message );
+ return;
+}
+
 sub open_session_file {
  my ($filename) = @_;
  $logger->info("Restoring session in $session");
- $slist->open_session_file(
-  $filename,
-  sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  }
- );
+ $slist->open_session_file( $filename, \&error_callback );
  update_uimanager();
  return;
 }
@@ -1884,13 +1884,7 @@ sub open_session_action {
 sub open_session {
  my ($sesdir) = @_;
  $logger->info("Restoring session in $session");
- $slist->open_session(
-  $sesdir, FALSE,
-  sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  }
- );
+ $slist->open_session( $sesdir, FALSE, \&error_callback );
  update_uimanager();
  return;
 }
@@ -2063,10 +2057,7 @@ sub open_dialog {
       import_file( $info, 1, 1 );
      }
     },
-    error_callback => sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    }
+    error_callback => \&error_callback
    );
   }
  }
@@ -2105,10 +2096,7 @@ sub import_file {
    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    update_uimanager();
   },
-  error_callback => sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  }
+  error_callback => \&error_callback
  );
  return;
 }
@@ -2424,13 +2412,8 @@ sub save_PDF {
 
  # Compile list of pages
  my @list_of_pages;
- my @pagelist = $slist->get_page_index(
-  $SETTING{'Page range'},
-  sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  }
- );
+ my @pagelist =
+   $slist->get_page_index( $SETTING{'Page range'}, \&error_callback );
  if ( not @pagelist ) { return }
  for (@pagelist) {
   push @list_of_pages, $slist->{data}[$_][2];
@@ -2474,10 +2457,7 @@ sub save_PDF {
     and $SETTING{'view files toggle'} );
    $logger->debug("Finished saving $filename");
   },
-  error_callback => sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  }
+  error_callback => \&error_callback
  );
  return;
 }
@@ -3130,13 +3110,8 @@ sub save_image {
 
   # Compile list of pages
   my @list_of_pages;
-  my @pagelist = $slist->get_page_index(
-   $SETTING{'Page range'},
-   sub {
-    my ($message) = @_;
-    show_message_dialog( $window, 'error', 'close', $message );
-   }
-  );
+  my @pagelist =
+    $slist->get_page_index( $SETTING{'Page range'}, \&error_callback );
   if ( not @pagelist ) { return }
   for (@pagelist) {
    push @list_of_pages, $slist->{data}[$_][2];
@@ -3184,10 +3159,7 @@ sub save_image {
      and $SETTING{'view files toggle'} );
     $logger->debug("Finished saving $filename");
    },
-   error_callback => sub {
-    my ($message) = @_;
-    show_message_dialog( $window, 'error', 'close', $message );
-   }
+   error_callback => \&error_callback
   );
 
   $windowi->hide if defined $windowi;
@@ -3201,13 +3173,8 @@ sub save_TIFF {
 
  # Compile list of pages
  my @list_of_pages;
- my @pagelist = $slist->get_page_index(
-  $SETTING{'Page range'},
-  sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  }
- );
+ my @pagelist =
+   $slist->get_page_index( $SETTING{'Page range'}, \&error_callback );
  if ( not @pagelist ) { return }
  for (@pagelist) {
   push @list_of_pages, $slist->{data}[$_][2];
@@ -3247,10 +3214,7 @@ sub save_TIFF {
     and $SETTING{'view files toggle'} );
    $logger->debug("Finished saving $filename");
   },
-  error_callback => sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  }
+  error_callback => \&error_callback
  );
  return;
 }
@@ -3260,13 +3224,8 @@ sub save_djvu {
 
  # Compile list of pages
  my @list_of_pages;
- my @pagelist = $slist->get_page_index(
-  $SETTING{'Page range'},
-  sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  }
- );
+ my @pagelist =
+   $slist->get_page_index( $SETTING{'Page range'}, \&error_callback );
  if ( not @pagelist ) { return }
  for (@pagelist) {
   push @list_of_pages, $slist->{data}[$_][2];
@@ -3302,10 +3261,7 @@ sub save_djvu {
     and $SETTING{'view files toggle'} );
    $logger->debug("Finished saving $filename");
   },
-  error_callback => sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  }
+  error_callback => \&error_callback
  );
 
  return;
@@ -3316,13 +3272,8 @@ sub save_txt {
 
  # Compile list of pages
  my @list_of_pages;
- my @pagelist = $slist->get_page_index(
-  $SETTING{'Page range'},
-  sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  }
- );
+ my @pagelist =
+   $slist->get_page_index( $SETTING{'Page range'}, \&error_callback );
  if ( not @pagelist ) { return }
  for (@pagelist) {
   push @list_of_pages, $slist->{data}[$_][2];
@@ -3353,10 +3304,7 @@ sub save_txt {
     and $SETTING{'view files toggle'} );
    $logger->debug("Finished saving $filename");
   },
-  error_callback => sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  }
+  error_callback => \&error_callback
  );
  return;
 }
@@ -3404,13 +3352,8 @@ sub email {
 
    # Compile list of pages
    my @list_of_pages;
-   my @pagelist = $slist->get_page_index(
-    $SETTING{'Page range'},
-    sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    }
-   );
+   my @pagelist =
+     $slist->get_page_index( $SETTING{'Page range'}, \&error_callback );
    if ( not @pagelist ) { return }
    for (@pagelist) {
     push @list_of_pages, $slist->{data}[$_][2];
@@ -3494,10 +3437,7 @@ sub email {
       $d->get('Error creating email') )
        if ( system($mua_string) );
     },
-    error_callback => sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    }
+    error_callback => \&error_callback
    );
 
    $windowe->hide;
@@ -4808,10 +4748,7 @@ sub rotate {
     $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
-   error_callback => sub {
-    my ($message) = @_;
-    show_message_dialog( $window, 'error', 'close', $message );
-   },
+   error_callback   => \&error_callback,
    display_callback => sub {
     my ($new_page) = @_;
     display_image($new_page);
@@ -4856,10 +4793,7 @@ sub analyse {
      select_blank_pages()                          if $select_blank;
      select_dark_pages()                           if $select_dark;
     },
-    error_callback => sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    },
+    error_callback => \&error_callback,
    );
   }
  }
@@ -4928,13 +4862,8 @@ sub threshold {
 
    $SETTING{'threshold tool'} = $spinbutton->get_value;
 
-   my @pagelist = $slist->get_page_index(
-    $SETTING{'Page range'},
-    sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    }
-   );
+   my @pagelist =
+     $slist->get_page_index( $SETTING{'Page range'}, \&error_callback );
    if ( not @pagelist ) { return }
    my $page = 0;
    for my $i (@pagelist) {
@@ -4956,10 +4885,7 @@ sub threshold {
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
-     error_callback => sub {
-      my ($message) = @_;
-      show_message_dialog( $window, 'error', 'close', $message );
-     },
+     error_callback   => \&error_callback,
      display_callback => sub {
       my ($new_page) = @_;
       display_image($new_page);
@@ -4997,13 +4923,8 @@ sub negate {
    # Update undo/redo buffers
    take_snapshot();
 
-   my @pagelist = $slist->get_page_index(
-    $SETTING{'Page range'},
-    sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    }
-   );
+   my @pagelist =
+     $slist->get_page_index( $SETTING{'Page range'}, \&error_callback );
    if ( not @pagelist ) { return }
    for my $i (@pagelist) {
     my ( $signal, $pid );
@@ -5022,10 +4943,7 @@ sub negate {
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
-     error_callback => sub {
-      my ($message) = @_;
-      show_message_dialog( $window, 'error', 'close', $message );
-     },
+     error_callback   => \&error_callback,
      display_callback => sub {
       my ($new_page) = @_;
       display_image($new_page);
@@ -5130,13 +5048,8 @@ sub unsharp {
    $SETTING{'unsharp amount'}    = $spinbuttona->get_value;
    $SETTING{'unsharp threshold'} = $spinbuttont->get_value;
 
-   my @pagelist = $slist->get_page_index(
-    $SETTING{'Page range'},
-    sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    }
-   );
+   my @pagelist =
+     $slist->get_page_index( $SETTING{'Page range'}, \&error_callback );
    if ( not @pagelist ) { return }
    for my $i (@pagelist) {
     my ( $signal, $pid );
@@ -5159,10 +5072,7 @@ sub unsharp {
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
-     error_callback => sub {
-      my ($message) = @_;
-      show_message_dialog( $window, 'error', 'close', $message );
-     },
+     error_callback   => \&error_callback,
      display_callback => sub {
       my ($new_page) = @_;
       display_image($new_page);
@@ -5317,13 +5227,8 @@ sub crop {
    # Update undo/redo buffers
    take_snapshot();
 
-   my @pagelist = $slist->get_page_index(
-    $SETTING{'Page range'},
-    sub {
-     my ($message) = @_;
-     show_message_dialog( $window, 'error', 'close', $message );
-    }
-   );
+   my @pagelist =
+     $slist->get_page_index( $SETTING{'Page range'}, \&error_callback );
    if ( not @pagelist ) { return }
    for my $i (@pagelist) {
     my ( $signal, $pid );
@@ -5346,10 +5251,7 @@ sub crop {
       $thbox->hide_all unless $pending;
       $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
      },
-     error_callback => sub {
-      my ($message) = @_;
-      show_message_dialog( $window, 'error', 'close', $message );
-     },
+     error_callback   => \&error_callback,
      display_callback => sub {
       my ($new_page) = @_;
       display_image($new_page);
@@ -5403,10 +5305,7 @@ sub user_defined_tool {
     $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
-   error_callback => sub {
-    my ($message) = @_;
-    show_message_dialog( $window, 'error', 'close', $message );
-   },
+   error_callback   => \&error_callback,
    display_callback => sub {
     my ($new_page) = @_;
     display_image($new_page);
@@ -5444,10 +5343,7 @@ sub unpaper_page {
     $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
-   error_callback => sub {
-    my ($message) = @_;
-    show_message_dialog( $window, 'error', 'close', $message );
-   },
+   error_callback   => \&error_callback,
    display_callback => sub {
     my ($new_page) = @_;
     display_image($new_page);
@@ -5497,14 +5393,7 @@ sub unpaper {
 
    # run unpaper
    my @pagelist = indices2pages(
-    $slist->get_page_index(
-     $SETTING{'Page range'},
-     sub {
-      my ($message) = @_;
-      show_message_dialog( $window, 'error', 'close', $message );
-     }
-    )
-   );
+    $slist->get_page_index( $SETTING{'Page range'}, \&error_callback ) );
    if ( not @pagelist ) { return }
    unpaper_page( \@pagelist, $unpaper->get_cmdline );
 
@@ -5541,10 +5430,7 @@ sub ocr_page {
    $thbox->hide_all unless $pending;
    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
   },
-  error_callback => sub {
-   my ($message) = @_;
-   show_message_dialog( $window, 'error', 'close', $message );
-  },
+  error_callback   => \&error_callback,
   display_callback => sub {
    my ($new_page) = @_;
    my @page = $slist->get_selected_indices;
@@ -5731,14 +5617,7 @@ sub OCR {
 
    # fill $pagelist with filenames depending on which radiobutton is active
    my @pagelist = indices2pages(
-    $slist->get_page_index(
-     $SETTING{'Page range'},
-     sub {
-      my ($message) = @_;
-      show_message_dialog( $window, 'error', 'close', $message );
-     }
-    )
-   );
+    $slist->get_page_index( $SETTING{'Page range'}, \&error_callback ) );
    if ( not @pagelist ) { return }
    ocr_page( \@pagelist );
    $windowo->hide;
@@ -6085,10 +5964,7 @@ sub compress_temp {
     $thbox->hide_all unless $pending;
     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
    },
-   error_callback => sub {
-    my ($message) = @_;
-    show_message_dialog( $window, 'error', 'close', $message );
-   },
+   error_callback => \&error_callback,
   );
  }
  return;
