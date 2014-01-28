@@ -55,8 +55,9 @@ sub SET_PROPERTY {
  my ( $self, $pspec, $newval ) = @_;
  my $name = $pspec->get_name;
  $self->{$name} = $newval;
- $self->get('vbox')->set( 'border-width', $newval )
-   if ( $name eq 'border_width' );
+ if ( $name eq 'border_width' ) {
+  $self->get('vbox')->set( 'border-width', $newval );
+ }
  return;
 }
 
@@ -72,7 +73,7 @@ sub on_delete_event {
 
 sub on_key_press_event {
  my ( $widget, $event ) = @_;
- unless ( $event->keyval ==
+ if ( $event->keyval !=
   $Gtk2::Gdk::Keysyms{Escape} )    ## no critic (ProhibitPackageVars)
  {
   $widget->signal_chain_from_overridden($event);
