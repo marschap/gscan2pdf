@@ -1117,7 +1117,7 @@ sub get_page_index {
  my ( $self, $page_range, $error_callback ) = @_;
  my @index;
  if ( $page_range eq 'all' ) {
-  if ( $#{ $self->{data} } > -1 ) {
+  if ( @{ $self->{data} } ) {
    return 0 .. $#{ $self->{data} };
   }
   else {
