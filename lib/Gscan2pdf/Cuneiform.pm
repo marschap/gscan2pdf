@@ -4,12 +4,15 @@ use 5.008005;
 use strict;
 use warnings;
 use Carp;
-use File::Temp;             # To create temporary files
-use Gscan2pdf::Document;    # for slurp
+use File::Temp;                      # To create temporary files
+use Gscan2pdf::Document;             # for slurp
 use version;
+use English qw( -no_match_vars );    # for $PROCESS_ID
 
 our $VERSION = '1.2.3';
 
+my $SPACE = q{ };
+my $EMPTY = q{};
 my ( %languages, $version, $setup, $logger );
 
 sub setup {
@@ -17,19 +20,17 @@ sub setup {
  return $version if $setup;
 
  my ( $out, $err ) = Gscan2pdf::Document::open_three('which cuneiform');
- return if ( not defined($out) or $out eq '' );
+ return if ( not defined($out) or $out eq $EMPTY );
 
  ( $out, $err ) = Gscan2pdf::Document::open_three("cuneiform");
- if ( $out =~ /^Cuneiform\ for\ Linux\ ([\d\.]+)/x ) {
-  $version = $1;
- }
+ if ( $out =~ /^Cuneiform\ for\ Linux\ ([\d\.]+)/xsm ) { $version = $1 }
 
  $setup = 1;
  return $version;
 }
 
 sub languages {
- unless (%languages) {
+ if ( not %languages ) {
 
   # cuneiform language codes
   my %lang = (
@@ -66,9 +67,9 @@ sub languages {
   ( my $output, undef ) = Gscan2pdf::Document::open_three($cmd);
 
   my $langs;
-  if ( $output =~ /Supported\ languages:\ (.*)\./x ) {
+  if ( $output =~ /Supported\ languages:\ (.*)\./xsm ) {
    $langs = $1;
-   for ( split " ", $langs ) {
+   for ( split $SPACE, $langs ) {
     if ( defined $lang{$_} ) {
      $languages{$_} = $lang{$_};
     }
@@ -87,13 +88,13 @@ sub languages {
 sub hocr {
  my ( $class, $file, $language, $loggr, $pidfile ) = @_;
  my ($bmp);
- Gscan2pdf::Cuneiform->setup($loggr) unless $setup;
+ if ( not $setup ) { Gscan2pdf::Cuneiform->setup($loggr) }
 
  # Temporary filename for output
  my $txt = File::Temp->new( SUFFIX => '.txt' );
 
  if ( version->parse("v$version") < version->parse('v1.1.0')
-  and $file !~ /\.bmp$/x )
+  and $file !~ /\.bmp$/xsm )
  {
 
   # Temporary filename for new file
@@ -112,7 +113,7 @@ sub hocr {
  my $cmd = "cuneiform -l $language -f hocr -o $txt $bmp";
  $logger->info($cmd);
  if ( defined $pidfile ) {
-  system("echo $$ > $pidfile;$cmd");
+  system("echo $PROCESS_ID > $pidfile;$cmd");
  }
  else {
   system($cmd);
