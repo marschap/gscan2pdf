@@ -141,7 +141,7 @@ sub print_option {
  }
 
  # print the option
- if ( $opt->{name} =~ /^(?:x|y|t|l)$/x ) {
+ if ( $opt->{name} =~ /^[xytl]$/xsm ) {
   printf "    -%s", $opt->{name};
  }
  else {
@@ -325,7 +325,7 @@ sub parse_scalar {
   $str =~ /^
                (\d*\.?\d*) # value
                (cm|mm|in|\"|b|B|dpi|%|us)? # optional unit
-              /x
+              /xsm
    )
  {
   $v    = $1;
@@ -381,7 +381,7 @@ sub parse_vector {
  my $separator  = '';
  my ( @vector, $value );
  do {
-  if ( $str =~ /^\[(\d*\.?\d*)(\])?/x ) {
+  if ( $str =~ /^\[(\d*\.?\d*)(\])?/xsm ) {
    $index = $1;
    if ( $2 ne '\]' ) {
     print STDERR "$prog_name: option --$opt->{name}: closing bracket missing "
@@ -403,7 +403,7 @@ sub parse_vector {
   # read value
   ( $value, $str ) = parse_scalar( $opt, $str );
 
-  if ( $str ne '' and $str !~ /^[-,]/x ) {
+  if ( $str ne '' and $str !~ /^[-,]/xsm ) {
    print STDERR
 "$prog_name: option --$opt->{name}: illegal separator (rest of option: $str)\n";
    exit(1);
@@ -588,7 +588,7 @@ sub process_backend_option {
 
  if ( ( $opt->{cap} & SANE_CAP_AUTOMATIC )
   and $optarg
-  and $optarg =~ /^auto$/xi )
+  and $optarg =~ /^auto$/xsmi )
  {
   $device->set_auto($optnum);
   if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
@@ -604,10 +604,10 @@ sub process_backend_option {
   when (SANE_TYPE_BOOL) {
    $value = 1;    # no argument means option is set
    if ($optarg) {
-    if ( $optarg =~ /^yes$/xi ) {
+    if ( $optarg =~ /^yes$/xsmi ) {
      $value = 1;
     }
-    elsif ( $optarg =~ /^no$/xi ) {
+    elsif ( $optarg =~ /^no$/xsmi ) {
      $value = 0;
     }
     else {
@@ -1203,12 +1203,12 @@ sub process_arguments {
  # this myself
  for (@ARGV_old) {
   my $ch;
-  if (/--(.*)/x) {
+  if (/--(.*)/xsm) {
    $ch = $1;
    my $i = index( $ch, '=' );
    if ( $i > -1 ) { $ch = substr( $ch, 0, $i ) }
   }
-  elsif (/-(.)/x) {
+  elsif (/-(.)/xsm) {
    $ch = $1;
   }
   else {
@@ -1297,11 +1297,11 @@ sub list_devices_verbose {
  else {
   for ( my $i = 0 ; $i < @device_list ; $i++ ) {
    my $string_format = $options{f};
-   $string_format =~ s/%d/$device_list[$i]->{name}/g;
-   $string_format =~ s/%v/$device_list[$i]->{vendor}/g;
-   $string_format =~ s/%m/$device_list[$i]->{model}/g;
-   $string_format =~ s/%t/$device_list[$i]->{type}/g;
-   $string_format =~ s/%i/$i/g;
+   $string_format =~ s/%d/$device_list[$i]->{name}/gsm;
+   $string_format =~ s/%v/$device_list[$i]->{vendor}/gsm;
+   $string_format =~ s/%m/$device_list[$i]->{model}/gsm;
+   $string_format =~ s/%t/$device_list[$i]->{type}/gsm;
+   $string_format =~ s/%i/$i/gsm;
    print $string_format;
   }
  }
@@ -1337,7 +1337,7 @@ sub open_device {
  $device = Sane::Device->open($devname);
  if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
   print STDERR "$prog_name: open of device $devname failed: $Sane::STATUS\n";
-  if ( $devname =~ /^\// ) {
+  if ( $devname =~ /^\//sm ) {
    print STDERR "\nYou seem to have specified a UNIX device name, "
      . "or filename instead of selecting\nthe SANE scanner or "
      . "image acquisition device you want to use. As an example,\n"
