@@ -7,6 +7,7 @@ use Sane;
 use Getopt::Long qw(:config no_ignore_case pass_through);
 use File::Basename;
 use IO::Handle;
+use English qw( -no_match_vars );    # for $PROGRAM_NAME
 use Readonly;
 Readonly my $BUFFER_SIZE   => ( 32 * 1024 );     # default size
 Readonly my $START_COLUMN  => 8;
@@ -45,7 +46,7 @@ my $progress         = 0;
 my $batch_double     = 0;
 my $batch_prompt     = 0;
 my $dont_scan        = 0;
-my $prog_name        = basename($0);
+my $prog_name        = basename($PROGRAM_NAME);
 my $SPACE            = q{ };
 my $EMPTY            = q{};
 my $DASH             = q{-};
@@ -1069,7 +1070,7 @@ sub scan_pages {    ## no critic (ProhibitExcessComplexity)
   }
   elsif ( $Sane::STATUS != SANE_STATUS_GOOD ) {
    if ($batch) {
-    close($fh);
+    close($fh) or warn "cannot close file\n";
     unlink($part_path);
    }
    last;
