@@ -34,6 +34,9 @@ my $batch_double      = 0;
 my $batch_prompt      = 0;
 my $dont_scan         = 0;
 my $prog_name         = basename($0);
+my $SPACE             = q{ };
+my $EMPTY             = q{};
+my $DASH              = q{-};
 my @args              = (
  \%options,
  'd|device-name=s' => \$devname,
@@ -92,7 +95,7 @@ sub print_unit {
    print "dpi";
   }
   when (SANE_UNIT_PERCENT) {
-   print "%";
+   print q{%};
   }
   when (SANE_UNIT_MICROSECOND) {
    print "us";
@@ -170,7 +173,7 @@ sub print_option {
  my $start      = 0;
  for my $pos ( 0 .. length( $opt->{desc} ) - 1 ) {
   ++$column;
-  if ( substr( $opt->{desc}, $pos, 1 ) eq ' ' ) {
+  if ( substr( $opt->{desc}, $pos, 1 ) eq $SPACE ) {
    $last_break = $pos;
   }
   elsif ( substr( $opt->{desc}, $pos, 1 ) eq "\n" ) {
@@ -199,7 +202,7 @@ sub print_option_choices {      ## no critic (ProhibitExcessComplexity)
   print "yes|no)]";
  }
  elsif ( $opt->{type} != SANE_TYPE_BUTTON ) {
-  print ' ';
+  print $SPACE;
   if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) {
    print "auto|";
   }
@@ -239,7 +242,7 @@ sub print_option_choices {      ## no critic (ProhibitExcessComplexity)
    or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
   {
    for my $i ( 0 .. $#{ $opt->{constraint} } ) {
-    if ( $i > 0 ) { print '|' }
+    if ( $i > 0 ) { print q{|} }
     my $string_format = $opt->{type} == SANE_TYPE_FIXED ? '%g' : '%s';
 
     printf $string_format, $opt->{constraint}[$i];
@@ -330,7 +333,7 @@ sub parse_scalar {
  {
   $v    = $1;
   $unit = $2;
-  if ( not defined($unit) ) { $unit = '' }
+  if ( not defined($unit) ) { $unit = $EMPTY }
  }
  else {
   print STDERR
@@ -378,7 +381,7 @@ sub parse_vector {
  my $index      = -1;
  my $prev_value = 0;
  my $prev_index = 0;
- my $separator  = '';
+ my $separator  = $EMPTY;
  my ( @vector, $value );
  do {
   if ( $str =~ /^\[(\d*\.?\d*)(\])?/xsm ) {
@@ -403,7 +406,7 @@ sub parse_vector {
   # read value
   ( $value, $str ) = parse_scalar( $opt, $str );
 
-  if ( $str ne '' and $str !~ /^[-,]/xsm ) {
+  if ( $str ne $EMPTY and $str !~ /^[-,]/xsm ) {
    print STDERR
 "$prog_name: option --$opt->{name}: illegal separator (rest of option: $str)\n";
    exit(1);
@@ -411,7 +414,7 @@ sub parse_vector {
 
   # store value:
   $vector[$index] = $value;
-  if ( $separator eq '-' ) {
+  if ( $separator eq $DASH ) {
 
    # interpolate
    my $v = $prev_value;
@@ -426,7 +429,7 @@ sub parse_vector {
   $prev_index = $index;
   $prev_value = $value;
   $separator  = substr( $str, 0, 1 );
- } while ( $separator eq ',' or $separator eq '-' );
+ } while ( $separator eq q{,} or $separator eq $DASH );
 
  if ( $verbose > 2 ) {
   print STDERR "$prog_name: value for --$opt->{name} is: ";
@@ -707,7 +710,7 @@ sub scan_it {
       buffer_data( $parm, $buffer, $len, \%image, $offset, $must_buffer );
 
     if ( $verbose and $parm->{depth} == 8 ) {
-     for ( split( //, $buffer ) ) {
+     for ( split( $EMPTY, $buffer ) ) {
       my $c = ord;
       if ( $c >= $max ) {
        $max = $c;
@@ -963,7 +966,7 @@ sub write_buffer {
 sub scan_pages {    ## no critic (ProhibitExcessComplexity)
  my $n = $batch_start_at;
 
- if ( $batch and ( not defined($format) or $format eq '' ) ) {
+ if ( $batch and ( not defined($format) or $format eq $EMPTY ) ) {
 
   #  if ($output_format == OUTPUT_TIFF) {
   #   $format = "out%d.tif";
@@ -1206,7 +1209,7 @@ sub process_arguments {
   my $ch;
   if (/--(.*)/xsm) {
    $ch = $1;
-   my $i = index( $ch, '=' );
+   my $i = index( $ch, q{=} );
    if ( $i > -1 ) { $ch = substr( $ch, 0, $i ) }
   }
   elsif (/-(.)/xsm) {
@@ -1265,7 +1268,7 @@ sub list_device_names {
     $column = 4;
    }
    if ( $column > 4 ) {
-    print ' ';
+    print $SPACE;
     $column += 1;
    }
    print $_->{name};
