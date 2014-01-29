@@ -168,7 +168,7 @@ sub print_option {
  my $column     = 8;
  my $last_break = 0;
  my $start      = 0;
- for ( my $pos = 0 ; $pos < length( $opt->{desc} ) ; ++$pos ) {
+ for my $pos ( 0 .. length( $opt->{desc} ) - 1 ) {
   ++$column;
   if ( substr( $opt->{desc}, $pos, 1 ) eq ' ' ) {
    $last_break = $pos;
@@ -238,7 +238,7 @@ sub print_option_choices {      ## no critic (ProhibitExcessComplexity)
   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
    or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
   {
-   for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
+   for my $i ( 0 .. $#{ $opt->{constraint} } ) {
     if ( $i > 0 ) { print '|' }
     my $string_format = $opt->{type} == SANE_TYPE_FIXED ? '%g' : '%s';
 
@@ -417,7 +417,7 @@ sub parse_vector {
    my $v = $prev_value;
    my $slope = ( $value - $v ) / ( $index - $prev_index );
 
-   for ( my $i = $prev_index + 1 ; $i < $index ; ++$i ) {
+   for my $i ( $prev_index + 1 .. $index - 1 ) {
     $v += $slope;
     $vector[$i] = $v;
    }
@@ -455,7 +455,7 @@ sub fetch_options {
  }
 
  # build the full table of long options
- for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
+ for my $i ( 1 .. $num_dev_options - 1 ) {
   $opt = $device->get_option_descriptor($i);
   if ( not defined($opt) ) {
    print STDERR "Could not get option descriptor for option $i\n";
@@ -489,7 +489,7 @@ sub fetch_options {
 
  # Initialize width & height options based on backend default
  # values for top-left x/y and bottom-right x/y:
- for ( my $i = 0 ; $i < 2 ; ++$i ) {
+ for my $i ( 0 .. 1 ) {
   if ( $window[$i] and not $window_val_user[$i] ) {
    $window_val[$i] = $device->get_option( $window[$i] );
    if ( $window[ $i + 2 ] ) {
@@ -867,7 +867,7 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
    or $parm->{format} == SANE_FRAME_GREEN
    or $parm->{format} == SANE_FRAME_BLUE )
   {
-   for ( my $i = 0 ; $i < $len ; ++$i ) {
+   for my $i ( 0 .. $len - 1 ) {
     $image->{data}[ $offset + 3 * $i ] = substr( $buffer, $i, 1 );
    }
    $offset += 3 * $len;
@@ -875,7 +875,7 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
   elsif ( $parm->{format} == SANE_FRAME_RGB
    or $parm->{format} == SANE_FRAME_GRAY )
   {
-   for ( my $i = 0 ; $i < $len ; ++$i ) {
+   for my $i ( 0 .. $len - 1 ) {
     $image->{data}[ $offset + $i ] = substr( $buffer, $i, 1 );
    }
    $offset += $len;
@@ -1135,14 +1135,15 @@ sub test_it {
  goto cleanup if ( $Sane::STATUS != SANE_STATUS_GOOD );
 
  my $i;
- for ( $i = 2 ; $i < $parm->{bytes_per_line} * 2 ; $i *= 2 ) {
+ for ( $i = 2 ; $i < $parm->{bytes_per_line} * 2 ; $i *= 2 )
+ {    ## no critic (ProhibitCStyleForLoops)
   printf STDERR "$prog_name: stepped read, %d bytes... \t", $i;
   ( $image{data}, $len ) = $device->read($i);
   pass_fail( $i, $len, $image{data} );
   goto cleanup if ( $Sane::STATUS != SANE_STATUS_GOOD );
  }
 
- for ( $i /= 2 ; $i > 2 ; $i /= 2 ) {
+ for ( $i /= 2 ; $i > 2 ; $i /= 2 ) {    ## no critic (ProhibitCStyleForLoops)
   printf STDERR "$prog_name: stepped read, %d bytes... \t", $i - 1;
   ( $image{data}, $len ) = $device->read( $i - 1 );
   pass_fail( $i - 1, $len, $image{data} );
@@ -1162,11 +1163,11 @@ cleanup:
 sub print_options {
  ( $device, my $num_dev_options, my $ro ) = @_;
 
- for ( my $i = 1 ; $i < $num_dev_options ; ++$i ) {
+ for my $i ( 1 .. $num_dev_options - 1 ) {
   my $opt;
 
   # scan area uses modified option struct
-  for ( my $j = 0 ; $j < 4 ; ++$j ) {
+  for my $j ( 0 .. 3 ) {
    if ( $i == $window[$j] ) {
     $opt = $window_option[$j];
    }
@@ -1238,7 +1239,7 @@ sub process_arguments {
  }
 
  # convert x/y to br_x/br_y
- for ( my $index = 0 ; $index < 2 ; ++$index ) {
+ for my $index ( 0 .. 1 ) {
   if ( $window[$index] and defined( $window_val[$index] ) ) {
    my $val = $window_val[$index];
    if ( $window[ $index + 2 ] ) {
@@ -1295,7 +1296,7 @@ sub list_devices_verbose {
   }
  }
  else {
-  for ( my $i = 0 ; $i < @device_list ; $i++ ) {
+  for my $i ( 0 .. $#device_list ) {
    my $string_format = $options{f};
    $string_format =~ s/%d/$device_list[$i]->{name}/gsm;
    $string_format =~ s/%v/$device_list[$i]->{vendor}/gsm;
