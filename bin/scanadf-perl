@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl                      ## no critic (RequireVersionVar)
 
 use warnings;
 use strict;
@@ -8,6 +8,7 @@ use Data::Dumper;
 use Getopt::Long qw(:config no_ignore_case pass_through);
 use File::Basename;
 use IO::Handle;
+use English qw( -no_match_vars );    # for $PROGRAM_NAME, $EVAL_ERROR
 use Readonly;
 Readonly my $BUFFER_SIZE     => ( 32 * 1024 );     # default size
 Readonly my $SANE_FRAME_TEXT => 10;
@@ -43,13 +44,13 @@ my $br_y             = 0;
 my $w_x              = 0;
 my $h_y              = 0;
 my $resolution_value = 0;
-my $prog_name        = basename($0);
+my $prog_name        = basename($PROGRAM_NAME);
 my $no_overwrite     = 0;
-my $outputFile       = "image-%04d";    # file name(format) to write output to
-my $raw              = SANE_FALSE;
-my $scanScript;                         # script to run at end of scan
-my $startNum = 1;                       # start/end numbers of pages to scan
-my $endNum   = -1;                      ## no critic (ProhibitMagicNumbers)
+my $outputFile = "image-%04d";    # file name(format) to write output to
+my $raw        = SANE_FALSE;
+my $scanScript;                   # script to run at end of scan
+my $startNum = 1;                 # start/end numbers of pages to scan
+my $endNum   = -1;                ## no critic (ProhibitMagicNumbers)
 my $SPACE    = q{ };
 my $EMPTY    = q{};
 my $DASH     = q{-};
@@ -377,8 +378,8 @@ sub parse_vector {
  my $prev_index = 0;
  my $separator  = $EMPTY;
  my ( @vector, $value );
- do {
-  if ( $str =~ /^\[(\d*\.?\d*)(\])?/xsm ) {
+ while ( length($str) ) {
+  if ( $str =~ /^\[(\d+)(\])?/xsm ) {
    $index = $1;
    if ( $2 ne '\]' ) {
     print STDERR "$prog_name: option --$opt->{name}: closing bracket missing "
@@ -423,7 +424,7 @@ sub parse_vector {
   $prev_index = $index;
   $prev_value = $value;
   $separator  = substr( $str, 0, 1 );
- } while ( $separator eq q{,} || $separator eq $DASH );
+ }
 
  if ( $verbose > 2 ) {
   print STDERR "$prog_name: value for --$opt->{name} is: ";
@@ -685,12 +686,12 @@ sub scan_it_raw {
  if ($must_buffer) { write_buffer( $fp, \%image, $parm ) }
 
  if ($fp) {
-  close $fp;
+  close $fp or die "Error closing file: $EVAL_ERROR\n";
   undef $fp;
  }
 
 cleanup:
- if ($fp) { close $fp }
+ if ($fp) { close $fp or die "Error closing file: $EVAL_ERROR\n" }
  return;
 }
 
@@ -712,7 +713,7 @@ sub log_frame_info {
 
  if ( not open( $fp, '>', $fname ) )    ## no critic (RequireBriefOpen)
  {
-  print STDERR "Error opening output `$fname': $@\n";
+  print STDERR "Error opening output `$fname': $EVAL_ERROR\n";
   $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
     SANE_STATUS_IO_ERROR;
   goto cleanup;
@@ -1191,6 +1192,7 @@ scan_docs( $startNum, $endNum, $outputFile, $scanScript );
 
 exit $Sane::STATUS;
 
+## no critic (RequirePodSections)
 __END__
 
 =head1 NAME
