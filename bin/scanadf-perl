@@ -8,6 +8,23 @@ use Data::Dumper;
 use Getopt::Long qw(:config no_ignore_case pass_through);
 use File::Basename;
 use IO::Handle;
+use Readonly;
+Readonly my $BUFFER_SIZE     => ( 32 * 1024 );     # default size
+Readonly my $SANE_FRAME_TEXT => 10;
+Readonly my $SANE_FRAME_JPEG => 11;
+Readonly my $SANE_FRAME_G31D => 12;
+Readonly my $SANE_FRAME_G32D => 13;
+Readonly my $SANE_FRAME_G42D => 14;
+Readonly my $START_COLUMN    => 8;
+Readonly my $END_COLUMN      => 80;
+Readonly my $INDENT          => 4;
+Readonly my $BITS_PER_BYTE   => 8;
+Readonly my $MM_PER_CM       => 10;
+Readonly my $MM_PER_INCH     => 25.4;
+Readonly my $_8_BIT          => 8;
+Readonly my $MAXVAL_8_BIT    => 2**$_8_BIT - 1;
+Readonly my $_16_BIT         => 16;
+Readonly my $MAXVAL_16_BIT   => 2**$_16_BIT - 1;
 
 #$Sane::DEBUG = 1;
 
@@ -18,9 +35,7 @@ my $verbose          = 0;
 my $help             = 0;
 my $test             = 0;
 my $batch_start_at   = 1;
-my $batch_count      = -1;
 my $batch_increment  = 1;
-my $buffer_size      = ( 32 * 1024 );    # default size
 my $tl_x             = 0;
 my $tl_y             = 0;
 my $br_x             = 0;
@@ -29,17 +44,13 @@ my $w_x              = 0;
 my $h_y              = 0;
 my $resolution_value = 0;
 my $prog_name        = basename($0);
-my $SANE_FRAME_TEXT  = 10;
-my $SANE_FRAME_JPEG  = 11;
-my $SANE_FRAME_G31D  = 12;
-my $SANE_FRAME_G32D  = 13;
-my $SANE_FRAME_G42D  = 14;
 my $no_overwrite     = 0;
-my $outputFile       = "image-%04d";     # file name(format) to write output to
+my $outputFile       = "image-%04d";    # file name(format) to write output to
 my $raw              = SANE_FALSE;
-my $scanScript;                          # script to run at end of scan
-my $startNum = 1, my $endNum = -1;       # start/end numbers of pages to scan
-my @args = (
+my $scanScript;                         # script to run at end of scan
+my $startNum = 1;                       # start/end numbers of pages to scan
+my $endNum   = -1;                      ## no critic (ProhibitMagicNumbers)
+my @args     = (
  \%options,
  'd|device-name=s' => \$devname,
  'L|list-devices',
@@ -149,17 +160,17 @@ sub print_option {
   print "Height of scan-area.";
  }
  else {
-  my $column     = 8;
+  my $column     = $START_COLUMN;
   my $last_break = 0;
   my $start      = 0;
   for ( my $pos = 0 ; $pos < length( $opt->{desc} ) ; ++$pos ) {
    ++$column;
    if ( substr( $opt->{desc}, $pos, 1 ) eq ' ' ) { $last_break = $pos }
-   if ( $column >= 79 and $last_break ) {
+   if ( $column >= $END_COLUMN - 1 and $last_break ) {
     while ( $start < $last_break ) { print substr( $opt->{desc}, $start++, 1 ) }
     $start = $last_break + 1;    # skip blank
     print "\n        ";
-    $column = 8 + $pos - $start;
+    $column = $START_COLUMN + $pos - $start;
    }
   }
   while ( $start < length( $opt->{desc} ) ) {
@@ -322,14 +333,14 @@ sub parse_scalar {
  }
 
  if ( $opt->{unit} == SANE_UNIT_BIT ) {
-  if ( $unit eq 'B' ) { $v *= 8 }
+  if ( $unit eq 'B' ) { $v *= $BITS_PER_BYTE }
  }
  elsif ( $opt->{unit} == SANE_UNIT_MM ) {
   if ( $unit eq 'cm' ) {
-   $v *= 10;
+   $v *= $MM_PER_CM;
   }
   elsif ( $unit eq 'in' ) {
-   $v *= 25.4;
+   $v *= $MM_PER_INCH;
   }
  }
  return $v, substr( $str, length($v) + length($unit), length($str) );
@@ -358,7 +369,7 @@ sub parse_scalar {
 sub parse_vector {
  my ( $opt, $str ) = @_;
 
- my $index      = -1;
+ my $index      = -1;    ## no critic (ProhibitMagicNumbers)
  my $prev_value = 0;
  my $prev_index = 0;
  my $separator  = '';
@@ -477,7 +488,7 @@ sub update_geometry {
     $opt->{name} = 'l';
    }
    when (SANE_NAME_SCAN_TL_Y) {
-    $window[3] = $i;
+    $window[3] = $i;      ## no critic (ProhibitMagicNumbers)
     $opt->{name} = 't';
    }
    when (SANE_NAME_SCAN_BR_X) {
@@ -609,7 +620,7 @@ sub write_pnm_header_to_file {
   or $frame_format == SANE_FRAME_RGB )
  {
   printf $fh "P6\n# SANE data follows\n%d %d\n%d\n", $width, $height,
-    ( $depth <= 8 ) ? 255 : 65535;
+    ( $depth <= $_8_BIT ) ? $MAXVAL_8_BIT : $MAXVAL_16_BIT;
  }
  elsif ( $frame_format == SANE_FRAME_GRAY ) {
   if ( $depth == 1 ) {
@@ -617,7 +628,7 @@ sub write_pnm_header_to_file {
   }
   else {
    printf $fh "P5\n# SANE data follows\n%d %d\n%d\n", $width, $height,
-     ( $depth <= 8 ) ? 255 : 65535;
+     ( $depth <= $_8_BIT ) ? $MAXVAL_8_BIT : $MAXVAL_16_BIT;
   }
  }
  return;
@@ -627,7 +638,7 @@ sub scan_it_raw {
  ( my $fname, $raw, my $script ) = @_;
 
  my $first_frame = 1, my $offset = 0, my $must_buffer = 0;
- my $min = 0xff, my $max = 0;
+ my $min = $MAXVAL_8_BIT, my $max = 0;
  my ( %image, $fp );
 
  my $parm;
@@ -637,9 +648,9 @@ sub scan_it_raw {
   my ( $must_buffer, $offset ) = initialise_scan( $parm, $first_frame, $fp );
 
   while (1) {
-   my ( $buffer, $len ) = $device->read($buffer_size);
+   my ( $buffer, $len ) = $device->read($BUFFER_SIZE);
    if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-    if ( $verbose && $parm->{depth} == 8 ) {
+    if ( $verbose && $parm->{depth} == $_8_BIT ) {
      printf STDERR "$prog_name: min/max graylevel value = %d/%d\n", $min, $max;
     }
     if ( $Sane::STATUS != SANE_STATUS_EOF ) {
@@ -652,7 +663,7 @@ sub scan_it_raw {
    $offset =
      buffer_data( $fp, $parm, $buffer, $len, \%image, $offset, $must_buffer );
 
-   if ( $verbose && $parm->{depth} == 8 ) {
+   if ( $verbose && $parm->{depth} == $_8_BIT ) {
     for ( split( //, $buffer ) ) {
      my $c = ord;
      if ( $c >= $max ) {
@@ -711,13 +722,13 @@ sub log_frame_info {
      printf STDERR "$prog_name: scanning image of size %dx%d pixels at "
        . "%d bits/pixel\n",
        $parm->{pixels_per_line}, $parm->{lines},
-       8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
+       $_8_BIT * $parm->{bytes_per_line} / $parm->{pixels_per_line};
     }
     else {
      printf STDERR "$prog_name: scanning image %d pixels wide and "
        . "variable height at %d bits/pixel\n",
        $parm->{pixels_per_line},
-       8 * $parm->{bytes_per_line} / $parm->{pixels_per_line};
+       $_8_BIT * $parm->{bytes_per_line} / $parm->{pixels_per_line};
     }
    }
    else {
@@ -747,7 +758,7 @@ sub initialise_scan {    ## no critic (ProhibitExcessComplexity)
    or $parm->{format} == SANE_FRAME_GREEN
    or $parm->{format} == SANE_FRAME_BLUE )
   {
-   if ( $parm->{depth} != 8 ) {
+   if ( $parm->{depth} != $_8_BIT ) {
     die # FIXME: compare message with SANE source, and give them patch if necessary
 "Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n";
    }
@@ -755,7 +766,7 @@ sub initialise_scan {    ## no critic (ProhibitExcessComplexity)
    $offset      = $parm->{format} - SANE_FRAME_RED;
   }
   elsif ( $parm->{format} == SANE_FRAME_RGB ) {
-   if ( $parm->{depth} != 8 ) {
+   if ( $parm->{depth} != $_8_BIT ) {
     die # FIXME: compare message with SANE source, and give them patch if necessary
 "Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 8)\n";
    }
@@ -763,7 +774,7 @@ sub initialise_scan {    ## no critic (ProhibitExcessComplexity)
   if ($parm->{format} == SANE_FRAME_RGB
    or $parm->{format} == SANE_FRAME_GRAY )
   {
-   if ( ( $parm->{depth} != 1 ) and ( $parm->{depth} != 8 ) ) {
+   if ( ( $parm->{depth} != 1 ) and ( $parm->{depth} != $_8_BIT ) ) {
     die # FIXME: compare message with SANE source, and give them patch if necessary
 "Error: frame format $parm->{format}, but image depth=$parm->{depth} (expected 1 or 8)\n";
    }
@@ -839,9 +850,10 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
    or $parm->{format} == SANE_FRAME_BLUE )
   {
    for ( my $i = 0 ; $i < $len ; ++$i ) {
-    $image->{data}[ $offset + 3 * $i ] = substr( $buffer, $i, 1 );
+    $image->{data}[ $offset + 3 * $i ] =    ## no critic (ProhibitMagicNumbers)
+      substr( $buffer, $i, 1 );
    }
-   $offset += 3 * $len;
+   $offset += 3 * $len;                     ## no critic (ProhibitMagicNumbers)
   }
   elsif ( $parm->{format} == SANE_FRAME_RGB
    or $parm->{format} == SANE_FRAME_GRAY )
@@ -875,7 +887,7 @@ sub write_buffer {
    or $parm->{format} == SANE_FRAME_GREEN
    or $parm->{format} == SANE_FRAME_BLUE )
   {
-   $image->{height} /= 3;
+   $image->{height} /= 3;    ## no critic (ProhibitMagicNumbers)
   }
  }
  if ( $raw == SANE_FALSE ) {
@@ -964,7 +976,9 @@ sub process_arguments {
   if (/--(.*)/xsm) {
    $ch = $1;
    my $i = index( $ch, '=' );
-   if ( $i > -1 ) { $ch = substr( $ch, 0, $i ) }
+   if ( $i > -1 ) {    ## no critic (ProhibitMagicNumbers)
+    $ch = substr( $ch, 0, $i );
+   }
   }
   elsif (/-(.)/xsm) {
    $ch = $1;
@@ -986,7 +1000,10 @@ sub process_arguments {
      process_backend_option( $device, $window[2], $options{l} );
     }
     when ('t') {    # tl-y
-     process_backend_option( $device, $window[3], $options{t} );
+     process_backend_option(
+      $device, $window[3],    ## no critic (ProhibitMagicNumbers)
+      $options{t}
+     );
     }
     default {
      process_backend_option( $device, $option_number{$ch}, $options{$ch} );
@@ -1015,7 +1032,7 @@ sub print_options {
   my $short_name = '';
 
   my $opt = 0;
-  for ( my $j = 0 ; $j < 4 ; ++$j ) {
+  for ( my $j = 0 ; $j < $INDENT ; ++$j ) {
    if ( $i == $window[$j] ) {
     $short_name = substr( "xylt", $j, 1 );
     if ( $j < 2 ) { $opt = $window_option[$j] }
@@ -1038,14 +1055,14 @@ sub list_device_names {
 "Type ``$prog_name --help -d DEVICE'' to get list of all options for DEVICE.\n\nList of available devices:";
  my @device_list = Sane->get_devices;
  if ( $Sane::STATUS == SANE_STATUS_GOOD ) {
-  my $column = 80;
+  my $column = $END_COLUMN;
 
   foreach (@device_list) {
-   if ( $column + length( $_->{name} ) + 1 >= 80 ) {
+   if ( $column + length( $_->{name} ) + 1 >= $END_COLUMN ) {
     printf "\n    ";
-    $column = 4;
+    $column = $INDENT;
    }
-   if ( $column > 4 ) {
+   if ( $column > $INDENT ) {
     print ' ';
     $column += 1;
    }
@@ -1079,7 +1096,7 @@ if ( defined $options{L} ) {
   printf "device `%s' is a %s %s %s\n", $_->{name}, $_->{vendor},
     $_->{model}, $_->{type};
  }
- if ( $#device_list == -1 ) {
+ if ( not @device_list ) {
   printf "\nNo scanners were identified. If you were expecting "
     . "something different,\ncheck that the scanner is plugged "
     . "in, turned on and detected by the\nsane-find-scanner tool "
@@ -1130,7 +1147,7 @@ if ( !$devname ) {
   print STDERR "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
   exit(1);
  }
- if ( $#device_list == -1 ) {
+ if ( not @device_list ) {
   print STDERR "$prog_name: no SANE devices found\n";
   exit(1);
  }
