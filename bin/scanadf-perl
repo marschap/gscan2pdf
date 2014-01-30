@@ -163,7 +163,7 @@ sub print_option {
   my $column     = $START_COLUMN;
   my $last_break = 0;
   my $start      = 0;
-  for ( my $pos = 0 ; $pos < length( $opt->{desc} ) ; ++$pos ) {
+  for my $pos ( 0 .. length( $opt->{desc} ) - 1 ) {
    ++$column;
    if ( substr( $opt->{desc}, $pos, 1 ) eq ' ' ) { $last_break = $pos }
    if ( $column >= $END_COLUMN - 1 and $last_break ) {
@@ -228,7 +228,7 @@ sub print_option_choices {    ## no critic (ProhibitExcessComplexity)
   elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
    or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
   {
-   for ( my $i = 0 ; $i < @{ $opt->{constraint} } ; ++$i ) {
+   for my $i ( 0 .. $#{ $opt->{constraint} } ) {
     if ( $i > 0 ) { print '|' }
     my $string_format = $opt->{type} == SANE_TYPE_FIXED ? '%g' : '%s';
 
@@ -411,7 +411,7 @@ sub parse_vector {
    my $v = $prev_value;
    my $slope = ( $value - $v ) / ( $index - $prev_index );
 
-   for ( my $i = $prev_index + 1 ; $i < $index ; ++$i ) {
+   for my $i ( $prev_index + 1 .. $index - 1 ) {
     $v += $slope;
     $vector[$i] = $v;
    }
@@ -443,7 +443,7 @@ sub fetch_options {
   exit(1);
  }
 
- for ( my $i = 0 ; $i < $num_dev_options ; ++$i ) {
+ for my $i ( 0 .. $num_dev_options - 1 ) {
   my $opt = $device->get_option_descriptor($i);
 
   next if ( !( $opt->{cap} & SANE_CAP_SOFT_SELECT ) );
@@ -465,7 +465,7 @@ sub fetch_options {
 
  # Initialize width & height options based on backend default
  # values for top-left x/y and bottom-right x/y:
- for ( my $i = 0 ; $i < 2 ; ++$i ) {
+ for my $i ( 0 .. 1 ) {
   if ( $window[$i] and $window[ $i + 2 ] and not $window_val_user[$i] ) {
    my $pos = $device->get_option( $window[ $i + 2 ] );
    if ( defined $pos ) { $window_val[$i] = $window_val[$i] - $pos }
@@ -849,7 +849,7 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
    or $parm->{format} == SANE_FRAME_GREEN
    or $parm->{format} == SANE_FRAME_BLUE )
   {
-   for ( my $i = 0 ; $i < $len ; ++$i ) {
+   for my $i ( 0 .. $len - 1 ) {
     $image->{data}[ $offset + 3 * $i ] =    ## no critic (ProhibitMagicNumbers)
       substr( $buffer, $i, 1 );
    }
@@ -858,7 +858,7 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
   elsif ( $parm->{format} == SANE_FRAME_RGB
    or $parm->{format} == SANE_FRAME_GRAY )
   {
-   for ( my $i = 0 ; $i < $len ; ++$i ) {
+   for my $i ( 0 .. $len - 1 ) {
     $image->{data}[ $offset + $i ] = substr( $buffer, $i, 1 );
    }
    $offset += $len;
@@ -1012,7 +1012,7 @@ sub process_arguments {
   }
  }
 
- for ( my $index = 0 ; $index < 2 ; ++$index ) {
+ for my $index ( 0 .. 1 ) {
   if ( $window[$index] and defined( $window_val[$index] ) ) {
    my $val = $window_val[$index] - 1;
    if ( $window[ $index + 2 ] ) {
@@ -1028,11 +1028,11 @@ sub process_arguments {
 sub print_options {
  printf "\nOptions specific to device `%s':\n", $devname;
 
- for ( my $i = 0 ; $i < $num_dev_options ; ++$i ) {
+ for my $i ( 0 .. $num_dev_options - 1 ) {
   my $short_name = '';
 
   my $opt = 0;
-  for ( my $j = 0 ; $j < $INDENT ; ++$j ) {
+  for my $j ( 0 .. $INDENT - 1 ) {
    if ( $i == $window[$j] ) {
     $short_name = substr( "xylt", $j, 1 );
     if ( $j < 2 ) { $opt = $window_option[$j] }
