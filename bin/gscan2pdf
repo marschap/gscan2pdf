@@ -96,12 +96,32 @@ use Data::Dumper;
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
 
+use Readonly;
+Readonly my $border_width            => 6;              # Window parameters
+Readonly my $STRING_FORMAT           => 8;
+Readonly my $_90_DEGREES             => 90;
+Readonly my $_180_DEGREES            => 180;
+Readonly my $_270_DEGREES            => 270;
+Readonly my $DRAGGER_TOOL            => 10;
+Readonly my $SELECTOR_TOOL           => 20;
+Readonly my $PAINTER_TOOL            => 30;
+Readonly my $EMPTY_LIST              => -1;
+Readonly my $_100_PERCENT            => 100;
+Readonly my $MAX_DPI                 => 2400;
+Readonly my $BITS_PER_BYTE           => 8;
+Readonly my $SECONDS_PER_DAY         => 24 * 60 * 60;
+Readonly my $RIGHT_MOUSE_BUTTON      => 3;
+Readonly my $SELECTOR_X              => 0;
+Readonly my $SELECTOR_Y              => 1;
+Readonly my $SELECTOR_W              => 2;
+Readonly my $SELECTOR_H              => 3;
+Readonly my $HELP_WINDOW_WIDTH       => 800;
+Readonly my $HELP_WINDOW_HEIGHT      => 600;
+Readonly my $HELP_WINDOW_DIVIDER_POS => 200;
+
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
 my $VERSION   = '1.2.3';
-
-# Window parameters
-my $border_width = 6;
 
 # Image border to ensure that a scaled to fit image gets no scrollbars
 my $border = 1;
@@ -276,7 +296,7 @@ $slist->drag_dest_set(
 $slist->signal_connect(
  'drag-data-get' => sub {
   my ( $tree, $context, $sel ) = @_;
-  $sel->set( $sel->target, 8, 'data' );
+  $sel->set( $sel->target, $STRING_FORMAT, 'data' );
  }
 );
 
@@ -370,10 +390,10 @@ $selector->{selection_changed_signal} = $selector->signal_connect(
   if ( defined $sel ) {
    $SETTING{selection} = [ $sel->values ];
    if ( defined $sb_selector_x ) {
-    $sb_selector_x->set_value( $SETTING{selection}[0] );
-    $sb_selector_y->set_value( $SETTING{selection}[1] );
-    $sb_selector_w->set_value( $SETTING{selection}[2] );
-    $sb_selector_h->set_value( $SETTING{selection}[3] );
+    $sb_selector_x->set_value( $SETTING{selection}[$SELECTOR_X] );
+    $sb_selector_y->set_value( $SETTING{selection}[$SELECTOR_Y] );
+    $sb_selector_w->set_value( $SETTING{selection}[$SELECTOR_W] );
+    $sb_selector_h->set_value( $SETTING{selection}[$SELECTOR_H] );
    }
   }
  }
@@ -1013,7 +1033,9 @@ sub create_menu_bar {
    $d->get('Rotate 90 clockwise'),
    '<control><shift>R',
    $d->get('Rotate 90 clockwise'),
-   sub { rotate( 90, [ indices2pages( $slist->get_selected_indices ) ] ) }
+   sub {
+    rotate( $_90_DEGREES, [ indices2pages( $slist->get_selected_indices ) ] );
+     }
   ],
   [
    'Rotate 180',
@@ -1021,7 +1043,9 @@ sub create_menu_bar {
    $d->get('Rotate 180'),
    '<control><shift>F',
    $d->get('Rotate 180'),
-   sub { rotate( 180, [ indices2pages( $slist->get_selected_indices ) ] ) }
+   sub {
+    rotate( $_180_DEGREES, [ indices2pages( $slist->get_selected_indices ) ] );
+     }
   ],
   [
    'Rotate 270',
@@ -1029,7 +1053,9 @@ sub create_menu_bar {
    $d->get('Rotate 90 anticlockwise'),
    '<control><shift>C',
    $d->get('Rotate 90 anticlockwise'),
-   sub { rotate( 270, [ indices2pages( $slist->get_selected_indices ) ] ) }
+   sub {
+    rotate( $_270_DEGREES, [ indices2pages( $slist->get_selected_indices ) ] );
+     }
   ],
 
   # Tools menu
@@ -1078,17 +1104,17 @@ sub create_menu_bar {
   [
    'DraggerTool',                'gtk-refresh',
    $d->get('_Drag'),             undef,
-   $d->get('Use the hand tool'), 10
+   $d->get('Use the hand tool'), $DRAGGER_TOOL
   ],
   [
    'SelectorTool',                                'selection',
    $d->get('_Select'),                            undef,
-   $d->get('Use the rectangular selection tool'), 20
+   $d->get('Use the rectangular selection tool'), $SELECTOR_TOOL
   ],
   [
    'PainterTool',                   'gtk-media-play',
    $d->get('_Paint'),               undef,
-   $d->get('Use the painter tool'), 30
+   $d->get('Use the painter tool'), $PAINTER_TOOL
   ]
  );
 
@@ -1247,7 +1273,8 @@ EOS
  # and fill it with Gtk2::Action instances
  my $actions_basic = Gtk2::ActionGroup->new("actions_basic");
  $actions_basic->add_actions( \@action_items, undef );
- $actions_basic->add_radio_actions( \@image_tools, 10, \&change_image_tool_cb );
+ $actions_basic->add_radio_actions( \@image_tools, $DRAGGER_TOOL,
+  \&change_image_tool_cb );
 
  # Add the actiongroup to the uimanager
  $uimanager->insert_action_group( $actions_basic, 0 );
@@ -1315,7 +1342,7 @@ EOS
  $uimanager->get_widget('/MenuBar/Tools/User-defined')->set_sensitive(FALSE);
 
  # a convenient place to put these
- $dependencies{pages} = -1;
+ $dependencies{pages} = $EMPTY_LIST;
 
  # Ghost rotations and unpaper if perlmagick not available
  if ( not $dependencies{perlmagick} ) {
@@ -1434,8 +1461,8 @@ sub update_uimanager {
    $uimanager->get_widget($_)->set_sensitive(FALSE);
   }
  }
- if ( $#{ $slist->{data} } > -1 ) {
-  if ( $dependencies{pages} == -1 ) {
+ if ( $#{ $slist->{data} } > $EMPTY_LIST ) {
+  if ( $dependencies{pages} == $EMPTY_LIST ) {
    if ( $dependencies{xdg} ) {
     $uimanager->get_widget('/MenuBar/File/Email as PDF')->set_sensitive(TRUE);
     $uimanager->get_widget('/ToolBar/Email as PDF')->set_sensitive(TRUE);
@@ -1454,7 +1481,7 @@ sub update_uimanager {
   }
  }
  else {
-  if ( $dependencies{pages} > -1 ) {
+  if ( $dependencies{pages} > $EMPTY_LIST ) {
    if ( $dependencies{xdg} ) {
     $uimanager->get_widget('/MenuBar/File/Email as PDF')->set_sensitive(FALSE);
     $uimanager->get_widget('/ToolBar/Email as PDF')->set_sensitive(FALSE);
@@ -1747,10 +1774,10 @@ sub display_image {
   $sb_selector_y->set_range( 0,
    $current_page->{h} - $sb_selector_h->get_value );
 
-  $SETTING{selection}[0] = $sb_selector_x->get_value;
-  $SETTING{selection}[1] = $sb_selector_y->get_value;
-  $SETTING{selection}[2] = $sb_selector_w->get_value;
-  $SETTING{selection}[3] = $sb_selector_h->get_value;
+  $SETTING{selection}[$SELECTOR_X] = $sb_selector_x->get_value;
+  $SETTING{selection}[$SELECTOR_Y] = $sb_selector_y->get_value;
+  $SETTING{selection}[$SELECTOR_W] = $sb_selector_w->get_value;
+  $SETTING{selection}[$SELECTOR_H] = $sb_selector_h->get_value;
 
   $selector->set_selection(
    Gtk2::Gdk::Rectangle->new( @{ $SETTING{selection} } ) );
@@ -1926,7 +1953,9 @@ sub setup_tpbar {
     $d->get("Process %i of %i (%s)"), $completed + 1, $total, $process
    )
   );
-  $tpbar->set_fraction( ( $completed + 0.5 ) / $total );
+  $tpbar->set_fraction(
+   ( $completed + 0.5 ) / $total )    ## no critic (ProhibitMagicNumbers)
+    ;
   $thbox->show_all;
 
 # Pass the signal back to:
@@ -1975,7 +2004,9 @@ sub update_tpbar {
   }
   else {
    $tpbar->set_fraction(
-    ( $options{jobs_completed} + 0.5 ) / $options{jobs_total} );
+    ( $options{jobs_completed} + 0.5 ) /    ## no critic (ProhibitMagicNumbers)
+      $options{jobs_total}
+   );
   }
   $thbox->show_all;
   return TRUE;
@@ -2177,6 +2208,15 @@ sub get_pagelist {
  return ( $pagelist, $n );
 }
 
+sub seconds_to_date {
+ my ($seconds) = @_;
+ my ( $day, $month, $year ) =
+   ( localtime($seconds) )[ 3, 4, 5 ];    ## no critic (ProhibitMagicNumbers)
+ $year  += 1900;                          ## no critic (ProhibitMagicNumbers)
+ $month += 1;
+ return $day, $month, $year;
+}
+
 # Add PDF options to $vbox
 
 sub add_pdf_metadata {
@@ -2195,9 +2235,7 @@ sub add_pdf_metadata {
  my $labele = Gtk2::Label->new( $d->get('Date') );
  $hboxe->pack_start( $labele, FALSE, FALSE, 0 );
  my ( $day, $month, $year ) =
-   ( localtime( time + $SETTING{'date offset'} * 24 * 60 * 60 ) )[ 3, 4, 5 ];
- $year  += 1900;
- $month += 1;
+   seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
 
  my $button =
    Gtk2::Button->new( sprintf( "%04d-%02d-%02d", $year, $month, $day ) );
@@ -2220,8 +2258,9 @@ sub add_pdf_metadata {
      $month += 1;
      $button->set_label( sprintf( "%04d-%02d-%02d", $year, $month, $day ) );
      use Time::Local;
-     $SETTING{'date offset'} = int(
-      ( timelocal( 0, 0, 0, $day, $month - 1, $year ) - time ) / 60 / 60 / 24 );
+     $SETTING{'date offset'} =
+       int( ( timelocal( 0, 0, 0, $day, $month - 1, $year ) - time ) /
+        $SECONDS_PER_DAY );
      $window_date->destroy;
     }
    );
@@ -2230,8 +2269,7 @@ sub add_pdf_metadata {
    my $today = Gtk2::Button->new( $d->get('Today') );
    $today->signal_connect(
     clicked => sub {
-     ( $day, $month, $year ) = ( localtime() )[ 3, 4, 5 ];
-     $year += 1900;
+     ( $day, $month, $year ) = seconds_to_date();
      $calendar->select_day($day);
      $calendar->select_month( $month, $year );
     }
@@ -2300,9 +2338,7 @@ sub get_pdf_metadata {
  my %h;
  if ( defined $SETTING{author} ) { $h{Author} = $SETTING{author} }
  my ( $day, $month, $year ) =
-   ( localtime( time + $SETTING{'date offset'} * 24 * 60 * 60 ) )[ 3, 4, 5 ];
- $year  += 1900;
- $month += 1;
+   seconds_to_date( time + days_to_seconds( $SETTING{'date offset'} ) );
  $h{CreationDate} =
    sprintf( "D:%4i%02i%02i000000+00'00'", $year, $month, $day );
  $h{ModDate}  = sprintf( "D:%4i%02i%02i000000+00'00'", $year, $month, $day );
@@ -2505,7 +2541,7 @@ sub add_quality_spinbutton {
  $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
  my $label = Gtk2::Label->new( $d->get('JPEG Quality') );
  $hbox->pack_start( $label, FALSE, FALSE, 0 );
- my $spinbutton = Gtk2::SpinButton->new_with_range( 1, 100, 1 );
+ my $spinbutton = Gtk2::SpinButton->new_with_range( 1, $_100_PERCENT, 1 );
  $spinbutton->set_value( $SETTING{'quality'} );
  $hbox->pack_end( $spinbutton, FALSE, FALSE, 0 );
  return ( $hbox, $spinbutton );
@@ -2520,7 +2556,7 @@ sub add_pdf_compression {
  my $button = Gtk2::CheckButton->new( $d->get('Downsample to') );
  $button->set_active(TRUE);
  $hboxd->pack_start( $button, FALSE, FALSE, 0 );
- my $spinbutton = Gtk2::SpinButton->new_with_range( 9, 2400, 1 );
+ my $spinbutton = Gtk2::SpinButton->new_with_range( 1, $MAX_DPI, 1 );
  $spinbutton->set_value( $SETTING{'downsample dpi'} );
  my $label = Gtk2::Label->new( $d->get('PPI') );
  $hboxd->pack_end( $label,      FALSE, FALSE, 0 );
@@ -2684,7 +2720,7 @@ sub save_dialog {
    }
    else {
     $hboxtq->hide_all;
-    $windowi->resize( 100, 100 );    # Doesn't matter that 200x200 is too small
+    $windowi->resize( 1, 1 );
    }
   }
  );
@@ -2793,7 +2829,7 @@ sub save_dialog {
   $vboxp->hide_all;
   $hboxf->hide_all;
  }
- $windowi->resize( 100, 100 );    # Doesn't matter that 200x200 is too small
+ $windowi->resize( 1, 1 );
  return;
 }
 
@@ -2812,13 +2848,13 @@ sub image_type_changed_callback {
   }
   else {
    $hboxpq->hide_all;
-   $windowi->resize( 100, 100 );    # Doesn't matter that 200x200 is too small
+   $windowi->resize( 1, 1 );
   }
  }
  else {
   $vboxp->hide_all;
   $hboxf->hide_all;
-  $windowi->resize( 100, 100 );     # Doesn't matter that 200x200 is too small
+  $windowi->resize( 1, 1 );
  }
  if ($type->[ $widget->get_active ][0] eq 'tif'
   or $type->[ $widget->get_active ][0] eq 'ps' )
@@ -2827,7 +2863,7 @@ sub image_type_changed_callback {
  }
  else {
   $hboxc->hide_all;
-  $windowi->resize( 100, 100 );     # Doesn't matter that 200x200 is too small
+  $windowi->resize( 1, 1 );
  }
  if (
   $type->[ $widget->get_active ][0] eq 'jpg'
@@ -2839,7 +2875,7 @@ sub image_type_changed_callback {
  }
  else {
   $hboxtq->hide_all;
-  $windowi->resize( 100, 100 );     # Doesn't matter that 200x200 is too small
+  $windowi->resize( 1, 1 );
  }
  return;
 }
@@ -2881,13 +2917,11 @@ sub save_button_clicked_callback {
    );
 
    my ( $dday, $dmonth, $dyear ) =
-     ( localtime( time + $SETTING{'date offset'} * 24 * 60 * 60 ) )[ 3, 4, 5 ];
-   $dyear += 1900;
-   $dmonth = sprintf( "%02d", $dmonth + 1 );
+     seconds_to_date( time + days_to_seconds( $SETTING{'date offset'} ) );
+   $dmonth = sprintf( "%02d", $dmonth );
    $dday   = sprintf( "%02d", $dday );
-   my ( $tday, $tmonth, $tyear ) = ( localtime(time) )[ 3, 4, 5 ];
-   $tyear += 1900;
-   $tmonth = sprintf( "%02d", $tmonth + 1 );
+   my ( $tday, $tmonth, $tyear ) = seconds_to_date(time);
+   $tmonth = sprintf( "%02d", $tmonth );
    $tday   = sprintf( "%02d", $tday );
 
    my $filename = $SETTING{'default filename'};
@@ -3538,7 +3572,7 @@ sub scan_dialog {
   dir                 => $session,
   'hide-on-delete'    => TRUE,
   'num-pages'         => $SETTING{'pages to scan'},
-  'page-number-start' => $#{ $slist->{data} } > -1
+  'page-number-start' => $#{ $slist->{data} } > $EMPTY_LIST
   ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
   : 1,
  );
@@ -3744,7 +3778,7 @@ sub changed_device_list_callback {
 
 sub changed_side_to_scan_callback {
  my ( $widget, $side ) = @_;
- if ( $#{ $slist->{data} } > -1 ) {
+ if ( $#{ $slist->{data} } > $EMPTY_LIST ) {
   $windows->set( 'page-number-start',
    $slist->{data}[ $#{ $slist->{data} } ][0] + 1 );
  }
@@ -3851,9 +3885,17 @@ sub add_postprocessing_rotate {
  $tooltips->set_tip( $comboboxs, $d->get('Select side to rotate') );
  $hboxr->pack_start( $comboboxs, TRUE, TRUE, 0 );
  my @rotate = (
-  [ 90,  $d->get('90'),  $d->get('Rotate image 90 degrees clockwise.') ],
-  [ 180, $d->get('180'), $d->get('Rotate image 180 degrees clockwise.') ],
-  [ 270, $d->get('270'), $d->get('Rotate image 90 degrees anticlockwise.') ],
+  [
+   $_90_DEGREES, $d->get('90'), $d->get('Rotate image 90 degrees clockwise.')
+  ],
+  [
+   $_180_DEGREES, $d->get('180'),
+   $d->get('Rotate image 180 degrees clockwise.')
+  ],
+  [
+   $_270_DEGREES, $d->get('270'),
+   $d->get('Rotate image 90 degrees anticlockwise.')
+  ],
  );
  my $comboboxr = combobox_from_array(@rotate);
  $tooltips->set_tip( $comboboxr, $d->get('Select direction of rotation') );
@@ -3894,7 +3936,7 @@ sub add_postprocessing_rotate {
     if ( $rbutton->get_active ) { $hboxr->set_sensitive(TRUE) }
 
     # Empty combobox
-    while ( $comboboxs2->get_active > -1 ) {
+    while ( $comboboxs2->get_active > $EMPTY_LIST ) {
      $comboboxs2->remove_text(0);
      $comboboxs2->set_active(0);
     }
@@ -3913,7 +3955,7 @@ sub add_postprocessing_rotate {
  );
 
  # In case it isn't set elsewhere
- combobox_set_active( $comboboxr2, 90, @rotate );
+ combobox_set_active( $comboboxr2, $_90_DEGREES, @rotate );
 
  if ( $SETTING{'rotate facing'} or $SETTING{'rotate reverse'} ) {
   $rbutton->set_active(TRUE);
@@ -4180,7 +4222,7 @@ sub update_start {
    }
   }
   else {
-   $i += $step > 0 ? 1 : -1;
+   $i += $step > 0 ? 1 : $EMPTY_LIST;
   }
  }
  $windows->set( 'page-number-start', $value );
@@ -4260,7 +4302,7 @@ sub import_scan {
      open( my $fh, ">>", $options{filename} )
        or die "cannot open >> $options{filename}: $!\n";
      my $data = $EMPTY;
-     for ( 1 .. $pad * 8 ) {
+     for ( 1 .. $pad * $BITS_PER_BYTE ) {
       $data .= '1';
      }
      printf $fh pack( sprintf( "b%d", length $data ), $data );
@@ -4276,7 +4318,7 @@ sub import_scan {
      window     => $window,
     );
     my $index = $slist->add_page( $gpage, $options{page}, &update_uimanager );
-    if ( $index == -1 ) {
+    if ( $index == $EMPTY_LIST ) {
      show_message_dialog( $windows, 'error', 'close',
       $d->get('Unable to load image') );
     }
@@ -4505,7 +4547,7 @@ sub delete_pages {
 # Reset start page number after delete or new
 
 sub reset_start {
- if ( $#{ $slist->{data} } > -1 ) {
+ if ( $#{ $slist->{data} } > $EMPTY_LIST ) {
   my $start_page = $windows->get('page-number-start');
   my $step       = $windows->get('page-number-increment');
   if ( $start_page > $slist->{data}[ $#{ $slist->{data} } ][0] + $step ) {
@@ -4883,7 +4925,7 @@ sub handle_clicks {
  # $SETTING{'RMB'} = ($event->button == 3);
  #warn "rmb $SETTING{'RMB'}\n";
 
- if ( $event->button == 3 ) {
+ if ( $event->button == $RIGHT_MOUSE_BUTTON ) {
   if ( $widget->isa('Gtk2::ImageView') ) {    # main image
    $uimanager->get_widget('/Detail_Popup')
      ->popup( undef, undef, undef, undef, $event->button, $event->time );
@@ -4924,7 +4966,7 @@ sub threshold {
  $hboxt->pack_start( $label, FALSE, TRUE, 0 );
  my $labelp = Gtk2::Label->new($PERCENT);
  $hboxt->pack_end( $labelp, FALSE, TRUE, 0 );
- my $spinbutton = Gtk2::SpinButton->new_with_range( 0, 100, 1 );
+ my $spinbutton = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
  $spinbutton->set_value( $SETTING{'threshold tool'} );
  $hboxt->pack_end( $spinbutton, FALSE, TRUE, 0 );
 
@@ -5056,7 +5098,10 @@ sub unsharp {
  $hbox->pack_start( $label, FALSE, TRUE, 0 );
  $label = Gtk2::Label->new( $d->get('pixels') );
  $hbox->pack_end( $label, FALSE, TRUE, 0 );
- my $spinbuttonr = Gtk2::SpinButton->new_with_range( 0, 100, 1 );
+ my $spinbuttonr = Gtk2::SpinButton->new_with_range(
+  0, 100,    ## no critic (ProhibitMagicNumbers)
+  1
+ );
  $spinbuttonr->set_value( $SETTING{'unsharp radius'} );
  $tooltips->set_tip(
   $spinbuttonr,
@@ -5073,7 +5118,10 @@ sub unsharp {
  $hbox->pack_start( $label, FALSE, TRUE, 0 );
  $label = Gtk2::Label->new( $d->get('pixels') );
  $hbox->pack_end( $label, FALSE, TRUE, 0 );
- my $spinbuttons = Gtk2::SpinButton->new_with_range( 0, 5, .1 );
+ my $spinbuttons = Gtk2::SpinButton->new_with_range(
+  0, 5,    ## no critic (ProhibitMagicNumbers)
+  .1       ## no critic (ProhibitMagicNumbers)
+ );
  $spinbuttons->set_value( $SETTING{'unsharp sigma'} );
  $tooltips->set_tip( $spinbuttons,
   $d->get('The standard deviation of the Gaussian.') );
@@ -5086,7 +5134,7 @@ sub unsharp {
  $hbox->pack_start( $label, FALSE, TRUE, 0 );
  $label = Gtk2::Label->new($PERCENT);
  $hbox->pack_end( $label, FALSE, TRUE, 0 );
- my $spinbuttona = Gtk2::SpinButton->new_with_range( 0, 100, 1 );
+ my $spinbuttona = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
  $spinbuttona->set_value( $SETTING{'unsharp amount'} );
  $tooltips->set_tip(
   $spinbuttona,
@@ -5101,7 +5149,9 @@ sub unsharp {
  $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
  $label = Gtk2::Label->new( $d->get('Threshold') );
  $hbox->pack_start( $label, FALSE, TRUE, 0 );
- my $spinbuttont = Gtk2::SpinButton->new_with_range( 0, 1, 0.01 );
+ my $spinbuttont = Gtk2::SpinButton->new_with_range( 0, 1,
+  0.01 )    ## no critic (ProhibitMagicNumbers)
+   ;
  $spinbuttont->set_value( $SETTING{'unsharp threshold'} );
  $tooltips->set_tip(
   $spinbuttont,
@@ -5167,16 +5217,16 @@ sub change_image_tool_cb {
  my ( $action, $current ) = @_;
  my $value = $current->get_current_value();
  my $tool  = $selector;
- if ( $value == 10 ) {
+ if ( $value == $DRAGGER_TOOL ) {
   $tool = $dragger;
  }
- elsif ( $value == 30 ) {
+ elsif ( $value == $PAINTER_TOOL ) {
   $tool = $painter;
  }
  $view->set_tool($tool);
- if ( $value == 20
+ if ( $value == $SELECTOR_TOOL
   and defined( $SETTING{selection} )
-  and @{ $SETTING{selection} } == 4 )
+  and @{ $SETTING{selection} } )
  {
   $selector->signal_handler_block( $selector->{selection_changed_signal} );
   $selector->set_selection(
@@ -5257,44 +5307,48 @@ sub crop {
  # Callbacks if the spinbuttons change
  $sb_selector_x->signal_connect(
   'value-changed' => sub {
-   $SETTING{selection}[0] = $sb_selector_x->get_value;
-   $sb_selector_w->set_range( 0, $current_page->{w} - $SETTING{selection}[0] );
+   $SETTING{selection}[$SELECTOR_X] = $sb_selector_x->get_value;
+   $sb_selector_w->set_range( 0,
+    $current_page->{w} - $SETTING{selection}[$SELECTOR_X] );
    update_selector();
   }
  );
  $sb_selector_y->signal_connect(
   'value-changed' => sub {
-   $SETTING{selection}[1] = $sb_selector_y->get_value;
-   $sb_selector_h->set_range( 0, $current_page->{h} - $SETTING{selection}[1] );
+   $SETTING{selection}[$SELECTOR_Y] = $sb_selector_y->get_value;
+   $sb_selector_h->set_range( 0,
+    $current_page->{h} - $SETTING{selection}[$SELECTOR_Y] );
    update_selector();
   }
  );
  $sb_selector_w->signal_connect(
   'value-changed' => sub {
-   $SETTING{selection}[2] = $sb_selector_w->get_value;
-   $sb_selector_x->set_range( 0, $current_page->{w} - $SETTING{selection}[2] );
+   $SETTING{selection}[$SELECTOR_W] = $sb_selector_w->get_value;
+   $sb_selector_x->set_range( 0,
+    $current_page->{w} - $SETTING{selection}[$SELECTOR_W] );
    update_selector();
   }
  );
  $sb_selector_h->signal_connect(
   'value-changed' => sub {
-   $SETTING{selection}[3] = $sb_selector_h->get_value;
-   $sb_selector_y->set_range( 0, $current_page->{h} - $SETTING{selection}[3] );
+   $SETTING{selection}[$SELECTOR_H] = $sb_selector_h->get_value;
+   $sb_selector_y->set_range( 0,
+    $current_page->{h} - $SETTING{selection}[$SELECTOR_H] );
    update_selector();
   }
  );
 
- if ( defined $SETTING{selection}[0] ) {
-  $sb_selector_x->set_value( $SETTING{selection}[0] );
+ if ( defined $SETTING{selection}[$SELECTOR_X] ) {
+  $sb_selector_x->set_value( $SETTING{selection}[$SELECTOR_X] );
  }
- if ( defined $SETTING{selection}[1] ) {
-  $sb_selector_y->set_value( $SETTING{selection}[1] );
+ if ( defined $SETTING{selection}[$SELECTOR_Y] ) {
+  $sb_selector_y->set_value( $SETTING{selection}[$SELECTOR_Y] );
  }
- if ( defined $SETTING{selection}[2] ) {
-  $sb_selector_w->set_value( $SETTING{selection}[2] );
+ if ( defined $SETTING{selection}[$SELECTOR_W] ) {
+  $sb_selector_w->set_value( $SETTING{selection}[$SELECTOR_W] );
  }
- if ( defined $SETTING{selection}[3] ) {
-  $sb_selector_h->set_value( $SETTING{selection}[3] );
+ if ( defined $SETTING{selection}[$SELECTOR_H] ) {
+  $sb_selector_h->set_value( $SETTING{selection}[$SELECTOR_H] );
  }
 
  # HBox for buttons
@@ -5313,10 +5367,10 @@ sub crop {
     my ( $signal, $pid );
     $pid = $slist->crop(
      page            => $slist->{data}[$i][2],
-     x               => $SETTING{selection}[0],
-     y               => $SETTING{selection}[1],
-     w               => $SETTING{selection}[2],
-     h               => $SETTING{selection}[3],
+     x               => $SETTING{selection}[$SELECTOR_X],
+     y               => $SETTING{selection}[$SELECTOR_Y],
+     w               => $SETTING{selection}[$SELECTOR_W],
+     h               => $SETTING{selection}[$SELECTOR_H],
      queued_callback => sub {
       return update_tpbar(@_);
      },
@@ -5819,11 +5873,11 @@ sub view_pod {
    return TRUE;    # ensures that the window is not destroyed
   }
  );
- $windowh->set_default_size( 800, 600 );
+ $windowh->set_default_size( $HELP_WINDOW_WIDTH, $HELP_WINDOW_HEIGHT );
 
  # Vertical divider between index and viewer
  my $pane = Gtk2::HPaned->new;
- $pane->set_position(200);
+ $pane->set_position($HELP_WINDOW_DIVIDER_POS);
  $windowh->add($pane);
 
  # Index list
@@ -6347,7 +6401,9 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
  $label = Gtk2::Label->new( $d->get('Blank threshold') );
  $hbox->pack_start( $label, FALSE, FALSE, 0 );
- my $spinbuttonb = Gtk2::SpinButton->new_with_range( 0, 1, 0.001 );
+ my $spinbuttonb = Gtk2::SpinButton->new_with_range( 0, 1,
+  0.001 )    ## no critic (ProhibitMagicNumbers)
+   ;
  $spinbuttonb->set_value( $SETTING{'Blank threshold'} );
  $tooltips->set_tip( $spinbuttonb,
   $d->get('Threshold used for selecting blank pages') );
@@ -6358,7 +6414,9 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
  $label = Gtk2::Label->new( $d->get('Dark threshold') );
  $hbox->pack_start( $label, FALSE, FALSE, 0 );
- my $spinbuttond = Gtk2::SpinButton->new_with_range( 0, 1, 0.01 );
+ my $spinbuttond = Gtk2::SpinButton->new_with_range( 0, 1,
+  0.01 )    ## no critic (ProhibitMagicNumbers)
+   ;
  $spinbuttond->set_value( $SETTING{'Dark threshold'} );
  $tooltips->set_tip( $spinbuttond,
   $d->get('Threshold used for selecting dark pages') );
@@ -6405,7 +6463,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
    my %tool = ( cmd => 'my-tool %i %o' );
    add_user_defined_tool_menu( \%tool );
    add_user_defined_tool_entry( $vboxt, \%tool );
-   $vboxt->reorder_child( $abutton, -1 );
+   $vboxt->reorder_child( $abutton, $EMPTY_LIST );
    $SETTING{user_defined_tools} = list_user_defined_tools($vboxt);
   }
  );
@@ -6424,7 +6482,9 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     $SETTING{'scan-reload-triggers'} = ();
     for ( @{ $option_visibility_list->{data} } ) {
      $SETTING{'visible-scan-options'}{ $_->[0] } = $_->[2];
-     if ( $_->[3] ) { push @{ $SETTING{'scan-reload-triggers'} }, $_->[0] }
+     if ( $_->[3] ) {    ## no critic (ProhibitMagicNumbers)
+      push @{ $SETTING{'scan-reload-triggers'} }, $_->[0];
+     }
     }
     if ( $SETTING{frontend} ne 'libsane-perl' ) {
      $windows->set( 'visible-scan-options', $SETTING{'visible-scan-options'} );
@@ -6601,7 +6661,7 @@ sub properties {
  my $label = Gtk2::Label->new( $d->get('Resolution') );
  $hbox->pack_start( $label, FALSE, FALSE, 0 );
  my $entry = Gtk2::Entry->new;
- $entry->set_width_chars(4);
+ $entry->set_width_chars(4);    ## no critic (ProhibitMagicNumbers)
  $entry->set_activates_default(TRUE);
  $entry->signal_connect(
   'insert-text' => sub {
