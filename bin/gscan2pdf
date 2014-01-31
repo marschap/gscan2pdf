@@ -112,7 +112,11 @@ my $border = 1;
 my $d      = Locale::gettext->domain($prog_name);
 my $d_sane = Locale::gettext->domain('sane-backends');
 
-my $debug = FALSE;
+my $debug   = FALSE;
+my $EMPTY   = q{};
+my $SPACE   = q{ };
+my $DOT     = q{.};
+my $PERCENT = q{%};
 my (
  $test,   $help,        $log,        $log_level, @device,
  $locale, @device_list, $test_image, $logger
@@ -127,18 +131,18 @@ set_up_test_mode();
 
 $logger->info("Perl version $^V");
 $logger->info("Glib-Perl version $Glib::VERSION");
-$logger->info( 'Built for Glib ' . join( '.', Glib->GET_VERSION_INFO ) );
+$logger->info( 'Built for Glib ' . join( $DOT, Glib->GET_VERSION_INFO ) );
 $logger->info( 'Running with Glib '
-   . join( '.', Glib::major_version, Glib::minor_version, Glib::micro_version )
+   . join( $DOT, Glib::major_version, Glib::minor_version, Glib::micro_version )
 );
 $logger->info("Gtk2-Perl version $Gtk2::VERSION");
-$logger->info( "Built for GTK " . join( '.', Gtk2->GET_VERSION_INFO ) );
-$logger->info( "Running with GTK " . join( '.', Gtk2->get_version_info ) );
+$logger->info( "Built for GTK " . join( $DOT, Gtk2->GET_VERSION_INFO ) );
+$logger->info( "Running with GTK " . join( $DOT, Gtk2->get_version_info ) );
 $logger->info( "Using GtkImageView version ",
  Gtk2::ImageView->library_version );
 $logger->info("Using Gtk2::ImageView version $Gtk2::ImageView::VERSION");
 $logger->info("Using PDF::API2 version $PDF::API2::VERSION");
-$logger->info( 'Using Sane version ' . join( '.', Sane->get_version ) );
+$logger->info( 'Using Sane version ' . join( $DOT, Sane->get_version ) );
 $logger->info("Using libsane-perl version $Sane::VERSION");
 
 if ($debug) { $logger->debug( Dumper( \%SETTING ) ) }
@@ -168,7 +172,7 @@ if ( -d '/usr/share/gscan2pdf' ) {
 }
 else {
  $iconpath =
-   '.';    # FIXME: make this a big cleverer, going one dir down from bin.
+   $DOT;    # FIXME: make this a big cleverer, going one dir down from bin.
 }
 init_icons(
  [ 'rotate90',  "$iconpath/stock-rotate-90.svg" ],
@@ -565,7 +569,7 @@ sub read_config_file {    ## no critic (RequireArgUnpacking)
   'rotate facing'     => 0,
   'rotate reverse'    => 0,
   'default filename'  => '%a %y-%m-%d',
-  'scan prefix'       => '',
+  'scan prefix'       => $EMPTY,
   'Blank threshold' => 0.005,       # Blank page standard deviation threshold
   'Dark threshold'  => 0.12,        # Dark page mean threshold
   'ocr engine'      => 'ocropus',
@@ -647,7 +651,7 @@ sub read_config_file {    ## no critic (RequireArgUnpacking)
  if (
   (
    defined( $SETTING{'SANE version'} )
-   and $SETTING{'SANE version'} ne join( '.', Sane->get_version )
+   and $SETTING{'SANE version'} ne join( $DOT, Sane->get_version )
   )
   or ( defined( $SETTING{'libsane-perl version'} )
    and $SETTING{'libsane-perl version'} ne $Sane::VERSION )
@@ -655,7 +659,7 @@ sub read_config_file {    ## no critic (RequireArgUnpacking)
  {
   if ( defined $SETTING{cache} ) { delete $SETTING{cache} }
  }
- $SETTING{'SANE version'} = join( '.', Sane->get_version );
+ $SETTING{'SANE version'} = join( $DOT, Sane->get_version );
  $SETTING{'libsane-perl version'} = $Sane::VERSION;
  return;
 }
@@ -698,7 +702,7 @@ sub set_up_test_mode {
     exit 1;
    }
    push @{ $test->{file} }, $file;
-   if ( not defined( $test->{output} ) ) { $test->{output} = '' }
+   if ( not defined( $test->{output} ) ) { $test->{output} = $EMPTY }
    $test->{output} .=
      "'$#{$test->{file}}','$device','" . basename($file) . "'\n";
   }
@@ -1267,7 +1271,7 @@ EOS
  check_dependencies();
 
  # Ghost save image item if imagemagick not available
- my $msg = '';
+ my $msg = $EMPTY;
  if ( not $dependencies{imagemagick} ) {
   $msg .= $d->get("Save image and Save as PDF both require imagemagick\n");
  }
@@ -1349,7 +1353,7 @@ EOS
  }
 
  # Put up warning if needed
- if ( $SETTING{'startup warning'} and $msg ne '' ) {
+ if ( $SETTING{'startup warning'} and $msg ne $EMPTY ) {
   my $dialog = Gtk2::Dialog->new( $d->get('Warning: missing packages'),
    $window, 'modal', 'gtk-ok' => 'none' );
   my $label = Gtk2::Label->new($msg);
@@ -1588,7 +1592,7 @@ sub create_temp_directory {
 
  # Create temporary directory if necessary
  if ( not defined($session) ) {
-  if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
+  if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne $EMPTY ) {
    if ( not -d $SETTING{TMPDIR} ) { mkdir( $SETTING{TMPDIR} ) }
    try {
     $session = File::Temp->newdir( 'gscan2pdf-XXXX', DIR => $SETTING{TMPDIR} );
@@ -1623,7 +1627,7 @@ sub create_temp_directory {
 sub find_crashed_sessions {
 
  # Look for crashed sessions
- if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
+ if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne $EMPTY ) {
   $tmpdir = $SETTING{TMPDIR};
  }
  else {
@@ -1843,11 +1847,11 @@ sub add_filter {
   my @filter_pattern;
 
   # Create case insensitive pattern
-  for my $byte ( split //, $extension ) {
+  for my $byte ( split $EMPTY, $extension ) {
    push( @filter_pattern, '[' . uc($byte) . lc($byte) . ']' );
   }
-  my $new_filter_pattern = join( '', @filter_pattern );
-  $filter->add_pattern( '*.' . $new_filter_pattern );
+  my $new_filter_pattern = join( $EMPTY, @filter_pattern );
+  $filter->add_pattern( q{*.} . $new_filter_pattern );
  }
  my $types;
  for (@file_extensions) {
@@ -1861,7 +1865,7 @@ sub add_filter {
  $filter->set_name("$name ($types)");
  $file_chooser->add_filter($filter);
  $filter = Gtk2::FileFilter->new;
- $filter->add_pattern('*');
+ $filter->add_pattern(q{*});
  $filter->set_name('All files');
  $file_chooser->add_filter($filter);
  return;
@@ -2155,7 +2159,7 @@ sub get_pagelist {
   $pagelist = $slist->{data}[0][2]{filename};
   my $i = 1;
   while ( $i < @{ $slist->{data} } ) {
-   $pagelist = $pagelist . " " . $slist->{data}[$i][2]{filename};
+   $pagelist = $pagelist . $SPACE . $slist->{data}[$i][2]{filename};
    ++$i;
   }
  }
@@ -2165,7 +2169,7 @@ sub get_pagelist {
   $pagelist = $slist->{data}[ $page[0] ][2]{filename};
   my $i = 1;
   while ( $i < @page ) {
-   $pagelist = $pagelist . " " . $slist->{data}[ $page[$i] ][2]{filename};
+   $pagelist = $pagelist . $SPACE . $slist->{data}[ $page[$i] ][2]{filename};
    ++$i;
   }
  }
@@ -2711,7 +2715,7 @@ sub save_dialog {
 
  for ( split /\n/sm, $stdout ) {
   if (/ttf:\ /xsm) {
-   my ( $file, $family, $style ) = split ':';
+   my ( $file, $family, $style ) = split /:/xsm;
    chomp $style;
    $family =~ s/^\ //xsm;
    $style =~ s/^style=//xsm;
@@ -3435,7 +3439,7 @@ sub email {
    elsif (
     (
      defined( $ENV{GNOME_DESKTOP_SESSION_ID} )
-     and $ENV{GNOME_DESKTOP_SESSION_ID} ne ''
+     and $ENV{GNOME_DESKTOP_SESSION_ID} ne $EMPTY
     )
     or ( defined( $ENV{XDG_CURRENT_DESKTOP} )
      and $ENV{XDG_CURRENT_DESKTOP} eq 'XFCE' )
@@ -3711,7 +3715,7 @@ sub scan_dialog {
 sub changed_device_callback {
  my ( $widget, $device ) = @_;
  $logger->info("signal 'changed-device' emitted with data: '$device'");
- if ( defined($device) and $device ne '' ) {
+ if ( defined($device) and $device ne $EMPTY ) {
   $SETTING{device} = $device;
  }
  return;
@@ -4255,7 +4259,7 @@ sub import_scan {
      my $pad = $size - $filesize;
      open( my $fh, ">>", $options{filename} )
        or die "cannot open >> $options{filename}: $!\n";
-     my $data = '';
+     my $data = $EMPTY;
      for ( 1 .. $pad * 8 ) {
       $data .= '1';
      }
@@ -4310,7 +4314,7 @@ sub print_dialog {
    if ( $pages eq 'ranges' ) {
     my $page_set = Set::IntSpan->new;
     my $ranges   = $settings->get('page-ranges');
-    for ( split ',', $ranges ) {
+    for ( split /,/xsm, $ranges ) {
      $page_set->I($_);
     }
     for ( 0 .. $#{ $slist->{data} } ) {
@@ -4918,7 +4922,7 @@ sub threshold {
  $vbox->pack_start( $hboxt, FALSE, TRUE, 0 );
  my $label = Gtk2::Label->new( $d->get('Threshold') );
  $hboxt->pack_start( $label, FALSE, TRUE, 0 );
- my $labelp = Gtk2::Label->new( $d->get('%') );
+ my $labelp = Gtk2::Label->new($PERCENT);
  $hboxt->pack_end( $labelp, FALSE, TRUE, 0 );
  my $spinbutton = Gtk2::SpinButton->new_with_range( 0, 100, 1 );
  $spinbutton->set_value( $SETTING{'threshold tool'} );
@@ -5080,7 +5084,7 @@ sub unsharp {
  $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
  $label = Gtk2::Label->new( $d->get('Amount') );
  $hbox->pack_start( $label, FALSE, TRUE, 0 );
- $label = Gtk2::Label->new( $d->get('%') );
+ $label = Gtk2::Label->new($PERCENT);
  $hbox->pack_end( $label, FALSE, TRUE, 0 );
  my $spinbuttona = Gtk2::SpinButton->new_with_range( 0, 100, 1 );
  $spinbuttona->set_value( $SETTING{'unsharp amount'} );
@@ -5395,7 +5399,7 @@ sub user_defined_tool {
 
 sub unpaper_page {
  my ( $pages, $options, $callback ) = @_;
- if ( not defined($options) ) { $options = '' }
+ if ( not defined($options) ) { $options = $EMPTY }
 
  # Update undo/redo buffers
  take_snapshot();
@@ -6604,9 +6608,9 @@ sub properties {
    my ( $widget, $string, $len, $position ) = @_;
 
    # only allow a valid positive real number
-   for ( split '', $string ) {
-    if (( $_ ne '.' and ( $_ lt '0' or $_ gt '9' ) )
-     or ( $_ eq '.' and $entry->get_text =~ /\./sm ) )
+   for ( split $EMPTY, $string ) {
+    if (( $_ ne $DOT and ( $_ lt '0' or $_ gt '9' ) )
+     or ( $_ eq $DOT and $entry->get_text =~ /\./sm ) )
     {
      $entry->signal_stop_emission_by_name('insert-text');
      last;
@@ -6659,17 +6663,17 @@ sub properties {
 # Helper function for properties()
 sub get_selected_properties {
  my @page       = $slist->get_selected_indices;
- my $resolution = '';
+ my $resolution = $EMPTY;
  if ( @page > 0 ) { $resolution = $slist->{data}[ shift @page ][2]{resolution} }
  for (@page) {
   if ( $slist->{data}[$_][2]{resolution} != $resolution ) {
-   $resolution = '';
+   $resolution = $EMPTY;
    last;
   }
  }
 
  # round the value to a sensible number of significant figures
- return $resolution eq '' ? '' : sprintf( "%g", $resolution );
+ return $resolution eq $EMPTY ? $EMPTY : sprintf( "%g", $resolution );
 }
 
 # Helper function to display a message dialog, wait for a response, and return it
