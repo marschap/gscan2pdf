@@ -494,7 +494,7 @@ EOS
  $logger->info("Log level $log_level");
 
  if ( defined $locale ) {
-  if ( $locale =~ /^\//x ) {
+  if ( $locale =~ /^\//xsm ) {
    $d->dir($locale);
   }
   else {
@@ -690,9 +690,9 @@ sub set_up_test_mode {
    delete $test->{$file};
 
    # Find a way of emulating the nonsense \n that some people seem to get
-   $device =~ s/\\n/\n/g;
+   $device =~ s/\\n/\n/gsm;
    $logger->debug("'$file','$device'");
-   if ( $file !~ /^\//x ) { $file = getcwd . "/$file" }
+   if ( $file !~ /^\//xsm ) { $file = getcwd . "/$file" }
    if ( !-r $file ) {
     $logger->fatal( sprintf( $d->get("Cannot read file: %s"), $file ) );
     exit 1;
@@ -1490,7 +1490,7 @@ sub drag_data_received_callback {
   my $iter = $model->get_iter($_);
   my @info = $model->get($iter);
   my $suffix;
-  if ( $info[2]->{filename} =~ /(\.\w*)$/x ) { $suffix = $1 }
+  if ( $info[2]->{filename} =~ /(\.\w*)$/xsm ) { $suffix = $1 }
   my $new = File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
 
   # quotes required to prevent File::Temp objects from being clobbered
@@ -2709,13 +2709,13 @@ sub save_dialog {
  my @fonts;
  my ($stdout) = Gscan2pdf::Document::open_three('fc-list : family style file');
 
- for ( split /\n/, $stdout ) {
-  if (/ttf:\ /x) {
+ for ( split /\n/sm, $stdout ) {
+  if (/ttf:\ /xsm) {
    my ( $file, $family, $style ) = split ':';
    chomp $style;
-   $family =~ s/^\ //x;
-   $style =~ s/^style=//x;
-   $style =~ s/,.*$//x;
+   $family =~ s/^\ //xsm;
+   $style =~ s/^style=//xsm;
+   $style =~ s/,.*$//xsm;
    my $font = "$family $style";
    push @fonts, [ $file, $font, $font ];
    if ( not defined( $SETTING{'pdf font'} )
@@ -2887,14 +2887,14 @@ sub save_button_clicked_callback {
    $tday   = sprintf( "%02d", $tday );
 
    my $filename = $SETTING{'default filename'};
-   $filename =~ s/%a/$SETTING{author}/g;
-   $filename =~ s/%t/$SETTING{title}/g;
-   $filename =~ s/%y/$dyear/g;
-   $filename =~ s/%Y/$tyear/g;
-   $filename =~ s/%m/$dmonth/g;
-   $filename =~ s/%M/$tmonth/g;
-   $filename =~ s/%d/$dday/g;
-   $filename =~ s/%D/$tday/g;
+   $filename =~ s/%a/$SETTING{author}/gsm;
+   $filename =~ s/%t/$SETTING{title}/gsm;
+   $filename =~ s/%y/$dyear/gsm;
+   $filename =~ s/%Y/$tyear/gsm;
+   $filename =~ s/%m/$dmonth/gsm;
+   $filename =~ s/%M/$tmonth/gsm;
+   $filename =~ s/%d/$dday/gsm;
+   $filename =~ s/%D/$tday/gsm;
 
    $file_chooser->set_current_name($filename);
    $file_chooser->set_default_response('ok');
@@ -3053,7 +3053,7 @@ sub file_chooser_response_callback {
  $logger->debug("PDF save filename dialog returned $response");
  if ( $response eq 'ok' ) {
   my $filename = $dialog->get_filename;
-  if ( $filename !~ /\.$type$/ix ) {
+  if ( $filename !~ /\.$type$/ixsm ) {
    $filename = "$filename.$type";
    if ( -f $filename ) {
 
@@ -3166,7 +3166,7 @@ sub save_image {
    $filename = "${filename}_%0${w}d.$SETTING{'image type'}";
   }
   else {
-   if ( $filename !~ /\.$SETTING{'image type'}$/ix ) {
+   if ( $filename !~ /\.$SETTING{'image type'}$/ixsm ) {
     $filename = $filename . ".$SETTING{'image type'}";
    }
    return if ( file_exists( $file_chooser, $filename ) );
@@ -3447,7 +3447,7 @@ sub email {
    }
 
    my $mua_string;
-   if ( $client =~ /thunderbird/ ) {
+   if ( $client =~ /thunderbird/sm ) {
     $mua_string = "thunderbird -compose attachment=file://$pdf";
    }
    else {
@@ -3632,7 +3632,7 @@ sub scan_dialog {
    $logger->info("signal 'process-error' emitted with data: $process $msg");
    if ( defined $signal ) { $scbutton->signal_handler_disconnect($signal) }
    $shbox->hide;
-   if ( $process =~ /^(?:get_devices|find_scan_options)$/x ) {
+   if ( $process =~ /^(?:get_devices|find_scan_options)$/xsm ) {
     $widget->hide;
     undef $widget;
     show_message_dialog( $window, 'error', 'close', $msg );
@@ -4408,7 +4408,7 @@ sub paste_selection {
   # Create a new image file for each page in the clipboard
   for (@clipboard) {
    my $suffix;
-   if ( $_->[2]{filename} =~ /(\.\w*)$/x ) { $suffix = $1 }
+   if ( $_->[2]{filename} =~ /(\.\w*)$/xsm ) { $suffix = $1 }
    my $new = File::Temp->new( DIR => $session, SUFFIX => $suffix );
 
    # stringify filename to prevent copy from mangling it
@@ -5875,8 +5875,8 @@ sub view_pod {
 
 sub strippod {
  my $text = shift;
- $text =~ s/B<([^<]*)>/$1/gx;
- $text =~ s/E<gt>/>/gx;
+ $text =~ s/B<([^<]*)>/$1/gxsm;
+ $text =~ s/E<gt>/>/gxsm;
  return $text;
 }
 
@@ -6061,7 +6061,7 @@ sub expand_tildes {
  my ($filename) = @_;
  $filename =~ s{ ^ ~ ( [^/]* ) } {
   $1 ? (getpwnam($1))[7] : ( $ENV{HOME} || $ENV{LOGDIR} || (getpwuid($>))[7] )
- }ex;
+ }exsm;
  return $filename;
 }
 
@@ -6606,7 +6606,7 @@ sub properties {
    # only allow a valid positive real number
    for ( split '', $string ) {
     if (( $_ ne '.' and ( $_ lt '0' or $_ gt '9' ) )
-     or ( $_ eq '.' and $entry->get_text =~ /\./ ) )
+     or ( $_ eq '.' and $entry->get_text =~ /\./sm ) )
     {
      $entry->signal_stop_emission_by_name('insert-text');
      last;
