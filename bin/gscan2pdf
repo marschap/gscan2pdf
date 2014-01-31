@@ -141,12 +141,12 @@ $logger->info("Using PDF::API2 version $PDF::API2::VERSION");
 $logger->info( 'Using Sane version ' . join( '.', Sane->get_version ) );
 $logger->info("Using libsane-perl version $Sane::VERSION");
 
-$logger->debug( Dumper( \%SETTING ) ) if ($debug);
+if ($debug) { $logger->debug( Dumper( \%SETTING ) ) }
 
 # Just in case dependencies have changed, put put startup warning again
 if ( not defined( $SETTING{version} ) or $SETTING{version} ne $VERSION ) {
  $SETTING{'startup warning'} = TRUE;
- delete $SETTING{cache} if ( defined $SETTING{cache} );
+ if ( defined $SETTING{cache} ) { delete $SETTING{cache} }
 }
 $SETTING{version} = $VERSION;
 
@@ -355,7 +355,7 @@ $view->signal_connect(
 $view->signal_connect( button_release_event => \&handle_clicks );
 $view->signal_connect(
  'zoom-changed' => sub {
-  $canvas->set_scale( $view->get_zoom ) if ( defined $canvas );
+  if ( defined $canvas ) { $canvas->set_scale( $view->get_zoom ) }
  }
 );
 
@@ -392,7 +392,7 @@ $window->signal_connect_after(
 
   # Let the keypress propagate
   return FALSE
-    unless ( $event->keyval ==
+    if ( $event->keyval !=
    $Gtk2::Gdk::Keysyms{Delete} )    ## no critic (ProhibitPackageVars)
     ;
 
@@ -402,7 +402,7 @@ $window->signal_connect_after(
 );
 
 # If defined in the config file, set the current directory
-$SETTING{'cwd'} = getcwd unless ( defined( $SETTING{'cwd'} ) );
+if ( not defined( $SETTING{'cwd'} ) ) { $SETTING{'cwd'} = getcwd }
 
 my $unpaper = Gscan2pdf::Unpaper->new( $SETTING{'unpaper options'} );
 
@@ -432,7 +432,7 @@ $tcbutton->set_image( Gtk2::Image->new_from_stock( 'gtk-cancel', 'button' ) );
 $thbox->pack_end( $tcbutton, FALSE, FALSE, 0 );
 
 # Open scan dialog in background
-scan_dialog(TRUE) if ( $SETTING{'auto-open-scan-dialog'} );
+if ( $SETTING{'auto-open-scan-dialog'} ) { scan_dialog(TRUE) }
 
 ### Subroutines
 
@@ -451,7 +451,7 @@ sub parse_arguments {
   'fatal' => sub { $log_level = 'FATAL' },
   'version' => sub { warn "$prog_name $VERSION\n"; exit 0 },
  );
- exit 1 unless ( GetOptions(@args) );
+ if ( not GetOptions(@args) ) { exit 1 }
  $Sane::DEBUG = $debug;
 
  if ( not defined($log_level) ) {
@@ -518,7 +518,7 @@ EOS
 sub read_config_file {    ## no critic (RequireArgUnpacking)
  my ($filename) = @_;
  $logger->info("Reading config from $filename");
- system("touch $filename") unless ( -r $filename );
+ if ( not -r $filename ) { system("touch $filename") }
  try {
   $conf = Config::General->new(
    -ConfigFile  => $filename,
@@ -535,7 +535,7 @@ sub read_config_file {    ## no critic (RequireArgUnpacking)
   move( $filename, "$filename.old" );
  }
  finally {
-  %SETTING = $conf->getall unless (@_);
+  if ( not @_ ) { %SETTING = $conf->getall }
  };
 
  my %default_settings = (
@@ -626,17 +626,19 @@ sub read_config_file {    ## no critic (RequireArgUnpacking)
   },
   'scan-reload-triggers' => qw(mode),
  );
- delete $SETTING{frontend}
-   if (
+ if (
   defined $SETTING{frontend}
   and ( $SETTING{frontend} eq 'scanimage-perl'
    or $SETTING{frontend} eq 'scanadf-perl'
    or $SETTING{frontend} eq 'scanimage.pl'
    or $SETTING{frontend} eq
    'scanadf.pl' )    # these frontends are just for testing purposes
-   );
+   )
+ {
+  delete $SETTING{frontend};
+ }
  for ( keys(%default_settings) ) {
-  $SETTING{$_} = $default_settings{$_} unless ( defined $SETTING{$_} );
+  if ( not defined( $SETTING{$_} ) ) { $SETTING{$_} = $default_settings{$_} }
  }
 
  remove_invalid_paper( $SETTING{Paper} );
@@ -651,7 +653,7 @@ sub read_config_file {    ## no critic (RequireArgUnpacking)
    and $SETTING{'libsane-perl version'} ne $Sane::VERSION )
    )
  {
-  delete $SETTING{cache} if ( defined $SETTING{cache} );
+  if ( defined $SETTING{cache} ) { delete $SETTING{cache} }
  }
  $SETTING{'SANE version'} = join( '.', Sane->get_version );
  $SETTING{'libsane-perl version'} = $Sane::VERSION;
@@ -666,8 +668,8 @@ sub remove_invalid_paper {
   }
   else {
    for (qw(x y t l)) {
-    unless ( ref( $hashref->{$paper} ) eq "HASH"
-     and defined( $hashref->{$paper}{$_} ) )
+    if ( ref( $hashref->{$paper} ) ne "HASH"
+     and not defined( $hashref->{$paper}{$_} ) )
     {
      delete $hashref->{$paper};
      last;
@@ -690,13 +692,13 @@ sub set_up_test_mode {
    # Find a way of emulating the nonsense \n that some people seem to get
    $device =~ s/\\n/\n/g;
    $logger->debug("'$file','$device'");
-   $file = getcwd . "/$file" if ( $file !~ /^\//x );
+   if ( $file !~ /^\//x ) { $file = getcwd . "/$file" }
    if ( !-r $file ) {
     $logger->fatal( sprintf( $d->get("Cannot read file: %s"), $file ) );
     exit 1;
    }
    push @{ $test->{file} }, $file;
-   $test->{output} = '' unless ( defined( $test->{output} ) );
+   if ( not defined( $test->{output} ) ) { $test->{output} = '' }
    $test->{output} .=
      "'$#{$test->{file}}','$device','" . basename($file) . "'\n";
   }
@@ -751,9 +753,10 @@ sub create_main_window {
  if ( $SETTING{'restore window'} ) {
   $widget->set_default_size( $SETTING{'window_width'},
    $SETTING{'window_height'} );
-  $widget->move( $SETTING{'window_x'}, $SETTING{'window_y'} )
-    if ( defined( $SETTING{'window_x'} ) and defined( $SETTING{'window_y'} ) );
-  $widget->maximize if ( $SETTING{'window_maximize'} );
+  if ( defined( $SETTING{'window_x'} ) and defined( $SETTING{'window_y'} ) ) {
+   $widget->move( $SETTING{'window_x'}, $SETTING{'window_y'} );
+  }
+  if ( $SETTING{'window_maximize'} ) { $widget->maximize }
  }
 
  try { $widget->set_default_icon_from_file("$iconpath/gscan2pdf.svg"); }
@@ -778,38 +781,45 @@ sub check_dependencies {
  $dependencies{djvu}        = Gscan2pdf::Document::check_command('cjb2');
  $dependencies{unpaper}     = Gscan2pdf::Unpaper->version;
  $dependencies{libtiff}     = Gscan2pdf::Document::check_command('tiffcp');
- $logger->info("Found Image::Magick") if ( $dependencies{perlmagick} );
- $logger->info("Found ImageMagick")   if ( $dependencies{imagemagick} );
- $logger->info("Found scanadf")       if ( $dependencies{scanadf} );
- $logger->info("Found xdg-email")     if ( $dependencies{xdg} );
- $logger->info("Found gocr")          if ( $dependencies{gocr} );
- $logger->info("Found tesseract")     if ( $dependencies{tesseract} );
- $logger->info("Found cuneiform v$dependencies{cuneiform}")
-   if ( $dependencies{cuneiform} );
- $logger->info("Found cjb2 (djvu)") if ( $dependencies{djvu} );
- $logger->info("Found libtiff")     if ( $dependencies{libtiff} );
- $logger->info("Found unpaper $dependencies{unpaper}")
-   if ( $dependencies{unpaper} );
+ if ( $dependencies{perlmagick} )  { $logger->info("Found Image::Magick") }
+ if ( $dependencies{imagemagick} ) { $logger->info("Found ImageMagick") }
+ if ( $dependencies{scanadf} )     { $logger->info("Found scanadf") }
+ if ( $dependencies{xdg} )         { $logger->info("Found xdg-email") }
+ if ( $dependencies{gocr} )        { $logger->info("Found gocr") }
+ if ( $dependencies{tesseract} )   { $logger->info("Found tesseract") }
+
+ if ( $dependencies{cuneiform} ) {
+  $logger->info("Found cuneiform v$dependencies{cuneiform}");
+ }
+ if ( $dependencies{djvu} )    { $logger->info("Found cjb2 (djvu)") }
+ if ( $dependencies{libtiff} ) { $logger->info("Found libtiff") }
+ if ( $dependencies{unpaper} ) {
+  $logger->info("Found unpaper $dependencies{unpaper}");
+ }
 
  # OCR engine options
- push @ocr_engine,
-   [ 'gocr', $d->get('GOCR'), $d->get('Process image with GOCR.') ]
-   if ( $dependencies{gocr} );
- push @ocr_engine,
-   [
-  'tesseract', $d->get('Tesseract'),
-  $d->get('Process image with Tesseract.')
-   ],
-   if ( $dependencies{tesseract} );
- push @ocr_engine,
-   [ 'ocropus', $d->get('Ocropus'), $d->get('Process image with Ocropus.') ],
-   if ( $dependencies{ocropus} );
- push @ocr_engine,
-   [
-  'cuneiform', $d->get('Cuneiform'),
-  $d->get('Process image with Cuneiform.')
-   ],
-   if ( $dependencies{cuneiform} );
+ if ( $dependencies{gocr} ) {
+  push @ocr_engine,
+    [ 'gocr', $d->get('GOCR'), $d->get('Process image with GOCR.') ];
+ }
+ if ( $dependencies{tesseract} ) {
+  push @ocr_engine,
+    [
+   'tesseract', $d->get('Tesseract'),
+   $d->get('Process image with Tesseract.')
+    ];
+ }
+ if ( $dependencies{ocropus} ) {
+  push @ocr_engine,
+    [ 'ocropus', $d->get('Ocropus'), $d->get('Process image with Ocropus.') ];
+ }
+ if ( $dependencies{cuneiform} ) {
+  push @ocr_engine,
+    [
+   'cuneiform', $d->get('Cuneiform'),
+   $d->get('Process image with Cuneiform.')
+    ];
+ }
  return;
 }
 
@@ -870,9 +880,14 @@ sub create_menu_bar {
    $d->get('Compress temporary files'),  \&compress_temp
   ],
   [
-   'Quit',           'gtk-quit',
-   $d->get('_Quit'), '<control>q',
-   $d->get('Quit'), sub { Gtk2->main_quit if quit(); }
+   'Quit',
+   'gtk-quit',
+   $d->get('_Quit'),
+   '<control>q',
+   $d->get('Quit'),
+   sub {
+    if ( quit() ) { Gtk2->main_quit }
+     }
   ],
 
   # Edit menu
@@ -1239,8 +1254,9 @@ EOS
  # extract the menubar
  $menubar = $uimanager->get_widget('/MenuBar');
 
- $SETTING{user_defined_tools} = [ $SETTING{user_defined_tools} ]
-   if ( ref( $SETTING{user_defined_tools} ) ne 'ARRAY' );
+ if ( ref( $SETTING{user_defined_tools} ) ne 'ARRAY' ) {
+  $SETTING{user_defined_tools} = [ $SETTING{user_defined_tools} ];
+ }
  for ( @{ $SETTING{user_defined_tools} } ) {
   my %tool = ( cmd => $_ );
   push @user_defined_tools, \%tool;
@@ -1252,20 +1268,24 @@ EOS
 
  # Ghost save image item if imagemagick not available
  my $msg = '';
- $msg .= $d->get("Save image and Save as PDF both require imagemagick\n")
-   unless ( $dependencies{imagemagick} );
+ if ( not $dependencies{imagemagick} ) {
+  $msg .= $d->get("Save image and Save as PDF both require imagemagick\n");
+ }
 
  # Ghost save image item if libtiff not available
- $msg .= $d->get("Save image requires libtiff\n")
-   unless ( $dependencies{libtiff} );
+ if ( not $dependencies{libtiff} ) {
+  $msg .= $d->get("Save image requires libtiff\n");
+ }
 
  # Ghost djvu item if cjb2 not available
- $msg .= $d->get("Save as DjVu requires djvulibre-bin\n")
-   unless ( $dependencies{djvu} );
+ if ( not $dependencies{djvu} ) {
+  $msg .= $d->get("Save as DjVu requires djvulibre-bin\n");
+ }
 
  # Ghost email item if xdg-email not available
- $msg .= $d->get("Email as PDF requires xdg-email\n")
-   unless ( $dependencies{xdg} );
+ if ( not $dependencies{xdg} ) {
+  $msg .= $d->get("Email as PDF requires xdg-email\n");
+ }
 
  # Undo/redo start off ghosted anyway-
  $uimanager->get_widget('/MenuBar/Edit/Undo')->set_sensitive(FALSE);
@@ -1294,7 +1314,7 @@ EOS
  $dependencies{pages} = -1;
 
  # Ghost rotations and unpaper if perlmagick not available
- unless ( $dependencies{perlmagick} ) {
+ if ( not $dependencies{perlmagick} ) {
   $uimanager->get_widget('/MenuBar/View/Rotate 90')->set_sensitive(FALSE);
   $uimanager->get_widget('/MenuBar/View/Rotate 180')->set_sensitive(FALSE);
   $uimanager->get_widget('/MenuBar/View/Rotate 270')->set_sensitive(FALSE);
@@ -1313,7 +1333,7 @@ EOS
  }
 
  # Ghost unpaper item if unpaper not available
- unless ( $dependencies{unpaper} ) {
+ if ( not $dependencies{unpaper} ) {
   $uimanager->get_widget('/MenuBar/Tools/unpaper')->set_sensitive(FALSE);
   $msg .= $d->get("unpaper missing\n");
  }
@@ -1340,7 +1360,7 @@ EOS
   $dialog->vbox->add($cb);
   $dialog->show_all;
   $dialog->run;
-  $SETTING{'startup warning'} = FALSE if ( $cb->get_active );
+  if ( $cb->get_active ) { $SETTING{'startup warning'} = FALSE }
   $dialog->destroy;
  }
 
@@ -1435,7 +1455,7 @@ sub update_uimanager {
     $uimanager->get_widget('/MenuBar/File/Email as PDF')->set_sensitive(FALSE);
     $uimanager->get_widget('/ToolBar/Email as PDF')->set_sensitive(FALSE);
     $uimanager->get_widget('/Thumb_Popup/Email as PDF')->set_sensitive(FALSE);
-    $windowe->hide if defined $windowe;
+    if ( defined $windowe ) { $windowe->hide }
    }
    if ( $dependencies{imagemagick} and $dependencies{libtiff} ) {
     $uimanager->get_widget('/MenuBar/File/Save')->set_sensitive(FALSE);
@@ -1445,7 +1465,7 @@ sub update_uimanager {
    $uimanager->get_widget('/MenuBar/File/Print')->set_sensitive(FALSE);
    $uimanager->get_widget('/ToolBar/Print')->set_sensitive(FALSE);
    $uimanager->get_widget('/Thumb_Popup/Print')->set_sensitive(FALSE);
-   $windowi->hide if defined $windowi;
+   if ( defined $windowi ) { $windowi->hide }
 
    $dependencies{pages} = $#{ $slist->{data} };
   }
@@ -1470,7 +1490,7 @@ sub drag_data_received_callback {
   my $iter = $model->get_iter($_);
   my @info = $model->get($iter);
   my $suffix;
-  $suffix = $1 if ( $info[2]->{filename} =~ /(\.\w*)$/x );
+  if ( $info[2]->{filename} =~ /(\.\w*)$/x ) { $suffix = $1 }
   my $new = File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
 
   # quotes required to prevent File::Temp objects from being clobbered
@@ -1511,14 +1531,14 @@ sub selection_changed_callback {
  my @page = $slist->get_selected_indices;
 
  # Display the new image
- $scwin_buffer->remove($_) for ( $scwin_buffer->get_children );
+ for ( $scwin_buffer->get_children ) { $scwin_buffer->remove($_) }
  if (@page) {
 
   my $path = Gtk2::TreePath->new_from_indices( $page[0] );
   $slist->scroll_to_cell($path);
   my $sel = $selector->get_selection;
   display_image( $slist->{data}[ $page[0] ][2] );
-  $selector->set_selection($sel) if ( defined $sel );
+  if ( defined $sel ) { $selector->set_selection($sel) }
  }
  else {
   $view->set_pixbuf(undef);
@@ -1567,9 +1587,9 @@ sub create_temp_directory {
  find_crashed_sessions();
 
  # Create temporary directory if necessary
- unless ( defined $session ) {
+ if ( not defined($session) ) {
   if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne '' ) {
-   mkdir( $SETTING{TMPDIR} ) if ( not -d $SETTING{TMPDIR} );
+   if ( not -d $SETTING{TMPDIR} ) { mkdir( $SETTING{TMPDIR} ) }
    try {
     $session = File::Temp->newdir( 'gscan2pdf-XXXX', DIR => $SETTING{TMPDIR} );
    }
@@ -1681,7 +1701,9 @@ sub find_crashed_sessions {
   push @{ $sessionlist->{data} }, @crashed;
   $dialog->vbox->add($sessionlist);
   $dialog->show_all;
-  ($selected) = $sessionlist->get_selected_indices if ( $dialog->run eq 'ok' );
+  if ( $dialog->run eq 'ok' ) {
+   ($selected) = $sessionlist->get_selected_indices;
+  }
   $dialog->destroy;
 
   if ( defined $selected ) {
@@ -1731,7 +1753,7 @@ sub display_image {
  }
 
  # Convert hocr output to Goo:Canvas if defined
- create_canvas($current_page) if ( defined $current_page->{hocr} );
+ if ( defined $current_page->{hocr} ) { create_canvas($current_page) }
  return;
 }
 
@@ -1742,7 +1764,7 @@ sub create_canvas {
  # Set up the canvas
  $canvas = Goo::Canvas->new;
  my $root = $canvas->get_root_item;
- unless ( defined $page->{w} ) {
+ if ( not defined( $page->{w} ) ) {
 
   # quotes required to prevent File::Temp object being clobbered
   my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$page->{filename}");
@@ -1765,7 +1787,7 @@ sub create_canvas {
  }
 
  # Remove the existing contents
- $scwin_buffer->remove($_) for ( $scwin_buffer->get_children );
+ for ( $scwin_buffer->get_children ) { $scwin_buffer->remove($_) }
 
  $scwin_buffer->add($canvas);
  $canvas->set_scale( $view->get_zoom );
@@ -1923,8 +1945,9 @@ sub update_tpbar {
  my (%options) = @_;
  if ( $options{total} ) {
   if ( defined $options{process_name} ) {
-   $options{process_name} .= " - $options{message}"
-     if ( defined $options{message} );
+   if ( defined $options{message} ) {
+    $options{process_name} .= " - $options{message}";
+   }
    $tpbar->set_text(
     sprintf(
      $d->get("Process %i of %i (%s)"),
@@ -2093,8 +2116,8 @@ sub import_file {
   },
   finished_callback => sub {
    my ( $new_page, $pending ) = @_;
-   $thbox->hide_all unless $pending;
-   $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   if ( not $pending )    { $thbox->hide_all }
+   if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
    update_uimanager();
   },
   error_callback => \&error_callback
@@ -2109,8 +2132,9 @@ sub add_page_range {
  $vbox->pack_start( $frame, FALSE, FALSE, 0 );
 
  my $pr = Gscan2pdf::PageRange->new;
- $pr->set_active( $SETTING{'Page range'} )
-   if ( defined $SETTING{'Page range'} );
+ if ( defined $SETTING{'Page range'} ) {
+  $pr->set_active( $SETTING{'Page range'} );
+ }
  $pr->signal_connect(
   changed => sub {
    $SETTING{'Page range'} = $pr->get_active;
@@ -2223,7 +2247,7 @@ sub add_pdf_metadata {
  $hboxa->pack_start( $labela, FALSE, FALSE, 0 );
  my $entrya = Gtk2::Entry->new;
  $hboxa->pack_end( $entrya, TRUE, TRUE, 0 );
- $entrya->set_text( $SETTING{author} ) if ( defined( $SETTING{author} ) );
+ if ( defined( $SETTING{author} ) ) { $entrya->set_text( $SETTING{author} ) }
 
  # Title
  my $hboxt = Gtk2::HBox->new;
@@ -2232,7 +2256,7 @@ sub add_pdf_metadata {
  $hboxt->pack_start( $labelt, FALSE, FALSE, 0 );
  my $entryt = Gtk2::Entry->new;
  $hboxt->pack_end( $entryt, TRUE, TRUE, 0 );
- $entryt->set_text( $SETTING{title} ) if ( defined( $SETTING{title} ) );
+ if ( defined( $SETTING{title} ) ) { $entryt->set_text( $SETTING{title} ) }
 
  # Subject
  my $hboxs = Gtk2::HBox->new;
@@ -2241,7 +2265,7 @@ sub add_pdf_metadata {
  $hboxs->pack_start( $labels, FALSE, FALSE, 0 );
  my $entrys = Gtk2::Entry->new;
  $hboxs->pack_end( $entrys, TRUE, TRUE, 0 );
- $entrys->set_text( $SETTING{subject} ) if ( defined( $SETTING{subject} ) );
+ if ( defined( $SETTING{subject} ) ) { $entrys->set_text( $SETTING{subject} ) }
 
  # Keywords
  my $hboxk = Gtk2::HBox->new;
@@ -2250,7 +2274,9 @@ sub add_pdf_metadata {
  $hboxk->pack_start( $labelk, FALSE, FALSE, 0 );
  my $entryk = Gtk2::Entry->new;
  $hboxk->pack_end( $entryk, TRUE, TRUE, 0 );
- $entryk->set_text( $SETTING{keywords} ) if ( defined( $SETTING{keywords} ) );
+ if ( defined( $SETTING{keywords} ) ) {
+  $entryk->set_text( $SETTING{keywords} );
+ }
 
  return ( $entrya, $entryt, $entrys, $entryk );
 }
@@ -2268,7 +2294,7 @@ sub update_PDF_settings {
 
 sub get_pdf_metadata {
  my %h;
- $h{Author} = $SETTING{author} if defined $SETTING{author};
+ if ( defined $SETTING{author} ) { $h{Author} = $SETTING{author} }
  my ( $day, $month, $year ) =
    ( localtime( time + $SETTING{'date offset'} * 24 * 60 * 60 ) )[ 3, 4, 5 ];
  $year  += 1900;
@@ -2278,9 +2304,9 @@ sub get_pdf_metadata {
  $h{ModDate}  = sprintf( "D:%4i%02i%02i000000+00'00'", $year, $month, $day );
  $h{Creator}  = "$prog_name v$VERSION";
  $h{Producer} = "PDF::API2";
- $h{Title}    = $SETTING{title} if defined $SETTING{title};
- $h{Subject}  = $SETTING{subject} if defined $SETTING{subject};
- $h{Keywords} = $SETTING{keywords} if defined $SETTING{keywords};
+ if ( defined $SETTING{title} )    { $h{Title}    = $SETTING{title} }
+ if ( defined $SETTING{subject} )  { $h{Subject}  = $SETTING{subject} }
+ if ( defined $SETTING{keywords} ) { $h{Keywords} = $SETTING{keywords} }
  return \%h;
 }
 
@@ -2397,9 +2423,10 @@ EOS
    elsif ( $item->isa('Goo::Canvas::Text') ) {
     $text = $item->get('text');
    }
-   $current_page->{hocr} .=
-     "  <span class=\"ocr_line\" title=\"bbox $x1 $y1 $x2 $y2\">$text</span>\n"
-     if ( defined($x2) and defined($text) );
+   if ( defined($x2) and defined($text) ) {
+    $current_page->{hocr} .=
+"  <span class=\"ocr_line\" title=\"bbox $x1 $y1 $x2 $y2\">$text</span>\n";
+   }
   }
  }
  $current_page->{hocr} .= "</p></div></body></html>";
@@ -2450,12 +2477,14 @@ sub save_PDF {
   },
   finished_callback => sub {
    my ( $new_page, $pending ) = @_;
-   $thbox->hide_all unless $pending;
-   $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   if ( not $pending )    { $thbox->hide_all }
+   if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
    mark_pages(@pagelist);
-   system("xdg-open \"$filename\" &")
-     if ( defined( $SETTING{'view files toggle'} )
-    and $SETTING{'view files toggle'} );
+   if ( defined( $SETTING{'view files toggle'} )
+    and $SETTING{'view files toggle'} )
+   {
+    system("xdg-open \"$filename\" &");
+   }
    $logger->debug("Finished saving $filename");
   },
   error_callback => \&error_callback
@@ -2600,8 +2629,9 @@ sub save_dialog {
   [ 'txt',     $d->get('Text'),    $d->get('Plain text') ],
   [ 'session', $d->get('Session'), $d->get('gscan2pdf session file') ],
  );
- push @type, [ 'djvu', $d->get('DjVu'), $d->get('Deja Vu') ]
-   if $dependencies{djvu};
+ if ( $dependencies{djvu} ) {
+  push @type, [ 'djvu', $d->get('DjVu'), $d->get('Deja Vu') ];
+ }
 
  my @tiff_compression = (
   [
@@ -2688,9 +2718,11 @@ sub save_dialog {
    $style =~ s/,.*$//x;
    my $font = "$family $style";
    push @fonts, [ $file, $font, $font ];
-   $SETTING{'pdf font'} = $file
-     if ( not defined( $SETTING{'pdf font'} )
-    and $font eq 'Times New Roman Regular' );
+   if ( not defined( $SETTING{'pdf font'} )
+    and $font eq 'Times New Roman Regular' )
+   {
+    $SETTING{'pdf font'} = $file;
+   }
   }
  }
  @fonts = sort { $a->[1] cmp $b->[1] } @fonts;
@@ -2736,16 +2768,22 @@ sub save_dialog {
  $cbutton->signal_connect( clicked => sub { $windowi->hide; } );
 
  $windowi->show_all;
- $hboxpq->hide_all if ( $pdf_compression[ $combob->get_active ][0] ne 'jpg' );
- $hboxtq->hide_all
-   if (
+ if ( $pdf_compression[ $combob->get_active ][0] ne 'jpg' ) {
+  $hboxpq->hide_all;
+ }
+ if (
   $type[ $combobi->get_active ][0] ne 'jpg'
   or ( $type[ $combobi->get_active ][0] eq 'tif'
    and $tiff_compression[ $combobtc->get_active ][0] ne 'jpg' )
-   );
- $hboxc->hide_all
-   if ( $type[ $combobi->get_active ][0] ne 'tif'
-  and $type[ $combobi->get_active ][0] ne 'ps' );
+   )
+ {
+  $hboxtq->hide_all;
+ }
+ if ( $type[ $combobi->get_active ][0] ne 'tif'
+  and $type[ $combobi->get_active ][0] ne 'ps' )
+ {
+  $hboxc->hide_all;
+ }
 
  if ( $type[ $combobi->get_active ][0] ne 'pdf' ) {
   $vboxp->hide_all;
@@ -3061,7 +3099,7 @@ sub file_chooser_response_callback {
     $slist->save_session($filename);
    }
   }
-  $windowi->hide if defined $windowi;
+  if ( defined $windowi ) { $windowi->hide }
  }
  $dialog->destroy;
  return;
@@ -3128,8 +3166,9 @@ sub save_image {
    $filename = "${filename}_%0${w}d.$SETTING{'image type'}";
   }
   else {
-   $filename = $filename . ".$SETTING{'image type'}"
-     if ( $filename !~ /\.$SETTING{'image type'}$/ix );
+   if ( $filename !~ /\.$SETTING{'image type'}$/ix ) {
+    $filename = $filename . ".$SETTING{'image type'}";
+   }
    return if ( file_exists( $file_chooser, $filename ) );
   }
 
@@ -3152,18 +3191,20 @@ sub save_image {
    },
    finished_callback => sub {
     my ( $new_page, $pending ) = @_;
-    $thbox->hide_all unless $pending;
-    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+    if ( not $pending )    { $thbox->hide_all }
+    if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
     mark_pages(@pagelist);
-    system("xdg-open \"$filename\" &")
-      if ( defined( $SETTING{'view files toggle'} )
-     and $SETTING{'view files toggle'} );
+    if ( defined( $SETTING{'view files toggle'} )
+     and $SETTING{'view files toggle'} )
+    {
+     system("xdg-open \"$filename\" &");
+    }
     $logger->debug("Finished saving $filename");
    },
    error_callback => \&error_callback
   );
 
-  $windowi->hide if defined $windowi;
+  if ( defined $windowi ) { $windowi->hide }
  }
  $file_chooser->destroy;
  return;
@@ -3206,13 +3247,15 @@ sub save_TIFF {
   },
   finished_callback => sub {
    my ( $new_page, $pending ) = @_;
-   $thbox->hide_all unless $pending;
-   $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   if ( not $pending )    { $thbox->hide_all }
+   if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
    mark_pages(@pagelist);
    my $file = defined($ps) ? $ps : $filename;
-   system("xdg-open \"$filename\" &")
-     if ( defined( $SETTING{'view files toggle'} )
-    and $SETTING{'view files toggle'} );
+   if ( defined( $SETTING{'view files toggle'} )
+    and $SETTING{'view files toggle'} )
+   {
+    system("xdg-open \"$filename\" &");
+   }
    $logger->debug("Finished saving $filename");
   },
   error_callback => \&error_callback
@@ -3254,12 +3297,14 @@ sub save_djvu {
   },
   finished_callback => sub {
    my ( $new_page, $pending ) = @_;
-   $thbox->hide_all unless $pending;
-   $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   if ( not $pending )    { $thbox->hide_all }
+   if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
    mark_pages(@pagelist);
-   system("xdg-open \"$filename\" &")
-     if ( defined( $SETTING{'view files toggle'} )
-    and $SETTING{'view files toggle'} );
+   if ( defined( $SETTING{'view files toggle'} )
+    and $SETTING{'view files toggle'} )
+   {
+    system("xdg-open \"$filename\" &");
+   }
    $logger->debug("Finished saving $filename");
   },
   error_callback => \&error_callback
@@ -3297,12 +3342,14 @@ sub save_txt {
   },
   finished_callback => sub {
    my ( $new_page, $pending ) = @_;
-   $thbox->hide_all unless $pending;
-   $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   if ( not $pending )    { $thbox->hide_all }
+   if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
    mark_pages(@pagelist);
-   system("xdg-open \"$filename\" &")
-     if ( defined( $SETTING{'view files toggle'} )
-    and $SETTING{'view files toggle'} );
+   if ( defined( $SETTING{'view files toggle'} )
+    and $SETTING{'view files toggle'} )
+   {
+    system("xdg-open \"$filename\" &");
+   }
    $logger->debug("Finished saving $filename");
   },
   error_callback => \&error_callback
@@ -3427,16 +3474,19 @@ sub email {
     },
     finished_callback => sub {
      my ( $new_page, $pending ) = @_;
-     $thbox->hide_all unless $pending;
-     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+     if ( not $pending )    { $thbox->hide_all }
+     if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
      mark_pages(@pagelist);
-     system("xdg-open \"$pdf\" &")
-       if ( defined( $SETTING{'view files toggle'} )
-      and $SETTING{'view files toggle'} );
+     if ( defined( $SETTING{'view files toggle'} )
+      and $SETTING{'view files toggle'} )
+     {
+      system("xdg-open \"$pdf\" &");
+     }
      $logger->info($mua_string);
-     show_message_dialog( $window, 'error', 'close',
-      $d->get('Error creating email') )
-       if ( system($mua_string) );
+     if ( system($mua_string) ) {
+      show_message_dialog( $window, 'error', 'close',
+       $d->get('Error creating email') );
+     }
     },
     error_callback => \&error_callback
    );
@@ -3452,7 +3502,7 @@ sub email {
  $cbutton->signal_connect( clicked => sub { $windowe->hide; } );
 
  $windowe->show_all;
- $hboxq->hide_all if ( $compression[ $combob->get_active ][0] ne 'jpg' );
+ if ( $compression[ $combob->get_active ][0] ne 'jpg' ) { $hboxq->hide_all }
  return;
 }
 
@@ -3467,11 +3517,13 @@ sub scan_dialog {
  }
 
  # If device not set by config and there is a default device, then set it
- $SETTING{device} = $ENV{'SANE_DEFAULT_DEVICE'}
-   if ( not defined( $SETTING{device} )
-  and defined( $ENV{'SANE_DEFAULT_DEVICE'} ) );
+ if ( not defined( $SETTING{device} )
+  and defined( $ENV{'SANE_DEFAULT_DEVICE'} ) )
+ {
+  $SETTING{device} = $ENV{'SANE_DEFAULT_DEVICE'};
+ }
 
- $SETTING{'pages to scan'} = 0 if ( $SETTING{'pages to scan'} eq 'all' );
+ if ( $SETTING{'pages to scan'} eq 'all' ) { $SETTING{'pages to scan'} = 0 }
 
  # scan pop-up window
  my %options = (
@@ -3563,12 +3615,14 @@ sub scan_dialog {
   'finished-process' => sub {
    my ( $widget, $process, $button_signal ) = @_;
    $logger->info("signal 'finished-process' emitted with data: $process");
-   $scbutton->signal_handler_disconnect($button_signal)
-     if ( defined $button_signal );
+   if ( defined $button_signal ) {
+    $scbutton->signal_handler_disconnect($button_signal);
+   }
    $shbox->hide;
 
-   $widget->scan_options( $SETTING{device} )
-     if ( $SETTING{'cycle sane handle'} and $process eq 'scan_pages' );
+   if ( $SETTING{'cycle sane handle'} and $process eq 'scan_pages' ) {
+    $widget->scan_options( $SETTING{device} );
+   }
   }
  );
 
@@ -3576,7 +3630,7 @@ sub scan_dialog {
   'process-error' => sub {
    my ( $widget, $process, $msg ) = @_;
    $logger->info("signal 'process-error' emitted with data: $process $msg");
-   $scbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   if ( defined $signal ) { $scbutton->signal_handler_disconnect($signal) }
    $shbox->hide;
    if ( $process =~ /^(?:get_devices|find_scan_options)$/x ) {
     $widget->hide;
@@ -3643,7 +3697,7 @@ sub scan_dialog {
 
  add_postprocessing_options($windows);
 
- $windows->show_all unless $hidden;
+ if ( not $hidden ) { $windows->show_all }
 
  if (@device_list) {
   $windows->set( 'device-list', \@device_list );
@@ -3657,8 +3711,9 @@ sub scan_dialog {
 sub changed_device_callback {
  my ( $widget, $device ) = @_;
  $logger->info("signal 'changed-device' emitted with data: '$device'");
- $SETTING{device} = $device
-   if ( defined($device) and $device ne '' );
+ if ( defined($device) and $device ne '' ) {
+  $SETTING{device} = $device;
+ }
  return;
 }
 
@@ -3697,8 +3752,9 @@ sub changed_side_to_scan_callback {
 
 sub reloaded_scan_options_callback {
  $windows->set( 'paper-formats', $SETTING{Paper} );
- $windows->set( 'paper',         $SETTING{'Paper size'} )
-   if ( defined $SETTING{'Paper size'} );
+ if ( defined $SETTING{'Paper size'} ) {
+  $windows->set( 'paper', $SETTING{'Paper size'} );
+ }
 
  my @profiles = keys %{ $SETTING{profile} };
  if ( defined $SETTING{'default profile'} ) {
@@ -3717,8 +3773,9 @@ sub changed_scan_option_callback {
  my ( $widget, $option, $value ) = @_;
 
  # Note resolution
- $SETTING{resolution} = $value
-   if ( $option eq SANE_NAME_SCAN_RESOLUTION );
+ if ( $option eq SANE_NAME_SCAN_RESOLUTION ) {
+  $SETTING{resolution} = $value;
+ }
  return;
 }
 
@@ -3730,7 +3787,7 @@ sub changed_progress_callback {
  else {
   $spbar->pulse;
  }
- $spbar->set_text($message) if ( defined $message );
+ if ( defined $message ) { $spbar->set_text($message) }
  return;
 }
 
@@ -3814,8 +3871,9 @@ sub add_postprocessing_rotate {
  $rbutton->signal_connect(
   toggled => sub {
    if ( $rbutton->get_active ) {
-    $hboxr->set_sensitive(TRUE)
-      if ( $side[ $comboboxs->get_active ]->[0] ne 'both' );
+    if ( $side[ $comboboxs->get_active ]->[0] ne 'both' ) {
+     $hboxr->set_sensitive(TRUE);
+    }
    }
    else {
     $hboxr->set_sensitive(FALSE);
@@ -3829,7 +3887,7 @@ sub add_postprocessing_rotate {
     $r2button->set_active(FALSE);
    }
    else {
-    $hboxr->set_sensitive(TRUE) if ( $rbutton->get_active );
+    if ( $rbutton->get_active ) { $hboxr->set_sensitive(TRUE) }
 
     # Empty combobox
     while ( $comboboxs2->get_active > -1 ) {
@@ -3838,9 +3896,11 @@ sub add_postprocessing_rotate {
     }
     @side2 = ();
     foreach (@side) {
-     push @side2, $_
-       unless ( $_->[0] eq 'both'
-      or $_->[0] eq $side[ $comboboxs->get_active ]->[0] );
+     if ( $_->[0] ne 'both'
+      and $_->[0] ne $side[ $comboboxs->get_active ]->[0] )
+     {
+      push @side2, $_;
+     }
     }
     $comboboxs2->append_text( $side2[0]->[1] );
     $comboboxs2->set_active(0);
@@ -3926,7 +3986,7 @@ sub add_postprocessing_ocr {
     }
    );
   }
-  $hboxtl->set_sensitive(FALSE) unless ( $obutton->get_active );
+  if ( not $obutton->get_active ) { $hboxtl->set_sensitive(FALSE) }
   $obutton->signal_connect(
    toggled => sub {
     if ( $obutton->get_active ) {
@@ -4052,12 +4112,15 @@ sub add_postprocessing_options {
    $SETTING{'OCR on scan'} = $obutton->get_active;
    $logger->info("OCR $SETTING{'OCR on scan'}");
    if ( $SETTING{'OCR on scan'} ) {
-    $SETTING{'ocr engine'}   = $ocr_engine[ $comboboxe->get_active ]->[0];
-    $SETTING{'ocr language'} = $tesslang->[ $comboboxtl->get_active ][0]
-      if ( $SETTING{'ocr engine'} eq 'tesseract'
-     or $SETTING{'ocr engine'} eq 'ocropus' );
-    $SETTING{'ocr language'} = $cflang->[ $comboboxcl->get_active ][0]
-      if ( $SETTING{'ocr engine'} eq 'cuneiform' );
+    $SETTING{'ocr engine'} = $ocr_engine[ $comboboxe->get_active ]->[0];
+    if ($SETTING{'ocr engine'} eq 'tesseract'
+     or $SETTING{'ocr engine'} eq 'ocropus' )
+    {
+     $SETTING{'ocr language'} = $tesslang->[ $comboboxtl->get_active ][0];
+    }
+    if ( $SETTING{'ocr engine'} eq 'cuneiform' ) {
+     $SETTING{'ocr language'} = $cflang->[ $comboboxcl->get_active ][0];
+    }
    }
 
   }
@@ -4065,15 +4128,19 @@ sub add_postprocessing_options {
 
  $self->signal_connect(
   show => sub {
-   $hboxtl->hide_all
-     if (
+   if (
     defined($hboxtl)
     and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
      or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
-     );
-   $hboxcl->hide_all
-     if ( defined($hboxcl)
-    and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) );
+     )
+   {
+    $hboxtl->hide_all;
+   }
+   if ( defined($hboxcl)
+    and not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' ) )
+   {
+    $hboxcl->hide_all;
+   }
   }
  );
 
@@ -4084,11 +4151,11 @@ sub add_postprocessing_options {
 # or row-changed signal of simplelist
 
 sub update_start {
- return unless ( defined $windows );
+ if ( not defined($windows) ) { return }
  my $value = $windows->get('page-number-start');
- $start = $windows->get('page-number-start') unless ( defined $start );
+ if ( not defined($start) ) { $start = $windows->get('page-number-start') }
  my $step = $value - $start;
- $step = $windows->get('page-number-increment') if ( $step == 0 );
+ if ( $step == 0 ) { $step = $windows->get('page-number-increment') }
  my $exists = TRUE;
  my $i = $step > 0 ? 0 : $#{ $slist->{data} };
  $start = $value;
@@ -4122,11 +4189,12 @@ sub update_start {
 # Update the number of pages to scan spinbutton if necessary
 
 sub update_number {
- return unless ( defined $windows );
+ if ( not defined($windows) ) { return }
  my $n = $slist->pages_possible( $windows->get('page-number-start'),
   $windows->get('page-number-increment') );
- $windows->set( 'num-pages', $n )
-   if ( $n > 0 and $n < $windows->get('num-pages') );
+ if ( $n > 0 and $n < $windows->get('num-pages') ) {
+  $windows->set( 'num-pages', $n );
+ }
  return;
 }
 
@@ -4228,8 +4296,9 @@ sub print_dialog {
  chdir $SETTING{'cwd'};
  my $print_op = Gtk2::PrintOperation->new;
 
- $print_op->set_print_settings($print_settings)
-   if ( defined $print_settings );
+ if ( defined $print_settings ) {
+  $print_op->set_print_settings($print_settings);
+ }
 
  $print_op->signal_connect(
   begin_print => sub {
@@ -4245,7 +4314,7 @@ sub print_dialog {
      $page_set->I($_);
     }
     for ( 0 .. $#{ $slist->{data} } ) {
-     push @page_list, $_ if ( $page_set->member( $slist->{data}[$_][0] ) );
+     if ( $page_set->member( $slist->{data}[$_][0] ) ) { push @page_list, $_ }
     }
    }
    else {
@@ -4274,7 +4343,7 @@ sub print_dialog {
 
    # Scale context to fit image
    my $scale = $pwidth / $iwidth;
-   $scale = $pheight / $iheight if ( $pheight / $iheight < $scale );
+   if ( $pheight / $iheight < $scale ) { $scale = $pheight / $iheight }
    $cr->scale( $scale, $scale );
 
    # Set source pixbuf
@@ -4289,7 +4358,7 @@ sub print_dialog {
 
  my $res = $print_op->run( 'print-dialog', $window );
 
- $print_settings = $print_op->get_print_settings if ( $res eq 'apply' );
+ if ( $res eq 'apply' ) { $print_settings = $print_op->get_print_settings }
  chdir $session;
  return;
 }
@@ -4339,11 +4408,11 @@ sub paste_selection {
   # Create a new image file for each page in the clipboard
   for (@clipboard) {
    my $suffix;
-   $suffix = $1 if ( $_->[2]{filename} =~ /(\.\w*)$/x );
+   if ( $_->[2]{filename} =~ /(\.\w*)$/x ) { $suffix = $1 }
    my $new = File::Temp->new( DIR => $session, SUFFIX => $suffix );
 
    # stringify filename to prevent copy from mangling it
-   unless ( copy( "$_->[2]{filename}", $new ) ) {
+   if ( not copy( "$_->[2]{filename}", $new ) ) {
     show_message_dialog( $window, 'error', 'close',
      $d->get( sprintf("Error pasting image - %s"), $! ) );
     return;
@@ -4407,7 +4476,7 @@ sub delete_pages {
 
   # Select just the first one
   @page = ( $page[0] );
-  $page[0] = $#{ $slist->{data} } if ( $page[0] > $#{ $slist->{data} } );
+  if ( $page[0] > $#{ $slist->{data} } ) { $page[0] = $#{ $slist->{data} } }
   $slist->select(@page);
  }
 
@@ -4419,7 +4488,7 @@ sub delete_pages {
 # No pages left, and having blocked the selection_changed_signal, we've got to clear the image
  else {
   $view->set_pixbuf(undef);
-  $scwin_buffer->remove($_) for ( $scwin_buffer->get_children );
+  for ( $scwin_buffer->get_children ) { $scwin_buffer->remove($_) }
  }
 
  # Reset start page in scan dialog
@@ -4435,9 +4504,10 @@ sub reset_start {
  if ( $#{ $slist->{data} } > -1 ) {
   my $start_page = $windows->get('page-number-start');
   my $step       = $windows->get('page-number-increment');
-  $windows->set( 'page-number-start',
-   $slist->{data}[ $#{ $slist->{data} } ][0] + $step )
-    if ( $start_page > $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
+  if ( $start_page > $slist->{data}[ $#{ $slist->{data} } ][0] + $step ) {
+   $windows->set( 'page-number-start',
+    $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
+  }
  }
  else {
   $windows->set( 'page-number-start', 1 );
@@ -4466,7 +4536,7 @@ sub select_odd_even {
  my $odd = shift;
  my @selection;
  for ( 0 .. $#{ $slist->{data} } ) {
-  push @selection, $_ if ( $slist->{data}[$_][0] % 2 xor $odd );
+  if ( $slist->{data}[$_][0] % 2 xor $odd ) { push @selection, $_ }
  }
 
  $slist->get_selection->unselect_all;
@@ -4482,7 +4552,7 @@ sub select_modified_since_ocr {
   my $ocr_time   = $slist->{data}[$page][2]{ocr_time};
   $dirty_time = defined($dirty_time) ? $dirty_time : 0;
   $ocr_time   = defined($ocr_time)   ? $ocr_time   : 0;
-  push @selection, $_ if ( $ocr_flag and ( $ocr_time le $dirty_time ) );
+  if ( $ocr_flag and ( $ocr_time le $dirty_time ) ) { push @selection, $_ }
  }
 
  $slist->get_selection->unselect_all;
@@ -4495,7 +4565,7 @@ sub select_modified_since_ocr {
 sub select_no_ocr {
  my @selection;
  for ( 0 .. $#{ $slist->{data} } ) {
-  push @selection, $_ unless ( defined $slist->{data}[$_][2]{hocr} );
+  if ( not defined( $slist->{data}[$_][2]{hocr} ) ) { push @selection, $_ }
  }
 
  $slist->get_selection->unselect_all;
@@ -4511,7 +4581,7 @@ sub clear_ocr {
  take_snapshot();
 
  # Remove the existing canvas
- $scwin_buffer->remove($_) for ( $scwin_buffer->get_children );
+ for ( $scwin_buffer->get_children ) { $scwin_buffer->remove($_) }
 
  my @selection = $slist->get_selected_indices;
  for (@selection) {
@@ -4745,9 +4815,9 @@ sub rotate {
    },
    finished_callback => sub {
     my ( $new_page, $pending ) = @_;
-    $callback->($new_page) if $callback;
-    $thbox->hide_all unless $pending;
-    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+    if ($callback)         { $callback->($new_page) }
+    if ( not $pending )    { $thbox->hide_all }
+    if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
    },
    error_callback   => \&error_callback,
    display_callback => sub {
@@ -4789,10 +4859,10 @@ sub analyse {
     },
     finished_callback => sub {
      my ( $new_page, $pending ) = @_;
-     $thbox->hide_all unless $pending;
-     $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
-     select_blank_pages()                          if $select_blank;
-     select_dark_pages()                           if $select_dark;
+     if ( not $pending )    { $thbox->hide_all }
+     if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
+     if ($select_blank)     { select_blank_pages() }
+     if ($select_dark)      { select_dark_pages() }
     },
     error_callback => \&error_callback,
    );
@@ -4883,8 +4953,8 @@ sub threshold {
      },
      finished_callback => sub {
       my ( $new_page, $pending ) = @_;
-      $thbox->hide_all unless $pending;
-      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+      if ( not $pending )    { $thbox->hide_all }
+      if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
      },
      error_callback   => \&error_callback,
      display_callback => sub {
@@ -4941,8 +5011,8 @@ sub negate {
      },
      finished_callback => sub {
       my ( $new_page, $pending ) = @_;
-      $thbox->hide_all unless $pending;
-      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+      if ( not $pending )    { $thbox->hide_all }
+      if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
      },
      error_callback   => \&error_callback,
      display_callback => sub {
@@ -5070,8 +5140,8 @@ sub unsharp {
      },
      finished_callback => sub {
       my ( $new_page, $pending ) = @_;
-      $thbox->hide_all unless $pending;
-      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+      if ( not $pending )    { $thbox->hide_all }
+      if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
      },
      error_callback   => \&error_callback,
      display_callback => sub {
@@ -5210,20 +5280,24 @@ sub crop {
   }
  );
 
- $sb_selector_x->set_value( $SETTING{selection}[0] )
-   if ( defined $SETTING{selection}[0] );
- $sb_selector_y->set_value( $SETTING{selection}[1] )
-   if ( defined $SETTING{selection}[1] );
- $sb_selector_w->set_value( $SETTING{selection}[2] )
-   if ( defined $SETTING{selection}[2] );
- $sb_selector_h->set_value( $SETTING{selection}[3] )
-   if ( defined $SETTING{selection}[3] );
+ if ( defined $SETTING{selection}[0] ) {
+  $sb_selector_x->set_value( $SETTING{selection}[0] );
+ }
+ if ( defined $SETTING{selection}[1] ) {
+  $sb_selector_y->set_value( $SETTING{selection}[1] );
+ }
+ if ( defined $SETTING{selection}[2] ) {
+  $sb_selector_w->set_value( $SETTING{selection}[2] );
+ }
+ if ( defined $SETTING{selection}[3] ) {
+  $sb_selector_h->set_value( $SETTING{selection}[3] );
+ }
 
  # HBox for buttons
  my $hboxb = _hbox_with_apply_cancel_buttons(
   sub {
 
-   return unless ( @{ $SETTING{selection} } );
+   if ( not @{ $SETTING{selection} } ) { return }
 
    # Update undo/redo buffers
    take_snapshot();
@@ -5249,8 +5323,8 @@ sub crop {
      },
      finished_callback => sub {
       my ( $new_page, $pending ) = @_;
-      $thbox->hide_all unless $pending;
-      $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+      if ( not $pending )    { $thbox->hide_all }
+      if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
      },
      error_callback   => \&error_callback,
      display_callback => sub {
@@ -5271,9 +5345,10 @@ sub crop {
 sub update_selector {
  my $sel = $selector->get_selection;
  $selector->signal_handler_block( $selector->{selection_changed_signal} );
- $selector->set_selection(
-  Gtk2::Gdk::Rectangle->new( @{ $SETTING{selection} } ) )
-   if ( defined $sel );
+ if ( defined $sel ) {
+  $selector->set_selection(
+   Gtk2::Gdk::Rectangle->new( @{ $SETTING{selection} } ) );
+ }
  $selector->signal_handler_unblock( $selector->{selection_changed_signal} );
  return;
 }
@@ -5303,8 +5378,8 @@ sub user_defined_tool {
    },
    finished_callback => sub {
     my ( $new_page, $pending ) = @_;
-    $thbox->hide_all unless $pending;
-    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+    if ( not $pending )    { $thbox->hide_all }
+    if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
    },
    error_callback   => \&error_callback,
    display_callback => sub {
@@ -5320,7 +5395,7 @@ sub user_defined_tool {
 
 sub unpaper_page {
  my ( $pages, $options, $callback ) = @_;
- $options = '' unless ( defined $options );
+ if ( not defined($options) ) { $options = '' }
 
  # Update undo/redo buffers
  take_snapshot();
@@ -5340,9 +5415,9 @@ sub unpaper_page {
    },
    finished_callback => sub {
     my ( $new_page, $pending ) = @_;
-    $callback->($new_page) if $callback;
-    $thbox->hide_all unless $pending;
-    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+    if ($callback)         { $callback->($new_page) }
+    if ( not $pending )    { $thbox->hide_all }
+    if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
    },
    error_callback   => \&error_callback,
    display_callback => sub {
@@ -5428,19 +5503,21 @@ sub ocr_page {
   },
   finished_callback => sub {
    my ( $new_page, $pending ) = @_;
-   $thbox->hide_all unless $pending;
-   $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+   if ( not $pending )    { $thbox->hide_all }
+   if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
   },
   error_callback   => \&error_callback,
   display_callback => sub {
    my ($new_page) = @_;
    my @page = $slist->get_selected_indices;
-   create_canvas($new_page)
-     if ( @page and $new_page == $slist->{data}[ $page[0] ][2] );
+   if ( @page and $new_page == $slist->{data}[ $page[0] ][2] ) {
+    create_canvas($new_page);
+   }
   }
  );
- $options{language} = $SETTING{'ocr language'}
-   unless ( $SETTING{'ocr engine'} eq 'gocr' );
+ if ( $SETTING{'ocr engine'} ne 'gocr' ) {
+  $options{language} = $SETTING{'ocr language'};
+ }
  for my $page ( @{$pages} ) {
   $options{page} = $page;
   if ( $SETTING{'ocr engine'} eq 'gocr' ) {
@@ -5482,11 +5559,11 @@ sub combobox_set_active {
  my $o;
  if ( defined($default) ) {
   foreach (@array) {
-   $o = $i if ( defined( $_->[0] ) and $_->[0] eq $default );
+   if ( defined( $_->[0] ) and $_->[0] eq $default ) { $o = $i }
    ++$i;
   }
  }
- $o = 0 unless ( defined $o );
+ if ( not defined($o) ) { $o = 0 }
  $combobox->set_active($o);
  return;
 }
@@ -5508,7 +5585,7 @@ sub add_tess_languages {
  }
 
  # If there are no language files, then we have tesseract-1.0, i.e. English
- unless (@tesslang) {
+ if ( not @tesslang ) {
   push @tesslang, [ undef, $d->get('English') ];
   $logger->info("No tesseract languages found");
  }
@@ -5609,12 +5686,15 @@ sub OCR {
  $hbox->pack_start( $obutton, TRUE, TRUE, 0 );
  $obutton->signal_connect(
   clicked => sub {
-   $SETTING{'ocr engine'}   = $ocr_engine[ $combobe->get_active ]->[0];
-   $SETTING{'ocr language'} = $tesslang[ $comboboxtl->get_active ]->[0]
-     if ( $SETTING{'ocr engine'} eq 'tesseract'
-    or $SETTING{'ocr engine'} eq 'ocropus' );
-   $SETTING{'ocr language'} = $cflang[ $comboboxcl->get_active ]->[0]
-     if ( $SETTING{'ocr engine'} eq 'cuneiform' );
+   $SETTING{'ocr engine'} = $ocr_engine[ $combobe->get_active ]->[0];
+   if ($SETTING{'ocr engine'} eq 'tesseract'
+    or $SETTING{'ocr engine'} eq 'ocropus' )
+   {
+    $SETTING{'ocr language'} = $tesslang[ $comboboxtl->get_active ]->[0];
+   }
+   if ( $SETTING{'ocr engine'} eq 'cuneiform' ) {
+    $SETTING{'ocr language'} = $cflang[ $comboboxcl->get_active ]->[0];
+   }
 
    # fill $pagelist with filenames depending on which radiobutton is active
    my @pagelist = indices2pages(
@@ -5631,15 +5711,19 @@ sub OCR {
  $cbutton->signal_connect( clicked => sub { $windowo->hide; } );
 
  $windowo->show_all;
- $hboxtl->hide_all
-   if (
+ if (
   defined($hboxtl)
   and not( $ocr_engine[ $combobe->get_active ]->[0] eq 'tesseract'
    or $ocr_engine[ $combobe->get_active ]->[0] eq 'ocropus' )
-   );
- $hboxcl->hide_all
-   if ( defined($hboxcl)
-  and not( $ocr_engine[ $combobe->get_active ]->[0] eq 'cuneiform' ) );
+   )
+ {
+  $hboxtl->hide_all;
+ }
+ if ( defined($hboxcl)
+  and not( $ocr_engine[ $combobe->get_active ]->[0] eq 'cuneiform' ) )
+ {
+  $hboxcl->hide_all;
+ }
  return;
 }
 
@@ -5898,7 +5982,7 @@ sub init_icons {
 sub register_icon {
  my ( $stock_id, $path ) = @_;
 
- return unless defined $IconFactory;
+ if ( not defined($IconFactory) ) { return }
 
  my $icon;
  try { $icon = Gtk2::Gdk::Pixbuf->new_from_file($path); }
@@ -5962,8 +6046,8 @@ sub compress_temp {
    },
    finished_callback => sub {
     my ( $new_page, $pending ) = @_;
-    $thbox->hide_all unless $pending;
-    $tcbutton->signal_handler_disconnect($signal) if ( defined $signal );
+    if ( not $pending )    { $thbox->hide_all }
+    if ( defined $signal ) { $tcbutton->signal_handler_disconnect($signal) }
    },
    error_callback => \&error_callback,
   );
@@ -6015,8 +6099,10 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
      . "This saves time clicking the scan button and waiting for the program to find the list of scanners"
   )
  );
- $cbo->set_active( $SETTING{'auto-open-scan-dialog'} )
-   if ( defined $SETTING{'auto-open-scan-dialog'} );
+
+ if ( defined $SETTING{'auto-open-scan-dialog'} ) {
+  $cbo->set_active( $SETTING{'auto-open-scan-dialog'} );
+ }
  $vbox1->pack_start( $cbo, TRUE, TRUE, 0 );
 
  # Frontends
@@ -6043,12 +6129,13 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
    $d->get('Scan using the scanadf-perl frontend.')
   ],
  );
- push @frontends,
-   [
-  'scanadf', $d->get('scanadf'),
-  $d->get('Scan using the scanadf frontend.')
-   ],
-   if ( $dependencies{scanadf} );
+ if ( $dependencies{scanadf} ) {
+  push @frontends,
+    [
+   'scanadf', $d->get('scanadf'),
+   $d->get('Scan using the scanadf frontend.')
+    ];
+ }
  my $combob = combobox_from_array(@frontends);
  my $cbcsh =
    Gtk2::CheckButton->new_with_label( $d->get('Cycle SANE handle after scan') );
@@ -6056,8 +6143,9 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $tooltips->set_tip( $hbox, $d->get("Interface used for scanner access") );
 
  # Cycle SANE handle after scan
- $cbcsh->set_active( $SETTING{'cycle sane handle'} )
-   if ( defined $SETTING{'cycle sane handle'} );
+ if ( defined $SETTING{'cycle sane handle'} ) {
+  $cbcsh->set_active( $SETTING{'cycle sane handle'} );
+ }
  $vbox1->pack_start( $cbcsh, FALSE, FALSE, 0 );
 
  # scan command prefix
@@ -6067,13 +6155,14 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $hboxp->pack_start( $label, FALSE, FALSE, 0 );
  my $preentry = Gtk2::Entry->new;
  $hboxp->add($preentry);
- $preentry->set_text( $SETTING{'scan prefix'} )
-   if defined( $SETTING{'scan prefix'} );
+ if ( defined $SETTING{'scan prefix'} ) {
+  $preentry->set_text( $SETTING{'scan prefix'} );
+ }
 
  # Cache options?
  my $cbc = Gtk2::CheckButton->new_with_label(
   $d->get('Cache device-dependent options') );
- $cbc->set_active(TRUE) if ( $SETTING{'cache options'} );
+ if ( $SETTING{'cache options'} ) { $cbc->set_active(TRUE) }
  $vbox1->pack_start( $cbc, FALSE, FALSE, 0 );
 
  # Clear options cache
@@ -6082,8 +6171,8 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  $vbox1->pack_start( $buttonc, FALSE, FALSE, 0 );
  $buttonc->signal_connect(
   clicked => sub {
-   delete $SETTING{cache} if ( defined $SETTING{cache} );
-   $windows->set( 'options-cache', undef ) if ( defined $windows );
+   if ( defined $SETTING{cache} ) { delete $SETTING{cache} }
+   if ( defined $windows ) { $windows->set( 'options-cache', undef ) }
   }
  );
 
@@ -6155,8 +6244,9 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  # fill the list
  if ( defined $SETTING{'visible-scan-options'} ) {
   my %reload;
-  $SETTING{'scan-reload-triggers'} = [ $SETTING{'scan-reload-triggers'} ]
-    if ( ref( $SETTING{'scan-reload-triggers'} ) ne 'ARRAY' );
+  if ( ref( $SETTING{'scan-reload-triggers'} ) ne 'ARRAY' ) {
+   $SETTING{'scan-reload-triggers'} = [ $SETTING{'scan-reload-triggers'} ];
+  }
   for ( @{ $SETTING{'scan-reload-triggers'} } ) {
    $reload{$_} = 1;
   }
@@ -6194,13 +6284,14 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
  # Restore window setting
  my $cbw = Gtk2::CheckButton->new_with_label(
   $d->get('Restore window settings on startup') );
- $cbw->set_active(TRUE) if ( $SETTING{'restore window'} );
+ if ( $SETTING{'restore window'} ) { $cbw->set_active(TRUE) }
  $vbox2->pack_start( $cbw, TRUE, TRUE, 0 );
 
  # View saved files
  my $cbv = Gtk2::CheckButton->new_with_label( $d->get('View files on saving') );
- $cbv->set_active( $SETTING{'view files toggle'} )
-   if ( defined $SETTING{'view files toggle'} );
+ if ( defined $SETTING{'view files toggle'} ) {
+  $cbv->set_active( $SETTING{'view files toggle'} );
+ }
  $vbox2->pack_start( $cbv, TRUE, TRUE, 0 );
 
  # Default filename
@@ -6216,8 +6307,10 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
   )
  );
  $hbox->add($fileentry);
- $fileentry->set_text( $SETTING{'default filename'} )
-   if defined( $SETTING{'default filename'} );
+
+ if ( defined $SETTING{'default filename'} ) {
+  $fileentry->set_text( $SETTING{'default filename'} );
+ }
 
  # Temporary directory settings
  $hbox = Gtk2::HBox->new;
@@ -6327,7 +6420,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     $SETTING{'scan-reload-triggers'} = ();
     for ( @{ $option_visibility_list->{data} } ) {
      $SETTING{'visible-scan-options'}{ $_->[0] } = $_->[2];
-     push @{ $SETTING{'scan-reload-triggers'} }, $_->[0] if ( $_->[3] );
+     if ( $_->[3] ) { push @{ $SETTING{'scan-reload-triggers'} }, $_->[0] }
     }
     if ( $SETTING{frontend} ne 'libsane-perl' ) {
      $windows->set( 'visible-scan-options', $SETTING{'visible-scan-options'} );
@@ -6338,8 +6431,9 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
       $windows->set( 'prefix',        $SETTING{'scan prefix'} );
       $windows->set( 'cache-options', $SETTING{'cache options'} );
      }
-     delete $SETTING{cache}
-       if ( defined $SETTING{cache} and not $SETTING{'cache options'} );
+     if ( defined $SETTING{cache} and not $SETTING{'cache options'} ) {
+      delete $SETTING{cache};
+     }
     }
    }
    $SETTING{'auto-open-scan-dialog'} = $cbo->get_active;
@@ -6405,7 +6499,7 @@ sub list_user_defined_tools {
  for my $hbox ( $vbox->get_children ) {
   if ( $hbox->isa('Gtk2::HBox') ) {
    for my $widget ( $hbox->get_children ) {
-    push @list, $widget->get_text if ( $widget->isa('Gtk2::Entry') );
+    if ( $widget->isa('Gtk2::Entry') ) { push @list, $widget->get_text }
    }
   }
  }
@@ -6566,7 +6660,7 @@ sub properties {
 sub get_selected_properties {
  my @page       = $slist->get_selected_indices;
  my $resolution = '';
- $resolution = $slist->{data}[ shift @page ][2]{resolution} if ( @page > 0 );
+ if ( @page > 0 ) { $resolution = $slist->{data}[ shift @page ][2]{resolution} }
  for (@page) {
   if ( $slist->{data}[$_][2]{resolution} != $resolution ) {
    $resolution = '';
