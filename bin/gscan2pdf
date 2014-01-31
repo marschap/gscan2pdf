@@ -689,7 +689,7 @@ sub read_config_file {    ## no critic (RequireArgUnpacking)
 
 sub remove_invalid_paper {
  my ($hashref) = @_;
- for my $paper ( keys %$hashref ) {
+ for my $paper ( keys %{$hashref} ) {
   if ( $paper eq '<>' or $paper eq '</>' ) {
    delete $hashref->{$paper};
   }
@@ -1809,7 +1809,7 @@ sub create_canvas {
 
  # Attach the text to the canvas
  for my $box ( $page->boxes ) {
-  my ( $x1, $y1, $x2, $y2, $text ) = @$box;
+  my ( $x1, $y1, $x2, $y2, $text ) = @{$box};
   boxed_text(
    text => $text,
    x1   => $x1,
@@ -2842,7 +2842,7 @@ sub image_type_changed_callback {
   $type,     $vboxp,  $hboxf, $pdf_compression,
   $combob,   $hboxpq, $hboxc, $tiff_compression,
   $combobtc, $hboxtq
- ) = @$data;
+ ) = @{$data};
  if ( $type->[ $widget->get_active ][0] eq 'pdf' ) {
   $vboxp->show_all;
   $hboxf->show_all;
@@ -2890,7 +2890,7 @@ sub save_button_clicked_callback {
   $pdf_compression, $combob,           $spinbuttonpq, $fonts,
   $combof,          $entrya,           $entryt,       $entrys,
   $entryk,          $tiff_compression, $combobtc,     $spinbuttontq
- ) = @$data;
+ ) = @{$data};
 
  # dig out the image type, compression and quality
  $SETTING{'image type'} = $type->[ $combobi->get_active ][0];
@@ -3767,7 +3767,7 @@ sub changed_device_list_callback {
   # Only set default device if it hasn't been specified on the command line
   # and it is in the the device list
   if ( defined( $SETTING{device} ) and not @device_list ) {
-   for (@$device_list) {
+   for ( @{$device_list} ) {
     if ( $SETTING{device} eq $_->{name} ) {
      $windows->set( 'device', $SETTING{device} );
      return;
@@ -4434,7 +4434,7 @@ sub copy_selection {
   undef @clipboard;
   my @pages = $slist->get_selected_indices;
   for my $page (@pages) {
-   my @copy = map { [@$_] } $slist->{data}[$page];
+   my @copy = map { [ @{$_} ] } $slist->{data}[$page];
    push @clipboard, @copy;
   }
  }
@@ -5946,7 +5946,7 @@ sub strippod {
 sub take_snapshot {
 
  # Deep copy the tied data. Otherwise, very bad things happen.
- @undo_buffer = map { [@$_] } @{ $slist->{data} };
+ @undo_buffer = map { [ @{$_} ] } @{ $slist->{data} };
  @undo_selection = $slist->get_selected_indices;
  $logger->debug( Dumper( \@undo_buffer ) );
 
@@ -5965,7 +5965,7 @@ sub undo {
  $logger->info("Undoing");
 
  # Deep copy the tied data. Otherwise, very bad things happen.
- @redo_buffer = map { [@$_] } @{ $slist->{data} };
+ @redo_buffer = map { [ @{$_} ] } @{ $slist->{data} };
  @redo_selection = $slist->get_selected_indices;
  $logger->debug("redo_selection, undo_selection:");
  $logger->debug( Dumper( \@redo_selection, \@undo_selection ) );
@@ -5997,7 +5997,7 @@ sub unundo {
  $logger->info("Redoing");
 
  # Deep copy the tied data. Otherwise, very bad things happen.
- @undo_buffer = map { [@$_] } @{ $slist->{data} };
+ @undo_buffer = map { [ @{$_} ] } @{ $slist->{data} };
  @undo_selection = $slist->get_selected_indices;
  $logger->debug("redo_selection, undo_selection:");
  $logger->debug( Dumper( \@redo_selection, \@undo_selection ) );
