@@ -91,6 +91,8 @@ use Fcntl qw(:flock)
 use Log::Log4perl;
 use Try::Tiny;
 use Data::Dumper;
+use English qw( -no_match_vars )
+  ;    # for $PERL_VERSION, $PROGRAM_NAME, $EVAL_ERROR, $ERRNO
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -149,7 +151,7 @@ read_config_file($rc);
 
 set_up_test_mode();
 
-$logger->info("Perl version $^V");
+$logger->info("Perl version $PERL_VERSION");
 $logger->info("Glib-Perl version $Glib::VERSION");
 $logger->info( 'Built for Glib ' . join( $DOT, Glib->GET_VERSION_INFO ) );
 $logger->info( 'Running with Glib '
@@ -508,7 +510,8 @@ EOS
  }
 
  if ( defined $help ) {
-  system("perldoc $0") == 0 or die $d->get('Error displaying help'), "\n";
+  system("perldoc $PROGRAM_NAME") == 0
+    or die $d->get('Error displaying help'), "\n";
  }
 
  Log::Log4perl::init( \$log_conf );
@@ -785,7 +788,7 @@ sub create_main_window {
 
  try { $widget->set_default_icon_from_file("$iconpath/gscan2pdf.svg"); }
  catch {
-  $logger->warn("Unable to load icon `$iconpath/gscan2pdf.svg': $@");
+  $logger->warn("Unable to load icon `$iconpath/gscan2pdf.svg': $EVAL_ERROR");
  };
 
  return $widget;
@@ -1673,8 +1676,8 @@ sub find_crashed_sessions {
     )
   {
    push @crashed, $_;
-   flock( $lockfh, LOCK_UN ) or die "Unlocking error on $lockfh ($!)\n";
-   close $lockfh or warn "Error closing $lockfh ($!)\n";
+   flock( $lockfh, LOCK_UN ) or die "Unlocking error on $lockfh ($ERRNO)\n";
+   close $lockfh or warn "Error closing $lockfh ($ERRNO)\n";
   }
  }
 
@@ -4279,7 +4282,7 @@ sub import_scan {
 
  # Interface to frontend
  open my $fh, '<', $options{filename}    ## no critic (RequireBriefOpen)
-   or die "can't open $options{filename}: $!\n";
+   or die "can't open $options{filename}: $ERRNO\n";
 
  # Read without blocking
  my $size = 0;
@@ -4300,7 +4303,7 @@ sub import_scan {
     if ( $size > $filesize ) {
      my $pad = $size - $filesize;
      open( my $fh, ">>", $options{filename} )
-       or die "cannot open >> $options{filename}: $!\n";
+       or die "cannot open >> $options{filename}: $ERRNO\n";
      my $data = $EMPTY;
      for ( 1 .. $pad * $BITS_PER_BYTE ) {
       $data .= '1';
@@ -4460,7 +4463,7 @@ sub paste_selection {
    # stringify filename to prevent copy from mangling it
    if ( not copy( "$_->[2]{filename}", $new ) ) {
     show_message_dialog( $window, 'error', 'close',
-     $d->get( sprintf("Error pasting image - %s"), $! ) );
+     $d->get( sprintf("Error pasting image - %s"), $ERRNO ) );
     return;
    }
    $_->[2]{filename} = $new;
@@ -5918,7 +5921,7 @@ sub view_pod {
  $pane->add1($index_scrwin);
  $pane->add2($viewer_scrwin);
 
- $viewer->load($0);
+ $viewer->load($PROGRAM_NAME);
 
  # Index contents
  my $idx_pbf = Gtk2::Image->new->render_icon( 'gtk-jump-to', 'menu' );
