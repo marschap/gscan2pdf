@@ -1829,27 +1829,37 @@ sub create_canvas {
  return;
 }
 
-# Deletes all scans after warning.
+# Check that all pages have been saved
 
-sub new {
-
- # Check that all pages have been saved
- for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
-  if ( not $slist->{data}[$i][2]{saved} ) {
-   my $response = show_message_dialog(
-    $window,
-    'question',
-    'ok-cancel',
-    $d->get(
-     "Some pages have not been saved.\nDo you really want to clear all pages?")
-   );
+sub scans_not_saved {
+ my ($message) = @_;
+ for ( @{ $slist->{data} } ) {
+  if ( not $_->[2]{saved} ) {
+   my $response =
+     show_message_dialog( $window, 'question', 'ok-cancel', $message );
    if ( $response ne 'ok' ) {
-    return FALSE;
+    return TRUE;
    }
    else {
     last;
    }
   }
+ }
+ return FALSE;
+}
+
+# Deletes all scans after warning.
+
+sub new {
+
+ if (
+  scans_not_saved(
+   $d->get(
+    "Some pages have not been saved.\nDo you really want to clear all pages?")
+  )
+   )
+ {
+  return;
  }
 
  # Update undo/redo buffers
@@ -3199,9 +3209,9 @@ sub save_image {
 
   if ( @list_of_pages > 1 ) {
    my $w = length( scalar @list_of_pages );
-   for ( my $i = 1 ; $i <= @list_of_pages ; $i++ ) {
+   for ( 1 .. @list_of_pages ) {
     my $current_filename = sprintf "${filename}_%0${w}d.$SETTING{'image type'}",
-      $i;
+      $_;
     return if ( file_exists( $file_chooser, $current_filename ) );
    }
    $filename = "${filename}_%0${w}d.$SETTING{'image type'}";
@@ -5792,19 +5802,13 @@ sub OCR {
 
 sub quit {
 
- # Check that all pages have been saved
- for ( my $i = 0 ; $i < @{ $slist->{data} } ; $i++ ) {
-  if ( not $slist->{data}[$i][2]{saved} ) {
-   my $response =
-     show_message_dialog( $window, 'question', 'ok-cancel',
-    $d->get("Some pages have not been saved.\nDo you really want to quit?") );
-   if ( $response ne 'ok' ) {
-    return FALSE;
-   }
-   else {
-    last;
-   }
-  }
+ if (
+  scans_not_saved(
+   $d->get("Some pages have not been saved.\nDo you really want to quit?")
+  )
+   )
+ {
+  return;
  }
 
  # Make sure that we are back in the start directory, otherwise we can't delete
@@ -6281,7 +6285,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
    if ( defined $windows ) {
     @{ $option_visibility_list->{data} } = ();
     my $options = $windows->get('available-scan-options');
-    for ( my $i = 1 ; $i < $options->num_options ; ++$i ) {
+    for my $i ( 1 .. $options->num_options - 1 ) {
      my $opt = $options->by_index($i);
      push @{ $option_visibility_list->{data} },
        [ $opt->{title}, $opt->{type}, TRUE, FALSE ];
