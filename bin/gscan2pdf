@@ -1,19 +1,6 @@
 #!/usr/bin/perl
 
 # gscan2pdf --- to aid the scan to PDF or DjVu process
-# Copyright (C) 2006--2013 Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
-
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the version 3 GNU General Public License as
-# published by the Free Software Foundation.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Release procedure:
 #    Use
@@ -4306,7 +4293,7 @@ sub import_scan {
      $size = Gscan2pdf::NetPBM::file_size_from_header( $options{filename} );
      $logger->info("Header suggests $size");
      return Glib::SOURCE_CONTINUE if ( $size == 0 );
-     close($fh);
+     close($fh) or $logger->warn("Error closing $options{filename}: $ERRNO");
     }
     my $filesize = -s $options{filename};
     $logger->info("Expecting $size, found $filesize");
@@ -4319,7 +4306,7 @@ sub import_scan {
       $data .= '1';
      }
      printf $fh pack( sprintf( "b%d", length $data ), $data );
-     close $fh;
+     close $fh or $logger->warn("Error closing $options{filename}: $ERRNO");
      $logger->info("Padded $pad bytes");
     }
     my $gpage = Gscan2pdf::Page->new(
@@ -4330,7 +4317,7 @@ sub import_scan {
      dir        => $session,
      window     => $window,
     );
-    my $index = $slist->add_page( $gpage, $options{page}, &update_uimanager );
+    my $index = $slist->add_page( $gpage, $options{page}, update_uimanager );
     if ( $index == $EMPTY_LIST ) {
      show_message_dialog( $windows, 'error', 'close',
       $d->get('Unable to load image') );
@@ -6761,7 +6748,7 @@ __END__
 
 =encoding utf8
 
-=head1 Name
+=head1 NAME
 
 gscan2pdf - A GUI to produce PDFs or DjVus from scanned documents
 
@@ -6769,7 +6756,7 @@ gscan2pdf - A GUI to produce PDFs or DjVus from scanned documents
  <img src="http://sourceforge.net/dbimage.php?id=249848" border="1" width="632"
  height="480" alt="Screenshot" /><br/>Screenshot: Main page v0.9.30</p>
 
-=head1 Synopsis
+=head1 USAGE
 
 =over
 
@@ -6779,7 +6766,11 @@ gscan2pdf - A GUI to produce PDFs or DjVus from scanned documents
 
 =back
 
-=head1 Description
+=head1 REQUIRED ARGUMENTS
+
+None
+
+=head1 OPTIONS
 
 gscan2pdf has the following command-line options:
 
@@ -6807,6 +6798,35 @@ Scanning is handled with SANE via scanimage.
 PDF conversion is done by PDF::API2.
 TIFF export is handled by libtiff (faster and smaller memory footprint for
 multipage files).
+
+=head1 DIAGNOSTICS
+
+To diagnose a possible error, start gscan2pdf from the command line with logging enabled:
+
+C<gscan2pdf --log=file.log>
+
+and check file.log.
+
+=head1 EXIT STATUS
+
+None
+
+=head1 CONFIGURATION
+
+gscan2pdf creates a text resource file called .gscan2pdf in the user's home
+directory. Generally, however, preferences should be changed via the
+Edit/Preferences menu, or are captured automatically during normal usage of the
+program.
+
+=head1 INCOMPATIBILITIES
+
+None known.
+
+=head1 BUGS AND LIMITATIONS
+
+Whilst it is possible to import PDFs, this is intended to be able to round-trip
+files created by gscan2pdf. Hence, only the images are imported, and all text
+is ignored.
 
 =head1 Download
 
@@ -7043,7 +7063,7 @@ Alternatively, Ubuntu has its own translation project. For the 9.04 release, the
 translations are available at
 L<https://translations.launchpad.net/ubuntu/jaunty/+source/sane-backends/+pots/sane-backends>
 
-=head1 Menus
+=head1 DESCRIPTION
 
 =head2 File
 
@@ -7430,5 +7450,21 @@ Sourceforge for hosting the project.
  <img src="http://sflogo.sourceforge.net/sflogo.php?group_id=174140&amp;type=14" width="150" height="40" alt="Get gscan2pdf at SourceForge.net. Fast, secure and Free Open Source software downloads" /></a>
  <a href="http://sourceforge.net/p/gscan2pdf/donate/">
  <img src="http://sourceforge.net/images/project-support.jpg" width="88" height="32" border="0" alt="Support This Project"></a>
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (C) 2006--2014 Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the version 3 GNU General Public License as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 =cut
