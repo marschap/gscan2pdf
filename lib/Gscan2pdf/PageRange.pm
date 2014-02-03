@@ -2,8 +2,9 @@ package Gscan2pdf::PageRange;
 
 use strict;
 use warnings;
+use Locale::gettext 1.05;    # For translations
 use Gtk2;
-use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
+use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
 
 # Note: in a BEGIN block to ensure that the registration is complete
 #       by the time the use Subclass goes to look for it.
@@ -28,6 +29,8 @@ use Glib::Object::Subclass Gtk2::VBox::,
 
 our $VERSION = '1.2.3';
 
+my @widget_list;
+
 sub INIT_INSTANCE {
  my $self    = shift;
  my $d       = Locale::gettext->domain(Glib::get_application_name);
@@ -50,8 +53,8 @@ sub INIT_INSTANCE {
   );
   $vbox->pack_start( $self->{button}{$nick}, TRUE, TRUE, 0 );
   if ( not $group ) { $group = $self->{button}{$nick}->get_group }
-  if ( not $self->{active} ) { $self->{active} = $nick }
  }
+ push @widget_list, $self;
  return;
 }
 
@@ -62,11 +65,13 @@ sub get_active {
 
 sub set_active {
  my ( $self, $active ) = @_;
- $self->{active} = $active;
- foreach my $nick ( keys %{ $self->{button} } ) {
-  if ( $self->{active} eq $nick ) {
-   $self->{button}{$nick}->set_active(TRUE);
-   $self->signal_emit('changed');
+ for my $widget (@widget_list) {
+  $widget->{active} = $active;
+  for my $nick ( keys %{ $self->{button} } ) {
+   if ( $active eq $nick ) {
+    $widget->{button}{$nick}->set_active(TRUE);
+    $widget->signal_emit('changed');
+   }
   }
  }
  return;

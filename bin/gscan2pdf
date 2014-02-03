@@ -210,9 +210,6 @@ my (
  # Goo::Canvas for OCR output
  $canvas,
 
- # List of PageRange widgets
- @prlist,
-
  # List of user-defined tools
  @user_defined_tools,
 
@@ -2176,7 +2173,6 @@ sub add_page_range {
   }
  );
  $frame->add($pr);
- push @prlist, $pr;
  return;
 }
 
