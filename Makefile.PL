@@ -124,17 +124,21 @@ $(DESTDIR)$(LOCALEDIR)/%/LC_MESSAGES/$(NAME).mo : po/$(NAME)-%.po
 	msgfmt -c $< -o $@
 	$(CHMOD) 755 $(@D)
 
-$(DESTDIR)$(SHAREDIR)/$(NAME) :
-	$(MKPATH) $(DESTDIR)$(SHAREDIR)/$(NAME)
+$(DESTDIR)$(SHAREDIR)/$(NAME) $(DESTDIR)$(SHAREDIR)/applications $(DESTDIR)$(SHAREDIR)/pixmaps $(DESTDIR)$(SHAREDIR)/appdata :
+	$(MKPATH) $@
 
-icon_install : $(DESTDIR)$(SHAREDIR)/$(NAME)
-	$(MKPATH) $(DESTDIR)$(SHAREDIR)/applications
-	$(MKPATH) $(DESTDIR)$(SHAREDIR)/pixmaps
+icon_install : $(NAME).desktop $(NAME).svg stock-rotate-90.svg \
+               stock-rotate-180.svg stock-rotate-270.svg scanner.svg pdf.svg \
+               stock-selection-all-16.png $(NAME).svg $(NAME).appdata.xml \
+             | $(DESTDIR)$(SHAREDIR)/$(NAME) $(DESTDIR)$(SHAREDIR)/applications \
+               $(DESTDIR)$(SHAREDIR)/pixmaps \
+               $(DESTDIR)$(SHAREDIR)/appdata
 	$(CP) $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
 	$(CP) $(NAME).svg stock-rotate-90.svg stock-rotate-180.svg \
 	      stock-rotate-270.svg scanner.svg pdf.svg \
 	      stock-selection-all-16.png $(DESTDIR)$(SHAREDIR)/$(NAME)
 	$(CP) $(NAME).svg $(DESTDIR)$(SHAREDIR)/pixmaps
+	$(CP) $(NAME).appdata.xml $(DESTDIR)$(SHAREDIR)/appdata
 
 html : htdocs/index.html
 
@@ -188,7 +192,7 @@ htdocs/index.html : bin/$(NAME)
 remote-html : htdocs/index.html
 	scp htdocs/index.html ra28145,$(NAME)@web.sf.net:/home/groups/g/gs/$(NAME)/htdocs/
 
-file_releases : 
+file_releases :
 	scp $(NAME)-$(VERSION).tar.gz \
          rpm/RPMS/noarch/$(NAME)-$(VERSION)* \
          rpm/SRPMS/$(NAME)-$(VERSION)* \
