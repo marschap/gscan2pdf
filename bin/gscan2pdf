@@ -2334,7 +2334,7 @@ sub get_pdf_metadata {
  my %h;
  if ( defined $SETTING{author} ) { $h{Author} = $SETTING{author} }
  my ( $day, $month, $year ) =
-   seconds_to_date( time + days_to_seconds( $SETTING{'date offset'} ) );
+   seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
  $h{CreationDate} =
    sprintf( "D:%4i%02i%02i000000+00'00'", $year, $month, $day );
  $h{ModDate}  = sprintf( "D:%4i%02i%02i000000+00'00'", $year, $month, $day );
@@ -2913,7 +2913,7 @@ sub save_button_clicked_callback {
    );
 
    my ( $dday, $dmonth, $dyear ) =
-     seconds_to_date( time + days_to_seconds( $SETTING{'date offset'} ) );
+     seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
    $dmonth = sprintf( "%02d", $dmonth );
    $dday   = sprintf( "%02d", $dday );
    my ( $tday, $tmonth, $tyear ) = seconds_to_date(time);
