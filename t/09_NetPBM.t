@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 BEGIN {
  use_ok('Gscan2pdf::NetPBM');
@@ -18,6 +18,13 @@ for (qw(pbm pgm ppm)) {
   -s $file, "get_size_from_PNM $_ 9 wide" );
  unlink $file;
 }
+
+#########################
+
+my $file = 'test.pnm';
+system("touch $file");
+is( Gscan2pdf::NetPBM::file_size_from_header($file), -s $file, "0-length PNM" );
+unlink $file;
 
 #########################
 
