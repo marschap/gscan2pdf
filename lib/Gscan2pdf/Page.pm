@@ -222,8 +222,13 @@ sub resolution {
   }
 
   if ( $self->{resolution} ) {
-   if ( not $image->Get('units') eq 'PixelsPerInch' ) {
+   my $units = $image->Get('units');
+   if ( $units eq 'pixels / centimeter' ) {
     $self->{resolution} *= $CM_PER_INCH;
+   }
+   elsif ( not $units eq 'pixels / inch' or $units eq 'undefined' ) {
+    $logger->warn("Unknown units: '$units'.");
+    $logger->warn('The resolution and page size will probably be wrong.');
    }
    return $self->{resolution};
   }

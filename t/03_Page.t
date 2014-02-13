@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 10;
+use Test::More tests => 13;
 
 BEGIN {
  use_ok('Gscan2pdf::Page');
@@ -202,8 +202,32 @@ is_deeply(
 
 is( $page->resolution( \%paper_sizes ), 25.4, 'resolution' );
 
+system('convert -units "PixelsPerInch" -density 300 xc:white test.jpg');
+$page = Gscan2pdf::Page->new(
+ filename => 'test.jpg',
+ format   => 'Joint Photographic Experts Group JFIF format',
+ dir      => File::Temp->newdir,
+);
+is( $page->resolution( \%paper_sizes ), 300, 'inches' );
+
+system('convert -units "PixelsPerCentimeter" -density 118 xc:white test.jpg');
+$page = Gscan2pdf::Page->new(
+ filename => 'test.jpg',
+ format   => 'Joint Photographic Experts Group JFIF format',
+ dir      => File::Temp->newdir,
+);
+is( $page->resolution( \%paper_sizes ), 299.72, 'centimetres' );
+
+system('convert -units "Undefined" -density 300 xc:white test.jpg');
+$page = Gscan2pdf::Page->new(
+ filename => 'test.jpg',
+ format   => 'Joint Photographic Experts Group JFIF format',
+ dir      => File::Temp->newdir,
+);
+is( $page->resolution( \%paper_sizes ), 300, 'undefined' );
+
 #########################
 
-unlink 'test.pnm';
+unlink 'test.pnm', 'test.jpg';
 
 __END__
