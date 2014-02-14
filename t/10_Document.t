@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 22;
+use Test::More tests => 24;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
 
@@ -57,6 +57,8 @@ is( $slist->pages_possible( 2, -1 ),
  1, 'pages_possible finite backwards starting in middle of range' );
 is( $slist->pages_possible( 6, -2 ),
  3, 'pages_possible finite backwards starting at end of range' );
+is( $slist->pages_possible( 2, 2 ),
+ -1, 'pages_possible infinite forwards starting in middle of range' );
 
 #########################
 
@@ -80,6 +82,17 @@ is_deeply(
  [ [ 1, undef, undef ], [ 2, undef, undef ], [ 3, undef, undef ] ],
  'renumber start 1 step 1'
 );
+
+#########################
+
+@{ $slist->{data} } = (
+ [ 1, undef, undef ],
+ [ 6, undef, undef ],
+ [ 7, undef, undef ],
+ [ 8, undef, undef ]
+);
+is( $slist->pages_possible( 2, 1 ),
+ 4, 'pages_possible finite forwards starting in middle of range2' );
 
 #########################
 

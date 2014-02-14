@@ -225,30 +225,42 @@ sub fetch_file {
 
 sub pages_possible {
  my ( $self, $start, $step ) = @_;
- my $n = 0;
  my $i = $#{ $self->{data} };
+
+ # Empty document and negative step
+ if ( $i < 0 and $step < 0 ) {
+  return -$start / $step;
+ }
+
+ # Empty document, or start page after end of document, allow infinite pages
+ elsif ( ( $i < 0 or $self->{data}[$i][0] < $start )
+  and $step > 0 )
+ {
+  return -1;    ## no critic (ProhibitMagicNumbers)
+ }
+
+ # track backwards to find index before which start page would be inserted
+ while ( $i > 0 and $self->{data}[ $i - 1 ][0] > $start ) {
+  --$i;
+ }
+
+ # scan in appropriate direction, looking for position for last page
+ my $n = 0;
  while (TRUE) {
 
-  # Settings take us into negative page range
-  if ( $start + $n * $step < 1 ) {    ## no critic (ProhibitCascadingIfElse)
+  # fallen off bottom of index
+  if ( $i < 0 ) {    ## no critic (ProhibitCascadingIfElse)
    return $n;
   }
 
-  # Empty document and negative step
-  elsif ( $i < 0 and $step < 0 ) {
-   return -$start / $step;
+  # fallen off top of index
+  elsif ( $i > $#{ $self->{data} } ) {
+   return -1         ## no critic (ProhibitMagicNumbers)
   }
 
-  # Empty document, or checked beyond end of document, allow infinite pages
-  elsif (
-   (
-    @{ $self->{data} } == 0
-    or $self->{data}[ $#{ $self->{data} } ][0] < $start
-   )
-   and $step > 0
-    )
-  {
-   return -1;    ## no critic (ProhibitMagicNumbers)
+  # Settings take us into negative page range
+  elsif ( $start + $n * $step < 1 ) {
+   return $n;
   }
 
   # Found existing page
@@ -256,14 +268,21 @@ sub pages_possible {
    return $n;
   }
 
-  # Current page doesn't exist, check for at least one more
-  elsif ( $n == 0 ) {
+  # increment index
+  elsif ( $step > 1 and $self->{data}[$i][0] < $start + $n * $step ) {
+   ++$i;
    ++$n;
   }
 
-  # In the middle of the document, scan back to find page nearer start
-  elsif ( $self->{data}[$i][0] > $start + $n * $step and $i > 0 ) {
+  # decrement index
+  elsif ( $step < 0 and $self->{data}[$i][0] > $start + $n * $step ) {
    --$i;
+   ++$n;
+  }
+
+  # Current page doesn't exist, check for at least one more
+  elsif ( $n == 0 ) {
+   ++$n;
   }
 
   # Try one more page
