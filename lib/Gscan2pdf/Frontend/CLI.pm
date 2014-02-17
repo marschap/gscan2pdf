@@ -160,7 +160,10 @@ sub _scanimage {
   err_callback     => sub {
    my ($line) = @_;
    given ($line) {
-    when (/^Progress:\ (\d*\.\d*)%/xsm) {
+
+    # scanimage seems to produce negative progress percentages
+    # in some circumstances
+    when (/^Progress:\ (-?\d*\.\d*)%/xsm) {
      if ( defined $options{running_callback} ) {
       $options{running_callback}->( $1 / $_100 );
      }
