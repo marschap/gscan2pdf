@@ -48,7 +48,6 @@ use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Sane;
 use Gscan2pdf::Frontend::CLI;
 use Gscan2pdf::NetPBM;
-use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Dialog::Scan::Sane;
 use Gscan2pdf::Dialog::Scan::CLI;
 use Gscan2pdf::Tesseract;
@@ -3668,7 +3667,7 @@ sub scan_dialog {
    $shbox->hide;
    if ( $process =~ /^(?:get_devices|find_scan_options)$/xsm ) {
     $widget->hide;
-    undef $widget;
+    undef $windows;
     show_message_dialog( $window, 'error', 'close', $msg );
    }
    else {
