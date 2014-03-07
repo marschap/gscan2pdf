@@ -5837,8 +5837,10 @@ sub view_pod {
   return;
  }
 
+ my $error;
  try { require Gtk2::Ex::PodViewer }
  catch {
+  $error = TRUE;
   show_message_dialog(
    $window, 'error', 'close',
    sprintf(
@@ -5850,8 +5852,8 @@ sub view_pod {
     "--help"
    )
   );
-  return;
  };
+ return if $error;
 
  # Window
  $windowh = Gtk2::Window->new;
@@ -6032,12 +6034,11 @@ sub register_icon {
  if ( not defined($IconFactory) ) { return }
 
  my $icon;
- try { $icon = Gtk2::Gdk::Pixbuf->new_from_file($path); }
- catch {
-  $logger->warn("Unable to load icon `$path': $_");
-  return;
- };
- $IconFactory->add( $stock_id, Gtk2::IconSet->new_from_pixbuf($icon) );
+ try { $icon = Gtk2::Gdk::Pixbuf->new_from_file($path) }
+ catch { $logger->warn("Unable to load icon `$path': $_") };
+ if ( defined $icon ) {
+  $IconFactory->add( $stock_id, Gtk2::IconSet->new_from_pixbuf($icon) );
+ }
  return;
 }
 
