@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.2.3
+Version: 1.2.4
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -79,15 +79,16 @@ fi
 %{perl_vendorlib}/*
 %{_datadir}/%{name}
 %{_datadir}/applications/%{name}.desktop
-%{_datadir}/pixmaps/gscan2pdf.svg
+%{_datadir}/pixmaps/%{name}.svg
+%{_datadir}/appdata/%{name}.appdata.xml
 %{_mandir}/man1/*.1*
 
 %changelog
-* Mon Jan 27 2014 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Wed Mar 26 2014 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
   - New upstream release
-  - Added depends: liblist-moreutils-perl
   - New upstream release
     Closes: #734854 (gscan2pdf wrong resolution)
+  - Added depends: liblist-moreutils-perl
   - New upstream release
     Closes: #701581
     (Thunderbird detection (for send email) does not work reliably on XFCE)
@@ -96,14 +97,15 @@ fi
     Closes: #717479
     (Background-scanning for devices and options)
   - New upstream release
-  - New upstream release
-  - New upstream release
-  - New upstream release
+    Closes: #723784 (gscan2pdf: New upstream version available)
+  - Removed all patches
+    Removed Build-Depends: quilt
+    Updated rules not to use quilt
+  - Bumped standards to 3.9.4 (no changes required)
+  - Add support for unpaper > 0.3
+    Closes: #680158 (Incompatible with unpaper 0.4.2)
+  - Fix applying default settings with CLI frontends
     Closes: #682818 (Presets aren't working)
-  - Added depends: libtry-tiny-perl
-  - New upstream release
-  - New upstream release
-    Closes: #670640 (Can't call method get_cmdline)
   - Recommend tesseract OR gocr OR cuneiform, rather than AND
     Closes: #682100 gscan2pdf Recommends cuneiform which is in non-free
   - Fix updating widgets in scanimage dialog
