@@ -18,7 +18,7 @@ Readonly my $MAXVAL_8_BIT   => 2**$_8_BIT - 1;
 Readonly my $_16_BIT        => 16;
 Readonly my $MAXVAL_16_BIT  => 2**$_16_BIT - 1;
 
-our $VERSION = '1.2.3';
+our $VERSION = '1.2.4';
 
 my $_self;
 my ( $prog_name, $logger );
