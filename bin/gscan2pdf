@@ -2264,9 +2264,9 @@ sub add_pdf_metadata {
    my $today = Gtk2::Button->new( $d->get('Today') );
    $today->signal_connect(
     clicked => sub {
-     ( $day, $month, $year ) = seconds_to_date();
+     ( $day, $month, $year ) = seconds_to_date(time);
      $calendar->select_day($day);
-     $calendar->select_month( $month, $year );
+     $calendar->select_month( $month - 1, $year );
     }
    );
    $vbox_date->pack_start( $today, TRUE, TRUE, 0 );
