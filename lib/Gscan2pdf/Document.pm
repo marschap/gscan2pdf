@@ -2703,6 +2703,12 @@ sub _thread_unpaper {
   delete   => TRUE,
   format   => 'Portable anymap',
  );
+
+ # unpaper doesn't change the resolution, so we can safely copy it
+ if ( defined $page->{resolution} ) {
+  $new->{resolution} = $page->{resolution};
+ }
+
  $new->{dirty_time} = timestamp();    #flag as dirty
  my %data = ( old => $page, new => $new->freeze );
  if ( $out2 ne $EMPTY ) {
@@ -2712,6 +2718,12 @@ sub _thread_unpaper {
    delete   => TRUE,
    format   => 'Portable anymap',
   );
+
+  # unpaper doesn't change the resolution, so we can safely copy it
+  if ( defined $page->{resolution} ) {
+   $new2->{resolution} = $page->{resolution};
+  }
+
   $new2->{dirty_time} = timestamp();    #flag as dirty
   $data{new2} = $new2->freeze;
  }
