@@ -1896,6 +1896,7 @@ sub add_filter {
 
 sub error_callback {
  my ($message) = @_;
+ $logger->error($message);
  show_message_dialog( $window, 'error', 'close', $message );
  return;
 }
