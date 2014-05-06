@@ -4,6 +4,7 @@ package Gscan2pdf::Dialog::Scan::CLI;
 
 use warnings;
 use strict;
+no if $] >= 5.018, warnings => "experimental::smartmatch";
 use Gscan2pdf::Dialog::Scan;
 use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT

@@ -2,6 +2,7 @@ package Gscan2pdf::Scanner::Options;
 
 use strict;
 use warnings;
+no if $] >= 5.018, warnings => "experimental::smartmatch";
 use Carp;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Sane 0.05;              # For enums

@@ -3,6 +3,7 @@ package Gscan2pdf::Frontend::CLI;
 use strict;
 use warnings;
 use feature "switch";
+no if $] >= 5.018, warnings => "experimental::smartmatch";
 
 use Locale::gettext 1.05;    # For translations
 use Carp;

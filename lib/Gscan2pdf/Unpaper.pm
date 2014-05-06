@@ -4,6 +4,7 @@ use 5.008005;
 use strict;
 use warnings;
 use feature "switch";
+no if $] >= 5.018, warnings => "experimental::smartmatch";
 use Carp;
 use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
 use Gtk2;

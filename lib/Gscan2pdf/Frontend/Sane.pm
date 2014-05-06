@@ -3,6 +3,7 @@ package Gscan2pdf::Frontend::Sane;
 use strict;
 use warnings;
 use feature "switch";
+no if $] >= 5.018, warnings => "experimental::smartmatch";
 
 use threads;
 use threads::shared;
