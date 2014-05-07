@@ -62,7 +62,7 @@ is( -s 'test.pdf' > -s 'test2.pdf', 1,
 system('pdfimages test2.pdf x');
 is(
  `identify -format '%m %G %g %z-bit %r' x-000.pbm`,
- "PBM 246x29 246x29+0+0 1-bit DirectClass Gray \n",
+ "PBM 226x28 226x28+0+0 1-bit DirectClass Gray ",
  'downsampled'
 );
 

@@ -1925,7 +1925,7 @@ sub _convert_image_for_pdf {
    my $h_pixels = $pagedata->{h} * $output_resolution;
 
    $logger->info("Resizing $filename to $w_pixels x $h_pixels");
-   my $status = $image->Resize( width => $w_pixels, height => $h_pixels );
+   my $status = $image->Sample( width => $w_pixels, height => $h_pixels );
    if ("$status") { $logger->warn($status) }
   }
   if ( defined( $options{options}->{quality} ) and $compression eq 'jpg' ) {
@@ -1965,16 +1965,8 @@ sub _write_image_object {
   or ( $compression =~ /(?:jpg|png)/xsm )
   or $downsample )
  {
-
-  # depth required because resize otherwise increases depth
-  # to maintain information
-  if ( not defined( $pagedata->{depth} ) ) {
-   $pagedata->{depth} = $image->Get('depth');
-  }
-  $logger->info(
-   "Writing temporary image $filename with depth $pagedata->{depth}");
-  my $status =
-    $image->Write( filename => $filename, depth => $pagedata->{depth} );
+  $logger->info("Writing temporary image $filename");
+  my $status = $image->Write( filename => $filename );
   return if $_self->{cancel};
   if ("$status") { $logger->warn($status) }
   if ( $filename =~ /\.(\w*)$/xsm ) {
