@@ -46,7 +46,8 @@ SKIP: {
         qr/quick/, 'Tesseract returned "quick"' );
        like( $slist->{data}[0][2]{hocr},
         qr/brown/, 'Tesseract returned "brown"' );
-       like( $slist->{data}[0][2]{hocr}, qr/fox/, 'Tesseract returned "fox"' );
+       like( $slist->{data}[0][2]{hocr},
+        qr/f(o|0)x/, 'Tesseract returned "fox"' );
        is( dirname("$slist->{data}[0][2]{filename}"),
         "$dir", 'using session directory' );
        Gtk2->main_quit;

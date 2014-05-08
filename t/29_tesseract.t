@@ -86,10 +86,10 @@ SKIP: {
  my ( $got, $messages ) =
    Gscan2pdf::Tesseract->hocr( 'test.png', 'eng', $logger );
 
- like( $got, qr/The/,   'Tesseract returned "The"' );
- like( $got, qr/quick/, 'Tesseract returned "quick"' );
- like( $got, qr/brown/, 'Tesseract returned "brown"' );
- like( $got, qr/fox/,   'Tesseract returned "fox"' );
+ like( $got, qr/The/,     'Tesseract returned "The"' );
+ like( $got, qr/quick/,   'Tesseract returned "quick"' );
+ like( $got, qr/brown/,   'Tesseract returned "brown"' );
+ like( $got, qr/f(o|0)x/, 'Tesseract returned "fox"' );
 
  my $languages = Gscan2pdf::Tesseract->languages;
  skip 'German language pack for Tesseract not installed', 5
