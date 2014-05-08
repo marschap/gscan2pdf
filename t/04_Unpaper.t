@@ -15,7 +15,7 @@ my $vbox    = Gtk2::VBox->new;
 $unpaper->add_options($vbox);
 is(
  $unpaper->get_cmdline,
-'unpaper --output-pages 1 --white-threshold 0.9 --layout single --black-threshold 0.33 --deskew-scan-direction left,right --border-margin 0,0 --overwrite '
+'unpaper --black-threshold 0.33 --border-margin 0,0 --deskew-scan-direction left,right --layout single --output-pages 1 --white-threshold 0.9 --overwrite '
    . (
   version->parse( $unpaper->version ) > version->parse('v0.3')
   ? '%s %s %s'
@@ -28,7 +28,7 @@ $unpaper = Gscan2pdf::Unpaper->new( { layout => 'Double' } );
 $unpaper->add_options($vbox);
 is(
  $unpaper->get_cmdline,
-'unpaper --output-pages 1 --white-threshold 0.9 --layout double --black-threshold 0.33 --deskew-scan-direction left,right --border-margin 0,0 --overwrite '
+'unpaper --black-threshold 0.33 --border-margin 0,0 --deskew-scan-direction left,right --layout double --output-pages 1 --white-threshold 0.9 --overwrite '
    . (
   version->parse( $unpaper->version ) > version->parse('v0.3')
   ? '%s %s %s'
@@ -69,7 +69,7 @@ $unpaper = Gscan2pdf::Unpaper->new(
 
 is(
  $unpaper->get_cmdline,
- 'unpaper --white-threshold 0.8 --black-threshold 0.35 --overwrite '
+ 'unpaper --black-threshold 0.35 --white-threshold 0.8 --overwrite '
    . (
   version->parse( $unpaper->version ) > version->parse('v0.3')
   ? '%s %s %s'

@@ -47,10 +47,10 @@ $signal = $dialog->signal_connect(
    'changed-options-cache' => sub {
     my ( $widget, $cache ) = @_;
     $dialog->signal_handler_disconnect($signal);
-    my @keys = keys( %{ $cache->{test} } );
+    my @keys = sort keys( %{ $cache->{test} } );
     is_deeply(
      \@keys,
-     [ 'mode,Color', 'mode,Gray', 'default' ],
+     [ 'default', 'mode,Color', 'mode,Gray' ],
      'starting with a non-default profile'
     );
     Gtk2->main_quit;

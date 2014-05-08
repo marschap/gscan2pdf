@@ -505,7 +505,7 @@ sub get_options {
     }
     when ('CheckButtonGroup') {
      my @items;
-     foreach ( keys %{ $hashref->{$option}{options} } ) {
+     foreach ( sort keys %{ $hashref->{$option}{options} } ) {
       if ( $hashref->{$option}{options}{$_}{widget}->get_active ) {
        push @items, $_;
       }
@@ -533,7 +533,7 @@ sub get_cmdline {
  my $default = $self->get_options;
 
  my @items;
- foreach my $option ( keys %{$hashref} ) {
+ foreach my $option ( sort keys %{$hashref} ) {
   if ( $hashref->{$option}{type} eq 'CheckButton' ) {
    if ( defined $default->{$option} and $default->{$option} ) {
     push @items, "--$option";
