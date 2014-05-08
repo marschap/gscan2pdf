@@ -3,6 +3,7 @@
 use warnings;
 use strict;
 use feature "switch";
+no if $] >= 5.018, warnings => "experimental::smartmatch";
 use Sane;
 use Data::Dumper;
 use Getopt::Long qw(:config no_ignore_case pass_through);
