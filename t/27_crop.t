@@ -40,8 +40,9 @@ $slist->get_file_info(
      w                 => 10,
      h                 => 10,
      finished_callback => sub {
-      is( `identify -format '%g' $slist->{data}[0][2]{filename}`,
-       "10x10+0+0\n", 'GIF cropped correctly' );
+      my $got = `identify -format '%g' $slist->{data}[0][2]{filename}`;
+      chomp($got);
+      is( $got, "10x10+0+0", 'GIF cropped correctly' );
       is( dirname("$slist->{data}[0][2]{filename}"),
        "$dir", 'using session directory' );
       Gtk2->main_quit;
