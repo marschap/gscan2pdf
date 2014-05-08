@@ -179,7 +179,7 @@ sub boxes {
   }
  }
  else {
-  push @boxes, [ 0, 0, $self->{w}, $self->{h}, decode_utf8( $self->{hocr} ) ];
+  push @boxes, [ 0, 0, $self->{w}, $self->{h}, $self->{hocr} ];
  }
  return @boxes;
 }

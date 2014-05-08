@@ -3,6 +3,8 @@
 * Fix today button on date dialog saving PDF
 * Fix resolution when processing non-standard sized images with unpaper
 * Speed up downsample option by using imagemagick sample instead of resize
+* Remove unnecessary decode_utf8() call causing
+  'Cannot decode string with wide characters' error in Perl 5.18.
 
 
 1.2.4 (26.03.2014):
