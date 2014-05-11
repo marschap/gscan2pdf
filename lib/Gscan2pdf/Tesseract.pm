@@ -185,8 +185,16 @@ sub hocr {
  if ( not $setup ) { Gscan2pdf::Tesseract->setup($logger) }
 
  # Temporary filename for output
- my $suffix =
-   version->parse("v$version") >= version->parse("v3") ? '.html' : '.txt';
+ my $suffix;
+ if ( version->parse("v$version") >= version->parse("v3.02") ) {
+  $suffix = '.hocr';
+ }
+ elsif ( version->parse("v$version") >= version->parse("v3") ) {
+  $suffix = '.html';
+ }
+ else {
+  $suffix = '.txt';
+ }
  my $txt = File::Temp->new( SUFFIX => $suffix );
  ( $name, $path, undef ) = fileparse( $txt, $suffix );
 

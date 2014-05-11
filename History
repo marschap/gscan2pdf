@@ -5,6 +5,8 @@
 * Speed up downsample option by using imagemagick sample instead of resize
 * Remove unnecessary decode_utf8() call causing
   'Cannot decode string with wide characters' error in Perl 5.18.
+* Add support for tesseract 3.03.
+  Closes bug #173 "v1.2.4 doesn't display any output"
 
 
 1.2.4 (26.03.2014):
