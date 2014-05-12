@@ -391,7 +391,7 @@ sub add_widget {
    foreach ( keys %{ $hashref->{$option}{options} } ) {
     $widget->append_text( $hashref->{$option}{options}{$_}{string} );
     push @tooltip, $hashref->{$option}{options}{$_}{tooltip};
-    if ( $_ eq $default->{$option} ) { $o = $i }
+    if (/^$default->{$option}$/ixsm) { $o = $i }
     $hashref->{$option}{options}{$_}{index} = $i++;
    }
    $widget->signal_connect(
