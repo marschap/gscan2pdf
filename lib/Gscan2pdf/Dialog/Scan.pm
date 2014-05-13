@@ -976,8 +976,11 @@ sub add_profile {
    }
   }
   elsif ( ref($profile) eq 'HASH' ) {
-   while ( my ( $key, $value ) = each( %{$profile} ) ) {
-    push @{ $self->{profiles}{$name} }, { $key => $value };
+
+   # If the profile is a hash, the order is undefined.
+   # Sort it to be consistent for tests.
+   for my $key ( sort keys %{$profile} ) {
+    push @{ $self->{profiles}{$name} }, { $key => $profile->{$key} };
    }
   }
   $self->{combobsp}->append_text($name);
