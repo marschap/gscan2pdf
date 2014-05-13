@@ -2321,9 +2321,12 @@ sub _thread_rotate {
 sub _thread_save_image {
  my ( $self, $path, $list_of_pages, $pidfile ) = @_;
 
+ # Escape quotes and spaces
+ $path =~ s/(['" ])/\\$1/gxsm;
+
  if ( @{$list_of_pages} == 1 ) {
   my $cmd =
-"convert $list_of_pages->[0]{filename} -density $list_of_pages->[0]{resolution} '$path'";
+"convert $list_of_pages->[0]{filename} -density $list_of_pages->[0]{resolution} $path";
   $logger->info($cmd);
   my $status = system("echo $PROCESS_ID > $pidfile;$cmd");
   return if $_self->{cancel};
@@ -2337,7 +2340,7 @@ sub _thread_save_image {
   my $i = 1;
   foreach ( @{$list_of_pages} ) {
    $current_filename = sprintf $path, $i++;
-   my $cmd = sprintf "convert %s -density %d \"%s\"",
+   my $cmd = sprintf "convert %s -density %d %s",
      $_->{filename}, $_->{resolution},
      $current_filename;
    my $status = system("echo $PROCESS_ID > $pidfile;$cmd");

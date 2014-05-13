@@ -8,6 +8,8 @@
   'Cannot decode string with wide characters' error in Perl 5.18.
 * Add support for tesseract 3.03.
   Closes bug #173 "v1.2.4 doesn't display any output"
+* Fix bug writing images with quotes in filename
+  Closes bug #174 "Fail to save file when target folder has quote in filename"
 
 
 1.2.4 (26.03.2014):
