@@ -460,6 +460,10 @@ sub set_option {
    if ($data) {
     $self->update_options( Gscan2pdf::Scanner::Options->new_from_data($data) );
    }
+   else {
+    my $opt = $options->by_name( $option->{name} );
+    $opt->{val} = $val;
+   }
 
    # We can carry on applying defaults now, if necessary.
    $self->signal_emit( 'finished-process', 'set_option' );
