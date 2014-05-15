@@ -226,8 +226,14 @@ sub resolution {
    if ( $units eq 'pixels / centimeter' ) {
     $self->{resolution} *= $CM_PER_INCH;
    }
-   elsif ( not $units eq 'pixels / inch' or $units eq 'undefined' ) {
+   elsif ( $units =~ /undefined/xsm ) {
+    $logger->warn("Undefined units.");
+   }
+   elsif ( $units ne 'pixels / inch' ) {
     $logger->warn("Unknown units: '$units'.");
+    $units = 'undefined';
+   }
+   if ( $units =~ /undefined/xsm ) {
     $logger->warn('The resolution and page size will probably be wrong.');
    }
    return $self->{resolution};
