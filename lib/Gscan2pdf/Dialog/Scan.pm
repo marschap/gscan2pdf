@@ -608,8 +608,9 @@ sub SET_PROPERTY {
     $self->signal_emit( 'changed-side-to-scan', $newval )
    }
    when ('paper') {
-    set_combobox_by_text( $self->{combobp}, $newval );
-    $self->signal_emit( 'changed-paper', $newval )
+    if ( set_combobox_by_text( $self->{combobp}, $newval ) ) {
+     $self->signal_emit( 'changed-paper', $newval );
+    }
    }
    when ('paper_formats') {
     $self->set_paper_formats($newval);
@@ -1071,7 +1072,11 @@ sub get_combobox_by_text {
 sub set_combobox_by_text {
  my ( $combobox, $text ) = @_;
  if ( defined $combobox ) {
-  $combobox->set_active( get_combobox_by_text( $combobox, $text ) );
+  my $index = get_combobox_by_text( $combobox, $text );
+  if ( $index > $_NO_INDEX or not defined($text) ) {
+   $combobox->set_active($index);
+   return TRUE;
+  }
  }
  return;
 }
