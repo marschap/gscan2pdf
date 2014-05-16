@@ -10,6 +10,11 @@
   Closes bug #173 "v1.2.4 doesn't display any output"
 * Fix bug writing images with quotes in filename
   Closes bug #174 "Fail to save file when target folder has quote in filename"
+* Fix setting options which don't cause a reload.
+  Closes bug #168 (Resolution Errors on Multiple Scanners)
+  Closes bug #170 (Format A2 in PDF properties despite having chosen A4 while scanning)
+  Closes Debian bug #742233 (wrong resolution)
+  Closes LP: #1304484 (resolution incorrect, saved pdf far too large)
 
 
 1.2.4 (26.03.2014):

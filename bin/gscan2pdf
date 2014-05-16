@@ -3804,16 +3804,6 @@ sub reloaded_scan_options_callback {
  return;
 }
 
-sub changed_scan_option_callback {
- my ( $widget, $option, $value ) = @_;
-
- # Note resolution
- if ( $option eq SANE_NAME_SCAN_RESOLUTION ) {
-  $SETTING{resolution} = $value;
- }
- return;
-}
-
 sub changed_progress_callback {
  my ( $widget, $progress, $message ) = @_;
  if ( defined $progress ) {
@@ -3848,15 +3838,15 @@ sub new_scan_callback {
  else {
   my $options = $windows->get('available-scan-options');
   my $opt     = $options->by_name(SANE_NAME_SCAN_RESOLUTION);
-  $SETTING{resolution} =
+  my $resolution =
     ( defined($opt) and defined( $opt->{val} ) )
     ? $opt->{val}
     : $Gscan2pdf::Document::POINTS_PER_INCH;
-  $logger->info("Importing scan with resolution=$SETTING{resolution}");
+  $logger->info("Importing scan with resolution=$resolution");
   import_scan(
    filename   => File::Spec->catdir( $session, "out$n.pnm" ),
    page       => $n,
-   resolution => $SETTING{resolution},
+   resolution => $resolution,
    delete     => TRUE,
    rotate     => $rotate,
    unpaper    => $SETTING{'unpaper on scan'},
