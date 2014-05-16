@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -60,11 +60,44 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
    'changed-paper' => sub {
     my ( $widget, $paper ) = @_;
     is( $paper, 'small', 'do not change paper if it is too big' );
-    Gtk2->main_quit;
+   }
+  );
+
+  # need a new main loop because of the timeout
+  my $loop = Glib::MainLoop->new;
+  my $flag = FALSE;
+  $dialog->{signal} = $dialog->signal_connect(
+   'changed-scan-option' => sub {
+    my ( $widget, $option, $value ) = @_;
+    $flag = TRUE;
+    if ( $option eq 'br-y' ) {
+     $dialog->signal_handler_disconnect( $dialog->{signal} );
+     $loop->quit;
+    }
    }
   );
   $dialog->set( 'paper', 'large' );
   $dialog->set( 'paper', 'small' );
+  $loop->run unless ($flag);
+
+  ######################################
+
+  # So that it can be used in hash
+  my $resolution = SANE_NAME_SCAN_RESOLUTION;
+
+  $dialog->{signal} = $dialog->signal_connect(
+   'changed-scan-option' => sub {
+    my ( $widget, $option, $value ) = @_;
+    $dialog->signal_handler_disconnect( $dialog->{signal} );
+    Gtk2->main_quit;
+    is( $option, $resolution,
+     'set other options after ignoring non-existant one' );
+   }
+  );
+  my $options = $dialog->get('available-scan-options');
+  $dialog->set_option( $options->by_name('non-existant option'), 'dummy' );
+
+  $dialog->set_option( $options->by_name($resolution), 51 );
  }
 );
 $dialog->{signal} = $dialog->signal_connect(

@@ -433,6 +433,7 @@ sub hide_geometry {
 
 sub set_option {
  my ( $self, $option, $val ) = @_;
+ if ( not defined($option) ) { return }
 
  my $current = $self->{current_scan_options};
 
@@ -692,7 +693,7 @@ sub set_option_widget {
    # check for it here, so that the reloaded value is not overwritten.
    $opt->{val} = $val;
   }
-  else {
+  elsif ( defined $widget ) {
    given ($widget) {
     when ( $widget->isa('Gtk2::CheckButton') ) {
      if ( $widget->get_active != $val ) {
@@ -723,6 +724,9 @@ sub set_option_widget {
      }
     }
    }
+  }
+  else {
+   $logger->warn("Widget for option '$name' undefined.");
   }
   ++$i;
  }

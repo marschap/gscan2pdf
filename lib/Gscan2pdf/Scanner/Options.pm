@@ -53,7 +53,9 @@ sub by_index {
 
 sub by_name {
  my ( $self, $name ) = @_;
- return defined($name) ? $self->{hash}{$name} : undef;
+ return ( defined($name) and defined( $self->{hash}{$name} ) )
+   ? $self->{hash}{$name}
+   : undef;
 }
 
 sub by_title {
