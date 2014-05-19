@@ -4,7 +4,7 @@ use Gtk2 -init;
 use Test::More tests => 7;
 
 BEGIN {
- use_ok('Gscan2pdf::PageRange');
+    use_ok('Gscan2pdf::PageRange');
 }
 
 #########################

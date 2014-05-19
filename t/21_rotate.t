@@ -4,8 +4,8 @@ use File::Basename;    # Split filename into dir, file, ext
 use Test::More tests => 3;
 
 BEGIN {
- use_ok('Gscan2pdf::Document');
- use Gtk2 -init;       # Could just call init separately
+    use_ok('Gscan2pdf::Document');
+    use Gtk2 -init;    # Could just call init separately
 }
 
 #########################
@@ -25,28 +25,28 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 $slist->get_file_info(
- path              => 'test.jpg',
- finished_callback => sub {
-  my ($info) = @_;
-  $slist->import_file(
-   info              => $info,
-   first             => 1,
-   last              => 1,
-   finished_callback => sub {
-    $slist->rotate(
-     angle             => 90,
-     page              => $slist->{data}[0][2],
-     finished_callback => sub {
-      is( system("identify $slist->{data}[0][2]{filename}"),
-       0, 'valid JPG created' );
-      is( dirname("$slist->{data}[0][2]{filename}"),
-       "$dir", 'using session directory' );
-      Gtk2->main_quit;
-     }
-    );
-   }
-  );
- }
+    path              => 'test.jpg',
+    finished_callback => sub {
+        my ($info) = @_;
+        $slist->import_file(
+            info              => $info,
+            first             => 1,
+            last              => 1,
+            finished_callback => sub {
+                $slist->rotate(
+                    angle             => 90,
+                    page              => $slist->{data}[0][2],
+                    finished_callback => sub {
+                        is( system("identify $slist->{data}[0][2]{filename}"),
+                            0, 'valid JPG created' );
+                        is( dirname("$slist->{data}[0][2]{filename}"),
+                            "$dir", 'using session directory' );
+                        Gtk2->main_quit;
+                    }
+                );
+            }
+        );
+    }
 );
 Gtk2->main;
 

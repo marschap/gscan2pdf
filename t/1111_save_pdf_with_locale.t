@@ -5,8 +5,8 @@ use Gtk2 -init;    # Could just call init separately
 use POSIX qw(locale_h);
 
 BEGIN {
- use Gscan2pdf::Document;
- use PDF::API2;
+    use Gscan2pdf::Document;
+    use PDF::API2;
 }
 
 #########################
@@ -29,22 +29,22 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 $slist->get_file_info(
- path              => 'test.pnm',
- finished_callback => sub {
-  my ($info) = @_;
-  $slist->import_file(
-   info              => $info,
-   first             => 1,
-   last              => 1,
-   finished_callback => sub {
-    $slist->save_pdf(
-     path              => 'test.pdf',
-     list_of_pages     => [ $slist->{data}[0][2] ],
-     finished_callback => sub { Gtk2->main_quit }
-    );
-   }
-  );
- }
+    path              => 'test.pnm',
+    finished_callback => sub {
+        my ($info) = @_;
+        $slist->import_file(
+            info              => $info,
+            first             => 1,
+            last              => 1,
+            finished_callback => sub {
+                $slist->save_pdf(
+                    path              => 'test.pdf',
+                    list_of_pages     => [ $slist->{data}[0][2] ],
+                    finished_callback => sub { Gtk2->main_quit }
+                );
+            }
+        );
+    }
 );
 Gtk2->main;
 

@@ -3,8 +3,8 @@ use strict;
 use Test::More tests => 2;
 
 BEGIN {
- use Gscan2pdf::Document;
- use Gtk2 -init;    # Could just call init separately
+    use Gscan2pdf::Document;
+    use Gtk2 -init;    # Could just call init separately
 }
 
 #########################
@@ -25,33 +25,33 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 $slist->get_file_info(
- path              => 'test.tif',
- finished_callback => sub {
-  my ($info) = @_;
-  my $pid = $slist->import_file(
-   info               => $info,
-   first              => 1,
-   last               => 1,
-   cancelled_callback => sub {
-    is( defined( $slist->{data}[0] ), '', 'TIFF not imported' );
-    $slist->import_file(
-     info              => $info,
-     first             => 1,
-     last              => 1,
-     finished_callback => sub {
-      system("cp $slist->{data}[0][2]{filename} test.tif");
-      Gtk2->main_quit;
-     }
-    );
-   }
-  );
-  $slist->cancel($pid);
- }
+    path              => 'test.tif',
+    finished_callback => sub {
+        my ($info) = @_;
+        my $pid = $slist->import_file(
+            info               => $info,
+            first              => 1,
+            last               => 1,
+            cancelled_callback => sub {
+                is( defined( $slist->{data}[0] ), '', 'TIFF not imported' );
+                $slist->import_file(
+                    info              => $info,
+                    first             => 1,
+                    last              => 1,
+                    finished_callback => sub {
+                        system("cp $slist->{data}[0][2]{filename} test.tif");
+                        Gtk2->main_quit;
+                    }
+                );
+            }
+        );
+        $slist->cancel($pid);
+    }
 );
 Gtk2->main;
 
 is( `identify -format '%m %G %g %z-bit %r' test.tif`,
- $old, 'TIFF imported correctly after cancelling previous import' );
+    $old, 'TIFF imported correctly after cancelling previous import' );
 
 #########################
 

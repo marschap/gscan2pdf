@@ -4,7 +4,7 @@ use Test::More tests => 2;
 use Gtk2 -init;    # Could just call init separately
 
 BEGIN {
- use_ok('Gscan2pdf::Document');
+    use_ok('Gscan2pdf::Document');
 }
 
 #########################
@@ -26,29 +26,29 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 $slist->get_file_info(
- path              => 'test.pnm',
- finished_callback => sub {
-  my ($info) = @_;
-  $slist->import_file(
-   info              => $info,
-   first             => 1,
-   last              => 1,
-   finished_callback => sub {
-    $slist->save_pdf(
-     path              => 'test.pdf',
-     list_of_pages     => [ $slist->{data}[0][2] ],
-     finished_callback => sub { Gtk2->main_quit }
-    );
-   }
-  );
- }
+    path              => 'test.pnm',
+    finished_callback => sub {
+        my ($info) = @_;
+        $slist->import_file(
+            info              => $info,
+            first             => 1,
+            last              => 1,
+            finished_callback => sub {
+                $slist->save_pdf(
+                    path              => 'test.pdf',
+                    list_of_pages     => [ $slist->{data}[0][2] ],
+                    finished_callback => sub { Gtk2->main_quit }
+                );
+            }
+        );
+    }
 );
 Gtk2->main;
 
 is(
- `pdfinfo test.pdf | grep 'Page size:'`,
- "Page size:      70 x 46 pts\n",
- 'valid PDF created'
+    `pdfinfo test.pdf | grep 'Page size:'`,
+    "Page size:      70 x 46 pts\n",
+    'valid PDF created'
 );
 
 #########################

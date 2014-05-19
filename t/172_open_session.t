@@ -4,8 +4,8 @@ use File::Basename;    # Split filename into dir, file, ext
 use Test::More tests => 4;
 
 BEGIN {
- use Gscan2pdf::Document;
- use Gtk2 -init;       # Could just call init separately
+    use Gscan2pdf::Document;
+    use Gtk2 -init;    # Could just call init separately
 }
 
 #########################
@@ -20,40 +20,40 @@ $slist->set_dir($dir);
 $slist->open_session_file('test.gs2p');
 
 like(
- `file $slist->{data}[0][2]{filename}`,
- qr/PNG image data, 70 x 46, 8-bit\/color RGB, non-interlaced/,
- 'PNG extracted with expected size'
+    `file $slist->{data}[0][2]{filename}`,
+    qr/PNG image data, 70 x 46, 8-bit\/color RGB, non-interlaced/,
+    'PNG extracted with expected size'
 );
 is(
- $slist->{data}[0][2]{hocr},
- 'The quick brown fox',
- 'Basic OCR output extracted'
+    $slist->{data}[0][2]{hocr},
+    'The quick brown fox',
+    'Basic OCR output extracted'
 );
 
 # Add another image to test behaviour with multiple saves
 system('convert rose: test.pnm');
 
 $slist->get_file_info(
- path              => 'test.pnm',
- finished_callback => sub {
-  my ($info) = @_;
-  $slist->import_file(
-   info              => $info,
-   first             => 1,
-   last              => 1,
-   finished_callback => sub {
-    $slist->save_session('test2.gs2p');
-    Gtk2->main_quit;
-   }
-  );
- }
+    path              => 'test.pnm',
+    finished_callback => sub {
+        my ($info) = @_;
+        $slist->import_file(
+            info              => $info,
+            first             => 1,
+            last              => 1,
+            finished_callback => sub {
+                $slist->save_session('test2.gs2p');
+                Gtk2->main_quit;
+            }
+        );
+    }
 );
 Gtk2->main;
 
 is(
- `file test2.gs2p`,
- "test2.gs2p: gzip compressed data\n",
- 'Session file created'
+    `file test2.gs2p`,
+    "test2.gs2p: gzip compressed data\n",
+    'Session file created'
 );
 cmp_ok( -s 'test2.gs2p', '>', 0, 'Non-empty Session file created' );
 

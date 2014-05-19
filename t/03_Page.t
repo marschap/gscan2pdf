@@ -3,8 +3,8 @@ use strict;
 use Test::More tests => 13;
 
 BEGIN {
- use_ok('Gscan2pdf::Page');
- use Encode;
+    use_ok('Gscan2pdf::Page');
+    use Encode;
 }
 
 #########################
@@ -19,10 +19,10 @@ system('convert rose: test.pnm');
 
 Gscan2pdf::Page->set_logger(Log::Log4perl::get_logger);
 my $page = Gscan2pdf::Page->new(
- filename   => 'test.pnm',
- format     => 'Portable anymap',
- resolution => 72,
- dir        => File::Temp->newdir,
+    filename   => 'test.pnm',
+    format     => 'Portable anymap',
+    resolution => 72,
+    dir        => File::Temp->newdir,
 );
 
 $page->{hocr} = <<'EOS';
@@ -46,10 +46,10 @@ $page->{hocr} = <<'EOS';
 EOS
 
 my @boxes = (
- [ 1,   14, 77,  48, 'The' ],
- [ 92,  14, 202, 59, 'quick' ],
- [ 214, 14, 341, 48, 'brown' ],
- [ 355, 14, 420, 48, 'fox' ]
+    [ 1,   14, 77,  48, 'The' ],
+    [ 92,  14, 202, 59, 'quick' ],
+    [ 214, 14, 341, 48, 'brown' ],
+    [ 355, 14, 420, 48, 'fox' ]
 );
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from tesseract 3.00' );
 
@@ -80,10 +80,10 @@ $page->{hocr} = <<'EOS';
 EOS
 
 @boxes = (
- [ 1,   9, 88,  45, 'The' ],
- [ 106, 9, 235, 55, 'quick' ],
- [ 253, 9, 397, 45, 'brown' ],
- [ 416, 9, 490, 45, 'fox' ]
+    [ 1,   9, 88,  45, 'The' ],
+    [ 106, 9, 235, 55, 'quick' ],
+    [ 253, 9, 397, 45, 'brown' ],
+    [ 416, 9, 490, 45, 'fox' ]
 );
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from tesseract 3.02.01' );
 
@@ -114,8 +114,8 @@ $page->{hocr} = <<'EOS';
 EOS
 
 @boxes = (
- [ 22, 26, 107, 39, "\x{a4}\x{f6}A\x{e4}U\x{fc}\x{df}'" ],
- [ 21, 74, 155, 87, 'Test Test Test E' ]
+    [ 22, 26, 107, 39, "\x{a4}\x{f6}A\x{e4}U\x{fc}\x{df}'" ],
+    [ 21, 74, 155, 87, 'Test Test Test E' ]
 );
 is_deeply( [ $page->boxes ], \@boxes, 'More boxes from ocropus 0.3 with UTF8' );
 
@@ -155,47 +155,47 @@ is_deeply( [ $page->boxes ], \@boxes, 'Boxes from cuneiform 1.0.0' );
 #########################
 
 my %paper_sizes = (
- A4 => {
-  x => 210,
-  y => 297,
-  l => 0,
-  t => 0,
- },
- 'US Letter' => {
-  x => 216,
-  y => 279,
-  l => 0,
-  t => 0,
- },
- 'US Legal' => {
-  x => 216,
-  y => 356,
-  l => 0,
-  t => 0,
- },
+    A4 => {
+        x => 210,
+        y => 297,
+        l => 0,
+        t => 0,
+    },
+    'US Letter' => {
+        x => 216,
+        y => 279,
+        l => 0,
+        t => 0,
+    },
+    'US Legal' => {
+        x => 216,
+        y => 356,
+        l => 0,
+        t => 0,
+    },
 );
 
 system('convert -size 210x297 xc:white test.pnm');
 $page = Gscan2pdf::Page->new(
- filename => 'test.pnm',
- format   => 'Portable anymap',
- dir      => File::Temp->newdir,
+    filename => 'test.pnm',
+    format   => 'Portable anymap',
+    dir      => File::Temp->newdir,
 );
 is_deeply(
- $page->matching_paper_sizes( \%paper_sizes ),
- { A4 => 25.4 },
- 'basic portrait'
+    $page->matching_paper_sizes( \%paper_sizes ),
+    { A4 => 25.4 },
+    'basic portrait'
 );
 system('convert -size 297x210 xc:white test.pnm');
 $page = Gscan2pdf::Page->new(
- filename => 'test.pnm',
- format   => 'Portable anymap',
- dir      => File::Temp->newdir,
+    filename => 'test.pnm',
+    format   => 'Portable anymap',
+    dir      => File::Temp->newdir,
 );
 is_deeply(
- $page->matching_paper_sizes( \%paper_sizes ),
- { A4 => 25.4 },
- 'basic landscape'
+    $page->matching_paper_sizes( \%paper_sizes ),
+    { A4 => 25.4 },
+    'basic landscape'
 );
 
 #########################
@@ -204,25 +204,25 @@ is( $page->resolution( \%paper_sizes ), 25.4, 'resolution' );
 
 system('convert -units "PixelsPerInch" -density 300 xc:white test.jpg');
 $page = Gscan2pdf::Page->new(
- filename => 'test.jpg',
- format   => 'Joint Photographic Experts Group JFIF format',
- dir      => File::Temp->newdir,
+    filename => 'test.jpg',
+    format   => 'Joint Photographic Experts Group JFIF format',
+    dir      => File::Temp->newdir,
 );
 is( $page->resolution( \%paper_sizes ), 300, 'inches' );
 
 system('convert -units "PixelsPerCentimeter" -density 118 xc:white test.jpg');
 $page = Gscan2pdf::Page->new(
- filename => 'test.jpg',
- format   => 'Joint Photographic Experts Group JFIF format',
- dir      => File::Temp->newdir,
+    filename => 'test.jpg',
+    format   => 'Joint Photographic Experts Group JFIF format',
+    dir      => File::Temp->newdir,
 );
 is( $page->resolution( \%paper_sizes ), 299.72, 'centimetres' );
 
 system('convert -units "Undefined" -density 300 xc:white test.jpg');
 $page = Gscan2pdf::Page->new(
- filename => 'test.jpg',
- format   => 'Joint Photographic Experts Group JFIF format',
- dir      => File::Temp->newdir,
+    filename => 'test.jpg',
+    format   => 'Joint Photographic Experts Group JFIF format',
+    dir      => File::Temp->newdir,
 );
 is( $page->resolution( \%paper_sizes ), 300, 'undefined' );
 

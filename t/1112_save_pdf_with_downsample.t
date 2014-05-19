@@ -4,7 +4,7 @@ use Test::More tests => 2;
 use Gtk2 -init;    # Could just call init separately
 
 BEGIN {
- use Gscan2pdf::Document;
+    use Gscan2pdf::Document;
 }
 
 #########################
@@ -28,42 +28,42 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 $slist->get_file_info(
- path              => 'test.png',
- finished_callback => sub {
-  my ($info) = @_;
-  $slist->import_file(
-   info              => $info,
-   first             => 1,
-   last              => 1,
-   finished_callback => sub {
-    $slist->save_pdf(
-     path              => 'test.pdf',
-     list_of_pages     => [ $slist->{data}[0][2] ],
-     finished_callback => sub {
-      $slist->save_pdf(
-       path          => 'test2.pdf',
-       list_of_pages => [ $slist->{data}[0][2] ],
-       options       => {
-        downsample       => 1,
-        'downsample dpi' => 150,
-       },
-       finished_callback => sub { Gtk2->main_quit }
-      );
-     }
-    );
-   }
-  );
- }
+    path              => 'test.png',
+    finished_callback => sub {
+        my ($info) = @_;
+        $slist->import_file(
+            info              => $info,
+            first             => 1,
+            last              => 1,
+            finished_callback => sub {
+                $slist->save_pdf(
+                    path              => 'test.pdf',
+                    list_of_pages     => [ $slist->{data}[0][2] ],
+                    finished_callback => sub {
+                        $slist->save_pdf(
+                            path          => 'test2.pdf',
+                            list_of_pages => [ $slist->{data}[0][2] ],
+                            options       => {
+                                downsample       => 1,
+                                'downsample dpi' => 150,
+                            },
+                            finished_callback => sub { Gtk2->main_quit }
+                        );
+                    }
+                );
+            }
+        );
+    }
 );
 Gtk2->main;
 
 is( -s 'test.pdf' > -s 'test2.pdf', 1,
- 'downsampled PDF smaller than original' );
+    'downsampled PDF smaller than original' );
 system('pdfimages test2.pdf x');
 is(
- `identify -format '%m %G %g %z-bit %r' x-000.pbm`,
- "PBM 226x28 226x28+0+0 1-bit DirectClass Gray ",
- 'downsampled'
+    `identify -format '%m %G %g %z-bit %r' x-000.pbm`,
+    "PBM 226x28 226x28+0+0 1-bit DirectClass Gray ",
+    'downsampled'
 );
 
 #########################

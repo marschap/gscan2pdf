@@ -4,24 +4,24 @@ use File::Temp;
 use Test::More tests => 1;
 
 BEGIN {
- use Gscan2pdf::Document;
- use Gtk2 -init;    # Could just call init separately
+    use Gscan2pdf::Document;
+    use Gtk2 -init;    # Could just call init separately
 }
 
 #########################
 
 SKIP: {
- skip 'pdftk not installed', 1 unless `which pdftk`;
+    skip 'pdftk not installed', 1 unless `which pdftk`;
 
- use Log::Log4perl qw(:easy);
+    use Log::Log4perl qw(:easy);
 
- Log::Log4perl->easy_init($WARN);
- my $logger = Log::Log4perl::get_logger;
- Gscan2pdf::Document->setup($logger);
+    Log::Log4perl->easy_init($WARN);
+    my $logger = Log::Log4perl::get_logger;
+    Gscan2pdf::Document->setup($logger);
 
- # Create test image
- system('convert rose: page1.pdf');
- my $content = <<'EOS';
+    # Create test image
+    system('convert rose: page1.pdf');
+    my $content = <<'EOS';
 %PDF-1.4
 1 0 obj
   << /Type /Catalog
@@ -80,38 +80,38 @@ startxref
 555 
 %%EOF 
 EOS
- open my $fh, '>', 'page2.pdf' or die 'Cannot open page2.pdf';
- print $fh $content;
- close $fh;
- system('pdftk page1.pdf page2.pdf cat output test.pdf');
+    open my $fh, '>', 'page2.pdf' or die 'Cannot open page2.pdf';
+    print $fh $content;
+    close $fh;
+    system('pdftk page1.pdf page2.pdf cat output test.pdf');
 
- my $slist = Gscan2pdf::Document->new;
+    my $slist = Gscan2pdf::Document->new;
 
- # dir for temporary files
- my $dir = File::Temp->newdir;
- $slist->set_dir($dir);
+    # dir for temporary files
+    my $dir = File::Temp->newdir;
+    $slist->set_dir($dir);
 
- $slist->get_file_info(
-  path              => 'test.pdf',
-  finished_callback => sub {
-   my ($info) = @_;
-   $slist->import_file(
-    info              => $info,
-    first             => 1,
-    last              => 2,
-    finished_callback => sub {
-     is( $#{ $slist->{data} }, 0, 'imported 1 image' );
-     Gtk2->main_quit;
-    }
-   );
-  }
- );
- Gtk2->main;
+    $slist->get_file_info(
+        path              => 'test.pdf',
+        finished_callback => sub {
+            my ($info) = @_;
+            $slist->import_file(
+                info              => $info,
+                first             => 1,
+                last              => 2,
+                finished_callback => sub {
+                    is( $#{ $slist->{data} }, 0, 'imported 1 image' );
+                    Gtk2->main_quit;
+                }
+            );
+        }
+    );
+    Gtk2->main;
 
 #########################
 
- unlink 'page1.pdf', 'page2.pdf', 'test.pdf', <$dir/*>;
- rmdir $dir;
+    unlink 'page1.pdf', 'page2.pdf', 'test.pdf', <$dir/*>;
+    rmdir $dir;
 
- Gscan2pdf::Document->quit();
+    Gscan2pdf::Document->quit();
 }

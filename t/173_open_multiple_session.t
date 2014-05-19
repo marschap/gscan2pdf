@@ -4,8 +4,8 @@ use File::Basename;    # Split filename into dir, file, ext
 use Test::More tests => 2;
 
 BEGIN {
- use Gscan2pdf::Document;
- use Gtk2 -init;       # Could just call init separately
+    use Gscan2pdf::Document;
+    use Gtk2 -init;    # Could just call init separately
 }
 
 #########################
@@ -25,14 +25,14 @@ $slist->open_session_file('test2.gs2p');
 $slist->save_session;
 
 like(
- `file $slist->{data}[0][2]{filename}`,
- qr/PNG image data, 70 x 46, 8-bit\/color RGB, non-interlaced/,
- 'PNG extracted with expected size'
+    `file $slist->{data}[0][2]{filename}`,
+    qr/PNG image data, 70 x 46, 8-bit\/color RGB, non-interlaced/,
+    'PNG extracted with expected size'
 );
 is(
- $slist->{data}[0][2]{hocr},
- 'The quick brown fox',
- 'Basic OCR output extracted'
+    $slist->{data}[0][2]{hocr},
+    'The quick brown fox',
+    'Basic OCR output extracted'
 );
 
 #########################

@@ -4,8 +4,8 @@ use File::Basename;    # Split filename into dir, file, ext
 use Test::More tests => 1;
 
 BEGIN {
- use Gscan2pdf::Document;
- use Gtk2 -init;       # Could just call init separately
+    use Gscan2pdf::Document;
+    use Gtk2 -init;    # Could just call init separately
 }
 
 #########################
@@ -27,20 +27,23 @@ my $old = `identify -format '%m %G %g %z-bit %r' test.png`;
 my $slist = Gscan2pdf::Document->new;
 
 $slist->get_file_info(
- path              => 'test.pdf',
- finished_callback => sub {
-  my ($info) = @_;
-  $slist->import_file(
-   info              => $info,
-   first             => 1,
-   last              => 1,
-   finished_callback => sub {
-    is( `identify -format '%m %G %g %z-bit %r' $slist->{data}[0][2]{filename}`,
-     $old, 'PDF imported correctly' );
-    Gtk2->main_quit;
-   }
-  );
- }
+    path              => 'test.pdf',
+    finished_callback => sub {
+        my ($info) = @_;
+        $slist->import_file(
+            info              => $info,
+            first             => 1,
+            last              => 1,
+            finished_callback => sub {
+                is(
+`identify -format '%m %G %g %z-bit %r' $slist->{data}[0][2]{filename}`,
+                    $old,
+                    'PDF imported correctly'
+                );
+                Gtk2->main_quit;
+            }
+        );
+    }
 );
 Gtk2->main;
 

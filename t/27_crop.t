@@ -4,8 +4,8 @@ use File::Basename;    # Split filename into dir, file, ext
 use Test::More tests => 3;
 
 BEGIN {
- use_ok('Gscan2pdf::Document');
- use Gtk2 -init;       # Could just call init separately
+    use_ok('Gscan2pdf::Document');
+    use Gtk2 -init;    # Could just call init separately
 }
 
 #########################
@@ -25,32 +25,33 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 $slist->get_file_info(
- path              => 'test.gif',
- finished_callback => sub {
-  my ($info) = @_;
-  $slist->import_file(
-   info              => $info,
-   first             => 1,
-   last              => 1,
-   finished_callback => sub {
-    $slist->crop(
-     page              => $slist->{data}[0][2],
-     x                 => 10,
-     y                 => 10,
-     w                 => 10,
-     h                 => 10,
-     finished_callback => sub {
-      my $got = `identify -format '%g' $slist->{data}[0][2]{filename}`;
-      chomp($got);
-      is( $got, "10x10+0+0", 'GIF cropped correctly' );
-      is( dirname("$slist->{data}[0][2]{filename}"),
-       "$dir", 'using session directory' );
-      Gtk2->main_quit;
-     }
-    );
-   }
-  );
- }
+    path              => 'test.gif',
+    finished_callback => sub {
+        my ($info) = @_;
+        $slist->import_file(
+            info              => $info,
+            first             => 1,
+            last              => 1,
+            finished_callback => sub {
+                $slist->crop(
+                    page              => $slist->{data}[0][2],
+                    x                 => 10,
+                    y                 => 10,
+                    w                 => 10,
+                    h                 => 10,
+                    finished_callback => sub {
+                        my $got =
+`identify -format '%g' $slist->{data}[0][2]{filename}`;
+                        chomp($got);
+                        is( $got, "10x10+0+0", 'GIF cropped correctly' );
+                        is( dirname("$slist->{data}[0][2]{filename}"),
+                            "$dir", 'using session directory' );
+                        Gtk2->main_quit;
+                    }
+                );
+            }
+        );
+    }
 );
 Gtk2->main;
 

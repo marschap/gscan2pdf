@@ -19,19 +19,19 @@ my $shareinstdir;
 
 @ARGV = ();
 foreach (@argv) {
- if (m!PREFIX=(.+)!i) {
-  $prefixdir = $1;
-  push @ARGV, $_;
- }
- elsif (m!SHAREINSTDIR=(.+)!i) {
-  $shareinstdir = $1;
- }
- elsif (m!SHAREDIR=(.+)!i) {
-  $sharedir = $1;
- }
- else {
-  push @ARGV, $_;
- }
+    if (m!PREFIX=(.+)!i) {
+        $prefixdir = $1;
+        push @ARGV, $_;
+    }
+    elsif (m!SHAREINSTDIR=(.+)!i) {
+        $shareinstdir = $1;
+    }
+    elsif (m!SHAREDIR=(.+)!i) {
+        $sharedir = $1;
+    }
+    else {
+        push @ARGV, $_;
+    }
 }
 
 $prefixdir = "/usr"                unless ($prefixdir);
@@ -39,65 +39,65 @@ $sharedir  = $prefixdir . "/share" unless ($sharedir);
 $localedir = $sharedir . "/locale" unless ($localedir);
 
 WriteMakefile(
- NAME      => $program,
- VERSION   => $version,
- EXE_FILES => [ "bin/$program", 'bin/scanimage-perl', 'bin/scanadf-perl' ],
- PREREQ_PM => {
-  Glib                   => 1.210,
-  Gtk2                   => 1.090,
-  Sane                   => 0.05,
-  Gtk2::Ex::Simple::List => 0,
-  Gtk2::ImageView        => 0,
-  Image::Magick          => 0,
-  Locale::gettext        => 1.05,
-  Config::General        => 2.40,
-  PDF::API2              => 0,
-  Set::IntSpan           => 1.10,
-  Goo::Canvas            => 0,
-  Readonly               => 0,
-  Log::Log4perl          => 0,
-  Try::Tiny              => 0,
-  List::MoreUtils        => 0,
- },
- clean => { FILES => '$(SOURCE_TIDY)' },
- (
-  $] >= 5.005
-  ?    ## Add these new keywords supported since 5.005
+    NAME      => $program,
+    VERSION   => $version,
+    EXE_FILES => [ "bin/$program", 'bin/scanimage-perl', 'bin/scanadf-perl' ],
+    PREREQ_PM => {
+        Glib                   => 1.210,
+        Gtk2                   => 1.090,
+        Sane                   => 0.05,
+        Gtk2::Ex::Simple::List => 0,
+        Gtk2::ImageView        => 0,
+        Image::Magick          => 0,
+        Locale::gettext        => 1.05,
+        Config::General        => 2.40,
+        PDF::API2              => 0,
+        Set::IntSpan           => 1.10,
+        Goo::Canvas            => 0,
+        Readonly               => 0,
+        Log::Log4perl          => 0,
+        Try::Tiny              => 0,
+        List::MoreUtils        => 0,
+    },
+    clean => { FILES => '$(SOURCE_TIDY)' },
     (
-   ABSTRACT_FROM => "bin/$program",      # retrieve abstract from module
-   AUTHOR        => "$author <$email>"
-    )
-  : ()
- ),
+        $] >= 5.005
+        ?    ## Add these new keywords supported since 5.005
+          (
+            ABSTRACT_FROM => "bin/$program",     # retrieve abstract from module
+            AUTHOR        => "$author <$email>"
+          )
+        : ()
+    ),
 );
 
 sub MY::macro {
- my $self   = shift;
- my $string = $self->MM::macro();
- $string .= "SHAREDIR=$sharedir\n";
- $string .= "LOCALEDIR=$localedir\n";
- $string .= "AUTHOR=$author\n";
- $string .= "EMAIL=$email\n";
- $string .= "YEAR=$year\n";
+    my $self   = shift;
+    my $string = $self->MM::macro();
+    $string .= "SHAREDIR=$sharedir\n";
+    $string .= "LOCALEDIR=$localedir\n";
+    $string .= "AUTHOR=$author\n";
+    $string .= "EMAIL=$email\n";
+    $string .= "YEAR=$year\n";
 
- $string .= "SITEPREFIX=$prefixdir\n";
- $string .= "INSTALLMAN1DIR=$sharedir/man/man1\n";
- $string .= "INSTALLSITEMAN1DIR=$sharedir/man/man1\n";
- $string .= "INSTALLMAN3DIR=$sharedir/man/man3\n";
- $string .= "INSTALLSITEMAN3DIR=$sharedir/man/man3\n";
- $string .= "MAN1EXT=1p\n";
- return $string;
+    $string .= "SITEPREFIX=$prefixdir\n";
+    $string .= "INSTALLMAN1DIR=$sharedir/man/man1\n";
+    $string .= "INSTALLSITEMAN1DIR=$sharedir/man/man1\n";
+    $string .= "INSTALLMAN3DIR=$sharedir/man/man3\n";
+    $string .= "INSTALLSITEMAN3DIR=$sharedir/man/man3\n";
+    $string .= "MAN1EXT=1p\n";
+    return $string;
 }
 
 sub MY::install {
- my $self   = shift;
- my $string = $self->MM::install();
- $string =~ s/doc_install/doc_install locale_install icon_install/;
- return $string;
+    my $self   = shift;
+    my $string = $self->MM::install();
+    $string =~ s/doc_install/doc_install locale_install icon_install/;
+    return $string;
 }
 
 sub MY::postamble {
- my $postamble = <<'END';
+    my $postamble = <<'END';
 SHELL = bash
 PO = $(wildcard po/*.po)
 DEB_BUILD_ROOT = /var/tmp/$(NAME)-$(VERSION)
@@ -215,7 +215,7 @@ MANIFEST : $(SOURCE)
 tidy : MANIFEST $(SOURCE_TIDY)
 
 %.tdy : %
-	perltidy -i=1 $* && if ! diff -q $@ $* > /dev/null; then cp $@ $*; fi
+	perltidy $* && if ! diff -q $@ $* > /dev/null; then cp $@ $*; fi
 END
- $postamble;
+    $postamble;
 }

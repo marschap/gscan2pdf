@@ -4,8 +4,8 @@ use File::Basename;    # Split filename into dir, file, ext
 use Test::More tests => 3;
 
 BEGIN {
- use_ok('Gscan2pdf::Document');
- use Gtk2 -init;       # Could just call init separately
+    use_ok('Gscan2pdf::Document');
+    use Gtk2 -init;    # Could just call init separately
 }
 
 #########################
@@ -25,31 +25,32 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 $slist->get_file_info(
- path              => 'white.pnm',
- finished_callback => sub {
-  my ($info) = @_;
-  $slist->import_file(
-   info              => $info,
-   first             => 1,
-   last              => 1,
-   finished_callback => sub {
-    $slist->negate(
-     page              => $slist->{data}[0][2],
-     finished_callback => sub {
-      $slist->analyse(
-       page              => $slist->{data}[0][2],
-       finished_callback => sub {
-        is( $slist->{data}[0][2]{mean}, 0, 'Found dark page' );
-        is( dirname("$slist->{data}[0][2]{filename}"),
-         "$dir", 'using session directory' );
-        Gtk2->main_quit;
-       }
-      );
-     }
-    );
-   }
-  );
- }
+    path              => 'white.pnm',
+    finished_callback => sub {
+        my ($info) = @_;
+        $slist->import_file(
+            info              => $info,
+            first             => 1,
+            last              => 1,
+            finished_callback => sub {
+                $slist->negate(
+                    page              => $slist->{data}[0][2],
+                    finished_callback => sub {
+                        $slist->analyse(
+                            page              => $slist->{data}[0][2],
+                            finished_callback => sub {
+                                is( $slist->{data}[0][2]{mean},
+                                    0, 'Found dark page' );
+                                is( dirname("$slist->{data}[0][2]{filename}"),
+                                    "$dir", 'using session directory' );
+                                Gtk2->main_quit;
+                            }
+                        );
+                    }
+                );
+            }
+        );
+    }
 );
 Gtk2->main;
 
