@@ -226,11 +226,11 @@ sub options2hash {
 
     # Remove everything above the options
     if (
-        $output =~ /
-                       .* # output header
-                       Options\ specific\ to\ device\ `(.+)':\n # line above options
+        $output =~ qr{
+                       Options[ ]specific[ ]to[ ]device[ ] # string
+                       `(.+)':\n # device name
                        (.*) # options
-                /xsm
+                }xsm
       )
     {
         $device = $1;
@@ -246,16 +246,16 @@ sub options2hash {
         my %option;
         $option{unit}            = SANE_UNIT_NONE;
         $option{constraint_type} = SANE_CONSTRAINT_NONE;
-        my $values = qr{(?:(?:\ |\[=\()([^\[].*?)(?:\)\])?)?}xsm;
+        my $values = qr{(?:(?:[ ]|[[]=[(])([^[].*?)(?:[)]\])?)?}xsm;
 
         # parse group
         if (
-            $output =~ /
-                      \A\ \ # two-character indent
+            $output =~ qr{
+                      \A[ ]{2} # two-character indent
                       ([^\n]*) # the title
                       :\n  # a colon at the end of the line
                       (.*) # the rest of the output
-                    /xsm
+                    }xsm
           )
         {
             $option{title}      = $1;
@@ -271,15 +271,15 @@ sub options2hash {
 
         # parse option
         elsif (
-            $output =~ /
-                      \A\ {4,} # four-character indent
+            $output =~ qr{
+                      \A[ ]{4,} # four-character indent
                       -+        # at least one dash
                       ([\w\-]+) # the option name
                       $values      # optionally followed by the possible values
-                      (?:\ \[(.*?)\])?  # optionally a space, followed by the current value in square brackets
-                      \ *\n     # the rest of the line
+                      (?:[ ][[](.*?)[]])?  # optionally a space, followed by the current value in square brackets
+                      [ ]*\n     # the rest of the line
                       (.*) # the rest of the output
-                    /xsm
+                    }xsm
           )
         {
 
@@ -334,11 +334,11 @@ sub options2hash {
             # Parse option description based on an 8-character indent.
             my $desc = $EMPTY;
             while (
-                $output =~ /
-                       \A\ {8,}   # 8-character indent
+                $output =~ qr{
+                       \A[ ]{8,}   # 8-character indent
                        ([^\n]*)\n    # text
                        (.*) # rest of output
-                     /xsm
+                     }xsm
               )
             {
                 if ( $desc eq $EMPTY ) {
@@ -369,18 +369,18 @@ sub options2hash {
 sub parse_constraint {
     my ( $option, $values ) = @_;
     $option->{type} = SANE_TYPE_INT;
-    if ( defined( $option->{val} ) and $option->{val} =~ /\./xsm ) {
+    if ( defined( $option->{val} ) and $option->{val} =~ /[.]/xsm ) {
         $option->{type} = SANE_TYPE_FIXED;
     }
     if (
         defined $values
-        and $values =~ /
-                    (-?\d+\.?\d*)          # min value, possibly negative or floating
-                    \.\.                   # two dots
-                    (\d+\.?\d*)            # max value, possible floating
+        and $values =~ qr{
+                    (-?\d+[.]?\d*)          # min value, possibly negative or floating
+                    [.]{2}                   # two dots
+                    (\d+[.]?\d*)            # max value, possible floating
                     $units? # optional unit
                     ($list)? # multiple values
-                  /xsm
+                  }xsm
       )
     {
         $option->{constraint}{min} = $1;
@@ -389,21 +389,21 @@ sub parse_constraint {
         if ( defined $3 ) { $option->{unit}       = unit2enum($3) }
         if ( defined $4 ) { $option->{max_values} = $MAX_VALUES }
         if (
-            $values =~ /
-                       \(              # opening round bracket
-                       in\ steps\ of\  # text
-                       (\d+\.?\d*)     # step
-                       \)              # closing round bracket
-                     /xsm
+            $values =~ qr{
+                       [(]              # opening round bracket
+                       in[ ]steps[ ]of[ ] # text
+                       (\d+[.]?\d*)     # step
+                       [)]              # closing round bracket
+                     }xsm
           )
         {
             $option->{constraint}{quant} = $1;
         }
         if (
-               $option->{constraint}{min} =~ /\./xsm
-            or $option->{constraint}{max} =~ /\./xsm
+               $option->{constraint}{min} =~ /[.]/xsm
+            or $option->{constraint}{max} =~ /[.]/xsm
             or ( defined( $option->{constraint}{quant} )
-                and $option->{constraint}{quant} =~ /\./xsm )
+                and $option->{constraint}{quant} =~ /[.]/xsm )
           )
         {
             $option->{type} = SANE_TYPE_FIXED;
@@ -440,7 +440,7 @@ sub parse_list_constraint {
         $values = $1;
         $option->{unit} = unit2enum($2);
     }
-    my @array = split /\|+/sm, $values;
+    my @array = split /[|]+/xsm, $values;
     if (@array) {
         if ( $array[0] eq 'auto' ) {
             $option->{cap} += SANE_CAP_AUTOMATIC;
@@ -464,7 +464,7 @@ sub parse_list_constraint {
                 if (/[[:alpha:]]/xsm) {
                     $option->{type} = SANE_TYPE_STRING;
                 }
-                elsif (/\./xsm) {
+                elsif (/[.]/xsm) {
                     $option->{type} = SANE_TYPE_FIXED;
                 }
             }
