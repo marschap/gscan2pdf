@@ -574,7 +574,7 @@ sub _geometry_option {
           and
           ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
           and ( $opt->{name} =~
-            /^(?:l|t|x|y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/xsm )
+            /^(?:[ltxy]|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/xsm )
     );
 }
 
