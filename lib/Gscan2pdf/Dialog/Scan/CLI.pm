@@ -93,8 +93,8 @@ sub SET_PROPERTY {
     my $name   = $pspec->get_name;
     my $oldval = $self->get($name);
     $self->{$name} = $newval;
-    if (   ( defined($newval) and defined($oldval) and $newval ne $oldval )
-        or ( defined($newval) xor defined($oldval) ) )
+    if (   ( defined $newval and defined $oldval and $newval ne $oldval )
+        or ( defined $newval xor defined $oldval ) )
     {
         if ( $name eq 'logger' ) {
             $logger = $newval;
@@ -159,7 +159,7 @@ sub cache_key {
     my ( $self, $options ) = @_;
 
     my $reload_triggers = $self->get('reload-triggers');
-    if ( not defined($reload_triggers) ) { return 'default' }
+    if ( not defined $reload_triggers ) { return 'default' }
 
     if ( ref($reload_triggers) ne 'ARRAY' ) {
         $reload_triggers = [$reload_triggers];
@@ -186,7 +186,7 @@ sub cache_key {
 
         # grep the reload triggers from the current options
         for ( @{ $self->{current_scan_options} } ) {
-            my ( $key, $value ) = each( %{$_} );
+            my ( $key, $value ) = each %{$_};
             for ( @{$reload_triggers} ) {
                 if (/^$key$/ixsm) {
                     if ( $cache_key ne $EMPTY ) { $cache_key .= $COMMA }
@@ -910,7 +910,7 @@ sub update_options {
 
             # If we are loading from the cache, then both the current options,
             # and the widgets could be different
-            if ( defined($updated_option)
+            if ( defined $updated_option
                 and $opt->{name} ne $updated_option->{name} )
             {
                 my $old_opt =
@@ -961,7 +961,7 @@ sub update_options {
 sub set_current_scan_options {
     my ( $self, $profile ) = @_;
 
-    if ( not defined($profile) ) { return }
+    if ( not defined $profile ) { return }
 
     # As scanimage and scanadf rename the geometry options,
     # we have to map them back to the original names
@@ -992,7 +992,7 @@ sub set_current_scan_options {
            # for reasons I don't understand, without walking the reference tree,
            # parts of $default are undef
             Gscan2pdf::Dialog::Scan::my_dumper($defaults);
-            my ( $ename, $eval ) = each( %{ $defaults->[$i] } );
+            my ( $ename, $eval ) = each %{ $defaults->[$i] };
 
             # don't check $eval against $val, just in case they are different
             if ( $ename eq $name ) {
@@ -1010,7 +1010,7 @@ sub set_current_scan_options {
            # for reasons I don't understand, without walking the reference tree,
            # parts of $default are undef
             Gscan2pdf::Dialog::Scan::my_dumper($defaults);
-            my ( $ename, $eval ) = each( %{ $defaults->[$i] } );
+            my ( $ename, $eval ) = each %{ $defaults->[$i] };
 
             if ( $eval eq $val ) {
                 $i++;
@@ -1036,7 +1036,7 @@ sub set_option_widget {
         # for reasons I don't understand, without walking the reference tree,
         # parts of $profile are undef
         Gscan2pdf::Dialog::Scan::my_dumper( $profile->[$i] );
-        my ( $name, $val ) = each( %{ $profile->[$i] } );
+        my ( $name, $val ) = each %{ $profile->[$i] };
 
         if ( $name eq 'Paper size' ) {
             $self->set( 'paper', $val );
@@ -1123,7 +1123,7 @@ sub map_geometry_names {
             when (SANE_NAME_SCAN_BR_X) {
                 $name = 'x';
                 my $l = $self->get_option_from_profile( 'l', $profile );
-                if ( not defined($l) ) {
+                if ( not defined $l ) {
                     $l =
                       $self->get_option_from_profile( SANE_NAME_SCAN_TL_X,
                         $profile );
@@ -1134,7 +1134,7 @@ sub map_geometry_names {
             when (SANE_NAME_SCAN_BR_Y) {
                 $name = 'y';
                 my $t = $self->get_option_from_profile( 't', $profile );
-                if ( not defined($t) ) {
+                if ( not defined $t ) {
                     $t =
                       $self->get_option_from_profile( SANE_NAME_SCAN_TL_Y,
                         $profile );
@@ -1158,7 +1158,7 @@ sub map_options {
         # for reasons I don't understand, without walking the reference tree,
         # parts of $_ are undef
         Gscan2pdf::Dialog::Scan::my_dumper($_);
-        my ( $key, $val ) = each( %{$_} );
+        my ( $key, $val ) = each %{$_};
         if ( $key ne 'Paper size' ) {
             my $opt = $options->by_name($key);
             if ( defined( $opt->{type} ) and $opt->{type} == SANE_TYPE_BOOL ) {
