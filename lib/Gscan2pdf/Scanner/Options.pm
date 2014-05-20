@@ -151,7 +151,7 @@ sub synonyms {
         [ scalar(SANE_NAME_SCAN_TL_X),   'l' ],
         [ scalar(SANE_NAME_SCAN_TL_Y),   't' ],
         [ scalar(SANE_NAME_SCAN_BR_X),   'x' ],
-        [ scalar(SANE_NAME_SCAN_BR_Y),   'y' ]
+        [ scalar(SANE_NAME_SCAN_BR_Y),   'y' ],
     );
     for my $synonym (@synonyms) {
         given ($name) {
