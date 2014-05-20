@@ -4,14 +4,14 @@ package Gscan2pdf::Dialog::Scan::CLI;
 
 use warnings;
 use strict;
-no if $] >= 5.018, warnings => "experimental::smartmatch";
+no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Gscan2pdf::Dialog::Scan;
 use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Gscan2pdf::Frontend::CLI;
 use Storable qw(dclone);     # For cloning the options cache
 use Locale::gettext 1.05;    # For translations
-use feature "switch";
+use feature 'switch';
 use List::MoreUtils qw{any};
 
 my $EMPTY = q{};
@@ -137,7 +137,7 @@ sub get_devices {
             $pbar->destroy;
             my @device_list = @{$device_list};
             use Data::Dumper;
-            $logger->info( "scanimage --formatted-device-list: ",
+            $logger->info( 'scanimage --formatted-device-list: ',
                 Dumper( \@device_list ) );
             if ( @device_list == 0 ) {
                 $self->signal_emit( 'process-error', 'get_devices',
@@ -315,7 +315,7 @@ sub scan_options {
 
 sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
     my ( $self, $options ) = @_;
-    $logger->debug( "scanimage --help returned: ", Dumper($options) );
+    $logger->debug( 'scanimage --help returned: ', Dumper($options) );
 
     my $num_dev_options = $options->num_options;
 
@@ -899,7 +899,7 @@ sub update_options {
     my ( $self, $options, $updated_option ) = @_;
 
     # walk the widget tree and update them from the hash
-    $logger->debug( "Sane->get_option_descriptor returned: ",
+    $logger->debug( 'Sane->get_option_descriptor returned: ',
         Dumper($options) );
 
     my ( $group, $vbox );
@@ -1194,7 +1194,7 @@ sub scan {
     Gscan2pdf::Frontend::CLI->scan_pages(
         device           => $self->get('device'),
         dir              => $self->get('dir'),
-        format           => "out%d.pnm",
+        format           => 'out%d.pnm',
         options          => $self->map_options($options),
         npages           => $npages,
         start            => $start,
@@ -1227,7 +1227,7 @@ sub scan {
 
 sub cancel_scan {
     Gscan2pdf::Frontend::CLI->cancel_scan;
-    $logger->info("Cancelled scan");
+    $logger->info('Cancelled scan');
     return;
 }
 
