@@ -22,7 +22,7 @@ my $device;
 sub new_from_data {
     my ( $class, $options ) = @_;
     my $self = $class->new();
-    if ( not defined($options) ) { croak 'Error: no options supplied' }
+    if ( not defined $options ) { croak 'Error: no options supplied' }
     if ( ref($options) eq 'ARRAY' ) {
 
        # do a two level clone to allow us to add extra keys to the option hashes
@@ -33,7 +33,7 @@ sub new_from_data {
             if ( defined $options->[$i] ) { %option = %{ $options->[$i] } }
             $option{index} = $i;
             push @options, \%option;
-            if ( defined( $options[$i]{name} )
+            if ( defined $options[$i]{name}
                 and $options[$i]{name} ne $EMPTY )
             {
                 $self->{hash}{ $options[$i]{name} } = $options[$i];
@@ -55,7 +55,7 @@ sub by_index {
 
 sub by_name {
     my ( $self, $name ) = @_;
-    return ( defined($name) and defined( $self->{hash}{$name} ) )
+    return ( defined $name and defined $self->{hash}{$name} )
       ? $self->{hash}{$name}
       : undef;
 }
@@ -110,12 +110,12 @@ sub parse_geometry {
             last;
         }
     }
-    if ( defined $self->{hash}{ scalar(SANE_NAME_SCAN_TL_X) } ) {
+    if ( defined $self->{hash}{ scalar SANE_NAME_SCAN_TL_X } ) {
         $self->{geometry}{l} =
-          $self->{hash}{ scalar(SANE_NAME_SCAN_TL_X) }{constraint}{min};
-        if ( defined $self->{hash}{ scalar(SANE_NAME_SCAN_BR_X) } ) {
+          $self->{hash}{ scalar SANE_NAME_SCAN_TL_X }{constraint}{min};
+        if ( defined $self->{hash}{ scalar SANE_NAME_SCAN_BR_X } ) {
             $self->{geometry}{x} =
-              $self->{hash}{ scalar(SANE_NAME_SCAN_BR_X) }{constraint}{max} -
+              $self->{hash}{ scalar SANE_NAME_SCAN_BR_X }{constraint}{max} -
               $self->{geometry}{l};
         }
     }
@@ -125,12 +125,12 @@ sub parse_geometry {
             $self->{geometry}{x} = $self->{hash}{x}{constraint}{max};
         }
     }
-    if ( defined $self->{hash}{ scalar(SANE_NAME_SCAN_TL_Y) } ) {
+    if ( defined $self->{hash}{ scalar SANE_NAME_SCAN_TL_Y } ) {
         $self->{geometry}{t} =
-          $self->{hash}{ scalar(SANE_NAME_SCAN_TL_Y) }{constraint}{min};
-        if ( defined $self->{hash}{ scalar(SANE_NAME_SCAN_BR_Y) } ) {
+          $self->{hash}{ scalar SANE_NAME_SCAN_TL_Y }{constraint}{min};
+        if ( defined $self->{hash}{ scalar SANE_NAME_SCAN_BR_Y } ) {
             $self->{geometry}{y} =
-              $self->{hash}{ scalar(SANE_NAME_SCAN_BR_Y) }{constraint}{max} -
+              $self->{hash}{ scalar SANE_NAME_SCAN_BR_Y }{constraint}{max} -
               $self->{geometry}{t};
         }
     }
@@ -170,11 +170,11 @@ sub prune_duplicates {
 
     my $j = $#{$arrayref};
     while ( $j > -1 ) {    ## no critic (ProhibitMagicNumbers)
-        my ($opt) = keys( %{ $arrayref->[$j] } );
+        my ($opt) = keys %{ $arrayref->[$j] };
         $seen{$opt}++;
         my $synonyms = synonyms($opt);
         for ( @{$synonyms} ) {
-            if ( defined( $seen{$_} ) and $seen{$_} > 1 ) {
+            if ( defined $seen{$_} and $seen{$_} > 1 ) {
                 splice @{$arrayref}, $j, 1;
                 last;
             }
@@ -373,7 +373,7 @@ sub parse_constraint {
         $option->{type} = SANE_TYPE_FIXED;
     }
     if (
-        defined($values)
+        defined $values
         and $values =~ /
                     (-?\d+\.?\d*)          # min value, possibly negative or floating
                     \.\.                   # two dots
@@ -409,7 +409,7 @@ sub parse_constraint {
             $option->{type} = SANE_TYPE_FIXED;
         }
     }
-    elsif ( defined($values) and $values =~ /^<(\w+)>($list)?$/xsm ) {
+    elsif ( defined $values and $values =~ /^<(\w+)>($list)?$/xsm ) {
         if ( $1 eq 'float' ) {
             $option->{type} = SANE_TYPE_FIXED;
         }
@@ -420,7 +420,7 @@ sub parse_constraint {
     }
 
     # if we haven't got a boolean, and there is no constraint, we have a button
-    elsif ( not defined($values) ) {
+    elsif ( not defined $values ) {
         $option->{type}       = SANE_TYPE_BUTTON;
         $option->{max_values} = 0;
     }
@@ -440,7 +440,7 @@ sub parse_list_constraint {
         $values = $1;
         $option->{unit} = unit2enum($2);
     }
-    my @array = split( /\|+/sm, $values );
+    my @array = split /\|+/sm, $values;
     if (@array) {
         if ( $array[0] eq 'auto' ) {
             $option->{cap} += SANE_CAP_AUTOMATIC;
