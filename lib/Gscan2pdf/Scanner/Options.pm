@@ -2,11 +2,11 @@ package Gscan2pdf::Scanner::Options;
 
 use strict;
 use warnings;
-no if $] >= 5.018, warnings => "experimental::smartmatch";
+no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Carp;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Sane 0.05;              # For enums
-use feature "switch";
+use feature 'switch';
 use Readonly;
 Readonly my $MAX_VALUES => 255;
 
@@ -22,7 +22,7 @@ my $device;
 sub new_from_data {
     my ( $class, $options ) = @_;
     my $self = $class->new();
-    if ( not defined($options) ) { croak "Error: no options supplied" }
+    if ( not defined($options) ) { croak 'Error: no options supplied' }
     if ( ref($options) eq 'ARRAY' ) {
 
        # do a two level clone to allow us to add extra keys to the option hashes
