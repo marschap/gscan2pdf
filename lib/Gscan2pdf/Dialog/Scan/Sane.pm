@@ -46,8 +46,8 @@ sub SET_PROPERTY {
     my $name   = $pspec->get_name;
     my $oldval = $self->get($name);
     $self->{$name} = $newval;
-    if (   ( defined($newval) and defined($oldval) and $newval ne $oldval )
-        or ( defined($newval) xor defined($oldval) ) )
+    if (   ( defined $newval and defined $oldval and $newval ne $oldval )
+        or ( defined $newval xor defined $oldval ) )
     {
         if ( $name eq 'logger' ) {
             $logger = $newval;
@@ -190,7 +190,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
         my $opt = $options->by_index($_);
 
         # Notebook page for group
-        if ( $opt->{type} == SANE_TYPE_GROUP or not defined($vbox) ) {
+        if ( $opt->{type} == SANE_TYPE_GROUP or not defined $vbox ) {
             $vbox = Gtk2::VBox->new;
             $group =
                 $opt->{type} == SANE_TYPE_GROUP
@@ -208,7 +208,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
         # Define HBox for paper size here
         # so that it can be put before first geometry option
-        if ( $self->_geometry_option($opt) and not defined($hboxp) ) {
+        if ( $self->_geometry_option($opt) and not defined $hboxp ) {
             $hboxp = Gtk2::HBox->new;
             $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
         }
@@ -457,7 +457,7 @@ sub hide_geometry {
 
 sub set_option {
     my ( $self, $option, $val ) = @_;
-    if ( not defined($option) ) { return }
+    if ( not defined $option ) { return }
 
     my $current = $self->{current_scan_options};
 
@@ -525,7 +525,7 @@ sub update_options {
         my $widget = $options->by_index($_)->{widget};
 
         # could be undefined for !($new_opt->{cap} & SANE_CAP_SOFT_DETECT)
-        if ( not defined($widget) ) { next; }
+        if ( not defined $widget ) { next }
 
         my $new_opt = $new_options->by_index($_);
         my $opt     = $options->by_index($_);
@@ -608,7 +608,7 @@ sub update_options {
 sub set_current_scan_options {
     my ( $self, $profile ) = @_;
 
-    if ( not defined($profile) ) { return }
+    if ( not defined $profile ) { return }
 
     # Move them first to a dummy array, as otherwise it would be self-modifying
     my $defaults;
@@ -635,7 +635,7 @@ sub set_current_scan_options {
            # for reasons I don't understand, without walking the reference tree,
            # parts of $default are undef
             Gscan2pdf::Dialog::Scan::my_dumper($defaults);
-            my ( $ename, $eval ) = each( %{ $defaults->[$i] } );
+            my ( $ename, $eval ) = each %{ $defaults->[$i] };
 
             # don't check $eval against $val, just in case they are different
             if ( $ename eq $name ) {
@@ -653,7 +653,7 @@ sub set_current_scan_options {
            # for reasons I don't understand, without walking the reference tree,
            # parts of $default are undef
             Gscan2pdf::Dialog::Scan::my_dumper($defaults);
-            my ( $ename, $eval ) = each( %{ $defaults->[$i] } );
+            my ( $ename, $eval ) = each %{ $defaults->[$i] };
 
             if ( $eval eq $val ) {
                 $i++;
@@ -679,7 +679,7 @@ sub set_option_widget {
         # for reasons I don't understand, without walking the reference tree,
         # parts of $profile are undef
         Gscan2pdf::Dialog::Scan::my_dumper( $profile->[$i] );
-        my ( $name, $val ) = each( %{ $profile->[$i] } );
+        my ( $name, $val ) = each %{ $profile->[$i] };
 
         if ( $name eq 'Paper size' ) {
             $self->set( 'paper', $val );
@@ -700,7 +700,7 @@ sub set_option_widget {
             when ('x') {
                 $name = SANE_NAME_SCAN_BR_X;
                 my $l = $self->get_option_from_profile( 'l', $profile );
-                if ( not defined($l) ) {
+                if ( not defined $l ) {
                     $l =
                       $self->get_option_from_profile( SANE_NAME_SCAN_TL_X,
                         $profile );
@@ -711,7 +711,7 @@ sub set_option_widget {
             when ('y') {
                 $name = SANE_NAME_SCAN_BR_Y;
                 my $t = $self->get_option_from_profile( 't', $profile );
-                if ( not defined($t) ) {
+                if ( not defined $t ) {
                     $t =
                       $self->get_option_from_profile( SANE_NAME_SCAN_TL_Y,
                         $profile );
