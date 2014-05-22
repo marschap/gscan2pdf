@@ -497,14 +497,14 @@ sub _thread_scan_page_to_fh {
             $device->start;
             if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
                 $logger->info("$prog_name: sane_start: $Sane::STATUS");
-                goto cleanup;
+                goto CLEANUP;
             }
         }
 
         $parm = $device->get_parameters;
         if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
             $logger->info("$prog_name: sane_get_parameters: $Sane::STATUS");
-            goto cleanup;
+            goto CLEANUP;
         }
 
         _log_frame_info( $first_frame, $parm, \@format_name );
@@ -545,7 +545,7 @@ sub _thread_scan_page_to_fh {
                   _buffer_scan( $offset, $parm, \%image, $len, $buffer );
             }
             else {
-                goto cleanup if not print {$fh} $buffer;
+                goto CLEANUP if not print {$fh} $buffer;
             }
         }
         $first_frame = 0;
@@ -554,7 +554,7 @@ sub _thread_scan_page_to_fh {
 
     if ($must_buffer) { _write_buffer_to_fh( $fh, $parm, \%image ) }
 
-  cleanup:
+  CLEANUP:
     my $expected_bytes =
       $parm->{bytes_per_line} * $parm->{lines} * _number_frames($parm);
     if ( $parm->{lines} < 0 ) { $expected_bytes = 0 }
@@ -748,7 +748,7 @@ sub _write_buffer_to_fh {
     }
     _thread_write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
         $image->{height}, $parm->{depth} );
-    for ( @{ $image->{data} } ) { goto cleanup if not print $fh }
+    for ( @{ $image->{data} } ) { goto CLEANUP if not print $fh }
     return;
 }
 
