@@ -124,7 +124,7 @@ sub open_device {
     _when_ready(
         $sentinel,
         sub {
-            if ( not $started and defined( $options{started_callback} ) ) {
+            if ( not $started and defined $options{started_callback} ) {
                 $options{started_callback}->();
             }
             if ( $_self->{status} == SANE_STATUS_GOOD ) {
@@ -204,7 +204,7 @@ sub set_option {
     _when_ready(
         $sentinel,
         sub {
-            if ( not $started and defined( $options{started_callback} ) ) {
+            if ( not $started and defined $options{started_callback} ) {
                 $options{started_callback}->();
             }
             if ( defined $options{finished_callback} ) {
@@ -251,7 +251,7 @@ sub scan_pages {
 
                 # Check status of scan
                 if (
-                        defined( $options{new_page_callback} )
+                        defined $options{new_page_callback}
                     and not $_self->{abort_scan}
                     and (  $_self->{status} == SANE_STATUS_GOOD
                         or $_self->{status} == SANE_STATUS_EOF )
@@ -586,7 +586,7 @@ sub _thread_scan_page {
     }
 
     my $fh;
-    if ( not open( $fh, '>', $path ) ) {
+    if ( not open $fh, '>', $path ) {
         $self->{device_handle}->cancel;
         $self->{status} = SANE_STATUS_ACCESS_DENIED;
         return;
@@ -595,7 +595,7 @@ sub _thread_scan_page {
     _thread_scan_page_to_fh( $self->{device_handle}, $fh );
     $self->{status} = $Sane::STATUS + 0;
 
-    if ( not close($fh) ) {
+    if ( not close $fh ) {
         $self->{device_handle}->cancel;
         $self->{status} = SANE_STATUS_ACCESS_DENIED;
         return;
@@ -607,7 +607,7 @@ sub _thread_scan_page {
     if (    $Sane::STATUS != SANE_STATUS_GOOD
         and $Sane::STATUS != SANE_STATUS_EOF )
     {
-        unlink($path);
+        unlink $path;
     }
 
     return;
@@ -730,8 +730,7 @@ sub _buffer_scan {
 
     my $number_frames = _number_frames($parm);
     for ( 0 .. $len - 1 ) {
-        $image->{data}[ $offset + $number_frames * $_ ] =
-          substr( $buffer, $_, 1 );
+        $image->{data}[ $offset + $number_frames * $_ ] = substr $buffer, $_, 1;
     }
     $offset += $number_frames * $len;
     return $offset;
