@@ -466,15 +466,16 @@ sub _thread_write_pnm_header {
         or $format == SANE_FRAME_BLUE
         or $format == SANE_FRAME_RGB )
     {
-        printf $fh "P6\n# SANE data follows\n%d %d\n%d\n", $width, $height,
+        printf {$fh} "P6\n# SANE data follows\n%d %d\n%d\n", $width, $height,
           ( $depth > $_8_BIT ) ? $MAXVAL_16_BIT : $MAXVAL_8_BIT;
     }
     else {
         if ( $depth == 1 ) {
-            printf $fh "P4\n# SANE data follows\n%d %d\n", $width, $height;
+            printf {$fh} "P4\n# SANE data follows\n%d %d\n", $width, $height;
         }
         else {
-            printf $fh "P5\n# SANE data follows\n%d %d\n%d\n", $width, $height,
+            printf {$fh} "P5\n# SANE data follows\n%d %d\n%d\n", $width,
+              $height,
               ( $depth > $_8_BIT ) ? $MAXVAL_16_BIT : $MAXVAL_8_BIT;
         }
     }
@@ -544,7 +545,7 @@ sub _thread_scan_page_to_fh {
                   _buffer_scan( $offset, $parm, \%image, $len, $buffer );
             }
             else {
-                print $fh $buffer;
+                print {$fh} $buffer;
             }
         }
         $first_frame = 0;
