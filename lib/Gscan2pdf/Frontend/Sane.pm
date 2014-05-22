@@ -2,8 +2,8 @@ package Gscan2pdf::Frontend::Sane;
 
 use strict;
 use warnings;
-use feature "switch";
-no if $] >= 5.018, warnings => "experimental::smartmatch";
+use feature 'switch';
+no if $] >= 5.018, warnings => 'experimental::smartmatch';
 
 use threads;
 use threads::shared;
@@ -320,7 +320,7 @@ sub _scanned_enough_pages {
 sub cancel_scan {
 
     # Empty process queue first to stop any new process from starting
-    $logger->info("Emptying process queue");
+    $logger->info('Emptying process queue');
     while ( $_self->{requests}->dequeue_nb ) { }
 
     # Then send the thread a cancel signal
@@ -394,7 +394,7 @@ sub _thread_get_options {
     # We got a device, find out how many options it has:
     my $num_dev_options = $self->{device_handle}->get_option(0);
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        $logger->error("unable to determine option count");
+        $logger->error('unable to determine option count');
         return;
     }
     for ( 1 .. $num_dev_options - 1 ) {
@@ -434,7 +434,7 @@ sub _thread_set_option {
     if ( $info & SANE_INFO_RELOAD_OPTIONS ) {
         my $num_dev_options = $self->{device_handle}->get_option(0);
         if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-            $logger->error("unable to determine option count");
+            $logger->error('unable to determine option count');
             return;
         }
 
@@ -487,7 +487,7 @@ sub _thread_scan_page_to_fh {
     my $offset      = 0;
     my $must_buffer = 0;
     my %image;
-    my @format_name = ( "gray", "RGB", "red", "green", "blue" );
+    my @format_name = qw( gray RGB red green blue );
     my $total_bytes = 0;
 
     my ( $parm, $last_frame );
@@ -559,12 +559,12 @@ sub _thread_scan_page_to_fh {
     if ( $parm->{lines} < 0 ) { $expected_bytes = 0 }
     if ( $total_bytes > $expected_bytes and $expected_bytes != 0 ) {
         $logger->info(
-            sprintf "%s: WARNING: read more data than announced by backend "
-              . "(%u/%u)",
+            sprintf '%s: WARNING: read more data than announced by backend '
+              . '(%u/%u)',
             $prog_name, $total_bytes, $expected_bytes );
     }
     else {
-        $logger->info( sprintf "%s: read %u bytes in total",
+        $logger->info( sprintf '%s: read %u bytes in total',
             $prog_name, $total_bytes );
     }
     return;
@@ -586,7 +586,7 @@ sub _thread_scan_page {
     }
 
     my $fh;
-    if ( not open( $fh, ">", $path ) ) {
+    if ( not open( $fh, '>', $path ) ) {
         $self->{device_handle}->cancel;
         $self->{status} = SANE_STATUS_ACCESS_DENIED;
         return;
@@ -601,7 +601,7 @@ sub _thread_scan_page {
         return;
     }
 
-    $logger->info( sprintf "Scanned page %s. (scanner status = %d)",
+    $logger->info( sprintf 'Scanned page %s. (scanner status = %d)',
         $path, $Sane::STATUS );
 
     if (    $Sane::STATUS != SANE_STATUS_GOOD
@@ -625,7 +625,7 @@ sub _log_frame_info {
         if ( $parm->{lines} >= 0 ) {
             $logger->info(
                 sprintf "$prog_name: scanning image of size %dx%d pixels at "
-                  . "%d bits/pixel",
+                  . '%d bits/pixel',
                 $parm->{pixels_per_line},
                 $parm->{lines},
                 $_8_BIT * $parm->{bytes_per_line} / $parm->{pixels_per_line}
@@ -634,7 +634,7 @@ sub _log_frame_info {
         else {
             $logger->info(
                 sprintf "$prog_name: scanning image %d pixels wide and "
-                  . "variable height at %d bits/pixel",
+                  . 'variable height at %d bits/pixel',
                 $parm->{pixels_per_line},
                 $_8_BIT * $parm->{bytes_per_line} / $parm->{pixels_per_line}
             );
@@ -644,7 +644,7 @@ sub _log_frame_info {
             sprintf "$prog_name: acquiring %s frame",
             $parm->{format} <= SANE_FRAME_BLUE
             ? $format_name->[ $parm->{format} ]
-            : "Unknown"
+            : 'Unknown'
         );
     }
     return;
