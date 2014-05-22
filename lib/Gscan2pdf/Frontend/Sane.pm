@@ -545,7 +545,7 @@ sub _thread_scan_page_to_fh {
                   _buffer_scan( $offset, $parm, \%image, $len, $buffer );
             }
             else {
-                print {$fh} $buffer;
+                goto cleanup if not print {$fh} $buffer;
             }
         }
         $first_frame = 0;
@@ -748,7 +748,7 @@ sub _write_buffer_to_fh {
     }
     _thread_write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
         $image->{height}, $parm->{depth} );
-    for ( @{ $image->{data} } ) { print $fh; }
+    for ( @{ $image->{data} } ) { goto cleanup if not print $fh }
     return;
 }
 
