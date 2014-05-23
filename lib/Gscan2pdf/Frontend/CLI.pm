@@ -60,15 +60,13 @@ sub parse_device_list {
 
     my (@device_list);
 
-    if ( defined($output) ) { $logger->info($output) }
+    if ( defined $output ) { $logger->info($output) }
 
     # parse out the device and model names
     my @words =
-      parse_line( $COMMA, 0,
-        substr( $output, 0, index( $output, "'\n" ) + 1 ) );
+      parse_line( $COMMA, 0, substr $output, 0, index( $output, "'\n" ) + 1 );
     while (@words) {
-        $output =
-          substr( $output, index( $output, "'\n" ) + 2, length($output) );
+        $output = substr $output, index( $output, "'\n" ) + 2, length $output;
         shift @words;
         push @device_list,
           {
@@ -77,9 +75,8 @@ sub parse_device_list {
             model  => shift @words,
             type   => shift @words
           };
-        @words =
-          parse_line( $COMMA, 0,
-            substr( $output, 0, index( $output, "'\n" ) + 1 ) );
+        @words = parse_line( $COMMA, 0, substr $output,
+            0, index( $output, "'\n" ) + 1 );
     }
 
     return \@device_list;
@@ -88,8 +85,8 @@ sub parse_device_list {
 sub find_scan_options {
     my ( $class, %options ) = @_;
 
-    if ( not defined( $options{prefix} ) ) { $options{prefix} = $EMPTY }
-    if ( not defined( $options{frontend} ) or $options{frontend} eq $EMPTY ) {
+    if ( not defined $options{prefix} ) { $options{prefix} = $EMPTY }
+    if ( not defined $options{frontend} or $options{frontend} eq $EMPTY ) {
         $options{frontend} = 'scanimage';
     }
 
@@ -103,11 +100,11 @@ sub find_scan_options {
         running_callback  => $options{running_callback},
         finished_callback => sub {
             my ( $output, $error ) = @_;
-            if ( defined($error) and $error =~ /^$options{frontend}:\ (.*)/xsm )
+            if ( defined $error and $error =~ /^$options{frontend}:\ (.*)/xsm )
             {
                 $error = $1;
             }
-            if ( defined($error) and defined( $options{error_callback} ) ) {
+            if ( defined $error and defined $options{error_callback} ) {
                 $options{error_callback}->($error);
             }
             my $options = Gscan2pdf::Scanner::Options->new_from_data($output);
@@ -125,10 +122,10 @@ sub find_scan_options {
 sub scan_pages {
     my ( $class, %options ) = @_;
 
-    if ( not defined( $options{prefix} ) ) { $options{prefix} = $EMPTY }
+    if ( not defined $options{prefix} ) { $options{prefix} = $EMPTY }
 
     if (
-        defined( $options{frontend} )
+        defined $options{frontend}
         and (  $options{frontend} eq 'scanadf'
             or $options{frontend} eq 'scanadf-perl' )
       )
@@ -145,7 +142,7 @@ sub scan_pages {
 
 sub _scanimage {
     my (%options) = @_;
-    if ( not defined( $options{frontend} ) or $options{frontend} eq $EMPTY ) {
+    if ( not defined $options{frontend} or $options{frontend} eq $EMPTY ) {
         $options{frontend} = 'scanimage';
     }
 
@@ -175,15 +172,14 @@ sub _scanimage {
                 }
                 when (/^Scanning\ (-?\d*)\ pages/xsm) {
                     if ( defined $options{running_callback} ) {
-                        $options{running_callback}->(
-                            0, sprintf( $d->get('Scanning %i pages...'), $1 )
-                        );
+                        $options{running_callback}
+                          ->( 0, sprintf $d->get('Scanning %i pages...'), $1 );
                     }
                 }
                 when (/^Scanning\ page\ (\d*)/xsm) {
                     if ( defined $options{running_callback} ) {
-                        $options{running_callback}->( 0,
-                            sprintf( $d->get('Scanning page %i...'), $1 ) );
+                        $options{running_callback}
+                          ->( 0, sprintf $d->get('Scanning page %i...'), $1 );
                     }
                 }
                 when (
@@ -224,7 +220,7 @@ sub _scanimage {
 /^$options{frontend}:\ sane_start:\ Document\ feeder\ out\ of\ documents/xsm
                   )
                 {
-                    if ( defined( $options{error_callback} )
+                    if ( defined $options{error_callback}
                         and $num_scans == 0 )
                     {
                         $options{error_callback}
@@ -244,8 +240,7 @@ sub _scanimage {
                     ;
                 }
                 when (/^$options{frontend}:\ rounded/xsm) {
-                    $logger->info(
-                        substr( $line, 0, index( $line, "\n" ) + 1 ) );
+                    $logger->info( substr $line, 0, index( $line, "\n" ) + 1 );
                 }
                 when (
 /^$options{frontend}:\ sane_(?:start|read):\ Device\ busy/xsm
@@ -266,8 +261,10 @@ sub _scanimage {
                 }
                 default {
                     if ( defined $options{error_callback} ) {
-                        $options{error_callback}->( $d->get('Unknown message: ')
-                              . substr( $line, 0, index( $line, "\n" ) ) );
+                        $options{error_callback}->(
+                            $d->get('Unknown message: ') . substr $line,
+                            0, index $line, "\n"
+                        );
                     }
                 }
             }
@@ -283,7 +280,7 @@ sub _create_scanimage_cmd {
     my ( $options, $scan ) = @_;
     my %options = %{$options};
 
-    if ( not defined( $options{frontend} ) ) {
+    if ( not defined $options{frontend} ) {
         $options{frontend} = 'scanimage';
     }
 
@@ -295,7 +292,7 @@ sub _create_scanimage_cmd {
     # Add basic options
     my @options;
     for ( @{ $options{options} } ) {
-        my ( $key, $value ) = each( %{$_} );
+        my ( $key, $value ) = each %{$_};
         if ( $key =~ /^(?:x|y|t|l)$/xsm ) {
             push @options, "-$key $value";
         }
@@ -306,13 +303,13 @@ sub _create_scanimage_cmd {
     if ( not $help ) {
         push @options, '--batch';
         push @options, '--progress';
-        if ( defined( $options{start} ) and $options{start} != 0 ) {
+        if ( defined $options{start} and $options{start} != 0 ) {
             push @options, "--batch-start=$options{start}";
         }
-        if ( defined( $options{npages} ) and $options{npages} != 0 ) {
+        if ( defined $options{npages} and $options{npages} != 0 ) {
             push @options, "--batch-count=$options{npages}";
         }
-        if ( defined( $options{step} ) and $options{step} != 1 ) {
+        if ( defined $options{step} and $options{step} != 1 ) {
             push @options, "--batch-increment=$options{step}";
         }
     }
@@ -326,7 +323,7 @@ sub _create_scanimage_cmd {
 sub _scanadf {
     my (%options) = @_;
 
-    if ( not defined( $options{frontend} ) ) { $options{frontend} = 'scanadf' }
+    if ( not defined $options{frontend} ) { $options{frontend} = 'scanadf' }
 
     # inverted commas needed for strange characters in device name
     my $device = "--device-name='$options{device}'";
@@ -425,8 +422,7 @@ sub _scanadf {
                     ;
                 }
                 when (/^$options{frontend}:\ rounded/xsm) {
-                    $logger->info(
-                        substr( $line, 0, index( $line, "\n" ) + 1 ) );
+                    $logger->info( substr $line, 0, index( $line, "\n" ) + 1 );
                 }
                 when (/^$options{frontend}:\ sane_start:\ Device\ busy/xsm) {
                     if ( defined $options{error_callback} ) {
@@ -446,8 +442,10 @@ sub _scanadf {
                 }
                 default {
                     if ( defined $options{error_callback} ) {
-                        $options{error_callback}->( $d->get('Unknown message: ')
-                              . substr( $line, 0, index( $line, "\n" ) ) );
+                        $options{error_callback}->(
+                            $d->get('Unknown message: ') . substr $line,
+                            0, index $line, "\n"
+                        );
                     }
                 }
             }
@@ -579,9 +577,8 @@ sub _watch_cmd {
                         $logger->info('Waiting to reap process');
 
              # -1 indicates a non-blocking wait for all pending zombie processes
-                        $logger->info( 'Reaped PID ',
-                            waitpid( -1, WNOHANG )
-                          )    ## no critic (ProhibitMagicNumbers)
+                        $logger->info( 'Reaped PID ', waitpid -1,
+                            WNOHANG )    ## no critic (ProhibitMagicNumbers)
                           ;
                         return Glib::SOURCE_REMOVE;
                     }
@@ -613,17 +610,17 @@ sub _add_watch {
                     my $le = $1;
                     if ( defined $line_callback ) {
                         $line_callback->(
-                            substr( $line, 0, index( $line, $le ) + 1 ) );
+                            substr $line, 0, index( $line, $le ) + 1
+                        );
                     }
-                    $line =
-                      substr( $line, index( $line, $le ) + 1, length($line) );
+                    $line = substr $line, index( $line, $le ) + 1, length $line;
                 }
             }
 
             # Only allow the hup if sure an empty buffer has been read.
             if (
                 ( $condition & 'hup' ) # bit field operation. >= would also work
-                and ( not defined($buffer) or $buffer eq $EMPTY )
+                and ( not defined $buffer or $buffer eq $EMPTY )
               )
             {
                 if ( close $fh ) {
