@@ -2,8 +2,8 @@ package Gscan2pdf::Frontend::CLI;
 
 use strict;
 use warnings;
-use feature "switch";
-no if $] >= 5.018, warnings => "experimental::smartmatch";
+use feature 'switch';
+no if $] >= 5.018, warnings => 'experimental::smartmatch';
 
 use Locale::gettext 1.05;    # For translations
 use Carp;
@@ -334,7 +334,7 @@ sub _scanadf {
     # Add basic options
     my @options;
     if ( defined $options{options} ) { @options = @{ $options{options} } }
-    push @options, "--start-count=1";
+    push @options, '--start-count=1';
     if ( $options{npages} != 0 ) {
         push @options, "--end-count=$options{npages}";
     }
@@ -579,7 +579,7 @@ sub _watch_cmd {
                         $logger->info('Waiting to reap process');
 
              # -1 indicates a non-blocking wait for all pending zombie processes
-                        $logger->info( "Reaped PID ",
+                        $logger->info( 'Reaped PID ',
                             waitpid( -1, WNOHANG )
                           )    ## no critic (ProhibitMagicNumbers)
                           ;
