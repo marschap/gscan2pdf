@@ -193,7 +193,7 @@ sub hocr {
 
     # Temporary filename for output
     my $suffix;
-    if ( version->parse("v$version") >= version->parse("v3.02") ) {
+    if ( version->parse("v$version") >= version->parse("v3.03") ) {
         $suffix = '.hocr';
     }
     elsif ( version->parse("v$version") >= version->parse("v3") ) {
