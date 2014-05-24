@@ -8,6 +8,7 @@ use Getopt::Long qw(:config no_ignore_case pass_through);
 use File::Basename;
 use IO::Handle;
 use English qw( -no_match_vars );    # for $PROGRAM_NAME
+no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Readonly;
 Readonly my $BUFFER_SIZE   => ( 32 * 1024 );     # default size
 Readonly my $START_COLUMN  => 8;
