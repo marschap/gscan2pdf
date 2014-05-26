@@ -45,11 +45,11 @@ sub new {
     }
 
     if ( not defined $options{filename} ) {
-        croak "Error: filename not supplied";
+        croak 'Error: filename not supplied';
     }
-    if ( not -f $options{filename} ) { croak "Error: filename not found" }
+    if ( not -f $options{filename} ) { croak 'Error: filename not found' }
     if ( not defined $options{format} ) {
-        croak "Error: format not supplied";
+        croak 'Error: format not supplied';
     }
 
     $logger->info(
@@ -213,7 +213,7 @@ sub resolution {
     return $self->{resolution} if defined $self->{resolution};
     my $image  = $self->im_object;
     my $format = $image->Get('format');
-    setlocale( LC_NUMERIC, "C" );
+    setlocale( LC_NUMERIC, 'C' );
 
     # Imagemagick always reports PNMs as 72ppi
     # Some versions of imagemagick report colour PNM as Portable pixmap (PPM)
@@ -231,7 +231,7 @@ sub resolution {
                 $self->{resolution} *= $CM_PER_INCH;
             }
             elsif ( $units =~ /undefined/xsm ) {
-                $logger->warn("Undefined units.");
+                $logger->warn('Undefined units.');
             }
             elsif ( $units ne 'pixels / inch' ) {
                 $logger->warn("Unknown units: '$units'.");
