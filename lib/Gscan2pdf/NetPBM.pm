@@ -37,7 +37,7 @@ sub file_size_from_header {
         $line = <$fh>;
         $header .= $line;
     }
-    if ( $line =~ /(\d*)\ (\d*)\n/xsm ) {
+    if ( $line =~ /(\d*)[ ](\d*)\n/xsm ) {
         my ( $width, $height ) = ( $1, $2 );
         if ( $magic_value == $BINARY_BITMAP ) {
             my $mod = $width % $BITS_PER_BYTE;
