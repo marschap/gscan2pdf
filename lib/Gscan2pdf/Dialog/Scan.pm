@@ -917,18 +917,19 @@ sub edit_paper {
                     my $name    = $slist->{data}[ $path->to_string ][0];
                     my $version = 2;
                     if (
-                        $name =~ /
+                        $name =~ qr{
                      (.*) # name
-                     \ \( # space, opening bracket
+                     [ ][(] # space, opening bracket
                      (\d+) # version
-                     \) # closing bracket
-                   /xsm
+                     [)] # closing bracket
+                   }xsm
                       )
                     {
                         $name    = $1;
                         $version = $2 + 1;
                     }
-                    $slist->{data}[ $path->to_string ][0] = "$name ($version)";
+                    $slist->{data}[ $path->to_string ][0] =
+                      "$name ($version)";
                     return;
                 }
             }
@@ -1242,7 +1243,8 @@ sub set_options {
     }
 
     if ( $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
-        @{ $opt->{constraint} } = sort { $a <=> $b } @{ $opt->{constraint} };
+        @{ $opt->{constraint} } =
+          sort { $a <=> $b } @{ $opt->{constraint} };
     }
 
     # HBox for buttons
@@ -1391,8 +1393,12 @@ sub update_graph {
     # Calculate bounds of graph
     my ( @xbounds, @ybounds );
     for ( @{ $canvas->{val} } ) {
-        if ( not defined $ybounds[0] or $_ < $ybounds[0] ) { $ybounds[0] = $_ }
-        if ( not defined $ybounds[1] or $_ > $ybounds[1] ) { $ybounds[1] = $_ }
+        if ( not defined $ybounds[0] or $_ < $ybounds[0] ) {
+            $ybounds[0] = $_;
+        }
+        if ( not defined $ybounds[1] or $_ > $ybounds[1] ) {
+            $ybounds[1] = $_;
+        }
     }
     my $opt = $canvas->{opt};
     $xbounds[0] = 0;
@@ -1421,8 +1427,9 @@ sub update_graph {
         ( $cheight - $canvas->{border} * 2 ) / $vheight
     );
 
-    $canvas->{scale}   = \@scale;
-    $canvas->{bounds}  = [ $xbounds[0], $ybounds[0], $xbounds[1], $xbounds[1] ];
+    $canvas->{scale} = \@scale;
+    $canvas->{bounds} =
+      [ $xbounds[0], $ybounds[0], $xbounds[1], $xbounds[1] ];
     $canvas->{cheight} = $cheight;
 
     # Update canvas
@@ -1461,7 +1468,9 @@ sub my_dumper {
 
 sub set_option_emit_signal {
     my ( $self, $i, $defaults, $signal1, $signal2 ) = @_;
-    if ( $i < @{$defaults} ) { $i = $self->set_option_widget( $i, $defaults ) }
+    if ( $i < @{$defaults} ) {
+        $i = $self->set_option_widget( $i, $defaults );
+    }
 
     # Only emit the changed-current-scan-options signal when we have finished
     if (    ( not defined $i or $i > $#{$defaults} )
@@ -1470,7 +1479,9 @@ sub set_option_emit_signal {
     {
         $self->signal_handler_disconnect($signal1);
         $self->signal_handler_disconnect($signal2);
-        if ( not $self->{setting_profile} ) { $self->set( 'profile', undef ) }
+        if ( not $self->{setting_profile} ) {
+            $self->set( 'profile', undef );
+        }
         $self->signal_emit(
             'changed-current-scan-options',
             $self->get('current-scan-options')
