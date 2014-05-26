@@ -17,7 +17,7 @@ my ( $exe, $installed, $setup, $logger );
 sub setup {
     ( my $class, $logger ) = @_;
     return $installed if $setup;
-    if ( system("which ocroscript > /dev/null 2> /dev/null") == 0 ) {
+    if ( system('which ocroscript > /dev/null 2> /dev/null') == 0 ) {
         my $env = $ENV{OCROSCRIPTS};
 
         if ( not defined($env) ) {
@@ -42,11 +42,11 @@ sub setup {
             }
             else {
                 $logger->warn(
-                    "Found ocroscript, but no recognition scripts. Disabling.");
+                    'Found ocroscript, but no recognition scripts. Disabling.');
             }
         }
         else {
-            $logger->warn("Found ocroscript, but not its scripts. Disabling.");
+            $logger->warn('Found ocroscript, but not its scripts. Disabling.');
         }
     }
     $setup = 1;
