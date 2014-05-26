@@ -26,7 +26,7 @@ sub setup {
     $installed = 1;
 
 # if we have 3.02.01 or better, we can use --list-langs and not bother with tessdata
-    my ( $out, $err ) = Gscan2pdf::Document::open_three("tesseract -v");
+    my ( $out, $err ) = Gscan2pdf::Document::open_three('tesseract -v');
     if ( $err =~ /^tesseract\ ([\d\.]+)/xsm ) {
         $version = $1;
     }
@@ -96,7 +96,7 @@ sub parse_strings {
     my ($strings) = @_;
     my @strings = split /\n/xsm, $strings;
     for (@strings) {
-        return $_ . "tessdata" if (/\/ share \//xsm);
+        return $_ . 'tessdata' if (/\/ share \//xsm);
     }
     return;
 }
@@ -153,7 +153,7 @@ sub languages {
         my @codes;
         if ( version->parse("v$version") > version->parse('v3.02') ) {
             my ( undef, $codes ) =
-              Gscan2pdf::Document::open_three("tesseract --list-langs");
+              Gscan2pdf::Document::open_three('tesseract --list-langs');
             @codes = split /\n/xsm, $codes;
             if ( $codes[0] =~ /^List\ of\ available\ languages/xsm ) {
                 shift @codes;
@@ -193,10 +193,10 @@ sub hocr {
 
     # Temporary filename for output
     my $suffix;
-    if ( version->parse("v$version") >= version->parse("v3.03") ) {
+    if ( version->parse("v$version") >= version->parse('v3.03') ) {
         $suffix = '.hocr';
     }
-    elsif ( version->parse("v$version") >= version->parse("v3") ) {
+    elsif ( version->parse("v$version") >= version->parse('v3') ) {
         $suffix = '.html';
     }
     else {
@@ -205,7 +205,7 @@ sub hocr {
     my $txt = File::Temp->new( SUFFIX => $suffix );
     ( $name, $path, undef ) = fileparse( $txt, $suffix );
 
-    if ( version->parse("v$version") < version->parse("v3")
+    if ( version->parse("v$version") < version->parse('v3')
         and $file !~ /\.tif$/xsm )
     {
 
@@ -218,7 +218,7 @@ sub hocr {
     else {
         $tif = $file;
     }
-    if ( version->parse("v$version") >= version->parse("v3") ) {
+    if ( version->parse("v$version") >= version->parse('v3') ) {
         $cmd =
 "echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $language +hocr.config;rm hocr.config";
     }
