@@ -578,9 +578,11 @@ sub _watch_cmd {
                         $logger->info('Waiting to reap process');
 
              # -1 indicates a non-blocking wait for all pending zombie processes
-                        $logger->info( 'Reaped PID ', waitpid -1,
-                            WNOHANG )    ## no critic (ProhibitMagicNumbers)
-                          ;
+                        $logger->info(
+                            'Reaped PID ',
+                            waitpid -1,    ## no critic (ProhibitMagicNumbers)
+                            WNOHANG
+                        );
                         return Glib::SOURCE_REMOVE;
                     }
                     return Glib::SOURCE_CONTINUE;
