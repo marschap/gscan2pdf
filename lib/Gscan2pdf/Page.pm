@@ -122,7 +122,7 @@ sub thaw {
     my ($self) = @_;
     my $new = $self->clone;
     my $suffix;
-    if ( $new->{filename} =~ /\.(\w*)$/xsm ) {
+    if ( $new->{filename} =~ /[.](\w*)$/xsm ) {
         $suffix = $1;
     }
     my $filename = File::Temp->new( DIR => $new->{dir}, SUFFIX => ".$suffix" );
@@ -156,7 +156,7 @@ sub boxes {
                         or $token->[2]{class} eq 'ocrx_word' )
                     and defined $token->[2]{title}
                     and $token->[2]{title} =~
-                    /bbox\ (\d+)\ (\d+)\ (\d+)\ (\d+)/xsm
+                    /bbox[ ](\d+)[ ](\d+)[ ](\d+)[ ](\d+)/xsm
                   )
                 {
                     ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
@@ -218,7 +218,7 @@ sub resolution {
     # Imagemagick always reports PNMs as 72ppi
     # Some versions of imagemagick report colour PNM as Portable pixmap (PPM)
     # B&W are Portable anymap
-    if ( $format !~ /^Portable\ ...map/xsm ) {
+    if ( $format !~ /^Portable[ ]...map/xsm ) {
         $self->{resolution} = $image->Get('x-resolution');
 
         if ( not defined $self->{resolution} ) {
