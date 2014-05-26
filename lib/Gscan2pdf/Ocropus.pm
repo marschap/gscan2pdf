@@ -20,7 +20,7 @@ sub setup {
     if ( system('which ocroscript > /dev/null 2> /dev/null') == 0 ) {
         my $env = $ENV{OCROSCRIPTS};
 
-        if ( not defined($env) ) {
+        if ( not defined $env ) {
             for (qw(/usr /usr/local)) {
                 if ( -d "$_/share/ocropus/scripts" ) {
                     $env = "$_/share/ocropus/scripts";
