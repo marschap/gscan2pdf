@@ -575,14 +575,14 @@ sub SET_PROPERTY {
         $logger = $newval;
         $logger->debug('Set logger in Gscan2pdf::Dialog::Scan');
     }
-    elsif (( defined($newval) and defined($oldval) and $newval ne $oldval )
-        or ( defined($newval) xor defined($oldval) ) )
+    elsif (( defined $newval and defined $oldval and $newval ne $oldval )
+        or ( defined $newval xor defined $oldval ) )
     {
         if ( defined $logger ) {
             $logger->debug(
                 "Started setting $name from "
                   . (
-                    defined($oldval)
+                    defined $oldval
                     ? (
                         ref($oldval) =~ /(?:HASH|ARRAY)/xsm
                         ? Dumper($oldval)
@@ -592,7 +592,7 @@ sub SET_PROPERTY {
                   )
                   . ' to '
                   . (
-                    defined($newval)
+                    defined $newval
                     ? (
                         ref($newval) =~ /(?:HASH|ARRAY)/xsm
                         ? Dumper($newval)
@@ -658,7 +658,7 @@ sub SET_PROPERTY {
             $logger->debug(
                 "Finished setting $name from "
                   . (
-                    defined($oldval)
+                    defined $oldval
                     ? (
                         ref($oldval) =~ /(?:HASH|ARRAY)/xsm
                         ? Dumper($oldval)
@@ -668,7 +668,7 @@ sub SET_PROPERTY {
                   )
                   . ' to '
                   . (
-                    defined($newval)
+                    defined $newval
                     ? (
                         ref($newval) =~ /(?:HASH|ARRAY)/xsm
                         ? Dumper($newval)
@@ -686,7 +686,7 @@ sub show {
     my $self = shift;
     $self->signal_chain_from_overridden;
     $self->{framex}->hide_all;
-    if ( defined( $self->{combobp}->get_active_text )
+    if ( defined $self->{combobp}->get_active_text
         and $self->{combobp}->get_active_text ne $d->get('Manual') )
     {
         $self->hide_geometry( $self->get('available-scan-options') );
@@ -696,7 +696,7 @@ sub show {
 
 sub set_device {
     my ( $self, $device ) = @_;
-    if ( defined($device) and $device ne $EMPTY ) {
+    if ( defined $device and $device ne $EMPTY ) {
         my $o;
         my $device_list = $self->get('device_list');
         if ( defined $device_list ) {
@@ -714,7 +714,7 @@ sub set_device {
             }
             else {
                 $self->signal_emit( 'process-error', 'open_device',
-                    sprintf( $d->get('Error: unknown device: %s'), $device ) );
+                    sprintf $d->get('Error: unknown device: %s'), $device );
             }
         }
     }
@@ -740,7 +740,7 @@ sub set_device_list {
     # Note any duplicate model names and add the device if necessary
     undef %seen;
     for ( @{$device_list} ) {
-        if ( not defined( $_->{model} ) ) { $_->{model} = $_->{name} }
+        if ( not defined $_->{model} ) { $_->{model} = $_->{name} }
         $seen{ $_->{model} }++;
     }
     for ( @{$device_list} ) {
@@ -804,7 +804,7 @@ sub set_paper_formats {
     my $options = $self->get('available-scan-options');
 
     for ( keys %{$formats} ) {
-        if ( defined( $self->{combobp} )
+        if ( defined $self->{combobp}
             and $options->supports_paper( $formats->{$_}, $tolerance ) )
         {
             $self->{combobp}->prepend_text($_);
@@ -967,7 +967,8 @@ sub edit_paper {
 'The following paper sizes are too big to be scanned by the selected device:'
                       )
                       . q{ }
-                      . join( ', ', @{ $self->{ignored_paper_formats} } )
+                      . join ', ',
+                    @{ $self->{ignored_paper_formats} }
                 );
             }
 
@@ -995,7 +996,7 @@ sub edit_paper {
 
 sub add_profile {
     my ( $self, $name, $profile ) = @_;
-    if ( defined($name) and defined($profile) ) {
+    if ( defined $name and defined $profile ) {
         $self->{profiles}{$name} = ();
         if ( ref($profile) eq 'ARRAY' ) {
             for ( @{$profile} ) {
@@ -1020,7 +1021,7 @@ sub add_profile {
 sub set_profile {
     my ( $self, $name ) = @_;
     set_combobox_by_text( $self->{combobsp}, $name );
-    if ( defined($name) and $name ne $EMPTY ) {
+    if ( defined $name and $name ne $EMPTY ) {
 
         # If we are setting the profile, don't unset the profile name
         $self->{setting_profile} = TRUE;
@@ -1049,7 +1050,7 @@ sub set_profile {
 
 sub remove_profile {
     my ( $self, $name ) = @_;
-    if ( defined($name) and defined( $self->{profiles}{$name} ) ) {
+    if ( defined $name and defined $self->{profiles}{$name} ) {
         my $i = get_combobox_by_text( $self->{combobsp}, $name );
         if ( $i > $_NO_INDEX ) {
             if ( $self->{combobsp}->get_active == $i ) {
@@ -1064,7 +1065,7 @@ sub remove_profile {
 
 sub get_combobox_num_rows {
     my ($combobox) = @_;
-    if ( not defined($combobox) ) { return }
+    if ( not defined $combobox ) { return }
     my $i = 0;
     $combobox->get_model->foreach(
         sub {
@@ -1077,7 +1078,7 @@ sub get_combobox_num_rows {
 
 sub get_combobox_by_text {
     my ( $combobox, $text ) = @_;
-    if ( not( defined($combobox) and defined($text) ) ) { return $_NO_INDEX }
+    if ( not( defined $combobox and defined $text ) ) { return $_NO_INDEX }
     my $o = $_NO_INDEX;
     my $i = 0;
     $combobox->get_model->foreach(
@@ -1100,7 +1101,7 @@ sub set_combobox_by_text {
     my ( $combobox, $text ) = @_;
     if ( defined $combobox ) {
         my $index = get_combobox_by_text( $combobox, $text );
-        if ( $index > $_NO_INDEX or not defined($text) ) {
+        if ( $index > $_NO_INDEX or not defined $text ) {
             $combobox->set_active($index);
             return TRUE;
         }
@@ -1448,7 +1449,7 @@ sub my_dumper {
             }
         }
         when ('HASH') {
-            while ( my ( $key, $val ) = each( %{$ref} ) ) {
+            while ( my ( $key, $val ) = each %{$ref} ) {
                 my_dumper($val);
             }
         }
@@ -1463,7 +1464,7 @@ sub set_option_emit_signal {
     if ( $i < @{$defaults} ) { $i = $self->set_option_widget( $i, $defaults ) }
 
     # Only emit the changed-current-scan-options signal when we have finished
-    if (    ( not defined($i) or $i > $#{$defaults} )
+    if (    ( not defined $i or $i > $#{$defaults} )
         and $self->signal_handler_is_connected($signal1)
         and $self->signal_handler_is_connected($signal2) )
     {
@@ -1487,7 +1488,7 @@ sub get_option_from_profile {
     # parts of $profile are undef
     my_dumper($profile);
     for ( @{$profile} ) {
-        my ( $key, $val ) = each( %{$_} );
+        my ( $key, $val ) = each %{$_};
         return $val if ( $key eq $name );
     }
     return;
