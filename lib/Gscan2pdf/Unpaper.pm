@@ -12,7 +12,7 @@ use Locale::gettext 1.05;    # For translations
 use version;
 use Gscan2pdf::Document;
 use Readonly;
-Readonly my $border_width => 6;
+Readonly my $BORDER_WIDTH => 6;
 
 BEGIN {
     use Exporter ();
@@ -432,7 +432,7 @@ sub add_widget {
             $widget = Gtk2::Frame->new( $hashref->{$option}{string} );
             $vbox->pack_start( $widget, TRUE, TRUE, 0 );
             my $vboxf = Gtk2::VBox->new;
-            $vboxf->set_border_width($border_width);
+            $vboxf->set_border_width($BORDER_WIDTH);
             $widget->add($vboxf);
             $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
             my %default;
@@ -470,7 +470,7 @@ sub add_widget {
             $widget = Gtk2::Frame->new( $hashref->{$option}{string} );
             $vbox->pack_start( $widget, TRUE, TRUE, 0 );
             my $vboxf = Gtk2::VBox->new;
-            $vboxf->set_border_width($border_width);
+            $vboxf->set_border_width($BORDER_WIDTH);
             $widget->add($vboxf);
             my @default;
             if ( defined $default->{$option} ) {
