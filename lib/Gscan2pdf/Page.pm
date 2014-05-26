@@ -40,15 +40,15 @@ my ( $d, $logger );
 sub new {
     my ( $class, %options ) = @_;
     my $self = {};
-    if ( not defined($d) ) {
+    if ( not defined $d ) {
         $d = Locale::gettext->domain(Glib::get_application_name);
     }
 
-    if ( not defined( $options{filename} ) ) {
+    if ( not defined $options{filename} ) {
         croak "Error: filename not supplied";
     }
     if ( not -f $options{filename} ) { croak "Error: filename not found" }
-    if ( not defined( $options{format} ) ) {
+    if ( not defined $options{format} ) {
         croak "Error: format not supplied";
     }
 
@@ -74,18 +74,18 @@ sub new {
         SUFFIX => $suffix{ $options{format} },
         UNLINK => FALSE,
     );
-    if ( defined( $options{delete} ) and $options{delete} ) {
+    if ( defined $options{delete} and $options{delete} ) {
         move( $options{filename}, $self->{filename} )
-          or croak sprintf( $d->get('Error importing image %s: %s'),
-            $options{filename}, $ERRNO );
+          or croak sprintf $d->get('Error importing image %s: %s'),
+          $options{filename}, $ERRNO;
     }
     else {
         copy( $options{filename}, $self->{filename} )
-          or croak sprintf( $d->get('Error importing image %s: %s'),
-            $options{filename}, $ERRNO );
+          or croak sprintf $d->get('Error importing image %s: %s'),
+          $options{filename}, $ERRNO;
     }
 
-    bless( $self, $class );
+    bless $self, $class;
     return $self;
 }
 
@@ -100,7 +100,7 @@ sub clone {
     for ( keys %{$self} ) {
         $new->{$_} = $self->{$_};
     }
-    bless( $new, ref($self) );
+    bless $new, ref $self;
     return $new;
 }
 
@@ -150,11 +150,11 @@ sub boxes {
             if ( $token->[0] eq 'S' ) {
                 if (
                         $token->[1] eq 'span'
-                    and defined( $token->[2]{class} )
+                    and defined $token->[2]{class}
                     and (  $token->[2]{class} eq 'ocr_line'
                         or $token->[2]{class} eq 'ocr_word'
                         or $token->[2]{class} eq 'ocrx_word' )
-                    and defined( $token->[2]{title} )
+                    and defined $token->[2]{title}
                     and $token->[2]{title} =~
                     /bbox\ (\d+)\ (\d+)\ (\d+)\ (\d+)/xsm
                   )
@@ -162,7 +162,7 @@ sub boxes {
                     ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
                 }
                 elsif ( $token->[1] eq 'span'
-                    and defined( $token->[2]{class} )
+                    and defined $token->[2]{class}
                     and $token->[2]{class} eq 'ocr_cinfo' )
                 {
                     undef $x1;
@@ -171,13 +171,13 @@ sub boxes {
             }
             if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/xsm ) {
                 $text = $token->[1];
-                chomp($text);
+                chomp $text;
             }
             if ( $token->[0] eq 'E' ) {
                 undef $x1;
                 undef $text;
             }
-            if ( defined($x1) and defined($text) ) {
+            if ( defined $x1 and defined $text ) {
                 push @boxes, [ $x1, $y1, $x2, $y2, $text ];
             }
         }
@@ -210,7 +210,7 @@ sub to_png {
 
 sub resolution {
     my ( $self, $paper_sizes ) = @_;
-    return $self->{resolution} if defined( $self->{resolution} );
+    return $self->{resolution} if defined $self->{resolution};
     my $image  = $self->im_object;
     my $format = $image->Get('format');
     setlocale( LC_NUMERIC, "C" );
@@ -221,7 +221,7 @@ sub resolution {
     if ( $format !~ /^Portable\ ...map/xsm ) {
         $self->{resolution} = $image->Get('x-resolution');
 
-        if ( not defined( $self->{resolution} ) ) {
+        if ( not defined $self->{resolution} ) {
             $self->{resolution} = $image->Get('y-resolution');
         }
 
@@ -261,7 +261,7 @@ sub resolution {
 
 sub matching_paper_sizes {
     my ( $self, $paper_sizes ) = @_;
-    if ( not( defined( $self->{height} ) and defined( $self->{width} ) ) ) {
+    if ( not( defined $self->{height} and defined $self->{width} ) ) {
         my $image = $self->im_object;
         $self->{width}  = $image->Get('width');
         $self->{height} = $image->Get('height');
