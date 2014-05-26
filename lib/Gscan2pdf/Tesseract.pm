@@ -22,7 +22,7 @@ sub setup {
     return $installed if $setup;
 
     my ( $exe, undef ) = Gscan2pdf::Document::open_three('which tesseract');
-    return if ( not defined($exe) or $exe eq $EMPTY );
+    return if ( not defined $exe or $exe eq $EMPTY );
     $installed = 1;
 
 # if we have 3.02.01 or better, we can use --list-langs and not bother with tessdata
@@ -39,7 +39,7 @@ sub setup {
     ( $out, $err ) = Gscan2pdf::Document::open_three("tesseract '' '' -l ''");
     ( $tessdata, $version, $datasuffix ) = parse_tessdata( $out . $err );
 
-    if ( not defined($tessdata) ) {
+    if ( not defined $tessdata ) {
         if ( $version
             and version->parse("v$version") > version->parse('v3.01') )
         {
@@ -74,15 +74,15 @@ sub parse_tessdata {
     }
     if ( $output =~ /Unable\ to\ load\ unicharset\ file\ ([^\n]+)/xsm ) {
         $output = $1;
-        if ( not defined($v) ) { $v = 2 }
+        if ( not defined $v ) { $v = 2 }
         $suffix = '.unicharset';
     }
     elsif ( $output =~ /Error\ openn?ing\ data\ file\ ([^\n]+)/xsm ) {
         $output = $1;
-        if ( not defined($v) ) { $v = 3 }    ## no critic (ProhibitMagicNumbers)
+        if ( not defined $v ) { $v = 3 }    ## no critic (ProhibitMagicNumbers)
         $suffix = '.traineddata';
     }
-    elsif ( defined($v) and version->parse("v$v") > version->parse('v3.01') ) {
+    elsif ( defined $v and version->parse("v$v") > version->parse('v3.01') ) {
         return ( undef, $v, '.traineddata' );
     }
     else {
