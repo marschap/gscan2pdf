@@ -58,7 +58,7 @@ sub hocr {
     my ( $png, $cmd );
     if ( not $setup ) { Gscan2pdf::Ocropus->setup($loggr) }
 
-    if ( $file !~ /\.(?:png|jpg|pnm)$/xsm ) {
+    if ( $file !~ /[.](?:png|jpg|pnm)$/xsm ) {
 
         # Temporary filename for new file
         $png = File::Temp->new( SUFFIX => '.png' );
