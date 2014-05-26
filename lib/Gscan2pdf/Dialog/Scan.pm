@@ -2,11 +2,11 @@ package Gscan2pdf::Dialog::Scan;
 
 use warnings;
 use strict;
-no if $] >= 5.018, warnings => "experimental::smartmatch";
+no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Gscan2pdf::Dialog;
-use feature "switch";
+use feature 'switch';
 use Data::Dumper;
 my (
     $_MAX_PAGES,        $_MAX_INCREMENT, $_DOUBLE_INCREMENT,
@@ -1496,9 +1496,9 @@ sub get_option_from_profile {
 
 sub make_progress_string {
     my ( $i, $npages ) = @_;
-    return sprintf $d->get("Scanning page %d of %d"), $i, $npages
+    return sprintf $d->get('Scanning page %d of %d'), $i, $npages
       if ( $npages > 0 );
-    return sprintf $d->get("Scanning page %d"), $i;
+    return sprintf $d->get('Scanning page %d'), $i;
 }
 
 1;
