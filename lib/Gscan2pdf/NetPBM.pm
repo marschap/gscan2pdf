@@ -20,7 +20,7 @@ sub file_size_from_header {
     open my $fh, '<', $filename or return 0;
     my $header = <$fh>;
     my $magic_value;
-    if ( defined($header) and $header =~ /^P(\d)\n/xsm ) {
+    if ( defined $header and $header =~ /^P(\d)\n/xsm ) {
         $magic_value = $1;
     }
     else {
