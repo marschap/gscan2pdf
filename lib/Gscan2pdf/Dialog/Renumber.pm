@@ -155,10 +155,10 @@ sub new {
     my ( $row_signal, $selection_signal, $document );
     $self->signal_connect(
         'changed-document' => sub {
-            if ( defined($row_signal) and defined($document) ) {
+            if ( defined $row_signal and defined $document ) {
                 $document->signal_handler_disconnect($row_signal);
             }
-            if ( defined($selection_signal) and defined($document) ) {
+            if ( defined $selection_signal and defined $document ) {
                 $document->signal_handler_disconnect($selection_signal);
             }
             $self->update;
@@ -198,8 +198,8 @@ sub SET_PROPERTY {
     my $name   = $pspec->get_name;
     my $oldval = $self->get($name);
     $self->{$name} = $newval;
-    if (   ( defined($newval) and defined($oldval) and $newval ne $oldval )
-        or ( defined($newval) xor defined($oldval) ) )
+    if (   ( defined $newval and defined $oldval and $newval ne $oldval )
+        or ( defined $newval xor defined $oldval ) )
     {
         $self->signal_emit( "changed-$name", $newval );
     }
@@ -214,8 +214,8 @@ sub update {
     my $start = $self->get('start');
     my $step  = $self->get('increment');
 
-    my $dstart = defined($start_old) ? $start - $start_old : 0;
-    my $dstep  = defined($step_old)  ? $step - $step_old   : 0;
+    my $dstart = defined $start_old ? $start - $start_old : 0;
+    my $dstep  = defined $step_old  ? $step - $step_old   : 0;
     if ( $dstart == 0 and $dstep == 0 ) {
         $dstart = 1;
     }
