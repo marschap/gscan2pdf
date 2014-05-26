@@ -230,7 +230,7 @@ sub new {
             default => 0.33,
         },
     };
-    bless( $self, $class );
+    bless $self, $class;
     return $self;
 }
 
@@ -572,11 +572,11 @@ sub get_cmdline {
 }
 
 sub version {
-    if ( not defined($version) ) {
+    if ( not defined $version ) {
         if ( Gscan2pdf::Document::check_command('unpaper') ) {
             ( $version, undef ) =
               Gscan2pdf::Document::open_three('unpaper --version');
-            chomp($version);
+            chomp $version;
             $version = "v$version";
         }
         else {
