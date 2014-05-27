@@ -2211,7 +2211,9 @@ sub _add_text_to_djvu {
         open my $fh, '>:encoding(UTF8)',    ## no critic (RequireBriefOpen)
           $djvusedtxtfile
           or croak( sprintf $d->get("Can't open file: %s"), $djvusedtxtfile );
-        print {$fh} "(page 0 0 $w $h\n";
+        print {$fh} "(page 0 0 $w $h\n"
+          or
+          croak( sprintf $d->get("Can't write to file: %s"), $djvusedtxtfile );
 
         # Write the text boxes
         for my $box ( $pagedata->boxes ) {
@@ -2226,7 +2228,9 @@ sub _add_text_to_djvu {
             printf {$fh} "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2,
               $h - $y1, $txt;
         }
-        print {$fh} ')';
+        print {$fh} ')'
+          or
+          croak( sprintf $d->get("Can't write to file: %s"), $djvusedtxtfile );
         close $fh
           or croak( sprintf $d->get("Can't close file: %s"), $djvusedtxtfile );
 
@@ -2414,13 +2418,18 @@ sub _thread_save_image {
 sub _thread_save_text {
     my ( $self, $path, $list_of_pages, $fh ) = @_;
 
-    if ( not open $fh, '>', $path ) {
+    if ( not open $fh, '>', $path ) {    ## no critic (RequireBriefOpen)
         $self->{status} = 1;
         $self->{message} = sprintf $d->get("Can't open file: %s"), $path;
         return;
     }
     foreach ( @{$list_of_pages} ) {
-        print {$fh} $_->{hocr};
+        if ( not print {$fh} $_->{hocr} ) {
+            $self->{status}  = 1;
+            $self->{message} = sprintf $d->get("Can't write to file: %s"),
+              $path;
+            return;
+        }
         return if $_self->{cancel};
     }
     if ( not close $fh ) {
