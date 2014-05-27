@@ -1863,7 +1863,7 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
         my $page = $pdf->page;
         $page->mediabox( $w * $POINTS_PER_INCH, $h * $POINTS_PER_INCH );
 
-        _add_text_to_PDF( $page, $pagedata, $ttfcache, $corecache );
+        _add_text_to_pdf( $page, $pagedata, $ttfcache, $corecache );
 
         # Add scan
         my $gfx = $page->gfx;
@@ -2030,7 +2030,7 @@ sub _write_image_object {
 
 # Add OCR as text behind the scan
 
-sub _add_text_to_PDF {
+sub _add_text_to_pdf {
     my ( $page, $data, $ttfcache, $corecache ) = @_;
     if ( defined( $data->{hocr} ) ) {
         my $h          = $data->{h};
@@ -2179,7 +2179,7 @@ sub _thread_save_djvu {
             return;
         }
         push @filelist, $djvu;
-        _add_text_to_DJVU( $self, $djvu, $dir, $pagedata );
+        _add_text_to_djvu( $self, $djvu, $dir, $pagedata );
     }
     $self->{progress} = 1;
     $self->{message}  = $d->get('Closing DjVu');
@@ -2197,7 +2197,7 @@ sub _thread_save_djvu {
 
 # Add OCR to text layer
 
-sub _add_text_to_DJVU {
+sub _add_text_to_djvu {
     my ( $self, $djvu, $dir, $pagedata ) = @_;
     if ( defined( $pagedata->{hocr} ) ) {
 
@@ -2443,8 +2443,8 @@ sub _thread_analyse {
     if ( not defined $depth ) { $logger->warn('image->Statistics() failed') }
     $logger->info("std dev: $stddev mean: $mean");
     return if $_self->{cancel};
-    my $maxQ = ( 1 << $depth ) - 1;
-    $mean = $maxQ ? $mean / $maxQ : 0;
+    my $maxq = ( 1 << $depth ) - 1;
+    $mean = $maxq ? $mean / $maxq : 0;
     if ( $stddev eq 'nan' ) { $stddev = 0 }
 
 # my $quantum_depth = $image->QuantumDepth;
