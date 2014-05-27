@@ -20,7 +20,7 @@ sub setup {
     return $version if $setup;
 
     my ( $out, $err ) = Gscan2pdf::Document::open_three('which cuneiform');
-    return if ( not defined($out) or $out eq $EMPTY );
+    return if ( not defined $out or $out eq $EMPTY );
 
     ( $out, $err ) = Gscan2pdf::Document::open_three("cuneiform");
     if ( $out =~ /^Cuneiform\ for\ Linux\ ([\d\.]+)/xsm ) { $version = $1 }
@@ -113,10 +113,10 @@ sub hocr {
     my $cmd = "cuneiform -l $language -f hocr -o $txt $bmp";
     $logger->info($cmd);
     if ( defined $pidfile ) {
-        system("echo $PROCESS_ID > $pidfile;$cmd");
+        system "echo $PROCESS_ID > $pidfile;$cmd";
     }
     else {
-        system($cmd);
+        system $cmd;
     }
     return Gscan2pdf::Document::slurp($txt);
 }
