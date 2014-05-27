@@ -166,7 +166,7 @@ sub import_file {
 
    # File in which to store the process ID so that it can be killed if necessary
     my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
-    my $dirname = '';
+    my $dirname = $EMPTY;
     if ( defined $self->{dir} ) { $dirname = "$self->{dir}" }
 
     my $sentinel = _enqueue_request(
