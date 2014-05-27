@@ -23,7 +23,7 @@ sub setup {
     return if ( not defined $out or $out eq $EMPTY );
 
     ( $out, $err ) = Gscan2pdf::Document::open_three('cuneiform');
-    if ( $out =~ /^Cuneiform\ for\ Linux\ ([\d\.]+)/xsm ) { $version = $1 }
+    if ( $out =~ /^Cuneiform[ ]for[ ]Linux[ ]([\d.]+)/xsm ) { $version = $1 }
 
     $setup = 1;
     return $version;
@@ -67,7 +67,7 @@ sub languages {
         ( my $output, undef ) = Gscan2pdf::Document::open_three($cmd);
 
         my $langs;
-        if ( $output =~ /Supported\ languages:\ (.*)\./xsm ) {
+        if ( $output =~ /Supported[ ]languages:[ ](.*)[.]/xsm ) {
             $langs = $1;
             for ( split $SPACE, $langs ) {
                 if ( defined $lang{$_} ) {
@@ -94,7 +94,7 @@ sub hocr {
     my $txt = File::Temp->new( SUFFIX => '.txt' );
 
     if ( version->parse("v$version") < version->parse('v1.1.0')
-        and $file !~ /\.bmp$/xsm )
+        and $file !~ /[.]bmp$/xsm )
     {
 
         # Temporary filename for new file
