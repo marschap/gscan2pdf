@@ -1570,7 +1570,7 @@ sub _thread_get_file_info {
     $logger->info($format);
 
     given ($format) {
-        when (/gzip\ compressed\ data/xsm) {
+        when (/gzip[ ]compressed[ ]data/xsm) {
             $info{path}   = $filename;
             $info{format} = 'session file';
             $self->{info_queue}->enqueue( \%info );
@@ -1612,7 +1612,7 @@ sub _thread_get_file_info {
             $self->{info_queue}->enqueue( \%info );
             return;
         }
-        when (/PDF\ document/xsm) {
+        when (/PDF[ ]document/xsm) {
             $format = 'Portable Document Format';
             my $cmd = "pdfinfo \"$filename\"";
             $logger->info($cmd);
@@ -1627,7 +1627,7 @@ sub _thread_get_file_info {
             $logger->info("$pages pages");
             $info{pages} = $pages;
         }
-        when (/TIFF\ image\ data/xsm) {
+        when (/TIFF[ ]image[ ]data/xsm) {
             $format = 'Tagged Image File Format';
             my $cmd = "tiffinfo \"$filename\"";
             $logger->info($cmd);
@@ -1637,7 +1637,7 @@ sub _thread_get_file_info {
             $logger->info($info);
 
             # Count number of pages
-            my $pages = () = $info =~ /TIFF\ Directory\ at\ offset/xsmg;
+            my $pages = () = $info =~ /TIFF[ ]Directory[ ]at[ ]offset/xsmg;
             $logger->info("$pages pages");
             $info{pages} = $pages;
         }
@@ -1671,9 +1671,9 @@ sub _thread_get_file_info {
 
 sub _thread_import_file {
     my ( $self, %options ) = @_;
-    my $PNG = qr/Portable\ Network\ Graphics/xsm;
-    my $JPG = qr/Joint\ Photographic\ Experts\ Group\ JFIF\ format/xsm;
-    my $GIF = qr/CompuServe\ graphics\ interchange\ format/xsm;
+    my $PNG = qr/Portable[ ]Network[ ]Graphics/xsm;
+    my $JPG = qr/Joint[ ]Photographic[ ]Experts[ ]Group[ ]JFIF[ ]format/xsm;
+    my $GIF = qr/CompuServe[ ]graphics[ ]interchange[ ]format/xsm;
 
     given ( $options{info}->{format} ) {
         when ('DJVU') {
@@ -1939,7 +1939,7 @@ sub _convert_image_for_pdf {
     my $compression = $pagedata->{compression};
 
     my $format;
-    if ( $filename =~ /\.(\w*)$/xsm ) {
+    if ( $filename =~ /[.](\w*)$/xsm ) {
         $format = $1;
     }
 
@@ -2021,7 +2021,7 @@ sub _write_image_object {
         my $status = $image->Write( filename => $filename );
         return if $_self->{cancel};
         if ("$status") { $logger->warn($status) }
-        if ( $filename =~ /\.(\w*)$/xsm ) {
+        if ( $filename =~ /[.](\w*)$/xsm ) {
             $format = $1;
         }
     }
@@ -2136,7 +2136,7 @@ sub _thread_save_djvu {
 
         # c44 can only use pnm and jpg
         my $format;
-        if ( $filename =~ /\.(\w*)$/xsm ) {
+        if ( $filename =~ /[.](\w*)$/xsm ) {
             $format = $1;
         }
         if ( $depth > 1 ) {
@@ -2262,7 +2262,7 @@ sub _thread_save_tiff {
 
         my $filename = $pagedata->{filename};
         if (
-            $filename !~ /\.tif/xsm
+            $filename !~ /[.]tif/xsm
             or ( defined( $options{options}->{compression} )
                 and $options{options}->{compression} eq 'jpeg' )
           )
@@ -2356,7 +2356,7 @@ sub _thread_rotate {
     return if $_self->{cancel};
     if ("$x") { $logger->warn($x) }
     my $suffix;
-    if ( $filename =~ /\.(\w*)$/xsm ) {
+    if ( $filename =~ /[.](\w*)$/xsm ) {
         $suffix = $1;
     }
     $filename = File::Temp->new(
@@ -2512,7 +2512,7 @@ sub _thread_negate {
 
     # Write it
     my $suffix;
-    if ( $filename =~ /(\.\w*)$/xsm ) {
+    if ( $filename =~ /([.]\w*)$/xsm ) {
         $suffix = $1;
     }
     $filename =
@@ -2550,7 +2550,7 @@ sub _thread_unsharp {
 
     # Write it
     my $suffix;
-    if ( $filename =~ /\.(\w*)$/xsm ) {
+    if ( $filename =~ /[.](\w*)$/xsm ) {
         $suffix = $1;
     }
     $filename = File::Temp->new(
@@ -2595,7 +2595,7 @@ sub _thread_crop {
 
     # Write it
     my $suffix;
-    if ( $filename =~ /\.(\w*)$/xsm ) {
+    if ( $filename =~ /[.](\w*)$/xsm ) {
         $suffix = $1;
     }
     $filename = File::Temp->new(
@@ -2673,7 +2673,7 @@ sub _thread_cuneiform {
 sub _thread_gocr {
     my ( $self, $page, $pidfile ) = @_;
     my $pnm;
-    if ( $page->{filename} !~ /\.pnm$/xsm ) {
+    if ( $page->{filename} !~ /[.]pnm$/xsm ) {
 
         # Temporary filename for new file
         $pnm = File::Temp->new( SUFFIX => '.pnm' );
@@ -2712,7 +2712,7 @@ sub _thread_unpaper {
     my $filename = $page->{filename};
     my $in;
 
-    if ( $filename !~ /\.pnm$/xsm ) {
+    if ( $filename !~ /[.]pnm$/xsm ) {
         my $image = Image::Magick->new;
         my $x     = $image->Read($filename);
         if ("$x") { $logger->warn($x) }
@@ -2741,7 +2741,7 @@ sub _thread_unpaper {
         UNLINK => FALSE
     );
     my $out2 = $EMPTY;
-    if ( $options =~ /--output-pages\ 2\ /xsm ) {
+    if ( $options =~ /--output-pages[ ]2[ ]/xsm ) {
         $out2 = File::Temp->new(
             DIR    => $dir,
             SUFFIX => '.pnm',
@@ -2793,7 +2793,7 @@ sub _thread_user_defined {
     my ( $self, $page, $cmd, $dir, $pidfile ) = @_;
     my $in = $page->{filename};
     my $suffix;
-    if ( $in =~ /(\.\w*)$/xsm ) {
+    if ( $in =~ /([.]\w*)$/xsm ) {
         $suffix = $1;
     }
     my $out = File::Temp->new(
