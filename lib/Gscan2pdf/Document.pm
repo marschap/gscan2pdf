@@ -2211,7 +2211,7 @@ sub _add_text_to_djvu {
         open my $fh, '>:encoding(UTF8)',    ## no critic (RequireBriefOpen)
           $djvusedtxtfile
           or croak( sprintf $d->get("Can't open file: %s"), $djvusedtxtfile );
-        print $fh "(page 0 0 $w $h\n";
+        print {$fh} "(page 0 0 $w $h\n";
 
         # Write the text boxes
         for my $box ( $pagedata->boxes ) {
@@ -2223,10 +2223,10 @@ sub _add_text_to_djvu {
             # Escape any inverted commas
             $txt =~ s/\\/\\\\/gxsm;
             $txt =~ s/"/\\\"/gxsm;
-            printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2,
+            printf {$fh} "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2,
               $h - $y1, $txt;
         }
-        print $fh ')';
+        print {$fh} ')';
         close $fh
           or croak( sprintf $d->get("Can't close file: %s"), $djvusedtxtfile );
 
@@ -2420,7 +2420,7 @@ sub _thread_save_text {
         return;
     }
     foreach ( @{$list_of_pages} ) {
-        print $fh $_->{hocr};
+        print {$fh} $_->{hocr};
         return if $_self->{cancel};
     }
     if ( not close $fh ) {
