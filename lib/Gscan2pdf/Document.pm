@@ -2,8 +2,8 @@ package Gscan2pdf::Document;
 
 use strict;
 use warnings;
-use feature "switch";
-no if $] >= 5.018, warnings => "experimental::smartmatch";
+use feature 'switch';
+no if $] >= 5.018, warnings => 'experimental::smartmatch';
 
 use threads;
 use threads::shared;
@@ -995,7 +995,7 @@ sub open_session_file {
     my ( $self, $filename, $error_callback ) = @_;
     if ( not defined($filename) ) {
         if ($error_callback) {
-            $error_callback->("Error: session file not supplied.");
+            $error_callback->('Error: session file not supplied.');
         }
         return;
     }
@@ -1054,7 +1054,7 @@ sub open_session {
             if ($error_callback) {
                 $error_callback->(
                     sprintf(
-                        $d->get("Error importing page %d. Ignoring."),
+                        $d->get('Error importing page %d. Ignoring.'),
                         $pagenum
                     )
                 );
@@ -1214,7 +1214,7 @@ sub timestamp {
     my @time = localtime();
 
     # return a time which can be string-wise compared
-    return sprintf( "%04d%02d%02d%02d%02d%02d", reverse @time[ 0 .. $YEAR ] );
+    return sprintf( '%04d%02d%02d%02d%02d%02d', reverse @time[ 0 .. $YEAR ] );
 }
 
 # Set session dir
@@ -1369,7 +1369,7 @@ sub _cancel_process {
     my ($pid) = @_;
 
     # Empty process queue first to stop any new process from starting
-    $logger->info("Emptying process queue");
+    $logger->info('Emptying process queue');
     while ( $_self->{requests}->dequeue_nb ) { }
 
 # Then send the thread a cancel signal to stop it going beyond the next break point
@@ -1544,7 +1544,7 @@ sub _thread_main {
 
             default {
                 $logger->info(
-                    "Ignoring unknown request " . $request->{action} );
+                    'Ignoring unknown request ' . $request->{action} );
                 next;
             }
         }
@@ -1563,7 +1563,7 @@ sub _thread_get_file_info {
     $self->{status} = 0;
     if ( not -e $filename ) {
         $self->{status} = 1;
-        $self->{message} = sprintf( $d->get("File %s not found"), $filename );
+        $self->{message} = sprintf( $d->get('File %s not found'), $filename );
         return;
     }
 
@@ -1658,7 +1658,7 @@ sub _thread_get_file_info {
             if ( not defined($format) ) {
                 $self->{status}  = 1;
                 $self->{message} = sprintf(
-                    $d->get("%s is not a recognised image type"),
+                    $d->get('%s is not a recognised image type'),
                     $filename
                 );
                 return;
@@ -1687,7 +1687,7 @@ sub _thread_import_file {
                     $self->{progress} =
                       ( $i - 1 ) / ( $options{last} - $options{first} + 1 );
                     $self->{message} =
-                      sprintf( $d->get("Importing page %i of %i"),
+                      sprintf( $d->get('Importing page %i of %i'),
                         $i, $options{last} - $options{first} + 1 );
                     my $tif = File::Temp->new(
                         DIR    => $options{dir},
@@ -1750,7 +1750,7 @@ sub _thread_import_file {
                     $self->{progress} =
                       $i / ( $options{last} - $options{first} + 1 );
                     $self->{message} =
-                      sprintf( $d->get("Importing page %i of %i"),
+                      sprintf( $d->get('Importing page %i of %i'),
                         $i, $options{last} - $options{first} + 1 );
                     my $tif = File::Temp->new(
                         DIR    => $options{dir},
@@ -1814,7 +1814,7 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
     foreach my $pagedata ( @{ $options{list_of_pages} } ) {
         ++$pagenr;
         $self->{progress} = $pagenr / ( $#{ $options{list_of_pages} } + 2 );
-        $self->{message} = sprintf( $d->get("Saving page %i of %i"),
+        $self->{message} = sprintf( $d->get('Saving page %i of %i'),
             $pagenr, $#{ $options{list_of_pages} } + 1 );
 
         my $filename = $pagedata->{filename};
@@ -1860,9 +1860,9 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
           _convert_image_for_pdf( $self, $pagedata, $image, %options );
 
         $logger->info(
-            "Defining page at ",
+            'Defining page at ',
             $w * $POINTS_PER_INCH,
-            "pt x ", $h * $POINTS_PER_INCH, "pt"
+            'pt x ', $h * $POINTS_PER_INCH, 'pt'
         );
         my $page = $pdf->page;
         $page->mediabox( $w * $POINTS_PER_INCH, $h * $POINTS_PER_INCH );
@@ -1903,7 +1903,7 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
             $logger->warn($msg);
             $self->{status} = 1;
             $self->{message} =
-              sprintf( $d->get("Error creating PDF image object: %s"), $msg );
+              sprintf( $d->get('Error creating PDF image object: %s'), $msg );
             return;
         }
         else {
@@ -1919,7 +1919,7 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
                 $self->{status}  = 1;
                 $self->{message} = sprintf(
                     $d->get(
-                        "Error embedding file image in %s format to PDF: %s"),
+                        'Error embedding file image in %s format to PDF: %s'),
                     $format, $_
                 );
             }
@@ -2007,7 +2007,7 @@ sub _convert_image_for_pdf {
                 $logger->info($output);
                 $self->{status} = 1;
                 $self->{message} =
-                  sprintf( $d->get("Error compressing image: %s"), $output );
+                  sprintf( $d->get('Error compressing image: %s'), $output );
                 return;
             }
             $filename = $filename2;
@@ -2120,7 +2120,7 @@ sub _thread_save_djvu {
     foreach my $pagedata ( @{$list_of_pages} ) {
         ++$page;
         $self->{progress} = $page / ( $#{$list_of_pages} + 2 );
-        $self->{message} = sprintf( $d->get("Writing page %i of %i"),
+        $self->{message} = sprintf( $d->get('Writing page %i of %i'),
             $page, $#{$list_of_pages} + 1 );
 
         my $filename = $pagedata->{filename};
@@ -2196,7 +2196,7 @@ sub _thread_save_djvu {
     if ($status) {
         $self->{status}  = 1;
         $self->{message} = $d->get('Error closing DjVu');
-        $logger->error("Error closing DjVu");
+        $logger->error('Error closing DjVu');
     }
     return;
 }
@@ -2233,7 +2233,7 @@ sub _add_text_to_DJVU {
             printf $fh "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2,
               $h - $y1, $txt;
         }
-        print $fh ")";
+        print $fh ')';
         close $fh
           or
           croak( sprintf( $d->get("Can't close file: %s"), $djvusedtxtfile ) );
@@ -2265,7 +2265,7 @@ sub _thread_save_tiff {
         $self->{progress} =
           ( $page - 1 ) / ( $#{ $options{list_of_pages} } + 2 );
         $self->{message} =
-          sprintf( $d->get("Converting image %i of %i to TIFF"),
+          sprintf( $d->get('Converting image %i of %i to TIFF'),
             $page, $#{ $options{list_of_pages} } + 1 );
 
         my $filename = $pagedata->{filename};
@@ -2330,7 +2330,7 @@ sub _thread_save_tiff {
         $logger->info($output);
         $self->{status} = 1;
         $self->{message} =
-          sprintf( $d->get("Error compressing image: %s"), $output );
+          sprintf( $d->get('Error compressing image: %s'), $output );
         return;
     }
     if ( defined $options{ps} ) {
@@ -2405,7 +2405,7 @@ sub _thread_save_image {
         my $i = 1;
         foreach ( @{$list_of_pages} ) {
             $current_filename = sprintf $path, $i++;
-            my $cmd = sprintf "convert %s -density %d %s",
+            my $cmd = sprintf 'convert %s -density %d %s',
               $_->{filename}, $_->{resolution},
               $current_filename;
             my $status = system("echo $PROCESS_ID > $pidfile;$cmd");
@@ -2422,7 +2422,7 @@ sub _thread_save_image {
 sub _thread_save_text {
     my ( $self, $path, $list_of_pages, $fh ) = @_;
 
-    if ( not open( $fh, ">", $path ) ) {
+    if ( not open( $fh, '>', $path ) ) {
         $self->{status} = 1;
         $self->{message} = sprintf( $d->get("Can't open file: %s"), $path );
         return;
@@ -2448,12 +2448,12 @@ sub _thread_analyse {
     if ("$x") { $logger->warn($x) }
 
     my ( $depth, $min, $max, $mean, $stddev ) = $image->Statistics();
-    if ( not defined($depth) ) { $logger->warn("image->Statistics() failed") }
+    if ( not defined($depth) ) { $logger->warn('image->Statistics() failed') }
     $logger->info("std dev: $stddev mean: $mean");
     return if $_self->{cancel};
     my $maxQ = ( 1 << $depth ) - 1;
     $mean = $maxQ ? $mean / $maxQ : 0;
-    if ( $stddev eq "nan" ) { $stddev = 0 }
+    if ( $stddev eq 'nan' ) { $stddev = 0 }
 
 # my $quantum_depth = $image->QuantumDepth;
 # warn "image->QuantumDepth failed" unless defined $quantum_depth;
@@ -2727,8 +2727,8 @@ sub _thread_unpaper {
         my $depth = $image->Get('depth');
 
 # Unforunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
-        my $suffix = ".pbm";
-        if ( $depth > 1 ) { $suffix = ".pnm" }
+        my $suffix = '.pbm';
+        if ( $depth > 1 ) { $suffix = '.pnm' }
 
         # Temporary filename for new file
         $in = File::Temp->new(
