@@ -22,7 +22,7 @@ sub setup {
     my ( $out, $err ) = Gscan2pdf::Document::open_three('which cuneiform');
     return if ( not defined $out or $out eq $EMPTY );
 
-    ( $out, $err ) = Gscan2pdf::Document::open_three("cuneiform");
+    ( $out, $err ) = Gscan2pdf::Document::open_three('cuneiform');
     if ( $out =~ /^Cuneiform\ for\ Linux\ ([\d\.]+)/xsm ) { $version = $1 }
 
     $setup = 1;
@@ -62,7 +62,7 @@ sub languages {
         );
 
         # Dig out supported languages
-        my $cmd = "cuneiform -l";
+        my $cmd = 'cuneiform -l';
         $logger->info($cmd);
         ( my $output, undef ) = Gscan2pdf::Document::open_three($cmd);
 
