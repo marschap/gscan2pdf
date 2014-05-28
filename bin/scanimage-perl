@@ -134,7 +134,7 @@ sub print_option {
     ( $device, my $opt_num, my $opt, my $ro ) = @_;
 
     if ( $opt->{type} == SANE_TYPE_GROUP ) {
-        printf( "  %s:\n", $opt->{title} );
+        printf "  %s:\n", $opt->{title};
         return;
     }
 
@@ -212,7 +212,7 @@ sub print_option {
         }
         if ( $column >= $END_COLUMN - 1 and $last_break ) {
             while ( $start < $last_break ) {
-                printstdout( substr( $opt->{desc}, $start++, 1 ) );
+                printstdout( substr $opt->{desc}, $start++, 1 );
             }
             $start = $last_break + 1;    # skip blank
             printstdout("\n        ");
@@ -220,7 +220,7 @@ sub print_option {
         }
     }
     while ( $start < length( $opt->{desc} ) ) {
-        printstdout( substr( $opt->{desc}, $start++, 1 ) );
+        printstdout( substr $opt->{desc}, $start++, 1 );
     }
     printstdout("\n");
     return;
@@ -371,13 +371,13 @@ sub parse_scalar {
         $v    = $1;
         $unit = $2;
         $rest = $3;
-        if ( not defined($unit) ) { $unit = $EMPTY }
+        if ( not defined $unit ) { $unit = $EMPTY }
     }
     else {
         printstderr(
 "$prog_name: option --$opt->{name}: bad option value (rest of option: $str)\n"
         );
-        exit(1);
+        exit 1;
     }
 
     if ( $opt->{unit} == SANE_UNIT_BIT ) {
@@ -422,27 +422,27 @@ sub parse_vector {
     my $prev_index = 0;
     my $separator  = $EMPTY;
     my ( @vector, $value );
-    while ( length($str) ) {
+    while ( length $str ) {
         if ( $str =~ /^\[(\d+)(\])?/xsm ) {
             $index = $1;
             if ( $2 ne '\]' ) {
                 printstderr(
 "$prog_name: option --$opt->{name}: closing bracket missing "
                       . "(rest of option: $str)\n" );
-                exit(1);
+                exit 1;
             }
         }
         else {
             ++$index;
         }
 
-        if ( $index < 0 or $index >= length($str) ) {
+        if ( $index < 0 or $index >= length $str ) {
             printstderr(
                 sprintf
 "$prog_name: option --$opt->{name}: index $index out of range [0..%d]\n",
-                length($str)
+                length $str
             );
-            exit(1);
+            exit 1;
         }
 
         # read value
@@ -452,7 +452,7 @@ sub parse_vector {
             printstderr(
 "$prog_name: option --$opt->{name}: illegal separator (rest of option: $str)\n"
             );
-            exit(1);
+            exit 1;
         }
 
         # store value:
@@ -471,7 +471,7 @@ sub parse_vector {
 
         $prev_index = $index;
         $prev_value = $value;
-        $separator  = substr( $str, 0, 1 );
+        $separator  = substr $str, 0, 1;
     }
 
     if ( $verbose > 2 ) {
@@ -489,23 +489,23 @@ sub fetch_options {
     $device = shift;
 
     my $opt = $device->get_option_descriptor(0);
-    if ( not defined($opt) ) {
+    if ( not defined $opt ) {
         printstderr("Could not get option descriptor for option 0\n");
-        exit(1);
+        exit 1;
     }
 
     $num_dev_options = $device->get_option(0);
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
         printstderr("Could not get value for option 0: $Sane::STATUS\n");
-        exit(1);
+        exit 1;
     }
 
     # build the full table of long options
     for my $i ( 1 .. $num_dev_options - 1 ) {
         $opt = $device->get_option_descriptor($i);
-        if ( not defined($opt) ) {
+        if ( not defined $opt ) {
             printstderr("Could not get option descriptor for option $i\n");
-            exit(1);
+            exit 1;
         }
 
         next if ( not( $opt->{cap} & SANE_CAP_SOFT_SELECT ) );
@@ -599,7 +599,7 @@ sub set_option {
         printstderr(
 "$prog_name: setting of option --$opt->{name} failed ($Sane::STATUS)\n"
         );
-        exit(1);
+        exit 1;
     }
 
     if ( ( $info & SANE_INFO_INEXACT ) and $opt->{max_values} == 1 ) {
@@ -632,7 +632,7 @@ sub process_backend_option {
     if ( $opt and ( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
         printstderr(
             "$prog_name: attempted to set inactive option $opt->{name}\n");
-        exit(1);
+        exit 1;
     }
 
     if (    ( $opt->{cap} & SANE_CAP_AUTOMATIC )
@@ -645,7 +645,7 @@ sub process_backend_option {
                 sprintf
 "$prog_name: failed to set option --$opt->{name} to automatic ($Sane::STATUS)\n"
             );
-            exit(1);
+            exit 1;
         }
         return;
     }
@@ -771,7 +771,7 @@ sub scan_it {
                 $must_buffer );
 
             if ( $verbose and $parm->{depth} == $_8_BIT ) {
-                for ( split( $EMPTY, $buffer ) ) {
+                for ( split $EMPTY, $buffer ) {
                     my $c = ord;
                     if ( $c >= $max ) {
                         $max = $c;
@@ -949,7 +949,7 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
             for my $i ( 0 .. $len - 1 ) {
                 $image->{data}[ $offset + 3 * $i ]
                   =    ## no critic (ProhibitMagicNumbers)
-                  substr( $buffer, $i, 1 );
+                  substr $buffer, $i, 1;
             }
             $offset += 3 * $len;    ## no critic (ProhibitMagicNumbers)
         }
@@ -957,7 +957,7 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
             or $parm->{format} == SANE_FRAME_GRAY )
         {
             for my $i ( 0 .. $len - 1 ) {
-                $image->{data}[ $offset + $i ] = substr( $buffer, $i, 1 );
+                $image->{data}[ $offset + $i ] = substr $buffer, $i, 1;
             }
             $offset += $len;
         }
@@ -1044,7 +1044,7 @@ sub write_buffer {
 sub scan_pages {    ## no critic (ProhibitExcessComplexity)
     my $n = $batch_start_at;
 
-    if ( $batch and ( not defined($format) or $format eq $EMPTY ) ) {
+    if ( $batch and ( not defined $format or $format eq $EMPTY ) ) {
 
         #  if ($output_format == OUTPUT_TIFF) {
         #   $format = "out%d.tif";
@@ -1085,7 +1085,7 @@ sub scan_pages {    ## no critic (ProhibitExcessComplexity)
                 printstderr("Press <RETURN> to continue.\n");
                 printstderr("Press Ctrl + D to terminate.\n");
 
-                if ( not defined(<>) ) {
+                if ( not defined <> ) {
                     printstderr( sprintf "Batch terminated, %d pages scanned\n",
                         ( $n - $batch_increment ) );
                     last;    # get out of this loop
@@ -1104,7 +1104,7 @@ sub scan_pages {    ## no critic (ProhibitExcessComplexity)
         if (
             $batch
             and not(
-                open( $fh, '>', $part_path )    ## no critic (RequireBriefOpen)
+                open $fh, '>', $part_path    ## no critic (RequireBriefOpen)
                 and STDOUT->fdopen( $fh, '>' )
             )
           )
@@ -1125,14 +1125,14 @@ sub scan_pages {    ## no critic (ProhibitExcessComplexity)
 
                 # close output file by redirecting, do not close stdout here!
                 if (
-                    open( $fh, '>',
-                        '/dev/null' )    ## no critic (RequireBriefOpen)
+                    open $fh, '>',
+                    '/dev/null'    ## no critic (RequireBriefOpen)
                     and STDOUT->fdopen( $fh, '>' )
                   )
                 {
 
                     # let the fully scanned file show up
-                    if ( not rename( $part_path, $path ) ) {
+                    if ( not rename $part_path, $path ) {
                         printstderr("cannot rename $part_path to $path\n");
                         $device->cancel;
                         return SANE_STATUS_ACCESS_DENIED;
@@ -1147,8 +1147,8 @@ sub scan_pages {    ## no critic (ProhibitExcessComplexity)
         }
         elsif ( $Sane::STATUS != SANE_STATUS_GOOD ) {
             if ($batch) {
-                close($fh) or warn "cannot close file\n";
-                unlink($part_path);
+                close $fh or warn "cannot close file\n";
+                unlink $part_path;
             }
             last;
         }
@@ -1166,8 +1166,8 @@ sub pass_fail {
     {    ## no critic (ProhibitCascadingIfElse)
         printstderr("FAIL Error: $Sane::STATUS\n");
     }
-    elsif ( $len < length($buffer) ) {
-        printstderr( sprintf "FAIL Cheat: %d bytes\n", length($buffer) );
+    elsif ( $len < length $buffer ) {
+        printstderr( sprintf "FAIL Cheat: %d bytes\n", length $buffer );
     }
     elsif ( $len > $max ) {
         printstderr( sprintf "FAIL Overflow: %d bytes\n", $len );
@@ -1272,7 +1272,7 @@ sub print_options {
                 $opt = $window_option[$j];
             }
         }
-        if ( not defined($opt) ) { $opt = $device->get_option_descriptor($i) }
+        if ( not defined $opt ) { $opt = $device->get_option_descriptor($i) }
 
         if (   $ro
             or $opt->{cap} & SANE_CAP_SOFT_SELECT
@@ -1306,9 +1306,9 @@ sub process_arguments {
         my $ch;
         if (/--(.*)/xsm) {
             $ch = $1;
-            my $i = index( $ch, q{=} );
+            my $i = index $ch, q{=};
             if ( $i > -1 ) {    ## no critic (ProhibitMagicNumbers)
-                $ch = substr( $ch, 0, $i );
+                $ch = substr $ch, 0, $i;
             }
         }
         elsif (/-(.)/xsm) {
@@ -1348,7 +1348,7 @@ sub process_arguments {
 
     # convert x/y to br_x/br_y
     for my $index ( 0 .. 1 ) {
-        if ( $window[$index] and defined( $window_val[$index] ) ) {
+        if ( $window[$index] and defined $window_val[$index] ) {
             my $val = $window_val[$index];
             if ( $window[ $index + 2 ] ) {
                 my $pos = $device->get_option( $window[ $index + 2 ] );
@@ -1389,9 +1389,9 @@ sub list_devices_verbose {
     my @device_list = Sane->get_devices;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
         printstderr("$prog_name: sane_get_devices() failed: $Sane::STATUS\n");
-        exit(1);
+        exit 1;
     }
-    if ( defined( $options{L} ) ) {
+    if ( defined $options{L} ) {
         foreach (@device_list) {
             printf "device `%s' is a %s %s %s\n", $_->{name}, $_->{vendor},
               $_->{model}, $_->{type};
@@ -1415,7 +1415,7 @@ sub list_devices_verbose {
             printstdout($string_format);
         }
     }
-    if ( defined( $ENV{'SANE_DEFAULT_DEVICE'} ) ) {
+    if ( defined $ENV{'SANE_DEFAULT_DEVICE'} ) {
         printf "default device is `%s'\n", $ENV{'SANE_DEFAULT_DEVICE'};
     }
     return;
@@ -1427,7 +1427,7 @@ sub open_device {
         # If no device name was specified explicitly, we look at the
         # environment variable SANE_DEFAULT_DEVICE.  If this variable
         # is not set, we open the first device we find (if any):
-        if ( defined( $ENV{'SANE_DEFAULT_DEVICE'} ) ) {
+        if ( defined $ENV{'SANE_DEFAULT_DEVICE'} ) {
             $devname = $ENV{'SANE_DEFAULT_DEVICE'};
         }
         else {
@@ -1435,11 +1435,11 @@ sub open_device {
             if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
                 printstderr(
                     "$prog_name: sane_get_devices() failed: $Sane::STATUS\n");
-                exit(1);
+                exit 1;
             }
             if ( not @device_list ) {
                 printstderr("$prog_name: no SANE devices found\n");
-                exit(1);
+                exit 1;
             }
             $devname = $device_list[0]{name};
         }
@@ -1462,7 +1462,7 @@ sub open_device {
             undef $device;
         }
         else {
-            exit(1);
+            exit 1;
         }
     }
     return;
@@ -1480,15 +1480,15 @@ for (@ARGV) {
 # permutation disabled:
 GetOptions(@args);
 
-if ( defined( $options{L} ) or defined( $options{f} ) ) {
+if ( defined $options{L} or defined $options{f} ) {
     list_devices_verbose();
-    exit(0);
+    exit 0;
 }
 
-if ( defined( $options{V} ) ) {
+if ( defined $options{V} ) {
     printf "%s %s; backend version %d.%d.%d\n", $prog_name,
       $Sane::VERSION, Sane->get_version;
-    exit(0);
+    exit 0;
 }
 
 if ($help) {
@@ -1530,7 +1530,7 @@ EOS
 
 open_device();
 
-if ( defined($device) ) {
+if ( defined $device ) {
     fetch_options($device);
     process_arguments();
 
@@ -1542,7 +1542,7 @@ if ( defined($device) ) {
 
     # list all device-specific options
     if ($all) {
-        printf( "\nAll options specific to device `%s':\n", $devname );
+        printf "\nAll options specific to device `%s':\n", $devname;
         print_options( $device, $num_dev_options, SANE_TRUE );
         exit 0;
     }
@@ -1551,10 +1551,10 @@ if ( defined($device) ) {
 # output device list
 if ($help) {
     list_device_names();
-    exit(0);
+    exit 0;
 }
 
-exit(0) if ($dont_scan);
+exit 0 if ($dont_scan);
 
 local $SIG{HUP}  = \&sighandler;
 local $SIG{INT}  = \&sighandler;
