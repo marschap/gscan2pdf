@@ -1281,12 +1281,12 @@ sub process_arguments {
         if ( $_ eq '-m' ) { $_ = '-l' }
         if ( $_ eq '-u' ) { $_ = '-t' }
     }
-    my @ARGV_old = @ARGV;
+    my @argv_old = @ARGV;
     exit 1 if ( not GetOptions(@args) );
 
     # As it isn't possible to get the argument order from Getopt::Long 2.37, do
     # this myself
-    for (@ARGV_old) {
+    for (@argv_old) {
         my $ch;
         if (/--(.*)/xsm) {
             $ch = $1;
