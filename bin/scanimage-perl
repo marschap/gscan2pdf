@@ -1172,13 +1172,13 @@ sub test_it {
     $device->start;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
         printstderr("$prog_name: sane_start: $Sane::STATUS\n");
-        goto cleanup;
+        goto CLEANUP;
     }
 
     my $parm = $device->get_parameters;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
         printstderr("$prog_name: sane_get_parameters: $Sane::STATUS\n");
-        goto cleanup;
+        goto CLEANUP;
     }
 
     if ( $parm->{lines} >= 0 ) {
@@ -1210,12 +1210,12 @@ sub test_it {
         $parm->{bytes_per_line} );
     ( $image{data}, my $len ) = $device->read( $parm->{bytes_per_line} );
     pass_fail( $parm->{bytes_per_line}, $len, $image{data} );
-    goto cleanup if ( $Sane::STATUS != SANE_STATUS_GOOD );
+    goto CLEANUP if ( $Sane::STATUS != SANE_STATUS_GOOD );
 
     printstderr("$prog_name: reading one byte...\t\t");
     ( $image{data}, $len ) = $device->read(1);
     pass_fail( 1, $len, $image{data} );
-    goto cleanup if ( $Sane::STATUS != SANE_STATUS_GOOD );
+    goto CLEANUP if ( $Sane::STATUS != SANE_STATUS_GOOD );
 
     my $i;
     for ( $i = 2 ; $i < $parm->{bytes_per_line} * 2 ; $i *= 2 )
@@ -1223,7 +1223,7 @@ sub test_it {
         printstderr( sprintf "$prog_name: stepped read, %d bytes... \t", $i );
         ( $image{data}, $len ) = $device->read($i);
         pass_fail( $i, $len, $image{data} );
-        goto cleanup if ( $Sane::STATUS != SANE_STATUS_GOOD );
+        goto CLEANUP if ( $Sane::STATUS != SANE_STATUS_GOOD );
     }
 
     for ( $i /= 2 ; $i > 2 ; $i /= 2 ) {   ## no critic (ProhibitCStyleForLoops)
@@ -1231,10 +1231,10 @@ sub test_it {
             $i - 1 );
         ( $image{data}, $len ) = $device->read( $i - 1 );
         pass_fail( $i - 1, $len, $image{data} );
-        goto cleanup if ( $Sane::STATUS != SANE_STATUS_GOOD );
+        goto CLEANUP if ( $Sane::STATUS != SANE_STATUS_GOOD );
     }
 
-  cleanup:
+  CLEANUP:
     $device->cancel;
     return;
 }
