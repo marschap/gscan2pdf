@@ -2,8 +2,8 @@
 
 use warnings;
 use strict;
-use feature "switch";
-no if $] >= 5.018, warnings => "experimental::smartmatch";
+use feature 'switch';
+no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Sane;
 use Data::Dumper;
 use Getopt::Long qw(:config no_ignore_case pass_through);
@@ -47,7 +47,7 @@ my $h_y              = 0;
 my $resolution_value = 0;
 my $prog_name        = basename($PROGRAM_NAME);
 my $no_overwrite     = 0;
-my $outputFile = "image-%04d";    # file name(format) to write output to
+my $outputFile = 'image-%04d';    # file name(format) to write output to
 my $raw        = SANE_FALSE;
 my $scanScript;                   # script to run at end of scan
 my $startNum = 1;                 # start/end numbers of pages to scan
@@ -72,22 +72,22 @@ my @args     = (
 sub sane_strframe {
     my $frame = shift;
     my %frame = (
-        SANE_FRAME_GRAY  => "gray",
-        SANE_FRAME_RGB   => "RGB",
-        SANE_FRAME_RED   => "red",
-        SANE_FRAME_GREEN => "green",
-        SANE_FRAME_BLUE  => "blue",
-        $SANE_FRAME_TEXT => "text",
-        $SANE_FRAME_JPEG => "jpeg",
-        $SANE_FRAME_G31D => "g31d",
-        $SANE_FRAME_G32D => "g32d",
-        $SANE_FRAME_G42D => "g42d",
+        SANE_FRAME_GRAY  => 'gray',
+        SANE_FRAME_RGB   => 'RGB',
+        SANE_FRAME_RED   => 'red',
+        SANE_FRAME_GREEN => 'green',
+        SANE_FRAME_BLUE  => 'blue',
+        $SANE_FRAME_TEXT => 'text',
+        $SANE_FRAME_JPEG => 'jpeg',
+        $SANE_FRAME_G31D => 'g31d',
+        $SANE_FRAME_G32D => 'g32d',
+        $SANE_FRAME_G42D => 'g42d',
     );
     if ( defined $frame{$frame} ) {
         return $frame{$frame};
     }
     else {
-        return "unknown";
+        return 'unknown';
     }
 }
 
@@ -116,22 +116,22 @@ sub print_unit {
 
     given ($unit) {
         when (SANE_UNIT_PIXEL) {
-            print "pel";
+            print 'pel';
         }
         when (SANE_UNIT_BIT) {
-            print "bit";
+            print 'bit';
         }
         when (SANE_UNIT_MM) {
-            print "mm";
+            print 'mm';
         }
         when (SANE_UNIT_DPI) {
-            print "dpi";
+            print 'dpi';
         }
         when (SANE_UNIT_PERCENT) {
             print q{%};
         }
         when (SANE_UNIT_MICROSECOND) {
-            print "us";
+            print 'us';
         }
     }
     return;
@@ -143,10 +143,10 @@ sub print_option {
     my $opt = $device->get_option_descriptor($opt_num);
 
     if ($short_name) {
-        printf "    -%s", $short_name;
+        printf '    -%s', $short_name;
     }
     else {
-        printf "    --%s", $opt->{name};
+        printf '    --%s', $opt->{name};
     }
 
     print_option_choices($opt);
@@ -154,16 +154,16 @@ sub print_option {
 
     if ( $opt->{type} != SANE_TYPE_BUTTON and $opt->{cap} & SANE_CAP_INACTIVE )
     {
-        print " [inactive]";
+        print ' [inactive]';
     }
 
     print "\n        ";
 
     if ( $short_name eq 'x' ) {
-        print "Width of scan-area.";
+        print 'Width of scan-area.';
     }
     elsif ( $short_name eq 'y' ) {
-        print "Height of scan-area.";
+        print 'Height of scan-area.';
     }
     else {
         my $column     = $START_COLUMN;
@@ -194,30 +194,30 @@ sub print_option {
 sub print_option_choices {    ## no critic (ProhibitExcessComplexity)
     my ($opt) = @_;
     if ( $opt->{type} == SANE_TYPE_BOOL ) {
-        print "[=(";
-        if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) { print "auto|" }
-        print "yes|no)]";
+        print '[=(';
+        if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) { print 'auto|' }
+        print 'yes|no)]';
     }
     elsif ( $opt->{type} != SANE_TYPE_BUTTON ) {
         print $SPACE;
         if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) {
-            print "auto|";
+            print 'auto|';
         }
         if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
             if ( $opt->{type} == SANE_TYPE_INT ) {
-                print "<int>";
+                print '<int>';
             }
             elsif ( $opt->{type} == SANE_TYPE_FIXED ) {
-                print "<float>";
+                print '<float>';
             }
             elsif ( $opt->{type} == SANE_TYPE_STRING ) {
-                print "<string>";
+                print '<string>';
             }
-            if ( $opt->{max_values} > 1 ) { print ",..." }
+            if ( $opt->{max_values} > 1 ) { print ',...' }
         }
         elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-            my $string_format = "%g..%g";
-            if ( $opt->{type} == SANE_TYPE_INT ) { $string_format = "%d..%d" }
+            my $string_format = '%g..%g';
+            if ( $opt->{type} == SANE_TYPE_INT ) { $string_format = '%d..%d' }
             if ( $opt->{name} eq SANE_NAME_SCAN_BR_X ) {
                 printf $string_format, $opt->{constraint}{min},
                   $opt->{constraint}{max} - $tl_x;
@@ -231,7 +231,7 @@ sub print_option_choices {    ## no critic (ProhibitExcessComplexity)
                   $opt->{constraint}{max};
             }
             print_unit( $opt->{unit} );
-            if ( $opt->{max_values} > 1 ) { print ",..." }
+            if ( $opt->{max_values} > 1 ) { print ',...' }
             if ( $opt->{constraint}{quant} ) {
                 print " (in steps of $opt->{constraint}{quant})";
             }
@@ -248,7 +248,7 @@ sub print_option_choices {    ## no critic (ProhibitExcessComplexity)
             }
             if ( $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
                 print_unit( $opt->{unit} );
-                if ( $opt->{max_values} > 1 ) { print ",..." }
+                if ( $opt->{max_values} > 1 ) { print ',...' }
             }
         }
     }
@@ -262,15 +262,15 @@ sub print_current_option_value {
         # print current option value
         if ( !( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
             my $val = $device->get_option($opt_num);
-            print " [";
+            print ' [';
             if ( $opt->{type} == SANE_TYPE_BOOL ) {
-                print( $val ? "yes" : "no" );
+                print( $val ? 'yes' : 'no' );
             }
             elsif ($opt->{type} == SANE_TYPE_INT
                 or $opt->{type} == SANE_TYPE_FIXED )
             {
-                my $string_format = "%g";
-                if ( $opt->{type} == SANE_TYPE_INT ) { $string_format = "%d" }
+                my $string_format = '%g';
+                if ( $opt->{type} == SANE_TYPE_INT ) { $string_format = '%d' }
                 given ( $opt->{name} ) {
                     when (SANE_NAME_SCAN_TL_X) {
                         $tl_x = $val;
@@ -769,9 +769,9 @@ sub log_frame_info {
             }
             else {
                 printf STDERR "$prog_name: receiving %s frame "
-                  . "bytes/line=%d, "
-                  . "pixels/line=%d, "
-                  . "lines=%d, "
+                  . 'bytes/line=%d, '
+                  . 'pixels/line=%d, '
+                  . 'lines=%d, '
                   . "depth=%d\n",, sane_strframe( $parm->{format} ),
                   $parm->{bytes_per_line},
                   $parm->{pixels_per_line},
@@ -1082,7 +1082,7 @@ sub print_options {
         my $opt = 0;
         for my $j ( 0 .. $INDENT - 1 ) {
             if ( $i == $window[$j] ) {
-                $short_name = substr( "xylt", $j, 1 );
+                $short_name = substr( 'xylt', $j, 1 );
                 if ( $j < 2 ) { $opt = $window_option[$j] }
             }
         }
