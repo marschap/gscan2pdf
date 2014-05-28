@@ -563,8 +563,8 @@ sub update_geometry {
             when (SANE_NAME_SCAN_TL_Y) {
                 $window[3]        = $i;      ## no critic (ProhibitMagicNumbers)
                 $window_option[3] = $opt;    ## no critic (ProhibitMagicNumbers)
-                $window_option[3]->{name} =
-                  't';                       ## no critic (ProhibitMagicNumbers)
+                $window_option[3]->{name} =  ## no critic (ProhibitMagicNumbers)
+                  't';
             }
         }
     }
@@ -930,11 +930,11 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
             or $parm->{format} == SANE_FRAME_BLUE )
         {
             for my $i ( 0 .. $len - 1 ) {
-                $image->{data}[ $offset + 3 * $i ]
-                  =    ## no critic (ProhibitMagicNumbers)
-                  substr $buffer, $i, 1;
+                $image->{data}
+                  [ $offset + 3 * $i ]    ## no critic (ProhibitMagicNumbers)
+                  = substr $buffer, $i, 1;
             }
-            $offset += 3 * $len;    ## no critic (ProhibitMagicNumbers)
+            $offset += 3 * $len;          ## no critic (ProhibitMagicNumbers)
         }
         elsif ($parm->{format} == SANE_FRAME_RGB
             or $parm->{format} == SANE_FRAME_GRAY )
@@ -945,7 +945,7 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
             $offset += $len;
         }
     }
-    else {                          # ! must_buffer
+    else {                                # ! must_buffer
 
         #    if (($output_format == OUTPUT_TIFF) or ($parm->{depth} != 16)) {
         #     printstdout($buffer);
@@ -1048,15 +1048,17 @@ sub scan_pages {    ## no critic (ProhibitExcessComplexity)
     while (
         (
             $batch
-            and ( $batch_count == -1
-                or --$batch_count )    ## no critic (ProhibitMagicNumbers)
+            and (
+                $batch_count == -1    ## no critic (ProhibitMagicNumbers)
+                or --$batch_count
+            )
         )
         and (  $Sane::STATUS == SANE_STATUS_GOOD
             or $Sane::STATUS == SANE_STATUS_EOF )
       )
     {
         my ( $path, $part_path, $fh );
-        if ($batch) {                  # format is NULL unless batch mode
+        if ($batch) {                 # format is NULL unless batch mode
             $path = sprintf $format, $n;
             $part_path = "$path.part";
         }
@@ -1108,9 +1110,8 @@ sub scan_pages {    ## no critic (ProhibitExcessComplexity)
 
                 # close output file by redirecting, do not close stdout here!
                 if (
-                    open $fh, '>',
-                    '/dev/null'    ## no critic (RequireBriefOpen)
-                    and STDOUT->fdopen( $fh, '>' )
+                    open $fh, '>',    ## no critic (RequireBriefOpen)
+                    '/dev/null' and STDOUT->fdopen( $fh, '>' )
                   )
                 {
 
