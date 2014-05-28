@@ -2,7 +2,7 @@
 
 use warnings;
 use strict;
-use feature "switch";
+use feature 'switch';
 use Sane;
 use Getopt::Long qw(:config no_ignore_case pass_through);
 use File::Basename;
@@ -97,22 +97,22 @@ sub print_unit {
 
     given ($unit) {
         when (SANE_UNIT_PIXEL) {
-            print "pel";
+            print 'pel';
         }
         when (SANE_UNIT_BIT) {
-            print "bit";
+            print 'bit';
         }
         when (SANE_UNIT_MM) {
-            print "mm";
+            print 'mm';
         }
         when (SANE_UNIT_DPI) {
-            print "dpi";
+            print 'dpi';
         }
         when (SANE_UNIT_PERCENT) {
             print q{%};
         }
         when (SANE_UNIT_MICROSECOND) {
-            print "us";
+            print 'us';
         }
     }
     return;
@@ -163,25 +163,25 @@ sub print_option {
 
     # print the option
     if ( $opt->{name} =~ /^[xytl]$/xsm ) {
-        printf "    -%s", $opt->{name};
+        printf '    -%s', $opt->{name};
     }
     else {
-        printf "    --%s", $opt->{name};
+        printf '    --%s', $opt->{name};
     }
 
     print_option_choices($opt);
     print_current_option_value( $opt, $opt_num );
 
     if ( $opt->{cap} & SANE_CAP_INACTIVE ) {
-        print " [inactive]";
+        print ' [inactive]';
     }
     elsif ( $opt->{cap} & SANE_CAP_HARD_SELECT ) {
-        print " [hardware]";
+        print ' [hardware]';
     }
     elsif ( not( $opt->{cap} & SANE_CAP_SOFT_SELECT )
         and $opt->{cap} & SANE_CAP_SOFT_DETECT )
     {
-        print " [read-only]";
+        print ' [read-only]';
     }
 
     print "\n        ";
@@ -217,35 +217,35 @@ sub print_option {
 sub print_option_choices {               ## no critic (ProhibitExcessComplexity)
     my ($opt) = @_;
     if ( $opt->{type} == SANE_TYPE_BOOL ) {
-        print "[=(";
-        if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) { print "auto|" }
-        print "yes|no)]";
+        print '[=(';
+        if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) { print 'auto|' }
+        print 'yes|no)]';
     }
     elsif ( $opt->{type} != SANE_TYPE_BUTTON ) {
         print $SPACE;
         if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) {
-            print "auto|";
+            print 'auto|';
         }
         if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
             if ( $opt->{type} == SANE_TYPE_INT ) {
-                print "<int>";
+                print '<int>';
             }
             elsif ( $opt->{type} == SANE_TYPE_FIXED ) {
-                print "<float>";
+                print '<float>';
             }
             elsif ( $opt->{type} == SANE_TYPE_STRING ) {
-                print "<string>";
+                print '<string>';
             }
-            if ( $opt->{max_values} > 1 ) { print ",..." }
+            if ( $opt->{max_values} > 1 ) { print ',...' }
         }
         elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-            my $string_format = "%g..%g";
-            if ( $opt->{type} == SANE_TYPE_INT ) { $string_format = "%d..%d" }
-            if ( $opt->{name} eq "x" ) {
+            my $string_format = '%g..%g';
+            if ( $opt->{type} == SANE_TYPE_INT ) { $string_format = '%d..%d' }
+            if ( $opt->{name} eq 'x' ) {
                 printf $string_format, $opt->{constraint}{min},
                   $opt->{constraint}{max} - $tl_x;
             }
-            elsif ( $opt->{name} eq "y" ) {
+            elsif ( $opt->{name} eq 'y' ) {
                 printf $string_format, $opt->{constraint}{min},
                   $opt->{constraint}{max} - $tl_y;
             }
@@ -254,7 +254,7 @@ sub print_option_choices {               ## no critic (ProhibitExcessComplexity)
                   $opt->{constraint}{max};
             }
             print_unit( $opt->{unit} );
-            if ( $opt->{max_values} > 1 ) { print ",..." }
+            if ( $opt->{max_values} > 1 ) { print ',...' }
             if ( $opt->{constraint}{quant} ) {
                 print " (in steps of $opt->{constraint}{quant})";
             }
@@ -271,7 +271,7 @@ sub print_option_choices {               ## no critic (ProhibitExcessComplexity)
             }
             if ( $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
                 print_unit( $opt->{unit} );
-                if ( $opt->{max_values} > 1 ) { print ",..." }
+                if ( $opt->{max_values} > 1 ) { print ',...' }
             }
         }
     }
@@ -283,29 +283,29 @@ sub print_current_option_value {
     if ( $opt->{max_values} == 1 ) {
         if ( not( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
             my $val = $device->get_option($opt_num);
-            print " [";
+            print ' [';
             if ( $opt->{type} == SANE_TYPE_BOOL ) {
-                print( $val ? "yes" : "no" );
+                print( $val ? 'yes' : 'no' );
             }
             elsif ($opt->{type} == SANE_TYPE_INT
                 or $opt->{type} == SANE_TYPE_FIXED )
             {
-                my $string_format = "%g";
-                if ( $opt->{type} == SANE_TYPE_INT ) { $string_format = "%d" }
+                my $string_format = '%g';
+                if ( $opt->{type} == SANE_TYPE_INT ) { $string_format = '%d' }
                 given ( $opt->{name} ) {
-                    when ("l") {
+                    when ('l') {
                         $tl_x = $val;
                         printf $string_format, $tl_x;
                     }
-                    when ("t") {
+                    when ('t') {
                         $tl_y = $val;
                         printf $string_format, $tl_y;
                     }
-                    when ("x") {
+                    when ('x') {
                         $br_x = $val;
                         printf $string_format, $br_x - $tl_x;
                     }
-                    when ("y") {
+                    when ('y') {
                         $br_y = $val;
                         printf $string_format, $br_y - $tl_y;
                     }
@@ -700,7 +700,7 @@ sub scan_it {
     my $min         = $MAXVAL_8_BIT;
     my $max         = 0;
     my %image;
-    my @format_name = ( "gray", "RGB", "red", "green", "blue" );
+    my @format_name = qw( gray RGB red green blue );
     my $total_bytes = 0;
 
     # my $hang_over = -1;
@@ -806,7 +806,7 @@ sub log_frame_info {
         printf STDERR "$prog_name: acquiring %s frame\n",
           $parm->{format} <= SANE_FRAME_BLUE
           ? $format_name[ $parm->{format} ]
-          : "Unknown";
+          : 'Unknown';
     }
     return;
 }
@@ -823,7 +823,7 @@ sub log_bytes_read {
     );
     if ( $parm->{lines} < 0 ) { $expected_bytes = 0 }
     if ( $total_bytes > $expected_bytes and $expected_bytes != 0 ) {
-        printf STDERR "%s: WARNING: read more data than announced by backend "
+        printf STDERR '%s: WARNING: read more data than announced by backend '
           . "(%u/%u)\n", $prog_name, $total_bytes, $expected_bytes;
     }
     elsif ($verbose) {
@@ -1013,7 +1013,7 @@ sub scan_pages {    ## no critic (ProhibitExcessComplexity)
         #   $format = "out%d.tif";
         #  }
         #  else {
-        $format = "out%d.pnm";
+        $format = 'out%d.pnm';
 
         #  }
     }
@@ -1077,7 +1077,7 @@ sub scan_pages {    ## no critic (ProhibitExcessComplexity)
 
         scan_it();
         if ($batch) {
-            printf STDERR "Scanned page %d.",         $n;
+            printf STDERR 'Scanned page %d.',         $n;
             printf STDERR " (scanner status = %d)\n", $Sane::STATUS;
         }
 
@@ -1144,7 +1144,7 @@ sub pass_fail {
 
 sub test_it {
     my %image;
-    my @format_name = ( "gray", "RGB", "red", "green", "blue" );
+    my @format_name = qw( gray RGB red green blue );
 
     $device->start;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
@@ -1171,7 +1171,7 @@ sub test_it {
     printf STDERR "$prog_name: acquiring %s frame, %d bits/sample\n",
       $parm->{format} <= SANE_FRAME_BLUE
       ? $format_name[ $parm->{format} ]
-      : "Unknown",
+      : 'Unknown',
       $parm->{depth};
 
     printf STDERR "$prog_name: reading one scanline, %d bytes...\t",
@@ -1403,9 +1403,9 @@ sub open_device {
             print STDERR "\nYou seem to have specified a UNIX device name, "
               . "or filename instead of selecting\nthe SANE scanner or "
               . "image acquisition device you want to use. As an example,\n"
-              . "you might want \"epson:/dev/sg0\" or "
+              . 'you might want "epson:/dev/sg0" or '
               . "\"hp:/dev/usbscanner0\". If any supported\ndevices are "
-              . "installed in your system, you should be able to see a "
+              . 'installed in your system, you should be able to see a '
               . "list with\n\"$prog_name --list-devices\".\n";
         }
         if ($help) {
