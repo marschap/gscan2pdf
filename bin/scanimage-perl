@@ -361,11 +361,11 @@ sub parse_scalar {
 
     my ( $v, $unit, $rest );
     if (
-        $str =~ /^
-               (\d*\.?\d*) # value
-               (cm|mm|in|\"|b|B|dpi|%|us)? # optional unit
+        $str =~ qr{^
+               (\d*[.]?\d*) # value
+               (cm|mm|in|["bB%]|dpi|us)? # optional unit
                (.*) # rest of string
-              /xsm
+              }xsm
       )
     {
         $v    = $1;
