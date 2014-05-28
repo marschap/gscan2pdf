@@ -10,9 +10,9 @@ ok( !system('perl bin/scanimage-perl --device=test --test > /dev/null 2>&1'),
 #########################
 
 SKIP: {
-    skip 'scanimage v1.0.23 not installed', 2
-      unless ( `scanimage --version` eq
-        "scanimage (sane-backends) 1.0.23; backend version 1.0.23\n" );
+    skip 'scanimage v1.0.23 or 1.0.24 not installed', 2
+      unless ( `scanimage --version` =~
+        /^scanimage \(sane-backends\) 1.0.2[34]; backend version 1.0.2[34]/ );
 
     my $output = `perl bin/scanimage-perl --device=test --help`;
     $output =~ s/scanimage-perl/scanimage/g;

@@ -74,7 +74,7 @@ my @args             = (
 
 sub printstdout {
     my ($msg) = @_;
-    if ( print $msg) { die "Error writing to STDOUT\n" }
+    if ( not print $msg) { die "Error writing to STDOUT\n" }
     return;
 }
 
