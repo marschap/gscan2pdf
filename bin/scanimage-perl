@@ -69,7 +69,7 @@ my @args             = (
     'h|help'            => \$help,
     'v|verbose+'        => \$verbose,
     'B|buffer-size=i'   => \$buffer_size,
-    'V|version'
+    'V|version',
 );
 
 sub printstdout {
