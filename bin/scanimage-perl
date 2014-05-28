@@ -374,10 +374,8 @@ sub parse_scalar {
         if ( not defined $unit ) { $unit = $EMPTY }
     }
     else {
-        printstderr(
-"$prog_name: option --$opt->{name}: bad option value (rest of option: $str)\n"
-        );
-        exit 1;
+        die
+"$prog_name: option --$opt->{name}: bad option value (rest of option: $str)\n";
     }
 
     if ( $opt->{unit} == SANE_UNIT_BIT ) {
@@ -426,10 +424,9 @@ sub parse_vector {
         if ( $str =~ /^\[(\d+)(\])?/xsm ) {
             $index = $1;
             if ( $2 ne '\]' ) {
-                printstderr(
-"$prog_name: option --$opt->{name}: closing bracket missing "
-                      . "(rest of option: $str)\n" );
-                exit 1;
+                die
+                  "$prog_name: option --$opt->{name}: closing bracket missing "
+                  . "(rest of option: $str)\n";
             }
         }
         else {
@@ -437,22 +434,18 @@ sub parse_vector {
         }
 
         if ( $index < 0 or $index >= length $str ) {
-            printstderr(
-                sprintf
-"$prog_name: option --$opt->{name}: index $index out of range [0..%d]\n",
-                length $str
-            );
-            exit 1;
+            my $msg = sprintf
+"$prog_name: option --$opt->{name}: index $index out of range [0..%d]",
+              length $str;
+            die "$msg\n";
         }
 
         # read value
         ( $value, $str ) = parse_scalar( $opt, $str );
 
         if ( $str ne $EMPTY and $str !~ /^[-,]/xsm ) {
-            printstderr(
-"$prog_name: option --$opt->{name}: illegal separator (rest of option: $str)\n"
-            );
-            exit 1;
+            die
+"$prog_name: option --$opt->{name}: illegal separator (rest of option: $str)\n";
         }
 
         # store value:
@@ -490,22 +483,19 @@ sub fetch_options {
 
     my $opt = $device->get_option_descriptor(0);
     if ( not defined $opt ) {
-        printstderr("Could not get option descriptor for option 0\n");
-        exit 1;
+        die "Could not get option descriptor for option 0\n";
     }
 
     $num_dev_options = $device->get_option(0);
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        printstderr("Could not get value for option 0: $Sane::STATUS\n");
-        exit 1;
+        die "Could not get value for option 0: $Sane::STATUS\n";
     }
 
     # build the full table of long options
     for my $i ( 1 .. $num_dev_options - 1 ) {
         $opt = $device->get_option_descriptor($i);
         if ( not defined $opt ) {
-            printstderr("Could not get option descriptor for option $i\n");
-            exit 1;
+            die "Could not get option descriptor for option $i\n";
         }
 
         next if ( not( $opt->{cap} & SANE_CAP_SOFT_SELECT ) );
@@ -596,10 +586,8 @@ sub set_option {
 
     my $info = $device->set_option( $optnum, $value );
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        printstderr(
-"$prog_name: setting of option --$opt->{name} failed ($Sane::STATUS)\n"
-        );
-        exit 1;
+        die
+"$prog_name: setting of option --$opt->{name} failed ($Sane::STATUS)\n";
     }
 
     if ( ( $info & SANE_INFO_INEXACT ) and $opt->{max_values} == 1 ) {
@@ -630,9 +618,7 @@ sub process_backend_option {
     my $opt = $device->get_option_descriptor($optnum);
 
     if ( $opt and ( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
-        printstderr(
-            "$prog_name: attempted to set inactive option $opt->{name}\n");
-        exit 1;
+        die "$prog_name: attempted to set inactive option $opt->{name}\n";
     }
 
     if (    ( $opt->{cap} & SANE_CAP_AUTOMATIC )
@@ -641,11 +627,8 @@ sub process_backend_option {
     {
         $device->set_auto($optnum);
         if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-            printstderr(
-                sprintf
-"$prog_name: failed to set option --$opt->{name} to automatic ($Sane::STATUS)\n"
-            );
-            exit 1;
+            die
+"$prog_name: failed to set option --$opt->{name} to automatic ($Sane::STATUS)\n";
         }
         return;
     }
@@ -1388,8 +1371,7 @@ sub list_device_names {
 sub list_devices_verbose {
     my @device_list = Sane->get_devices;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        printstderr("$prog_name: sane_get_devices() failed: $Sane::STATUS\n");
-        exit 1;
+        die "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
     }
     if ( defined $options{L} ) {
         foreach (@device_list) {
@@ -1433,13 +1415,10 @@ sub open_device {
         else {
             my @device_list = Sane->get_devices;
             if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-                printstderr(
-                    "$prog_name: sane_get_devices() failed: $Sane::STATUS\n");
-                exit 1;
+                die "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
             }
             if ( not @device_list ) {
-                printstderr("$prog_name: no SANE devices found\n");
-                exit 1;
+                die "$prog_name: no SANE devices found\n";
             }
             $devname = $device_list[0]{name};
         }
