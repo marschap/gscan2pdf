@@ -101,11 +101,23 @@ sub sane_isbasicframe {
       || $frame == SANE_FRAME_BLUE;
 }
 
+sub printstdout {
+    my ($msg) = @_;
+    if ( not print $msg) { die "Error writing to STDOUT\n" }
+    return;
+}
+
+sub printstderr {
+    my ($msg) = @_;
+    print {*STDERR} $msg;    ## no critic (RequireCheckedSyscalls)
+    return;
+}
+
 sub sighandler {
     my $signum = shift;
 
     if ($device) {
-        print STDERR "$prog_name: stopping scanner...\n";
+        printstderr("$prog_name: stopping scanner...\n");
         $device->cancel;
     }
     return;
@@ -116,22 +128,22 @@ sub print_unit {
 
     given ($unit) {
         when (SANE_UNIT_PIXEL) {
-            print 'pel';
+            printstdout('pel');
         }
         when (SANE_UNIT_BIT) {
-            print 'bit';
+            printstdout('bit');
         }
         when (SANE_UNIT_MM) {
-            print 'mm';
+            printstdout('mm');
         }
         when (SANE_UNIT_DPI) {
-            print 'dpi';
+            printstdout('dpi');
         }
         when (SANE_UNIT_PERCENT) {
-            print q{%};
+            printstdout(q{%});
         }
         when (SANE_UNIT_MICROSECOND) {
-            print 'us';
+            printstdout('us');
         }
     }
     return;
@@ -154,16 +166,16 @@ sub print_option {
 
     if ( $opt->{type} != SANE_TYPE_BUTTON and $opt->{cap} & SANE_CAP_INACTIVE )
     {
-        print ' [inactive]';
+        printstdout(' [inactive]');
     }
 
-    print "\n        ";
+    printstdout("\n        ");
 
     if ( $short_name eq 'x' ) {
-        print 'Width of scan-area.';
+        printstdout('Width of scan-area.');
     }
     elsif ( $short_name eq 'y' ) {
-        print 'Height of scan-area.';
+        printstdout('Height of scan-area.');
     }
     else {
         my $column     = $START_COLUMN;
@@ -176,44 +188,44 @@ sub print_option {
             }
             if ( $column >= $END_COLUMN - 1 and $last_break ) {
                 while ( $start < $last_break ) {
-                    print substr( $opt->{desc}, $start++, 1 );
+                    printstdout( substr( $opt->{desc}, $start++, 1 ) );
                 }
                 $start = $last_break + 1;    # skip blank
-                print "\n        ";
+                printstdout("\n        ");
                 $column = $START_COLUMN + $pos - $start;
             }
         }
         while ( $start < length( $opt->{desc} ) ) {
-            print substr( $opt->{desc}, $start++, 1 );
+            printstdout( substr( $opt->{desc}, $start++, 1 ) );
         }
     }
-    print "\n";
+    printstdout("\n");
     return;
 }
 
 sub print_option_choices {    ## no critic (ProhibitExcessComplexity)
     my ($opt) = @_;
     if ( $opt->{type} == SANE_TYPE_BOOL ) {
-        print '[=(';
-        if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) { print 'auto|' }
-        print 'yes|no)]';
+        printstdout('[=(');
+        if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) { printstdout('auto|') }
+        printstdout('yes|no)]');
     }
     elsif ( $opt->{type} != SANE_TYPE_BUTTON ) {
-        print $SPACE;
+        printstdout($SPACE);
         if ( $opt->{cap} & SANE_CAP_AUTOMATIC ) {
-            print 'auto|';
+            printstdout('auto|');
         }
         if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
             if ( $opt->{type} == SANE_TYPE_INT ) {
-                print '<int>';
+                printstdout('<int>');
             }
             elsif ( $opt->{type} == SANE_TYPE_FIXED ) {
-                print '<float>';
+                printstdout('<float>');
             }
             elsif ( $opt->{type} == SANE_TYPE_STRING ) {
-                print '<string>';
+                printstdout('<string>');
             }
-            if ( $opt->{max_values} > 1 ) { print ',...' }
+            if ( $opt->{max_values} > 1 ) { printstdout(',...') }
         }
         elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
             my $string_format = '%g..%g';
@@ -231,16 +243,16 @@ sub print_option_choices {    ## no critic (ProhibitExcessComplexity)
                   $opt->{constraint}{max};
             }
             print_unit( $opt->{unit} );
-            if ( $opt->{max_values} > 1 ) { print ',...' }
+            if ( $opt->{max_values} > 1 ) { printstdout(',...') }
             if ( $opt->{constraint}{quant} ) {
-                print " (in steps of $opt->{constraint}{quant})";
+                printstdout(" (in steps of $opt->{constraint}{quant})");
             }
         }
         elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
             or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
         {
             for my $i ( 0 .. $#{ $opt->{constraint} } ) {
-                if ( $i > 0 ) { print q{|} }
+                if ( $i > 0 ) { printstdout(q{|}) }
                 my $string_format =
                   $opt->{type} == SANE_TYPE_FIXED ? '%g' : '%s';
 
@@ -248,7 +260,7 @@ sub print_option_choices {    ## no critic (ProhibitExcessComplexity)
             }
             if ( $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
                 print_unit( $opt->{unit} );
-                if ( $opt->{max_values} > 1 ) { print ',...' }
+                if ( $opt->{max_values} > 1 ) { printstdout(',...') }
             }
         }
     }
@@ -262,9 +274,9 @@ sub print_current_option_value {
         # print current option value
         if ( !( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
             my $val = $device->get_option($opt_num);
-            print ' [';
+            printstdout(' [');
             if ( $opt->{type} == SANE_TYPE_BOOL ) {
-                print( $val ? 'yes' : 'no' );
+                printstdout( $val ? 'yes' : 'no' );
             }
             elsif ($opt->{type} == SANE_TYPE_INT
                 or $opt->{type} == SANE_TYPE_FIXED )
@@ -296,9 +308,9 @@ sub print_current_option_value {
                 }
             }
             elsif ( $opt->{type} == SANE_TYPE_STRING ) {
-                print $val;
+                printstdout($val);
             }
-            print ']';
+            printstdout(']');
         }
     }
     return;
@@ -341,9 +353,8 @@ sub parse_scalar {
         if ( not defined($unit) ) { $unit = $EMPTY }
     }
     else {
-        print STDERR
+        die
 "$prog_name: option --$opt->{name}: bad option value (rest of option: $str)\n";
-        exit(1);
     }
 
     if ( $opt->{unit} == SANE_UNIT_BIT ) {
@@ -392,10 +403,9 @@ sub parse_vector {
         if ( $str =~ /^\[(\d+)(\])?/xsm ) {
             $index = $1;
             if ( $2 ne '\]' ) {
-                print STDERR
+                die
                   "$prog_name: option --$opt->{name}: closing bracket missing "
                   . "(rest of option: $str)\n";
-                exit(1);
             }
         }
         else {
@@ -403,9 +413,11 @@ sub parse_vector {
         }
 
         if ( $index < 0 or $index >= length($str) ) {
-            printf STDERR
+            printstderr(
+                sprintf
 "$prog_name: option --$opt->{name}: index $index out of range [0..%d]\n",
-              length($str);
+                length($str)
+            );
             exit(1);
         }
 
@@ -413,9 +425,8 @@ sub parse_vector {
         ( $value, $str ) = parse_scalar( $opt, $str );
 
         if ( $str ne $EMPTY and $str !~ /^[-,]/xsm ) {
-            print STDERR
+            die
 "$prog_name: option --$opt->{name}: illegal separator (rest of option: $str)\n";
-            exit(1);
         }
 
         # store value:
@@ -438,11 +449,11 @@ sub parse_vector {
     }
 
     if ( $verbose > 2 ) {
-        print STDERR "$prog_name: value for --$opt->{name} is: ";
+        printstderr("$prog_name: value for --$opt->{name} is: ");
         for (@vector) {
-            print STDERR "$_ ";
+            printstderr("$_ ");
         }
-        print STDERR "\n";
+        printstderr("\n");
     }
 
     return @vector;
@@ -454,8 +465,7 @@ sub fetch_options {
     # We got a device, find out how many options it has:
     $num_dev_options = $device->get_option(0);
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        print STDERR "$prog_name: unable to determine option count\n";
-        exit(1);
+        die "$prog_name: unable to determine option count\n";
     }
 
     for my $i ( 0 .. $num_dev_options - 1 ) {
@@ -538,7 +548,7 @@ sub set_option {
     my $opt = $device->get_option_descriptor($optnum);
     if ( $opt and ( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
         if ( $verbose > 0 ) {
-            print STDERR
+            warn
 "$prog_name: ignored request to set inactive option $opt->{name}\n";
         }
         return;
@@ -546,23 +556,26 @@ sub set_option {
 
     my $info = $device->set_option( $optnum, $value );
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        print STDERR
+        die
 "$prog_name: setting of option --$opt->{name} failed ($Sane::STATUS)\n";
-        exit(1);
     }
 
     if ( ( $info & SANE_INFO_INEXACT ) and $opt->{max_values} == 1 ) {
         my $orig = $value;
         $value = $device->get_option($optnum);
         if ( $opt->{type} == SANE_TYPE_INT ) {
-            printf STDERR
-              "$prog_name: rounded value of $opt->{name} from %d to %d\n",
-              $orig, $value;
+            printstderr(
+                sprintf
+                  "$prog_name: rounded value of $opt->{name} from %d to %d\n",
+                $orig, $value
+            );
         }
         elsif ( $opt->{type} == SANE_TYPE_FIXED ) {
-            printf STDERR
-              "$prog_name: rounded value of $opt->{name} from %g to %g\n",
-              $orig, $value;
+            printstderr(
+                sprintf
+                  "$prog_name: rounded value of $opt->{name} from %g to %g\n",
+                $orig, $value
+            );
         }
     }
     if ( $info & SANE_INFO_RELOAD_OPTIONS ) { fetch_options($device) }
@@ -575,9 +588,7 @@ sub process_backend_option {
     my $opt = $device->get_option_descriptor($optnum);
 
     if ( $opt and ( $opt->{cap} & SANE_CAP_INACTIVE ) ) {
-        print STDERR
-          "$prog_name: attempted to set inactive option $opt->{name}\n";
-        exit(1);
+        die "$prog_name: attempted to set inactive option $opt->{name}\n";
     }
 
     if (    ( $opt->{cap} & SANE_CAP_AUTOMATIC )
@@ -586,9 +597,8 @@ sub process_backend_option {
     {
         $device->set_auto($optnum);
         if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-            printf STDERR
+            die
 "$prog_name: failed to set option --$opt->{name} to automatic ($Sane::STATUS)\n";
-            exit(1);
         }
         return;
     }
@@ -605,9 +615,8 @@ sub process_backend_option {
                     $value = 0;
                 }
                 else {
-                    printf STDERR
+                    die
 "$prog_name: option --$opt->{name}: bad option value `$optarg'\n";
-                    exit(1);
                 }
             }
         }
@@ -626,8 +635,7 @@ sub process_backend_option {
             $value = 0;    # value doesn't matter
         }
         default {
-            printf STDERR
-              "$prog_name: duh, got unknown option type $opt->{type}\n";
+            warn "$prog_name: duh, got unknown option type $opt->{type}\n";
             return;
         }
     }
@@ -647,15 +655,16 @@ sub write_pnm_header_to_file {
         or $frame_format == SANE_FRAME_BLUE
         or $frame_format == SANE_FRAME_RGB )
     {
-        printf $fh "P6\n# SANE data follows\n%d %d\n%d\n", $width, $height,
+        printf {$fh} "P6\n# SANE data follows\n%d %d\n%d\n", $width, $height,
           ( $depth <= $_8_BIT ) ? $MAXVAL_8_BIT : $MAXVAL_16_BIT;
     }
     elsif ( $frame_format == SANE_FRAME_GRAY ) {
         if ( $depth == 1 ) {
-            printf $fh "P4\n# SANE data follows\n%d %d\n", $width, $height;
+            printf {$fh} "P4\n# SANE data follows\n%d %d\n", $width, $height;
         }
         else {
-            printf $fh "P5\n# SANE data follows\n%d %d\n%d\n", $width, $height,
+            printf {$fh} "P5\n# SANE data follows\n%d %d\n%d\n", $width,
+              $height,
               ( $depth <= $_8_BIT ) ? $MAXVAL_8_BIT : $MAXVAL_16_BIT;
         }
     }
@@ -680,12 +689,13 @@ sub scan_it_raw {
             my ( $buffer, $len ) = $device->read($BUFFER_SIZE);
             if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
                 if ( $verbose && $parm->{depth} == $_8_BIT ) {
-                    printf STDERR
-                      "$prog_name: min/max graylevel value = %d/%d\n", $min,
-                      $max;
+                    printstderr(
+                        sprintf "$prog_name: min/max graylevel value = %d/%d\n",
+                        $min, $max
+                    );
                 }
                 if ( $Sane::STATUS != SANE_STATUS_EOF ) {
-                    print STDERR "$prog_name: sane_read: $Sane::STATUS\n";
+                    warn "$prog_name: sane_read: $Sane::STATUS\n";
                     return;
                 }
                 last;
@@ -728,20 +738,20 @@ sub log_frame_info {
     $device->start;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
         if ( $Sane::STATUS != SANE_STATUS_NO_DOCS ) {
-            print STDERR "$prog_name: sane_start: $Sane::STATUS\n";
+            warn "$prog_name: sane_start: $Sane::STATUS\n";
         }
         goto cleanup;
     }
 
     $parm = $device->get_parameters;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        print STDERR "$prog_name: sane_get_parameters: $Sane::STATUS\n";
+        warn "$prog_name: sane_get_parameters: $Sane::STATUS\n";
         goto cleanup;
     }
 
     if ( not open( $fp, '>', $fname ) )    ## no critic (RequireBriefOpen)
     {
-        print STDERR "Error opening output `$fname': $EVAL_ERROR\n";
+        warn "Error opening output `$fname': $EVAL_ERROR\n";
         $Sane::_status =   ## no critic (ProhibitPackageVars ProtectPrivateVars)
           SANE_STATUS_IO_ERROR;
         goto cleanup;
@@ -751,37 +761,46 @@ sub log_frame_info {
         if ($first_frame) {
             if ( sane_isbasicframe( $parm->{format} ) ) {
                 if ( $parm->{lines} >= 0 ) {
-                    printf STDERR
-                      "$prog_name: scanning image of size %dx%d pixels at "
-                      . "%d bits/pixel\n",
-                      $parm->{pixels_per_line}, $parm->{lines},
-                      $_8_BIT * $parm->{bytes_per_line} /
-                      $parm->{pixels_per_line};
+                    printstderr(
+                        sprintf
+                          "$prog_name: scanning image of size %dx%d pixels at "
+                          . "%d bits/pixel\n",
+                        $parm->{pixels_per_line},
+                        $parm->{lines},
+                        $_8_BIT * $parm->{bytes_per_line} /
+                          $parm->{pixels_per_line}
+                    );
                 }
                 else {
-                    printf STDERR
-                      "$prog_name: scanning image %d pixels wide and "
-                      . "variable height at %d bits/pixel\n",
-                      $parm->{pixels_per_line},
-                      $_8_BIT * $parm->{bytes_per_line} /
-                      $parm->{pixels_per_line};
+                    printstderr(
+                        sprintf
+                          "$prog_name: scanning image %d pixels wide and "
+                          . "variable height at %d bits/pixel\n",
+                        $parm->{pixels_per_line},
+                        $_8_BIT * $parm->{bytes_per_line} /
+                          $parm->{pixels_per_line}
+                    );
                 }
             }
             else {
-                printf STDERR "$prog_name: receiving %s frame "
-                  . 'bytes/line=%d, '
-                  . 'pixels/line=%d, '
-                  . 'lines=%d, '
-                  . "depth=%d\n",, sane_strframe( $parm->{format} ),
-                  $parm->{bytes_per_line},
-                  $parm->{pixels_per_line},
-                  $parm->{lines},
-                  $parm->{depth};
+                printstderr(
+                    sprintf "$prog_name: receiving %s frame "
+                      . 'bytes/line=%d, '
+                      . 'pixels/line=%d, '
+                      . 'lines=%d, '
+                      . "depth=%d\n",
+                    ,
+                    sane_strframe( $parm->{format} ),
+                    $parm->{bytes_per_line},
+                    $parm->{pixels_per_line},
+                    $parm->{lines},
+                    $parm->{depth}
+                );
             }
         }
 
-        printf STDERR "$prog_name: acquiring %s frame\n",
-          sane_strframe( $parm->{format} );
+        printstderr( sprintf "$prog_name: acquiring %s frame\n",
+            sane_strframe( $parm->{format} ) );
     }
     return;
 }
@@ -839,8 +858,9 @@ sub initialise_scan {    ## no critic (ProhibitExcessComplexity)
                 $Sane::_status
                   =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
                   SANE_STATUS_INVAL;
-                printf STDERR "$prog_name: bad %s frame: must be last_frame\n",
-                  sane_strframe( $parm->{format} );
+                printstderr(
+                    sprintf "$prog_name: bad %s frame: must be last_frame\n",
+                    sane_strframe( $parm->{format} ) );
                 goto cleanup;
             }
         }
@@ -853,15 +873,15 @@ sub initialise_scan {    ## no critic (ProhibitExcessComplexity)
             # Since we're not writing a header, there's no need to
             # buffer.
             if ($verbose) {
-                printf STDERR
-                  "$prog_name: unknown frame format $parm->{format}\n";
+                warn "$prog_name: unknown frame format $parm->{format}\n";
             }
             if ( !$parm->{last_frame} ) {
                 $Sane::_status
                   =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
                   SANE_STATUS_INVAL;
-                printf STDERR "$prog_name: bad %s frame: must be last_frame\n",
-                  sane_strframe( $parm->{format} );
+                printstderr(
+                    sprintf "$prog_name: bad %s frame: must be last_frame\n",
+                    sane_strframe( $parm->{format} ) );
                 goto cleanup;
             }
         }
@@ -907,12 +927,13 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
         else {
 
             # optional frametypes are never buffered
-            printf STDERR "$prog_name: ERROR: trying to buffer %s frametype\n",
-              sane_strframe( $parm->{format} );
+            printstderr(
+                sprintf "$prog_name: ERROR: trying to buffer %s frametype\n",
+                sane_strframe( $parm->{format} ) );
         }
     }
     else {
-        print $fp $buffer;
+        if ( not print {$fp} $buffer ) { die "Error writing to file\n" }
     }
     return $offset;
 }
@@ -938,7 +959,9 @@ sub write_buffer {
             $parm->{pixels_per_line},
             $image->{height}, $parm->{depth} );
     }
-    for ( @{ $image->{data} } ) { print $fp $_; }
+    for ( @{ $image->{data} } ) {
+        if ( not print {$fp} $_ ) { die "Error writing to file\n" }
+    }
     return;
 }
 
@@ -959,7 +982,7 @@ sub scan_docs {
             $Sane::_status
               =         ## no critic (ProhibitPackageVars ProtectPrivateVars)
               SANE_STATUS_INVAL;
-            print STDERR "Filename $fname already exists; will not overwrite\n";
+            warn "Filename $fname already exists; will not overwrite\n";
         }
 
         # Scan the document
@@ -982,19 +1005,19 @@ sub scan_docs {
             $Sane::_status
               =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
               SANE_STATUS_GOOD;
-            print STDERR "Scanned document $fname\n";
+            warn "Scanned document $fname\n";
             $scannedPages++;
             $start++;
         }
         else {
 
             # unexpected error
-            print STDERR "$Sane::STATUS\n";
+            warn "$Sane::STATUS\n";
             last;
         }
     }
 
-    print STDERR "Scanned $scannedPages pages\n";
+    warn "Scanned $scannedPages pages\n";
 
     return;
 }
@@ -1096,7 +1119,7 @@ sub print_options {
 
         print_option( $device, $i, $short_name );
     }
-    if ($num_dev_options) { print "\n" }
+    if ($num_dev_options) { printstdout("\n") }
     return;
 }
 
@@ -1113,14 +1136,14 @@ sub list_device_names {
                 $column = $INDENT;
             }
             if ( $column > $INDENT ) {
-                print $SPACE;
+                printstdout($SPACE);
                 $column += 1;
             }
-            print $_->{name};
+            printstdout( $_->{name} );
             $column += length( $_->{name} );
         }
     }
-    print "\n";
+    printstdout("\n");
     return;
 }
 
@@ -1139,8 +1162,7 @@ GetOptions(@args);
 if ( defined $options{L} ) {
     my @device_list = Sane->get_devices;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        print STDERR "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
-        exit(1);
+        die "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
     }
     foreach (@device_list) {
         printf "device `%s' is a %s %s %s\n", $_->{name}, $_->{vendor},
@@ -1165,7 +1187,7 @@ if ( defined( $options{V} ) ) {
 }
 
 if ($help) {
-    print <<"EOS";
+    print <<"EOS";    ## no critic (RequireCheckedSyscalls)
 Usage: $prog_name [OPTION]...
 
 Start image acquisition on a scanner device and write image data to
@@ -1194,19 +1216,17 @@ if ( !$devname ) {
     # we open the first device we find (if any):
     my @device_list = Sane->get_devices;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        print STDERR "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
-        exit(1);
+        die "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
     }
     if ( not @device_list ) {
-        print STDERR "$prog_name: no SANE devices found\n";
-        exit(1);
+        die "$prog_name: no SANE devices found\n";
     }
     $devname = $device_list[0]{name};
 }
 
 $device = Sane::Device->open($devname);
 if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-    print STDERR "$prog_name: open of device $devname failed: $Sane::STATUS\n";
+    warn "$prog_name: open of device $devname failed: $Sane::STATUS\n";
     if ($help) {
         undef $device;
     }
