@@ -728,7 +728,7 @@ sub scan_it_raw {
         undef $fp;
     }
 
-  cleanup:
+  CLEANUP:
     if ($fp) { close $fp or die "Error closing file: $EVAL_ERROR\n" }
     return;
 }
@@ -740,13 +740,13 @@ sub log_frame_info {
         if ( $Sane::STATUS != SANE_STATUS_NO_DOCS ) {
             warn "$prog_name: sane_start: $Sane::STATUS\n";
         }
-        goto cleanup;
+        goto CLEANUP;
     }
 
     $parm = $device->get_parameters;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
         warn "$prog_name: sane_get_parameters: $Sane::STATUS\n";
-        goto cleanup;
+        goto CLEANUP;
     }
 
     if ( not open $fp, '>', $fname )    ## no critic (RequireBriefOpen)
@@ -754,7 +754,7 @@ sub log_frame_info {
         warn "Error opening output `$fname': $EVAL_ERROR\n";
         $Sane::_status =   ## no critic (ProhibitPackageVars ProtectPrivateVars)
           SANE_STATUS_IO_ERROR;
-        goto cleanup;
+        goto CLEANUP;
     }
 
     if ($verbose) {
@@ -860,7 +860,7 @@ sub initialise_scan {    ## no critic (ProhibitExcessComplexity)
                 printstderr(
                     sprintf "$prog_name: bad %s frame: must be last_frame\n",
                     sane_strframe( $parm->{format} ) );
-                goto cleanup;
+                goto CLEANUP;
             }
         }
 
@@ -880,7 +880,7 @@ sub initialise_scan {    ## no critic (ProhibitExcessComplexity)
                 printstderr(
                     sprintf "$prog_name: bad %s frame: must be last_frame\n",
                     sane_strframe( $parm->{format} ) );
-                goto cleanup;
+                goto CLEANUP;
             }
         }
     }
