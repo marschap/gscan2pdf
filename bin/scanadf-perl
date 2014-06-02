@@ -47,11 +47,11 @@ my $h_y              = 0;
 my $resolution_value = 0;
 my $prog_name        = basename($PROGRAM_NAME);
 my $no_overwrite     = 0;
-my $outputFile = 'image-%04d';    # file name(format) to write output to
+my $outputfile = 'image-%04d';    # file name(format) to write output to
 my $raw        = SANE_FALSE;
-my $scanScript;                   # script to run at end of scan
-my $startNum = 1;                 # start/end numbers of pages to scan
-my $endNum   = -1;                ## no critic (ProhibitMagicNumbers)
+my $scanscript;                   # script to run at end of scan
+my $startnum = 1;                 # start/end numbers of pages to scan
+my $endnum   = -1;                ## no critic (ProhibitMagicNumbers)
 my $SPACE    = q{ };
 my $EMPTY    = q{};
 my $DASH     = q{-};
@@ -63,9 +63,9 @@ my @args     = (
     'v|verbose+'     => \$verbose,
     'N|no-overwrite' => \$no_overwrite,
 
-    'o|output-file:s' => \$outputFile,
-    's|start-count=i' => \$startNum,
-    'e|end-count=i'   => \$endNum,
+    'o|output-file:s' => \$outputfile,
+    's|start-count=i' => \$startnum,
+    'e|end-count=i'   => \$endnum,
     'r|raw'           => \$raw,
 );
 
@@ -968,7 +968,7 @@ sub scan_docs {
 
     $Sane::_status =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
       SANE_STATUS_GOOD;
-    my $scannedPages = 0;
+    my $scannedpages = 0;
 
     while ( $end < 0 || $start <= $end ) {
 
@@ -1001,7 +1001,7 @@ sub scan_docs {
             $Sane::_status ## no critic (ProhibitPackageVars ProtectPrivateVars)
               = SANE_STATUS_GOOD;
             warn "Scanned document $fname\n";
-            $scannedPages++;
+            $scannedpages++;
             $start++;
         }
         else {
@@ -1012,7 +1012,7 @@ sub scan_docs {
         }
     }
 
-    warn "Scanned $scannedPages pages\n";
+    warn "Scanned $scannedpages pages\n";
 
     return;
 }
@@ -1029,12 +1029,12 @@ sub process_arguments {
         if ( $_ eq '-m' ) { $_ = '-l' }
         if ( $_ eq '-u' ) { $_ = '-t' }
     }
-    my @ARGV_old = @ARGV;
+    my @argv_old = @ARGV;
     exit 1 if ( !GetOptions(@args) );
 
     # As it isn't possible to get the argument order from Getopt::Long 2.37, do
     # this myself
-    for (@ARGV_old) {
+    for (@argv_old) {
         my $ch;
         if (/--(.*)/xsm) {
             $ch = $1;
@@ -1249,7 +1249,7 @@ local $SIG{INT}  = \&sighandler;
 local $SIG{PIPE} = \&sighandler;
 local $SIG{TERM} = \&sighandler;
 
-scan_docs( $startNum, $endNum, $outputFile, $scanScript );
+scan_docs( $startnum, $endnum, $outputfile, $scanscript );
 
 exit $Sane::STATUS;
 
