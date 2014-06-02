@@ -66,7 +66,7 @@ my @args     = (
     'o|output-file:s' => \$outputFile,
     's|start-count=i' => \$startNum,
     'e|end-count=i'   => \$endNum,
-    'r|raw'           => \$raw
+    'r|raw'           => \$raw,
 );
 
 sub sane_strframe {
