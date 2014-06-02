@@ -855,9 +855,8 @@ sub initialise_scan {    ## no critic (ProhibitExcessComplexity)
             or $parm->{format} == $SANE_FRAME_G42D )
         {
             if ( !$parm->{last_frame} ) {
-                $Sane::_status
-                  =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
-                  SANE_STATUS_INVAL;
+                $Sane::_status ## no critic (ProhibitPackageVars ProtectPrivateVars)
+                  = SANE_STATUS_INVAL;
                 printstderr(
                     sprintf "$prog_name: bad %s frame: must be last_frame\n",
                     sane_strframe( $parm->{format} ) );
@@ -876,9 +875,8 @@ sub initialise_scan {    ## no critic (ProhibitExcessComplexity)
                 warn "$prog_name: unknown frame format $parm->{format}\n";
             }
             if ( !$parm->{last_frame} ) {
-                $Sane::_status
-                  =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
-                  SANE_STATUS_INVAL;
+                $Sane::_status ## no critic (ProhibitPackageVars ProtectPrivateVars)
+                  = SANE_STATUS_INVAL;
                 printstderr(
                     sprintf "$prog_name: bad %s frame: must be last_frame\n",
                     sane_strframe( $parm->{format} ) );
@@ -910,11 +908,11 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
             or $parm->{format} == SANE_FRAME_BLUE )
         {
             for my $i ( 0 .. $len - 1 ) {
-                $image->{data}[ $offset + 3 * $i ]
-                  =    ## no critic (ProhibitMagicNumbers)
-                  substr $buffer, $i, 1;
+                $image->{data}
+                  [ $offset + 3 * $i ]    ## no critic (ProhibitMagicNumbers)
+                  = substr $buffer, $i, 1;
             }
-            $offset += 3 * $len;    ## no critic (ProhibitMagicNumbers)
+            $offset += 3 * $len;          ## no critic (ProhibitMagicNumbers)
         }
         elsif ($parm->{format} == SANE_FRAME_RGB
             or $parm->{format} == SANE_FRAME_GRAY )
@@ -979,9 +977,8 @@ sub scan_docs {
 
         # does the filename already exist?
         if ( $no_overwrite and -r $fname ) {
-            $Sane::_status
-              =         ## no critic (ProhibitPackageVars ProtectPrivateVars)
-              SANE_STATUS_INVAL;
+            $Sane::_status ## no critic (ProhibitPackageVars ProtectPrivateVars)
+              = SANE_STATUS_INVAL;
             warn "Filename $fname already exists; will not overwrite\n";
         }
 
@@ -994,17 +991,15 @@ sub scan_docs {
         if ( $Sane::STATUS == SANE_STATUS_NO_DOCS ) {
 
             # out of paper in the hopper; this is our normal exit
-            $Sane::_status
-              =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
-              SANE_STATUS_GOOD;
+            $Sane::_status ## no critic (ProhibitPackageVars ProtectPrivateVars)
+              = SANE_STATUS_GOOD;
             last;
         }
         elsif ( $Sane::STATUS == SANE_STATUS_EOF ) {
 
             # done with this doc
-            $Sane::_status
-              =    ## no critic (ProhibitPackageVars ProtectPrivateVars)
-              SANE_STATUS_GOOD;
+            $Sane::_status ## no critic (ProhibitPackageVars ProtectPrivateVars)
+              = SANE_STATUS_GOOD;
             warn "Scanned document $fname\n";
             $scannedPages++;
             $start++;
