@@ -188,7 +188,7 @@ sub print_option {
             }
             if ( $column >= $END_COLUMN - 1 and $last_break ) {
                 while ( $start < $last_break ) {
-                    printstdout( substr( $opt->{desc}, $start++, 1 ) );
+                    printstdout( substr $opt->{desc}, $start++, 1 );
                 }
                 $start = $last_break + 1;    # skip blank
                 printstdout("\n        ");
@@ -196,7 +196,7 @@ sub print_option {
             }
         }
         while ( $start < length( $opt->{desc} ) ) {
-            printstdout( substr( $opt->{desc}, $start++, 1 ) );
+            printstdout( substr $opt->{desc}, $start++, 1 );
         }
     }
     printstdout("\n");
@@ -350,7 +350,7 @@ sub parse_scalar {
     {
         $v    = $1;
         $unit = $2;
-        if ( not defined($unit) ) { $unit = $EMPTY }
+        if ( not defined $unit ) { $unit = $EMPTY }
     }
     else {
         die
@@ -368,7 +368,7 @@ sub parse_scalar {
             $v *= $MM_PER_INCH;
         }
     }
-    return $v, substr( $str, length($v) + length($unit), length($str) );
+    return $v, substr $str, length $v + length $unit, length $str;
 }
 
 # A vector has the following syntax:
@@ -399,7 +399,7 @@ sub parse_vector {
     my $prev_index = 0;
     my $separator  = $EMPTY;
     my ( @vector, $value );
-    while ( length($str) ) {
+    while ( length $str ) {
         if ( $str =~ /^\[(\d+)(\])?/xsm ) {
             $index = $1;
             if ( $2 ne '\]' ) {
@@ -412,13 +412,13 @@ sub parse_vector {
             ++$index;
         }
 
-        if ( $index < 0 or $index >= length($str) ) {
+        if ( $index < 0 or $index >= length $str ) {
             printstderr(
                 sprintf
 "$prog_name: option --$opt->{name}: index $index out of range [0..%d]\n",
-                length($str)
+                length $str
             );
-            exit(1);
+            exit 1;
         }
 
         # read value
@@ -445,7 +445,7 @@ sub parse_vector {
 
         $prev_index = $index;
         $prev_value = $value;
-        $separator  = substr( $str, 0, 1 );
+        $separator  = substr $str, 0, 1;
     }
 
     if ( $verbose > 2 ) {
@@ -706,7 +706,7 @@ sub scan_it_raw {
                 $must_buffer );
 
             if ( $verbose && $parm->{depth} == $_8_BIT ) {
-                for ( split( $EMPTY, $buffer ) ) {
+                for ( split $EMPTY, $buffer ) {
                     my $c = ord;
                     if ( $c >= $max ) {
                         $max = $c;
@@ -749,7 +749,7 @@ sub log_frame_info {
         goto cleanup;
     }
 
-    if ( not open( $fp, '>', $fname ) )    ## no critic (RequireBriefOpen)
+    if ( not open $fp, '>', $fname )    ## no critic (RequireBriefOpen)
     {
         warn "Error opening output `$fname': $EVAL_ERROR\n";
         $Sane::_status =   ## no critic (ProhibitPackageVars ProtectPrivateVars)
@@ -912,7 +912,7 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
             for my $i ( 0 .. $len - 1 ) {
                 $image->{data}[ $offset + 3 * $i ]
                   =    ## no critic (ProhibitMagicNumbers)
-                  substr( $buffer, $i, 1 );
+                  substr $buffer, $i, 1;
             }
             $offset += 3 * $len;    ## no critic (ProhibitMagicNumbers)
         }
@@ -920,7 +920,7 @@ sub buffer_data {    ## no critic (ProhibitManyArgs)
             or $parm->{format} == SANE_FRAME_GRAY )
         {
             for my $i ( 0 .. $len - 1 ) {
-                $image->{data}[ $offset + $i ] = substr( $buffer, $i, 1 );
+                $image->{data}[ $offset + $i ] = substr $buffer, $i, 1;
             }
             $offset += $len;
         }
@@ -975,7 +975,7 @@ sub scan_docs {
     while ( $end < 0 || $start <= $end ) {
 
         #!!! buffer overflow; need protection
-        my $fname = sprintf( $outfmt, $start );
+        my $fname = sprintf $outfmt, $start;
 
         # does the filename already exist?
         if ( $no_overwrite and -r $fname ) {
@@ -1043,9 +1043,9 @@ sub process_arguments {
         my $ch;
         if (/--(.*)/xsm) {
             $ch = $1;
-            my $i = index( $ch, q{=} );
+            my $i = index $ch, q{=};
             if ( $i > -1 ) {    ## no critic (ProhibitMagicNumbers)
-                $ch = substr( $ch, 0, $i );
+                $ch = substr $ch, 0, $i;
             }
         }
         elsif (/-(.)/xsm) {
@@ -1084,7 +1084,7 @@ sub process_arguments {
     }
 
     for my $index ( 0 .. 1 ) {
-        if ( $window[$index] and defined( $window_val[$index] ) ) {
+        if ( $window[$index] and defined $window_val[$index] ) {
             my $val = $window_val[$index] - 1;
             if ( $window[ $index + 2 ] ) {
                 my $pos = $device->get_option( $window[ $index + 2 ] );
@@ -1105,7 +1105,7 @@ sub print_options {
         my $opt = 0;
         for my $j ( 0 .. $INDENT - 1 ) {
             if ( $i == $window[$j] ) {
-                $short_name = substr( 'xylt', $j, 1 );
+                $short_name = substr 'xylt', $j, 1;
                 if ( $j < 2 ) { $opt = $window_option[$j] }
             }
         }
@@ -1175,15 +1175,15 @@ if ( defined $options{L} ) {
           . "(if appropriate). Please read the documentation\nwhich came "
           . "with this software (README, FAQ, manpages).\n";
     }
-    if ( defined( $ENV{'SANE_DEFAULT_DEVICE'} ) ) {
+    if ( defined $ENV{'SANE_DEFAULT_DEVICE'} ) {
         printf "default device is `%s'\n", $ENV{'SANE_DEFAULT_DEVICE'};
     }
-    exit(0);
+    exit 0;
 }
 
-if ( defined( $options{V} ) ) {
+if ( defined $options{V} ) {
     printf "$prog_name (sane-backends) %s\n", Sane->get_version;
-    exit(0);
+    exit 0;
 }
 
 if ($help) {
@@ -1231,11 +1231,11 @@ if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
         undef $device;
     }
     else {
-        exit(1);
+        exit 1;
     }
 }
 
-if ( defined($device) ) {
+if ( defined $device ) {
     fetch_options($device);
     process_arguments();
 
@@ -1246,7 +1246,7 @@ if ( defined($device) ) {
 
 if ($help) {
     list_device_names();
-    exit(0);
+    exit 0;
 }
 
 local $SIG{HUP}  = \&sighandler;
