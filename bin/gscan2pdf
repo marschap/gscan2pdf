@@ -42,8 +42,8 @@
 
 use warnings;
 use strict;
-use feature "switch";
-no if $] >= 5.018, warnings => "experimental::smartmatch";
+use feature 'switch';
+no if $] >= 5.018, warnings => 'experimental::smartmatch';
 
 use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Sane;
@@ -153,9 +153,9 @@ $logger->info(
         Glib::major_version, Glib::minor_version, Glib::micro_version )
 );
 $logger->info("Gtk2-Perl version $Gtk2::VERSION");
-$logger->info( "Built for GTK " . join( $DOT, Gtk2->GET_VERSION_INFO ) );
-$logger->info( "Running with GTK " . join( $DOT, Gtk2->get_version_info ) );
-$logger->info( "Using GtkImageView version ",
+$logger->info( 'Built for GTK ' . join( $DOT, Gtk2->GET_VERSION_INFO ) );
+$logger->info( 'Running with GTK ' . join( $DOT, Gtk2->get_version_info ) );
+$logger->info( 'Using GtkImageView version ',
     Gtk2::ImageView->library_version );
 $logger->info("Using Gtk2::ImageView version $Gtk2::ImageView::VERSION");
 $logger->info("Using PDF::API2 version $PDF::API2::VERSION");
@@ -528,9 +528,9 @@ EOS
 
     # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
     # scanimage
-    setlocale( LC_NUMERIC, "C" );
-    $logger->info( "Using ", setlocale(LC_CTYPE), " locale" );
-    $logger->info( "Startup LC_NUMERIC ", setlocale(LC_NUMERIC) );
+    setlocale( LC_NUMERIC, 'C' );
+    $logger->info( 'Using ', setlocale(LC_CTYPE), ' locale' );
+    $logger->info( 'Startup LC_NUMERIC ', setlocale(LC_NUMERIC) );
     return;
 }
 
@@ -690,7 +690,7 @@ sub remove_invalid_paper {
         }
         else {
             for (qw(x y t l)) {
-                if ( ref( $hashref->{$paper} ) ne "HASH"
+                if ( ref( $hashref->{$paper} ) ne 'HASH'
                     and not defined( $hashref->{$paper}{$_} ) )
                 {
                     delete $hashref->{$paper};
@@ -717,7 +717,7 @@ sub set_up_test_mode {
             if ( $file !~ /^\//xsm ) { $file = getcwd . "/$file" }
             if ( !-r $file ) {
                 $logger->fatal(
-                    sprintf( $d->get("Cannot read file: %s"), $file ) );
+                    sprintf( $d->get('Cannot read file: %s'), $file ) );
                 exit 1;
             }
             push @{ $test->{file} }, $file;
@@ -739,7 +739,7 @@ sub set_up_test_mode {
         }
         else {
             $logger->fatal(
-                sprintf( $d->get("Cannot read file: %s"), $test_image ) );
+                sprintf( $d->get('Cannot read file: %s'), $test_image ) );
             exit 1;
         }
     }
@@ -808,18 +808,18 @@ sub check_dependencies {
     $dependencies{djvu}      = Gscan2pdf::Document::check_command('cjb2');
     $dependencies{unpaper}   = Gscan2pdf::Unpaper->version;
     $dependencies{libtiff}   = Gscan2pdf::Document::check_command('tiffcp');
-    if ( $dependencies{perlmagick} )  { $logger->info("Found Image::Magick") }
-    if ( $dependencies{imagemagick} ) { $logger->info("Found ImageMagick") }
-    if ( $dependencies{scanadf} )     { $logger->info("Found scanadf") }
-    if ( $dependencies{xdg} )         { $logger->info("Found xdg-email") }
-    if ( $dependencies{gocr} )        { $logger->info("Found gocr") }
-    if ( $dependencies{tesseract} )   { $logger->info("Found tesseract") }
+    if ( $dependencies{perlmagick} )  { $logger->info('Found Image::Magick') }
+    if ( $dependencies{imagemagick} ) { $logger->info('Found ImageMagick') }
+    if ( $dependencies{scanadf} )     { $logger->info('Found scanadf') }
+    if ( $dependencies{xdg} )         { $logger->info('Found xdg-email') }
+    if ( $dependencies{gocr} )        { $logger->info('Found gocr') }
+    if ( $dependencies{tesseract} )   { $logger->info('Found tesseract') }
 
     if ( $dependencies{cuneiform} ) {
         $logger->info("Found cuneiform v$dependencies{cuneiform}");
     }
-    if ( $dependencies{djvu} )    { $logger->info("Found cjb2 (djvu)") }
-    if ( $dependencies{libtiff} ) { $logger->info("Found libtiff") }
+    if ( $dependencies{djvu} )    { $logger->info('Found cjb2 (djvu)') }
+    if ( $dependencies{libtiff} ) { $logger->info('Found libtiff') }
     if ( $dependencies{unpaper} ) {
         $logger->info("Found unpaper $dependencies{unpaper}");
     }
@@ -1285,7 +1285,7 @@ EOS
 
     # Create the basic Gtk2::ActionGroup instance
     # and fill it with Gtk2::Action instances
-    my $actions_basic = Gtk2::ActionGroup->new("actions_basic");
+    my $actions_basic = Gtk2::ActionGroup->new('actions_basic');
     $actions_basic->add_actions( \@action_items, undef );
     $actions_basic->add_radio_actions( \@image_tools, $DRAGGER_TOOL,
         \&change_image_tool_cb );
@@ -1664,7 +1664,7 @@ sub create_temp_directory {
                 $logger->warn(
                     sprintf(
                         $d->get(
-"Warning: unable to use %s for temporary storage. Defaulting to %s instead."
+'Warning: unable to use %s for temporary storage. Defaulting to %s instead.'
                         ),
                         $SETTING{TMPDIR},
                         dirname($session)
@@ -2000,7 +2000,7 @@ sub setup_tpbar {
     if ( $total and defined($process) ) {
         $tpbar->set_text(
             sprintf(
-                $d->get("Process %i of %i (%s)"),
+                $d->get('Process %i of %i (%s)'),
                 $completed + 1,
                 $total, $process
             )
@@ -2035,7 +2035,7 @@ sub update_tpbar {
             }
             $tpbar->set_text(
                 sprintf(
-                    $d->get("Process %i of %i (%s)"),
+                    $d->get('Process %i of %i (%s)'),
                     $options{jobs_completed} + 1, $options{jobs_total},
                     $options{process_name}
                 )
@@ -2044,7 +2044,7 @@ sub update_tpbar {
         else {
             $tpbar->set_text(
                 sprintf(
-                    $d->get("Process %i of %i"),
+                    $d->get('Process %i of %i'),
                     $options{jobs_completed} + 1,
                     $options{jobs_total}
                 )
@@ -2304,7 +2304,7 @@ sub add_pdf_metadata {
       seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
 
     my $button =
-      Gtk2::Button->new( sprintf( "%04d-%02d-%02d", $year, $month, $day ) );
+      Gtk2::Button->new( sprintf( '%04d-%02d-%02d', $year, $month, $day ) );
     $button->signal_connect(
         clicked => sub {
             my $window_date = Gscan2pdf::Dialog->new(
@@ -2323,7 +2323,7 @@ sub add_pdf_metadata {
                     ( $year, $month, $day ) = $calendar->get_date;
                     $month += 1;
                     $button->set_label(
-                        sprintf( "%04d-%02d-%02d", $year, $month, $day ) );
+                        sprintf( '%04d-%02d-%02d', $year, $month, $day ) );
                     use Time::Local;
                     $SETTING{'date offset'} = int(
                         (
@@ -2415,7 +2415,7 @@ sub get_pdf_metadata {
       sprintf( "D:%4i%02i%02i000000+00'00'", $year, $month, $day );
     $h{ModDate}  = sprintf( "D:%4i%02i%02i000000+00'00'", $year, $month, $day );
     $h{Creator}  = "$prog_name v$VERSION";
-    $h{Producer} = "PDF::API2";
+    $h{Producer} = 'PDF::API2';
     if ( defined $SETTING{title} )    { $h{Title}    = $SETTING{title} }
     if ( defined $SETTING{subject} )  { $h{Subject}  = $SETTING{subject} }
     if ( defined $SETTING{keywords} ) { $h{Keywords} = $SETTING{keywords} }
@@ -2446,7 +2446,7 @@ sub boxed_text {
         'button-press-event' => sub {
             my ( $widget, $target, $ev ) = @_;
             my $dialog = Gtk2::Dialog->new(
-                $d->get('Editing text') . "...", $window,
+                $d->get('Editing text') . '...', $window,
                 'modal',
                 'gtk-ok'     => 'ok',
                 'gtk-cancel' => 'cancel'
@@ -2542,7 +2542,7 @@ EOS
             }
         }
     }
-    $current_page->{hocr} .= "</p></div></body></html>";
+    $current_page->{hocr} .= '</p></div></body></html>';
     return;
 }
 
@@ -3018,11 +3018,11 @@ sub save_button_clicked_callback {
             my ( $dday, $dmonth, $dyear ) =
               seconds_to_date(
                 time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
-            $dmonth = sprintf( "%02d", $dmonth );
-            $dday   = sprintf( "%02d", $dday );
+            $dmonth = sprintf( '%02d', $dmonth );
+            $dday   = sprintf( '%02d', $dday );
             my ( $tday, $tmonth, $tyear ) = seconds_to_date(time);
-            $tmonth = sprintf( "%02d", $tmonth );
-            $tday   = sprintf( "%02d", $tday );
+            $tmonth = sprintf( '%02d', $tmonth );
+            $tday   = sprintf( '%02d', $tday );
 
             my $filename = $SETTING{'default filename'};
             $filename =~ s/%a/$SETTING{author}/gsm;
@@ -3211,7 +3211,7 @@ sub file_chooser_response_callback {
             or ( -f $filename and not -w $filename ) )
         {
             show_message_dialog( $dialog, 'error', 'close',
-                sprintf( $d->get("File %s is read-only"), $filename ) );
+                sprintf( $d->get('File %s is read-only'), $filename ) );
             return;
         }
 
@@ -3249,7 +3249,7 @@ sub file_exists {
     my ( $file_chooser, $filename ) = @_;
     if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
         show_message_dialog( $file_chooser, 'error', 'close',
-            sprintf( $d->get("File %s is read-only"), $filename ) );
+            sprintf( $d->get('File %s is read-only'), $filename ) );
         return TRUE;
     }
     elsif ( -e $filename ) {
@@ -4448,13 +4448,13 @@ sub import_scan {
                 $logger->info("Expecting $size, found $filesize");
                 if ( $size > $filesize ) {
                     my $pad = $size - $filesize;
-                    open( my $fh, ">>", $options{filename} )
+                    open( my $fh, '>>', $options{filename} )
                       or die "cannot open >> $options{filename}: $ERRNO\n";
                     my $data = $EMPTY;
                     for ( 1 .. $pad * $BITS_PER_BYTE ) {
                         $data .= '1';
                     }
-                    printf $fh pack( sprintf( "b%d", length $data ), $data );
+                    printf $fh pack( sprintf( 'b%d', length $data ), $data );
                     close $fh
                       or
                       $logger->warn("Error closing $options{filename}: $ERRNO");
@@ -4616,7 +4616,7 @@ sub paste_selection {
             # stringify filename to prevent copy from mangling it
             if ( not copy( "$_->[2]{filename}", $new ) ) {
                 show_message_dialog( $window, 'error', 'close',
-                    $d->get( sprintf("Error pasting image - %s"), $ERRNO ) );
+                    $d->get( sprintf('Error pasting image - %s'), $ERRNO ) );
                 return;
             }
             $_->[2]{filename} = $new;
@@ -4820,7 +4820,7 @@ sub select_blank_pages {
             $logger->warn(
                 $d->get(
                     sprintf(
-"Page %d probably needs to be re-Analysed.  Try Update or Analyse.",
+'Page %d probably needs to be re-Analysed.  Try Update or Analyse.',
                         $page + 1 )
                 )
             );
@@ -4831,11 +4831,11 @@ sub select_blank_pages {
         if ( $slist->{data}[$page][2]{std_dev} <= $SETTING{'Blank threshold'} )
         {
             $slist->select($page);
-            $logger->info("Selecting blank page");
+            $logger->info('Selecting blank page');
         }
-        $logger->info( "StdDev: "
+        $logger->info( 'StdDev: '
               . $slist->{data}[$page][2]{std_dev}
-              . " threshold: "
+              . ' threshold: '
               . $SETTING{'Blank threshold'} );
     }
     return;
@@ -4852,7 +4852,7 @@ sub analyse_select_dark {
 
 sub select_dark_pages {
     $slist->get_selection->unselect_all;
-    $logger->info("Checking for dark pages now, is analysis done?");
+    $logger->info('Checking for dark pages now, is analysis done?');
     foreach my $page ( 0 .. $#{ $slist->{data} } ) {
         $logger->info("smp page: $page");
         my $dirty_time   = $slist->{data}[$page][2]{dirty_time};
@@ -4863,7 +4863,7 @@ sub select_dark_pages {
             $logger->warn(
                 $d->get(
                     sprintf(
-"Page %d probably needs to be re-Analysed.  Try Update or Analyse.",
+'Page %d probably needs to be re-Analysed.  Try Update or Analyse.',
                         $page + 1 )
                 )
             );
@@ -4873,7 +4873,7 @@ sub select_dark_pages {
         #compare Mean to threshold
         if ( $slist->{data}[$page][2]{mean} <= $SETTING{'Dark threshold'} ) {
             $slist->select($page);
-            $logger->info("Selecting dark page");
+            $logger->info('Selecting dark page');
         }
     }
     return;
@@ -5857,7 +5857,7 @@ sub add_tess_languages {
     # If there are no language files, then we have tesseract-1.0, i.e. English
     if ( not @tesslang ) {
         push @tesslang, [ undef, $d->get('English') ];
-        $logger->info("No tesseract languages found");
+        $logger->info('No tesseract languages found');
     }
 
     my $combobox = combobox_from_array(@tesslang);
@@ -6037,16 +6037,16 @@ sub quit {
 
     kill_threads();
     kill_subs();
-    $logger->debug("Quitting");
+    $logger->debug('Quitting');
     return TRUE;
 }
 
 # kill all threads
 
 sub kill_threads {
-    $logger->info("Killing Sane thread(s)");
+    $logger->info('Killing Sane thread(s)');
     Gscan2pdf::Frontend::Sane->quit();
-    $logger->info("Killing document thread(s)");
+    $logger->info('Killing document thread(s)');
     Gscan2pdf::Document->quit();
     return;
 }
@@ -6072,7 +6072,7 @@ sub view_pod {
                       . "Alternatively, try: %s %s\n\n"
                 ),
                 $prog_name,
-                "--help"
+                '--help'
             )
         );
     };
@@ -6173,14 +6173,14 @@ sub take_snapshot {
 # Put things back to last snapshot after updating redo buffer
 
 sub undo {
-    $logger->info("Undoing");
+    $logger->info('Undoing');
 
     # Deep copy the tied data. Otherwise, very bad things happen.
     @redo_buffer = map { [ @{$_} ] } @{ $slist->{data} };
     @redo_selection = $slist->get_selected_indices;
-    $logger->debug("redo_selection, undo_selection:");
+    $logger->debug('redo_selection, undo_selection:');
     $logger->debug( Dumper( \@redo_selection, \@undo_selection ) );
-    $logger->debug("redo_buffer, undo_buffer:");
+    $logger->debug('redo_buffer, undo_buffer:');
     $logger->debug( Dumper( \@redo_buffer, \@undo_buffer ) );
 
     # Block slist signals whilst updating
@@ -6205,14 +6205,14 @@ sub undo {
 # Put things back to last snapshot after updating redo buffer
 
 sub unundo {
-    $logger->info("Redoing");
+    $logger->info('Redoing');
 
     # Deep copy the tied data. Otherwise, very bad things happen.
     @undo_buffer = map { [ @{$_} ] } @{ $slist->{data} };
     @undo_selection = $slist->get_selected_indices;
-    $logger->debug("redo_selection, undo_selection:");
+    $logger->debug('redo_selection, undo_selection:');
     $logger->debug( Dumper( \@redo_selection, \@undo_selection ) );
-    $logger->debug("redo_buffer, undo_buffer:");
+    $logger->debug('redo_buffer, undo_buffer:');
     $logger->debug( Dumper( \@redo_buffer, \@undo_buffer ) );
 
     # Block slist signals whilst updating
@@ -6368,8 +6368,8 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     $tooltips->set_tip(
         $cbo,
         $d->get(
-"Automatically open the scan dialog in the background at program start. "
-              . "This saves time clicking the scan button and waiting for the program to find the list of scanners"
+'Automatically open the scan dialog in the background at program start. '
+              . 'This saves time clicking the scan button and waiting for the program to find the list of scanners'
         )
     );
 
@@ -6417,7 +6417,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
       Gtk2::CheckButton->new_with_label(
         $d->get('Cycle SANE handle after scan') );
     $hbox->pack_end( $combob, TRUE, TRUE, 0 );
-    $tooltips->set_tip( $hbox, $d->get("Interface used for scanner access") );
+    $tooltips->set_tip( $hbox, $d->get('Interface used for scanner access') );
 
     # Cycle SANE handle after scan
     if ( defined $SETTING{'cycle sane handle'} ) {
@@ -6807,7 +6807,7 @@ sub list_user_defined_tools {
 # Add user-defined tool menu item
 sub add_user_defined_tool_menu {
     my ($tool) = @_;
-    my $action_group = Gtk2::ActionGroup->new("actions");
+    my $action_group = Gtk2::ActionGroup->new('actions');
     $tool->{name} = "$action_group";
     my $tool_ui = <<"EOS";
 <ui>
@@ -6975,7 +6975,7 @@ sub get_selected_properties {
     }
 
     # round the value to a sensible number of significant figures
-    return $resolution eq $EMPTY ? $EMPTY : sprintf( "%g", $resolution );
+    return $resolution eq $EMPTY ? $EMPTY : sprintf( '%g', $resolution );
 }
 
 # Helper function to display a message dialog, wait for a response, and return it
