@@ -146,26 +146,25 @@ set_up_test_mode();
 
 $logger->info("Perl version $PERL_VERSION");
 $logger->info("Glib-Perl version $Glib::VERSION");
-$logger->info( 'Built for Glib ' . join( $DOT, Glib->GET_VERSION_INFO ) );
+$logger->info( 'Built for Glib ' . join $DOT, Glib->GET_VERSION_INFO );
 $logger->info(
-    'Running with Glib '
-      . join( $DOT,
-        Glib::major_version, Glib::minor_version, Glib::micro_version )
+    'Running with Glib ' . join $DOT, Glib::major_version,
+    Glib::minor_version,              Glib::micro_version
 );
 $logger->info("Gtk2-Perl version $Gtk2::VERSION");
-$logger->info( 'Built for GTK ' . join( $DOT, Gtk2->GET_VERSION_INFO ) );
-$logger->info( 'Running with GTK ' . join( $DOT, Gtk2->get_version_info ) );
+$logger->info( 'Built for GTK ' . join $DOT,    Gtk2->GET_VERSION_INFO );
+$logger->info( 'Running with GTK ' . join $DOT, Gtk2->get_version_info );
 $logger->info( 'Using GtkImageView version ',
     Gtk2::ImageView->library_version );
 $logger->info("Using Gtk2::ImageView version $Gtk2::ImageView::VERSION");
 $logger->info("Using PDF::API2 version $PDF::API2::VERSION");
-$logger->info( 'Using Sane version ' . join( $DOT, Sane->get_version ) );
+$logger->info( 'Using Sane version ' . join $DOT, Sane->get_version );
 $logger->info("Using libsane-perl version $Sane::VERSION");
 
 if ($debug) { $logger->debug( Dumper( \%SETTING ) ) }
 
 # Just in case dependencies have changed, put put startup warning again
-if ( not defined( $SETTING{version} ) or $SETTING{version} ne $VERSION ) {
+if ( not defined $SETTING{version} or $SETTING{version} ne $VERSION ) {
     $SETTING{'startup warning'} = TRUE;
     if ( defined $SETTING{cache} ) { delete $SETTING{cache} }
 }
@@ -421,7 +420,7 @@ $window->signal_connect_after(
 );
 
 # If defined in the config file, set the current directory
-if ( not defined( $SETTING{'cwd'} ) ) { $SETTING{'cwd'} = getcwd }
+if ( not defined $SETTING{'cwd'} ) { $SETTING{'cwd'} = getcwd }
 
 my $unpaper = Gscan2pdf::Unpaper->new( $SETTING{'unpaper options'} );
 
@@ -473,7 +472,7 @@ sub parse_arguments {
     if ( not GetOptions(@args) ) { exit 1 }
     $Sane::DEBUG = $debug;
 
-    if ( not defined($log_level) ) {
+    if ( not defined $log_level ) {
         if ( defined $log ) {
             $log_level = 'DEBUG';
             $debug     = TRUE;
@@ -538,7 +537,7 @@ EOS
 sub read_config_file {    ## no critic (RequireArgUnpacking)
     my ($filename) = @_;
     $logger->info("Reading config from $filename");
-    if ( not -r $filename ) { system("touch $filename") }
+    if ( not -r $filename ) { system "touch $filename" }
     try {
         $conf = Config::General->new(
             -ConfigFile  => $filename,
@@ -657,8 +656,8 @@ sub read_config_file {    ## no critic (RequireArgUnpacking)
     {
         delete $SETTING{frontend};
     }
-    for ( keys(%default_settings) ) {
-        if ( not defined( $SETTING{$_} ) ) {
+    for ( keys %default_settings ) {
+        if ( not defined $SETTING{$_} ) {
             $SETTING{$_} = $default_settings{$_};
         }
     }
@@ -668,16 +667,16 @@ sub read_config_file {    ## no critic (RequireArgUnpacking)
     # Delete the options cache if there is a new version of SANE
     if (
         (
-            defined( $SETTING{'SANE version'} )
-            and $SETTING{'SANE version'} ne join( $DOT, Sane->get_version )
+            defined $SETTING{'SANE version'}
+            and $SETTING{'SANE version'} ne join $DOT, Sane->get_version
         )
-        or ( defined( $SETTING{'libsane-perl version'} )
+        or ( defined $SETTING{'libsane-perl version'}
             and $SETTING{'libsane-perl version'} ne $Sane::VERSION )
       )
     {
         if ( defined $SETTING{cache} ) { delete $SETTING{cache} }
     }
-    $SETTING{'SANE version'} = join( $DOT, Sane->get_version );
+    $SETTING{'SANE version'} = join $DOT, Sane->get_version;
     $SETTING{'libsane-perl version'} = $Sane::VERSION;
     return;
 }
@@ -691,7 +690,7 @@ sub remove_invalid_paper {
         else {
             for (qw(x y t l)) {
                 if ( ref( $hashref->{$paper} ) ne 'HASH'
-                    and not defined( $hashref->{$paper}{$_} ) )
+                    and not defined $hashref->{$paper}{$_} )
                 {
                     delete $hashref->{$paper};
                     last;
@@ -716,12 +715,12 @@ sub set_up_test_mode {
             $logger->debug("'$file','$device'");
             if ( $file !~ /^\//xsm ) { $file = getcwd . "/$file" }
             if ( !-r $file ) {
-                $logger->fatal(
-                    sprintf( $d->get('Cannot read file: %s'), $file ) );
+                $logger->fatal( sprintf $d->get('Cannot read file: %s'),
+                    $file );
                 exit 1;
             }
             push @{ $test->{file} }, $file;
-            if ( not defined( $test->{output} ) ) { $test->{output} = $EMPTY }
+            if ( not defined $test->{output} ) { $test->{output} = $EMPTY }
             $test->{output} .=
               "'$#{$test->{file}}','$device','" . basename($file) . "'\n";
         }
@@ -738,8 +737,8 @@ sub set_up_test_mode {
             $logger->info("Using test image $test_image");
         }
         else {
-            $logger->fatal(
-                sprintf( $d->get('Cannot read file: %s'), $test_image ) );
+            $logger->fatal( sprintf $d->get('Cannot read file: %s'),
+                $test_image );
             exit 1;
         }
     }
@@ -777,8 +776,8 @@ sub create_main_window {
     if ( $SETTING{'restore window'} ) {
         $widget->set_default_size( $SETTING{'window_width'},
             $SETTING{'window_height'} );
-        if (    defined( $SETTING{'window_x'} )
-            and defined( $SETTING{'window_y'} ) )
+        if (    defined $SETTING{'window_x'}
+            and defined $SETTING{'window_y'} )
         {
             $widget->move( $SETTING{'window_x'}, $SETTING{'window_y'} );
         }
@@ -1651,9 +1650,9 @@ sub create_temp_directory {
     find_crashed_sessions();
 
     # Create temporary directory if necessary
-    if ( not defined($session) ) {
-        if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne $EMPTY ) {
-            if ( not -d $SETTING{TMPDIR} ) { mkdir( $SETTING{TMPDIR} ) }
+    if ( not defined $session ) {
+        if ( defined $SETTING{TMPDIR} and $SETTING{TMPDIR} ne $EMPTY ) {
+            if ( not -d $SETTING{TMPDIR} ) { mkdir $SETTING{TMPDIR} }
             try {
                 $session =
                   File::Temp->newdir( 'gscan2pdf-XXXX',
@@ -1662,13 +1661,11 @@ sub create_temp_directory {
             catch {
                 $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
                 $logger->warn(
-                    sprintf(
-                        $d->get(
+                    sprintf $d->get(
 'Warning: unable to use %s for temporary storage. Defaulting to %s instead.'
-                        ),
-                        $SETTING{TMPDIR},
-                        dirname($session)
-                    )
+                    ),
+                    $SETTING{TMPDIR},
+                    dirname($session)
                 );
             };
         }
@@ -1679,7 +1676,7 @@ sub create_temp_directory {
         open $lockfh, '>',    ## no critic (RequireBriefOpen)
           File::Spec->catfile( $session, 'lockfile' )
           or die "Cannot open lockfile\n";
-        flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
+        flock $lockfh, LOCK_EX or die "Cannot lock file\n";
         $slist->save_session;
         $logger->info("Using $session for temporary files");
     }
@@ -1689,7 +1686,7 @@ sub create_temp_directory {
 sub find_crashed_sessions {
 
     # Look for crashed sessions
-    if ( defined( $SETTING{TMPDIR} ) and $SETTING{TMPDIR} ne $EMPTY ) {
+    if ( defined $SETTING{TMPDIR} and $SETTING{TMPDIR} ne $EMPTY ) {
         $tmpdir = $SETTING{TMPDIR};
     }
     else {
@@ -1702,14 +1699,13 @@ sub find_crashed_sessions {
     # Forget those used by running sessions
     for (@sessions) {
         if (
-            open $lockfh,
-            '>',
-            File::Spec->catfile( $_, 'lockfile' )
-            and flock( $lockfh, LOCK_EX | LOCK_NB )
+            open $lockfh, '>',
+            File::Spec->catfile( $_, 'lockfile' ) and flock $lockfh,
+            LOCK_EX | LOCK_NB
           )
         {
             push @crashed, $_;
-            flock( $lockfh, LOCK_UN )
+            flock $lockfh, LOCK_UN
               or die "Unlocking error on $lockfh ($ERRNO)\n";
             close $lockfh or warn "Error closing $lockfh ($ERRNO)\n";
         }
@@ -1780,7 +1776,7 @@ sub find_crashed_sessions {
             open $lockfh, '>',    ## no critic (RequireBriefOpen)
               File::Spec->catfile( $session, 'lockfile' )
               or die "Cannot open lockfile\n";
-            flock( $lockfh, LOCK_EX ) or die "Cannot lock file\n";
+            flock $lockfh, LOCK_EX or die "Cannot lock file\n";
             $slist->set_dir($session);
             open_session($session);
         }
@@ -1802,7 +1798,7 @@ sub display_image {
       ( $pixbuf->get_width, $pixbuf->get_height );
 
     # Update the ranges on the crop dialog
-    if ( defined($sb_selector_w) and defined($current_page) ) {
+    if ( defined $sb_selector_w and defined $current_page ) {
         $sb_selector_w->set_range( 0,
             $current_page->{w} - $sb_selector_x->get_value );
         $sb_selector_h->set_range( 0,
@@ -1833,7 +1829,7 @@ sub create_canvas {
     # Set up the canvas
     $canvas = Goo::Canvas->new;
     my $root = $canvas->get_root_item;
-    if ( not defined( $page->{w} ) ) {
+    if ( not defined $page->{w} ) {
 
         # quotes required to prevent File::Temp object being clobbered
         my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$page->{filename}");
@@ -1851,7 +1847,7 @@ sub create_canvas {
             y1   => $y1,
             x2   => $x2,
             y2   => $y2,
-            size => abs( $y2 - $y1 )
+            size => abs $y2 - $y1
         );
     }
 
@@ -1924,9 +1920,9 @@ sub add_filter {
 
         # Create case insensitive pattern
         for my $byte ( split $EMPTY, $extension ) {
-            push( @filter_pattern, '[' . uc($byte) . lc($byte) . ']' );
+            push @filter_pattern, '[' . uc($byte) . lc($byte) . ']';
         }
-        my $new_filter_pattern = join( $EMPTY, @filter_pattern );
+        my $new_filter_pattern = join $EMPTY, @filter_pattern;
         $filter->add_pattern( q{*.} . $new_filter_pattern );
     }
     my $types;
@@ -1997,13 +1993,11 @@ sub open_session {
 
 sub setup_tpbar {
     my ( $thread, $process, $completed, $total, $pid ) = @_;
-    if ( $total and defined($process) ) {
+    if ( $total and defined $process ) {
         $tpbar->set_text(
-            sprintf(
-                $d->get('Process %i of %i (%s)'),
-                $completed + 1,
-                $total, $process
-            )
+            sprintf $d->get('Process %i of %i (%s)'),
+            $completed + 1,
+            $total, $process
         );
         $tpbar->set_fraction(
             ( $completed + 0.5 ) / $total )  ## no critic (ProhibitMagicNumbers)
@@ -2034,20 +2028,16 @@ sub update_tpbar {
                 $options{process_name} .= " - $options{message}";
             }
             $tpbar->set_text(
-                sprintf(
-                    $d->get('Process %i of %i (%s)'),
-                    $options{jobs_completed} + 1, $options{jobs_total},
-                    $options{process_name}
-                )
+                sprintf $d->get('Process %i of %i (%s)'),
+                $options{jobs_completed} + 1,
+                $options{jobs_total}, $options{process_name}
             );
         }
         else {
             $tpbar->set_text(
-                sprintf(
-                    $d->get('Process %i of %i'),
-                    $options{jobs_completed} + 1,
-                    $options{jobs_total}
-                )
+                sprintf $d->get('Process %i of %i'),
+                $options{jobs_completed} + 1,
+                $options{jobs_total}
             );
         }
         if ( defined $options{progress} ) {
@@ -2277,8 +2267,8 @@ sub get_pagelist {
 sub seconds_to_date {
     my ($seconds) = @_;
     my ( $day, $month, $year ) =
-      ( localtime($seconds) )[ 3, 4, 5 ];    ## no critic (ProhibitMagicNumbers)
-    $year  += 1900;                          ## no critic (ProhibitMagicNumbers)
+      ( localtime $seconds )[ 3, 4, 5 ];    ## no critic (ProhibitMagicNumbers)
+    $year  += 1900;                         ## no critic (ProhibitMagicNumbers)
     $month += 1;
     return $day, $month, $year;
 }
@@ -2304,7 +2294,7 @@ sub add_pdf_metadata {
       seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
 
     my $button =
-      Gtk2::Button->new( sprintf( '%04d-%02d-%02d', $year, $month, $day ) );
+      Gtk2::Button->new( sprintf '%04d-%02d-%02d', $year, $month, $day );
     $button->signal_connect(
         clicked => sub {
             my $window_date = Gscan2pdf::Dialog->new(
@@ -2322,8 +2312,8 @@ sub add_pdf_metadata {
                 day_selected_double_click => sub {
                     ( $year, $month, $day ) = $calendar->get_date;
                     $month += 1;
-                    $button->set_label(
-                        sprintf( '%04d-%02d-%02d', $year, $month, $day ) );
+                    $button->set_label( sprintf '%04d-%02d-%02d',
+                        $year, $month, $day );
                     use Time::Local;
                     $SETTING{'date offset'} = int(
                         (
@@ -2359,7 +2349,7 @@ sub add_pdf_metadata {
     $hboxa->pack_start( $labela, FALSE, FALSE, 0 );
     my $entrya = Gtk2::Entry->new;
     $hboxa->pack_end( $entrya, TRUE, TRUE, 0 );
-    if ( defined( $SETTING{author} ) ) { $entrya->set_text( $SETTING{author} ) }
+    if ( defined $SETTING{author} ) { $entrya->set_text( $SETTING{author} ) }
 
     # Title
     my $hboxt = Gtk2::HBox->new;
@@ -2368,7 +2358,7 @@ sub add_pdf_metadata {
     $hboxt->pack_start( $labelt, FALSE, FALSE, 0 );
     my $entryt = Gtk2::Entry->new;
     $hboxt->pack_end( $entryt, TRUE, TRUE, 0 );
-    if ( defined( $SETTING{title} ) ) { $entryt->set_text( $SETTING{title} ) }
+    if ( defined $SETTING{title} ) { $entryt->set_text( $SETTING{title} ) }
 
     # Subject
     my $hboxs = Gtk2::HBox->new;
@@ -2377,7 +2367,7 @@ sub add_pdf_metadata {
     $hboxs->pack_start( $labels, FALSE, FALSE, 0 );
     my $entrys = Gtk2::Entry->new;
     $hboxs->pack_end( $entrys, TRUE, TRUE, 0 );
-    if ( defined( $SETTING{subject} ) ) {
+    if ( defined $SETTING{subject} ) {
         $entrys->set_text( $SETTING{subject} );
     }
 
@@ -2388,7 +2378,7 @@ sub add_pdf_metadata {
     $hboxk->pack_start( $labelk, FALSE, FALSE, 0 );
     my $entryk = Gtk2::Entry->new;
     $hboxk->pack_end( $entryk, TRUE, TRUE, 0 );
-    if ( defined( $SETTING{keywords} ) ) {
+    if ( defined $SETTING{keywords} ) {
         $entryk->set_text( $SETTING{keywords} );
     }
 
@@ -2411,9 +2401,9 @@ sub get_pdf_metadata {
     if ( defined $SETTING{author} ) { $h{Author} = $SETTING{author} }
     my ( $day, $month, $year ) =
       seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
-    $h{CreationDate} =
-      sprintf( "D:%4i%02i%02i000000+00'00'", $year, $month, $day );
-    $h{ModDate}  = sprintf( "D:%4i%02i%02i000000+00'00'", $year, $month, $day );
+    $h{CreationDate} = sprintf "D:%4i%02i%02i000000+00'00'", $year, $month,
+      $day;
+    $h{ModDate}  = sprintf "D:%4i%02i%02i000000+00'00'", $year, $month, $day;
     $h{Creator}  = "$prog_name v$VERSION";
     $h{Producer} = 'PDF::API2';
     if ( defined $SETTING{title} )    { $h{Title}    = $SETTING{title} }
@@ -2536,7 +2526,7 @@ EOS
             elsif ( $item->isa('Goo::Canvas::Text') ) {
                 $text = $item->get('text');
             }
-            if ( defined($x2) and defined($text) ) {
+            if ( defined $x2 and defined $text ) {
                 $current_page->{hocr} .=
 "  <span class=\"ocr_line\" title=\"bbox $x1 $y1 $x2 $y2\">$text</span>\n";
             }
@@ -2596,10 +2586,10 @@ sub save_PDF {
                 $tcbutton->signal_handler_disconnect($signal);
             }
             mark_pages(@pagelist);
-            if ( defined( $SETTING{'view files toggle'} )
+            if ( defined $SETTING{'view files toggle'}
                 and $SETTING{'view files toggle'} )
             {
-                system("xdg-open \"$filename\" &");
+                system "xdg-open \"$filename\" &";
             }
             $logger->debug("Finished saving $filename");
         },
@@ -2854,7 +2844,7 @@ sub save_dialog {
             $style =~ s/,.*$//xsm;
             my $font = "$family $style";
             push @fonts, [ $file, $font, $font ];
-            if ( not defined( $SETTING{'pdf font'} )
+            if ( not defined $SETTING{'pdf font'}
                 and $font eq 'Times New Roman Regular' )
             {
                 $SETTING{'pdf font'} = $file;
@@ -3018,11 +3008,11 @@ sub save_button_clicked_callback {
             my ( $dday, $dmonth, $dyear ) =
               seconds_to_date(
                 time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
-            $dmonth = sprintf( '%02d', $dmonth );
-            $dday   = sprintf( '%02d', $dday );
+            $dmonth = sprintf '%02d', $dmonth;
+            $dday   = sprintf '%02d', $dday;
             my ( $tday, $tmonth, $tyear ) = seconds_to_date(time);
-            $tmonth = sprintf( '%02d', $tmonth );
-            $tday   = sprintf( '%02d', $tday );
+            $tmonth = sprintf '%02d', $tmonth;
+            $tday   = sprintf '%02d', $tday;
 
             my $filename = $SETTING{'default filename'};
             $filename =~ s/%a/$SETTING{author}/gsm;
@@ -3211,7 +3201,7 @@ sub file_chooser_response_callback {
             or ( -f $filename and not -w $filename ) )
         {
             show_message_dialog( $dialog, 'error', 'close',
-                sprintf( $d->get('File %s is read-only'), $filename ) );
+                sprintf $d->get('File %s is read-only'), $filename );
             return;
         }
 
@@ -3249,16 +3239,13 @@ sub file_exists {
     my ( $file_chooser, $filename ) = @_;
     if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
         show_message_dialog( $file_chooser, 'error', 'close',
-            sprintf( $d->get('File %s is read-only'), $filename ) );
+            sprintf $d->get('File %s is read-only'), $filename );
         return TRUE;
     }
     elsif ( -e $filename ) {
-        my $response = show_message_dialog(
-            $file_chooser,
-            'question',
-            'ok-cancel',
-            sprintf( $d->get("File %s exists.\nReally overwrite?"), $filename )
-        );
+        my $response =
+          show_message_dialog( $file_chooser, 'question', 'ok-cancel',
+            sprintf $d->get("File %s exists.\nReally overwrite?"), $filename );
         return TRUE if ( $response ne 'ok' );
     }
     return FALSE;
@@ -3300,7 +3287,7 @@ sub save_image {
         }
 
         if ( @list_of_pages > 1 ) {
-            my $w = length( scalar @list_of_pages );
+            my $w = length scalar @list_of_pages;
             for ( 1 .. @list_of_pages ) {
                 my $current_filename =
                   sprintf "${filename}_%0${w}d.$SETTING{'image type'}",
@@ -3341,10 +3328,10 @@ sub save_image {
                     $tcbutton->signal_handler_disconnect($signal);
                 }
                 mark_pages(@pagelist);
-                if ( defined( $SETTING{'view files toggle'} )
+                if ( defined $SETTING{'view files toggle'}
                     and $SETTING{'view files toggle'} )
                 {
-                    system("xdg-open \"$filename\" &");
+                    system "xdg-open \"$filename\" &";
                 }
                 $logger->debug("Finished saving $filename");
             },
@@ -3400,11 +3387,11 @@ sub save_TIFF {
                 $tcbutton->signal_handler_disconnect($signal);
             }
             mark_pages(@pagelist);
-            my $file = defined($ps) ? $ps : $filename;
-            if ( defined( $SETTING{'view files toggle'} )
+            my $file = defined $ps ? $ps : $filename;
+            if ( defined $SETTING{'view files toggle'}
                 and $SETTING{'view files toggle'} )
             {
-                system("xdg-open \"$filename\" &");
+                system "xdg-open \"$filename\" &";
             }
             $logger->debug("Finished saving $filename");
         },
@@ -3453,10 +3440,10 @@ sub save_djvu {
                 $tcbutton->signal_handler_disconnect($signal);
             }
             mark_pages(@pagelist);
-            if ( defined( $SETTING{'view files toggle'} )
+            if ( defined $SETTING{'view files toggle'}
                 and $SETTING{'view files toggle'} )
             {
-                system("xdg-open \"$filename\" &");
+                system "xdg-open \"$filename\" &";
             }
             $logger->debug("Finished saving $filename");
         },
@@ -3501,10 +3488,10 @@ sub save_txt {
                 $tcbutton->signal_handler_disconnect($signal);
             }
             mark_pages(@pagelist);
-            if ( defined( $SETTING{'view files toggle'} )
+            if ( defined $SETTING{'view files toggle'}
                 and $SETTING{'view files toggle'} )
             {
-                system("xdg-open \"$filename\" &");
+                system "xdg-open \"$filename\" &";
             }
             $logger->debug("Finished saving $filename");
         },
@@ -3584,7 +3571,7 @@ sub email {
 
             # Check for thunderbird
             my ($client);
-            if ( defined( $ENV{KDE_FULL_SESSION} )
+            if ( defined $ENV{KDE_FULL_SESSION}
                 and $ENV{KDE_FULL_SESSION} eq 'true' )
             {
                 ($client) = Gscan2pdf::Document::open_three(
@@ -3593,10 +3580,10 @@ sub email {
             }
             elsif (
                 (
-                    defined( $ENV{GNOME_DESKTOP_SESSION_ID} )
+                    defined $ENV{GNOME_DESKTOP_SESSION_ID}
                     and $ENV{GNOME_DESKTOP_SESSION_ID} ne $EMPTY
                 )
-                or ( defined( $ENV{XDG_CURRENT_DESKTOP} )
+                or ( defined $ENV{XDG_CURRENT_DESKTOP}
                     and $ENV{XDG_CURRENT_DESKTOP} eq 'XFCE' )
               )
             {
@@ -3640,13 +3627,13 @@ sub email {
                         $tcbutton->signal_handler_disconnect($signal);
                     }
                     mark_pages(@pagelist);
-                    if ( defined( $SETTING{'view files toggle'} )
+                    if ( defined $SETTING{'view files toggle'}
                         and $SETTING{'view files toggle'} )
                     {
-                        system("xdg-open \"$pdf\" &");
+                        system "xdg-open \"$pdf\" &";
                     }
                     $logger->info($mua_string);
-                    if ( system($mua_string) ) {
+                    if ( system $mua_string ) {
                         show_message_dialog( $window, 'error', 'close',
                             $d->get('Error creating email') );
                     }
@@ -3680,8 +3667,8 @@ sub scan_dialog {
     }
 
     # If device not set by config and there is a default device, then set it
-    if ( not defined( $SETTING{device} )
-        and defined( $ENV{'SANE_DEFAULT_DEVICE'} ) )
+    if ( not defined $SETTING{device}
+        and defined $ENV{'SANE_DEFAULT_DEVICE'} )
     {
         $SETTING{device} = $ENV{'SANE_DEFAULT_DEVICE'};
     }
@@ -3885,7 +3872,7 @@ sub scan_dialog {
 sub changed_device_callback {
     my ( $widget, $device ) = @_;
     $logger->info("signal 'changed-device' emitted with data: '$device'");
-    if ( defined($device) and $device ne $EMPTY ) {
+    if ( defined $device and $device ne $EMPTY ) {
         $SETTING{device} = $device;
     }
     return;
@@ -3899,7 +3886,7 @@ sub changed_device_list_callback {
 
        # Only set default device if it hasn't been specified on the command line
        # and it is in the the device list
-        if ( defined( $SETTING{device} ) and not @device_list ) {
+        if ( defined $SETTING{device} and not @device_list ) {
             for ( @{$device_list} ) {
                 if ( $SETTING{device} eq $_->{name} ) {
                     $windows->set( 'device', $SETTING{device} );
@@ -3980,7 +3967,7 @@ sub new_scan_callback {
         my $options = $windows->get('available-scan-options');
         my $opt     = $options->by_name(SANE_NAME_SCAN_RESOLUTION);
         my $resolution =
-          ( defined($opt) and defined( $opt->{val} ) )
+          ( defined $opt and defined $opt->{val} )
           ? $opt->{val}
           : $Gscan2pdf::Document::POINTS_PER_INCH;
         $logger->info("Importing scan with resolution=$resolution");
@@ -4315,7 +4302,7 @@ sub add_postprocessing_options {
     $self->signal_connect(
         show => sub {
             if (
-                defined($hboxtl)
+                defined $hboxtl
                 and
                 not(   $ocr_engine[ $comboboxe->get_active ]->[0] eq 'tesseract'
                     or $ocr_engine[ $comboboxe->get_active ]->[0] eq 'ocropus' )
@@ -4324,7 +4311,7 @@ sub add_postprocessing_options {
                 $hboxtl->hide_all;
             }
             if (
-                defined($hboxcl)
+                defined $hboxcl
                 and
                 not( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' )
               )
@@ -4341,9 +4328,9 @@ sub add_postprocessing_options {
 # or row-changed signal of simplelist
 
 sub update_start {
-    if ( not defined($windows) ) { return }
+    if ( not defined $windows ) { return }
     my $value = $windows->get('page-number-start');
-    if ( not defined($start) ) { $start = $windows->get('page-number-start') }
+    if ( not defined $start ) { $start = $windows->get('page-number-start') }
     my $step = $value - $start;
     if ( $step == 0 ) { $step = $windows->get('page-number-increment') }
     my $exists = TRUE;
@@ -4379,7 +4366,7 @@ sub update_start {
 # Update the number of pages to scan spinbutton if necessary
 
 sub update_number {
-    if ( not defined($windows) ) { return }
+    if ( not defined $windows ) { return }
     my $n = $slist->pages_possible(
         $windows->get('page-number-start'),
         $windows->get('page-number-increment')
@@ -4440,7 +4427,7 @@ sub import_scan {
                         $options{filename} );
                     $logger->info("Header suggests $size");
                     return Glib::SOURCE_CONTINUE if ( $size == 0 );
-                    close($fh)
+                    close $fh
                       or
                       $logger->warn("Error closing $options{filename}: $ERRNO");
                 }
@@ -4448,13 +4435,13 @@ sub import_scan {
                 $logger->info("Expecting $size, found $filesize");
                 if ( $size > $filesize ) {
                     my $pad = $size - $filesize;
-                    open( my $fh, '>>', $options{filename} )
+                    open my $fh, '>>', $options{filename}
                       or die "cannot open >> $options{filename}: $ERRNO\n";
                     my $data = $EMPTY;
                     for ( 1 .. $pad * $BITS_PER_BYTE ) {
                         $data .= '1';
                     }
-                    printf $fh pack( sprintf( 'b%d', length $data ), $data );
+                    printf $fh pack sprintf 'b%d', length $data, $data;
                     close $fh
                       or
                       $logger->warn("Error closing $options{filename}: $ERRNO");
@@ -4522,7 +4509,7 @@ sub print_dialog {
             else {
                 @page_list = ( 0 .. $#{ $slist->{data} } );
             }
-            $op->set_n_pages( scalar(@page_list) );
+            $op->set_n_pages( scalar @page_list );
         }
     );
 
@@ -4616,7 +4603,7 @@ sub paste_selection {
             # stringify filename to prevent copy from mangling it
             if ( not copy( "$_->[2]{filename}", $new ) ) {
                 show_message_dialog( $window, 'error', 'close',
-                    $d->get( sprintf('Error pasting image - %s'), $ERRNO ) );
+                    $d->get( sprintf 'Error pasting image - %s', $ERRNO ) );
                 return;
             }
             $_->[2]{filename} = $new;
@@ -4755,8 +4742,8 @@ sub select_modified_since_ocr {
         my $dirty_time = $slist->{data}[$page][2]{dirty_time};
         my $ocr_flag   = $slist->{data}[$page][2]{ocr_flag};
         my $ocr_time   = $slist->{data}[$page][2]{ocr_time};
-        $dirty_time = defined($dirty_time) ? $dirty_time : 0;
-        $ocr_time   = defined($ocr_time)   ? $ocr_time   : 0;
+        $dirty_time = defined $dirty_time ? $dirty_time : 0;
+        $ocr_time   = defined $ocr_time   ? $ocr_time   : 0;
         if ( $ocr_flag and ( $ocr_time le $dirty_time ) ) {
             push @selection, $_;
         }
@@ -4772,7 +4759,7 @@ sub select_modified_since_ocr {
 sub select_no_ocr {
     my @selection;
     for ( 0 .. $#{ $slist->{data} } ) {
-        if ( not defined( $slist->{data}[$_][2]{hocr} ) ) {
+        if ( not defined $slist->{data}[$_][2]{hocr} ) {
             push @selection, $_;
         }
     }
@@ -4814,14 +4801,14 @@ sub select_blank_pages {
         $logger->info("smp page: $page");
         my $dirty_time   = $slist->{data}[$page][2]{dirty_time};
         my $analyse_time = $slist->{data}[$page][2]{analyse_time};
-        $dirty_time   = defined($dirty_time)   ? $dirty_time   : 0;
-        $analyse_time = defined($analyse_time) ? $analyse_time : 0;
+        $dirty_time   = defined $dirty_time   ? $dirty_time   : 0;
+        $analyse_time = defined $analyse_time ? $analyse_time : 0;
         if ( $analyse_time le $dirty_time ) {
             $logger->warn(
                 $d->get(
-                    sprintf(
+                    sprintf
 'Page %d probably needs to be re-Analysed.  Try Update or Analyse.',
-                        $page + 1 )
+                    $page + 1
                 )
             );
             next;
@@ -4857,14 +4844,14 @@ sub select_dark_pages {
         $logger->info("smp page: $page");
         my $dirty_time   = $slist->{data}[$page][2]{dirty_time};
         my $analyse_time = $slist->{data}[$page][2]{analyse_time};
-        $dirty_time   = defined($dirty_time)   ? $dirty_time   : 0;
-        $analyse_time = defined($analyse_time) ? $analyse_time : 0;
+        $dirty_time   = defined $dirty_time   ? $dirty_time   : 0;
+        $analyse_time = defined $analyse_time ? $analyse_time : 0;
         if ( $analyse_time le $dirty_time ) {
             $logger->warn(
                 $d->get(
-                    sprintf(
+                    sprintf
 'Page %d probably needs to be re-Analysed.  Try Update or Analyse.',
-                        $page + 1 )
+                    $page + 1
                 )
             );
             next;
@@ -5053,8 +5040,8 @@ sub analyse {
     foreach my $i ( 0 .. $#{ $slist->{data} } ) {
         my $dirty_time   = $slist->{data}[$i][2]{dirty_time};
         my $analyse_time = $slist->{data}[$i][2]{analyse_time};
-        $dirty_time   = defined($dirty_time)   ? $dirty_time   : 0;
-        $analyse_time = defined($analyse_time) ? $analyse_time : 0;
+        $dirty_time   = defined $dirty_time   ? $dirty_time   : 0;
+        $analyse_time = defined $analyse_time ? $analyse_time : 0;
         if ( $analyse_time le $dirty_time ) {
             $logger->info(
 "Updating: $slist->{data}[$i][0] analyse_time: $analyse_time dirty_time: $dirty_time"
@@ -5413,7 +5400,7 @@ sub change_image_tool_cb {
     }
     $view->set_tool($tool);
     if (    $value == $SELECTOR_TOOL
-        and defined( $SETTING{selection} )
+        and defined $SETTING{selection}
         and @{ $SETTING{selection} } )
     {
         $selector->signal_handler_block(
@@ -5655,7 +5642,7 @@ sub user_defined_tool {
 
 sub unpaper_page {
     my ( $pages, $options, $callback ) = @_;
-    if ( not defined($options) ) { $options = $EMPTY }
+    if ( not defined $options ) { $options = $EMPTY }
 
     # Update undo/redo buffers
     take_snapshot();
@@ -5826,13 +5813,13 @@ sub combobox_set_active {
     # Fill ComboBox
     my $i = 0;
     my $o;
-    if ( defined($default) ) {
+    if ( defined $default ) {
         foreach (@array) {
-            if ( defined( $_->[0] ) and $_->[0] eq $default ) { $o = $i }
+            if ( defined $_->[0] and $_->[0] eq $default ) { $o = $i }
             ++$i;
         }
     }
-    if ( not defined($o) ) { $o = 0 }
+    if ( not defined $o ) { $o = 0 }
     $combobox->set_active($o);
     return;
 }
@@ -5987,14 +5974,14 @@ sub OCR {
 
     $windowo->show_all;
     if (
-        defined($hboxtl)
+        defined $hboxtl
         and not( $ocr_engine[ $combobe->get_active ]->[0] eq 'tesseract'
             or $ocr_engine[ $combobe->get_active ]->[0] eq 'ocropus' )
       )
     {
         $hboxtl->hide_all;
     }
-    if ( defined($hboxcl)
+    if ( defined $hboxcl
         and not( $ocr_engine[ $combobe->get_active ]->[0] eq 'cuneiform' ) )
     {
         $hboxcl->hide_all;
@@ -6066,14 +6053,12 @@ sub view_pod {
         $error = TRUE;
         show_message_dialog(
             $window, 'error', 'close',
-            sprintf(
-                $d->get(
-                        "The help viewer requires module Gtk2::Ex::PodViewer\n"
-                      . "Alternatively, try: %s %s\n\n"
-                ),
-                $prog_name,
-                '--help'
-            )
+            sprintf $d->get(
+                    "The help viewer requires module Gtk2::Ex::PodViewer\n"
+                  . "Alternatively, try: %s %s\n\n"
+            ),
+            $prog_name,
+            '--help'
         );
     };
     return if $error;
@@ -6136,7 +6121,7 @@ sub view_pod {
 
     # Index contents
     my $idx_pbf = Gtk2::Image->new->render_icon( 'gtk-jump-to', 'menu' );
-    map { push( @{ $index->{data} }, [ $idx_pbf, strippod($_), $_ ] ) }
+    map { push @{ $index->{data} }, [ $idx_pbf, strippod($_), $_ ] }
       $viewer->get_marks;
 
     $windowh->show_all;
@@ -6254,7 +6239,7 @@ sub init_icons {
 sub register_icon {
     my ( $stock_id, $path ) = @_;
 
-    if ( not defined($IconFactory) ) { return }
+    if ( not defined $IconFactory ) { return }
 
     my $icon;
     try { $icon = Gtk2::Gdk::Pixbuf->new_from_file($path) }
@@ -6533,9 +6518,8 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
         for ( sort { $a cmp $b } keys %{ $SETTING{'visible-scan-options'} } ) {
             push @{ $option_visibility_list->{data} },
               [
-                $_, undef,
-                $SETTING{'visible-scan-options'}{$_},
-                defined( $reload{$_} )
+                $_,                                   undef,
+                $SETTING{'visible-scan-options'}{$_}, defined $reload{$_}
               ];
         }
     }
@@ -6975,7 +6959,7 @@ sub get_selected_properties {
     }
 
     # round the value to a sensible number of significant figures
-    return $resolution eq $EMPTY ? $EMPTY : sprintf( '%g', $resolution );
+    return $resolution eq $EMPTY ? $EMPTY : sprintf '%g', $resolution;
 }
 
 # Helper function to display a message dialog, wait for a response, and return it
