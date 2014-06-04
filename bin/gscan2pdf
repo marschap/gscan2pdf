@@ -4444,7 +4444,7 @@ sub import_scan {
                     for ( 1 .. $pad * $BITS_PER_BYTE ) {
                         $data .= '1';
                     }
-                    printf $fh pack sprintf 'b%d', length $data, $data;
+                    printf {$fh} pack sprintf 'b%d', length $data, $data;
                     close $fh
                       or
                       $logger->warn("Error closing $options{filename}: $ERRNO");
