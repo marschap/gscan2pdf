@@ -86,7 +86,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
 
 use Readonly;
-Readonly my $border_width            => 6;              # Window parameters
+Readonly my $BORDER_WIDTH            => 6;              # Window parameters
 Readonly my $STRING_FORMAT           => 8;
 Readonly my $_90_DEGREES             => 90;
 Readonly my $_180_DEGREES            => 180;
@@ -181,7 +181,7 @@ Gscan2pdf::Frontend::CLI->setup($logger);
 Gscan2pdf::Document->set_paper_sizes( $SETTING{Paper} );
 
 # Create icons for rotate buttons
-my $IconFactory;
+my $iconfactory;
 my $iconpath;
 if ( -d '/usr/share/gscan2pdf' ) {
     $iconpath = '/usr/share/gscan2pdf';
@@ -206,7 +206,7 @@ my (
     $windowu,
     @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
-    %helperTag,   $menubar,        $toolbar,
+    $menubar,     $toolbar,
     @ocr_engine,  @clipboard,
     $windowr,        $view,    $windowp,
     $print_settings, $windowc, $current_page,
@@ -2115,7 +2115,7 @@ sub open_dialog {
                         my $windowq = Gscan2pdf::Dialog->new(
                             'transient-for' => $window,
                             title           => $d->get('Pages to extract'),
-                            border_width    => $border_width
+                            border_width    => $BORDER_WIDTH
                         );
                         my $vbox = $windowq->get('vbox');
                         my $hbox = Gtk2::HBox->new;
@@ -2282,7 +2282,7 @@ sub add_pdf_metadata {
     my $frame = Gtk2::Frame->new( $d->get('Metadata') );
     $vbox->pack_start( $frame, TRUE, TRUE, 0 );
     my $vboxm = Gtk2::VBox->new;
-    $vboxm->set_border_width($border_width);
+    $vboxm->set_border_width($BORDER_WIDTH);
     $frame->add($vboxm);
 
     # Date/time
@@ -2300,7 +2300,7 @@ sub add_pdf_metadata {
             my $window_date = Gscan2pdf::Dialog->new(
                 'transient-for' => $windowi,
                 title           => $d->get('Select Date'),
-                border_width    => $border_width
+                border_width    => $BORDER_WIDTH
             );
             my $vbox_date = $window_date->get('vbox');
             $window_date->set_resizable(FALSE);
@@ -2385,7 +2385,7 @@ sub add_pdf_metadata {
     return ( $entrya, $entryt, $entrys, $entryk );
 }
 
-sub update_PDF_settings {
+sub update_pdf_settings {
     my ( $entrya, $entryt, $entrys, $entryk ) = @_;
 
     # Get metadata
@@ -2541,7 +2541,7 @@ EOS
 
 # Save selected pages as PDF under given name.
 
-sub save_PDF {
+sub save_pdf {
     my ($filename) = @_;
 
     # Compile list of pages
@@ -2720,7 +2720,7 @@ sub save_dialog {
         'transient-for'  => $window,
         title            => $d->get('Save'),
         'hide-on-delete' => TRUE,
-        border_width     => $border_width
+        border_width     => $BORDER_WIDTH
     );
     my $vbox = $windowi->get('vbox');
 
@@ -2995,7 +2995,7 @@ sub save_button_clicked_callback {
 
             $SETTING{'pdf font'} = $fonts->[ $combof->get_active ][0];
 
-            update_PDF_settings( $entrya, $entryt, $entrys, $entryk );
+            update_pdf_settings( $entrya, $entryt, $entrys, $entryk );
 
             # cd back to cwd to save
             chdir $SETTING{'cwd'};
@@ -3213,20 +3213,20 @@ sub file_chooser_response_callback {
 
         given ($type) {
             when ('pdf') {
-                save_PDF($filename);
+                save_pdf($filename);
             }
             when ('djvu') {
                 save_djvu($filename);
             }
             when ('tif') {
-                save_TIFF($filename);
+                save_tiff($filename);
             }
             when ('txt') {
                 save_txt($filename);
             }
             when ('ps') {
                 my $tif = File::Temp->new( DIR => $session, SUFFIX => '.tif' );
-                save_TIFF( $tif->filename, $filename );
+                save_tiff( $tif->filename, $filename );
             }
             when ('gs2p') {
                 $slist->save_session($filename);
@@ -3347,7 +3347,7 @@ sub save_image {
     return;
 }
 
-sub save_TIFF {
+sub save_tiff {
     my ( $filename, $ps ) = @_;
 
     # Compile list of pages
@@ -3517,7 +3517,7 @@ sub email {
         'transient-for'  => $window,
         title            => $d->get('Email as PDF'),
         'hide-on-delete' => TRUE,
-        border_width     => $border_width
+        border_width     => $BORDER_WIDTH
     );
     my $vbox = $windowe->get('vbox');
 
@@ -3542,7 +3542,7 @@ sub email {
         clicked => sub {
 
             # Set options
-            update_PDF_settings( $entrya, $entryt, $entrys, $entryk );
+            update_pdf_settings( $entrya, $entryt, $entrys, $entryk );
 
             # Compile list of pages
             my @list_of_pages;
@@ -3682,7 +3682,7 @@ sub scan_dialog {
     my %options = (
         'transient-for'     => $window,
         title               => $d->get('Scan Document'),
-        border_width        => $border_width,
+        border_width        => $BORDER_WIDTH,
         logger              => $logger,
         dir                 => $session,
         'hide-on-delete'    => TRUE,
@@ -4181,7 +4181,7 @@ sub add_postprocessing_options {
     my $framep = Gtk2::Frame->new( $d->get('Post-processing') );
     $vbox->pack_start( $framep, FALSE, FALSE, 0 );
     my $vboxp = Gtk2::VBox->new;
-    $vboxp->set_border_width($border_width);
+    $vboxp->set_border_width($BORDER_WIDTH);
     $framep->add($vboxp);
 
     # Rotate
@@ -4212,7 +4212,7 @@ sub add_postprocessing_options {
             my $windowuo = Gscan2pdf::Dialog->new(
                 'transient-for' => $window,
                 title           => $d->get('unpaper options'),
-                border_width    => $border_width
+                border_width    => $BORDER_WIDTH
             );
             my $vbox1 = $windowuo->get('vbox');
             $unpaper->add_options($vbox1);
@@ -4967,7 +4967,7 @@ sub renumber_dialog {
         'transient-for'  => $window,
         document         => $slist,
         'hide-on-delete' => FALSE,
-        border_width     => $border_width
+        border_width     => $BORDER_WIDTH
     );
 
     # Update undo/redo buffers
@@ -5115,7 +5115,7 @@ sub threshold {
     my $windowt = Gscan2pdf::Dialog->new(
         'transient-for' => $window,
         title           => $d->get('Threshold'),
-        border_width    => $border_width
+        border_width    => $BORDER_WIDTH
     );
     my $vbox = $windowt->get('vbox');
 
@@ -5194,7 +5194,7 @@ sub negate {
     my $windowt = Gscan2pdf::Dialog->new(
         'transient-for' => $window,
         title           => $d->get('Negate'),
-        border_width    => $border_width
+        border_width    => $BORDER_WIDTH
     );
     my $vbox = $windowt->get('vbox');
 
@@ -5257,7 +5257,7 @@ sub unsharp {
     my $windowum = Gscan2pdf::Dialog->new(
         'transient-for' => $window,
         title           => $d->get('Unsharp mask'),
-        border_width    => $border_width
+        border_width    => $BORDER_WIDTH
     );
     my $vbox = $windowum->get('vbox');
 
@@ -5431,7 +5431,7 @@ sub crop {
         'transient-for'  => $window,
         title            => $d->get('Crop'),
         'hide-on-delete' => TRUE,
-        border_width     => $border_width
+        border_width     => $BORDER_WIDTH
     );
     my $vbox = $windowc->get('vbox');
 
@@ -5696,7 +5696,7 @@ sub unpaper {
         'transient-for'  => $window,
         title            => $d->get('unpaper'),
         'hide-on-delete' => TRUE,
-        border_width     => $border_width
+        border_width     => $BORDER_WIDTH
     );
     my $vbox = $windowu->get('vbox');
     $unpaper->add_options($vbox);
@@ -5891,7 +5891,7 @@ sub OCR {
         'transient-for'  => $window,
         title            => $d->get('OCR'),
         'hide-on-delete' => TRUE,
-        border_width     => $border_width
+        border_width     => $BORDER_WIDTH
     );
     my $vbox = $windowo->get('vbox');
 
@@ -6026,7 +6026,6 @@ sub quit {
     $logger->info("Wrote config to $ENV{'HOME'}/.$prog_name");
 
     kill_threads();
-    kill_subs();
     $logger->debug('Quitting');
     return TRUE;
 }
@@ -6100,7 +6099,7 @@ sub view_pod {
 
     # Viewer
     my $viewer = Gtk2::Ex::PodViewer->new;
-    $viewer->set_border_width($border_width);
+    $viewer->set_border_width($BORDER_WIDTH);
     $viewer->set_cursor_visible(FALSE);
     $index->get_selection->signal_connect(
         'changed',
@@ -6222,14 +6221,14 @@ sub unundo {
     return;
 }
 
-# Initialise IconFactory
+# Initialise $iconfactory
 
 sub init_icons {
     my @icons = @_;
-    return if defined $IconFactory;
+    return if defined $iconfactory;
 
-    $IconFactory = Gtk2::IconFactory->new();
-    $IconFactory->add_default();
+    $iconfactory = Gtk2::IconFactory->new();
+    $iconfactory->add_default();
 
     foreach (@icons) {
         register_icon( $_->[0], $_->[1] );
@@ -6242,24 +6241,13 @@ sub init_icons {
 sub register_icon {
     my ( $stock_id, $path ) = @_;
 
-    if ( not defined $IconFactory ) { return }
+    if ( not defined $iconfactory ) { return }
 
     my $icon;
     try { $icon = Gtk2::Gdk::Pixbuf->new_from_file($path) }
     catch { $logger->warn("Unable to load icon `$path': $_") };
     if ( defined $icon ) {
-        $IconFactory->add( $stock_id, Gtk2::IconSet->new_from_pixbuf($icon) );
-    }
-    return;
-}
-
-# We should clean up after ourselves so that we don't
-# leave dead processes flying around.
-sub kill_subs {
-
-    foreach ( keys %helperTag ) {
-        $logger->info("Sending TERM signal to PID $_ and its children");
-        killfam 'TERM', ($_);
+        $iconfactory->add( $stock_id, Gtk2::IconSet->new_from_pixbuf($icon) );
     }
     return;
 }
@@ -6339,7 +6327,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
         'transient-for'  => $window,
         title            => $d->get('Preferences'),
         'hide-on-delete' => TRUE,
-        border_width     => $border_width
+        border_width     => $BORDER_WIDTH
     );
     my $vbox = $windowr->get('vbox');
 
@@ -6348,7 +6336,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     $vbox->pack_start( $notebook, TRUE, TRUE, 0 );
     my $vbox1 = Gtk2::VBox->new;
     $notebook->append_page( $vbox1, $d->get('Scan options') );
-    $vbox1->set_border_width($border_width);
+    $vbox1->set_border_width($BORDER_WIDTH);
 
     my $cbo =
       Gtk2::CheckButton->new_with_label(
@@ -6445,7 +6433,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     my $oframe = Gtk2::Frame->new( $d->get('Option visibility & control') );
     $vbox1->pack_start( $oframe, TRUE, TRUE, 0 );
     my $vvbox = Gtk2::VBox->new;
-    $vvbox->set_border_width($border_width);
+    $vvbox->set_border_width($BORDER_WIDTH);
     $oframe->add($vvbox);
     my $scwin = Gtk2::ScrolledWindow->new;
     $vvbox->pack_start( $scwin, TRUE, TRUE, 0 );
@@ -6549,7 +6537,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
 
     my $vbox2 = Gtk2::VBox->new;
     $notebook->append_page( $vbox2, $d->get('General options') );
-    $vbox2->set_border_width($border_width);
+    $vbox2->set_border_width($BORDER_WIDTH);
 
     # Restore window setting
     my $cbw = Gtk2::CheckButton->new_with_label(
@@ -6665,7 +6653,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     my $frame = Gtk2::Frame->new( $d->get('User-defined tools') );
     $vbox2->pack_start( $frame, TRUE, TRUE, 0 );
     my $vboxt = Gtk2::VBox->new;
-    $vboxt->set_border_width($border_width);
+    $vboxt->set_border_width($BORDER_WIDTH);
     $frame->add($vboxt);
     for my $tool (@user_defined_tools) {
         add_user_defined_tool_entry( $vboxt, $tool );
@@ -6877,7 +6865,7 @@ sub properties {
         'transient-for'  => $window,
         title            => $d->get('Properties'),
         'hide-on-delete' => TRUE,
-        border_width     => $border_width
+        border_width     => $BORDER_WIDTH
     );
     my $vbox = $windowp->get('vbox');
 
