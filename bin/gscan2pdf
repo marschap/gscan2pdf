@@ -1128,7 +1128,7 @@ sub create_menu_bar {
             'PainterTool',                   'gtk-media-play',
             $d->get('_Paint'),               undef,
             $d->get('Use the painter tool'), $PAINTER_TOOL
-        ]
+        ],
     );
 
     my $ui = <<'EOS';
@@ -2509,9 +2509,12 @@ EOS
     for my $i ( 0 .. $root->get_n_children - 1 ) {
         my $group  = $root->get_child($i);
         my $bounds = $group->get_bounds;
-        my ( $x1, $y1, $x2, $y2 ) =
-          ( $bounds->x1 + 1, $bounds->y1 + 1, $bounds->x2 - 1,
-            $bounds->y2 - 1 );
+        my ( $x1, $y1, $x2, $y2 ) = (
+            $bounds->x1 + 1,
+            $bounds->y1 + 1,
+            $bounds->x2 - 1,
+            $bounds->y2 - 1,
+        );
 
 #  my $matrix = $group->get_transform; FIXME: use this as soon as Goo::Canvas 0.07 is in generally available
 #  my ( $x1, $y1 ) = ( $matrix->x0, $matrix->y0 );
@@ -5769,7 +5772,7 @@ sub ocr_page {
             if ( @page and $new_page == $slist->{data}[ $page[0] ][2] ) {
                 create_canvas($new_page);
             }
-        }
+        },
     );
     if ( $SETTING{'ocr engine'} ne 'gocr' ) {
         $options{language} = $SETTING{'ocr language'};
