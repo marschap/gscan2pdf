@@ -2047,9 +2047,9 @@ sub update_tpbar {
         }
         else {
             $tpbar->set_fraction(
-                ( $options{jobs_completed} + 0.5 )
-                /    ## no critic (ProhibitMagicNumbers)
-                  $options{jobs_total}
+                ( $options{jobs_completed} +
+                      0.5 )    ## no critic (ProhibitMagicNumbers)
+                / $options{jobs_total}
             );
         }
         $thbox->show_all;
