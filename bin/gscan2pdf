@@ -133,7 +133,7 @@ my (
 parse_arguments();
 
 # Catch and log perl warnings
-$SIG{__WARN__} = sub {
+local $SIG{__WARN__} = sub {
     local $Log::Log4perl::caller_depth = $Log::Log4perl::caller_depth + 1;
     $logger->warn(@_);
 };
