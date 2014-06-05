@@ -3936,7 +3936,7 @@ sub reloaded_scan_options_callback {
 
 sub changed_progress_callback {
     my ( $widget, $progress, $message ) = @_;
-    if ( defined $progress ) {
+    if ( defined $progress and $progress >= 0 and $progress <= 1 ) {
         $spbar->set_fraction($progress);
     }
     else {
