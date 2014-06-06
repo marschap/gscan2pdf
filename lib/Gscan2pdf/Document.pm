@@ -652,6 +652,32 @@ sub save_text {
     );
 }
 
+sub save_hocr {
+    my ( $self, %options ) = @_;
+
+    for my $i ( 0 .. $#{ $options{list_of_pages} } ) {
+        $options{list_of_pages}->[$i] =
+          $options{list_of_pages}->[$i]
+          ->freeze;    # sharing File::Temp objects causes problems
+    }
+    my $sentinel = _enqueue_request(
+        'save-hocr',
+        {
+            path          => $options{path},
+            list_of_pages => $options{list_of_pages},
+        }
+    );
+    return $self->_monitor_process(
+        sentinel           => $sentinel,
+        queued_callback    => $options{queued_callback},
+        started_callback   => $options{started_callback},
+        running_callback   => $options{running_callback},
+        error_callback     => $options{error_callback},
+        cancelled_callback => $options{cancelled_callback},
+        finished_callback  => $options{finished_callback},
+    );
+}
+
 sub analyse {
     my ( $self, %options ) = @_;
 
@@ -1466,6 +1492,11 @@ sub _thread_main {
                     $request->{dir}, $request->{pidfile} );
             }
 
+            when ('save-hocr') {
+                _thread_save_hocr( $self, $request->{path},
+                    $request->{list_of_pages} );
+            }
+
             when ('save-image') {
                 _thread_save_image( $self, $request->{path},
                     $request->{list_of_pages},
@@ -2195,6 +2226,18 @@ sub _thread_save_djvu {
     return;
 }
 
+sub _write_file {
+    my ( $self, $fh, $filename, $data ) = @_;
+    if ( not print {$fh} $data ) {
+        $self->{status}  = 1;
+        $self->{message} = sprintf $d->get("Can't write to file: %s"),
+          $filename;
+        $self->{status} = 1;
+        return FALSE;
+    }
+    return TRUE;
+}
+
 # Add OCR to text layer
 
 sub _add_text_to_djvu {
@@ -2211,9 +2254,8 @@ sub _add_text_to_djvu {
         open my $fh, '>:encoding(UTF8)',    ## no critic (RequireBriefOpen)
           $djvusedtxtfile
           or croak( sprintf $d->get("Can't open file: %s"), $djvusedtxtfile );
-        print {$fh} "(page 0 0 $w $h\n"
-          or
-          croak( sprintf $d->get("Can't write to file: %s"), $djvusedtxtfile );
+        _write_file( $self, $fh, $djvusedtxtfile, "(page 0 0 $w $h\n" )
+          or return;
 
         # Write the text boxes
         for my $box ( $pagedata->boxes ) {
@@ -2228,9 +2270,7 @@ sub _add_text_to_djvu {
             printf {$fh} "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2,
               $h - $y1, $txt;
         }
-        print {$fh} ')'
-          or
-          croak( sprintf $d->get("Can't write to file: %s"), $djvusedtxtfile );
+        _write_file( $self, $fh, $djvusedtxtfile, ')' ) or return;
         close $fh
           or croak( sprintf $d->get("Can't close file: %s"), $djvusedtxtfile );
 
@@ -2423,14 +2463,44 @@ sub _thread_save_text {
         $self->{message} = sprintf $d->get("Can't open file: %s"), $path;
         return;
     }
-    foreach ( @{$list_of_pages} ) {
-        if ( not print {$fh} $_->{hocr} ) {
-            $self->{status}  = 1;
-            $self->{message} = sprintf $d->get("Can't write to file: %s"),
-              $path;
-            return;
+    for my $page ( @{$list_of_pages} ) {
+
+        # Note y value to be able to put line breaks
+        # at appropriate positions
+        my ( $oldx, $oldy );
+        for my $box ( $page->boxes ) {
+            my ( $x1, $y1, $x2, $y2, $text ) = @{$box};
+            if ( defined $oldx and $x1 > $oldx ) {
+                _write_file( $self, $fh, $path, $SPACE ) or return;
+            }
+            if ( defined $oldy and $y1 > $oldy ) {
+                _write_file( $self, $fh, $path, "\n" ) or return;
+            }
+            ( $oldx, $oldy ) = ( $x1, $y1 );
+            _write_file( $self, $fh, $path, $text ) or return;
         }
         return if $_self->{cancel};
+    }
+    if ( not close $fh ) {
+        $self->{status} = 1;
+        $self->{message} = sprintf $d->get("Can't close file: %s"), $path;
+    }
+    return;
+}
+
+sub _thread_save_hocr {
+    my ( $self, $path, $list_of_pages, $fh ) = @_;
+
+    if ( not open $fh, '>', $path ) {    ## no critic (RequireBriefOpen)
+        $self->{status} = 1;
+        $self->{message} = sprintf $d->get("Can't open file: %s"), $path;
+        return;
+    }
+    foreach ( @{$list_of_pages} ) {
+        if ( $_->{hocr} =~ /<body>([\s\S]*)<\/body>/xsm ) {
+            _write_file( $self, $fh, $path, $_->{hocr} ) or return;
+            return if $_self->{cancel};
+        }
     }
     if ( not close $fh ) {
         $self->{status} = 1;

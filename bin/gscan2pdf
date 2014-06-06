@@ -2748,6 +2748,7 @@ sub save_dialog {
         [ 'ps',      $d->get('PS'),      $d->get('Postscript') ],
         [ 'tif',     $d->get('TIFF'),    $d->get('Tagged Image File Format') ],
         [ 'txt',     $d->get('Text'),    $d->get('Plain text') ],
+        [ 'hocr',    $d->get('hOCR'),    $d->get('hOCR markup language') ],
         [ 'session', $d->get('Session'), $d->get('gscan2pdf session file') ],
     );
     if ( $dependencies{djvu} ) {
@@ -3120,6 +3121,31 @@ sub save_button_clicked_callback {
             # cd back to tempdir
             chdir $session;
         }
+        when ('hocr') {
+
+            # cd back to cwd to save
+            chdir $SETTING{'cwd'};
+
+            # Set up file selector
+            my $file_chooser = Gtk2::FileChooserDialog->new(
+                $d->get('hOCR filename'),
+                $windowi, 'save',
+                'gtk-cancel' => 'cancel',
+                'gtk-save'   => 'ok'
+            );
+            $file_chooser->set_default_response('ok');
+            $file_chooser->set_current_folder( $SETTING{'cwd'} );
+            $file_chooser->set_do_overwrite_confirmation(TRUE);
+            add_filter( $file_chooser, $d->get('hOCR files'), 'hocr' );
+            $file_chooser->signal_connect(
+                response => \&file_chooser_response_callback,
+                'hocr'
+            );
+            $file_chooser->show;
+
+            # cd back to tempdir
+            chdir $session;
+        }
         when ('ps') {
             $SETTING{'tiff compression'} =
               $tiff_compression->[ $combobtc->get_active ][0];
@@ -3222,7 +3248,10 @@ sub file_chooser_response_callback {
                 save_tiff($filename);
             }
             when ('txt') {
-                save_txt($filename);
+                save_text($filename);
+            }
+            when ('hocr') {
+                save_hocr($filename);
             }
             when ('ps') {
                 my $tif = File::Temp->new( DIR => $session, SUFFIX => '.tif' );
@@ -3456,7 +3485,7 @@ sub save_djvu {
     return;
 }
 
-sub save_txt {
+sub save_text {
     my ($filename) = @_;
 
     # Compile list of pages
@@ -3470,6 +3499,53 @@ sub save_txt {
 
     my ( $signal, $pid );
     $pid = $slist->save_text(
+        path            => $filename,
+        list_of_pages   => \@list_of_pages,
+        queued_callback => sub {
+            return update_tpbar(@_);
+        },
+        started_callback => sub {
+            my ( $thread, $process, $completed, $total ) = @_;
+            $signal =
+              setup_tpbar( $thread, $process, $completed, $total, $pid );
+            return TRUE if ( defined $signal );
+        },
+        running_callback => sub {
+            return update_tpbar(@_);
+        },
+        finished_callback => sub {
+            my ( $new_page, $pending ) = @_;
+            if ( not $pending ) { $thbox->hide_all }
+            if ( defined $signal ) {
+                $tcbutton->signal_handler_disconnect($signal);
+            }
+            mark_pages(@pagelist);
+            if ( defined $SETTING{'view files toggle'}
+                and $SETTING{'view files toggle'} )
+            {
+                system "xdg-open \"$filename\" &";
+            }
+            $logger->debug("Finished saving $filename");
+        },
+        error_callback => \&error_callback
+    );
+    return;
+}
+
+sub save_hocr {
+    my ($filename) = @_;
+
+    # Compile list of pages
+    my @list_of_pages;
+    my @pagelist =
+      $slist->get_page_index( $SETTING{'Page range'}, \&error_callback );
+    if ( not @pagelist ) { return }
+    for (@pagelist) {
+        push @list_of_pages, $slist->{data}[$_][2];
+    }
+
+    my ( $signal, $pid );
+    $pid = $slist->save_hocr(
         path            => $filename,
         list_of_pages   => \@list_of_pages,
         queued_callback => sub {
