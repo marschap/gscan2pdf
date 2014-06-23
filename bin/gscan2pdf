@@ -4874,36 +4874,23 @@ sub analyse_select_blank {
 
 # Select blank pages
 
-sub select_blank_pages {
-    $slist->get_selection->unselect_all;
-    foreach my $page ( 0 .. $#{ $slist->{data} } ) {
-        $logger->info("smp page: $page");
-        my $dirty_time   = $slist->{data}[$page][2]{dirty_time};
-        my $analyse_time = $slist->{data}[$page][2]{analyse_time};
-        $dirty_time   = defined $dirty_time   ? $dirty_time   : 0;
-        $analyse_time = defined $analyse_time ? $analyse_time : 0;
-        if ( $analyse_time le $dirty_time ) {
-            $logger->warn(
-                $d->get(
-                    sprintf
-'Page %d probably needs to be re-Analysed.  Try Update or Analyse.',
-                    $page + 1
-                )
-            );
-            next;
-        }
+sub select_blank_page {
+    my ($page) = @_;
+    $logger->info("smp page: $page");
 
-        #compare Std Dev to threshold
-        if ( $slist->{data}[$page][2]{std_dev} <= $SETTING{'Blank threshold'} )
-        {
-            $slist->select($page);
-            $logger->info('Selecting blank page');
-        }
-        $logger->info( 'StdDev: '
-              . $slist->{data}[$page][2]{std_dev}
-              . ' threshold: '
-              . $SETTING{'Blank threshold'} );
+    #compare Std Dev to threshold
+    if ( $slist->{data}[$page][2]{std_dev} <= $SETTING{'Blank threshold'} ) {
+        $slist->select($page);
+        $logger->info('Selecting blank page');
     }
+    else {
+        $slist->unselect($page);
+        $logger->info('Unselecting non-blank page');
+    }
+    $logger->info( 'StdDev: '
+          . $slist->{data}[$page][2]{std_dev}
+          . ' threshold: '
+          . $SETTING{'Blank threshold'} );
     return;
 }
 
@@ -4916,32 +4903,23 @@ sub analyse_select_dark {
 
 # Select dark pages
 
-sub select_dark_pages {
-    $slist->get_selection->unselect_all;
-    $logger->info('Checking for dark pages now, is analysis done?');
-    foreach my $page ( 0 .. $#{ $slist->{data} } ) {
-        $logger->info("smp page: $page");
-        my $dirty_time   = $slist->{data}[$page][2]{dirty_time};
-        my $analyse_time = $slist->{data}[$page][2]{analyse_time};
-        $dirty_time   = defined $dirty_time   ? $dirty_time   : 0;
-        $analyse_time = defined $analyse_time ? $analyse_time : 0;
-        if ( $analyse_time le $dirty_time ) {
-            $logger->warn(
-                $d->get(
-                    sprintf
-'Page %d probably needs to be re-Analysed.  Try Update or Analyse.',
-                    $page + 1
-                )
-            );
-            next;
-        }
+sub select_dark_page {
+    my ($page) = @_;
+    $logger->info("smp page: $page");
 
-        #compare Mean to threshold
-        if ( $slist->{data}[$page][2]{mean} <= $SETTING{'Dark threshold'} ) {
-            $slist->select($page);
-            $logger->info('Selecting dark page');
-        }
+    #compare Mean to threshold
+    if ( $slist->{data}[$page][2]{mean} <= $SETTING{'Dark threshold'} ) {
+        $slist->select($page);
+        $logger->info('Selecting dark page');
     }
+    else {
+        $slist->unselect($page);
+        $logger->info('Unselecting non-dark page');
+    }
+    $logger->info( 'mean: '
+          . $slist->{data}[$page][2]{mean}
+          . ' threshold: '
+          . $SETTING{'Dark threshold'} );
     return;
 }
 
@@ -5144,11 +5122,15 @@ sub analyse {
                     if ( defined $signal ) {
                         $tcbutton->signal_handler_disconnect($signal);
                     }
-                    if ($select_blank) { select_blank_pages() }
-                    if ($select_dark)  { select_dark_pages() }
+                    if ($select_blank) { select_blank_page($i) }
+                    if ($select_dark)  { select_dark_page($i) }
                 },
                 error_callback => \&error_callback,
             );
+        }
+        else {
+            if ($select_blank) { select_blank_page($i) }
+            if ($select_dark)  { select_dark_page($i) }
         }
     }
     return;
