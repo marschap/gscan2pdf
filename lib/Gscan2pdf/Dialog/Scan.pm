@@ -254,20 +254,7 @@ sub INIT_INSTANCE {
             }
         }
     );
-    $self->signal_connect(
-        'changed-device' => sub {
-            my ( $widget, $device ) = @_;
-            my $device_list = $self->get('device-list');
-            for ( @{$device_list} ) {
-                if ( $_->{name} eq $device ) {
-                    Gscan2pdf::Dialog::Scan::set_combobox_by_text(
-                        $self->{combobd}, $_->{label} );
-                    $self->scan_options;
-                    return;
-                }
-            }
-        }
-    );
+    $self->signal_connect( 'changed-device' => \&_changed_device_callback );
     $tooltips->set_tip( $self->{combobd},
         $d->get('Sets the device to be used for the scan') );
     $self->{hboxd}->pack_end( $self->{combobd}, FALSE, FALSE, 0 );
@@ -561,6 +548,25 @@ sub INIT_INSTANCE {
         }
     );
     return $self;
+}
+
+sub _changed_device_callback {
+    my ( $self, $device ) = @_;
+    my $device_list = $self->get('device-list');
+    if ( defined $device and $device ne $EMPTY ) {
+        for ( @{$device_list} ) {
+            if ( $_->{name} eq $device ) {
+                Gscan2pdf::Dialog::Scan::set_combobox_by_text( $self->{combobd},
+                    $_->{label} );
+                $self->scan_options;
+                return;
+            }
+        }
+    }
+    else {
+        $self->{combobd}->set_active($_NO_INDEX);
+    }
+    return;
 }
 
 sub SET_PROPERTY {

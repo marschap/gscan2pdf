@@ -157,7 +157,6 @@ sub scan_options {
                             'Error retrieving scanner options: ' . $message
                         )
                     );
-                    $self->destroy;
                 }
             );
         },
@@ -165,7 +164,6 @@ sub scan_options {
             my ($message) = @_;
             $self->signal_emit( 'process-error', 'open_device',
                 $d->get( 'Error opening device: ' . $message ) );
-            $self->destroy;
         }
     );
     return;

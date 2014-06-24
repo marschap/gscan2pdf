@@ -126,10 +126,7 @@ my $EMPTY   = q{};
 my $SPACE   = q{ };
 my $DOT     = q{.};
 my $PERCENT = q{%};
-my (
-    $test,   $help,        $log,        $log_level, @device,
-    $locale, @device_list, $test_image, $logger
-);
+my ( $test, $help, $log, $log_level, @device, $locale, $test_image, $logger );
 parse_arguments();
 
 # Catch and log perl warnings
@@ -519,10 +516,6 @@ EOS
         else {
             $d->dir( getcwd . "/$locale" );
         }
-    }
-
-    for (@device) {
-        push @device_list, { name => $_, label => $_ };
     }
 
     # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
@@ -3866,24 +3859,8 @@ sub scan_dialog {
     );
 
     $windows->signal_connect(
-        'process-error' => sub {
-            my ( $widget, $process, $msg ) = @_;
-            $logger->info(
-                "signal 'process-error' emitted with data: $process $msg");
-            if ( defined $signal ) {
-                $scbutton->signal_handler_disconnect($signal);
-            }
-            $shbox->hide;
-            if ( $process =~ /^(?:get_devices|find_scan_options)$/xsm ) {
-                $widget->hide;
-                undef $windows;
-                show_message_dialog( $window, 'error', 'close', $msg );
-            }
-            else {
-                show_message_dialog( $widget, 'error', 'close',
-                    $d_sane->get($msg) );
-            }
-        }
+        'process-error' => \&process_error_callback,
+        $signal
     );
 
     # Profiles
@@ -3939,7 +3916,11 @@ sub scan_dialog {
 
     if ( not $hidden ) { $windows->show_all }
 
-    if (@device_list) {
+    if (@device) {
+        my @device_list;
+        for (@device) {
+            push @device_list, { name => $_, label => $_ };
+        }
         $windows->set( 'device-list', \@device_list );
     }
     else {
@@ -3950,9 +3931,12 @@ sub scan_dialog {
 
 sub changed_device_callback {
     my ( $widget, $device ) = @_;
-    $logger->info("signal 'changed-device' emitted with data: '$device'");
     if ( defined $device and $device ne $EMPTY ) {
+        $logger->info("signal 'changed-device' emitted with data: '$device'");
         $SETTING{device} = $device;
+    }
+    else {
+        $logger->info("signal 'changed-device' emitted with data: undef");
     }
     return;
 }
@@ -3965,7 +3949,7 @@ sub changed_device_list_callback {
 
        # Only set default device if it hasn't been specified on the command line
        # and it is in the the device list
-        if ( defined $SETTING{device} and not @device_list ) {
+        if ( defined $SETTING{device} and not @device ) {
             for ( @{$device_list} ) {
                 if ( $SETTING{device} eq $_->{name} ) {
                     $windows->set( 'device', $SETTING{device} );
@@ -4060,6 +4044,31 @@ sub new_scan_callback {
             ocr        => $SETTING{'OCR on scan'}
         );
     }
+    return;
+}
+
+sub process_error_callback {
+    my ( $widget, $process, $msg, $signal ) = @_;
+    $logger->info("signal 'process-error' emitted with data: $process $msg");
+    if ( defined $signal ) {
+        $scbutton->signal_handler_disconnect($signal);
+    }
+    $shbox->hide;
+
+    # If we get an error opening a device,
+    # remove it from the device list
+    if ( $process =~ /^(?:get_devices|open_device|find_scan_options)$/xsm ) {
+        my $device_list = $widget->get('device-list');
+        my $device      = $widget->get('device');
+        if ( defined $device ) {
+            my @device_list;
+            for ( @{$device_list} ) {
+                if ( $_->{name} ne $device ) { push @device_list, $_ }
+            }
+            $widget->set( 'device-list', \@device_list );
+        }
+    }
+    show_message_dialog( $widget, 'error', 'close', $msg );
     return;
 }
 

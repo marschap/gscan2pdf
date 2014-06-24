@@ -4,6 +4,8 @@
 * Changed 'save text' to extract plain text from hOCR output
 * + 'save hOCR', to save hOCR output, where available.
 * Fixed logic of automatic selection of blank or dark pages.
+* If an error occurs whilst opening a device, remove it from the device list
+  and try the next, rather than giving up straight away.
 
 
 1.2.5 (17.05.2014):

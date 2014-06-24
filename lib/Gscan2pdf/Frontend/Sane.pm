@@ -18,6 +18,7 @@ Readonly my $_8_BIT         => 8;
 Readonly my $MAXVAL_8_BIT   => 2**$_8_BIT - 1;
 Readonly my $_16_BIT        => 16;
 Readonly my $MAXVAL_16_BIT  => 2**$_16_BIT - 1;
+my $EMPTY = q{};
 
 our $VERSION = '1.2.5';
 
@@ -373,6 +374,11 @@ sub _thread_get_devices {
 
 sub _thread_open_device {
     my ( $self, $device_name ) = @_;
+
+    if ( not defined $device_name or $device_name eq $EMPTY ) {
+        $logger->error('Cannot open undefined device');
+        return;
+    }
 
     # close the handle
     if ( defined( $self->{device_handle} ) ) { undef $self->{device_handle} }
