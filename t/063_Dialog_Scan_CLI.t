@@ -447,5 +447,6 @@ Gtk2->main;
 is( $reloads, 2, 'Final number of calls reloaded-scan-options' );
 is( $dialog->get('available-scan-options')->by_name('mode')->{val},
     'Color', 'reloaded option still set to non-default value' );
+unlink 'out2.pnm';
 
 __END__
