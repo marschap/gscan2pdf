@@ -110,7 +110,7 @@ Readonly my $HELP_WINDOW_DIVIDER_POS => 200;
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
-my $VERSION   = '1.2.5';
+my $VERSION   = '1.2.6';
 
 # Image border to ensure that a scaled to fit image gets no scrollbars
 my $border = 1;
