@@ -2286,8 +2286,40 @@ sub add_pdf_metadata {
     my ( $day, $month, $year ) =
       seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
 
-    my $button =
-      Gtk2::Button->new( sprintf '%04d-%02d-%02d', $year, $month, $day );
+    my $entry =
+      Gtk2::Entry->new_with_max_length(10);  ## no critic (ProhibitMagicNumbers)
+    $entry->set_text( sprintf '%04d-%02d-%02d', $year, $month, $day );
+    $entry->set_activates_default(TRUE);
+    $tooltips->set_tip( $entry, $d->get('Year-Month-Day') );
+    $entry->set_alignment(1.);               # Right justify
+    $entry->signal_connect(
+        'insert-text' => sub {
+            my ( $widget, $string, $len, $position ) = @_;
+
+            # only allow integers and -
+            if ( $string !~ /^[\d\-]+$/smx ) {
+                $entry->signal_stop_emission_by_name('insert-text');
+            }
+            ()    # this callback must return either 2 or 0 items.
+        }
+    );
+    $entry->signal_connect(
+        'focus-out-event' => sub {
+            my $text = $entry->get_text;
+
+            if ( $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
+                ( $year, $month, $day ) = ( $1, $2, $3 );
+                if ( not defined $year )  { $year  = 1 }
+                if ( not defined $month ) { $month = 1 }
+                if ( not defined $day )   { $day   = 1 }
+                $entry->set_text( sprintf '%04d-%02d-%02d',
+                    $year, $month, $day );
+            }
+            return FALSE;
+        }
+    );
+    my $button = Gtk2::Button->new;
+    $button->set_image( Gtk2::Image->new_from_stock( 'gtk-edit', 'button' ) );
     $button->signal_connect(
         clicked => sub {
             my $window_date = Gscan2pdf::Dialog->new(
@@ -2297,15 +2329,23 @@ sub add_pdf_metadata {
             );
             my $vbox_date = $window_date->get('vbox');
             $window_date->set_resizable(FALSE);
-
             my $calendar = Gtk2::Calendar->new;
             $calendar->select_day($day);
             $calendar->select_month( $month - 1, $year );
+            my $calendar_s;
+            $calendar_s = $calendar->signal_connect(
+                day_selected => sub {
+                    ( $year, $month, $day ) = $calendar->get_date;
+                    $month += 1;
+                    $entry->set_text( sprintf '%04d-%02d-%02d',
+                        $year, $month, $day );
+                }
+            );
             $calendar->signal_connect(
                 day_selected_double_click => sub {
                     ( $year, $month, $day ) = $calendar->get_date;
                     $month += 1;
-                    $button->set_label( sprintf '%04d-%02d-%02d',
+                    $entry->set_text( sprintf '%04d-%02d-%02d',
                         $year, $month, $day );
                     use Time::Local;
                     $SETTING{'date offset'} = int(
@@ -2323,8 +2363,15 @@ sub add_pdf_metadata {
             $today->signal_connect(
                 clicked => sub {
                     ( $day, $month, $year ) = seconds_to_date(time);
+
+                    # block and unblock signal, and update entry manually
+                    # to remove possibility of race conditions
+                    $calendar->signal_handler_block($calendar_s);
                     $calendar->select_day($day);
                     $calendar->select_month( $month - 1, $year );
+                    $calendar->signal_handler_unblock($calendar_s);
+                    $entry->set_text( sprintf '%04d-%02d-%02d',
+                        $year, $month, $day );
                 }
             );
             $vbox_date->pack_start( $today, TRUE, TRUE, 0 );
@@ -2332,8 +2379,9 @@ sub add_pdf_metadata {
             $window_date->show_all;
         }
     );
-    $tooltips->set_tip( $button, $d->get('Year-Month-Day') );
-    $hboxe->pack_end( $button, TRUE, TRUE, 0 );
+    $tooltips->set_tip( $button, $d->get('Select date with calendar') );
+    $hboxe->pack_end( $button, FALSE, FALSE, 0 );
+    $hboxe->pack_end( $entry,  FALSE, FALSE, 0 );
 
     # Document author
     my $hboxa = Gtk2::HBox->new;
