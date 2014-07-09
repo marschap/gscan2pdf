@@ -1614,8 +1614,8 @@ sub _thread_get_file_info {
             $logger->info($cmd);
             ( my $info, undef ) =
               open_three("echo $PROCESS_ID > $pidfile;$cmd");
-            return if $_self->{cancel};
             $logger->info($info);
+            return if $_self->{cancel};
 
             my $pages = 1;
             if ( $info =~ /\s(\d+)\s+page/xsm ) {
@@ -2797,7 +2797,7 @@ sub _thread_unpaper {
         if ("$x") { $logger->warn($x) }
         my $depth = $image->Get('depth');
 
-# Unforunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
+# Unfortunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
         my $suffix = '.pbm';
         if ( $depth > 1 ) { $suffix = '.pnm' }
 
@@ -2831,7 +2831,8 @@ sub _thread_unpaper {
     # --overwrite needed because $out exists with 0 size
     my $cmd = sprintf "$options;", $in, $out, $out2;
     $logger->info($cmd);
-    system "echo $PROCESS_ID > $pidfile;$cmd";
+    ( my $info, undef ) = open_three("echo $PROCESS_ID > $pidfile;$cmd");
+    $logger->info($info);
     return if $_self->{cancel};
 
     my $new = Gscan2pdf::Page->new(
