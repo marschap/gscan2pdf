@@ -151,6 +151,7 @@ $logger->info(
 $logger->info("Gtk2-Perl version $Gtk2::VERSION");
 $logger->info( 'Built for GTK ' . join $DOT,    Gtk2->GET_VERSION_INFO );
 $logger->info( 'Running with GTK ' . join $DOT, Gtk2->get_version_info );
+$logger->info("Gscan2pdf::Document version $Gscan2pdf::Document::VERSION");
 $logger->info( 'Using GtkImageView version ',
     Gtk2::ImageView->library_version );
 $logger->info("Using Gtk2::ImageView version $Gtk2::ImageView::VERSION");
@@ -3995,6 +3996,28 @@ sub changed_device_list_callback {
           . Dumper($device_list) );
     if ( defined $device_list ) {
 
+        # Apply the device blacklist
+        if ( defined $SETTING{'device blacklist'}
+            and $SETTING{'device blacklist'} ne '' )
+        {
+            my @device_list = @{$device_list};
+            my $i           = 0;
+            while ( $i < @device_list ) {
+                if ( $device_list[$i]{name} =~ /$SETTING{'device blacklist'}/ )
+                {
+                    $logger->info("Blacklisting device $device_list[$i]{name}");
+                    splice @device_list, $i, 1;
+                }
+                else {
+                    $i++;
+                }
+            }
+            if ( @device_list < @{$device_list} ) {
+                $windows->set( 'device-list', \@device_list );
+                return;
+            }
+        }
+
        # Only set default device if it hasn't been specified on the command line
        # and it is in the the device list
         if ( defined $SETTING{device} and not @device ) {
@@ -6504,13 +6527,27 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
           ];
     }
     my $combob = combobox_from_array(@frontends);
+
+    # Device blacklist
+    my $hboxb = Gtk2::HBox->new;
+    $vbox1->pack_start( $hboxb, FALSE, FALSE, 0 );
+    $label = Gtk2::Label->new( $d->get('Device blacklist') );
+    $hboxb->pack_start( $label, FALSE, FALSE, 0 );
+    my $blacklist = Gtk2::Entry->new;
+    $hboxb->add($blacklist);
+    $tooltips->set_tip( $hboxb,
+        $d->get('Device blacklist (regular expression)') );
+
+    if ( defined $SETTING{'device blacklist'} ) {
+        $blacklist->set_text( $SETTING{'device blacklist'} );
+    }
+
+    # Cycle SANE handle after scan
     my $cbcsh =
       Gtk2::CheckButton->new_with_label(
         $d->get('Cycle SANE handle after scan') );
     $hbox->pack_end( $combob, TRUE, TRUE, 0 );
     $tooltips->set_tip( $hbox, $d->get('Interface used for scanner access') );
-
-    # Cycle SANE handle after scan
     if ( defined $SETTING{'cycle sane handle'} ) {
         $cbcsh->set_active( $SETTING{'cycle sane handle'} );
     }
@@ -6823,6 +6860,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
                 }
             }
             $SETTING{'auto-open-scan-dialog'} = $cbo->get_active;
+            $SETTING{'device blacklist'}      = $blacklist->get_text;
             $SETTING{'cycle sane handle'}     = $cbcsh->get_active;
             $SETTING{'default filename'}      = $fileentry->get_text;
             $SETTING{'restore window'}        = $cbw->get_active;

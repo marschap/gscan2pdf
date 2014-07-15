@@ -762,7 +762,8 @@ sub set_device_list {
     $self->{combobd}->signal_handler_block( $self->{combobd_changed_signal} );
 
     # Remove all entries apart from rescan
-    for ( get_combobox_num_rows( $self->{combobd} ) .. 2 ) {
+    my $num_rows = get_combobox_num_rows( $self->{combobd} );
+    while ( $num_rows-- > 1 ) {
         $self->{combobd}->remove_text(0);
     }
 

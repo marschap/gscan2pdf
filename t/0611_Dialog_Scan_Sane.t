@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 45;
+use Test::More tests => 46;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -411,6 +411,14 @@ $dialog->{signal} = $dialog->signal_connect(
                 }
             ],
             'add model field if missing'
+        );
+
+        is(
+            Gscan2pdf::Dialog::Scan::get_combobox_num_rows(
+                $dialog->{combobd}
+            ),
+            3,
+            'we still have the rescan item'
         );
 
         $dialog->{signal} = $dialog->signal_connect(
