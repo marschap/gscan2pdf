@@ -889,7 +889,8 @@ sub edit_paper {
                 }
             }
             my @line = ("$name ($version)");
-            for ( 1 .. $#{ $slist->get_columns } ) {
+            @columns = $slist->get_columns;
+            for ( 1 .. $#columns ) {
                 push @line, $slist->{data}[ $rows[0] ][$_];
             }
             splice @{ $slist->{data} }, $rows[0] + 1, 0, \@line;
