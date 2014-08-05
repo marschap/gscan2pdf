@@ -3998,12 +3998,13 @@ sub changed_device_list_callback {
 
         # Apply the device blacklist
         if ( defined $SETTING{'device blacklist'}
-            and $SETTING{'device blacklist'} ne '' )
+            and $SETTING{'device blacklist'} ne $EMPTY )
         {
             my @device_list = @{$device_list};
             my $i           = 0;
             while ( $i < @device_list ) {
-                if ( $device_list[$i]{name} =~ /$SETTING{'device blacklist'}/ )
+                if ( $device_list[$i]{name} =~
+                    /$SETTING{'device blacklist'}/xsm )
                 {
                     $logger->info("Blacklisting device $device_list[$i]{name}");
                     splice @device_list, $i, 1;
