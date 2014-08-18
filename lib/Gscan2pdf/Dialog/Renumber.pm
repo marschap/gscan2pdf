@@ -7,7 +7,7 @@ use Gscan2pdf::Dialog;
 use Gscan2pdf::Document;
 use Gscan2pdf::PageRange;
 use Readonly;
-Readonly my $_MAX_PAGES     => 999;
+Readonly my $_MAX_PAGES     => 9999;
 Readonly my $_MAX_INCREMENT => 99;
 
 use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {

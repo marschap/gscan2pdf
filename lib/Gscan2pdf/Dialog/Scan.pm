@@ -20,7 +20,7 @@ BEGIN {
     Glib::Type->register_enum( 'Gscan2pdf::Scanner::Dialog::Side',
         qw(facing reverse) );
     use Readonly;
-    Readonly $_MAX_PAGES         => 999;
+    Readonly $_MAX_PAGES         => 9999;
     Readonly $_MAX_INCREMENT     => 99;
     Readonly $_DOUBLE_INCREMENT  => 2;
     Readonly $_CANVAS_SIZE       => 200;
