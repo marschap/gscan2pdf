@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 4;
+use Test::More tests => 5;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 
@@ -62,6 +62,13 @@ $signal = $dialog->signal_connect(
 );
 $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
 $dialog->set( 'device', 'test' );
+
+my $filename = 'scanners/Brother_DCP-7025';
+my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
+my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
+my $opt      = $options->by_name('contrast');
+is( $dialog->value_for_active_option( TRUE, $opt ),
+    FALSE, 'value_for_active_option() with defined value and inactive option' );
 
 Gtk2->main;
 

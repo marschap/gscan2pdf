@@ -1175,7 +1175,7 @@ sub multiple_values_button_callback {
 
 sub value_for_active_option {
     my ( $self, $value, $opt ) = @_;
-    return defined $value and not $opt->{cap} & SANE_CAP_INACTIVE;
+    return ( defined $value and not $opt->{cap} & SANE_CAP_INACTIVE );
 }
 
 # display Goo::Canvas with graph
