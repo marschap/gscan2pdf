@@ -2267,6 +2267,18 @@ sub seconds_to_date {
     return $day, $month, $year;
 }
 
+sub text_to_date {
+    my ($text) = @_;
+    my ( $year, $month, $day );
+    if ( $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
+        ( $year, $month, $day ) = ( $1, $2, $3 );
+    }
+    if ( not defined $year )  { $year  = 1 }
+    if ( not defined $month ) { $month = 1 }
+    if ( not defined $day )   { $day   = 1 }
+    return $year, $month, $day;
+}
+
 # Add PDF options to $vbox
 
 sub add_pdf_metadata {
@@ -2287,35 +2299,27 @@ sub add_pdf_metadata {
     my ( $day, $month, $year ) =
       seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
 
-    my $entry =
+    my $entryd =
       Gtk2::Entry->new_with_max_length(10);  ## no critic (ProhibitMagicNumbers)
-    $entry->set_text( sprintf '%04d-%02d-%02d', $year, $month, $day );
-    $entry->set_activates_default(TRUE);
-    $tooltips->set_tip( $entry, $d->get('Year-Month-Day') );
-    $entry->set_alignment(1.);               # Right justify
-    $entry->signal_connect(
+    $entryd->set_text( sprintf '%04d-%02d-%02d', $year, $month, $day );
+    $entryd->set_activates_default(TRUE);
+    $tooltips->set_tip( $entryd, $d->get('Year-Month-Day') );
+    $entryd->set_alignment(1.);              # Right justify
+    $entryd->signal_connect(
         'insert-text' => sub {
             my ( $widget, $string, $len, $position ) = @_;
 
             # only allow integers and -
             if ( $string !~ /^[\d\-]+$/smx ) {
-                $entry->signal_stop_emission_by_name('insert-text');
+                $entryd->signal_stop_emission_by_name('insert-text');
             }
             ()    # this callback must return either 2 or 0 items.
         }
     );
-    $entry->signal_connect(
+    $entryd->signal_connect(
         'focus-out-event' => sub {
-            my $text = $entry->get_text;
-
-            if ( $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
-                ( $year, $month, $day ) = ( $1, $2, $3 );
-                if ( not defined $year )  { $year  = 1 }
-                if ( not defined $month ) { $month = 1 }
-                if ( not defined $day )   { $day   = 1 }
-                $entry->set_text( sprintf '%04d-%02d-%02d',
-                    $year, $month, $day );
-            }
+            my $text = $entryd->get_text;
+            $entryd->set_text( sprintf '%04d-%02d-%02d', text_to_date($text) );
             return FALSE;
         }
     );
@@ -2338,7 +2342,7 @@ sub add_pdf_metadata {
                 day_selected => sub {
                     ( $year, $month, $day ) = $calendar->get_date;
                     $month += 1;
-                    $entry->set_text( sprintf '%04d-%02d-%02d',
+                    $entryd->set_text( sprintf '%04d-%02d-%02d',
                         $year, $month, $day );
                 }
             );
@@ -2346,15 +2350,8 @@ sub add_pdf_metadata {
                 day_selected_double_click => sub {
                     ( $year, $month, $day ) = $calendar->get_date;
                     $month += 1;
-                    $entry->set_text( sprintf '%04d-%02d-%02d',
+                    $entryd->set_text( sprintf '%04d-%02d-%02d',
                         $year, $month, $day );
-                    use Time::Local;
-                    $SETTING{'date offset'} = int(
-                        (
-                            timelocal( 0, 0, 0, $day, $month - 1, $year ) -
-                              time
-                        ) / $SECONDS_PER_DAY
-                    );
                     $window_date->destroy;
                 }
             );
@@ -2371,7 +2368,7 @@ sub add_pdf_metadata {
                     $calendar->select_day($day);
                     $calendar->select_month( $month - 1, $year );
                     $calendar->signal_handler_unblock($calendar_s);
-                    $entry->set_text( sprintf '%04d-%02d-%02d',
+                    $entryd->set_text( sprintf '%04d-%02d-%02d',
                         $year, $month, $day );
                 }
             );
@@ -2382,7 +2379,7 @@ sub add_pdf_metadata {
     );
     $tooltips->set_tip( $button, $d->get('Select date with calendar') );
     $hboxe->pack_end( $button, FALSE, FALSE, 0 );
-    $hboxe->pack_end( $entry,  FALSE, FALSE, 0 );
+    $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
 
     # Document author
     my $hboxa = Gtk2::HBox->new;
@@ -2424,17 +2421,23 @@ sub add_pdf_metadata {
         $entryk->set_text( $SETTING{keywords} );
     }
 
-    return ( $entrya, $entryt, $entrys, $entryk );
+    return ( $entryd, $entrya, $entryt, $entrys, $entryk );
 }
 
 sub update_pdf_settings {
-    my ( $entrya, $entryt, $entrys, $entryk ) = @_;
+    my ( $entryd, $entrya, $entryt, $entrys, $entryk ) = @_;
 
     # Get metadata
     $SETTING{author}   = $entrya->get_text;
     $SETTING{title}    = $entryt->get_text;
     $SETTING{subject}  = $entrys->get_text;
     $SETTING{keywords} = $entryk->get_text;
+    my ( $year, $month, $day ) = text_to_date( $entryd->get_text );
+
+    use Time::Local;
+    $SETTING{'date offset'} =
+      int( ( timelocal( 0, 0, 0, $day, $month - 1, $year ) - time ) /
+          $SECONDS_PER_DAY );
     return;
 }
 
@@ -2861,7 +2864,8 @@ sub save_dialog {
     # PDF options
     my $vboxp = Gtk2::VBox->new;
     $vbox->pack_start( $vboxp, FALSE, FALSE, 0 );
-    my ( $entrya, $entryt, $entrys, $entryk ) = add_pdf_metadata($vboxp);
+    my ( $entryd, $entrya, $entryt, $entrys, $entryk ) =
+      add_pdf_metadata($vboxp);
 
     # Compression options
     my ( $buttond, $spinbuttond, $combob, $hboxpq, $spinbuttonpq,
@@ -2925,12 +2929,12 @@ sub save_dialog {
     $sbutton->signal_connect(
         clicked => \&save_button_clicked_callback,
         [
-            \@type,        $combobi,           $buttond,
-            $spinbuttond,  \@pdf_compression,  $combob,
-            $spinbuttonpq, \@fonts,            $combof,
-            $entrya,       $entryt,            $entrys,
-            $entryk,       \@tiff_compression, $combobtc,
-            $spinbuttontq
+            \@type,        $combobi,          $buttond,
+            $spinbuttond,  \@pdf_compression, $combob,
+            $spinbuttonpq, \@fonts,           $combof,
+            $entryd,       $entrya,           $entryt,
+            $entrys,       $entryk,           \@tiff_compression,
+            $combobtc,     $spinbuttontq
         ]
     );
 
@@ -3015,11 +3019,10 @@ sub image_type_changed_callback {
 sub save_button_clicked_callback {
     my ( $widget, $data ) = @_;
     my (
-        $type,         $combobi,          $buttond,
-        $spinbuttond,  $pdf_compression,  $combob,
-        $spinbuttonpq, $fonts,            $combof,
-        $entrya,       $entryt,           $entrys,
-        $entryk,       $tiff_compression, $combobtc,
+        $type,            $combobi, $buttond,          $spinbuttond,
+        $pdf_compression, $combob,  $spinbuttonpq,     $fonts,
+        $combof,          $entryd,  $entrya,           $entryt,
+        $entrys,          $entryk,  $tiff_compression, $combobtc,
         $spinbuttontq
     ) = @{$data};
 
@@ -3038,7 +3041,7 @@ sub save_button_clicked_callback {
 
             $SETTING{'pdf font'} = $fonts->[ $combof->get_active ][0];
 
-            update_pdf_settings( $entrya, $entryt, $entrys, $entryk );
+            update_pdf_settings( $entryd, $entrya, $entryt, $entrys, $entryk );
 
             # cd back to cwd to save
             chdir $SETTING{'cwd'};
@@ -3635,12 +3638,13 @@ sub email {
         'transient-for'  => $window,
         title            => $d->get('Email as PDF'),
         'hide-on-delete' => TRUE,
-        border_width     => $BORDER_WIDTH
+        'border-width'   => $BORDER_WIDTH
     );
     my $vbox = $windowe->get('vbox');
 
     # PDF options
-    my ( $entrya, $entryt, $entrys, $entryk ) = add_pdf_metadata($vbox);
+    my ( $entryd, $entrya, $entryt, $entrys, $entryk ) =
+      add_pdf_metadata($vbox);
 
     # Frame for page range
     add_page_range($vbox);
@@ -3660,7 +3664,7 @@ sub email {
         clicked => sub {
 
             # Set options
-            update_pdf_settings( $entrya, $entryt, $entrys, $entryk );
+            update_pdf_settings( $entryd, $entrya, $entryt, $entrys, $entryk );
 
             # Compile list of pages
             my @list_of_pages;
