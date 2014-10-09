@@ -189,12 +189,14 @@ else {
       $DOT;    # FIXME: make this a big cleverer, going one dir down from bin.
 }
 init_icons(
-    [ 'rotate90',  "$iconpath/stock-rotate-90.svg" ],
-    [ 'rotate180', "$iconpath/stock-rotate-180.svg" ],
-    [ 'rotate270', "$iconpath/stock-rotate-270.svg" ],
-    [ 'scanner',   "$iconpath/scanner.svg" ],
-    [ 'pdf',       "$iconpath/pdf.svg" ],
-    [ 'selection', "$iconpath/stock-selection-all-16.png" ],
+    [ 'rotate90',    "$iconpath/stock-rotate-90.svg" ],
+    [ 'rotate180',   "$iconpath/stock-rotate-180.svg" ],
+    [ 'rotate270',   "$iconpath/stock-rotate-270.svg" ],
+    [ 'scanner',     "$iconpath/scanner.svg" ],
+    [ 'pdf',         "$iconpath/pdf.svg" ],
+    [ 'selection',   "$iconpath/stock-selection-all-16.png" ],
+    [ 'hand-tool',   "$iconpath/hand-tool.svg" ],
+    [ 'mail-attach', "$iconpath/mail-attach.svg" ],
 );
 
 # Define application-wide variables here so that they can be referenced
@@ -889,7 +891,7 @@ sub create_menu_bar {
             $d->get('Save'), \&save_dialog
         ],
         [
-            'Email as PDF',                          'gtk-edit',
+            'Email as PDF',                          'mail-attach',
             $d->get('_Email as PDF'),                '<control>e',
             $d->get('Attach as PDF to a new email'), \&email
         ],
@@ -1109,7 +1111,7 @@ sub create_menu_bar {
 
     my @image_tools = (
         [
-            'DraggerTool',                'gtk-refresh',
+            'DraggerTool',                'hand-tool',
             $d->get('_Drag'),             undef,
             $d->get('Use the hand tool'), $DRAGGER_TOOL
         ],
@@ -5082,7 +5084,7 @@ Tiago Silva
 Igor Zubarev
 EOS
     $about->set_translator_credits($translators);
-    $about->set_artists('lodp');
+    $about->set_artists('lodp, Andreas E.');
     $about->run;
     $about->destroy;
     return;
