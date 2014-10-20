@@ -825,9 +825,10 @@ sub tesseract {
     my $sentinel = _enqueue_request(
         'tesseract',
         {
-            page     => $options{page}->freeze,
-            language => $options{language},
-            pidfile  => "$pidfile"
+            page      => $options{page}->freeze,
+            language  => $options{language},
+            threshold => $options{threshold},
+            pidfile   => "$pidfile",
         }
     );
 
@@ -854,9 +855,10 @@ sub ocropus {
     my $sentinel = _enqueue_request(
         'ocropus',
         {
-            page     => $options{page}->freeze,
-            language => $options{language},
-            pidfile  => "$pidfile"
+            page      => $options{page}->freeze,
+            language  => $options{language},
+            threshold => $options{threshold},
+            pidfile   => "$pidfile",
         }
     );
 
@@ -883,9 +885,10 @@ sub cuneiform {
     my $sentinel = _enqueue_request(
         'cuneiform',
         {
-            page     => $options{page}->freeze,
-            language => $options{language},
-            pidfile  => "$pidfile"
+            page      => $options{page}->freeze,
+            language  => $options{language},
+            threshold => $options{threshold},
+            pidfile   => "$pidfile",
         }
     );
 
@@ -909,9 +912,14 @@ sub gocr {
    # File in which to store the process ID so that it can be killed if necessary
     my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
 
-    my $sentinel =
-      _enqueue_request( 'gocr',
-        { page => $options{page}->freeze, pidfile => "$pidfile" } );
+    my $sentinel = _enqueue_request(
+        'gocr',
+        {
+            page      => $options{page}->freeze,
+            threshold => $options{threshold},
+            pidfile   => "$pidfile",
+        }
+    );
 
     return $self->_monitor_process(
         sentinel           => $sentinel,
@@ -1441,7 +1449,8 @@ sub _thread_main {
 
             when ('cuneiform') {
                 _thread_cuneiform( $self, $request->{page},
-                    $request->{language}, $request->{pidfile} );
+                    $request->{language}, $request->{threshold},
+                    $request->{pidfile} );
             }
 
             when ('get-file-info') {
@@ -1450,7 +1459,8 @@ sub _thread_main {
             }
 
             when ('gocr') {
-                _thread_gocr( $self, $request->{page}, $request->{pidfile} );
+                _thread_gocr( $self, $request->{page}, $request->{threshold},
+                    $request->{pidfile} );
             }
 
             when ('import-file') {
@@ -1470,7 +1480,7 @@ sub _thread_main {
 
             when ('ocropus') {
                 _thread_ocropus( $self, $request->{page}, $request->{language},
-                    $request->{pidfile} );
+                    $request->{threshold}, $request->{pidfile} );
             }
 
             when ('paper_sizes') {
@@ -1534,7 +1544,8 @@ sub _thread_main {
 
             when ('tesseract') {
                 _thread_tesseract( $self, $request->{page},
-                    $request->{language}, $request->{pidfile} );
+                    $request->{language}, $request->{threshold},
+                    $request->{pidfile} );
             }
 
             when ('threshold') {
@@ -2708,11 +2719,15 @@ sub _thread_to_png {
 }
 
 sub _thread_tesseract {
-    my ( $self, $page, $language, $pidfile ) = @_;
+    my ( $self, $page, $language, $threshold, $pidfile ) = @_;
     my $new = $page->clone;
-    ( $new->{hocr}, $new->{warnings} ) =
-      Gscan2pdf::Tesseract->hocr( $page->{filename}, $language, $logger,
-        $pidfile );
+    ( $new->{hocr}, $new->{warnings} ) = Gscan2pdf::Tesseract->hocr(
+        file      => $page->{filename},
+        language  => $language,
+        logger    => $logger,
+        threshold => $threshold,
+        pidfile   => $pidfile
+    );
     return if $_self->{cancel};
     $new->{ocr_flag} = 1;              #FlagOCR
     $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page
@@ -2722,11 +2737,15 @@ sub _thread_tesseract {
 }
 
 sub _thread_ocropus {
-    my ( $self, $page, $language, $pidfile ) = @_;
+    my ( $self, $page, $language, $threshold, $pidfile ) = @_;
     my $new = $page->clone;
-    $new->{hocr} =
-      Gscan2pdf::Ocropus->hocr( $page->{filename}, $language, $logger,
-        $pidfile );
+    $new->{hocr} = Gscan2pdf::Ocropus->hocr(
+        file      => $page->{filename},
+        language  => $language,
+        logger    => $logger,
+        pidfile   => $pidfile,
+        threshold => $threshold
+    );
     return if $_self->{cancel};
     $new->{ocr_flag} = 1;              #FlagOCR
     $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page
@@ -2736,11 +2755,15 @@ sub _thread_ocropus {
 }
 
 sub _thread_cuneiform {
-    my ( $self, $page, $language, $pidfile ) = @_;
+    my ( $self, $page, $language, $threshold, $pidfile ) = @_;
     my $new = $page->clone;
-    $new->{hocr} =
-      Gscan2pdf::Cuneiform->hocr( $page->{filename}, $language, $logger,
-        $pidfile );
+    $new->{hocr} = Gscan2pdf::Cuneiform->hocr(
+        file      => $page->{filename},
+        language  => $language,
+        logger    => $logger,
+        pidfile   => $pidfile,
+        threshold => $threshold
+    );
     return if $_self->{cancel};
     $new->{ocr_flag} = 1;              #FlagOCR
     $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page
@@ -2750,16 +2773,33 @@ sub _thread_cuneiform {
 }
 
 sub _thread_gocr {
-    my ( $self, $page, $pidfile ) = @_;
+    my ( $self, $page, $threshold, $pidfile ) = @_;
     my $pnm;
-    if ( $page->{filename} !~ /[.]pnm$/xsm ) {
+    if (   ( $page->{filename} !~ /[.]pnm$/xsm )
+        or ( defined $threshold and $threshold ) )
+    {
 
         # Temporary filename for new file
         $pnm = File::Temp->new( SUFFIX => '.pnm' );
         my $image = Image::Magick->new;
         $image->Read( $page->{filename} );
         return if $_self->{cancel};
-        $image->Write( filename => $pnm );
+
+        my $x;
+        if ( defined $threshold and $threshold ) {
+            $logger->info("thresholding at $threshold to $pnm");
+            $image->BlackThreshold( threshold => "$threshold%" );
+            return if $_self->{cancel};
+            $image->WhiteThreshold( threshold => "$threshold%" );
+            return if $_self->{cancel};
+            $x = $image->Quantize( colors => 2 );
+            return if $_self->{cancel};
+            $x = $image->Write( depth => 1, filename => $pnm );
+        }
+        else {
+            $logger->info("writing temporary image $pnm");
+            $image->Write( filename => $pnm );
+        }
         return if $_self->{cancel};
     }
     else {

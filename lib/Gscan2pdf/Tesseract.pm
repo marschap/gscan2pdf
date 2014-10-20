@@ -183,11 +183,9 @@ sub languages {
 }
 
 sub hocr {
-
-    # can't use the package-wide logger variable as we are in a thread here.
-    ( my $class, my $file, my $language, $logger, my $pidfile ) = @_;
+    my ( $class, %options ) = @_;
     my ( $tif, $cmd, $name, $path );
-    if ( not $setup ) { Gscan2pdf::Tesseract->setup($logger) }
+    if ( not $setup ) { Gscan2pdf::Tesseract->setup( $options{logger} ) }
 
     # Temporary filename for output
     my $suffix;
@@ -203,25 +201,43 @@ sub hocr {
     my $txt = File::Temp->new( SUFFIX => $suffix );
     ( $name, $path, undef ) = fileparse( $txt, $suffix );
 
-    if ( version->parse("v$version") < version->parse('v3')
-        and $file !~ /[.]tif$/xsm )
+    if (
+        (
+            version->parse("v$version") < version->parse('v3')
+            and $options{file} !~ /[.]tif$/xsm
+        )
+        or ( defined $options{threshold} and $options{threshold} )
+      )
     {
 
         # Temporary filename for new file
         $tif = File::Temp->new( SUFFIX => '.tif' );
         my $image = Image::Magick->new;
-        $image->Read($file);
-        $image->Write( filename => $tif );
+        $image->Read( $options{file} );
+
+        my $x;
+        if ( defined $options{threshold} and $options{threshold} ) {
+            $logger->info("thresholding at $options{threshold} to $tif");
+            $image->BlackThreshold( threshold => "$options{threshold}%" );
+            $image->WhiteThreshold( threshold => "$options{threshold}%" );
+            $x = $image->Quantize( colors => 2 );
+            $x = $image->Write( depth => 1, filename => $tif );
+        }
+        else {
+            $logger->info("writing temporary image $tif");
+            $x = $image->Write( filename => $tif );
+        }
+        if ("$x") { $logger->warn($x) }
     }
     else {
-        $tif = $file;
+        $tif = $options{file};
     }
     if ( version->parse("v$version") >= version->parse('v3') ) {
         $cmd =
-"echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $language +hocr.config;rm hocr.config";
+"echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $options{language} +hocr.config;rm hocr.config";
     }
-    elsif ($language) {
-        $cmd = "tesseract $tif $path$name -l $language";
+    elsif ( $options{language} ) {
+        $cmd = "tesseract $tif $path$name -l $options{language}";
     }
     else {
         $cmd = "tesseract $tif $path$name";
@@ -229,7 +245,9 @@ sub hocr {
     $logger->info($cmd);
 
    # File in which to store the process ID so that it can be killed if necessary
-    if ( defined $pidfile ) { $cmd = "echo $PROCESS_ID > $pidfile;$cmd" }
+    if ( defined $options{pidfile} ) {
+        $cmd = "echo $PROCESS_ID > $options{pidfile};$cmd";
+    }
 
     my ( $out, $err ) = Gscan2pdf::Document::open_three($cmd);
     my $warnings = $out . $err;

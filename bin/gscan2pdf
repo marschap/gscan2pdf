@@ -4094,15 +4094,18 @@ sub new_scan_callback {
     # show an error
     my $rotate =
       $n % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
+    my %options = (
+        page    => $n,
+        rotate  => $rotate,
+        unpaper => $SETTING{'unpaper on scan'},
+        ocr     => $SETTING{'OCR on scan'},
+    );
+    if ( $SETTING{'threshold before OCR'} ) {
+        $options{threshold} = $SETTING{'threshold tool'};
+    }
     if ( defined $test_image ) {
-        import_scan(
-            filename => $test_image,
-            page     => $n,
-            delete   => FALSE,
-            rotate   => $rotate,
-            unpaper  => $SETTING{'unpaper on scan'},
-            ocr      => $SETTING{'OCR on scan'}
-        );
+        $options{filename} = $test_image;
+        $options{delete}   = FALSE;
     }
     else {
         my $options = $windows->get('available-scan-options');
@@ -4112,16 +4115,11 @@ sub new_scan_callback {
           ? $opt->{val}
           : $Gscan2pdf::Document::POINTS_PER_INCH;
         $logger->info("Importing scan with resolution=$resolution");
-        import_scan(
-            filename   => File::Spec->catdir( $session, "out$n.pnm" ),
-            page       => $n,
-            resolution => $resolution,
-            delete     => TRUE,
-            rotate     => $rotate,
-            unpaper    => $SETTING{'unpaper on scan'},
-            ocr        => $SETTING{'OCR on scan'}
-        );
+        $options{filename}   = File::Spec->catdir( $session, "out$n.pnm" );
+        $options{resolution} = $resolution;
+        $options{delete}     = TRUE;
     }
+    import_scan(%options);
     return;
 }
 
@@ -4302,37 +4300,62 @@ sub add_postprocessing_ocr {
                 }
             }
         );
-        if ( $dependencies{cuneiform} ) {
-            ( $hboxcl, $comboboxcl, @cflang ) = add_cf_languages($vbox);
-            $comboboxe->signal_connect(
-                changed => sub {
-                    if ( $ocr_engine[ $comboboxe->get_active ]->[0] eq
-                        'cuneiform' )
-                    {
-                        $hboxcl->show_all;
-                    }
-                    else {
-                        $hboxcl->hide_all;
-                    }
-                }
-            );
-        }
-        if ( not $obutton->get_active ) { $hboxtl->set_sensitive(FALSE) }
-        $obutton->signal_connect(
-            toggled => sub {
-                if ( $obutton->get_active ) {
-                    $hboxtl->set_sensitive(TRUE);
+    }
+    if ( $dependencies{cuneiform} ) {
+        ( $hboxcl, $comboboxcl, @cflang ) = add_cf_languages($vbox);
+        $comboboxe->signal_connect(
+            changed => sub {
+                if ( $ocr_engine[ $comboboxe->get_active ]->[0] eq 'cuneiform' )
+                {
+                    $hboxcl->show_all;
                 }
                 else {
-                    $hboxtl->set_sensitive(FALSE);
+                    $hboxcl->hide_all;
                 }
             }
         );
     }
+    if ( not $obutton->get_active ) { $hboxtl->set_sensitive(FALSE) }
+    $obutton->signal_connect(
+        toggled => sub {
+            if ( $obutton->get_active ) {
+                $hboxtl->set_sensitive(TRUE);
+            }
+            else {
+                $hboxtl->set_sensitive(FALSE);
+            }
+        }
+    );
     combobox_set_active( $comboboxe, $SETTING{'ocr engine'}, @ocr_engine );
+
+    my $cbt =
+      Gtk2::CheckButton->new_with_label( $d->get('Threshold before OCR') );
+    $tooltips->set_tip(
+        $cbt,
+        $d->get(
+                'Threshold the image before performing OCR. '
+              . 'This only affects the image passed to the OCR engine, and not the image stored.'
+        )
+    );
+    if ( defined $SETTING{'threshold-before-ocr'} ) {
+        $cbt->set_active( $SETTING{'threshold-before-ocr'} );
+    }
+    $vbox->pack_start( $cbt, TRUE, TRUE, 0 );
+
+    # SpinButton for threshold
+    my $hboxt = Gtk2::HBox->new;
+    $vbox->pack_start( $hboxt, FALSE, TRUE, 0 );
+    my $label = Gtk2::Label->new( $d->get('Threshold') );
+    $hboxt->pack_start( $label, FALSE, TRUE, 0 );
+    my $labelp = Gtk2::Label->new($PERCENT);
+    $hboxt->pack_end( $labelp, FALSE, TRUE, 0 );
+    my $spinbutton = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
+    $spinbutton->set_value( $SETTING{'threshold tool'} );
+    $hboxt->pack_end( $spinbutton, FALSE, TRUE, 0 );
+
     return (
-        $obutton, $comboboxe,  $hboxtl,    $comboboxtl,
-        $hboxcl,  $comboboxcl, \@tesslang, \@cflang
+        $obutton,    $comboboxe, $hboxtl,  $comboboxtl, $hboxcl,
+        $comboboxcl, \@tesslang, \@cflang, $cbt,        $spinbutton,
     );
 }
 
@@ -4407,8 +4430,8 @@ sub add_postprocessing_options {
     );
 
     my (
-        $obutton, $comboboxe,  $hboxtl,   $comboboxtl,
-        $hboxcl,  $comboboxcl, $tesslang, $cflang
+        $obutton,    $comboboxe, $hboxtl, $comboboxtl, $hboxcl,
+        $comboboxcl, $tesslang,  $cflang, $tbutton,    $tsb
     ) = add_postprocessing_ocr($vboxp);
 
     $self->signal_connect(
@@ -4460,6 +4483,10 @@ sub add_postprocessing_options {
                     $SETTING{'ocr language'} =
                       $cflang->[ $comboboxcl->get_active ][0];
                 }
+                $SETTING{'threshold before OCR'} = $tbutton->get_active;
+                $logger->info(
+                    "threshold before OCR $SETTING{'threshold before OCR'}");
+                $SETTING{'threshold tool'} = $tsb->get_value;
             }
 
         }
@@ -4544,14 +4571,15 @@ sub update_number {
 }
 
 sub post_process_scan {
-    my ( $pages, $rotate, $unpaper_flag, $ocr ) = @_;
+    my ( $pages, $rotate, $unpaper_flag, $ocr, $threshold ) = @_;
 
     if ($rotate) {
         rotate(
             $rotate, $pages,
             sub {    # finished callback
                 my ($page) = @_;
-                post_process_scan( $page, undef, $unpaper_flag, $ocr );
+                post_process_scan( $page, undef, $unpaper_flag, $ocr,
+                    $threshold );
             }
         );
     }
@@ -4561,12 +4589,12 @@ sub post_process_scan {
             $unpaper->get_cmdline,
             sub {    # finished callback
                 my ($page) = @_;
-                post_process_scan( $page, undef, undef, $ocr );
+                post_process_scan( $page, undef, undef, $ocr, $threshold );
             }
         );
     }
     elsif ($ocr) {
-        ocr_page($pages);
+        ocr_page( $pages, $threshold );
     }
     return;
 }
@@ -4629,10 +4657,8 @@ sub import_scan {
                 }
                 else {
                     update_uimanager();
-                    post_process_scan(
-                        [$gpage],          $options{rotate},
-                        $options{unpaper}, $options{ocr}
-                    );
+                    post_process_scan( [$gpage], $options{rotate},
+                        $options{unpaper}, $options{ocr}, $options{threshold} );
                 }
                 return Glib::SOURCE_REMOVE;
             }
@@ -5890,7 +5916,7 @@ sub unpaper {
 # Add $page to the OCR stack, setting it off if not running.
 
 sub ocr_page {
-    my ($pages) = @_;
+    my ( $pages, $threshold ) = @_;
 
     my ( $signal, $pid );
     my %options = (
@@ -5921,6 +5947,9 @@ sub ocr_page {
     );
     if ( $SETTING{'ocr engine'} ne 'gocr' ) {
         $options{language} = $SETTING{'ocr language'};
+    }
+    if ($threshold) {
+        $options{threshold} = $SETTING{'threshold tool'};
     }
     for my $page ( @{$pages} ) {
         $options{page} = $page;
@@ -6079,6 +6108,31 @@ sub OCR {
         );
     }
 
+    my $cbt =
+      Gtk2::CheckButton->new_with_label( $d->get('Threshold before OCR') );
+    $tooltips->set_tip(
+        $cbt,
+        $d->get(
+                'Threshold the image before performing OCR. '
+              . 'This only affects the image passed to the OCR engine, and not the image stored.'
+        )
+    );
+    if ( defined $SETTING{'threshold-before-ocr'} ) {
+        $cbt->set_active( $SETTING{'threshold-before-ocr'} );
+    }
+    $vbox->pack_start( $cbt, TRUE, TRUE, 0 );
+
+    # SpinButton for threshold
+    my $hboxt = Gtk2::HBox->new;
+    $vbox->pack_start( $hboxt, FALSE, TRUE, 0 );
+    $label = Gtk2::Label->new( $d->get('Threshold') );
+    $hboxt->pack_start( $label, FALSE, TRUE, 0 );
+    my $labelp = Gtk2::Label->new($PERCENT);
+    $hboxt->pack_end( $labelp, FALSE, TRUE, 0 );
+    my $spinbutton = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
+    $spinbutton->set_value( $SETTING{'threshold tool'} );
+    $hboxt->pack_end( $spinbutton, FALSE, TRUE, 0 );
+
     # Frame for page range
     add_page_range($vbox);
 
@@ -6103,6 +6157,11 @@ sub OCR {
                   $cflang[ $comboboxcl->get_active ]->[0];
             }
 
+            $SETTING{'threshold-before-ocr'} = $cbt->get_active;
+            if ( $SETTING{'threshold-before-ocr'} ) {
+                $SETTING{'threshold tool'} = $spinbutton->get_value;
+            }
+
         # fill $pagelist with filenames depending on which radiobutton is active
             my @pagelist = indices2pages(
                 $slist->get_page_index(
@@ -6110,7 +6169,7 @@ sub OCR {
                 )
             );
             if ( not @pagelist ) { return }
-            ocr_page( \@pagelist );
+            ocr_page( \@pagelist, $SETTING{'threshold-before-ocr'} );
             $windowo->hide;
         }
     );
