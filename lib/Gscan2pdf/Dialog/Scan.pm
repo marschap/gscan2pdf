@@ -1520,6 +1520,29 @@ sub make_progress_string {
     return sprintf $d->get('Scanning page %d'), $i;
 }
 
+sub add_to_current_scan_options {
+    my ( $self, $option, $val ) = @_;
+    my $current = $self->{current_scan_options};
+    if ( not defined $current ) {
+        $current = [];
+    }
+
+    # Config::General flattens an array of hashes with 1 entry to a hash,
+    # so we must check for this
+    elsif ( ref($current) eq 'HASH' ) {
+        my %hash = %{$current};
+        $current = [ \%hash ];
+    }
+
+    # Cache option
+    push @{$current}, { $option->{name} => $val };
+
+    # Note any duplicate options, keeping only the last entry.
+    $self->{current_scan_options} =
+      Gscan2pdf::Scanner::Options::prune_duplicates($current);
+    return;
+}
+
 1;
 
 __END__

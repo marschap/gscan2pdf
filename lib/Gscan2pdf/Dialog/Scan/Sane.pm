@@ -457,14 +457,7 @@ sub set_option {
     my ( $self, $option, $val ) = @_;
     if ( not defined $option ) { return }
 
-    my $current = $self->{current_scan_options};
-
-    # Cache option
-    push @{$current}, { $option->{name} => $val };
-
-    # Note any duplicate options, keeping only the last entry.
-    $self->{current_scan_options} =
-      Gscan2pdf::Scanner::Options::prune_duplicates($current);
+    $self->add_to_current_scan_options( $option, $val );
 
     my $signal;
     my $options = $self->get('available-scan-options');
@@ -496,12 +489,14 @@ sub set_option {
             # Unset the profile unless we are actively setting it
             if ( not $self->{setting_profile} ) {
                 $self->set( 'profile', undef );
+
+                $self->signal_emit(
+                    'changed-current-scan-options',
+                    $self->get('current-scan-options')
+                );
             }
 
             $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
-
-            #   $self->signal_emit( 'changed-current-scan-options',
-            #    $self->get('current-scan-options') );
         }
     );
     return;

@@ -690,14 +690,7 @@ sub set_option {
     $option->{val} = $val;
     $self->update_widget( $option->{name}, $val );
 
-    my $current = $self->{current_scan_options};
-
-    # Cache option
-    push @{$current}, { $option->{name} => $val };
-
-    # Note any duplicate options, keeping only the last entry.
-    $self->{current_scan_options} =
-      Gscan2pdf::Scanner::Options::prune_duplicates($current);
+    $self->add_to_current_scan_options( $option, $val );
 
     # Do we need to reload?
     my $reload_triggers = $self->get('reload-triggers');
@@ -738,6 +731,10 @@ sub set_option {
                 # Unset the profile unless we are actively setting it
                 if ( not $self->{setting_profile} ) {
                     $self->set( 'profile', undef );
+                    $self->signal_emit(
+                        'changed-current-scan-options',
+                        $self->get('current-scan-options')
+                    );
                 }
 
                 $self->signal_emit( 'changed-scan-option', $option->{name},
@@ -751,10 +748,10 @@ sub set_option {
             my $pbar;
             my $hboxd = $self->{hboxd};
             Gscan2pdf::Frontend::CLI->find_scan_options(
-                prefix           => $self->get('prefix'),
-                frontend         => $self->get('frontend'),
-                device           => $self->get('device'),
-                options          => $self->map_options($current),
+                prefix   => $self->get('prefix'),
+                frontend => $self->get('frontend'),
+                device   => $self->get('device'),
+                options  => $self->map_options( $self->{current_scan_options} ),
                 started_callback => sub {
 
                     # Set up ProgressBar
@@ -800,6 +797,10 @@ sub set_option {
                     # Unset the profile unless we are actively setting it
                     if ( not $self->{setting_profile} ) {
                         $self->set( 'profile', undef );
+                        $self->signal_emit(
+                            'changed-current-scan-options',
+                            $self->get('current-scan-options')
+                        );
                     }
 
                     $self->signal_emit( 'changed-scan-option', $option->{name},
@@ -816,11 +817,19 @@ sub set_option {
             );
         }
     }
+    else {
 
-    # Unset the profile unless we are actively setting it
-    if ( not $self->{setting_profile} ) { $self->set( 'profile', undef ) }
+        # Unset the profile unless we are actively setting it
+        if ( not $self->{setting_profile} ) {
+            $self->set( 'profile', undef );
+            $self->signal_emit(
+                'changed-current-scan-options',
+                $self->get('current-scan-options')
+            );
+        }
 
-    $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
+        $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
+    }
     return;
 }
 
