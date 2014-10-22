@@ -139,12 +139,12 @@ sub boxes {
     # Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
     # where decode_entities doesn't work cleanly, so encode/decode to finally
     # get good UTF-8
-    $self->{hocr} =
+    my $hocr =
       decode_utf8(
         encode_utf8( HTML::Entities::decode_entities( $self->{hocr} ) ) );
 
-    if ( $self->{hocr} =~ /<body>([\s\S]*)<\/body>/xsm ) {
-        my $p = HTML::TokeParser->new( \$self->{hocr} );
+    if ( $hocr =~ /<body>([\s\S]*)<\/body>/xsm ) {
+        my $p = HTML::TokeParser->new( \$hocr );
         my ( $x1, $y1, $x2, $y2, $text );
         while ( my $token = $p->get_token ) {
             if ( $token->[0] eq 'S' ) {
@@ -183,7 +183,7 @@ sub boxes {
         }
     }
     else {
-        push @boxes, [ 0, 0, $self->{w}, $self->{h}, $self->{hocr} ];
+        push @boxes, [ 0, 0, $self->{w}, $self->{h}, $hocr ];
     }
     return @boxes;
 }
