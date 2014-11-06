@@ -265,9 +265,12 @@ sub INIT_INSTANCE {
     $vbox->pack_start( $self->{notebook}, TRUE, TRUE, 0 );
 
     # Notebook page 1
+    my $scwin = Gtk2::ScrolledWindow->new;
+    $self->{notebook}->append_page( $scwin, $d->get('Page Options') );
+    $scwin->set_policy( 'automatic', 'automatic' );
     my $vbox1 = Gtk2::VBox->new;
     $self->{vbox} = $vbox1;
-    $self->{notebook}->append_page( $vbox1, $d->get('Page Options') );
+    $scwin->add_with_viewport($vbox1);
 
     # Frame for # pages
     my $framen = Gtk2::Frame->new( $d->get('# Pages') );
@@ -542,11 +545,6 @@ sub INIT_INSTANCE {
     $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
     $cbutton->signal_connect( clicked => sub { $self->hide; } );
 
-    $self->signal_connect(
-        check_resize => sub {
-            Glib::Idle->add( sub { $self->resize( 1, 1 ); } );
-        }
-    );
     return $self;
 }
 

@@ -3806,7 +3806,9 @@ sub scan_dialog {
     my %options = (
         'transient-for'     => $window,
         title               => $d->get('Scan Document'),
-        border_width        => $BORDER_WIDTH,
+        'border-width'      => $BORDER_WIDTH,
+        'default-width'     => $SETTING{scan_window_width},
+        'default-height'    => $SETTING{scan_window_height},
         logger              => $logger,
         dir                 => $session,
         'hide-on-delete'    => TRUE,
@@ -6222,8 +6224,10 @@ sub quit {
     ( $SETTING{'window_width'}, $SETTING{'window_height'} ) = $window->get_size;
     ( $SETTING{'window_x'}, $SETTING{'window_y'} ) = $window->get_position;
     $SETTING{'thumb panel'} = $hpaned->get_position;
-
-    # delete $SETTING{'RMB'};
+    if ( defined $windows ) {
+        ( $SETTING{'scan_window_width'}, $SETTING{'scan_window_height'} ) =
+          $windows->get_size;
+    }
 
     # Write config file
     $conf->save_file( $rc, \%SETTING );
