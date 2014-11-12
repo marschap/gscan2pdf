@@ -4302,6 +4302,17 @@ sub add_postprocessing_ocr {
                 }
             }
         );
+        if ( not $obutton->get_active ) { $hboxtl->set_sensitive(FALSE) }
+        $obutton->signal_connect(
+            toggled => sub {
+                if ( $obutton->get_active ) {
+                    $hboxtl->set_sensitive(TRUE);
+                }
+                else {
+                    $hboxtl->set_sensitive(FALSE);
+                }
+            }
+        );
     }
     if ( $dependencies{cuneiform} ) {
         ( $hboxcl, $comboboxcl, @cflang ) = add_cf_languages($vbox);
@@ -4317,17 +4328,6 @@ sub add_postprocessing_ocr {
             }
         );
     }
-    if ( not $obutton->get_active ) { $hboxtl->set_sensitive(FALSE) }
-    $obutton->signal_connect(
-        toggled => sub {
-            if ( $obutton->get_active ) {
-                $hboxtl->set_sensitive(TRUE);
-            }
-            else {
-                $hboxtl->set_sensitive(FALSE);
-            }
-        }
-    );
     combobox_set_active( $comboboxe, $SETTING{'ocr engine'}, @ocr_engine );
 
     my $cbt =
