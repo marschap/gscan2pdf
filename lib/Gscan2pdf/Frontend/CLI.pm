@@ -23,7 +23,7 @@ Readonly my $_100             => 100;
 Readonly my $_SANE_STATUS_EOF => 5;      # or we could use Sane
 Readonly my $_1KB             => 1024;
 
-our $VERSION = '1.2.6';
+our $VERSION = '1.2.7';
 
 my $EMPTY = q{};
 my $COMMA = q{,};
