@@ -3074,6 +3074,9 @@ sub save_button_clicked_callback {
             $filename =~ s/%d/$dday/gsm;
             $filename =~ s/%D/$tday/gsm;
 
+            # avoid leading and trailing blanks in expanded filename template
+            $filename =~ s/^\s*(.*?)\s*$/$1/;
+
             $file_chooser->set_current_name($filename);
             $file_chooser->set_default_response('ok');
             $file_chooser->set_current_folder( $SETTING{'cwd'} );
