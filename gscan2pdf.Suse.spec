@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.2.6
+Version: 1.2.7
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -84,7 +84,9 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sat Sep 27 2014 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sun Nov 23 2014 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #769823 (menu entry Tools > Unsharp Mask lacks OK & Cancel buttons)
   - New upstream release
   - Bumped standards to 3.9.6 (no changes required)
   - New upstream release
