@@ -99,7 +99,6 @@ sub MY::install {
 sub MY::postamble {
     my $postamble = <<'END';
 SHELL = bash
-PO = $(wildcard po/*.po)
 DEB_BUILD_ROOT = /var/tmp/$(NAME)-$(VERSION)
 MANIFEST = $(shell cat MANIFEST)
 SOURCE = $(filter bin/% %.pm %.PL %.pl %.t,$(MANIFEST))
@@ -107,6 +106,7 @@ SOURCE_TIDY = $(foreach file,$(SOURCE),$(file).tdy)
 PO = $(filter %.po,$(MANIFEST))
 LANGUAGES = $(patsubst po/$(NAME)-%.po,%,$(PO))
 MO = $(foreach lang,$(LANGUAGES),$(DESTDIR)$(LOCALEDIR)/$(lang)/LC_MESSAGES/$(NAME).mo)
+ICONS = $(wildcard icons/*)
 
 rpmdist : $(NAME).spec $(NAME).Suse.spec tardist
 	$(MKPATH) rpm rpm/SPECS rpm/SOURCES rpm/BUILD rpm/RPMS rpm/SRPMS \
@@ -127,17 +127,13 @@ $(DESTDIR)$(LOCALEDIR)/%/LC_MESSAGES/$(NAME).mo : po/$(NAME)-%.po
 $(DESTDIR)$(SHAREDIR)/$(NAME) $(DESTDIR)$(SHAREDIR)/applications $(DESTDIR)$(SHAREDIR)/pixmaps $(DESTDIR)$(SHAREDIR)/appdata :
 	$(MKPATH) $@
 
-icon_install : $(NAME).desktop $(NAME).svg stock-rotate-90.svg \
-               stock-rotate-180.svg stock-rotate-270.svg scanner.svg pdf.svg \
-               stock-selection-all-16.png $(NAME).svg $(NAME).appdata.xml \
+icon_install : $(NAME).desktop $(ICONS) $(NAME).appdata.xml \
              | $(DESTDIR)$(SHAREDIR)/$(NAME) $(DESTDIR)$(SHAREDIR)/applications \
                $(DESTDIR)$(SHAREDIR)/pixmaps \
                $(DESTDIR)$(SHAREDIR)/appdata
 	$(CP) $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
-	$(CP) $(NAME).svg stock-rotate-90.svg stock-rotate-180.svg \
-	      stock-rotate-270.svg scanner.svg pdf.svg \
-	      stock-selection-all-16.png $(DESTDIR)$(SHAREDIR)/$(NAME)
-	$(CP) $(NAME).svg $(DESTDIR)$(SHAREDIR)/pixmaps
+	$(CP) $(ICONS) $(DESTDIR)$(SHAREDIR)/$(NAME)
+	$(CP) icons/$(NAME).svg $(DESTDIR)$(SHAREDIR)/pixmaps
 	$(CP) $(NAME).appdata.xml $(DESTDIR)$(SHAREDIR)/appdata
 
 html : htdocs/index.html

@@ -18,8 +18,15 @@ gscan2pdf.Suse.spec
 gscan2pdf.appdata.xml
 gscan2pdf.desktop
 gscan2pdf.spec
-gscan2pdf.svg
-hand-tool.svg
+icons/gscan2pdf.svg
+icons/hand-tool.svg
+icons/mail-attach.svg
+icons/pdf.svg
+icons/scanner.svg
+icons/stock-rotate-180.svg
+icons/stock-rotate-270.svg
+icons/stock-rotate-90.svg
+icons/stock-selection-all-16.png
 lib/Gscan2pdf/Cuneiform.pm
 lib/Gscan2pdf/Dialog.pm
 lib/Gscan2pdf/Dialog/Renumber.pm
@@ -36,8 +43,6 @@ lib/Gscan2pdf/PageRange.pm
 lib/Gscan2pdf/Scanner/Options.pm
 lib/Gscan2pdf/Tesseract.pm
 lib/Gscan2pdf/Unpaper.pm
-mail-attach.svg
-pdf.svg
 po/gscan2pdf-ab.po
 po/gscan2pdf-be.po
 po/gscan2pdf-bg.po
@@ -71,7 +76,6 @@ po/gscan2pdf-tr.po
 po/gscan2pdf-uk.po
 po/gscan2pdf-zh_CN.po
 po/gscan2pdf-zh_TW.po
-scanner.svg
 scanners/Brother_DCP-7025
 scanners/Brother_MFC-8860DN
 scanners/Brother_MFC_5100c
@@ -118,10 +122,6 @@ scanners/snapscanS510.Lineart
 scanners/test
 scanners/umax
 scanners/xp450
-stock-rotate-180.svg
-stock-rotate-270.svg
-stock-rotate-90.svg
-stock-selection-all-16.png
 t/01_scan_sane.t
 t/02_Scanner_Options_Brother_DCP-7025.t
 t/02_Scanner_Options_Brother_MFC_5100c.t
