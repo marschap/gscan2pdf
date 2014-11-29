@@ -7320,7 +7320,7 @@ sub properties {
     $hbox->pack_end( $label, FALSE, FALSE, 0 );
 
     $hbox = Gtk2::HBox->new;
-    $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+    $vbox->pack_end( $hbox, FALSE, FALSE, 0 );
 
     # Apply button
     my $button = Gtk2::Button->new_from_stock('gtk-apply');
