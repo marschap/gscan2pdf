@@ -2271,12 +2271,18 @@ sub seconds_to_date {
 sub text_to_date {
     my ($text) = @_;
     my ( $year, $month, $day );
+    my ( $thisday, $thismonth, $thisyear ) = seconds_to_date( time );
     if ( $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
         ( $year, $month, $day ) = ( $1, $2, $3 );
     }
-    if ( not defined $year )  { $year  = 1 }
-    if ( not defined $month ) { $month = 1 }
-    if ( not defined $day )   { $day   = 1 }
+
+    $year  = $thisyear
+        unless ( defined $year );
+    $month = $thismonth
+        unless ( defined $month && $month > 0 && $month < 13 );	## no critic (ProhibitMagicNumbers)
+    $day = $thisday
+        unless ( defined $day && $day > 0 && $day < 32 );	## no critic (ProhibitMagicNumbers)
+
     return $year, $month, $day;
 }
 
