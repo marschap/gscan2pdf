@@ -6203,7 +6203,7 @@ sub add_tess_languages {
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
     my $label = Gtk2::Label->new( $d->get('Language to recognise') );
-    $hbox->pack_start( $label, TRUE, TRUE, 0 );
+    $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # Tesseract language files
     my @tesslang;
@@ -6220,7 +6220,7 @@ sub add_tess_languages {
 
     my $combobox = combobox_from_array(@tesslang);
     combobox_set_active( $combobox, $SETTING{'ocr language'}, @tesslang );
-    $hbox->pack_end( $combobox, TRUE, TRUE, 0 );
+    $hbox->pack_end( $combobox, FALSE, TRUE, 0 );
     return $hbox, $combobox, @tesslang;
 }
 
@@ -6232,7 +6232,7 @@ sub add_cf_languages {
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
     my $label = Gtk2::Label->new( $d->get('Language to recognise') );
-    $hbox->pack_start( $label, TRUE, TRUE, 0 );
+    $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # Tesseract language files
     my @lang;
@@ -6242,7 +6242,7 @@ sub add_cf_languages {
 
     my $combobox = combobox_from_array(@lang);
     combobox_set_active( $combobox, $SETTING{'ocr language'}, @lang );
-    $hbox->pack_end( $combobox, TRUE, TRUE, 0 );
+    $hbox->pack_end( $combobox, FALSE, TRUE, 0 );
     return $hbox, $combobox, @lang;
 }
 
@@ -6268,12 +6268,12 @@ sub OCR {
 
     # OCR engine selection
     my $hboxe = Gtk2::HBox->new;
-    $vbox->pack_start( $hboxe, TRUE, TRUE, 0 );
+    $vbox->pack_start( $hboxe, FALSE, TRUE, 0 );
     my $label = Gtk2::Label->new( $d->get('OCR Engine') );
-    $hboxe->pack_start( $label, FALSE, FALSE, 0 );
+    $hboxe->pack_start( $label, FALSE, TRUE, 0 );
     my $combobe = combobox_from_array(@ocr_engine);
     combobox_set_active( $combobe, $SETTING{'ocr engine'}, @ocr_engine );
-    $hboxe->pack_end( $combobe, FALSE, FALSE, 0 );
+    $hboxe->pack_end( $combobe, FALSE, TRUE, 0 );
     my ( $comboboxtl, $hboxtl, @tesslang, $comboboxcl, $hboxcl, @cflang );
 
     if ( $dependencies{tesseract} ) {
