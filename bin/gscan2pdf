@@ -2441,11 +2441,14 @@ sub update_pdf_settings {
     $SETTING{subject}  = $entrys->get_text;
     $SETTING{keywords} = $entryk->get_text;
     my ( $year, $month, $day ) = text_to_date( $entryd->get_text );
+    use Time::Local qw/timegm_nocheck/;
+    my $then = timegm_nocheck( 0, 0, 0, $day, $month - 1, $year );
+    my $now = time;
+    # "floor" $now at 0:00am (analogue to $then)
+    $now -= ($now % $SECONDS_PER_DAY);
 
-    use Time::Local;
     $SETTING{'date offset'} =
-      int( ( timelocal( 0, 0, 0, $day, $month - 1, $year ) - time ) /
-          $SECONDS_PER_DAY );
+      int( $then / $SECONDS_PER_DAY - $now / $SECONDS_PER_DAY );
     return;
 }
 
