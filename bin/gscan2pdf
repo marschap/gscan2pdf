@@ -6062,10 +6062,12 @@ sub unpaper {
         border_width     => $BORDER_WIDTH
     );
     my $vbox = $windowu->get('vbox');
-    $unpaper->add_options($vbox);
 
     # Frame for page range
     add_page_range($vbox);
+
+    # add unpaper options
+    $unpaper->add_options($vbox);
 
     # HBox for buttons
     my $hboxb = Gtk2::HBox->new;
