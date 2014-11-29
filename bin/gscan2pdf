@@ -5565,7 +5565,7 @@ sub negate {
         },
         sub { $windowt->destroy }
     );
-    $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
+    $vbox->pack_end( $hboxb, FALSE, TRUE, 0 );
     $windowt->show_all;
     return;
 }
