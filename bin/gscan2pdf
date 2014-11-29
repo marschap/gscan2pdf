@@ -6263,6 +6263,9 @@ sub OCR {
     );
     my $vbox = $windowo->get('vbox');
 
+    # Frame for page range
+    add_page_range($vbox);
+
     # OCR engine selection
     my $hboxe = Gtk2::HBox->new;
     $vbox->pack_start( $hboxe, TRUE, TRUE, 0 );
@@ -6326,9 +6329,6 @@ sub OCR {
     my $spinbutton = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
     $spinbutton->set_value( $SETTING{'threshold tool'} );
     $hboxt->pack_end( $spinbutton, FALSE, TRUE, 0 );
-
-    # Frame for page range
-    add_page_range($vbox);
 
     # HBox for buttons
     my $hbox = Gtk2::HBox->new;
