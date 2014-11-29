@@ -7257,7 +7257,10 @@ sub properties {
             $entry->set_text( get_selected_properties() );
         }
     );
-    $hbox->pack_end( $entry, TRUE, TRUE, 0 );
+    $hbox->pack_start( $entry, TRUE, TRUE, 0 );
+
+    $label = Gtk2::Label->new( $d->get('dpi') );
+    $hbox->pack_end( $label, FALSE, FALSE, 0 );
 
     $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
