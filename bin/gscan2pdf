@@ -7414,33 +7414,15 @@ sub properties {
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
     my $label = Gtk2::Label->new( $d->get('Resolution') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
-    my $entry = Gtk2::Entry->new;
-    $entry->set_width_chars(4);    ## no critic (ProhibitMagicNumbers)
-    $entry->set_activates_default(TRUE);
-    $entry->signal_connect(
-        'insert-text' => sub {
-            my ( $widget, $string, $len, $position ) = @_;
-
-            # only allow a valid positive real number
-            for ( split $EMPTY, $string ) {
-                if (   ( $_ ne $DOT and ( $_ lt '0' or $_ gt '9' ) )
-                    or ( $_ eq $DOT and $entry->get_text =~ /[.]/sm ) )
-                {
-                    $entry->signal_stop_emission_by_name('insert-text');
-                    last;
-                }
-            }
-            ()    # this callback must return either 2 or 0 items.
-        }
-    );
-
-    $entry->set_text( get_selected_properties() );
+    my $spinbutton = Gtk2::SpinButton->new_with_range(0, 9999, 1);	## no critic (ProhibitMagicNumbers)
+    $spinbutton->set_digits(1);
+    $spinbutton->set_value( get_selected_properties() );
     $slist->get_selection->signal_connect(
         changed => sub {
-            $entry->set_text( get_selected_properties() );
+            $spinbutton->set_value( get_selected_properties() );
         }
     );
-    $hbox->pack_start( $entry, TRUE, TRUE, 0 );
+    $hbox->pack_start( $spinbutton, TRUE, TRUE, 0 );
 
     $label = Gtk2::Label->new( $d->get('dpi') );
     $hbox->pack_end( $label, FALSE, FALSE, 0 );
@@ -7455,7 +7437,7 @@ sub properties {
     $button->signal_connect(
         clicked => sub {
             $windowp->hide;
-            my $resolution = $entry->get_text;
+            my $resolution = $spinbutton->get_value;
             $slist->get_model->signal_handler_block(
                 $slist->{row_changed_signal} );
             for ( $slist->get_selected_indices ) {
@@ -7493,7 +7475,7 @@ sub get_selected_properties {
     }
 
     # round the value to a sensible number of significant figures
-    return $resolution eq $EMPTY ? $EMPTY : sprintf '%g', $resolution;
+    return $resolution eq $EMPTY ? 0 : sprintf '%.1g', $resolution;
 }
 
 # Helper function to display a message dialog, wait for a response, and return it
