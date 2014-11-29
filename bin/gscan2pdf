@@ -5571,13 +5571,18 @@ sub unsharp {
     # Frame for page range
     add_page_range($vbox);
 
+    # table for nice layout
+    my $table = Gtk2::Table->new( 4, 3 );	 ## no critic (ProhibitMagicNumbers)
+    $vbox->pack_start( $table, TRUE, TRUE, 0 );
+    $table->set_row_spacings ($BORDER_WIDTH);
+
     # SpinButton for radius
     my $hbox = Gtk2::HBox->new;
-    $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
+    $table->attach_defaults( $hbox, 0, 1, 0, 1 );	## no critic (ProhibitMagicNumbers)
     my $label = Gtk2::Label->new( $d->get('Radius') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('pixels') );
-    $hbox->pack_end( $label, FALSE, TRUE, 0 );
+    $hbox = Gtk2::HBox->new;
+    $table->attach_defaults( $hbox, 1, 2, 0, 1 );	## no critic (ProhibitMagicNumbers)
     my $spinbuttonr = Gtk2::SpinButton->new_with_range(
         0, 100,    ## no critic (ProhibitMagicNumbers)
         1
@@ -5589,15 +5594,19 @@ sub unsharp {
 'The radius of the Gaussian, in pixels, not counting the center pixel (0 = automatic).'
         )
     );
-    $hbox->pack_end( $spinbuttonr, FALSE, TRUE, 0 );
+    $hbox->pack_end( $spinbuttonr, TRUE, TRUE, 0 );
+    $hbox = Gtk2::HBox->new;
+    $table->attach_defaults( $hbox, 2, 3, 0, 1 );	## no critic (ProhibitMagicNumbers)
+    $label = Gtk2::Label->new( $d->get('pixels') );
+    $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for sigma
     $hbox = Gtk2::HBox->new;
-    $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
+    $table->attach_defaults( $hbox, 0, 1, 1, 2 );	## no critic (ProhibitMagicNumbers)
     $label = Gtk2::Label->new( $d->get('Sigma') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('pixels') );
-    $hbox->pack_end( $label, FALSE, TRUE, 0 );
+    $hbox = Gtk2::HBox->new;
+    $table->attach_defaults( $hbox, 1, 2, 1, 2 );	## no critic (ProhibitMagicNumbers)
     my $spinbuttons = Gtk2::SpinButton->new_with_range(
         0, 5,    ## no critic (ProhibitMagicNumbers)
         .1       ## no critic (ProhibitMagicNumbers)
@@ -5605,15 +5614,19 @@ sub unsharp {
     $spinbuttons->set_value( $SETTING{'unsharp sigma'} );
     $tooltips->set_tip( $spinbuttons,
         $d->get('The standard deviation of the Gaussian.') );
-    $hbox->pack_end( $spinbuttons, FALSE, TRUE, 0 );
+    $hbox->pack_end( $spinbuttons, TRUE, TRUE, 0 );
+    $hbox = Gtk2::HBox->new;
+    $table->attach_defaults( $hbox, 2, 3, 1, 2 );	## no critic (ProhibitMagicNumbers)
+    $label = Gtk2::Label->new( $d->get('pixels') );
+    $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for amount
     $hbox = Gtk2::HBox->new;
-    $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
+    $table->attach_defaults( $hbox, 0, 1, 2, 3 );	## no critic (ProhibitMagicNumbers)
     $label = Gtk2::Label->new( $d->get('Amount') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    $label = Gtk2::Label->new($PERCENT);
-    $hbox->pack_end( $label, FALSE, TRUE, 0 );
+    $hbox = Gtk2::HBox->new;
+    $table->attach_defaults( $hbox, 1, 2, 2, 3 );	## no critic (ProhibitMagicNumbers)
     my $spinbuttona = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
     $spinbuttona->set_value( $SETTING{'unsharp amount'} );
     $tooltips->set_tip(
@@ -5622,13 +5635,19 @@ sub unsharp {
 'The percentage of the difference between the original and the blur image that is added back into the original.'
         )
     );
-    $hbox->pack_end( $spinbuttona, FALSE, TRUE, 0 );
+    $hbox->pack_end( $spinbuttona, TRUE, TRUE, 0 );
+    $hbox = Gtk2::HBox->new;
+    $table->attach_defaults( $hbox, 2, 3, 2, 3 );	## no critic (ProhibitMagicNumbers)
+    $label = Gtk2::Label->new($PERCENT);
+    $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for threshold
     $hbox = Gtk2::HBox->new;
-    $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
+    $table->attach_defaults( $hbox, 0, 1, 3, 4 );	## no critic (ProhibitMagicNumbers)
     $label = Gtk2::Label->new( $d->get('Threshold') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
+    $hbox = Gtk2::HBox->new;
+    $table->attach_defaults( $hbox, 1, 2, 3, 4 );	## no critic (ProhibitMagicNumbers)
     my $spinbuttont = Gtk2::SpinButton->new_with_range( 0, 1,
         0.01 )    ## no critic (ProhibitMagicNumbers)
       ;
@@ -5639,7 +5658,7 @@ sub unsharp {
 'The threshold, as a fraction of QuantumRange, needed to apply the difference amount.'
         )
     );
-    $hbox->pack_end( $spinbuttont, FALSE, TRUE, 0 );
+    $hbox->pack_end( $spinbuttont, TRUE, TRUE, 0 );
 
     # HBox for buttons
     my $hboxb = _hbox_with_apply_cancel_buttons(
