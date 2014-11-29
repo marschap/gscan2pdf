@@ -2291,11 +2291,16 @@ sub add_metadata_dialog {
     $vboxm->set_border_width($BORDER_WIDTH);
     $frame->add($vboxm);
 
+    # table-view
+    my $table = Gtk2::Table->new( 5, 2 );	## no critic (ProhibitMagicNumbers)
+    $table->set_row_spacings( $BORDER_WIDTH );
+    $vboxm->pack_start( $table, TRUE, TRUE, 0 );
+
     # Date/time
     my $hboxe = Gtk2::HBox->new;
-    $vboxm->pack_start( $hboxe, TRUE, TRUE, 0 );
+    $table->attach( $hboxe, 0, 1, 0, 1, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
     my $labele = Gtk2::Label->new( $d->get('Date') );
-    $hboxe->pack_start( $labele, FALSE, FALSE, 0 );
+    $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
     my ( $day, $month, $year ) =
       seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
 
@@ -2378,32 +2383,40 @@ sub add_metadata_dialog {
         }
     );
     $tooltips->set_tip( $button, $d->get('Select date with calendar') );
+    $hboxe = Gtk2::HBox->new;
+    $table->attach_defaults( $hboxe, 1, 2, 0, 1 );	## no critic (ProhibitMagicNumbers)
     $hboxe->pack_end( $button, FALSE, FALSE, 0 );
     $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
 
     # Document author
     my $hboxa = Gtk2::HBox->new;
-    $vboxm->pack_start( $hboxa, TRUE, TRUE, 0 );
+    $table->attach( $hboxa, 0, 1, 1, 2, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
     my $labela = Gtk2::Label->new( $d->get('Document author') );
-    $hboxa->pack_start( $labela, FALSE, FALSE, 0 );
+    $hboxa->pack_start( $labela, FALSE, TRUE, 0 );
+    $hboxa = Gtk2::HBox->new;
+    $table->attach_defaults( $hboxa, 1, 2, 1, 2 );	## no critic (ProhibitMagicNumbers)
     my $entrya = Gtk2::Entry->new;
-    $hboxa->pack_end( $entrya, TRUE, TRUE, 0 );
+    $hboxa->pack_start( $entrya, TRUE, TRUE, 0 );
     if ( defined $SETTING{author} ) { $entrya->set_text( $SETTING{author} ) }
 
     # Title
     my $hboxt = Gtk2::HBox->new;
-    $vboxm->pack_start( $hboxt, TRUE, TRUE, 0 );
+    $table->attach( $hboxt, 0, 1, 2, 3, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
     my $labelt = Gtk2::Label->new( $d->get('Title') );
-    $hboxt->pack_start( $labelt, FALSE, FALSE, 0 );
+    $hboxt->pack_start( $labelt, FALSE, TRUE, 0 );
+    $hboxt = Gtk2::HBox->new;
+    $table->attach_defaults( $hboxt, 1, 2, 2, 3 );	## no critic (ProhibitMagicNumbers)
     my $entryt = Gtk2::Entry->new;
-    $hboxt->pack_end( $entryt, TRUE, TRUE, 0 );
+    $hboxt->pack_start( $entryt, TRUE, TRUE, 0 );
     if ( defined $SETTING{title} ) { $entryt->set_text( $SETTING{title} ) }
 
     # Subject
     my $hboxs = Gtk2::HBox->new;
-    $vboxm->pack_start( $hboxs, TRUE, TRUE, 0 );
+    $table->attach( $hboxs, 0, 1, 3, 4, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
     my $labels = Gtk2::Label->new( $d->get('Subject') );
-    $hboxs->pack_start( $labels, FALSE, FALSE, 0 );
+    $hboxs->pack_start( $labels, FALSE, TRUE, 0 );
+    $hboxs = Gtk2::HBox->new;
+    $table->attach_defaults( $hboxs, 1, 2, 3, 4 );	## no critic (ProhibitMagicNumbers)
     my $entrys = Gtk2::Entry->new;
     $hboxs->pack_end( $entrys, TRUE, TRUE, 0 );
     if ( defined $SETTING{subject} ) {
@@ -2412,9 +2425,11 @@ sub add_metadata_dialog {
 
     # Keywords
     my $hboxk = Gtk2::HBox->new;
-    $vboxm->pack_start( $hboxk, TRUE, TRUE, 0 );
+    $table->attach( $hboxk, 0, 1, 4, 5, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
     my $labelk = Gtk2::Label->new( $d->get('Keywords') );
-    $hboxk->pack_start( $labelk, FALSE, FALSE, 0 );
+    $hboxk->pack_start( $labelk, FALSE, TRUE, 0 );
+    $hboxk = Gtk2::HBox->new;
+    $table->attach_defaults( $hboxk, 1, 2, 4, 5 );	## no critic (ProhibitMagicNumbers)
     my $entryk = Gtk2::Entry->new;
     $hboxk->pack_end( $entryk, TRUE, TRUE, 0 );
     if ( defined $SETTING{keywords} ) {
