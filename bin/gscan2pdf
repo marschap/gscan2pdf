@@ -3792,12 +3792,12 @@ sub email {
     );
     my $vbox = $windowe->get('vbox');
 
+    # Frame for page range
+    add_page_range($vbox);
+
     # PDF options
     my ( $entryd, $entrya, $entryt, $entrys, $entryk ) =
       add_metadata_dialog($vbox);
-
-    # Frame for page range
-    add_page_range($vbox);
 
     # Compression options
     my ( $buttond, $spinbuttond, $combob, $hboxq, $spinbuttonq, @compression )
