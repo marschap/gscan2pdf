@@ -2285,7 +2285,7 @@ sub add_metadata_dialog {
     my ($vbox) = @_;
 
     # Frame for metadata
-    my $frame = Gtk2::Frame->new( $d->get('Metadata') );
+    my $frame = Gtk2::Frame->new( $d->get('Document Metadata') );
     $vbox->pack_start( $frame, TRUE, TRUE, 0 );
     my $vboxm = Gtk2::VBox->new;
     $vboxm->set_border_width($BORDER_WIDTH);
@@ -2388,27 +2388,27 @@ sub add_metadata_dialog {
     $hboxe->pack_end( $button, FALSE, FALSE, 0 );
     $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
 
-    # Document author
-    my $hboxa = Gtk2::HBox->new;
-    $table->attach( $hboxa, 0, 1, 1, 2, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
-    my $labela = Gtk2::Label->new( $d->get('Document author') );
-    $hboxa->pack_start( $labela, FALSE, TRUE, 0 );
-    $hboxa = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxa, 1, 2, 1, 2 );	## no critic (ProhibitMagicNumbers)
-    my $entrya = Gtk2::Entry->new;
-    $hboxa->pack_start( $entrya, TRUE, TRUE, 0 );
-    if ( defined $SETTING{author} ) { $entrya->set_text( $SETTING{author} ) }
-
     # Title
     my $hboxt = Gtk2::HBox->new;
-    $table->attach( $hboxt, 0, 1, 2, 3, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
+    $table->attach( $hboxt, 0, 1, 1, 2, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
     my $labelt = Gtk2::Label->new( $d->get('Title') );
     $hboxt->pack_start( $labelt, FALSE, TRUE, 0 );
     $hboxt = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxt, 1, 2, 2, 3 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hboxt, 1, 2, 1, 2 );	## no critic (ProhibitMagicNumbers)
     my $entryt = Gtk2::Entry->new;
     $hboxt->pack_start( $entryt, TRUE, TRUE, 0 );
     if ( defined $SETTING{title} ) { $entryt->set_text( $SETTING{title} ) }
+
+    # Document author
+    my $hboxa = Gtk2::HBox->new;
+    $table->attach( $hboxa, 0, 1, 2, 3, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
+    my $labela = Gtk2::Label->new( $d->get('Author') );
+    $hboxa->pack_start( $labela, FALSE, TRUE, 0 );
+    $hboxa = Gtk2::HBox->new;
+    $table->attach_defaults( $hboxa, 1, 2, 2, 3 );	## no critic (ProhibitMagicNumbers)
+    my $entrya = Gtk2::Entry->new;
+    $hboxa->pack_start( $entrya, TRUE, TRUE, 0 );
+    if ( defined $SETTING{author} ) { $entrya->set_text( $SETTING{author} ) }
 
     # Subject
     my $hboxs = Gtk2::HBox->new;
