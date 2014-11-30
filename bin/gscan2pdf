@@ -1837,15 +1837,7 @@ sub create_canvas {
 
     # Attach the text to the canvas
     for my $box ( $page->boxes ) {
-        my ( $x1, $y1, $x2, $y2, $text ) = @{$box};
-        boxed_text(
-            text => $text,
-            x1   => $x1,
-            y1   => $y1,
-            x2   => $x2,
-            y2   => $y2,
-            size => abs $y2 - $y1
-        );
+        boxed_text($box);
     }
 
     # Remove the existing contents
@@ -2499,21 +2491,20 @@ sub prepare_output_metadata {
 # Draw text on the canvas with a box around it
 
 sub boxed_text {
-    my (%options) = @_;
-    my $root      = $canvas->get_root_item;
-    my $g         = Goo::Canvas::Group->new($root);
-    $g->translate( $options{x1}, $options{y1} );
+    my $box = shift;
+    my ($x1, $y1, $x2, $y2) = @{$box->{bbox}};
+    my $x_size = abs $x2 - $x1;
+    my $y_size = abs $y2 - $y1;
+    my $root   = $canvas->get_root_item;
+    my $g      = Goo::Canvas::Group->new($root);
+    $g->translate( $x1, $y1 );
 
 # draw the rect first to make sure the text goes on top and receives any mouse clicks
-    my $rect = Goo::Canvas::Rect->new(
-        $g, 0, 0,
-        $options{x2} - $options{x1},
-        $options{y2} - $options{y1}
-    );
+    my $rect = Goo::Canvas::Rect->new( $g, 0, 0, $x_size, $y_size );
     my $text =
-      Goo::Canvas::Text->new( $g, $options{text}, 0, 0,
-        $options{x2} - $options{x1},
-        'nw', 'height' => $options{size}, );
+      Goo::Canvas::Text->new( $g, $box->{text}, 0, 0,
+        $x_size,
+        'nw', 'height' => $y_size );
 
     # clicking text box produces a dialog to edit the text
     $text->signal_connect(

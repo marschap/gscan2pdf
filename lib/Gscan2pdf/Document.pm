@@ -2089,7 +2089,8 @@ sub _add_text_to_pdf {
         my $font;
         my $text = $page->text;
         for my $box ( $data->boxes ) {
-            my ( $x1, $y1, $x2, $y2, $txt ) = @{$box};
+            my ( $x1, $y1, $x2, $y2 ) = @{$box->{bbox}};
+            my $txt = $box->{text};
             if ( $txt =~ /([[:^ascii:]])/xsm and defined $ttfcache ) {
                 if ( defined $1 ) {
                     $logger->debug("non-ascii text is '$1' in '$txt'");
@@ -2278,7 +2279,8 @@ sub _add_text_to_djvu {
 
         # Write the text boxes
         for my $box ( $pagedata->boxes ) {
-            my ( $x1, $y1, $x2, $y2, $txt ) = @{$box};
+            my ( $x1, $y1, $x2, $y2 ) = @{$box->{bbox}};
+            my $txt = $box->{text};
             if ( $x1 == 0 and $y1 == 0 and not defined $x2 ) {
                 ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution );
             }
@@ -2526,7 +2528,8 @@ sub _thread_save_text {
         # at appropriate positions
         my ( $oldx, $oldy );
         for my $box ( $page->boxes ) {
-            my ( $x1, $y1, $x2, $y2, $text ) = @{$box};
+            my ( $x1, $y1, $x2, $y2 ) = @{$box->{bbox}};
+            my $text = $box->{text};
             if ( defined $oldx and $x1 > $oldx ) {
                 _write_file( $self, $fh, $path, $SPACE ) or return;
             }
