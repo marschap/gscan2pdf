@@ -170,6 +170,18 @@ sub boxes {
                              /\bbbox\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/ ) {
                             $data->{bbox} = [ $1, $2, $3, $4 ];
                         }
+                        if ( $attrs{title} =~ /\btextangle\s+(\d+)/ ) {
+                            $data->{textangle} = $1;
+                        }
+                        if ( $attrs{title} =~ /\bx_wconf\s+(\d+)/ ) {
+                            $data->{confidence} = $1;
+                        }
+                        if ( $attrs{title} =~ /\bbaseline\s+(?:-?\d+(?:\.\d+)?\s+)*(-?\d+)/ ) {
+                            $data->{baseline} = $1;
+                            # slightly kludgy: textangle defined means 90°
+                            $data->{base} = $data->{baseline} +
+                                $data->{textangle} ? $data->{bbox}[3] : $data->{bbox}[2];
+                        }
                     }
                     elsif ( $attrs{class} eq 'ocr_cinfo' ) {
                         # reset data pointer
@@ -177,6 +189,10 @@ sub boxes {
                         %worddata = ();
                         %linedata = ();
                     }
+                }
+                elsif ( defined $data ) {
+                    push( @{$data->{style}}, 'Bold')  if ( $tag eq 'strong' );
+                    push( @{$data->{style}}, 'Italic')  if ( $tag eq 'em' );
                 }
             }
             elsif ( $token->[0] eq 'T' ) {
