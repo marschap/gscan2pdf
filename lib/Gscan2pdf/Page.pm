@@ -145,45 +145,61 @@ sub boxes {
 
     if ( $hocr =~ /<body>([\s\S]*)<\/body>/xsm ) {
         my $p = HTML::TokeParser->new( \$hocr );
-        my ( $x1, $y1, $x2, $y2, $text );
+        my (%linedata, %worddata, $data);
         while ( my $token = $p->get_token ) {
             if ( $token->[0] eq 'S' ) {
-                if (
-                        $token->[1] eq 'span'
-                    and defined $token->[2]{class}
-                    and (  $token->[2]{class} eq 'ocr_line'
-                        or $token->[2]{class} eq 'ocr_word'
-                        or $token->[2]{class} eq 'ocrx_word' )
-                    and defined $token->[2]{title}
-                    and $token->[2]{title} =~
-                    /bbox[ ](\d+)[ ](\d+)[ ](\d+)[ ](\d+)/xsm
-                  )
-                {
-                    ( $x1, $y1, $x2, $y2 ) = ( $1, $2, $3, $4 );
+                my ($tag, %attrs) = ( $token->[1], %{$token->[2]} );
+                if ( $tag eq 'span' and defined $attrs{class} ) {
+                    if ( (  $attrs{class} eq 'ocr_line'
+                         or $attrs{class} eq 'ocr_word'
+                         or $attrs{class} eq 'ocrx_word' )
+                       and defined $attrs{title} ) {
+                        # initialize data pointer
+                        if ($attrs{class} =~ /_word$/) {
+                            %worddata = %linedata;
+                            $data = \%worddata;
+                            $data->{type} = 'word';
+                        }
+                        else {
+                            %linedata = ();
+                            $data = \%linedata;
+                            $data->{type} = 'line';
+                        }
+
+                        if ( $attrs{title} =~
+                             /\bbbox\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/ ) {
+                            $data->{bbox} = [ $1, $2, $3, $4 ];
+                        }
+                    }
+                    elsif ( $attrs{class} eq 'ocr_cinfo' ) {
+                        # reset data pointer
+                        undef $data;
+                        %worddata = ();
+                        %linedata = ();
+                    }
                 }
-                elsif ( $token->[1] eq 'span'
-                    and defined $token->[2]{class}
-                    and $token->[2]{class} eq 'ocr_cinfo' )
-                {
-                    undef $x1;
-                    undef $text;
+            }
+            elsif ( $token->[0] eq 'T' ) {
+                if ( $token->[1] !~ /^\s*$/xsm ) {
+                    chomp( $data->{text} = $token->[1] );
                 }
             }
-            if ( $token->[0] eq 'T' and $token->[1] !~ /^\s*$/xsm ) {
-                $text = $token->[1];
-                chomp $text;
+            elsif ( $token->[0] eq 'E' ) {
+                # reset data pointer
+                undef $data;
             }
-            if ( $token->[0] eq 'E' ) {
-                undef $x1;
-                undef $text;
-            }
-            if ( defined $x1 and defined $text ) {
-                push @boxes, [ $x1, $y1, $x2, $y2, $text ];
+
+            if (   defined $data
+               and defined $data->{text}
+               and defined $data->{bbox} ) {
+                push @boxes, { %{$data} };
             }
         }
     }
     else {
-        push @boxes, [ 0, 0, $self->{w}, $self->{h}, $hocr ];
+        push @boxes, { type => 'page',
+                       bbox => [ 0, 0, $self->{w}, $self->{h} ],
+                       text => $hocr };
     }
     return @boxes;
 }
