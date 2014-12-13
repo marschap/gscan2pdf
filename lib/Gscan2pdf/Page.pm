@@ -145,6 +145,7 @@ sub boxes {
 
     if ( $hocr =~ /<body>([\s\S]*)<\/body>/xsm ) {
         my $p = HTML::TokeParser->new( \$hocr );
+        my ($lineid, $wordid) = (1,1);
         my (%linedata, %worddata, $data);
         while ( my $token = $p->get_token ) {
             if ( $token->[0] eq 'S' ) {
@@ -159,11 +160,14 @@ sub boxes {
                             %worddata = %linedata;
                             $data = \%worddata;
                             $data->{type} = 'word';
+                            $data->{lineid} = $linedata{id};
+                            $data->{id} = $wordid++;
                         }
                         else {
                             %linedata = ();
                             $data = \%linedata;
                             $data->{type} = 'line';
+                            $data->{id} = $lineid++;
                         }
 
                         if ( $attrs{title} =~
