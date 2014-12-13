@@ -2499,12 +2499,44 @@ sub boxed_text {
     my $g      = Goo::Canvas::Group->new($root);
     $g->translate( $x1, $y1 );
 
-# draw the rect first to make sure the text goes on top and receives any mouse clicks
-    my $rect = Goo::Canvas::Rect->new( $g, 0, 0, $x_size, $y_size );
-    my $text =
-      Goo::Canvas::Text->new( $g, $box->{text}, 0, 0,
-        $x_size,
-        'nw', 'height' => $y_size );
+    # draw the rect first to make sure the text goes on top and receives any mouse clicks
+    my $confidence = defined $box->{confidence} ? $box->{confidence} : 100;
+    $confidence = $confidence > 64 ? 2 * int(($confidence - 65) / 12) + 10 : 0;
+    my $color = defined $box->{confidence}
+                ? sprintf '#%xfff%xfff%xfff', 
+                          0xf - int($confidence / 10), $confidence, $confidence
+                : '#7fff7fff7fff';
+    my $rect = Goo::Canvas::Rect->new( $g, 0, 0, $x_size, $y_size,
+       'stroke-color' => $color );
+
+#    # show text baseline (currently of no use)
+#    if ($box->{baseline} and $box->{baseline} >= $y1) {
+#        $rect = Goo::Canvas::Rect->new( $g,
+#             0, $box->{baseline} - $y1, $x_size, 1,
+#            'stroke-color' => 'yellow');
+#    }
+
+    my $text;
+    if ($box->{type} eq 'page') {
+        # only basic info on text, so simply create it
+        $text = Goo::Canvas::Text->new( $g, $box->{text},
+            0, 0, $x_size,
+            'nw', 'height' => $y_size );
+    }
+    else {
+        # create text and then scale, shift & rotate it into the bounding box
+        my $angle = defined($box->{textangle}) ? (-$box->{textangle} % 360) : 0;
+        $text = Goo::Canvas::Text->new( $g, $box->{text},
+            $x_size/2, $y_size/2, -1,
+            'center', 'font' => 'Sans '.($angle ? $x_size : $y_size) );
+        my $bounds = $text->get_bounds;
+        my $scale = ($angle ? $y_size : $x_size) / ($bounds->x2 - $bounds->x1);
+        $text->set_simple_transform( 0, 0, $scale, $angle );
+        $bounds = $text->get_bounds;
+        my $x_offset = ($x1 + $x2 - $bounds->x1 - $bounds->x2) / 2;
+        my $y_offset = ($y1 + $y2 - $bounds->y1 - $bounds->y2) / 2;
+        $text->set_simple_transform($x_offset, $y_offset, $scale, $angle);
+    }
 
     # clicking text box produces a dialog to edit the text
     $text->signal_connect(
