@@ -2558,6 +2558,18 @@ sub boxed_text {
      
                 if ( $dialog->run eq 'ok' ) {
                     $widget->set( text => $textbuffer->get('text') );
+
+                    # per above: group = text's parent, group's 1st child = rect
+                    my $g = $widget->get_property('parent');
+                    my $rect = $g->get_child(0);
+                    if ( length($textbuffer->get('text')) ) {
+                        # color for 100% confidence
+                        $rect->set_property( 'stroke-color' => '#efffefffefff' );
+                    }
+                    else {
+                        $g->remove_child(0);
+                    }
+
                     canvas2hocr();
                 }
                 $dialog->destroy;
