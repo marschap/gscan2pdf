@@ -2499,6 +2499,9 @@ sub boxed_text {
     my $g      = Goo::Canvas::Group->new($root);
     $g->translate( $x1, $y1 );
 
+    # add box properties to group properties
+    map { $g->{$_} = $box->{$_}; } keys %{$box};
+
     # draw the rect first to make sure the text goes on top and receives any mouse clicks
     my $confidence = defined $box->{confidence} ? $box->{confidence} : 100;
     $confidence = $confidence > 64 ? 2 * int(($confidence - 65) / 12) + 10 : 0;
