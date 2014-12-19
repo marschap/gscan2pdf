@@ -3070,6 +3070,7 @@ sub save_dialog {
     # Save button
     my $sbutton = Gtk2::Button->new_from_stock('gtk-save');
     $hboxb->pack_start( $sbutton, TRUE, TRUE, 0 );
+    $sbutton->grab_focus;
     $sbutton->signal_connect(
         clicked => \&save_button_clicked_callback,
         [
@@ -6076,6 +6077,7 @@ sub unpaper {
     # OK button
     my $sbutton = Gtk2::Button->new_from_stock('gtk-ok');
     $hboxb->pack_start( $sbutton, TRUE, TRUE, 0 );
+    $sbutton->grab_focus;
     $sbutton->signal_connect(
         clicked => sub {
 
@@ -6337,6 +6339,7 @@ sub OCR {
     # Start button
     my $obutton = Gtk2::Button->new( $d->get('Start OCR') );
     $hbox->pack_start( $obutton, TRUE, TRUE, 0 );
+    $obutton->grab_focus;
     $obutton->signal_connect(
         clicked => sub {
             $SETTING{'ocr engine'} = $ocr_engine[ $combobe->get_active ]->[0];
@@ -7169,6 +7172,7 @@ sub _hbox_with_apply_cancel_buttons {
     # Apply button
     my $button = Gtk2::Button->new_from_stock('gtk-apply');
     $hbox->pack_start( $button, TRUE, TRUE, 0 );
+    $button->grab_focus;
     $button->signal_connect( clicked => $apply_callback );
 
     # Cancel button
@@ -7324,9 +7328,8 @@ sub properties {
 
     # Apply button
     my $button = Gtk2::Button->new_from_stock('gtk-apply');
-    $button->can_default(TRUE);
-    $windowp->set_default($button);
     $hbox->pack_start( $button, TRUE, TRUE, 0 );
+    $button->grab_focus;
     $button->signal_connect(
         clicked => sub {
             $windowp->hide;
