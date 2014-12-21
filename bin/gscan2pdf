@@ -2873,11 +2873,16 @@ sub save_dialog {
         @tiff_compression );
     $hboxc->pack_end( $combobtc, FALSE, FALSE, 0 );
 
+    # metadata options
+    my $hboxmd = Gtk2::HBox->new;
+    $vbox->pack_start( $hboxmd, FALSE, FALSE, 0 );
+
+    my ( $entryd, $entrya, $entryt, $entrys, $entryk ) =
+      add_metadata_dialog($hboxmd);
+
     # PDF options
     my $vboxp = Gtk2::VBox->new;
     $vbox->pack_start( $vboxp, FALSE, FALSE, 0 );
-    my ( $entryd, $entrya, $entryt, $entrys, $entryk ) =
-      add_metadata_dialog($vboxp);
 
     # Compression options
     my ( $buttond, $spinbuttond, $combob, $hboxpq, $spinbuttonpq,
@@ -2925,7 +2930,7 @@ sub save_dialog {
         [
             \@type,    $vboxp,  $hboxf, \@pdf_compression,
             $combob,   $hboxpq, $hboxc, \@tiff_compression,
-            $combobtc, $hboxtq
+            $combobtc, $hboxtq, $hboxmd
         ]
     );
     combobox_set_active( $combobi, $SETTING{'image type'}, @type );
@@ -2974,6 +2979,9 @@ sub save_dialog {
     }
 
     if ( $type[ $combobi->get_active ][0] ne 'pdf' ) {
+        if ( $type[ $combobi->get_active ][0] ne 'djvu' ) {
+            $hboxmd->hide_all;
+        }
         $vboxp->hide_all;
         $hboxf->hide_all;
     }
@@ -2986,9 +2994,10 @@ sub image_type_changed_callback {
     my (
         $type,     $vboxp,  $hboxf, $pdf_compression,
         $combob,   $hboxpq, $hboxc, $tiff_compression,
-        $combobtc, $hboxtq
+        $combobtc, $hboxtq, $hboxmd
     ) = @{$data};
     if ( $type->[ $widget->get_active ][0] eq 'pdf' ) {
+        $hboxmd->show_all;
         $vboxp->show_all;
         $hboxf->show_all;
         if ( $pdf_compression->[ $combob->get_active ][0] eq 'jpg' ) {
@@ -3000,6 +3009,12 @@ sub image_type_changed_callback {
         }
     }
     else {
+        if ( $type->[ $widget->get_active ][0] eq 'djvu' ) {
+            $hboxmd->show_all;
+        }
+        else {
+            $hboxmd->hide_all;
+        }
         $vboxp->hide_all;
         $hboxf->hide_all;
         $windowi->resize( 1, 1 );
