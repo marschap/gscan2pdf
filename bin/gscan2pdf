@@ -2289,7 +2289,7 @@ sub text_to_date {
 
 # Add PDF options to $vbox
 
-sub add_pdf_metadata {
+sub add_metadata_dialog {
     my ($vbox) = @_;
 
     # Frame for metadata
@@ -2432,7 +2432,7 @@ sub add_pdf_metadata {
     return ( $entryd, $entrya, $entryt, $entrys, $entryk );
 }
 
-sub update_pdf_settings {
+sub update_metadata_settings {
     my ( $entryd, $entrya, $entryt, $entrys, $entryk ) = @_;
 
     # Get metadata
@@ -2453,7 +2453,7 @@ sub update_pdf_settings {
     return;
 }
 
-sub get_pdf_metadata {
+sub prepare_output_metadata {
     my %h;
     if ( defined $SETTING{author} ) { $h{Author} = $SETTING{author} }
     my ( $day, $month, $year ) =
@@ -2625,7 +2625,7 @@ sub save_pdf {
     $pid = $slist->save_pdf(
         path            => $filename,
         list_of_pages   => \@list_of_pages,
-        metadata        => get_pdf_metadata(),
+        metadata        => prepare_output_metadata(),
         options         => \%options,
         queued_callback => sub {
             return update_tpbar(@_);
@@ -2877,7 +2877,7 @@ sub save_dialog {
     my $vboxp = Gtk2::VBox->new;
     $vbox->pack_start( $vboxp, FALSE, FALSE, 0 );
     my ( $entryd, $entrya, $entryt, $entrys, $entryk ) =
-      add_pdf_metadata($vboxp);
+      add_metadata_dialog($vboxp);
 
     # Compression options
     my ( $buttond, $spinbuttond, $combob, $hboxpq, $spinbuttonpq,
@@ -3053,7 +3053,7 @@ sub save_button_clicked_callback {
 
             $SETTING{'pdf font'} = $fonts->[ $combof->get_active ][0];
 
-            update_pdf_settings( $entryd, $entrya, $entryt, $entrys, $entryk );
+            update_metadata_settings( $entryd, $entrya, $entryt, $entrys, $entryk );
 
             # cd back to cwd to save
             chdir $SETTING{'cwd'};
@@ -3659,7 +3659,7 @@ sub email {
 
     # PDF options
     my ( $entryd, $entrya, $entryt, $entrys, $entryk ) =
-      add_pdf_metadata($vbox);
+      add_metadata_dialog($vbox);
 
     # Frame for page range
     add_page_range($vbox);
@@ -3679,7 +3679,7 @@ sub email {
         clicked => sub {
 
             # Set options
-            update_pdf_settings( $entryd, $entrya, $entryt, $entrys, $entryk );
+            update_metadata_settings( $entryd, $entrya, $entryt, $entrys, $entryk );
 
             # Compile list of pages
             my @list_of_pages;
@@ -3745,7 +3745,7 @@ sub email {
             $pid = $slist->save_pdf(
                 path            => $pdf->filename,
                 list_of_pages   => \@list_of_pages,
-                metadata        => get_pdf_metadata(),
+                metadata        => prepare_output_metadata(),
                 options         => \%options,
                 queued_callback => sub {
                     return update_tpbar(@_);
