@@ -2566,6 +2566,8 @@ sub boxed_text {
                     my $g = $widget->get_property('parent');
                     my $rect = $g->get_child(0);
                     if ( length($textbuffer->get('text')) ) {
+                        $g->{text} = $textbuffer->get('text');
+                        $g->{confidence} = 100;
                         # color for 100% confidence
                         $rect->set_property( 'stroke-color' => '#efffefffefff' );
 
@@ -2586,6 +2588,7 @@ sub boxed_text {
                         }
                     }
                     else {
+			delete $g->{text};
                         $g->remove_child(0);
                     }
 
