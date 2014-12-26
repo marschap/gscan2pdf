@@ -2230,15 +2230,15 @@ sub _thread_save_djvu {
         _add_text_to_djvu( $self, $djvu, $options{dir}, $pagedata );
     }
     $self->{progress} = 1;
-    $self->{message}  = $d->get('Closing DjVu');
+    $self->{message}  = $d->get('Merging DjVu');
     my $cmd = "djvm -c '$options{path}' @filelist";
     $logger->info($cmd);
     my $status = system "echo $PROCESS_ID > $options{pidfile};$cmd";
     return if $_self->{cancel};
     if ($status) {
         $self->{status}  = 1;
-        $self->{message} = $d->get('Error closing DjVu');
-        $logger->error('Error closing DjVu');
+        $self->{message} = $d->get('Error merging DjVu');
+        $logger->error('Error merging DjVu');
     }
     _add_metadata_to_djvu( $self, $options{path}, $options{dir},
         $options{pidfile}, $options{metadata} );
