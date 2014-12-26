@@ -2454,18 +2454,22 @@ sub update_metadata_settings {
 }
 
 sub prepare_output_metadata {
+    my $type = shift;
     my %h;
-    if ( defined $SETTING{author} ) { $h{Author} = $SETTING{author} }
-    my ( $day, $month, $year ) =
-      seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
-    $h{CreationDate} = sprintf "D:%4i%02i%02i000000+00'00'", $year, $month,
-      $day;
-    $h{ModDate}  = sprintf "D:%4i%02i%02i000000+00'00'", $year, $month, $day;
-    $h{Creator}  = "$prog_name v$VERSION";
-    $h{Producer} = 'PDF::API2';
-    if ( defined $SETTING{title} )    { $h{Title}    = $SETTING{title} }
-    if ( defined $SETTING{subject} )  { $h{Subject}  = $SETTING{subject} }
-    if ( defined $SETTING{keywords} ) { $h{Keywords} = $SETTING{keywords} }
+
+    if ($type eq 'PDF' or $type eq 'DjVu') {
+        my $dateformat = $type eq 'PDF' ? "D:%4i%02i%02i000000+00'00'"
+                                        : "%4i-%02i-%02i 00:00:00+00:00";
+        my ( $day, $month, $year ) =
+          seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
+        $h{CreationDate} = sprintf $dateformat, $year, $month, $day;
+        $h{ModDate}  = sprintf $dateformat, $year, $month, $day;
+        $h{Creator}  = "$prog_name v$VERSION";
+        $h{Producer} = $type eq 'PDF' ? 'PDF::API2' : 'djvulibre';
+        foreach my $key (qw/author title subject keywords/) {
+            $h{ucfirst($key)} = $SETTING{$key}  if ( defined $SETTING{$key} );
+        }
+    }
     return \%h;
 }
 
@@ -2625,7 +2629,7 @@ sub save_pdf {
     $pid = $slist->save_pdf(
         path            => $filename,
         list_of_pages   => \@list_of_pages,
-        metadata        => prepare_output_metadata(),
+        metadata        => prepare_output_metadata('PDF'),
         options         => \%options,
         queued_callback => sub {
             return update_tpbar(@_);
@@ -3528,6 +3532,7 @@ sub save_djvu {
     $pid = $slist->save_djvu(
         path            => $filename,
         list_of_pages   => \@list_of_pages,
+        metadata        => prepare_output_metadata('DjVu'),
         queued_callback => sub {
             return update_tpbar(@_);
         },
@@ -3760,7 +3765,7 @@ sub email {
             $pid = $slist->save_pdf(
                 path            => $pdf->filename,
                 list_of_pages   => \@list_of_pages,
-                metadata        => prepare_output_metadata(),
+                metadata        => prepare_output_metadata('PDF'),
                 options         => \%options,
                 queued_callback => sub {
                     return update_tpbar(@_);
