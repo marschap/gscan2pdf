@@ -2630,8 +2630,24 @@ sub boxed_text {
 
 sub canvas2hocr {
     my ( $x, $y, $w, $h ) = $canvas->get_bounds;
+    my $root = $canvas->get_root_item;
+    my @data;
 
-    $current_page->{hocr} = <<"EOS";
+    for my $i ( 0 .. $root->get_n_children - 1 ) {
+        my $group = $root->get_child($i);
+
+        if ($group->{bbox} and $group->{text}) {
+           my $title = 'bbox '.join(' ', @{$group->{bbox}});
+
+           push( @data, '<span class="ocr_line" title="'.$title.'">' .
+                        $group->{text}. '</span>' );
+        }
+    }
+
+    if (@data) {
+        my $data = join("\n   ", @data);
+
+        $current_page->{hocr} = <<"EOS";
 <!DOCTYPE html
  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN
  http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -2644,41 +2660,16 @@ sub canvas2hocr {
  <title>OCR Output</title>
 </head>
 <body>
- <div class="ocr_page" title="bbox $x $y $w $h>
- <p class="ocr_par">
+ <div class="ocr_page" title="bbox $x $y $w $h">
+  <p class="ocr_par">
+$data
+  </p>
+ </div>
+</body>
+</html>
 EOS
-
-    my $root = $canvas->get_root_item;
-    for my $i ( 0 .. $root->get_n_children - 1 ) {
-        my $group  = $root->get_child($i);
-        my $bounds = $group->get_bounds;
-        my ( $x1, $y1, $x2, $y2 ) = (
-            $bounds->x1 + 1,
-            $bounds->y1 + 1,
-            $bounds->x2 - 1,
-            $bounds->y2 - 1,
-        );
-
-#  my $matrix = $group->get_transform; FIXME: use this as soon as Goo::Canvas 0.07 is in generally available
-#  my ( $x1, $y1 ) = ( $matrix->x0, $matrix->y0 );
-#  my ( $x2, $y2, $text );
-        my ($text);
-        for my $i ( 0 .. $group->get_n_children - 1 ) {
-            my $item = $group->get_child($i);
-            if ( $item->isa('Goo::Canvas::Rect') ) {
-
-  #    ( $x2, $y2 ) = ( $x1 + $item->get('width'), $y1 + $item->get('height') );
-            }
-            elsif ( $item->isa('Goo::Canvas::Text') ) {
-                $text = $item->get('text');
-            }
-            if ( defined $x2 and defined $text ) {
-                $current_page->{hocr} .=
-"  <span class=\"ocr_line\" title=\"bbox $x1 $y1 $x2 $y2\">$text</span>\n";
-            }
-        }
     }
-    $current_page->{hocr} .= '</p></div></body></html>';
+
     return;
 }
 
