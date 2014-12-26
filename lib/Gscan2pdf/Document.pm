@@ -454,6 +454,7 @@ sub save_djvu {
         {
             path          => $options{path},
             list_of_pages => $options{list_of_pages},
+            metadata      => $options{metadata},
             dir           => "$self->{dir}",
             pidfile       => "$pidfile"
         }
@@ -1497,9 +1498,14 @@ sub _thread_main {
             }
 
             when ('save-djvu') {
-                _thread_save_djvu( $self, $request->{path},
-                    $request->{list_of_pages},
-                    $request->{dir}, $request->{pidfile} );
+                _thread_save_djvu(
+                    $self,
+                    path          => $request->{path},
+                    list_of_pages => $request->{list_of_pages},
+                    metadata      => $request->{metadata},
+                    dir           => $request->{dir},
+                    pidfile       => $request->{pidfile}
+                );
             }
 
             when ('save-hocr') {
@@ -2148,19 +2154,19 @@ sub _wrap_text_to_page {
 }
 
 sub _thread_save_djvu {
-    my ( $self, $path, $list_of_pages, $dir, $pidfile ) = @_;
+    my ( $self, %options ) = @_;
 
     my $page = 0;
     my @filelist;
 
-    foreach my $pagedata ( @{$list_of_pages} ) {
+    foreach my $pagedata ( @{$options{list_of_pages}} ) {
         ++$page;
-        $self->{progress} = $page / ( $#{$list_of_pages} + 2 );
+        $self->{progress} = $page / ( $#{$options{list_of_pages}} + 2 );
         $self->{message} = sprintf $d->get('Writing page %i of %i'),
-          $page, $#{$list_of_pages} + 1;
+          $page, $#{ $options{list_of_pages} } + 1;
 
         my $filename = $pagedata->{filename};
-        my $djvu = File::Temp->new( DIR => $dir, SUFFIX => '.djvu' );
+        my $djvu = File::Temp->new( DIR => $options{dir}, SUFFIX => '.djvu' );
 
         # Check the image depth to decide what sort of compression to use
         my $image = Image::Magick->new;
@@ -2173,7 +2179,7 @@ sub _thread_save_djvu {
         # Get the size
         $pagedata->{w}           = $image->Get('width');
         $pagedata->{h}           = $image->Get('height');
-        $pagedata->{pidfile}     = $pidfile;
+        $pagedata->{pidfile}     = $options{pidfile};
         $pagedata->{page_number} = $page;
 
         # c44 can only use pnm and jpg
@@ -2184,7 +2190,7 @@ sub _thread_save_djvu {
         if ( $depth > 1 ) {
             $compression = 'c44';
             if ( $format !~ /(?:pnm|jpg)/xsm ) {
-                my $pnm = File::Temp->new( DIR => $dir, SUFFIX => '.pnm' );
+                my $pnm = File::Temp->new( DIR => $options{dir}, SUFFIX => '.pnm' );
                 $x = $image->Write( filename => $pnm );
                 if ("$x") { $logger->warn($x) }
                 $filename = $pnm;
@@ -2197,7 +2203,7 @@ sub _thread_save_djvu {
             if ( $format !~ /(?:pnm|tif)/xsm
                 or ( $format eq 'pnm' and $class ne 'PseudoClass' ) )
             {
-                my $pbm = File::Temp->new( DIR => $dir, SUFFIX => '.pbm' );
+                my $pbm = File::Temp->new( DIR => $options{dir}, SUFFIX => '.pbm' );
                 $x = $image->Write( filename => $pbm );
                 if ("$x") { $logger->warn($x) }
                 $filename = $pbm;
@@ -2209,7 +2215,7 @@ sub _thread_save_djvu {
           $pagedata->{resolution};
         $logger->info($cmd);
         my ( $status, $size ) =
-          ( system("echo $PROCESS_ID > $pidfile;$cmd"), -s "$djvu" )
+          ( system("echo $PROCESS_ID > $options{pidfile};$cmd"), -s "$djvu" )
           ;    # quotes needed to prevent -s clobbering File::Temp object
         return if $_self->{cancel};
         if ( $status != 0 or not $size ) {
@@ -2221,19 +2227,21 @@ sub _thread_save_djvu {
             return;
         }
         push @filelist, $djvu;
-        _add_text_to_djvu( $self, $djvu, $dir, $pagedata );
+        _add_text_to_djvu( $self, $djvu, $options{dir}, $pagedata );
     }
     $self->{progress} = 1;
     $self->{message}  = $d->get('Closing DjVu');
-    my $cmd = "djvm -c '$path' @filelist";
+    my $cmd = "djvm -c '$options{path}' @filelist";
     $logger->info($cmd);
-    my $status = system "echo $PROCESS_ID > $pidfile;$cmd";
+    my $status = system "echo $PROCESS_ID > $options{pidfile};$cmd";
     return if $_self->{cancel};
     if ($status) {
         $self->{status}  = 1;
         $self->{message} = $d->get('Error closing DjVu');
         $logger->error('Error closing DjVu');
     }
+    _add_metadata_to_djvu( $self, $options{path}, $options{dir},
+        $options{pidfile}, $options{metadata} );
     return;
 }
 
@@ -2296,6 +2304,44 @@ sub _add_text_to_djvu {
             $logger->error(
                 "Error adding text layer to DjVu page $pagedata->{page_number}"
             );
+        }
+    }
+    return;
+}
+
+sub _add_metadata_to_djvu {
+    my ( $self, $djvu, $dir, $pidfile, $metadata ) = @_;
+    if ( $metadata and %{$metadata} ) {
+
+        # Open djvusedmetafile
+        my $djvusedmetafile = File::Temp->new( DIR => $dir, SUFFIX => '.txt' );
+        open my $fh, '>:encoding(UTF8)',    ## no critic (RequireBriefOpen)
+          $djvusedmetafile
+          or croak( sprintf $d->get("Can't open file: %s"), $djvusedmetafile );
+        _write_file( $self, $fh, $djvusedmetafile, "(metadata\n" )
+          or return;
+
+        # Write the metadata
+        for my $key ( keys %{$metadata} ) {
+            my $val = $metadata->{$key};
+            # backslash-escape any double quotes and bashslashes
+            $val =~ s/\\/\\\\/gxsm;
+            $val =~ s/"/\\\"/gxsm;
+            print {$fh} "$key \"$val\"\n";
+        }
+        _write_file( $self, $fh, $djvusedmetafile, ')' ) or return;
+        close $fh
+          or croak( sprintf $d->get("Can't close file: %s"), $djvusedmetafile );
+
+        # Write djvusedmetafile
+        my $cmd = "djvused '$djvu' -e 'set-meta $djvusedmetafile' -s";
+        $logger->info($cmd);
+        my $status = system "echo $PROCESS_ID > $pidfile;$cmd";
+        return if $_self->{cancel};
+        if ($status) {
+            $self->{status}  = 1;
+            $self->{message} = $d->get('Error adding metadata to DjVu');
+            $logger->error('Error adding metadata info to DjVu file');
         }
     }
     return;
