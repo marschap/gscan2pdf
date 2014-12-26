@@ -2453,6 +2453,29 @@ sub update_metadata_settings {
     return;
 }
 
+sub expand_metadata_pattern {
+    my $template = shift;
+    my ( $dday, $dmonth, $dyear ) =
+      seconds_to_date(
+        time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
+    $dmonth = sprintf '%02d', $dmonth;
+    $dday   = sprintf '%02d', $dday;
+    my ( $tday, $tmonth, $tyear ) = seconds_to_date(time);
+    $tmonth = sprintf '%02d', $tmonth;
+    $tday   = sprintf '%02d', $tday;
+
+    $template =~ s/%a/$SETTING{author}/gsm;
+    $template =~ s/%t/$SETTING{title}/gsm;
+    $template =~ s/%y/$dyear/gsm;
+    $template =~ s/%Y/$tyear/gsm;
+    $template =~ s/%m/$dmonth/gsm;
+    $template =~ s/%M/$tmonth/gsm;
+    $template =~ s/%d/$dday/gsm;
+    $template =~ s/%D/$tday/gsm;
+
+    return $template;
+}
+
 sub prepare_output_metadata {
     my $type = shift;
     my %h;
@@ -3085,24 +3108,7 @@ sub save_button_clicked_callback {
                 'gtk-save'   => 'ok'
             );
 
-            my ( $dday, $dmonth, $dyear ) =
-              seconds_to_date(
-                time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
-            $dmonth = sprintf '%02d', $dmonth;
-            $dday   = sprintf '%02d', $dday;
-            my ( $tday, $tmonth, $tyear ) = seconds_to_date(time);
-            $tmonth = sprintf '%02d', $tmonth;
-            $tday   = sprintf '%02d', $tday;
-
-            my $filename = $SETTING{'default filename'};
-            $filename =~ s/%a/$SETTING{author}/gsm;
-            $filename =~ s/%t/$SETTING{title}/gsm;
-            $filename =~ s/%y/$dyear/gsm;
-            $filename =~ s/%Y/$tyear/gsm;
-            $filename =~ s/%m/$dmonth/gsm;
-            $filename =~ s/%M/$tmonth/gsm;
-            $filename =~ s/%d/$dday/gsm;
-            $filename =~ s/%D/$tday/gsm;
+            my $filename = expand_metadata_pattern( $SETTING{'default filename'} );
 
             # avoid leading and trailing blanks in expanded filename template
             $filename =~ s/^\s*(.*?)\s*$/$1/xsm;
@@ -3123,6 +3129,8 @@ sub save_button_clicked_callback {
         }
         when ('djvu') {
 
+            update_metadata_settings( $entryd, $entrya, $entryt, $entrys, $entryk );
+
             # cd back to cwd to save
             chdir $SETTING{'cwd'};
 
@@ -3133,6 +3141,13 @@ sub save_button_clicked_callback {
                 'gtk-cancel' => 'cancel',
                 'gtk-save'   => 'ok'
             );
+
+            my $filename = expand_metadata_pattern( $SETTING{'default filename'} );
+
+            # avoid leading and trailing blanks in expanded filename template
+            $filename =~ s/^\s*(.*?)\s*$/$1/;
+
+            $file_chooser->set_current_name($filename);
             $file_chooser->set_default_response('ok');
             $file_chooser->set_current_folder( $SETTING{'cwd'} );
             add_filter( $file_chooser, $d->get('DjVu files'), 'djvu' );
