@@ -4502,7 +4502,13 @@ sub add_postprocessing_ocr {
     $hboxt->pack_end( $labelp, FALSE, TRUE, 0 );
     my $spinbutton = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
     $spinbutton->set_value( $SETTING{'threshold tool'} );
+    $spinbutton->set_sensitive( $cbt->get_active ? TRUE : FALSE );
     $hboxt->pack_end( $spinbutton, FALSE, TRUE, 0 );
+    $cbt->signal_connect(
+        toggled => sub {
+            $spinbutton->set_sensitive( $cbt->get_active ? TRUE : FALSE );
+        }
+    );
 
     return (
         $obutton,    $comboboxe, $hboxtl,  $comboboxtl, $hboxcl,
@@ -6330,7 +6336,13 @@ sub OCR {
     $hboxt->pack_end( $labelp, FALSE, TRUE, 0 );
     my $spinbutton = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
     $spinbutton->set_value( $SETTING{'threshold tool'} );
+    $spinbutton->set_sensitive( $cbt->get_active ? TRUE : FALSE );
     $hboxt->pack_end( $spinbutton, FALSE, TRUE, 0 );
+    $cbt->signal_connect(
+        toggled => sub {
+            $spinbutton->set_sensitive( $cbt->get_active ? TRUE : FALSE );
+        }
+    );
 
     # HBox for buttons
     my $hbox = Gtk2::HBox->new;
