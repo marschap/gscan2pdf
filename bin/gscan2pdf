@@ -3082,7 +3082,7 @@ sub save_button_clicked_callback {
             $filename =~ s/%D/$tday/gsm;
 
             # avoid leading and trailing blanks in expanded filename template
-            $filename =~ s/^\s*(.*?)\s*$/$1/;
+            $filename =~ s/^\s*(.*?)\s*$/$1/xsm;
 
             $file_chooser->set_current_name($filename);
             $file_chooser->set_default_response('ok');
