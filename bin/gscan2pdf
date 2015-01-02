@@ -2444,8 +2444,9 @@ sub update_pdf_settings {
     use Time::Local qw/timegm_nocheck/;
     my $then = timegm_nocheck( 0, 0, 0, $day, $month - 1, $year );
     my $now = time;
+
     # "floor" $now at 0:00am (analogue to $then)
-    $now -= ($now % $SECONDS_PER_DAY);
+    $now -= ( $now % $SECONDS_PER_DAY );
 
     $SETTING{'date offset'} =
       int( $then / $SECONDS_PER_DAY - $now / $SECONDS_PER_DAY );
