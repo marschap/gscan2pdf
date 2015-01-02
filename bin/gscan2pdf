@@ -99,6 +99,8 @@ Readonly my $_100_PERCENT            => 100;
 Readonly my $MAX_DPI                 => 2400;
 Readonly my $BITS_PER_BYTE           => 8;
 Readonly my $SECONDS_PER_DAY         => 24 * 60 * 60;
+Readonly my $DAYS_PER_MONTH          => 31;
+Readonly my $MONTHS_PER_YEAR         => 12;
 Readonly my $RIGHT_MOUSE_BUTTON      => 3;
 Readonly my $SELECTOR_X              => 0;
 Readonly my $SELECTOR_Y              => 1;
@@ -2271,18 +2273,17 @@ sub seconds_to_date {
 sub text_to_date {
     my ($text) = @_;
     my ( $year, $month, $day );
-    my ( $thisday, $thismonth, $thisyear ) = seconds_to_date( time );
+    my ( $thisday, $thismonth, $thisyear ) = seconds_to_date(time);
     if ( $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
         ( $year, $month, $day ) = ( $1, $2, $3 );
     }
-
-    $year  = $thisyear
-        unless ( defined $year );
-    $month = $thismonth
-        unless ( defined $month && $month > 0 && $month < 13 );	## no critic (ProhibitMagicNumbers)
-    $day = $thisday
-        unless ( defined $day && $day > 0 && $day < 32 );	## no critic (ProhibitMagicNumbers)
-
+    if ( not defined $year ) { $year = $thisyear }
+    if ( not defined $month or $month < 1 or $month > $MONTHS_PER_YEAR ) {
+        $month = $thismonth;
+    }
+    if ( not defined $day or $day < 1 or $day > $DAYS_PER_MONTH ) {
+        $day = $thisday;
+    }
     return $year, $month, $day;
 }
 
