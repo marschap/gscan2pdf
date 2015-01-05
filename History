@@ -1,3 +1,10 @@
+1.2.8 (06.01.2015):
+
+* Avoid leading & trailing spaces in filename expanded from template
+  Closes bugs #172 & #169 and Debian bug #774099.
+  Thanks to Peter Marschall for the patch.
+
+
 1.2.7 (23.11.2014):
 
 * Use date from entry rather than calendar widget.
