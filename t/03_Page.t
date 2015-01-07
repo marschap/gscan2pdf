@@ -46,10 +46,34 @@ $page->{hocr} = <<'EOS';
 EOS
 
 my @boxes = (
-    { type => 'word', id => 1, lineid => 1, bbox => [ 1,   14, 77,  48 ], text => 'The' },
-    { type => 'word', id => 2, lineid => 1, bbox => [ 92,  14, 202, 59 ], text => 'quick' },
-    { type => 'word', id => 3, lineid => 1, bbox => [ 214, 14, 341, 48 ], text => 'brown' },
-    { type => 'word', id => 4, lineid => 1, bbox => [ 355, 14, 420, 48 ], text => 'fox' }
+    {
+        type   => 'word',
+        id     => 1,
+        lineid => 1,
+        bbox   => [ 1, 14, 77, 48 ],
+        text   => 'The'
+    },
+    {
+        type   => 'word',
+        id     => 2,
+        lineid => 1,
+        bbox   => [ 92, 14, 202, 59 ],
+        text   => 'quick'
+    },
+    {
+        type   => 'word',
+        id     => 3,
+        lineid => 1,
+        bbox   => [ 214, 14, 341, 48 ],
+        text   => 'brown'
+    },
+    {
+        type   => 'word',
+        id     => 4,
+        lineid => 1,
+        bbox   => [ 355, 14, 420, 48 ],
+        text   => 'fox'
+    }
 );
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from tesseract 3.00' );
 
@@ -80,10 +104,37 @@ $page->{hocr} = <<'EOS';
 EOS
 
 @boxes = (
-    { type => 'word', id => 1, lineid => 1, bbox => [ 1,   9, 88,  45 ], text => 'The', style => [ 'Bold' ] },
-    { type => 'word', id => 2, lineid => 1, bbox => [ 106, 9, 235, 55 ], text => 'quick' },
-    { type => 'word', id => 3, lineid => 1, bbox => [ 253, 9, 397, 45 ], text => 'brown', style => [ 'Bold' ] },
-    { type => 'word', id => 4, lineid => 1, bbox => [ 416, 9, 490, 45 ], text => 'fox', style => [ 'Bold' ] }
+    {
+        type   => 'word',
+        id     => 1,
+        lineid => 1,
+        bbox   => [ 1, 9, 88, 45 ],
+        text   => 'The',
+        style  => ['Bold']
+    },
+    {
+        type   => 'word',
+        id     => 2,
+        lineid => 1,
+        bbox   => [ 106, 9, 235, 55 ],
+        text   => 'quick'
+    },
+    {
+        type   => 'word',
+        id     => 3,
+        lineid => 1,
+        bbox   => [ 253, 9, 397, 45 ],
+        text   => 'brown',
+        style  => ['Bold']
+    },
+    {
+        type   => 'word',
+        id     => 4,
+        lineid => 1,
+        bbox   => [ 416, 9, 490, 45 ],
+        text   => 'fox',
+        style  => ['Bold']
+    }
 );
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from tesseract 3.02.01' );
 
@@ -98,7 +149,14 @@ $page->{hocr} = <<'EOS';
 </span></div></body></html>
 EOS
 
-@boxes = ( { type => 'line', id => 1, bbox => [ 3, 1, 271, 47 ], text => decode_utf8('ööäiiüüß €') } );
+@boxes = (
+    {
+        type => 'line',
+        id   => 1,
+        bbox => [ 3, 1, 271, 47 ],
+        text => decode_utf8('ööäiiüüß €')
+    }
+);
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from ocropus 0.3 with UTF8' );
 
 #########################
@@ -114,8 +172,18 @@ $page->{hocr} = <<'EOS';
 EOS
 
 @boxes = (
-    { type => 'line', id => 1, bbox => [ 22, 26, 107, 39 ], text => "\x{a4}\x{f6}A\x{e4}U\x{fc}\x{df}'" },
-    { type => 'line', id => 2, bbox => [ 21, 74, 155, 87 ], text => 'Test Test Test E' }
+    {
+        type => 'line',
+        id   => 1,
+        bbox => [ 22, 26, 107, 39 ],
+        text => "\x{a4}\x{f6}A\x{e4}U\x{fc}\x{df}'"
+    },
+    {
+        type => 'line',
+        id   => 2,
+        bbox => [ 21, 74, 155, 87 ],
+        text => 'Test Test Test E'
+    }
 );
 is_deeply( [ $page->boxes ], \@boxes, 'More boxes from ocropus 0.3 with UTF8' );
 
@@ -130,7 +198,14 @@ $page->{hocr} = <<'EOS';
 </span></div></body></html>
 EOS
 
-@boxes = ( { type => 'line', id => 1, bbox => [ 1, 14, 420, 59 ], text => 'The quick brown fox' } );
+@boxes = (
+    {
+        type => 'line',
+        id   => 1,
+        bbox => [ 1, 14, 420, 59 ],
+        text => 'The quick brown fox'
+    }
+);
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from ocropus 0.4' );
 
 #########################
@@ -149,7 +224,14 @@ $page->{hocr} = <<'EOS';
 </div></body></html>
 EOS
 
-@boxes = ( { type => 'line', id => 1, bbox => [ 1, 15, 420, 60 ], text => 'The quick brown fox' } );
+@boxes = (
+    {
+        type => 'line',
+        id   => 1,
+        bbox => [ 1, 15, 420, 60 ],
+        text => 'The quick brown fox'
+    }
+);
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from cuneiform 1.0.0' );
 
 #########################

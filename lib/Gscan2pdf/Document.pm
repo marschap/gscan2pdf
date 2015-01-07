@@ -1048,6 +1048,12 @@ sub open_session_file {
 
 sub open_session {
     my ( $self, $sesdir, $delete, $error_callback ) = @_;
+    if ( not defined $sesdir ) {
+        if ($error_callback) {
+            $error_callback->("Error: session folder not defined");
+        }
+        return;
+    }
     my $sessionfile = File::Spec->catfile( $sesdir, 'session' );
     if ( not -r $sessionfile ) {
         if ($error_callback) {
@@ -2089,7 +2095,7 @@ sub _add_text_to_pdf {
         my $font;
         my $text = $page->text;
         for my $box ( $data->boxes ) {
-            my ( $x1, $y1, $x2, $y2 ) = @{$box->{bbox}};
+            my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
             my $txt = $box->{text};
             if ( $txt =~ /([[:^ascii:]])/xsm and defined $ttfcache ) {
                 if ( defined $1 ) {
@@ -2160,9 +2166,9 @@ sub _thread_save_djvu {
     my $page = 0;
     my @filelist;
 
-    foreach my $pagedata ( @{$options{list_of_pages}} ) {
+    foreach my $pagedata ( @{ $options{list_of_pages} } ) {
         ++$page;
-        $self->{progress} = $page / ( $#{$options{list_of_pages}} + 2 );
+        $self->{progress} = $page / ( $#{ $options{list_of_pages} } + 2 );
         $self->{message} = sprintf $d->get('Writing page %i of %i'),
           $page, $#{ $options{list_of_pages} } + 1;
 
@@ -2191,7 +2197,8 @@ sub _thread_save_djvu {
         if ( $depth > 1 ) {
             $compression = 'c44';
             if ( $format !~ /(?:pnm|jpg)/xsm ) {
-                my $pnm = File::Temp->new( DIR => $options{dir}, SUFFIX => '.pnm' );
+                my $pnm =
+                  File::Temp->new( DIR => $options{dir}, SUFFIX => '.pnm' );
                 $x = $image->Write( filename => $pnm );
                 if ("$x") { $logger->warn($x) }
                 $filename = $pnm;
@@ -2204,7 +2211,8 @@ sub _thread_save_djvu {
             if ( $format !~ /(?:pnm|tif)/xsm
                 or ( $format eq 'pnm' and $class ne 'PseudoClass' ) )
             {
-                my $pbm = File::Temp->new( DIR => $options{dir}, SUFFIX => '.pbm' );
+                my $pbm =
+                  File::Temp->new( DIR => $options{dir}, SUFFIX => '.pbm' );
                 $x = $image->Write( filename => $pbm );
                 if ("$x") { $logger->warn($x) }
                 $filename = $pbm;
@@ -2279,7 +2287,7 @@ sub _add_text_to_djvu {
 
         # Write the text boxes
         for my $box ( $pagedata->boxes ) {
-            my ( $x1, $y1, $x2, $y2 ) = @{$box->{bbox}};
+            my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
             my $txt = $box->{text};
             if ( $x1 == 0 and $y1 == 0 and not defined $x2 ) {
                 ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution );
@@ -2326,6 +2334,7 @@ sub _add_metadata_to_djvu {
         # Write the metadata
         for my $key ( keys %{$metadata} ) {
             my $val = $metadata->{$key};
+
             # backslash-escape any double quotes and bashslashes
             $val =~ s/\\/\\\\/gxsm;
             $val =~ s/"/\\\"/gxsm;
@@ -2528,7 +2537,7 @@ sub _thread_save_text {
         # at appropriate positions
         my ( $oldx, $oldy );
         for my $box ( $page->boxes ) {
-            my ( $x1, $y1, $x2, $y2 ) = @{$box->{bbox}};
+            my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
             my $text = $box->{text};
             if ( defined $oldx and $x1 > $oldx ) {
                 _write_file( $self, $fh, $path, $SPACE ) or return;

@@ -134,7 +134,7 @@ sub thaw {
 # returns array of boxes with OCR text
 
 sub boxes {
-    my ( $self, @boxes ) = @_;
+    my ($self) = @_;
 
     # Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
     # where decode_entities doesn't work cleanly, so encode/decode to finally
@@ -144,84 +144,105 @@ sub boxes {
         encode_utf8( HTML::Entities::decode_entities( $self->{hocr} ) ) );
 
     if ( $hocr =~ /<body>([\s\S]*)<\/body>/xsm ) {
-        my $p = HTML::TokeParser->new( \$hocr );
-        my ($lineid, $wordid) = (1,1);
-        my (%linedata, %worddata, $data);
-        while ( my $token = $p->get_token ) {
-            if ( $token->[0] eq 'S' ) {
-                my ($tag, %attrs) = ( $token->[1], %{$token->[2]} );
-                if ( $tag eq 'span' and defined $attrs{class} ) {
-                    if ( (  $attrs{class} eq 'ocr_line'
-                         or $attrs{class} eq 'ocr_word'
-                         or $attrs{class} eq 'ocrx_word' )
-                       and defined $attrs{title} ) {
-                        # initialize data pointer
-                        if ($attrs{class} =~ /_word$/) {
-                            %worddata = %linedata;
-                            $data = \%worddata;
-                            $data->{type} = 'word';
-                            $data->{lineid} = $linedata{id};
-                            $data->{id} = $wordid++;
-                        }
-                        else {
-                            %linedata = ();
-                            $data = \%linedata;
-                            $data->{type} = 'line';
-                            $data->{id} = $lineid++;
-                        }
+        return parse_hocr($hocr);
+    }
+    return {
+        type => 'page',
+        bbox => [ 0, 0, $self->{w}, $self->{h} ],
+        text => $hocr
+    };
+}
 
-                        if ( $attrs{title} =~
-                             /\bbbox\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/ ) {
-                            $data->{bbox} = [ $1, $2, $3, $4 ];
-                        }
-                        if ( $attrs{title} =~ /\btextangle\s+(\d+)/ ) {
-                            $data->{textangle} = $1;
-                        }
-                        if ( $attrs{title} =~ /\bx_wconf\s+(\d+)/ ) {
-                            $data->{confidence} = $1;
-                        }
-                        if ( $attrs{title} =~ /\bbaseline\s+(?:-?\d+(?:\.\d+)?\s+)*(-?\d+)/ ) {
-                            $data->{baseline} = $1;
-                            # slightly kludgy: textangle defined means 90°
-                            $data->{base} = $data->{baseline} +
-                                $data->{textangle} ? $data->{bbox}[3] : $data->{bbox}[2];
-                        }
-                    }
-                    elsif ( $attrs{class} eq 'ocr_cinfo' ) {
-                        # reset data pointer
-                        undef $data;
-                        %worddata = ();
-                        %linedata = ();
-                    }
-                }
-                elsif ( defined $data ) {
-                    push( @{$data->{style}}, 'Bold')  if ( $tag eq 'strong' );
-                    push( @{$data->{style}}, 'Italic')  if ( $tag eq 'em' );
-                }
-            }
-            elsif ( $token->[0] eq 'T' ) {
-                if ( $token->[1] !~ /^\s*$/xsm ) {
-                    chomp( $data->{text} = $token->[1] );
-                }
-            }
-            elsif ( $token->[0] eq 'E' ) {
-                # reset data pointer
-                undef $data;
-            }
+sub parse_hocr {
+    my ($hocr) = @_;
+    my $p = HTML::TokeParser->new( \$hocr );
+    my ( $lineid, $wordid ) = ( 1, 1 );
+    my ( %linedata, %worddata, $data, @boxes );
+    while ( my $token = $p->get_token ) {
+        if ( $token->[0] eq 'S' ) {
+            my ( $tag, %attrs ) = ( $token->[1], %{ $token->[2] } );
+            if ( $tag eq 'span' and defined $attrs{class} ) {
+                if ( new_hocr_data(%attrs) ) {
 
-            if (   defined $data
-               and defined $data->{text}
-               and defined $data->{bbox} ) {
-                push @boxes, { %{$data} };
+                    # initialize data pointer
+                    if ( $attrs{class} =~ /_word$/xsm ) {
+                        %worddata       = %linedata;
+                        $data           = \%worddata;
+                        $data->{type}   = 'word';
+                        $data->{lineid} = $linedata{id};
+                        $data->{id}     = $wordid++;
+                    }
+                    else {
+                        %linedata     = ();
+                        $data         = \%linedata;
+                        $data->{type} = 'line';
+                        $data->{id}   = $lineid++;
+                    }
+                    parse_tag_data( $attrs{title}, $data );
+                }
+                elsif ( $attrs{class} eq 'ocr_cinfo' ) {
+
+                    # reset data pointer
+                    undef $data;
+                    %worddata = ();
+                    %linedata = ();
+                }
+            }
+            elsif ( defined $data ) {
+                if ( $tag eq 'strong' ) { push @{ $data->{style} }, 'Bold' }
+                if ( $tag eq 'em' )     { push @{ $data->{style} }, 'Italic' }
             }
         }
-    }
-    else {
-        push @boxes, { type => 'page',
-                       bbox => [ 0, 0, $self->{w}, $self->{h} ],
-                       text => $hocr };
+        elsif ( $token->[0] eq 'T' ) {
+            if ( $token->[1] !~ /^\s*$/xsm ) {
+                $data->{text} = $token->[1];
+                chomp $data->{text};
+            }
+        }
+        elsif ( $token->[0] eq 'E' ) {
+
+            # reset data pointer
+            undef $data;
+        }
+
+        if (    defined $data
+            and defined $data->{text}
+            and defined $data->{bbox} )
+        {
+            push @boxes, { %{$data} };
+        }
     }
     return @boxes;
+}
+
+sub new_hocr_data {
+    my %attrs = @_;
+    return (
+        (
+                 $attrs{class} eq 'ocr_line'
+              or $attrs{class} eq 'ocr_word'
+              or $attrs{class} eq 'ocrx_word'
+        )
+          and defined $attrs{title}
+    );
+}
+
+sub parse_tag_data {
+    my ( $title, $data ) = @_;
+    if ( $title =~ /\bbbox\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/xsm ) {
+        $data->{bbox} = [ $1, $2, $3, $4 ];
+    }
+    if ( $title =~ /\btextangle\s+(\d+)/xsm ) { $data->{textangle}  = $1 }
+    if ( $title =~ /\bx_wconf\s+(\d+)/xsm )   { $data->{confidence} = $1 }
+    if ( $title =~ /\bbaseline\s+(?:-?\d+(?:[.]\d+)?\s+)*(-?\d+)/xsm ) {
+        $data->{baseline} = $1;
+
+        # slightly kludgy: textangle defined means 90°
+        $data->{base} = $data->{baseline} + defined $data->{textangle}
+          ? $data->{bbox}[3]    ## no critic (ProhibitMagicNumbers)
+          : $data->{bbox}[2];
+    }
+    return;
 }
 
 sub to_png {

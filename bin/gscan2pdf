@@ -2292,13 +2292,13 @@ sub add_metadata_dialog {
     $frame->add($vboxm);
 
     # table-view
-    my $table = Gtk2::Table->new( 5, 2 );	## no critic (ProhibitMagicNumbers)
-    $table->set_row_spacings( $BORDER_WIDTH );
+    my $table = Gtk2::Table->new( 5, 2 );    ## no critic (ProhibitMagicNumbers)
+    $table->set_row_spacings($BORDER_WIDTH);
     $vboxm->pack_start( $table, TRUE, TRUE, 0 );
 
     # Date/time
     my $hboxe = Gtk2::HBox->new;
-    $table->attach( $hboxe, 0, 1, 0, 1, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
+    $table->attach( $hboxe, 0, 1, 0, 1, 'fill', 'shrink', 0, 0 );
     my $labele = Gtk2::Label->new( $d->get('Date') );
     $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
     my ( $day, $month, $year ) =
@@ -2384,54 +2384,76 @@ sub add_metadata_dialog {
     );
     $tooltips->set_tip( $button, $d->get('Select date with calendar') );
     $hboxe = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxe, 1, 2, 0, 1 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hboxe, 1, 2, 0, 1 );
     $hboxe->pack_end( $button, FALSE, FALSE, 0 );
     $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
 
     # Title
     my $hboxt = Gtk2::HBox->new;
-    $table->attach( $hboxt, 0, 1, 1, 2, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
+    $table->attach( $hboxt, 0, 1, 1, 2, 'fill', 'shrink', 0, 0 );
     my $labelt = Gtk2::Label->new( $d->get('Title') );
     $hboxt->pack_start( $labelt, FALSE, TRUE, 0 );
     $hboxt = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxt, 1, 2, 1, 2 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hboxt, 1, 2, 1, 2 );
     my $entryt = Gtk2::Entry->new;
     $hboxt->pack_start( $entryt, TRUE, TRUE, 0 );
     if ( defined $SETTING{title} ) { $entryt->set_text( $SETTING{title} ) }
 
     # Document author
     my $hboxa = Gtk2::HBox->new;
-    $table->attach( $hboxa, 0, 1, 2, 3, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
+    $table->attach(
+        $hboxa, 0, 1, 2, 3, 'fill',    ## no critic (ProhibitMagicNumbers)
+        'shrink',
+        0, 0
+    );
     my $labela = Gtk2::Label->new( $d->get('Author') );
     $hboxa->pack_start( $labela, FALSE, TRUE, 0 );
     $hboxa = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxa, 1, 2, 2, 3 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hboxa, 1, 2, 2,
+        3 )                            ## no critic (ProhibitMagicNumbers)
+      ;
     my $entrya = Gtk2::Entry->new;
     $hboxa->pack_start( $entrya, TRUE, TRUE, 0 );
     if ( defined $SETTING{author} ) { $entrya->set_text( $SETTING{author} ) }
 
     # Subject
     my $hboxs = Gtk2::HBox->new;
-    $table->attach( $hboxs, 0, 1, 3, 4, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
+    $table->attach(
+        $hboxs, 0, 1, 3, 4, 'fill',    ## no critic (ProhibitMagicNumbers)
+        'shrink',
+        0, 0
+    );
     my $labels = Gtk2::Label->new( $d->get('Subject') );
     $hboxs->pack_start( $labels, FALSE, TRUE, 0 );
     $hboxs = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxs, 1, 2, 3, 4 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hboxs, 1, 2, 3,               ## no critic (ProhibitMagicNumbers)
+        4                              ## no critic (ProhibitMagicNumbers)
+    );
     my $entrys = Gtk2::Entry->new;
     $hboxs->pack_end( $entrys, TRUE, TRUE, 0 );
+
     if ( defined $SETTING{subject} ) {
         $entrys->set_text( $SETTING{subject} );
     }
 
     # Keywords
     my $hboxk = Gtk2::HBox->new;
-    $table->attach( $hboxk, 0, 1, 4, 5, 'fill', 'shrink', 0, 0 );	## no critic (ProhibitMagicNumbers)
+    $table->attach(
+        $hboxk, 0, 1, 4, 5, 'fill',    ## no critic (ProhibitMagicNumbers)
+        'shrink',
+        0, 0
+    );
     my $labelk = Gtk2::Label->new( $d->get('Keywords') );
     $hboxk->pack_start( $labelk, FALSE, TRUE, 0 );
     $hboxk = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxk, 1, 2, 4, 5 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hboxk, 1, 2, 4,               ## no critic (ProhibitMagicNumbers)
+        5                              ## no critic (ProhibitMagicNumbers)
+    );
     my $entryk = Gtk2::Entry->new;
     $hboxk->pack_end( $entryk, TRUE, TRUE, 0 );
+
     if ( defined $SETTING{keywords} ) {
         $entryk->set_text( $SETTING{keywords} );
     }
@@ -2463,8 +2485,7 @@ sub update_metadata_settings {
 sub expand_metadata_pattern {
     my $template = shift;
     my ( $dday, $dmonth, $dyear ) =
-      seconds_to_date(
-        time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
+      seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
     $dmonth = sprintf '%02d', $dmonth;
     $dday   = sprintf '%02d', $dday;
     my ( $tday, $tmonth, $tyear ) = seconds_to_date(time);
@@ -2487,17 +2508,21 @@ sub prepare_output_metadata {
     my $type = shift;
     my %h;
 
-    if ($type eq 'PDF' or $type eq 'DjVu') {
-        my $dateformat = $type eq 'PDF' ? "D:%4i%02i%02i000000+00'00'"
-                                        : "%4i-%02i-%02i 00:00:00+00:00";
+    if ( $type eq 'PDF' or $type eq 'DjVu' ) {
+        my $dateformat =
+          $type eq 'PDF'
+          ? "D:%4i%02i%02i000000+00'00'"
+          : '%4i-%02i-%02i 00:00:00+00:00';
         my ( $day, $month, $year ) =
           seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
         $h{CreationDate} = sprintf $dateformat, $year, $month, $day;
-        $h{ModDate}  = sprintf $dateformat, $year, $month, $day;
-        $h{Creator}  = "$prog_name v$VERSION";
+        $h{ModDate}      = sprintf $dateformat, $year, $month, $day;
+        $h{Creator}      = "$prog_name v$VERSION";
         $h{Producer} = $type eq 'PDF' ? 'PDF::API2' : 'djvulibre';
         foreach my $key (qw/author title subject keywords/) {
-            $h{ucfirst($key)} = $SETTING{$key}  if ( defined $SETTING{$key} );
+            if ( defined $SETTING{$key} ) {
+                $h{ ucfirst $key } = $SETTING{$key};
+            }
         }
     }
     return \%h;
@@ -2507,7 +2532,7 @@ sub prepare_output_metadata {
 
 sub boxed_text {
     my $box = shift;
-    my ($x1, $y1, $x2, $y2) = @{$box->{bbox}};
+    my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
     my $x_size = abs $x2 - $x1;
     my $y_size = abs $y2 - $y1;
     my $root   = $canvas->get_root_item;
@@ -2517,103 +2542,68 @@ sub boxed_text {
     # add box properties to group properties
     map { $g->{$_} = $box->{$_}; } keys %{$box};
 
-    # draw the rect first to make sure the text goes on top and receives any mouse clicks
-    my $confidence = defined $box->{confidence} ? $box->{confidence} : 100;
-    $confidence = $confidence > 64 ? 2 * int(($confidence - 65) / 12) + 10 : 0;
+    # draw the rect first to make sure the text goes on top
+    # and receives any mouse clicks
+    my $confidence =
+      defined $box->{confidence} ? $box->{confidence} : $_100_PERCENT;
+    $confidence = $confidence > 64    ## no critic (ProhibitMagicNumbers)
+      ? 2 * int( ( $confidence - 65 ) / 12 ) ## no critic (ProhibitMagicNumbers)
+      + 10                                   ## no critic (ProhibitMagicNumbers)
+      : 0;
     my $color = defined $box->{confidence}
-                ? sprintf '#%xfff%xfff%xfff', 
-                          0xf - int($confidence / 10), $confidence, $confidence
-                : '#7fff7fff7fff';
+      ? sprintf '#%xfff%xfff%xfff',
+      0xf - int( $confidence / 10 ),         ## no critic (ProhibitMagicNumbers)
+      $confidence, $confidence
+      : '#7fff7fff7fff';
     my $rect = Goo::Canvas::Rect->new( $g, 0, 0, $x_size, $y_size,
-       'stroke-color' => $color );
+        'stroke-color' => $color );
 
     if ( $box->{text} ) {
-#        # show text baseline (currently of no use)
-#        if ($box->{baseline} and $box->{baseline} >= $y1) {
-#            $rect = Goo::Canvas::Rect->new( $g,
-#                 0, $box->{baseline} - $y1, $x_size, 1,
-#                'stroke-color' => 'yellow');
-#        }
-     
+
+        #        # show text baseline (currently of no use)
+        #        if ($box->{baseline} and $box->{baseline} >= $y1) {
+        #            $rect = Goo::Canvas::Rect->new( $g,
+        #                 0, $box->{baseline} - $y1, $x_size, 1,
+        #                'stroke-color' => 'yellow');
+        #        }
+
         my $text;
-        if ($box->{type} eq 'page') {
+        if ( $box->{type} eq 'page' ) {
+
             # only basic info on text, so simply create it
-            $text = Goo::Canvas::Text->new( $g, $box->{text},
-                0, 0, $x_size,
+            $text = Goo::Canvas::Text->new( $g, $box->{text}, 0, 0, $x_size,
                 'nw', 'height' => $y_size );
         }
         else {
-            # create text and then scale, shift & rotate it into the bounding box
-            my $angle = defined($box->{textangle}) ? (-$box->{textangle} % 360) : 0;
-            $text = Goo::Canvas::Text->new( $g, $box->{text},
-                $x_size/2, $y_size/2, -1,
-                'center', 'font' => 'Sans '.($angle ? $x_size : $y_size) );
+           # create text and then scale, shift & rotate it into the bounding box
+            my $angle = defined( $box->{textangle} )
+              ? ( -$box->{textangle} % 360 ) ## no critic (ProhibitMagicNumbers)
+              : 0;
+            $text = Goo::Canvas::Text->new(
+                $g,
+                $box->{text},
+                $x_size / 2,
+                $y_size / 2,
+                -1, 'center',                ## no critic (ProhibitMagicNumbers)
+                'font' => 'Sans '
+                  . (
+                      $angle
+                    ? $x_size
+                    : $y_size
+                  )
+            );
             my $bounds = $text->get_bounds;
-            my $scale = ($angle ? $y_size : $x_size) / ($bounds->x2 - $bounds->x1);
+            my $scale =
+              ( $angle ? $y_size : $x_size ) / ( $bounds->x2 - $bounds->x1 );
             $text->set_simple_transform( 0, 0, $scale, $angle );
             $bounds = $text->get_bounds;
-            my $x_offset = ($x1 + $x2 - $bounds->x1 - $bounds->x2) / 2;
-            my $y_offset = ($y1 + $y2 - $bounds->y1 - $bounds->y2) / 2;
-            $text->set_simple_transform($x_offset, $y_offset, $scale, $angle);
+            my $x_offset = ( $x1 + $x2 - $bounds->x1 - $bounds->x2 ) / 2;
+            my $y_offset = ( $y1 + $y2 - $bounds->y1 - $bounds->y2 ) / 2;
+            $text->set_simple_transform( $x_offset, $y_offset, $scale, $angle );
         }
-     
+
         # clicking text box produces a dialog to edit the text
-        $text->signal_connect(
-            'button-press-event' => sub {
-                my ( $widget, $target, $ev ) = @_;
-                my $dialog = Gtk2::Dialog->new(
-                    $d->get('Editing text') . '...', $window,
-                    'modal',
-                    'gtk-ok'     => 'ok',
-                    'gtk-cancel' => 'cancel'
-                );
-                my $textview   = Gtk2::TextView->new;
-                my $textbuffer = $textview->get_buffer;
-                $textbuffer->set( text => $widget->get('text') );
-                $dialog->vbox->add($textview);
-                $dialog->set_default_response('ok');
-                $dialog->show_all;
-     
-                if ( $dialog->run eq 'ok' ) {
-                    $widget->set( text => $textbuffer->get('text') );
-
-                    # per above: group = text's parent, group's 1st child = rect
-                    my $g = $widget->get_property('parent');
-                    my $rect = $g->get_child(0);
-                    if ( length($textbuffer->get('text')) ) {
-                        $g->{text} = $textbuffer->get('text');
-                        $g->{confidence} = 100;
-                        # color for 100% confidence
-                        $rect->set_property( 'stroke-color' => '#efffefffefff' );
-
-                        # re-adjust text size & position
-                        if ( $g->{type} ne 'page' ) {
-                            my ($x1, $y1, $x2, $y2) = @{$g->{bbox}};
-                            my $x_size = abs $x2 - $x1;
-                            my $y_size = abs $y2 - $y1;
-                            $widget->set_simple_transform( 0, 0, 1, 0 );
-                            my $angle = defined($g->{textangle}) ? (-$g->{textangle} % 360) : 0;
-                            my $bounds = $widget->get_bounds;
-                            my $scale = ($angle ? $y_size : $x_size) / ($bounds->x2 - $bounds->x1);
-                            $widget->set_simple_transform( 0, 0, $scale, $angle );
-                            $bounds = $widget->get_bounds;
-                            my $x_offset = ($x1 + $x2 - $bounds->x1 - $bounds->x2) / 2;
-                            my $y_offset = ($y1 + $y2 - $bounds->y1 - $bounds->y2) / 2;
-                            $widget->set_simple_transform($x_offset, $y_offset, $scale, $angle);
-                        }
-                    }
-                    else {
-			delete $g->{text};
-                        $g->remove_child(0);
-                    }
-
-                    canvas2hocr();
-                }
-                $dialog->destroy;
-                $canvas->pointer_ungrab( $widget, $ev->time );
-                return TRUE;
-            }
-        );
+        $text->signal_connect( 'button-press-event' => \&edit_ocr_text );
     }
 
     # $rect->signal_connect(
@@ -2641,6 +2631,68 @@ sub boxed_text {
     return;
 }
 
+sub edit_ocr_text {
+    my ( $widget, $target, $ev ) = @_;
+    my $dialog = Gtk2::Dialog->new(
+        $d->get('Editing text') . '...', $window,
+        'modal',
+        'gtk-ok'     => 'ok',
+        'gtk-cancel' => 'cancel'
+    );
+    my $textview   = Gtk2::TextView->new;
+    my $textbuffer = $textview->get_buffer;
+    $textbuffer->set( text => $widget->get('text') );
+    $dialog->vbox->add($textview);
+    $dialog->set_default_response('ok');
+    $dialog->show_all;
+
+    if ( $dialog->run eq 'ok' ) {
+        $widget->set( text => $textbuffer->get('text') );
+
+        # per above: group = text's parent, group's 1st child = rect
+        my $g    = $widget->get_property('parent');
+        my $rect = $g->get_child(0);
+        if ( length( $textbuffer->get('text') ) ) {
+            $g->{text}       = $textbuffer->get('text');
+            $g->{confidence} = $_100_PERCENT;
+
+            # color for 100% confidence
+            $rect->set_property( 'stroke-color' => '#efffefffefff' );
+
+            # re-adjust text size & position
+            if ( $g->{type} ne 'page' ) {
+                my ( $x1, $y1, $x2, $y2 ) = @{ $g->{bbox} };
+                my $x_size = abs $x2 - $x1;
+                my $y_size = abs $y2 - $y1;
+                $widget->set_simple_transform( 0, 0, 1, 0 );
+                my $angle = defined( $g->{textangle} )
+                  ? (
+                    -$g->{textangle} % 360 ) ## no critic (ProhibitMagicNumbers)
+                  : 0;
+                my $bounds = $widget->get_bounds;
+                my $scale =
+                  ( $angle ? $y_size : $x_size ) /
+                  ( $bounds->x2 - $bounds->x1 );
+                $widget->set_simple_transform( 0, 0, $scale, $angle );
+                $bounds = $widget->get_bounds;
+                my $x_offset = ( $x1 + $x2 - $bounds->x1 - $bounds->x2 ) / 2;
+                my $y_offset = ( $y1 + $y2 - $bounds->y1 - $bounds->y2 ) / 2;
+                $widget->set_simple_transform( $x_offset,
+                    $y_offset, $scale, $angle );
+            }
+        }
+        else {
+            delete $g->{text};
+            $g->remove_child(0);
+        }
+
+        canvas2hocr();
+    }
+    $dialog->destroy;
+    $canvas->pointer_ungrab( $widget, $ev->time );
+    return TRUE;
+}
+
 # Convert the canvas into hocr
 
 sub canvas2hocr {
@@ -2657,45 +2709,57 @@ sub canvas2hocr {
         if ( $group->{type} eq 'page' ) {
             $current_page->{hocr} = $group->{text};
             return;
-	}
+        }
 
         # try to preserve as much information as possible
         if ( $group->{bbox} and $group->{text} ) {
-           my $class = 'ocr_'.$group->{type};
-           my $title = 'bbox '.join(' ', @{$group->{bbox}});
+            my $class = 'ocr_' . $group->{type};
+            my $title = 'bbox ' . join $SPACE, @{ $group->{bbox} };
 
-           $title .= '; textangle '.$group->{textangle}
-               if ( $group->{textangle} );
-           $title .= '; baseline '.$group->{baseline}
-               if ( $group->{baseline} );
-           if ( $group->{confidence} ) {
-               $title .= '; x_wconf '.$group->{confidence};
-               $class = 'ocrx_word';
-           }
-           $classes{$class} = 1;
+            if ( $group->{textangle} ) {
+                $title .= '; textangle ' . $group->{textangle};
+            }
+            if ( $group->{baseline} ) {
+                $title .= '; baseline ' . $group->{baseline};
+            }
+            if ( $group->{confidence} ) {
+                $title .= '; x_wconf ' . $group->{confidence};
+                $class = 'ocrx_word';
+            }
+            $classes{$class} = 1;
 
-           if ($group->{lineid} ) {
-              push( @data, '</span>' )
-                  if ( defined $lineid and $group->{lineid} != $lineid );
-              push( @data, '<span class="ocr_line" id="'.$group->{lineid}.'" title="">' )
-                  if ( $group->{lineid} != $lineid );
-              $lineid = $group->{lineid};
-           }
-           else {
-              push( @data, '</span>' )
-                  if ( defined $lineid );
-              undef $lineid;
-           }
-           push( @data, '<span class="'.$class.'" id="'.$group->{id}.'" '.
-                'title="'.$title.'">'.$group->{text}. '</span>' );
+            if ( $group->{lineid} ) {
+                if ( defined $lineid and $group->{lineid} != $lineid ) {
+                    push @data, '</span>';
+                }
+                if ( $group->{lineid} != $lineid ) {
+                    push @data,
+                        '<span class="ocr_line" id="'
+                      . $group->{lineid}
+                      . '" title="">';
+                }
+                $lineid = $group->{lineid};
+            }
+            else {
+                if ( defined $lineid ) { push @data, '</span>' }
+                undef $lineid;
+            }
+            push @data,
+                '<span class="'
+              . $class
+              . '" id="'
+              . $group->{id} . '" '
+              . 'title="'
+              . $title . '">'
+              . $group->{text}
+              . '</span>';
         }
     }
-    push( @data, '</span>' )
-        if ( defined $lineid );
+    if ( defined $lineid ) { push @data, '</span>' }
 
-    if ( @data ) {
-        my $classes = join(" ", keys %classes);
-        my $data = join("\n   ", @data);
+    if (@data) {
+        my $classes = join $SPACE, keys %classes;
+        my $data = join "\n   ", @data;
 
         $current_page->{hocr} = <<"EOS";
 <!DOCTYPE html
@@ -3196,7 +3260,8 @@ sub save_button_clicked_callback {
 
             $SETTING{'pdf font'} = $fonts->[ $combof->get_active ][0];
 
-            update_metadata_settings( $entryd, $entrya, $entryt, $entrys, $entryk );
+            update_metadata_settings( $entryd, $entrya, $entryt, $entrys,
+                $entryk );
 
             # cd back to cwd to save
             chdir $SETTING{'cwd'};
@@ -3209,7 +3274,8 @@ sub save_button_clicked_callback {
                 'gtk-save'   => 'ok'
             );
 
-            my $filename = expand_metadata_pattern( $SETTING{'default filename'} );
+            my $filename =
+              expand_metadata_pattern( $SETTING{'default filename'} );
 
             # avoid leading and trailing blanks in expanded filename template
             $filename =~ s/^\s*(.*?)\s*$/$1/xsm;
@@ -3230,7 +3296,8 @@ sub save_button_clicked_callback {
         }
         when ('djvu') {
 
-            update_metadata_settings( $entryd, $entrya, $entryt, $entrys, $entryk );
+            update_metadata_settings( $entryd, $entrya, $entryt, $entrys,
+                $entryk );
 
             # cd back to cwd to save
             chdir $SETTING{'cwd'};
@@ -3243,10 +3310,11 @@ sub save_button_clicked_callback {
                 'gtk-save'   => 'ok'
             );
 
-            my $filename = expand_metadata_pattern( $SETTING{'default filename'} );
+            my $filename =
+              expand_metadata_pattern( $SETTING{'default filename'} );
 
             # avoid leading and trailing blanks in expanded filename template
-            $filename =~ s/^\s*(.*?)\s*$/$1/;
+            $filename =~ s/^\s*(.*?)\s*$/$1/xsm;
 
             $file_chooser->set_current_name($filename);
             $file_chooser->set_default_response('ok');
@@ -3815,7 +3883,8 @@ sub email {
         clicked => sub {
 
             # Set options
-            update_metadata_settings( $entryd, $entrya, $entryt, $entrys, $entryk );
+            update_metadata_settings( $entryd, $entrya, $entryt, $entrys,
+                $entryk );
 
             # Compile list of pages
             my @list_of_pages;
@@ -5594,19 +5663,19 @@ sub unsharp {
     add_page_range($vbox);
 
     # table for nice layout
-    my $table = Gtk2::Table->new( 4, 3 );	 ## no critic (ProhibitMagicNumbers)
+    my $table = Gtk2::Table->new( 4, 3 );    ## no critic (ProhibitMagicNumbers)
     $vbox->pack_start( $table, TRUE, TRUE, 0 );
-    $table->set_row_spacings ($BORDER_WIDTH);
+    $table->set_row_spacings($BORDER_WIDTH);
 
     # SpinButton for radius
     my $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 0, 1 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 0, 1, 0, 1 );
     my $label = Gtk2::Label->new( $d->get('Radius') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 0, 1 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 1, 2, 0, 1 );
     my $spinbuttonr = Gtk2::SpinButton->new_with_range(
-        0, 100,    ## no critic (ProhibitMagicNumbers)
+        0, 100,                              ## no critic (ProhibitMagicNumbers)
         1
     );
     $spinbuttonr->set_value( $SETTING{'unsharp radius'} );
@@ -5618,17 +5687,20 @@ sub unsharp {
     );
     $hbox->pack_end( $spinbuttonr, TRUE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 2, 3, 0, 1 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hbox, 2, 3, 0,    ## no critic (ProhibitMagicNumbers)
+        1
+    );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for sigma
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 1, 2 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 0, 1, 1, 2 );
     $label = Gtk2::Label->new( $d->get('Sigma') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 1, 2 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 1, 2, 1, 2 );
     my $spinbuttons = Gtk2::SpinButton->new_with_range(
         0, 5,    ## no critic (ProhibitMagicNumbers)
         .1       ## no critic (ProhibitMagicNumbers)
@@ -5638,17 +5710,24 @@ sub unsharp {
         $d->get('The standard deviation of the Gaussian.') );
     $hbox->pack_end( $spinbuttons, TRUE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 2, 3, 1, 2 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hbox, 2, 3, 1,    ## no critic (ProhibitMagicNumbers)
+        2
+    );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for amount
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 2, 3 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 0, 1, 2,
+        3 )                ## no critic (ProhibitMagicNumbers)
+      ;
     $label = Gtk2::Label->new( $d->get('Amount') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 2, 3 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 1, 2, 2,
+        3 )                ## no critic (ProhibitMagicNumbers)
+      ;
     my $spinbuttona = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
     $spinbuttona->set_value( $SETTING{'unsharp amount'} );
     $tooltips->set_tip(
@@ -5659,19 +5738,28 @@ sub unsharp {
     );
     $hbox->pack_end( $spinbuttona, TRUE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 2, 3, 2, 3 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hbox, 2, 3, 2,    ## no critic (ProhibitMagicNumbers)
+        3                  ## no critic (ProhibitMagicNumbers)
+    );
     $label = Gtk2::Label->new($PERCENT);
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for threshold
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 3, 4 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hbox, 0, 1, 3,    ## no critic (ProhibitMagicNumbers)
+        4                  ## no critic (ProhibitMagicNumbers)
+    );
     $label = Gtk2::Label->new( $d->get('Threshold') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 3, 4 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hbox, 1, 2, 3,    ## no critic (ProhibitMagicNumbers)
+        4                  ## no critic (ProhibitMagicNumbers)
+    );
     my $spinbuttont = Gtk2::SpinButton->new_with_range( 0, 1,
-        0.01 )    ## no critic (ProhibitMagicNumbers)
+        0.01 )             ## no critic (ProhibitMagicNumbers)
       ;
     $spinbuttont->set_value( $SETTING{'unsharp threshold'} );
     $tooltips->set_tip(
@@ -5788,73 +5876,95 @@ sub crop {
     add_page_range($vbox);
 
     # table for nice layout
-    my $table = Gtk2::Table->new( 4, 3 );	 ## no critic (ProhibitMagicNumbers)
+    my $table = Gtk2::Table->new( 4, 3 );    ## no critic (ProhibitMagicNumbers)
     $vbox->pack_start( $table, TRUE, TRUE, 0 );
-    $table->set_row_spacings ($BORDER_WIDTH);
+    $table->set_row_spacings($BORDER_WIDTH);
 
     # SpinButton for x
     my $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 0, 1 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 0, 1, 0, 1 );
     my $label = Gtk2::Label->new( $d->get('x') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 0, 1 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 1, 2, 0, 1 );
     $sb_selector_x =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
     $tooltips->set_tip( $sb_selector_x,
         $d->get('The x-position of the left hand edge of the crop.') );
     $hbox->pack_end( $sb_selector_x, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 2, 3, 0, 1 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hbox, 2, 3, 0,    ## no critic (ProhibitMagicNumbers)
+        1
+    );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for y
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 1, 2 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 0, 1, 1, 2 );
     $label = Gtk2::Label->new( $d->get('y') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 1, 2 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 1, 2, 1, 2 );
     $sb_selector_y =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
     $tooltips->set_tip( $sb_selector_y,
         $d->get('The y-position of the top edge of the crop.') );
     $hbox->pack_end( $sb_selector_y, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 2, 3, 1, 2 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hbox, 2, 3, 1,    ## no critic (ProhibitMagicNumbers)
+        2
+    );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for w
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 2, 3 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 0, 1, 2,
+        3 )                ## no critic (ProhibitMagicNumbers)
+      ;
     $label = Gtk2::Label->new( $d->get('Width') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 2, 3 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults( $hbox, 1, 2, 2,
+        3 )                ## no critic (ProhibitMagicNumbers)
+      ;
     $sb_selector_w =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
     $tooltips->set_tip( $sb_selector_w, $d->get('The width of the crop.') );
     $hbox->pack_end( $sb_selector_w, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 2, 3, 2, 3 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hbox, 2, 3, 2,    ## no critic (ProhibitMagicNumbers)
+        3                  ## no critic (ProhibitMagicNumbers)
+    );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for h
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 3, 4 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hbox, 0, 1, 3,    ## no critic (ProhibitMagicNumbers)
+        4                  ## no critic (ProhibitMagicNumbers)
+    );
     $label = Gtk2::Label->new( $d->get('Height') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 3, 4 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hbox, 1, 2, 3,    ## no critic (ProhibitMagicNumbers)
+        4                  ## no critic (ProhibitMagicNumbers)
+    );
     $sb_selector_h =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
     $tooltips->set_tip( $sb_selector_h, $d->get('The height of the crop.') );
     $hbox->pack_end( $sb_selector_h, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 2, 3, 3, 4 );	## no critic (ProhibitMagicNumbers)
+    $table->attach_defaults(
+        $hbox, 2, 3, 3,    ## no critic (ProhibitMagicNumbers)
+        4                  ## no critic (ProhibitMagicNumbers)
+    );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
@@ -6256,7 +6366,7 @@ sub add_cf_languages {
 
 # Run OCR on current page and display result
 
-sub OCR {
+sub OCR {    ## no critic (ProhibitExcessComplexity)
 
     if ( defined $windowo ) {
         $windowo->present;
@@ -6329,6 +6439,7 @@ sub OCR {
 
     # SpinButton for threshold
     my $hboxt = Gtk2::HBox->new;
+    $hboxt->set_sensitive( $cbt->get_active ? TRUE : FALSE );
     $vbox->pack_start( $hboxt, FALSE, TRUE, 0 );
     $label = Gtk2::Label->new( $d->get('Threshold') );
     $hboxt->pack_start( $label, FALSE, TRUE, 0 );
@@ -6336,11 +6447,10 @@ sub OCR {
     $hboxt->pack_end( $labelp, FALSE, TRUE, 0 );
     my $spinbutton = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
     $spinbutton->set_value( $SETTING{'threshold tool'} );
-    $spinbutton->set_sensitive( $cbt->get_active ? TRUE : FALSE );
     $hboxt->pack_end( $spinbutton, FALSE, TRUE, 0 );
     $cbt->signal_connect(
         toggled => sub {
-            $spinbutton->set_sensitive( $cbt->get_active ? TRUE : FALSE );
+            $hboxt->set_sensitive( $cbt->get_active ? TRUE : FALSE );
         }
     );
 
@@ -6371,7 +6481,8 @@ sub OCR {
                 $SETTING{'threshold tool'} = $spinbutton->get_value;
             }
 
-        # fill $pagelist with filenames depending on which radiobutton is active
+            # fill $pagelist with filenames
+            # depending on which radiobutton is active
             my @pagelist = indices2pages(
                 $slist->get_page_index(
                     $SETTING{'Page range'}, \&error_callback
