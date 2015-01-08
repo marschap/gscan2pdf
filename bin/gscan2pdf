@@ -808,12 +808,7 @@ sub check_dependencies {
     if ( $dependencies{imagemagick} ) { $logger->info('Found ImageMagick') }
     if ( $dependencies{scanadf} )     { $logger->info('Found scanadf') }
     if ( $dependencies{xdg} )         { $logger->info('Found xdg-email') }
-    if ( $dependencies{gocr} )        { $logger->info('Found gocr') }
-    if ( $dependencies{tesseract} )   { $logger->info('Found tesseract') }
 
-    if ( $dependencies{cuneiform} ) {
-        $logger->info("Found cuneiform v$dependencies{cuneiform}");
-    }
     if ( $dependencies{djvu} )    { $logger->info('Found cjb2 (djvu)') }
     if ( $dependencies{libtiff} ) { $logger->info('Found libtiff') }
     if ( $dependencies{unpaper} ) {
@@ -822,10 +817,12 @@ sub check_dependencies {
 
     # OCR engine options
     if ( $dependencies{gocr} ) {
+        $logger->info('Found gocr');
         push @ocr_engine,
           [ 'gocr', $d->get('GOCR'), $d->get('Process image with GOCR.') ];
     }
     if ( $dependencies{tesseract} ) {
+        $logger->info('Found tesseract');
         push @ocr_engine,
           [
             'tesseract', $d->get('Tesseract'),
@@ -833,6 +830,7 @@ sub check_dependencies {
           ];
     }
     if ( $dependencies{ocropus} ) {
+        $logger->info('Found ocropus');
         push @ocr_engine,
           [
             'ocropus', $d->get('Ocropus'),
@@ -840,6 +838,7 @@ sub check_dependencies {
           ];
     }
     if ( $dependencies{cuneiform} ) {
+        $logger->info("Found cuneiform v$dependencies{cuneiform}");
         push @ocr_engine,
           [
             'cuneiform', $d->get('Cuneiform'),
