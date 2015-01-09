@@ -141,8 +141,20 @@ sub cancel {
 sub get_file_info {
     my ( $self, %options ) = @_;
 
-# File in which to store the subprocess ID so that it can be killed if necessary
-    my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    # File in which to store the process ID
+    # so that it can be killed if necessary
+    my $pidfile;
+    try {
+        $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    }
+    catch {
+        $logger->error("Caught error writing to $self->{dir}: $_");
+        if ( $options{error_callback} ) {
+            $options{error_callback}
+              ->("Error: unable to write to $self->{dir}.");
+        }
+    };
+    if ( not defined $pidfile ) { return }
 
     my $sentinel =
       _enqueue_request( 'get-file-info',
@@ -164,8 +176,20 @@ sub get_file_info {
 sub import_file {
     my ( $self, %options ) = @_;
 
-   # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    # File in which to store the process ID
+    # so that it can be killed if necessary
+    my $pidfile;
+    try {
+        $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    }
+    catch {
+        $logger->error("Caught error writing to $self->{dir}: $_");
+        if ( $options{error_callback} ) {
+            $options{error_callback}
+              ->("Error: unable to write to $self->{dir}.");
+        }
+    };
+    if ( not defined $pidfile ) { return }
     my $dirname = $EMPTY;
     if ( defined $self->{dir} ) { $dirname = "$self->{dir}" }
 
@@ -1802,15 +1826,35 @@ sub _thread_import_file {
                     $self->{message} =
                       sprintf $d->get('Importing page %i of %i'),
                       $i, $options{last} - $options{first} + 1;
-                    my $tif = File::Temp->new(
-                        DIR    => $options{dir},
-                        SUFFIX => '.tif',
-                        UNLINK => FALSE
-                    );
-                    my $cmd = "tiffcp \"$options{info}->{path}\",$i $tif";
-                    $logger->info($cmd);
-                    system "echo $PROCESS_ID > $options{pidfile};$cmd";
-                    return if $_self->{cancel};
+
+                    my ( $tif, $error );
+                    try {
+                        $tif = File::Temp->new(
+                            DIR    => $options{dir},
+                            SUFFIX => '.tif',
+                            UNLINK => FALSE
+                        );
+                        my $cmd = "tiffcp \"$options{info}->{path}\",$i $tif";
+                        $logger->info($cmd);
+                        system "echo $PROCESS_ID > $options{pidfile};$cmd";
+                    }
+                    catch {
+                        if ( defined $tif ) {
+                            $logger->error("Caught error creating $tif: $_");
+                            $self->{status} = 1;
+                            $self->{message} =
+                              "Error: unable to write to $tif.";
+                        }
+                        else {
+                            $logger->error(
+                                "Caught error writing to $options{dir}: $_");
+                            $self->{status} = 1;
+                            $self->{message} =
+                              "Error: unable to write to $options{dir}.";
+                        }
+                        $error = TRUE;
+                    };
+                    return if ( $_self->{cancel} or $error );
                     my $page = Gscan2pdf::Page->new(
                         filename => $tif,
                         dir      => $options{dir},
