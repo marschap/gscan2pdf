@@ -1074,7 +1074,7 @@ sub open_session {
     my ( $self, $sesdir, $delete, $error_callback ) = @_;
     if ( not defined $sesdir ) {
         if ($error_callback) {
-            $error_callback->("Error: session folder not defined");
+            $error_callback->('Error: session folder not defined');
         }
         return;
     }
