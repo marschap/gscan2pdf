@@ -2338,7 +2338,7 @@ sub _add_metadata_to_djvu {
             # backslash-escape any double quotes and bashslashes
             $val =~ s/\\/\\\\/gxsm;
             $val =~ s/"/\\\"/gxsm;
-            print {$fh} "$key \"$val\"\n";
+            _write_file( $self, $fh, $djvusedmetafile, "$key \"$val\"\n" );
         }
         _write_file( $self, $fh, $djvusedmetafile, ')' ) or return;
         close $fh
@@ -2347,8 +2347,8 @@ sub _add_metadata_to_djvu {
         # Write djvusedmetafile
         my $cmd = "djvused '$djvu' -e 'set-meta $djvusedmetafile' -s";
         $logger->info($cmd);
-        my $status = system "echo $PROCESS_ID > $pidfile;$cmd";
         return if $_self->{cancel};
+        my $status = system "echo $PROCESS_ID > $pidfile;$cmd";
         if ($status) {
             $self->{status}  = 1;
             $self->{message} = $d->get('Error adding metadata to DjVu');
