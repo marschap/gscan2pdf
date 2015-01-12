@@ -2339,6 +2339,11 @@ sub add_metadata_dialog {
             my $vbox_date = $window_date->get('vbox');
             $window_date->set_resizable(FALSE);
             my $calendar = Gtk2::Calendar->new;
+
+            # Editing the entry and clicking the edit button bypasses the
+            # focus-out-event, so update the date now
+            ( $year, $month, $day ) = text_to_date( $entryd->get_text );
+
             $calendar->select_day($day);
             $calendar->select_month( $month - 1, $year );
             my $calendar_s;
