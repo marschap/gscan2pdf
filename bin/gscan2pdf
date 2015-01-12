@@ -2395,6 +2395,7 @@ sub add_metadata_dialog {
     $hboxt = Gtk2::HBox->new;
     $table->attach_defaults( $hboxt, 1, 2, 1, 2 );
     my $entryt = Gtk2::Entry->new;
+    $entryt->set_activates_default(TRUE);
     $hboxt->pack_start( $entryt, TRUE, TRUE, 0 );
     if ( defined $SETTING{title} ) { $entryt->set_text( $SETTING{title} ) }
 
@@ -2412,6 +2413,7 @@ sub add_metadata_dialog {
         3 )                            ## no critic (ProhibitMagicNumbers)
       ;
     my $entrya = Gtk2::Entry->new;
+    $entrya->set_activates_default(TRUE);
     $hboxa->pack_start( $entrya, TRUE, TRUE, 0 );
     if ( defined $SETTING{author} ) { $entrya->set_text( $SETTING{author} ) }
 
@@ -2430,6 +2432,7 @@ sub add_metadata_dialog {
         4                              ## no critic (ProhibitMagicNumbers)
     );
     my $entrys = Gtk2::Entry->new;
+    $entrys->set_activates_default(TRUE);
     $hboxs->pack_end( $entrys, TRUE, TRUE, 0 );
 
     if ( defined $SETTING{subject} ) {
@@ -2451,6 +2454,7 @@ sub add_metadata_dialog {
         5                              ## no critic (ProhibitMagicNumbers)
     );
     my $entryk = Gtk2::Entry->new;
+    $entryk->set_activates_default(TRUE);
     $hboxk->pack_end( $entryk, TRUE, TRUE, 0 );
 
     if ( defined $SETTING{keywords} ) {
@@ -3134,6 +3138,8 @@ sub save_dialog {
     my $sbutton = Gtk2::Button->new_from_stock('gtk-save');
     $hboxb->pack_start( $sbutton, TRUE, TRUE, 0 );
     $sbutton->grab_focus;
+    $sbutton->can_default(TRUE);
+    $sbutton->grab_default;
     $sbutton->signal_connect(
         clicked => \&save_button_clicked_callback,
         [
