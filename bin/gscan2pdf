@@ -7420,7 +7420,10 @@ sub properties {
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
     my $label = Gtk2::Label->new( $d->get('Resolution') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
-    my $spinbutton = Gtk2::SpinButton->new_with_range(0, 9999, 1);	## no critic (ProhibitMagicNumbers)
+    my $spinbutton = Gtk2::SpinButton->new_with_range(
+        0, 9999,    ## no critic (ProhibitMagicNumbers)
+        1
+    );
     $spinbutton->set_digits(1);
     $spinbutton->set_value( get_selected_properties() );
     $slist->get_selection->signal_connect(
