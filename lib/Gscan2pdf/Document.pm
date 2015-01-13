@@ -2411,8 +2411,8 @@ sub _add_metadata_to_djvu {
         # Write djvusedmetafile
         my $cmd = "djvused '$djvu' -e 'set-meta $djvusedmetafile' -s";
         $logger->info($cmd);
-        return if $_self->{cancel};
         my $status = system "echo $PROCESS_ID > $pidfile;$cmd";
+        return if $_self->{cancel};
         if ($status) {
             $self->{status}  = 1;
             $self->{message} = $d->get('Error adding metadata to DjVu');
