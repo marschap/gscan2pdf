@@ -1764,16 +1764,36 @@ sub _thread_import_file {
                     $self->{message} =
                       sprintf $d->get('Importing page %i of %i'),
                       $i, $options{last} - $options{first} + 1;
-                    my $tif = File::Temp->new(
-                        DIR    => $options{dir},
-                        SUFFIX => '.tif',
-                        UNLINK => FALSE
-                    );
-                    my $cmd =
+
+                    my ( $tif, $error );
+                    try {
+                        $tif = File::Temp->new(
+                            DIR    => $options{dir},
+                            SUFFIX => '.tif',
+                            UNLINK => FALSE
+                        );
+                        my $cmd =
 "ddjvu -format=tiff -page=$i \"$options{info}->{path}\" $tif";
-                    $logger->info($cmd);
-                    system "echo $PROCESS_ID > $options{pidfile};$cmd";
-                    return if $_self->{cancel};
+                        $logger->info($cmd);
+                        system "echo $PROCESS_ID > $options{pidfile};$cmd";
+                    }
+                    catch {
+                        if ( defined $tif ) {
+                            $logger->error("Caught error creating $tif: $_");
+                            $self->{status} = 1;
+                            $self->{message} =
+                              "Error: unable to write to $tif.";
+                        }
+                        else {
+                            $logger->error(
+                                "Caught error writing to $options{dir}: $_");
+                            $self->{status} = 1;
+                            $self->{message} =
+                              "Error: unable to write to $options{dir}.";
+                        }
+                        $error = TRUE;
+                    };
+                    return if ( $_self->{cancel} or $error );
                     my $page = Gscan2pdf::Page->new(
                         filename   => $tif,
                         dir        => $options{dir},
