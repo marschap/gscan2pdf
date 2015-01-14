@@ -1905,12 +1905,20 @@ sub _thread_import_file {
 
    # only 1-bit Portable anymap is properly supported, so convert ANY pnm to png
         default {
-            my $page = Gscan2pdf::Page->new(
-                filename => $options{info}->{path},
-                dir      => $options{dir},
-                format   => $options{info}->{format},
-            );
-            $self->{page_queue}->enqueue( $page->to_png($paper_sizes)->freeze );
+            try {
+                my $page = Gscan2pdf::Page->new(
+                    filename => $options{info}->{path},
+                    dir      => $options{dir},
+                    format   => $options{info}->{format},
+                );
+                $self->{page_queue}
+                  ->enqueue( $page->to_png($paper_sizes)->freeze );
+            }
+            catch {
+                $logger->error("Caught error writing to $options{dir}: $_");
+                $self->{status}  = 1;
+                $self->{message} = "Error: unable to write to $options{dir}.";
+            };
         }
     }
     return;
