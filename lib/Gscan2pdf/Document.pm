@@ -1825,14 +1825,23 @@ sub _thread_import_file {
                 $self->{page_queue}->enqueue( $#images + 1 );
                 foreach (@images) {
                     my ($ext) = /([^.]+)$/xsm;
-                    my $page = Gscan2pdf::Page->new(
-                        filename => $_,
-                        dir      => $options{dir},
-                        delete   => TRUE,
-                        format   => $format{$ext},
-                    );
-                    $self->{page_queue}
-                      ->enqueue( $page->to_png($paper_sizes)->freeze );
+                    try {
+                        my $page = Gscan2pdf::Page->new(
+                            filename => $_,
+                            dir      => $options{dir},
+                            delete   => TRUE,
+                            format   => $format{$ext},
+                        );
+                        $self->{page_queue}
+                          ->enqueue( $page->to_png($paper_sizes)->freeze );
+                    }
+                    catch {
+                        $logger->error(
+                            "Caught error extracting images from PDF: $_");
+                        $self->{status} = 1;
+                        $self->{message} =
+                          $d->get('Error extracting images from PDF');
+                    };
                 }
             }
         }
