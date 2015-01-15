@@ -1940,8 +1940,7 @@ sub _thread_import_file {
     return;
 }
 
-# Perl-Critic is confused by @_ in finally{} See P::C bug #79138
-sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
+sub _thread_save_pdf {
     my ( $self, %options ) = @_;
 
     my $pagenr = 0;
