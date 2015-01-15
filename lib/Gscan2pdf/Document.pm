@@ -1728,9 +1728,6 @@ sub _thread_get_file_info {
             if ("$x") { $logger->warn($x) }
 
             $format = $image->Get('format');
-            if ( defined $format ) { $logger->info("Format $format") }
-            undef $image;
-
             if ( not defined $format ) {
                 $self->{status}  = 1;
                 $self->{message} = sprintf
@@ -1738,6 +1735,7 @@ sub _thread_get_file_info {
                   $filename;
                 return;
             }
+            $logger->info("Format $format");
             $info{pages} = 1;
         }
     }
