@@ -51,6 +51,6 @@ Gtk2->main;
 
 #########################
 
-unlink 'test.pdf', <$dir/*>;
+unlink 'test.png', <$dir/*>;
 rmdir $dir;
 Gscan2pdf::Document->quit();
