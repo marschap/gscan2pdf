@@ -435,7 +435,18 @@ sub save_pdf {
     }
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    my $pidfile;
+    try {
+        $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    }
+    catch {
+        $logger->error("Caught error writing to $self->{dir}: $_");
+        if ( $options{error_callback} ) {
+            $options{error_callback}
+              ->("Error: unable to write to $self->{dir}.");
+        }
+    };
+    if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
         'save-pdf',
@@ -1992,8 +2003,17 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
             $pagedata->{compression} = $options{options}->{compression};
         }
 
-        ( $filename, my $format, my $output_resolution ) =
-          _convert_image_for_pdf( $self, $pagedata, $image, %options );
+        my ( $format, $output_resolution );
+        try {
+            ( $filename, $format, $output_resolution ) =
+              _convert_image_for_pdf( $self, $pagedata, $image, %options );
+        }
+        catch {
+            $logger->error("Caught error converting image: $_");
+            $self->{status}  = 1;
+            $self->{message} = "Caught error converting image: $_.";
+        };
+        if ( $self->{status} ) { return }
 
         $logger->info(
             'Defining page at ',
@@ -2007,33 +2027,30 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
 
         # Add scan
         my $gfx = $page->gfx;
-        my $imgobj;
-        my $msg;
-        given ($format) {
-            when ('png') {
-                try { $imgobj = $pdf->image_png($filename) }
-                catch { $msg = $_ };
-            }
-            when ('jpg') {
-                try { $imgobj = $pdf->image_jpeg($filename) }
-                catch { $msg = $_ };
-            }
-            when ('pnm') {
-                try { $imgobj = $pdf->image_pnm($filename) }
-                catch { $msg = $_ };
-            }
-            when ('gif') {
-                try { $imgobj = $pdf->image_gif($filename) }
-                catch { $msg = $_ };
-            }
-            when ('tif') {
-                try { $imgobj = $pdf->image_tiff($filename) }
-                catch { $msg = $_ };
-            }
-            default {
-                $msg = "Unknown format $format file $filename";
+        my ( $imgobj, $msg );
+        try {
+            given ($format) {
+                when ('png') {
+                    $imgobj = $pdf->image_png($filename);
+                }
+                when ('jpg') {
+                    $imgobj = $pdf->image_jpeg($filename);
+                }
+                when ('pnm') {
+                    $imgobj = $pdf->image_pnm($filename);
+                }
+                when ('gif') {
+                    $imgobj = $pdf->image_gif($filename);
+                }
+                when ('tif') {
+                    $imgobj = $pdf->image_tiff($filename);
+                }
+                default {
+                    $msg = "Unknown format $format file $filename";
+                }
             }
         }
+        catch { $msg = $_ };
         return if $_self->{cancel};
         if ($msg) {
             $logger->warn($msg);
@@ -2042,27 +2059,24 @@ sub _thread_save_pdf {    ## no critic (RequireArgUnpacking)
               sprintf $d->get('Error creating PDF image object: %s'), $msg;
             return;
         }
-        else {
-            try {
-                $gfx->image(
-                    $imgobj, 0, 0,
-                    $w * $POINTS_PER_INCH,
-                    $h * $POINTS_PER_INCH
-                );
-            }
-            catch {
-                $logger->warn($_);
-                $self->{status}  = 1;
-                $self->{message} = sprintf $d->get(
-                    'Error embedding file image in %s format to PDF: %s'),
-                  $format, $_;
-            }
-            finally {
-                if ( not @_ ) {
-                    $logger->info("Adding $filename at $output_resolution PPI");
-                }
-            };
+
+        try {
+            $gfx->image(
+                $imgobj, 0, 0,
+                $w * $POINTS_PER_INCH,
+                $h * $POINTS_PER_INCH
+            );
         }
+        catch {
+            $logger->warn($_);
+            $self->{status}  = 1;
+            $self->{message} = sprintf $d->get(
+                'Error embedding file image in %s format to PDF: %s'),
+              $format, $_;
+        };
+        if ( $self->{status} ) { return }
+
+        $logger->info("Added $filename at $output_resolution PPI");
         return if $_self->{cancel};
     }
     $self->{message} = $d->get('Closing PDF');
