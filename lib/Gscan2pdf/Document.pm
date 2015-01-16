@@ -482,7 +482,18 @@ sub save_djvu {
     }
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    my $pidfile;
+    try {
+        $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    }
+    catch {
+        $logger->error("Caught error writing to $self->{dir}: $_");
+        if ( $options{error_callback} ) {
+            $options{error_callback}
+              ->("Error: unable to write to $self->{dir}.");
+        }
+    };
+    if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
         'save-djvu',
@@ -2272,7 +2283,17 @@ sub _thread_save_djvu {
           $page, $#{ $options{list_of_pages} } + 1;
 
         my $filename = $pagedata->{filename};
-        my $djvu = File::Temp->new( DIR => $options{dir}, SUFFIX => '.djvu' );
+
+        my $djvu;
+        try {
+            $djvu = File::Temp->new( DIR => $options{dir}, SUFFIX => '.djvu' );
+        }
+        catch {
+            $logger->error("Caught error writing DjVu: $_");
+            $self->{status}  = 1;
+            $self->{message} = "Caught error writing DjVu: $_.";
+        };
+        if ( $self->{status} ) { return }
 
         # Check the image depth to decide what sort of compression to use
         my $image = Image::Magick->new;
