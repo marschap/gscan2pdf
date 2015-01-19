@@ -528,7 +528,18 @@ sub save_tiff {
     }
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    my $pidfile;
+    try {
+        $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    }
+    catch {
+        $logger->error("Caught error writing to $self->{dir}: $_");
+        if ( $options{error_callback} ) {
+            $options{error_callback}
+              ->("Error: unable to write to $self->{dir}.");
+        }
+    };
+    if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
         'save-tiff',
@@ -2499,7 +2510,17 @@ sub _thread_save_tiff {
                 and $options{options}->{compression} eq 'jpeg' )
           )
         {
-            my $tif = File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
+            my $tif;
+            try {
+                $tif =
+                  File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
+            }
+            catch {
+                $logger->error("Error writing TIFF: $_");
+                $self->{status}  = 1;
+                $self->{message} = "Error writing TIFF: $_.";
+            };
+            if ( $self->{status} ) { return }
             my $resolution = $pagedata->{resolution};
 
             # Convert to tiff
@@ -2517,6 +2538,7 @@ sub _thread_save_tiff {
             return if $_self->{cancel};
 
             if ($status) {
+                $logger->error('Error writing TIFF');
                 $self->{status}  = 1;
                 $self->{message} = $d->get('Error writing TIFF');
                 return;
