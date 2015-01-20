@@ -2613,12 +2613,20 @@ sub _thread_rotate {
     if ( $filename =~ /[.](\w*)$/xsm ) {
         $suffix = $1;
     }
-    $filename = File::Temp->new(
-        DIR    => $dir,
-        SUFFIX => ".$suffix",
-        UNLINK => FALSE
-    );
-    $x = $image->Write( filename => $filename, depth => $depth );
+    try {
+        $filename = File::Temp->new(
+            DIR    => $dir,
+            SUFFIX => ".$suffix",
+            UNLINK => FALSE
+        );
+        $x = $image->Write( filename => $filename, depth => $depth );
+    }
+    catch {
+        $logger->error("Error rotating: $_");
+        $self->{status}  = 1;
+        $self->{message} = "Error rotating: $_.";
+    };
+    if ( $self->{status} ) { return }
     return if $_self->{cancel};
     if ("$x") { $logger->warn($x) }
     my $new = $page->freeze;
