@@ -2817,15 +2817,21 @@ sub _thread_negate {
     return if $_self->{cancel};
 
     # Write it
-    my $suffix;
-    if ( $filename =~ /([.]\w*)$/xsm ) {
-        $suffix = $1;
+    try {
+        my $suffix;
+        if ( $filename =~ /([.]\w*)$/xsm ) { $suffix = $1 }
+        $filename =
+          File::Temp->new( DIR => $dir, SUFFIX => $suffix, UNLINK => FALSE );
+        $x = $image->Write( depth => $depth, filename => $filename );
+        if ("$x") { $logger->warn($x) }
     }
-    $filename =
-      File::Temp->new( DIR => $dir, SUFFIX => $suffix, UNLINK => FALSE );
-    $x = $image->Write( depth => $depth, filename => $filename );
+    catch {
+        $logger->error("Error thesholding: $_");
+        $self->{status}  = 1;
+        $self->{message} = "Error thesholding: $_.";
+    };
+    if ( $self->{status} ) { return }
     return if $_self->{cancel};
-    if ("$x") { $logger->warn($x) }
     $logger->info("Negating to $filename");
 
     my $new = $page->freeze;
