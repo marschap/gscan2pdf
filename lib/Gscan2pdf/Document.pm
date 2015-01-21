@@ -2779,11 +2779,19 @@ sub _thread_threshold {
     return if $_self->{cancel};
 
     # Write it
-    $filename =
-      File::Temp->new( DIR => $dir, SUFFIX => '.pbm', UNLINK => FALSE );
-    $x = $image->Write( filename => $filename );
+    try {
+        $filename =
+          File::Temp->new( DIR => $dir, SUFFIX => '.pbm', UNLINK => FALSE );
+        $x = $image->Write( filename => $filename );
+        if ("$x") { $logger->warn($x) }
+    }
+    catch {
+        $logger->error("Error thesholding: $_");
+        $self->{status}  = 1;
+        $self->{message} = "Error thesholding: $_.";
+    };
+    if ( $self->{status} ) { return }
     return if $_self->{cancel};
-    if ("$x") { $logger->warn($x) }
 
     my $new = $page->freeze;
     $new->{filename}   = $filename->filename;   # can't queue File::Temp objects
