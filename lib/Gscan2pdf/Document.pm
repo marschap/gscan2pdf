@@ -2861,18 +2861,24 @@ sub _thread_unsharp {
     return if $_self->{cancel};
 
     # Write it
-    my $suffix;
-    if ( $filename =~ /[.](\w*)$/xsm ) {
-        $suffix = $1;
+    try {
+        my $suffix;
+        if ( $filename =~ /[.](\w*)$/xsm ) { $suffix = $1 }
+        $filename = File::Temp->new(
+            DIR    => $options{dir},
+            SUFFIX => ".$suffix",
+            UNLINK => FALSE
+        );
+        $x = $image->Write( filename => $filename );
+        if ("$x") { $logger->warn($x) }
     }
-    $filename = File::Temp->new(
-        DIR    => $options{dir},
-        SUFFIX => ".$suffix",
-        UNLINK => FALSE
-    );
-    $x = $image->Write( filename => $filename );
+    catch {
+        $logger->error("Error thesholding: $_");
+        $self->{status}  = 1;
+        $self->{message} = "Error thesholding: $_.";
+    };
+    if ( $self->{status} ) { return }
     return if $_self->{cancel};
-    if ("$x") { $logger->warn($x) }
     $logger->info(
 "Wrote $filename with unsharp mask: r=$options{radius}, s=$options{sigma}, a=$options{amount}, t=$options{threshold}"
     );
