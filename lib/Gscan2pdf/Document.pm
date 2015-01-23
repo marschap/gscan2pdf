@@ -591,7 +591,7 @@ sub rotate {
 }
 
 sub update_page {
-    my ( $self, $display_callback ) = @_;
+    my ( $self, $display_callback, $error_callback ) = @_;
     my (@out);
     my $data = $_self->{page_queue}->dequeue;
 
@@ -607,7 +607,17 @@ sub update_page {
     if ( $i <= $#{ $self->{data} } ) {
 
 # Move the temp file from the thread to a temp object that will be automatically cleared up
-        my $new = $data->{new}->thaw;
+        my $new;
+        try {
+            $new = $data->{new}->thaw;
+        }
+        catch {
+            $logger->error("Caught error writing to $self->{dir}: $_");
+            if ($error_callback) {
+                $error_callback->("Error: unable to write to $self->{dir}.");
+            }
+        };
+        if ( not defined $new ) { return }
 
         if ( defined $self->{row_changed_signal} ) {
             $self->get_model->signal_handler_block(
@@ -878,7 +888,18 @@ sub tesseract {
     my ( $self, %options ) = @_;
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    my $pidfile;
+    try {
+        $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    }
+    catch {
+        $logger->error("Caught error writing to $self->{dir}: $_");
+        if ( $options{error_callback} ) {
+            $options{error_callback}
+              ->("Error: unable to write to $self->{dir}.");
+        }
+    };
+    if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
         'tesseract',
@@ -1451,7 +1472,8 @@ sub _monitor_process_finished_callback {
         $data = $_self->{info_queue}->dequeue;
     }
     elsif ( $options->{update_slist} ) {
-        $data = $self->update_page( $options->{display_callback} );
+        $data = $self->update_page( $options->{display_callback},
+            $options->{error_callback} );
     }
     if ( $options->{finished_callback} ) {
         $options->{finished_callback}->( $data, $_self->{requests}->pending );
@@ -2963,14 +2985,23 @@ sub _thread_to_png {
 
 sub _thread_tesseract {
     my ( $self, $page, $language, $threshold, $pidfile ) = @_;
-    my $new = $page->clone;
-    ( $new->{hocr}, $new->{warnings} ) = Gscan2pdf::Tesseract->hocr(
-        file      => $page->{filename},
-        language  => $language,
-        logger    => $logger,
-        threshold => $threshold,
-        pidfile   => $pidfile
-    );
+    my $new;
+    try {
+        $new = $page->clone;
+        ( $new->{hocr}, $new->{warnings} ) = Gscan2pdf::Tesseract->hocr(
+            file      => $page->{filename},
+            language  => $language,
+            logger    => $logger,
+            threshold => $threshold,
+            pidfile   => $pidfile
+        );
+    }
+    catch {
+        $logger->error("Error processing with tesseract: $_");
+        $self->{status}  = 1;
+        $self->{message} = "Error processing with tesseract: $_.";
+    };
+    if ( $self->{status} ) { return }
     return if $_self->{cancel};
     $new->{ocr_flag} = 1;              #FlagOCR
     $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page

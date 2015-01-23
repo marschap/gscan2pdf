@@ -228,8 +228,6 @@ t/273_crop_with_error.t
 t/281_to_png.t
 t/282_cancel_to_png.t
 t/283_to_png_with_error.t
-t/29_tesseract.t
-t/30_tesseract_in_thread.t
 t/31_ocropus.t
 t/32_ocropus_in_thread.t
 t/33_cuneiform.t
@@ -244,7 +242,10 @@ t/37_user_defined.t
 t/38_user_defined2.t
 t/390_gocr.t
 t/391_gocr.t
-t/50_cancel_tesseract.t
+t/411_tesseract.t
+t/412_tesseract_in_thread.t
+t/413_cancel_tesseract.t
+t/414_tesseract_with_error.t
 t/51_cancel_ocropus.t
 t/52_cancel_cuneiform.t
 t/53_cancel_unpaper.t
