@@ -2826,9 +2826,9 @@ sub _thread_negate {
         if ("$x") { $logger->warn($x) }
     }
     catch {
-        $logger->error("Error thesholding: $_");
+        $logger->error("Error negating: $_");
         $self->{status}  = 1;
-        $self->{message} = "Error thesholding: $_.";
+        $self->{message} = "Error negating: $_.";
     };
     if ( $self->{status} ) { return }
     return if $_self->{cancel};
@@ -2873,9 +2873,9 @@ sub _thread_unsharp {
         if ("$x") { $logger->warn($x) }
     }
     catch {
-        $logger->error("Error thesholding: $_");
+        $logger->error("Error writing image with unsharp mask: $_");
         $self->{status}  = 1;
-        $self->{message} = "Error thesholding: $_.";
+        $self->{message} = "Error writing image with unsharp mask: $_.";
     };
     if ( $self->{status} ) { return }
     return if $_self->{cancel};
@@ -2912,21 +2912,27 @@ sub _thread_crop {
     if ("$e") { $logger->warn($e) }
 
     # Write it
-    my $suffix;
-    if ( $filename =~ /[.](\w*)$/xsm ) {
-        $suffix = $1;
+    try {
+        my $suffix;
+        if ( $filename =~ /[.](\w*)$/xsm ) { $suffix = $1 }
+        $filename = File::Temp->new(
+            DIR    => $options{dir},
+            SUFFIX => ".$suffix",
+            UNLINK => FALSE
+        );
+        $e = $image->Write( filename => $filename );
+        if ("$e") { $logger->warn($e) }
     }
-    $filename = File::Temp->new(
-        DIR    => $options{dir},
-        SUFFIX => ".$suffix",
-        UNLINK => FALSE
-    );
+    catch {
+        $logger->error("Error cropping: $_");
+        $self->{status}  = 1;
+        $self->{message} = "Error cropping: $_.";
+    };
+    if ( $self->{status} ) { return }
     $logger->info(
 "Cropping $options{w} x $options{h} + $options{x} + $options{y} to $filename"
     );
-    $e = $image->Write( filename => $filename );
     return if $_self->{cancel};
-    if ("$e") { $logger->warn($e) }
 
     my $new = $options{page}->freeze;
     $new->{filename}   = $filename->filename;   # can't queue File::Temp objects

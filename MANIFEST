@@ -222,7 +222,9 @@ t/253_negate_with_error.t
 t/261_unsharp_mask.t
 t/262_cancel_unsharp_mask.t
 t/263_unsharp_mask_with_error.t
-t/27_crop.t
+t/271_crop.t
+t/272_cancel_crop.t
+t/273_crop_with_error.t
 t/28_to_png.t
 t/29_tesseract.t
 t/30_tesseract_in_thread.t
@@ -240,7 +242,6 @@ t/37_user_defined.t
 t/38_user_defined2.t
 t/390_gocr.t
 t/391_gocr.t
-t/48_cancel_crop.t
 t/49_cancel_to_png.t
 t/50_cancel_tesseract.t
 t/51_cancel_ocropus.t
