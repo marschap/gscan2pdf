@@ -2944,7 +2944,16 @@ sub _thread_crop {
 
 sub _thread_to_png {
     my ( $self, $page, $dir ) = @_;
-    my $new = $page->to_png($paper_sizes);
+    my $new;
+    try {
+        $new = $page->to_png($paper_sizes);
+    }
+    catch {
+        $logger->error("Error converting to png: $_");
+        $self->{status}  = 1;
+        $self->{message} = "Error converting to png: $_.";
+    };
+    if ( $self->{status} ) { return }
     return if $_self->{cancel};
     my %data = ( old => $page, new => $new->freeze );
     $logger->info("Converted $page->{filename} to $data{new}{filename}");
