@@ -638,7 +638,8 @@ sub save_image {
     }
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    my $pidfile = $self->create_pidfile(%options);
+    if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
         'save-image',
@@ -885,7 +886,8 @@ sub ocropus {
     my ( $self, %options ) = @_;
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    my $pidfile = $self->create_pidfile(%options);
+    if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
         'ocropus',
@@ -946,7 +948,8 @@ sub gocr {
     my ( $self, %options ) = @_;
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    my $pidfile = $self->create_pidfile(%options);
+    if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
         'gocr',
@@ -975,7 +978,8 @@ sub unpaper {
     my ( $self, %options ) = @_;
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    my $pidfile = $self->create_pidfile(%options);
+    if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
         'unpaper',
@@ -1005,7 +1009,8 @@ sub user_defined {
     my ( $self, %options ) = @_;
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
+    my $pidfile = $self->create_pidfile(%options);
+    if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
         'user-defined',
