@@ -138,11 +138,8 @@ sub cancel {
     return;
 }
 
-sub get_file_info {
+sub create_pidfile {
     my ( $self, %options ) = @_;
-
-    # File in which to store the process ID
-    # so that it can be killed if necessary
     my $pidfile;
     try {
         $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
@@ -154,6 +151,15 @@ sub get_file_info {
               ->("Error: unable to write to $self->{dir}.");
         }
     };
+    return $pidfile;
+}
+
+sub get_file_info {
+    my ( $self, %options ) = @_;
+
+    # File in which to store the process ID
+    # so that it can be killed if necessary
+    my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
     my $sentinel =
@@ -178,17 +184,7 @@ sub import_file {
 
     # File in which to store the process ID
     # so that it can be killed if necessary
-    my $pidfile;
-    try {
-        $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
-    }
-    catch {
-        $logger->error("Caught error writing to $self->{dir}: $_");
-        if ( $options{error_callback} ) {
-            $options{error_callback}
-              ->("Error: unable to write to $self->{dir}.");
-        }
-    };
+    my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
     my $dirname = $EMPTY;
     if ( defined $self->{dir} ) { $dirname = "$self->{dir}" }
@@ -435,17 +431,7 @@ sub save_pdf {
     }
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile;
-    try {
-        $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
-    }
-    catch {
-        $logger->error("Caught error writing to $self->{dir}: $_");
-        if ( $options{error_callback} ) {
-            $options{error_callback}
-              ->("Error: unable to write to $self->{dir}.");
-        }
-    };
+    my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
@@ -482,17 +468,7 @@ sub save_djvu {
     }
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile;
-    try {
-        $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
-    }
-    catch {
-        $logger->error("Caught error writing to $self->{dir}: $_");
-        if ( $options{error_callback} ) {
-            $options{error_callback}
-              ->("Error: unable to write to $self->{dir}.");
-        }
-    };
+    my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
@@ -528,17 +504,7 @@ sub save_tiff {
     }
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile;
-    try {
-        $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
-    }
-    catch {
-        $logger->error("Caught error writing to $self->{dir}: $_");
-        if ( $options{error_callback} ) {
-            $options{error_callback}
-              ->("Error: unable to write to $self->{dir}.");
-        }
-    };
+    my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
@@ -888,17 +854,7 @@ sub tesseract {
     my ( $self, %options ) = @_;
 
    # File in which to store the process ID so that it can be killed if necessary
-    my $pidfile;
-    try {
-        $pidfile = File::Temp->new( DIR => $self->{dir}, SUFFIX => '.pid' );
-    }
-    catch {
-        $logger->error("Caught error writing to $self->{dir}: $_");
-        if ( $options{error_callback} ) {
-            $options{error_callback}
-              ->("Error: unable to write to $self->{dir}.");
-        }
-    };
+    my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
     my $sentinel = _enqueue_request(
