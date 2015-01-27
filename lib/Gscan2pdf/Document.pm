@@ -3159,42 +3159,49 @@ sub _thread_user_defined {
     if ( $in =~ /([.]\w*)$/xsm ) {
         $suffix = $1;
     }
-    my $out = File::Temp->new(
-        DIR    => $dir,
-        SUFFIX => $suffix,
-        UNLINK => FALSE
-    );
+    try {
+        my $out = File::Temp->new(
+            DIR    => $dir,
+            SUFFIX => $suffix,
+            UNLINK => FALSE
+        );
 
-    if ( $cmd =~ s/%o/$out/gxsm ) {
-        $cmd =~ s/%i/$in/gxsm;
-    }
-    else {
-        if ( not copy( $in, $out ) ) {
-            $self->{status}  = 1;
-            $self->{message} = $d->get('Error copying page');
-            $d->get('Error copying page');
-            return;
+        if ( $cmd =~ s/%o/$out/gxsm ) {
+            $cmd =~ s/%i/$in/gxsm;
         }
-        $cmd =~ s/%i/$out/gxsm;
+        else {
+            if ( not copy( $in, $out ) ) {
+                $self->{status}  = 1;
+                $self->{message} = $d->get('Error copying page');
+                $d->get('Error copying page');
+                return;
+            }
+            $cmd =~ s/%i/$out/gxsm;
+        }
+        $cmd =~ s/%r/$page->{resolution}/gxsm;
+        $logger->info($cmd);
+        system "echo $PROCESS_ID > $pidfile;$cmd";
+        return if $_self->{cancel};
+
+        # Get file type
+        my $image = Image::Magick->new;
+        my $x     = $image->Read($out);
+        if ("$x") { $logger->warn($x) }
+
+        my $new = Gscan2pdf::Page->new(
+            filename => $out,
+            dir      => $dir,
+            delete   => TRUE,
+            format   => $image->Get('format'),
+        );
+        my %data = ( old => $page, new => $new->freeze );
+        $self->{page_queue}->enqueue( \%data );
     }
-    $cmd =~ s/%r/$page->{resolution}/gxsm;
-    $logger->info($cmd);
-    system "echo $PROCESS_ID > $pidfile;$cmd";
-    return if $_self->{cancel};
-
-    # Get file type
-    my $image = Image::Magick->new;
-    my $x     = $image->Read($out);
-    if ("$x") { $logger->warn($x) }
-
-    my $new = Gscan2pdf::Page->new(
-        filename => $out,
-        dir      => $dir,
-        delete   => TRUE,
-        format   => $image->Get('format'),
-    );
-    my %data = ( old => $page, new => $new->freeze );
-    $self->{page_queue}->enqueue( \%data );
+    catch {
+        $logger->error("Error creating file in $dir: $_");
+        $self->{status}  = 1;
+        $self->{message} = "Error creating file in $dir: $_.";
+    };
     return;
 }
 
