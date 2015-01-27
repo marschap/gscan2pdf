@@ -3067,67 +3067,53 @@ sub _thread_unpaper {
     my $filename = $page->{filename};
     my $in;
 
-    if ( $filename !~ /[.]pnm$/xsm ) {
-        my $image = Image::Magick->new;
-        my $x     = $image->Read($filename);
-        if ("$x") { $logger->warn($x) }
-        my $depth = $image->Get('depth');
+    try {
+        if ( $filename !~ /[.]pnm$/xsm ) {
+            my $image = Image::Magick->new;
+            my $x     = $image->Read($filename);
+            if ("$x") { $logger->warn($x) }
+            my $depth = $image->Get('depth');
 
 # Unfortunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
-        my $suffix = '.pbm';
-        if ( $depth > 1 ) { $suffix = '.pnm' }
+            my $suffix = '.pbm';
+            if ( $depth > 1 ) { $suffix = '.pnm' }
 
-        # Temporary filename for new file
-        $in = File::Temp->new(
-            DIR    => $dir,
-            SUFFIX => $suffix,
-        );
+            # Temporary filename for new file
+            $in = File::Temp->new(
+                DIR    => $dir,
+                SUFFIX => $suffix,
+            );
 
 # FIXME: need to -compress Zip from perlmagick       "convert -compress Zip $slist->{data}[$pagenum][2]{filename} $in;";
-        $image->Write( filename => $in );
-    }
-    else {
-        $in = $filename;
-    }
+            $image->Write( filename => $in );
+        }
+        else {
+            $in = $filename;
+        }
 
-    my $out = File::Temp->new(
-        DIR    => $dir,
-        SUFFIX => '.pnm',
-        UNLINK => FALSE
-    );
-    my $out2 = $EMPTY;
-    if ( $options =~ /--output-pages[ ]2[ ]/xsm ) {
-        $out2 = File::Temp->new(
+        my $out = File::Temp->new(
             DIR    => $dir,
             SUFFIX => '.pnm',
             UNLINK => FALSE
         );
-    }
+        my $out2 = $EMPTY;
+        if ( $options =~ /--output-pages[ ]2[ ]/xsm ) {
+            $out2 = File::Temp->new(
+                DIR    => $dir,
+                SUFFIX => '.pnm',
+                UNLINK => FALSE
+            );
+        }
 
-    # --overwrite needed because $out exists with 0 size
-    my $cmd = sprintf "$options;", $in, $out, $out2;
-    $logger->info($cmd);
-    ( my $info, undef ) = open_three("echo $PROCESS_ID > $pidfile;$cmd");
-    $logger->info($info);
-    return if $_self->{cancel};
+        # --overwrite needed because $out exists with 0 size
+        my $cmd = sprintf "$options;", $in, $out, $out2;
+        $logger->info($cmd);
+        ( my $info, undef ) = open_three("echo $PROCESS_ID > $pidfile;$cmd");
+        $logger->info($info);
+        return if $_self->{cancel};
 
-    my $new = Gscan2pdf::Page->new(
-        filename => $out,
-        dir      => $dir,
-        delete   => TRUE,
-        format   => 'Portable anymap',
-    );
-
-    # unpaper doesn't change the resolution, so we can safely copy it
-    if ( defined $page->{resolution} ) {
-        $new->{resolution} = $page->{resolution};
-    }
-
-    $new->{dirty_time} = timestamp();    #flag as dirty
-    my %data = ( old => $page, new => $new->freeze );
-    if ( $out2 ne $EMPTY ) {
-        my $new2 = Gscan2pdf::Page->new(
-            filename => $out2,
+        my $new = Gscan2pdf::Page->new(
+            filename => $out,
             dir      => $dir,
             delete   => TRUE,
             format   => 'Portable anymap',
@@ -3135,13 +3121,34 @@ sub _thread_unpaper {
 
         # unpaper doesn't change the resolution, so we can safely copy it
         if ( defined $page->{resolution} ) {
-            $new2->{resolution} = $page->{resolution};
+            $new->{resolution} = $page->{resolution};
         }
 
-        $new2->{dirty_time} = timestamp();    #flag as dirty
-        $data{new2} = $new2->freeze;
+        $new->{dirty_time} = timestamp();    #flag as dirty
+        my %data = ( old => $page, new => $new->freeze );
+        if ( $out2 ne $EMPTY ) {
+            my $new2 = Gscan2pdf::Page->new(
+                filename => $out2,
+                dir      => $dir,
+                delete   => TRUE,
+                format   => 'Portable anymap',
+            );
+
+            # unpaper doesn't change the resolution, so we can safely copy it
+            if ( defined $page->{resolution} ) {
+                $new2->{resolution} = $page->{resolution};
+            }
+
+            $new2->{dirty_time} = timestamp();    #flag as dirty
+            $data{new2} = $new2->freeze;
+        }
+        $self->{page_queue}->enqueue( \%data );
     }
-    $self->{page_queue}->enqueue( \%data );
+    catch {
+        $logger->error("Error creating file in $dir: $_");
+        $self->{status}  = 1;
+        $self->{message} = "Error creating file in $dir: $_.";
+    };
     return;
 }
 
