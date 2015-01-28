@@ -242,8 +242,6 @@ t/374_user_defined.t
 t/375_user_defined.t
 t/376_cancel_user_defined.t
 t/377_user_defined_with_error.t
-t/390_gocr.t
-t/391_gocr.t
 t/411_tesseract.t
 t/412_tesseract_in_thread.t
 t/413_cancel_tesseract.t
@@ -252,8 +250,11 @@ t/421_cuneiform.t
 t/422_cuneiform_in_thread.t
 t/423_cancel_cuneiform.t
 t/424_cuneiform_with_error.t
+t/431_gocr.t
+t/432_gocr.t
+t/433_cancel_gocr.t
+t/434_gocr_with_error.t
 t/51_cancel_ocropus.t
-t/55_cancel_gocr.t
 t/80_scanimage-perl.t
 t/81_scanadf-perl.t
 t/90_MANIFEST.t
