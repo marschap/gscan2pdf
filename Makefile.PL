@@ -144,23 +144,14 @@ po.tar.gz : po/$(NAME).pot $(PO)
 	cd po; tar cfvz po.tar.gz $(NAME).pot *.po
 	mv po/po.tar.gz .
 
-$(NAME).spec : bin/$(NAME) debian/changelog
-	$(CP) $(NAME).spec $(NAME).spec_tmp
-	sed 's/^Version:.*/Version: $(VERSION)/' < $(NAME).spec_tmp | \
-         sed '/^%changelog/q' > $(NAME).spec
-	rm $(NAME).spec_tmp
-	echo "*" `date +'%a %b %d %Y'` "$(AUTHOR) <$(EMAIL)>" >> $(NAME).spec
+$(NAME).spec $(NAME).Suse.spec : bin/$(NAME) debian/changelog
+	$(CP) $@ $@_tmp
+	sed 's/^Version:.*/Version: $(VERSION)/' < $@_tmp | \
+         sed '/^%changelog/q' > $@
+	rm $@_tmp
+	echo "*" `date +'%a %b %d %Y'` "$(AUTHOR) <$(EMAIL)>" >> $@
 	sed 's/^$(NAME).*//' < debian/changelog | \
-         sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $(NAME).spec
-
-$(NAME).Suse.spec : bin/$(NAME) debian/changelog
-	$(CP) $(NAME).Suse.spec $(NAME).spec_tmp
-	sed 's/^Version:.*/Version: $(VERSION)/' < $(NAME).spec_tmp | \
-         sed '/^%changelog/q' > $(NAME).Suse.spec
-	rm $(NAME).spec_tmp
-	echo "*" `date +'%a %b %d %Y'` "$(AUTHOR) <$(EMAIL)>" >> $(NAME).Suse.spec
-	sed 's/^$(NAME).*//' < debian/changelog | \
-         sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $(NAME).Suse.spec
+         sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $@
 
 ppa : tardist
 	$(RM_RF) /tmp/$(NAME)

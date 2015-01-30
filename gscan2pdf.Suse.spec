@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.2.7
+Version: 1.3.0
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -84,7 +84,16 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sun Nov 23 2014 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Fri Jan 30 2015 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #774099
+    (avoid leading and trailing blanks in expanded filename template)
+    Closes: #774103 (fixes for date offset calculation)
+    Closes: #710428
+    (Add "Found ocropus" to log information on application start)
+    Closes: #774093 (various consistency updates for dialogs)
+    Closes: #774094 (misc. improvements for OCR'ed texts)
+    Closes: #774097 (when saving as DjVU, use MetaData)
   - New upstream release
     Closes: #769823 (menu entry Tools > Unsharp Mask lacks OK & Cancel buttons)
   - New upstream release
