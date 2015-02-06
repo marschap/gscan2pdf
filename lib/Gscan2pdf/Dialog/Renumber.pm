@@ -24,6 +24,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         param_types => ['Gscan2pdf::PageRange::Range'],    # new range
     },
     'before-renumber' => { param_types => [], },
+    'error'           => { param_types => ['Glib::String'], },
   },
   properties => [
     Glib::ParamSpec->int(
@@ -59,11 +60,17 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         'selected',                                        # default
         [qw/readable writable/]                            # flags
     ),
+    Glib::ParamSpec->scalar(
+        'logger',                                          # name
+        'Logger',                                          # nick
+        'Log::Log4perl::get_logger object',                # blurb
+        [qw/readable writable/]                            # flags
+    ),
   ];
 
 our $VERSION = '1.3.0';
 
-my ( $start_old, $step_old );
+my ( $start_old, $step_old, $logger );
 
 # Normally, we would initialise the widget in INIT_INSTANCE and use the
 # default constructor new(). However, we have to override the default contructor
@@ -198,9 +205,40 @@ sub SET_PROPERTY {
     my $name   = $pspec->get_name;
     my $oldval = $self->get($name);
     $self->{$name} = $newval;
-    if (   ( defined $newval and defined $oldval and $newval ne $oldval )
+
+    # Have to set logger separately as it has already been set in the subclassed
+    # widget
+    if ( $name eq 'logger' ) {
+        $logger = $newval;
+        $logger->debug('Set logger in Gscan2pdf::Dialog::Renumber');
+    }
+    elsif (( defined $newval and defined $oldval and $newval ne $oldval )
         or ( defined $newval xor defined $oldval ) )
     {
+        if ( defined $logger ) {
+            $logger->debug(
+                "Started setting $name from "
+                  . (
+                    defined $oldval
+                    ? (
+                        ref($oldval) =~ /(?:HASH|ARRAY)/xsm
+                        ? Dumper($oldval)
+                        : $oldval
+                      )
+                    : 'undef'
+                  )
+                  . ' to '
+                  . (
+                    defined $newval
+                    ? (
+                        ref($newval) =~ /(?:HASH|ARRAY)/xsm
+                        ? Dumper($newval)
+                        : $newval
+                      )
+                    : 'undef'
+                  )
+            );
+        }
         $self->signal_emit( "changed-$name", $newval );
     }
     return;
@@ -318,13 +356,12 @@ sub renumber {
         $slist->select(@page);
     }
     else {
-        my $d = Locale::gettext->domain(Glib::get_application_name);
-        show_message_dialog(
-            $self, 'error', 'close',
-            $d->get(
+        my $d   = Locale::gettext->domain(Glib::get_application_name);
+        my $msg = $d->get(
 'The current settings would result in duplicate page numbers. Please select new start and increment values.'
-            )
         );
+        $logger->error($msg);
+        $self->signal_emit( 'error', $msg );
     }
     return;
 }

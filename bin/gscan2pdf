@@ -5370,6 +5370,7 @@ sub renumber_dialog {
     $windowrn = Gscan2pdf::Dialog::Renumber->new(
         'transient-for'  => $window,
         document         => $slist,
+        logger           => $logger,
         'hide-on-delete' => FALSE,
         border_width     => $BORDER_WIDTH
     );
@@ -5378,6 +5379,13 @@ sub renumber_dialog {
     $windowrn->signal_connect(
         'before-renumber' => sub {
             take_snapshot();
+        }
+    );
+
+    $windowrn->signal_connect(
+        'error' => sub {
+            my ($msg) = @_;
+            show_message_dialog( $windowrn, 'error', 'close', $msg );
         }
     );
 

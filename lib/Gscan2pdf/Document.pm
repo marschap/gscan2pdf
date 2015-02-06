@@ -1186,6 +1186,9 @@ sub renumber {
 
 sub valid_renumber {
     my ( $self, $start, $step, $selection ) = @_;
+    $logger->debug(
+"Checking renumber validity of: start $start, step $step, selection $selection"
+    );
 
     return FALSE if ( $step == 0 );
 
@@ -1206,10 +1209,12 @@ sub valid_renumber {
     my $selected     = Set::IntSpan->new( \@selected );
     my $all          = Set::IntSpan->new( \@all );
     my $not_selected = $all->diff($selected);
+    $logger->debug("Page numbers not selected: $not_selected");
 
     # Create a set from the current settings
     my $current = Set::IntSpan->new;
     for ( 0 .. $#selected ) { $current->insert( $start + $step * $_ ) }
+    $logger->debug("Current setting would create page numbers: $current");
 
     # Are any of the new page numbers the same as those not selected?
     return FALSE if ( $current->intersect($not_selected)->size );
