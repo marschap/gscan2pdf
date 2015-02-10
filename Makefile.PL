@@ -58,6 +58,7 @@ WriteMakefile(
         Log::Log4perl          => 0,
         Try::Tiny              => 0,
         List::MoreUtils        => 0,
+        Linux::Distribution    => 0,
     },
     clean => { FILES => '$(SOURCE_TIDY)' },
     (

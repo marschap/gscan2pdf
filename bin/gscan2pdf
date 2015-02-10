@@ -78,6 +78,7 @@ use Fcntl qw(:flock)
 use Log::Log4perl;
 use Try::Tiny;
 use Data::Dumper;
+use Linux::Distribution qw(distribution_name distribution_version);
 use English qw( -no_match_vars )
   ;    # for $PERL_VERSION, $PROGRAM_NAME, $EVAL_ERROR, $ERRNO
 
@@ -143,6 +144,19 @@ read_config_file($rc);
 
 set_up_test_mode();
 
+if ( my $distro = distribution_name() ) {
+    my $version = distribution_version();
+    if ( defined $version ) {
+        $version = ", version $version";
+    }
+    else {
+        $version = $EMPTY;
+    }
+    $logger->info("You are running $distro$version");
+}
+else {
+    $logger->info('Distribution unknown');
+}
 $logger->info("Perl version $PERL_VERSION");
 $logger->info("Glib-Perl version $Glib::VERSION");
 $logger->info( 'Built for Glib ' . join $DOT, Glib->GET_VERSION_INFO );
