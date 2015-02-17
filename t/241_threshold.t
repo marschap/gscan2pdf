@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use File::Basename;    # Split filename into dir, file, ext
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
@@ -38,10 +38,17 @@ $slist->get_file_info(
                     page              => $slist->{data}[0][2],
                     finished_callback => sub {
                         is( system("identify $slist->{data}[0][2]{filename}"),
-                            0, 'valid PNG created' );
+                            0, 'created valid file' );
                         is( dirname("$slist->{data}[0][2]{filename}"),
                             "$dir", 'using session directory' );
-                        Gtk2->main_quit;
+                        $slist->save_pdf(
+                            path          => 'test.pdf',
+                            list_of_pages => [ $slist->{data}[0][2] ],
+                            options       => {
+                                compression => 'none',
+                            },
+                            finished_callback => sub { Gtk2->main_quit }
+                        );
                     }
                 );
             }
@@ -49,6 +56,12 @@ $slist->get_file_info(
     }
 );
 Gtk2->main;
+
+is(
+    `pdfinfo test.pdf | grep 'Page size:'`,
+    "Page size:      70 x 46 pts\n",
+    'created valid PDF'
+);
 
 #########################
 
