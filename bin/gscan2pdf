@@ -79,6 +79,7 @@ use Log::Log4perl;
 use Try::Tiny;
 use Data::Dumper;
 use Linux::Distribution qw(distribution_name distribution_version);
+use Filesys::Df;
 use English qw( -no_match_vars )
   ;    # for $PERL_VERSION, $PROGRAM_NAME, $EVAL_ERROR, $ERRNO
 
@@ -87,7 +88,7 @@ use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
 
 use Readonly;
-Readonly my $BORDER_WIDTH            => 6;              # Window parameters
+Readonly my $BORDER_WIDTH            => 6;               # Window parameters
 Readonly my $STRING_FORMAT           => 8;
 Readonly my $_90_DEGREES             => 90;
 Readonly my $_180_DEGREES            => 180;
@@ -110,6 +111,8 @@ Readonly my $SELECTOR_H              => 3;
 Readonly my $HELP_WINDOW_WIDTH       => 800;
 Readonly my $HELP_WINDOW_HEIGHT      => 600;
 Readonly my $HELP_WINDOW_DIVIDER_POS => 200;
+Readonly my $_1KB                    => 1024;
+Readonly my $_1MB                    => $_1KB * $_1KB;
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
@@ -602,6 +605,7 @@ sub read_config_file {    ## no critic (RequireArgUnpacking)
         'OCR output' =>
           'replace',   # When a page is re-OCRed, replace old text with new text
         'auto-open-scan-dialog' => TRUE,
+        'available-tmp-warning' => 10,
         'Paper'                 => {
             $d->get('A4') => {
                 x => 210,
@@ -6710,6 +6714,20 @@ sub take_snapshot {
     $uimanager->get_widget('/MenuBar/Edit/Undo')->set_sensitive(TRUE);
     $uimanager->get_widget('/ToolBar/Undo')->set_sensitive(TRUE);
 
+    # Check free space in $session directory
+    my $df = df( $SETTING{TMPDIR}, $_1MB );
+    if ( defined $df ) {
+        $logger->debug(
+"Free space in $session (Mb): $df->{bavail} (warning at $SETTING{'available-tmp-warning'})"
+        );
+        if ( $df->{bavail} < $SETTING{'available-tmp-warning'} ) {
+            show_message_dialog( $window, 'warning', 'close',
+                sprintf $d->get('%dMb free in %s.'),
+                $df->{bavail}, $SETTING{TMPDIR} );
+        }
+
+    }
+
     # Save session
     $slist->save_session;
     return;
@@ -7169,6 +7187,25 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     );
     $hbox->pack_end( $button, TRUE, TRUE, 0 );
 
+    # Available space in temporary directory
+    $hbox = Gtk2::HBox->new;
+    $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
+    $label =
+      Gtk2::Label->new( $d->get('Warn if available space less than (Mb)') );
+    $hbox->pack_start( $label, FALSE, FALSE, 0 );
+    my $spinbuttonw = Gtk2::SpinButton->new_with_range(
+        0, 100_000,    ## no critic (ProhibitMagicNumbers)
+        1
+    );
+    $spinbuttonw->set_value( $SETTING{'available-tmp-warning'} );
+    $tooltips->set_tip(
+        $spinbuttonw,
+        $d->get(
+'Warn if the available space in the temporary directory is less than this value'
+        )
+    );
+    $hbox->add($spinbuttonw);
+
     # Blank page standard deviation threshold
     $hbox = Gtk2::HBox->new;
     $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
@@ -7303,9 +7340,10 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
                     )
                 );
             }
-            $SETTING{'Blank threshold'} = $spinbuttonb->get_value;
-            $SETTING{'Dark threshold'}  = $spinbuttond->get_value;
-            $SETTING{'OCR output'}      = $array[ $comboo->get_active ][0];
+            $SETTING{'available-tmp-warning'} = $spinbuttonw->get_value;
+            $SETTING{'Blank threshold'}       = $spinbuttonb->get_value;
+            $SETTING{'Dark threshold'}        = $spinbuttond->get_value;
+            $SETTING{'OCR output'} = $array[ $comboo->get_active ][0];
 
             # Store viewer preferences
             $SETTING{'view files toggle'} = $cbv->get_active;
