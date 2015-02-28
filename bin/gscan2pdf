@@ -6715,7 +6715,7 @@ sub take_snapshot {
     $uimanager->get_widget('/ToolBar/Undo')->set_sensitive(TRUE);
 
     # Check free space in $session directory
-    my $df = df( $SETTING{TMPDIR}, $_1MB );
+    my $df = df( "$session", $_1MB );
     if ( defined $df ) {
         $logger->debug(
 "Free space in $session (Mb): $df->{bavail} (warning at $SETTING{'available-tmp-warning'})"
