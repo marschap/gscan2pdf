@@ -99,6 +99,12 @@ sub new {
             tooltip => $d->get('Disable mask detection.'),
             default => FALSE,
         },
+        'no-mask-center' => {
+            type    => 'CheckButton',
+            string  => $d->get('No mask centering'),
+            tooltip => $d->get('Disable mask centering.'),
+            default => FALSE,
+        },
         'no-blackfilter' => {
             type    => 'CheckButton',
             string  => $d->get('No black filter'),
@@ -379,13 +385,27 @@ sub add_options {
     my $spinbuttonwt = $self->add_widget( $vbox3, $options, 'white-threshold' );
     my $spinbuttonbt = $self->add_widget( $vbox3, $options, 'black-threshold' );
     my $msbutton     = $self->add_widget( $vbox3, $options, 'no-mask-scan' );
+    my $mcbutton     = $self->add_widget( $vbox3, $options, 'no-mask-center' );
     my $bfbutton     = $self->add_widget( $vbox3, $options, 'no-blackfilter' );
     my $gfbutton     = $self->add_widget( $vbox3, $options, 'no-grayfilter' );
     my $nfbutton     = $self->add_widget( $vbox3, $options, 'no-noisefilter' );
     my $blbutton     = $self->add_widget( $vbox3, $options, 'no-blurfilter' );
 
+    # make no-mask-center depend on no-mask-scan
+    $msbutton->signal_connect(
+        toggled => sub {
+            if ( $msbutton->get_active ) {
+                $mcbutton->set_sensitive(FALSE);
+            }
+            else {
+                $mcbutton->set_sensitive(TRUE);
+            }
+        }
+    );
+
     # Having added the widgets with callbacks if necessary, set the defaults
     $self->set_options( $self->{default} );
+
     return;
 }
 
