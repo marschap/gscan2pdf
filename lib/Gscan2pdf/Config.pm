@@ -219,6 +219,8 @@ sub add_defaults {
         'default filename'            => '%a %y-%m-%d',
         'view files toggle'           => TRUE,
         'threshold-before-ocr'        => FALSE,
+        'brightness tool'             => 65,
+        'contrast tool'               => 65,
         'threshold tool'              => 80,
         'Blank threshold' => 0.005,    # Blank page standard deviation threshold
         'Dark threshold'  => 0.12,     # Dark page mean threshold

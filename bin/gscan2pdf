@@ -872,6 +872,11 @@ sub create_menu_bar {
             \&threshold
         ],
         [
+            'BrightnessContrast', undef, $d->get('_Brightness / Contrast'),
+            undef, $d->get('Change brightness & contrast'),
+            \&brightness_contrast
+        ],
+        [
             'Negate', undef, $d->get('_Negate'), undef,
             $d->get('Converts black to white and vice versa'), \&negate
         ],
@@ -986,6 +991,7 @@ sub create_menu_bar {
   </menu>
   <menu action='Tools'>
    <menuitem action='Threshold'/>
+   <menuitem action='BrightnessContrast'/>
    <menuitem action='Negate'/>
    <menuitem action='Unsharp'/>
    <menuitem action='Crop'/>
@@ -1139,6 +1145,7 @@ EOS
     $uimanager->get_widget('/Thumb_Popup/Print')->set_sensitive(FALSE);
 
     $uimanager->get_widget('/MenuBar/Tools/Threshold')->set_sensitive(FALSE);
+    $uimanager->get_widget('/MenuBar/Tools/BrightnessContrast')->set_sensitive(FALSE);
     $uimanager->get_widget('/MenuBar/Tools/Negate')->set_sensitive(FALSE);
     $uimanager->get_widget('/MenuBar/Tools/Unsharp')->set_sensitive(FALSE);
     $uimanager->get_widget('/MenuBar/Tools/Crop')->set_sensitive(FALSE);
@@ -1224,6 +1231,7 @@ sub update_uimanager {
         '/MenuBar/View/Rotate 180',
         '/MenuBar/View/Rotate 270',
         '/MenuBar/Tools/Threshold',
+        '/MenuBar/Tools/BrightnessContrast',
         '/MenuBar/Tools/Negate',
         '/MenuBar/Tools/Unsharp',
         '/MenuBar/Tools/Crop',
@@ -4774,6 +4782,98 @@ sub threshold {
                 my ( $signal, $pid );
                 $pid = $slist->threshold(
                     threshold       => $SETTING{'threshold tool'},
+                    page            => $slist->{data}[$i][2],
+                    queued_callback => sub {
+                        return update_tpbar(@_);
+                    },
+                    started_callback => sub {
+                        my ( $thread, $process, $completed, $total ) = @_;
+                        $signal =
+                          setup_tpbar( $thread, $process, $completed, $total,
+                            $pid );
+                        return TRUE if ( defined $signal );
+                    },
+                    finished_callback => sub {
+                        my ( $new_page, $pending ) = @_;
+                        if ( not $pending ) { $thbox->hide_all }
+                        if ( defined $signal ) {
+                            $tcbutton->signal_handler_disconnect($signal);
+                        }
+                        $slist->save_session;
+                    },
+                    error_callback   => \&error_callback,
+                    display_callback => sub {
+                        my ($new_page) = @_;
+                        display_image($new_page);
+                    },
+                );
+            }
+        },
+        sub { $windowt->destroy }
+    );
+    $vbox->pack_end( $hboxb, FALSE, TRUE, 0 );
+    $windowt->show_all;
+    return;
+}
+
+# Display page selector and on apply brightness & contrast accordingly
+
+sub brightness_contrast {
+
+    # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
+
+    my $windowt = Gscan2pdf::Dialog->new(
+        'transient-for' => $window,
+        title           => $d->get('Brightness / Contrast'),
+        border_width    => $BORDER_WIDTH
+    );
+    my $vbox = $windowt->get('vbox');
+    my ($hbox, $label);
+
+    # Frame for page range
+    add_page_range($vbox);
+
+    # SpinButton for brightness
+    $hbox = Gtk2::HBox->new;
+    $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
+    $label = Gtk2::Label->new( $d->get('Brightness') );
+    $hbox->pack_start( $label, FALSE, TRUE, 0 );
+    $label = Gtk2::Label->new($PERCENT);
+    $hbox->pack_end( $label, FALSE, TRUE, 0 );
+    my $spinbuttonb = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
+    $spinbuttonb->set_value( $SETTING{'brightness tool'} );
+    $hbox->pack_end( $spinbuttonb, FALSE, TRUE, 0 );
+
+    # SpinButton for contrast
+    $hbox = Gtk2::HBox->new;
+    $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
+    $label = Gtk2::Label->new( $d->get('Contrast') );
+    $hbox->pack_start( $label, FALSE, TRUE, 0 );
+    $label = Gtk2::Label->new($PERCENT);
+    $hbox->pack_end( $label, FALSE, TRUE, 0 );
+    my $spinbuttonc = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
+    $spinbuttonc->set_value( $SETTING{'contrast tool'} );
+    $hbox->pack_end( $spinbuttonc, FALSE, TRUE, 0 );
+
+    # HBox for buttons
+    my $hboxb = _hbox_with_apply_cancel_buttons(
+        sub {
+
+            # Update undo/redo buffers
+            take_snapshot();
+
+            $SETTING{'brightness tool'} = $spinbuttonb->get_value;
+            $SETTING{'contrast tool'} = $spinbuttonc->get_value;
+
+            my @pagelist =
+              $slist->get_page_index( $SETTING{'Page range'},
+                \&error_callback );
+            if ( not @pagelist ) { return }
+            for my $i (@pagelist) {
+                my ( $signal, $pid );
+                $pid = $slist->brightness_contrast(
+                    brightness      => $SETTING{'brightness tool'},
+                    contrast        => $SETTING{'contrast tool'},
                     page            => $slist->{data}[$i][2],
                     queued_callback => sub {
                         return update_tpbar(@_);
