@@ -37,7 +37,7 @@ sub new {
     my ( $class, $default ) = @_;
     my $self = {};
     $d = Locale::gettext->domain(Glib::get_application_name);
-    $self->{default} = $default;
+    $self->{default} = defined $default ? $default : {};
 
     # Set up hash for options
     $self->{options} = {
@@ -358,6 +358,9 @@ sub add_options {
     my $gfbutton     = $self->add_widget( $vbox3, $options, 'no-grayfilter' );
     my $nfbutton     = $self->add_widget( $vbox3, $options, 'no-noisefilter' );
     my $blbutton     = $self->add_widget( $vbox3, $options, 'no-blurfilter' );
+
+    # Having added the widgets with callbacks if necessary, set the defaults
+    $self->set_options( $self->{default} );
     return;
 }
 
@@ -397,12 +400,10 @@ sub add_widget {
             # Add text and tooltips
             my @tooltip;
             my $i = 0;
-            my $o = 0;
             foreach ( keys %{ $hashref->{$option}{options} } ) {
                 $widget->append_text(
                     $hashref->{$option}{options}{$_}{string} );
                 push @tooltip, $hashref->{$option}{options}{$_}{tooltip};
-                if (/^$default->{$option}$/ixsm) { $o = $i }
                 $hashref->{$option}{options}{$_}{index} = $i++;
             }
             $widget->signal_connect(
@@ -413,19 +414,12 @@ sub add_widget {
                     }
                 }
             );
-
-            # Set defaults
-            $widget->set_active($o);
-            $tooltips->set_tip( $widget, $tooltip[0] );
         }
 
         when ('CheckButton') {
             $widget = Gtk2::CheckButton->new( $hashref->{$option}{string} );
             $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
             $vbox->pack_start( $widget, TRUE, TRUE, 0 );
-            if ( defined $default->{$option} ) {
-                $widget->set_active( $default->{$option} );
-            }
         }
 
         when ('CheckButtonGroup') {
@@ -435,17 +429,9 @@ sub add_widget {
             $vboxf->set_border_width($BORDER_WIDTH);
             $widget->add($vboxf);
             $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
-            my %default;
-            if ( defined $default->{$option} ) {
-
-                foreach ( split /,/sm, $default->{$option} ) {
-                    $default{$_} = TRUE;
-                }
-            }
             foreach ( keys %{ $hashref->{$option}{options} } ) {
                 my $button =
                   $self->add_widget( $vboxf, $hashref->{$option}{options}, $_ );
-                if ( defined $default{$_} ) { $button->set_active(TRUE) }
             }
         }
 
@@ -472,10 +458,6 @@ sub add_widget {
             my $vboxf = Gtk2::VBox->new;
             $vboxf->set_border_width($BORDER_WIDTH);
             $widget->add($vboxf);
-            my @default;
-            if ( defined $default->{$option} ) {
-                @default = split /,/sm, $default->{$option};
-            }
             foreach (
                 sort {
                     $hashref->{$option}{options}{$a}{order}
@@ -485,7 +467,6 @@ sub add_widget {
             {
                 my $button =
                   $self->add_widget( $vboxf, $hashref->{$option}{options}, $_ );
-                if (@default) { $button->set_value( shift @default ) }
             }
         }
     }
@@ -543,7 +524,63 @@ sub get_options {
     return $default;
 }
 
-# was options2unpaper
+sub set_options {
+    my ( $self, $options ) = @_;
+    my $hashref = $self->{options};
+
+    foreach my $option ( keys %{$options} ) {
+        if ( defined $hashref->{$option}{widget} ) {
+            given ( $hashref->{$option}{type} ) {
+                when ('ComboBox') {
+                    my $i = $hashref->{$option}{options}{ $options->{$option} }
+                      {index};
+                    if ( defined $i ) {
+                        $hashref->{$option}{widget}->set_active($i);
+                    }
+                }
+                when ('CheckButton') {
+                    $hashref->{$option}{widget}
+                      ->set_active( $options->{$option} );
+                }
+                when ('CheckButtonGroup') {
+                    my %default;
+                    if ( defined $options->{$option} ) {
+                        foreach ( split /,/sm, $options->{$option} ) {
+                            $default{$_} = TRUE;
+                        }
+                    }
+                    foreach ( keys %{ $hashref->{$option}{options} } ) {
+                        $hashref->{$option}{options}{$_}{widget}
+                          ->set_active( defined $default{$_} );
+                    }
+                }
+                when ('SpinButton') {
+                    $hashref->{$option}{widget}
+                      ->set_value( $options->{$option} );
+                }
+                when ('SpinButtonGroup') {
+                    my @default;
+                    if ( defined $options->{$option} ) {
+                        @default = split /,/sm, $options->{$option};
+                    }
+                    foreach (
+                        sort {
+                            $hashref->{$option}{options}{$a}{order}
+                              <=> $hashref->{$option}{options}{$b}{order}
+                        } keys %{ $hashref->{$option}{options} }
+                      )
+                    {
+                        if (@default) {
+                            $hashref->{$option}{options}{$_}{widget}
+                              ->set_value( shift @default );
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return;
+}
 
 sub get_cmdline {
     my ($self)  = @_;

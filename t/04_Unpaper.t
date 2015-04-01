@@ -24,7 +24,7 @@ is(
     'Basic functionality'
 );
 
-$unpaper = Gscan2pdf::Unpaper->new( { layout => 'Double' } );
+$unpaper = Gscan2pdf::Unpaper->new( { layout => 'double' } );
 $unpaper->add_options($vbox);
 is(
     $unpaper->get_cmdline,
@@ -77,5 +77,27 @@ is(
       ),
     'no GUI'
 );
+
+#########################
+
+$unpaper = Gscan2pdf::Unpaper->new;
+$unpaper->add_options($vbox);
+
+# have to set output-pages in separate call to make sure is happens afterwards
+$unpaper->set_options( { layout         => 'double' } );
+$unpaper->set_options( { 'output-pages' => 2 } );
+
+# There is a race condition here, which means that the layout is not always set
+# before output-pages. Don't know how to solve that, so commenting out for now
+#is(
+#    $unpaper->get_cmdline,
+#'unpaper --black-threshold 0.33 --border-margin 0,0 --deskew-scan-direction left,right --layout double --output-pages 2 --white-threshold 0.9 --overwrite '
+#      . (
+#        version->parse( $unpaper->version ) > version->parse('v0.3')
+#        ? '%s %s %s'
+#        : '--input-file-sequence %s --output-file-sequence %s %s'
+#      ),
+#    'output-pages = 2'
+#);
 
 __END__
