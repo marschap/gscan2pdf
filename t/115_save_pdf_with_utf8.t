@@ -19,7 +19,7 @@ Gscan2pdf::Document->setup($logger);
 system('convert rose: test.pnm');
 
 my %options;
-$options{font} = `fc-list : file | grep times.ttf | head -n 1`;
+$options{font} = `fc-list : file | grep ttf | head -n 1`;
 chomp $options{font};
 $options{font} =~ s/: $//;
 
