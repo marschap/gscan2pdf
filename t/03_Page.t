@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 15;
+use Test::More tests => 16;
 
 BEGIN {
     use_ok('Gscan2pdf::Page');
@@ -45,41 +45,58 @@ $page->{hocr} = <<'EOS';
 </html>
 EOS
 
-my @boxes = (
+my $boxes = [
     {
-        type => 'page',
-        bbox => [ 0, 0, 422, 61 ],
-    },
-    {
-        type   => 'word',
-        id     => 1,
-        lineid => 1,
-        bbox   => [ 1, 14, 77, 48 ],
-        text   => 'The'
-    },
-    {
-        type   => 'word',
-        id     => 2,
-        lineid => 1,
-        bbox   => [ 92, 14, 202, 59 ],
-        text   => 'quick'
-    },
-    {
-        type   => 'word',
-        id     => 3,
-        lineid => 1,
-        bbox   => [ 214, 14, 341, 48 ],
-        text   => 'brown'
-    },
-    {
-        type   => 'word',
-        id     => 4,
-        lineid => 1,
-        bbox   => [ 355, 14, 420, 48 ],
-        text   => 'fox'
+        type     => 'page',
+        id       => 'page_1',
+        bbox     => [ 0, 0, 422, 61 ],
+        contents => [
+            {
+                type     => 'column',
+                id       => 'block_1_1',
+                bbox     => [ 1, 14, 420, 59 ],
+                contents => [
+                    {
+                        type     => 'line',
+                        id       => 'line_1_1',
+                        bbox     => [ 1, 14, 420, 59 ],
+                        contents => [
+                            {
+                                type       => 'word',
+                                id         => 'word_1_1',
+                                bbox       => [ 1, 14, 77, 48 ],
+                                text       => 'The',
+                                confidence => -3
+                            },
+                            {
+                                type       => 'word',
+                                id         => 'word_1_2',
+                                bbox       => [ 92, 14, 202, 59 ],
+                                text       => 'quick',
+                                confidence => -3
+                            },
+                            {
+                                type       => 'word',
+                                id         => 'word_1_3',
+                                bbox       => [ 214, 14, 341, 48 ],
+                                text       => 'brown',
+                                confidence => -3
+                            },
+                            {
+                                type       => 'word',
+                                id         => 'word_1_4',
+                                bbox       => [ 355, 14, 420, 48 ],
+                                text       => 'fox',
+                                confidence => -4
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
     }
-);
-is_deeply( [ $page->boxes ], \@boxes, 'Boxes from tesseract 3.00' );
+];
+is_deeply( $page->boxes, $boxes, 'Boxes from tesseract 3.00' );
 
 #########################
 
@@ -107,44 +124,64 @@ $page->{hocr} = <<'EOS';
 </html>
 EOS
 
-@boxes = (
+$boxes = [
     {
-        type => 'page',
-        bbox => [ 0, 0, 494, 57 ],
-    },
-    {
-        type   => 'word',
-        id     => 1,
-        lineid => 1,
-        bbox   => [ 1, 9, 88, 45 ],
-        text   => 'The',
-        style  => ['Bold']
-    },
-    {
-        type   => 'word',
-        id     => 2,
-        lineid => 1,
-        bbox   => [ 106, 9, 235, 55 ],
-        text   => 'quick'
-    },
-    {
-        type   => 'word',
-        id     => 3,
-        lineid => 1,
-        bbox   => [ 253, 9, 397, 45 ],
-        text   => 'brown',
-        style  => ['Bold']
-    },
-    {
-        type   => 'word',
-        id     => 4,
-        lineid => 1,
-        bbox   => [ 416, 9, 490, 45 ],
-        text   => 'fox',
-        style  => ['Bold']
+        type     => 'page',
+        id       => 'page_1',
+        bbox     => [ 0, 0, 494, 57 ],
+        contents => [
+            {
+                type     => 'column',
+                id       => 'block_1_1',
+                bbox     => [ 1, 9, 490, 55 ],
+                contents => [
+                    {
+                        type     => 'para',
+                        id       => 'par_1',
+                        bbox     => [ 1, 9, 490, 55 ],
+                        contents => [
+                            {
+                                type     => 'line',
+                                id       => 'line_1',
+                                bbox     => [ 1, 9, 490, 55 ],
+                                contents => [
+                                    {
+                                        type  => 'word',
+                                        id    => 'word_1',
+                                        bbox  => [ 1, 9, 88, 45 ],
+                                        text  => 'The',
+                                        style => ['Bold']
+                                    },
+                                    {
+                                        type => 'word',
+                                        id   => 'word_2',
+                                        bbox => [ 106, 9, 235, 55 ],
+                                        text => 'quick'
+                                    },
+                                    {
+                                        type  => 'word',
+                                        id    => 'word_3',
+                                        bbox  => [ 253, 9, 397, 45 ],
+                                        text  => 'brown',
+                                        style => ['Bold']
+                                    },
+                                    {
+                                        type  => 'word',
+                                        id    => 'word_4',
+                                        bbox  => [ 416, 9, 490, 45 ],
+                                        text  => 'fox',
+                                        style => ['Bold']
+                                    },
+                                ]
+                            }
+                        ]
+                    },
+                ]
+            },
+        ]
     }
-);
-is_deeply( [ $page->boxes ], \@boxes, 'Boxes from tesseract 3.02.01' );
+];
+is_deeply( $page->boxes, $boxes, 'Boxes from tesseract 3.02.01' );
 
 #########################
 
@@ -157,19 +194,20 @@ $page->{hocr} = <<'EOS';
 </span></div></body></html>
 EOS
 
-@boxes = (
+$boxes = [
     {
-        type => 'page',
-        bbox => [ 0, 0, 274, 58 ],
-    },
-    {
-        type => 'line',
-        id   => 1,
-        bbox => [ 3, 1, 271, 47 ],
-        text => decode_utf8('ööäiiüüß €')
+        type     => 'page',
+        bbox     => [ 0, 0, 274, 58 ],
+        contents => [
+            {
+                type => 'line',
+                bbox => [ 3, 1, 271, 47 ],
+                text => decode_utf8('ööäiiüüß €')
+            },
+        ]
     }
-);
-is_deeply( [ $page->boxes ], \@boxes, 'Boxes from ocropus 0.3 with UTF8' );
+];
+is_deeply( $page->boxes, $boxes, 'Boxes from ocropus 0.3 with UTF8' );
 
 #########################
 
@@ -183,25 +221,25 @@ $page->{hocr} = <<'EOS';
 </span></div></body></html>
 EOS
 
-@boxes = (
+$boxes = [
     {
-        type => 'page',
-        bbox => [ 0, 0, 202, 114 ],
-    },
-    {
-        type => 'line',
-        id   => 1,
-        bbox => [ 22, 26, 107, 39 ],
-        text => "\x{a4}\x{f6}A\x{e4}U\x{fc}\x{df}'"
-    },
-    {
-        type => 'line',
-        id   => 2,
-        bbox => [ 21, 74, 155, 87 ],
-        text => 'Test Test Test E'
+        type     => 'page',
+        bbox     => [ 0, 0, 202, 114 ],
+        contents => [
+            {
+                type => 'line',
+                bbox => [ 22, 26, 107, 39 ],
+                text => "\x{a4}\x{f6}A\x{e4}U\x{fc}\x{df}'"
+            },
+            {
+                type => 'line',
+                bbox => [ 21, 74, 155, 87 ],
+                text => 'Test Test Test E'
+            },
+        ]
     }
-);
-is_deeply( [ $page->boxes ], \@boxes, 'More boxes from ocropus 0.3 with UTF8' );
+];
+is_deeply( $page->boxes, $boxes, 'More boxes from ocropus 0.3 with UTF8' );
 
 #########################
 
@@ -214,19 +252,20 @@ $page->{hocr} = <<'EOS';
 </span></div></body></html>
 EOS
 
-@boxes = (
+$boxes = [
     {
-        type => 'page',
-        bbox => [ 0, 0, 422, 61 ],
-    },
-    {
-        type => 'line',
-        id   => 1,
-        bbox => [ 1, 14, 420, 59 ],
-        text => 'The quick brown fox'
+        type     => 'page',
+        bbox     => [ 0, 0, 422, 61 ],
+        contents => [
+            {
+                type => 'line',
+                bbox => [ 1, 14, 420, 59 ],
+                text => 'The quick brown fox'
+            },
+        ]
     }
-);
-is_deeply( [ $page->boxes ], \@boxes, 'Boxes from ocropus 0.4' );
+];
+is_deeply( $page->boxes, $boxes, 'Boxes from ocropus 0.4' );
 
 #########################
 
@@ -244,25 +283,28 @@ $page->{hocr} = <<'EOS';
 </div></body></html>
 EOS
 
-@boxes = (
+$boxes = [
     {
-        type => 'page',
-        bbox => [ 0, 0, 422, 61 ],
-    },
-    {
-        type => 'line',
-        id   => 1,
-        bbox => [ 1, 15, 420, 60 ],
-        text => 'The quick brown fox'
+        type     => 'page',
+        id       => 'page_1',
+        bbox     => [ 0, 0, 422, 61 ],
+        contents => [
+            {
+                type => 'line',
+                id   => 'line_1',
+                bbox => [ 1, 15, 420, 60 ],
+                text => 'The quick brown fox'
+            },
+        ]
     }
-);
-is_deeply( [ $page->boxes ], \@boxes, 'Boxes from cuneiform 1.0.0' );
+];
+is_deeply( $page->boxes, $boxes, 'Boxes from cuneiform 1.0.0' );
 
 #########################
 
 my $expected = <<'EOS';
 (page 0 0 422 61
-(line 1 1 420 46 "The quick brown fox"))
+  (line 1 15 420 60 "The quick brown fox"))
 EOS
 
 is_deeply( $page->djvu_text, $expected, 'djvu_text from cuneiform 1.0.0' );
@@ -277,6 +319,52 @@ $expected     = <<'EOS';
 EOS
 
 is_deeply( $page->djvu_text, $expected, 'djvu_text from simple text' );
+
+#########################
+
+$page->{hocr} = <<'EOS';
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <title>
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name='ocr-system' content='tesseract 3.03' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocrx_word'/>
+</head>
+<body>
+  <div class='ocr_page' id='page_1' title='image "0020_1L.tif"; bbox 0 0 2236 3185; ppageno 0'>
+   <div class='ocr_carea' id='block_1_1' title="bbox 157 80 1725 174">
+    <p class='ocr_par' dir='ltr' id='par_1_1' title="bbox 157 84 1725 171">
+     <span class='ocr_line' id='line_1_1' title="bbox 157 84 1725 171; baseline -0.003 -17">
+      <span class='ocrx_word' id='word_1_1' title='bbox 157 90 241 155; x_wconf 85' lang='fra'>28</span>
+      <span class='ocrx_word' id='word_1_2' title='bbox 533 86 645 152; x_wconf 90' lang='fra' dir='ltr'>LA</span>
+      <span class='ocrx_word' id='word_1_3' title='bbox 695 86 1188 171; x_wconf 75' lang='fra' dir='ltr'>MARQUISE</span>
+      <span class='ocrx_word' id='word_1_4' title='bbox 1229 87 1365 151; x_wconf 90' lang='fra' dir='ltr'>DE</span>
+      <span class='ocrx_word' id='word_1_5' title='bbox 1409 84 1725 154; x_wconf 82' lang='fra' dir='ltr'><em>GANGE</em></span>
+     </span>
+    </p>
+   </div>
+  </div>
+ </body>
+</html>
+EOS
+
+$expected = <<'EOS';
+(page 0 0 2236 3185
+  (column 157 80 1725 174
+    (para 157 84 1725 171
+      (line 157 84 1725 171
+        (word 157 90 241 155 "28")
+        (word 533 86 645 152 "LA")
+        (word 695 86 1188 171 "MARQUISE")
+        (word 1229 87 1365 151 "DE")
+        (word 1409 84 1725 154 "GANGE")))))
+EOS
+
+is_deeply( $page->djvu_text, $expected, 'djvu_text with hiearchy' );
 
 #########################
 

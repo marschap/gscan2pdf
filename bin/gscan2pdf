@@ -56,9 +56,9 @@ use Gscan2pdf::Ocropus;
 use Gscan2pdf::Cuneiform;
 use Gscan2pdf::Unpaper;
 use Gscan2pdf::Dialog::Renumber;
+use Gscan2pdf::Canvas;
 use Sane 0.05;    # To get SANE_* enums
 use Gtk2::ImageView;
-use Goo::Canvas;
 use Gtk2::Ex::Simple::List;
 use Gtk2 -init;    # Could just call init separately
 use Gtk2::Gdk::Keysyms;
@@ -1841,21 +1841,7 @@ sub create_canvas {
     $current_page = $page;
 
     # Set up the canvas
-    $canvas = Goo::Canvas->new;
-    my $root = $canvas->get_root_item;
-    if ( not defined $page->{w} ) {
-
-        # quotes required to prevent File::Temp object being clobbered
-        my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$page->{filename}");
-        $page->{w} = $pixbuf->get_width;
-        $page->{h} = $pixbuf->get_height;
-    }
-    $canvas->set_bounds( 0, 0, $page->{w}, $page->{h} );
-
-    # Attach the text to the canvas
-    for my $box ( $page->boxes ) {
-        boxed_text($box);
-    }
+    $canvas = Gscan2pdf::Canvas->new( $page, \&edit_ocr_text );
 
     # Remove the existing contents
     for ( $scwin_buffer->get_children ) { $scwin_buffer->remove($_) }
@@ -1864,6 +1850,29 @@ sub create_canvas {
     $canvas->set_scale( $view->get_zoom );
     $canvas->show;
     return;
+}
+
+sub edit_ocr_text {
+    my ( $widget, $target, $ev ) = @_;
+    my $dialog = Gtk2::Dialog->new(
+        $d->get('Editing text') . '...', $window,
+        'modal',
+        'gtk-ok'     => 'ok',
+        'gtk-cancel' => 'cancel'
+    );
+    my $textview   = Gtk2::TextView->new;
+    my $textbuffer = $textview->get_buffer;
+    $textbuffer->set( text => $widget->get('text') );
+    $dialog->vbox->add($textview);
+    $dialog->set_default_response('ok');
+    $dialog->show_all;
+
+    if ( $dialog->run eq 'ok' ) {
+        $canvas->set_box_text( $widget, $textbuffer->get('text') );
+    }
+    $dialog->destroy;
+    $canvas->pointer_ungrab( $widget, $ev->time );
+    return TRUE;
 }
 
 # Check that all pages have been saved
@@ -2552,265 +2561,6 @@ sub prepare_output_metadata {
         }
     }
     return \%h;
-}
-
-# Draw text on the canvas with a box around it
-
-sub boxed_text {
-    my $box = shift;
-    my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
-    my $x_size = abs $x2 - $x1;
-    my $y_size = abs $y2 - $y1;
-    my $root   = $canvas->get_root_item;
-    my $g      = Goo::Canvas::Group->new($root);
-    $g->translate( $x1, $y1 );
-
-    # add box properties to group properties
-    map { $g->{$_} = $box->{$_}; } keys %{$box};
-
-    # draw the rect first to make sure the text goes on top
-    # and receives any mouse clicks
-    my $confidence =
-      defined $box->{confidence} ? $box->{confidence} : $_100_PERCENT;
-    $confidence = $confidence > 64    ## no critic (ProhibitMagicNumbers)
-      ? 2 * int( ( $confidence - 65 ) / 12 ) ## no critic (ProhibitMagicNumbers)
-      + 10                                   ## no critic (ProhibitMagicNumbers)
-      : 0;
-    my $color = defined $box->{confidence}
-      ? sprintf '#%xfff%xfff%xfff',
-      0xf - int( $confidence / 10 ),         ## no critic (ProhibitMagicNumbers)
-      $confidence, $confidence
-      : '#7fff7fff7fff';
-    my $rect = Goo::Canvas::Rect->new( $g, 0, 0, $x_size, $y_size,
-        'stroke-color' => $color );
-
-    if ( $box->{text} ) {
-
-        #        # show text baseline (currently of no use)
-        #        if ($box->{baseline} and $box->{baseline} >= $y1) {
-        #            $rect = Goo::Canvas::Rect->new( $g,
-        #                 0, $box->{baseline} - $y1, $x_size, 1,
-        #                'stroke-color' => 'yellow');
-        #        }
-
-        my $text;
-        if ( $box->{type} eq 'page' ) {
-
-            # only basic info on text, so simply create it
-            $text = Goo::Canvas::Text->new( $g, $box->{text}, 0, 0, $x_size,
-                'nw', 'height' => $y_size );
-        }
-        else {
-           # create text and then scale, shift & rotate it into the bounding box
-            my $angle = defined( $box->{textangle} )
-              ? ( -$box->{textangle} % 360 ) ## no critic (ProhibitMagicNumbers)
-              : 0;
-            $text = Goo::Canvas::Text->new(
-                $g,
-                $box->{text},
-                $x_size / 2,
-                $y_size / 2,
-                -1, 'center',                ## no critic (ProhibitMagicNumbers)
-                'font' => 'Sans '
-                  . (
-                      $angle
-                    ? $x_size
-                    : $y_size
-                  )
-            );
-            my $bounds = $text->get_bounds;
-            my $scale =
-              ( $angle ? $y_size : $x_size ) / ( $bounds->x2 - $bounds->x1 );
-            $text->set_simple_transform( 0, 0, $scale, $angle );
-            $bounds = $text->get_bounds;
-            my $x_offset = ( $x1 + $x2 - $bounds->x1 - $bounds->x2 ) / 2;
-            my $y_offset = ( $y1 + $y2 - $bounds->y1 - $bounds->y2 ) / 2;
-            $text->set_simple_transform( $x_offset, $y_offset, $scale, $angle );
-        }
-
-        # clicking text box produces a dialog to edit the text
-        $text->signal_connect( 'button-press-event' => \&edit_ocr_text );
-    }
-
-    # $rect->signal_connect(
-    #  'button-press-event' => sub {
-    #   my ( $widget, $target, $ev ) = @_;
-    #   print "rect button-press-event\n";
-    #   #  return TRUE;
-    #  }
-    # );
-    # $g->signal_connect(
-    #  'button-press-event' => sub {
-    #   my ( $widget, $target, $ev ) = @_;
-    #   print "group $widget button-press-event\n";
-    #   my $n = $widget->get_n_children;
-    #   for ( my $i = 0 ; $i < $n ; $i++ ) {
-    #    my $item = $widget->get_child($i);
-    #    if ( $item->isa('Goo::Canvas::Text') ) {
-    #     print "contains $item\n", $item->get('text'), "\n";
-    #     last;
-    #    }
-    #   }
-    #   #  return TRUE;
-    #  }
-    # );
-    return;
-}
-
-sub edit_ocr_text {
-    my ( $widget, $target, $ev ) = @_;
-    my $dialog = Gtk2::Dialog->new(
-        $d->get('Editing text') . '...', $window,
-        'modal',
-        'gtk-ok'     => 'ok',
-        'gtk-cancel' => 'cancel'
-    );
-    my $textview   = Gtk2::TextView->new;
-    my $textbuffer = $textview->get_buffer;
-    $textbuffer->set( text => $widget->get('text') );
-    $dialog->vbox->add($textview);
-    $dialog->set_default_response('ok');
-    $dialog->show_all;
-
-    if ( $dialog->run eq 'ok' ) {
-        $widget->set( text => $textbuffer->get('text') );
-
-        # per above: group = text's parent, group's 1st child = rect
-        my $g    = $widget->get_property('parent');
-        my $rect = $g->get_child(0);
-        if ( length( $textbuffer->get('text') ) ) {
-            $g->{text}       = $textbuffer->get('text');
-            $g->{confidence} = $_100_PERCENT;
-
-            # color for 100% confidence
-            $rect->set_property( 'stroke-color' => '#efffefffefff' );
-
-            # re-adjust text size & position
-            if ( $g->{type} ne 'page' ) {
-                my ( $x1, $y1, $x2, $y2 ) = @{ $g->{bbox} };
-                my $x_size = abs $x2 - $x1;
-                my $y_size = abs $y2 - $y1;
-                $widget->set_simple_transform( 0, 0, 1, 0 );
-                my $angle = defined( $g->{textangle} )
-                  ? (
-                    -$g->{textangle} % 360 ) ## no critic (ProhibitMagicNumbers)
-                  : 0;
-                my $bounds = $widget->get_bounds;
-                my $scale =
-                  ( $angle ? $y_size : $x_size ) /
-                  ( $bounds->x2 - $bounds->x1 );
-                $widget->set_simple_transform( 0, 0, $scale, $angle );
-                $bounds = $widget->get_bounds;
-                my $x_offset = ( $x1 + $x2 - $bounds->x1 - $bounds->x2 ) / 2;
-                my $y_offset = ( $y1 + $y2 - $bounds->y1 - $bounds->y2 ) / 2;
-                $widget->set_simple_transform( $x_offset,
-                    $y_offset, $scale, $angle );
-            }
-        }
-        else {
-            delete $g->{text};
-            $g->remove_child(0);
-        }
-
-        canvas2hocr();
-    }
-    $dialog->destroy;
-    $canvas->pointer_ungrab( $widget, $ev->time );
-    return TRUE;
-}
-
-# Convert the canvas into hocr
-
-sub canvas2hocr {
-    my ( $x, $y, $w, $h ) = $canvas->get_bounds;
-    my $root = $canvas->get_root_item;
-    my %classes;
-    my @data;
-    my $lineid;
-
-    for my $i ( 0 .. $root->get_n_children - 1 ) {
-        my $group = $root->get_child($i);
-
-        # short-circuit for whole pages to have a safe round-trip
-        if ( $group->{type} eq 'page' ) {
-            $current_page->{hocr} = $group->{text};
-            return;
-        }
-
-        # try to preserve as much information as possible
-        if ( $group->{bbox} and $group->{text} ) {
-            my $class = 'ocr_' . $group->{type};
-            my $title = 'bbox ' . join $SPACE, @{ $group->{bbox} };
-
-            if ( $group->{textangle} ) {
-                $title .= '; textangle ' . $group->{textangle};
-            }
-            if ( $group->{baseline} ) {
-                $title .= '; baseline ' . $group->{baseline};
-            }
-            if ( $group->{confidence} ) {
-                $title .= '; x_wconf ' . $group->{confidence};
-                $class = 'ocrx_word';
-            }
-            $classes{$class} = 1;
-
-            if ( $group->{lineid} ) {
-                if ( defined $lineid and $group->{lineid} != $lineid ) {
-                    push @data, '</span>';
-                }
-                if ( $group->{lineid} != $lineid ) {
-                    push @data,
-                        '<span class="ocr_line" id="'
-                      . $group->{lineid}
-                      . '" title="">';
-                }
-                $lineid = $group->{lineid};
-            }
-            else {
-                if ( defined $lineid ) { push @data, '</span>' }
-                undef $lineid;
-            }
-            push @data,
-                '<span class="'
-              . $class
-              . '" id="'
-              . $group->{id} . '" '
-              . 'title="'
-              . $title . '">'
-              . $group->{text}
-              . '</span>';
-        }
-    }
-    if ( defined $lineid ) { push @data, '</span>' }
-
-    if (@data) {
-        my $classes = join $SPACE, keys %classes;
-        my $data = join "\n   ", @data;
-
-        $current_page->{hocr} = <<"EOS";
-<!DOCTYPE html
- PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN
- http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
- <meta content="ocr_page ocr_carea $classes" name="ocr-capabilities"/>
- <meta content="en" name="ocr-langs"/>
- <meta content="Latn" name="ocr-scripts"/>
- <meta content="" name="ocr-microformats"/>
- <title>OCR Output</title>
-</head>
-<body>
- <div class="ocr_page" title="bbox $x $y $w $h">
-  <div class="ocr_carea">
-$data
-  </div>
- </div>
-</body>
-</html>
-EOS
-    }
-
-    return;
 }
 
 # Save selected pages as PDF under given name.

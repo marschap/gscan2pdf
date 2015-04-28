@@ -2033,7 +2033,11 @@ sub _thread_save_pdf {
         my $page = $pdf->page;
         $page->mediabox( $w * $POINTS_PER_INCH, $h * $POINTS_PER_INCH );
 
-        _add_text_to_pdf( $page, $pagedata, $ttfcache, $corecache );
+        if ( defined( $pagedata->{hocr} ) ) {
+            $logger->info('Embedding OCR output behind image');
+            _add_text_to_pdf( $page, $pagedata, $pagedata->boxes, $ttfcache,
+                $corecache );
+        }
 
         # Add scan
         my $gfx = $page->gfx;
@@ -2195,51 +2199,52 @@ sub _write_image_object {
 # Add OCR as text behind the scan
 
 sub _add_text_to_pdf {
-    my ( $page, $data, $ttfcache, $corecache ) = @_;
-    if ( defined( $data->{hocr} ) ) {
-        my $h          = $data->{h};
-        my $w          = $data->{w};
-        my $resolution = $data->{resolution};
+    my ( $pdf_page, $gs_page, $boxes, $ttfcache, $corecache ) = @_;
+    my $h          = $gs_page->{h};
+    my $w          = $gs_page->{w};
+    my $resolution = $gs_page->{resolution};
+    my $font;
+    my $text = $pdf_page->text;
+    for my $box ( @{$boxes} ) {
+        if ( defined $box->{contents} ) {
+            _add_text_to_pdf( $pdf_page, $gs_page, $box->{contents}, $ttfcache,
+                $corecache );
+        }
+        my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
+        my $txt = $box->{text};
+        if ( not defined $txt ) { next }
+        if ( $txt =~ /([[:^ascii:]])/xsm and defined $ttfcache ) {
+            if ( defined $1 ) {
+                $logger->debug("non-ascii text is '$1' in '$txt'");
+            }
+            $font = $ttfcache;
+        }
+        else {
+            $font = $corecache;
+        }
+        if ( $x1 == 0 and $y1 == 0 and not defined $x2 ) {
+            ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution );
+        }
+        if (    abs( $h * $resolution - $y2 + $y1 ) > $BOX_TOLERANCE
+            and abs( $w * $resolution - $x2 + $x1 ) > $BOX_TOLERANCE )
+        {
 
-        $logger->info('Embedding OCR output behind image');
-        my $font;
-        my $text = $page->text;
-        for my $box ( $data->boxes ) {
-            my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
-            my $txt = $box->{text};
-            if ( $txt =~ /([[:^ascii:]])/xsm and defined $ttfcache ) {
-                if ( defined $1 ) {
-                    $logger->debug("non-ascii text is '$1' in '$txt'");
-                }
-                $font = $ttfcache;
-            }
-            else {
-                $font = $corecache;
-            }
-            if ( $x1 == 0 and $y1 == 0 and not defined $x2 ) {
-                ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution );
-            }
-            if (    abs( $h * $resolution - $y2 + $y1 ) > $BOX_TOLERANCE
-                and abs( $w * $resolution - $x2 + $x1 ) > $BOX_TOLERANCE )
-            {
-
-                # Box is smaller than the page. We know the text position.
-                # Set the text position.
-                # Translate x1 and y1 to inches and then to points. Invert the
-                # y coordinate (since the PDF coordinates are bottom to top
-                # instead of top to bottom) and subtract $size, since the text
-                # will end up above the given point instead of below.
-                my $size = ( $y2 - $y1 ) / $resolution * $POINTS_PER_INCH;
-                $text->font( $font, $size );
-                $text->translate( $x1 / $resolution * $POINTS_PER_INCH,
-                    ( $h - ( $y1 / $resolution ) ) * $POINTS_PER_INCH - $size );
-                $text->text( $txt, utf8 => 1 );
-            }
-            else {
-                my $size = 1;
-                $text->font( $font, $size );
-                _wrap_text_to_page( $txt, $size, $text, $h, $w );
-            }
+            # Box is smaller than the page. We know the text position.
+            # Set the text position.
+            # Translate x1 and y1 to inches and then to points. Invert the
+            # y coordinate (since the PDF coordinates are bottom to top
+            # instead of top to bottom) and subtract $size, since the text
+            # will end up above the given point instead of below.
+            my $size = ( $y2 - $y1 ) / $resolution * $POINTS_PER_INCH;
+            $text->font( $font, $size );
+            $text->translate( $x1 / $resolution * $POINTS_PER_INCH,
+                ( $h - ( $y1 / $resolution ) ) * $POINTS_PER_INCH - $size );
+            $text->text( $txt, utf8 => 1 );
+        }
+        else {
+            my $size = 1;
+            $text->font( $font, $size );
+            _wrap_text_to_page( $txt, $size, $text, $h, $w );
         }
     }
     return;
@@ -2642,31 +2647,18 @@ sub _thread_save_image {
 
 sub _thread_save_text {
     my ( $self, $path, $list_of_pages, $fh ) = @_;
+    my $string = $EMPTY;
 
-    if ( not open $fh, '>', $path ) {    ## no critic (RequireBriefOpen)
+    for my $page ( @{$list_of_pages} ) {
+        $string .= $page->string;
+        return if $_self->{cancel};
+    }
+    if ( not open $fh, '>', $path ) {
         $self->{status} = 1;
         $self->{message} = sprintf $d->get("Can't open file: %s"), $path;
         return;
     }
-    for my $page ( @{$list_of_pages} ) {
-
-        # Note y value to be able to put line breaks
-        # at appropriate positions
-        my ( $oldx, $oldy );
-        for my $box ( $page->boxes ) {
-            if ( not defined $box->{text} ) { next }
-            my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
-            if ( defined $oldx and $x1 > $oldx ) {
-                _write_file( $self, $fh, $path, $SPACE ) or return;
-            }
-            if ( defined $oldy and $y1 > $oldy ) {
-                _write_file( $self, $fh, $path, "\n" ) or return;
-            }
-            ( $oldx, $oldy ) = ( $x1, $y1 );
-            _write_file( $self, $fh, $path, $box->{text} ) or return;
-        }
-        return if $_self->{cancel};
-    }
+    _write_file( $self, $fh, $path, $string ) or return;
     if ( not close $fh ) {
         $self->{status} = 1;
         $self->{message} = sprintf $d->get("Can't close file: %s"), $path;

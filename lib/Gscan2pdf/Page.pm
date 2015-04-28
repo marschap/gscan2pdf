@@ -151,61 +151,97 @@ sub boxes {
     if ( $hocr =~ /<body>([\s\S]*)<\/body>/xsm ) {
         return _parse_hocr($hocr);
     }
-    return {
-        type => 'page',
-        bbox => [ 0, 0, $self->{w}, $self->{h} ],
-        text => $hocr
-    };
+    return [
+        {
+            type => 'page',
+            bbox => [ 0, 0, $self->{w}, $self->{h} ],
+            text => $hocr
+        }
+    ];
 }
 
 sub _parse_hocr {
     my ($hocr) = @_;
     my $p = HTML::TokeParser->new( \$hocr );
-    my ( $lineid, $wordid ) = ( 1, 1 );
-    my ( %pagedata, %linedata, %worddata, $data, @boxes );
+    my ( $data, @stack, $boxes );
     while ( my $token = $p->get_token ) {
         given ( $token->[0] ) {
             when ('S') {
                 my ( $tag, %attrs ) = ( $token->[1], %{ $token->[2] } );
-                if ( $tag eq 'span' and defined $attrs{class} ) {
-                    if ( _new_hocr_data(%attrs) ) {
 
-                        # initialize data pointer
-                        if ( $attrs{class} =~ /_word$/xsm ) {
-                            %worddata       = %linedata;
-                            $data           = \%worddata;
-                            $data->{type}   = 'word';
-                            $data->{lineid} = $linedata{id};
-                            $data->{id}     = $wordid++;
+                # new data point
+                $data = {};
+
+                if ( defined $attrs{class} and defined $attrs{title} ) {
+                    _parse_tag_data( $attrs{title}, $data );
+                    given ( $attrs{class} ) {
+                        when (/_page$/xsm) {
+                            $data->{type} = 'page';
+                            push @{$boxes}, $data;
                         }
-                        else {
-                            %linedata     = ();
-                            $data         = \%linedata;
+                        when (/_carea$/xsm) {
+                            $data->{type} = 'column';
+                        }
+                        when (/_par$/xsm) {
+                            $data->{type} = 'para';
+                        }
+                        when (/_line$/xsm) {
                             $data->{type} = 'line';
-                            $data->{id}   = $lineid++;
                         }
-                        _parse_tag_data( $attrs{title}, $data );
+                        when (/_word$/xsm) {
+                            $data->{type} = 'word';
+                        }
                     }
-                    elsif ( $attrs{class} eq 'ocr_cinfo' ) {
 
-                        # reset data pointer
-                        undef $data;
-                        %worddata = ();
-                        %linedata = ();
+                    # pick up previous pointer to add style
+                    if ( not defined $data->{type} ) {
+                        $data = $stack[-1];
+                    }
+
+                    # put information xocr_word information in parent ocr_word
+                    if (    $data->{type} eq 'word'
+                        and $stack[-1]{type} eq 'word' )
+                    {
+                        for ( keys %{$data} ) {
+                            if ( not defined $stack[-1]{$_} ) {
+                                $stack[-1]{$_} = $data->{$_};
+                            }
+                            elsif ( $_ ne 'type' ) {
+                                $logger->warn("Ignoring $_=$data->{$_}");
+                            }
+                        }
+
+                        # pick up previous pointer to add any later text
+                        $data = $stack[-1];
+                    }
+                    else {
+                        if ( defined $attrs{id} ) {
+                            $data->{id} = $attrs{id};
+                        }
+
+                        # if we have a previous one, add the new one to the
+                        # contents of the previous one
+                        if (    defined $stack[-1]
+                            and $data != $stack[-1]
+                            and defined $data->{bbox} )
+                        {
+                            push @{ $stack[-1]{contents} }, $data;
+                        }
                     }
                 }
-                if ( $tag eq 'div' and defined $attrs{class} ) {
-                    if ( $attrs{class} =~ /_page$/xsm ) {
-                        %pagedata     = ();
-                        $data         = \%pagedata;
-                        $data->{type} = 'page';
-                        _parse_tag_data( $attrs{title}, $data );
-                    }
+
+                # pick up previous pointer
+                # so that unknown tags don't break the chain
+                else {
+                    $data = $stack[-1];
                 }
-                elsif ( defined $data ) {
+                if ( defined $data ) {
                     if ( $tag eq 'strong' ) { push @{ $data->{style} }, 'Bold' }
                     if ( $tag eq 'em' ) { push @{ $data->{style} }, 'Italic' }
                 }
+
+                # put the new data point on the stack
+                push @stack, $data;
             }
             when ('T') {
                 if ( $token->[1] !~ /^\s*$/xsm ) {
@@ -215,41 +251,22 @@ sub _parse_hocr {
             }
             when ('E') {
 
-                # reset data pointer
-                undef $data;
+                # up a level
+                $data = pop @stack;
             }
         }
 
-        if (    defined $data
-            and defined $data->{bbox}
-            and ( defined $data->{text} or $data->{type} eq 'page' ) )
-        {
-            push @boxes, { %{$data} };
-            undef $data;
-        }
     }
-    return @boxes;
-}
-
-sub _new_hocr_data {
-    my %attrs = @_;
-    return (
-        (
-                 $attrs{class} eq 'ocr_line'
-              or $attrs{class} eq 'ocr_word'
-              or $attrs{class} eq 'ocrx_word'
-        )
-          and defined $attrs{title}
-    );
+    return $boxes;
 }
 
 sub _parse_tag_data {
     my ( $title, $data ) = @_;
     if ( $title =~ /\bbbox\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/xsm ) {
-        $data->{bbox} = [ $1, $2, $3, $4 ];
+        if ( $1 != $3 and $2 != $4 ) { $data->{bbox} = [ $1, $2, $3, $4 ] }
     }
     if ( $title =~ /\btextangle\s+(\d+)/xsm ) { $data->{textangle}  = $1 }
-    if ( $title =~ /\bx_wconf\s+(\d+)/xsm )   { $data->{confidence} = $1 }
+    if ( $title =~ /\bx_wconf\s+(-?\d+)/xsm ) { $data->{confidence} = $1 }
     if ( $title =~ /\bbaseline\s+(?:-?\d+(?:[.]\d+)?\s+)*(-?\d+)/xsm ) {
         $data->{baseline} = $1;
 
@@ -261,35 +278,59 @@ sub _parse_tag_data {
     return;
 }
 
-sub djvu_text {
+# return hocr output as string
+
+sub string {
     my ($self) = @_;
+    return _boxes2string( $self->boxes );
+}
+
+sub _boxes2string {
+    my ($boxes) = @_;
+    my $string = $EMPTY;
+
+    # Note y value to be able to put line breaks
+    # at appropriate positions
+    my ( $oldx, $oldy );
+    for my $box ( @{$boxes} ) {
+        if ( defined $box->{contents} ) {
+            $string .= _boxes2string( $box->{contents} );
+        }
+        if ( not defined $box->{text} ) { next }
+        my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
+        if ( defined $oldx and $x1 > $oldx ) { $string .= $SPACE }
+        if ( defined $oldy and $y1 > $oldy ) { $string .= "\n" }
+        ( $oldx, $oldy ) = ( $x1, $y1 );
+        $string .= $box->{text};
+    }
+    return $string;
+}
+
+sub djvu_text {
+    my ( $self, $pointer, $indent ) = @_;
 
     my $w          = $self->{w};
     my $h          = $self->{h};
     my $resolution = $self->{resolution};
     my $string     = $EMPTY;
+    if ( not defined $indent )  { $indent  = 0 }
+    if ( not defined $pointer ) { $pointer = $self->boxes }
 
     # Write the text boxes
-    for my $box ( $self->boxes ) {
+    for my $box ( @{$pointer} ) {
         my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
-        if ( $box->{type} eq 'page' ) {
-            ( $w, $h ) = ( $x2, $y2 );
-            $string .= sprintf '(page %d %d %d %d', $x1, $y1, $x2, $y2;
-            if ( defined $box->{text} ) {
-                $string .= $SPACE . _escape_text( $box->{text} );
-            }
+        if ( $indent != 0 ) { $string .= "\n" }
+        for ( 1 .. $indent ) { $string .= $SPACE }
+        $string .= sprintf "($box->{type} %d %d %d %d", $x1, $y1, $x2, $y2;
+        if ( defined $box->{text} ) {
+            $string .= $SPACE . _escape_text( $box->{text} );
         }
-        else {
-            if ( $x1 == 0 and $y1 == 0 and not defined $x2 ) {
-                ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution );
-            }
-
-            $string .= sprintf "\n($box->{type} %d %d %d %d %s)", $x1,
-              $h - $y2, $x2,
-              $h - $y1, _escape_text( $box->{text} );
+        if ( defined $box->{contents} ) {
+            $string .= $self->djvu_text( $box->{contents}, $indent + 2 );
         }
+        $string .= ')';
     }
-    $string .= ")\n";
+    if ( $indent == 0 ) { $string .= "\n" }
     return $string;
 }
 
