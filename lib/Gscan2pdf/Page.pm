@@ -3,6 +3,8 @@ package Gscan2pdf::Page;
 use 5.008005;
 use strict;
 use warnings;
+use feature 'switch';
+no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Carp;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use File::Copy;
@@ -19,6 +21,9 @@ Readonly my $CM_PER_INCH    => 2.54;
 Readonly my $MM_PER_CM      => 10;
 Readonly my $MM_PER_INCH    => $CM_PER_INCH * $MM_PER_CM;
 Readonly my $PAGE_TOLERANCE => 0.02;
+my $EMPTY         = q{};
+my $SPACE         = q{ };
+my $DOUBLE_QUOTES = q{"};
 
 BEGIN {
     use Exporter ();
@@ -144,7 +149,7 @@ sub boxes {
         encode_utf8( HTML::Entities::decode_entities( $self->{hocr} ) ) );
 
     if ( $hocr =~ /<body>([\s\S]*)<\/body>/xsm ) {
-        return parse_hocr($hocr);
+        return _parse_hocr($hocr);
     }
     return {
         type => 'page',
@@ -153,69 +158,80 @@ sub boxes {
     };
 }
 
-sub parse_hocr {
+sub _parse_hocr {
     my ($hocr) = @_;
     my $p = HTML::TokeParser->new( \$hocr );
     my ( $lineid, $wordid ) = ( 1, 1 );
-    my ( %linedata, %worddata, $data, @boxes );
+    my ( %pagedata, %linedata, %worddata, $data, @boxes );
     while ( my $token = $p->get_token ) {
-        if ( $token->[0] eq 'S' ) {
-            my ( $tag, %attrs ) = ( $token->[1], %{ $token->[2] } );
-            if ( $tag eq 'span' and defined $attrs{class} ) {
-                if ( new_hocr_data(%attrs) ) {
+        given ( $token->[0] ) {
+            when ('S') {
+                my ( $tag, %attrs ) = ( $token->[1], %{ $token->[2] } );
+                if ( $tag eq 'span' and defined $attrs{class} ) {
+                    if ( _new_hocr_data(%attrs) ) {
 
-                    # initialize data pointer
-                    if ( $attrs{class} =~ /_word$/xsm ) {
-                        %worddata       = %linedata;
-                        $data           = \%worddata;
-                        $data->{type}   = 'word';
-                        $data->{lineid} = $linedata{id};
-                        $data->{id}     = $wordid++;
+                        # initialize data pointer
+                        if ( $attrs{class} =~ /_word$/xsm ) {
+                            %worddata       = %linedata;
+                            $data           = \%worddata;
+                            $data->{type}   = 'word';
+                            $data->{lineid} = $linedata{id};
+                            $data->{id}     = $wordid++;
+                        }
+                        else {
+                            %linedata     = ();
+                            $data         = \%linedata;
+                            $data->{type} = 'line';
+                            $data->{id}   = $lineid++;
+                        }
+                        _parse_tag_data( $attrs{title}, $data );
                     }
-                    else {
-                        %linedata     = ();
-                        $data         = \%linedata;
-                        $data->{type} = 'line';
-                        $data->{id}   = $lineid++;
+                    elsif ( $attrs{class} eq 'ocr_cinfo' ) {
+
+                        # reset data pointer
+                        undef $data;
+                        %worddata = ();
+                        %linedata = ();
                     }
-                    parse_tag_data( $attrs{title}, $data );
                 }
-                elsif ( $attrs{class} eq 'ocr_cinfo' ) {
-
-                    # reset data pointer
-                    undef $data;
-                    %worddata = ();
-                    %linedata = ();
+                if ( $tag eq 'div' and defined $attrs{class} ) {
+                    if ( $attrs{class} =~ /_page$/xsm ) {
+                        %pagedata     = ();
+                        $data         = \%pagedata;
+                        $data->{type} = 'page';
+                        _parse_tag_data( $attrs{title}, $data );
+                    }
+                }
+                elsif ( defined $data ) {
+                    if ( $tag eq 'strong' ) { push @{ $data->{style} }, 'Bold' }
+                    if ( $tag eq 'em' ) { push @{ $data->{style} }, 'Italic' }
                 }
             }
-            elsif ( defined $data ) {
-                if ( $tag eq 'strong' ) { push @{ $data->{style} }, 'Bold' }
-                if ( $tag eq 'em' )     { push @{ $data->{style} }, 'Italic' }
+            when ('T') {
+                if ( $token->[1] !~ /^\s*$/xsm ) {
+                    $data->{text} = $token->[1];
+                    chomp $data->{text};
+                }
             }
-        }
-        elsif ( $token->[0] eq 'T' ) {
-            if ( $token->[1] !~ /^\s*$/xsm ) {
-                $data->{text} = $token->[1];
-                chomp $data->{text};
-            }
-        }
-        elsif ( $token->[0] eq 'E' ) {
+            when ('E') {
 
-            # reset data pointer
-            undef $data;
+                # reset data pointer
+                undef $data;
+            }
         }
 
         if (    defined $data
-            and defined $data->{text}
-            and defined $data->{bbox} )
+            and defined $data->{bbox}
+            and ( defined $data->{text} or $data->{type} eq 'page' ) )
         {
             push @boxes, { %{$data} };
+            undef $data;
         }
     }
     return @boxes;
 }
 
-sub new_hocr_data {
+sub _new_hocr_data {
     my %attrs = @_;
     return (
         (
@@ -227,7 +243,7 @@ sub new_hocr_data {
     );
 }
 
-sub parse_tag_data {
+sub _parse_tag_data {
     my ( $title, $data ) = @_;
     if ( $title =~ /\bbbox\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/xsm ) {
         $data->{bbox} = [ $1, $2, $3, $4 ];
