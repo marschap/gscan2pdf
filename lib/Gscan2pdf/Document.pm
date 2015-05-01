@@ -2046,7 +2046,7 @@ sub _thread_save_pdf {
                 when ('jpg') {
                     $imgobj = $pdf->image_jpeg($filename);
                 }
-                when (/^p[bn]m$/) {
+                when (/^p[bn]m$/xsm) {
                     $imgobj = $pdf->image_pnm($filename);
                 }
                 when ('gif') {
