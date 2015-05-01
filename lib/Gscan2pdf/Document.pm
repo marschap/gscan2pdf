@@ -1727,7 +1727,12 @@ sub _thread_get_file_info {
             $logger->info("$pages pages");
             $info{pages} = $pages;
         }
-        when (/TIFF[ ]image[ ]data/xsm) {
+
+        # A JPEG which I was unable to reproduce as a test case had what
+        # seemed to be a TIFF thumbnail which file -b reported, and therefore
+        # gscan2pdf attempted to import it as a TIFF. Therefore forcing the text
+        # to appear at the beginning of the file -b output.
+        when (/^TIFF[ ]image[ ]data/xsm) {
             $format = 'Tagged Image File Format';
             my $cmd = "tiffinfo \"$filename\"";
             $logger->info($cmd);
