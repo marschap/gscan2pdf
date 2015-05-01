@@ -261,6 +261,47 @@ sub _parse_tag_data {
     return;
 }
 
+sub djvu_text {
+    my ($self) = @_;
+
+    my $w          = $self->{w};
+    my $h          = $self->{h};
+    my $resolution = $self->{resolution};
+    my $string     = $EMPTY;
+
+    # Write the text boxes
+    for my $box ( $self->boxes ) {
+        my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
+        if ( $box->{type} eq 'page' ) {
+            ( $w, $h ) = ( $x2, $y2 );
+            $string .= sprintf '(page %d %d %d %d', $x1, $y1, $x2, $y2;
+            if ( defined $box->{text} ) {
+                $string .= $SPACE . _escape_text( $box->{text} );
+            }
+        }
+        else {
+            if ( $x1 == 0 and $y1 == 0 and not defined $x2 ) {
+                ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution );
+            }
+
+            $string .= sprintf "\n($box->{type} %d %d %d %d %s)", $x1,
+              $h - $y2, $x2,
+              $h - $y1, _escape_text( $box->{text} );
+        }
+    }
+    $string .= ")\n";
+    return $string;
+}
+
+# Escape backslashes and inverted commas
+# Surround with inverted commas
+sub _escape_text {
+    my ($txt) = @_;
+    $txt =~ s/\\/\\\\/gxsm;
+    $txt =~ s/"/\\\"/gxsm;
+    return "$DOUBLE_QUOTES$txt$DOUBLE_QUOTES";
+}
+
 sub to_png {
     my ( $self, $page_sizes ) = @_;
 

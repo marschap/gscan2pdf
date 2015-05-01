@@ -2392,38 +2392,16 @@ sub _add_text_to_djvu {
     my ( $self, $djvu, $dir, $pagedata ) = @_;
     if ( defined( $pagedata->{hocr} ) ) {
 
-        # Get the size
-        my $w          = $pagedata->{w};
-        my $h          = $pagedata->{h};
-        my $resolution = $pagedata->{resolution};
-
-        # Open djvusedtxtfile
+        # Write djvusedtxtfile
         my $djvusedtxtfile = File::Temp->new( DIR => $dir, SUFFIX => '.txt' );
-        open my $fh, '>:encoding(UTF8)',    ## no critic (RequireBriefOpen)
-          $djvusedtxtfile
+        open my $fh, '>:encoding(UTF8)', $djvusedtxtfile
           or croak( sprintf $d->get("Can't open file: %s"), $djvusedtxtfile );
-        _write_file( $self, $fh, $djvusedtxtfile, "(page 0 0 $w $h\n" )
+        _write_file( $self, $fh, $djvusedtxtfile, $pagedata->djvu_text )
           or return;
-
-        # Write the text boxes
-        for my $box ( $pagedata->boxes ) {
-            my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
-            my $txt = $box->{text};
-            if ( $x1 == 0 and $y1 == 0 and not defined $x2 ) {
-                ( $x2, $y2 ) = ( $w * $resolution, $h * $resolution );
-            }
-
-            # Escape any inverted commas
-            $txt =~ s/\\/\\\\/gxsm;
-            $txt =~ s/"/\\\"/gxsm;
-            printf {$fh} "\n(line %d %d %d %d \"%s\")", $x1, $h - $y2, $x2,
-              $h - $y1, $txt;
-        }
-        _write_file( $self, $fh, $djvusedtxtfile, ')' ) or return;
         close $fh
           or croak( sprintf $d->get("Can't close file: %s"), $djvusedtxtfile );
 
-        # Write djvusedtxtfile
+        # Run djvusedtxtfile
         my $cmd = "djvused '$djvu' -e 'select 1; set-txt $djvusedtxtfile' -s";
         $logger->info($cmd);
         my $status = system "echo $PROCESS_ID > $pagedata->{pidfile};$cmd";
@@ -2676,8 +2654,8 @@ sub _thread_save_text {
         # at appropriate positions
         my ( $oldx, $oldy );
         for my $box ( $page->boxes ) {
+            if ( not defined $box->{text} ) { next }
             my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
-            my $text = $box->{text};
             if ( defined $oldx and $x1 > $oldx ) {
                 _write_file( $self, $fh, $path, $SPACE ) or return;
             }
@@ -2685,7 +2663,7 @@ sub _thread_save_text {
                 _write_file( $self, $fh, $path, "\n" ) or return;
             }
             ( $oldx, $oldy ) = ( $x1, $y1 );
-            _write_file( $self, $fh, $path, $text ) or return;
+            _write_file( $self, $fh, $path, $box->{text} ) or return;
         }
         return if $_self->{cancel};
     }

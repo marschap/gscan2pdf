@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 15;
 
 BEGIN {
     use_ok('Gscan2pdf::Page');
@@ -46,6 +46,10 @@ $page->{hocr} = <<'EOS';
 EOS
 
 my @boxes = (
+    {
+        type => 'page',
+        bbox => [ 0, 0, 422, 61 ],
+    },
     {
         type   => 'word',
         id     => 1,
@@ -105,6 +109,10 @@ EOS
 
 @boxes = (
     {
+        type => 'page',
+        bbox => [ 0, 0, 494, 57 ],
+    },
+    {
         type   => 'word',
         id     => 1,
         lineid => 1,
@@ -151,6 +159,10 @@ EOS
 
 @boxes = (
     {
+        type => 'page',
+        bbox => [ 0, 0, 274, 58 ],
+    },
+    {
         type => 'line',
         id   => 1,
         bbox => [ 3, 1, 271, 47 ],
@@ -172,6 +184,10 @@ $page->{hocr} = <<'EOS';
 EOS
 
 @boxes = (
+    {
+        type => 'page',
+        bbox => [ 0, 0, 202, 114 ],
+    },
     {
         type => 'line',
         id   => 1,
@@ -200,6 +216,10 @@ EOS
 
 @boxes = (
     {
+        type => 'page',
+        bbox => [ 0, 0, 422, 61 ],
+    },
+    {
         type => 'line',
         id   => 1,
         bbox => [ 1, 14, 420, 59 ],
@@ -226,6 +246,10 @@ EOS
 
 @boxes = (
     {
+        type => 'page',
+        bbox => [ 0, 0, 422, 61 ],
+    },
+    {
         type => 'line',
         id   => 1,
         bbox => [ 1, 15, 420, 60 ],
@@ -233,6 +257,26 @@ EOS
     }
 );
 is_deeply( [ $page->boxes ], \@boxes, 'Boxes from cuneiform 1.0.0' );
+
+#########################
+
+my $expected = <<'EOS';
+(page 0 0 422 61
+(line 1 1 420 46 "The quick brown fox"))
+EOS
+
+is_deeply( $page->djvu_text, $expected, 'djvu_text from cuneiform 1.0.0' );
+
+#########################
+
+$page->{hocr} = 'The quick brown fox';
+$page->{w}    = 422;
+$page->{h}    = 61;
+$expected     = <<'EOS';
+(page 0 0 422 61 "The quick brown fox")
+EOS
+
+is_deeply( $page->djvu_text, $expected, 'djvu_text from simple text' );
 
 #########################
 
