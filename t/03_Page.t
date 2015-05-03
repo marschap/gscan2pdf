@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 16;
+use Test::More tests => 19;
 
 BEGIN {
     use_ok('Gscan2pdf::Page');
@@ -304,7 +304,7 @@ is_deeply( $page->boxes, $boxes, 'Boxes from cuneiform 1.0.0' );
 
 my $expected = <<'EOS';
 (page 0 0 422 61
-  (line 1 15 420 60 "The quick brown fox"))
+  (line 1 1 420 46 "The quick brown fox"))
 EOS
 
 is_deeply( $page->djvu_text, $expected, 'djvu_text from cuneiform 1.0.0' );
@@ -354,17 +354,115 @@ EOS
 
 $expected = <<'EOS';
 (page 0 0 2236 3185
-  (column 157 80 1725 174
-    (para 157 84 1725 171
-      (line 157 84 1725 171
-        (word 157 90 241 155 "28")
-        (word 533 86 645 152 "LA")
-        (word 695 86 1188 171 "MARQUISE")
-        (word 1229 87 1365 151 "DE")
-        (word 1409 84 1725 154 "GANGE")))))
+  (column 157 3011 1725 3105
+    (para 157 3014 1725 3101
+      (line 157 3014 1725 3101
+        (word 157 3030 241 3095 "28")
+        (word 533 3033 645 3099 "LA")
+        (word 695 3014 1188 3099 "MARQUISE")
+        (word 1229 3034 1365 3098 "DE")
+        (word 1409 3031 1725 3101 "GANGE")))))
 EOS
 
 is_deeply( $page->djvu_text, $expected, 'djvu_text with hiearchy' );
+
+#########################
+
+$page->{hocr} = <<'EOS';
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <title>
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name='ocr-system' content='tesseract 3.03' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocrx_word'/>
+</head>
+<body>
+  <div class='ocr_page' id='page_1' title='image "0020_1L.tif"; bbox 0 0 2236 3185; ppageno 0'>
+   <div class='ocr_carea' id='block_1_5' title="bbox 1808 552 2290 1020">
+    <p class='ocr_par' dir='ltr' id='par_1_6' title="bbox 1810 552 2288 1020">
+     <span class='ocr_line' id='line_1_9' title="bbox 1810 552 2288 1020; baseline 0 2487"><span class='ocrx_word' id='word_1_17' title='bbox 1810 552 2288 1020; x_wconf 95' lang='deu' dir='ltr'> </span> 
+     </span>
+    </p>
+   </div>
+  </div>
+ </body>
+</html>
+EOS
+
+is_deeply( $page->djvu_text, '', 'ignore hierachy with no contents' );
+
+#########################
+
+$page->{hocr} = <<'EOS';
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <title>
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name='ocr-system' content='tesseract 3.03' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocrx_word'/>
+</head>
+<body>
+  <div class='ocr_page' id='page_1' title='image "/tmp/gscan2pdf-Ay0J/nUVvJ79mSJ.pnm"; bbox 0 0 2480 3507; ppageno 0'>
+   <div class='ocr_carea' id='block_1_1' title="bbox 295 263 546 440">
+    <p class='ocr_par' dir='ltr' id='par_1_1' title="bbox 297 263 545 440">
+     <span class='ocr_line' id='line_1_1' title="bbox 368 263 527 310; baseline 0 3197"><span class='ocrx_word' id='word_1_1' title='bbox 368 263 527 310; x_wconf 95' lang='deu' dir='ltr'> </span> 
+     </span>
+     <span class='ocr_line' id='line_1_2' title="bbox 297 310 545 440; baseline 0 0"><span class='ocrx_word' id='word_1_2' title='bbox 297 310 545 440; x_wconf 95' lang='deu' dir='ltr'>  </span> 
+     </span>
+    </p>
+   </div>
+  </div>
+ </body>
+</html>
+EOS
+
+is_deeply( $page->djvu_text, '', 'ignore hierachy with no contents 2' );
+
+#########################
+
+$page->{hocr} = <<'EOS';
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <title>
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name='ocr-system' content='tesseract 3.03' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocrx_word'/>
+</head>
+<body>
+  <div class='ocr_page' id='page_1' title='image "/tmp/gscan2pdf-jzAZ/YHm7vp6nUp.pnm"; bbox 0 0 2480 3507; ppageno 0'>
+   <div class='ocr_carea' id='block_1_10' title="bbox 305 2194 2082 2573">
+    <p class='ocr_par' dir='ltr' id='par_1_13' title="bbox 306 2195 2079 2568">
+     <span class='ocr_line' id='line_1_43' title="bbox 311 2382 1920 2428; baseline -0.009 -3">
+      <span class='ocrx_word' id='word_1_401' title='bbox 1198 2386 1363 2418; x_wconf 77' lang='deu' dir='ltr'><strong>Kauﬂ&lt;raft</strong></span>
+     </span>
+    </p>
+   </div>
+  </div>
+ </body>
+</html>
+EOS
+
+$expected = <<'EOS';
+(page 0 0 2480 3507
+  (column 305 934 2082 1313
+    (para 306 939 2079 1312
+      (line 311 1079 1920 1125
+        (word 1198 1089 1363 1121 "Kauﬂ<raft")))))
+EOS
+
+is_deeply( $page->djvu_text, $expected, 'deal with encoded characters' );
 
 #########################
 

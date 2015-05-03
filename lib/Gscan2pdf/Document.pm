@@ -2401,12 +2401,16 @@ sub _write_file {
 sub _add_text_to_djvu {
     my ( $self, $djvu, $dir, $pagedata ) = @_;
     if ( defined( $pagedata->{hocr} ) ) {
+        my $txt = $pagedata->djvu_text;
+        if ( $txt eq $EMPTY ) { return }
 
         # Write djvusedtxtfile
         my $djvusedtxtfile = File::Temp->new( DIR => $dir, SUFFIX => '.txt' );
+        $logger->debug( $pagedata->{hocr} );
+        $logger->debug( $pagedata->djvu_text );
         open my $fh, '>:encoding(UTF8)', $djvusedtxtfile
           or croak( sprintf $d->get("Can't open file: %s"), $djvusedtxtfile );
-        _write_file( $self, $fh, $djvusedtxtfile, $pagedata->djvu_text )
+        _write_file( $self, $fh, $djvusedtxtfile, $txt )
           or return;
         close $fh
           or croak( sprintf $d->get("Can't close file: %s"), $djvusedtxtfile );

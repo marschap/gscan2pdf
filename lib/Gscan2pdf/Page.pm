@@ -21,6 +21,7 @@ Readonly my $CM_PER_INCH    => 2.54;
 Readonly my $MM_PER_CM      => 10;
 Readonly my $MM_PER_INCH    => $CM_PER_INCH * $MM_PER_CM;
 Readonly my $PAGE_TOLERANCE => 0.02;
+Readonly my $EMPTY_LIST     => -1;
 my $EMPTY         = q{};
 my $SPACE         = q{ };
 my $DOUBLE_QUOTES = q{"};
@@ -140,24 +141,28 @@ sub thaw {
 
 sub boxes {
     my ($self) = @_;
-
-    # Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
-    # where decode_entities doesn't work cleanly, so encode/decode to finally
-    # get good UTF-8
-    my $hocr =
-      decode_utf8(
-        encode_utf8( HTML::Entities::decode_entities( $self->{hocr} ) ) );
-
+    my $hocr = $self->{hocr};
     if ( $hocr =~ /<body>([\s\S]*)<\/body>/xsm ) {
-        return _parse_hocr($hocr);
+        my $boxes = _parse_hocr($hocr);
+        _prune_empty_branches($boxes);
+        return $boxes;
     }
     return [
         {
             type => 'page',
             bbox => [ 0, 0, $self->{w}, $self->{h} ],
-            text => $hocr
+            text => _decode_hocr($hocr)
         }
     ];
+}
+
+# Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
+# where decode_entities doesn't work cleanly, so encode/decode to finally
+# get good UTF-8
+
+sub _decode_hocr {
+    my ($hocr) = @_;
+    return decode_utf8( encode_utf8( HTML::Entities::decode_entities($hocr) ) );
 }
 
 sub _parse_hocr {
@@ -219,8 +224,8 @@ sub _parse_hocr {
                             $data->{id} = $attrs{id};
                         }
 
-                        # if we have a previous one, add the new one to the
-                        # contents of the previous one
+                        # if we have previous data, add the new data to the
+                        # contents of the previous data point
                         if (    defined $stack[-1]
                             and $data != $stack[-1]
                             and defined $data->{bbox} )
@@ -245,7 +250,7 @@ sub _parse_hocr {
             }
             when ('T') {
                 if ( $token->[1] !~ /^\s*$/xsm ) {
-                    $data->{text} = $token->[1];
+                    $data->{text} = _decode_hocr( $token->[1] );
                     chomp $data->{text};
                 }
             }
@@ -274,6 +279,30 @@ sub _parse_tag_data {
         $data->{base} = $data->{baseline} + defined $data->{textangle}
           ? $data->{bbox}[3]    ## no critic (ProhibitMagicNumbers)
           : $data->{bbox}[2];
+    }
+    return;
+}
+
+sub _prune_empty_branches {
+    my ($boxes) = @_;
+    if ( defined $boxes ) {
+        my $i = 0;
+        while ( $i <= $#{$boxes} ) {
+            my $child = $boxes->[$i];
+            _prune_empty_branches( $child->{contents} );
+            if ( $#{ $child->{contents} } == $EMPTY_LIST ) {
+                delete $child->{contents};
+            }
+            if ( $#{$boxes} > $EMPTY_LIST
+                and not( defined $child->{contents} or defined $child->{text} )
+              )
+            {
+                splice @{$boxes}, $i, 1;
+            }
+            else {
+                $i++;
+            }
+        }
     }
     return;
 }
@@ -307,26 +336,32 @@ sub _boxes2string {
 }
 
 sub djvu_text {
-    my ( $self, $pointer, $indent ) = @_;
+    my ($self) = @_;
+    my $boxes = $self->boxes;
+    if ( defined $boxes and $#{$boxes} > $EMPTY_LIST ) {
+        my $h =
+          ( $boxes->[0]{type} eq 'page' ) ? $boxes->[0]{bbox}[-1] : $self->{h};
+        return _boxes2djvu( $boxes, 0, $h );
+    }
+    return $EMPTY;
+}
 
-    my $w          = $self->{w};
-    my $h          = $self->{h};
-    my $resolution = $self->{resolution};
-    my $string     = $EMPTY;
-    if ( not defined $indent )  { $indent  = 0 }
-    if ( not defined $pointer ) { $pointer = $self->boxes }
+sub _boxes2djvu {
+    my ( $pointer, $indent, $h ) = @_;
+    my $string = $EMPTY;
 
     # Write the text boxes
     for my $box ( @{$pointer} ) {
         my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
         if ( $indent != 0 ) { $string .= "\n" }
         for ( 1 .. $indent ) { $string .= $SPACE }
-        $string .= sprintf "($box->{type} %d %d %d %d", $x1, $y1, $x2, $y2;
+        $string .= sprintf "($box->{type} %d %d %d %d", $x1, $h - $y2, $x2,
+          $h - $y1;
         if ( defined $box->{text} ) {
             $string .= $SPACE . _escape_text( $box->{text} );
         }
         if ( defined $box->{contents} ) {
-            $string .= $self->djvu_text( $box->{contents}, $indent + 2 );
+            $string .= _boxes2djvu( $box->{contents}, $indent + 2, $h );
         }
         $string .= ')';
     }
