@@ -4651,7 +4651,6 @@ sub import_scan {
                     format     => 'Portable anymap',
                     delete     => $options{delete},
                     dir        => $session,
-                    window     => $window,
                 );
                 my $index =
                   $slist->add_page( $gpage, $options{page}, update_uimanager );
