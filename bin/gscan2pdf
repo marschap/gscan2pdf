@@ -547,8 +547,7 @@ EOS
     return;
 }
 
-# Perl-Critic is confused by @_ in finally{} See P::C bug #79138
-sub read_config_file {    ## no critic (RequireArgUnpacking)
+sub read_config_file {
     my ($filename) = @_;
     $logger->info("Reading config from $filename");
     if ( not -r $filename ) { system "touch $filename" }
