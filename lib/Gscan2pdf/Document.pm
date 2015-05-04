@@ -1126,6 +1126,10 @@ sub open_session {
         # Populate the SimpleList
         try {
             my $page = Gscan2pdf::Page->new( %{ $session{$pagenum} } );
+
+            # at some point the main window widget was being stored on the
+            # Page object. Restoring this and dumping it via Dumper segfaults.
+            if ( defined $page->{window} ) { delete $page->{window} }
             my $thumb =
               get_pixbuf( $page->{filename}, $self->{heightt},
                 $self->{widtht} );
