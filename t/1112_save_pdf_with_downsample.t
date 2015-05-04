@@ -60,9 +60,9 @@ Gtk2->main;
 is( -s 'test.pdf' > -s 'test2.pdf', 1,
     'downsampled PDF smaller than original' );
 system('pdfimages test2.pdf x');
-is(
+like(
     `identify -format '%m %G %g %z-bit %r' x-000.pbm`,
-    "PBM 226x28 226x28+0+0 1-bit DirectClass Gray ",
+    qr/PBM 22\dx2\d 22\dx2\d[+]0[+]0 1-bit DirectClass Gray/,
     'downsampled'
 );
 
