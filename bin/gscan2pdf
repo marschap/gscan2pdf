@@ -5091,26 +5091,16 @@ EOS
     $about->set_website('http://gscan2pdf.sf.net');
     my $translators =
       <<'EOS'; # inverted commas required around EOS because of UTF-8 in $translators
-Pavel Borecki
-tjamob
-Piotr Strębski
-Max lenders
-Christophe CHAUVET
-Adolfo Jayme
-Wojciech Górnaś
+gorkaazk
 Tobias Bannert
-Eugene Marshal
-Eric Spierings
-Milo Casagrande
-Raúl González Duque
-R120X
-NSV
-Alexandre Prokoudine
-Paul Wohlhart
-Pierre Slamich
-Tiago Silva
-Igor Zubarev
-Jarosław Ogrodnik
+Peter
+JDammann
+Pavel Borecki
+Ettore Atalan
+Aleksey Kabanov
+Max lenders
+Christoph Langner
+Matthias Gutjahr
 EOS
     $about->set_translator_credits($translators);
     $about->set_artists('lodp, Andreas E.');
