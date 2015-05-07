@@ -29,12 +29,14 @@ use Try::Tiny;
 use Set::IntSpan 1.10;               # For size method for page numbering issues
 use PDF::API2;
 use English qw( -no_match_vars );    # for $PROCESS_ID, $INPUT_RECORD_SEPARATOR
+                                     # $CHILD_ERROR
 use Readonly;
 Readonly our $POINTS_PER_INCH => 72;
 Readonly my $_POLL_INTERVAL   => 100;    # ms
 Readonly my $THUMBNAIL        => 100;    # pixels
 Readonly my $YEAR             => 5;
 Readonly my $BOX_TOLERANCE    => 5;
+Readonly my $BITS_PER_BYTE    => 8;
 
 BEGIN {
     use Exporter ();
@@ -1285,8 +1287,10 @@ sub open_three {
 
     # we create a symbol for the err because open3 will not do that for us
     my $err = gensym();
-    open3( undef, my $reader, $err, $cmd );
-    return ( slurp($reader), slurp($err) );
+    my $pid = open3( undef, my $reader, $err, $cmd );
+    waitpid $pid, 0;
+    my $child_exit_status = $CHILD_ERROR >> $BITS_PER_BYTE;
+    return ( slurp($reader), slurp($err), $child_exit_status );
 }
 
 # Check that a command exists
@@ -1835,44 +1839,7 @@ sub _thread_import_file {
             }
         }
         when ('Portable Document Format') {
-
-            # Extract images from PDF
-            if ( $options{last} >= $options{first} and $options{first} > 0 ) {
-                my $cmd =
-"pdfimages -f $options{first} -l $options{last} \"$options{info}->{path}\" x";
-                $logger->info($cmd);
-                my $status = system "echo $PROCESS_ID > $options{pidfile};$cmd";
-                return if $_self->{cancel};
-                if ($status) {
-                    $self->{status} = 1;
-                    $self->{message} =
-                      $d->get('Error extracting images from PDF');
-                }
-
-                # Import each image
-                my @images = glob 'x-???.???';
-                $self->{page_queue}->enqueue( $#images + 1 );
-                foreach (@images) {
-                    my ($ext) = /([^.]+)$/xsm;
-                    try {
-                        my $page = Gscan2pdf::Page->new(
-                            filename => $_,
-                            dir      => $options{dir},
-                            delete   => TRUE,
-                            format   => $format{$ext},
-                        );
-                        $self->{page_queue}
-                          ->enqueue( $page->to_png($paper_sizes)->freeze );
-                    }
-                    catch {
-                        $logger->error(
-                            "Caught error extracting images from PDF: $_");
-                        $self->{status} = 1;
-                        $self->{message} =
-                          $d->get('Error extracting images from PDF');
-                    };
-                }
-            }
+            _thread_import_pdf( $self, %options );
         }
         when ('Tagged Image File Format') {
 
@@ -1954,6 +1921,50 @@ sub _thread_import_file {
                 $logger->error("Caught error writing to $options{dir}: $_");
                 $self->{status}  = 1;
                 $self->{message} = "Error: unable to write to $options{dir}.";
+            };
+        }
+    }
+    return;
+}
+
+sub _thread_import_pdf {
+    my ( $self, %options ) = @_;
+
+    # Extract images from PDF
+    if ( $options{last} >= $options{first} and $options{first} > 0 ) {
+        my $cmd =
+"pdfimages -f $options{first} -l $options{last} \"$options{info}->{path}\" x";
+        $logger->info($cmd);
+        $cmd = "echo $PROCESS_ID > $options{pidfile};$cmd";
+        my ( $out, $err, $status ) = open_three($cmd);
+        return if $_self->{cancel};
+        if ($status) {
+            $self->{status}  = 1;
+            $self->{message} = $d->get('Error extracting images from PDF');
+        }
+        else {
+            $self->{message} = "$out$err";
+        }
+
+        # Import each image
+        my @images = glob 'x-???.???';
+        $self->{page_queue}->enqueue( $#images + 1 );
+        foreach (@images) {
+            my ($ext) = /([^.]+)$/xsm;
+            try {
+                my $page = Gscan2pdf::Page->new(
+                    filename => $_,
+                    dir      => $options{dir},
+                    delete   => TRUE,
+                    format   => $format{$ext},
+                );
+                $self->{page_queue}
+                  ->enqueue( $page->to_png($paper_sizes)->freeze );
+            }
+            catch {
+                $logger->error("Caught error extracting images from PDF: $_");
+                $self->{status}  = 1;
+                $self->{message} = $d->get('Error extracting images from PDF');
             };
         }
     }
