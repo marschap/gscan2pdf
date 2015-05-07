@@ -16,7 +16,7 @@ SKIP: {
     my $unpaper = Gscan2pdf::Unpaper->new;
 
     use Log::Log4perl qw(:easy);
-    Log::Log4perl->easy_init($WARN);
+    Log::Log4perl->easy_init($FATAL);
     my $logger = Log::Log4perl::get_logger;
     Gscan2pdf::Document->setup($logger);
 

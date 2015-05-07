@@ -12,7 +12,7 @@ BEGIN {
 Glib::set_application_name('gscan2pdf');
 
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($WARN);
+Log::Log4perl->easy_init($ERROR);
 
 # Create test image
 system('convert rose: test.pnm');
