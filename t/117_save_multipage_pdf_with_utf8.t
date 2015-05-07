@@ -24,7 +24,7 @@ my $n = 3;
 my @pages;
 
 my %options;
-$options{font} = `fc-list : file | grep ttf | head -n 1`;
+$options{font} = `fc-list : file | grep ttf 2> /dev/null | head -n 1`;
 chomp $options{font};
 $options{font} =~ s/: $//;
 
