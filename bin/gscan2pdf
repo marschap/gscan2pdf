@@ -15,7 +15,7 @@
 #    Update translators in credits (https://launchpad.net/gscan2pdf/+topcontributors)
 #    Check a locale with LC_ALL=de_DE LC_MESSAGES=de_DE LC_CTYPE=de_DE LANG=de_DE LANGUAGE=de_DE bin/gscan2pdf --log=log --locale=<wherever the locale directory is>
 #    Check $VERSION. If necessary bump with something like
-#     xargs sed -i "s/\(\$VERSION *= \)'1\.2\.7'/\1'1.3.0'/" < MANIFEST
+#     xargs sed -i "s/\(\$VERSION *= \)'1\.3\.0'/\1'1.3.1'/" < MANIFEST
 #    Make appropriate updates to ../debian/changelog
 # 2.  perl Makefile.PL
 #     make rpmdist debdist
@@ -116,7 +116,7 @@ Readonly my $_1MB                    => $_1KB * $_1KB;
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
-my $VERSION   = '1.3.0';
+my $VERSION   = '1.3.1';
 
 # Image border to ensure that a scaled to fit image gets no scrollbars
 my $border = 1;
