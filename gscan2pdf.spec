@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.3.0
+Version: 1.3.1
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -85,7 +85,9 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Fri Jan 30 2015 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sun May 10 2015 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    New Depends: liblinux-distribution-perl, libfilesys-df-perl
   - New upstream release
     Closes: #774099
     (avoid leading and trailing blanks in expanded filename template)
