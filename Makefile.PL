@@ -60,7 +60,8 @@ WriteMakefile(
         List::MoreUtils        => 0,
         Linux::Distribution    => 0,
     },
-    clean => { FILES => '$(SOURCE_TIDY)' },
+    clean => { FILES    => '$(SOURCE_TIDY)' },
+    dist  => { COMPRESS => 'xz -9', SUFFIX => '.xz', },
     (
         $] >= 5.005
         ?    ## Add these new keywords supported since 5.005
