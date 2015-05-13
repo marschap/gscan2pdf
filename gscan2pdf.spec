@@ -1,12 +1,12 @@
 Name:      gscan2pdf
-Version: 1.3.1
+Version: 1.3.2
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
 Group:     Applications/Publishing
 License:   GPL
 URL:       http://%{name}.sourceforge.net/
-Source0:   %{name}-%{version}.tar.gz
+Source0:   %{name}-%{version}.tar.xz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
 
@@ -85,7 +85,8 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sun May 10 2015 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Wed May 13 2015 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
   - New upstream release
     New Depends: liblinux-distribution-perl, libfilesys-df-perl
   - New upstream release

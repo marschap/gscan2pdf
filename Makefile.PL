@@ -159,10 +159,9 @@ debdist : tardist
 	$(RM_RF) /tmp/$(NAME)
 	$(MKPATH) /tmp/$(NAME)
 	cp $(NAME)-$(VERSION).tar.xz /tmp/$(NAME)/$(NAME)_$(VERSION).orig.tar.xz
-	cd /tmp/$(NAME) && tar xvfz $(NAME)_$(VERSION).orig.tar.xz
+	cd /tmp/$(NAME) && tar xvfJ $(NAME)_$(VERSION).orig.tar.xz
 	cd /tmp/$(NAME)/$(NAME)-$(VERSION) && debuild
 	$(CP) /tmp/$(NAME)/$(NAME)_$(VERSION)*_all.deb \
-              /tmp/$(NAME)/$(NAME)_$(VERSION)*.diff.gz \
               /tmp/$(NAME)/$(NAME)_$(VERSION)*.dsc \
               /tmp/$(NAME)/$(NAME)_$(VERSION).orig.tar.xz .
 
