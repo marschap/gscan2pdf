@@ -30,13 +30,15 @@ use Set::IntSpan 1.10;               # For size method for page numbering issues
 use PDF::API2;
 use English qw( -no_match_vars );    # for $PROCESS_ID, $INPUT_RECORD_SEPARATOR
                                      # $CHILD_ERROR
+use POSIX qw(:sys_wait_h);
 use Readonly;
-Readonly our $POINTS_PER_INCH => 72;
-Readonly my $_POLL_INTERVAL   => 100;    # ms
-Readonly my $THUMBNAIL        => 100;    # pixels
-Readonly my $YEAR             => 5;
-Readonly my $BOX_TOLERANCE    => 5;
-Readonly my $BITS_PER_BYTE    => 8;
+Readonly our $POINTS_PER_INCH             => 72;
+Readonly my $_POLL_INTERVAL               => 100;    # ms
+Readonly my $THUMBNAIL                    => 100;    # pixels
+Readonly my $YEAR                         => 5;
+Readonly my $BOX_TOLERANCE                => 5;
+Readonly my $BITS_PER_BYTE                => 8;
+Readonly my $ALL_PENDING_ZOMBIE_PROCESSES => -1;
 
 BEGIN {
     use Exporter ();
@@ -45,7 +47,7 @@ BEGIN {
     $VERSION = '1.3.1';
 
     use base qw(Exporter Gtk2::Ex::Simple::List);
-    %EXPORT_TAGS = ();                   # eg: TAG => [ qw!name1 name2! ],
+    %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
 
     # your exported package globals go here,
     # as well as any optionally exported functions
@@ -1288,7 +1290,7 @@ sub open_three {
     # we create a symbol for the err because open3 will not do that for us
     my $err = gensym();
     my $pid = open3( undef, my $reader, $err, $cmd );
-    waitpid $pid, 0;
+    waitpid $ALL_PENDING_ZOMBIE_PROCESSES, WNOHANG;
     my $child_exit_status = $CHILD_ERROR >> $BITS_PER_BYTE;
     return ( slurp($reader), slurp($err), $child_exit_status );
 }

@@ -18,10 +18,11 @@ use Gscan2pdf::Scanner::Options;
 use Cwd;
 use File::Spec;
 use Readonly;
-Readonly my $_POLL_INTERVAL   => 100;    # ms
-Readonly my $_100             => 100;
-Readonly my $_SANE_STATUS_EOF => 5;      # or we could use Sane
-Readonly my $_1KB             => 1024;
+Readonly my $_POLL_INTERVAL               => 100;    # ms
+Readonly my $_100                         => 100;
+Readonly my $_SANE_STATUS_EOF             => 5;      # or we could use Sane
+Readonly my $_1KB                         => 1024;
+Readonly my $ALL_PENDING_ZOMBIE_PROCESSES => -1;
 
 our $VERSION = '1.3.1';
 
@@ -576,13 +577,8 @@ sub _watch_cmd {
                             $options{finished_callback}->( $stdout, $stderr );
                         }
                         $logger->info('Waiting to reap process');
-
-             # -1 indicates a non-blocking wait for all pending zombie processes
-                        $logger->info(
-                            'Reaped PID ',
-                            waitpid -1,    ## no critic (ProhibitMagicNumbers)
-                            WNOHANG
-                        );
+                        $logger->info( 'Reaped PID ',
+                            waitpid $ALL_PENDING_ZOMBIE_PROCESSES, WNOHANG );
                         return Glib::SOURCE_REMOVE;
                     }
                     return Glib::SOURCE_CONTINUE;

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 24;
+use Test::More tests => 25;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
 
@@ -93,6 +93,11 @@ is_deeply(
 );
 is( $slist->pages_possible( 2, 1 ),
     4, 'pages_possible finite forwards starting in middle of range2' );
+
+#########################
+
+like( Gscan2pdf::Document::open_three('fc-list : family style file'),
+    qr/\w+/, 'open_three produces some output from fc-list' );
 
 #########################
 
