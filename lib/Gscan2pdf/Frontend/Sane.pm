@@ -20,7 +20,7 @@ Readonly my $_16_BIT        => 16;
 Readonly my $MAXVAL_16_BIT  => 2**$_16_BIT - 1;
 my $EMPTY = q{};
 
-our $VERSION = '1.3.1';
+our $VERSION = '1.3.2';
 
 my $_self;
 my ( $prog_name, $logger );
