@@ -114,7 +114,7 @@ rpmdist : $(NAME).spec $(NAME).Suse.spec tardist
 	$(MKPATH) rpm rpm/SPECS rpm/SOURCES rpm/BUILD rpm/RPMS rpm/SRPMS \
                                                   rpm/RPMS/noarch || /bin/true
 	$(CP) $(NAME).spec $(NAME).Suse.spec rpm/SPECS/
-	$(CP) $(NAME)-$(VERSION).tar.gz rpm/SOURCES/$(NAME)-$(VERSION).tar.gz
+	$(CP) $(NAME)-$(VERSION).tar.xz rpm/SOURCES/$(NAME)-$(VERSION).tar.xz
 	( cd rpm/SPECS; \
 	  rpmbuild --nodeps --define='_topdir $(PWD)/rpm' -ba $(NAME).spec; \
 	  rpmbuild --nodeps --define='_topdir $(PWD)/rpm' --define 'dist .Suse' -ba $(NAME).Suse.spec )
@@ -155,24 +155,16 @@ $(NAME).spec $(NAME).Suse.spec : bin/$(NAME) debian/changelog
 	sed 's/^$(NAME).*//' < debian/changelog | \
          sed 's/^ --.*//' | sed 's/^  \*/  -/' | sed '/^$$/d' >> $@
 
-ppa : tardist
-	$(RM_RF) /tmp/$(NAME)
-	$(MKPATH) /tmp/$(NAME)
-	cp $(NAME)-$(VERSION).tar.gz /tmp/$(NAME)/$(NAME)_$(VERSION).orig.tar.gz
-	cd /tmp/$(NAME) && tar xvfz $(NAME)_$(VERSION).orig.tar.gz
-	cd /tmp/$(NAME)/$(NAME)-$(VERSION) && debuild -S -sa
-	dput $(NAME)-ppa /tmp/$(NAME)/$(NAME)_$(VERSION)*_source.changes
-
 debdist : tardist
 	$(RM_RF) /tmp/$(NAME)
 	$(MKPATH) /tmp/$(NAME)
-	cp $(NAME)-$(VERSION).tar.gz /tmp/$(NAME)/$(NAME)_$(VERSION).orig.tar.gz
-	cd /tmp/$(NAME) && tar xvfz $(NAME)_$(VERSION).orig.tar.gz
+	cp $(NAME)-$(VERSION).tar.xz /tmp/$(NAME)/$(NAME)_$(VERSION).orig.tar.xz
+	cd /tmp/$(NAME) && tar xvfz $(NAME)_$(VERSION).orig.tar.xz
 	cd /tmp/$(NAME)/$(NAME)-$(VERSION) && debuild
 	$(CP) /tmp/$(NAME)/$(NAME)_$(VERSION)*_all.deb \
               /tmp/$(NAME)/$(NAME)_$(VERSION)*.diff.gz \
               /tmp/$(NAME)/$(NAME)_$(VERSION)*.dsc \
-              /tmp/$(NAME)/$(NAME)_$(VERSION).orig.tar.gz .
+              /tmp/$(NAME)/$(NAME)_$(VERSION).orig.tar.xz .
 
 htdocs/index.html : bin/$(NAME)
 	[ -d htdocs ] || mkdir htdocs
@@ -182,7 +174,7 @@ remote-html : htdocs/index.html
 	scp htdocs/index.html ra28145,$(NAME)@web.sf.net:/home/groups/g/gs/$(NAME)/htdocs/
 
 file_releases :
-	scp $(NAME)-$(VERSION).tar.gz \
+	scp $(NAME)-$(VERSION).tar.xz \
          rpm/RPMS/noarch/$(NAME)-$(VERSION)* \
          rpm/SRPMS/$(NAME)-$(VERSION)* \
          /tmp/$(NAME)/$(NAME)_$(VERSION)*.deb \
