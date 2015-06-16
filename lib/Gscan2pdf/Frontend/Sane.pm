@@ -169,7 +169,9 @@ sub find_scan_options {
     _when_ready(
         $sentinel,
         sub {
-            if ( not $started ) { $started_callback->() }
+            if ( not $started and defined $started_callback ) {
+                $started_callback->();
+            }
             if ( $_self->{status} == SANE_STATUS_GOOD ) {
                 $finished_callback->($option_array);
             }
@@ -179,7 +181,7 @@ sub find_scan_options {
         },
         sub {
             if ( not $started ) {
-                $started_callback->();
+                if ( defined $started_callback ) { $started_callback->() }
                 $started = 1;
             }
             $running_callback->();
@@ -422,6 +424,8 @@ sub _thread_get_options {
 
 sub _thread_set_option {
     my ( $self, $index, $value, $new_options ) = @_;
+    my $opt = $self->{device_handle}->get_option_descriptor($index);
+    if ( $opt->{type} == SANE_TYPE_BOOL and $value eq '' ) { $value = 0 }
 
     # FIXME: Stringification to force this SV to have a PV slot.  This seems to
     # be necessary to get through Sane.pm's value checks.
@@ -430,7 +434,6 @@ sub _thread_set_option {
     my $info = $self->{device_handle}->set_option( $index, $value );
     if ( $logger->is_info ) {
         my $status = $Sane::STATUS;
-        my $opt    = $self->{device_handle}->get_option_descriptor($index);
         $logger->info(
 "sane_set_option $index ($opt->{name}) to $value returned status $status with info $info"
         );

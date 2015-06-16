@@ -728,6 +728,7 @@ sub set_option_widget {
         elsif ( defined $widget ) {
             given ($widget) {
                 when ( $widget->isa('Gtk2::CheckButton') ) {
+                    if ( $val eq '' ) { $val = 0 }
                     if ( $widget->get_active != $val ) {
                         $widget->set_active($val);
                         return $i;
