@@ -2,6 +2,8 @@
 
 * Suppress warnings when passed boolean as empty string
   Closes LP: #844582 ("Invalid argument" when trying to scan)
+* Moved config file format to JSON. JSON::PP is a core module,
+  so this does not create a new dependency.
 
 
 1.3.2 (13.05.2015):

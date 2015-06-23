@@ -29,6 +29,7 @@ icons/stock-rotate-270.svg
 icons/stock-rotate-90.svg
 icons/stock-selection-all-16.png
 lib/Gscan2pdf/Canvas.pm
+lib/Gscan2pdf/Config.pm
 lib/Gscan2pdf/Cuneiform.pm
 lib/Gscan2pdf/Dialog.pm
 lib/Gscan2pdf/Dialog/Renumber.pm
@@ -216,6 +217,7 @@ t/174_open_crashed_session.t
 t/175_open_session2.t
 t/18_PageRange.t
 t/19_Canvas.t
+t/20_Config.t
 t/211_rotate.t
 t/212_cancel_rotate.t
 t/213_rotate_with_error.t

@@ -57,6 +57,7 @@ use Gscan2pdf::Cuneiform;
 use Gscan2pdf::Unpaper;
 use Gscan2pdf::Dialog::Renumber;
 use Gscan2pdf::Canvas;
+use Gscan2pdf::Config;
 use Sane 0.05;    # To get SANE_* enums
 use Gtk2::ImageView;
 use Gtk2::Ex::Simple::List;
@@ -68,7 +69,6 @@ use File::Copy;
 use File::Temp;        # To create temporary files
 use File::Path qw(remove_tree);
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Config::General 2.40;
 use PDF::API2;
 use Getopt::Long;
 use Set::IntSpan 1.10;      # For size method for page numbering issues
@@ -141,9 +141,15 @@ local $SIG{__WARN__} = sub {
     $logger->warn(@_);
 };
 
-my ( %SETTING, $conf );
 my $rc = "$ENV{'HOME'}/.$prog_name";
-read_config_file($rc);
+my %SETTING = Gscan2pdf::Config::read_config( $rc, $logger );
+Gscan2pdf::Config::add_defaults( \%SETTING );
+Gscan2pdf::Config::remove_invalid_paper( $SETTING{Paper} );
+
+# Delete the options cache if there is a new version of SANE
+Gscan2pdf::Config::check_sane_version( \%SETTING,
+    join( $DOT, Sane->get_version ),
+    $Sane::VERSION );
 
 set_up_test_mode();
 
@@ -544,174 +550,6 @@ EOS
     setlocale( LC_NUMERIC, 'C' );
     $logger->info( 'Using ', setlocale(LC_CTYPE), ' locale' );
     $logger->info( 'Startup LC_NUMERIC ', setlocale(LC_NUMERIC) );
-    return;
-}
-
-sub read_config_file {
-    my ($filename) = @_;
-    $logger->info("Reading config from $filename");
-    if ( not -r $filename ) { system "touch $filename" }
-    try {
-        $conf = Config::General->new(
-            -ConfigFile  => $filename,
-            -SplitPolicy => 'equalsign',
-            -UTF8        => 1,
-        );
-    }
-    catch {
-        $logger->error(
-            $d->get(
-"Error: unable to load settings.\nBacking up settings\nReverting to defaults"
-            )
-        );
-        move( $filename, "$filename.old" );
-    }
-    finally {
-        if ( not @_ ) { %SETTING = $conf->getall }
-    };
-
-    my %default_settings = (
-        'window_width'      => 800,
-        'window_height'     => 600,
-        'window_maximize'   => TRUE,
-        'thumb panel'       => 100,
-        'Page range'        => 'all',
-        'layout'            => 'single',
-        'downsample'        => FALSE,
-        'downsample dpi'    => 150,
-        'threshold tool'    => 80,
-        'unsharp radius'    => 0,
-        'unsharp sigma'     => 1,
-        'unsharp amount'    => 1,
-        'unsharp threshold' => 0.05,
-        'cache options'     => TRUE,
-        'restore window'    => TRUE,
-        'startup warning'   => FALSE,
-        'date offset'       => 0,
-        'pdf compression'   => 'auto',
-        'quality'           => 75,
-        'pages to scan'     => 1,
-        'unpaper on scan'   => TRUE,
-        'OCR on scan'       => TRUE,
-        'frontend'          => 'libsane-perl',
-        'rotate facing'     => 0,
-        'rotate reverse'    => 0,
-        'default filename'  => '%a %y-%m-%d',
-        'scan prefix'       => $EMPTY,
-        'Blank threshold' => 0.005,    # Blank page standard deviation threshold
-        'Dark threshold'  => 0.12,     # Dark page mean threshold
-        'ocr engine' => 'tesseract',
-        'OCR output' =>
-          'replace',   # When a page is re-OCRed, replace old text with new text
-        'auto-open-scan-dialog' => TRUE,
-        'available-tmp-warning' => 10,
-        'Paper'                 => {
-            $d->get('A4') => {
-                x => 210,
-                y => 297,
-                l => 0,
-                t => 0,
-            },
-            $d->get('US Letter') => {
-                x => 216,
-                y => 279,
-                l => 0,
-                t => 0,
-            },
-            $d->get('US Legal') => {
-                x => 216,
-                y => 356,
-                l => 0,
-                t => 0,
-            },
-        },
-        user_defined_tools => ['gimp %i'],
-
-        # show the options marked with 1, hide those with 0
-        # for the others, see the value of default-option-visibility
-        'visible-scan-options' => {
-            mode                => 1,
-            compression         => 1,
-            resolution          => 1,
-            brightness          => 1,
-            gain                => 1,
-            contrast            => 1,
-            threshold           => 1,
-            speed               => 1,
-            'batch-scan'        => 1,
-            'wait-for-button'   => 1,
-            'button-wait'       => 1,
-            'calibration-cache' => 1,
-            source              => 1,
-            pagewidth           => 1,
-            pageheight          => 1,
-            'page-width'        => 1,
-            'page-height'       => 1,
-            'overscan-top'      => 1,
-            'overscan-bottom'   => 1,
-            adf_mode            => 1,
-            'adf-mode'          => 1,
-            'Paper size'        => 1,
-            x                   => 1,
-            y                   => 1,
-            l                   => 1,
-            t                   => 1,
-        },
-        'scan-reload-triggers' => qw(mode),
-    );
-    if (
-        defined $SETTING{frontend}
-        and (  $SETTING{frontend} eq 'scanimage-perl'
-            or $SETTING{frontend} eq 'scanadf-perl'
-            or $SETTING{frontend} eq 'scanimage.pl'
-            or $SETTING{frontend} eq
-            'scanadf.pl' )    # these frontends are just for testing purposes
-      )
-    {
-        delete $SETTING{frontend};
-    }
-    for ( keys %default_settings ) {
-        if ( not defined $SETTING{$_} ) {
-            $SETTING{$_} = $default_settings{$_};
-        }
-    }
-
-    remove_invalid_paper( $SETTING{Paper} );
-
-    # Delete the options cache if there is a new version of SANE
-    if (
-        (
-            defined $SETTING{'SANE version'}
-            and $SETTING{'SANE version'} ne join $DOT, Sane->get_version
-        )
-        or ( defined $SETTING{'libsane-perl version'}
-            and $SETTING{'libsane-perl version'} ne $Sane::VERSION )
-      )
-    {
-        if ( defined $SETTING{cache} ) { delete $SETTING{cache} }
-    }
-    $SETTING{'SANE version'} = join $DOT, Sane->get_version;
-    $SETTING{'libsane-perl version'} = $Sane::VERSION;
-    return;
-}
-
-sub remove_invalid_paper {
-    my ($hashref) = @_;
-    for my $paper ( keys %{$hashref} ) {
-        if ( $paper eq '<>' or $paper eq '</>' ) {
-            delete $hashref->{$paper};
-        }
-        else {
-            for (qw(x y t l)) {
-                if ( ref( $hashref->{$paper} ) ne 'HASH'
-                    and not defined $hashref->{$paper}{$_} )
-                {
-                    delete $hashref->{$paper};
-                    last;
-                }
-            }
-        }
-    }
     return;
 }
 
@@ -6322,8 +6160,7 @@ sub quit {
     }
 
     # Write config file
-    $conf->save_file( $rc, \%SETTING );
-    $logger->info("Wrote config to $ENV{'HOME'}/.$prog_name");
+    Gscan2pdf::Config::write_config( $rc, $logger, \%SETTING );
 
     kill_threads();
     $logger->debug('Quitting');
