@@ -94,7 +94,6 @@ sub add_defaults {
         'unsharp threshold' => 0.05,
         'cache options'     => TRUE,
         'restore window'    => TRUE,
-        'startup warning'   => FALSE,
         'date offset'       => 0,
         'pdf compression'   => 'auto',
         'quality'           => 75,

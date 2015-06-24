@@ -901,8 +901,12 @@ sub edit_paper {
         clicked => sub {
             my @rows = $slist->get_selected_indices;
             if ( $#rows == $#{ $slist->{data} } ) {
-                main::show_message_dialog( $window, 'error', 'close',
-                    $d->get('Cannot delete all paper sizes') );
+                main::show_message_dialog(
+                    parent  => $window,
+                    type    => 'error',
+                    buttons => 'close',
+                    text    => $d->get('Cannot delete all paper sizes')
+                );
             }
             else {
                 while (@rows) {
@@ -968,10 +972,10 @@ sub edit_paper {
                 and @{ $self->{ignored_paper_formats} } )
             {
                 main::show_message_dialog(
-                    $window,
-                    'warning',
-                    'close',
-                    $d->get(
+                    parent  => $window,
+                    type    => 'warning',
+                    buttons => 'close',
+                    text    => $d->get(
 'The following paper sizes are too big to be scanned by the selected device:'
                       )
                       . q{ }
@@ -1151,8 +1155,10 @@ sub multiple_values_button_callback {
     {
         if ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
             main::show_message_dialog(
-                $dialog, 'info', 'close',
-                $d->get(
+                parent  => $dialog,
+                type    => 'info',
+                buttons => 'close',
+                text    => $d->get(
 'Multiple unconstrained values are not currently supported. Please file a bug.'
                 )
             );
@@ -1163,8 +1169,10 @@ sub multiple_values_button_callback {
     }
     else {
         main::show_message_dialog(
-            $dialog, 'info', 'close',
-            $d->get(
+            parent  => $dialog,
+            type    => 'info',
+            buttons => 'close',
+            text    => $d->get(
 'Multiple non-numerical values are not currently supported. Please file a bug.'
             )
         );

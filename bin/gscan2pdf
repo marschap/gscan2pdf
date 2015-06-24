@@ -186,10 +186,10 @@ $logger->info("Using libsane-perl version $Sane::VERSION");
 
 if ($debug) { $logger->debug( Dumper( \%SETTING ) ) }
 
-# Just in case dependencies have changed, put put startup warning again
-if ( not defined $SETTING{version} or $SETTING{version} ne $VERSION ) {
-    $SETTING{'startup warning'} = TRUE;
-    if ( defined $SETTING{cache} ) { delete $SETTING{cache} }
+if ( ( not defined $SETTING{version} or $SETTING{version} ne $VERSION )
+    and defined $SETTING{cache} )
+{
+    delete $SETTING{cache};
 }
 $SETTING{version} = $VERSION;
 
@@ -1251,19 +1251,15 @@ EOS
     }
 
     # Put up warning if needed
-    if ( $SETTING{'startup warning'} and $msg ne $EMPTY ) {
-        my $dialog = Gtk2::Dialog->new( $d->get('Warning: missing packages'),
-            $window, 'modal', 'gtk-ok' => 'none' );
-        my $label = Gtk2::Label->new($msg);
-        $dialog->vbox->add($label);
-        my $cb = Gtk2::CheckButton->new_with_label(
-            $d->get("Don't show this message again") );
-        $cb->set_active(TRUE);
-        $dialog->vbox->add($cb);
-        $dialog->show_all;
-        $dialog->run;
-        if ( $cb->get_active ) { $SETTING{'startup warning'} = FALSE }
-        $dialog->destroy;
+    if ( $msg ne $EMPTY ) {
+        $msg = $d->get('Warning: missing packages') . "\n$msg";
+        show_message_dialog(
+            parent           => $window,
+            type             => 'modal',
+            buttons          => 'gtk-ok',
+            text             => $msg,
+            'store-response' => TRUE
+        );
     }
 
     # extract the toolbar
@@ -1408,8 +1404,12 @@ sub drag_data_received_callback {
 
         # quotes required to prevent File::Temp objects from being clobbered
         copy( "$info[2]->{filename}", "$new" )
-          or show_message_dialog( $window, 'error', 'close',
-            $d->get('Error copying page') );
+          or show_message_dialog(
+            parent  => $window,
+            type    => 'error',
+            buttons => 'close',
+            text    => $d->get('Error copying page')
+          );
 
         $info[2]->{filename} = $new;
         push @data, [@info];
@@ -1718,8 +1718,14 @@ sub scans_not_saved {
     my ($message) = @_;
     for ( @{ $slist->{data} } ) {
         if ( not $_->[2]{saved} ) {
-            my $response =
-              show_message_dialog( $window, 'question', 'ok-cancel', $message );
+            my $response = show_message_dialog(
+                parent             => $window,
+                type               => 'question',
+                buttons            => 'ok-cancel',
+                text               => $message,
+                'store-response'   => TRUE,
+                'stored-responses' => ['ok']
+            );
             if ( $response ne 'ok' ) {
                 return TRUE;
             }
@@ -1798,7 +1804,13 @@ sub add_filter {
 sub error_callback {
     my ($message) = @_;
     $logger->error($message);
-    show_message_dialog( $window, 'error', 'close', $message );
+    show_message_dialog(
+        parent           => $window,
+        type             => 'error',
+        buttons          => 'close',
+        text             => $message,
+        'store-response' => TRUE
+    );
     return;
 }
 
@@ -3107,8 +3119,13 @@ sub file_chooser_response_callback {
         if ( not -w dirname($filename)
             or ( -f $filename and not -w $filename ) )
         {
-            show_message_dialog( $dialog, 'error', 'close',
-                sprintf $d->get('File %s is read-only'), $filename );
+            my $text = sprintf $d->get('File %s is read-only'), $filename;
+            show_message_dialog(
+                parent  => $dialog,
+                type    => 'error',
+                buttons => 'close',
+                text    => $text
+            );
             return;
         }
 
@@ -3148,14 +3165,27 @@ sub file_chooser_response_callback {
 sub file_exists {
     my ( $file_chooser, $filename ) = @_;
     if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
-        show_message_dialog( $file_chooser, 'error', 'close',
-            sprintf $d->get('File %s is read-only'), $filename );
+        my $text = sprintf $d->get('File %s is read-only'), $filename;
+        show_message_dialog(
+            parent  => $file_chooser,
+            type    => 'error',
+            buttons => 'close',
+            text    => $text
+        );
         return TRUE;
     }
     elsif ( -e $filename ) {
-        my $response =
-          show_message_dialog( $file_chooser, 'question', 'ok-cancel',
-            sprintf $d->get("File %s exists.\nReally overwrite?"), $filename );
+        my $text = sprintf
+          $d->get("File %s exists.\nReally overwrite?"),
+          $filename;
+        my $response = show_message_dialog(
+            parent             => $file_chooser,
+            type               => 'question',
+            buttons            => 'ok-cancel',
+            text               => $text,
+            'store-response'   => TRUE,
+            'stored-responses' => ['ok']
+        );
         return TRUE if ( $response ne 'ok' );
     }
     return FALSE;
@@ -3594,8 +3624,12 @@ sub email {
                     }
                     $logger->info($mua_string);
                     if ( system $mua_string ) {
-                        show_message_dialog( $window, 'error', 'close',
-                            $d->get('Error creating email') );
+                        show_message_dialog(
+                            parent  => $window,
+                            type    => 'error',
+                            buttons => 'close',
+                            text    => $d->get('Error creating email')
+                        );
                     }
                 },
                 error_callback => \&error_callback
@@ -3979,7 +4013,13 @@ sub process_error_callback {
             $widget->set( 'device-list', \@device_list );
         }
     }
-    show_message_dialog( $widget, 'error', 'close', $msg );
+    show_message_dialog(
+        parent           => $widget,
+        type             => 'error',
+        buttons          => 'close',
+        text             => $msg,
+        'store-response' => TRUE
+    );
     return;
 }
 
@@ -4492,8 +4532,12 @@ sub import_scan {
                 my $index =
                   $slist->add_page( $gpage, $options{page}, update_uimanager );
                 if ( $index == $EMPTY_LIST ) {
-                    show_message_dialog( $windows, 'error', 'close',
-                        $d->get('Unable to load image') );
+                    show_message_dialog(
+                        parent  => $windows,
+                        type    => 'error',
+                        buttons => 'close',
+                        text    => $d->get('Unable to load image')
+                    );
                 }
                 else {
                     update_uimanager();
@@ -4634,8 +4678,13 @@ sub paste_selection {
 
             # stringify filename to prevent copy from mangling it
             if ( not copy( "$_->[2]{filename}", $new ) ) {
-                show_message_dialog( $window, 'error', 'close',
-                    $d->get( sprintf 'Error pasting image - %s', $ERRNO ) );
+                my $text = sprintf $d->get('Error pasting image - %s'), $ERRNO;
+                show_message_dialog(
+                    parent  => $window,
+                    type    => 'error',
+                    buttons => 'close',
+                    text    => $text
+                );
                 return;
             }
             $_->[2]{filename} = $new;
@@ -4979,7 +5028,12 @@ sub renumber_dialog {
     $windowrn->signal_connect(
         'error' => sub {
             my ($msg) = @_;
-            show_message_dialog( $windowrn, 'error', 'close', $msg );
+            show_message_dialog(
+                parent  => $windowrn,
+                type    => 'error',
+                buttons => 'close',
+                text    => $msg
+            );
         }
     );
 
@@ -6190,14 +6244,16 @@ sub view_pod {
     try { require Gtk2::Ex::PodViewer }
     catch {
         $error = TRUE;
+        my $text = sprintf $d->get(
+                "The help viewer requires module Gtk2::Ex::PodViewer\n"
+              . "Alternatively, try: %s %s\n\n" ),
+          $prog_name,
+          '--help';
         show_message_dialog(
-            $window, 'error', 'close',
-            sprintf $d->get(
-                    "The help viewer requires module Gtk2::Ex::PodViewer\n"
-                  . "Alternatively, try: %s %s\n\n"
-            ),
-            $prog_name,
-            '--help'
+            parent  => $window,
+            type    => 'error',
+            buttons => 'close',
+            text    => $text
         );
     };
     return if $error;
@@ -6296,9 +6352,15 @@ sub take_snapshot {
 "Free space in $session (Mb): $df->{bavail} (warning at $SETTING{'available-tmp-warning'})"
         );
         if ( $df->{bavail} < $SETTING{'available-tmp-warning'} ) {
-            show_message_dialog( $window, 'warning', 'close',
-                sprintf $d->get('%dMb free in %s.'),
-                $df->{bavail}, $SETTING{TMPDIR} );
+            my $text = sprintf
+              $d->get('%dMb free in %s.'),
+              $df->{bavail}, $SETTING{TMPDIR};
+            show_message_dialog(
+                parent  => $window,
+                type    => 'warning',
+                buttons => 'close',
+                text    => $text
+            );
         }
 
     }
@@ -6420,9 +6482,14 @@ sub mark_pages {
 sub compress_temp {
     return
       if (
-        show_message_dialog( $window, 'question',
-            'ok-cancel',
-            $d->get('This operation cannot be undone. Are you sure?') ) ne 'ok'
+        show_message_dialog(
+            parent  => $window,
+            type    => 'question',
+            buttons => 'ok-cancel',
+            text => $d->get('This operation cannot be undone. Are you sure?'),
+            'store-response'   => TRUE,
+            'stored-responses' => ['ok']
+        ) ne 'ok'
       );
     @undo_buffer    = ();
     @undo_selection = ();
@@ -6648,8 +6715,10 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
             }
             else {
                 show_message_dialog(
-                    $windowr, 'error', 'close',
-                    $d->get(
+                    parent  => $windowr,
+                    type    => 'error',
+                    buttons => 'close',
+                    text    => $d->get(
                         'No scanner currently open with command line frontend.')
                 );
             }
@@ -6907,10 +6976,10 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
             if ( $newdir ne $tmp ) {
                 $SETTING{TMPDIR} = $newdir;
                 show_message_dialog(
-                    $window,
-                    'warning',
-                    'close',
-                    $d->get(
+                    parent  => $window,
+                    type    => 'warning',
+                    buttons => 'close',
+                    text    => $d->get(
 'You will have to restart gscanp2df for changes to the temporary directory to take effect.'
                     )
                 );
@@ -7130,12 +7199,38 @@ sub get_selected_properties {
 # Helper function to display a message dialog, wait for a response, and return it
 
 sub show_message_dialog {
-    my ( $parent, $type, $buttons, $text ) = @_;
-    my $dialog =
-      Gtk2::MessageDialog->new( $parent, 'destroy-with-parent', $type, $buttons,
-        $text );
+    my %options = @_;
+    if ( defined $SETTING{message}{ $options{text} }{response} ) {
+        return $SETTING{message}{ $options{text} }{response};
+    }
+    my $dialog = Gtk2::MessageDialog->new(
+        $options{parent},  'destroy-with-parent', $options{type},
+        $options{buttons}, $options{text}
+    );
+    my $cb;
+    if ( $options{'store-response'} ) {
+        $cb = Gtk2::CheckButton->new_with_label(
+            $d->get("Don't show this message again") );
+        $dialog->get_message_area->add($cb);
+    }
+    $dialog->show_all;
     my $response = $dialog->run;
     $dialog->destroy;
+    if ( $options{'store-response'} and $cb->get_active ) {
+        my $filter = TRUE;
+        if ( $options{'stored-responses'} ) {
+            $filter = FALSE;
+            for ( @{ $options{'stored-responses'} } ) {
+                if ( $_ eq $response ) {
+                    $filter = TRUE;
+                    last;
+                }
+            }
+        }
+        if ($filter) {
+            $SETTING{message}{ $options{text} }{response} = $response;
+        }
+    }
     return $response;
 }
 
