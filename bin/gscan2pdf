@@ -768,7 +768,7 @@ sub create_menu_bar {
             $d->get('Quit'),
             sub {
                 if ( quit() ) { Gtk2->main_quit }
-              }
+            }
         ],
 
         # Edit menu
@@ -896,7 +896,7 @@ sub create_menu_bar {
             sub {
                 rotate( $_90_DEGREES,
                     [ indices2pages( $slist->get_selected_indices ) ] );
-              }
+            }
         ],
         [
             'Rotate 180',
@@ -907,7 +907,7 @@ sub create_menu_bar {
             sub {
                 rotate( $_180_DEGREES,
                     [ indices2pages( $slist->get_selected_indices ) ] );
-              }
+            }
         ],
         [
             'Rotate 270',
@@ -918,7 +918,7 @@ sub create_menu_bar {
             sub {
                 rotate( $_270_DEGREES,
                     [ indices2pages( $slist->get_selected_indices ) ] );
-              }
+            }
         ],
 
         # Tools menu
