@@ -6699,7 +6699,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
         }
     );
     $bhbox->pack_start( $hbutton, TRUE, TRUE, 0 );
-    my $fbutton = Gtk2::Button->new( $d->get('List current optionts') );
+    my $fbutton = Gtk2::Button->new( $d->get('List current options') );
     $fbutton->signal_connect(
         clicked => sub {
             if ( defined $windows ) {
