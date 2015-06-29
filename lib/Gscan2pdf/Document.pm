@@ -2597,16 +2597,21 @@ sub _thread_rotate {
 
     # Rotate with imagemagick
     my $image = Image::Magick->new;
-    my $x     = $image->Read($filename);
+    my $e     = $image->Read($filename);
     return if $_self->{cancel};
-    if ("$x") { $logger->warn($x) }
+    if ("$e") { $logger->warn($e) }
 
     # workaround for those versions of imagemagick that produce 16bit output
     # with rotate
     my $depth = $image->Get('depth');
-    $x = $image->Rotate($angle);
+    $e = $image->Rotate($angle);
+    if ("$e") {
+        $logger->error($e);
+        $self->{status}  = 1;
+        $self->{message} = "Error rotating: $e.";
+        return;
+    }
     return if $_self->{cancel};
-    if ("$x") { $logger->warn($x) }
     my $suffix;
     if ( $filename =~ /[.](\w*)$/xsm ) {
         $suffix = $1;
@@ -2617,7 +2622,7 @@ sub _thread_rotate {
             SUFFIX => ".$suffix",
             UNLINK => FALSE
         );
-        $x = $image->Write( filename => $filename, depth => $depth );
+        $e = $image->Write( filename => $filename, depth => $depth );
     }
     catch {
         $logger->error("Error rotating: $_");
@@ -2626,7 +2631,7 @@ sub _thread_rotate {
     };
     if ( $self->{status} ) { return }
     return if $_self->{cancel};
-    if ("$x") { $logger->warn($x) }
+    if ("$e") { $logger->warn($e) }
     my $new = $page->freeze;
     $new->{filename}   = $filename->filename;   # can't queue File::Temp objects
     $new->{dirty_time} = timestamp();           #flag as dirty
@@ -2753,22 +2758,34 @@ sub _thread_threshold {
     my $filename = $page->{filename};
 
     my $image = Image::Magick->new;
-    my $x     = $image->Read($filename);
+    my $e     = $image->Read($filename);
     return if $_self->{cancel};
-    if ("$x") { $logger->warn($x) }
+    if ("$e") { $logger->warn($e) }
 
     # Threshold the image
-    $image->BlackThreshold( threshold => "$threshold%" );
+    $e = $image->BlackThreshold( threshold => "$threshold%" );
+    if ("$e") {
+        $logger->error($e);
+        $self->{status}  = 1;
+        $self->{message} = "Error running threshold: $e.";
+        return;
+    }
     return if $_self->{cancel};
-    $image->WhiteThreshold( threshold => "$threshold%" );
+    $e = $image->WhiteThreshold( threshold => "$threshold%" );
+    if ("$e") {
+        $logger->error($e);
+        $self->{status}  = 1;
+        $self->{message} = "Error running threshold: $e.";
+        return;
+    }
     return if $_self->{cancel};
 
     # Write it
     try {
         $filename =
           File::Temp->new( DIR => $dir, SUFFIX => '.pbm', UNLINK => FALSE );
-        $x = $image->Write( filename => $filename );
-        if ("$x") { $logger->warn($x) }
+        $e = $image->Write( filename => $filename );
+        if ("$e") { $logger->warn($e) }
     }
     catch {
         $logger->error("Error thesholding: $_");
@@ -2791,14 +2808,20 @@ sub _thread_negate {
     my $filename = $page->{filename};
 
     my $image = Image::Magick->new;
-    my $x     = $image->Read($filename);
+    my $e     = $image->Read($filename);
     return if $_self->{cancel};
-    if ("$x") { $logger->warn($x) }
+    if ("$e") { $logger->warn($e) }
 
     my $depth = $image->Get('depth');
 
     # Negate the image
-    $image->Negate;
+    $e = $image->Negate;
+    if ("$e") {
+        $logger->error($e);
+        $self->{status}  = 1;
+        $self->{message} = "Error negating: $e.";
+        return;
+    }
     return if $_self->{cancel};
 
     # Write it
@@ -2807,8 +2830,8 @@ sub _thread_negate {
         if ( $filename =~ /([.]\w*)$/xsm ) { $suffix = $1 }
         $filename =
           File::Temp->new( DIR => $dir, SUFFIX => $suffix, UNLINK => FALSE );
-        $x = $image->Write( depth => $depth, filename => $filename );
-        if ("$x") { $logger->warn($x) }
+        $e = $image->Write( depth => $depth, filename => $filename );
+        if ("$e") { $logger->warn($e) }
     }
     catch {
         $logger->error("Error negating: $_");
@@ -2832,17 +2855,23 @@ sub _thread_unsharp {
     my $filename = $options{page}->{filename};
 
     my $image = Image::Magick->new;
-    my $x     = $image->Read($filename);
+    my $e     = $image->Read($filename);
     return if $_self->{cancel};
-    if ("$x") { $logger->warn($x) }
+    if ("$e") { $logger->warn($e) }
 
     # Unsharp the image
-    $image->UnsharpMask(
+    $e = $image->UnsharpMask(
         radius    => $options{radius},
         sigma     => $options{sigma},
         amount    => $options{amount},
         threshold => $options{threshold},
     );
+    if ("$e") {
+        $logger->error($e);
+        $self->{status}  = 1;
+        $self->{message} = "Error running unsharp: $e.";
+        return;
+    }
     return if $_self->{cancel};
 
     # Write it
@@ -2854,8 +2883,8 @@ sub _thread_unsharp {
             SUFFIX => ".$suffix",
             UNLINK => FALSE
         );
-        $x = $image->Write( filename => $filename );
-        if ("$x") { $logger->warn($x) }
+        $e = $image->Write( filename => $filename );
+        if ("$e") { $logger->warn($e) }
     }
     catch {
         $logger->error("Error writing image with unsharp mask: $_");
@@ -2892,9 +2921,14 @@ sub _thread_crop {
         x      => $options{x},
         y      => $options{y}
     );
+    if ("$e") {
+        $logger->error($e);
+        $self->{status}  = 1;
+        $self->{message} = "Error cropping: $e.";
+        return;
+    }
     $image->Set( page => '0x0+0+0' );
     return if $_self->{cancel};
-    if ("$e") { $logger->warn($e) }
 
     # Write it
     try {
@@ -3086,6 +3120,7 @@ sub _thread_unpaper {
             );
 
 # FIXME: need to -compress Zip from perlmagick       "convert -compress Zip $slist->{data}[$pagenum][2]{filename} $in;";
+            $logger->debug("Converting $filename -> $in for unpaper");
             $image->Write( filename => $in );
         }
         else {
@@ -3109,8 +3144,15 @@ sub _thread_unpaper {
         # --overwrite needed because $out exists with 0 size
         my $cmd = sprintf "$options;", $in, $out, $out2;
         $logger->info($cmd);
-        ( my $info, undef ) = open_three("echo $PROCESS_ID > $pidfile;$cmd");
-        $logger->info($info);
+        my ( $stdout, $stderr ) =
+          open_three("echo $PROCESS_ID > $pidfile;$cmd");
+        $logger->info($stdout);
+        if ($stderr) {
+            $logger->error($stderr);
+            $self->{status}  = 1;
+            $self->{message} = "Error running unpaper: $stderr.";
+            return;
+        }
         return if $_self->{cancel};
 
         my $new = Gscan2pdf::Page->new(

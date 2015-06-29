@@ -5,6 +5,8 @@
 * Moved config file format to JSON. JSON::PP is a core module,
   so this does not create a new dependency.
 * + option not to show dialog messages
+* Trap errors from unpaper, rotate, crop, threshold, negate, unsharp
+  processing tools
 
 
 1.3.2 (13.05.2015):
