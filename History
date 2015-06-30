@@ -7,6 +7,8 @@
 * + option not to show dialog messages
 * Trap errors from unpaper, rotate, crop, threshold, negate, unsharp
   processing tools
+  Closes bug #198 (empty pages when saving, GIMP, or printing)
+* Removed dependency on liblinux-distribution-perl as not available on FreeBSD
 
 
 1.3.2 (13.05.2015):
