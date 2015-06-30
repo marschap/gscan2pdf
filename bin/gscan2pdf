@@ -227,8 +227,8 @@ my (
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     $menubar,     $toolbar,
     @ocr_engine,  @clipboard,
-    $windowr,        $view,    $windowp,
-    $print_settings, $windowc, $current_page,
+    $windowr, $view, $windowp,
+    $print_settings, $windowc, $current_page, $gconftool,
 
     # start page on scan dialog
     $start,
@@ -3483,6 +3483,70 @@ sub save_hocr {
     return;
 }
 
+sub mua_string {
+    my ( $parent, $attachment ) = @_;
+
+    # Check for thunderbird
+    my ($client);
+    if ( defined $ENV{KDE_FULL_SESSION}
+        and $ENV{KDE_FULL_SESSION} eq 'true' )
+    {
+        ($client) = Gscan2pdf::Document::open_three(
+"kreadconfig --file emaildefaults --group PROFILE_Default --key EmailClient| cut -d ' ' -f 1"
+        );
+    }
+    elsif (
+        (
+            defined $ENV{GNOME_DESKTOP_SESSION_ID}
+            and $ENV{GNOME_DESKTOP_SESSION_ID} ne $EMPTY
+        )
+        or ( defined $ENV{XDG_CURRENT_DESKTOP}
+            and $ENV{XDG_CURRENT_DESKTOP} =~ /(:?XFCE|GNOME)/xsm )
+      )
+    {
+        if ( not defined $gconftool ) {
+            for (qw(gconftool gconftool-2)) {
+                if ( Gscan2pdf::Document::check_command($_) ) {
+                    $gconftool = $_;
+                    last;
+                }
+            }
+            if ( not defined $gconftool ) {
+                show_message_dialog(
+                    parent  => $parent,
+                    type    => 'error',
+                    buttons => 'close',
+                    text    => $d->get(
+'You seem to be using Gnome or XFCE, but do not have gconftool installed. Unable to determine email client.'
+                    )
+                );
+                return;
+            }
+        }
+
+        ($client) = Gscan2pdf::Document::open_three(
+"$gconftool --get /desktop/gnome/url-handlers/mailto/command | cut -d ' ' -f 1"
+        );
+    }
+    else {
+        show_message_dialog(
+            parent  => $parent,
+            type    => 'error',
+            buttons => 'close',
+            text    => $d->get(
+'Unable to determine your desktop enviroment, and therefore your email client.'
+            )
+        );
+        return;
+    }
+
+    my $mua_string;
+    if ( $client =~ /(thunderbird|icedove)/smx ) {
+        return "$1 -compose attachment=file://$attachment";
+    }
+    return "xdg-email --attach $attachment 'x\@y'";
+}
+
 # Display page selector and email.
 
 sub email {
@@ -3553,37 +3617,8 @@ sub email {
             );
 
             $pdf = File::Temp->new( DIR => $session, SUFFIX => '.pdf' );
-
-            # Check for thunderbird
-            my ($client);
-            if ( defined $ENV{KDE_FULL_SESSION}
-                and $ENV{KDE_FULL_SESSION} eq 'true' )
-            {
-                ($client) = Gscan2pdf::Document::open_three(
-"kreadconfig --file emaildefaults --group PROFILE_Default --key EmailClient| cut -d ' ' -f 1"
-                );
-            }
-            elsif (
-                (
-                    defined $ENV{GNOME_DESKTOP_SESSION_ID}
-                    and $ENV{GNOME_DESKTOP_SESSION_ID} ne $EMPTY
-                )
-                or ( defined $ENV{XDG_CURRENT_DESKTOP}
-                    and $ENV{XDG_CURRENT_DESKTOP} eq 'XFCE' )
-              )
-            {
-                ($client) = Gscan2pdf::Document::open_three(
-"gconftool --get /desktop/gnome/url-handlers/mailto/command | cut -d ' ' -f 1"
-                );
-            }
-
-            my $mua_string;
-            if ( $client =~ /thunderbird/sm ) {
-                $mua_string = "thunderbird -compose attachment=file://$pdf";
-            }
-            else {
-                $mua_string = "xdg-email --attach $pdf 'x\@y'";
-            }
+            my $mua_string = mua_string( $windowe, $pdf );
+            if ( not defined $mua_string ) { return }
 
             # Create the PDF
             my ( $signal, $pid );
@@ -4989,12 +5024,6 @@ EOS
     $about->run;
     $about->destroy;
     return;
-}
-
-# Check that a command exists
-
-sub check_command {
-    return system("which $_[0] >/dev/null 2>/dev/null") == 0 ? TRUE : FALSE;
 }
 
 # Dialog for renumber
