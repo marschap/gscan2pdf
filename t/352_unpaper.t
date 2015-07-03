@@ -54,30 +54,22 @@ SKIP: {
     $slist->set_dir($dir);
     $slist->set_paper_sizes( \%paper_sizes );
 
-    $slist->get_file_info(
-        path              => 'test.pnm',
+    $slist->import_files(
+        paths             => ['test.pnm'],
         finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 1,
+            is( $slist->{data}[0][2]{resolution},
+                72, 'non-standard size pnm imports with 72 PPI' );
+            $slist->{data}[0][2]{resolution} = 300;
+            is( $slist->{data}[0][2]{resolution},
+                300,
+                'simulated having imported non-standard pnm with 300 PPI' );
+            $slist->unpaper(
+                page              => $slist->{data}[0][2],
+                options           => $unpaper->get_cmdline,
                 finished_callback => sub {
                     is( $slist->{data}[0][2]{resolution},
-                        72, 'non-standard size pnm imports with 72 PPI' );
-                    $slist->{data}[0][2]{resolution} = 300;
-                    is( $slist->{data}[0][2]{resolution}, 300,
-'simulated having imported non-standard pnm with 300 PPI'
-                    );
-                    $slist->unpaper(
-                        page              => $slist->{data}[0][2],
-                        options           => $unpaper->get_cmdline,
-                        finished_callback => sub {
-                            is( $slist->{data}[0][2]{resolution},
-                                300, 'Resolution of processed image' );
-                            Gtk2->main_quit;
-                        }
-                    );
+                        300, 'Resolution of processed image' );
+                    Gtk2->main_quit;
                 }
             );
         }

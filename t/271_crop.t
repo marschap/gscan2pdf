@@ -24,31 +24,23 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'test.gif',
+$slist->import_files(
+    paths             => ['test.gif'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
+        $slist->crop(
+            page              => $slist->{data}[0][2],
+            x                 => 10,
+            y                 => 10,
+            w                 => 10,
+            h                 => 10,
             finished_callback => sub {
-                $slist->crop(
-                    page              => $slist->{data}[0][2],
-                    x                 => 10,
-                    y                 => 10,
-                    w                 => 10,
-                    h                 => 10,
-                    finished_callback => sub {
-                        my $got =
-`identify -format '%g' $slist->{data}[0][2]{filename}`;
-                        chomp($got);
-                        is( $got, "10x10+0+0", 'GIF cropped correctly' );
-                        is( dirname("$slist->{data}[0][2]{filename}"),
-                            "$dir", 'using session directory' );
-                        Gtk2->main_quit;
-                    }
-                );
+                my $got =
+                  `identify -format '%g' $slist->{data}[0][2]{filename}`;
+                chomp($got);
+                is( $got, "10x10+0+0", 'GIF cropped correctly' );
+                is( dirname("$slist->{data}[0][2]{filename}"),
+                    "$dir", 'using session directory' );
+                Gtk2->main_quit;
             }
         );
     }

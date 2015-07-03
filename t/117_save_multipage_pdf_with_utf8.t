@@ -7,6 +7,7 @@ BEGIN {
     use Gtk2 -init;    # Could just call init separately
     use PDF::API2;
     use File::Copy;
+    use utf8;
 }
 
 #########################
@@ -21,7 +22,6 @@ system('convert rose: 1.pnm');
 
 # number of pages
 my $n = 3;
-my @pages;
 
 my %options;
 $options{font} = `fc-list : file | grep ttf 2> /dev/null | head -n 1`;
@@ -34,32 +34,28 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
+my @files;
 for my $i ( 1 .. $n ) {
     copy( '1.pnm', "$i.pnm" ) if ( $i > 1 );
-    $slist->get_file_info(
-        path              => "$i.pnm",
-        finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 1,
-                finished_callback => sub {
-                    use utf8;
-                    $slist->{data}[ $i - 1 ][2]{hocr} =
-'пени способствовала сохранению';
-                    push @pages, $slist->{data}[ $i - 1 ][2];
-                    $slist->save_pdf(
-                        path              => 'test.pdf',
-                        list_of_pages     => \@pages,
-                        options           => \%options,
-                        finished_callback => sub { Gtk2->main_quit }
-                    ) if ( $i == $n );
-                }
-            );
-        }
-    );
+    push @files, "$i.pnm";
 }
+$slist->import_files(
+    paths             => \@files,
+    finished_callback => sub {
+        my @pages;
+        for my $i ( 1 .. $n ) {
+            $slist->{data}[ $i - 1 ][2]{hocr} =
+              'пени способствовала сохранению';
+            push @pages, $slist->{data}[ $i - 1 ][2];
+        }
+        $slist->save_pdf(
+            path              => 'test.pdf',
+            list_of_pages     => \@pages,
+            options           => \%options,
+            finished_callback => sub { Gtk2->main_quit }
+        );
+    }
+);
 Gtk2->main;
 
 is( `pdffonts test.pdf | grep -c TrueType` + 0,

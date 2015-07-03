@@ -25,22 +25,14 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 my $metadata = { Title => 'metadata title' };
-$slist->get_file_info(
-    path              => 'test.pnm',
+$slist->import_files(
+    paths             => ['test.pnm'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
-                $slist->save_pdf(
-                    path              => 'test.pdf',
-                    list_of_pages     => [ $slist->{data}[0][2] ],
-                    metadata          => $metadata,
-                    finished_callback => sub { Gtk2->main_quit }
-                );
-            }
+        $slist->save_pdf(
+            path              => 'test.pdf',
+            list_of_pages     => [ $slist->{data}[0][2] ],
+            metadata          => $metadata,
+            finished_callback => sub { Gtk2->main_quit }
         );
     }
 );

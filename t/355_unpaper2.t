@@ -35,37 +35,21 @@ SKIP: {
     my $dir = File::Temp->newdir;
     $slist->set_dir($dir);
 
-    $slist->get_file_info(
-        path              => 'test.pnm',
+    $slist->import_files(
+        paths             => ['test.pnm'],
         finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 1,
+            $slist->unpaper(
+                page              => $slist->{data}[0][2],
+                options           => $unpaper->get_cmdline,
                 finished_callback => sub {
-                    $slist->unpaper(
-                        page              => $slist->{data}[0][2],
-                        options           => $unpaper->get_cmdline,
-                        finished_callback => sub {
-                            is(
-                                system(
-                                    "identify $slist->{data}[0][2]{filename}"),
-                                0,
-                                'valid PNM created for LH'
-                            );
-                            is(
-                                system(
-                                    "identify $slist->{data}[1][2]{filename}"),
-                                0,
-                                'valid PNM created for RH'
-                            );
-                            is( dirname("$slist->{data}[0][2]{filename}"),
-                                "$dir", 'using session directory' );
+                    is( system("identify $slist->{data}[0][2]{filename}"),
+                        0, 'valid PNM created for LH' );
+                    is( system("identify $slist->{data}[1][2]{filename}"),
+                        0, 'valid PNM created for RH' );
+                    is( dirname("$slist->{data}[0][2]{filename}"),
+                        "$dir", 'using session directory' );
 
-                            Gtk2->main_quit;
-                        }
-                    );
+                    Gtk2->main_quit;
                 }
             );
         }

@@ -27,29 +27,21 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'test.png',
+$slist->import_files(
+    paths             => ['test.png'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
+        $slist->save_pdf(
+            path              => 'test.pdf',
+            list_of_pages     => [ $slist->{data}[0][2] ],
             finished_callback => sub {
                 $slist->save_pdf(
-                    path              => 'test.pdf',
-                    list_of_pages     => [ $slist->{data}[0][2] ],
-                    finished_callback => sub {
-                        $slist->save_pdf(
-                            path          => 'test2.pdf',
-                            list_of_pages => [ $slist->{data}[0][2] ],
-                            options       => {
-                                downsample       => 1,
-                                'downsample dpi' => 150,
-                            },
-                            finished_callback => sub { Gtk2->main_quit }
-                        );
-                    }
+                    path          => 'test2.pdf',
+                    list_of_pages => [ $slist->{data}[0][2] ],
+                    options       => {
+                        downsample       => 1,
+                        'downsample dpi' => 150,
+                    },
+                    finished_callback => sub { Gtk2->main_quit }
                 );
             }
         );

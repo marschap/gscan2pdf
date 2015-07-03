@@ -53,31 +53,23 @@ SKIP: {
 'convert -size 2100x2970 +matte -depth 1 -border 2x2 -bordercolor black -pointsize 12 -density 300 label:"The quick brown fox" test.pnm'
     );
 
-    $slist->get_file_info(
-        path              => 'test.pnm',
+    $slist->import_files(
+        paths             => ['test.pnm'],
         finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 1,
-                finished_callback => sub {
 
-                    # Now we've imported it,
-                    # remove the data to give a corrupt image
-                    system("echo '' > $slist->{data}[0][2]->{filename}");
-                    $slist->unpaper(
-                        page              => $slist->{data}[0][2],
-                        options           => $unpaper->get_cmdline,
-                        finished_callback => sub {
-                            ok( 0, 'caught errors from unpaper' );
-                            Gtk2->main_quit;
-                        },
-                        error_callback => sub {
-                            ok( 1, 'caught errors from unpaper' );
-                            Gtk2->main_quit;
-                        }
-                    );
+            # Now we've imported it,
+            # remove the data to give a corrupt image
+            system("echo '' > $slist->{data}[0][2]->{filename}");
+            $slist->unpaper(
+                page              => $slist->{data}[0][2],
+                options           => $unpaper->get_cmdline,
+                finished_callback => sub {
+                    ok( 0, 'caught errors from unpaper' );
+                    Gtk2->main_quit;
+                },
+                error_callback => sub {
+                    ok( 1, 'caught errors from unpaper' );
+                    Gtk2->main_quit;
                 }
             );
         }

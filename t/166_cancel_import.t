@@ -24,28 +24,25 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'test.tif',
-    finished_callback => sub {
-        my ($info) = @_;
-        my $pid = $slist->import_file(
-            info               => $info,
-            first              => 1,
-            last               => 1,
-            cancelled_callback => sub {
-                is( defined( $slist->{data}[0] ), '', 'TIFF not imported' );
-                $slist->import_file(
-                    info              => $info,
-                    first             => 1,
-                    last              => 1,
-                    finished_callback => sub {
-                        system("cp $slist->{data}[0][2]{filename} test.tif");
-                        Gtk2->main_quit;
-                    }
-                );
+my $pid;
+$pid = $slist->import_files(
+    paths           => ['test.tif'],
+    queued_callback => sub {
+        $slist->cancel($pid);
+    },
+    cancelled_callback => sub {
+        is( defined( $slist->{data}[0] ), '', 'TIFF not imported' );
+        $slist->import_files(
+            paths             => ['test.tif'],
+            finished_callback => sub {
+                system("cp $slist->{data}[0][2]{filename} test.tif");
+                Gtk2->main_quit;
             }
         );
-        $slist->cancel($pid);
+    },
+    finished_callback => sub {
+        ok( 0, 'TIFF not imported' );
+        Gtk2->main_quit;
     }
 );
 Gtk2->main;

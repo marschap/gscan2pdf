@@ -11,7 +11,7 @@ BEGIN {
 #########################
 
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($WARN);
+Log::Log4perl->easy_init($FATAL);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Document->setup($logger);
 
@@ -24,31 +24,23 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'test.jpg',
+$slist->import_files(
+    paths             => ['test.jpg'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
 
-                # Now we've imported it,
-                # remove the data to give a corrupt image
-                system("echo '' > $slist->{data}[0][2]->{filename}");
-                $slist->rotate(
-                    angle             => 90,
-                    page              => $slist->{data}[0][2],
-                    finished_callback => sub {
-                        ok( 0, 'caught errors from rotate' );
-                        Gtk2->main_quit;
-                    },
-                    error_callback => sub {
-                        ok( 1, 'caught errors from rotate' );
-                        Gtk2->main_quit;
-                    }
-                );
+        # Now we've imported it,
+        # remove the data to give a corrupt image
+        system("echo '' > $slist->{data}[0][2]->{filename}");
+        $slist->rotate(
+            angle             => 90,
+            page              => $slist->{data}[0][2],
+            finished_callback => sub {
+                ok( 0, 'caught errors from rotate' );
+                Gtk2->main_quit;
+            },
+            error_callback => sub {
+                ok( 1, 'caught errors from rotate' );
+                Gtk2->main_quit;
             }
         );
     }

@@ -30,31 +30,22 @@ SKIP: {
     my $dir = File::Temp->newdir;
     $slist->set_dir($dir);
 
-    $slist->get_file_info(
-        path              => 'test.tif',
+    $slist->import_files(
+        paths             => ['test.tif'],
         finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 1,
-                finished_callback => sub {
-                    my $pid = $slist->tesseract(
-                        page               => $slist->{data}[0][2],
-                        language           => 'eng',
-                        cancelled_callback => sub {
-                            is( $slist->{data}[0][2]{hocr},
-                                undef, 'no OCR output' );
-                            $slist->save_image(
-                                path              => 'test.jpg',
-                                list_of_pages     => [ $slist->{data}[0][2] ],
-                                finished_callback => sub { Gtk2->main_quit }
-                            );
-                        }
+            my $pid = $slist->tesseract(
+                page               => $slist->{data}[0][2],
+                language           => 'eng',
+                cancelled_callback => sub {
+                    is( $slist->{data}[0][2]{hocr}, undef, 'no OCR output' );
+                    $slist->save_image(
+                        path              => 'test.jpg',
+                        list_of_pages     => [ $slist->{data}[0][2] ],
+                        finished_callback => sub { Gtk2->main_quit }
                     );
-                    $slist->cancel($pid);
                 }
             );
+            $slist->cancel($pid);
         }
     );
     Gtk2->main;

@@ -23,21 +23,13 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'test.pnm',
+$slist->import_files(
+    paths             => ['test.pnm'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
-                $slist->save_djvu(
-                    path              => 'test.djvu',
-                    list_of_pages     => [ $slist->{data}[0][2] ],
-                    finished_callback => sub { Gtk2->main_quit }
-                );
-            }
+        $slist->save_djvu(
+            path              => 'test.djvu',
+            list_of_pages     => [ $slist->{data}[0][2] ],
+            finished_callback => sub { Gtk2->main_quit }
         );
     }
 );

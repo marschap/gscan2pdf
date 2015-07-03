@@ -24,32 +24,24 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'test.jpg',
+$slist->import_files(
+    paths             => ['test.jpg'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
+        $slist->threshold(
+            threshold         => 80,
+            page              => $slist->{data}[0][2],
             finished_callback => sub {
-                $slist->threshold(
-                    threshold         => 80,
-                    page              => $slist->{data}[0][2],
-                    finished_callback => sub {
-                        is( system("identify $slist->{data}[0][2]{filename}"),
-                            0, 'created valid file' );
-                        is( dirname("$slist->{data}[0][2]{filename}"),
-                            "$dir", 'using session directory' );
-                        $slist->save_pdf(
-                            path          => 'test.pdf',
-                            list_of_pages => [ $slist->{data}[0][2] ],
-                            options       => {
-                                compression => 'none',
-                            },
-                            finished_callback => sub { Gtk2->main_quit }
-                        );
-                    }
+                is( system("identify $slist->{data}[0][2]{filename}"),
+                    0, 'created valid file' );
+                is( dirname("$slist->{data}[0][2]{filename}"),
+                    "$dir", 'using session directory' );
+                $slist->save_pdf(
+                    path          => 'test.pdf',
+                    list_of_pages => [ $slist->{data}[0][2] ],
+                    options       => {
+                        compression => 'none',
+                    },
+                    finished_callback => sub { Gtk2->main_quit }
                 );
             }
         );

@@ -24,26 +24,17 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'test.djvu',
-    finished_callback => sub {
-        my ($info) = @_;
+$slist->import_files(
+    paths           => ['test.djvu'],
+    queued_callback => sub {
 
-        $slist->import_file(
-            info            => $info,
-            first           => 1,
-            last            => 1,
-            queued_callback => sub {
-
-                # inject error during import_file
-                chmod 0500, $dir;    # no write access
-            },
-            error_callback => sub {
-                ok( 1, 'import_file caught error injected in queue' );
-                chmod 0700, $dir;    # allow write access
-                Gtk2->main_quit;
-            }
-        );
+        # inject error during import_file
+        chmod 0500, $dir;    # no write access
+    },
+    error_callback => sub {
+        ok( 1, 'import_file caught error injected in queue' );
+        chmod 0700, $dir;    # allow write access
+        Gtk2->main_quit;
     }
 );
 Gtk2->main;

@@ -54,45 +54,35 @@ SKIP: {
     $slist->set_dir($dir);
     $slist->set_paper_sizes( \%paper_sizes );
 
-    $slist->get_file_info(
-        path              => $filename,
+    $slist->import_files(
+        paths             => [$filename],
         finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 1,
-                finished_callback => sub {
 
-                    # inject error before unpaper
-                    chmod 0500, $dir;    # no write access
+            # inject error before unpaper
+            chmod 0500, $dir;    # no write access
+
+            $slist->unpaper(
+                page           => $slist->{data}[0][2],
+                options        => $unpaper->get_cmdline,
+                error_callback => sub {
+                    ok( 1, 'caught error injected before unpaper' );
+                    chmod 0700, $dir;    # allow write access
 
                     $slist->unpaper(
-                        page           => $slist->{data}[0][2],
-                        options        => $unpaper->get_cmdline,
+                        page            => $slist->{data}[0][2],
+                        options         => $unpaper->get_cmdline,
+                        queued_callback => sub {
+
+                            # inject error during unpaper
+                            chmod 0500, $dir;    # no write access
+                        },
                         error_callback => sub {
-                            ok( 1, 'caught error injected before unpaper' );
+                            ok( 1, 'unpaper caught error injected in queue' );
                             chmod 0700, $dir;    # allow write access
-
-                            $slist->unpaper(
-                                page            => $slist->{data}[0][2],
-                                options         => $unpaper->get_cmdline,
-                                queued_callback => sub {
-
-                                    # inject error during unpaper
-                                    chmod 0500, $dir;    # no write access
-                                },
-                                error_callback => sub {
-                                    ok( 1,
-                                        'unpaper caught error injected in queue'
-                                    );
-                                    chmod 0700, $dir;    # allow write access
-                                    Gtk2->main_quit;
-                                }
-                            );
-
+                            Gtk2->main_quit;
                         }
                     );
+
                 }
             );
         }

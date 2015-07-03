@@ -30,34 +30,21 @@ SKIP: {
     my $dir = File::Temp->newdir;
     $slist->set_dir($dir);
 
-    $slist->get_file_info(
-        path              => 'test.pnm',
+    $slist->import_files(
+        paths             => ['test.pnm'],
         finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 1,
+            $slist->gocr(
+                page              => $slist->{data}[0][2],
                 finished_callback => sub {
-                    $slist->gocr(
-                        page              => $slist->{data}[0][2],
-                        finished_callback => sub {
-                            is(
-                                Encode::is_utf8(
-                                    $slist->{data}[0][2]{hocr}, 1
-                                ),
-                                1,
-                                "gocr returned UTF8"
-                            );
-                            for my $c (qw( ö ä ü ))
-                            {    # ignoring ß, as gocr doesn't recognise it
-                                my $c2 = decode_utf8($c);
-                                like( $slist->{data}[0][2]{hocr},
-                                    qr/$c2/, "gocr returned $c" );
-                            }
-                            Gtk2->main_quit;
-                        }
-                    );
+                    is( Encode::is_utf8( $slist->{data}[0][2]{hocr}, 1 ),
+                        1, "gocr returned UTF8" );
+                    for my $c (qw( ö ä ü ))
+                    {    # ignoring ß, as gocr doesn't recognise it
+                        my $c2 = decode_utf8($c);
+                        like( $slist->{data}[0][2]{hocr},
+                            qr/$c2/, "gocr returned $c" );
+                    }
+                    Gtk2->main_quit;
                 }
             );
         }

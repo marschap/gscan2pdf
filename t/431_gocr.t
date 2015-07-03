@@ -29,26 +29,18 @@ SKIP: {
     my $dir = File::Temp->newdir;
     $slist->set_dir($dir);
 
-    $slist->get_file_info(
-        path              => 'test.pnm',
+    $slist->import_files(
+        paths             => ['test.pnm'],
         finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 1,
+            $slist->gocr(
+                page              => $slist->{data}[0][2],
                 finished_callback => sub {
-                    $slist->gocr(
-                        page              => $slist->{data}[0][2],
-                        finished_callback => sub {
-                            like(
-                                $slist->{data}[0][2]{hocr},
-                                qr/The quick brown fox/,
-                                'gocr returned sensible text'
-                            );
-                            Gtk2->main_quit;
-                        }
+                    like(
+                        $slist->{data}[0][2]{hocr},
+                        qr/The quick brown fox/,
+                        'gocr returned sensible text'
                     );
+                    Gtk2->main_quit;
                 }
             );
         }

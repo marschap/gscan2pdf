@@ -22,24 +22,16 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'white.pnm',
+$slist->import_files(
+    paths             => ['white.pnm'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
+        $slist->user_defined(
+            page              => $slist->{data}[0][2],
+            command           => 'convert %i -negate %i',
             finished_callback => sub {
-                $slist->user_defined(
+                $slist->analyse(
                     page              => $slist->{data}[0][2],
-                    command           => 'convert %i -negate %i',
-                    finished_callback => sub {
-                        $slist->analyse(
-                            page              => $slist->{data}[0][2],
-                            finished_callback => sub { Gtk2->main_quit }
-                        );
-                    }
+                    finished_callback => sub { Gtk2->main_quit }
                 );
             }
         );

@@ -48,26 +48,18 @@ my $hocr = <<'EOS';
 </html>
 EOS
 
-$slist->get_file_info(
-    path              => 'test.pnm',
+$slist->import_files(
+    paths             => ['test.pnm'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
-                $slist->{data}[0][2]{hocr} = $hocr;
+        $slist->{data}[0][2]{hocr} = $hocr;
 
-                # The line below was altering the xml, so we need it in the test
-                my @boxes = $slist->{data}[0][2]->boxes;
+        # The line below was altering the xml, so we need it in the test
+        my @boxes = $slist->{data}[0][2]->boxes;
 
-                $slist->save_hocr(
-                    path              => 'test.txt',
-                    list_of_pages     => [ $slist->{data}[0][2] ],
-                    finished_callback => sub { Gtk2->main_quit }
-                );
-            }
+        $slist->save_hocr(
+            path              => 'test.txt',
+            list_of_pages     => [ $slist->{data}[0][2] ],
+            finished_callback => sub { Gtk2->main_quit }
         );
     }
 );

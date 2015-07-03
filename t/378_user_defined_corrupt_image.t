@@ -9,7 +9,7 @@ BEGIN {
 }
 
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($WARN);
+Log::Log4perl->easy_init($FATAL);
 Gscan2pdf::Document->setup(Log::Log4perl::get_logger);
 
 my %paper_sizes = (
@@ -43,31 +43,23 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 $slist->set_paper_sizes( \%paper_sizes );
 
-$slist->get_file_info(
-    path              => 'white.pnm',
+$slist->import_files(
+    paths             => ['white.pnm'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
 
-                # Now we've imported it,
-                # remove the data to give a corrupt image
-                system("echo '' > $slist->{data}[0][2]->{filename}");
-                $slist->user_defined(
-                    page              => $slist->{data}[0][2],
-                    command           => 'convert %i -negate %o',
-                    finished_callback => sub {
-                        ok( 0, 'caught errors from user-defined' );
-                        Gtk2->main_quit;
-                    },
-                    error_callback => sub {
-                        ok( 1, 'caught errors from user-defined' );
-                        Gtk2->main_quit;
-                    }
-                );
+        # Now we've imported it,
+        # remove the data to give a corrupt image
+        system("echo '' > $slist->{data}[0][2]->{filename}");
+        $slist->user_defined(
+            page              => $slist->{data}[0][2],
+            command           => 'convert %i -negate %o',
+            finished_callback => sub {
+                ok( 0, 'caught errors from user-defined' );
+                Gtk2->main_quit;
+            },
+            error_callback => sub {
+                ok( 1, 'caught errors from user-defined' );
+                Gtk2->main_quit;
             }
         );
     }

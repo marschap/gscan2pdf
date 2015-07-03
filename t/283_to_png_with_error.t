@@ -24,42 +24,33 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => $filename,
+$slist->import_files(
+    paths             => [$filename],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
 
-                # inject error before to_png
-                chmod 0500, $dir;    # no write access
+        # inject error before to_png
+        chmod 0500, $dir;    # no write access
+
+        $slist->to_png(
+            page           => $slist->{data}[0][2],
+            error_callback => sub {
+                ok( 1, 'caught error injected before to_png' );
+                chmod 0700, $dir;    # allow write access
 
                 $slist->to_png(
-                    page           => $slist->{data}[0][2],
+                    page            => $slist->{data}[0][2],
+                    queued_callback => sub {
+
+                        # inject error during to_png
+                        chmod 0500, $dir;    # no write access
+                    },
                     error_callback => sub {
-                        ok( 1, 'caught error injected before to_png' );
+                        ok( 1, 'to_png caught error injected in queue' );
                         chmod 0700, $dir;    # allow write access
-
-                        $slist->to_png(
-                            page            => $slist->{data}[0][2],
-                            queued_callback => sub {
-
-                                # inject error during to_png
-                                chmod 0500, $dir;    # no write access
-                            },
-                            error_callback => sub {
-                                ok( 1,
-                                    'to_png caught error injected in queue' );
-                                chmod 0700, $dir;    # allow write access
-                                Gtk2->main_quit;
-                            }
-                        );
-
+                        Gtk2->main_quit;
                     }
                 );
+
             }
         );
     }

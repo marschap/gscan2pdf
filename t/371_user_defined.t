@@ -43,44 +43,33 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 $slist->set_paper_sizes( \%paper_sizes );
 
-$slist->get_file_info(
-    path              => 'white.pnm',
+$slist->import_files(
+    paths             => ['white.pnm'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
+        is( int( abs( $slist->{data}[0][2]{resolution} - 25.4 ) ),
+            0, 'Resolution of imported image' );
+        $slist->user_defined(
+            page              => $slist->{data}[0][2],
+            command           => 'convert %i -negate %o',
             finished_callback => sub {
-                is( int( abs( $slist->{data}[0][2]{resolution} - 25.4 ) ),
-                    0, 'Resolution of imported image' );
-                $slist->user_defined(
+                $slist->analyse(
                     page              => $slist->{data}[0][2],
-                    command           => 'convert %i -negate %o',
                     finished_callback => sub {
-                        $slist->analyse(
-                            page              => $slist->{data}[0][2],
-                            finished_callback => sub {
-                                is( $slist->{data}[0][2]{mean},
-                                    0, 'User-defined with %i and %o' );
-                                is(
-                                    int(
-                                        abs(
-                                            $slist->{data}[0][2]{resolution} -
-                                              25.4
-                                        )
-                                    ),
-                                    0,
-                                    'Resolution of converted image'
-                                );
-                                is( dirname("$slist->{data}[0][2]{filename}"),
-                                    "$dir", 'using session directory' );
-                                $slist->save_pdf(
-                                    path          => 'test.pdf',
-                                    list_of_pages => [ $slist->{data}[0][2] ],
-                                    finished_callback => sub { Gtk2->main_quit }
-                                );
-                            }
+                        is( $slist->{data}[0][2]{mean},
+                            0, 'User-defined with %i and %o' );
+                        is(
+                            int(
+                                abs( $slist->{data}[0][2]{resolution} - 25.4 )
+                            ),
+                            0,
+                            'Resolution of converted image'
+                        );
+                        is( dirname("$slist->{data}[0][2]{filename}"),
+                            "$dir", 'using session directory' );
+                        $slist->save_pdf(
+                            path              => 'test.pdf',
+                            list_of_pages     => [ $slist->{data}[0][2] ],
+                            finished_callback => sub { Gtk2->main_quit }
                         );
                     }
                 );

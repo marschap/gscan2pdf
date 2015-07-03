@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use File::Basename;    # Split filename into dir, file, ext
-use Test::More tests => 3;
+use Test::More tests => 2;
 
 BEGIN {
     use Gscan2pdf::Document;
@@ -24,48 +24,25 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-# inject error before get_file_info
+# inject error before import_files
 chmod 0500, $dir;    # no write access
 
-$slist->get_file_info(
-    path           => 'test.tif',
+$slist->import_files(
+    paths          => ['test.tif'],
     error_callback => sub {
-        ok( 1, 'get_file_info caught error injected before call' );
+        ok( 1, 'import_files caught error injected before call' );
         chmod 0700, $dir;    # allow write access
-        $slist->get_file_info(
-            path              => 'test.tif',
-            finished_callback => sub {
-                my ($info) = @_;
+        $slist->import_files(
+            paths           => ['test.tif'],
+            queued_callback => sub {
 
-                # inject error before import_file
+                # inject error during import_file
                 chmod 0500, $dir;    # no write access
-                $slist->import_file(
-                    info           => $info,
-                    first          => 1,
-                    last           => 1,
-                    error_callback => sub {
-                        ok( 1,
-                            'import_file caught error injected before call' );
-                        chmod 0700, $dir;    # allow write access
-                        $slist->import_file(
-                            info            => $info,
-                            first           => 1,
-                            last            => 1,
-                            queued_callback => sub {
-
-                                # inject error during import_file
-                                chmod 0500, $dir;    # no write access
-                            },
-                            error_callback => sub {
-                                ok( 1,
-                                    'import_file caught error injected in queue'
-                                );
-                                chmod 0700, $dir;    # allow write access
-                                Gtk2->main_quit;
-                            }
-                        );
-                    }
-                );
+            },
+            error_callback => sub {
+                ok( 1, 'import_files caught error injected in queue' );
+                chmod 0700, $dir;    # allow write access
+                Gtk2->main_quit;
             }
         );
     }

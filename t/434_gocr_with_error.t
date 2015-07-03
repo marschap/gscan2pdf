@@ -30,42 +30,33 @@ SKIP: {
     my $dir = File::Temp->newdir;
     $slist->set_dir($dir);
 
-    $slist->get_file_info(
-        path              => $filename,
+    $slist->import_files(
+        paths             => [$filename],
         finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 1,
-                finished_callback => sub {
 
-                    # inject error before gocr
-                    chmod 0500, $dir;    # no write access
+            # inject error before gocr
+            chmod 0500, $dir;    # no write access
+
+            $slist->gocr(
+                page           => $slist->{data}[0][2],
+                error_callback => sub {
+                    ok( 1, 'caught error injected before gocr' );
+                    chmod 0700, $dir;    # allow write access
 
                     $slist->gocr(
-                        page           => $slist->{data}[0][2],
+                        page            => $slist->{data}[0][2],
+                        queued_callback => sub {
+
+                            # inject error during gocr
+                            chmod 0500, $dir;    # no write access
+                        },
                         error_callback => sub {
-                            ok( 1, 'caught error injected before gocr' );
+                            ok( 1, 'gocr caught error injected in queue' );
                             chmod 0700, $dir;    # allow write access
-
-                            $slist->gocr(
-                                page            => $slist->{data}[0][2],
-                                queued_callback => sub {
-
-                                    # inject error during gocr
-                                    chmod 0500, $dir;    # no write access
-                                },
-                                error_callback => sub {
-                                    ok( 1,
-                                        'gocr caught error injected in queue' );
-                                    chmod 0700, $dir;    # allow write access
-                                    Gtk2->main_quit;
-                                }
-                            );
-
+                            Gtk2->main_quit;
                         }
                     );
+
                 }
             );
         }

@@ -25,44 +25,35 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'test.pnm',
+$slist->import_files(
+    paths             => ['test.pnm'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
 
-                # inject error before save_pdf
-                chmod 0500, $dir;    # no write access
+        # inject error before save_pdf
+        chmod 0500, $dir;    # no write access
+
+        $slist->save_pdf(
+            path           => 'test.pdf',
+            list_of_pages  => [ $slist->{data}[0][2] ],
+            error_callback => sub {
+                ok( 1, 'caught error injected before save_pdf' );
+                chmod 0700, $dir;    # allow write access
 
                 $slist->save_pdf(
-                    path           => 'test.pdf',
-                    list_of_pages  => [ $slist->{data}[0][2] ],
+                    path            => 'test.pdf',
+                    list_of_pages   => [ $slist->{data}[0][2] ],
+                    queued_callback => sub {
+
+                        # inject error during save_pdf
+                        chmod 0500, $dir;    # no write access
+                    },
                     error_callback => sub {
-                        ok( 1, 'caught error injected before save_pdf' );
+                        ok( 1, 'save_pdf caught error injected in queue' );
                         chmod 0700, $dir;    # allow write access
-
-                        $slist->save_pdf(
-                            path            => 'test.pdf',
-                            list_of_pages   => [ $slist->{data}[0][2] ],
-                            queued_callback => sub {
-
-                                # inject error during save_pdf
-                                chmod 0500, $dir;    # no write access
-                            },
-                            error_callback => sub {
-                                ok( 1,
-                                    'save_pdf caught error injected in queue' );
-                                chmod 0700, $dir;    # allow write access
-                                Gtk2->main_quit;
-                            }
-                        );
-
+                        Gtk2->main_quit;
                     }
                 );
+
             }
         );
     }

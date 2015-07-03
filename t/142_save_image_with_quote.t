@@ -25,21 +25,13 @@ $slist->set_dir($dir);
 
 mkdir "te'st";
 
-$slist->get_file_info(
-    path              => 'test.pnm',
+$slist->import_files(
+    paths             => ['test.pnm'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
-                $slist->save_image(
-                    path              => "te'st/te'st.jpg",
-                    list_of_pages     => [ $slist->{data}[0][2] ],
-                    finished_callback => sub { Gtk2->main_quit }
-                );
-            }
+        $slist->save_image(
+            path              => "te'st/te'st.jpg",
+            list_of_pages     => [ $slist->{data}[0][2] ],
+            finished_callback => sub { Gtk2->main_quit }
         );
     }
 );

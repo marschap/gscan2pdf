@@ -32,29 +32,21 @@ SKIP: {
     my $dir = File::Temp->newdir;
     $slist->set_dir($dir);
 
-    $slist->get_file_info(
-        path              => 'test.png',
+    $slist->import_files(
+        paths             => ['test.png'],
         finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 1,
+            $slist->ocropus(
+                page              => $slist->{data}[0][2],
+                language          => 'eng',
                 finished_callback => sub {
-                    $slist->ocropus(
-                        page              => $slist->{data}[0][2],
-                        language          => 'eng',
-                        finished_callback => sub {
-                            like(
-                                $slist->{data}[0][2]{hocr},
-                                qr/The quick brown fox/,
-                                'Ocropus returned sensible text'
-                            );
-                            is( dirname("$slist->{data}[0][2]{filename}"),
-                                "$dir", 'using session directory' );
-                            Gtk2->main_quit;
-                        }
+                    like(
+                        $slist->{data}[0][2]{hocr},
+                        qr/The quick brown fox/,
+                        'Ocropus returned sensible text'
                     );
+                    is( dirname("$slist->{data}[0][2]{filename}"),
+                        "$dir", 'using session directory' );
+                    Gtk2->main_quit;
                 }
             );
         }

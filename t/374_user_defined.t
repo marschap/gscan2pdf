@@ -43,39 +43,25 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 $slist->set_paper_sizes( \%paper_sizes );
 
-$slist->get_file_info(
-    path              => 'white.pnm',
+$slist->import_files(
+    paths             => ['white.pnm'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
+        is( int( abs( $slist->{data}[0][2]{resolution} - 25.4 ) ),
+            0, 'Resolution of imported image' );
+        $slist->user_defined(
+            page              => $slist->{data}[0][2],
+            command           => 'convert %i tmp.pgm;mv tmp.pgm %i',
             finished_callback => sub {
                 is( int( abs( $slist->{data}[0][2]{resolution} - 25.4 ) ),
-                    0, 'Resolution of imported image' );
-                $slist->user_defined(
-                    page              => $slist->{data}[0][2],
-                    command           => 'convert %i tmp.pgm;mv tmp.pgm %i',
-                    finished_callback => sub {
-                        is(
-                            int(
-                                abs( $slist->{data}[0][2]{resolution} - 25.4 )
-                            ),
-                            0,
-                            'Resolution of converted image'
-                        );
-                        my ( $dir, $base, $suffix ) =
-                          fileparse( "$slist->{data}[0][2]{filename}",
-                            qr/\.[^.]*/ );
-                        is( $dir,    "$dir", 'using session directory' );
-                        is( $suffix, ".pgm", 'still has an extension' );
-                        $slist->save_pdf(
-                            path              => 'test.pdf',
-                            list_of_pages     => [ $slist->{data}[0][2] ],
-                            finished_callback => sub { Gtk2->main_quit }
-                        );
-                    }
+                    0, 'Resolution of converted image' );
+                my ( $dir, $base, $suffix ) =
+                  fileparse( "$slist->{data}[0][2]{filename}", qr/\.[^.]*/ );
+                is( $dir,    "$dir", 'using session directory' );
+                is( $suffix, ".pgm", 'still has an extension' );
+                $slist->save_pdf(
+                    path              => 'test.pdf',
+                    list_of_pages     => [ $slist->{data}[0][2] ],
+                    finished_callback => sub { Gtk2->main_quit }
                 );
             }
         );

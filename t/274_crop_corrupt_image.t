@@ -24,34 +24,26 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'test.gif',
+$slist->import_files(
+    paths             => ['test.gif'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
 
-                # Now we've imported it,
-                # remove the data to give a corrupt image
-                system("echo '' > $slist->{data}[0][2]->{filename}");
-                $slist->crop(
-                    page              => $slist->{data}[0][2],
-                    x                 => 10,
-                    y                 => 10,
-                    w                 => 10,
-                    h                 => 10,
-                    finished_callback => sub {
-                        ok( 0, 'caught errors from crop' );
-                        Gtk2->main_quit;
-                    },
-                    error_callback => sub {
-                        ok( 1, 'caught errors from crop' );
-                        Gtk2->main_quit;
-                    }
-                );
+        # Now we've imported it,
+        # remove the data to give a corrupt image
+        system("echo '' > $slist->{data}[0][2]->{filename}");
+        $slist->crop(
+            page              => $slist->{data}[0][2],
+            x                 => 10,
+            y                 => 10,
+            w                 => 10,
+            h                 => 10,
+            finished_callback => sub {
+                ok( 0, 'caught errors from crop' );
+                Gtk2->main_quit;
+            },
+            error_callback => sub {
+                ok( 1, 'caught errors from crop' );
+                Gtk2->main_quit;
             }
         );
     }

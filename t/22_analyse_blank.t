@@ -24,25 +24,16 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'white.pnm',
+$slist->import_files(
+    paths             => ['white.pnm'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
+        $slist->analyse(
+            page              => $slist->{data}[0][2],
             finished_callback => sub {
-                $slist->analyse(
-                    page              => $slist->{data}[0][2],
-                    finished_callback => sub {
-                        is( $slist->{data}[0][2]{std_dev},
-                            0, 'Found blank page' );
-                        is( dirname("$slist->{data}[0][2]{filename}"),
-                            "$dir", 'using session directory' );
-                        Gtk2->main_quit;
-                    }
-                );
+                is( $slist->{data}[0][2]{std_dev}, 0, 'Found blank page' );
+                is( dirname("$slist->{data}[0][2]{filename}"),
+                    "$dir", 'using session directory' );
+                Gtk2->main_quit;
             }
         );
     }

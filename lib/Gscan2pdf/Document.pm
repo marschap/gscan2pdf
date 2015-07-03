@@ -158,29 +158,105 @@ sub create_pidfile {
     return $pidfile;
 }
 
-sub get_file_info {
+# To avoid race condtions importing multiple files,
+# run get_file_info on all files first before checking for errors and importing
+
+sub import_files {
     my ( $self, %options ) = @_;
 
-    # File in which to store the process ID
-    # so that it can be killed if necessary
-    my $pidfile = $self->create_pidfile(%options);
-    if ( not defined $pidfile ) { return }
+    my @info;
+    for my $i ( 0 .. $#{ $options{paths} } ) {
+        my $path = $options{paths}->[$i];
 
-    my $sentinel =
-      _enqueue_request( 'get-file-info',
-        { path => $options{path}, pidfile => "$pidfile" } );
+        # File in which to store the process ID
+        # so that it can be killed if necessary
+        my $pidfile = $self->create_pidfile(%options);
+        if ( not defined $pidfile ) { return }
 
-    return $self->_monitor_process(
-        sentinel           => $sentinel,
-        pidfile            => $pidfile,
-        info               => TRUE,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        finished_callback  => $options{finished_callback},
-    );
+        my $sentinel =
+          _enqueue_request( 'get-file-info',
+            { path => $path, pidfile => "$pidfile" } );
+
+        my $pid = $self->_monitor_process(
+            sentinel           => $sentinel,
+            pidfile            => $pidfile,
+            info               => TRUE,
+            queued_callback    => $options{queued_callback},
+            started_callback   => $options{started_callback},
+            running_callback   => $options{running_callback},
+            error_callback     => $options{error_callback},
+            cancelled_callback => $options{cancelled_callback},
+            finished_callback  => sub {
+                my ($info) = @_;
+                $logger->debug("In finished_callback for $path");
+                push @info, $info;
+                if ( $i == $#{ $options{paths} } ) {
+                    $self->_get_file_info_finished_callback( \@info, %options );
+                }
+            },
+        );
+    }
+    return;
+}
+
+sub _get_file_info_finished_callback {
+    my ( $self, $info, %options ) = @_;
+    if ( @{$info} > 1 ) {
+        for ( @{$info} ) {
+            if ( $_->{format} eq 'session file' ) {
+                $logger->error(
+'Cannot open a session file at the same time as another file.'
+                );
+                if ( $options{error_callback} ) {
+                    $options{error_callback}->(
+                        $d->get(
+'Error: cannot open a session file at the same time as another file.'
+                        )
+                    );
+                }
+                return;
+            }
+            elsif ( $_->{pages} > 1 ) {
+                $logger->error(
+'Cannot import a multipage file at the same time as another file.'
+                );
+                if ( $options{error_callback} ) {
+                    $options{error_callback}->(
+                        $d->get(
+'Error: import a multipage file at the same time as another file.'
+                        )
+                    );
+                }
+                return;
+            }
+        }
+        for ( @{$info} ) {
+            $self->import_file(
+                info  => $_,
+                first => 1,
+                last  => 1,
+                %options
+            );
+        }
+    }
+    elsif ( $info->[0]{format} eq 'session file' ) {
+        open_session_file( $info->[0]{path} );
+    }
+    else {
+        my $first_page = 1;
+        my $last_page  = $info->[0]{pages};
+        if ( $options{pagerange_callback} ) {
+            ( $first_page, $last_page ) =
+              $options{pagerange_callback}->( $info->[0] );
+        }
+        $self->import_file(
+            info  => $info->[0],
+            first => $first_page,
+            last  => $last_page,
+            %options
+        );
+    }
+    return;
 }
 
 sub import_file {
@@ -1677,7 +1753,8 @@ sub _thread_get_file_info {
 
     $logger->info("Getting info for $filename");
     ( my $format, undef ) = open_three("file -b \"$filename\"");
-    $logger->info($format);
+    chomp $format;
+    $logger->info("Format: '$format'");
 
     given ($format) {
         when (/gzip[ ]compressed[ ]data/xsm) {
@@ -1760,10 +1837,17 @@ sub _thread_get_file_info {
 
             # Get file type
             my $image = Image::Magick->new;
-            my $x     = $image->Read($filename);
+            my $e     = $image->Read($filename);
+            if ("$e") {
+                $logger->error($e);
+                $logger->error('Thrown error');
+                $self->{status}  = 1;
+                $self->{message} = sprintf
+                  $d->get('%s is not a recognised image type'),
+                  $filename;
+                return;
+            }
             return if $_self->{cancel};
-            if ("$x") { $logger->warn($x) }
-
             $format = $image->Get('format');
             if ( not defined $format ) {
                 $self->{status}  = 1;
@@ -2324,8 +2408,13 @@ sub _thread_save_djvu {
 
         # Check the image depth to decide what sort of compression to use
         my $image = Image::Magick->new;
-        my $x     = $image->Read($filename);
-        if ("$x") { $logger->warn($x) }
+        my $e     = $image->Read($filename);
+        if ("$e") {
+            $logger->error($e);
+            $self->{status}  = 1;
+            $self->{message} = "Error reading $filename: $e.";
+            return;
+        }
         my $depth = $image->Get('depth');
         my $class = $image->Get('class');
         my $compression;
@@ -2346,8 +2435,13 @@ sub _thread_save_djvu {
             if ( $format !~ /(?:pnm|jpg)/xsm ) {
                 my $pnm =
                   File::Temp->new( DIR => $options{dir}, SUFFIX => '.pnm' );
-                $x = $image->Write( filename => $pnm );
-                if ("$x") { $logger->warn($x) }
+                $e = $image->Write( filename => $pnm );
+                if ("$e") {
+                    $logger->error($e);
+                    $self->{status}  = 1;
+                    $self->{message} = "Error writing $pnm: $e.";
+                    return;
+                }
                 $filename = $pnm;
             }
         }
@@ -2360,8 +2454,13 @@ sub _thread_save_djvu {
             {
                 my $pbm =
                   File::Temp->new( DIR => $options{dir}, SUFFIX => '.pbm' );
-                $x = $image->Write( filename => $pbm );
-                if ("$x") { $logger->warn($x) }
+                $e = $image->Write( filename => $pbm );
+                if ("$e") {
+                    $logger->error($e);
+                    $self->{status}  = 1;
+                    $self->{message} = "Error writing $pbm: $e.";
+                    return;
+                }
                 $filename = $pbm;
             }
         }
@@ -2723,9 +2822,14 @@ sub _thread_analyse {
 
     # Identify with imagemagick
     my $image = Image::Magick->new;
-    my $x     = $image->Read( $page->{filename} );
+    my $e     = $image->Read( $page->{filename} );
+    if ("$e") {
+        $logger->error($e);
+        $self->{status}  = 1;
+        $self->{message} = "Error reading $page->{filename}: $e.";
+        return;
+    }
     return if $_self->{cancel};
-    if ("$x") { $logger->warn($x) }
 
     my ( $depth, $min, $max, $mean, $stddev ) = $image->Statistics();
     if ( not defined $depth ) { $logger->warn('image->Statistics() failed') }
@@ -3105,8 +3209,13 @@ sub _thread_unpaper {
     try {
         if ( $filename !~ /[.]pnm$/xsm ) {
             my $image = Image::Magick->new;
-            my $x     = $image->Read($filename);
-            if ("$x") { $logger->warn($x) }
+            my $e     = $image->Read($filename);
+            if ("$e") {
+                $logger->error($e);
+                $self->{status}  = 1;
+                $self->{message} = "Error reading $filename: $e.";
+                return;
+            }
             my $depth = $image->Get('depth');
 
 # Unfortunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
@@ -3228,8 +3337,13 @@ sub _thread_user_defined {
 
         # Get file type
         my $image = Image::Magick->new;
-        my $x     = $image->Read($out);
-        if ("$x") { $logger->warn($x) }
+        my $e     = $image->Read($out);
+        if ("$e") {
+            $logger->error($e);
+            $self->{status}  = 1;
+            $self->{message} = "Error reading $out: $e.";
+            return;
+        }
 
         my $new = Gscan2pdf::Page->new(
             filename => $out,

@@ -26,23 +26,15 @@ my $old = `identify -format '%m %G %g %z-bit %r' test.png`;
 
 my $slist = Gscan2pdf::Document->new;
 
-$slist->get_file_info(
-    path              => 'test.pdf',
+$slist->import_files(
+    paths             => ['test.pdf'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
-                is(
+        is(
 `identify -format '%m %G %g %z-bit %r' $slist->{data}[0][2]{filename}`,
-                    $old,
-                    'PDF imported correctly'
-                );
-                Gtk2->main_quit;
-            }
+            $old,
+            'PDF imported correctly'
         );
+        Gtk2->main_quit;
     }
 );
 Gtk2->main;

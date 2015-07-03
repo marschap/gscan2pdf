@@ -18,11 +18,10 @@ Gscan2pdf::Document->setup($logger);
 system('convert rose: test.pnm; c44 test.pnm te\ st.djvu');
 
 my $slist = Gscan2pdf::Document->new;
-$slist->get_file_info(
-    path              => 'te st.djvu',
+$slist->import_files(
+    paths             => ['te st.djvu'],
     finished_callback => sub {
-        my ($info) = @_;
-        is( $info->{format}, 'DJVU', 'DjVu with spaces recognised correctly' );
+        is( $#{ $slist->{data} }, 0, 'Imported correctly DjVu with spaces' );
         Gtk2->main_quit;
     }
 );

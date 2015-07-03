@@ -1951,86 +1951,68 @@ sub open_dialog {
         # Update cwd
         $SETTING{'cwd'} = dirname( $filename[0] );
 
-        for (@filename) {
-            my ( $signal, $pid );
-            $pid = $slist->get_file_info(
-                path            => $_,
-                queued_callback => sub {
-                    return update_tpbar(@_);
-                },
-                started_callback => sub {
-                    my ( $thread, $process, $completed, $total ) = @_;
-                    $signal =
-                      setup_tpbar( $thread, $process, $completed, $total,
-                        $pid );
-                    return TRUE if ( defined $signal );
-                },
-                finished_callback => sub {
-                    my ( $info, $pending ) = @_;
-                    if ( $info->{format} eq 'session file' ) {
-                        open_session_file( $info->{path} );
-                    }
-                    elsif ( $info->{pages} > 1 ) {
-                        my $windowq = Gscan2pdf::Dialog->new(
-                            'transient-for' => $window,
-                            title           => $d->get('Pages to extract'),
-                            border_width    => $BORDER_WIDTH
-                        );
-                        my $vbox = $windowq->get('vbox');
-                        my $hbox = Gtk2::HBox->new;
-                        $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-                        my $label =
-                          Gtk2::Label->new( $d->get('First page to extract') );
-                        $hbox->pack_start( $label, FALSE, FALSE, 0 );
-                        my $spinbuttonf =
-                          Gtk2::SpinButton->new_with_range( 1, $info->{pages},
-                            1 );
-                        $hbox->pack_end( $spinbuttonf, FALSE, FALSE, 0 );
-                        $hbox = Gtk2::HBox->new;
-                        $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-                        $label =
-                          Gtk2::Label->new( $d->get('Last page to extract') );
-                        $hbox->pack_start( $label, FALSE, FALSE, 0 );
-                        my $spinbuttonl =
-                          Gtk2::SpinButton->new_with_range( 1, $info->{pages},
-                            1 );
-                        $spinbuttonl->set_value( $info->{pages} );
-                        $hbox->pack_end( $spinbuttonl, FALSE, FALSE, 0 );
+        my ( $signal, $pid );
+        $pid = $slist->import_files(
+            paths           => \@filename,
+            queued_callback => sub {
+                $logger->debug("import_files queued @filename");
+                return update_tpbar(@_);
+            },
+            started_callback => sub {
+                my ( $thread, $process, $completed, $total ) = @_;
+                $logger->debug("import_files started @filename");
+                $signal =
+                  setup_tpbar( $thread, $process, $completed, $total, $pid );
+                return TRUE if ( defined $signal );
+            },
+            pagerange_callback => sub {
+                my ($info) = @_;
+                my $dialog = Gtk2::Dialog->new(
+                    $d->get('Pages to extract'),
+                    $window, [qw/modal destroy-with-parent/],
+                    'gtk-ok'     => 'ok',
+                    'gtk-cancel' => 'cancel'
+                );
+                my $vbox = $dialog->get_content_area;
+                my $hbox = Gtk2::HBox->new;
+                $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+                my $label =
+                  Gtk2::Label->new( $d->get('First page to extract') );
+                $hbox->pack_start( $label, FALSE, FALSE, 0 );
+                my $spinbuttonf =
+                  Gtk2::SpinButton->new_with_range( 1, $info->{pages}, 1 );
+                $hbox->pack_end( $spinbuttonf, FALSE, FALSE, 0 );
+                $hbox = Gtk2::HBox->new;
+                $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+                $label = Gtk2::Label->new( $d->get('Last page to extract') );
+                $hbox->pack_start( $label, FALSE, FALSE, 0 );
+                my $spinbuttonl =
+                  Gtk2::SpinButton->new_with_range( 1, $info->{pages}, 1 );
+                $spinbuttonl->set_value( $info->{pages} );
+                $hbox->pack_end( $spinbuttonl, FALSE, FALSE, 0 );
 
-                        # HBox for buttons
-                        my $hboxb = Gtk2::HBox->new;
-                        $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
-
-                        # OK button
-                        my $obutton = Gtk2::Button->new_from_stock('gtk-ok');
-                        $hboxb->pack_start( $obutton, TRUE, TRUE, 0 );
-                        $obutton->signal_connect(
-                            clicked => sub {
-                                $windowq->destroy;
-                                import_file( $info, $spinbuttonf->get_value,
-                                    $spinbuttonl->get_value );
-                            }
-                        );
-
-                        # Cancel button
-                        my $cbutton =
-                          Gtk2::Button->new_from_stock('gtk-cancel');
-                        $hboxb->pack_start( $cbutton, TRUE, TRUE, 0 );
-                        $cbutton->signal_connect(
-                            clicked => sub {
-                                $windowq->destroy;
-                                return;
-                            }
-                        );
-                        $windowq->show_all;
-                    }
-                    else {
-                        import_file( $info, 1, 1 );
-                    }
-                },
-                error_callback => \&error_callback
-            );
-        }
+                $dialog->show_all;
+                my $response = $dialog->run;
+                $dialog->destroy;
+                if ( $response eq 'ok' ) {
+                    return $spinbuttonf->get_value, $spinbuttonl->get_value;
+                }
+                return;
+            },
+            running_callback => sub {
+                return update_tpbar(@_);
+            },
+            finished_callback => sub {
+                my ($pending) = @_;
+                $logger->debug("import_files finished @filename");
+                if ( not $pending ) { $thbox->hide_all }
+                if ( defined $signal ) {
+                    $tcbutton->signal_handler_disconnect($signal);
+                }
+                update_uimanager();
+            },
+            error_callback => \&error_callback
+        );
     }
     else {
         $file_chooser->destroy;
@@ -2038,40 +2020,6 @@ sub open_dialog {
 
     # cd back to tempdir
     chdir $session;
-    return;
-}
-
-# Wrapper for $slist->import_file
-
-sub import_file {
-    my ( $info, $first_page, $last_page ) = @_;
-    my ( $signal, $pid );
-    $pid = $slist->import_file(
-        info            => $info,
-        first           => $first_page,
-        last            => $last_page,
-        queued_callback => sub {
-            return update_tpbar(@_);
-        },
-        started_callback => sub {
-            my ( $thread, $process, $completed, $total ) = @_;
-            $signal =
-              setup_tpbar( $thread, $process, $completed, $total, $pid );
-            return TRUE if ( defined $signal );
-        },
-        running_callback => sub {
-            return update_tpbar(@_);
-        },
-        finished_callback => sub {
-            my ( $new_page, $pending ) = @_;
-            if ( not $pending ) { $thbox->hide_all }
-            if ( defined $signal ) {
-                $tcbutton->signal_handler_disconnect($signal);
-            }
-            update_uimanager();
-        },
-        error_callback => \&error_callback
-    );
     return;
 }
 

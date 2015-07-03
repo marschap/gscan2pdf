@@ -91,19 +91,11 @@ EOS
     my $dir = File::Temp->newdir;
     $slist->set_dir($dir);
 
-    $slist->get_file_info(
-        path              => 'test.pdf',
+    $slist->import_files(
+        paths             => ['test.pdf'],
         finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 2,
-                finished_callback => sub {
-                    is( $#{ $slist->{data} }, 0, 'imported 1 image' );
-                    Gtk2->main_quit;
-                }
-            );
+            is( $#{ $slist->{data} }, 0, 'imported 1 image' );
+            Gtk2->main_quit;
         }
     );
     Gtk2->main;

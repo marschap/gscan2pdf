@@ -33,19 +33,11 @@ is(
 # Add another image to test behaviour with multiple saves
 system('convert rose: test.pnm');
 
-$slist->get_file_info(
-    path              => 'test.pnm',
+$slist->import_files(
+    paths             => ['test.pnm'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
-                $slist->save_session('test2.gs2p');
-                Gtk2->main_quit;
-            }
-        );
+        $slist->save_session('test2.gs2p');
+        Gtk2->main_quit;
     }
 );
 Gtk2->main;

@@ -54,44 +54,25 @@ SKIP: {
     $slist->set_dir($dir);
     $slist->set_paper_sizes( \%paper_sizes );
 
-    $slist->get_file_info(
-        path              => 'test.pnm',
+    $slist->import_files(
+        paths             => ['test.pnm'],
         finished_callback => sub {
-            my ($info) = @_;
-            $slist->import_file(
-                info              => $info,
-                first             => 1,
-                last              => 1,
+            is( int( abs( $slist->{data}[0][2]{resolution} - 254 ) ),
+                0, 'Resolution of imported image' );
+            $slist->unpaper(
+                page              => $slist->{data}[0][2],
+                options           => $unpaper->get_cmdline,
                 finished_callback => sub {
                     is( int( abs( $slist->{data}[0][2]{resolution} - 254 ) ),
-                        0, 'Resolution of imported image' );
-                    $slist->unpaper(
-                        page              => $slist->{data}[0][2],
-                        options           => $unpaper->get_cmdline,
-                        finished_callback => sub {
-                            is(
-                                int(
-                                    abs(
-                                        $slist->{data}[0][2]{resolution} - 254
-                                    )
-                                ),
-                                0,
-                                'Resolution of processed image'
-                            );
-                            is(
-                                system(
-                                    "identify $slist->{data}[0][2]{filename}"),
-                                0,
-                                'valid image created'
-                            );
-                            is( dirname("$slist->{data}[0][2]{filename}"),
-                                "$dir", 'using session directory' );
-                            $slist->save_pdf(
-                                path              => 'test.pdf',
-                                list_of_pages     => [ $slist->{data}[0][2] ],
-                                finished_callback => sub { Gtk2->main_quit }
-                            );
-                        }
+                        0, 'Resolution of processed image' );
+                    is( system("identify $slist->{data}[0][2]{filename}"),
+                        0, 'valid image created' );
+                    is( dirname("$slist->{data}[0][2]{filename}"),
+                        "$dir", 'using session directory' );
+                    $slist->save_pdf(
+                        path              => 'test.pdf',
+                        list_of_pages     => [ $slist->{data}[0][2] ],
+                        finished_callback => sub { Gtk2->main_quit }
                     );
                 }
             );

@@ -46,45 +46,35 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 $slist->set_paper_sizes( \%paper_sizes );
 
-$slist->get_file_info(
-    path              => $filename,
+$slist->import_files(
+    paths             => [$filename],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
 
-                # inject error before user_defined
-                chmod 0500, $dir;    # no write access
+        # inject error before user_defined
+        chmod 0500, $dir;    # no write access
+
+        $slist->user_defined(
+            page           => $slist->{data}[0][2],
+            command        => 'convert %i -negate %o',
+            error_callback => sub {
+                ok( 1, 'caught error injected before user_defined' );
+                chmod 0700, $dir;    # allow write access
 
                 $slist->user_defined(
-                    page           => $slist->{data}[0][2],
-                    command        => 'convert %i -negate %o',
+                    page            => $slist->{data}[0][2],
+                    command         => 'convert %i -negate %o',
+                    queued_callback => sub {
+
+                        # inject error during user_defined
+                        chmod 0500, $dir;    # no write access
+                    },
                     error_callback => sub {
-                        ok( 1, 'caught error injected before user_defined' );
+                        ok( 1, 'user_defined caught error injected in queue' );
                         chmod 0700, $dir;    # allow write access
-
-                        $slist->user_defined(
-                            page            => $slist->{data}[0][2],
-                            command         => 'convert %i -negate %o',
-                            queued_callback => sub {
-
-                                # inject error during user_defined
-                                chmod 0500, $dir;    # no write access
-                            },
-                            error_callback => sub {
-                                ok( 1,
-'user_defined caught error injected in queue'
-                                );
-                                chmod 0700, $dir;    # allow write access
-                                Gtk2->main_quit;
-                            }
-                        );
-
+                        Gtk2->main_quit;
                     }
                 );
+
             }
         );
     }

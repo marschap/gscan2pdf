@@ -25,11 +25,10 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'test2.tif',
+$slist->import_files(
+    paths             => ['test2.tif'],
     finished_callback => sub {
-        my ($info) = @_;
-        is( $info->{pages}, 2, 'found 2 pages' );
+        is( $#{ $slist->{data} }, 1, 'imported 2 pages' );
         Gtk2->main_quit;
     }
 );

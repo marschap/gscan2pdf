@@ -1,21 +1,22 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use File::Basename;    # Split filename into dir, file, ext
+use Test::More tests => 1;
 
 BEGIN {
-    use_ok('Gscan2pdf::Document');
+    use Gscan2pdf::Document;
     use Gtk2 -init;    # Could just call init separately
 }
 
 #########################
 
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($WARN);
+Log::Log4perl->easy_init($FATAL);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Document->setup($logger);
 
-# Create test image
-system('convert rose: test.pnm');
+# Create corrupt image
+system('echo "" > test.png');
 
 my $slist = Gscan2pdf::Document->new;
 
@@ -24,20 +25,20 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 $slist->import_files(
-    paths             => ['test.pnm'],
+    paths             => ['test.png'],
     finished_callback => sub {
-        $slist->save_image(
-            path              => 'test.jpg',
-            list_of_pages     => [ $slist->{data}[0][2] ],
-            finished_callback => sub { Gtk2->main_quit }
-        );
+        ok( 0, 'caught errors importing file' );
+        Gtk2->main_quit;
+    },
+    error_callback => sub {
+        ok( 1, 'caught errors importing file' );
+        Gtk2->main_quit;
     }
 );
 Gtk2->main;
 
-is( system('identify test.jpg'), 0, 'valid JPG created' );
-
 #########################
 
-unlink 'test.pnm', 'test.jpg';
+unlink 'test.png', <$dir/*>;
+rmdir $dir;
 Gscan2pdf::Document->quit();

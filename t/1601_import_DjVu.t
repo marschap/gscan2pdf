@@ -25,25 +25,17 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-$slist->get_file_info(
-    path              => 'test.djvu',
+$slist->import_files(
+    paths             => ['test.djvu'],
     finished_callback => sub {
-        my ($info) = @_;
-        $slist->import_file(
-            info              => $info,
-            first             => 1,
-            last              => 1,
-            finished_callback => sub {
-                like(
+        like(
 `identify -format '%m %G %g %z-bit %r' $slist->{data}[0][2]{filename}`,
-                    qr/^TIFF/,
-                    'DjVu imported correctly'
-                );
-                is( dirname("$slist->{data}[0][2]{filename}"),
-                    "$dir", 'using session directory' );
-                Gtk2->main_quit;
-            }
+            qr/^TIFF/,
+            'DjVu imported correctly'
         );
+        is( dirname("$slist->{data}[0][2]{filename}"),
+            "$dir", 'using session directory' );
+        Gtk2->main_quit;
     }
 );
 Gtk2->main;
