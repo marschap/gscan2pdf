@@ -3949,7 +3949,7 @@ sub new_scan_callback {
         unpaper => $SETTING{'unpaper on scan'},
         ocr     => $SETTING{'OCR on scan'},
     );
-    if ( $SETTING{'threshold before OCR'} ) {
+    if ( $SETTING{'threshold-before-ocr'} ) {
         $options{threshold} = $SETTING{'threshold tool'};
     }
     if ( defined $test_image ) {
@@ -4344,9 +4344,9 @@ sub add_postprocessing_options {
                     $SETTING{'ocr language'} =
                       $cflang->[ $comboboxcl->get_active ][0];
                 }
-                $SETTING{'threshold before OCR'} = $tbutton->get_active;
+                $SETTING{'threshold-before-ocr'} = $tbutton->get_active;
                 $logger->info(
-                    "threshold before OCR $SETTING{'threshold before OCR'}");
+                    "threshold-before-ocr $SETTING{'threshold-before-ocr'}");
                 $SETTING{'threshold tool'} = $tsb->get_value;
             }
 
