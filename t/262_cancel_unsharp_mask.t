@@ -26,13 +26,16 @@ $slist->set_dir($dir);
 $slist->import_files(
     paths             => ['test.jpg'],
     finished_callback => sub {
-        my $pid = $slist->unsharp(
-            page               => $slist->{data}[0][2],
-            radius             => 100,
-            sigma              => 5,
-            amount             => 100,
-            threshold          => 0.5,
-            cancelled_callback => sub {
+        $slist->unsharp(
+            page              => $slist->{data}[0][2],
+            radius            => 100,
+            sigma             => 5,
+            amount            => 100,
+            threshold         => 0.5,
+            finished_callback => sub { ok 0, 'Finished callback' }
+        );
+        $slist->cancel(
+            sub {
                 is(
                     -s 'test.jpg',
                     -s "$slist->{data}[0][2]{filename}",
@@ -45,7 +48,6 @@ $slist->import_files(
                 );
             }
         );
-        $slist->cancel($pid);
     }
 );
 Gtk2->main;

@@ -57,6 +57,11 @@ SKIP: {
                             ok( 1, 'cuneiform caught error injected in queue' );
                             chmod 0700, $dir;    # allow write access
                             Gtk2->main_quit;
+                        },
+                        finished_callback => sub {
+                            ok( 0, 'cuneiform caught error injected in queue' );
+                            chmod 0700, $dir;    # allow write access
+                            Gtk2->main_quit;
                         }
                     );
 

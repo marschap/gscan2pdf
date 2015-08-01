@@ -31,6 +31,7 @@ use PDF::API2;
 use English qw( -no_match_vars );    # for $PROCESS_ID, $INPUT_RECORD_SEPARATOR
                                      # $CHILD_ERROR
 use POSIX qw(:sys_wait_h);
+use Data::UUID;
 use Readonly;
 Readonly our $POINTS_PER_INCH             => 72;
 Readonly my $_POLL_INTERVAL               => 100;    # ms
@@ -39,6 +40,8 @@ Readonly my $YEAR                         => 5;
 Readonly my $BOX_TOLERANCE                => 5;
 Readonly my $BITS_PER_BYTE                => 8;
 Readonly my $ALL_PENDING_ZOMBIE_PROCESSES => -1;
+Readonly my $INFINITE                     => -1;
+Readonly my $NOT_FOUND                    => -1;
 
 BEGIN {
     use Exporter ();
@@ -62,12 +65,13 @@ BEGIN {
 }
 our @EXPORT_OK;
 
-my $_PID           = 0;      # flag to identify which process to cancel
+my $_PID           = 0;               # flag to identify which process to cancel
 my $jobs_completed = 0;
 my $jobs_total     = 0;
+my $uuid_object    = Data::UUID->new;
 my $EMPTY          = q{};
 my $SPACE          = q{ };
-my ( $_self, $d, $logger, $paper_sizes );
+my ( $_self, $d, $logger, $paper_sizes, %callback );
 
 my %format = (
     'pnm' => 'Portable anymap',
@@ -82,14 +86,12 @@ sub setup {
     $d     = Locale::gettext->domain(Glib::get_application_name);
     Gscan2pdf::Page->set_logger($logger);
 
-    $_self->{requests}   = Thread::Queue->new;
-    $_self->{info_queue} = Thread::Queue->new;
-    $_self->{page_queue} = Thread::Queue->new;
-    share $_self->{status};
-    share $_self->{message};
+    $_self->{requests} = Thread::Queue->new;
+    $_self->{return}   = Thread::Queue->new;
     share $_self->{progress};
     share $_self->{process_name};
     share $_self->{cancel};
+    $_self->{cancel} = FALSE;
 
     $_self->{thread} = threads->new( \&_thread_main, $_self );
     return;
@@ -114,6 +116,7 @@ sub new {
     if ( not defined( $self->{widtht} ) )  { $self->{widtht}  = $THUMBNAIL }
 
     bless $self, $class;
+    Glib::Timeout->add( $_POLL_INTERVAL, \&check_return_queue, $self );
     return $self;
 }
 
@@ -132,14 +135,34 @@ sub quit {
     return;
 }
 
-# Flag the given process to cancel itself
+# Kill all running processes
 
 sub cancel {
-    my ( $self, $pid, $callback ) = @_;
-    if ( defined $self->{running_pids}{$pid} ) {
-        $self->{cancel_cb}{$pid} = $callback;
+    my ( $self, $callback ) = @_;
+
+    # Empty process queue first to stop any new process from starting
+    $logger->info('Emptying process queue');
+    while ( $_self->{requests}->dequeue_nb ) { }
+
+    # Then send the thread a cancel signal
+    # to stop it going beyond the next break point
+    $_self->{cancel} = TRUE;
+
+    # Kill all running processes in the thread
+    for my $pid ( keys %{ $self->{running_pids} } ) {
+        $logger->info("Killing pid $pid");
+        local $SIG{HUP} = 'IGNORE';
+        killfam 'HUP', ($pid);
+        delete $self->{running_pids}{$pid};
     }
-    return;
+
+    my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{cancelled} = $callback;
+
+    # Add a cancel request to ensure the reply is not blocked
+    $logger->info('Requesting cancel');
+    my $sentinel = _enqueue_request( 'cancel', { uuid => $uuid } );
+    return $self->_monitor_process( sentinel => $sentinel, );
 }
 
 sub create_pidfile {
@@ -173,27 +196,32 @@ sub import_files {
         my $pidfile = $self->create_pidfile(%options);
         if ( not defined $pidfile ) { return }
 
+        my $uuid = $uuid_object->create_str;
+        $callback{$uuid}{finished} = sub {
+            my ($info) = @_;
+            $logger->debug("In finished_callback for $path");
+            push @info, $info;
+            if ( $i == $#{ $options{paths} } ) {
+                $self->_get_file_info_finished_callback(
+                    \@info,
+                    uuid => $uuid,
+                    %options
+                );
+            }
+        };
+        $callback{$uuid}{error}     = $options{error_callback};
+        $callback{$uuid}{cancelled} = $options{cancelled_callback};
         my $sentinel =
           _enqueue_request( 'get-file-info',
-            { path => $path, pidfile => "$pidfile" } );
+            { path => $path, pidfile => "$pidfile", uuid => $uuid } );
 
-        my $pid = $self->_monitor_process(
-            sentinel           => $sentinel,
-            pidfile            => $pidfile,
-            info               => TRUE,
-            queued_callback    => $options{queued_callback},
-            started_callback   => $options{started_callback},
-            running_callback   => $options{running_callback},
-            error_callback     => $options{error_callback},
-            cancelled_callback => $options{cancelled_callback},
-            finished_callback  => sub {
-                my ($info) = @_;
-                $logger->debug("In finished_callback for $path");
-                push @info, $info;
-                if ( $i == $#{ $options{paths} } ) {
-                    $self->_get_file_info_finished_callback( \@info, %options );
-                }
-            },
+        $self->_monitor_process(
+            sentinel         => $sentinel,
+            pidfile          => $pidfile,
+            info             => TRUE,
+            queued_callback  => $options{queued_callback},
+            started_callback => $options{started_callback},
+            running_callback => $options{running_callback},
         );
     }
     return;
@@ -230,9 +258,16 @@ sub _get_file_info_finished_callback {
                 return;
             }
         }
-        for ( @{$info} ) {
+        my $main_uuid         = $options{uuid};
+        my $finished_callback = $options{finished_callback};
+        delete $options{paths};
+        delete $options{finished_callback};
+        for my $i ( 0 .. $#{$info} ) {
+            if ( $i == $#{$info} ) {
+                $options{finished_callback} = $finished_callback;
+            }
             $self->import_file(
-                info  => $_,
+                info  => $info->[$i],
                 first => 1,
                 last  => 1,
                 %options
@@ -245,7 +280,7 @@ sub _get_file_info_finished_callback {
     else {
         my $first_page = 1;
         my $last_page  = $info->[0]{pages};
-        if ( $options{pagerange_callback} ) {
+        if ( $options{pagerange_callback} and $last_page > 1 ) {
             ( $first_page, $last_page ) =
               $options{pagerange_callback}->( $info->[0] );
         }
@@ -259,6 +294,19 @@ sub _get_file_info_finished_callback {
     return;
 }
 
+# Because the finished, error and cancelled callbacks are triggered by the
+# return queue, note them here for the return queue to use.
+
+sub _note_callbacks {
+    my (%options) = @_;
+    my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{finished}  = $options{finished_callback};
+    $callback{$uuid}{error}     = $options{error_callback};
+    $callback{$uuid}{cancelled} = $options{cancelled_callback};
+    $callback{$uuid}{display}   = $options{display_callback};
+    return $uuid;
+}
+
 sub import_file {
     my ( $self, %options ) = @_;
 
@@ -269,6 +317,7 @@ sub import_file {
     my $dirname = $EMPTY;
     if ( defined $self->{dir} ) { $dirname = "$self->{dir}" }
 
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'import-file',
         {
@@ -276,52 +325,87 @@ sub import_file {
             first   => $options{first},
             last    => $options{last},
             dir     => $dirname,
-            pidfile => "$pidfile"
+            pidfile => "$pidfile",
+            uuid    => $uuid,
         }
     );
-
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        pidfile            => $pidfile,
-        add                => $options{last} - $options{first} + 1,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        pidfile          => $pidfile,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
-sub fetch_file {
-    my ( $self, $n ) = @_;
-    my $i = 0;
-    if ($n) {
-        while ( $i < $n ) {
-            my $page = $_self->{page_queue}->dequeue;
-            if ( ref($page) eq $EMPTY ) {
-                $n = $page;
-                return $self->fetch_file($n);
+sub _throw_error {
+    my ( $uuid, $message ) = @_;
+    if ( defined $callback{$uuid}{error} ) {
+        $callback{$uuid}{error}->($message);
+        delete $callback{$uuid};
+    }
+    return;
+}
+
+sub check_return_queue {
+    my ($self) = @_;
+    while ( defined( my $data = $_self->{return}->dequeue_nb() ) ) {
+        if ( not defined $data->{type} ) {
+            $logger->error("Bad data bundle $data in return queue.");
+            next;
+        }
+
+        # if we have pressed the cancel button, ignore everything in the returns
+        # queue until it flags cancelled.
+        if ( $_self->{cancel} ) {
+            if ( $data->{type} eq 'cancelled' ) {
+                $_self->{cancel} = FALSE;
+                if ( defined $callback{ $data->{uuid} }{cancelled} ) {
+                    $callback{ $data->{uuid} }{cancelled}->( $data->{info} );
+                    delete $callback{ $data->{uuid} };
+                }
             }
             else {
-                $self->add_page( $page->thaw );
-                ++$i;
+                next;
+            }
+        }
+
+        if ( not defined $data->{uuid} ) {
+            $logger->error('Bad uuid in return queue.');
+            next;
+        }
+        given ( $data->{type} ) {
+            when ('file-info') {
+                if ( not defined $data->{info} ) {
+                    $logger->error('Bad file info in return queue.');
+                    next;
+                }
+                if ( defined $callback{ $data->{uuid} }{finished} ) {
+                    $callback{ $data->{uuid} }{finished}->( $data->{info} );
+                    delete $callback{ $data->{uuid} };
+                }
+            }
+            when ('page') {
+                if ( defined $data->{page} ) {
+                    $self->add_page( $data->{uuid}, $data->{page},
+                        $data->{info} );
+                }
+                else {
+                    $logger->error('Bad page in return queue.');
+                }
+            }
+            when ('error') {
+                _throw_error( $data->{uuid}, $data->{message} );
+            }
+            when ('finished') {
+                if ( defined $callback{ $data->{uuid} }{finished} ) {
+                    $callback{ $data->{uuid} }{finished}->( $data->{message} );
+                    delete $callback{ $data->{uuid} };
+                }
             }
         }
     }
-    else {
-        while ( defined( my $page = $_self->{page_queue}->dequeue_nb() ) ) {
-            if ( ref($page) eq $EMPTY ) {
-                $n = $page;
-                return $self->fetch_file($n);
-            }
-            else {
-                $self->add_page( $page->thaw );
-                ++$i;
-            }
-        }
-    }
-    return $i;
+    return Glib::SOURCE_CONTINUE;
 }
 
 # Check how many pages could be scanned
@@ -339,7 +423,7 @@ sub pages_possible {
     elsif ( ( $i < 0 or $self->{data}[$i][0] < $start )
         and $step > 0 )
     {
-        return -1;    ## no critic (ProhibitMagicNumbers)
+        return $INFINITE;
     }
 
     # track backwards to find index before which start page would be inserted
@@ -358,7 +442,7 @@ sub pages_possible {
 
         # fallen off top of index
         elsif ( $i > $#{ $self->{data} } ) {
-            return -1      ## no critic (ProhibitMagicNumbers)
+            return $INFINITE;
         }
 
         # Settings take us into negative page range
@@ -396,26 +480,91 @@ sub pages_possible {
     return;
 }
 
+sub find_page_by_uuid {
+    my ( $self, $uuid ) = @_;
+    my $i = 0;
+    while ( $i <= $#{ $self->{data} } and $self->{data}[$i][2]{uuid} ne $uuid )
+    {
+        $i++;
+    }
+    if ( $i <= $#{ $self->{data} } ) { return $i }
+    return;
+}
+
 # Add a new page to the document
 
 sub add_page {
-    my ( $self, $page, $pagenum, $success_cb ) = @_;
+    my ( $self, $process_uuid, $page, $ref ) = @_;
+    my ( $i, $pagenum, $new, @page );
 
-    # Add to the page list
-    if ( not defined $pagenum ) { $pagenum = $#{ $self->{data} } + 2 }
+    # This is really hacky to allow import_scan() to specify the page number
+    if ( ref($ref) ne 'HASH' ) {
+        $pagenum = $ref;
+        undef $ref;
+    }
+    for my $uuid ( ( $ref->{replace}, $ref->{'insert-after'} ) ) {
+        if ( defined $uuid ) {
+            $i = $self->find_page_by_uuid($uuid);
+            if ( not defined $i ) {
+                $logger->error("Requested page $uuid does not exist.");
+                return $NOT_FOUND;
+            }
+            last;
+        }
+    }
+
+    # Move the temp file from the thread to a temp object that will be
+    # automatically cleared up
+    if ( ref( $page->{filename} ) eq 'File::Temp' ) {
+        $new = $page;
+    }
+    else {
+        try {
+            $new = $page->thaw;
+        }
+        catch {
+            _throw_error( $process_uuid,
+                "Caught error writing to $self->{dir}: $_" );
+        };
+        if ( not defined $new ) { return }
+    }
 
     # Block the row-changed signal whilst adding the scan (row) and sorting it.
     if ( defined $self->{row_changed_signal} ) {
         $self->get_model->signal_handler_block( $self->{row_changed_signal} );
     }
     my $thumb =
-      get_pixbuf( $page->{filename}, $self->{heightt}, $self->{widtht} );
-    my $resolution = $page->resolution($paper_sizes);
-    push @{ $self->{data} }, [ $pagenum, $thumb, $page ];
-    $logger->info(
-        "Added $page->{filename} at page $pagenum with resolution $resolution");
+      get_pixbuf( $new->{filename}, $self->{heightt}, $self->{widtht} );
+    my $resolution = $new->resolution($paper_sizes);
 
-# Block selection_changed_signal to prevent its firing changing pagerange to all
+    if ( defined $i ) {
+        if ( defined $ref->{replace} ) {
+            $self->{data}[$i][1] = $thumb;
+            $self->{data}[$i][2] = $new;
+            $pagenum             = $self->{data}[$i][0];
+            $logger->info(
+"Replaced $self->{data}[$i][2]->{filename} at page $pagenum with $new->{filename}, resolution $resolution"
+            );
+        }
+        elsif ( defined $ref->{'insert-after'} ) {
+            $pagenum = $self->{data}[$i][0] + 1;
+            splice @{ $self->{data} }, $i + 1, 0, [ $pagenum, $thumb, $new ];
+            $logger->info(
+"Inserted $new->{filename} at page $pagenum with resolution $resolution"
+            );
+        }
+    }
+    else {
+        # Add to the page list
+        if ( not defined $pagenum ) { $pagenum = $#{ $self->{data} } + 2 }
+        push @{ $self->{data} }, [ $pagenum, $thumb, $new ];
+        $logger->info(
+"Added $page->{filename} at page $pagenum with resolution $resolution"
+        );
+    }
+
+    # Block selection_changed_signal
+    # to prevent its firing changing pagerange to all
     if ( defined $self->{selection_changed_signal} ) {
         $self->get_selection->signal_handler_block(
             $self->{selection_changed_signal} );
@@ -430,8 +579,6 @@ sub add_page {
         $self->get_model->signal_handler_unblock( $self->{row_changed_signal} );
     }
 
-    my @page;
-
     # Due to the sort, must search for new page
     $page[0] = 0;
 
@@ -445,8 +592,9 @@ sub add_page {
 
     $self->select(@page);
 
-    if ($success_cb) { $success_cb->() }
-
+    if ( defined $callback{$process_uuid}{display} ) {
+        $callback{$process_uuid}{display}->( $self->{data}[$i][2] );
+    }
     return $page[0];
 }
 
@@ -476,7 +624,8 @@ sub manual_sort_by_column {
     # and view column indices aligned.
     my $sortfunc = $sortfuncs{ $self->get_model->get_column_type($sortcol) };
 
- # Deep copy the tied data so we can sort it. Otherwise, very bad things happen.
+    # Deep copy the tied data so we can sort it.
+    # Otherwise, very bad things happen.
     my @data = map { [ @{$_} ] } @{ $self->{data} };
     @data = sort { $sortfunc->( $a->[$sortcol], $b->[$sortcol] ) } @data;
 
@@ -514,6 +663,7 @@ sub save_pdf {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-pdf',
         {
@@ -522,19 +672,17 @@ sub save_pdf {
             metadata      => $options{metadata},
             options       => $options{options},
             dir           => "$self->{dir}",
-            pidfile       => "$pidfile"
+            pidfile       => "$pidfile",
+            uuid          => $uuid,
         }
     );
 
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        pidfile            => $pidfile,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        pidfile          => $pidfile,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
@@ -551,6 +699,7 @@ sub save_djvu {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-djvu',
         {
@@ -558,19 +707,17 @@ sub save_djvu {
             list_of_pages => $options{list_of_pages},
             metadata      => $options{metadata},
             dir           => "$self->{dir}",
-            pidfile       => "$pidfile"
+            pidfile       => "$pidfile",
+            uuid          => $uuid,
         }
     );
 
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        pidfile            => $pidfile,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        pidfile          => $pidfile,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
@@ -587,6 +734,7 @@ sub save_tiff {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-tiff',
         {
@@ -595,117 +743,39 @@ sub save_tiff {
             options       => $options{options},
             ps            => $options{ps},
             dir           => "$self->{dir}",
-            pidfile       => "$pidfile"
+            pidfile       => "$pidfile",
+            uuid          => $uuid,
         }
     );
 
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        pidfile            => $pidfile,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        pidfile          => $pidfile,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
 sub rotate {
     my ( $self, %options ) = @_;
-
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'rotate',
         {
             angle => $options{angle},
             page  => $options{page}->freeze,
-            dir   => "$self->{dir}"
+            dir   => "$self->{dir}",
+            uuid  => $uuid,
         }
     );
 
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        display_callback   => $options{display_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
-}
-
-sub update_page {
-    my ( $self, $display_callback, $error_callback ) = @_;
-    my (@out);
-    my $data = $_self->{page_queue}->dequeue;
-
-    # find old page
-    my $i = 0;
-    while ( $i <= $#{ $self->{data} }
-        and $self->{data}[$i][2]{filename} ne $data->{old}{filename} )
-    {
-        $i++;
-    }
-
-    # if found, replace with new one
-    if ( $i <= $#{ $self->{data} } ) {
-
-# Move the temp file from the thread to a temp object that will be automatically cleared up
-        my $new;
-        try {
-            $new = $data->{new}->thaw;
-        }
-        catch {
-            $logger->error("Caught error writing to $self->{dir}: $_");
-            if ($error_callback) {
-                $error_callback->("Error: unable to write to $self->{dir}.");
-            }
-        };
-        if ( not defined $new ) { return }
-
-        if ( defined $self->{row_changed_signal} ) {
-            $self->get_model->signal_handler_block(
-                $self->{row_changed_signal} );
-        }
-        my $resolution = $new->resolution($paper_sizes);
-        $logger->info(
-"Replaced $self->{data}[$i][2]->{filename} at page $self->{data}[$i][0] with $new->{filename}, resolution $resolution"
-        );
-        $self->{data}[$i][1] =
-          get_pixbuf( $new->{filename}, $self->{heightt}, $self->{widtht} );
-        $self->{data}[$i][2] = $new;
-        push @out, $new;
-
-        if ( defined $data->{new2} ) {
-            $new = $data->{new2}->thaw;
-            splice @{ $self->{data} }, $i + 1, 0,
-              [
-                $self->{data}[$i][0] + 1,
-                get_pixbuf(
-                    $new->{filename}, $self->{heightt}, $self->{widtht}
-                ),
-                $new
-              ];
-            $logger->info(
-                "Inserted $new->{filename} at page ",
-                $self->{data}[ $i + 1 ][0],
-                " with  resolution $resolution"
-            );
-            push @out, $new;
-        }
-
-        if ( defined $self->{row_changed_signal} ) {
-            $self->get_model->signal_handler_unblock(
-                $self->{row_changed_signal} );
-        }
-        my @selected = $self->get_selected_indices;
-        if ( @selected and $i == $selected[0] ) { $self->select(@selected) }
-        if ($display_callback) { $display_callback->( $self->{data}[$i][2] ) }
-    }
-
-    return \@out;
 }
 
 sub save_image {
@@ -721,23 +791,22 @@ sub save_image {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-image',
         {
             path          => $options{path},
             list_of_pages => $options{list_of_pages},
-            pidfile       => "$pidfile"
+            pidfile       => "$pidfile",
+            uuid          => $uuid,
         }
     );
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        pidfile            => $pidfile,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        pidfile          => $pidfile,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
@@ -749,21 +818,20 @@ sub save_text {
           $options{list_of_pages}->[$i]
           ->freeze;    # sharing File::Temp objects causes problems
     }
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-text',
         {
             path          => $options{path},
             list_of_pages => $options{list_of_pages},
+            uuid          => $uuid,
         }
     );
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
@@ -775,90 +843,83 @@ sub save_hocr {
           $options{list_of_pages}->[$i]
           ->freeze;    # sharing File::Temp objects causes problems
     }
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-hocr',
         {
             path          => $options{path},
             list_of_pages => $options{list_of_pages},
+            uuid          => $uuid,
         }
     );
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
 sub analyse {
     my ( $self, %options ) = @_;
-
-    my $sentinel =
-      _enqueue_request( 'analyse', { page => $options{page}->freeze } );
-
+    my $uuid     = _note_callbacks(%options);
+    my $sentinel = _enqueue_request(
+        'analyse',
+        {
+            page => $options{page}->freeze,
+            uuid => $uuid
+        }
+    );
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
 sub threshold {
     my ( $self, %options ) = @_;
-
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'threshold',
         {
             threshold => $options{threshold},
             page      => $options{page}->freeze,
-            dir       => "$self->{dir}"
+            dir       => "$self->{dir}",
+            uuid      => $uuid,
         }
     );
-
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        display_callback   => $options{display_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
 sub negate {
     my ( $self, %options ) = @_;
-
-    my $sentinel =
-      _enqueue_request( 'negate',
-        { page => $options{page}->freeze, dir => "$self->{dir}" } );
-
+    my $uuid     = _note_callbacks(%options);
+    my $sentinel = _enqueue_request(
+        'negate',
+        {
+            page => $options{page}->freeze,
+            dir  => "$self->{dir}",
+            uuid => $uuid
+        }
+    );
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        display_callback   => $options{display_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
 sub unsharp {
     my ( $self, %options ) = @_;
-
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'unsharp',
         {
@@ -868,25 +929,20 @@ sub unsharp {
             amount    => $options{amount},
             threshold => $options{threshold},
             dir       => "$self->{dir}",
+            uuid      => $uuid,
         }
     );
-
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        display_callback   => $options{display_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
 sub crop {
     my ( $self, %options ) = @_;
-
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'crop',
         {
@@ -896,38 +952,33 @@ sub crop {
             w    => $options{w},
             h    => $options{h},
             dir  => "$self->{dir}",
+            uuid => $uuid,
         }
     );
-
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        display_callback   => $options{display_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
 sub to_png {
     my ( $self, %options ) = @_;
-
-    my $sentinel =
-      _enqueue_request( 'to-png',
-        { page => $options{page}->freeze, dir => "$self->{dir}" } );
-
+    my $uuid     = _note_callbacks(%options);
+    my $sentinel = _enqueue_request(
+        'to-png',
+        {
+            page => $options{page}->freeze,
+            dir  => "$self->{dir}",
+            uuid => $uuid
+        }
+    );
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
@@ -938,6 +989,7 @@ sub tesseract {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'tesseract',
         {
@@ -945,20 +997,15 @@ sub tesseract {
             language  => $options{language},
             threshold => $options{threshold},
             pidfile   => "$pidfile",
+            uuid      => $uuid,
         }
     );
-
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        pidfile            => $pidfile,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        display_callback   => $options{display_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        pidfile          => $pidfile,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
@@ -969,6 +1016,7 @@ sub ocropus {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'ocropus',
         {
@@ -976,20 +1024,15 @@ sub ocropus {
             language  => $options{language},
             threshold => $options{threshold},
             pidfile   => "$pidfile",
+            uuid      => $uuid,
         }
     );
-
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        pidfile            => $pidfile,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        display_callback   => $options{display_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        pidfile          => $pidfile,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
@@ -1000,6 +1043,7 @@ sub cuneiform {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'cuneiform',
         {
@@ -1007,20 +1051,15 @@ sub cuneiform {
             language  => $options{language},
             threshold => $options{threshold},
             pidfile   => "$pidfile",
+            uuid      => $uuid,
         }
     );
-
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        pidfile            => $pidfile,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        display_callback   => $options{display_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        pidfile          => $pidfile,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
@@ -1031,26 +1070,22 @@ sub gocr {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'gocr',
         {
             page      => $options{page}->freeze,
             threshold => $options{threshold},
             pidfile   => "$pidfile",
+            uuid      => $uuid,
         }
     );
-
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        pidfile            => $pidfile,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        display_callback   => $options{display_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        pidfile          => $pidfile,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
@@ -1061,6 +1096,7 @@ sub unpaper {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'unpaper',
         {
@@ -1068,20 +1104,15 @@ sub unpaper {
             options => $options{options},
             pidfile => "$pidfile",
             dir     => "$self->{dir}",
+            uuid    => $uuid,
         }
     );
-
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        pidfile            => $pidfile,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        display_callback   => $options{display_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        pidfile          => $pidfile,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
@@ -1092,27 +1123,23 @@ sub user_defined {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
+    my $uuid     = _note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'user-defined',
         {
             page    => $options{page}->freeze,
             command => $options{command},
             dir     => "$self->{dir}",
-            pidfile => "$pidfile"
+            pidfile => "$pidfile",
+            uuid    => $uuid,
         }
     );
-
     return $self->_monitor_process(
-        sentinel           => $sentinel,
-        update_slist       => TRUE,
-        pidfile            => $pidfile,
-        queued_callback    => $options{queued_callback},
-        started_callback   => $options{started_callback},
-        running_callback   => $options{running_callback},
-        error_callback     => $options{error_callback},
-        cancelled_callback => $options{cancelled_callback},
-        display_callback   => $options{display_callback},
-        finished_callback  => $options{finished_callback},
+        sentinel         => $sentinel,
+        pidfile          => $pidfile,
+        queued_callback  => $options{queued_callback},
+        started_callback => $options{started_callback},
+        running_callback => $options{running_callback},
     );
 }
 
@@ -1448,29 +1475,7 @@ sub _monitor_process {
 
 sub _monitor_process_running_callback {
     my ( $self, $pid, $options ) = @_;
-    if ( exists $self->{cancel_cb}{$pid} ) {
-        if ( not defined( $self->{cancel_cb}{$pid} )
-            or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
-        {
-            if ( defined $options->{pidfile} ) {
-                _cancel_process( slurp( $options->{pidfile} ) );
-            }
-            else {
-                _cancel_process();
-            }
-            if ( $options->{cancelled_callback} ) {
-                $options->{cancelled_callback}->();
-            }
-            if ( $self->{cancel_cb}{$pid} ) { $self->{cancel_cb}{$pid}->() }
-
-            # Flag that the callbacks have been done here
-            # so they are not repeated here or in finished
-            $self->{cancel_cb}{$pid} = 1;
-            delete $self->{running_pids}{$pid};
-        }
-        return;
-    }
-    if ( $options->{add} ) { $self->fetch_file( $options->{add} ) }
+    if ( $_self->{cancel} ) { return }
     if ( $options->{started_callback} and not $options->{started_flag} ) {
         $options->{started_flag} = $options->{started_callback}->(
             1, $_self->{process_name},
@@ -1491,25 +1496,7 @@ sub _monitor_process_running_callback {
 
 sub _monitor_process_finished_callback {
     my ( $self, $pid, $options ) = @_;
-    if ( exists $self->{cancel_cb}{$pid} ) {
-        if ( not defined( $self->{cancel_cb}{$pid} )
-            or ref( $self->{cancel_cb}{$pid} ) eq 'CODE' )
-        {
-            if ( defined $options->{pidfile} ) {
-                _cancel_process( slurp( $options->{pidfile} ) );
-            }
-            else {
-                _cancel_process();
-            }
-            if ( $options->{cancelled_callback} ) {
-                $options->{cancelled_callback}->();
-            }
-            if ( $self->{cancel_cb}{$pid} ) { $self->{cancel_cb}{$pid}->() }
-        }
-        delete $self->{cancel_cb}{$pid};
-        delete $self->{running_pids}{$pid};
-        return;
-    }
+    if ( $_self->{cancel} ) { return }
     if ( $options->{started_callback} and not $options->{started_flag} ) {
         $options->{started_callback}->();
     }
@@ -1519,39 +1506,9 @@ sub _monitor_process_finished_callback {
         }
         return;
     }
-    if ( $options->{add} ) { $options->{add} -= $self->fetch_file }
-    my $data;
-    if ( $options->{info} ) {
-        $data = $_self->{info_queue}->dequeue;
-    }
-    elsif ( $options->{update_slist} ) {
-        $data = $self->update_page( $options->{display_callback},
-            $options->{error_callback} );
-    }
-    if ( $options->{finished_callback} ) {
-        $options->{finished_callback}->( $data, $_self->{requests}->pending );
-    }
+    $self->check_return_queue;
     delete $self->{cancel_cb}{$pid};
     delete $self->{running_pids}{$pid};
-    return;
-}
-
-sub _cancel_process {
-    my ($pid) = @_;
-
-    # Empty process queue first to stop any new process from starting
-    $logger->info('Emptying process queue');
-    while ( $_self->{requests}->dequeue_nb ) { }
-
-# Then send the thread a cancel signal to stop it going beyond the next break point
-    $_self->{cancel} = TRUE;
-
-    # Before killing any process running in the thread
-    if ($pid) {
-        $logger->info("Killing pid $pid");
-        local $SIG{HUP} = 'IGNORE';
-        killfam 'HUP', ($pid);
-    }
     return;
 }
 
@@ -1560,18 +1517,18 @@ sub _thread_main {
 
     while ( my $request = $self->{requests}->dequeue ) {
         $self->{process_name} = $request->{action};
-        undef $_self->{cancel};
 
         # Signal the sentinel that the request was started.
         ${ $request->{sentinel} }++;
 
         given ( $request->{action} ) {
             when ('analyse') {
-                _thread_analyse( $self, $request->{page} );
+                _thread_analyse( $self, $request->{page}, $request->{uuid} );
             }
 
             when ('cancel') {
-                _thread_cancel($self);
+                $self->{return}->enqueue(
+                    { type => 'cancelled', uuid => $request->{uuid} } );
             }
 
             when ('crop') {
@@ -1583,23 +1540,29 @@ sub _thread_main {
                     w    => $request->{w},
                     h    => $request->{h},
                     dir  => $request->{dir},
+                    uuid => $request->{uuid},
                 );
             }
 
             when ('cuneiform') {
-                _thread_cuneiform( $self, $request->{page},
-                    $request->{language}, $request->{threshold},
-                    $request->{pidfile} );
+                _thread_cuneiform(
+                    $self,
+                    page      => $request->{page},
+                    language  => $request->{language},
+                    threshold => $request->{threshold},
+                    pidfile   => $request->{pidfile},
+                    uuid      => $request->{uuid}
+                );
             }
 
             when ('get-file-info') {
                 _thread_get_file_info( $self, $request->{path},
-                    $request->{pidfile} );
+                    $request->{pidfile}, $request->{uuid} );
             }
 
             when ('gocr') {
                 _thread_gocr( $self, $request->{page}, $request->{threshold},
-                    $request->{pidfile} );
+                    $request->{pidfile}, $request->{uuid} );
             }
 
             when ('import-file') {
@@ -1609,17 +1572,27 @@ sub _thread_main {
                     first   => $request->{first},
                     last    => $request->{last},
                     dir     => $request->{dir},
-                    pidfile => $request->{pidfile}
+                    pidfile => $request->{pidfile},
+                    uuid    => $request->{uuid}
                 );
             }
 
             when ('negate') {
-                _thread_negate( $self, $request->{page}, $request->{dir} );
+                _thread_negate(
+                    $self,           $request->{page},
+                    $request->{dir}, $request->{uuid}
+                );
             }
 
             when ('ocropus') {
-                _thread_ocropus( $self, $request->{page}, $request->{language},
-                    $request->{threshold}, $request->{pidfile} );
+                _thread_ocropus(
+                    $self,
+                    page      => $request->{page},
+                    language  => $request->{language},
+                    threshold => $request->{threshold},
+                    pidfile   => $request->{pidfile},
+                    uuid      => $request->{uuid}
+                );
             }
 
             when ('paper_sizes') {
@@ -1631,8 +1604,10 @@ sub _thread_main {
             }
 
             when ('rotate') {
-                _thread_rotate( $self, $request->{angle}, $request->{page},
-                    $request->{dir} );
+                _thread_rotate(
+                    $self,           $request->{angle}, $request->{page},
+                    $request->{dir}, $request->{uuid}
+                );
             }
 
             when ('save-djvu') {
@@ -1642,19 +1617,21 @@ sub _thread_main {
                     list_of_pages => $request->{list_of_pages},
                     metadata      => $request->{metadata},
                     dir           => $request->{dir},
-                    pidfile       => $request->{pidfile}
+                    pidfile       => $request->{pidfile},
+                    uuid          => $request->{uuid}
                 );
             }
 
             when ('save-hocr') {
                 _thread_save_hocr( $self, $request->{path},
-                    $request->{list_of_pages} );
+                    $request->{list_of_pages},
+                    $request->{uuid} );
             }
 
             when ('save-image') {
                 _thread_save_image( $self, $request->{path},
                     $request->{list_of_pages},
-                    $request->{pidfile} );
+                    $request->{pidfile}, $request->{uuid} );
             }
 
             when ('save-pdf') {
@@ -1665,13 +1642,15 @@ sub _thread_main {
                     metadata      => $request->{metadata},
                     options       => $request->{options},
                     dir           => $request->{dir},
-                    pidfile       => $request->{pidfile}
+                    pidfile       => $request->{pidfile},
+                    uuid          => $request->{uuid}
                 );
             }
 
             when ('save-text') {
                 _thread_save_text( $self, $request->{path},
-                    $request->{list_of_pages} );
+                    $request->{list_of_pages},
+                    $request->{uuid} );
             }
 
             when ('save-tiff') {
@@ -1682,28 +1661,43 @@ sub _thread_main {
                     options       => $request->{options},
                     ps            => $request->{ps},
                     dir           => $request->{dir},
-                    pidfile       => $request->{pidfile}
+                    pidfile       => $request->{pidfile},
+                    uuid          => $request->{uuid}
                 );
             }
 
             when ('tesseract') {
-                _thread_tesseract( $self, $request->{page},
-                    $request->{language}, $request->{threshold},
-                    $request->{pidfile} );
+                _thread_tesseract(
+                    $self,
+                    page      => $request->{page},
+                    language  => $request->{language},
+                    threshold => $request->{threshold},
+                    pidfile   => $request->{pidfile},
+                    uuid      => $request->{uuid}
+                );
             }
 
             when ('threshold') {
                 _thread_threshold( $self, $request->{threshold},
-                    $request->{page}, $request->{dir} );
+                    $request->{page}, $request->{dir}, $request->{uuid} );
             }
 
             when ('to-png') {
-                _thread_to_png( $self, $request->{page}, $request->{dir} );
+                _thread_to_png(
+                    $self,           $request->{page},
+                    $request->{dir}, $request->{uuid}
+                );
             }
 
             when ('unpaper') {
-                _thread_unpaper( $self, $request->{page}, $request->{options},
-                    $request->{pidfile}, $request->{dir} );
+                _thread_unpaper(
+                    $self,
+                    page    => $request->{page},
+                    options => $request->{options},
+                    pidfile => $request->{pidfile},
+                    dir     => $request->{dir},
+                    uuid    => $request->{uuid}
+                );
             }
 
             when ('unsharp') {
@@ -1715,14 +1709,18 @@ sub _thread_main {
                     amount    => $request->{amount},
                     threshold => $request->{threshold},
                     dir       => $request->{dir},
+                    uuid      => $request->{uuid},
                 );
             }
 
             when ('user-defined') {
                 _thread_user_defined(
-                    $self,               $request->{page},
-                    $request->{command}, $request->{dir},
-                    $request->{pidfile}
+                    $self,
+                    page    => $request->{page},
+                    command => $request->{command},
+                    dir     => $request->{dir},
+                    pidfile => $request->{pidfile},
+                    uuid    => $request->{uuid}
                 );
             }
 
@@ -1741,13 +1739,24 @@ sub _thread_main {
     return;
 }
 
-sub _thread_get_file_info {
-    my ( $self, $filename, $pidfile, %info ) = @_;
+sub _thread_throw_error {
+    my ( $self, $uuid, $message ) = @_;
+    $self->{return}->enqueue(
+        {
+            type    => 'error',
+            uuid    => $uuid,
+            message => $message
+        }
+    );
+    return;
+}
 
-    $self->{status} = 0;
+sub _thread_get_file_info {
+    my ( $self, $filename, $pidfile, $uuid, %info ) = @_;
+
     if ( not -e $filename ) {
-        $self->{status} = 1;
-        $self->{message} = sprintf $d->get('File %s not found'), $filename;
+        _thread_throw_error( $self, $uuid, sprintf $d->get('File %s not found'),
+            $filename );
         return;
     }
 
@@ -1757,10 +1766,17 @@ sub _thread_get_file_info {
     $logger->info("Format: '$format'");
 
     given ($format) {
+        when ('very short file (no magic)') {
+            _thread_throw_error( $self, $uuid,
+                sprintf $d->get('Error importing zero-length file %s.'),
+                $filename );
+            return;
+        }
         when (/gzip[ ]compressed[ ]data/xsm) {
             $info{path}   = $filename;
             $info{format} = 'session file';
-            $self->{info_queue}->enqueue( \%info );
+            $self->{return}->enqueue(
+                { type => 'file-info', uuid => $uuid, info => \%info } );
             return;
         }
         when (/DjVu/xsm) {
@@ -1787,16 +1803,19 @@ sub _thread_get_file_info {
                 $logger->info("Page $#ppi is $ppi[$#ppi] ppi");
             }
             if ( $pages != @ppi ) {
-                $self->{status} = 1;
-                $self->{message} =
-                  $d->get(
-                    'Unknown DjVu file structure. Please contact the author.');
+                _thread_throw_error(
+                    $self, $uuid,
+                    $d->get(
+'Unknown DjVu file structure. Please contact the author.'
+                    )
+                );
                 return;
             }
             $info{ppi}   = \@ppi;
             $info{pages} = $pages;
             $info{path}  = $filename;
-            $self->{info_queue}->enqueue( \%info );
+            $self->{return}->enqueue(
+                { type => 'file-info', uuid => $uuid, info => \%info } );
             return;
         }
         when (/PDF[ ]document/xsm) {
@@ -1840,20 +1859,17 @@ sub _thread_get_file_info {
             my $e     = $image->Read($filename);
             if ("$e") {
                 $logger->error($e);
-                $logger->error('Thrown error');
-                $self->{status}  = 1;
-                $self->{message} = sprintf
-                  $d->get('%s is not a recognised image type'),
-                  $filename;
+                _thread_throw_error( $self, $uuid,
+                    sprintf $d->get('%s is not a recognised image type'),
+                    $filename );
                 return;
             }
             return if $_self->{cancel};
             $format = $image->Get('format');
             if ( not defined $format ) {
-                $self->{status}  = 1;
-                $self->{message} = sprintf
-                  $d->get('%s is not a recognised image type'),
-                  $filename;
+                _thread_throw_error( $self, $uuid,
+                    sprintf $d->get('%s is not a recognised image type'),
+                    $filename );
                 return;
             }
             $logger->info("Format $format");
@@ -1862,7 +1878,8 @@ sub _thread_get_file_info {
     }
     $info{format} = $format;
     $info{path}   = $filename;
-    $self->{info_queue}->enqueue( \%info );
+    $self->{return}
+      ->enqueue( { type => 'file-info', uuid => $uuid, info => \%info } );
     return;
 }
 
@@ -1899,16 +1916,14 @@ sub _thread_import_file {
                     catch {
                         if ( defined $tif ) {
                             $logger->error("Caught error creating $tif: $_");
-                            $self->{status} = 1;
-                            $self->{message} =
-                              "Error: unable to write to $tif.";
+                            _thread_throw_error( $self, $options{uuid},
+                                "Error: unable to write to $tif." );
                         }
                         else {
                             $logger->error(
                                 "Caught error writing to $options{dir}: $_");
-                            $self->{status} = 1;
-                            $self->{message} =
-                              "Error: unable to write to $options{dir}.";
+                            _thread_throw_error( $self, $options{uuid},
+                                "Error: unable to write to $options{dir}." );
                         }
                         $error = TRUE;
                     };
@@ -1920,7 +1935,13 @@ sub _thread_import_file {
                         format     => 'Tagged Image File Format',
                         resolution => $options{info}->{ppi}[ $i - 1 ],
                     );
-                    $self->{page_queue}->enqueue( $page->freeze );
+                    $self->{return}->enqueue(
+                        {
+                            type => 'page',
+                            uuid => $options{uuid},
+                            page => $page->freeze
+                        }
+                    );
                 }
             }
         }
@@ -1952,16 +1973,14 @@ sub _thread_import_file {
                     catch {
                         if ( defined $tif ) {
                             $logger->error("Caught error creating $tif: $_");
-                            $self->{status} = 1;
-                            $self->{message} =
-                              "Error: unable to write to $tif.";
+                            _thread_throw_error( $self, $options{uuid},
+                                "Error: unable to write to $tif." );
                         }
                         else {
                             $logger->error(
                                 "Caught error writing to $options{dir}: $_");
-                            $self->{status} = 1;
-                            $self->{message} =
-                              "Error: unable to write to $options{dir}.";
+                            _thread_throw_error( $self, $options{uuid},
+                                "Error: unable to write to $options{dir}." );
                         }
                         $error = TRUE;
                     };
@@ -1972,7 +1991,13 @@ sub _thread_import_file {
                         delete   => TRUE,
                         format   => $options{info}->{format},
                     );
-                    $self->{page_queue}->enqueue( $page->freeze );
+                    $self->{return}->enqueue(
+                        {
+                            type => 'page',
+                            uuid => $options{uuid},
+                            page => $page->freeze
+                        }
+                    );
                 }
             }
         }
@@ -1983,12 +2008,18 @@ sub _thread_import_file {
                     dir      => $options{dir},
                     format   => $options{info}->{format},
                 );
-                $self->{page_queue}->enqueue( $page->freeze );
+                $self->{return}->enqueue(
+                    {
+                        type => 'page',
+                        uuid => $options{uuid},
+                        page => $page->freeze
+                    }
+                );
             }
             catch {
                 $logger->error("Caught error writing to $options{dir}: $_");
-                $self->{status}  = 1;
-                $self->{message} = "Error: unable to write to $options{dir}.";
+                _thread_throw_error( $self, $options{uuid},
+                    "Error: unable to write to $options{dir}." );
             };
         }
 
@@ -2000,16 +2031,28 @@ sub _thread_import_file {
                     dir      => $options{dir},
                     format   => $options{info}->{format},
                 );
-                $self->{page_queue}
-                  ->enqueue( $page->to_png($paper_sizes)->freeze );
+                $self->{return}->enqueue(
+                    {
+                        type => 'page',
+                        uuid => $options{uuid},
+                        page => $page->to_png($paper_sizes)->freeze
+                    }
+                );
             }
             catch {
                 $logger->error("Caught error writing to $options{dir}: $_");
-                $self->{status}  = 1;
-                $self->{message} = "Error: unable to write to $options{dir}.";
+                _thread_throw_error( $self, $options{uuid},
+                    "Error: unable to write to $options{dir}." );
             };
         }
     }
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'import-file',
+            uuid    => $options{uuid},
+        }
+    );
     return;
 }
 
@@ -2025,16 +2068,12 @@ sub _thread_import_pdf {
         my ( $out, $err, $status ) = open_three($cmd);
         return if $_self->{cancel};
         if ($status) {
-            $self->{status}  = 1;
-            $self->{message} = $d->get('Error extracting images from PDF');
-        }
-        else {
-            $self->{message} = "$out$err";
+            _thread_throw_error( $self, $options{uuid},
+                $d->get('Error extracting images from PDF') );
         }
 
         # Import each image
         my @images = glob 'x-???.???';
-        $self->{page_queue}->enqueue( $#images + 1 );
         foreach (@images) {
             my ($ext) = /([^.]+)$/xsm;
             try {
@@ -2044,13 +2083,18 @@ sub _thread_import_pdf {
                     delete   => TRUE,
                     format   => $format{$ext},
                 );
-                $self->{page_queue}
-                  ->enqueue( $page->to_png($paper_sizes)->freeze );
+                $self->{return}->enqueue(
+                    {
+                        type => 'page',
+                        uuid => $options{uuid},
+                        page => $page->to_png($paper_sizes)->freeze
+                    }
+                );
             }
             catch {
                 $logger->error("Caught error extracting images from PDF: $_");
-                $self->{status}  = 1;
-                $self->{message} = $d->get('Error extracting images from PDF');
+                _thread_throw_error( $self, $options{uuid},
+                    $d->get('Error extracting images from PDF') );
             };
         }
     }
@@ -2119,17 +2163,18 @@ sub _thread_save_pdf {
             $pagedata->{compression} = $options{options}->{compression};
         }
 
-        my ( $format, $output_resolution );
+        my ( $format, $output_resolution, $error );
         try {
             ( $filename, $format, $output_resolution ) =
               _convert_image_for_pdf( $self, $pagedata, $image, %options );
         }
         catch {
             $logger->error("Caught error converting image: $_");
-            $self->{status}  = 1;
-            $self->{message} = "Caught error converting image: $_.";
+            _thread_throw_error( $self, $options{uuid},
+                "Caught error converting image: $_." );
+            $error = TRUE;
         };
-        if ( $self->{status} ) { return }
+        if ($error) { return }
 
         $logger->info(
             'Defining page at ',
@@ -2174,9 +2219,8 @@ sub _thread_save_pdf {
         return if $_self->{cancel};
         if ($msg) {
             $logger->warn($msg);
-            $self->{status} = 1;
-            $self->{message} =
-              sprintf $d->get('Error creating PDF image object: %s'), $msg;
+            _thread_throw_error( $self, $options{uuid},
+                sprintf $d->get('Error creating PDF image object: %s'), $msg );
             return;
         }
 
@@ -2189,19 +2233,32 @@ sub _thread_save_pdf {
         }
         catch {
             $logger->warn($_);
-            $self->{status}  = 1;
-            $self->{message} = sprintf $d->get(
-                'Error embedding file image in %s format to PDF: %s'),
-              $format, $_;
+            _thread_throw_error(
+                $self,
+                $options{uuid},
+                sprintf $d->get(
+                    'Error embedding file image in %s format to PDF: %s'),
+                $format,
+                $_
+            );
+            $error = TRUE;
         };
-        if ( $self->{status} ) { return }
+        if ($error) { return }
 
         $logger->info("Added $filename at $output_resolution PPI");
         return if $_self->{cancel};
     }
     $self->{message} = $d->get('Closing PDF');
+    $logger->info('Closing PDF');
     $pdf->save;
     $pdf->end;
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'save-pdf',
+            uuid    => $options{uuid},
+        }
+    );
     return;
 }
 
@@ -2273,9 +2330,8 @@ sub _convert_image_for_pdf {
             if ($status) {
                 my $output = slurp($error);
                 $logger->info($output);
-                $self->{status} = 1;
-                $self->{message} =
-                  sprintf $d->get('Error compressing image: %s'), $output;
+                _thread_throw_error( $self, $options{uuid},
+                    sprintf $d->get('Error compressing image: %s'), $output );
                 return;
             }
             $filename = $filename2;
@@ -2395,24 +2451,25 @@ sub _thread_save_djvu {
 
         my $filename = $pagedata->{filename};
 
-        my $djvu;
+        my ( $djvu, $error );
         try {
             $djvu = File::Temp->new( DIR => $options{dir}, SUFFIX => '.djvu' );
         }
         catch {
             $logger->error("Caught error writing DjVu: $_");
-            $self->{status}  = 1;
-            $self->{message} = "Caught error writing DjVu: $_.";
+            _thread_throw_error( $self, $options{uuid},
+                "Caught error writing DjVu: $_." );
+            $error = TRUE;
         };
-        if ( $self->{status} ) { return }
+        if ($error) { return }
 
         # Check the image depth to decide what sort of compression to use
         my $image = Image::Magick->new;
         my $e     = $image->Read($filename);
         if ("$e") {
             $logger->error($e);
-            $self->{status}  = 1;
-            $self->{message} = "Error reading $filename: $e.";
+            _thread_throw_error( $self, $options{uuid},
+                "Error reading $filename: $e." );
             return;
         }
         my $depth = $image->Get('depth');
@@ -2438,8 +2495,8 @@ sub _thread_save_djvu {
                 $e = $image->Write( filename => $pnm );
                 if ("$e") {
                     $logger->error($e);
-                    $self->{status}  = 1;
-                    $self->{message} = "Error writing $pnm: $e.";
+                    _thread_throw_error( $self, $options{uuid},
+                        "Error writing $pnm: $e." );
                     return;
                 }
                 $filename = $pnm;
@@ -2457,8 +2514,8 @@ sub _thread_save_djvu {
                 $e = $image->Write( filename => $pbm );
                 if ("$e") {
                     $logger->error($e);
-                    $self->{status}  = 1;
-                    $self->{message} = "Error writing $pbm: $e.";
+                    _thread_throw_error( $self, $options{uuid},
+                        "Error writing $pbm: $e." );
                     return;
                 }
                 $filename = $pbm;
@@ -2474,15 +2531,16 @@ sub _thread_save_djvu {
           ;    # quotes needed to prevent -s clobbering File::Temp object
         return if $_self->{cancel};
         if ( $status != 0 or not $size ) {
-            $self->{status}  = 1;
-            $self->{message} = $d->get('Error writing DjVu');
             $logger->error(
 "Error writing image for page $page of DjVu (process returned $status, image size $size)"
             );
+            _thread_throw_error( $self, $options{uuid},
+                $d->get('Error writing DjVu') );
             return;
         }
         push @filelist, $djvu;
-        _add_text_to_djvu( $self, $djvu, $options{dir}, $pagedata );
+        _add_text_to_djvu( $self, $djvu, $options{dir}, $pagedata,
+            $options{uuid} );
     }
     $self->{progress} = 1;
     $self->{message}  = $d->get('Merging DjVu');
@@ -2491,22 +2549,26 @@ sub _thread_save_djvu {
     my $status = system "echo $PROCESS_ID > $options{pidfile};$cmd";
     return if $_self->{cancel};
     if ($status) {
-        $self->{status}  = 1;
-        $self->{message} = $d->get('Error merging DjVu');
         $logger->error('Error merging DjVu');
+        _thread_throw_error( $self, $options{uuid},
+            $d->get('Error merging DjVu') );
     }
-    _add_metadata_to_djvu( $self, $options{path}, $options{dir},
-        $options{pidfile}, $options{metadata} );
+    _add_metadata_to_djvu( $self, %options );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'save-djvu',
+            uuid    => $options{uuid},
+        }
+    );
     return;
 }
 
 sub _write_file {
-    my ( $self, $fh, $filename, $data ) = @_;
+    my ( $self, $fh, $filename, $data, $uuid ) = @_;
     if ( not print {$fh} $data ) {
-        $self->{status}  = 1;
-        $self->{message} = sprintf $d->get("Can't write to file: %s"),
-          $filename;
-        $self->{status} = 1;
+        _thread_throw_error( $self, $uuid,
+            sprintf $d->get("Can't write to file: %s"), $filename );
         return FALSE;
     }
     return TRUE;
@@ -2515,7 +2577,7 @@ sub _write_file {
 # Add OCR to text layer
 
 sub _add_text_to_djvu {
-    my ( $self, $djvu, $dir, $pagedata ) = @_;
+    my ( $self, $djvu, $dir, $pagedata, $uuid ) = @_;
     if ( defined( $pagedata->{hocr} ) ) {
         my $txt = $pagedata->djvu_text;
         if ( $txt eq $EMPTY ) { return }
@@ -2526,7 +2588,7 @@ sub _add_text_to_djvu {
         $logger->debug( $pagedata->djvu_text );
         open my $fh, '>:encoding(UTF8)', $djvusedtxtfile
           or croak( sprintf $d->get("Can't open file: %s"), $djvusedtxtfile );
-        _write_file( $self, $fh, $djvusedtxtfile, $txt )
+        _write_file( $self, $fh, $djvusedtxtfile, $txt, $uuid )
           or return;
         close $fh
           or croak( sprintf $d->get("Can't close file: %s"), $djvusedtxtfile );
@@ -2537,50 +2599,55 @@ sub _add_text_to_djvu {
         my $status = system "echo $PROCESS_ID > $pagedata->{pidfile};$cmd";
         return if $_self->{cancel};
         if ($status) {
-            $self->{status}  = 1;
-            $self->{message} = $d->get('Error adding text layer to DjVu');
             $logger->error(
                 "Error adding text layer to DjVu page $pagedata->{page_number}"
             );
+            _thread_throw_error( $self, $uuid,
+                $d->get('Error adding text layer to DjVu') );
         }
     }
     return;
 }
 
 sub _add_metadata_to_djvu {
-    my ( $self, $djvu, $dir, $pidfile, $metadata ) = @_;
-    if ( $metadata and %{$metadata} ) {
+    my ( $self, %options ) = @_;
+    if ( $options{metadata} and %{ $options{metadata} } ) {
 
         # Open djvusedmetafile
-        my $djvusedmetafile = File::Temp->new( DIR => $dir, SUFFIX => '.txt' );
+        my $djvusedmetafile =
+          File::Temp->new( DIR => $options{dir}, SUFFIX => '.txt' );
         open my $fh, '>:encoding(UTF8)',    ## no critic (RequireBriefOpen)
           $djvusedmetafile
           or croak( sprintf $d->get("Can't open file: %s"), $djvusedmetafile );
-        _write_file( $self, $fh, $djvusedmetafile, "(metadata\n" )
+        _write_file( $self, $fh, $djvusedmetafile, "(metadata\n",
+            $options{uuid} )
           or return;
 
         # Write the metadata
-        for my $key ( keys %{$metadata} ) {
-            my $val = $metadata->{$key};
+        for my $key ( keys %{ $options{metadata} } ) {
+            my $val = $options{metadata}{$key};
 
             # backslash-escape any double quotes and bashslashes
             $val =~ s/\\/\\\\/gxsm;
             $val =~ s/"/\\\"/gxsm;
-            _write_file( $self, $fh, $djvusedmetafile, "$key \"$val\"\n" );
+            _write_file( $self, $fh, $djvusedmetafile, "$key \"$val\"\n",
+                $options{uuid} )
+              or return;
         }
-        _write_file( $self, $fh, $djvusedmetafile, ')' ) or return;
+        _write_file( $self, $fh, $djvusedmetafile, ')', $options{uuid} )
+          or return;
         close $fh
           or croak( sprintf $d->get("Can't close file: %s"), $djvusedmetafile );
 
         # Write djvusedmetafile
-        my $cmd = "djvused '$djvu' -e 'set-meta $djvusedmetafile' -s";
+        my $cmd = "djvused '$options{path}' -e 'set-meta $djvusedmetafile' -s";
         $logger->info($cmd);
-        my $status = system "echo $PROCESS_ID > $pidfile;$cmd";
+        my $status = system "echo $PROCESS_ID > $options{pidfile};$cmd";
         return if $_self->{cancel};
         if ($status) {
-            $self->{status}  = 1;
-            $self->{message} = $d->get('Error adding metadata to DjVu');
             $logger->error('Error adding metadata info to DjVu file');
+            _thread_throw_error( $self, $options{uuid},
+                $d->get('Error adding metadata to DjVu') );
         }
     }
     return;
@@ -2607,17 +2674,18 @@ sub _thread_save_tiff {
                 and $options{options}->{compression} eq 'jpeg' )
           )
         {
-            my $tif;
+            my ( $tif, $error );
             try {
                 $tif =
                   File::Temp->new( DIR => $options{dir}, SUFFIX => '.tif' );
             }
             catch {
                 $logger->error("Error writing TIFF: $_");
-                $self->{status}  = 1;
-                $self->{message} = "Error writing TIFF: $_.";
+                _thread_throw_error( $self, $options{uuid},
+                    "Error writing TIFF: $_." );
+                $error = TRUE;
             };
-            if ( $self->{status} ) { return }
+            if ($error) { return }
             my $resolution = $pagedata->{resolution};
 
             # Convert to tiff
@@ -2636,8 +2704,8 @@ sub _thread_save_tiff {
 
             if ($status) {
                 $logger->error('Error writing TIFF');
-                $self->{status}  = 1;
-                $self->{message} = $d->get('Error writing TIFF');
+                _thread_throw_error( $self, $options{uuid},
+                    $d->get('Error writing TIFF') );
                 return;
             }
             $filename = $tif;
@@ -2671,9 +2739,8 @@ sub _thread_save_tiff {
     if ($status) {
         my $output = slurp($out);
         $logger->info($output);
-        $self->{status}  = 1;
-        $self->{message} = sprintf $d->get('Error compressing image: %s'),
-          $output;
+        _thread_throw_error( $self, $options{uuid},
+            sprintf $d->get('Error compressing image: %s'), $output );
         return;
     }
     if ( defined $options{ps} ) {
@@ -2686,11 +2753,18 @@ sub _thread_save_tiff {
         $logger->info($cmd);
         ( my $output, undef ) = open_three($cmd);
     }
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'save-tiff',
+            uuid    => $options{uuid},
+        }
+    );
     return;
 }
 
 sub _thread_rotate {
-    my ( $self, $angle, $page, $dir ) = @_;
+    my ( $self, $angle, $page, $dir, $uuid ) = @_;
     my $filename = $page->{filename};
     $logger->info("Rotating $filename by $angle degrees");
 
@@ -2706,12 +2780,11 @@ sub _thread_rotate {
     $e = $image->Rotate($angle);
     if ("$e") {
         $logger->error($e);
-        $self->{status}  = 1;
-        $self->{message} = "Error rotating: $e.";
+        _thread_throw_error( $self, $uuid, "Error rotating: $e." );
         return;
     }
     return if $_self->{cancel};
-    my $suffix;
+    my ( $suffix, $error );
     if ( $filename =~ /[.](\w*)$/xsm ) {
         $suffix = $1;
     }
@@ -2725,22 +2798,34 @@ sub _thread_rotate {
     }
     catch {
         $logger->error("Error rotating: $_");
-        $self->{status}  = 1;
-        $self->{message} = "Error rotating: $_.";
+        _thread_throw_error( $self, $uuid, "Error rotating: $_." );
+        $error = TRUE;
     };
-    if ( $self->{status} ) { return }
+    if ($error) { return }
     return if $_self->{cancel};
     if ("$e") { $logger->warn($e) }
-    my $new = $page->freeze;
-    $new->{filename}   = $filename->filename;   # can't queue File::Temp objects
-    $new->{dirty_time} = timestamp();           #flag as dirty
-    my %data = ( old => $page, new => $new );
-    $self->{page_queue}->enqueue( \%data );
+    $page->{filename}   = $filename->filename;
+    $page->{dirty_time} = timestamp();           #flag as dirty
+    $self->{return}->enqueue(
+        {
+            type => 'page',
+            uuid => $uuid,
+            page => $page,
+            info => { replace => $page->{uuid} }
+        }
+    );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'rotate',
+            uuid    => $uuid,
+        }
+    );
     return;
 }
 
 sub _thread_save_image {
-    my ( $self, $path, $list_of_pages, $pidfile ) = @_;
+    my ( $self, $path, $list_of_pages, $pidfile, $uuid ) = @_;
 
     # Escape quotes and spaces
     $path =~ s/(['" ])/\\$1/gxsm;
@@ -2752,8 +2837,7 @@ sub _thread_save_image {
         my $status = system "echo $PROCESS_ID > $pidfile;$cmd";
         return if $_self->{cancel};
         if ($status) {
-            $self->{status}  = 1;
-            $self->{message} = $d->get('Error saving image');
+            _thread_throw_error( $self, $uuid, $d->get('Error saving image') );
         }
     }
     else {
@@ -2767,16 +2851,24 @@ sub _thread_save_image {
             my $status = system "echo $PROCESS_ID > $pidfile;$cmd";
             return if $_self->{cancel};
             if ($status) {
-                $self->{status}  = 1;
-                $self->{message} = $d->get('Error saving image');
+                _thread_throw_error( $self, $uuid,
+                    $d->get('Error saving image') );
             }
         }
     }
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'save-image',
+            uuid    => $uuid,
+        }
+    );
     return;
 }
 
 sub _thread_save_text {
-    my ( $self, $path, $list_of_pages, $fh ) = @_;
+    my ( $self, $path, $list_of_pages, $uuid ) = @_;
+    my $fh;
     my $string = $EMPTY;
 
     for my $page ( @{$list_of_pages} ) {
@@ -2784,49 +2876,64 @@ sub _thread_save_text {
         return if $_self->{cancel};
     }
     if ( not open $fh, '>', $path ) {
-        $self->{status} = 1;
-        $self->{message} = sprintf $d->get("Can't open file: %s"), $path;
+        _thread_throw_error( $self, $uuid,
+            sprintf $d->get("Can't open file: %s"), $path );
         return;
     }
-    _write_file( $self, $fh, $path, $string ) or return;
+    _write_file( $self, $fh, $path, $string, $uuid ) or return;
     if ( not close $fh ) {
-        $self->{status} = 1;
-        $self->{message} = sprintf $d->get("Can't close file: %s"), $path;
+        _thread_throw_error( $self, $uuid,
+            sprintf $d->get("Can't close file: %s"), $path );
     }
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'save-text',
+            uuid    => $uuid,
+        }
+    );
     return;
 }
 
 sub _thread_save_hocr {
-    my ( $self, $path, $list_of_pages, $fh ) = @_;
+    my ( $self, $path, $list_of_pages, $uuid ) = @_;
+    my $fh;
 
     if ( not open $fh, '>', $path ) {    ## no critic (RequireBriefOpen)
-        $self->{status} = 1;
-        $self->{message} = sprintf $d->get("Can't open file: %s"), $path;
+        _thread_throw_error( $self, $uuid,
+            sprintf $d->get("Can't open file: %s"), $path );
         return;
     }
     foreach ( @{$list_of_pages} ) {
         if ( $_->{hocr} =~ /<body>([\s\S]*)<\/body>/xsm ) {
-            _write_file( $self, $fh, $path, $_->{hocr} ) or return;
+            _write_file( $self, $fh, $path, $_->{hocr}, $uuid ) or return;
             return if $_self->{cancel};
         }
     }
     if ( not close $fh ) {
-        $self->{status} = 1;
-        $self->{message} = sprintf $d->get("Can't close file: %s"), $path;
+        _thread_throw_error( $self, $uuid,
+            sprintf $d->get("Can't close file: %s"), $path );
     }
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'save-hocr',
+            uuid    => $uuid,
+        }
+    );
     return;
 }
 
 sub _thread_analyse {
-    my ( $self, $page ) = @_;
+    my ( $self, $page, $uuid ) = @_;
 
     # Identify with imagemagick
     my $image = Image::Magick->new;
     my $e     = $image->Read( $page->{filename} );
     if ("$e") {
         $logger->error($e);
-        $self->{status}  = 1;
-        $self->{message} = "Error reading $page->{filename}: $e.";
+        _thread_throw_error( $self, $uuid,
+            "Error reading $page->{filename}: $e." );
         return;
     }
     return if $_self->{cancel};
@@ -2848,17 +2955,29 @@ sub _thread_analyse {
 #   if most of the Std Dev are high, then it might be portrait
 # TODO may need to send quantumdepth
 
-    my $new = $page->clone;
-    $new->{mean}         = $mean;
-    $new->{std_dev}      = $stddev;
-    $new->{analyse_time} = timestamp();
-    my %data = ( old => $page, new => $new );
-    $self->{page_queue}->enqueue( \%data );
+    $page->{mean}         = $mean;
+    $page->{std_dev}      = $stddev;
+    $page->{analyse_time} = timestamp();
+    $self->{return}->enqueue(
+        {
+            type => 'page',
+            uuid => $uuid,
+            page => $page,
+            info => { replace => $page->{uuid} }
+        }
+    );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'analyse',
+            uuid    => $uuid,
+        }
+    );
     return;
 }
 
 sub _thread_threshold {
-    my ( $self, $threshold, $page, $dir ) = @_;
+    my ( $self, $threshold, $page, $dir, $uuid ) = @_;
     my $filename = $page->{filename};
 
     my $image = Image::Magick->new;
@@ -2870,21 +2989,20 @@ sub _thread_threshold {
     $e = $image->BlackThreshold( threshold => "$threshold%" );
     if ("$e") {
         $logger->error($e);
-        $self->{status}  = 1;
-        $self->{message} = "Error running threshold: $e.";
+        _thread_throw_error( $self, $uuid, "Error running threshold: $e." );
         return;
     }
     return if $_self->{cancel};
     $e = $image->WhiteThreshold( threshold => "$threshold%" );
     if ("$e") {
         $logger->error($e);
-        $self->{status}  = 1;
-        $self->{message} = "Error running threshold: $e.";
+        _thread_throw_error( $self, $uuid, "Error running threshold: $e." );
         return;
     }
     return if $_self->{cancel};
 
     # Write it
+    my $error;
     try {
         $filename =
           File::Temp->new( DIR => $dir, SUFFIX => '.pbm', UNLINK => FALSE );
@@ -2893,22 +3011,34 @@ sub _thread_threshold {
     }
     catch {
         $logger->error("Error thesholding: $_");
-        $self->{status}  = 1;
-        $self->{message} = "Error thesholding: $_.";
+        _thread_throw_error( $self, $uuid, "Error running threshold: $_." );
+        $error = TRUE;
     };
-    if ( $self->{status} ) { return }
+    if ($error) { return }
     return if $_self->{cancel};
 
-    my $new = $page->freeze;
-    $new->{filename}   = $filename->filename;   # can't queue File::Temp objects
-    $new->{dirty_time} = timestamp();           #flag as dirty
-    my %data = ( old => $page, new => $new );
-    $self->{page_queue}->enqueue( \%data );
+    $page->{filename}   = $filename->filename;
+    $page->{dirty_time} = timestamp();           #flag as dirty
+    $self->{return}->enqueue(
+        {
+            type => 'page',
+            uuid => $uuid,
+            page => $page,
+            info => { replace => $page->{uuid} }
+        }
+    );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'theshold',
+            uuid    => $uuid,
+        }
+    );
     return;
 }
 
 sub _thread_negate {
-    my ( $self, $page, $dir ) = @_;
+    my ( $self, $page, $dir, $uuid ) = @_;
     my $filename = $page->{filename};
 
     my $image = Image::Magick->new;
@@ -2922,13 +3052,13 @@ sub _thread_negate {
     $e = $image->Negate;
     if ("$e") {
         $logger->error($e);
-        $self->{status}  = 1;
-        $self->{message} = "Error negating: $e.";
+        _thread_throw_error( $self, $uuid, "Error negating: $e." );
         return;
     }
     return if $_self->{cancel};
 
     # Write it
+    my $error;
     try {
         my $suffix;
         if ( $filename =~ /([.]\w*)$/xsm ) { $suffix = $1 }
@@ -2939,18 +3069,30 @@ sub _thread_negate {
     }
     catch {
         $logger->error("Error negating: $_");
-        $self->{status}  = 1;
-        $self->{message} = "Error negating: $_.";
+        _thread_throw_error( $self, $uuid, "Error negating: $_." );
+        $error = TRUE;
     };
-    if ( $self->{status} ) { return }
+    if ($error) { return }
     return if $_self->{cancel};
     $logger->info("Negating to $filename");
 
-    my $new = $page->freeze;
-    $new->{filename}   = $filename->filename;   # can't queue File::Temp objects
-    $new->{dirty_time} = timestamp();           #flag as dirty
-    my %data = ( old => $page, new => $new );
-    $self->{page_queue}->enqueue( \%data );
+    $page->{filename}   = $filename->filename;
+    $page->{dirty_time} = timestamp();           #flag as dirty
+    $self->{return}->enqueue(
+        {
+            type => 'page',
+            uuid => $uuid,
+            page => $page,
+            info => { replace => $page->{uuid} }
+        }
+    );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'negate',
+            uuid    => $uuid,
+        }
+    );
     return;
 }
 
@@ -2972,13 +3114,14 @@ sub _thread_unsharp {
     );
     if ("$e") {
         $logger->error($e);
-        $self->{status}  = 1;
-        $self->{message} = "Error running unsharp: $e.";
+        _thread_throw_error( $self, $options{uuid},
+            "Error running unsharp: $e." );
         return;
     }
     return if $_self->{cancel};
 
     # Write it
+    my $error;
     try {
         my $suffix;
         if ( $filename =~ /[.](\w*)$/xsm ) { $suffix = $1 }
@@ -2992,20 +3135,33 @@ sub _thread_unsharp {
     }
     catch {
         $logger->error("Error writing image with unsharp mask: $_");
-        $self->{status}  = 1;
-        $self->{message} = "Error writing image with unsharp mask: $_.";
+        _thread_throw_error( $self, $options{uuid},
+            "Error writing image with unsharp mask: $_." );
+        $error = TRUE;
     };
-    if ( $self->{status} ) { return }
+    if ($error) { return }
     return if $_self->{cancel};
     $logger->info(
 "Wrote $filename with unsharp mask: r=$options{radius}, s=$options{sigma}, a=$options{amount}, t=$options{threshold}"
     );
 
-    my $new = $options{page}->freeze;
-    $new->{filename}   = $filename->filename;   # can't queue File::Temp objects
-    $new->{dirty_time} = timestamp();           #flag as dirty
-    my %data = ( old => $options{page}, new => $new );
-    $self->{page_queue}->enqueue( \%data );
+    $options{page}{filename}   = $filename->filename;
+    $options{page}{dirty_time} = timestamp();           #flag as dirty
+    $self->{return}->enqueue(
+        {
+            type => 'page',
+            uuid => $options{uuid},
+            page => $options{page},
+            info => { replace => $options{page}{uuid} }
+        }
+    );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'unsharp',
+            uuid    => $options{uuid},
+        }
+    );
     return;
 }
 
@@ -3027,14 +3183,14 @@ sub _thread_crop {
     );
     if ("$e") {
         $logger->error($e);
-        $self->{status}  = 1;
-        $self->{message} = "Error cropping: $e.";
+        _thread_throw_error( $self, $options{uuid}, "Error cropping: $e." );
         return;
     }
     $image->Set( page => '0x0+0+0' );
     return if $_self->{cancel};
 
     # Write it
+    my $error;
     try {
         my $suffix;
         if ( $filename =~ /[.](\w*)$/xsm ) { $suffix = $1 }
@@ -3048,107 +3204,172 @@ sub _thread_crop {
     }
     catch {
         $logger->error("Error cropping: $_");
-        $self->{status}  = 1;
-        $self->{message} = "Error cropping: $_.";
+        _thread_throw_error( $self, $options{uuid}, "Error cropping: $_." );
+        $error = TRUE;
     };
-    if ( $self->{status} ) { return }
+    if ($error) { return }
     $logger->info(
 "Cropping $options{w} x $options{h} + $options{x} + $options{y} to $filename"
     );
     return if $_self->{cancel};
 
-    my $new = $options{page}->freeze;
-    $new->{filename}   = $filename->filename;   # can't queue File::Temp objects
-    $new->{dirty_time} = timestamp();           #flag as dirty
-    my %data = ( old => $options{page}, new => $new );
-    $self->{page_queue}->enqueue( \%data );
+    $options{page}{filename}   = $filename->filename;
+    $options{page}{dirty_time} = timestamp();           #flag as dirty
+    $self->{return}->enqueue(
+        {
+            type => 'page',
+            uuid => $options{uuid},
+            page => $options{page},
+            info => { replace => $options{page}{uuid} }
+        }
+    );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'crop',
+            uuid    => $options{uuid},
+        }
+    );
     return;
 }
 
 sub _thread_to_png {
-    my ( $self, $page, $dir ) = @_;
-    my $new;
+    my ( $self, $page, $dir, $uuid ) = @_;
+    my ( $new, $error );
     try {
         $new = $page->to_png($paper_sizes);
     }
     catch {
         $logger->error("Error converting to png: $_");
-        $self->{status}  = 1;
-        $self->{message} = "Error converting to png: $_.";
+        _thread_throw_error( $self, $uuid, "Error converting to png: $_." );
+        $error = TRUE;
     };
-    if ( $self->{status} ) { return }
+    if ($error) { return }
     return if $_self->{cancel};
-    my %data = ( old => $page, new => $new->freeze );
-    $logger->info("Converted $page->{filename} to $data{new}{filename}");
-    $self->{page_queue}->enqueue( \%data );
+    $logger->info("Converted $page->{filename} to $new->{filename}");
+    $self->{return}->enqueue(
+        {
+            type => 'page',
+            uuid => $uuid,
+            page => $new->freeze,
+            info => { replace => $page->{uuid} }
+        }
+    );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'to-png',
+            uuid    => $uuid,
+        }
+    );
     return;
 }
 
 sub _thread_tesseract {
-    my ( $self, $page, $language, $threshold, $pidfile ) = @_;
-    my $new;
+    my ( $self, %options ) = @_;
+    my ( $error, $stderr );
     try {
-        $new = $page->clone;
-        ( $new->{hocr}, $new->{warnings} ) = Gscan2pdf::Tesseract->hocr(
-            file      => $page->{filename},
-            language  => $language,
+        ( $options{page}{hocr}, $stderr ) = Gscan2pdf::Tesseract->hocr(
+            file      => $options{page}{filename},
+            language  => $options{language},
             logger    => $logger,
-            threshold => $threshold,
-            pidfile   => $pidfile
+            threshold => $options{threshold},
+            pidfile   => $options{pidfile}
         );
     }
     catch {
         $logger->error("Error processing with tesseract: $_");
-        $self->{status}  = 1;
-        $self->{message} = "Error processing with tesseract: $_.";
+        _thread_throw_error( $self, $options{uuid},
+            "Error processing with tesseract: $_." );
+        $error = TRUE;
     };
-    if ( $self->{status} ) { return }
+    if ($error) { return }
     return if $_self->{cancel};
-    $new->{ocr_flag} = 1;              #FlagOCR
-    $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page
-    my %data = ( old => $page, new => $new );
-    $self->{page_queue}->enqueue( \%data );
+    $options{page}{ocr_flag} = 1;    #FlagOCR
+    $options{page}{ocr_time} =
+      timestamp();                   #remember when we ran OCR on this page
+    $self->{return}->enqueue(
+        {
+            type => 'page',
+            uuid => $options{uuid},
+            page => $options{page},
+            info => { replace => $options{page}{uuid} }
+        }
+    );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'tesseract',
+            uuid    => $options{uuid},
+        }
+    );
     return;
 }
 
 sub _thread_ocropus {
-    my ( $self, $page, $language, $threshold, $pidfile ) = @_;
-    my $new = $page->clone;
-    $new->{hocr} = Gscan2pdf::Ocropus->hocr(
-        file      => $page->{filename},
-        language  => $language,
+    my ( $self, %options ) = @_;
+    $options{page}{hocr} = Gscan2pdf::Ocropus->hocr(
+        file      => $options{page}{filename},
+        language  => $options{language},
         logger    => $logger,
-        pidfile   => $pidfile,
-        threshold => $threshold
+        pidfile   => $options{pidfile},
+        threshold => $options{threshold}
     );
     return if $_self->{cancel};
-    $new->{ocr_flag} = 1;              #FlagOCR
-    $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page
-    my %data = ( old => $page, new => $new );
-    $self->{page_queue}->enqueue( \%data );
+    $options{page}{ocr_flag} = 1;    #FlagOCR
+    $options{page}{ocr_time} =
+      timestamp();                   #remember when we ran OCR on this page
+    $self->{return}->enqueue(
+        {
+            type => 'page',
+            uuid => $options{uuid},
+            page => $options{page},
+            info => { replace => $options{page}{uuid} }
+        }
+    );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'ocropus',
+            uuid    => $options{uuid},
+        }
+    );
     return;
 }
 
 sub _thread_cuneiform {
-    my ( $self, $page, $language, $threshold, $pidfile ) = @_;
-    my $new = $page->clone;
-    $new->{hocr} = Gscan2pdf::Cuneiform->hocr(
-        file      => $page->{filename},
-        language  => $language,
+    my ( $self, %options ) = @_;
+    $options{page}{hocr} = Gscan2pdf::Cuneiform->hocr(
+        file      => $options{page}{filename},
+        language  => $options{language},
         logger    => $logger,
-        pidfile   => $pidfile,
-        threshold => $threshold
+        pidfile   => $options{pidfile},
+        threshold => $options{threshold}
     );
     return if $_self->{cancel};
-    $new->{ocr_flag} = 1;              #FlagOCR
-    $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page
-    my %data = ( old => $page, new => $new );
-    $self->{page_queue}->enqueue( \%data );
+    $options{page}{ocr_flag} = 1;    #FlagOCR
+    $options{page}{ocr_time} =
+      timestamp();                   #remember when we ran OCR on this page
+    $self->{return}->enqueue(
+        {
+            type => 'page',
+            uuid => $options{uuid},
+            page => $options{page},
+            info => { replace => $options{page}{uuid} }
+        }
+    );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'cuneiform',
+            uuid    => $options{uuid},
+        }
+    );
     return;
 }
 
 sub _thread_gocr {
-    my ( $self, $page, $threshold, $pidfile ) = @_;
+    my ( $self, $page, $threshold, $pidfile, $uuid ) = @_;
     my $pnm;
     if (   ( $page->{filename} !~ /[.]pnm$/xsm )
         or ( defined $threshold and $threshold ) )
@@ -3181,8 +3402,6 @@ sub _thread_gocr {
         $pnm = $page->{filename};
     }
 
-    my $new = $page->clone;
-
     # Temporary filename for output
     my $txt = File::Temp->new( SUFFIX => '.txt' );
 
@@ -3191,19 +3410,32 @@ sub _thread_gocr {
     my $cmd = "gocr $pnm -o $txt";
     $logger->info($cmd);
     system "echo $PROCESS_ID > $pidfile;$cmd";
-    ( $new->{hocr}, undef ) = Gscan2pdf::Document::slurp($txt);
+    ( $page->{hocr}, undef ) = Gscan2pdf::Document::slurp($txt);
 
     return if $_self->{cancel};
-    $new->{ocr_flag} = 1;              #FlagOCR
-    $new->{ocr_time} = timestamp();    #remember when we ran OCR on this page
-    my %data = ( old => $page, new => $new );
-    $self->{page_queue}->enqueue( \%data );
+    $page->{ocr_flag} = 1;              #FlagOCR
+    $page->{ocr_time} = timestamp();    #remember when we ran OCR on this page
+    $self->{return}->enqueue(
+        {
+            type => 'page',
+            uuid => $uuid,
+            page => $page,
+            info => { replace => $page->{uuid} }
+        }
+    );
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'gocr',
+            uuid    => $uuid,
+        }
+    );
     return;
 }
 
 sub _thread_unpaper {
-    my ( $self, $page, $options, $pidfile, $dir ) = @_;
-    my $filename = $page->{filename};
+    my ( $self, %options ) = @_;
+    my $filename = $options{page}{filename};
     my $in;
 
     try {
@@ -3212,23 +3444,25 @@ sub _thread_unpaper {
             my $e     = $image->Read($filename);
             if ("$e") {
                 $logger->error($e);
-                $self->{status}  = 1;
-                $self->{message} = "Error reading $filename: $e.";
+                _thread_throw_error( $self, $options{uuid},
+                    "Error reading $filename: $e." );
                 return;
             }
             my $depth = $image->Get('depth');
 
-# Unfortunately, -depth doesn't seem to work here, so forcing depth=1 using pbm extension.
+            # Unfortunately, -depth doesn't seem to work here,
+            # so forcing depth=1 using pbm extension.
             my $suffix = '.pbm';
             if ( $depth > 1 ) { $suffix = '.pnm' }
 
             # Temporary filename for new file
             $in = File::Temp->new(
-                DIR    => $dir,
+                DIR    => $options{dir},
                 SUFFIX => $suffix,
             );
 
-# FIXME: need to -compress Zip from perlmagick       "convert -compress Zip $slist->{data}[$pagenum][2]{filename} $in;";
+           # FIXME: need to -compress Zip from perlmagick
+           # "convert -compress Zip $slist->{data}[$pagenum][2]{filename} $in;";
             $logger->debug("Converting $filename -> $in for unpaper");
             $image->Write( filename => $in );
         }
@@ -3237,102 +3471,122 @@ sub _thread_unpaper {
         }
 
         my $out = File::Temp->new(
-            DIR    => $dir,
+            DIR    => $options{dir},
             SUFFIX => '.pnm',
             UNLINK => FALSE
         );
         my $out2 = $EMPTY;
-        if ( $options =~ /--output-pages[ ]2[ ]/xsm ) {
+        if ( $options{options} =~ /--output-pages[ ]2[ ]/xsm ) {
             $out2 = File::Temp->new(
-                DIR    => $dir,
+                DIR    => $options{dir},
                 SUFFIX => '.pnm',
                 UNLINK => FALSE
             );
         }
 
         # --overwrite needed because $out exists with 0 size
-        my $cmd = sprintf "$options;", $in, $out, $out2;
+        my $cmd = sprintf "$options{options};", $in, $out, $out2;
         $logger->info($cmd);
         my ( $stdout, $stderr ) =
-          open_three("echo $PROCESS_ID > $pidfile;$cmd");
+          open_three("echo $PROCESS_ID > $options{pidfile};$cmd");
         $logger->info($stdout);
         if ($stderr) {
             $logger->error($stderr);
-            $self->{status}  = 1;
-            $self->{message} = "Error running unpaper: $stderr.";
+            _thread_throw_error( $self, $options{uuid},
+                "Error running unpaper: $stderr." );
             return;
         }
         return if $_self->{cancel};
 
         my $new = Gscan2pdf::Page->new(
             filename => $out,
-            dir      => $dir,
+            dir      => $options{dir},
             delete   => TRUE,
             format   => 'Portable anymap',
         );
 
         # unpaper doesn't change the resolution, so we can safely copy it
-        if ( defined $page->{resolution} ) {
-            $new->{resolution} = $page->{resolution};
+        if ( defined $options{page}{resolution} ) {
+            $new->{resolution} = $options{page}{resolution};
         }
 
         $new->{dirty_time} = timestamp();    #flag as dirty
-        my %data = ( old => $page, new => $new->freeze );
+        $self->{return}->enqueue(
+            {
+                type => 'page',
+                uuid => $options{uuid},
+                page => $new->freeze,
+                info => { replace => $options{page}{uuid} }
+            }
+        );
+
         if ( $out2 ne $EMPTY ) {
             my $new2 = Gscan2pdf::Page->new(
                 filename => $out2,
-                dir      => $dir,
+                dir      => $options{dir},
                 delete   => TRUE,
                 format   => 'Portable anymap',
             );
 
             # unpaper doesn't change the resolution, so we can safely copy it
-            if ( defined $page->{resolution} ) {
-                $new2->{resolution} = $page->{resolution};
+            if ( defined $options{page}{resolution} ) {
+                $new2->{resolution} = $options{page}{resolution};
             }
 
             $new2->{dirty_time} = timestamp();    #flag as dirty
-            $data{new2} = $new2->freeze;
+            $self->{return}->enqueue(
+                {
+                    type => 'page',
+                    uuid => $options{uuid},
+                    page => $new2->freeze,
+                    info => { 'insert-after' => $new->{uuid} }
+                }
+            );
         }
-        $self->{page_queue}->enqueue( \%data );
     }
     catch {
-        $logger->error("Error creating file in $dir: $_");
-        $self->{status}  = 1;
-        $self->{message} = "Error creating file in $dir: $_.";
+        $logger->error("Error creating file in $options{dir}: $_");
+        _thread_throw_error( $self, $options{uuid},
+            "Error creating file in $options{dir}: $_." );
     };
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'unpaper',
+            uuid    => $options{uuid},
+        }
+    );
     return;
 }
 
 sub _thread_user_defined {
-    my ( $self, $page, $cmd, $dir, $pidfile ) = @_;
-    my $in = $page->{filename};
+    my ( $self, %options ) = @_;
+    my $in = $options{page}{filename};
     my $suffix;
     if ( $in =~ /([.]\w*)$/xsm ) {
         $suffix = $1;
     }
     try {
         my $out = File::Temp->new(
-            DIR    => $dir,
+            DIR    => $options{dir},
             SUFFIX => $suffix,
             UNLINK => FALSE
         );
 
-        if ( $cmd =~ s/%o/$out/gxsm ) {
-            $cmd =~ s/%i/$in/gxsm;
+        if ( $options{command} =~ s/%o/$out/gxsm ) {
+            $options{command} =~ s/%i/$in/gxsm;
         }
         else {
             if ( not copy( $in, $out ) ) {
-                $self->{status}  = 1;
-                $self->{message} = $d->get('Error copying page');
-                $d->get('Error copying page');
+                _thread_throw_error( $self, $options{uuid},
+                    $d->get('Error copying page') );
                 return;
             }
-            $cmd =~ s/%i/$out/gxsm;
+            $options{command} =~ s/%i/$out/gxsm;
         }
-        $cmd =~ s/%r/$page->{resolution}/gxsm;
-        $logger->info($cmd);
-        system "echo $PROCESS_ID > $pidfile;$cmd";
+        $options{command} =~ s/%r/$options{page}{resolution}/gxsm;
+        $logger->info( $options{command} );
+        system "echo $PROCESS_ID > $options{pidfile};$options{command}";
         return if $_self->{cancel};
 
         # Get file type
@@ -3340,25 +3594,38 @@ sub _thread_user_defined {
         my $e     = $image->Read($out);
         if ("$e") {
             $logger->error($e);
-            $self->{status}  = 1;
-            $self->{message} = "Error reading $out: $e.";
+            _thread_throw_error( $self, $options{uuid},
+                "Error reading $out: $e." );
             return;
         }
 
         my $new = Gscan2pdf::Page->new(
             filename => $out,
-            dir      => $dir,
+            dir      => $options{dir},
             delete   => TRUE,
             format   => $image->Get('format'),
         );
-        my %data = ( old => $page, new => $new->freeze );
-        $self->{page_queue}->enqueue( \%data );
+        $self->{return}->enqueue(
+            {
+                type => 'page',
+                uuid => $options{uuid},
+                page => $new->freeze,
+                info => { replace => $options{page}{uuid} }
+            }
+        );
     }
     catch {
-        $logger->error("Error creating file in $dir: $_");
-        $self->{status}  = 1;
-        $self->{message} = "Error creating file in $dir: $_.";
+        $logger->error("Error creating file in $options{dir}: $_");
+        _thread_throw_error( $self, $options{uuid},
+            "Error creating file in $options{dir}: $_." );
     };
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'user-defined',
+            uuid    => $options{uuid},
+        }
+    );
     return;
 }
 

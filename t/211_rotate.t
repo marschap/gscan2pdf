@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use File::Basename;    # Split filename into dir, file, ext
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
@@ -30,6 +30,7 @@ $slist->import_files(
         $slist->rotate(
             angle             => 90,
             page              => $slist->{data}[0][2],
+            display_callback  => sub { ok 1, 'Triggered display callback' },
             finished_callback => sub {
                 is( system("identify $slist->{data}[0][2]{filename}"),
                     0, 'valid JPG created' );

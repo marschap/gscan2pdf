@@ -15,7 +15,7 @@ my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Document->setup($logger);
 
 SKIP: {
-    skip 'gocr not installed', 1
+    skip 'gocr not installed', 2
       unless ( system("which gocr > /dev/null 2> /dev/null") == 0 );
 
     # Create test image
@@ -52,6 +52,11 @@ SKIP: {
                         },
                         error_callback => sub {
                             ok( 1, 'gocr caught error injected in queue' );
+                            chmod 0700, $dir;    # allow write access
+                            Gtk2->main_quit;
+                        },
+                        finished_callback => sub {
+                            ok( 0, 'gocr caught error injected in queue' );
                             chmod 0700, $dir;    # allow write access
                             Gtk2->main_quit;
                         }

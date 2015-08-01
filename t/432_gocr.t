@@ -11,7 +11,7 @@ BEGIN {
 #########################
 
 SKIP: {
-    skip 'gocr not installed', 1
+    skip 'gocr not installed', 4
       unless ( system("which gocr > /dev/null 2> /dev/null") == 0 );
 
     use Log::Log4perl qw(:easy);

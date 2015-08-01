@@ -27,10 +27,13 @@ $slist->set_dir($dir);
 $slist->import_files(
     paths             => ['test.pnm'],
     finished_callback => sub {
-        my $pid = $slist->save_pdf(
-            path               => 'test.pdf',
-            list_of_pages      => [ $slist->{data}[0][2] ],
-            cancelled_callback => sub {
+        $slist->save_pdf(
+            path              => 'test.pdf',
+            list_of_pages     => [ $slist->{data}[0][2] ],
+            finished_callback => sub { ok 0, 'Finished callback' }
+        );
+        $slist->cancel(
+            sub {
                 $slist->save_image(
                     path              => 'test.jpg',
                     list_of_pages     => [ $slist->{data}[0][2] ],
@@ -38,7 +41,6 @@ $slist->import_files(
                 );
             }
         );
-        $slist->cancel($pid);
     }
 );
 Gtk2->main;

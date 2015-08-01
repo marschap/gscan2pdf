@@ -32,10 +32,13 @@ SKIP: {
     $slist->import_files(
         paths             => ['test.png'],
         finished_callback => sub {
-            my $pid = $slist->ocropus(
-                page               => $slist->{data}[0][2],
-                language           => 'eng',
-                cancelled_callback => sub {
+            $slist->ocropus(
+                page              => $slist->{data}[0][2],
+                language          => 'eng',
+                finished_callback => sub { ok 0, 'Finished callback' }
+            );
+            $slist->cancel(
+                sub {
                     is( $slist->{data}[0][2]{hocr}, undef, 'no OCR output' );
                     $slist->save_image(
                         path              => 'test.jpg',
@@ -44,7 +47,6 @@ SKIP: {
                     );
                 }
             );
-            $slist->cancel($pid);
         }
     );
     Gtk2->main;

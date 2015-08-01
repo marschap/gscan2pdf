@@ -10,7 +10,7 @@ BEGIN {
 #########################
 
 SKIP: {
-    skip 'gocr not installed', 1
+    skip 'gocr not installed', 2
       unless ( system("which gocr > /dev/null 2> /dev/null") == 0 );
 
     use Log::Log4perl qw(:easy);
@@ -32,9 +32,12 @@ SKIP: {
     $slist->import_files(
         paths             => ['test.pnm'],
         finished_callback => sub {
-            my $pid = $slist->gocr(
-                page               => $slist->{data}[0][2],
-                cancelled_callback => sub {
+            $slist->gocr(
+                page              => $slist->{data}[0][2],
+                finished_callback => sub { ok 0, 'Finished callback' }
+            );
+            $slist->cancel(
+                sub {
                     is( $slist->{data}[0][2]{hocr}, undef, 'no OCR output' );
                     $slist->save_image(
                         path              => 'test.jpg',
@@ -43,7 +46,6 @@ SKIP: {
                     );
                 }
             );
-            $slist->cancel($pid);
         }
     );
     Gtk2->main;

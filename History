@@ -1,4 +1,4 @@
-1.3.3 (16.07.2015):
+1.3.3 (01.08.2015):
 
 * Suppress warnings when passed boolean as empty string
   Closes LP: #844582 ("Invalid argument" when trying to scan)
@@ -13,6 +13,7 @@
   Closes bug #200 (it doesn't attach on Fedora 21 (with thunderbird))
 * Update to German translation (thanks to Tobias Bannert)
 * Fixed program hang importing an empty file at the same time as other files
+* Rewrite threading system to simplify it and remove many race conditions
 
 
 1.3.2 (13.05.2015):

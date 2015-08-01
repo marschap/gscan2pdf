@@ -15,6 +15,7 @@ use Image::Magick;
 use Encode;
 use Locale::gettext 1.05;            # For translations
 use POSIX qw(locale_h);
+use Data::UUID;
 use English qw( -no_match_vars );    # for $ERRNO
 use Readonly;
 Readonly my $CM_PER_INCH    => 2.54;
@@ -42,6 +43,7 @@ BEGIN {
 our @EXPORT_OK;
 
 my ( $d, $logger );
+my $uuid = Data::UUID->new;
 
 sub new {
     my ( $class, %options ) = @_;
@@ -63,6 +65,7 @@ sub new {
     for ( keys %options ) {
         $self->{$_} = $options{$_};
     }
+    $self->{uuid} = $uuid->create_str();
 
     # copy or move image to session directory
     my %suffix = (
@@ -106,6 +109,7 @@ sub clone {
     for ( keys %{$self} ) {
         $new->{$_} = $self->{$_};
     }
+    $new->{uuid} = $uuid->create_str();
     bless $new, ref $self;
     return $new;
 }
@@ -116,11 +120,13 @@ sub freeze {
     my ($self) = @_;
     my $new = $self->clone;
     if ( ref( $new->{filename} ) eq 'File::Temp' ) {
+        $new->{filename}->unlink_on_destroy(FALSE);
         $new->{filename} = $self->{filename}->filename;
     }
     if ( ref( $new->{dir} ) eq 'File::Temp::Dir' ) {
         $new->{dir} = $self->{dir}->dirname;
     }
+    $new->{uuid} = $self->{uuid};
     return $new;
 }
 
@@ -134,6 +140,7 @@ sub thaw {
     my $filename = File::Temp->new( DIR => $new->{dir}, SUFFIX => ".$suffix" );
     move( $new->{filename}, $filename );
     $new->{filename} = $filename;
+    $new->{uuid}     = $self->{uuid};
     return $new;
 }
 

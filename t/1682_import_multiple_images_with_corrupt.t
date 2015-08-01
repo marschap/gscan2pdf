@@ -11,9 +11,7 @@ BEGIN {
 #########################
 
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($DEBUG);
-
-#Log::Log4perl->easy_init($WARN);
+Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Document->setup($logger);
 
@@ -38,12 +36,10 @@ system('echo "" > 5.tif');
 $slist->import_files(
     paths             => \@files,
     finished_callback => sub {
-        ok( 0, 'caught errors importing file' );
         Gtk2->main_quit;
     },
     error_callback => sub {
-        ok( 1, 'caught errors importing file' );
-        Gtk2->main_quit;
+        ok( 1, 'caught error importing corrupt file' );
     }
 );
 Gtk2->main;

@@ -27,10 +27,13 @@ $slist->import_files(
     paths             => ['white.pnm'],
     finished_callback => sub {
         my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
-        my $pid    = $slist->user_defined(
-            page               => $slist->{data}[0][2],
-            command            => 'convert %i -negate %o',
-            cancelled_callback => sub {
+        $slist->user_defined(
+            page              => $slist->{data}[0][2],
+            command           => 'convert %i -negate %o',
+            finished_callback => sub { ok 0, 'Finished callback' }
+        );
+        $slist->cancel(
+            sub {
                 is(
                     $md5sum,
                     `md5sum $slist->{data}[0][2]{filename} | cut -c -32`,
@@ -43,7 +46,6 @@ $slist->import_files(
                 );
             }
         );
-        $slist->cancel($pid);
     }
 );
 Gtk2->main;

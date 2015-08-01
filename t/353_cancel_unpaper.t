@@ -41,10 +41,13 @@ SKIP: {
         paths             => ['test.pnm'],
         finished_callback => sub {
             my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
-            my $pid    = $slist->unpaper(
-                page               => $slist->{data}[0][2],
-                options            => $unpaper->get_cmdline,
-                cancelled_callback => sub {
+            $slist->unpaper(
+                page              => $slist->{data}[0][2],
+                options           => $unpaper->get_cmdline,
+                finished_callback => sub { ok 0, 'Finished callback' }
+            );
+            $slist->cancel(
+                sub {
                     is(
                         $md5sum,
                         `md5sum $slist->{data}[0][2]{filename} | cut -c -32`,
@@ -57,7 +60,6 @@ SKIP: {
                     );
                 }
             );
-            $slist->cancel($pid);
         }
     );
     Gtk2->main;
