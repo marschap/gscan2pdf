@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.3.2
+Version: 1.3.3
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -85,8 +85,14 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Wed May 13 2015 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sat Aug 01 2015 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
   - New upstream release
+    New Depends: libdata-uuid-perl
+    Removed depends: liblinux-distribution-perl
+  - Changed perlmagick dependency to libimage-magick-perl
+    Closes: #789229 (gscan2pdf depends on transition package perlmagick)
+  - New upstream release
+  - Changed source format from 1.0 to 3.0 (quilt)
   - New upstream release
     New Depends: liblinux-distribution-perl, libfilesys-df-perl
   - New upstream release
