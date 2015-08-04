@@ -1250,8 +1250,8 @@ EOS
         $msg = $d->get('Warning: missing packages') . "\n$msg";
         show_message_dialog(
             parent           => $window,
-            type             => 'modal',
-            buttons          => 'gtk-ok',
+            type             => 'warning',
+            buttons          => 'ok',
             text             => $msg,
             'store-response' => TRUE
         );
@@ -7176,10 +7176,10 @@ sub show_message_dialog {
     if ( defined $SETTING{message}{ $options{text} }{response} ) {
         return $SETTING{message}{ $options{text} }{response};
     }
-    my $dialog = Gtk2::MessageDialog->new(
-        $options{parent},  'destroy-with-parent', $options{type},
-        $options{buttons}, $options{text}
-    );
+    my $dialog =
+      Gtk2::MessageDialog->new( $options{parent},
+        [ 'destroy-with-parent', 'modal' ],
+        $options{type}, $options{buttons}, $options{text} );
     my $cb;
     if ( $options{'store-response'} ) {
         $cb = Gtk2::CheckButton->new_with_label(
