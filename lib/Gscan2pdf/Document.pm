@@ -2105,16 +2105,23 @@ sub _thread_save_pdf {
     my ( $self, %options ) = @_;
 
     my $pagenr = 0;
-    my $ttfcache;
+    my $cache;
 
     # Create PDF with PDF::API2
     $self->{message} = $d->get('Setting up PDF');
-    my $pdf = PDF::API2->new( -file => $options{path} );
-    if ( defined $options{metadata} ) { $pdf->info( %{ $options{metadata} } ) }
+    my $filename = $options{path};
+    if (   defined $options{options}{prepend}
+        or defined $options{options}{append} )
+    {
+        $filename = File::Temp->new( DIR => $options{dir}, SUFFIX => '.pdf' );
+    }
+    my $pdf = PDF::API2->new( -file => $filename );
 
-    my $corecache = $pdf->corefont('Times-Roman');
+    if ( defined $options{metadata} ) { $pdf->info( %{ $options{metadata} } ) }
+    $cache->{core} = $pdf->corefont('Times-Roman');
     if ( defined $options{options}->{font} ) {
-        $ttfcache = $pdf->ttfont( $options{options}->{font}, -unicodemap => 1 );
+        $cache->{ttf} =
+          $pdf->ttfont( $options{options}->{font}, -unicodemap => 1 );
         $logger->info("Using $options{options}->{font} for non-ASCII text");
     }
 
@@ -2123,135 +2130,50 @@ sub _thread_save_pdf {
         $self->{progress} = $pagenr / ( $#{ $options{list_of_pages} } + 2 );
         $self->{message} = sprintf $d->get('Saving page %i of %i'),
           $pagenr, $#{ $options{list_of_pages} } + 1;
-
-        my $filename = $pagedata->{filename};
-        my $image    = Image::Magick->new;
-        my $status   = $image->Read($filename);
-        return if $_self->{cancel};
-        if ("$status") { $logger->warn($status) }
-
-        # Get the size and resolution. Resolution is dots per inch, width
-        # and height are in inches.
-        my $w = $image->Get('width') / $pagedata->{resolution};
-        my $h = $image->Get('height') / $pagedata->{resolution};
-        $pagedata->{w} = $w;
-        $pagedata->{h} = $h;
-
-        # Automatic mode
-        my $type;
-        if ( not defined( $options{options}->{compression} )
-            or $options{options}->{compression} eq 'auto' )
-        {
-            $pagedata->{depth} = $image->Get('depth');
-            $logger->info("Depth of $filename is $pagedata->{depth}");
-            if ( $pagedata->{depth} == 1 ) {
-                $pagedata->{compression} = 'lzw';
-            }
-            else {
-                $type = $image->Get('type');
-                $logger->info("Type of $filename is $type");
-                if ( $type =~ /TrueColor/xsm ) {
-                    $pagedata->{compression} = 'jpg';
-                }
-                else {
-                    $pagedata->{compression} = 'png';
-                }
-            }
-            $logger->info("Selecting $pagedata->{compression} compression");
-        }
-        else {
-            $pagedata->{compression} = $options{options}->{compression};
-        }
-
-        my ( $format, $output_resolution, $error );
-        try {
-            ( $filename, $format, $output_resolution ) =
-              _convert_image_for_pdf( $self, $pagedata, $image, %options );
-        }
-        catch {
-            $logger->error("Caught error converting image: $_");
-            _thread_throw_error( $self, $options{uuid},
-                "Caught error converting image: $_." );
-            $error = TRUE;
-        };
-        if ($error) { return }
-
-        $logger->info(
-            'Defining page at ',
-            $w * $POINTS_PER_INCH,
-            'pt x ', $h * $POINTS_PER_INCH, 'pt'
-        );
-        my $page = $pdf->page;
-        $page->mediabox( $w * $POINTS_PER_INCH, $h * $POINTS_PER_INCH );
-
-        if ( defined( $pagedata->{hocr} ) ) {
-            $logger->info('Embedding OCR output behind image');
-            _add_text_to_pdf( $page, $pagedata, $pagedata->boxes, $ttfcache,
-                $corecache );
-        }
-
-        # Add scan
-        my $gfx = $page->gfx;
-        my ( $imgobj, $msg );
-        try {
-            given ($format) {
-                when ('png') {
-                    $imgobj = $pdf->image_png($filename);
-                }
-                when ('jpg') {
-                    $imgobj = $pdf->image_jpeg($filename);
-                }
-                when (/^p[bn]m$/xsm) {
-                    $imgobj = $pdf->image_pnm($filename);
-                }
-                when ('gif') {
-                    $imgobj = $pdf->image_gif($filename);
-                }
-                when ('tif') {
-                    $imgobj = $pdf->image_tiff($filename);
-                }
-                default {
-                    $msg = "Unknown format $format file $filename";
-                }
-            }
-        }
-        catch { $msg = $_ };
-        return if $_self->{cancel};
-        if ($msg) {
-            $logger->warn($msg);
-            _thread_throw_error( $self, $options{uuid},
-                sprintf $d->get('Error creating PDF image object: %s'), $msg );
-            return;
-        }
-
-        try {
-            $gfx->image(
-                $imgobj, 0, 0,
-                $w * $POINTS_PER_INCH,
-                $h * $POINTS_PER_INCH
-            );
-        }
-        catch {
-            $logger->warn($_);
-            _thread_throw_error(
-                $self,
-                $options{uuid},
-                sprintf $d->get(
-                    'Error embedding file image in %s format to PDF: %s'),
-                $format,
-                $_
-            );
-            $error = TRUE;
-        };
-        if ($error) { return }
-
-        $logger->info("Added $filename at $output_resolution PPI");
-        return if $_self->{cancel};
+        my $status =
+          _add_page_to_pdf( $self, $pdf, $pagedata, $cache, %options );
+        return if ( $status or $_self->{cancel} );
     }
+
     $self->{message} = $d->get('Closing PDF');
     $logger->info('Closing PDF');
     $pdf->save;
     $pdf->end;
+
+    if (   defined $options{options}{prepend}
+        or defined $options{options}{append} )
+    {
+        my ( $bak, $file1, $file2, $out, $message );
+        if ( defined $options{options}{prepend} ) {
+            $file1   = $filename;
+            $file2   = "$options{options}{prepend}.bak";
+            $bak     = $file2;
+            $out     = $options{options}{prepend};
+            $message = $d->get('Error prepending PDF: %s');
+            $logger->info('Prepending PDF');
+        }
+        else {
+            $file2   = $filename;
+            $file1   = "$options{options}{append}.bak";
+            $bak     = $file1;
+            $out     = $options{options}{append};
+            $message = $d->get('Error appending PDF: %s');
+            $logger->info('Appending PDF');
+        }
+        my $cmd = "mv $out $bak;pdfunite $file1 $file2 $out";
+        my $error = File::Temp->new( DIR => $options{dir}, SUFFIX => '.txt' );
+        my $status =
+          system "echo $PROCESS_ID > $options{pidfile};$cmd 2>$error";
+        return if $_self->{cancel};
+        if ($status) {
+            my $output = slurp($error);
+            $logger->info($output);
+            _thread_throw_error( $self, $options{uuid}, sprintf $message,
+                $output );
+            return;
+        }
+    }
+
     $self->{return}->enqueue(
         {
             type    => 'finished',
@@ -2259,6 +2181,133 @@ sub _thread_save_pdf {
             uuid    => $options{uuid},
         }
     );
+    return;
+}
+
+sub _add_page_to_pdf {
+    my ( $self, $pdf, $pagedata, $cache, %options ) = @_;
+    my $filename = $pagedata->{filename};
+    my $image    = Image::Magick->new;
+    my $status   = $image->Read($filename);
+    return if $_self->{cancel};
+    if ("$status") { $logger->warn($status) }
+
+    # Get the size and resolution. Resolution is dots per inch, width
+    # and height are in inches.
+    my $w = $image->Get('width') / $pagedata->{resolution};
+    my $h = $image->Get('height') / $pagedata->{resolution};
+    $pagedata->{w} = $w;
+    $pagedata->{h} = $h;
+
+    # Automatic mode
+    my $type;
+    if ( not defined( $options{options}->{compression} )
+        or $options{options}->{compression} eq 'auto' )
+    {
+        $pagedata->{depth} = $image->Get('depth');
+        $logger->info("Depth of $filename is $pagedata->{depth}");
+        if ( $pagedata->{depth} == 1 ) {
+            $pagedata->{compression} = 'lzw';
+        }
+        else {
+            $type = $image->Get('type');
+            $logger->info("Type of $filename is $type");
+            if ( $type =~ /TrueColor/xsm ) {
+                $pagedata->{compression} = 'jpg';
+            }
+            else {
+                $pagedata->{compression} = 'png';
+            }
+        }
+        $logger->info("Selecting $pagedata->{compression} compression");
+    }
+    else {
+        $pagedata->{compression} = $options{options}->{compression};
+    }
+
+    my ( $format, $output_resolution, $error );
+    try {
+        ( $filename, $format, $output_resolution ) =
+          _convert_image_for_pdf( $self, $pagedata, $image, %options );
+    }
+    catch {
+        $logger->error("Caught error converting image: $_");
+        _thread_throw_error( $self, $options{uuid},
+            "Caught error converting image: $_." );
+        $error = TRUE;
+    };
+    if ($error) { return 1 }
+
+    $logger->info(
+        'Defining page at ',
+        $w * $POINTS_PER_INCH,
+        'pt x ', $h * $POINTS_PER_INCH, 'pt'
+    );
+    my $page = $pdf->page;
+    $page->mediabox( $w * $POINTS_PER_INCH, $h * $POINTS_PER_INCH );
+
+    if ( defined( $pagedata->{hocr} ) ) {
+        $logger->info('Embedding OCR output behind image');
+        _add_text_to_pdf( $page, $pagedata, $pagedata->boxes, $cache->{ttf},
+            $cache->{core} );
+    }
+
+    # Add scan
+    my $gfx = $page->gfx;
+    my ( $imgobj, $msg );
+    try {
+        given ($format) {
+            when ('png') {
+                $imgobj = $pdf->image_png($filename);
+            }
+            when ('jpg') {
+                $imgobj = $pdf->image_jpeg($filename);
+            }
+            when (/^p[bn]m$/xsm) {
+                $imgobj = $pdf->image_pnm($filename);
+            }
+            when ('gif') {
+                $imgobj = $pdf->image_gif($filename);
+            }
+            when ('tif') {
+                $imgobj = $pdf->image_tiff($filename);
+            }
+            default {
+                $msg = "Unknown format $format file $filename";
+            }
+        }
+    }
+    catch { $msg = $_ };
+    return if $_self->{cancel};
+    if ($msg) {
+        $logger->warn($msg);
+        _thread_throw_error( $self, $options{uuid},
+            sprintf $d->get('Error creating PDF image object: %s'), $msg );
+        return 1;
+    }
+
+    try {
+        $gfx->image(
+            $imgobj, 0, 0,
+            $w * $POINTS_PER_INCH,
+            $h * $POINTS_PER_INCH
+        );
+    }
+    catch {
+        $logger->warn($_);
+        _thread_throw_error(
+            $self,
+            $options{uuid},
+            sprintf $d->get(
+                'Error embedding file image in %s format to PDF: %s'),
+            $format,
+            $_
+        );
+        $error = TRUE;
+    };
+    if ($error) { return 1 }
+
+    $logger->info("Added $filename at $output_resolution PPI");
     return;
 }
 

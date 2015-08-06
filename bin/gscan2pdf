@@ -654,13 +654,15 @@ sub check_dependencies {
     $dependencies{djvu}      = Gscan2pdf::Document::check_command('cjb2');
     $dependencies{unpaper}   = Gscan2pdf::Unpaper->version;
     $dependencies{libtiff}   = Gscan2pdf::Document::check_command('tiffcp');
+    $dependencies{pdfunite}  = Gscan2pdf::Document::check_command('pdfunite');
     if ( $dependencies{perlmagick} )  { $logger->info('Found Image::Magick') }
     if ( $dependencies{imagemagick} ) { $logger->info('Found ImageMagick') }
     if ( $dependencies{scanadf} )     { $logger->info('Found scanadf') }
     if ( $dependencies{xdg} )         { $logger->info('Found xdg-email') }
 
-    if ( $dependencies{djvu} )    { $logger->info('Found cjb2 (djvu)') }
-    if ( $dependencies{libtiff} ) { $logger->info('Found libtiff') }
+    if ( $dependencies{djvu} )     { $logger->info('Found cjb2 (djvu)') }
+    if ( $dependencies{libtiff} )  { $logger->info('Found libtiff') }
+    if ( $dependencies{pdfunite} ) { $logger->info('Found pdfunite') }
     if ( $dependencies{unpaper} ) {
         $logger->info("Found unpaper $dependencies{unpaper}");
     }
@@ -2360,7 +2362,7 @@ sub prepare_output_metadata {
 # Save selected pages as PDF under given name.
 
 sub save_pdf {
-    my ($filename) = @_;
+    my ( $filename, $append ) = @_;
 
     # Compile list of pages
     my @list_of_pages;
@@ -2379,6 +2381,12 @@ sub save_pdf {
         quality          => $SETTING{quality},
         font             => $SETTING{'pdf font'},
     );
+    if ( $append eq 'prependpdf' ) {
+        $options{prepend} = $filename;
+    }
+    elsif ( $append eq 'appendpdf' ) {
+        $options{append} = $filename;
+    }
 
     # Create the PDF
     $logger->debug("Started saving $filename");
@@ -2569,6 +2577,18 @@ sub save_dialog {
         [ 'hocr',    $d->get('hOCR'),    $d->get('hOCR markup language') ],
         [ 'session', $d->get('Session'), $d->get('gscan2pdf session file') ],
     );
+    if ( $dependencies{pdfunite} ) {
+        push @type,
+          [
+            'prependpdf', $d->get('Prepend to PDF'),
+            $d->get('Prepend to an existing PDF')
+          ];
+        push @type,
+          [
+            'appendpdf', $d->get('Append to PDF'),
+            $d->get('Append to an existing PDF')
+          ];
+    }
     if ( $dependencies{djvu} ) {
         push @type, [ 'djvu', $d->get('DjVu'), $d->get('Deja Vu') ];
     }
@@ -2760,50 +2780,68 @@ sub image_type_changed_callback {
         $combob,   $hboxpq, $hboxc, $tiff_compression,
         $combobtc, $hboxtq, $hboxmd
     ) = @{$data};
-    if ( $type->[ $widget->get_active ][0] eq 'pdf' ) {
-        $hboxmd->show_all;
-        $vboxp->show_all;
-        $hboxf->show_all;
-        if ( $pdf_compression->[ $combob->get_active ][0] eq 'jpg' ) {
-            $hboxpq->show_all;
+    given ( $type->[ $widget->get_active ][0] ) {
+        when (/pdf/xsm) {
+            $vboxp->show_all;
+            $hboxf->show_all;
+            $hboxc->hide_all;
+            $hboxtq->hide_all;
+            if ( $_ eq 'pdf' ) {
+                $hboxmd->show_all;
+            }
+            else {    # don't show metadata for pre-/append to pdf
+                $hboxmd->hide_all;
+            }
+            if ( $pdf_compression->[ $combob->get_active ][0] eq 'jpg' ) {
+                $hboxpq->show_all;
+            }
+            else {
+                $hboxpq->hide_all;
+            }
         }
-        else {
-            $hboxpq->hide_all;
-            $windowi->resize( 1, 1 );
-        }
-    }
-    else {
-        if ( $type->[ $widget->get_active ][0] eq 'djvu' ) {
+        when ('djvu') {
             $hboxmd->show_all;
+            $hboxc->hide_all;
+            $vboxp->hide_all;
+            $hboxf->hide_all;
+            $hboxpq->hide_all;
+            $hboxtq->hide_all;
         }
-        else {
+        when ('tif') {
+            $hboxc->show_all;
             $hboxmd->hide_all;
+            $vboxp->hide_all;
+            $hboxf->hide_all;
+            $hboxpq->hide_all;
+            if ( $tiff_compression->[ $combobtc->get_active ][0] eq 'jpeg' ) {
+                $hboxtq->show_all;
+            }
+            else {
+                $hboxtq->hide_all;
+            }
         }
-        $vboxp->hide_all;
-        $hboxf->hide_all;
-        $windowi->resize( 1, 1 );
+        when ('ps') {
+            $hboxc->show_all;
+            $hboxmd->hide_all;
+            $vboxp->hide_all;
+            $hboxf->hide_all;
+            $hboxpq->hide_all;
+            $hboxtq->hide_all;
+        }
+        when ('jpg') {
+            $hboxtq->show_all;
+            $hboxpq->hide_all;
+        }
+        default {
+            $hboxmd->hide_all;
+            $vboxp->hide_all;
+            $hboxf->hide_all;
+            $hboxc->hide_all;
+            $hboxpq->hide_all;
+            $hboxtq->hide_all;
+        }
     }
-    if (   $type->[ $widget->get_active ][0] eq 'tif'
-        or $type->[ $widget->get_active ][0] eq 'ps' )
-    {
-        $hboxc->show_all;
-    }
-    else {
-        $hboxc->hide_all;
-        $windowi->resize( 1, 1 );
-    }
-    if (
-        $type->[ $widget->get_active ][0] eq 'jpg'
-        or (    $type->[ $widget->get_active ][0] eq 'tif'
-            and $tiff_compression->[ $combobtc->get_active ][0] eq 'jpeg' )
-      )
-    {
-        $hboxtq->show_all;
-    }
-    else {
-        $hboxtq->hide_all;
-        $windowi->resize( 1, 1 );
-    }
+    $windowi->resize( 1, 1 );
     return;
 }
 
@@ -2821,7 +2859,7 @@ sub save_button_clicked_callback {
     $SETTING{'image type'} = $type->[ $combobi->get_active ][0];
 
     given ( $SETTING{'image type'} ) {
-        when ('pdf') {
+        when (/pdf/xsm) {
 
             # dig out the compression
             $SETTING{'downsample'}     = $buttond->get_active;
@@ -2832,34 +2870,45 @@ sub save_button_clicked_callback {
 
             $SETTING{'pdf font'} = $fonts->[ $combof->get_active ][0];
 
-            update_metadata_settings( $entryd, $entrya, $entryt, $entrys,
-                $entryk );
-
             # cd back to cwd to save
             chdir $SETTING{'cwd'};
 
-            # Set up file selector
-            my $file_chooser = Gtk2::FileChooserDialog->new(
-                $d->get('PDF filename'),
-                $windowi, 'save',
-                'gtk-cancel' => 'cancel',
-                'gtk-save'   => 'ok'
-            );
+            my $file_chooser;
+            if ( $_ eq 'pdf' ) {
+                update_metadata_settings( $entryd, $entrya, $entryt, $entrys,
+                    $entryk );
 
-            my $filename =
-              expand_metadata_pattern( $SETTING{'default filename'} );
+                # Set up file selector
+                $file_chooser = Gtk2::FileChooserDialog->new(
+                    $d->get('PDF filename'),
+                    $windowi, 'save',
+                    'gtk-cancel' => 'cancel',
+                    'gtk-save'   => 'ok'
+                );
 
-            # avoid leading and trailing blanks in expanded filename template
-            $filename =~ s/^\s*(.*?)\s*$/$1/xsm;
+                my $filename =
+                  expand_metadata_pattern( $SETTING{'default filename'} );
 
-            $file_chooser->set_current_name($filename);
-            $file_chooser->set_default_response('ok');
-            $file_chooser->set_current_folder( $SETTING{'cwd'} );
+               # avoid leading and trailing blanks in expanded filename template
+                $filename =~ s/^\s*(.*?)\s*$/$1/xsm;
+
+                $file_chooser->set_current_name($filename);
+                $file_chooser->set_do_overwrite_confirmation(TRUE);
+            }
+            else {
+                $file_chooser = Gtk2::FileChooserDialog->new(
+                    $d->get('PDF filename'),
+                    $windowi, 'open',
+                    'gtk-cancel' => 'cancel',
+                    'gtk-open'   => 'ok'
+                );
+            }
             add_filter( $file_chooser, $d->get('PDF files'), 'pdf' );
-            $file_chooser->set_do_overwrite_confirmation(TRUE);
+            $file_chooser->set_current_folder( $SETTING{'cwd'} );
+            $file_chooser->set_default_response('ok');
             $file_chooser->signal_connect(
                 response => \&file_chooser_response_callback,
-                'pdf'
+                $_
             );
             $file_chooser->show;
 
@@ -3044,10 +3093,13 @@ sub save_button_clicked_callback {
 
 sub file_chooser_response_callback {
     my ( $dialog, $response, $type ) = @_;
-    $logger->debug("PDF save filename dialog returned $response");
+    $logger->debug("save filename dialog returned $response");
+
+    my $suffix = $type;
+    if ( $suffix =~ /pdf/ ) { $suffix = 'pdf' }
     if ( $response eq 'ok' ) {
         my $filename = $dialog->get_filename;
-        if ( $filename !~ /[.]$type$/ixsm ) {
+        if ( $filename !~ /[.]$suffix$/ixsm ) {
             $filename = "$filename.$type";
             if ( -f $filename ) {
 
@@ -3078,8 +3130,8 @@ sub file_chooser_response_callback {
         $SETTING{'cwd'} = dirname($filename);
 
         given ($type) {
-            when ('pdf') {
-                save_pdf($filename);
+            when (/pdf/xsm) {
+                save_pdf( $filename, $_ );
             }
             when ('djvu') {
                 save_djvu($filename);
