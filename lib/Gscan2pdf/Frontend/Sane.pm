@@ -11,6 +11,8 @@ use Thread::Queue;
 
 use Glib qw(TRUE FALSE);
 use Sane;
+use Data::UUID;
+use File::Temp;    # To create temporary files
 use Readonly;
 Readonly my $BUFFER_SIZE    => ( 32 * 1024 );     # default size
 Readonly my $_POLL_INTERVAL => 100;               # ms
@@ -18,12 +20,12 @@ Readonly my $_8_BIT         => 8;
 Readonly my $MAXVAL_8_BIT   => 2**$_8_BIT - 1;
 Readonly my $_16_BIT        => 16;
 Readonly my $MAXVAL_16_BIT  => 2**$_16_BIT - 1;
-my $EMPTY = q{};
+my $uuid_object = Data::UUID->new;
+my $EMPTY       = q{};
 
 our $VERSION = '1.3.4';
 
-my $_self;
-my ( $prog_name, $logger );
+my ( $prog_name, $logger, %callback, $_self );
 
 sub setup {
     ( my $class, $logger ) = @_;
@@ -31,11 +33,9 @@ sub setup {
     $prog_name = Glib::get_application_name;
 
     $_self->{requests} = Thread::Queue->new;
-    share $_self->{device_list};
-    share $_self->{device_name};
+    $_self->{return}   = Thread::Queue->new;
 
     # $_self->{device_handle} explicitly not shared
-    share $_self->{status};
     share $_self->{abort_scan};
     share $_self->{scan_progress};
 
@@ -56,19 +56,26 @@ sub _enqueue_request {
     return \$sentinel;
 }
 
-sub _when_ready {
-    my ( $sentinel, $ready_callback, $not_ready_callback ) = @_;
+sub _monitor_process {
+    my ( $sentinel, $started_callback, $running_callback ) = @_;
+
+    my $started;
     Glib::Timeout->add(
         $_POLL_INTERVAL,
         sub {
-            if ( ${$sentinel} ) {
-                $ready_callback->();
+            if ( ${$sentinel} == 2 ) {
+                if ( not $started and defined $started_callback ) {
+                    $started_callback->();
+                }
+                check_return_queue();
                 return Glib::SOURCE_REMOVE;
             }
-            else {
-                if ( defined $not_ready_callback ) {
-                    $not_ready_callback->();
+            elsif ( ${$sentinel} == 1 ) {
+                if ( not $started ) {
+                    if ( defined $started_callback ) { $started_callback->() }
+                    $started = 1;
                 }
+                if ( defined $running_callback ) { $running_callback->() }
                 return Glib::SOURCE_CONTINUE;
             }
         }
@@ -87,23 +94,10 @@ sub get_devices {
     my ( $class, $started_callback, $running_callback, $finished_callback ) =
       @_;
 
-    my $sentinel = _enqueue_request('get-devices');
-
-    my $started;
-    _when_ready(
-        $sentinel,
-        sub {
-            if ( not $started ) { $started_callback->() }
-            $finished_callback->( $_self->{device_list} );
-        },
-        sub {
-            if ( not $started ) {
-                $started_callback->();
-                $started = 1;
-            }
-            $running_callback->();
-        }
-    );
+    my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{finished} = $finished_callback;
+    my $sentinel = _enqueue_request( 'get-devices', { uuid => $uuid } );
+    _monitor_process( $sentinel, $started_callback, $running_callback );
     return;
 }
 
@@ -118,39 +112,19 @@ sub device {
 sub open_device {
     my ( $class, %options ) = @_;
 
+    my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{finished} = sub {
+        $_self->{device_name} = $options{device_name};
+        $options{finished_callback}->();
+    };
+    $callback{$uuid}{error} = $options{error_callback};
     my $sentinel =
-      _enqueue_request( 'open', { device_name => $options{device_name} } );
-
-    my $started;
-    _when_ready(
+      _enqueue_request( 'open',
+        { uuid => $uuid, device_name => $options{device_name} } );
+    _monitor_process(
         $sentinel,
-        sub {
-            if ( not $started and defined $options{started_callback} ) {
-                $options{started_callback}->();
-            }
-            if ( $_self->{status} == SANE_STATUS_GOOD ) {
-                if ( defined $options{finished_callback} ) {
-                    $options{finished_callback}->();
-                }
-            }
-            else {
-                if ( defined $options{error_callback} ) {
-                    $options{error_callback}
-                      ->( Sane::strstatus( $_self->{status} ) );
-                }
-            }
-        },
-        sub {
-            if ( not $started ) {
-                if ( defined $options{started_callback} ) {
-                    $options{started_callback}->();
-                }
-                $started = 1;
-            }
-            if ( defined $options{running_callback} ) {
-                $options{running_callback}->();
-            }
-        }
+        $options{started_callback},
+        $options{running_callback}
     );
     return;
 }
@@ -161,159 +135,137 @@ sub find_scan_options {
         $finished_callback, $error_callback
     ) = @_;
 
-    my $option_array : shared;
-    my $sentinel =
-      _enqueue_request( 'get-options', { options => \$option_array } );
-
-    my $started;
-    _when_ready(
-        $sentinel,
-        sub {
-            if ( not $started and defined $started_callback ) {
-                $started_callback->();
-            }
-            if ( $_self->{status} == SANE_STATUS_GOOD ) {
-                $finished_callback->($option_array);
-            }
-            else {
-                $error_callback->( Sane::strstatus( $_self->{status} ) );
-            }
-        },
-        sub {
-            if ( not $started ) {
-                if ( defined $started_callback ) { $started_callback->() }
-                $started = 1;
-            }
-            $running_callback->();
-        }
-    );
+    my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{finished} = $finished_callback;
+    $callback{$uuid}{error}    = $error_callback;
+    my $sentinel = _enqueue_request( 'get-options', { uuid => $uuid } );
+    _monitor_process( $sentinel, $started_callback, $running_callback );
     return;
 }
 
 sub set_option {
     my ( $class, %options ) = @_;
 
-    my $option_array : shared;
+    my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{finished} = $options{finished_callback};
+    $callback{$uuid}{error}    = $options{error_callback};
     my $sentinel = _enqueue_request(
         'set-option',
         {
-            index       => $options{index},
-            value       => $options{value},
-            new_options => \$option_array
+            index => $options{index},
+            value => $options{value},
+            uuid  => $uuid,
         }
     );
-
-    my $started;
-    _when_ready(
+    _monitor_process(
         $sentinel,
-        sub {
-            if ( not $started and defined $options{started_callback} ) {
-                $options{started_callback}->();
-            }
-            if ( defined $options{finished_callback} ) {
-                $options{finished_callback}->($option_array);
-            }
-        },
-        sub {
-            if ( not $started ) {
-                if ( defined $options{started_callback} ) {
-                    $options{started_callback}->();
-                }
-                $started = 1;
-            }
-            if ( defined $options{running_callback} ) {
-                $options{running_callback}->();
-            }
-        }
+        $options{started_callback},
+        $options{running_callback}
     );
     return;
 }
 
-sub _new_page {
-    my ( $dir, $format, $n ) = @_;
-    my $path = sprintf $format, $n;
-    if ( defined $dir ) { $path = File::Spec->catdir( $dir, $path ) }
-    return _enqueue_request( 'scan-page', { path => $path } );
+sub scan_page {
+    my ( $class, %options ) = @_;
+
+    $_self->{abort_scan}    = 0;
+    $_self->{scan_progress} = 0;
+    my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{error}    = $options{error_callback};
+    $callback{$uuid}{finished} = $options{finished_callback};
+    my $sentinel = _enqueue_request( 'scan-page',
+        { uuid => $uuid, path => "$options{path}" } );
+    _monitor_process(
+        $sentinel,
+        $options{started_callback},
+        $options{running_callback}
+    );
+    return;
+}
+
+sub scan_page_finished_callback {
+    my ( $status, $path, $n, %options ) = @_;
+    if (
+            defined $options{new_page_callback}
+        and not $_self->{abort_scan}
+        and (  int($status) == SANE_STATUS_GOOD
+            or int($status) == SANE_STATUS_EOF )
+      )
+    {
+        $options{new_page_callback}->( $status, $path, $options{start} );
+    }
+
+    # Stop the process unless everything OK and more scans required
+    if (
+           $_self->{abort_scan}
+        or ( $options{npages} and ++$n > $options{npages} )
+        or (    $status != SANE_STATUS_GOOD
+            and $status != SANE_STATUS_EOF )
+      )
+    {
+        _enqueue_request( 'cancel', { uuid => $uuid_object->create_str } );
+        if ( _scanned_enough_pages( $status, $options{npages}, $n ) ) {
+            if ( defined $options{finished_callback} ) {
+                $options{finished_callback}->();
+            }
+        }
+        else {
+            if ( defined $options{error_callback} ) {
+                $options{error_callback}->( Sane::strstatus($status) );
+            }
+        }
+        return;
+    }
+
+    $options{start} += $options{step};
+    Gscan2pdf::Frontend::Sane->scan_page(
+        path => File::Temp->new(
+            DIR    => $options{dir},
+            SUFFIX => '.pnm',
+            UNLINK => FALSE,
+        ),
+        started_callback => $options{started_callback},
+        running_callback => sub {
+            $options{running_callback}->( $_self->{scan_progress} );
+        },
+        error_callback    => $options{error_callback},
+        finished_callback => sub {
+            my ( $new_path, $new_status ) = @_;
+            scan_page_finished_callback( $new_status, $new_path, $n, %options );
+        },
+    );
+    return;
 }
 
 sub scan_pages {
     my ( $class, %options ) = @_;
 
-    $_self->{status}        = SANE_STATUS_GOOD;
-    $_self->{abort_scan}    = 0;
-    $_self->{scan_progress} = 0;
-    my $sentinel =
-      _new_page( $options{dir}, $options{format}, $options{start} );
-
     my $n = 1;
-    my $started;
-    Glib::Timeout->add(
-        $_POLL_INTERVAL,
-        sub {
-            if ( ${$sentinel} ) {
-
-                # Check status of scan
-                if (
-                        defined $options{new_page_callback}
-                    and not $_self->{abort_scan}
-                    and (  $_self->{status} == SANE_STATUS_GOOD
-                        or $_self->{status} == SANE_STATUS_EOF )
-                  )
-                {
-                    $options{new_page_callback}->( $options{start} );
-                }
-
-                # Stop the process unless everything OK and more scans required
-                if (
-                       $_self->{abort_scan}
-                    or ( $options{npages} and ++$n > $options{npages} )
-                    or (    $_self->{status} != SANE_STATUS_GOOD
-                        and $_self->{status} != SANE_STATUS_EOF )
-                  )
-                {
-                    _enqueue_request('cancel');
-                    if ( _scanned_enough_pages( $options{npages}, $n ) ) {
-                        if ( defined $options{finished_callback} ) {
-                            $options{finished_callback}->();
-                        }
-                    }
-                    else {
-                        if ( defined $options{error_callback} ) {
-                            $options{error_callback}
-                              ->( Sane::strstatus( $_self->{status} ) );
-                        }
-                    }
-                    return Glib::SOURCE_REMOVE;
-                }
-
-                $options{start} += $options{step};
-                $sentinel =
-                  _new_page( $options{dir}, $options{format}, $options{start} );
-                return Glib::SOURCE_CONTINUE;
-            }
-            else {
-                if ( not $started ) {
-                    if ( defined $options{started_callback} ) {
-                        $options{started_callback}->();
-                    }
-                    $started = 1;
-                }
-                if ( defined $options{running_callback} ) {
-                    $options{running_callback}->( $_self->{scan_progress} );
-                }
-                return Glib::SOURCE_CONTINUE;
-            }
-        }
+    Gscan2pdf::Frontend::Sane->scan_page(
+        path => File::Temp->new(
+            DIR    => $options{dir},
+            SUFFIX => '.pnm',
+            UNLINK => FALSE,
+        ),
+        started_callback => $options{started_callback},
+        running_callback => sub {
+            $options{running_callback}->( $_self->{scan_progress} );
+        },
+        error_callback    => $options{error_callback},
+        finished_callback => sub {
+            my ( $path, $status ) = @_;
+            scan_page_finished_callback( $status, $path, $n, %options );
+        },
     );
     return;
 }
 
 sub _scanned_enough_pages {
-    my ( $nrequired, $ndone ) = @_;
+    my ( $status, $nrequired, $ndone ) = @_;
     return (
-             $_self->{status} == SANE_STATUS_GOOD
-          or $_self->{status} == SANE_STATUS_EOF
-          or (  $_self->{status} == SANE_STATUS_NO_DOCS
+             $status == SANE_STATUS_GOOD
+          or $status == SANE_STATUS_EOF
+          or (  $status == SANE_STATUS_NO_DOCS
             and $nrequired < $ndone )
     );
 }
@@ -321,45 +273,93 @@ sub _scanned_enough_pages {
 # Flag the scan routine to abort
 
 sub cancel_scan {
+    my ( $self, $callback ) = @_;
 
     # Empty process queue first to stop any new process from starting
     $logger->info('Emptying process queue');
-    while ( $_self->{requests}->dequeue_nb ) { }
+    while ( $self->{requests}->dequeue_nb ) { }
 
     # Then send the thread a cancel signal
-    $_self->{abort_scan} = 1;
+    $self->{abort_scan} = 1;
+
+    my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{cancelled} = $callback;
+
+    # Add a cancel request to ensure the reply is not blocked
+    $logger->info('Requesting cancel');
+    my $sentinel = _enqueue_request( 'cancel', { uuid => $uuid } );
+    _monitor_process( $sentinel, );
     return;
+}
+
+sub check_return_queue {
+    while ( defined( my $data = $_self->{return}->dequeue_nb() ) ) {
+        if ( not defined $data->{type} ) {
+            $logger->error("Bad data bundle $data in return queue.");
+            next;
+        }
+        if ( not defined $data->{uuid} ) {
+            $logger->error('Bad uuid in return queue.');
+            next;
+        }
+
+        # if we have pressed the cancel button, ignore everything in the returns
+        # queue until it flags cancelled.
+        if ( $_self->{cancel} ) {
+            if ( $data->{type} eq 'cancelled' ) {
+                $_self->{cancel} = FALSE;
+                if ( defined $callback{ $data->{uuid} }{cancelled} ) {
+                    $callback{ $data->{uuid} }{cancelled}->( $data->{info} );
+                    delete $callback{ $data->{uuid} };
+                }
+            }
+            else {
+                next;
+            }
+        }
+
+        if ( defined $callback{ $data->{uuid} }{finished} ) {
+            $callback{ $data->{uuid} }{finished}
+              ->( $data->{info}, $data->{status} );
+            delete $callback{ $data->{uuid} };
+        }
+    }
+    return Glib::SOURCE_CONTINUE;
 }
 
 sub _thread_main {
     my ($self) = @_;
 
     while ( my $request = $self->{requests}->dequeue ) {
+
+        # Signal the sentinel that the request was started.
+        ${ $request->{sentinel} }++;
+
         given ( $request->{action} ) {
-            when ('quit')        { last }
-            when ('get-devices') { _thread_get_devices($self) }
+            when ('quit') { last }
+            when ('get-devices') {
+                _thread_get_devices( $self, $request->{uuid} )
+            }
             when ('open') {
-                _thread_open_device( $self, $request->{device_name} )
+                _thread_open_device( $self, $request->{uuid},
+                    $request->{device_name} )
             }
             when ('get-options') {
-                _thread_get_options( $self, $request->{options} )
+                _thread_get_options( $self, $request->{uuid} )
             }
             when ('set-option') {
-                _thread_set_option( $self, $request->{index}, $request->{value},
-                    $request->{new_options} )
+                _thread_set_option( $self, $request->{uuid}, $request->{index},
+                    $request->{value} )
             }
-            when ('scan-page') { _thread_scan_page( $self, $request->{path} ) }
-            when ('cancel') { _thread_cancel($self) }
+            when ('scan-page') {
+                _thread_scan_page( $self, $request->{uuid}, $request->{path} )
+            }
+            when ('cancel') { _thread_cancel( $self, $request->{uuid} ) }
             default {
                 $logger->info("Ignoring unknown request $_");
                 next;
             }
         }
-
-    # Store the current status in the shared status variable.  Otherwise, the
-    # main thread has no way to access this thread's $Sane::STATUS.  Numerify to
-    # please thread::shared.
-        $self->{status} = $Sane::STATUS + 0;
 
         # Signal the sentinel that the request was completed.
         ${ $request->{sentinel} }++;
@@ -368,17 +368,35 @@ sub _thread_main {
 }
 
 sub _thread_get_devices {
-    my ($self) = @_;
-    my @devices = Sane->get_devices;
-    $self->{device_list} = shared_clone \@devices;
+    my ( $self, $uuid ) = @_;
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'get-devices',
+            uuid    => $uuid,
+            info    => Sane->get_devices,
+        }
+    );
+    return;
+}
+
+sub _thread_throw_error {
+    my ( $self, $uuid, $message ) = @_;
+    $self->{return}->enqueue(
+        {
+            type    => 'error',
+            uuid    => $uuid,
+            message => $message
+        }
+    );
     return;
 }
 
 sub _thread_open_device {
-    my ( $self, $device_name ) = @_;
+    my ( $self, $uuid, $device_name ) = @_;
 
     if ( not defined $device_name or $device_name eq $EMPTY ) {
-        $logger->error('Cannot open undefined device');
+        _thread_throw_error( $self, $uuid, 'Cannot open undefined device' );
         return;
     }
 
@@ -388,21 +406,30 @@ sub _thread_open_device {
     $self->{device_handle} = Sane::Device->open($device_name);
     $logger->debug("opening device '$device_name': $Sane::STATUS");
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        $logger->error("opening device '$device_name': $Sane::STATUS");
+        _thread_throw_error( $self, $uuid,
+            "opening device '$device_name': $Sane::STATUS" );
         return;
     }
-    $self->{device_name} = $device_name;
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'open-device',
+            uuid    => $uuid,
+            info    => $device_name,
+        }
+    );
     return;
 }
 
 sub _thread_get_options {
-    my ( $self, $options ) = @_;
+    my ( $self, $uuid ) = @_;
     my @options;
 
     # We got a device, find out how many options it has:
     my $num_dev_options = $self->{device_handle}->get_option(0);
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        $logger->error('unable to determine option count');
+        _thread_throw_error( $self, $uuid,
+            "unable to determine option count: $Sane::STATUS" );
         return;
     }
     for ( 1 .. $num_dev_options - 1 ) {
@@ -417,15 +444,21 @@ sub _thread_get_options {
             $opt->{val} = $self->{device_handle}->get_option($_);
         }
     }
-
-    ${$options} = shared_clone \@options;
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'get-options',
+            uuid    => $uuid,
+            info    => \@options,
+        }
+    );
     return;
 }
 
 sub _thread_set_option {
-    my ( $self, $index, $value, $new_options ) = @_;
+    my ( $self, $uuid, $index, $value ) = @_;
     my $opt = $self->{device_handle}->get_option_descriptor($index);
-    if ( $opt->{type} == SANE_TYPE_BOOL and $value eq '' ) { $value = 0 }
+    if ( $opt->{type} == SANE_TYPE_BOOL and $value eq $EMPTY ) { $value = 0 }
 
     # FIXME: Stringification to force this SV to have a PV slot.  This seems to
     # be necessary to get through Sane.pm's value checks.
@@ -439,26 +472,17 @@ sub _thread_set_option {
         );
     }
 
-    # FIXME: This duplicates _thread_get_options.
     if ( $info & SANE_INFO_RELOAD_OPTIONS ) {
-        my $num_dev_options = $self->{device_handle}->get_option(0);
-        if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-            $logger->error('unable to determine option count');
-            return;
-        }
-
-        my @options;
-        for ( 1 .. $num_dev_options - 1 ) {
-            my $opt = $self->{device_handle}->get_option_descriptor($_);
-            $options[$_] = $opt;
-            if ( not $opt->{cap} & SANE_CAP_SOFT_DETECT ) { next }
-
-            if ( $opt->{type} != SANE_TYPE_BUTTON ) {
-                $opt->{val} = $self->{device_handle}->get_option($_);
+        _thread_get_options( $self, $uuid );
+    }
+    else {
+        $self->{return}->enqueue(
+            {
+                type    => 'finished',
+                process => 'set-option',
+                uuid    => $uuid,
             }
-        }
-
-        ${$new_options} = shared_clone \@options;
+        );
     }
     return;
 }
@@ -581,33 +605,35 @@ sub _thread_scan_page_to_fh {
 }
 
 sub _thread_scan_page {
-    my ( $self, $path ) = @_;
+    my ( $self, $uuid, $path ) = @_;
 
     if ( not defined( $self->{device_handle} ) ) {
         $logger->info("$prog_name: must open device before starting scan");
+        _thread_throw_error( $self, $uuid,
+            "$prog_name: must open device before starting scan" );
         return;
     }
     $self->{device_handle}->start;
 
-    $self->{status} = $Sane::STATUS + 0;
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
         $logger->info("$prog_name: sane_start: $Sane::STATUS");
+        _thread_throw_error( $self, $uuid,
+            "$prog_name: sane_start: $Sane::STATUS" );
         return;
     }
 
     my $fh;
     if ( not open $fh, '>', $path ) {
         $self->{device_handle}->cancel;
-        $self->{status} = SANE_STATUS_ACCESS_DENIED;
+        _thread_throw_error( $self, $uuid, "Error writing to $path" );
         return;
     }
 
     _thread_scan_page_to_fh( $self->{device_handle}, $fh );
-    $self->{status} = $Sane::STATUS + 0;
 
     if ( not close $fh ) {
         $self->{device_handle}->cancel;
-        $self->{status} = SANE_STATUS_ACCESS_DENIED;
+        _thread_throw_error( $self, $uuid, "Error closing $path" );
         return;
     }
 
@@ -620,12 +646,22 @@ sub _thread_scan_page {
         unlink $path;
     }
 
+    $self->{return}->enqueue(
+        {
+            type    => 'finished',
+            process => 'scan-page',
+            uuid    => $uuid,
+            status  => int($Sane::STATUS),
+            info    => $path,
+        }
+    );
     return;
 }
 
 sub _thread_cancel {
-    my ($self) = @_;
+    my ( $self, $uuid ) = @_;
     if ( defined $self->{device_handle} ) { $self->{device_handle}->cancel }
+    $self->{return}->enqueue( { type => 'cancelled', uuid => $uuid } );
     return;
 }
 

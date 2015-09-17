@@ -9,6 +9,8 @@ use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Gscan2pdf::Frontend::Sane;
 use Locale::gettext 1.05;    # For translations
 use feature 'switch';
+use Readonly;
+Readonly my $LAST_PAGE => -1;
 
 # logger duplicated from Gscan2pdf::Dialog::Scan
 # to ensure that SET_PROPERTIES gets called in both places
@@ -29,6 +31,7 @@ my $SANE_NAME_SCAN_BR_X   = SANE_NAME_SCAN_BR_X;
 my $SANE_NAME_SCAN_BR_Y   = SANE_NAME_SCAN_BR_Y;
 my $SANE_NAME_PAGE_HEIGHT = SANE_NAME_PAGE_HEIGHT;
 my $SANE_NAME_PAGE_WIDTH  = SANE_NAME_PAGE_WIDTH;
+my $EMPTY                 = q{};
 my ( $d, $d_sane, $logger, $tooltips );
 
 sub INIT_INSTANCE {
@@ -108,9 +111,7 @@ sub scan_options {
 
     # Remove any existing pages
     while ( $self->{notebook}->get_n_pages > 1 ) {
-
-        # -1 = last page
-        $self->{notebook}->remove_page(-1);  ## no critic (ProhibitMagicNumbers)
+        $self->{notebook}->remove_page($LAST_PAGE);
     }
 
     # Ghost the scan button whilst options being updated
@@ -497,7 +498,12 @@ sub set_option {
             }
 
             $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
-        }
+        },
+        error_callback => sub {
+            my ($message) = @_;
+            $self->signal_emit( 'process-error', 'set_option',
+                $d->get( 'Error setting option: ' . $message ) );
+        },
     );
     return;
 }
@@ -718,6 +724,11 @@ sub set_option_widget {
         my $opt     = $options->by_name($name);
         my $widget  = $opt->{widget};
 
+        if ( $opt->{cap} & SANE_CAP_INACTIVE ) {
+            $logger->warn("Ignoring inactive option '$name'.");
+            return $self->set_option_widget( $i + 1, $profile );
+        }
+
         if ( ref($val) eq 'ARRAY' ) {
             $self->set_option( $opt, $val );
 
@@ -728,7 +739,7 @@ sub set_option_widget {
         elsif ( defined $widget ) {
             given ($widget) {
                 when ( $widget->isa('Gtk2::CheckButton') ) {
-                    if ( $val eq '' ) { $val = 0 }
+                    if ( $val eq $EMPTY ) { $val = 0 }
                     if ( $widget->get_active != $val ) {
                         $widget->set_active($val);
                         return $i;
@@ -787,7 +798,6 @@ sub scan {
     my $i = 1;
     Gscan2pdf::Frontend::Sane->scan_pages(
         dir              => $self->get('dir'),
-        format           => 'out%d.pnm',
         npages           => $npages,
         start            => $start,
         step             => $step,
@@ -803,8 +813,8 @@ sub scan {
             $self->signal_emit( 'finished-process', 'scan_pages' );
         },
         new_page_callback => sub {
-            my ($n) = @_;
-            $self->signal_emit( 'new-scan', $n );
+            my ( $status, $path, $n ) = @_;
+            $self->signal_emit( 'new-scan', $path, $n );
             $self->signal_emit( 'changed-progress', 0,
                 Gscan2pdf::Dialog::Scan::make_progress_string( ++$i, $npages )
             );

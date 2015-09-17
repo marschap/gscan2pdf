@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Gscan2pdf::Scanner::Options;
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 BEGIN {
     use_ok('Gscan2pdf::Frontend::Sane');
@@ -21,6 +21,7 @@ my $loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::Sane->open_device(
     device_name       => 'test',
     finished_callback => sub {
+        ok 1, 'opened device';
         Gscan2pdf::Frontend::Sane->find_scan_options(
             undef, undef,
             sub {    # finished callback

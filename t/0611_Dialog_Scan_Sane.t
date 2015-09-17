@@ -343,10 +343,11 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 is( $process, 'set_option', 'finished-process set_option' );
             }
         );
-        my $n;
+        my $n = 0;
         $dialog->signal_connect(
             'new-scan' => sub {
-                ( my $widget, $n ) = @_;
+                my ( $widget, $status, $path ) = @_;
+                ++$n;
             }
         );
         $dialog->signal_connect(

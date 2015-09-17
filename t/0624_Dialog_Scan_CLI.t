@@ -38,7 +38,7 @@ $signal = $dialog->signal_connect(
 
         $dialog->signal_connect(
             'new-scan' => sub {
-                my ( $widget, $n ) = @_;
+                my ( $widget, $path, $n ) = @_;
                 is( $n, 1, 'error-free scan despite illegal option' );
 
 #########################
@@ -59,7 +59,7 @@ $signal = $dialog->signal_connect(
 
                         $dialog->signal_connect(
                             'new-scan' => sub {
-                                my ( $widget, $n ) = @_;
+                                my ( $widget, $path, $n ) = @_;
                                 is( $n, 1,
 'error-free scan despite illegal option following an ignored one'
                                 );

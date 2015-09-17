@@ -430,7 +430,7 @@ $signal = $dialog->signal_connect(
         #     );
         $dialog->signal_connect(
             'new-scan' => sub {
-                my ( $widget, $n ) = @_;
+                my ( $widget, $path, $n ) = @_;
                 is( $n, 2, 'new_scan' );
                 $flag = TRUE;
                 Gtk2->main_quit;

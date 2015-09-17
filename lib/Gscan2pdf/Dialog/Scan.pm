@@ -34,10 +34,10 @@ BEGIN {
 # from http://gtk2-perl.sourceforge.net/doc/subclassing_widgets_in_perl.html
 use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
     'new-scan' => {
-        param_types => ['Glib::UInt'],    # page number
+        param_types => [ 'Glib::String', 'Glib::UInt' ], # filename, page number
     },
     'changed-device' => {
-        param_types => ['Glib::String'],    # device name
+        param_types => ['Glib::String'],                 # device name
     },
     'changed-device-list' => {
         param_types => ['Glib::Scalar'],    # array of hashes with device info

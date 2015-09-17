@@ -3986,17 +3986,15 @@ sub changed_progress_callback {
 }
 
 sub new_scan_callback {
-    my ( $widget, $n ) = @_;
+    my ( $widget, $path, $page_number ) = @_;
 
     # Update undo/redo buffers
     take_snapshot();
 
-    # If the scan can't be loaded then blow the scanning dialog away and
-    # show an error
     my $rotate =
-      $n % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
+      $page_number % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
     my %options = (
-        page    => $n,
+        page    => $page_number,
         rotate  => $rotate,
         unpaper => $SETTING{'unpaper on scan'},
         ocr     => $SETTING{'OCR on scan'},
@@ -4016,7 +4014,7 @@ sub new_scan_callback {
           ? $opt->{val}
           : $Gscan2pdf::Document::POINTS_PER_INCH;
         $logger->info("Importing scan with resolution=$resolution");
-        $options{filename}   = File::Spec->catdir( $session, "out$n.pnm" );
+        $options{filename}   = $path;
         $options{resolution} = $resolution;
         $options{delete}     = TRUE;
     }

@@ -206,7 +206,7 @@ sub _scanimage {
                                     return Glib::SOURCE_CONTINUE;
                                 }
                                 if ( defined $options{new_page_callback} ) {
-                                    $options{new_page_callback}->($id);
+                                    $options{new_page_callback}->( $path, $id );
                                 }
                                 $num_scans++;
                                 return Glib::SOURCE_REMOVE;
@@ -405,11 +405,16 @@ sub _scanadf {
                     my $timer = Glib::Timeout->add(
                         $_POLL_INTERVAL,
                         sub {
-                            if ( not -e "out$id.pnm" ) {
+                            my $path =
+                              defined( $options{dir} )
+                              ? File::Spec->catfile( $options{dir},
+                                "out$id.pnm" )
+                              : "out$id.pnm";
+                            if ( not -e $path ) {
                                 return Glib::SOURCE_CONTINUE;
                             }
                             if ( defined $options{new_page_callback} ) {
-                                $options{new_page_callback}->($id);
+                                $options{new_page_callback}->( $path, $id );
                             }
                             return Glib::SOURCE_REMOVE;
                         }

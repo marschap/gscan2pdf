@@ -1057,10 +1057,11 @@ sub set_option_widget {
         my $widget  = $opt->{widget};
 
         # If the option is inactive, then remove it from the profile
-        if ( $opt->{cap} & SANE_CAP_INACTIVE ) {
+        if ( not defined $opt->{cap} or $opt->{cap} & SANE_CAP_INACTIVE ) {
+            $logger->warn("Ignoring inactive option '$name'.");
             splice @{$profile}, $i, 1;
             $self->{current_scan_options} = $profile;
-            return $i;
+            return $self->set_option_widget( $i, $profile );
         }
         elsif ( ref($val) eq 'ARRAY' ) {
             $self->set_option( $opt, $val );
@@ -1220,8 +1221,8 @@ sub scan {
             $self->signal_emit( 'finished-process', 'scan_pages' );
         },
         new_page_callback => sub {
-            my ($n) = @_;
-            $self->signal_emit( 'new-scan', $n );
+            my ( $path, $n ) = @_;
+            $self->signal_emit( 'new-scan', $path, $n );
             $self->signal_emit( 'changed-progress', 0,
                 Gscan2pdf::Dialog::Scan::make_progress_string( ++$i, $npages )
             );
