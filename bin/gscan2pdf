@@ -3096,7 +3096,7 @@ sub file_chooser_response_callback {
     $logger->debug("save filename dialog returned $response");
 
     my $suffix = $type;
-    if ( $suffix =~ /pdf/ ) { $suffix = 'pdf' }
+    if ( $suffix =~ /pdf/ixsm ) { $suffix = 'pdf' }
     if ( $response eq 'ok' ) {
         my $filename = $dialog->get_filename;
         if ( $filename !~ /[.]$suffix$/ixsm ) {

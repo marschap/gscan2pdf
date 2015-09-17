@@ -25,7 +25,8 @@ sub setup {
     return if ( not defined $exe or $exe eq $EMPTY );
     $installed = 1;
 
-# if we have 3.02.01 or better, we can use --list-langs and not bother with tessdata
+    # if we have 3.02.01 or better,
+    # we can use --list-langs and not bother with tessdata
     my ( $out, $err ) = Gscan2pdf::Document::open_three('tesseract -v');
     if ( $err =~ /^tesseract[ ]([\d.]+)/xsm ) {
         $version = $1;
@@ -161,7 +162,7 @@ sub languages {
             for ( glob "$tessdata/*$datasuffix" ) {
 
                 # Weed out the empty language files
-                if ( not -z $_ ) {
+                if ( not -z ) {
                     if (/ ([\w\-]*) $datasuffix $/xsm) {
                         push @codes, $1;
                     }
