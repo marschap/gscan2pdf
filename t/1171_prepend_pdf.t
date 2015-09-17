@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 use Gtk2 -init;    # Could just call init separately
 
 BEGIN {
