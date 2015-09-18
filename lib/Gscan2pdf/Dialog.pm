@@ -5,6 +5,7 @@ use strict;
 use Gtk2;
 use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2::Gdk::Keysyms;
+use Data::Dumper;
 
 use Glib::Object::Subclass Gtk2::Window::,
   signals => {
@@ -38,6 +39,7 @@ use Glib::Object::Subclass Gtk2::Window::,
   ];
 
 our $VERSION = '1.3.4';
+my $EMPTY = q{};
 
 sub INIT_INSTANCE {
     my $self = shift;
@@ -86,6 +88,15 @@ sub on_key_press_event {
         $widget->destroy;
     }
     return Gtk2::EVENT_STOP;
+}
+
+sub dump_or_stringify {
+    my ($val) = @_;
+    return (
+        defined $val
+        ? ( ref($val) eq $EMPTY ? $val : Dumper($val) )
+        : 'undef'
+    );
 }
 
 1;

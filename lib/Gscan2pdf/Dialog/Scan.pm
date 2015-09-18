@@ -7,7 +7,6 @@ use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Gscan2pdf::Dialog;
 use feature 'switch';
-use Data::Dumper;
 my (
     $_MAX_PAGES,        $_MAX_INCREMENT, $_DOUBLE_INCREMENT,
     $_CANVAS_SIZE,      $_CANVAS_BORDER, $_CANVAS_POINT_SIZE,
@@ -582,29 +581,13 @@ sub SET_PROPERTY {
     elsif (( defined $newval and defined $oldval and $newval ne $oldval )
         or ( defined $newval xor defined $oldval ) )
     {
+        my $msg;
         if ( defined $logger ) {
-            $logger->debug(
-                "Started setting $name from "
-                  . (
-                    defined $oldval
-                    ? (
-                        ref($oldval) =~ /(?:HASH|ARRAY)/xsm
-                        ? Dumper($oldval)
-                        : $oldval
-                      )
-                    : 'undef'
-                  )
-                  . ' to '
-                  . (
-                    defined $newval
-                    ? (
-                        ref($newval) =~ /(?:HASH|ARRAY)/xsm
-                        ? Dumper($newval)
-                        : $newval
-                      )
-                    : 'undef'
-                  )
-            );
+            $msg =
+                " setting $name from "
+              . Gscan2pdf::Dialog::dump_or_stringify($oldval) . ' to '
+              . Gscan2pdf::Dialog::dump_or_stringify($newval);
+            $logger->debug("Started$msg");
         }
         given ($name) {
             when ('device') {
@@ -658,30 +641,7 @@ sub SET_PROPERTY {
                 $self->SUPER::SET_PROPERTY( $pspec, $newval );
             }
         }
-        if ( defined $logger ) {
-            $logger->debug(
-                "Finished setting $name from "
-                  . (
-                    defined $oldval
-                    ? (
-                        ref($oldval) =~ /(?:HASH|ARRAY)/xsm
-                        ? Dumper($oldval)
-                        : $oldval
-                      )
-                    : 'undef'
-                  )
-                  . ' to '
-                  . (
-                    defined $newval
-                    ? (
-                        ref($newval) =~ /(?:HASH|ARRAY)/xsm
-                        ? Dumper($newval)
-                        : $newval
-                      )
-                    : 'undef'
-                  )
-            );
-        }
+        if ( defined $logger ) { $logger->debug("Finished$msg") }
     }
     return;
 }

@@ -216,28 +216,9 @@ sub SET_PROPERTY {
         or ( defined $newval xor defined $oldval ) )
     {
         if ( defined $logger ) {
-            $logger->debug(
-                "Started setting $name from "
-                  . (
-                    defined $oldval
-                    ? (
-                        ref($oldval) =~ /(?:HASH|ARRAY)/xsm
-                        ? Dumper($oldval)
-                        : $oldval
-                      )
-                    : 'undef'
-                  )
-                  . ' to '
-                  . (
-                    defined $newval
-                    ? (
-                        ref($newval) =~ /(?:HASH|ARRAY)/xsm
-                        ? Dumper($newval)
-                        : $newval
-                      )
-                    : 'undef'
-                  )
-            );
+            $logger->debug( "Started setting $name from "
+                  . Gscan2pdf::Dialog::dump_or_stringify($oldval) . ' to '
+                  . Gscan2pdf::Dialog::dump_or_stringify($newval) );
         }
         $self->signal_emit( "changed-$name", $newval );
     }
