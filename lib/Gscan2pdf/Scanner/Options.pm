@@ -8,7 +8,8 @@ use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Sane 0.05;              # For enums
 use feature 'switch';
 use Readonly;
-Readonly my $MAX_VALUES => 255;
+Readonly my $MAX_VALUES  => 255;
+Readonly my $EMPTY_ARRAY => -1;
 
 use Glib::Object::Subclass Glib::Object::;
 
@@ -169,11 +170,11 @@ sub prune_duplicates {
     my %seen;
 
     my $j = $#{$arrayref};
-    while ( $j > -1 ) {    ## no critic (ProhibitMagicNumbers)
+    while ( $j > $EMPTY_ARRAY ) {
         my ($opt) = keys %{ $arrayref->[$j] };
-        $seen{$opt}++;
         my $synonyms = synonyms($opt);
         for ( @{$synonyms} ) {
+            $seen{$_}++;
             if ( defined $seen{$_} and $seen{$_} > 1 ) {
                 splice @{$arrayref}, $j, 1;
                 last;

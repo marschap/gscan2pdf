@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 15;
+use Test::More tests => 16;
 use Sane 0.05;    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
@@ -830,3 +830,18 @@ is_deeply(
     [ SANE_NAME_SCAN_BR_Y, 'y' ],
     'synonyms for y'
 );
+my $profile = [
+    {
+        'y' => '297'
+    },
+    {
+        'br-y' => '297'
+    }
+];
+my $pruned = [
+    {
+        'br-y' => '297'
+    }
+];
+is_deeply( Gscan2pdf::Scanner::Options::prune_duplicates($profile),
+    $pruned, 'basic functionality prune_duplicates' );
