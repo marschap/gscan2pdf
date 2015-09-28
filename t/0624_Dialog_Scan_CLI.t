@@ -15,7 +15,7 @@ my $window = Gtk2::Window->new;
 
 Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($WARN);
+Log::Log4perl->easy_init($ERROR);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::CLI->setup($logger);
 
@@ -79,6 +79,13 @@ $signal = $dialog->signal_connect(
                 );
                 $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
                 $dialog->set( 'device', 'test' );
+            }
+        );
+        $dialog->signal_connect(
+            'process-error' => sub {
+                my ( $widget, $process, $msg ) = @_;
+                ok 0, 'error-free scan despite illegal option';
+                Gtk2->main_quit;
             }
         );
         $dialog->set( 'num-pages',             1 );

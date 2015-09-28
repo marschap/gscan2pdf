@@ -623,8 +623,9 @@ sub SET_PROPERTY {
                 $self->set_profile($newval);
             }
 
-   # This resets all options, so also clear the profile and current-scan-options
-   # options, but without setting off their signals
+            # This resets all options, so also clear the profile and
+            # current-scan-options options, but without setting off their
+            # signals
             when ('available_scan_options') {
                 $self->{profile}              = undef;
                 $self->{current_scan_options} = undef;
@@ -1439,21 +1440,115 @@ sub my_dumper {
     return;
 }
 
-# Helper sub to reduce code duplication
+# Set options to profile referenced by hashref
 
-sub set_option_emit_signal {
-    my ( $self, $i, $defaults, $signal1, $signal2 ) = @_;
-    if ( $i < @{$defaults} ) {
-        $i = $self->set_option_widget( $i, $defaults );
+sub set_current_scan_options {
+    my ( $self, $profile ) = @_;
+
+    if ( not defined $profile ) { return }
+
+    # As scanimage and scanadf rename the geometry options,
+    # we have to map them back to the original names
+    $self->map_geometry_names($profile);
+
+    # Move them first to a dummy array, as otherwise it would be self-modifying
+    my @defaults;
+
+    # Config::General flattens arrays with 1 entry to scalars,
+    # so we must check for this
+    if ( ref($profile) ne 'ARRAY' ) {
+        push @defaults, $profile;
+    }
+    else {
+        @defaults = @{$profile};
     }
 
-    # Only emit the changed-current-scan-options signal when we have finished
-    if (    ( not defined $i or $i > $#{$defaults} )
-        and $self->signal_handler_is_connected($signal1)
-        and $self->signal_handler_is_connected($signal2) )
-    {
-        $self->signal_handler_disconnect($signal1);
-        $self->signal_handler_disconnect($signal2);
+    # Give the GUI a chance to catch up between settings,
+    # in case they have to be reloaded.
+    # Use the callback to trigger the next loop
+    $self->_set_option_profile( 0, \@defaults );
+    return;
+}
+
+sub _set_option_profile {
+    my ( $self, $i, $profile ) = @_;
+    if ( $i < @{$profile} ) {
+
+        # for reasons I don't understand, without walking the reference tree,
+        # parts of $profile are undef
+        Gscan2pdf::Dialog::Scan::my_dumper( $profile->[$i] );
+        my ( $name, $val ) = each %{ $profile->[$i] };
+
+        if ( $name eq 'Paper size' ) {
+            $self->set( 'paper', $val );
+            $self->_set_option_profile( $i + 1, $profile );
+            return;
+        }
+
+        my $options = $self->get('available-scan-options');
+        my $opt     = $options->by_name($name);
+        if ( not defined $opt or $opt->{cap} & SANE_CAP_INACTIVE ) {
+            $logger->warn("Ignoring inactive option '$name'.");
+            splice @{$profile}, $i, 1;
+
+            # Update current_scan_options with a copy of the profile to prevent
+            # other callbacks changing it whilst we are applying it
+            my @dummy = @{$profile};
+            $self->{current_scan_options} = \@dummy;
+            $self->_set_option_profile( $i, $profile );
+            return;
+        }
+
+        $logger->debug("Setting option '$name' to '$val'.");
+        $self->set_option(
+            $opt, $val,
+            sub {
+                $self->_set_option_profile( $i + 1, $profile );
+            }
+        );
+
+        my $widget = $opt->{widget};
+        if ( defined $widget ) {
+            $logger->debug("Setting widget '$name' to '$val'.");
+            given ($widget) {
+                when ( $widget->isa('Gtk2::CheckButton') ) {
+                    if ( $val eq $EMPTY ) { $val = 0 }
+                    if ( $widget->get_active != $val ) {
+                        $widget->set_active($val);
+                        return $i;
+                    }
+                }
+                when ( $widget->isa('Gtk2::SpinButton') ) {
+                    if ( $widget->get_value != $val ) {
+                        $widget->set_value($val);
+                        return $i;
+                    }
+                }
+                when ( $widget->isa('Gtk2::ComboBox') ) {
+                    if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
+                        my $index;
+                        for ( 0 .. $#{ $opt->{constraint} } ) {
+                            if ( $opt->{constraint}[$_] eq $val ) {
+                                $index = $_;
+                            }
+                        }
+                        if ( defined $index ) { $widget->set_active($index) }
+                        return $i;
+                    }
+                }
+                when ( $widget->isa('Gtk2::Entry') ) {
+                    if ( $widget->get_text ne $val ) {
+                        $widget->set_text($val);
+                        return $i;
+                    }
+                }
+            }
+        }
+        else {
+            $logger->warn("Widget for option '$name' undefined.");
+        }
+    }
+    else {
         if ( not $self->{setting_profile} ) {
             $self->set( 'profile', undef );
         }
@@ -1462,7 +1557,7 @@ sub set_option_emit_signal {
             $self->get('current-scan-options')
         );
     }
-    return $i;
+    return;
 }
 
 # Extract a option value from a profile

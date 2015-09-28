@@ -231,7 +231,8 @@ sub scan_page_finished_callback {
         error_callback    => $options{error_callback},
         finished_callback => sub {
             my ( $new_path, $new_status ) = @_;
-            scan_page_finished_callback( $new_status, $new_path, $n, %options );
+            scan_page_finished_callback( $new_status, $new_path,
+                $options{start}, %options );
         },
     );
     return;
@@ -240,7 +241,6 @@ sub scan_page_finished_callback {
 sub scan_pages {
     my ( $class, %options ) = @_;
 
-    my $n = 1;
     Gscan2pdf::Frontend::Sane->scan_page(
         path => File::Temp->new(
             DIR    => $options{dir},
@@ -254,7 +254,8 @@ sub scan_pages {
         error_callback    => $options{error_callback},
         finished_callback => sub {
             my ( $path, $status ) = @_;
-            scan_page_finished_callback( $status, $path, $n, %options );
+            scan_page_finished_callback( $status, $path, $options{start},
+                %options );
         },
     );
     return;
@@ -318,10 +319,25 @@ sub check_return_queue {
             }
         }
 
-        if ( defined $callback{ $data->{uuid} }{finished} ) {
-            $callback{ $data->{uuid} }{finished}
-              ->( $data->{info}, $data->{status} );
-            delete $callback{ $data->{uuid} };
+        if ( $data->{type} eq 'error' ) {
+            if ( $data->{status} == SANE_STATUS_NO_DOCS ) {
+                $data->{type} = 'finished';
+            }
+            else {
+                if ( defined $callback{ $data->{uuid} }{error} ) {
+                    $callback{ $data->{uuid} }{error}
+                      ->( $data->{message}, $data->{status} );
+                    delete $callback{ $data->{uuid} };
+                }
+                return Glib::SOURCE_CONTINUE;
+            }
+        }
+        if ( $data->{type} eq 'finished' ) {
+            if ( defined $callback{ $data->{uuid} }{finished} ) {
+                $callback{ $data->{uuid} }{finished}
+                  ->( $data->{info}, $data->{status} );
+                delete $callback{ $data->{uuid} };
+            }
         }
     }
     return Glib::SOURCE_CONTINUE;
@@ -381,11 +397,13 @@ sub _thread_get_devices {
 }
 
 sub _thread_throw_error {
-    my ( $self, $uuid, $message ) = @_;
+    my ( $self, $uuid, $status, $message ) = @_;
+    $logger->info($message);
     $self->{return}->enqueue(
         {
             type    => 'error',
             uuid    => $uuid,
+            status  => $status,
             message => $message
         }
     );
@@ -396,7 +414,8 @@ sub _thread_open_device {
     my ( $self, $uuid, $device_name ) = @_;
 
     if ( not defined $device_name or $device_name eq $EMPTY ) {
-        _thread_throw_error( $self, $uuid, 'Cannot open undefined device' );
+        _thread_throw_error( $self, $uuid, SANE_STATUS_ACCESS_DENIED,
+            'Cannot open undefined device' );
         return;
     }
 
@@ -406,7 +425,7 @@ sub _thread_open_device {
     $self->{device_handle} = Sane::Device->open($device_name);
     $logger->debug("opening device '$device_name': $Sane::STATUS");
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        _thread_throw_error( $self, $uuid,
+        _thread_throw_error( $self, $uuid, int($Sane::STATUS),
             "opening device '$device_name': $Sane::STATUS" );
         return;
     }
@@ -428,7 +447,7 @@ sub _thread_get_options {
     # We got a device, find out how many options it has:
     my $num_dev_options = $self->{device_handle}->get_option(0);
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        _thread_throw_error( $self, $uuid,
+        _thread_throw_error( $self, $uuid, int($Sane::STATUS),
             "unable to determine option count: $Sane::STATUS" );
         return;
     }
@@ -608,16 +627,14 @@ sub _thread_scan_page {
     my ( $self, $uuid, $path ) = @_;
 
     if ( not defined( $self->{device_handle} ) ) {
-        $logger->info("$prog_name: must open device before starting scan");
-        _thread_throw_error( $self, $uuid,
+        _thread_throw_error( $self, $uuid, SANE_STATUS_ACCESS_DENIED,
             "$prog_name: must open device before starting scan" );
         return;
     }
     $self->{device_handle}->start;
 
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
-        $logger->info("$prog_name: sane_start: $Sane::STATUS");
-        _thread_throw_error( $self, $uuid,
+        _thread_throw_error( $self, $uuid, int($Sane::STATUS),
             "$prog_name: sane_start: $Sane::STATUS" );
         return;
     }
@@ -625,7 +642,8 @@ sub _thread_scan_page {
     my $fh;
     if ( not open $fh, '>', $path ) {
         $self->{device_handle}->cancel;
-        _thread_throw_error( $self, $uuid, "Error writing to $path" );
+        _thread_throw_error( $self, $uuid, SANE_STATUS_ACCESS_DENIED,
+            "Error writing to $path" );
         return;
     }
 
@@ -633,7 +651,8 @@ sub _thread_scan_page {
 
     if ( not close $fh ) {
         $self->{device_handle}->cancel;
-        _thread_throw_error( $self, $uuid, "Error closing $path" );
+        _thread_throw_error( $self, $uuid, SANE_STATUS_ACCESS_DENIED,
+            "Error closing $path" );
         return;
     }
 

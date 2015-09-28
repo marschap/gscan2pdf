@@ -686,7 +686,7 @@ sub hide_geometry {
 # and walking the options tree, update the widgets
 
 sub set_option {
-    my ( $self, $option, $val ) = @_;
+    my ( $self, $option, $val, $finished_callback ) = @_;
     $option->{val} = $val;
     $self->update_widget( $option->{name}, $val );
 
@@ -830,6 +830,7 @@ sub set_option {
 
         $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
     }
+    if ( defined $finished_callback ) { $finished_callback->() }
     return;
 }
 
@@ -962,152 +963,6 @@ sub update_options {
             }
         }
     }
-    return;
-}
-
-# Set options to profile referenced by hashref
-
-sub set_current_scan_options {
-    my ( $self, $profile ) = @_;
-
-    if ( not defined $profile ) { return }
-
-    # As scanimage and scanadf rename the geometry options,
-    # we have to map them back to the original names
-    $self->map_geometry_names($profile);
-
-    # Move them first to a dummy array, as otherwise it would be self-modifying
-    my $defaults;
-
-    # Config::General flattens arrays with 1 entry to scalars,
-    # so we must check for this
-    if ( ref($profile) ne 'ARRAY' ) {
-        push @{$defaults}, $profile;
-    }
-    else {
-        @{$defaults} = @{$profile};
-    }
-
-    # Give the GUI a chance to catch up between settings,
-    # in case they have to be reloaded.
-    # Use the 'changed-scan-option' signal to trigger the next loop
-    my $i = 0;
-
-    my ( $changed_scan_signal, $changed_paper_signal );
-    $changed_scan_signal = $self->signal_connect(
-        'changed-scan-option' => sub {
-            my ( $widget, $name, $val ) = @_;
-
-           # for reasons I don't understand, without walking the reference tree,
-           # parts of $default are undef
-            Gscan2pdf::Dialog::Scan::my_dumper($defaults);
-            my ( $ename, $eval ) = each %{ $defaults->[$i] };
-
-            # don't check $eval against $val, just in case they are different
-            if ( $ename eq $name ) {
-                $i++;
-                $i =
-                  $self->set_option_emit_signal( $i, $defaults,
-                    $changed_scan_signal, $changed_paper_signal );
-            }
-        }
-    );
-    $changed_paper_signal = $self->signal_connect(
-        'changed-paper' => sub {
-            my ( $widget, $val ) = @_;
-
-           # for reasons I don't understand, without walking the reference tree,
-           # parts of $default are undef
-            Gscan2pdf::Dialog::Scan::my_dumper($defaults);
-            my ( $ename, $eval ) = each %{ $defaults->[$i] };
-
-            if ( $eval eq $val ) {
-                $i++;
-                $i =
-                  $self->set_option_emit_signal( $i, $defaults,
-                    $changed_scan_signal, $changed_paper_signal );
-            }
-        }
-    );
-    $i =
-      $self->set_option_emit_signal( $i, $defaults, $changed_scan_signal,
-        $changed_paper_signal );
-    return;
-}
-
-# Set option widget
-
-sub set_option_widget {
-    my ( $self, $i, $profile ) = @_;
-
-    while ( $i < @{$profile} ) {
-
-        # for reasons I don't understand, without walking the reference tree,
-        # parts of $profile are undef
-        Gscan2pdf::Dialog::Scan::my_dumper( $profile->[$i] );
-        my ( $name, $val ) = each %{ $profile->[$i] };
-
-        if ( $name eq 'Paper size' ) {
-            $self->set( 'paper', $val );
-            return $self->set_option_widget( $i + 1, $profile );
-        }
-
-        my $options = $self->get('available-scan-options');
-        my $opt     = $options->by_name($name);
-        my $widget  = $opt->{widget};
-
-        # If the option is inactive, then remove it from the profile
-        if ( not defined $opt->{cap} or $opt->{cap} & SANE_CAP_INACTIVE ) {
-            $logger->warn("Ignoring inactive option '$name'.");
-            splice @{$profile}, $i, 1;
-            $self->{current_scan_options} = $profile;
-            return $self->set_option_widget( $i, $profile );
-        }
-        elsif ( ref($val) eq 'ARRAY' ) {
-            $self->set_option( $opt, $val );
-
-            # when INFO_INEXACT is implemented, so that the value is reloaded,
-            # check for it here, so that the reloaded value is not overwritten.
-            $opt->{val} = $val;
-        }
-        else {
-            given ($widget) {
-                when ( $widget->isa('Gtk2::CheckButton') ) {
-                    if ( $val eq $EMPTY ) { $val = SANE_FALSE }
-                    if ( $widget->get_active != $val ) {
-                        $widget->set_active($val);
-                        return $i;
-                    }
-                }
-                when ( $widget->isa('Gtk2::SpinButton') ) {
-                    if ( $widget->get_value != $val ) {
-                        $widget->set_value($val);
-                        return $i;
-                    }
-                }
-                when ( $widget->isa('Gtk2::ComboBox') ) {
-                    if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
-                        my $index;
-                        for ( 0 .. $#{ $opt->{constraint} } ) {
-                            if ( $opt->{constraint}[$_] eq $val ) {
-                                $index = $_;
-                            }
-                        }
-                        if ( defined $index ) { $widget->set_active($index) }
-                        return $i;
-                    }
-                }
-                when ( $widget->isa('Gtk2::Entry') ) {
-                    if ( $widget->get_text ne $val ) {
-                        $widget->set_text($val);
-                        return $i;
-                    }
-                }
-            }
-        }
-        ++$i;
-    }
-
     return;
 }
 

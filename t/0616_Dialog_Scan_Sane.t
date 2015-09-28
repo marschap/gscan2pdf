@@ -15,7 +15,7 @@ my $window = Gtk2::Window->new;
 
 Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($WARN);
+Log::Log4perl->easy_init($ERROR);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::Sane->setup($logger);
 
@@ -58,10 +58,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [
-                        { 'bool-soft-select-soft-detect' => TRUE },
-                        { mode                           => 'Color' }
-                    ],
+                    [ { mode => 'Color' } ],
                     'correctly set rest of profile'
                 );
                 $flag = TRUE;
