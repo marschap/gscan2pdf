@@ -184,7 +184,7 @@ sub scan_page {
 }
 
 sub scan_page_finished_callback {
-    my ( $status, $path, $n, %options ) = @_;
+    my ( $status, $path, $n_scanned, %options ) = @_;
     if (
             defined $options{new_page_callback}
         and not $_self->{abort_scan}
@@ -198,13 +198,13 @@ sub scan_page_finished_callback {
     # Stop the process unless everything OK and more scans required
     if (
            $_self->{abort_scan}
-        or ( $options{npages} and ++$n > $options{npages} )
+        or ( $options{npages} and $n_scanned >= $options{npages} )
         or (    $status != SANE_STATUS_GOOD
             and $status != SANE_STATUS_EOF )
       )
     {
         _enqueue_request( 'cancel', { uuid => $uuid_object->create_str } );
-        if ( _scanned_enough_pages( $status, $options{npages}, $n ) ) {
+        if ( _scanned_enough_pages( $status, $options{npages}, $n_scanned ) ) {
             if ( defined $options{finished_callback} ) {
                 $options{finished_callback}->();
             }
@@ -217,6 +217,7 @@ sub scan_page_finished_callback {
         return;
     }
 
+    if ( not defined $options{step} ) { $options{step} = 1 }
     $options{start} += $options{step};
     Gscan2pdf::Frontend::Sane->scan_page(
         path => File::Temp->new(
@@ -231,8 +232,8 @@ sub scan_page_finished_callback {
         error_callback    => $options{error_callback},
         finished_callback => sub {
             my ( $new_path, $new_status ) = @_;
-            scan_page_finished_callback( $new_status, $new_path,
-                $options{start}, %options );
+            scan_page_finished_callback( $new_status, $new_path, ++$n_scanned,
+                %options );
         },
     );
     return;
@@ -241,6 +242,7 @@ sub scan_page_finished_callback {
 sub scan_pages {
     my ( $class, %options ) = @_;
 
+    my $num_pages_scanned = 0;
     Gscan2pdf::Frontend::Sane->scan_page(
         path => File::Temp->new(
             DIR    => $options{dir},
@@ -254,7 +256,7 @@ sub scan_pages {
         error_callback    => $options{error_callback},
         finished_callback => sub {
             my ( $path, $status ) = @_;
-            scan_page_finished_callback( $status, $path, $options{start},
+            scan_page_finished_callback( $status, $path, ++$num_pages_scanned,
                 %options );
         },
     );
@@ -266,8 +268,8 @@ sub _scanned_enough_pages {
     return (
              $status == SANE_STATUS_GOOD
           or $status == SANE_STATUS_EOF
-          or (  $status == SANE_STATUS_NO_DOCS
-            and $nrequired < $ndone )
+          or ( $status == SANE_STATUS_NO_DOCS
+            and ( $nrequired == 0 or $nrequired < $ndone ) )
     );
 }
 
