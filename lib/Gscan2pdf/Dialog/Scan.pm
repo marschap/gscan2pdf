@@ -18,6 +18,8 @@ BEGIN {
     use Gscan2pdf::Scanner::Options;
     Glib::Type->register_enum( 'Gscan2pdf::Scanner::Dialog::Side',
         qw(facing reverse) );
+    Glib::Type->register_enum( 'Gscan2pdf::Scanner::Dialog::Sided',
+        qw(single double) );
     use Readonly;
     Readonly $_MAX_PAGES         => 9999;
     Readonly $_MAX_INCREMENT     => 99;
@@ -177,20 +179,28 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         [qw/readable writable/]    # flags
     ),
     Glib::ParamSpec->enum(
-        'side-to-scan',                        # name
-        'Side to scan',                        # nickname
-        'Either facing or reverse',            # blurb
-        'Gscan2pdf::Scanner::Dialog::Side',    # type
-        'facing',                              # default
-        [qw/readable writable/]                # flags
+        'sided',                                # name
+        'Sided',                                # nickname
+        'Either single or double',              # blurb
+        'Gscan2pdf::Scanner::Dialog::Sided',    # type
+        'single',                               # default
+        [qw/readable writable/]                 # flags
+    ),
+    Glib::ParamSpec->enum(
+        'side-to-scan',                         # name
+        'Side to scan',                         # nickname
+        'Either facing or reverse',             # blurb
+        'Gscan2pdf::Scanner::Dialog::Side',     # type
+        'facing',                               # default
+        [qw/readable writable/]                 # flags
     ),
     Glib::ParamSpec->object(
-        'available-scan-options',              # name
-        'Scan options available',              # nickname
+        'available-scan-options',               # name
+        'Scan options available',               # nickname
         'Scan options currently available, whether active, selected, or not'
-        ,                                      # blurb
-        'Gscan2pdf::Scanner::Options',         # package
-        [qw/readable writable/]                # flags
+        ,                                       # blurb
+        'Gscan2pdf::Scanner::Options',          # package
+        [qw/readable writable/]                 # flags
     ),
     Glib::ParamSpec->scalar(
         'current-scan-options',                               # name
@@ -402,20 +412,24 @@ sub INIT_INSTANCE {
     $frames->add($vboxs);
 
     # Single sided button
-    my $buttons = Gtk2::RadioButton->new( undef, $d->get('Single sided') );
-    $tooltips->set_tip( $buttons, $d->get('Source document is single-sided') );
-    $vboxs->pack_start( $buttons, TRUE, TRUE, 0 );
-    $buttons->signal_connect(
+    $self->{buttons} = Gtk2::RadioButton->new( undef, $d->get('Single sided') );
+    $tooltips->set_tip( $self->{buttons},
+        $d->get('Source document is single-sided') );
+    $vboxs->pack_start( $self->{buttons}, TRUE, TRUE, 0 );
+    $self->{buttons}->signal_connect(
         clicked => sub {
             $spin_buttoni->set_value(1);
+            $self->set( 'sided',
+                $self->{buttons}->get_active == 1 ? 'single' : 'double' );
         }
     );
 
     # Double sided button
-    my $buttond =
-      Gtk2::RadioButton->new( $buttons->get_group, $d->get('Double sided') );
-    $tooltips->set_tip( $buttond, $d->get('Source document is double-sided') );
-    $vboxs->pack_start( $buttond, FALSE, FALSE, 0 );
+    $self->{buttond} = Gtk2::RadioButton->new( $self->{buttons}->get_group,
+        $d->get('Double sided') );
+    $tooltips->set_tip( $self->{buttond},
+        $d->get('Source document is double-sided') );
+    $vboxs->pack_start( $self->{buttond}, FALSE, FALSE, 0 );
 
     # Facing/reverse page button
     my $hboxs = Gtk2::HBox->new;
@@ -423,15 +437,15 @@ sub INIT_INSTANCE {
     my $labels = Gtk2::Label->new( $d->get('Side to scan') );
     $hboxs->pack_start( $labels, FALSE, FALSE, 0 );
 
-    my $combobs = Gtk2::ComboBox->new_text;
+    $self->{combobs} = Gtk2::ComboBox->new_text;
     for ( ( $d->get('Facing'), $d->get('Reverse') ) ) {
-        $combobs->append_text($_);
+        $self->{combobs}->append_text($_);
     }
-    $combobs->signal_connect(
+    $self->{combobs}->signal_connect(
         changed => sub {
-            $buttond->set_active(TRUE);    # Set the radiobutton active
+            $self->{buttond}->set_active(TRUE);    # Set the radiobutton active
             $self->set( 'side-to-scan',
-                $combobs->get_active == 0 ? 'facing' : 'reverse' );
+                $self->{combobs}->get_active == 0 ? 'facing' : 'reverse' );
         }
     );
     $self->signal_connect(
@@ -441,19 +455,19 @@ sub INIT_INSTANCE {
                 $value eq 'facing' ? $_DOUBLE_INCREMENT : -$_DOUBLE_INCREMENT );
         }
     );
-    $tooltips->set_tip( $combobs,
+    $tooltips->set_tip( $self->{combobs},
         $d->get('Sets which side of a double-sided document is scanned') );
-    $combobs->set_active(0);
+    $self->{combobs}->set_active(0);
 
     # Have to do this here because setting the facing combobox switches it
-    $buttons->set_active(TRUE);
-    $hboxs->pack_end( $combobs, FALSE, FALSE, 0 );
+    $self->{buttons}->set_active(TRUE);
+    $hboxs->pack_end( $self->{combobs}, FALSE, FALSE, 0 );
 
     # Have to put the double-sided callback here to reference page side
-    $buttond->signal_connect(
+    $self->{buttond}->signal_connect(
         clicked => sub {
             $spin_buttoni->set_value(
-                  $combobs->get_active == 0
+                  $self->{combobs}->get_active == 0
                 ? $_DOUBLE_INCREMENT
                 : -$_DOUBLE_INCREMENT
             );
@@ -463,7 +477,7 @@ sub INIT_INSTANCE {
 # Have to put the extended pagenumber checkbox here to reference simple controls
     $checkx->signal_connect(
         toggled => \&_extended_pagenumber_checkbox_callback,
-        [ $self, $frames, $spin_buttoni, $buttons, $buttond, $combobs ]
+        [ $self, $frames, $spin_buttoni ]
     );
 
     # Scan profiles
@@ -608,7 +622,19 @@ sub SET_PROPERTY {
                 $self->signal_emit( 'changed-page-number-increment', $newval )
             }
             when ('side_to_scan') {
-                $self->signal_emit( 'changed-side-to-scan', $newval )
+                $self->signal_emit( 'changed-side-to-scan', $newval );
+                $self->{combobs}->set_active( $newval eq 'facing' ? 0 : 1 );
+            }
+            when ('sided') {
+                my $widget = $self->{buttons};
+                if ( $newval eq 'double' ) {
+                    $widget = $self->{buttond};
+                }
+                else {
+                    # selecting single-sided also selects facing page.
+                    $self->set( 'side-to-scan', 'facing' );
+                }
+                $widget->set_active(TRUE);
             }
             when ('paper') {
                 if ( set_combobox_by_text( $self->{combobp}, $newval ) ) {
@@ -1084,23 +1110,22 @@ sub set_combobox_by_text {
 
 sub _extended_pagenumber_checkbox_callback {
     my ( $widget, $data ) = @_;
-    my ( $dialog, $frames, $spin_buttoni, $buttons, $buttond, $combobs ) =
-      @{$data};
+    my ( $dialog, $frames, $spin_buttoni ) = @{$data};
     if ( $widget->get_active ) {
         $frames->hide_all;
         $dialog->{framex}->show_all;
     }
     else {
         if ( $spin_buttoni->get_value == 1 ) {
-            $buttons->set_active(TRUE);
+            $widget->{buttons}->set_active(TRUE);
         }
         elsif ( $spin_buttoni->get_value > 0 ) {
-            $buttond->set_active(TRUE);
-            $combobs->set_active(0);
+            $widget->{buttond}->set_active(TRUE);
+            $widget->{combobs}->set_active(0);
         }
         else {
-            $buttond->set_active(TRUE);
-            $combobs->set_active(1);
+            $widget->{buttond}->set_active(TRUE);
+            $widget->{combobs}->set_active(1);
         }
         $frames->show_all;
         $dialog->{framex}->hide_all;
