@@ -4489,7 +4489,7 @@ sub post_process_scan {
             $rotate, $pages,
             sub {    # finished callback
                 my ($page) = @_;
-                post_process_scan( $page, undef, $unpaper_flag, $ocr,
+                post_process_scan( [$page], undef, $unpaper_flag, $ocr,
                     $threshold );
             }
         );
@@ -4500,7 +4500,7 @@ sub post_process_scan {
             $unpaper->get_cmdline,
             sub {    # finished callback
                 my ($page) = @_;
-                post_process_scan( $page, undef, undef, $ocr, $threshold );
+                post_process_scan( [$page], undef, undef, $ocr, $threshold );
             }
         );
     }
@@ -5835,7 +5835,6 @@ sub unpaper_page {
             },
             finished_callback => sub {
                 my ( $new_page, $pending ) = @_;
-                if ($callback)      { $callback->($new_page) }
                 if ( not $pending ) { $thbox->hide_all }
                 if ( defined $signal ) {
                     $tcbutton->signal_handler_disconnect($signal);
@@ -5845,6 +5844,7 @@ sub unpaper_page {
             display_callback => sub {
                 my ($new_page) = @_;
                 display_image($new_page);
+                if ($callback) { $callback->($new_page) }
             },
         );
     }
