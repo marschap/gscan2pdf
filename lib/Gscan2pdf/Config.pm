@@ -98,7 +98,7 @@ sub add_defaults {
         'pdf compression'   => 'auto',
         'quality'           => 75,
         'pages to scan'     => 1,
-        'unpaper on scan'   => TRUE,
+        'unpaper on scan'   => FALSE,
         'OCR on scan'       => TRUE,
         'frontend'          => 'libsane-perl',
         'rotate facing'     => 0,
