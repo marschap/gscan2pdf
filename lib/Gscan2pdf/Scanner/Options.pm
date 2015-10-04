@@ -13,7 +13,7 @@ Readonly my $EMPTY_ARRAY => -1;
 
 use Glib::Object::Subclass Glib::Object::;
 
-our $VERSION = '1.3.4';
+our $VERSION = '1.3.5';
 
 my $units = qr{(pel|bit|mm|dpi|%|us)}xsm;
 my $EMPTY = q{};
