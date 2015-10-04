@@ -387,12 +387,14 @@ sub _thread_main {
 
 sub _thread_get_devices {
     my ( $self, $uuid ) = @_;
+    my @devices = Sane->get_devices;
     $self->{return}->enqueue(
         {
             type    => 'finished',
             process => 'get-devices',
             uuid    => $uuid,
-            info    => Sane->get_devices,
+            info    => \@devices,
+            status  => int($Sane::STATUS),
         }
     );
     return;
@@ -438,6 +440,7 @@ sub _thread_open_device {
             process => 'open-device',
             uuid    => $uuid,
             info    => $device_name,
+            status  => int($Sane::STATUS),
         }
     );
     return;
@@ -472,6 +475,7 @@ sub _thread_get_options {
             process => 'get-options',
             uuid    => $uuid,
             info    => \@options,
+            status  => int($Sane::STATUS),
         }
     );
     return;
@@ -503,6 +507,7 @@ sub _thread_set_option {
                 type    => 'finished',
                 process => 'set-option',
                 uuid    => $uuid,
+                status  => int($Sane::STATUS),
             }
         );
     }
