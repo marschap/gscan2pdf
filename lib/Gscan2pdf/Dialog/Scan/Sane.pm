@@ -485,7 +485,8 @@ sub set_option {
             }
 
             # We can carry on applying defaults now, if necessary.
-            $self->signal_emit( 'finished-process', 'set_option' );
+            $self->signal_emit( 'finished-process',
+                "set_option $option->{name} to $val" );
 
             # Unset the profile unless we are actively setting it
             if ( not $self->{setting_profile} ) {

@@ -57,25 +57,34 @@ sub _enqueue_request {
 }
 
 sub _monitor_process {
-    my ( $sentinel, $started_callback, $running_callback ) = @_;
+    my ( $sentinel, $uuid ) = @_;
 
     my $started;
     Glib::Timeout->add(
         $_POLL_INTERVAL,
         sub {
             if ( ${$sentinel} == 2 ) {
-                if ( not $started and defined $started_callback ) {
-                    $started_callback->();
+                if ( not $started ) {
+                    if ( defined $callback{$uuid}{started} ) {
+                        $callback{$uuid}{started}->();
+                        delete $callback{$uuid}{started};
+                    }
+                    $started = 1;
                 }
                 check_return_queue();
                 return Glib::SOURCE_REMOVE;
             }
             elsif ( ${$sentinel} == 1 ) {
                 if ( not $started ) {
-                    if ( defined $started_callback ) { $started_callback->() }
+                    if ( defined $callback{$uuid}{started} ) {
+                        $callback{$uuid}{started}->();
+                        delete $callback{$uuid}{started};
+                    }
                     $started = 1;
                 }
-                if ( defined $running_callback ) { $running_callback->() }
+                if ( defined $callback{$uuid}{running} ) {
+                    $callback{$uuid}{running}->();
+                }
                 return Glib::SOURCE_CONTINUE;
             }
         }
@@ -95,9 +104,11 @@ sub get_devices {
       @_;
 
     my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{started}  = $started_callback;
+    $callback{$uuid}{running}  = $running_callback;
     $callback{$uuid}{finished} = $finished_callback;
     my $sentinel = _enqueue_request( 'get-devices', { uuid => $uuid } );
-    _monitor_process( $sentinel, $started_callback, $running_callback );
+    _monitor_process( $sentinel, $uuid );
     return;
 }
 
@@ -113,6 +124,8 @@ sub open_device {
     my ( $class, %options ) = @_;
 
     my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{started}  = $options{started_callback};
+    $callback{$uuid}{running}  = $options{running_callback};
     $callback{$uuid}{finished} = sub {
         $_self->{device_name} = $options{device_name};
         $options{finished_callback}->();
@@ -121,11 +134,7 @@ sub open_device {
     my $sentinel =
       _enqueue_request( 'open',
         { uuid => $uuid, device_name => $options{device_name} } );
-    _monitor_process(
-        $sentinel,
-        $options{started_callback},
-        $options{running_callback}
-    );
+    _monitor_process( $sentinel, $uuid );
     return;
 }
 
@@ -136,10 +145,12 @@ sub find_scan_options {
     ) = @_;
 
     my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{started}  = $started_callback;
+    $callback{$uuid}{running}  = $running_callback;
     $callback{$uuid}{finished} = $finished_callback;
     $callback{$uuid}{error}    = $error_callback;
     my $sentinel = _enqueue_request( 'get-options', { uuid => $uuid } );
-    _monitor_process( $sentinel, $started_callback, $running_callback );
+    _monitor_process( $sentinel, $uuid );
     return;
 }
 
@@ -147,6 +158,8 @@ sub set_option {
     my ( $class, %options ) = @_;
 
     my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{started}  = $options{started_callback};
+    $callback{$uuid}{running}  = $options{running_callback};
     $callback{$uuid}{finished} = $options{finished_callback};
     $callback{$uuid}{error}    = $options{error_callback};
     my $sentinel = _enqueue_request(
@@ -157,11 +170,7 @@ sub set_option {
             uuid  => $uuid,
         }
     );
-    _monitor_process(
-        $sentinel,
-        $options{started_callback},
-        $options{running_callback}
-    );
+    _monitor_process( $sentinel, $uuid );
     return;
 }
 
@@ -171,15 +180,13 @@ sub scan_page {
     $_self->{abort_scan}    = 0;
     $_self->{scan_progress} = 0;
     my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{started}  = $options{started_callback};
+    $callback{$uuid}{running}  = $options{running_callback};
     $callback{$uuid}{error}    = $options{error_callback};
     $callback{$uuid}{finished} = $options{finished_callback};
     my $sentinel = _enqueue_request( 'scan-page',
         { uuid => $uuid, path => "$options{path}" } );
-    _monitor_process(
-        $sentinel,
-        $options{started_callback},
-        $options{running_callback}
-    );
+    _monitor_process( $sentinel, $uuid );
     return;
 }
 
@@ -335,6 +342,9 @@ sub check_return_queue {
             }
         }
         if ( $data->{type} eq 'finished' ) {
+            if ( defined $callback{ $data->{uuid} }{started} ) {
+                $callback{ $data->{uuid} }{started}->();
+            }
             if ( defined $callback{ $data->{uuid} }{finished} ) {
                 $callback{ $data->{uuid} }{finished}
                   ->( $data->{info}, $data->{status} );

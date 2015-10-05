@@ -162,7 +162,7 @@ sub cancel {
     # Add a cancel request to ensure the reply is not blocked
     $logger->info('Requesting cancel');
     my $sentinel = _enqueue_request( 'cancel', { uuid => $uuid } );
-    return $self->_monitor_process( sentinel => $sentinel, );
+    return $self->_monitor_process( sentinel => $sentinel, uuid => $uuid );
 }
 
 sub create_pidfile {
@@ -209,6 +209,9 @@ sub import_files {
                 );
             }
         };
+        $callback{$uuid}{queued}    = $options{queued_callback};
+        $callback{$uuid}{started}   = $options{started_callback};
+        $callback{$uuid}{running}   = $options{running_callback};
         $callback{$uuid}{error}     = $options{error_callback};
         $callback{$uuid}{cancelled} = $options{cancelled_callback};
         my $sentinel =
@@ -216,12 +219,10 @@ sub import_files {
             { path => $path, pidfile => "$pidfile", uuid => $uuid } );
 
         $self->_monitor_process(
-            sentinel         => $sentinel,
-            pidfile          => $pidfile,
-            info             => TRUE,
-            queued_callback  => $options{queued_callback},
-            started_callback => $options{started_callback},
-            running_callback => $options{running_callback},
+            sentinel => $sentinel,
+            pidfile  => $pidfile,
+            info     => TRUE,
+            uuid     => $uuid,
         );
     }
     return;
@@ -300,6 +301,9 @@ sub _get_file_info_finished_callback {
 sub _note_callbacks {
     my (%options) = @_;
     my $uuid = $uuid_object->create_str;
+    $callback{$uuid}{queued}    = $options{queued_callback};
+    $callback{$uuid}{started}   = $options{started_callback};
+    $callback{$uuid}{running}   = $options{running_callback};
     $callback{$uuid}{finished}  = $options{finished_callback};
     $callback{$uuid}{error}     = $options{error_callback};
     $callback{$uuid}{cancelled} = $options{cancelled_callback};
@@ -330,11 +334,9 @@ sub import_file {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        pidfile          => $pidfile,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        uuid     => $uuid,
     );
 }
 
@@ -398,6 +400,9 @@ sub check_return_queue {
                 _throw_error( $data->{uuid}, $data->{message} );
             }
             when ('finished') {
+                if ( defined $callback{ $data->{uuid} }{started} ) {
+                    $callback{ $data->{uuid} }{started}->();
+                }
                 if ( defined $callback{ $data->{uuid} }{finished} ) {
                     $callback{ $data->{uuid} }{finished}->( $data->{message} );
                     delete $callback{ $data->{uuid} };
@@ -678,11 +683,9 @@ sub save_pdf {
     );
 
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        pidfile          => $pidfile,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        uuid     => $uuid,
     );
 }
 
@@ -713,11 +716,9 @@ sub save_djvu {
     );
 
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        pidfile          => $pidfile,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        uuid     => $uuid,
     );
 }
 
@@ -749,11 +750,9 @@ sub save_tiff {
     );
 
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        pidfile          => $pidfile,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        uuid     => $uuid,
     );
 }
 
@@ -771,10 +770,8 @@ sub rotate {
     );
 
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        uuid     => $uuid,
     );
 }
 
@@ -802,11 +799,9 @@ sub save_image {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        pidfile          => $pidfile,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        uuid     => $uuid,
     );
 }
 
@@ -828,10 +823,8 @@ sub save_text {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        uuid     => $uuid,
     );
 }
 
@@ -853,10 +846,8 @@ sub save_hocr {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        uuid     => $uuid,
     );
 }
 
@@ -871,10 +862,8 @@ sub analyse {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        uuid     => $uuid,
     );
 }
 
@@ -891,10 +880,8 @@ sub threshold {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        uuid     => $uuid,
     );
 }
 
@@ -910,10 +897,8 @@ sub negate {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        uuid     => $uuid,
     );
 }
 
@@ -933,10 +918,8 @@ sub unsharp {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        uuid     => $uuid,
     );
 }
 
@@ -956,10 +939,8 @@ sub crop {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        uuid     => $uuid,
     );
 }
 
@@ -975,10 +956,8 @@ sub to_png {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        uuid     => $uuid,
     );
 }
 
@@ -1001,11 +980,9 @@ sub tesseract {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        pidfile          => $pidfile,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        uuid     => $uuid,
     );
 }
 
@@ -1028,11 +1005,9 @@ sub ocropus {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        pidfile          => $pidfile,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        uuid     => $uuid,
     );
 }
 
@@ -1055,11 +1030,9 @@ sub cuneiform {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        pidfile          => $pidfile,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        uuid     => $uuid,
     );
 }
 
@@ -1081,11 +1054,9 @@ sub gocr {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        pidfile          => $pidfile,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        uuid     => $uuid,
     );
 }
 
@@ -1108,11 +1079,9 @@ sub unpaper {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        pidfile          => $pidfile,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        uuid     => $uuid,
     );
 }
 
@@ -1135,11 +1104,9 @@ sub user_defined {
         }
     );
     return $self->_monitor_process(
-        sentinel         => $sentinel,
-        pidfile          => $pidfile,
-        queued_callback  => $options{queued_callback},
-        started_callback => $options{started_callback},
-        running_callback => $options{running_callback},
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        uuid     => $uuid,
     );
 }
 
@@ -1447,8 +1414,8 @@ sub _monitor_process {
     my $pid = ++$_PID;
     $self->{running_pids}{$pid} = 1;
 
-    if ( $options{queued_callback} ) {
-        $options{queued_callback}->(
+    if ( $callback{ $options{uuid} }{queued} ) {
+        $callback{ $options{uuid} }{queued}->(
             process_name   => $_self->{process_name},
             jobs_completed => $jobs_completed,
             jobs_total     => $jobs_total
@@ -1476,14 +1443,15 @@ sub _monitor_process {
 sub _monitor_process_running_callback {
     my ( $self, $pid, $options ) = @_;
     if ( $_self->{cancel} ) { return }
-    if ( $options->{started_callback} and not $options->{started_flag} ) {
-        $options->{started_flag} = $options->{started_callback}->(
+    if ( $callback{ $options->{uuid} }{started} ) {
+        $callback{ $options->{uuid} }{started}->(
             1, $_self->{process_name},
             $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
         );
+        delete $callback{ $options->{uuid} }{started};
     }
-    if ( $options->{running_callback} ) {
-        $options->{running_callback}->(
+    if ( $callback{ $options->{uuid} }{running} ) {
+        $callback{ $options->{uuid} }{running}->(
             process        => $_self->{process_name},
             jobs_completed => $jobs_completed,
             jobs_total     => $jobs_total,
@@ -1497,12 +1465,13 @@ sub _monitor_process_running_callback {
 sub _monitor_process_finished_callback {
     my ( $self, $pid, $options ) = @_;
     if ( $_self->{cancel} ) { return }
-    if ( $options->{started_callback} and not $options->{started_flag} ) {
-        $options->{started_callback}->();
+    if ( $callback{ $options->{uuid} }{started} ) {
+        $callback{ $options->{uuid} }{started}->();
+        delete $callback{ $options->{uuid} }{started};
     }
     if ( $_self->{status} ) {
-        if ( $options->{error_callback} ) {
-            $options->{error_callback}->( $_self->{message} );
+        if ( $callback{ $options->{uuid} }{error} ) {
+            $callback{ $options->{uuid} }{error}->( $_self->{message} );
         }
         return;
     }

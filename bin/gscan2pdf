@@ -3784,6 +3784,8 @@ sub scan_dialog {
     $windows->signal_connect(
         'started-process' => sub {
             my ( $widget, $message ) = @_;
+            $logger->debug(
+                "signal 'started-process' emitted with message: $message");
             $spbar->set_fraction(0);
             $spbar->set_text($message);
             $shbox->show_all;
@@ -3801,7 +3803,7 @@ sub scan_dialog {
     $windows->signal_connect(
         'finished-process' => sub {
             my ( $widget, $process, $button_signal ) = @_;
-            $logger->info(
+            $logger->debug(
                 "signal 'finished-process' emitted with data: $process");
             if ( defined $button_signal ) {
                 $scbutton->signal_handler_disconnect($button_signal);

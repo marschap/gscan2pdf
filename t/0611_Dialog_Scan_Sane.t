@@ -340,7 +340,11 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
             'finished-process' => sub {
                 my ( $widget, $process ) = @_;
                 $dialog->signal_handler_disconnect($f_signal);
-                is( $process, 'set_option', 'finished-process set_option' );
+                is(
+                    $process,
+                    'set_option tl-x to 0',
+                    'finished-process set_option'
+                );
             }
         );
         my $n = 0;
