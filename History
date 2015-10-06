@@ -7,6 +7,9 @@
   (Selecting 1-sided/front after 2-sided/back has a logical problem)
 * Fixed scan->unpaper->OCR chaining.
 * Changed defaults so that unpaper does not run by default after scanning.
+* Enabled hours, minutes and seconds in filename template.
+  Closes patch #12 (Enable hours, minutes and seconds in default filename).
+  Thanks to Jason Kankiewicz for the patch.
 * Update to German translation (thanks to Tobias Bannert)
 * Update to Slovak translation (thanks to Dusan Kazik)
 

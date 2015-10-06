@@ -2077,11 +2077,13 @@ sub get_pagelist {
 
 sub seconds_to_date {
     my ($seconds) = @_;
-    my ( $day, $month, $year ) =
-      ( localtime $seconds )[ 3, 4, 5 ];    ## no critic (ProhibitMagicNumbers)
-    $year  += 1900;                         ## no critic (ProhibitMagicNumbers)
+    my ( $day, $month, $year, $hour, $min, $sec ) =
+      ( localtime $seconds )
+      [ 3, 4, 5, 2, 1, 0 ]    ## no critic (ProhibitMagicNumbers)
+      ;
+    $year  += 1900;           ## no critic (ProhibitMagicNumbers)
     $month += 1;
-    return $day, $month, $year;
+    return $day, $month, $year, $hour, $min, $sec;
 }
 
 sub text_to_date {
@@ -2315,7 +2317,7 @@ sub update_metadata_settings {
 
 sub expand_metadata_pattern {
     my $template = shift;
-    my ( $dday, $dmonth, $dyear ) =
+    my ( $dday, $dmonth, $dyear, $dhour, $dmin, $dsec ) =
       seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
     $dmonth = sprintf '%02d', $dmonth;
     $dday   = sprintf '%02d', $dday;
@@ -2331,6 +2333,9 @@ sub expand_metadata_pattern {
     $template =~ s/%M/$tmonth/gsm;
     $template =~ s/%d/$dday/gsm;
     $template =~ s/%D/$tday/gsm;
+    $template =~ s/%h/$dhour/gsm;
+    $template =~ s/%i/$dmin/gsm;
+    $template =~ s/%s/$dsec/gsm;
 
     return $template;
 }
@@ -4974,6 +4979,7 @@ Leon Fisk
 John Goerzen
 David Hampton
 Sascha Hunold
+Jason Kankiewicz
 Matthijs Kooijman
 Peter Marschall
 Chris Mayo
@@ -6822,7 +6828,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     $tooltips->set_tip(
         $fileentry,
         $d->get(
-"\%a\t author\n\%t\t title\n\%y\t document's year\n\%Y\t today's year\n\%m\t document's month\n\%M\t today's month\n\%d\t document's day\n\%D\t today's day"
+"\%a\t author\n\%t\t title\n\%y\t document's year\n\%Y\t today's year\n\%m\t document's month\n\%M\t today's month\n\%d\t document's day\n\%D\t today's day\n\%h\t document's hour\n\%i\tdocument's minute\n\%s\t document's second"
         )
     );
     $hbox->add($fileentry);
@@ -7773,6 +7779,9 @@ metadata:
  %M	today's month
  %d	document's day
  %D	today's day
+ %h	document's hour
+ %i	document's minute
+ %s	document's second
 
 =head2 View
 
