@@ -287,10 +287,10 @@ sub cancel_scan {
 
     # Empty process queue first to stop any new process from starting
     $logger->info('Emptying process queue');
-    while ( $self->{requests}->dequeue_nb ) { }
+    while ( $_self->{requests}->dequeue_nb ) { }
 
     # Then send the thread a cancel signal
-    $self->{abort_scan} = 1;
+    $_self->{abort_scan} = 1;
 
     my $uuid = $uuid_object->create_str;
     $callback{$uuid}{cancelled} = $callback;
@@ -298,7 +298,7 @@ sub cancel_scan {
     # Add a cancel request to ensure the reply is not blocked
     $logger->info('Requesting cancel');
     my $sentinel = _enqueue_request( 'cancel', { uuid => $uuid } );
-    _monitor_process( $sentinel, );
+    _monitor_process( $sentinel, $uuid );
     return;
 }
 
