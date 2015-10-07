@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.3.4
+Version: 1.3.5
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -85,7 +85,8 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Tue Aug 04 2015 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Wed Oct 07 2015 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
   - New upstream release
   - Declared libossp-uuid-perl as an alternative to libdata-uuid-perl
   - New upstream release
