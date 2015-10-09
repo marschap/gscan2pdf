@@ -233,7 +233,11 @@ sub hocr {
     else {
         $tif = $options{file};
     }
-    if ( version->parse("v$version") >= version->parse('v3') ) {
+    if ( version->parse("v$version") >= version->parse('v3.02.02') ) {
+        $cmd =
+"tesseract $tif $path$name -l $options{language} -c tessedit_create_hocr=1";
+    }
+    elsif ( version->parse("v$version") >= version->parse('v3') ) {
         $cmd =
 "echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $options{language} +hocr.config;rm hocr.config";
     }
