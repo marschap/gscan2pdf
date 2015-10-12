@@ -56,6 +56,7 @@ use Gscan2pdf::Unpaper;
 use Gscan2pdf::Dialog::Renumber;
 use Gscan2pdf::Canvas;
 use Gscan2pdf::Config;
+use Gscan2pdf::EntryCompletion;
 use Sane 0.05;    # To get SANE_* enums
 use Gtk2::ImageView;
 use Gtk2::Ex::Simple::List;
@@ -2222,10 +2223,9 @@ sub add_metadata_dialog {
     $hboxt->pack_start( $labelt, FALSE, TRUE, 0 );
     $hboxt = Gtk2::HBox->new;
     $table->attach_defaults( $hboxt, 1, 2, 1, 2 );
-    my $entryt = Gtk2::Entry->new;
-    $entryt->set_activates_default(TRUE);
+    my $entryt = Gscan2pdf::EntryCompletion->new( $SETTING{title},
+        $SETTING{'title-suggestions'} );
     $hboxt->pack_start( $entryt, TRUE, TRUE, 0 );
-    if ( defined $SETTING{title} ) { $entryt->set_text( $SETTING{title} ) }
 
     # Document author
     my $hboxa = Gtk2::HBox->new;
@@ -2240,10 +2240,9 @@ sub add_metadata_dialog {
     $table->attach_defaults( $hboxa, 1, 2, 2,
         3 )                            ## no critic (ProhibitMagicNumbers)
       ;
-    my $entrya = Gtk2::Entry->new;
-    $entrya->set_activates_default(TRUE);
+    my $entrya = Gscan2pdf::EntryCompletion->new( $SETTING{author},
+        $SETTING{'author-suggestions'} );
     $hboxa->pack_start( $entrya, TRUE, TRUE, 0 );
-    if ( defined $SETTING{author} ) { $entrya->set_text( $SETTING{author} ) }
 
     # Subject
     my $hboxs = Gtk2::HBox->new;
@@ -2259,13 +2258,9 @@ sub add_metadata_dialog {
         $hboxs, 1, 2, 3,               ## no critic (ProhibitMagicNumbers)
         4                              ## no critic (ProhibitMagicNumbers)
     );
-    my $entrys = Gtk2::Entry->new;
-    $entrys->set_activates_default(TRUE);
+    my $entrys = Gscan2pdf::EntryCompletion->new( $SETTING{subject},
+        $SETTING{'subject-suggestions'} );
     $hboxs->pack_end( $entrys, TRUE, TRUE, 0 );
-
-    if ( defined $SETTING{subject} ) {
-        $entrys->set_text( $SETTING{subject} );
-    }
 
     # Keywords
     my $hboxk = Gtk2::HBox->new;
@@ -2281,13 +2276,9 @@ sub add_metadata_dialog {
         $hboxk, 1, 2, 4,               ## no critic (ProhibitMagicNumbers)
         5                              ## no critic (ProhibitMagicNumbers)
     );
-    my $entryk = Gtk2::Entry->new;
-    $entryk->set_activates_default(TRUE);
+    my $entryk = Gscan2pdf::EntryCompletion->new( $SETTING{keywords},
+        $SETTING{'keyword-suggestions'} );
     $hboxk->pack_end( $entryk, TRUE, TRUE, 0 );
-
-    if ( defined $SETTING{keywords} ) {
-        $entryk->set_text( $SETTING{keywords} );
-    }
 
     return ( $entryd, $entrya, $entryt, $entrys, $entryk );
 }
@@ -2296,10 +2287,16 @@ sub update_metadata_settings {
     my ( $entryd, $entrya, $entryt, $entrys, $entryk ) = @_;
 
     # Get metadata
-    $SETTING{author}   = $entrya->get_text;
-    $SETTING{title}    = $entryt->get_text;
-    $SETTING{subject}  = $entrys->get_text;
-    $SETTING{keywords} = $entryk->get_text;
+    for (
+        qw(author-suggestions title-suggestions subject-suggestions keyword-suggestions)
+      )
+    {
+        if ( not defined $SETTING{$_} ) { $SETTING{$_} = [] }
+    }
+    $SETTING{author}   = $entrya->update( $SETTING{'author-suggestions'} );
+    $SETTING{title}    = $entryt->update( $SETTING{'title-suggestions'} );
+    $SETTING{subject}  = $entrys->update( $SETTING{'subject-suggestions'} );
+    $SETTING{keywords} = $entryk->update( $SETTING{'keyword-suggestions'} );
     my ( $year, $month, $day ) = text_to_date( $entryd->get_text );
     use Time::Local qw/timegm_nocheck/;
     my $then = timegm_nocheck( 0, 0, 0, $day, $month - 1, $year );
