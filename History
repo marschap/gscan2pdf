@@ -3,6 +3,9 @@
 * Use simplified tesseract call for tesseract >= 3.02.02. Closes patch #15
   (Simplifying Tesseract call in Tesseract.pm). Thanks to Wikinaut for the patch
 * Add completion for author, title, subject & keyword metadata
+* Store the list of pages to be saved on hitting the save button, not waiting to
+  choose the filename. Closes Debian bug #648627
+  (post-dialog selection changes influence which pages are saved)
 
 
 1.3.5 (07.10.2015):
