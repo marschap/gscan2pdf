@@ -89,6 +89,7 @@ sub setup {
     $_self->{requests} = Thread::Queue->new;
     $_self->{return}   = Thread::Queue->new;
     share $_self->{progress};
+    share $_self->{message};
     share $_self->{process_name};
     share $_self->{cancel};
     $_self->{cancel} = FALSE;
@@ -401,7 +402,12 @@ sub check_return_queue {
             }
             when ('finished') {
                 if ( defined $callback{ $data->{uuid} }{started} ) {
-                    $callback{ $data->{uuid} }{started}->();
+                    $callback{ $data->{uuid} }{started}->(
+                        undef, $_self->{process_name},
+                        $jobs_completed, $jobs_total, $data->{message},
+                        $_self->{progress}
+                    );
+                    delete $callback{ $data->{uuid} }{started};
                 }
                 if ( defined $callback{ $data->{uuid} }{finished} ) {
                     $callback{ $data->{uuid} }{finished}->( $data->{message} );
@@ -1466,7 +1472,10 @@ sub _monitor_process_finished_callback {
     my ( $self, $pid, $options ) = @_;
     if ( $_self->{cancel} ) { return }
     if ( $callback{ $options->{uuid} }{started} ) {
-        $callback{ $options->{uuid} }{started}->();
+        $callback{ $options->{uuid} }{started}->(
+            undef, $_self->{process_name},
+            $jobs_completed, $jobs_total, $_self->{message}, $_self->{progress}
+        );
         delete $callback{ $options->{uuid} }{started};
     }
     if ( $_self->{status} ) {

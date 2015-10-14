@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use File::Basename;    # Split filename into dir, file, ext
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 BEGIN {
     use Gscan2pdf::Document;
@@ -26,7 +26,16 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 $slist->import_files(
-    paths             => ['test.djvu'],
+    paths            => ['test.djvu'],
+    started_callback => sub {
+        my ( $n, $process_name, $jobs_completed, $jobs_total, $message,
+            $progress )
+          = @_;
+        ok(
+            ( defined $message and $message ne '' ),
+            'started callback has message'
+        );
+    },
     finished_callback => sub {
         like(
 `identify -format '%m %G %g %z-bit %r' $slist->{data}[0][2]{filename}`,

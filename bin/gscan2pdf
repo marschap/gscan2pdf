@@ -1883,15 +1883,15 @@ sub setup_tpbar {
 
 sub update_tpbar {
     my (%options) = @_;
-    if ( $options{total} ) {
-        if ( defined $options{process_name} ) {
+    if ( $options{jobs_total} ) {
+        if ( defined $options{process} ) {
             if ( defined $options{message} ) {
-                $options{process_name} .= " - $options{message}";
+                $options{process} .= " - $options{message}";
             }
             $tpbar->set_text(
                 sprintf $d->get('Process %i of %i (%s)'),
                 $options{jobs_completed} + 1,
-                $options{jobs_total}, $options{process_name}
+                $options{jobs_total}, $options{process}
             );
         }
         else {
