@@ -404,8 +404,12 @@ sub create_paper_widget {
                 else {
                     my $paper   = $self->{combobp}->get_active_text;
                     my $formats = $self->get('paper-formats');
-                    if (    defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
-                        and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) ) )
+                    if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
+                        and not $options->by_name(SANE_NAME_PAGE_HEIGHT)->{cap}
+                        & SANE_CAP_INACTIVE
+                        and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) )
+                        and not $options->by_name(SANE_NAME_PAGE_WIDTH)->{cap}
+                        & SANE_CAP_INACTIVE )
                     {
                         $options->by_name(SANE_NAME_PAGE_HEIGHT)->{widget}
                           ->set_value(
