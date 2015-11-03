@@ -1069,6 +1069,10 @@ sub scan {
         start            => $start,
         step             => $step,
         started_callback => sub {
+            if ( $npages == 0 and $self->get('max-pages') > 0 ) {
+                $npages = $self->get('max-pages');
+            }
+            $logger->info("Scanning $npages pages from $start with step $step");
             $self->signal_emit( 'started-process',
                 Gscan2pdf::Dialog::Scan::make_progress_string( $i, $npages ) );
         },

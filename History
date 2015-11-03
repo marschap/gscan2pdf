@@ -10,6 +10,8 @@
 * Some scanners activate paper-width and paper-height only for the ADF, and thus
   send "invalid argument" when setting the paper size for the flatbed. Trap this
   by also testing whether these options are active when setting the paper size.
+* When scanning "all" pages, but only a finite number are possible, report this
+  in the progress bar.
 
 
 1.3.5 (07.10.2015):
