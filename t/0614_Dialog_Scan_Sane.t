@@ -31,23 +31,28 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         ######################################
 
-        # So that it can be used in hash
-        my $resolution = SANE_NAME_SCAN_RESOLUTION;
+        $dialog->add_profile( 'my profile',
+            [ { 'enable-test-options' => '' } ] );
 
-        $dialog->{signal} = $dialog->signal_connect(
-            'changed-current-scan-options' => sub {
-                my ( $widget, $option_array ) = @_;
-                $dialog->signal_handler_disconnect( $dialog->{signal} );
-                Gtk2->main_quit;
+        # need a new main loop because of the timeout
+        my $loop = Glib::MainLoop->new;
+        my $flag = FALSE;
+        $dialog->{profile_signal} = $dialog->signal_connect(
+            'changed-profile' => sub {
+                my ( $widget, $profile ) = @_;
+                $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
                 is_deeply(
-                    $option_array,
-                    [ { $resolution => 51 }, ],
-                    'emitted changed-current-scan-options'
+                    $dialog->get('current-scan-options'),
+                    [ { 'enable-test-options' => '' } ],
+                    'bool false as empty string'
                 );
+                $flag = TRUE;
+                $loop->quit;
             }
         );
-        my $options = $dialog->get('available-scan-options');
-        $dialog->set_option( $options->by_name($resolution), 51 );
+        $dialog->set( 'profile', 'my profile' );
+        $loop->run unless ($flag);
+        Gtk2->main_quit;
     }
 );
 $dialog->{signal} = $dialog->signal_connect(

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 3;
+use Test::More tests => 1;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -31,73 +31,22 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         ######################################
 
-        $dialog->signal_connect(
-            'changed-paper-formats' => sub {
-                my ( $widget, $formats ) = @_;
-                is_deeply( $dialog->{ignored_paper_formats},
-                    ['large'], 'ignored paper formats' );
-            }
-        );
-        $dialog->set(
-            'paper-formats',
-            {
-                large => {
-                    l => 0,
-                    y => 3000,
-                    x => 3000,
-                    t => 0,
-                },
-                small => {
-                    l => 0,
-                    y => 30,
-                    x => 30,
-                    t => 0,
-                }
-            }
-        );
-
-        $dialog->signal_connect(
-            'changed-paper' => sub {
-                my ( $widget, $paper ) = @_;
-                is( $paper, 'small', 'do not change paper if it is too big' );
-            }
-        );
-
-        # need a new main loop because of the timeout
-        my $loop = Glib::MainLoop->new;
-        my $flag = FALSE;
-        $dialog->{signal} = $dialog->signal_connect(
-            'changed-scan-option' => sub {
-                my ( $widget, $option, $value ) = @_;
-                $flag = TRUE;
-                if ( $option eq 'br-y' ) {
-                    $dialog->signal_handler_disconnect( $dialog->{signal} );
-                    $loop->quit;
-                }
-            }
-        );
-        $dialog->set( 'paper', 'large' );
-        $dialog->set( 'paper', 'small' );
-        $loop->run unless ($flag);
-
-        ######################################
-
         # So that it can be used in hash
         my $resolution = SANE_NAME_SCAN_RESOLUTION;
 
         $dialog->{signal} = $dialog->signal_connect(
-            'changed-scan-option' => sub {
-                my ( $widget, $option, $value ) = @_;
+            'changed-current-scan-options' => sub {
+                my ( $widget, $option_array ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
                 Gtk2->main_quit;
-                is( $option, $resolution,
-                    'set other options after ignoring non-existant one' );
+                is_deeply(
+                    $option_array,
+                    [ { $resolution => 51 }, ],
+                    'emitted changed-current-scan-options'
+                );
             }
         );
         my $options = $dialog->get('available-scan-options');
-        $dialog->set_option( $options->by_name('non-existant option'),
-            'dummy' );
-
         $dialog->set_option( $options->by_name($resolution), 51 );
     }
 );

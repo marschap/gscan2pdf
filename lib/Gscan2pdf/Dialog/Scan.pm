@@ -6,6 +6,7 @@ no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Gscan2pdf::Dialog;
+use Data::Dumper;
 use feature 'switch';
 my (
     $_MAX_PAGES,        $_MAX_INCREMENT, $_DOUBLE_INCREMENT,
@@ -648,13 +649,7 @@ sub SET_PROPERTY {
             when ('profile') {
                 $self->set_profile($newval);
             }
-
-            # This resets all options, so also clear the profile and
-            # current-scan-options options, but without setting off their
-            # signals
             when ('available_scan_options') {
-                $self->{profile}              = undef;
-                $self->{current_scan_options} = undef;
                 $self->signal_emit('reloaded-scan-options')
             }
 
@@ -789,22 +784,149 @@ sub pack_widget {
     return;
 }
 
+# If setting an option triggers a reload, the widgets must be updated to reflect
+# the new options
+
+sub update_options {
+    my ( $self, $new_options ) = @_;
+
+    # walk the widget tree and update them from the hash
+    $logger->debug( 'Sane->get_option_descriptor returned: ',
+        Dumper($new_options) );
+
+    my $num_dev_options = $new_options->num_options;
+    my $options         = $self->get('available-scan-options');
+    for ( 1 .. $num_dev_options - 1 ) {
+        my $widget = $options->by_index($_)->{widget};
+
+        # could be undefined for !($new_opt->{cap} & SANE_CAP_SOFT_DETECT)
+        if ( not defined $widget ) { next }
+
+        my $new_opt = $new_options->by_index($_);
+        my $opt     = $options->by_index($_);
+        if ( $new_opt->{name} ne $opt->{name} ) {
+            $logger->error(
+'Error updating options: reloaded options are numbered differently'
+            );
+            return;
+        }
+        if ( $opt->{type} != $new_opt->{type} ) {
+            $logger->error(
+                'Error updating options: reloaded options have different types'
+            );
+            return;
+        }
+        if ( $opt->{type} == SANE_TYPE_GROUP ) { next }
+
+        # Block the signal handler for the widget to prevent infinite
+        # loops of the widget updating the option, updating the widget, etc.
+        $widget->signal_handler_block( $widget->{signal} );
+        $new_opt->{widget} = $widget;
+        $opt = $new_opt;
+        my $value = $opt->{val};
+
+        # HBox for option
+        my $hbox = $widget->parent;
+        $hbox->set_sensitive( ( not $opt->{cap} & SANE_CAP_INACTIVE )
+              and $opt->{cap} & SANE_CAP_SOFT_SELECT );
+
+        if ( $opt->{max_values} < 2 ) {
+
+            # CheckButton
+            if ( $opt->{type} == SANE_TYPE_BOOL ) {
+                if ( $self->value_for_active_option( $value, $opt ) ) {
+                    $widget->set_active($value);
+                }
+            }
+            else {
+                given ( $opt->{constraint_type} ) {
+
+                    # SpinButton
+                    when (SANE_CONSTRAINT_RANGE) {
+                        my ( $step, $page ) = $widget->get_increments;
+                        $step = 1;
+                        if ( $opt->{constraint}{quant} ) {
+                            $step = $opt->{constraint}{quant};
+                        }
+                        $widget->set_range( $opt->{constraint}{min},
+                            $opt->{constraint}{max} );
+                        $widget->set_increments( $step, $page );
+                        if ( $self->value_for_active_option( $value, $opt ) ) {
+                            $widget->set_value($value);
+                        }
+                    }
+
+                    # ComboBox
+                    when (
+                        [
+                            SANE_CONSTRAINT_STRING_LIST,
+                            SANE_CONSTRAINT_WORD_LIST
+                        ]
+                      )
+                    {
+                        $widget->get_model->clear;
+                        my $index = 0;
+                        for ( 0 .. $#{ $opt->{constraint} } ) {
+                            $widget->append_text(
+                                $d_sane->get( $opt->{constraint}[$_] ) );
+                            if ( defined $value
+                                and $opt->{constraint}[$_] eq $value )
+                            {
+                                $index = $_;
+                            }
+                        }
+                        if ( defined $index ) { $widget->set_active($index) }
+                    }
+
+                    # Entry
+                    when (SANE_CONSTRAINT_NONE) {
+                        if ( $self->value_for_active_option( $value, $opt ) ) {
+                            $widget->set_text($value);
+                        }
+                    }
+                }
+            }
+        }
+        $widget->signal_handler_unblock( $widget->{signal} );
+    }
+
+    # This fires the reloaded-scan-options signal,
+    # so don't set this until we have finished
+    $self->set( 'available-scan-options', $new_options );
+
+    # In case the geometry values have changed,
+    # update the available paper formats
+    $self->set_paper_formats( $self->{paper_formats} );
+    return;
+}
+
 # Add paper size to combobox if scanner large enough
 
 sub set_paper_formats {
     my ( $self, $formats ) = @_;
-    $self->{ignored_paper_formats} = ();
-    my $options = $self->get('available-scan-options');
+    my $combobp = $self->{combobp};
 
-    for ( keys %{$formats} ) {
-        if ( defined $self->{combobp}
-            and $options->supports_paper( $formats->{$_}, $tolerance ) )
-        {
-            $self->{combobp}->prepend_text($_);
+    if ( defined $combobp ) {
+
+        # Remove all formats, leaving Manual and Edit
+        my $n = get_combobox_num_rows($combobp);
+        while ( $n-- > 2 ) { $combobp->remove_text(0) }
+
+        $self->{ignored_paper_formats} = ();
+        my $options = $self->get('available-scan-options');
+        for ( keys %{$formats} ) {
+            if ( $options->supports_paper( $formats->{$_}, $tolerance ) ) {
+                $logger->debug("Options support paper size '$_'.");
+                $combobp->prepend_text($_);
+            }
+            else {
+                $logger->debug("Options do not support paper size '$_'.");
+                push @{ $self->{ignored_paper_formats} }, $_;
+            }
         }
-        else {
-            push @{ $self->{ignored_paper_formats} }, $_;
-        }
+
+        # Set the combobox back from Edit to the previous value
+        set_combobox_by_text( $combobp, $self->get('paper') );
     }
     return;
 }
@@ -950,9 +1072,6 @@ sub edit_paper {
                 }
             }
 
-            # Remove all formats, leaving Manual and Edit
-            while ( $combobp->get_active > 1 ) { $combobp->remove_text(0) }
-
             # Add new definitions
             $self->set( 'paper-formats', \%formats );
             if ( $self->{ignored_paper_formats}
@@ -970,9 +1089,6 @@ sub edit_paper {
                     @{ $self->{ignored_paper_formats} }
                 );
             }
-
-            # Set the combobox back from Edit to the previous value
-            set_combobox_by_text( $combobp, $self->get('paper') );
 
             $window->destroy;
         }

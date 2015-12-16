@@ -15,7 +15,7 @@ my $window = Gtk2::Window->new;
 
 Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($ERROR);
+Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::Sane->setup($logger);
 
@@ -31,87 +31,38 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         ######################################
 
-        # Setting a profile means setting a series of options; setting the
-        # first, waiting for it to finish, setting the second, and so on. If one
-        # of the settings is already applied, and therefore does not fire a
-        # signal, then there is a danger that the rest of the profile is not
-        # set.
+        # The test dialog conveniently gives us
+        #    Source = Automatic Document Feeder,
+        # which returns SANE_STATUS_NO_DOCS after the 10th scan.
+        # Test that we catch this.
 
-        $dialog->add_profile(
-            'g51',
-            [
-                {
-                    'page-height' => '297'
-                },
-                {
-                    'y' => '297'
-                },
-                {
-                    'resolution' => '51'
-                },
-            ]
-        );
-        $dialog->add_profile(
-            'c50',
-            [
-                {
-                    'page-height' => '297'
-                },
-                {
-                    'y' => '297'
-                },
-                {
-                    'resolution' => '50'
-                },
-            ]
-        );
+        my $options = $dialog->get('available-scan-options');
+        $dialog->set_option( $options->by_name('source'),
+            'Automatic Document Feeder' );
+        $dialog->set( 'num-pages', 0 );
 
-        # need a new main loop because of the timeout
-        my $loop = Glib::MainLoop->new;
-        my $flag = FALSE;
-        $dialog->{profile_signal} = $dialog->signal_connect(
-            'changed-profile' => sub {
-                my ( $widget, $profile ) = @_;
-                $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
-                my $options      = $dialog->get('available-scan-options');
-                my $opt          = $options->by_name('resolution');
-                my $optwidget    = $opt->{widget};
-                my $widget_value = $optwidget->get_value;
-                is( $widget_value, 51, 'correctly updated widget' );
-                $flag = TRUE;
-                $loop->quit;
+        my $n = 0;
+        $dialog->signal_connect(
+            'new-scan' => sub {
+                my ( $widget, $path, $num ) = @_;
+                ++$n;
+                if ( $num == 10 ) { ok 1, 'new-scan emitted with n=10' }
+                if ( $n > 10 ) {
+                    ok 0, 'new-scan emitted 10 times';
+                    Gtk2->main_quit;
+                }
             }
         );
-        $dialog->set( 'profile', 'g51' );
-        $loop->run unless ($flag);
-
-        # need a new main loop because of the timeout
-        $loop                     = Glib::MainLoop->new;
-        $flag                     = FALSE;
-        $dialog->{profile_signal} = $dialog->signal_connect(
-            'changed-profile' => sub {
-                my ( $widget, $profile ) = @_;
-                $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
-                is_deeply(
-                    $dialog->get('current-scan-options'),
-                    [
-                        {
-                            'br-y' => '297'
-                        },
-                        {
-                            'resolution' => '50'
-                        },
-                    ],
-                    'fired signal and set profile'
-                );
-                $flag = TRUE;
-                $loop->quit;
+        $dialog->signal_connect(
+            'finished-process' => sub {
+                my ( $widget, $process ) = @_;
+                if ( $process eq 'scan_pages' ) {
+                    is( $n, 10, 'new-scan emitted 10 times' );
+                    Gtk2->main_quit;
+                }
             }
         );
-        $dialog->set( 'profile', 'c50' );
-        $loop->run unless ($flag);
-
-        Gtk2->main_quit;
+        $dialog->scan;
     }
 );
 $dialog->{signal} = $dialog->signal_connect(

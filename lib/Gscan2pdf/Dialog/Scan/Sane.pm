@@ -9,6 +9,7 @@ use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Gscan2pdf::Frontend::Sane;
 use Locale::gettext 1.05;    # For translations
 use feature 'switch';
+use Data::Dumper;
 use Readonly;
 Readonly my $LAST_PAGE => -1;
 
@@ -87,7 +88,6 @@ sub get_devices {
             my ($data) = @_;
             $pbar->destroy;
             my @device_list = @{$data};
-            use Data::Dumper;
             $logger->info( 'Sane->get_devices returned: ',
                 Dumper( \@device_list ) );
             if ( @device_list == 0 ) {
@@ -383,6 +383,7 @@ sub create_paper_widget {
         $self->{combobp}->set_active(0);
         $self->{combobp}->signal_connect(
             changed => sub {
+                if ( not defined $self->{combobp}->get_active_text ) { return }
 
                 if ( $self->{combobp}->get_active_text eq $d->get('Edit') ) {
                     $self->edit_paper;
@@ -511,100 +512,6 @@ sub set_option {
                 $d->get( 'Error setting option: ' . $message ) );
         },
     );
-    return;
-}
-
-# If setting an option triggers a reload, we need to update the options
-
-sub update_options {
-    my ( $self, $new_options ) = @_;
-
-    # walk the widget tree and update them from the hash
-    $logger->debug( 'Sane->get_option_descriptor returned: ',
-        Dumper($new_options) );
-
-    my ( $group, $vbox );
-    my $num_dev_options = $new_options->num_options;
-    my $options         = $self->get('available-scan-options');
-    for ( 1 .. $num_dev_options - 1 ) {
-        my $widget = $options->by_index($_)->{widget};
-
-        # could be undefined for !($new_opt->{cap} & SANE_CAP_SOFT_DETECT)
-        if ( not defined $widget ) { next }
-
-        my $new_opt = $new_options->by_index($_);
-        my $opt     = $options->by_index($_);
-        if ( $new_opt->{name} ne $opt->{name} ) {
-            $logger->error(
-'Error updating options: reloaded options are numbered differently'
-            );
-            return;
-        }
-
-      # We've got to block the signal handler for the widget to prevent infinite
-      # loops of the widget updating the option, updating the widget, etc., but
-      # therefore we must update the options manually
-        for (qw(val cap max_values type constraint_type constraint)) {
-            $opt->{$_} = $new_opt->{$_};
-        }
-        $widget->signal_handler_block( $widget->{signal} );
-        my $value = $opt->{val};
-
-        # HBox for option
-        my $hbox = $widget->parent;
-        $hbox->set_sensitive( ( not $opt->{cap} & SANE_CAP_INACTIVE )
-              and $opt->{cap} & SANE_CAP_SOFT_SELECT );
-
-        if ( $opt->{max_values} < 2 ) {
-
-            # CheckButton
-            if ( $opt->{type} == SANE_TYPE_BOOL )
-            {    ## no critic (ProhibitCascadingIfElse)
-                if ( $self->value_for_active_option( $value, $opt ) ) {
-                    $widget->set_active($value);
-                }
-            }
-
-            # SpinButton
-            elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-                my ( $step, $page ) = $widget->get_increments;
-                $step = 1;
-                if ( $opt->{constraint}{quant} ) {
-                    $step = $opt->{constraint}{quant};
-                }
-                $widget->set_range( $opt->{constraint}{min},
-                    $opt->{constraint}{max} );
-                $widget->set_increments( $step, $page );
-                if ( $self->value_for_active_option( $value, $opt ) ) {
-                    $widget->set_value($value);
-                }
-            }
-
-            # ComboBox
-            elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
-                or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
-            {
-                $widget->get_model->clear;
-                my $index = 0;
-                for ( 0 .. $#{ $opt->{constraint} } ) {
-                    $widget->append_text(
-                        $d_sane->get( $opt->{constraint}[$_] ) );
-                    if ( defined $value and $opt->{constraint}[$_] eq $value ) {
-                        $index = $_;
-                    }
-                }
-                if ( defined $index ) { $widget->set_active($index) }
-            }
-
-            # Entry
-            elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-                if ( $self->value_for_active_option( $value, $opt ) ) {
-                    $widget->set_text($value);
-                }
-            }
-        }
-        $widget->signal_handler_unblock( $widget->{signal} );
-    }
     return;
 }
 

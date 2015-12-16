@@ -1,7 +1,5 @@
 package Gscan2pdf::Dialog::Scan::CLI;
 
-# TODO: put the test code in to use the --help output from other people's scanners
-
 use warnings;
 use strict;
 no if $] >= 5.018, warnings => 'experimental::smartmatch';
@@ -13,6 +11,7 @@ use Storable qw(dclone);     # For cloning the options cache
 use Locale::gettext 1.05;    # For translations
 use feature 'switch';
 use List::MoreUtils qw{any};
+use Data::Dumper;
 
 my $EMPTY = q{};
 my $COMMA = q{,};
@@ -54,7 +53,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, signals => {
     Glib::ParamSpec->scalar(
         'reload-triggers',                                               # name
         'Reload triggers',                                               # nick
-        'Hash of option names that cause the options to be reloaded',    # blurb
+        'Array of option names that cause the options to be reloaded',   # blurb
         [qw/readable writable/]                                          # flags
     ),
     Glib::ParamSpec->boolean(
@@ -136,7 +135,6 @@ sub get_devices {
             my ($device_list) = @_;
             $pbar->destroy;
             my @device_list = @{$device_list};
-            use Data::Dumper;
             $logger->info( 'scanimage --formatted-device-list: ',
                 Dumper( \@device_list ) );
             if ( @device_list == 0 ) {
@@ -542,6 +540,11 @@ sub _update_option_visibility {
             $container->hide_all;
         }
     }
+
+    # In case the geometry values have changed,
+    # update the available paper formats
+    $self->set_paper_formats( $self->{paper_formats} );
+
     if ( defined $visible_options->{'Paper size'} ) {
         $self->{hboxp}->show_all;
     }
@@ -599,8 +602,9 @@ sub create_paper_widget {
 
     # Only define the paper size once the rest of the geometry widgets
     # have been created
-    if ( _geometry_widgets_created($options)
-        and not defined( $self->{combobp} ) )
+    if (    _geometry_widgets_created($options)
+        and not defined( $self->{combobp} )
+        and defined( $self->{hboxp} ) )
     {
         # Paper list
         my $label = Gtk2::Label->new( $d->get('Paper size') );
@@ -615,6 +619,7 @@ sub create_paper_widget {
         $self->{combobp}->set_active(0);
         $self->{combobp}->signal_connect(
             changed => sub {
+                if ( not defined $self->{combobp}->get_active_text ) { return }
 
                 if ( $self->{combobp}->get_active_text eq $d->get('Edit') ) {
                     $self->edit_paper;
@@ -650,7 +655,8 @@ sub create_paper_widget {
                           ->set_value(
                             $formats->{$paper}{x} + $formats->{$paper}{l} );
 
-         # Update the options and widgets, otherwise the new max will be ignored
+                        # Update the options and widgets,
+                        # otherwise the new max will be ignored
                         for (qw( l t x y )) {
                             my $opt = $options->by_name($_);
                             $opt->{constraint}{max} = $formats->{$paper}{$_};
@@ -728,7 +734,7 @@ sub set_option {
                     $self->get('device'), $cache_key );
                 $logger->info($options);
 
-                if ($options) { $self->update_options( $options, $option ) }
+                if ($options) { $self->patch_cache($options) }
 
                 $self->signal_emit( 'finished-process', 'find_scan_options' );
 
@@ -778,8 +784,9 @@ sub set_option {
                     if ( $self->get('cache-options') ) {
                         my $cache = $self->get('options-cache');
 
-                  # We only store the array part of the options object
-                  # as we have to recreate the object anyway when we retrieve it
+                        # We only store the array part of the options object as
+                        # we have to recreate the object anyway when we retrieve
+                        # it
                         my $clone = dclone( $options->{array} );
 
                         if ( defined $cache ) {
@@ -838,7 +845,32 @@ sub set_option {
     return;
 }
 
-sub update_widget {
+# If we are loading from the cache, then both the current options, and the
+# widgets could be different
+
+sub patch_cache {
+    my ( $self, $options ) = @_;
+
+    # for reasons I don't understand, without walking the
+    # reference tree, parts of $self->{current_scan_options}
+    # are undef
+    Gscan2pdf::Dialog::Scan::my_dumper( $self->{current_scan_options} );
+    for my $hashref ( @{ $self->{current_scan_options} } ) {
+        my ( $key, undef ) = each %{$hashref};
+        my $updated_option =
+          $self->get('available-scan-options')->by_name($key);
+        if ( defined( $updated_option->{name} )
+            and $updated_option->{name} ne $EMPTY )
+        {
+            my $opt = $options->by_name( $updated_option->{name} );
+            $opt->{val} = $updated_option->{val};
+        }
+    }
+    $self->update_options($options);
+    return;
+}
+
+sub update_widget {    # FIXME: this is partly duplicated in Sane.pm
     my ( $self, $name, $value ) = @_;
 
     my ( $group, $vbox );
@@ -903,69 +935,6 @@ sub update_widget {
             }
         }
         $widget->signal_handler_unblock( $widget->{signal} );
-    }
-    return;
-}
-
-# If setting an option triggers a reload, we need to update the options
-
-sub update_options {
-    my ( $self, $options, $updated_option ) = @_;
-
-    # walk the widget tree and update them from the hash
-    $logger->debug( 'Sane->get_option_descriptor returned: ',
-        Dumper($options) );
-
-    my ( $group, $vbox );
-    my $num_dev_options = $options->num_options;
-    for ( 1 .. $num_dev_options - 1 ) {
-        my $opt = $options->by_index($_);
-        if ( defined( $opt->{name} ) and $opt->{name} ne $EMPTY ) {
-
-            # If we are loading from the cache, then both the current options,
-            # and the widgets could be different
-            if ( defined $updated_option
-                and $opt->{name} ne $updated_option->{name} )
-            {
-                my $old_opt =
-                  $self->get('available-scan-options')->by_name( $opt->{name} );
-                if (
-                    not(   ( $old_opt->{cap} & SANE_CAP_INACTIVE )
-                        or ( $opt->{cap} & SANE_CAP_INACTIVE ) )
-                    and ( defined( $old_opt->{val} ) or defined( $opt->{val} ) )
-                    and (
-                        (
-                            defined( $old_opt->{val} ) xor
-                            defined( $opt->{val} )
-                        )
-                        or ( $old_opt->{val} ne $opt->{val} )
-                    )
-                  )
-                {
-
-                    # Don't update if the old option is still available
-                    my $val = quotemeta( $old_opt->{val} )
-                      ;    # quote any possible metacharacters
-                    if (
-                        not(
-                            (
-                                $opt->{constraint_type} ==
-                                SANE_CONSTRAINT_STRING_LIST
-                                or $opt->{constraint_type} ==
-                                SANE_CONSTRAINT_WORD_LIST
-                            )
-                            and any { /^$val$/xsm } @{ $opt->{constraint} }
-                        )
-                      )
-                    {
-                        $self->set_option( $old_opt, $opt->{val} );
-                    }
-                }
-            }
-            else {
-                $self->update_widget( $opt->{name}, $opt->{val} );
-            }
-        }
     }
     return;
 }

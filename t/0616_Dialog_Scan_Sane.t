@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -31,42 +31,86 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         ######################################
 
-        # There are some backends where the paper-width and -height options are
-        # only valid when the ADF is active. Therefore, changing the paper size
-        # when the flatbed is active tries to set these options, causing an
-        # "invalid argument" error, which is normally not possible, as the
-        # option is ghosted.
-        # Test this by setting up a profile with "bool-soft-select-soft-detect"
-        # and then a valid option. Check that:
-        # a. no error message is produced
-        # b. the rest of the profile is correctly applied
-        # c. the appropriate signals are still emitted.
+        # Setting a profile means setting a series of options; setting the
+        # first, waiting for it to finish, setting the second, and so on. If one
+        # of the settings is already applied, and therefore does not fire a
+        # signal, then there is a danger that the rest of the profile is not
+        # set.
 
         $dialog->add_profile(
-            'my profile',
-            [ { 'bool-soft-select-soft-detect' => TRUE }, { mode => 'Color' } ]
+            'g51',
+            [
+                {
+                    'page-height' => '297'
+                },
+                {
+                    'y' => '297'
+                },
+                {
+                    'resolution' => '51'
+                },
+            ]
+        );
+        $dialog->add_profile(
+            'c50',
+            [
+                {
+                    'page-height' => '297'
+                },
+                {
+                    'y' => '297'
+                },
+                {
+                    'resolution' => '50'
+                },
+            ]
         );
 
         # need a new main loop because of the timeout
         my $loop = Glib::MainLoop->new;
         my $flag = FALSE;
-        $dialog->signal_connect(
-            'process-error' => sub { ok 0, 'Should not throw error' } );
+        $dialog->{profile_signal} = $dialog->signal_connect(
+            'changed-profile' => sub {
+                my ( $widget, $profile ) = @_;
+                $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
+                my $options      = $dialog->get('available-scan-options');
+                my $opt          = $options->by_name('resolution');
+                my $optwidget    = $opt->{widget};
+                my $widget_value = $optwidget->get_value;
+                is( $widget_value, 51, 'correctly updated widget' );
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+        $dialog->set( 'profile', 'g51' );
+        $loop->run unless ($flag);
+
+        # need a new main loop because of the timeout
+        $loop                     = Glib::MainLoop->new;
+        $flag                     = FALSE;
         $dialog->{profile_signal} = $dialog->signal_connect(
             'changed-profile' => sub {
                 my ( $widget, $profile ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [ { mode => 'Color' } ],
-                    'correctly set rest of profile'
+                    [
+                        {
+                            'br-y' => '297'
+                        },
+                        {
+                            'resolution' => '50'
+                        },
+                    ],
+                    'fired signal and set profile'
                 );
                 $flag = TRUE;
                 $loop->quit;
             }
         );
-        $dialog->set( 'profile', 'my profile' );
+        $dialog->set( 'profile', 'c50' );
         $loop->run unless ($flag);
+
         Gtk2->main_quit;
     }
 );

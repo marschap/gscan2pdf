@@ -15,7 +15,7 @@ my $window = Gtk2::Window->new;
 
 Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($WARN);
+Log::Log4perl->easy_init($ERROR);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::Sane->setup($logger);
 
@@ -31,20 +31,35 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         ######################################
 
-        $dialog->add_profile( 'my profile',
-            [ { 'enable-test-options' => '' } ] );
+        # There are some backends where the paper-width and -height options are
+        # only valid when the ADF is active. Therefore, changing the paper size
+        # when the flatbed is active tries to set these options, causing an
+        # "invalid argument" error, which is normally not possible, as the
+        # option is ghosted.
+        # Test this by setting up a profile with "bool-soft-select-soft-detect"
+        # and then a valid option. Check that:
+        # a. no error message is produced
+        # b. the rest of the profile is correctly applied
+        # c. the appropriate signals are still emitted.
+
+        $dialog->add_profile(
+            'my profile',
+            [ { 'bool-soft-select-soft-detect' => TRUE }, { mode => 'Color' } ]
+        );
 
         # need a new main loop because of the timeout
         my $loop = Glib::MainLoop->new;
         my $flag = FALSE;
+        $dialog->signal_connect(
+            'process-error' => sub { ok 0, 'Should not throw error' } );
         $dialog->{profile_signal} = $dialog->signal_connect(
             'changed-profile' => sub {
                 my ( $widget, $profile ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [ { 'enable-test-options' => '' } ],
-                    'bool false as empty string'
+                    [ { mode => 'Color' } ],
+                    'correctly set rest of profile'
                 );
                 $flag = TRUE;
                 $loop->quit;
