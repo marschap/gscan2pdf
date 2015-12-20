@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.3.5
+Version: 1.3.6
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
