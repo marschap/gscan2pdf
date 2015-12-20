@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: gscan2pdf\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2015-05-06 10:24+0200\n"
-"PO-Revision-Date: 2013-12-09 11:07+0000\n"
-"Last-Translator: Christophe CHAUVET <Unknown>\n"
+"PO-Revision-Date: 2015-10-24 06:03+0000\n"
+"Last-Translator: Jean-Marc <Unknown>\n"
 "Language-Team: French <fr@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2015-10-01 08:56+0000\n"
-"X-Generator: Launchpad (build 17780)\n"
+"X-Launchpad-Export-Date: 2015-12-20 14:56+0000\n"
+"X-Generator: Launchpad (build 17865)\n"
 
 #: bin/gscan2pdf:383
 msgid "Image"
@@ -118,7 +118,7 @@ msgstr ""
 
 #: bin/gscan2pdf:903
 msgid "S_can"
-msgstr "S_canner"
+msgstr "Numériser"
 
 #: bin/gscan2pdf:904
 msgid "Scan document"
@@ -126,11 +126,11 @@ msgstr "Numériser le document"
 
 #: bin/gscan2pdf:907 bin/gscan2pdf:908 bin/gscan2pdf:2744
 msgid "Save"
-msgstr "Sauvegarder"
+msgstr "Enregistrer"
 
 #: bin/gscan2pdf:912
 msgid "_Email as PDF"
-msgstr "_Email comme PDF"
+msgstr "_Envoyer le PDF par courriel"
 
 #: bin/gscan2pdf:913
 msgid "Attach as PDF to a new email"
@@ -138,7 +138,7 @@ msgstr "Attacher comme PDF dans un nouvel e-mail"
 
 #: bin/gscan2pdf:917
 msgid "_Print"
-msgstr "_Imprimer"
+msgstr "Im_primer"
 
 #: bin/gscan2pdf:918
 msgid "Print"
@@ -254,7 +254,7 @@ msgstr "_Blanc"
 
 #: bin/gscan2pdf:993
 msgid "Select pages with low standard deviation"
-msgstr ""
+msgstr "Sélectionner les pages à faible écart type"
 
 #: bin/gscan2pdf:998
 msgid "_Dark"
@@ -282,7 +282,7 @@ msgstr ""
 
 #: bin/gscan2pdf:1016
 msgid "_Clear OCR"
-msgstr ""
+msgstr "_Effacer la ROC"
 
 #: bin/gscan2pdf:1017
 msgid "Clear OCR output from selected pages"
@@ -491,6 +491,8 @@ msgstr "Erreur de copie de page"
 msgid ""
 "Warning: unable to use %s for temporary storage. Defaulting to %s instead."
 msgstr ""
+"Attention : Impossible d'utiliser %s pour un enregistrement temporaire. "
+"Valeur par défaut choisie : %s ."
 
 #: bin/gscan2pdf:1737
 msgid "Crashed sessions"
@@ -508,7 +510,7 @@ msgstr "Session"
 
 #: bin/gscan2pdf:1769 bin/gscan2pdf:1775
 msgid "Pick crashed session to restore"
-msgstr ""
+msgstr "Choisir la session perdue à restaurer"
 
 #: bin/gscan2pdf:1857
 msgid "Editing text"
@@ -571,7 +573,7 @@ msgstr ""
 
 #: bin/gscan2pdf:2313
 msgid "Document Metadata"
-msgstr ""
+msgstr "Métadonnées du document"
 
 #: bin/gscan2pdf:2327
 msgid "Date"
@@ -587,11 +589,11 @@ msgstr "Sélectionnez une date"
 
 #: bin/gscan2pdf:2395
 msgid "Today"
-msgstr "Aujourdhui"
+msgstr "Aujourd'hui"
 
 #: bin/gscan2pdf:2415
 msgid "Select date with calendar"
-msgstr ""
+msgstr "Choisir une date avec le calendrier"
 
 #: bin/gscan2pdf:2424 bin/gscan2pdf:6770
 msgid "Title"
@@ -599,7 +601,7 @@ msgstr "Titre"
 
 #: bin/gscan2pdf:2440
 msgid "Author"
-msgstr ""
+msgstr "Auteur"
 
 #: bin/gscan2pdf:2458
 msgid "Subject"
@@ -873,14 +875,14 @@ msgstr "Scanner le document"
 #: t/0611_Dialog_Scan_Sane.t:38 t/0611_Dialog_Scan_Sane.t:71
 #: t/0621_Dialog_Scan_CLI.t:38 t/0621_Dialog_Scan_CLI.t:96
 msgid "page-number-increment"
-msgstr ""
+msgstr "Incrément du numéro de page"
 
 #: bin/gscan2pdf:3870 bin/gscan2pdf:4528 bin/gscan2pdf:4529 bin/gscan2pdf:4567
 #: bin/gscan2pdf:4891 lib/Gscan2pdf/Dialog/Scan.pm:388
 #: lib/Gscan2pdf/Dialog/Scan/CLI.pm:1187 lib/Gscan2pdf/Dialog/Scan/Sane.pm:776
 #: t/0611_Dialog_Scan_Sane.t:37 t/0621_Dialog_Scan_CLI.t:37
 msgid "page-number-start"
-msgstr ""
+msgstr "Numéro de page de début"
 
 #: bin/gscan2pdf:4108 bin/gscan2pdf:6803 lib/Gscan2pdf/Dialog/Scan.pm:697
 #: lib/Gscan2pdf/Dialog/Scan.pm:810 lib/Gscan2pdf/Dialog/Scan.pm:830
@@ -910,7 +912,7 @@ msgstr ""
 #: t/0611_Dialog_Scan_Sane.t:400 t/0621_Dialog_Scan_CLI.t:33
 #: t/0621_Dialog_Scan_CLI.t:47 t/0622_Dialog_Scan_CLI.t:65
 msgid "device-list"
-msgstr ""
+msgstr "liste de périphériques"
 
 #: bin/gscan2pdf:4135 lib/Gscan2pdf/Dialog/Scan/CLI.pm:226
 #: lib/Gscan2pdf/Dialog/Scan/CLI.pm:228 lib/Gscan2pdf/Dialog/Scan/CLI.pm:229
@@ -921,7 +923,7 @@ msgstr ""
 #: lib/Gscan2pdf/Dialog/Scan/CLI.pm:1204 lib/Gscan2pdf/Dialog/Scan/Sane.pm:121
 #: t/0611_Dialog_Scan_Sane.t:32 t/0621_Dialog_Scan_CLI.t:32
 msgid "device"
-msgstr ""
+msgstr "périphérique"
 
 #: bin/gscan2pdf:4152 bin/gscan2pdf:4183
 msgid "Rotate"
@@ -1062,7 +1064,7 @@ msgstr "Pour simplifier le processus numérisation-vers-PDF"
 
 #: bin/gscan2pdf:5073
 msgid "Copyright 2006--2015 Jeffrey Ratcliffe"
-msgstr ""
+msgstr "Copyright 2006--2015 Jeffrey Ratcliffe"
 
 #: bin/gscan2pdf:5368
 msgid "Negate"
@@ -1304,7 +1306,7 @@ msgstr "Type"
 
 #: bin/gscan2pdf:6772 bin/gscan2pdf:6779
 msgid "Show"
-msgstr ""
+msgstr "Afficher"
 
 #: bin/gscan2pdf:6773
 msgid "Reload"
@@ -1353,6 +1355,14 @@ msgid ""
 "%d\t document's day\n"
 "%D\t today's day"
 msgstr ""
+"%a\t aueur\n"
+"%\t titre\n"
+"%y\t année du document\n"
+"%Y\t année en cours\n"
+"%m\t mois du document\n"
+"%M\t mois en cours\n"
+"%d\t jour du document\n"
+"%D\t jour en cours"
 
 #: bin/gscan2pdf:6905
 msgid "Temporary directory"
@@ -1453,7 +1463,7 @@ msgstr "Résolution"
 
 #: bin/gscan2pdf:7239
 msgid "dpi"
-msgstr ""
+msgstr "ppp"
 
 #: lib/Gscan2pdf/Dialog.pm:66 lib/Gscan2pdf/Dialog.pm:82 t/05_Dialog.t:25
 msgid "hide-on-delete"
@@ -1804,7 +1814,7 @@ msgstr ""
 
 #: lib/Gscan2pdf/Document.pm:1255
 msgid "No pages selected"
-msgstr ""
+msgstr "Aucune page sélectionnée"
 
 #: lib/Gscan2pdf/Document.pm:1668
 #, perl-format
@@ -1889,7 +1899,7 @@ msgstr "Impossible d'ouvrir le fichier: %s"
 #: lib/Gscan2pdf/Document.pm:2677 lib/Gscan2pdf/Document.pm:2698
 #, perl-format
 msgid "Can't close file: %s"
-msgstr ""
+msgstr "Impossible de fermer le fichier : %s"
 
 #: lib/Gscan2pdf/Document.pm:2429
 msgid "Error adding text layer to DjVu"
@@ -1902,7 +1912,7 @@ msgstr ""
 #: lib/Gscan2pdf/Document.pm:2488
 #, perl-format
 msgid "Converting image %i of %i to TIFF"
-msgstr ""
+msgstr "Conversion de l'image %i de %i en TIFF"
 
 #: lib/Gscan2pdf/Document.pm:2528
 msgid "Error writing TIFF"
