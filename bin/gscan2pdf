@@ -4968,17 +4968,23 @@ EOS
     $about->set_website('http://gscan2pdf.sf.net');
     my $translators =
       <<'EOS'; # inverted commas required around EOS because of UTF-8 in $translators
+Alan Mortensen
+Aputsiaĸ Niels Janussen
 gorkaazk
 Tobias Bannert
-Peter
+Jean-Marc
 Ettore Atalan
-JDammann
-Aleksey Kabanov
+GenghisKhan
+mavosaure
 Dusan Kazik
 Tom
-Matthias Gutjahr
+Peter
+Aleksey Kabanov
 Christoph Langner
 Matthias Mailänder
+Jacob Nielsen
+Édouard Lopez
+JDammann
 EOS
     $about->set_translator_credits($translators);
     $about->set_artists('lodp, Andreas E.');
