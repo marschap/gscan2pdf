@@ -16,7 +16,7 @@ Requires: perl(Gtk2::ImageView), perl-Gtk2-Ex-Simple-List
 Requires: perl-Sane, perl-Locale-gettext
 Requires: sane-utils, libtiff-tools, perl(PDF::API2)
 Requires: perl(Config::General), perl-PerlMagick, ImageMagick
-Requires: librsvg2-common, perl(Set::Intspan), perl(List::MoreUtils)
+Requires: librsvg-2-2, perl(Set::Intspan), perl(List::MoreUtils)
 Requires: perl-HTML-Parser, perl(Goo::Canvas), perl-Proc-ProcessTable
 Requires: perl(Readonly), perl(Log::Log4perl), perl(Try::Tiny), perl-Filesys-Df
 Requires: perl(OSSP::uuid), perl(Gtk2::Ex::PodViewer), sane-backends >= 1.0.17
