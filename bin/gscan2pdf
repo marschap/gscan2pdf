@@ -46,7 +46,6 @@ no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Sane;
 use Gscan2pdf::Frontend::CLI;
-use Gscan2pdf::NetPBM;
 use Gscan2pdf::Dialog::Scan::Sane;
 use Gscan2pdf::Dialog::Scan::CLI;
 use Gscan2pdf::Tesseract;
@@ -944,7 +943,8 @@ sub create_menu_bar {
         ],
         [
             'OCR', undef, $d->get('_OCR'), undef,
-            $d->get('Optical Character Recognition'), \&OCR
+            $d->get('Optical Character Recognition'),
+            \&ocr_dialog
         ],
         [ 'User-defined', undef, $d->get('U_ser-defined') ],
 
@@ -3946,11 +3946,16 @@ sub new_scan_callback {
     my $rotate =
       $page_number % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
     my %options = (
-        page    => $page_number,
-        rotate  => $rotate,
-        unpaper => $SETTING{'unpaper on scan'},
-        ocr     => $SETTING{'OCR on scan'},
+        page     => $page_number,
+        dir      => $session,
+        rotate   => $rotate,
+        ocr      => $SETTING{'OCR on scan'},
+        engine   => $SETTING{'ocr engine'},
+        language => $SETTING{'ocr language'},
     );
+    if ( $SETTING{'unpaper on scan'} ) {
+        $options{unpaper} = $unpaper;
+    }
     if ( $SETTING{'threshold-before-ocr'} ) {
         $options{threshold} = $SETTING{'threshold tool'};
     }
@@ -3970,7 +3975,9 @@ sub new_scan_callback {
         $options{resolution} = $resolution;
         $options{delete}     = TRUE;
     }
-    import_scan(%options);
+    $options{error_callback} = \&error_callback;
+    $options{display_callback} = sub { update_uimanager() };
+    $slist->import_scan(%options);
     return;
 }
 
@@ -4430,107 +4437,6 @@ sub update_number {
     if ( $n > 0 and $n < $windows->get('num-pages') ) {
         $windows->set( 'num-pages', $n );
     }
-    return;
-}
-
-sub post_process_scan {
-    my ( $pages, $rotate, $unpaper_flag, $ocr, $threshold ) = @_;
-
-    if ($rotate) {
-        rotate(
-            $rotate, $pages,
-            sub {    # finished callback
-                my ($page) = @_;
-                post_process_scan( [$page], undef, $unpaper_flag, $ocr,
-                    $threshold );
-            }
-        );
-    }
-    elsif ($unpaper_flag) {
-        unpaper_page(
-            $pages,
-            $unpaper->get_cmdline,
-            sub {    # finished callback
-                my ($page) = @_;
-                post_process_scan( [$page], undef, undef, $ocr, $threshold );
-            }
-        );
-    }
-    elsif ($ocr) {
-        ocr_page( $pages, $threshold );
-    }
-    return;
-}
-
-# Take new scan and display it
-
-sub import_scan {
-    my %options = @_;
-
-    # Interface to frontend
-    open my $fh, '<', $options{filename}    ## no critic (RequireBriefOpen)
-      or die "can't open $options{filename}: $ERRNO\n";
-
-    # Read without blocking
-    my $size = 0;
-    Glib::IO->add_watch(
-        fileno($fh),
-        [ 'in', 'hup' ],
-        sub {
-            my ( $fileno, $condition ) = @_;
-            if ( $condition & 'in' ) { # bit field operation. >= would also work
-                if ( $size == 0 ) {
-                    $size = Gscan2pdf::NetPBM::file_size_from_header(
-                        $options{filename} );
-                    $logger->info("Header suggests $size");
-                    return Glib::SOURCE_CONTINUE if ( $size == 0 );
-                    close $fh
-                      or
-                      $logger->warn("Error closing $options{filename}: $ERRNO");
-                }
-                my $filesize = -s $options{filename};
-                $logger->info("Expecting $size, found $filesize");
-                if ( $size > $filesize ) {
-                    my $pad = $size - $filesize;
-                    open my $fh, '>>', $options{filename}
-                      or die "cannot open >> $options{filename}: $ERRNO\n";
-                    my $data = $EMPTY;
-                    for ( 1 .. $pad * $BITS_PER_BYTE ) {
-                        $data .= '1';
-                    }
-                    printf {$fh} pack sprintf 'b%d', length $data, $data;
-                    close $fh
-                      or
-                      $logger->warn("Error closing $options{filename}: $ERRNO");
-                    $logger->info("Padded $pad bytes");
-                }
-                my $gpage = Gscan2pdf::Page->new(
-                    filename   => $options{filename},
-                    resolution => $options{resolution},
-                    format     => 'Portable anymap',
-                    delete     => $options{delete},
-                    dir        => $session,
-                );
-                my $index = $slist->add_page( 'none', $gpage, $options{page} );
-                if ( $index == $EMPTY_LIST ) {
-                    show_message_dialog(
-                        parent  => $windows,
-                        type    => 'error',
-                        buttons => 'close',
-                        text    => $d->get('Unable to load image')
-                    );
-                }
-                else {
-                    update_uimanager();
-                    post_process_scan( [$gpage], $options{rotate},
-                        $options{unpaper}, $options{ocr}, $options{threshold} );
-                }
-                return Glib::SOURCE_REMOVE;
-            }
-            return Glib::SOURCE_CONTINUE;
-        }
-    );
-
     return;
 }
 
@@ -5875,62 +5781,6 @@ sub unpaper {
     return;
 }
 
-# Add $page to the OCR stack, setting it off if not running.
-
-sub ocr_page {
-    my ( $pages, $threshold ) = @_;
-
-    my ( $signal, $pid );
-    my %options = (
-        queued_callback => sub {
-            return update_tpbar(@_);
-        },
-        started_callback => sub {
-            my ( $thread, $process, $completed, $total ) = @_;
-            $signal =
-              setup_tpbar( $thread, $process, $completed, $total, $pid );
-            return TRUE if ( defined $signal );
-        },
-        finished_callback => sub {
-            my ( $new_page, $pending ) = @_;
-            if ( not $pending ) { $thbox->hide_all }
-            if ( defined $signal ) {
-                $tcbutton->signal_handler_disconnect($signal);
-            }
-        },
-        error_callback   => \&error_callback,
-        display_callback => sub {
-            my ($new_page) = @_;
-            my @page = $slist->get_selected_indices;
-            if ( @page and $new_page == $slist->{data}[ $page[0] ][2] ) {
-                create_canvas($new_page);
-            }
-        },
-    );
-    if ( $SETTING{'ocr engine'} ne 'gocr' ) {
-        $options{language} = $SETTING{'ocr language'};
-    }
-    if ($threshold) {
-        $options{threshold} = $SETTING{'threshold tool'};
-    }
-    for my $page ( @{$pages} ) {
-        $options{page} = $page;
-        if ( $SETTING{'ocr engine'} eq 'gocr' ) {
-            $pid = $slist->gocr(%options);
-        }
-        elsif ( $SETTING{'ocr engine'} eq 'tesseract' ) {
-            $pid = $slist->tesseract(%options);
-        }
-        elsif ( $SETTING{'ocr engine'} eq 'ocropus' ) {
-            $pid = $slist->ocropus(%options);
-        }
-        else {    # cuneiform
-            $pid = $slist->cuneiform(%options);
-        }
-    }
-    return;
-}
-
 # Create a combobox from an array and set the default
 
 sub combobox_from_array {
@@ -6016,7 +5866,7 @@ sub add_cf_languages {
 
 # Run OCR on current page and display result
 
-sub OCR {    ## no critic (ProhibitExcessComplexity)
+sub ocr_dialog {
 
     if ( defined $windowo ) {
         $windowo->present;
@@ -6114,33 +5964,13 @@ sub OCR {    ## no critic (ProhibitExcessComplexity)
     $obutton->grab_focus;
     $obutton->signal_connect(
         clicked => sub {
-            $SETTING{'ocr engine'} = $ocr_engine[ $combobe->get_active ]->[0];
-            if (   $SETTING{'ocr engine'} eq 'tesseract'
-                or $SETTING{'ocr engine'} eq 'ocropus' )
-            {
-                $SETTING{'ocr language'} =
-                  $tesslang[ $comboboxtl->get_active ]->[0];
-            }
-            if ( $SETTING{'ocr engine'} eq 'cuneiform' ) {
-                $SETTING{'ocr language'} =
-                  $cflang[ $comboboxcl->get_active ]->[0];
-            }
-
-            $SETTING{'threshold-before-ocr'} = $cbt->get_active;
-            if ( $SETTING{'threshold-before-ocr'} ) {
-                $SETTING{'threshold tool'} = $spinbutton->get_value;
-            }
-
-            # fill $pagelist with filenames
-            # depending on which radiobutton is active
-            my @pagelist = indices2pages(
-                $slist->get_page_index(
-                    $SETTING{'Page range'}, \&error_callback
-                )
+            run_ocr(
+                $ocr_engine[ $combobe->get_active ]->[0],
+                $tesslang[ $comboboxtl->get_active ]->[0],
+                $cflang[ $comboboxcl->get_active ]->[0],
+                $cbt->get_active,
+                $spinbutton->get_value
             );
-            if ( not @pagelist ) { return }
-            ocr_page( \@pagelist, $SETTING{'threshold-before-ocr'} );
-            $windowo->hide;
         }
     );
 
@@ -6163,6 +5993,60 @@ sub OCR {    ## no critic (ProhibitExcessComplexity)
     {
         $hboxcl->hide_all;
     }
+    return;
+}
+
+sub run_ocr {
+    my ( $engine, $tesslang, $cflang, $threshold_flag, $threshold ) = @_;
+    if ( $engine eq 'tesseract' or $engine eq 'ocropus' ) {
+        $SETTING{'ocr language'} = $tesslang;
+    }
+    if ( $SETTING{'ocr engine'} eq 'cuneiform' ) {
+        $SETTING{'ocr language'} = $cflang;
+    }
+    my ( $signal, $pid );
+    my %options = (
+        queued_callback => sub {
+            return update_tpbar(@_);
+        },
+        started_callback => sub {
+            my ( $thread, $process, $completed, $total ) = @_;
+            $signal =
+              setup_tpbar( $thread, $process, $completed, $total, $pid );
+            return TRUE if ( defined $signal );
+        },
+        finished_callback => sub {
+            my ( $new_page, $pending ) = @_;
+            if ( not $pending ) { $thbox->hide_all }
+            if ( defined $signal ) {
+                $tcbutton->signal_handler_disconnect($signal);
+            }
+        },
+        error_callback   => \&error_callback,
+        display_callback => sub {
+            my ($new_page) = @_;
+            my @page = $slist->get_selected_indices;
+            if ( @page and $new_page == $slist->{data}[ $page[0] ][2] ) {
+                create_canvas($new_page);
+            }
+        },
+        engine   => $engine,
+        language => $SETTING{'ocr language'},
+    );
+    $SETTING{'ocr engine'}           = $engine;
+    $SETTING{'threshold-before-ocr'} = $threshold_flag;
+    if ($threshold_flag) {
+        $SETTING{'threshold tool'} = $threshold;
+        $options{threshold} = $threshold;
+    }
+
+    # fill $pagelist with filenames
+    # depending on which radiobutton is active
+    my @pagelist = indices2pages(
+        $slist->get_page_index( $SETTING{'Page range'}, \&error_callback ) );
+    if ( not @pagelist ) { return }
+    $slist->ocr_pages( \@pagelist, %options );
+    $windowo->hide;
     return;
 }
 

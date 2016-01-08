@@ -1,6 +1,8 @@
-1.3.7 (06.02.2016):
+1.3.7 (20.01.2016):
 
 * Fixed check that pages have been saved
+* Fixed scan->rotate->unpaper->OCR chaining (again). Closes bug #213
+  (Cant call method freeze on an undefined value)
 
 
 1.3.6 (20.12.2015):

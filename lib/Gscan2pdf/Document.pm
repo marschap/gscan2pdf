@@ -11,6 +11,10 @@ use Thread::Queue;
 
 use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Page;
+use Gscan2pdf::Tesseract;
+use Gscan2pdf::Ocropus;
+use Gscan2pdf::Cuneiform;
+use Gscan2pdf::NetPBM;
 use Glib 1.210 qw(TRUE FALSE)
   ; # To get TRUE and FALSE. 1.210 necessary for Glib::SOURCE_REMOVE and Glib::SOURCE_CONTINUE
 use Socket;
@@ -350,6 +354,122 @@ sub import_file {
         pidfile  => $pidfile,
         uuid     => $uuid,
     );
+}
+
+sub _post_process_scan {
+    my ( $self, $page, %options ) = @_;
+    if ( $options{rotate} ) {
+        $self->rotate(
+            angle             => $options{rotate},
+            page              => $page,
+            finished_callback => sub {
+                delete $options{rotate};
+                my $finished_page = $self->find_page_by_uuid( $page->{uuid} );
+                $self->_post_process_scan( $self->{data}[$finished_page][2],
+                    %options );
+            }
+        );
+        return;
+    }
+    if ( $options{unpaper} ) {
+        $self->unpaper(
+            page              => $page,
+            options           => $options{unpaper}->get_cmdline,
+            finished_callback => sub {
+                delete $options{unpaper};
+                my $finished_page = $self->find_page_by_uuid( $page->{uuid} );
+                $self->_post_process_scan( $self->{data}[$finished_page][2],
+                    %options );
+            }
+        );
+        return;
+    }
+    if ( $options{ocr} ) {
+        $self->ocr_pages(
+            [$page],
+            threshold         => $options{threshold},
+            engine            => $options{engine},
+            language          => $options{language},
+            finished_callback => sub {
+                delete $options{ocr};
+                $self->_post_process_scan( undef, %options )
+                  ;    # to fire finished_callback
+            }
+        );
+        return;
+    }
+    if ( $options{finished_callback} ) { $options{finished_callback}->() }
+    return;
+}
+
+# Take new scan, pad it if necessary, display it,
+# and set off any post-processing chains
+
+sub import_scan {
+    my ( $self, %options ) = @_;
+
+    # Interface to frontend
+    open my $fh, '<', $options{filename}    ## no critic (RequireBriefOpen)
+      or die "can't open $options{filename}: $ERRNO\n";
+
+    # Read without blocking
+    my $size = 0;
+    Glib::IO->add_watch(
+        fileno($fh),
+        [ 'in', 'hup' ],
+        sub {
+            my ( $fileno, $condition ) = @_;
+            if ( $condition & 'in' ) { # bit field operation. >= would also work
+                if ( $size == 0 ) {
+                    $size = Gscan2pdf::NetPBM::file_size_from_header(
+                        $options{filename} );
+                    $logger->info("Header suggests $size");
+                    return Glib::SOURCE_CONTINUE if ( $size == 0 );
+                    close $fh
+                      or
+                      $logger->warn("Error closing $options{filename}: $ERRNO");
+                }
+                my $filesize = -s $options{filename};
+                $logger->info("Expecting $size, found $filesize");
+                if ( $size > $filesize ) {
+                    my $pad = $size - $filesize;
+                    open my $fh, '>>', $options{filename}
+                      or die "cannot open >> $options{filename}: $ERRNO\n";
+                    my $data = $EMPTY;
+                    for ( 1 .. $pad * $BITS_PER_BYTE ) {
+                        $data .= '1';
+                    }
+                    printf {$fh} pack sprintf 'b%d', length $data, $data;
+                    close $fh
+                      or
+                      $logger->warn("Error closing $options{filename}: $ERRNO");
+                    $logger->info("Padded $pad bytes");
+                }
+                my $page = Gscan2pdf::Page->new(
+                    filename   => $options{filename},
+                    resolution => $options{resolution},
+                    format     => 'Portable anymap',
+                    delete     => $options{delete},
+                    dir        => $options{dir},
+                );
+                my $index = $self->add_page( 'none', $page, $options{page} );
+                if ( $index == $NOT_FOUND and $options{error_callback} ) {
+                    $options{error_callback}
+                      ->( $d->get('Unable to load image') );
+                }
+                else {
+                    if ( $options{display_callback} ) {
+                        $options{display_callback}->();
+                    }
+                    $self->_post_process_scan( $page, %options );
+                }
+                return Glib::SOURCE_REMOVE;
+            }
+            return Glib::SOURCE_CONTINUE;
+        }
+    );
+
+    return;
 }
 
 sub _throw_error {
@@ -1094,6 +1214,28 @@ sub gocr {
         pidfile  => $pidfile,
         uuid     => $uuid,
     );
+}
+
+# Wrapper for the various ocr engines
+
+sub ocr_pages {
+    my ( $self, $pages, %options ) = @_;
+    for my $page ( @{$pages} ) {
+        $options{page} = $page;
+        if ( $options{engine} eq 'gocr' ) {
+            $self->gocr(%options);
+        }
+        elsif ( $options{engine} eq 'tesseract' ) {
+            $self->tesseract(%options);
+        }
+        elsif ( $options{engine} eq 'ocropus' ) {
+            $self->ocropus(%options);
+        }
+        else {    # cuneiform
+            $self->cuneiform(%options);
+        }
+    }
+    return;
 }
 
 sub unpaper {
@@ -3567,7 +3709,9 @@ sub _thread_unpaper {
             $new->{resolution} = $options{page}{resolution};
         }
 
-        $new->{dirty_time} = timestamp();    #flag as dirty
+        # reuse uuid so that the process chain can find it again
+        $new->{uuid}       = $options{page}{uuid};
+        $new->{dirty_time} = timestamp();            #flag as dirty
         $self->{return}->enqueue(
             {
                 type => 'page',

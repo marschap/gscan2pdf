@@ -260,6 +260,7 @@ t/282_cancel_to_png.t
 t/283_to_png_with_error.t
 t/31_ocropus.t
 t/32_ocropus_in_thread.t
+t/33_cancel_ocropus.t
 t/351_unpaper.t
 t/352_unpaper.t
 t/353_cancel_unpaper.t
@@ -286,7 +287,7 @@ t/431_gocr.t
 t/432_gocr.t
 t/433_cancel_gocr.t
 t/434_gocr_with_error.t
-t/51_cancel_ocropus.t
+t/51_process_chain.t
 t/80_scanimage-perl.t
 t/81_scanadf-perl.t
 t/90_MANIFEST.t
