@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use File::Basename;    # Split filename into dir, file, ext
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
@@ -27,6 +27,7 @@ $slist->set_dir($dir);
 $slist->import_files(
     paths             => ['test.jpg'],
     finished_callback => sub {
+        $slist->{data}[0][2]{saved} = 1;
         $slist->rotate(
             angle             => 90,
             page              => $slist->{data}[0][2],
@@ -36,6 +37,7 @@ $slist->import_files(
                     0, 'valid JPG created' );
                 is( dirname("$slist->{data}[0][2]{filename}"),
                     "$dir", 'using session directory' );
+                is( $slist->scans_saved, '', 'modification removed saved tag' );
                 Gtk2->main_quit;
             }
         );

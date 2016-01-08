@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use Test::More tests => 4;
 use Gtk2 -init;    # Could just call init separately
 
 BEGIN {
@@ -28,20 +28,23 @@ $slist->set_dir($dir);
 $slist->import_files(
     paths             => ['test.pnm'],
     finished_callback => sub {
+        is( $slist->scans_saved, '', 'pages not tagged as saved' );
         $slist->save_pdf(
             path              => 'test.pdf',
             list_of_pages     => [ $slist->{data}[0][2] ],
-            finished_callback => sub { Gtk2->main_quit }
+            finished_callback => sub {
+                is(
+                    `pdfinfo test.pdf | grep 'Page size:'`,
+                    "Page size:      70 x 46 pts\n",
+                    'valid PDF created'
+                );
+                is( $slist->scans_saved, 1, 'pages tagged as saved' );
+                Gtk2->main_quit;
+            }
         );
     }
 );
 Gtk2->main;
-
-is(
-    `pdfinfo test.pdf | grep 'Page size:'`,
-    "Page size:      70 x 46 pts\n",
-    'valid PDF created'
-);
 
 #########################
 

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
@@ -29,13 +29,15 @@ $slist->import_files(
         $slist->save_djvu(
             path              => 'test.djvu',
             list_of_pages     => [ $slist->{data}[0][2] ],
-            finished_callback => sub { Gtk2->main_quit }
+            finished_callback => sub {
+                is( -s 'test.djvu', 1054, 'DjVu created with expected size' );
+                is( $slist->scans_saved, 1, 'pages tagged as saved' );
+                Gtk2->main_quit;
+            }
         );
     }
 );
 Gtk2->main;
-
-is( -s 'test.djvu', 1054, 'DjVu created with expected size' );
 
 #########################
 

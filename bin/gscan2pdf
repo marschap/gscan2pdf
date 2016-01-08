@@ -1710,27 +1710,20 @@ sub edit_ocr_text {
 
 # Check that all pages have been saved
 
-sub scans_not_saved {
+sub scans_saved {
     my ($message) = @_;
-    for ( @{ $slist->{data} } ) {
-        if ( not $_->[2]{saved} ) {
-            my $response = show_message_dialog(
-                parent             => $window,
-                type               => 'question',
-                buttons            => 'ok-cancel',
-                text               => $message,
-                'store-response'   => TRUE,
-                'stored-responses' => ['ok']
-            );
-            if ( $response ne 'ok' ) {
-                return TRUE;
-            }
-            else {
-                last;
-            }
-        }
+    if ( not $slist->scans_saved ) {
+        my $response = show_message_dialog(
+            parent             => $window,
+            type               => 'question',
+            buttons            => 'ok-cancel',
+            text               => $message,
+            'store-response'   => TRUE,
+            'stored-responses' => ['ok']
+        );
+        if ( $response ne 'ok' ) { return FALSE }
     }
-    return FALSE;
+    return TRUE;
 }
 
 # Deletes all scans after warning.
@@ -1738,7 +1731,7 @@ sub scans_not_saved {
 sub new {
 
     if (
-        scans_not_saved(
+        not scans_saved(
             $d->get(
 "Some pages have not been saved.\nDo you really want to clear all pages?"
             )
@@ -6178,7 +6171,7 @@ sub OCR {    ## no critic (ProhibitExcessComplexity)
 sub quit {
 
     if (
-        scans_not_saved(
+        not scans_saved(
             $d->get(
                 "Some pages have not been saved.\nDo you really want to quit?")
         )

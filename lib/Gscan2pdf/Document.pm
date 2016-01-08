@@ -300,7 +300,7 @@ sub _get_file_info_finished_callback {
 # return queue, note them here for the return queue to use.
 
 sub _note_callbacks {
-    my (%options) = @_;
+    my ( $self, %options ) = @_;
     my $uuid = $uuid_object->create_str;
     $callback{$uuid}{queued}    = $options{queued_callback};
     $callback{$uuid}{started}   = $options{started_callback};
@@ -309,6 +309,17 @@ sub _note_callbacks {
     $callback{$uuid}{error}     = $options{error_callback};
     $callback{$uuid}{cancelled} = $options{cancelled_callback};
     $callback{$uuid}{display}   = $options{display_callback};
+    if ( $options{mark_saved} ) {
+        $callback{$uuid}{mark_saved} = sub {
+
+            # list_of_pages is frozen,
+            # so find the original pages from their uuids
+            for ( @{ $options{list_of_pages} } ) {
+                my $page = $self->find_page_by_uuid( $_->{uuid} );
+                $self->{data}[$page][2]->{saved} = TRUE;
+            }
+        };
+    }
     return $uuid;
 }
 
@@ -322,7 +333,7 @@ sub import_file {
     my $dirname = $EMPTY;
     if ( defined $self->{dir} ) { $dirname = "$self->{dir}" }
 
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'import-file',
         {
@@ -390,6 +401,7 @@ sub check_return_queue {
             }
             when ('page') {
                 if ( defined $data->{page} ) {
+                    delete $data->{page}{saved};    # Remove saved tag
                     $self->add_page( $data->{uuid}, $data->{page},
                         $data->{info} );
                 }
@@ -408,6 +420,10 @@ sub check_return_queue {
                         $_self->{progress}
                     );
                     delete $callback{ $data->{uuid} }{started};
+                }
+                if ( defined $callback{ $data->{uuid} }{mark_saved} ) {
+                    $callback{ $data->{uuid} }{mark_saved}->();
+                    delete $callback{ $data->{uuid} }{mark_saved};
                 }
                 if ( defined $callback{ $data->{uuid} }{finished} ) {
                     $callback{ $data->{uuid} }{finished}->( $data->{message} );
@@ -674,7 +690,8 @@ sub save_pdf {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
-    my $uuid     = _note_callbacks(%options);
+    $options{mark_saved} = TRUE;
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-pdf',
         {
@@ -708,7 +725,8 @@ sub save_djvu {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
-    my $uuid     = _note_callbacks(%options);
+    $options{mark_saved} = TRUE;
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-djvu',
         {
@@ -741,7 +759,8 @@ sub save_tiff {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
-    my $uuid     = _note_callbacks(%options);
+    $options{mark_saved} = TRUE;
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-tiff',
         {
@@ -764,7 +783,7 @@ sub save_tiff {
 
 sub rotate {
     my ( $self, %options ) = @_;
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'rotate',
         {
@@ -794,7 +813,8 @@ sub save_image {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
-    my $uuid     = _note_callbacks(%options);
+    $options{mark_saved} = TRUE;
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-image',
         {
@@ -811,6 +831,16 @@ sub save_image {
     );
 }
 
+# Check that all pages have been saved
+
+sub scans_saved {
+    my ($self) = @_;
+    for ( @{ $self->{data} } ) {
+        if ( not $_->[2]{saved} ) { return FALSE }
+    }
+    return TRUE;
+}
+
 sub save_text {
     my ( $self, %options ) = @_;
 
@@ -819,7 +849,7 @@ sub save_text {
           $options{list_of_pages}->[$i]
           ->freeze;    # sharing File::Temp objects causes problems
     }
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-text',
         {
@@ -842,7 +872,7 @@ sub save_hocr {
           $options{list_of_pages}->[$i]
           ->freeze;    # sharing File::Temp objects causes problems
     }
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'save-hocr',
         {
@@ -859,7 +889,7 @@ sub save_hocr {
 
 sub analyse {
     my ( $self, %options ) = @_;
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'analyse',
         {
@@ -875,7 +905,7 @@ sub analyse {
 
 sub threshold {
     my ( $self, %options ) = @_;
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'threshold',
         {
@@ -893,7 +923,7 @@ sub threshold {
 
 sub negate {
     my ( $self, %options ) = @_;
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'negate',
         {
@@ -910,7 +940,7 @@ sub negate {
 
 sub unsharp {
     my ( $self, %options ) = @_;
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'unsharp',
         {
@@ -931,7 +961,7 @@ sub unsharp {
 
 sub crop {
     my ( $self, %options ) = @_;
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'crop',
         {
@@ -952,7 +982,7 @@ sub crop {
 
 sub to_png {
     my ( $self, %options ) = @_;
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'to-png',
         {
@@ -974,7 +1004,7 @@ sub tesseract {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'tesseract',
         {
@@ -999,7 +1029,7 @@ sub ocropus {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'ocropus',
         {
@@ -1024,7 +1054,7 @@ sub cuneiform {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'cuneiform',
         {
@@ -1049,7 +1079,7 @@ sub gocr {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'gocr',
         {
@@ -1073,7 +1103,7 @@ sub unpaper {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'unpaper',
         {
@@ -1098,7 +1128,7 @@ sub user_defined {
     my $pidfile = $self->create_pidfile(%options);
     if ( not defined $pidfile ) { return }
 
-    my $uuid     = _note_callbacks(%options);
+    my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
         'user-defined',
         {
