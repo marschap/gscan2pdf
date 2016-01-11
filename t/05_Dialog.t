@@ -80,7 +80,7 @@ is(
     Gscan2pdf::Dialog::filter_message(
 '[image2 @ 0x1338180] Encoder did not produce proper pts, making some up.'
     ),
-    '[image2 @ %x] Encoder did not produce proper pts, making some up.',
+    '[image2 @ %%x] Encoder did not produce proper pts, making some up.',
     'Filter out memory address from unpaper warning'
 );
 

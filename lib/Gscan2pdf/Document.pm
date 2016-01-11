@@ -476,7 +476,7 @@ sub _throw_error {
     my ( $uuid, $message ) = @_;
     if ( defined $callback{$uuid}{error} ) {
         $callback{$uuid}{error}->($message);
-        delete $callback{$uuid};
+        delete $callback{$uuid}{error};
     }
     return;
 }
@@ -3692,8 +3692,8 @@ sub _thread_unpaper {
         if ($stderr) {
             $logger->error($stderr);
             _thread_throw_error( $self, $options{uuid},
-                "Error running unpaper: $stderr." );
-            return;
+                "Error running unpaper: $stderr" );
+            if ( not -s $out ) { return }
         }
         return if $_self->{cancel};
 

@@ -108,7 +108,7 @@ sub filter_message {
     $message =~ s{^(.*)           # start of message
                   0x[[:xdigit:]]+ # hex address
                   (.*)$           # rest of message
-                 }{$1%x$2}xsm;
+                 }{$1%%x$2}xsm;
     return $message;
 }
 
