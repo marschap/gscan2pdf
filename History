@@ -3,6 +3,9 @@
 * Fixed check that pages have been saved
 * Fixed scan->rotate->unpaper->OCR chaining (again). Closes bug #213
   (Cant call method freeze on an undefined value)
+* Filter out memory address from unpaper warning. Closes bug #205
+  (Gscan2pdf problem with unpaper 6.2) and Debian bug #807565
+  (Unpaper error dialog cannot be hidden permanently)
 
 
 1.3.6 (20.12.2015):

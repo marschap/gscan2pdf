@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 17;
+use Test::More tests => 18;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;
 use Scalar::Util;
@@ -75,5 +75,13 @@ $dialog->signal_connect_after(
 $event = Gtk2::Gdk::Event->new('key-press');
 $event->keyval( $Gtk2::Gdk::Keysyms{Delete} );
 $dialog->signal_emit( 'key_press_event', $event );
+
+is(
+    Gscan2pdf::Dialog::filter_message(
+'[image2 @ 0x1338180] Encoder did not produce proper pts, making some up.'
+    ),
+    '[image2 @ %x] Encoder did not produce proper pts, making some up.',
+    'Filter out memory address from unpaper warning'
+);
 
 __END__

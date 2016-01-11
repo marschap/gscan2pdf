@@ -99,6 +99,19 @@ sub dump_or_stringify {
     );
 }
 
+# Unpaper sometimes throws warning messages including a memory address.
+# As the address is very rarely the same, although the message itself is,
+# filter out the address from the message
+
+sub filter_message {
+    my ($message) = @_;
+    $message =~ s{^(.*)           # start of message
+                  0x[[:xdigit:]]+ # hex address
+                  (.*)$           # rest of message
+                 }{$1%x$2}xsm;
+    return $message;
+}
+
 1;
 
 __END__

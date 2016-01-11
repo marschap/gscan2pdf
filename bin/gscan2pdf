@@ -7068,13 +7068,14 @@ sub get_selected_properties {
 
 sub show_message_dialog {
     my %options = @_;
-    if ( defined $SETTING{message}{ $options{text} }{response} ) {
-        return $SETTING{message}{ $options{text} }{response};
+    my $text    = Gscan2pdf::Dialog::filter_message( $options{text} );
+    if ( defined $SETTING{message}{$text}{response} ) {
+        return $SETTING{message}{$text}{response};
     }
     my $dialog =
       Gtk2::MessageDialog->new( $options{parent},
         [ 'destroy-with-parent', 'modal' ],
-        $options{type}, $options{buttons}, $options{text} );
+        $options{type}, $options{buttons}, $text );
     my $cb;
     if ( $options{'store-response'} ) {
         $cb = Gtk2::CheckButton->new_with_label(
@@ -7096,7 +7097,7 @@ sub show_message_dialog {
             }
         }
         if ($filter) {
-            $SETTING{message}{ $options{text} }{response} = $response;
+            $SETTING{message}{$text}{response} = $response;
         }
     }
     return $response;
