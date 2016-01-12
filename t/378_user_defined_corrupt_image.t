@@ -54,12 +54,10 @@ $slist->import_files(
             page              => $slist->{data}[0][2],
             command           => 'convert %i -negate %o',
             finished_callback => sub {
-                ok( 0, 'caught errors from user-defined' );
                 Gtk2->main_quit;
             },
             error_callback => sub {
                 ok( 1, 'caught errors from user-defined' );
-                Gtk2->main_quit;
             }
         );
     }

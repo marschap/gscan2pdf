@@ -56,10 +56,8 @@ SKIP: {
                         error_callback => sub {
                             ok( 1, 'tesseract caught error injected in queue' );
                             chmod 0700, $dir;    # allow write access
-                            Gtk2->main_quit;
                         },
                         finished_callback => sub {
-                            ok( 0, 'tesseract caught error injected in queue' );
                             chmod 0700, $dir;    # allow write access
                             Gtk2->main_quit;
                         }
