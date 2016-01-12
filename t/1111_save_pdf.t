@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 4;
+use Test::More tests => 8;
 use Gtk2 -init;    # Could just call init separately
 
 BEGIN {
@@ -26,12 +26,22 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 $slist->import_files(
-    paths             => ['test.pnm'],
+    paths            => ['test.pnm'],
+    started_callback => sub {
+        my ( $thread, $process, $completed, $total ) = @_;
+        is( $completed, 1, 'completed counter starts at 1' );
+        is( $total,     1, 'total counter starts at 1' );
+    },
     finished_callback => sub {
         is( $slist->scans_saved, '', 'pages not tagged as saved' );
         $slist->save_pdf(
-            path              => 'test.pdf',
-            list_of_pages     => [ $slist->{data}[0][2] ],
+            path             => 'test.pdf',
+            list_of_pages    => [ $slist->{data}[0][2] ],
+            started_callback => sub {
+                my ( $thread, $process, $completed, $total ) = @_;
+                ok( $completed < 3, 'completed counter re-initialised' );
+                is( $total, 1, 'total counter re-initialised' );
+            },
             finished_callback => sub {
                 is(
                     `pdfinfo test.pdf | grep 'Page size:'`,

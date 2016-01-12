@@ -148,6 +148,8 @@ sub cancel {
     # Empty process queue first to stop any new process from starting
     $logger->info('Emptying process queue');
     while ( $_self->{requests}->dequeue_nb ) { }
+    $jobs_completed = 0;
+    $jobs_total     = 0;
 
     # Then send the thread a cancel signal
     # to stop it going beyond the next break point
@@ -1570,6 +1572,10 @@ sub set_dir {
 sub _enqueue_request {
     my ( $action, $data ) = @_;
     my $sentinel : shared = 0;
+    if ( $_self->{requests}->pending == 0 ) {
+        $jobs_completed = 0;
+        $jobs_total     = 0;
+    }
     $_self->{requests}->enqueue(
         {
             action   => $action,
@@ -1577,10 +1583,6 @@ sub _enqueue_request {
             ( $data ? %{$data} : () )
         }
     );
-    if ( $_self->{requests}->pending == 0 ) {
-        $jobs_completed = 0;
-        $jobs_total     = 0;
-    }
     $jobs_total++;
     return \$sentinel;
 }
