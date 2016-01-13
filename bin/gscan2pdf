@@ -3945,13 +3945,32 @@ sub new_scan_callback {
 
     my $rotate =
       $page_number % 2 ? $SETTING{'rotate facing'} : $SETTING{'rotate reverse'};
+    my ( $signal, $pid );
     my %options = (
-        page     => $page_number,
-        dir      => $session,
-        rotate   => $rotate,
-        ocr      => $SETTING{'OCR on scan'},
-        engine   => $SETTING{'ocr engine'},
-        language => $SETTING{'ocr language'},
+        page            => $page_number,
+        dir             => $session,
+        rotate          => $rotate,
+        ocr             => $SETTING{'OCR on scan'},
+        engine          => $SETTING{'ocr engine'},
+        language        => $SETTING{'ocr language'},
+        queued_callback => sub {
+            return update_tpbar(@_);
+        },
+        started_callback => sub {
+            my ( $thread, $process, $completed, $total ) = @_;
+            $signal =
+              setup_tpbar( $thread, $process, $completed, $total, $pid );
+            return TRUE if ( defined $signal );
+        },
+        finished_callback => sub {
+            my ( $new_page, $pending ) = @_;
+            if ( not $pending ) { $thbox->hide_all }
+            if ( defined $signal ) {
+                $tcbutton->signal_handler_disconnect($signal);
+            }
+        },
+        error_callback => \&error_callback,
+        display_callback => sub { update_uimanager() },
     );
     if ( $SETTING{'unpaper on scan'} ) {
         $options{unpaper} = $unpaper;
@@ -3975,8 +3994,6 @@ sub new_scan_callback {
         $options{resolution} = $resolution;
         $options{delete}     = TRUE;
     }
-    $options{error_callback} = \&error_callback;
-    $options{display_callback} = sub { update_uimanager() };
     $slist->import_scan(%options);
     return;
 }

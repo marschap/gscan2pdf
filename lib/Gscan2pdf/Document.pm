@@ -364,12 +364,16 @@ sub _post_process_scan {
         $self->rotate(
             angle             => $options{rotate},
             page              => $page,
+            queued_callback   => $options{queued_callback},
+            started_callback  => $options{started_callback},
             finished_callback => sub {
                 delete $options{rotate};
                 my $finished_page = $self->find_page_by_uuid( $page->{uuid} );
                 $self->_post_process_scan( $self->{data}[$finished_page][2],
                     %options );
-            }
+            },
+            error_callback   => $options{error_callback},
+            display_callback => $options{display_callback},
         );
         return;
     }
@@ -377,12 +381,16 @@ sub _post_process_scan {
         $self->unpaper(
             page              => $page,
             options           => $options{unpaper}->get_cmdline,
+            queued_callback   => $options{queued_callback},
+            started_callback  => $options{started_callback},
             finished_callback => sub {
                 delete $options{unpaper};
                 my $finished_page = $self->find_page_by_uuid( $page->{uuid} );
                 $self->_post_process_scan( $self->{data}[$finished_page][2],
                     %options );
-            }
+            },
+            error_callback   => $options{error_callback},
+            display_callback => $options{display_callback},
         );
         return;
     }
@@ -392,11 +400,15 @@ sub _post_process_scan {
             threshold         => $options{threshold},
             engine            => $options{engine},
             language          => $options{language},
+            queued_callback   => $options{queued_callback},
+            started_callback  => $options{started_callback},
             finished_callback => sub {
                 delete $options{ocr};
                 $self->_post_process_scan( undef, %options )
                   ;    # to fire finished_callback
-            }
+            },
+            error_callback   => $options{error_callback},
+            display_callback => $options{display_callback},
         );
         return;
     }
