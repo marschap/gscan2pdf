@@ -628,11 +628,6 @@ sub pages_possible {
             ++$n;
         }
 
-        # Current page doesn't exist, check for at least one more
-        elsif ( $n == 0 ) {
-            ++$n;
-        }
-
         # Try one more page
         else {
             ++$n;
