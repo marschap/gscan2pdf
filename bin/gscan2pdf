@@ -5981,13 +5981,15 @@ sub ocr_dialog {
     $obutton->grab_focus;
     $obutton->signal_connect(
         clicked => sub {
-            run_ocr(
-                $ocr_engine[ $combobe->get_active ]->[0],
-                $tesslang[ $comboboxtl->get_active ]->[0],
-                $cflang[ $comboboxcl->get_active ]->[0],
-                $cbt->get_active,
-                $spinbutton->get_value
-            );
+            my ( $tesslang, $cflang ) = @_;
+            if ( defined $comboboxtl ) {
+                $tesslang = $tesslang[ $comboboxtl->get_active ]->[0];
+            }
+            if ( defined $comboboxcl ) {
+                $tesslang = $cflang[ $comboboxcl->get_active ]->[0];
+            }
+            run_ocr( $ocr_engine[ $combobe->get_active ]->[0],
+                $tesslang, $cflang, $cbt->get_active, $spinbutton->get_value );
         }
     );
 
