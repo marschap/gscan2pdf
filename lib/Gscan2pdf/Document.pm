@@ -203,7 +203,7 @@ sub import_files {
         my $pidfile = $self->create_pidfile(%options);
         if ( not defined $pidfile ) { return }
 
-        my $uuid = $uuid_object->create_str;
+        my $uuid = $self->_note_callbacks(%options);
         $callback{$uuid}{finished} = sub {
             my ($info) = @_;
             $logger->debug("In finished_callback for $path");
@@ -216,11 +216,6 @@ sub import_files {
                 );
             }
         };
-        $callback{$uuid}{queued}    = $options{queued_callback};
-        $callback{$uuid}{started}   = $options{started_callback};
-        $callback{$uuid}{running}   = $options{running_callback};
-        $callback{$uuid}{error}     = $options{error_callback};
-        $callback{$uuid}{cancelled} = $options{cancelled_callback};
         my $sentinel =
           _enqueue_request( 'get-file-info',
             { path => $path, pidfile => "$pidfile", uuid => $uuid } );
