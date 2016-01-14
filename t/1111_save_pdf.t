@@ -29,8 +29,8 @@ $slist->import_files(
     paths            => ['test.pnm'],
     started_callback => sub {
         my ( $thread, $process, $completed, $total ) = @_;
-        is( $completed, 1, 'completed counter starts at 1' );
-        is( $total,     1, 'total counter starts at 1' );
+        is( $completed, 0, 'completed counter starts at 0' );
+        is( $total,     2, 'total counter starts at 2' );
     },
     finished_callback => sub {
         is( $slist->scans_saved, '', 'pages not tagged as saved' );
@@ -39,8 +39,8 @@ $slist->import_files(
             list_of_pages    => [ $slist->{data}[0][2] ],
             started_callback => sub {
                 my ( $thread, $process, $completed, $total ) = @_;
-                ok( $completed < 3, 'completed counter re-initialised' );
-                is( $total, 1, 'total counter re-initialised' );
+                is( $completed, 0, 'completed counter re-initialised' );
+                is( $total,     0, 'total counter re-initialised' );
             },
             finished_callback => sub {
                 is(

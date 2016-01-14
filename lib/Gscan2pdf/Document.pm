@@ -563,6 +563,13 @@ sub check_return_queue {
                     $callback{ $data->{uuid} }{finished}->( $data->{message} );
                     delete $callback{ $data->{uuid} };
                 }
+                if ( $_self->{requests}->pending == 0 ) {
+                    $jobs_completed = 0;
+                    $jobs_total     = 0;
+                }
+                else {
+                    $jobs_completed++;
+                }
             }
         }
     }
@@ -1579,10 +1586,6 @@ sub set_dir {
 sub _enqueue_request {
     my ( $action, $data ) = @_;
     my $sentinel : shared = 0;
-    if ( $_self->{requests}->pending == 0 ) {
-        $jobs_completed = 0;
-        $jobs_total     = 0;
-    }
     $_self->{requests}->enqueue(
         {
             action   => $action,
@@ -1613,7 +1616,6 @@ sub _monitor_process {
         $_POLL_INTERVAL,
         sub {
             if ( ${ $options{sentinel} } == 2 ) {
-                $jobs_completed++;
                 $self->_monitor_process_finished_callback( $pid, \%options );
                 return Glib::SOURCE_REMOVE;
             }
