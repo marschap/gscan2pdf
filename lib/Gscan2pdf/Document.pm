@@ -2229,7 +2229,7 @@ sub _thread_import_pdf {
         }
 
         # Import each image
-        my @images = glob 'x-???.???';
+        my @images = glob 'x-??*.???';
         foreach (@images) {
             my ($ext) = /([^.]+)$/xsm;
             try {
