@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.3.6
+Version: 1.3.7
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -92,7 +92,13 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Wed Oct 07 2015 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sat Jan 16 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #807565 (Unpaper error dialog cannot be hidden permanently)
+    Closes: #810834 (Always Getting Some Pages Not Saved Warning)
+  - New upstream release
+    Closes: #648627
+    (post-dialog selection changes influence which pages are saved)
   - New upstream release
   - New upstream release
   - Declared libossp-uuid-perl as an alternative to libdata-uuid-perl
