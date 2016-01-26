@@ -3138,7 +3138,7 @@ sub file_chooser_response_callback {
                 save_djvu( $filename, $list_of_pages );
             }
             when ('tif') {
-                save_tiff( $filename, $list_of_pages );
+                save_tiff( $filename, undef, $list_of_pages );
             }
             when ('txt') {
                 save_text( $filename, $list_of_pages );
