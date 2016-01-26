@@ -6239,9 +6239,8 @@ sub take_snapshot {
 "Free space in $session (Mb): $df->{bavail} (warning at $SETTING{'available-tmp-warning'})"
         );
         if ( $df->{bavail} < $SETTING{'available-tmp-warning'} ) {
-            my $text = sprintf
-              $d->get('%dMb free in %s.'),
-              $df->{bavail}, $SETTING{TMPDIR};
+            my $text = sprintf $d->get('%dMb free in %s.'), $df->{bavail},
+              $session;
             show_message_dialog(
                 parent  => $window,
                 type    => 'warning',
