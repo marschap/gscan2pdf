@@ -460,7 +460,7 @@ sub hide_geometry {
 # and walking the options tree, update the widgets
 
 sub set_option {
-    my ( $self, $option, $val, $finished_callback ) = @_;
+    my ( $self, $option, $val ) = @_;
     if ( not defined $option ) { return }
 
     $self->add_to_current_scan_options( $option, $val );
@@ -504,7 +504,6 @@ sub set_option {
             }
 
             $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
-            if ( defined $finished_callback ) { $finished_callback->() }
         },
         error_callback => sub {
             my ($message) = @_;

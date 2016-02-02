@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 46;
+use Test::More tests => 47;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -213,7 +213,13 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
             'changed-profile' => sub {
                 my ( $widget, $profile ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
-                is( $profile, 'my profile', 'reset profile' );
+                is( $profile, 'my profile',
+                    'reset profile back to my profile' );
+                is_deeply(
+                    $dialog->get('current-scan-options'),
+                    [ { $resolution => 52 }, { mode => 'Color' } ],
+                    'current-scan-options after reset to profile my profile'
+                );
                 $flag = TRUE;
                 $loop->quit;
             }
@@ -251,20 +257,16 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         ######################################
 
-        $dialog->set(
-            'paper-formats',
-            {
-                new => {
-                    l => 1,
-                    y => 50,
-                    x => 50,
-                    t => 2,
-                }
-            }
+        $dialog->add_profile(
+            'cli geometry',
+            [
+                { l           => 1 },
+                { y           => 50 },
+                { x           => 50 },
+                { t           => 2 },
+                { $resolution => 50 }
+            ]
         );
-
-        $dialog->add_profile( 'cli geometry',
-            [ { 'Paper size' => 'new' }, { $resolution => 50 } ] );
 
         # need a new main loop because of the timeout
         $loop             = Glib::MainLoop->new;
@@ -274,15 +276,15 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 my ( $widget, $profile ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
                 my $options = $dialog->get('available-scan-options');
-                my $expected = [ { 'Paper size' => 'new' } ];
+                my $expected = [ { mode => 'Color' } ];
                 push @$expected, { scalar(SANE_NAME_PAGE_HEIGHT) => 52 }
                   if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
                 push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 51 }
                   if ( defined $options->by_name(SANE_NAME_PAGE_WIDTH) );
                 push @$expected, { scalar(SANE_NAME_SCAN_TL_X) => 1 },
-                  { scalar(SANE_NAME_SCAN_TL_Y) => 2 },
-                  { scalar(SANE_NAME_SCAN_BR_X) => 51 },
                   { scalar(SANE_NAME_SCAN_BR_Y) => 52 },
+                  { scalar(SANE_NAME_SCAN_BR_X) => 51 },
+                  { scalar(SANE_NAME_SCAN_TL_Y) => 2 },
                   { $resolution                 => 50 };
                 is_deeply( $dialog->get('current-scan-options'),
                     $expected, 'CLI geometry option names' );

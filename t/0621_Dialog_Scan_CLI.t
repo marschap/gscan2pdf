@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 48;
+use Test::More tests => 49;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -207,8 +207,9 @@ $signal = $dialog->signal_connect(
         $loop   = Glib::MainLoop->new;
         $flag   = FALSE;
         $signal = $dialog->signal_connect(
-            'changed-scan-option' => sub {
+            'changed-profile' => sub {
                 my ( $widget, $option, $value ) = @_;
+                $dialog->signal_handler_disconnect($signal);
                 is( $dialog->get('profile'),
                     undef, 'changing an option deselects the current profile' );
                 is_deeply(
@@ -216,7 +217,6 @@ $signal = $dialog->signal_connect(
                     [ { mode => 'Color' }, { $resolution => 51 } ],
                     'current-scan-options without profile'
                 );
-                $dialog->signal_handler_disconnect($signal);
                 $flag = TRUE;
                 $loop->quit;
             }
@@ -242,7 +242,12 @@ $signal = $dialog->signal_connect(
         $signal = $dialog->signal_connect(
             'changed-profile' => sub {
                 my ( $widget, $profile ) = @_;
-                is( $profile, 'my profile', 'reset profile' );
+                is( $profile, 'my profile', 'reset profile name' );
+                is_deeply(
+                    $dialog->get('current-scan-options'),
+                    [ { $resolution => 52 }, { mode => 'Color' } ],
+                    'reset profile options'
+                );
                 $dialog->signal_handler_disconnect($signal);
                 $flag = TRUE;
                 $loop->quit;
@@ -259,9 +264,17 @@ $signal = $dialog->signal_connect(
         $signal = $dialog->signal_connect(
             'changed-profile' => sub {
                 my ( $widget, $profile ) = @_;
+                $dialog->signal_handler_disconnect($signal);
                 is( $profile, undef,
 'changing an option fires the changed-profile signal if a profile is set'
                 );
+            }
+        );
+        my $signal2;
+        $signal2 = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                my ( $widget, $name, $value ) = @_;
+                $dialog->signal_handler_disconnect($signal2);
                 is_deeply(
                     $dialog->get('current-scan-options'),
                     [ { $resolution => 52 }, { mode => 'Gray' } ],
@@ -270,7 +283,6 @@ $signal = $dialog->signal_connect(
                 my $reloaded_options = $dialog->get('available-scan-options');
                 is( $reloaded_options->by_name($resolution)->{val},
                     52, 'option value updated when reloaded' );
-                $dialog->signal_handler_disconnect($signal);
                 $flag = TRUE;
                 $loop->quit;
             }
@@ -312,7 +324,7 @@ $signal = $dialog->signal_connect(
                 my ( $widget, $option, $value ) = @_;
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [ { x => 11 } ],
+                    [ { $resolution => 52 }, { mode => 'Color' }, { x => 11 } ],
                     'map option names'
                 );
                 $dialog->signal_handler_disconnect($signal);
@@ -320,25 +332,21 @@ $signal = $dialog->signal_connect(
                 $loop->quit;
             }
         );
-        $dialog->set( 'current-scan-options', [ { $brx => 11 } ] );
+        $dialog->set_current_scan_options( [ { $brx => 11 } ] );
         $loop->run unless ($flag);
 
         ######################################
 
-        $dialog->set(
-            'paper-formats',
-            {
-                new => {
-                    l => 1,
-                    y => 50,
-                    x => 50,
-                    t => 2,
-                }
-            }
+        $dialog->add_profile(
+            'cli geometry',
+            [
+                { l           => 1 },
+                { y           => 50 },
+                { x           => 50 },
+                { t           => 2 },
+                { $resolution => 50 }
+            ]
         );
-
-        $dialog->add_profile( 'cli geometry',
-            [ { 'Paper size' => 'new' }, { $resolution => 50 } ] );
 
         # need a new main loop because of the timeout
         $loop   = Glib::MainLoop->new;
@@ -347,14 +355,14 @@ $signal = $dialog->signal_connect(
             'changed-profile' => sub {
                 my ( $widget, $profile ) = @_;
                 my $options = $dialog->get('available-scan-options');
-                my $expected = [ { 'Paper size' => 'new' } ];
+                my $expected = [ { mode => 'Color' } ];
                 push @$expected, { scalar(SANE_NAME_PAGE_HEIGHT) => 52 }
                   if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
                 push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 51 }
                   if ( defined $options->by_name(SANE_NAME_PAGE_WIDTH) );
-                push @$expected, { l => 1 }, { t => 2 }, { x => 50 },
-                  { y           => 50 },
-                  { $resolution => 50 };
+                push @$expected, { l => 1 },
+                  { y => 50 }, { x           => 50 },
+                  { t => 2 },  { $resolution => 50 };
                 is_deeply( $dialog->get('current-scan-options'),
                     $expected, 'CLI geometry option names' );
                 $dialog->signal_handler_disconnect($signal);
@@ -391,8 +399,7 @@ $signal = $dialog->signal_connect(
                 is( $paper, 'new2', 'changed-paper' );
 
                 my $options = $dialog->get('available-scan-options');
-                my $expected =
-                  [ { 'Paper size' => 'new' }, { $resolution => 50 } ];
+                my $expected = [ { mode => 'Color' }, { $resolution => 50 } ];
                 push @$expected, { scalar(SANE_NAME_PAGE_HEIGHT) => 10 }
                   if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
                 push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 10 }

@@ -207,7 +207,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         'current-scan-options',                               # name
         'Current scan options',                               # nick
         'Array of scan options making up current profile',    # blurb
-        [qw/readable writable/]                               # flags
+        [qw/readable/]                                        # flags
     ),
     Glib::ParamSpec->scalar(
         'visible-scan-options',                                  # name
@@ -488,12 +488,8 @@ sub INIT_INSTANCE {
     $vboxsp->set_border_width($border_width);
     $framesp->add($vboxsp);
     $self->{combobsp} = Gtk2::ComboBox->new_text;
-    $self->{combobsp}->signal_connect(
-        changed => sub {
-            my $profile = $self->{combobsp}->get_active_text;
-            if ( defined $profile ) { $self->set( 'profile', $profile ) }
-        }
-    );
+    $self->{combobsp}->signal_connect( changed =>
+          sub { $self->set_profile( $self->{combobsp}->get_active_text ) } );
     $vboxsp->pack_start( $self->{combobsp}, FALSE, FALSE, 0 );
     my $hboxsp = Gtk2::HBox->new;
     $vboxsp->pack_end( $hboxsp, FALSE, FALSE, 0 );
@@ -519,11 +515,7 @@ sub INIT_INSTANCE {
             $dialog->show_all;
 
             if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/xsm ) {
-                my $profile = $entry->get_text;
-                $self->add_profile( $profile,
-                    $self->get('current-scan-options') );
-                $self->{combobsp}->set_active(
-                    get_combobox_num_rows( $self->{combobsp} ) - 1 );
+                $self->save_current_profile( $entry->get_text );
             }
             $dialog->destroy;
         }
@@ -585,13 +577,13 @@ sub SET_PROPERTY {
     my ( $self, $pspec, $newval ) = @_;
     my $name   = $pspec->get_name;
     my $oldval = $self->get($name);
-    $self->{$name} = $newval;
 
     # Have to set logger separately as it has already been set in the subclassed
     # widget
     if ( $name eq 'logger' ) {
         $logger = $newval;
         $logger->debug('Set logger in Gscan2pdf::Dialog::Scan');
+        $self->{$name} = $newval;
     }
     elsif (( defined $newval and defined $oldval and $newval ne $oldval )
         or ( defined $newval xor defined $oldval ) )
@@ -604,29 +596,37 @@ sub SET_PROPERTY {
               . Gscan2pdf::Dialog::dump_or_stringify($newval);
             $logger->debug("Started$msg");
         }
+        my $callback = FALSE;
         given ($name) {
             when ('device') {
+                $self->{$name} = $newval;
                 $self->set_device($newval);
                 $self->signal_emit( 'changed-device', $newval )
             }
             when ('device_list') {
+                $self->{$name} = $newval;
                 $self->set_device_list($newval);
                 $self->signal_emit( 'changed-device-list', $newval )
             }
             when ('num_pages') {
+                $self->{$name} = $newval;
                 $self->signal_emit( 'changed-num-pages', $newval )
             }
             when ('page_number_start') {
+                $self->{$name} = $newval;
                 $self->signal_emit( 'changed-page-number-start', $newval )
             }
             when ('page_number_increment') {
+                $self->{$name} = $newval;
                 $self->signal_emit( 'changed-page-number-increment', $newval )
             }
             when ('side_to_scan') {
+                $self->{$name} = $newval;
                 $self->signal_emit( 'changed-side-to-scan', $newval );
                 $self->{combobs}->set_active( $newval eq 'facing' ? 0 : 1 );
             }
             when ('sided') {
+                $self->{$name} = $newval;
                 my $widget = $self->{buttons};
                 if ( $newval eq 'double' ) {
                     $widget = $self->{buttond};
@@ -638,32 +638,45 @@ sub SET_PROPERTY {
                 $widget->set_active(TRUE);
             }
             when ('paper') {
+                $self->{$name} = $newval;
                 if ( set_combobox_by_text( $self->{combobp}, $newval ) ) {
                     $self->signal_emit( 'changed-paper', $newval );
                 }
             }
             when ('paper_formats') {
+                $self->{$name} = $newval;
                 $self->set_paper_formats($newval);
                 $self->signal_emit( 'changed-paper-formats', $newval )
             }
             when ('profile') {
+                $callback = TRUE;
+                my $signal;
+                $signal = $self->signal_connect(
+                    'changed-profile' => sub {
+                        $self->signal_handler_disconnect($signal);
+                        set_combobox_by_text( $self->{combobsp}, $newval );
+                        if ( defined $logger ) {
+                            $logger->debug("Finished$msg");
+                        }
+                    }
+                );
                 $self->set_profile($newval);
             }
             when ('available_scan_options') {
+                $self->{$name} = $newval;
                 $self->signal_emit('reloaded-scan-options')
             }
-
-            when ('current_scan_options') {
-                $self->set_current_scan_options($newval)
-            }
             when ('visible_scan_options') {
+                $self->{$name} = $newval;
                 $self->signal_emit( 'changed-option-visibility', $newval );
             }
             default {
                 $self->SUPER::SET_PROPERTY( $pspec, $newval );
             }
         }
-        if ( defined $logger ) { $logger->debug("Finished$msg") }
+        if ( defined $logger and not $callback ) {
+            $logger->debug("Finished$msg");
+        }
     }
     return;
 }
@@ -1109,25 +1122,45 @@ sub edit_paper {
     return;
 }
 
+sub _clone_profile {
+    my ($profile) = @_;
+    my @clone;
+    if ( ref($profile) eq 'ARRAY' ) {
+        for ( @{$profile} ) {
+            my ( $key, $val ) = each %{$_};
+            if ( defined $key ) { push @clone, { $key => $val } }
+        }
+    }
+    elsif ( ref($profile) eq 'HASH' ) {
+
+        # If the profile is a hash, the order is undefined.
+        # Sort it to be consistent for tests.
+        for my $key ( sort keys %{$profile} ) {
+            push @clone, { $key => $profile->{$key} };
+        }
+    }
+    return \@clone;
+}
+
+# keeping this as a separate sub allows us to test it
+sub save_current_profile {
+    my ( $self, $name ) = @_;
+    $self->add_profile( $name, $self->{current_scan_options} );
+    $self->{combobsp}
+      ->set_active( get_combobox_num_rows( $self->{combobsp} ) - 1 );
+    return;
+}
+
 sub add_profile {
     my ( $self, $name, $profile ) = @_;
     if ( defined $name and defined $profile ) {
-        $self->{profiles}{$name} = ();
-        if ( ref($profile) eq 'ARRAY' ) {
-            for ( @{$profile} ) {
-                push @{ $self->{profiles}{$name} }, $_;
-            }
-        }
-        elsif ( ref($profile) eq 'HASH' ) {
 
-            # If the profile is a hash, the order is undefined.
-            # Sort it to be consistent for tests.
-            for my $key ( sort keys %{$profile} ) {
-                push @{ $self->{profiles}{$name} },
-                  { $key => $profile->{$key} };
-            }
-        }
+        # if we don't clone the profile,
+        # we get strange action-at-a-distance problems
+        $self->{profiles}{$name} = _clone_profile($profile);
         $self->{combobsp}->append_text($name);
+        $logger->debug( "Saved profile '$name':",
+            Dumper( $self->{profiles}{$name} ) );
         $self->signal_emit( 'added-profile', $name, $self->{profiles}{$name} );
     }
     return;
@@ -1135,7 +1168,6 @@ sub add_profile {
 
 sub set_profile {
     my ( $self, $name ) = @_;
-    set_combobox_by_text( $self->{combobsp}, $name );
     if ( defined $name and $name ne $EMPTY ) {
 
         # If we are setting the profile, don't unset the profile name
@@ -1145,17 +1177,37 @@ sub set_profile {
         my $signal;
         $signal = $self->signal_connect(
             'changed-current-scan-options' => sub {
-                $self->{setting_profile} = FALSE;
-                $self->signal_emit( 'changed-profile', $name );
                 $self->signal_handler_disconnect($signal);
+                $self->{setting_profile} = FALSE;
+
+                # set property before emitting signal to ensure callbacks
+                # receive correct value
+                $self->{profile} = $name;
+                $self->signal_emit( 'changed-profile', $name );
             }
         );
 
-        $self->set( 'current-scan-options', $self->{profiles}{$name} );
+        # for reasons I don't understand, without walking the reference tree,
+        # parts of $self->{profiles}{$name} are undef
+        my_dumper( $self->{profiles}{$name} );
+
+        # I don't understand why it necessary to clone the profile here,
+        # since it is cloned again in set_current_scan_options(),
+        # but it shouldn't hurt, and otherwise, it fails t/0601_Dialog_Scan.t
+
+        # I also don't understand why the $clone variable is necessary: why
+        # I can't simply pass the return value from _clone_profile() directly
+        # into set_current_scan_options(),
+        # but otherwise it fails t/0610_Dialog_Scan.t
+        my $clone = _clone_profile( $self->{profiles}{$name} );
+        $self->set_current_scan_options($clone);
     }
 
     # no need to wait - nothing to do
     else {
+        # set property before emitting signal to ensure callbacks
+        # receive correct value
+        $self->{profile} = $name;
         $self->signal_emit( 'changed-profile', $name );
     }
     return;
@@ -1588,26 +1640,17 @@ sub set_current_scan_options {
 
     if ( not defined $profile ) { return }
 
+    # First clone the profile, as otherwise it would be self-modifying
+    my $clone = _clone_profile($profile);
+
     # As scanimage and scanadf rename the geometry options,
     # we have to map them back to the original names
-    $self->map_geometry_names($profile);
-
-    # Move them first to a dummy array, as otherwise it would be self-modifying
-    my @defaults;
-
-    # Config::General flattens arrays with 1 entry to scalars,
-    # so we must check for this
-    if ( ref($profile) ne 'ARRAY' ) {
-        push @defaults, $profile;
-    }
-    else {
-        @defaults = @{$profile};
-    }
+    $self->map_geometry_names($clone);
 
     # Give the GUI a chance to catch up between settings,
     # in case they have to be reloaded.
     # Use the callback to trigger the next loop
-    $self->_set_option_profile( 0, \@defaults );
+    $self->_set_option_profile( 0, $clone );
     return;
 }
 
@@ -1617,7 +1660,7 @@ sub _set_option_profile {
 
         # for reasons I don't understand, without walking the reference tree,
         # parts of $profile are undef
-        Gscan2pdf::Dialog::Scan::my_dumper( $profile->[$i] );
+        my_dumper( $profile->[$i] );
         my ( $name, $val ) = each %{ $profile->[$i] };
 
         if ( $name eq 'Paper size' ) {
@@ -1631,38 +1674,34 @@ sub _set_option_profile {
         if ( not defined $opt or $opt->{cap} & SANE_CAP_INACTIVE ) {
             $logger->warn("Ignoring inactive option '$name'.");
             splice @{$profile}, $i, 1;
-
-            # Update current_scan_options with a copy of the profile to prevent
-            # other callbacks changing it whilst we are applying it
-            my @dummy = @{$profile};
-            $self->{current_scan_options} = \@dummy;
             $self->_set_option_profile( $i, $profile );
             return;
         }
 
         $logger->debug("Setting option '$name' to '$val'.");
-        $self->set_option(
-            $opt, $val,
-            sub {
+        my $signal;
+        $signal = $self->signal_connect(
+            'changed-scan-option' => sub {
+                $self->signal_handler_disconnect($signal);
                 $self->_set_option_profile( $i + 1, $profile );
             }
         );
+        $self->set_option( $opt, $val );
 
         my $widget = $opt->{widget};
         if ( defined $widget ) {
             $logger->debug("Setting widget '$name' to '$val'.");
+            $widget->signal_handler_block( $widget->{signal} );
             given ($widget) {
                 when ( $widget->isa('Gtk2::CheckButton') ) {
                     if ( $val eq $EMPTY ) { $val = 0 }
                     if ( $widget->get_active != $val ) {
                         $widget->set_active($val);
-                        return $i;
                     }
                 }
                 when ( $widget->isa('Gtk2::SpinButton') ) {
                     if ( $widget->get_value != $val ) {
                         $widget->set_value($val);
-                        return $i;
                     }
                 }
                 when ( $widget->isa('Gtk2::ComboBox') ) {
@@ -1674,16 +1713,15 @@ sub _set_option_profile {
                             }
                         }
                         if ( defined $index ) { $widget->set_active($index) }
-                        return $i;
                     }
                 }
                 when ( $widget->isa('Gtk2::Entry') ) {
                     if ( $widget->get_text ne $val ) {
                         $widget->set_text($val);
-                        return $i;
                     }
                 }
             }
+            $widget->signal_handler_unblock( $widget->{signal} );
         }
         else {
             $logger->warn("Widget for option '$name' undefined.");
@@ -1698,7 +1736,7 @@ sub _set_option_profile {
             $self->get('current-scan-options')
         );
     }
-    return;
+    return $i;
 }
 
 # Extract a option value from a profile

@@ -261,7 +261,6 @@ sub scan_options {
             my ($options) = @_;
             $pbar->destroy;
             $hboxd->show_all;
-            $logger->info($options);
             if ( $self->get('cache-options') ) {
                 my $cache = $self->get('options-cache');
 
@@ -696,7 +695,7 @@ sub hide_geometry {
 # and walking the options tree, update the widgets
 
 sub set_option {
-    my ( $self, $option, $val, $finished_callback ) = @_;
+    my ( $self, $option, $val ) = @_;
     $option->{val} = $val;
     $self->update_widget( $option->{name}, $val );
 
@@ -841,7 +840,6 @@ sub set_option {
 
         $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
     }
-    if ( defined $finished_callback ) { $finished_callback->() }
     return;
 }
 
