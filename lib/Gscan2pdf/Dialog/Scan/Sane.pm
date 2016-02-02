@@ -522,7 +522,7 @@ sub map_geometry_names {
 
         # for reasons I don't understand, without walking the reference tree,
         # parts of $profile are undef
-        Gscan2pdf::Dialog::Scan::my_dumper( $profile->[$i] );
+        Dumper( $profile->[$i] );
         my ( $name, $val ) = each %{ $profile->[$i] };
         given ($name) {
             when ('l') {

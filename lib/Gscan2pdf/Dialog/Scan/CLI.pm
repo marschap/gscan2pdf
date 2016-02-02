@@ -180,7 +180,7 @@ sub cache_key {
 
         # for reasons I don't understand, without walking the reference tree,
         # parts of $default are undef
-        Gscan2pdf::Dialog::Scan::my_dumper( $self->{current_scan_options} );
+        Dumper( $self->{current_scan_options} );
 
         # grep the reload triggers from the current options
         for ( @{ $self->{current_scan_options} } ) {
@@ -852,7 +852,7 @@ sub patch_cache {
     # for reasons I don't understand, without walking the
     # reference tree, parts of $self->{current_scan_options}
     # are undef
-    Gscan2pdf::Dialog::Scan::my_dumper( $self->{current_scan_options} );
+    Dumper( $self->{current_scan_options} );
     for my $hashref ( @{ $self->{current_scan_options} } ) {
         my ( $key, undef ) = each %{$hashref};
         my $updated_option =
@@ -945,7 +945,7 @@ sub map_geometry_names {
 
         # for reasons I don't understand, without walking the reference tree,
         # parts of $profile are undef
-        Gscan2pdf::Dialog::Scan::my_dumper($profile);
+        Dumper($profile);
         my ( $name, $val ) = each %{ $profile->[$i] };
         given ($name) {
             when (SANE_NAME_SCAN_TL_X) {
@@ -993,7 +993,7 @@ sub map_options {
 
         # for reasons I don't understand, without walking the reference tree,
         # parts of $_ are undef
-        Gscan2pdf::Dialog::Scan::my_dumper($_);
+        Dumper($_);
         my ( $key, $val ) = each %{$_};
         if ( $key ne 'Paper size' ) {
             my $opt = $options->by_name($key);

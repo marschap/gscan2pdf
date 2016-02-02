@@ -1189,7 +1189,7 @@ sub set_profile {
 
         # for reasons I don't understand, without walking the reference tree,
         # parts of $self->{profiles}{$name} are undef
-        my_dumper( $self->{profiles}{$name} );
+        Dumper( $self->{profiles}{$name} );
 
         # I don't understand why it necessary to clone the profile here,
         # since it is cloned again in set_current_scan_options(),
@@ -1614,25 +1614,6 @@ sub update_graph {
     return;
 }
 
-# roll my own Data::Dumper to walk the reference tree without printing the results
-
-sub my_dumper {
-    my ($ref) = @_;
-    given ( ref $ref ) {
-        when ('ARRAY') {
-            for ( @{$ref} ) {
-                my_dumper($_);
-            }
-        }
-        when ('HASH') {
-            while ( my ( $key, $val ) = each %{$ref} ) {
-                my_dumper($val);
-            }
-        }
-    }
-    return;
-}
-
 # Set options to profile referenced by hashref
 
 sub set_current_scan_options {
@@ -1660,7 +1641,7 @@ sub _set_option_profile {
 
         # for reasons I don't understand, without walking the reference tree,
         # parts of $profile are undef
-        my_dumper( $profile->[$i] );
+        Dumper( $profile->[$i] );
         my ( $name, $val ) = each %{ $profile->[$i] };
 
         if ( $name eq 'Paper size' ) {
@@ -1746,7 +1727,7 @@ sub get_option_from_profile {
 
     # for reasons I don't understand, without walking the reference tree,
     # parts of $profile are undef
-    my_dumper($profile);
+    Dumper($profile);
     for ( @{$profile} ) {
         my ( $key, $val ) = each %{$_};
         return $val if ( $key eq $name );
