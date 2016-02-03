@@ -4886,21 +4886,22 @@ EOS
       <<'EOS'; # inverted commas required around EOS because of UTF-8 in $translators
 Alan Mortensen
 Aputsiaĸ Niels Janussen
-gorkaazk
+Микола Ткач
 Tobias Bannert
+gorkaazk
 Jean-Marc
-Ettore Atalan
+Pavel Borecki
 GenghisKhan
+Ettore Atalan
 mavosaure
-Dusan Kazik
 Tom
-Peter
-Aleksey Kabanov
-Christoph Langner
+Dusan Kazik
 Matthias Mailänder
 Jacob Nielsen
 Édouard Lopez
 JDammann
+Peter
+Aleksey Kabanov
 EOS
     $about->set_translator_credits($translators);
     $about->set_artists('lodp, Andreas E.');
