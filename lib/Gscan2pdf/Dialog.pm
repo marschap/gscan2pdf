@@ -38,7 +38,7 @@ use Glib::Object::Subclass Gtk2::Window::,
     ),
   ];
 
-our $VERSION = '1.3.7';
+our $VERSION = '1.3.8';
 my $EMPTY = q{};
 
 sub INIT_INSTANCE {

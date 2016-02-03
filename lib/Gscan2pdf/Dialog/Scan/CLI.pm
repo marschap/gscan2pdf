@@ -71,7 +71,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, signals => {
     ),
   ];
 
-our $VERSION = '1.3.7';
+our $VERSION = '1.3.8';
 
 my $SANE_NAME_PAGE_HEIGHT = SANE_NAME_PAGE_HEIGHT;
 my $SANE_NAME_PAGE_WIDTH  = SANE_NAME_PAGE_WIDTH;
