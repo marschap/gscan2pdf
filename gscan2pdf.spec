@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.3.7
+Version: 1.3.8
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -92,7 +92,9 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sat Jan 16 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Thu Feb 04 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #812684 (cannot save in .tif format)
   - New upstream release
     Closes: #807565 (Unpaper error dialog cannot be hidden permanently)
     Closes: #810834 (Always Getting Some Pages Not Saved Warning)
