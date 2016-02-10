@@ -13,8 +13,14 @@ use feature 'switch';
 use List::MoreUtils qw{any};
 use Data::Dumper;
 
-my $EMPTY = q{};
-my $COMMA = q{,};
+my ( $d, $d_sane, $logger, $tooltips, $EMPTY, $COMMA );
+
+# otherwise older version of perl complain that $EMPTY is not defined
+# in the subclass
+BEGIN {
+    $EMPTY = q{};
+    $COMMA = q{,};
+}
 
 # logger duplicated from Gscan2pdf::Dialog::Scan
 # to ensure that SET_PROPERTIES gets called in both places
@@ -75,7 +81,6 @@ our $VERSION = '1.3.8';
 
 my $SANE_NAME_PAGE_HEIGHT = SANE_NAME_PAGE_HEIGHT;
 my $SANE_NAME_PAGE_WIDTH  = SANE_NAME_PAGE_WIDTH;
-my ( $d, $d_sane, $logger, $tooltips );
 
 sub INIT_INSTANCE {
     my $self = shift;
