@@ -79,6 +79,7 @@ use Data::Dumper;
 use Filesys::Df;
 use English qw( -no_match_vars )
   ;    # for $PERL_VERSION, $PROGRAM_NAME, $EVAL_ERROR, $ERRNO
+use Time::Local qw/timegm_nocheck/;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -97,7 +98,6 @@ Readonly my $EMPTY_LIST              => -1;
 Readonly my $_100_PERCENT            => 100;
 Readonly my $MAX_DPI                 => 2400;
 Readonly my $BITS_PER_BYTE           => 8;
-Readonly my $SECONDS_PER_DAY         => 24 * 60 * 60;
 Readonly my $DAYS_PER_MONTH          => 31;
 Readonly my $MONTHS_PER_YEAR         => 12;
 Readonly my $RIGHT_MOUSE_BUTTON      => 3;
@@ -2117,8 +2117,7 @@ sub add_metadata_dialog {
     $table->attach( $hboxe, 0, 1, 0, 1, 'fill', 'shrink', 0, 0 );
     my $labele = Gtk2::Label->new( $d->get('Date') );
     $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
-    my ( $day, $month, $year ) =
-      seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
+    my ( $day, $month, $year ) = seconds_to_date( $SETTING{'document date'} );
 
     my $entryd =
       Gtk2::Entry->new_with_max_length(10);  ## no critic (ProhibitMagicNumbers)
@@ -2291,22 +2290,15 @@ sub update_metadata_settings {
     $SETTING{subject}  = $entrys->update( $SETTING{'subject-suggestions'} );
     $SETTING{keywords} = $entryk->update( $SETTING{'keyword-suggestions'} );
     my ( $year, $month, $day ) = text_to_date( $entryd->get_text );
-    use Time::Local qw/timegm_nocheck/;
-    my $then = timegm_nocheck( 0, 0, 0, $day, $month - 1, $year );
-    my $now = time;
-
-    # "floor" $now at 0:00am (analogue to $then)
-    $now -= ( $now % $SECONDS_PER_DAY );
-
-    $SETTING{'date offset'} =
-      int( $then / $SECONDS_PER_DAY - $now / $SECONDS_PER_DAY );
+    $SETTING{'document date'} =
+      timegm_nocheck( 0, 0, 0, $day, $month - 1, $year );
     return;
 }
 
 sub expand_metadata_pattern {
     my $template = shift;
     my ( $dday, $dmonth, $dyear, $dhour, $dmin, $dsec ) =
-      seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
+      seconds_to_date( $SETTING{'document date'} );
     $dmonth = sprintf '%02d', $dmonth;
     $dday   = sprintf '%02d', $dday;
     my ( $tday, $tmonth, $tyear ) = seconds_to_date(time);
@@ -2338,7 +2330,7 @@ sub prepare_output_metadata {
           ? "D:%4i%02i%02i000000+00'00'"
           : '%4i-%02i-%02i 00:00:00+00:00';
         my ( $day, $month, $year ) =
-          seconds_to_date( time + $SETTING{'date offset'} * $SECONDS_PER_DAY );
+          seconds_to_date( $SETTING{'document date'} );
         $h{CreationDate} = sprintf $dateformat, $year, $month, $day;
         $h{ModDate}      = sprintf $dateformat, $year, $month, $day;
         $h{Creator}      = "$prog_name v$VERSION";

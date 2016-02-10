@@ -79,7 +79,7 @@ Gscan2pdf::Config::add_defaults( \%output );
     'unsharp threshold'     => 0.05,
     'cache options'         => TRUE,
     'restore window'        => TRUE,
-    'date offset'           => 0,
+    'document date'         => time,
     'pdf compression'       => 'auto',
     'quality'               => 75,
     'pages to scan'         => 1,
