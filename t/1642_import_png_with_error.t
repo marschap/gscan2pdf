@@ -32,11 +32,11 @@ $slist->import_files(
         chmod 0500, $dir;    # no write access
     },
     error_callback => sub {
-        ok( 1, 'import_file caught error injected in queue' );
+        pass('import_file caught error injected in queue');
         Gtk2->main_quit;
     },
     finished_callback => sub {
-        ok( 0, 'import_file caught error injected in queue' );
+        fail('import_file caught error injected in queue');
         Gtk2->main_quit;
     },
 );

@@ -42,7 +42,7 @@ SKIP: {
                 page           => $slist->{data}[0][2],
                 language       => 'eng',
                 error_callback => sub {
-                    ok( 1, 'caught error injected before cuneiform' );
+                    pass('caught error injected before cuneiform');
                     chmod 0700, $dir;    # allow write access
 
                     $slist->cuneiform(
@@ -54,7 +54,7 @@ SKIP: {
                             chmod 0500, $dir;    # no write access
                         },
                         error_callback => sub {
-                            ok( 1, 'cuneiform caught error injected in queue' );
+                            pass('cuneiform caught error injected in queue');
                             chmod 0700, $dir;    # allow write access
                         },
                         finished_callback => sub {

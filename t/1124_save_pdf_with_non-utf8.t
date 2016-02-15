@@ -40,7 +40,7 @@ $slist->import_files(
 );
 Gtk2->main;
 
-ok( 1, 'PDF with expected text' );
+pass('PDF with expected text');
 
 #########################
 

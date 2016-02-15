@@ -42,7 +42,7 @@ SKIP: {
                 page           => $slist->{data}[0][2],
                 language       => 'eng',
                 error_callback => sub {
-                    ok( 1, 'caught error injected before tesseract' );
+                    pass('caught error injected before tesseract');
                     chmod 0700, $dir;    # allow write access
 
                     $slist->tesseract(
@@ -54,7 +54,7 @@ SKIP: {
                             chmod 0500, $dir;    # no write access
                         },
                         error_callback => sub {
-                            ok( 1, 'tesseract caught error injected in queue' );
+                            pass('tesseract caught error injected in queue');
                             chmod 0700, $dir;    # allow write access
                         },
                         finished_callback => sub {

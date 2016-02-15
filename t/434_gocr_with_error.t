@@ -40,7 +40,7 @@ SKIP: {
             $slist->gocr(
                 page           => $slist->{data}[0][2],
                 error_callback => sub {
-                    ok( 1, 'caught error injected before gocr' );
+                    pass('caught error injected before gocr');
                     chmod 0700, $dir;    # allow write access
 
                     $slist->gocr(
@@ -51,7 +51,7 @@ SKIP: {
                             chmod 0500, $dir;    # no write access
                         },
                         error_callback => sub {
-                            ok( 1, 'gocr caught error injected in queue' );
+                            pass('gocr caught error injected in queue');
                             chmod 0700, $dir;    # allow write access
                         },
                         finished_callback => sub {

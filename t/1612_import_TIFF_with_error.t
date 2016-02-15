@@ -30,7 +30,7 @@ chmod 0500, $dir;    # no write access
 $slist->import_files(
     paths          => ['test.tif'],
     error_callback => sub {
-        ok( 1, 'import_files caught error injected before call' );
+        pass('import_files caught error injected before call');
         chmod 0700, $dir;    # allow write access
         $slist->import_files(
             paths           => ['test.tif'],
@@ -40,7 +40,7 @@ $slist->import_files(
                 chmod 0500, $dir;    # no write access
             },
             error_callback => sub {
-                ok( 1, 'import_files caught error injected in queue' );
+                pass('import_files caught error injected in queue');
                 chmod 0700, $dir;    # allow write access
                 Gtk2->main_quit;
             }

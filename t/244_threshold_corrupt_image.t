@@ -35,11 +35,11 @@ $slist->import_files(
             threshold         => 80,
             page              => $slist->{data}[0][2],
             finished_callback => sub {
-                ok( 0, 'caught errors from threshold' );
+                fail('caught errors from threshold');
                 Gtk2->main_quit;
             },
             error_callback => sub {
-                ok( 1, 'caught errors from threshold' );
+                pass('caught errors from threshold');
                 Gtk2->main_quit;
             }
         );

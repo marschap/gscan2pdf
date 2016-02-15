@@ -35,11 +35,11 @@ $slist->import_files(
             angle             => 90,
             page              => $slist->{data}[0][2],
             finished_callback => sub {
-                ok( 0, 'caught errors from rotate' );
+                fail('caught errors from rotate');
                 Gtk2->main_quit;
             },
             error_callback => sub {
-                ok( 1, 'caught errors from rotate' );
+                pass('caught errors from rotate');
                 Gtk2->main_quit;
             }
         );

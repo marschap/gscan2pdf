@@ -57,7 +57,7 @@ $slist->import_files(
                 Gtk2->main_quit;
             },
             error_callback => sub {
-                ok( 1, 'caught errors from user-defined' );
+                pass('caught errors from user-defined');
             }
         );
     }

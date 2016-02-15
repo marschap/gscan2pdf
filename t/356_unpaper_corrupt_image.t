@@ -67,7 +67,7 @@ SKIP: {
                     Gtk2->main_quit;
                 },
                 error_callback => sub {
-                    ok( 1, 'caught errors from unpaper' );
+                    pass('caught errors from unpaper');
                 }
             );
         }

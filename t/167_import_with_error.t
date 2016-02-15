@@ -54,8 +54,7 @@ $slist->import_files(
                         Gtk2->main_quit;
                     },
                     error_callback => sub {
-                        ok( 0,
-                            'error callback triggered after previous errors' );
+                        fail('error callback triggered after previous errors');
                         Gtk2->main_quit;
                     }
                 );

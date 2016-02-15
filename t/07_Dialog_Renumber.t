@@ -69,7 +69,7 @@ is( $dialog->get('start'),     4,  'start for document with negative step' );
 is( $dialog->get('increment'), -2, 'step for document with negative step' );
 $dialog->signal_connect(
     'before-renumber' => sub {
-        ok( 1, 'before-renumber signal fired on renumber' );
+        pass('before-renumber signal fired on renumber');
     }
 );
 $dialog->renumber;

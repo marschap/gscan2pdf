@@ -45,7 +45,7 @@ $signal = $dialog->signal_connect(
     'changed-options-cache' => sub {
         my ( $widget, $cache ) = @_;
         $dialog->signal_handler_disconnect($signal);
-        ok( 1, 'changed options-cache' );
+        pass('changed options-cache');
 
         $signal = $dialog->signal_connect(
             'reloaded-scan-options' => sub {
@@ -57,7 +57,7 @@ $signal = $dialog->signal_connect(
                     'changed-options-cache' => sub {
                         my ( $widget, $cache ) = @_;
                         $dialog->signal_handler_disconnect($signal);
-                        ok( 1, 'changed options-cache after set mode' );
+                        pass('changed options-cache after set mode');
 
                         $dialog = Gscan2pdf::Dialog::Scan::CLI->new(
                             title             => 'title',
@@ -71,7 +71,7 @@ $signal = $dialog->signal_connect(
                             'fetched-options-cache' => sub {
                                 my ( $widget, $device, $cache_key ) = @_;
                                 $dialog->signal_handler_disconnect($signal);
-                                ok( 1, 'fetched-options-cache' );
+                                pass('fetched-options-cache');
 
                                 $signal = $dialog->signal_connect(
                                     'fetched-options-cache' => sub {
@@ -79,7 +79,7 @@ $signal = $dialog->signal_connect(
                                           @_;
                                         $dialog->signal_handler_disconnect(
                                             $signal);
-                                        ok( 1,
+                                        pass(
                                             'fetched-options-cache for set mode'
                                         );
                                         Gtk2->main_quit;

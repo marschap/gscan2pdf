@@ -57,7 +57,7 @@ $slist->import_files(
             page           => $slist->{data}[0][2],
             command        => 'convert %i -negate %o',
             error_callback => sub {
-                ok( 1, 'caught error injected before user_defined' );
+                pass('caught error injected before user_defined');
                 chmod 0700, $dir;    # allow write access
 
                 $slist->user_defined(
@@ -69,7 +69,7 @@ $slist->import_files(
                         chmod 0500, $dir;    # no write access
                     },
                     error_callback => sub {
-                        ok( 1, 'user_defined caught error injected in queue' );
+                        pass('user_defined caught error injected in queue');
                         chmod 0700, $dir;    # allow write access
                         Gtk2->main_quit;
                     }

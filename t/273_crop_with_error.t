@@ -37,7 +37,7 @@ $slist->import_files(
             w              => 10,
             h              => 10,
             error_callback => sub {
-                ok( 1, 'caught error injected before crop' );
+                pass('caught error injected before crop');
                 chmod 0700, $dir;    # allow write access
 
                 $slist->crop(
@@ -52,7 +52,7 @@ $slist->import_files(
                         chmod 0500, $dir;    # no write access
                     },
                     error_callback => sub {
-                        ok( 1, 'crop caught error injected in queue' );
+                        pass('crop caught error injected in queue');
                         chmod 0700, $dir;    # allow write access
                         Gtk2->main_quit;
                     }

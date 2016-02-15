@@ -81,7 +81,7 @@ $dialog->set( 'page-number-increment', 2 );
 $dialog->{reloaded_signal} = $dialog->signal_connect(
     'reloaded-scan-options' => sub {
         $dialog->signal_handler_disconnect( $dialog->{reloaded_signal} );
-        ok( 1, 'reloaded-scan-options' );
+        pass('reloaded-scan-options');
 
         # So that it can be used in hash
         my $resolution = SANE_NAME_SCAN_RESOLUTION;
@@ -300,7 +300,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         $dialog->signal_connect(
             'changed-paper-formats' => sub {
                 my ( $widget, $formats ) = @_;
-                ok( 1, 'changed-paper-formats' );
+                pass('changed-paper-formats');
             }
         );
         $dialog->set(
@@ -327,14 +327,14 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         $s_signal = $dialog->signal_connect(
             'started-process' => sub {
                 $dialog->signal_handler_disconnect($s_signal);
-                ok( 1, 'started-process' );
+                pass('started-process');
             }
         );
         my $c_signal;
         $c_signal = $dialog->signal_connect(
             'changed-progress' => sub {
                 $dialog->signal_handler_disconnect($c_signal);
-                ok( 1, 'changed-progress' );
+                pass('changed-progress');
             }
         );
         my $f_signal;
@@ -401,7 +401,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 $dialog->{signal} = $dialog->signal_connect(
     'changed-device-list' => sub {
         $dialog->signal_handler_disconnect( $dialog->{signal} );
-        ok( 1, 'changed-device-list' );
+        pass('changed-device-list');
 
         is_deeply(
             $dialog->get('device-list'),

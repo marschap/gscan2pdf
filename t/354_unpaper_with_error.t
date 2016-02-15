@@ -65,7 +65,7 @@ SKIP: {
                 page           => $slist->{data}[0][2],
                 options        => $unpaper->get_cmdline,
                 error_callback => sub {
-                    ok( 1, 'caught error injected before unpaper' );
+                    pass('caught error injected before unpaper');
                     chmod 0700, $dir;    # allow write access
 
                     $slist->unpaper(
@@ -77,7 +77,7 @@ SKIP: {
                             chmod 0500, $dir;    # no write access
                         },
                         error_callback => sub {
-                            ok( 1, 'unpaper caught error injected in queue' );
+                            pass('unpaper caught error injected in queue');
                             chmod 0700, $dir;    # allow write access
                             Gtk2->main_quit;
                         }

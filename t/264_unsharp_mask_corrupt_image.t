@@ -38,11 +38,11 @@ $slist->import_files(
             amount            => 100,
             threshold         => 0.5,
             finished_callback => sub {
-                ok( 0, 'caught errors from unsharp' );
+                fail('caught errors from unsharp');
                 Gtk2->main_quit;
             },
             error_callback => sub {
-                ok( 1, 'caught errors from unsharp' );
+                pass('caught errors from unsharp');
                 Gtk2->main_quit;
             }
         );

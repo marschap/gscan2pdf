@@ -34,7 +34,7 @@ $slist->import_files(
         $slist->to_png(
             page           => $slist->{data}[0][2],
             error_callback => sub {
-                ok( 1, 'caught error injected before to_png' );
+                pass('caught error injected before to_png');
                 chmod 0700, $dir;    # allow write access
 
                 $slist->to_png(
@@ -45,7 +45,7 @@ $slist->import_files(
                         chmod 0500, $dir;    # no write access
                     },
                     error_callback => sub {
-                        ok( 1, 'to_png caught error injected in queue' );
+                        pass('to_png caught error injected in queue');
                         chmod 0700, $dir;    # allow write access
                         Gtk2->main_quit;
                     }

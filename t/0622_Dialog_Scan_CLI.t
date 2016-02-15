@@ -38,7 +38,7 @@ is_deeply(
 my $signal;
 $signal = $dialog->signal_connect(
     'changed-option-visibility' => sub {
-        ok( 1, 'changed-option-visibility' );
+        pass('changed-option-visibility');
 
         is_deeply(
             $dialog->get('visible-scan-options'),
@@ -59,7 +59,7 @@ $dialog->set( 'visible-scan-options', { mode => 0 } );
 
 $dialog->signal_connect(
     'changed-device-list' => sub {
-        ok( 1, 'changed-device-list' );
+        pass('changed-device-list');
 
         is_deeply(
             $dialog->get('device-list'),
@@ -81,7 +81,7 @@ $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
 
 $signal = $dialog->signal_connect(
     'reloaded-scan-options' => sub {
-        ok( 1, 'reloaded-scan-options' );
+        pass('reloaded-scan-options');
         $dialog->signal_handler_disconnect($signal);
 
         my $options = $dialog->get('available-scan-options');

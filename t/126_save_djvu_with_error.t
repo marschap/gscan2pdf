@@ -34,7 +34,7 @@ $slist->import_files(
             path           => 'test.djvu',
             list_of_pages  => [ $slist->{data}[0][2] ],
             error_callback => sub {
-                ok( 1, 'caught error injected before save_djvu' );
+                pass('caught error injected before save_djvu');
                 chmod 0700, $dir;    # allow write access
 
                 $slist->save_djvu(
@@ -46,7 +46,7 @@ $slist->import_files(
                         chmod 0500, $dir;    # no write access
                     },
                     error_callback => sub {
-                        ok( 1, 'save_djvu caught error injected in queue' );
+                        pass('save_djvu caught error injected in queue');
                         chmod 0700, $dir;    # allow write access
                         Gtk2->main_quit;
                     }

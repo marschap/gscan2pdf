@@ -34,11 +34,11 @@ $slist->import_files(
         $slist->negate(
             page              => $slist->{data}[0][2],
             finished_callback => sub {
-                ok( 0, 'caught errors from negate' );
+                fail('caught errors from negate');
                 Gtk2->main_quit;
             },
             error_callback => sub {
-                ok( 1, 'caught errors from negate' );
+                pass('caught errors from negate');
                 Gtk2->main_quit;
             }
         );

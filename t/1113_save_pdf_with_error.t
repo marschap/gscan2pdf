@@ -36,7 +36,7 @@ $slist->import_files(
             path           => 'test.pdf',
             list_of_pages  => [ $slist->{data}[0][2] ],
             error_callback => sub {
-                ok( 1, 'caught error injected before save_pdf' );
+                pass('caught error injected before save_pdf');
                 chmod 0700, $dir;    # allow write access
 
                 $slist->save_pdf(
@@ -48,7 +48,7 @@ $slist->import_files(
                         chmod 0500, $dir;    # no write access
                     },
                     error_callback => sub {
-                        ok( 1, 'save_pdf caught error injected in queue' );
+                        pass('save_pdf caught error injected in queue');
                         chmod 0700, $dir;    # allow write access
                         Gtk2->main_quit;
                     }

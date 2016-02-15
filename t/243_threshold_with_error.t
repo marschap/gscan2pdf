@@ -34,7 +34,7 @@ $slist->import_files(
             threshold      => 80,
             page           => $slist->{data}[0][2],
             error_callback => sub {
-                ok( 1, 'caught error injected before threshold' );
+                pass('caught error injected before threshold');
                 chmod 0700, $dir;    # allow write access
 
                 $slist->threshold(
@@ -46,7 +46,7 @@ $slist->import_files(
                         chmod 0500, $dir;    # no write access
                     },
                     error_callback => sub {
-                        ok( 1, 'threshold caught error injected in queue' );
+                        pass('threshold caught error injected in queue');
                         chmod 0700, $dir;    # allow write access
                         Gtk2->main_quit;
                     }

@@ -38,11 +38,11 @@ $slist->import_files(
             w                 => 10,
             h                 => 10,
             finished_callback => sub {
-                ok( 0, 'caught errors from crop' );
+                fail('caught errors from crop');
                 Gtk2->main_quit;
             },
             error_callback => sub {
-                ok( 1, 'caught errors from crop' );
+                pass('caught errors from crop');
                 Gtk2->main_quit;
             }
         );

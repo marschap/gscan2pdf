@@ -27,11 +27,11 @@ $slist->set_dir($dir);
 $slist->import_files(
     paths             => ['test.png'],
     finished_callback => sub {
-        ok( 0, 'caught errors importing file' );
+        fail('caught errors importing file');
         Gtk2->main_quit;
     },
     error_callback => sub {
-        ok( 1, 'caught errors importing file' );
+        pass('caught errors importing file');
         Gtk2->main_quit;
     }
 );

@@ -41,7 +41,7 @@ is( $dialog->get('available-scan-options'), undef, 'available-scan-options' );
 
 my $signal = $dialog->signal_connect(
     'changed-device-list' => sub {
-        ok( 1, 'changed-device-list' );
+        pass('changed-device-list');
 
         is_deeply(
             $dialog->get('device-list'),
@@ -378,7 +378,7 @@ $signal = $dialog->signal_connect(
         $dialog->signal_connect(
             'changed-paper-formats' => sub {
                 my ( $widget, $formats ) = @_;
-                ok( 1, 'changed-paper-formats' );
+                pass('changed-paper-formats');
             }
         );
         $dialog->set(
@@ -416,14 +416,14 @@ $signal = $dialog->signal_connect(
         my $s_signal;
         $s_signal = $dialog->signal_connect(
             'started-process' => sub {
-                ok( 1, 'started-process' );
+                pass('started-process');
                 $dialog->signal_handler_disconnect($s_signal);
             }
         );
         my $c_signal;
         $c_signal = $dialog->signal_connect(
             'changed-progress' => sub {
-                ok( 1, 'changed-progress' );
+                pass('changed-progress');
                 $dialog->signal_handler_disconnect($c_signal);
             }
         );
@@ -432,7 +432,7 @@ $signal = $dialog->signal_connect(
         #     my $e_signal;
         #     $e_signal = $dialog->signal_connect(
         #      'process-error' => sub {
-        #       ok( 1, 'process-error' );
+        #       pass( 'process-error' );
         #       $dialog->signal_handler_disconnect($e_signal);
         #      }
         #     );

@@ -51,7 +51,7 @@ my $loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI::_watch_cmd(
     cmd              => 'echo hello stdout',
     started_callback => sub {
-        ok( 1, 'started watching only stdout' );
+        pass('started watching only stdout');
     },
     out_callback => sub {
         my ($output) = @_;
@@ -72,7 +72,7 @@ $loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI::_watch_cmd(
     cmd              => 'echo hello stderr 1>&2',
     started_callback => sub {
-        ok( 1, 'started watching only stderr' );
+        pass('started watching only stderr');
     },
     err_callback => sub {
         my ($output) = @_;
@@ -93,7 +93,7 @@ $loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI::_watch_cmd(
     cmd              => 'echo hello stdout; echo hello stderr 1>&2',
     started_callback => sub {
-        ok( 1, 'started watching stdout and stderr' );
+        pass('started watching stdout and stderr');
     },
     out_callback => sub {
         my ($output) = @_;
@@ -127,7 +127,7 @@ my $cmd = 'cat scanners/*';
 Gscan2pdf::Frontend::CLI::_watch_cmd(
     cmd              => $cmd,
     started_callback => sub {
-        ok( 1, 'started watching large amounts of stdout' );
+        pass('started watching large amounts of stdout');
     },
     finished_callback => sub {
         my ( $output, $error ) = @_;
@@ -179,7 +179,7 @@ Gscan2pdf::Frontend::CLI->scan_pages(
     device           => 'test',
     npages           => 1,
     started_callback => sub {
-        ok( 1, 'scanimage starts' );
+        pass('scanimage starts');
     },
     new_page_callback => sub {
         my ( $path, $n ) = @_;
@@ -187,7 +187,7 @@ Gscan2pdf::Frontend::CLI->scan_pages(
         unlink $path;
     },
     finished_callback => sub {
-        ok( 1, 'scanimage finishes' );
+        pass('scanimage finishes');
         $loop->quit;
     },
 );
@@ -201,7 +201,7 @@ Gscan2pdf::Frontend::CLI->scan_pages(
     device           => 'test',
     npages           => 1,
     started_callback => sub {
-        ok( 1, 'scanadf starts' );
+        pass('scanadf starts');
     },
     new_page_callback => sub {
         my ( $path, $n ) = @_;
@@ -209,7 +209,7 @@ Gscan2pdf::Frontend::CLI->scan_pages(
         unlink $path;
     },
     finished_callback => sub {
-        ok( 1, 'scanadf finishes' );
+        pass('scanadf finishes');
         $loop->quit;
     },
 );

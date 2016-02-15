@@ -34,7 +34,7 @@ $slist->import_files(
             angle          => 90,
             page           => $slist->{data}[0][2],
             error_callback => sub {
-                ok( 1, 'caught error injected before rotate' );
+                pass('caught error injected before rotate');
                 chmod 0700, $dir;    # allow write access
 
                 $slist->rotate(
@@ -46,7 +46,7 @@ $slist->import_files(
                         chmod 0500, $dir;    # no write access
                     },
                     error_callback => sub {
-                        ok( 1, 'rotate caught error injected in queue' );
+                        pass('rotate caught error injected in queue');
                         chmod 0700, $dir;    # allow write access
                         Gtk2->main_quit;
                     }

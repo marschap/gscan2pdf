@@ -39,7 +39,7 @@ $slist->import_files(
         Gtk2->main_quit;
     },
     error_callback => sub {
-        ok( 1, 'caught error importing corrupt file' );
+        pass('caught error importing corrupt file');
     }
 );
 Gtk2->main;

@@ -30,7 +30,7 @@ SKIP: {
     $slist->import_files(
         paths             => ['test.tif'],
         finished_callback => sub {
-            ok( 0, 'TIFF not imported' );
+            fail('TIFF not imported');
             Gtk2->main_quit;
         }
     );
