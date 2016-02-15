@@ -3797,7 +3797,7 @@ sub scan_dialog {
     );
 
     # Can't set the paper or profile until the options have been loaded
-    $windows->signal_connect(
+    $windows->{reloaded_signal} = $windows->signal_connect(
         'reloaded-scan-options' => \&reloaded_scan_options_callback );
     $windows->signal_connect(
         'changed-paper-formats' => sub {
@@ -3899,7 +3899,9 @@ sub changed_side_to_scan_callback {
     return;
 }
 
+# This should only be called the first time after loading the available options
 sub reloaded_scan_options_callback {
+    $windows->signal_handler_disconnect( $windows->{reloaded_signal} );
     $windows->set( 'paper-formats', $SETTING{Paper} );
     if ( defined $SETTING{'Paper size'} ) {
         $windows->set( 'paper', $SETTING{'Paper size'} );
@@ -3910,8 +3912,7 @@ sub reloaded_scan_options_callback {
         $windows->set( 'profile', $SETTING{'default profile'} );
     }
     elsif ( defined $SETTING{'default-scan-options'} ) {
-        $windows->set( 'current-scan-options',
-            $SETTING{'default-scan-options'} );
+        $windows->set_current_scan_options( $SETTING{'default-scan-options'} );
     }
     elsif (@profiles) {
         $windows->set( 'profile', $profiles[0] );
