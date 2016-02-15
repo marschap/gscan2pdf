@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -76,6 +76,22 @@ $signal = $dialog->signal_connect(
                 ],
             },
             'applied 2nd profile without affecting 1st'
+        );
+
+        $dialog->remove_profile('profile 1');
+        is_deeply(
+            $dialog->{profiles},
+            {
+                'profile 2' => [
+                    {
+                        'tl-x' => '20'
+                    },
+                    {
+                        'tl-y' => '20'
+                    },
+                ],
+            },
+            'remove_profile()'
         );
 
         Gtk2->main_quit;

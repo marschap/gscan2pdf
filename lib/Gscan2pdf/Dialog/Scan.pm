@@ -1226,6 +1226,7 @@ sub remove_profile {
             $self->{combobsp}->remove_text($i);
             $self->signal_emit( 'removed-profile', $name );
         }
+        delete $self->{profiles}{$name};
     }
     return;
 }
