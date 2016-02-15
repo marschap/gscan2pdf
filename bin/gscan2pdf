@@ -7091,7 +7091,15 @@ sub show_message_dialog {
     if ( $options{'store-response'} ) {
         $cb = Gtk2::CheckButton->new_with_label(
             $d->get("Don't show this message again") );
-        $dialog->get_message_area->add($cb);
+
+        # older gtks don't have get_message_area() or get_content_area()
+        my $area;
+        try { $area = $dialog->get_message_area }
+        catch {
+            try { $area = $dialog->get_content_area }
+            catch { $area = $dialog->vbox }
+        };
+        if ( defined $area ) { $area->add($cb) }
     }
     $dialog->show_all;
     my $response = $dialog->run;
