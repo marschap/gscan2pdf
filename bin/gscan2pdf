@@ -3105,19 +3105,7 @@ sub file_chooser_response_callback {
             }
         }
 
-        # Check that the file can be written
-        if ( not -w dirname($filename)
-            or ( -f $filename and not -w $filename ) )
-        {
-            my $text = sprintf $d->get('File %s is read-only'), $filename;
-            show_message_dialog(
-                parent  => $dialog,
-                type    => 'error',
-                buttons => 'close',
-                text    => $text
-            );
-            return;
-        }
+        return if ( file_exists( $dialog, $filename ) );
 
         # Update cwd
         $SETTING{'cwd'} = dirname($filename);
@@ -3153,11 +3141,22 @@ sub file_chooser_response_callback {
 }
 
 sub file_exists {
-    my ( $file_chooser, $filename ) = @_;
-    if ( not -w dirname($filename) or ( -f $filename and not -w $filename ) ) {
+    my ( $parent, $filename ) = @_;
+    if ( not -w dirname($filename) ) {
+        my $text = sprintf $d->get('Directory %s is read-only'),
+          dirname($filename);
+        show_message_dialog(
+            parent  => $parent,
+            type    => 'error',
+            buttons => 'close',
+            text    => $text
+        );
+        return TRUE;
+    }
+    elsif ( -f $filename and not -w $filename ) {
         my $text = sprintf $d->get('File %s is read-only'), $filename;
         show_message_dialog(
-            parent  => $file_chooser,
+            parent  => $parent,
             type    => 'error',
             buttons => 'close',
             text    => $text
@@ -3169,7 +3168,7 @@ sub file_exists {
           $d->get("File %s exists.\nReally overwrite?"),
           $filename;
         my $response = show_message_dialog(
-            parent             => $file_chooser,
+            parent             => $parent,
             type               => 'question',
             buttons            => 'ok-cancel',
             text               => $text,
