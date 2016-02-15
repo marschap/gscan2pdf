@@ -489,7 +489,7 @@ sub INIT_INSTANCE {
     $framesp->add($vboxsp);
     $self->{combobsp} = Gtk2::ComboBox->new_text;
     $self->{combobsp}->signal_connect( changed =>
-          sub { $self->set_profile( $self->{combobsp}->get_active_text ) } );
+          sub { $self->set( 'profile', $self->{combobsp}->get_active_text ) } );
     $vboxsp->pack_start( $self->{combobsp}, FALSE, FALSE, 0 );
     my $hboxsp = Gtk2::HBox->new;
     $vboxsp->pack_end( $hboxsp, FALSE, FALSE, 0 );
