@@ -17,7 +17,7 @@ Gscan2pdf::Document->setup(Log::Log4perl::get_logger);
 my $slist = Gscan2pdf::Document->new;
 my $dir   = File::Temp->newdir;
 $slist->set_dir($dir);
-$slist->open_session_file('test.gs2p');
+$slist->open_session_file( info => 'test.gs2p' );
 
 like(
     `file $slist->{data}[0][2]{filename}`,

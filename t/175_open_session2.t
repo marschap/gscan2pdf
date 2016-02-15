@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 use File::Basename;    # Split filename into dir, file, ext
 
 BEGIN {
@@ -17,7 +17,7 @@ Gscan2pdf::Document->setup($logger);
 
 my $slist = Gscan2pdf::Document->new;
 $slist->set_dir( File::Temp->newdir );
-$slist->open_session_file('t/1.gs2p');
+$slist->open_session_file( info => 't/1.gs2p' );
 use Data::Dumper;
 my $string = Dumper( $slist->{data} );
 
@@ -25,6 +25,17 @@ like(
     `file $slist->{data}[0][2]{filename}`,
     qr/image data/,
     'extracted valid image'
+);
+
+#########################
+
+$slist = Gscan2pdf::Document->new;
+$slist->set_dir( File::Temp->newdir );
+$slist->open_session_file(
+    info              => 't/1.gs2p',
+    finished_callback => sub {
+        pass('in finished_callback');
+    }
 );
 
 #########################

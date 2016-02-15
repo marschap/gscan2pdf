@@ -278,7 +278,7 @@ sub _get_file_info_finished_callback {
         }
     }
     elsif ( $info->[0]{format} eq 'session file' ) {
-        open_session_file( $info->[0]{path} );
+        $self->open_session_file( info => $info->[0]{path}, %options );
     }
     else {
         my $first_page = 1;
@@ -1330,14 +1330,14 @@ sub save_session {
 }
 
 sub open_session_file {
-    my ( $self, $filename, $error_callback ) = @_;
-    if ( not defined $filename ) {
-        if ($error_callback) {
-            $error_callback->('Error: session file not supplied.');
+    my ( $self, %options ) = @_;
+    if ( not defined $options{info} ) {
+        if ( $options{error_callback} ) {
+            $options{error_callback}->('Error: session file not supplied.');
         }
         return;
     }
-    my $tar          = Archive::Tar->new( $filename, TRUE );
+    my $tar          = Archive::Tar->new( $options{info}, TRUE );
     my @filenamelist = $tar->list_files;
     my @sessionfile  = grep { /\/session$/xsm } @filenamelist;
     my $sesdir =
@@ -1345,22 +1345,23 @@ sub open_session_file {
     for (@filenamelist) {
         $tar->extract_file( $_, File::Spec->catfile( $sesdir, basename($_) ) );
     }
-    $self->open_session( $sesdir, TRUE, $error_callback );
+    $self->open_session( dir => $sesdir, delete => TRUE, %options );
+    if ( $options{finished_callback} ) { $options{finished_callback}->() }
     return;
 }
 
 sub open_session {
-    my ( $self, $sesdir, $delete, $error_callback ) = @_;
-    if ( not defined $sesdir ) {
-        if ($error_callback) {
-            $error_callback->('Error: session folder not defined');
+    my ( $self, %options ) = @_;
+    if ( not defined $options{dir} ) {
+        if ( $options{error_callback} ) {
+            $options{error_callback}->('Error: session folder not defined');
         }
         return;
     }
-    my $sessionfile = File::Spec->catfile( $sesdir, 'session' );
+    my $sessionfile = File::Spec->catfile( $options{dir}, 'session' );
     if ( not -r $sessionfile ) {
-        if ($error_callback) {
-            $error_callback->("Error: Unable to read $sessionfile");
+        if ( $options{error_callback} ) {
+            $options{error_callback}->("Error: Unable to read $sessionfile");
         }
         return;
     }
@@ -1377,12 +1378,12 @@ sub open_session {
 
         # don't reuse session directory
         $session{$pagenum}{dir}    = $self->{dir};
-        $session{$pagenum}{delete} = $delete;
+        $session{$pagenum}{delete} = $options{delete};
 
         # correct the path now that it is relative to the current session dir
-        if ( $sesdir ne $self->{dir} ) {
+        if ( $options{dir} ne $self->{dir} ) {
             $session{$pagenum}{filename} =
-              File::Spec->catfile( $sesdir,
+              File::Spec->catfile( $options{dir},
                 basename( $session{$pagenum}{filename} ) );
         }
 
@@ -1399,8 +1400,8 @@ sub open_session {
             push @{ $self->{data} }, [ $pagenum, $thumb, $page ];
         }
         catch {
-            if ($error_callback) {
-                $error_callback->(
+            if ( $options{error_callback} ) {
+                $options{error_callback}->(
                     sprintf $d->get('Error importing page %d. Ignoring.'),
                     $pagenum
                 );

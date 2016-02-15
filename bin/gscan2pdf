@@ -1806,7 +1806,10 @@ sub error_callback {
 sub open_session_file {
     my ($filename) = @_;
     $logger->info("Restoring session in $session");
-    $slist->open_session_file( $filename, \&error_callback );
+    $slist->open_session_file(
+        info           => $filename,
+        error_callback => \&error_callback
+    );
     update_uimanager();
     return;
 }
