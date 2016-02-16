@@ -31,7 +31,7 @@ BEGIN {
     use Exporter ();
     our ( $VERSION, @EXPORT_OK, %EXPORT_TAGS );
 
-    $VERSION = '1.3.8';
+    $VERSION = '1.3.9';
 
     use base qw(Exporter);
     %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
