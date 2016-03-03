@@ -9,6 +9,8 @@
 * Fixed bug opening session file
 * A deleted profile stays deleted across sessions
 * Fixed multiple reload callback, affecting setting profiles
+* If a profile affects geometry settings, update paper size widget appropriately
+  Closes Debian bug #815552 (fails to set geometry when loading saved profile)
 
 
 1.3.8 (04.02.2016):

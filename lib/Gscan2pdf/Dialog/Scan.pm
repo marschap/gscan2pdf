@@ -638,10 +638,32 @@ sub SET_PROPERTY {
                 $widget->set_active(TRUE);
             }
             when ('paper') {
-                $self->{$name} = $newval;
-                if ( set_combobox_by_text( $self->{combobp}, $newval ) ) {
-                    $self->signal_emit( 'changed-paper', $newval );
+                if ( defined $newval ) {
+                    for ( @{ $self->{ignored_paper_formats} } ) {
+                        if ( $_ eq $newval ) {
+                            if ( defined $logger ) {
+                                $logger->info(
+                                    "Ignoring unsupported paper $newval");
+                                $logger->debug("Finished$msg");
+                            }
+                            return;
+                        }
+                    }
                 }
+                $callback = TRUE;
+                my $signal;
+                $signal = $self->signal_connect(
+                    'changed-paper' => sub {
+                        $self->signal_handler_disconnect($signal);
+                        my $paper =
+                          defined $newval ? $newval : $d->get('Manual');
+                        set_combobox_by_text( $self->{combobp}, $paper );
+                        if ( defined $logger ) {
+                            $logger->debug("Finished$msg");
+                        }
+                    }
+                );
+                $self->set_paper($newval);
             }
             when ('paper_formats') {
                 $self->{$name} = $newval;
@@ -1227,6 +1249,16 @@ sub remove_profile {
             $self->signal_emit( 'removed-profile', $name );
         }
         delete $self->{profiles}{$name};
+    }
+    return;
+}
+
+# Helper function to check the new value is different before adding the option
+# to the profile
+sub build_profile {
+    my ( $self, $profile, $option, $newval ) = @_;
+    if ( $option->{val} != $newval ) {
+        push @{$profile}, { $option->{name} => $newval };
     }
     return;
 }

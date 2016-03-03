@@ -401,43 +401,113 @@ sub create_paper_widget {
                             $options->{box}{$_}->show_all;
                         }
                     }
+                    $self->set( 'paper', undef );
                 }
                 else {
-                    my $paper   = $self->{combobp}->get_active_text;
-                    my $formats = $self->get('paper-formats');
-                    if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
-                        and not $options->by_name(SANE_NAME_PAGE_HEIGHT)->{cap}
-                        & SANE_CAP_INACTIVE
-                        and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) )
-                        and not $options->by_name(SANE_NAME_PAGE_WIDTH)->{cap}
-                        & SANE_CAP_INACTIVE )
-                    {
-                        $options->by_name(SANE_NAME_PAGE_HEIGHT)->{widget}
-                          ->set_value(
-                            $formats->{$paper}{y} + $formats->{$paper}{t} );
-                        $options->by_name(SANE_NAME_PAGE_WIDTH)->{widget}
-                          ->set_value(
-                            $formats->{$paper}{x} + $formats->{$paper}{l} );
-                    }
-
-                    $options->by_name(SANE_NAME_SCAN_TL_X)->{widget}
-                      ->set_value( $formats->{$paper}{l} );
-                    $options->by_name(SANE_NAME_SCAN_TL_Y)->{widget}
-                      ->set_value( $formats->{$paper}{t} );
-                    $options->by_name(SANE_NAME_SCAN_BR_X)->{widget}
-                      ->set_value(
-                        $formats->{$paper}{x} + $formats->{$paper}{l} );
-                    $options->by_name(SANE_NAME_SCAN_BR_Y)->{widget}
-                      ->set_value(
-                        $formats->{$paper}{y} + $formats->{$paper}{t} );
-                    Glib::Idle->add( sub { $self->hide_geometry($options) } );
-
-                    # Do this last, as it fires the changed-paper signal
+                    my $paper = $self->{combobp}->get_active_text;
                     $self->set( 'paper', $paper );
                 }
             }
         );
+
+        # If the geometry is changed, unset the paper size
+        for (
+            ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+                SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+                SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
+            )
+          )
+        {
+            if ( defined $options->by_name($_) ) {
+                my $widget = $options->by_name($_)->{widget};
+                $widget->signal_connect(
+                    changed => sub {
+                        if ( defined $self->get('paper') ) {
+                            $self->set( 'paper', undef );
+                        }
+                    }
+                );
+            }
+        }
     }
+    return;
+}
+
+# Treat a paper size as a profile, so build up the required profile of geometry
+# settings and apply it
+sub set_paper {
+    my ( $self, $paper ) = @_;
+    if ( not defined $paper ) {
+        $self->{paper} = $paper;
+        $self->signal_emit( 'changed-paper', $paper );
+        return;
+    }
+    for ( @{ $self->{ignored_paper_formats} } ) {
+        if ( $_ eq $paper ) { return }
+    }
+    my $formats = $self->get('paper-formats');
+    my $options = $self->get('available-scan-options');
+    my @paper_profile;
+    if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
+        and not $options->by_name(SANE_NAME_PAGE_HEIGHT)->{cap} &
+        SANE_CAP_INACTIVE
+        and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) )
+        and not $options->by_name(SANE_NAME_PAGE_WIDTH)->{cap} &
+        SANE_CAP_INACTIVE )
+    {
+        $self->build_profile(
+            \@paper_profile,
+            $options->by_name(SANE_NAME_PAGE_HEIGHT),
+            $formats->{$paper}{y} + $formats->{$paper}{t}
+        );
+        $self->build_profile(
+            \@paper_profile,
+            $options->by_name(SANE_NAME_PAGE_WIDTH),
+            $formats->{$paper}{x} + $formats->{$paper}{l}
+        );
+    }
+    $self->build_profile(
+        \@paper_profile,
+        $options->by_name(SANE_NAME_SCAN_TL_X),
+        $formats->{$paper}{l}
+    );
+    $self->build_profile(
+        \@paper_profile,
+        $options->by_name(SANE_NAME_SCAN_TL_Y),
+        $formats->{$paper}{t}
+    );
+    $self->build_profile(
+        \@paper_profile,
+        $options->by_name(SANE_NAME_SCAN_BR_X),
+        $formats->{$paper}{x} + $formats->{$paper}{l}
+    );
+    $self->build_profile(
+        \@paper_profile,
+        $options->by_name(SANE_NAME_SCAN_BR_Y),
+        $formats->{$paper}{y} + $formats->{$paper}{t}
+    );
+
+    if ( not @paper_profile ) {
+        $self->hide_geometry($options);
+        $self->{paper} = $paper;
+        $self->signal_emit( 'changed-paper', $paper );
+        return;
+    }
+
+    my $signal;
+    $signal = $self->signal_connect(
+        'changed-current-scan-options' => sub {
+            $self->signal_handler_disconnect($signal);
+            $self->hide_geometry($options);
+            $self->{paper} = $paper;
+            $self->set( 'profile', undef );
+            $self->signal_emit( 'changed-paper', $paper );
+        }
+    );
+
+# Don't trigger the changed-paper signal until we have finished setting the profile
+    $self->{setting_profile} = TRUE;
+    $self->_set_option_profile( 0, \@paper_profile );
     return;
 }
 
