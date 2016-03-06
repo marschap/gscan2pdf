@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.3.8
+Version: 1.3.9
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -92,7 +92,10 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Thu Feb 04 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sun Mar 06 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #815552 (fails to set geometry when loading saved profile)
+  - Bumped standards to 3.9.7 (no changes required)
   - New upstream release
     Closes: #812684 (cannot save in .tif format)
   - New upstream release
