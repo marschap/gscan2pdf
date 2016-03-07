@@ -3097,18 +3097,10 @@ sub file_chooser_response_callback {
         my $filename = $dialog->get_filename;
         if ( $filename !~ /[.]$suffix$/ixsm ) {
             $filename = "$filename.$type";
-            if ( -f $filename ) {
-
-                # File exists; get the file chooser to ask the user to confirm.
-                $dialog->set_filename($filename);
-
-                # Give the name change time to take effect.
-                Glib::Idle->add( sub { $dialog->response('ok'); } );
-                return;
-            }
+            return if ( file_exists( $dialog, $filename ) );
         }
 
-        return if ( file_exists( $dialog, $filename ) );
+        return if ( file_writable( $dialog, $filename ) );
 
         # Update cwd
         $SETTING{'cwd'} = dirname($filename);
@@ -3144,12 +3136,26 @@ sub file_chooser_response_callback {
 }
 
 sub file_exists {
-    my ( $parent, $filename ) = @_;
+    my ( $chooser, $filename ) = @_;
+    if ( -f $filename ) {
+
+        # File exists; get the file chooser to ask the user to confirm.
+        $chooser->set_filename($filename);
+
+        # Give the name change time to take effect.
+        Glib::Idle->add( sub { $chooser->response('ok'); } );
+        return TRUE;
+    }
+    return;
+}
+
+sub file_writable {
+    my ( $chooser, $filename ) = @_;
     if ( not -w dirname($filename) ) {
         my $text = sprintf $d->get('Directory %s is read-only'),
           dirname($filename);
         show_message_dialog(
-            parent  => $parent,
+            parent  => $chooser,
             type    => 'error',
             buttons => 'close',
             text    => $text
@@ -3159,26 +3165,12 @@ sub file_exists {
     elsif ( -f $filename and not -w $filename ) {
         my $text = sprintf $d->get('File %s is read-only'), $filename;
         show_message_dialog(
-            parent  => $parent,
+            parent  => $chooser,
             type    => 'error',
             buttons => 'close',
             text    => $text
         );
         return TRUE;
-    }
-    elsif ( -e $filename ) {
-        my $text = sprintf
-          $d->get("File %s exists.\nReally overwrite?"),
-          $filename;
-        my $response = show_message_dialog(
-            parent             => $parent,
-            type               => 'question',
-            buttons            => 'ok-cancel',
-            text               => $text,
-            'store-response'   => TRUE,
-            'stored-responses' => ['ok']
-        );
-        return TRUE if ( $response ne 'ok' );
     }
     return FALSE;
 }
@@ -3200,6 +3192,7 @@ sub save_image {
     $file_chooser->set_current_folder( $SETTING{'cwd'} );
     add_filter( $file_chooser, $d->get('Image files'),
         'jpg', 'png', 'pnm', 'gif', 'tif', 'tiff', 'pdf', 'djvu', 'ps' );
+    $file_chooser->set_do_overwrite_confirmation(TRUE);
 
     if ( 'ok' eq $file_chooser->run ) {
         my $filename = $file_chooser->get_filename;
@@ -3217,14 +3210,16 @@ sub save_image {
                   sprintf "${filename}_%0${w}d.$SETTING{'image type'}",
                   $_;
                 return if ( file_exists( $file_chooser, $current_filename ) );
+                return if ( file_writable( $file_chooser, $current_filename ) );
             }
             $filename = "${filename}_%0${w}d.$SETTING{'image type'}";
         }
         else {
             if ( $filename !~ /[.]$SETTING{'image type'}$/ixsm ) {
-                $filename = $filename . ".$SETTING{'image type'}";
+                $filename = "$filename.$SETTING{'image type'}";
+                return if ( file_exists( $file_chooser, $filename ) );
             }
-            return if ( file_exists( $file_chooser, $filename ) );
+            return if ( file_writable( $file_chooser, $filename ) );
         }
 
         # Create the image
