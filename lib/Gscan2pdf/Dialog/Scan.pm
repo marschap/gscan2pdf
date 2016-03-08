@@ -1205,6 +1205,8 @@ sub set_profile {
                 # set property before emitting signal to ensure callbacks
                 # receive correct value
                 $self->{profile} = $name;
+                my $paper = $self->get_paper_by_geometry;
+                if ( defined $paper ) { $self->set( 'paper', $paper ) }
                 $self->signal_emit( 'changed-profile', $name );
             }
         );

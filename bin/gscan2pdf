@@ -3800,12 +3800,6 @@ sub scan_dialog {
             $SETTING{Paper} = $formats;
         }
     );
-    $windows->signal_connect(
-        'changed-paper' => sub {
-            my ( $widget, $paper ) = @_;
-            $SETTING{'Paper size'} = $paper;
-        }
-    );
 
     $windows->signal_connect( 'new-scan' => \&new_scan_callback );
 
@@ -3898,9 +3892,6 @@ sub changed_side_to_scan_callback {
 sub reloaded_scan_options_callback {
     $windows->signal_handler_disconnect( $windows->{reloaded_signal} );
     $windows->set( 'paper-formats', $SETTING{Paper} );
-    if ( defined $SETTING{'Paper size'} ) {
-        $windows->set( 'paper', $SETTING{'Paper size'} );
-    }
 
     my @profiles = keys %{ $SETTING{profile} };
     if ( defined $SETTING{'default profile'} ) {

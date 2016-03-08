@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 4;
+use Test::More tests => 7;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -117,6 +117,43 @@ $dialog->{signal} = $dialog->signal_connect(
         );
         Gscan2pdf::Dialog::Scan::set_combobox_by_text( $dialog->{combobp},
             'Manual' );
+        $loop->run unless ($flag);
+
+        $dialog->add_profile(
+            '10x10',
+            [
+                {
+                    'tl-y' => '0'
+                },
+                {
+                    'tl-x' => '0'
+                },
+                {
+                    'br-y' => '10'
+                },
+                {
+                    'br-x' => '10'
+                },
+            ]
+        );
+
+        $loop             = Glib::MainLoop->new;
+        $flag             = FALSE;
+        $dialog->{signal} = $dialog->signal_connect(
+            'changed-profile' => sub {
+                my ( $widget, $paper ) = @_;
+                $dialog->signal_handler_disconnect( $dialog->{signal} );
+                is( $dialog->get_paper_by_geometry,
+                    '10x10', 'get_paper_by_geometry()' );
+                is( $dialog->get('paper'),
+                    '10x10', 'paper size updated after changing profile' );
+                is( $dialog->{combobp}->get_active_text,
+                    '10x10', 'paper undefined means manual geometry' );
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+        $dialog->set( 'profile', '10x10' );
         $loop->run unless ($flag);
 
         Gtk2->main_quit;

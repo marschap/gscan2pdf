@@ -744,6 +744,28 @@ sub hide_geometry {
     return;
 }
 
+sub get_paper_by_geometry {
+    my ($self) = @_;
+    my $formats = $self->get('paper-formats');
+    if ( not defined $formats ) { return }
+    my $options = $self->get('available-scan-options');
+    my %current;
+    for (qw(l t x y)) {
+        $current{$_} = $options->by_name($_)->{val};
+    }
+    for my $paper ( keys %{$formats} ) {
+        my $match = TRUE;
+        for (qw(l t x y)) {
+            if ( $formats->{$paper}{$_} != $current{$_} ) {
+                $match = FALSE;
+                last;
+            }
+        }
+        if ($match) { return $paper }
+    }
+    return;
+}
+
 # Update the sane option in the thread
 # If necessary, reload the options,
 # and walking the options tree, update the widgets
