@@ -389,6 +389,23 @@ sub _post_process_scan {
         );
         return;
     }
+    if ( $options{udt} ) {
+        $self->user_defined(
+            page              => $page,
+            command           => $options{udt},
+            queued_callback   => $options{queued_callback},
+            started_callback  => $options{started_callback},
+            finished_callback => sub {
+                delete $options{udt};
+                my $finished_page = $self->find_page_by_uuid( $page->{uuid} );
+                $self->_post_process_scan( $self->{data}[$finished_page][2],
+                    %options );
+            },
+            error_callback   => $options{error_callback},
+            display_callback => $options{display_callback},
+        );
+        return;
+    }
     if ( $options{ocr} ) {
         $self->ocr_pages(
             [$page],
@@ -3813,6 +3830,9 @@ sub _thread_user_defined {
             delete   => TRUE,
             format   => $image->Get('format'),
         );
+
+        # reuse uuid so that the process chain can find it again
+        $new->{uuid} = $options{page}{uuid};
         $self->{return}->enqueue(
             {
                 type => 'page',

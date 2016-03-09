@@ -3959,6 +3959,9 @@ sub new_scan_callback {
     if ( $SETTING{'threshold-before-ocr'} ) {
         $options{threshold} = $SETTING{'threshold tool'};
     }
+    if ( $SETTING{udt_on_scan} ) {
+        $options{udt} = $SETTING{current_udt};
+    }
     if ( defined $test_image ) {
         $options{filename} = $test_image;
         $options{delete}   = FALSE;
@@ -4124,6 +4127,32 @@ sub add_postprocessing_rotate {
         \@rotate,   \@side,      \@side2,    $rbutton, $r2button,
         $comboboxs, $comboboxs2, $comboboxr, $comboboxr2
     );
+}
+
+sub add_postprocessing_udt {
+    my ($vboxp) = @_;
+    my $hboxudt = Gtk2::HBox->new;
+    $vboxp->pack_start( $hboxudt, FALSE, FALSE, 0 );
+    my $udtbutton =
+      Gtk2::CheckButton->new( $d->get('Process with user-defined tool') );
+    $tooltips->set_tip( $udtbutton,
+        $d->get('Process scanned images with user-defined tool') );
+    $hboxudt->pack_start( $udtbutton, TRUE, TRUE, 0 );
+    if ( not $SETTING{user_defined_tools} ) {
+        $hboxudt->set_sensitive(FALSE);
+        $udtbutton->set_active(FALSE);
+    }
+    elsif ( $SETTING{udf_on_scan} ) {
+        $udtbutton->set_active(TRUE);
+    }
+    my @toolarray;
+    for ( @{ $SETTING{user_defined_tools} } ) {
+        push @toolarray, [ $_, $_ ];
+    }
+    my $comboboxudt = combobox_from_array(@toolarray);
+    combobox_set_active( $comboboxudt, $SETTING{current_udt}, @toolarray );
+    $hboxudt->pack_start( $comboboxudt, TRUE, TRUE, 0 );
+    return $udtbutton, $comboboxudt;
 }
 
 sub add_postprocessing_ocr {
@@ -4297,6 +4326,9 @@ sub add_postprocessing_options {
         }
     );
 
+    # CheckButton for user-defined tool
+    my ( $udtbutton, $comboboxudt ) = add_postprocessing_udt($vboxp);
+
     my (
         $obutton,    $comboboxe, $hboxtl, $comboboxtl, $hboxcl,
         $comboboxcl, $tesslang,  $cflang, $tbutton,    $tsb
@@ -4336,6 +4368,12 @@ sub add_postprocessing_options {
 
             $SETTING{'unpaper on scan'} = $ubutton->get_active;
             $logger->info("unpaper $SETTING{'unpaper on scan'}");
+
+            $SETTING{udt_on_scan} = $udtbutton->get_active;
+            $SETTING{current_udt} = $comboboxudt->get_active_text;
+            $logger->info("UDT $SETTING{udt_on_scan}");
+            $logger->info("Current UDT $SETTING{current_udt}");
+
             $SETTING{'OCR on scan'} = $obutton->get_active;
             $logger->info("OCR $SETTING{'OCR on scan'}");
             if ( $SETTING{'OCR on scan'} ) {
@@ -5780,7 +5818,7 @@ sub unpaper {
     return;
 }
 
-# Create a combobox from an array and set the default
+# Create a combobox from the second column of an array
 
 sub combobox_from_array {
     my (@array) = @_;
@@ -5793,7 +5831,8 @@ sub combobox_from_array {
     return $combobox;
 }
 
-# Create a combobox from an array and set the default
+# Set the current active item of a combobox
+# based on the first column of an array
 
 sub combobox_set_active {
     my ( $combobox, $default, @array ) = @_;
