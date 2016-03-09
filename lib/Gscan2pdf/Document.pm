@@ -2231,7 +2231,7 @@ sub _thread_import_pdf {
 
         # Import each image
         my @images = glob 'x-??*.???';
-        foreach (@images) {
+        for (@images) {
             my ($ext) = /([^.]+)$/xsm;
             try {
                 my $page = Gscan2pdf::Page->new(
@@ -2282,7 +2282,7 @@ sub _thread_save_pdf {
         $logger->info("Using $options{options}->{font} for non-ASCII text");
     }
 
-    foreach my $pagedata ( @{ $options{list_of_pages} } ) {
+    for my $pagedata ( @{ $options{list_of_pages} } ) {
         ++$pagenr;
         $self->{progress} = $pagenr / ( $#{ $options{list_of_pages} } + 2 );
         $self->{message} = sprintf $d->get('Saving page %i of %i'),
@@ -2625,11 +2625,11 @@ sub _add_text_to_pdf {
 sub _wrap_text_to_page {
     my ( $txt, $size, $text_box, $h, $w ) = @_;
     my $y = $h * $POINTS_PER_INCH - $size;
-    foreach my $line ( split /\n/xsm, $txt ) {
+    for my $line ( split /\n/xsm, $txt ) {
         my $x = 0;
 
         # Add a word at a time in order to linewrap
-        foreach my $word ( split $SPACE, $line ) {
+        for my $word ( split $SPACE, $line ) {
             if ( length($word) * $size + $x > $w * $POINTS_PER_INCH ) {
                 $x = 0;
                 $y -= $size;
@@ -2649,7 +2649,7 @@ sub _thread_save_djvu {
     my $page = 0;
     my @filelist;
 
-    foreach my $pagedata ( @{ $options{list_of_pages} } ) {
+    for my $pagedata ( @{ $options{list_of_pages} } ) {
         ++$page;
         $self->{progress} = $page / ( $#{ $options{list_of_pages} } + 2 );
         $self->{message} = sprintf $d->get('Writing page %i of %i'),
@@ -2865,7 +2865,7 @@ sub _thread_save_tiff {
     my $page = 0;
     my @filelist;
 
-    foreach my $pagedata ( @{ $options{list_of_pages} } ) {
+    for my $pagedata ( @{ $options{list_of_pages} } ) {
         ++$page;
         $self->{progress} =
           ( $page - 1 ) / ( $#{ $options{list_of_pages} } + 2 );
@@ -3049,7 +3049,7 @@ sub _thread_save_image {
     else {
         my $current_filename;
         my $i = 1;
-        foreach ( @{$list_of_pages} ) {
+        for ( @{$list_of_pages} ) {
             $current_filename = sprintf $path, $i++;
             my $cmd = sprintf 'convert %s -density %d %s',
               $_->{filename}, $_->{resolution},
@@ -3110,7 +3110,7 @@ sub _thread_save_hocr {
             sprintf $d->get("Can't open file: %s"), $path );
         return;
     }
-    foreach ( @{$list_of_pages} ) {
+    for ( @{$list_of_pages} ) {
         if ( $_->{hocr} =~ /<body>([\s\S]*)<\/body>/xsm ) {
             _write_file( $self, $fh, $path, $_->{hocr}, $uuid ) or return;
             return if $_self->{cancel};

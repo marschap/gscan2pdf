@@ -475,7 +475,8 @@ sub INIT_INSTANCE {
         }
     );
 
-# Have to put the extended pagenumber checkbox here to reference simple controls
+    # Have to put the extended pagenumber checkbox here
+    # to reference simple controls
     $checkx->signal_connect(
         toggled => \&_extended_pagenumber_checkbox_callback,
         [ $self, $frames, $spin_buttoni ]

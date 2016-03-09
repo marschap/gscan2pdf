@@ -18,7 +18,7 @@ my $sharedir;
 my $shareinstdir;
 
 @ARGV = ();
-foreach (@argv) {
+for (@argv) {
     if (m!PREFIX=(.+)!i) {
         $prefixdir = $1;
         push @ARGV, $_;

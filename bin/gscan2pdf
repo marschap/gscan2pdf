@@ -1315,12 +1315,12 @@ sub update_uimanager {
     );
 
     if ( $slist->get_selected_indices ) {
-        foreach (@widgets) {
+        for (@widgets) {
             $uimanager->get_widget($_)->set_sensitive(TRUE);
         }
     }
     else {
-        foreach (@widgets) {
+        for (@widgets) {
             $uimanager->get_widget($_)->set_sensitive(FALSE);
         }
     }
@@ -2338,7 +2338,7 @@ sub prepare_output_metadata {
         $h{ModDate}      = sprintf $dateformat, $year, $month, $day;
         $h{Creator}      = "$prog_name v$VERSION";
         $h{Producer} = $type eq 'PDF' ? 'PDF::API2' : 'djvulibre';
-        foreach my $key (qw/author title subject keywords/) {
+        for my $key (qw/author title subject keywords/) {
             if ( defined $SETTING{$key} ) {
                 $h{ ucfirst $key } = $SETTING{$key};
             }
@@ -4083,7 +4083,7 @@ sub add_postprocessing_rotate {
                     $comboboxs2->set_active(0);
                 }
                 @side2 = ();
-                foreach (@side) {
+                for (@side) {
                     if (    $_->[0] ne 'both'
                         and $_->[0] ne $side[ $comboboxs->get_active ]->[0] )
                     {
@@ -4704,7 +4704,7 @@ sub select_odd_even {
 
 sub select_modified_since_ocr {
     my @selection;
-    foreach my $page ( 0 .. $#{ $slist->{data} } ) {
+    for my $page ( 0 .. $#{ $slist->{data} } ) {
         my $dirty_time = $slist->{data}[$page][2]{dirty_time};
         my $ocr_flag   = $slist->{data}[$page][2]{ocr_flag};
         my $ocr_time   = $slist->{data}[$page][2]{ocr_time};
@@ -4989,7 +4989,7 @@ sub analyse {
     # Update undo/redo buffers
     take_snapshot();
 
-    foreach my $i ( 0 .. $#{ $slist->{data} } ) {
+    for my $i ( 0 .. $#{ $slist->{data} } ) {
         my $dirty_time   = $slist->{data}[$i][2]{dirty_time};
         my $analyse_time = $slist->{data}[$i][2]{analyse_time};
         $dirty_time   = defined $dirty_time   ? $dirty_time   : 0;
@@ -5787,7 +5787,7 @@ sub combobox_from_array {
 
     # Fill ComboBox
     my $combobox = Gtk2::ComboBox->new_text;
-    foreach (@array) {
+    for (@array) {
         $combobox->append_text( $_->[1] );
     }
     return $combobox;
@@ -5802,7 +5802,7 @@ sub combobox_set_active {
     my $i = 0;
     my $o;
     if ( defined $default ) {
-        foreach (@array) {
+        for (@array) {
             if ( defined $_->[0] and $_->[0] eq $default ) { $o = $i }
             ++$i;
         }
@@ -6311,7 +6311,7 @@ sub init_icons {
     $iconfactory = Gtk2::IconFactory->new();
     $iconfactory->add_default();
 
-    foreach (@icons) {
+    for (@icons) {
         register_icon( $_->[0], $_->[1] );
     }
     return;

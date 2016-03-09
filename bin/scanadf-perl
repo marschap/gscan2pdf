@@ -1125,7 +1125,7 @@ sub list_device_names {
     if ( $Sane::STATUS == SANE_STATUS_GOOD ) {
         my $column = $END_COLUMN;
 
-        foreach (@device_list) {
+        for (@device_list) {
             if ( $column + length( $_->{name} ) + 1 >= $END_COLUMN ) {
                 printf "\n    ";
                 $column = $INDENT;
@@ -1159,7 +1159,7 @@ if ( defined $options{L} ) {
     if ( $Sane::STATUS != SANE_STATUS_GOOD ) {
         die "$prog_name: sane_get_devices() failed: $Sane::STATUS\n";
     }
-    foreach (@device_list) {
+    for (@device_list) {
         printf "device `%s' is a %s %s %s\n", $_->{name}, $_->{vendor},
           $_->{model}, $_->{type};
     }

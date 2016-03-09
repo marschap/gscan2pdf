@@ -275,7 +275,7 @@ sub add_options {
         }
     );
 
-    foreach ( keys %{ $options->{'deskew-scan-direction'}{options} } ) {
+    for ( keys %{ $options->{'deskew-scan-direction'}{options} } ) {
         my $button = $options->{'deskew-scan-direction'}{options}{$_}{widget};
 
         # Ensure that at least one checkbutton stays active
@@ -325,7 +325,7 @@ sub add_options {
     # Define margins here to reference them below
     my $bmframe = $self->add_widget( $vbox2, $options, 'border-margin' );
 
-    foreach ( keys %{ $options->{'border-align'}{options} } ) {
+    for ( keys %{ $options->{'border-align'}{options} } ) {
         my $button = $options->{'border-align'}{options}{$_}{widget};
 
         # Ghost margin if nothing selected
@@ -400,7 +400,7 @@ sub add_widget {
             # Add text and tooltips
             my @tooltip;
             my $i = 0;
-            foreach ( keys %{ $hashref->{$option}{options} } ) {
+            for ( keys %{ $hashref->{$option}{options} } ) {
                 $widget->append_text(
                     $hashref->{$option}{options}{$_}{string} );
                 push @tooltip, $hashref->{$option}{options}{$_}{tooltip};
@@ -429,7 +429,7 @@ sub add_widget {
             $vboxf->set_border_width($BORDER_WIDTH);
             $widget->add($vboxf);
             $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
-            foreach ( keys %{ $hashref->{$option}{options} } ) {
+            for ( keys %{ $hashref->{$option}{options} } ) {
                 my $button =
                   $self->add_widget( $vboxf, $hashref->{$option}{options}, $_ );
             }
@@ -458,7 +458,7 @@ sub add_widget {
             my $vboxf = Gtk2::VBox->new;
             $vboxf->set_border_width($BORDER_WIDTH);
             $widget->add($vboxf);
-            foreach (
+            for (
                 sort {
                     $hashref->{$option}{options}{$a}{order}
                       <=> $hashref->{$option}{options}{$b}{order}
@@ -480,7 +480,7 @@ sub get_options {
     my $hashref = $self->{options};
     my $default = $self->{default};
 
-    foreach my $option ( keys %{$hashref} ) {
+    for my $option ( keys %{$hashref} ) {
         if ( defined $hashref->{$option}{widget} ) {
             given ( $hashref->{$option}{type} ) {
                 when ('ComboBox') {
@@ -501,7 +501,7 @@ sub get_options {
                 }
                 when ('CheckButtonGroup') {
                     my @items;
-                    foreach ( sort keys %{ $hashref->{$option}{options} } ) {
+                    for ( sort keys %{ $hashref->{$option}{options} } ) {
                         if ( $hashref->{$option}{options}{$_}{widget}
                             ->get_active )
                         {
@@ -512,7 +512,7 @@ sub get_options {
                 }
                 when ('SpinButtonGroup') {
                     my @items;
-                    foreach ( keys %{ $hashref->{$option}{options} } ) {
+                    for ( keys %{ $hashref->{$option}{options} } ) {
                         push @items,
                           $hashref->{$option}{options}{$_}{widget}->get_value;
                     }
@@ -528,7 +528,7 @@ sub set_options {
     my ( $self, $options ) = @_;
     my $hashref = $self->{options};
 
-    foreach my $option ( keys %{$options} ) {
+    for my $option ( keys %{$options} ) {
         if ( defined $hashref->{$option}{widget} ) {
             given ( $hashref->{$option}{type} ) {
                 when ('ComboBox') {
@@ -545,11 +545,11 @@ sub set_options {
                 when ('CheckButtonGroup') {
                     my %default;
                     if ( defined $options->{$option} ) {
-                        foreach ( split /,/sm, $options->{$option} ) {
+                        for ( split /,/sm, $options->{$option} ) {
                             $default{$_} = TRUE;
                         }
                     }
-                    foreach ( keys %{ $hashref->{$option}{options} } ) {
+                    for ( keys %{ $hashref->{$option}{options} } ) {
                         $hashref->{$option}{options}{$_}{widget}
                           ->set_active( defined $default{$_} );
                     }
@@ -563,7 +563,7 @@ sub set_options {
                     if ( defined $options->{$option} ) {
                         @default = split /,/sm, $options->{$option};
                     }
-                    foreach (
+                    for (
                         sort {
                             $hashref->{$option}{options}{$a}{order}
                               <=> $hashref->{$option}{options}{$b}{order}
@@ -588,7 +588,7 @@ sub get_cmdline {
     my $default = $self->get_options;
 
     my @items;
-    foreach my $option ( sort keys %{$hashref} ) {
+    for my $option ( sort keys %{$hashref} ) {
         if ( $hashref->{$option}{type} eq 'CheckButton' ) {
             if ( defined $default->{$option} and $default->{$option} ) {
                 push @items, "--$option";

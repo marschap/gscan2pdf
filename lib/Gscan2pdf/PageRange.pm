@@ -45,7 +45,7 @@ sub INIT_INSTANCE {
     #the first radio button has to set the group,
     #which is undef for the first button
     my $group;
-    foreach my $nick ( sort keys %buttons ) {
+    for my $nick ( sort keys %buttons ) {
         $self->{button}{$nick} =
           Gtk2::RadioButton->new( $group, $buttons{$nick} );
         $self->{button}{$nick}->signal_connect(
