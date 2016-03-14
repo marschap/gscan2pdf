@@ -219,8 +219,8 @@ init_icons(
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
 my (
-    $slist, $windowi, $windowe, $windows, $windowh, $windowo, $windowrn,
-    $windowu,
+    $slist,   $windowi, $windowe, $windows, $windowh, $windowo, $windowrn,
+    $windowu, $windowudt,
     @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     $menubar,     $toolbar,
@@ -233,9 +233,6 @@ my (
 
     # Goo::Canvas for OCR output
     $canvas,
-
-    # List of user-defined tools
-    @user_defined_tools,
 
     # Spinbuttons for selector on crop dialog
     $sb_selector_x, $sb_selector_y, $sb_selector_w, $sb_selector_h,
@@ -946,7 +943,11 @@ sub create_menu_bar {
             $d->get('Optical Character Recognition'),
             \&ocr_dialog
         ],
-        [ 'User-defined', undef, $d->get('U_ser-defined') ],
+        [
+            'User-defined', undef, $d->get('U_ser-defined'),
+            undef, $d->get('Process images with user-defined tool'),
+            \&user_defined_dialog
+        ],
 
         # Help menu
         [ 'Help menu', undef, $d->get('_Help') ],
@@ -1041,8 +1042,7 @@ sub create_menu_bar {
    <menuitem action='unpaper'/>
    <menuitem action='OCR'/>
    <separator/>
-   <menu action='User-defined'>
-   </menu>
+   <menuitem action='User-defined'/>
   </menu>
   <menu action='Help menu'>
    <menuitem action='Help'/>
@@ -1144,15 +1144,6 @@ EOS
 
     # extract the menubar
     $menubar = $uimanager->get_widget('/MenuBar');
-
-    if ( ref( $SETTING{user_defined_tools} ) ne 'ARRAY' ) {
-        $SETTING{user_defined_tools} = [ $SETTING{user_defined_tools} ];
-    }
-    for ( @{ $SETTING{user_defined_tools} } ) {
-        my %tool = ( cmd => $_ );
-        push @user_defined_tools, \%tool;
-        add_user_defined_tool_menu( \%tool );
-    }
 
     # Check for presence of various packages
     check_dependencies();
@@ -4327,7 +4318,7 @@ sub add_postprocessing_options {
     );
 
     # CheckButton for user-defined tool
-    my ( $udtbutton, $comboboxudt ) = add_postprocessing_udt($vboxp);
+    ( my $udtbutton, $self->{comboboxudt} ) = add_postprocessing_udt($vboxp);
 
     my (
         $obutton,    $comboboxe, $hboxtl, $comboboxtl, $hboxcl,
@@ -4370,7 +4361,7 @@ sub add_postprocessing_options {
             $logger->info("unpaper $SETTING{'unpaper on scan'}");
 
             $SETTING{udt_on_scan} = $udtbutton->get_active;
-            $SETTING{current_udt} = $comboboxudt->get_active_text;
+            $SETTING{current_udt} = $self->{comboboxudt}->get_active_text;
             $logger->info("UDT $SETTING{udt_on_scan}");
             $logger->info("Current UDT $SETTING{current_udt}");
 
@@ -5673,20 +5664,106 @@ sub update_selector {
     return;
 }
 
+# Run unpaper to clean up scan.
+
+sub user_defined_dialog {
+
+    if ( defined $windowudt ) {
+        $windowudt->present;
+        return;
+    }
+
+    $windowudt = Gscan2pdf::Dialog->new(
+        'transient-for'  => $window,
+        title            => $d->get('User-defined tools'),
+        'hide-on-delete' => TRUE,
+        border_width     => $BORDER_WIDTH
+    );
+    my $vbox = $windowudt->get('vbox');
+
+    # Frame for page range
+    add_page_range($vbox);
+
+    # Manage user-defined tools
+    my $frame = Gtk2::Frame->new( $d->get('Manage user-defined tools') );
+    $vbox->pack_start( $frame, TRUE, TRUE, 0 );
+    my $vboxt = Gtk2::VBox->new;
+    $vboxt->set_border_width($BORDER_WIDTH);
+    $frame->add($vboxt);
+    my $hbox = Gtk2::HBox->new;
+    $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
+    my $label = Gtk2::Label->new( $d->get('Selected tool') );
+    $hbox->pack_start( $label, FALSE, TRUE, 0 );
+    my $combobox = Gtk2::ComboBox->new_text;
+    $combobox->set_title( $d->get('Current tool') );
+    my $udtools = [];
+
+    for my $tool ( @{ $SETTING{user_defined_tools} } ) {
+        add_user_defined_tool_entry( $vboxt, $combobox, $tool, $udtools );
+    }
+    my $abutton = Gtk2::Button->new_from_stock('gtk-add');
+    $vboxt->pack_start( $abutton, TRUE, TRUE, 0 );
+    $abutton->signal_connect(
+        clicked => sub {
+            add_user_defined_tool_entry( $vboxt, $combobox, 'my-tool %i %o',
+                $udtools );
+            $vboxt->reorder_child( $abutton, $EMPTY_LIST );
+            update_list_user_defined_tools( $vboxt, $combobox, $udtools );
+        }
+    );
+
+    $hbox->pack_start( $combobox, TRUE, TRUE, 0 );
+    combobox_set_active( $combobox, $SETTING{current_udt}, @{$udtools} );
+
+    # HBox for buttons
+    my $hboxb = Gtk2::HBox->new;
+    $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
+
+    # OK button
+    my $sbutton = Gtk2::Button->new_from_stock('gtk-ok');
+    $hboxb->pack_start( $sbutton, TRUE, TRUE, 0 );
+    $sbutton->grab_focus;
+    $sbutton->signal_connect(
+        clicked => sub {
+
+            # Update undo/redo buffers
+            take_snapshot();
+
+            # run unpaper
+            my @pagelist = indices2pages(
+                $slist->get_page_index(
+                    $SETTING{'Page range'}, \&error_callback
+                )
+            );
+            if ( not @pagelist ) { return }
+            $SETTING{current_udt} = $combobox->get_active_text;
+            user_defined_tool( \@pagelist, $SETTING{current_udt} );
+
+            $windowudt->hide;
+        }
+    );
+
+    # Cancel button
+    my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
+    $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
+    $cbutton->signal_connect( clicked => sub { $windowudt->hide; } );
+
+    $windowudt->show_all;
+    return;
+}
+
 # Run a user-defined tool on the selected images
 
 sub user_defined_tool {
-    my ($action) = @_;
-    my @pages = $slist->get_selected_indices;
+    my ( $pages, $cmd ) = @_;
 
     # Update undo/redo buffers
     take_snapshot();
 
-    my $cmd = $action->get('label');
-    for my $i (@pages) {
+    for my $page ( @{$pages} ) {
         my ( $signal, $pid );
         $pid = $slist->user_defined(
-            page            => $slist->{data}[$i][2],
+            page            => $page,
             command         => $cmd,
             queued_callback => sub {
                 return update_tpbar(@_);
@@ -5836,17 +5913,17 @@ sub combobox_from_array {
 
 sub combobox_set_active {
     my ( $combobox, $default, @array ) = @_;
-
-    # Fill ComboBox
     my $i = 0;
-    my $o;
+    my $o = 0;
     if ( defined $default ) {
         for (@array) {
-            if ( defined $_->[0] and $_->[0] eq $default ) { $o = $i }
+            if ( defined $_->[0] and $_->[0] eq $default ) {
+                $o = $i;
+                last;
+            }
             ++$i;
         }
     }
-    if ( not defined $o ) { $o = 0 }
     $combobox->set_active($o);
     return;
 }
@@ -6809,27 +6886,6 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     combobox_set_active( $comboo, $SETTING{'OCR output'}, @array );
     $hbox->pack_end( $comboo, TRUE, TRUE, 0 );
 
-    # User-defined tools
-    my $frame = Gtk2::Frame->new( $d->get('User-defined tools') );
-    $vbox2->pack_start( $frame, TRUE, TRUE, 0 );
-    my $vboxt = Gtk2::VBox->new;
-    $vboxt->set_border_width($BORDER_WIDTH);
-    $frame->add($vboxt);
-    for my $tool (@user_defined_tools) {
-        add_user_defined_tool_entry( $vboxt, $tool );
-    }
-    my $abutton = Gtk2::Button->new_from_stock('gtk-add');
-    $vboxt->pack_start( $abutton, TRUE, TRUE, 0 );
-    $abutton->signal_connect(
-        clicked => sub {
-            my %tool = ( cmd => 'my-tool %i %o' );
-            add_user_defined_tool_menu( \%tool );
-            add_user_defined_tool_entry( $vboxt, \%tool );
-            $vboxt->reorder_child( $abutton, $EMPTY_LIST );
-            $SETTING{user_defined_tools} = list_user_defined_tools($vboxt);
-        }
-    );
-
     # Apply button
     $hbox = _hbox_with_apply_cancel_buttons(
         sub {
@@ -6926,72 +6982,53 @@ sub _hbox_with_apply_cancel_buttons {
     return $hbox;
 }
 
-# Return list of user-defined tools
-sub list_user_defined_tools {
-    my ($vbox) = @_;
-    my @list;
+# Update list of user-defined tools
+sub update_list_user_defined_tools {
+    my ( $vbox, $combobox, $udtools ) = @_;
+    my (@list);
+    while ( $#{$udtools} > $EMPTY_LIST ) {
+        $combobox->remove_text(0);
+        if ( defined $windows->{comboboxudt} ) {
+            $windows->{comboboxudt}->remove_text(0);
+        }
+        pop @{$udtools};
+    }
     for my $hbox ( $vbox->get_children ) {
         if ( $hbox->isa('Gtk2::HBox') ) {
             for my $widget ( $hbox->get_children ) {
                 if ( $widget->isa('Gtk2::Entry') ) {
-                    push @list, $widget->get_text;
+                    my $text = $widget->get_text;
+                    push @list, $text;
+                    push @{$udtools}, [ $text, $text ];
+                    $combobox->append_text($text);
+                    if ( defined $windows->{comboboxudt} ) {
+                        $windows->{comboboxudt}->append_text($text);
+                    }
                 }
             }
         }
     }
-    return \@list;
-}
-
-# Add user-defined tool menu item
-sub add_user_defined_tool_menu {
-    my ($tool) = @_;
-    my $action_group = Gtk2::ActionGroup->new('actions');
-    $tool->{name} = "$action_group";
-    my $tool_ui = <<"EOS";
-<ui>
- <menubar name='MenuBar'>
-  <menu action='Tools'>
-   <menu action='User-defined'>
-    <menuitem action='$tool->{name}'/>
-   </menu>
-  </menu>
- </menubar>
-</ui>
-EOS
-
-    # add the basic XML description of the GUI
-    $tool->{merge_id} = $uimanager->add_ui_from_string($tool_ui);
-
-    my @action_item = (
-
-        # Fields for each action item:
-        # [name, stock_id, value, label, accelerator, tooltip, callback]
-        [
-            $tool->{name}, undef,
-            $tool->{cmd},  undef,
-            undef,         \&user_defined_tool
-        ],
-    );
-    $action_group->add_actions( \@action_item, undef );
-
-    # Add the actiongroup to the uimanager
-    $uimanager->insert_action_group( $action_group, 0 );
-    $tool->{action_group} = $action_group;
+    $SETTING{user_defined_tools} = \@list;
+    combobox_set_active( $combobox, $SETTING{current_udt}, @{$udtools} );
+    if ( defined $windows->{comboboxudt} ) {
+        combobox_set_active( $windows->{comboboxudt},
+            $SETTING{current_udt}, @{$udtools} );
+    }
     return;
 }
 
 # Add user-defined tool entry
 sub add_user_defined_tool_entry {
-    my ( $vbox, $tool ) = @_;
+    my ( $vbox, $combobox, $tool, $udtools ) = @_;
+    $combobox->append_text($tool);
+    push @{$udtools}, [ $tool, $tool ];
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
     my $entry = Gtk2::Entry->new;
-    $entry->set_text( $tool->{cmd} );
+    $entry->set_text($tool);
     $entry->signal_connect(
         changed => sub {
-            my $action = $tool->{action_group}->get_action( $tool->{name} );
-            $action->set( 'label', $entry->get_text );
-            $SETTING{user_defined_tools} = list_user_defined_tools($vbox);
+            update_list_user_defined_tools( $vbox, $combobox, $udtools );
             ()    # this callback must return either 2 or 0 items.
         }
     );
@@ -7007,9 +7044,8 @@ sub add_user_defined_tool_entry {
     $button->set_image( Gtk2::Image->new_from_stock( 'gtk-delete', 'button' ) );
     $button->signal_connect(
         clicked => sub {
-            $uimanager->remove_ui( $tool->{merge_id} );
             $hbox->destroy;
-            $SETTING{user_defined_tools} = list_user_defined_tools($vbox);
+            update_list_user_defined_tools( $vbox, $combobox, $udtools );
         }
     );
     $hbox->pack_end( $button, FALSE, FALSE, 0 );
