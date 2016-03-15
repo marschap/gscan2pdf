@@ -341,8 +341,9 @@ sub INIT_INSTANCE {
     }
 
     # Toggle to switch between basic and extended modes
-    my $checkx = Gtk2::CheckButton->new( $d->get('Extended page numbering') );
-    $vbox1->pack_start( $checkx, FALSE, FALSE, 0 );
+    $self->{checkx} =
+      Gtk2::CheckButton->new( $d->get('Extended page numbering') );
+    $vbox1->pack_start( $self->{checkx}, FALSE, FALSE, 0 );
 
     # Frame for extended mode
     $self->{framex} = Gtk2::Frame->new( $d->get('Page number') );
@@ -477,7 +478,7 @@ sub INIT_INSTANCE {
 
     # Have to put the extended pagenumber checkbox here
     # to reference simple controls
-    $checkx->signal_connect(
+    $self->{checkx}->signal_connect(
         toggled => \&_extended_pagenumber_checkbox_callback,
         [ $self, $frames, $spin_buttoni ]
     );
@@ -1321,15 +1322,15 @@ sub _extended_pagenumber_checkbox_callback {
     }
     else {
         if ( $spin_buttoni->get_value == 1 ) {
-            $widget->{buttons}->set_active(TRUE);
+            $dialog->{buttons}->set_active(TRUE);
         }
         elsif ( $spin_buttoni->get_value > 0 ) {
-            $widget->{buttond}->set_active(TRUE);
-            $widget->{combobs}->set_active(0);
+            $dialog->{buttond}->set_active(TRUE);
+            $dialog->{combobs}->set_active(FALSE);
         }
         else {
-            $widget->{buttond}->set_active(TRUE);
-            $widget->{combobs}->set_active(1);
+            $dialog->{buttond}->set_active(TRUE);
+            $dialog->{combobs}->set_active(TRUE);
         }
         $frames->show_all;
         $dialog->{framex}->hide_all;
