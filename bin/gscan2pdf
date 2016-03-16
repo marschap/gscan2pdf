@@ -1831,7 +1831,11 @@ sub open_session_action {
 sub open_session {
     my ($sesdir) = @_;
     $logger->info("Restoring session in $session");
-    $slist->open_session( $sesdir, FALSE, \&error_callback );
+    $slist->open_session(
+        dir            => $sesdir,
+        delete         => FALSE,
+        error_callback => \&error_callback
+    );
     update_uimanager();
     return;
 }
