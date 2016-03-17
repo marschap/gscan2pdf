@@ -239,6 +239,7 @@ sub scan_options {
             # This fires the reloaded-scan-options signal,
             # so don't set this until we have finished
             $self->set( 'available-scan-options', $options );
+            $self->set_paper_formats( $self->{paper_formats} );
             return;
         }
     }
@@ -303,6 +304,7 @@ sub scan_options {
             # This fires the reloaded-scan-options signal,
             # so don't set this until we have finished
             $self->set( 'available-scan-options', $options );
+            $self->set_paper_formats( $self->{paper_formats} );
         },
         error_callback => sub {
             my ($message) = @_;
@@ -323,9 +325,8 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
     # We have hereby removed the active profile and paper,
     # so update the properties without triggering the signals
-    $self->{profile}       = undef;
-    $self->{paper_formats} = undef;
-    $self->{paper}         = undef;
+    $self->{profile} = undef;
+    $self->{paper}   = undef;
 
     # Default tab
     my $vbox = Gtk2::VBox->new;

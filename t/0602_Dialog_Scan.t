@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 3;
+use Test::More tests => 5;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -23,6 +23,18 @@ my $dialog = Gscan2pdf::Dialog::Scan::Sane->new(
     title           => 'title',
     'transient-for' => $window,
     'logger'        => $logger
+);
+
+$dialog->set(
+    'paper-formats',
+    {
+        new => {
+            l => 0,
+            y => 10,
+            x => 10,
+            t => 0,
+        }
+    }
 );
 
 my $profile_changes = 0;
@@ -100,6 +112,11 @@ $signal = $dialog->signal_connect(
 $dialog->set( 'device', 'test' );
 $dialog->scan_options;
 Gtk2->main;
+
+is( Gscan2pdf::Dialog::Scan::get_combobox_num_rows( $dialog->{combobp} ),
+    3, 'available paper reapplied after setting/changing device' );
+is( $dialog->{combobp}->get_active_text,
+    'Manual', 'paper combobox has a value' );
 
 Gscan2pdf::Frontend::Sane->quit;
 __END__

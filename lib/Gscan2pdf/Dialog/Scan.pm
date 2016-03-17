@@ -963,7 +963,9 @@ sub set_paper_formats {
         }
 
         # Set the combobox back from Edit to the previous value
-        set_combobox_by_text( $combobp, $self->get('paper') );
+        my $paper = $self->get('paper');
+        if ( not defined $paper ) { $paper = $d->get('Manual') }
+        set_combobox_by_text( $combobp, $paper );
     }
     return;
 }

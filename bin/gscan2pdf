@@ -3645,6 +3645,7 @@ sub scan_dialog {
         logger              => $logger,
         dir                 => $session,
         'hide-on-delete'    => TRUE,
+        'paper-formats'     => $SETTING{Paper},
         'num-pages'         => $SETTING{'pages to scan'},
         'page-number-start' => $#{ $slist->{data} } > $EMPTY_LIST
         ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
@@ -3786,9 +3787,10 @@ sub scan_dialog {
         }
     );
 
-    # Can't set the paper or profile until the options have been loaded
+    # Can't set the profile until the options have been loaded
     $windows->{reloaded_signal} = $windows->signal_connect(
         'reloaded-scan-options' => \&reloaded_scan_options_callback );
+
     $windows->signal_connect(
         'changed-paper-formats' => sub {
             my ( $widget, $formats ) = @_;
@@ -3886,7 +3888,6 @@ sub changed_side_to_scan_callback {
 # This should only be called the first time after loading the available options
 sub reloaded_scan_options_callback {
     $windows->signal_handler_disconnect( $windows->{reloaded_signal} );
-    $windows->set( 'paper-formats', $SETTING{Paper} );
 
     my @profiles = keys %{ $SETTING{profile} };
     if ( defined $SETTING{'default profile'} ) {
