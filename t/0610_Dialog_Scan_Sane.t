@@ -362,7 +362,8 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 if ( $process eq 'scan_pages' ) {
                     is( $n, 1, 'new-scan emitted once' );
 
-             # changing device via the combobox should really change the device!
+                    # changing device via the combobox
+                    # should really change the device!
                     $dialog->{signal} = $dialog->signal_connect(
                         'changed-device' => sub {
                             my ( $widget, $name ) = @_;
