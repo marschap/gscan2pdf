@@ -2404,7 +2404,6 @@ sub save_pdf {
 # Set up quality spinbutton here so that it can be shown or hidden by callback
 
 sub add_quality_spinbutton {
-
     my ($vbox) = @_;
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
@@ -2606,10 +2605,9 @@ sub save_dialog {
     $label = Gtk2::Label->new( $d->get('Compression') );
     $hboxc->pack_start( $label, FALSE, FALSE, 0 );
 
-  # Set up quality spinbutton here so that it can be shown or hidden by callback
+    # Set up quality spinbutton here
+    # so that it can be shown or hidden by callback
     my ( $hboxtq, $spinbuttontq ) = add_quality_spinbutton($vbox);
-    $label = Gtk2::Label->new( $d->get('tiff') );
-    $hboxtq->pack_start( $label, FALSE, FALSE, 0 );
 
     # Fill compression ComboBox
     my $combobtc = combobox_from_array(@tiff_compression);
@@ -2803,8 +2801,11 @@ sub image_type_changed_callback {
             $hboxtq->hide_all;
         }
         when ('jpg') {
-            $hboxtq->show_all;
+            $hboxmd->hide_all;
+            $hboxf->hide_all;
+            $hboxc->hide_all;
             $hboxpq->hide_all;
+            $hboxtq->show_all;
         }
         default {
             $hboxmd->hide_all;
@@ -3073,6 +3074,10 @@ sub save_button_clicked_callback {
 
             # cd back to tempdir
             chdir $session;
+        }
+        when ('jpg') {
+            $SETTING{'quality'} = $spinbuttontq->get_value;
+            save_image($list_of_pages);
         }
         default {
             save_image($list_of_pages);
