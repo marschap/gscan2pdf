@@ -2004,6 +2004,7 @@ sub open_dialog {
                     $tcbutton->signal_handler_disconnect($signal);
                 }
                 update_uimanager();
+                $slist->save_session;
             },
             error_callback => \&error_callback
         );
@@ -3950,6 +3951,7 @@ sub new_scan_callback {
             if ( defined $signal ) {
                 $tcbutton->signal_handler_disconnect($signal);
             }
+            $slist->save_session;
         },
         error_callback => \&error_callback,
         display_callback => sub { update_uimanager() },
@@ -4692,6 +4694,7 @@ sub delete_pages {
     reset_start();
 
     update_uimanager();
+    $slist->save_session;
     return;
 }
 
@@ -4788,6 +4791,7 @@ sub clear_ocr {
     for (@selection) {
         delete $slist->{data}[$_][2]{hocr};
     }
+    $slist->save_session;
     return;
 }
 
@@ -5010,6 +5014,7 @@ sub rotate {
                 if ( defined $signal ) {
                     $tcbutton->signal_handler_disconnect($signal);
                 }
+                $slist->save_session;
             },
             error_callback   => \&error_callback,
             display_callback => sub {
@@ -5059,6 +5064,7 @@ sub analyse {
                     }
                     if ($select_blank) { select_blank_page($i) }
                     if ($select_dark)  { select_dark_page($i) }
+                    $slist->save_session;
                 },
                 error_callback => \&error_callback,
             );
@@ -5162,6 +5168,7 @@ sub threshold {
                         if ( defined $signal ) {
                             $tcbutton->signal_handler_disconnect($signal);
                         }
+                        $slist->save_session;
                     },
                     error_callback   => \&error_callback,
                     display_callback => sub {
@@ -5225,6 +5232,7 @@ sub negate {
                         if ( defined $signal ) {
                             $tcbutton->signal_handler_disconnect($signal);
                         }
+                        $slist->save_session;
                     },
                     error_callback   => \&error_callback,
                     display_callback => sub {
@@ -5405,6 +5413,7 @@ sub unsharp {
                         if ( defined $signal ) {
                             $tcbutton->signal_handler_disconnect($signal);
                         }
+                        $slist->save_session;
                     },
                     error_callback   => \&error_callback,
                     display_callback => sub {
@@ -5647,6 +5656,7 @@ sub crop {
                         if ( defined $signal ) {
                             $tcbutton->signal_handler_disconnect($signal);
                         }
+                        $slist->save_session;
                     },
                     error_callback   => \&error_callback,
                     display_callback => sub {
@@ -5736,11 +5746,6 @@ sub user_defined_dialog {
     $sbutton->grab_focus;
     $sbutton->signal_connect(
         clicked => sub {
-
-            # Update undo/redo buffers
-            take_snapshot();
-
-            # run unpaper
             my @pagelist = indices2pages(
                 $slist->get_page_index(
                     $SETTING{'Page range'}, \&error_callback
@@ -5791,6 +5796,7 @@ sub user_defined_tool {
                 if ( defined $signal ) {
                     $tcbutton->signal_handler_disconnect($signal);
                 }
+                $slist->save_session;
             },
             error_callback   => \&error_callback,
             display_callback => sub {
@@ -5831,6 +5837,7 @@ sub unpaper_page {
                 if ( defined $signal ) {
                     $tcbutton->signal_handler_disconnect($signal);
                 }
+                $slist->save_session;
             },
             error_callback   => \&error_callback,
             display_callback => sub {
@@ -5877,9 +5884,6 @@ sub unpaper {
     $sbutton->grab_focus;
     $sbutton->signal_connect(
         clicked => sub {
-
-            # Update undo/redo buffers
-            take_snapshot();
 
             # Update $SETTING
             $SETTING{'unpaper options'} = $unpaper->get_options;
@@ -6192,11 +6196,12 @@ sub quit {
         return;
     }
 
-  # Make sure that we are back in the start directory, otherwise we can't delete
-  # the temp dir.
+    # Make sure that we are back in the start directory,
+    # otherwise we can't delete the temp dir.
     chdir $SETTING{'cwd'};
 
- # Remove temporary files (for some reason File::Temp wasn't doing its job here)
+    # Remove temporary files
+    # (for some reason File::Temp wasn't doing its job here)
     unlink <$session/*>;
     rmdir $session;
 
@@ -6359,9 +6364,6 @@ sub take_snapshot {
         }
 
     }
-
-    # Save session
-    $slist->save_session;
     return;
 }
 
