@@ -6153,6 +6153,7 @@ sub run_ocr {
             if ( defined $signal ) {
                 $tcbutton->signal_handler_disconnect($signal);
             }
+            $slist->save_session;
         },
         error_callback   => \&error_callback,
         display_callback => sub {
