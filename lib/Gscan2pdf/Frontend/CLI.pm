@@ -66,7 +66,8 @@ sub parse_device_list {
 
     my (@device_list);
 
-    if ( defined $output ) { $logger->info($output) }
+    if ( not defined $output ) { return [] }
+    $logger->info($output);
 
     # parse out the device and model names
     my @words =
@@ -97,7 +98,6 @@ sub find_scan_options {
     }
 
     # Get output from scanimage or scanadf.
-    # Inverted commas needed for strange characters in device name
     my $cmd = _create_scanimage_cmd( \%options );
 
     _watch_cmd(
