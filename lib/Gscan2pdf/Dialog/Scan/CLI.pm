@@ -543,10 +543,6 @@ sub _update_option_visibility {
         }
     }
 
-    # In case the geometry values have changed,
-    # update the available paper formats
-    $self->set_paper_formats( $self->{paper_formats} );
-
     if ( defined $visible_options->{'Paper size'} ) {
         $self->{hboxp}->show_all;
     }
