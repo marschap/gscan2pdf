@@ -471,9 +471,6 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
         $self->pack_widget( $widget, [ $options, $opt, $hbox ] );
     }
 
-    # Set defaults
-    my $sane_device = Gscan2pdf::Frontend::CLI->device;
-
     # Callback for option visibility
     $self->signal_connect(
         'changed-option-visibility' => sub {

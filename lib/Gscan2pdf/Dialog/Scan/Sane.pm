@@ -325,9 +325,6 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
         $self->pack_widget( $widget, [ $options, $opt, $hbox, $hboxp ] );
     }
 
-    # Set defaults
-    my $sane_device = Gscan2pdf::Frontend::Sane->device();
-
     # Show new pages
     for ( 1 .. $self->{notebook}->get_n_pages - 1 ) {
         $self->{notebook}->get_nth_page($_)->show_all;
