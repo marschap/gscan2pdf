@@ -254,6 +254,9 @@ my (
     # Simple::List in preferences dialog
     $option_visibility_list,
 
+    # Comboboxes for user-defined tools
+    $comboboxudt,
+
     # Declare the XML structure
     $uimanager,
 );
@@ -4148,14 +4151,19 @@ sub add_postprocessing_udt {
     elsif ( $SETTING{udf_on_scan} ) {
         $udtbutton->set_active(TRUE);
     }
+    return $udtbutton, add_udt_combobox($hboxudt);
+}
+
+sub add_udt_combobox {
+    my ($hbox) = @_;
     my @toolarray;
     for ( @{ $SETTING{user_defined_tools} } ) {
         push @toolarray, [ $_, $_ ];
     }
-    my $comboboxudt = combobox_from_array(@toolarray);
-    combobox_set_active( $comboboxudt, $SETTING{current_udt}, @toolarray );
-    $hboxudt->pack_start( $comboboxudt, TRUE, TRUE, 0 );
-    return $udtbutton, $comboboxudt;
+    my $combobox = combobox_from_array(@toolarray);
+    combobox_set_active( $combobox, $SETTING{current_udt}, @toolarray );
+    $hbox->pack_start( $combobox, TRUE, TRUE, 0 );
+    return $combobox;
 }
 
 sub add_postprocessing_ocr {
@@ -5705,36 +5713,11 @@ sub user_defined_dialog {
     # Frame for page range
     add_page_range($vbox);
 
-    # Manage user-defined tools
-    my $frame = Gtk2::Frame->new( $d->get('Manage user-defined tools') );
-    $vbox->pack_start( $frame, TRUE, TRUE, 0 );
-    my $vboxt = Gtk2::VBox->new;
-    $vboxt->set_border_width($BORDER_WIDTH);
-    $frame->add($vboxt);
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
     my $label = Gtk2::Label->new( $d->get('Selected tool') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    my $combobox = Gtk2::ComboBox->new_text;
-    $combobox->set_title( $d->get('Current tool') );
-    my $udtools = [];
-
-    for my $tool ( @{ $SETTING{user_defined_tools} } ) {
-        add_user_defined_tool_entry( $vboxt, $combobox, $tool, $udtools );
-    }
-    my $abutton = Gtk2::Button->new_from_stock('gtk-add');
-    $vboxt->pack_start( $abutton, TRUE, TRUE, 0 );
-    $abutton->signal_connect(
-        clicked => sub {
-            add_user_defined_tool_entry( $vboxt, $combobox, 'my-tool %i %o',
-                $udtools );
-            $vboxt->reorder_child( $abutton, $EMPTY_LIST );
-            update_list_user_defined_tools( $vboxt, $combobox, $udtools );
-        }
-    );
-
-    $hbox->pack_start( $combobox, TRUE, TRUE, 0 );
-    combobox_set_active( $combobox, $SETTING{current_udt}, @{$udtools} );
+    $comboboxudt = add_udt_combobox($hbox);
 
     # HBox for buttons
     my $hboxb = Gtk2::HBox->new;
@@ -5752,7 +5735,7 @@ sub user_defined_dialog {
                 )
             );
             if ( not @pagelist ) { return }
-            $SETTING{current_udt} = $combobox->get_active_text;
+            $SETTING{current_udt} = $comboboxudt->get_active_text;
             user_defined_tool( \@pagelist, $SETTING{current_udt} );
 
             $windowudt->hide;
@@ -6900,6 +6883,32 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     combobox_set_active( $comboo, $SETTING{'OCR output'}, @array );
     $hbox->pack_end( $comboo, TRUE, TRUE, 0 );
 
+    # Manage user-defined tools
+    my $frame = Gtk2::Frame->new( $d->get('Manage user-defined tools') );
+    $vbox2->pack_start( $frame, TRUE, TRUE, 0 );
+    my $vboxt = Gtk2::VBox->new;
+    $vboxt->set_border_width($BORDER_WIDTH);
+    $frame->add($vboxt);
+    my $udtools = [];
+
+    for my $tool ( @{ $SETTING{user_defined_tools} } ) {
+        add_user_defined_tool_entry( $vboxt, [], $tool, $udtools );
+    }
+    my $abutton = Gtk2::Button->new_from_stock('gtk-add');
+    $vboxt->pack_start( $abutton, TRUE, TRUE, 0 );
+    $abutton->signal_connect(
+        clicked => sub {
+            add_user_defined_tool_entry(
+                $vboxt,
+                [ $comboboxudt, $windows->{comboboxudt} ],
+                'my-tool %i %o', $udtools
+            );
+            $vboxt->reorder_child( $abutton, $EMPTY_LIST );
+            update_list_user_defined_tools( $vboxt,
+                [ $comboboxudt, $windows->{comboboxudt} ], $udtools );
+        }
+    );
+
     # Apply button
     $hbox = _hbox_with_apply_cancel_buttons(
         sub {
@@ -6996,14 +7005,25 @@ sub _hbox_with_apply_cancel_buttons {
     return $hbox;
 }
 
+sub _cb_array_append {
+    my ( $combobox_array, $text ) = @_;
+    for my $combobox ( @{$combobox_array} ) {
+        if ( defined $combobox ) {
+            $combobox->append_text($text);
+        }
+    }
+    return;
+}
+
 # Update list of user-defined tools
 sub update_list_user_defined_tools {
-    my ( $vbox, $combobox, $udtools ) = @_;
+    my ( $vbox, $combobox_array, $udtools ) = @_;
     my (@list);
     while ( $#{$udtools} > $EMPTY_LIST ) {
-        $combobox->remove_text(0);
-        if ( defined $windows->{comboboxudt} ) {
-            $windows->{comboboxudt}->remove_text(0);
+        for my $combobox ( @{$combobox_array} ) {
+            if ( defined $combobox ) {
+                $combobox->remove_text(0);
+            }
         }
         pop @{$udtools};
     }
@@ -7014,27 +7034,25 @@ sub update_list_user_defined_tools {
                     my $text = $widget->get_text;
                     push @list, $text;
                     push @{$udtools}, [ $text, $text ];
-                    $combobox->append_text($text);
-                    if ( defined $windows->{comboboxudt} ) {
-                        $windows->{comboboxudt}->append_text($text);
-                    }
+                    _cb_array_append( $combobox_array, $text );
                 }
             }
         }
     }
     $SETTING{user_defined_tools} = \@list;
-    combobox_set_active( $combobox, $SETTING{current_udt}, @{$udtools} );
-    if ( defined $windows->{comboboxudt} ) {
-        combobox_set_active( $windows->{comboboxudt},
-            $SETTING{current_udt}, @{$udtools} );
+    for my $combobox ( @{$combobox_array} ) {
+        if ( defined $combobox ) {
+            combobox_set_active( $combobox, $SETTING{current_udt},
+                @{$udtools} );
+        }
     }
     return;
 }
 
 # Add user-defined tool entry
 sub add_user_defined_tool_entry {
-    my ( $vbox, $combobox, $tool, $udtools ) = @_;
-    $combobox->append_text($tool);
+    my ( $vbox, $combobox_array, $tool, $udtools ) = @_;
+    _cb_array_append( $combobox_array, $tool );
     push @{$udtools}, [ $tool, $tool ];
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
@@ -7042,7 +7060,7 @@ sub add_user_defined_tool_entry {
     $entry->set_text($tool);
     $entry->signal_connect(
         changed => sub {
-            update_list_user_defined_tools( $vbox, $combobox, $udtools );
+            update_list_user_defined_tools( $vbox, $combobox_array, $udtools );
             ()    # this callback must return either 2 or 0 items.
         }
     );
@@ -7059,7 +7077,7 @@ sub add_user_defined_tool_entry {
     $button->signal_connect(
         clicked => sub {
             $hbox->destroy;
-            update_list_user_defined_tools( $vbox, $combobox, $udtools );
+            update_list_user_defined_tools( $vbox, $combobox_array, $udtools );
         }
     );
     $hbox->pack_end( $button, FALSE, FALSE, 0 );
