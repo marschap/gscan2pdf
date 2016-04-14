@@ -10,7 +10,7 @@ use Gscan2pdf::Document;             # for slurp
 use version;
 use English qw( -no_match_vars );    # for $PROCESS_ID
 
-our $VERSION = '1.3.9';
+our $VERSION = '1.4.0';
 my $EMPTY = q{};
 my $COMMA = q{,};
 
