@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 20;
+use Test::More tests => 21;
 
 BEGIN {
     use_ok('Gscan2pdf::Page');
@@ -510,6 +510,54 @@ $page->import_djvutext($djvu);
 my @expected = split "\n", $expected;
 my @output   = split "\n", $page->{hocr};
 is_deeply( \@output, \@expected, 'import_djvutext() basic functionality' );
+
+#########################
+
+my $pdftext = <<'EOS';
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title></title>
+<meta name="Producer" content="Tesseract 3.03"/>
+<meta name="CreationDate" content=""/>
+</head>
+<body>
+<doc>
+  <page width="464.910000" height="58.630000">
+    <word xMin="1.029000" yMin="22.787000" xMax="87.429570" yMax="46.334000">The</word>
+    <word xMin="105.029000" yMin="22.787000" xMax="222.286950" yMax="46.334000">quick</word>
+    <word xMin="241.029000" yMin="22.787000" xMax="374.744000" yMax="46.334000">brown</word>
+    <word xMin="393.029000" yMin="22.787000" xMax="460.914860" yMax="46.334000">fox</word>
+  </page>
+</doc>
+</body>
+</html>
+EOS
+
+$expected = <<'EOS';
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name='ocr-system' content='gscan2pdf 1.4.0' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
+ </head>
+ <body>
+  <div class='ocr_page' title="bbox 0 0 465 59">
+   <span class='ocr_word' title="bbox 1 23 87 46">The</span>
+   <span class='ocr_word' title="bbox 105 23 222 46">quick</span>
+   <span class='ocr_word' title="bbox 241 23 375 46">brown</span>
+   <span class='ocr_word' title="bbox 393 23 461 46">fox</span>
+  </div>
+ </body>
+</html>
+EOS
+
+$page->import_pdftotext($pdftext);
+@expected = split "\n", $expected;
+@output   = split "\n", $page->{hocr};
+is_deeply( \@output, \@expected, 'import_pdftotext() basic functionality' );
 
 #########################
 

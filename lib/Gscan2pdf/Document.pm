@@ -2240,41 +2240,55 @@ sub _thread_import_pdf {
 
     # Extract images from PDF
     if ( $options{last} >= $options{first} and $options{first} > 0 ) {
-        my $cmd =
-"pdfimages -f $options{first} -l $options{last} \"$options{info}->{path}\" x";
-        $logger->info($cmd);
-        $cmd = "echo $PROCESS_ID > $options{pidfile};$cmd";
-        my ( $out, $err, $status ) = open_three($cmd);
-        return if $_self->{cancel};
-        if ($status) {
-            _thread_throw_error( $self, $options{uuid},
-                $d->get('Error extracting images from PDF') );
-        }
+        for my $i ( $options{first} .. $options{last} ) {
 
-        # Import each image
-        my @images = glob 'x-??*.???';
-        for (@images) {
-            my ($ext) = /([^.]+)$/xsm;
-            try {
-                my $page = Gscan2pdf::Page->new(
-                    filename => $_,
-                    dir      => $options{dir},
-                    delete   => TRUE,
-                    format   => $format{$ext},
-                );
-                $self->{return}->enqueue(
-                    {
-                        type => 'page',
-                        uuid => $options{uuid},
-                        page => $page->to_png($paper_sizes)->freeze
-                    }
-                );
-            }
-            catch {
-                $logger->error("Caught error extracting images from PDF: $_");
+            my $cmd = "pdfimages -f $i -l $i \"$options{info}->{path}\" x";
+            $logger->info($cmd);
+            $cmd = "echo $PROCESS_ID > $options{pidfile};$cmd";
+            my ( $out, $err, $status ) = open_three($cmd);
+            return if $_self->{cancel};
+            if ($status) {
                 _thread_throw_error( $self, $options{uuid},
                     $d->get('Error extracting images from PDF') );
-            };
+            }
+
+            $cmd =
+"pdftotext -bbox -f $i -l $i \"$options{info}->{path}\" text.html";
+            $logger->info($cmd);
+            $cmd = "echo $PROCESS_ID > $options{pidfile};$cmd";
+            ( $out, $err, $status ) = open_three($cmd);
+            return if $_self->{cancel};
+            if ($status) {
+                _thread_throw_error( $self, $options{uuid},
+                    $d->get('Error extracting text layer from PDF') );
+            }
+
+            # Import each image
+            my @images = glob 'x-??*.???';
+            for (@images) {
+                my ($ext) = /([^.]+)$/xsm;
+                try {
+                    my $page = Gscan2pdf::Page->new(
+                        filename => $_,
+                        dir      => $options{dir},
+                        delete   => TRUE,
+                        format   => $format{$ext},
+                    );
+                    $page->import_pdftotext( slurp('text.html') );
+                    $self->{return}->enqueue(
+                        {
+                            type => 'page',
+                            uuid => $options{uuid},
+                            page => $page->to_png($paper_sizes)->freeze
+                        }
+                    );
+                }
+                catch {
+                    $logger->error("Caught error importing PDF: $_");
+                    _thread_throw_error( $self, $options{uuid},
+                        $d->get('Error importing PDF') );
+                };
+            }
         }
     }
     return;

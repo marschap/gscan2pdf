@@ -315,6 +315,79 @@ sub _prune_empty_branches {
     return;
 }
 
+sub _pdftotext2boxes {
+    my ($html) = @_;
+    my $p = HTML::TokeParser->new( \$html );
+    my ( $data, @stack, $boxes );
+    while ( my $token = $p->get_token ) {
+        given ( $token->[0] ) {
+            when ('S') {
+                my ( $tag, %attrs ) = ( $token->[1], %{ $token->[2] } );
+
+                # new data point
+                $data = {};
+
+                if ( $tag eq 'page' ) {
+                    $data->{type} = $tag;
+                    if ( defined $attrs{width} and defined $attrs{height} ) {
+                        $data->{bbox} = [
+                            0, 0,
+                            round( $attrs{width} ),
+                            round( $attrs{height} )
+                        ];
+                    }
+                    push @{$boxes}, $data;
+                }
+                elsif ( $tag eq 'word' ) {
+                    $data->{type} = $tag;
+                    if (    defined $attrs{xmin}
+                        and defined $attrs{ymin}
+                        and defined $attrs{xmax}
+                        and defined $attrs{ymax} )
+                    {
+                        $data->{bbox} = [
+                            round( $attrs{xmin} ),
+                            round( $attrs{ymin} ),
+                            round( $attrs{xmax} ),
+                            round( $attrs{ymax} )
+                        ];
+                    }
+                }
+
+                # if we have previous data, add the new data to the
+                # contents of the previous data point
+                if (    defined $stack[-1]
+                    and $data != $stack[-1]
+                    and defined $data->{bbox} )
+                {
+                    push @{ $stack[-1]{contents} }, $data;
+                }
+
+                # put the new data point on the stack
+                if ( defined $data->{bbox} ) { push @stack, $data }
+            }
+            when ('T') {
+                if ( $token->[1] !~ /^\s*$/xsm ) {
+                    $data->{text} = _decode_hocr( $token->[1] );
+                    chomp $data->{text};
+                }
+            }
+            when ('E') {
+
+                # up a level
+                $data = pop @stack;
+            }
+        }
+
+    }
+    return $boxes;
+}
+
+sub round {
+    my ($f) = @_;
+    return int( $f + 0.5 );
+}
+
 # return hocr output as string
 
 sub string {
@@ -476,6 +549,13 @@ sub import_djvutext {
     return;
 }
 
+sub import_pdftotext {
+    my ( $self, $html ) = @_;
+    my $boxes = _pdftotext2boxes($html);
+    $self->{hocr} = _boxes2hocr($boxes);
+    return;
+}
+
 # Escape backslashes and inverted commas
 # Surround with inverted commas
 sub _escape_text {
@@ -502,6 +582,7 @@ sub to_png {
         dir        => $self->{dir},
         resolution => $self->resolution($page_sizes),
     );
+    if ( defined $self->{hocr} ) { $new->{hocr} = $self->{hocr} }
     return $new;
 }
 
