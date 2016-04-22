@@ -13,9 +13,10 @@ use HTML::TokeParser;
 use HTML::Entities;
 use Image::Magick;
 use Encode;
-use Locale::gettext 1.05;            # For translations
+use Locale::gettext 1.05;    # For translations
 use POSIX qw(locale_h);
 use Data::UUID;
+use Text::Balanced qw ( extract_bracketed );
 use English qw( -no_match_vars );    # for $ERRNO
 use Readonly;
 Readonly my $CM_PER_INCH    => 2.54;
@@ -150,7 +151,7 @@ sub boxes {
     my ($self) = @_;
     my $hocr = $self->{hocr};
     if ( $hocr =~ /<body>([\s\S]*)<\/body>/xsm ) {
-        my $boxes = _parse_hocr($hocr);
+        my $boxes = _hocr2boxes($hocr);
         _prune_empty_branches($boxes);
         return $boxes;
     }
@@ -172,7 +173,7 @@ sub _decode_hocr {
     return decode_utf8( encode_utf8( HTML::Entities::decode_entities($hocr) ) );
 }
 
-sub _parse_hocr {
+sub _hocr2boxes {
     my ($hocr) = @_;
     my $p = HTML::TokeParser->new( \$hocr );
     my ( $data, @stack, $boxes );
@@ -374,6 +375,105 @@ sub _boxes2djvu {
     }
     if ( $indent == 0 ) { $string .= "\n" }
     return $string;
+}
+
+sub _boxes2hocr {
+    my ( $pointer, $indent ) = @_;
+    my $string = $EMPTY;
+    if ( not defined $indent ) { $indent = 0 }
+
+    # Write the text boxes
+    for my $box ( @{$pointer} ) {
+        my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
+        if ( $indent == 0 ) {
+            $string .= <<'EOS';
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name='ocr-system' content='gscan2pdf 1.4.0' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
+ </head>
+ <body>
+EOS
+        }
+        else {
+            $string .= "\n";
+        }
+        for ( 0 .. $indent + 1 ) { $string .= $SPACE }
+        my $type  = $box->{type};
+        my $class = 'span';
+        given ( $box->{type} ) {
+            when ('page') {
+                $class = 'div';
+            }
+            when ('column') {
+                $type  = 'carea';
+                $class = 'div';
+            }
+            when ('para') {
+                $type  = 'par';
+                $class = 'p';
+            }
+        }
+        $string .=
+          sprintf "<$class class='ocr_$type' title=\"bbox %d %d %d %d\">", $x1,
+          $y1, $x2, $y2;
+        if ( defined $box->{text} ) {
+            $string .= $box->{text};
+        }
+        if ( defined $box->{contents} ) {
+            $string .= _boxes2hocr( $box->{contents}, $indent + 1 ) . "\n";
+            for ( 0 .. $indent + 1 ) { $string .= $SPACE }
+            $string .= "</$class>";
+        }
+        else {
+            $string .= "</$class>";
+        }
+    }
+    if ( $indent == 0 ) { $string .= "\n </body>\n</html>\n" }
+    return $string;
+}
+
+sub _djvu2boxes {
+    my ( $text, $h ) = @_;
+    my @boxes;
+    while ( defined $text and $text !~ /\A\s*\z/xsm ) {
+        my @result = extract_bracketed( $text, '()' );
+        if ( $result[0] =~
+            /^\s*[(](\w+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(.*)[)]$/xsm )
+        {
+            my $box = {};
+            $box->{type} = $1;
+            if ( $1 eq 'page' ) { $h = $5 }
+            $box->{bbox} = [ $2, $h - $5, $4, $h - $3 ];
+            my $rest = $6;
+            if ( $rest =~ /\A\s*[(].*[)]\s*\z/xsm ) {
+                $box->{contents} = _djvu2boxes( $rest, $h );
+            }
+            elsif ( $rest =~ /\A\s*"(.*)"\s*\z/xsm ) {
+                $box->{text} = $1;
+            }
+            else {
+                croak "Error parsing djvu text $rest";
+            }
+            push @boxes, $box;
+        }
+        else {
+            croak "Error parsing djvu text $result[0]";
+        }
+        $text = $result[1];
+    }
+    return \@boxes;
+}
+
+sub import_djvutext {
+    my ( $self, $text ) = @_;
+    my $boxes = _djvu2boxes($text);
+    $self->{hocr} = _boxes2hocr($boxes);
+    return;
 }
 
 # Escape backslashes and inverted commas

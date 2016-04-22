@@ -2075,15 +2075,19 @@ sub _thread_import_file {
                       sprintf $d->get('Importing page %i of %i'),
                       $i, $options{last} - $options{first} + 1;
 
-                    my ( $tif, $error );
+                    my ( $tif, $txt, $error );
                     try {
                         $tif = File::Temp->new(
                             DIR    => $options{dir},
                             SUFFIX => '.tif',
                             UNLINK => FALSE
                         );
+                        $txt = File::Temp->new(
+                            DIR    => $options{dir},
+                            SUFFIX => '.txt',
+                        );
                         my $cmd =
-"ddjvu -format=tiff -page=$i \"$options{info}->{path}\" $tif";
+"ddjvu -format=tiff -page=$i \"$options{info}->{path}\" $tif;djvused \"$options{info}->{path}\" -e 'select $i; print-txt' > $txt";
                         $logger->info($cmd);
                         system "echo $PROCESS_ID > $options{pidfile};$cmd";
                     }
@@ -2109,6 +2113,7 @@ sub _thread_import_file {
                         format     => 'Tagged Image File Format',
                         resolution => $options{info}->{ppi}[ $i - 1 ],
                     );
+                    $page->import_djvutext( slurp($txt) );
                     $self->{return}->enqueue(
                         {
                             type => 'page',
