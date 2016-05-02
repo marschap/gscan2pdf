@@ -29,26 +29,14 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
     'reloaded-scan-options' => sub {
         $dialog->signal_handler_disconnect( $dialog->{reloaded_signal} );
 
-        ######################################
-
-        # The test dialog conveniently gives us
-        #    Source = Automatic Document Feeder,
-        # which returns SANE_STATUS_NO_DOCS after the 10th scan.
-        # Test that we catch this.
-
-        my $options = $dialog->get('available-scan-options');
-        $dialog->set_option( $options->by_name('source'),
-            'Automatic Document Feeder' );
-        $dialog->set( 'num-pages', 0 );
-
         my $n = 0;
         $dialog->signal_connect(
             'new-scan' => sub {
                 my ( $widget, $path, $num ) = @_;
                 ++$n;
-                if ( $num == 10 ) { ok 1, 'new-scan emitted with n=10' }
+                if ( $num == 10 ) { pass 'new-scan emitted with n=10' }
                 if ( $n > 10 ) {
-                    ok 0, 'new-scan emitted 10 times';
+                    fail 'new-scan emitted 10 times';
                     Gtk2->main_quit;
                 }
             }
@@ -62,7 +50,21 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 }
             }
         );
-        $dialog->scan;
+        $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                $dialog->set( 'num-pages', 0 );
+                $dialog->scan;
+            }
+        );
+
+        # The test dialog conveniently gives us
+        #    Source = Automatic Document Feeder,
+        # which returns SANE_STATUS_NO_DOCS after the 10th scan.
+        # Test that we catch this.
+        # this should also unblock num-page to allow-batch-flatbed
+        my $options = $dialog->get('available-scan-options');
+        $dialog->set_option( $options->by_name('source'),
+            'Automatic Document Feeder' );
     }
 );
 $dialog->{signal} = $dialog->signal_connect(

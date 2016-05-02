@@ -224,6 +224,13 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         0.1,                                                     # default_value
         [qw/readable writable/]                                  # flags
     ),
+    Glib::ParamSpec->boolean(
+        'allow-batch-flatbed',                                   # name
+        'Allow batch scanning from flatbed',                     # nick
+        'Allow batch scanning from flatbed',                     # blurb
+        FALSE,                                                   # default_value
+        [qw/readable writable/]                                  # flags
+    ),
   ];
 
 our $VERSION = '1.4.0';
@@ -283,15 +290,15 @@ sub INIT_INSTANCE {
     $scwin->add_with_viewport($vbox1);
 
     # Frame for # pages
-    my $framen = Gtk2::Frame->new( $d->get('# Pages') );
-    $vbox1->pack_start( $framen, FALSE, FALSE, 0 );
+    $self->{framen} = Gtk2::Frame->new( $d->get('# Pages') );
+    $vbox1->pack_start( $self->{framen}, FALSE, FALSE, 0 );
     my $vboxn        = Gtk2::VBox->new;
     my $border_width = $self->get('border_width');
     $vboxn->set_border_width($border_width);
-    $framen->add($vboxn);
+    $self->{framen}->add($vboxn);
 
-    #the first radio button has to set the group,
-    #which is undef for the first button
+    # the first radio button has to set the group,
+    # which is undef for the first button
     # All button
     my $bscanall = Gtk2::RadioButton->new( undef, $d->get('All') );
     $tooltips->set_tip( $bscanall, $d->get('Scan all pages') );
@@ -329,6 +336,24 @@ sub INIT_INSTANCE {
             else {
                 $spin_buttonn->set_value($value);
             }
+        }
+    );
+    $self->signal_connect(
+        'changed-scan-option' => sub {
+            my ( $widget, $name, $value ) = @_;
+            if ( $name eq 'source' ) {
+                if (   $self->get('allow-batch-flatbed')
+                    or $value !~ /flatbed/xsmi )
+                {
+                    $self->{framen}->set_sensitive(TRUE);
+                }
+                else {
+                    $bscannum->set_active(TRUE);
+                    $self->set( 'num_pages', 1 );
+                    $self->{framen}->set_sensitive(FALSE);
+                }
+            }
+
         }
     );
 
@@ -600,6 +625,40 @@ sub SET_PROPERTY {
         }
         my $callback = FALSE;
         given ($name) {
+            when ('allow_batch_flatbed') {
+                $self->{$name} = $newval;
+                if ($newval) {
+                    $self->{framen}->set_sensitive(TRUE);
+                }
+                else {
+                    my $options = $self->get('available-scan-options');
+                    if ( defined $options
+                        and $options->by_name('source')->{val} =~
+                        /flatbed/xsmi )
+                    {
+                        $self->{framen}->set_sensitive(FALSE);
+
+                        # emits changed-num-pages signal, allowing us to test
+                        # for $self->{framen}->set_sensitive(FALSE)
+                        $self->set( 'num-pages', 1 );
+                    }
+                }
+            }
+            when ('available_scan_options') {
+                $self->{$name} = $newval;
+                if ( not $self->get('allow-batch-flatbed')
+                    and $newval->by_name('source')->{val} =~ /flatbed/xsmi )
+                {
+                    if ( $self->get('num-pages') != 1 ) {
+                        $self->set( 'num-pages', 1 );
+                    }
+                    $self->{framen}->set_sensitive(FALSE);
+                }
+                else {
+                    $self->{framen}->set_sensitive(TRUE);
+                }
+                $self->signal_emit('reloaded-scan-options')
+            }
             when ('device') {
                 $self->{$name} = $newval;
                 $self->set_device($newval);
@@ -611,8 +670,18 @@ sub SET_PROPERTY {
                 $self->signal_emit( 'changed-device-list', $newval )
             }
             when ('num_pages') {
-                $self->{$name} = $newval;
-                $self->signal_emit( 'changed-num-pages', $newval )
+                my $options = $self->get('available-scan-options');
+                if (
+                       $newval == 1
+                    or $self->get('allow-batch-flatbed')
+                    or ( defined $options
+                        and $options->by_name('source')->{val} !~
+                        /flatbed/xsmi )
+                  )
+                {
+                    $self->{$name} = $newval;
+                    $self->signal_emit( 'changed-num-pages', $newval );
+                }
             }
             when ('page_number_start') {
                 $self->{$name} = $newval;
@@ -685,10 +754,6 @@ sub SET_PROPERTY {
                     }
                 );
                 $self->set_profile($newval);
-            }
-            when ('available_scan_options') {
-                $self->{$name} = $newval;
-                $self->signal_emit('reloaded-scan-options')
             }
             when ('visible_scan_options') {
                 $self->{$name} = $newval;

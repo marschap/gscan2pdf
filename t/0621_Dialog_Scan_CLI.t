@@ -70,7 +70,8 @@ $csignal = $dialog->signal_connect(
         $dialog->signal_handler_disconnect($csignal);
     }
 );
-$dialog->set( 'num-pages', 0 );
+$dialog->set( 'allow-batch-flatbed', TRUE );
+$dialog->set( 'num-pages',           0 );
 
 $dialog->signal_connect(
     'changed-page-number-start' => sub {

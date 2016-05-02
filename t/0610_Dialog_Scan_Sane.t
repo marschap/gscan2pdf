@@ -46,7 +46,8 @@ $dialog->{signal} = $dialog->signal_connect(
         is( $n, 0, 'changed-num-pages' );
     }
 );
-$dialog->set( 'num-pages', 0 );
+$dialog->set( 'allow-batch-flatbed', TRUE );
+$dialog->set( 'num-pages',           0 );
 
 $dialog->{signal} = $dialog->signal_connect(
     'changed-page-number-start' => sub {

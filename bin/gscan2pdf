@@ -3646,17 +3646,18 @@ sub scan_dialog {
 
     # scan pop-up window
     my %options = (
-        'transient-for'     => $window,
-        title               => $d->get('Scan Document'),
-        'border-width'      => $BORDER_WIDTH,
-        'default-width'     => $SETTING{scan_window_width},
-        'default-height'    => $SETTING{scan_window_height},
-        logger              => $logger,
-        dir                 => $session,
-        'hide-on-delete'    => TRUE,
-        'paper-formats'     => $SETTING{Paper},
-        'num-pages'         => $SETTING{'pages to scan'},
-        'page-number-start' => $#{ $slist->{data} } > $EMPTY_LIST
+        'transient-for'       => $window,
+        title                 => $d->get('Scan Document'),
+        'border-width'        => $BORDER_WIDTH,
+        'default-width'       => $SETTING{scan_window_width},
+        'default-height'      => $SETTING{scan_window_height},
+        logger                => $logger,
+        dir                   => $session,
+        'hide-on-delete'      => TRUE,
+        'paper-formats'       => $SETTING{Paper},
+        'num-pages'           => $SETTING{'pages to scan'},
+        'allow-batch-flatbed' => $SETTING{'allow-batch-flatbed'},
+        'page-number-start'   => $#{ $slist->{data} } > $EMPTY_LIST
         ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
         : 1,
     );
@@ -6583,6 +6584,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
           ];
     }
     my $combob = combobox_from_array(@frontends);
+    $hbox->pack_end( $combob, TRUE, TRUE, 0 );
 
     # Device blacklist
     my $hboxb = Gtk2::HBox->new;
@@ -6602,12 +6604,26 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     my $cbcsh =
       Gtk2::CheckButton->new_with_label(
         $d->get('Cycle SANE handle after scan') );
-    $hbox->pack_end( $combob, TRUE, TRUE, 0 );
     $tooltips->set_tip( $hbox, $d->get('Interface used for scanner access') );
     if ( defined $SETTING{'cycle sane handle'} ) {
         $cbcsh->set_active( $SETTING{'cycle sane handle'} );
     }
     $vbox1->pack_start( $cbcsh, FALSE, FALSE, 0 );
+
+    # Cycle SANE handle after scan
+    my $cb_batch_flatbed =
+      Gtk2::CheckButton->new_with_label(
+        $d->get('Allow batch scanning from flatbed') );
+    $tooltips->set_tip(
+        $hbox,
+        $d->get(
+'If not set, switching to a flatbed scanner will force # pages to 1.'
+        )
+    );
+    if ( defined $SETTING{'allow-batch-flatbed'} ) {
+        $cb_batch_flatbed->set_active( $SETTING{'allow-batch-flatbed'} );
+    }
+    $vbox1->pack_start( $cb_batch_flatbed, FALSE, FALSE, 0 );
 
     # scan command prefix
     my $hboxp = Gtk2::HBox->new;
@@ -6944,8 +6960,14 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
             $SETTING{'auto-open-scan-dialog'} = $cbo->get_active;
             $SETTING{'device blacklist'}      = $blacklist->get_text;
             $SETTING{'cycle sane handle'}     = $cbcsh->get_active;
+            $SETTING{'allow-batch-flatbed'}   = $cb_batch_flatbed->get_active;
             $SETTING{'default filename'}      = $fileentry->get_text;
             $SETTING{'restore window'}        = $cbw->get_active;
+
+            if ( defined $windows ) {
+                $windows->set( 'allow-batch-flatbed',
+                    $SETTING{'allow-batch-flatbed'} );
+            }
 
             my @tmpdirs = File::Spec->splitdir($session);
             pop @tmpdirs;    # Remove the top level

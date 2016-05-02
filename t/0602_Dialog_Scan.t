@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 5;
+use Test::More tests => 11;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -36,6 +36,8 @@ $dialog->set(
         }
     }
 );
+
+$dialog->set( 'num-pages', 2 );
 
 my $profile_changes = 0;
 my $signal;
@@ -106,7 +108,28 @@ $signal = $dialog->signal_connect(
             'remove_profile()'
         );
 
-        Gtk2->main_quit;
+        is $options->by_name('source')->{val}, 'Flatbed',
+          'source defaults to Flatbed';
+        is $dialog->get('num-pages'), 1,
+          'allow-batch-flatbed should force num-pages';
+        is $dialog->{framen}->is_sensitive, FALSE, 'num-page gui ghosted';
+        $dialog->set( 'num-pages', 2 );
+        is $dialog->get('num-pages'), 1,
+          'allow-batch-flatbed should force num-pages2';
+
+        $dialog->set( 'allow-batch-flatbed', TRUE );
+        $dialog->set( 'num-pages',           2 );
+        $signal = $dialog->signal_connect(
+            'changed-num-pages' => sub {
+                $dialog->signal_handler_disconnect($signal);
+                is $dialog->get('num-pages'), 1,
+                  'allow-batch-flatbed should force num-pages3';
+                is $dialog->{framen}->is_sensitive, FALSE,
+                  'num-page gui ghosted2';
+                Gtk2->main_quit;
+            }
+        );
+        $dialog->set( 'allow-batch-flatbed', FALSE );
     }
 );
 $dialog->set( 'device', 'test' );

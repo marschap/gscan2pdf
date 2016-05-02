@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 5;
+use Test::More tests => 10;
 use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
 use Gtk2 -init;              # Could just call init separately
 use Sane 0.05;               # To get SANE_* enums
@@ -44,5 +44,15 @@ $dialog->set( 'page-number-increment', 3 );
 $dialog->{checkx}->set_active(FALSE);
 is $dialog->get('page-number-increment'), 2,
   'turning off extended page numbering resets increment';
+
+is $dialog->get('allow-batch-flatbed'), 0, 'default allow-batch-flatbed';
+$dialog->set( 'allow-batch-flatbed', TRUE );
+$dialog->set( 'num-pages',           2 );
+is $dialog->get('num-pages'), 2, 'num-pages';
+ok $dialog->{framen}->is_sensitive, 'num-page gui not ghosted';
+$dialog->set( 'allow-batch-flatbed', FALSE );
+is $dialog->get('num-pages'), 2,
+  'with no source, num-pages not affected by allow-batch-flatbed';
+ok $dialog->{framen}->is_sensitive, 'with no source num-page gui not ghosted';
 
 __END__
