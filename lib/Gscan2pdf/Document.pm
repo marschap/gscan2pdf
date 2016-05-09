@@ -1588,6 +1588,17 @@ sub timestamp {
     return sprintf '%04d%02d%02d%02d%02d%02d', reverse @time[ 0 .. $YEAR ];
 }
 
+sub seconds_to_date {
+    my ($seconds) = @_;
+    my ( $day, $month, $year, $hour, $min, $sec ) =
+      ( localtime $seconds )
+      [ 3, 4, 5, 2, 1, 0 ]    ## no critic (ProhibitMagicNumbers)
+      ;
+    $year  += 1900;           ## no critic (ProhibitMagicNumbers)
+    $month += 1;
+    return $year, $month, $day, $hour, $min, $sec;
+}
+
 # Set session dir
 
 sub set_dir {

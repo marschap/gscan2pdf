@@ -2,6 +2,8 @@
 
 * Also import text layer when importing PDF or DjVu.
 * + option in Edit/Preference to allow/forbid batch scanning from a flatbed
+* Store date as string to avoid time zone problems
+  Closes Debian bug #823626 (Date in file name off by one day when saving)
 
 
 1.4.0 (14.04.2016):

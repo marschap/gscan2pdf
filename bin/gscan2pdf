@@ -79,7 +79,6 @@ use Data::Dumper;
 use Filesys::Df;
 use English qw( -no_match_vars )
   ;    # for $PERL_VERSION, $PROGRAM_NAME, $EVAL_ERROR, $ERRNO
-use Time::Local qw/timegm_nocheck/;
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
@@ -2069,21 +2068,11 @@ sub get_pagelist {
     return ( $pagelist, $n );
 }
 
-sub seconds_to_date {
-    my ($seconds) = @_;
-    my ( $day, $month, $year, $hour, $min, $sec ) =
-      ( localtime $seconds )
-      [ 3, 4, 5, 2, 1, 0 ]    ## no critic (ProhibitMagicNumbers)
-      ;
-    $year  += 1900;           ## no critic (ProhibitMagicNumbers)
-    $month += 1;
-    return $day, $month, $year, $hour, $min, $sec;
-}
-
 sub text_to_date {
     my ($text) = @_;
-    my ( $year, $month, $day );
-    my ( $thisday, $thismonth, $thisyear ) = seconds_to_date(time);
+    my ( $year,     $month,     $day );
+    my ( $thisyear, $thismonth, $thisday ) =
+      Gscan2pdf::Document::seconds_to_date(time);
     if ( $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
         ( $year, $month, $day ) = ( $1, $2, $3 );
     }
@@ -2119,7 +2108,7 @@ sub add_metadata_dialog {
     $table->attach( $hboxe, 0, 1, 0, 1, 'fill', 'shrink', 0, 0 );
     my $labele = Gtk2::Label->new( $d->get('Date') );
     $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
-    my ( $day, $month, $year ) = seconds_to_date( $SETTING{'document date'} );
+    my ( $year, $month, $day ) = text_to_date( $SETTING{'document date'} );
 
     my $entryd =
       Gtk2::Entry->new_with_max_length(10);  ## no critic (ProhibitMagicNumbers)
@@ -2187,7 +2176,8 @@ sub add_metadata_dialog {
             my $today = Gtk2::Button->new( $d->get('Today') );
             $today->signal_connect(
                 clicked => sub {
-                    ( $day, $month, $year ) = seconds_to_date(time);
+                    ( $year, $month, $day ) =
+                      Gscan2pdf::Document::seconds_to_date(time);
 
                     # block and unblock signal, and update entry manually
                     # to remove possibility of race conditions
@@ -2291,19 +2281,18 @@ sub update_metadata_settings {
     $SETTING{title}    = $entryt->update( $SETTING{'title-suggestions'} );
     $SETTING{subject}  = $entrys->update( $SETTING{'subject-suggestions'} );
     $SETTING{keywords} = $entryk->update( $SETTING{'keyword-suggestions'} );
-    my ( $year, $month, $day ) = text_to_date( $entryd->get_text );
-    $SETTING{'document date'} =
-      timegm_nocheck( 0, 0, 0, $day, $month - 1, $year );
+    $SETTING{'document date'} = sprintf '%04d-%02d-%02d',
+      text_to_date( $entryd->get_text );
     return;
 }
 
 sub expand_metadata_pattern {
     my $template = shift;
-    my ( $dday, $dmonth, $dyear, $dhour, $dmin, $dsec ) =
-      seconds_to_date( $SETTING{'document date'} );
+    my ( $dyear, $dmonth, $dday, $dhour, $dmin, $dsec ) =
+      text_to_date( $SETTING{'document date'} );
     $dmonth = sprintf '%02d', $dmonth;
     $dday   = sprintf '%02d', $dday;
-    my ( $tday, $tmonth, $tyear ) = seconds_to_date(time);
+    my ( $tyear, $tmonth, $tday ) = Gscan2pdf::Document::seconds_to_date(time);
     $tmonth = sprintf '%02d', $tmonth;
     $tday   = sprintf '%02d', $tday;
 
@@ -2331,8 +2320,7 @@ sub prepare_output_metadata {
           $type eq 'PDF'
           ? "D:%4i%02i%02i000000+00'00'"
           : '%4i-%02i-%02i 00:00:00+00:00';
-        my ( $day, $month, $year ) =
-          seconds_to_date( $SETTING{'document date'} );
+        my ( $year, $month, $day ) = text_to_date( $SETTING{'document date'} );
         $h{CreationDate} = sprintf $dateformat, $year, $month, $day;
         $h{ModDate}      = sprintf $dateformat, $year, $month, $day;
         $h{Creator}      = "$prog_name v$VERSION";

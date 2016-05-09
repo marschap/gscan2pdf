@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Gscan2pdf::Document;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 BEGIN {
     use_ok('Gscan2pdf::Config');
@@ -63,23 +63,24 @@ is_deeply( \@output, \@example, 'Write JSON' );
 %output = %example;
 Gscan2pdf::Config::add_defaults( \%output );
 %example = (
-    version                 => '1.3.3',
-    'window_width'          => 800,
-    'window_height'         => 600,
-    'window_maximize'       => TRUE,
-    'thumb panel'           => 100,
-    'Page range'            => 'all',
-    'layout'                => 'single',
-    'downsample'            => FALSE,
-    'downsample dpi'        => 150,
-    'threshold tool'        => 80,
-    'unsharp radius'        => 0,
-    'unsharp sigma'         => 1,
-    'unsharp amount'        => 1,
-    'unsharp threshold'     => 0.05,
-    'cache options'         => TRUE,
-    'restore window'        => TRUE,
-    'document date'         => time,
+    version             => '1.3.3',
+    'window_width'      => 800,
+    'window_height'     => 600,
+    'window_maximize'   => TRUE,
+    'thumb panel'       => 100,
+    'Page range'        => 'all',
+    'layout'            => 'single',
+    'downsample'        => FALSE,
+    'downsample dpi'    => 150,
+    'threshold tool'    => 80,
+    'unsharp radius'    => 0,
+    'unsharp sigma'     => 1,
+    'unsharp amount'    => 1,
+    'unsharp threshold' => 0.05,
+    'cache options'     => TRUE,
+    'restore window'    => TRUE,
+    'document date'     => sprintf '%04d-%02d-%02d',
+    Gscan2pdf::Document::seconds_to_date(time),
     'pdf compression'       => 'auto',
     'quality'               => 75,
     'pages to scan'         => 1,
@@ -190,6 +191,23 @@ Gscan2pdf::Config::check_sane_version( \%output, '1.2.3', 0.06 );
     'libsane-perl version' => 0.06,
 );
 is_deeply( \%output, \%example, 'check_sane_version' );
+
+#########################
+
+$config = <<'EOS';
+{
+   "version" : "1.4.0",
+   "document date" : 1455062400
+}
+EOS
+open $fh, '>', $rc or die "Error: cannot open $rc\n";
+print $fh $config;
+close $fh or die "Error: cannot close $rc\n";
+
+%example = ( version => '1.4.0', 'document date' => '2016-02-10' );
+%output = Gscan2pdf::Config::read_config( $rc, $logger );
+
+is_deeply( \%output, \%example, 'Read document date as integer' );
 
 #########################
 
