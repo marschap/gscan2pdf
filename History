@@ -4,6 +4,8 @@
 * + option in Edit/Preference to allow/forbid batch scanning from a flatbed
 * Store date as string to avoid time zone problems
   Closes Debian bug #823626 (Date in file name off by one day when saving)
+* Show warning when importing a PDF if number of images is not equal to number
+  of pages.
 
 
 1.4.0 (14.04.2016):

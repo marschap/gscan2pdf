@@ -2248,6 +2248,7 @@ sub _thread_import_file {
 
 sub _thread_import_pdf {
     my ( $self, %options ) = @_;
+    my $warning_flag;
 
     # Extract images from PDF
     if ( $options{last} >= $options{first} and $options{first} > 0 ) {
@@ -2276,6 +2277,7 @@ sub _thread_import_pdf {
 
             # Import each image
             my @images = glob 'x-??*.???';
+            if ( @images != 1 ) { $warning_flag = TRUE }
             for (@images) {
                 my ($ext) = /([^.]+)$/xsm;
                 try {
@@ -2300,6 +2302,14 @@ sub _thread_import_pdf {
                         $d->get('Error importing PDF') );
                 };
             }
+        }
+
+        if ($warning_flag) {
+            _thread_throw_error( $self, $options{uuid}, $d->get(<<'EOS') );
+Warning: gscan2pdf expects one image per page, but this was not satisfied. It is probable that the PDF has not been correcly imported.
+
+If you wish to add scans to an existing PDF, use the prepend/append to PDF options in the Save dialogue.
+EOS
         }
     }
     return;

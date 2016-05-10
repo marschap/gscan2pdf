@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use File::Temp;
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 BEGIN {
     use Gscan2pdf::Document;
@@ -92,7 +92,11 @@ EOS
     $slist->set_dir($dir);
 
     $slist->import_files(
-        paths             => ['test.pdf'],
+        paths          => ['test.pdf'],
+        error_callback => sub {
+            my ($message) = @_;
+            like $message, qr/one image per page/, 'one image per page warning';
+        },
         finished_callback => sub {
             is( $#{ $slist->{data} }, 0, 'imported 1 image' );
             Gtk2->main_quit;
