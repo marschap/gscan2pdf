@@ -100,8 +100,8 @@ sub add_defaults {
         'unsharp threshold' => 0.05,
         'cache options'     => TRUE,
         'restore window'    => TRUE,
-        'document date'     => sprintf '%04d-%02d-%02d',
-        Gscan2pdf::Document::seconds_to_date(time),
+        'document date'     => sprintf( '%04d-%02d-%02d',
+            Gscan2pdf::Document::seconds_to_date(time) ),
         'pdf compression'  => 'auto',
         'quality'          => 75,
         'pages to scan'    => 1,
@@ -119,6 +119,7 @@ sub add_defaults {
           'replace',   # When a page is re-OCRed, replace old text with new text
         'auto-open-scan-dialog' => TRUE,
         'available-tmp-warning' => 10,
+        close_dialog_on_save    => TRUE,
         'Paper'                 => {
             $d->get('A4') => {
                 x => 210,
@@ -184,6 +185,7 @@ sub add_defaults {
     {
         delete $SETTING->{frontend};
     }
+
     for ( keys %default_settings ) {
         if ( not defined $SETTING->{$_} ) {
             $SETTING->{$_} = $default_settings{$_};

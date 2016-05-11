@@ -79,8 +79,8 @@ Gscan2pdf::Config::add_defaults( \%output );
     'unsharp threshold' => 0.05,
     'cache options'     => TRUE,
     'restore window'    => TRUE,
-    'document date'     => sprintf '%04d-%02d-%02d',
-    Gscan2pdf::Document::seconds_to_date(time),
+    'document date' =>
+      sprintf( '%04d-%02d-%02d', Gscan2pdf::Document::seconds_to_date(time) ),
     'pdf compression'       => 'auto',
     'quality'               => 75,
     'pages to scan'         => 1,
@@ -97,6 +97,7 @@ Gscan2pdf::Config::add_defaults( \%output );
     'OCR output'            => 'replace',
     'auto-open-scan-dialog' => TRUE,
     'available-tmp-warning' => 10,
+    close_dialog_on_save    => TRUE,
     'Paper'                 => {
         'A4' => {
             x => 210,
