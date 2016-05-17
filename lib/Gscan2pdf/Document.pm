@@ -51,7 +51,7 @@ BEGIN {
     use Exporter ();
     our ( $VERSION, @EXPORT_OK, %EXPORT_TAGS );
 
-    $VERSION = '1.4.1';
+    $VERSION = '1.5.0';
 
     use base qw(Exporter Gtk2::Ex::Simple::List);
     %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
