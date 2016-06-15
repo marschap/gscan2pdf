@@ -78,6 +78,12 @@ sub read_config {
               Gscan2pdf::Document::seconds_to_date( $SETTING{'document date'} );
         }
     }
+
+    if ( defined $SETTING{user_defined_tools}
+        and ref( $SETTING{user_defined_tools} ) ne 'ARRAY' )
+    {
+        $SETTING{user_defined_tools} = [ $SETTING{user_defined_tools} ];
+    }
     $logger->debug( Dumper( \%SETTING ) );
     return %SETTING;
 }

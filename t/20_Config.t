@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Gscan2pdf::Document;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 BEGIN {
     use_ok('Gscan2pdf::Config');
@@ -209,6 +209,22 @@ close $fh or die "Error: cannot close $rc\n";
 %output = Gscan2pdf::Config::read_config( $rc, $logger );
 
 is_deeply( \%output, \%example, 'Read document date as integer' );
+
+#########################
+
+$config = <<'EOS';
+{
+   "user_defined_tools" : "gimp %i"
+}
+EOS
+open $fh, '>', $rc or die "Error: cannot open $rc\n";
+print $fh $config;
+close $fh or die "Error: cannot close $rc\n";
+
+%example = ( user_defined_tools => ['gimp %i'] );
+%output = Gscan2pdf::Config::read_config( $rc, $logger );
+
+is_deeply( \%output, \%example, 'force user_defined_tools to be an array' );
 
 #########################
 
