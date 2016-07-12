@@ -630,23 +630,7 @@ sub SET_PROPERTY {
         my $callback = FALSE;
         given ($name) {
             when ('allow_batch_flatbed') {
-                $self->{$name} = $newval;
-                if ($newval) {
-                    $self->{framen}->set_sensitive(TRUE);
-                }
-                else {
-                    my $options = $self->get('available-scan-options');
-                    if ( defined $options
-                        and $options->by_name('source')->{val} =~
-                        /flatbed/xsmi )
-                    {
-                        $self->{framen}->set_sensitive(FALSE);
-
-                        # emits changed-num-pages signal, allowing us to test
-                        # for $self->{framen}->set_sensitive(FALSE)
-                        $self->set( 'num-pages', 1 );
-                    }
-                }
+                $self->_set_allow_batch_flatbed( $name, $newval );
             }
             when ('available_scan_options') {
                 $self->{$name} = $newval;
@@ -769,6 +753,27 @@ sub SET_PROPERTY {
         }
         if ( defined $logger and not $callback ) {
             $logger->debug("Finished$msg");
+        }
+    }
+    return;
+}
+
+sub _set_allow_batch_flatbed {
+    my ( $self, $name, $newval ) = @_;
+    $self->{$name} = $newval;
+    if ($newval) {
+        $self->{framen}->set_sensitive(TRUE);
+    }
+    else {
+        my $options = $self->get('available-scan-options');
+        if ( defined $options
+            and $options->by_name('source')->{val} =~ /flatbed/xsmi )
+        {
+            $self->{framen}->set_sensitive(FALSE);
+
+            # emits changed-num-pages signal, allowing us to test
+            # for $self->{framen}->set_sensitive(FALSE)
+            $self->set( 'num-pages', 1 );
         }
     }
     return;
