@@ -248,34 +248,7 @@ sub INIT_INSTANCE {
     $d      = Locale::gettext->domain(Glib::get_application_name);
     $d_sane = Locale::gettext->domain('sane-backends');
 
-    # device list
-    $self->{hboxd} = Gtk2::HBox->new;
-    my $labeld = Gtk2::Label->new( $d->get('Device') );
-    $self->{hboxd}->pack_start( $labeld, FALSE, FALSE, 0 );
-    $self->{combobd} = Gtk2::ComboBox->new_text;
-    $self->{combobd}->append_text( $d->get('Rescan for devices') );
-
-    $self->{combobd_changed_signal} = $self->{combobd}->signal_connect(
-        changed => sub {
-            my $index       = $self->{combobd}->get_active;
-            my $device_list = $self->get('device-list');
-            if ( $index > $#{$device_list} ) {
-                $self->{combobd}->hide;
-                $labeld->hide;
-                $self->set( 'device', undef )
-                  ;    # to make sure that the device is reloaded
-                $self->get_devices;
-            }
-            elsif ( $index > $_NO_INDEX ) {
-                $self->set( 'device', $device_list->[$index]{name} );
-            }
-        }
-    );
-    $self->signal_connect( 'changed-device' => \&_changed_device_callback );
-    $tooltips->set_tip( $self->{combobd},
-        $d->get('Sets the device to be used for the scan') );
-    $self->{hboxd}->pack_end( $self->{combobd}, FALSE, FALSE, 0 );
-    $vbox->pack_start( $self->{hboxd}, FALSE, FALSE, 0 );
+    $self->_add_device_combobox($vbox);
 
     # Notebook to collate options
     $self->{notebook} = Gtk2::Notebook->new;
@@ -581,22 +554,53 @@ sub INIT_INSTANCE {
     return $self;
 }
 
-sub _changed_device_callback {
-    my ( $self, $device ) = @_;
-    my $device_list = $self->get('device-list');
-    if ( defined $device and $device ne $EMPTY ) {
-        for ( @{$device_list} ) {
-            if ( $_->{name} eq $device ) {
-                Gscan2pdf::Dialog::Scan::set_combobox_by_text( $self->{combobd},
-                    $_->{label} );
-                $self->scan_options;
-                return;
+sub _add_device_combobox {
+    my ( $self, $vbox ) = @_;
+    $self->{hboxd} = Gtk2::HBox->new;
+    my $labeld = Gtk2::Label->new( $d->get('Device') );
+    $self->{hboxd}->pack_start( $labeld, FALSE, FALSE, 0 );
+    $self->{combobd} = Gtk2::ComboBox->new_text;
+    $self->{combobd}->append_text( $d->get('Rescan for devices') );
+
+    $self->{combobd_changed_signal} = $self->{combobd}->signal_connect(
+        changed => sub {
+            my $index       = $self->{combobd}->get_active;
+            my $device_list = $self->get('device-list');
+            if ( $index > $#{$device_list} ) {
+                $self->{combobd}->hide;
+                $labeld->hide;
+                $self->set( 'device', undef )
+                  ;    # to make sure that the device is reloaded
+                $self->get_devices;
+            }
+            elsif ( $index > $_NO_INDEX ) {
+                $self->set( 'device', $device_list->[$index]{name} );
             }
         }
-    }
-    else {
-        $self->{combobd}->set_active($_NO_INDEX);
-    }
+    );
+    $self->signal_connect(
+        'changed-device' => sub {
+            my ( $self, $device ) = @_;
+            my $device_list = $self->get('device-list');
+            if ( defined $device and $device ne $EMPTY ) {
+                for ( @{$device_list} ) {
+                    if ( $_->{name} eq $device ) {
+                        Gscan2pdf::Dialog::Scan::set_combobox_by_text(
+                            $self->{combobd}, $_->{label} );
+                        $self->scan_options;
+                        return;
+                    }
+                }
+            }
+            else {
+                $self->{combobd}->set_active($_NO_INDEX);
+            }
+        }
+    );
+    $tooltips->set_tip( $self->{combobd},
+        $d->get('Sets the device to be used for the scan') );
+    $self->{hboxd}->pack_end( $self->{combobd}, FALSE, FALSE, 0 );
+    $vbox->pack_start( $self->{hboxd}, FALSE, FALSE, 0 );
     return;
 }
 
