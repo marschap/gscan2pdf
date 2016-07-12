@@ -658,18 +658,7 @@ sub SET_PROPERTY {
                 $self->signal_emit( 'changed-device-list', $newval )
             }
             when ('num_pages') {
-                my $options = $self->get('available-scan-options');
-                if (
-                       $newval == 1
-                    or $self->get('allow-batch-flatbed')
-                    or ( defined $options
-                        and $options->by_name('source')->{val} !~
-                        /flatbed/xsmi )
-                  )
-                {
-                    $self->{$name} = $newval;
-                    $self->signal_emit( 'changed-num-pages', $newval );
-                }
+                $self->_set_num_pages( $name, $newval );
             }
             when ('page_number_start') {
                 $self->{$name} = $newval;
@@ -775,6 +764,22 @@ sub _set_allow_batch_flatbed {
             # for $self->{framen}->set_sensitive(FALSE)
             $self->set( 'num-pages', 1 );
         }
+    }
+    return;
+}
+
+sub _set_num_pages {
+    my ( $self, $name, $newval ) = @_;
+    my $options = $self->get('available-scan-options');
+    if (
+           $newval == 1
+        or $self->get('allow-batch-flatbed')
+        or ( defined $options
+            and $options->by_name('source')->{val} !~ /flatbed/xsmi )
+      )
+    {
+        $self->{$name} = $newval;
+        $self->signal_emit( 'changed-num-pages', $newval );
     }
     return;
 }
