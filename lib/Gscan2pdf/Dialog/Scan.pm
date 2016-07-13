@@ -633,19 +633,7 @@ sub SET_PROPERTY {
                 $self->_set_allow_batch_flatbed( $name, $newval );
             }
             when ('available_scan_options') {
-                $self->{$name} = $newval;
-                if ( not $self->get('allow-batch-flatbed')
-                    and $newval->by_name('source')->{val} =~ /flatbed/xsmi )
-                {
-                    if ( $self->get('num-pages') != 1 ) {
-                        $self->set( 'num-pages', 1 );
-                    }
-                    $self->{framen}->set_sensitive(FALSE);
-                }
-                else {
-                    $self->{framen}->set_sensitive(TRUE);
-                }
-                $self->signal_emit('reloaded-scan-options')
+                $self->_set_available_scan_options( $name, $newval );
             }
             when ('device') {
                 $self->{$name} = $newval;
@@ -765,6 +753,22 @@ sub _set_allow_batch_flatbed {
             $self->set( 'num-pages', 1 );
         }
     }
+    return;
+}
+
+sub _set_available_scan_options {
+    my ( $self, $name, $newval ) = @_;
+    $self->{$name} = $newval;
+    if ( not $self->get('allow-batch-flatbed')
+        and $newval->by_name('source')->{val} =~ /flatbed/xsmi )
+    {
+        if ( $self->get('num-pages') != 1 ) { $self->set( 'num-pages', 1 ) }
+        $self->{framen}->set_sensitive(FALSE);
+    }
+    else {
+        $self->{framen}->set_sensitive(TRUE);
+    }
+    $self->signal_emit('reloaded-scan-options');
     return;
 }
 
