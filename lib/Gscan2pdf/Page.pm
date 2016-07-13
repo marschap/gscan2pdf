@@ -385,7 +385,7 @@ sub _pdftotext2boxes {
 
 sub round {
     my ($f) = @_;
-    return int( $f + 0.5 );
+    return int( $f + 0.5 );    ## no critic (ProhibitMagicNumbers)
 }
 
 # return hocr output as string
