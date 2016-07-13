@@ -24,7 +24,7 @@ Readonly my $_SANE_STATUS_EOF             => 5;      # or we could use Sane
 Readonly my $_1KB                         => 1024;
 Readonly my $ALL_PENDING_ZOMBIE_PROCESSES => -1;
 
-our $VERSION = '1.5.0';
+our $VERSION = '1.5.1';
 
 my $EMPTY = q{};
 my $COMMA = q{,};
