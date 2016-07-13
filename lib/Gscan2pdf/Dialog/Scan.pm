@@ -8,6 +8,7 @@ use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Gscan2pdf::Dialog;
 use Data::Dumper;
 use feature 'switch';
+use Gscan2pdf::Scanner::Options;
 my (
     $_MAX_PAGES,        $_MAX_INCREMENT, $_DOUBLE_INCREMENT,
     $_CANVAS_SIZE,      $_CANVAS_BORDER, $_CANVAS_POINT_SIZE,
@@ -16,10 +17,9 @@ my (
 
 # need to register this with Glib before we can use it below
 BEGIN {
-    use Gscan2pdf::Scanner::Options;
-    Glib::Type->register_enum( 'Gscan2pdf::Scanner::Dialog::Side',
+    Glib::Type->register_enum( 'Gscan2pdf::Dialog::Scan::Side',
         qw(facing reverse) );
-    Glib::Type->register_enum( 'Gscan2pdf::Scanner::Dialog::Sided',
+    Glib::Type->register_enum( 'Gscan2pdf::Dialog::Scan::Sided',
         qw(single double) );
     use Readonly;
     Readonly $_MAX_PAGES         => 9999;
@@ -180,28 +180,28 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         [qw/readable writable/]    # flags
     ),
     Glib::ParamSpec->enum(
-        'sided',                                # name
-        'Sided',                                # nickname
-        'Either single or double',              # blurb
-        'Gscan2pdf::Scanner::Dialog::Sided',    # type
-        'single',                               # default
-        [qw/readable writable/]                 # flags
+        'sided',                             # name
+        'Sided',                             # nickname
+        'Either single or double',           # blurb
+        'Gscan2pdf::Dialog::Scan::Sided',    # type
+        'single',                            # default
+        [qw/readable writable/]              # flags
     ),
     Glib::ParamSpec->enum(
-        'side-to-scan',                         # name
-        'Side to scan',                         # nickname
-        'Either facing or reverse',             # blurb
-        'Gscan2pdf::Scanner::Dialog::Side',     # type
-        'facing',                               # default
-        [qw/readable writable/]                 # flags
+        'side-to-scan',                      # name
+        'Side to scan',                      # nickname
+        'Either facing or reverse',          # blurb
+        'Gscan2pdf::Dialog::Scan::Side',     # type
+        'facing',                            # default
+        [qw/readable writable/]              # flags
     ),
     Glib::ParamSpec->object(
-        'available-scan-options',               # name
-        'Scan options available',               # nickname
+        'available-scan-options',            # name
+        'Scan options available',            # nickname
         'Scan options currently available, whether active, selected, or not'
-        ,                                       # blurb
-        'Gscan2pdf::Scanner::Options',          # package
-        [qw/readable writable/]                 # flags
+        ,                                    # blurb
+        'Gscan2pdf::Scanner::Options',       # package
+        [qw/readable writable/]              # flags
     ),
     Glib::ParamSpec->scalar(
         'current-scan-options',                               # name
