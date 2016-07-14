@@ -3638,8 +3638,6 @@ sub scan_dialog {
         $SETTING{device} = $ENV{'SANE_DEFAULT_DEVICE'};
     }
 
-    if ( $SETTING{'pages to scan'} eq 'all' ) { $SETTING{'pages to scan'} = 0 }
-
     # scan pop-up window
     my %options = (
         'transient-for'       => $window,
@@ -3651,7 +3649,6 @@ sub scan_dialog {
         dir                   => $session,
         'hide-on-delete'      => TRUE,
         'paper-formats'       => $SETTING{Paper},
-        'num-pages'           => $SETTING{'pages to scan'},
         'allow-batch-flatbed' => $SETTING{'allow-batch-flatbed'},
         'page-number-start'   => $#{ $slist->{data} } > $EMPTY_LIST
         ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
@@ -3686,15 +3683,8 @@ sub scan_dialog {
     # Update default device
     $windows->signal_connect( 'changed-device' => \&changed_device_callback );
 
-    # Set default
-    $windows->signal_connect(
-        'changed-num-pages' => sub {
-            ( my $widget, $SETTING{'pages to scan'} ) = @_;
-
-            # Check that there is room in the list for the number of pages
-            update_number();
-        }
-    );
+    # Check that there is room in the list for the number of pages
+    $windows->signal_connect( 'changed-num-pages' => sub { update_number() } );
     $windows->signal_connect(
         'changed-page-number-start' => sub {
             my ( $widget, $value ) = @_;

@@ -83,7 +83,6 @@ Gscan2pdf::Config::add_defaults( \%output );
       sprintf( '%04d-%02d-%02d', Gscan2pdf::Document::seconds_to_date(time) ),
     'pdf compression'       => 'auto',
     'quality'               => 75,
-    'pages to scan'         => 1,
     'unpaper on scan'       => FALSE,
     'OCR on scan'           => TRUE,
     'frontend'              => 'libsane-perl',
