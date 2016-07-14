@@ -6,6 +6,7 @@ use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
 use Sub::Override;          # Override Frontend::Sane to test functionality that
                             # we can't with the test backend
+use Storable qw(freeze);    # For cloning the options cache
 
 BEGIN {
     use Gscan2pdf::Dialog::Scan::Sane;
@@ -30,12 +31,14 @@ $override->replace(
                 type    => 'finished',
                 process => 'get-devices',
                 uuid    => $uuid,
-                info    => [
-                    {
-                        'name'  => 'mock_device',
-                        'label' => 'mock_device'
-                    }
-                ],
+                info    => freeze(
+                    [
+                        {
+                            'name'  => 'mock_device',
+                            'label' => 'mock_device'
+                        }
+                    ]
+                ),
                 status => SANE_STATUS_GOOD,
             }
         );
@@ -50,7 +53,7 @@ $override->replace(
                 type    => 'finished',
                 process => 'open-device',
                 uuid    => $uuid,
-                info    => $device_name,
+                info    => freeze( \$device_name ),
                 status  => SANE_STATUS_GOOD,
             }
         );
@@ -145,7 +148,7 @@ $override->replace(
                 type    => 'finished',
                 process => 'get-options',
                 uuid    => $uuid,
-                info    => $options,
+                info    => freeze($options),
                 status  => SANE_STATUS_GOOD,
             }
         );

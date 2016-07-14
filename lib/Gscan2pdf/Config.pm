@@ -29,6 +29,47 @@ BEGIN {
 my $EMPTY = q{};
 my $d;
 
+sub _pre_151 {
+    my ( $version, $SETTING ) = @_;
+    if ( version->parse($version) < version->parse('1.5.1') ) {
+        if ( defined $SETTING->{profile}
+            and ref( $SETTING->{profile} ) eq 'HASH' )
+        {
+            for my $name ( keys %{ $SETTING->{profile} } ) {
+                if ( ref( $SETTING->{profile}{$name} ) eq 'ARRAY' ) {
+                    $SETTING->{profile}{$name} =
+                      _add_profile_backend( $SETTING->{profile}{$name} );
+                }
+                elsif ( ref( $SETTING->{profile}{$name} ) eq 'HASH' ) {
+                    $SETTING->{profile}{$name} =
+                      _add_profile_backend(
+                        _hash_profile_to_array( $SETTING->{profile}{$name} ) );
+                }
+                else {
+                    delete $SETTING->{profile}{$name};
+                }
+            }
+        }
+        if ( defined $SETTING->{'default-scan-options'} ) {
+            if ( ref( $SETTING->{'default-scan-options'} ) eq 'ARRAY' ) {
+                $SETTING->{'default-scan-options'} =
+                  _add_profile_backend( $SETTING->{'default-scan-options'} );
+            }
+            elsif ( ref( $SETTING->{'default-scan-options'} ) eq 'HASH' ) {
+                $SETTING->{'default-scan-options'} = _add_profile_backend(
+                    _hash_profile_to_array(
+                        $SETTING->{'default-scan-options'}
+                    )
+                );
+            }
+            else {
+                delete $SETTING->{'default-scan-options'};
+            }
+        }
+    }
+    return;
+}
+
 sub read_config {
     my ( $filename, $logger ) = @_;
     my ( %SETTING, $conf );
@@ -84,8 +125,29 @@ sub read_config {
     {
         $SETTING{user_defined_tools} = [ $SETTING{user_defined_tools} ];
     }
+
+    _pre_151( $version, \%SETTING );
+
     $logger->debug( Dumper( \%SETTING ) );
     return %SETTING;
+}
+
+# If the profile is a hash, the order is undefined.
+# Sort it to be consistent for tests.
+sub _hash_profile_to_array {
+    my ($profile_hashref) = @_;
+    my @clone;
+    for my $key ( sort keys %{$profile_hashref} ) {
+        push @clone, { $key => $profile_hashref->{$key} };
+    }
+    return \@clone;
+}
+
+sub _add_profile_backend {
+    my ($profile_arrayref) = @_;
+    my $profile;
+    $profile->{backend} = $profile_arrayref;
+    return $profile;
 }
 
 sub add_defaults {

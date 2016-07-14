@@ -62,11 +62,13 @@ $dialog->{signal} = $dialog->signal_connect(
 
         $dialog->add_profile(
             '20x20',
-            [
-                {
-                    'tl-y' => '20'
-                },
-            ]
+            {
+                backend => [
+                    {
+                        'tl-y' => '20'
+                    },
+                ]
+            }
         );
 
         $loop             = Glib::MainLoop->new;
@@ -121,20 +123,23 @@ $dialog->{signal} = $dialog->signal_connect(
 
         $dialog->add_profile(
             '10x10',
-            [
-                {
-                    'tl-y' => '0'
-                },
-                {
-                    'tl-x' => '0'
-                },
-                {
-                    'br-y' => '10'
-                },
-                {
-                    'br-x' => '10'
-                },
-            ]
+            {
+                backend => [
+                    {
+                        'tl-y' => '0'
+                    },
+                    {
+                        'tl-x' => '0'
+                    },
+                    {
+                        'br-y' => '10'
+                    },
+                    {
+                        'br-x' => '10'
+                    },
+                ],
+                frontend => { paper => '10x10' }
+            }
         );
 
         $loop             = Glib::MainLoop->new;

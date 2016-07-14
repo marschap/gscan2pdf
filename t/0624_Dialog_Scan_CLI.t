@@ -34,7 +34,8 @@ $signal = $dialog->signal_connect(
     'reloaded-scan-options' => sub {
         $dialog->signal_handler_disconnect($signal);
 
-        $dialog->set_current_scan_options( [ { 'invert-endianess' => 0 } ] );
+        $dialog->set_current_scan_options(
+            { backend => [ { 'invert-endianess' => 0 } ] } );
 
         $dialog->signal_connect(
             'new-scan' => sub {
@@ -54,7 +55,12 @@ $signal = $dialog->signal_connect(
                         $dialog->signal_handler_disconnect($signal);
 
                         $dialog->set_current_scan_options(
-                            [ { mode => 'Gray' }, { 'invert-endianess' => 0 } ]
+                            {
+                                backend => [
+                                    { mode               => 'Gray' },
+                                    { 'invert-endianess' => 0 }
+                                ]
+                            }
                         );
 
                         $dialog->signal_connect(

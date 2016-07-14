@@ -55,14 +55,16 @@ $signal = $dialog->signal_connect(
         is_deeply(
             $dialog->{profiles},
             {
-                'profile 1' => [
-                    {
-                        'tl-x' => '10'
-                    },
-                    {
-                        'tl-y' => '10'
-                    },
-                ]
+                'profile 1' => {
+                    backend => [
+                        {
+                            'tl-x' => '10'
+                        },
+                        {
+                            'tl-y' => '10'
+                        },
+                    ]
+                }
             },
             'applied 1st profile'
         );
@@ -72,22 +74,26 @@ $signal = $dialog->signal_connect(
         is_deeply(
             $dialog->{profiles},
             {
-                'profile 1' => [
-                    {
-                        'tl-x' => '10'
-                    },
-                    {
-                        'tl-y' => '10'
-                    },
-                ],
-                'profile 2' => [
-                    {
-                        'tl-x' => '20'
-                    },
-                    {
-                        'tl-y' => '20'
-                    },
-                ],
+                'profile 1' => {
+                    backend => [
+                        {
+                            'tl-x' => '10'
+                        },
+                        {
+                            'tl-y' => '10'
+                        },
+                    ]
+                },
+                'profile 2' => {
+                    backend => [
+                        {
+                            'tl-x' => '20'
+                        },
+                        {
+                            'tl-y' => '20'
+                        },
+                    ]
+                },
             },
             'applied 2nd profile without affecting 1st'
         );
@@ -96,14 +102,16 @@ $signal = $dialog->signal_connect(
         is_deeply(
             $dialog->{profiles},
             {
-                'profile 2' => [
-                    {
-                        'tl-x' => '20'
-                    },
-                    {
-                        'tl-y' => '20'
-                    },
-                ],
+                'profile 2' => {
+                    backend => [
+                        {
+                            'tl-x' => '20'
+                        },
+                        {
+                            'tl-y' => '20'
+                        },
+                    ]
+                },
             },
             'remove_profile()'
         );

@@ -37,7 +37,12 @@ $signal = $dialog->signal_connect(
         # So that it can be used in hash
         my $resolution = SANE_NAME_SCAN_RESOLUTION;
 
-        $dialog->add_profile( 'my profile', [ { $resolution => 52 } ] );
+        $dialog->add_profile(
+            'my profile',
+            {
+                backend => [ { $resolution => 52 } ]
+            }
+        );
 
         my $loop;
         my $option_signal;
@@ -46,7 +51,7 @@ $signal = $dialog->signal_connect(
                 my ( $widget, $option, $value ) = @_;
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [ { $resolution => 52 } ],
+                    { backend => [ { $resolution => 52 } ] },
                     'current-scan-options'
                 );
                 $dialog->signal_handler_disconnect($option_signal);

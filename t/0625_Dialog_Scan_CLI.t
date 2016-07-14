@@ -42,8 +42,11 @@ my ( $signal, $signal2 );
 $signal = $dialog->signal_connect(
     'changed-options-cache' => sub {
         $dialog->signal_handler_disconnect($signal);
-        is( $#{ $dialog->get('current-scan-options') },
-            -1, 'cached default Gray - no scan option set' );
+        is_deeply(
+            $dialog->get('current-scan-options'),
+            { backend => [] },
+            'cached default Gray - no scan option set'
+        );
 
         $signal = $dialog->signal_connect(
             'reloaded-scan-options' => sub {
@@ -52,8 +55,11 @@ $signal = $dialog->signal_connect(
                 $signal = $dialog->signal_connect(
                     'changed-options-cache' => sub {
                         $dialog->signal_handler_disconnect($signal);
-                        is( $#{ $dialog->get('current-scan-options') },
-                            0, 'cached Color - 1 scan option set' );
+                        is_deeply(
+                            $dialog->get('current-scan-options'),
+                            { backend => [ { mode => 'Color' } ] },
+                            'cached Color'
+                        );
 
                         $signal2 = $dialog->signal_connect(
                             'fetched-options-cache' => sub {
@@ -65,23 +71,24 @@ $signal = $dialog->signal_connect(
                         $signal = $dialog->signal_connect(
                             'reloaded-scan-options' => sub {
                                 $dialog->signal_handler_disconnect($signal);
-                                is(
-                                    $#{ $dialog->get('current-scan-options') },
-                                    0,
-'retrieved Gray from cache - 1 scan option set'
+                                is_deeply(
+                                    $dialog->get('current-scan-options'),
+                                    { backend => [ { mode => 'Gray' } ] },
+                                    'retrieved Gray from cache'
                                 );
 
                                 $signal = $dialog->signal_connect(
                                     'reloaded-scan-options' => sub {
                                         $dialog->signal_handler_disconnect(
                                             $signal);
-                                        is(
-                                            $#{
-                                                $dialog->get(
-                                                    'current-scan-options')
+                                        is_deeply(
+                                            $dialog->get(
+                                                'current-scan-options'),
+                                            {
+                                                backend =>
+                                                  [ { mode => 'Color' } ]
                                             },
-                                            0,
-'retrieved Color from cache - 1 scan option set'
+                                            'retrieved Color from cache'
                                         );
 
                                         $signal = $dialog->signal_connect(
@@ -89,14 +96,15 @@ $signal = $dialog->signal_connect(
                                                 $dialog
                                                   ->signal_handler_disconnect(
                                                     $signal);
-                                                is(
-                                                    $#{
-                                                        $dialog->get(
-'current-scan-options'
-                                                        )
+                                                is_deeply(
+                                                    $dialog->get(
+                                                        'current-scan-options'),
+                                                    {
+                                                        backend => [
+                                                            { mode => 'Gray' }
+                                                        ]
                                                     },
-                                                    0,
-'retrieved Gray from cache #2 - 1 scan option set'
+'retrieved Gray from cache #2'
                                                 );
                                                 Gtk2->main_quit;
                                             }

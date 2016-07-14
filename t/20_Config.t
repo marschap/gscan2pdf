@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Gscan2pdf::Document;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Test::More tests => 10;
+use Test::More tests => 12;
 
 BEGIN {
     use_ok('Gscan2pdf::Config');
@@ -225,6 +225,117 @@ close $fh or die "Error: cannot close $rc\n";
 %output = Gscan2pdf::Config::read_config( $rc, $logger );
 
 is_deeply( \%output, \%example, 'force user_defined_tools to be an array' );
+
+#########################
+
+$config = <<'EOS';
+{
+   "default-scan-options" : [
+      {
+         "source" : "Flatbed"
+      }
+   ],
+   "profile" : {
+      "10x10" : [
+         {
+            "br-y" : 10
+         }
+      ],
+      "20x20" : [
+         {
+            "br-y" : 20
+         }
+      ]
+   },
+   "version" : "1.5.0"
+}
+EOS
+open $fh, '>', $rc or die "Error: cannot open $rc\n";
+print $fh $config;
+close $fh or die "Error: cannot close $rc\n";
+
+%example = (
+    "default-scan-options" => {
+        backend => [
+            {
+                "source" => "Flatbed"
+            }
+        ]
+    },
+    "profile" => {
+        "10x10" => {
+            backend => [
+                {
+                    "br-y" => 10
+                }
+            ]
+        },
+        "20x20" => {
+            backend => [
+                {
+                    "br-y" => 20
+                }
+            ]
+        }
+    },
+    "version" => "1.5.0"
+);
+%output = Gscan2pdf::Config::read_config( $rc, $logger );
+
+is_deeply( \%output, \%example,
+    'convert pre-v1.5.1 profiles to v1.5.1 format' );
+
+#########################
+
+$config = <<'EOS';
+{
+   "default-scan-options" : {
+         "source" : "Flatbed"
+      },
+   "profile" : {
+      "10x10" : {
+            "br-y" : 10
+         },
+      "20x20" : {
+            "br-y" : 20
+         }
+   },
+   "version" : "1.5.0"
+}
+EOS
+open $fh, '>', $rc or die "Error: cannot open $rc\n";
+print $fh $config;
+close $fh or die "Error: cannot close $rc\n";
+
+%example = (
+    "default-scan-options" => {
+        backend => [
+            {
+                "source" => "Flatbed"
+            }
+        ]
+    },
+    "profile" => {
+        "10x10" => {
+            backend => [
+                {
+                    "br-y" => 10
+                }
+            ]
+        },
+        "20x20" => {
+            backend => [
+                {
+                    "br-y" => 20
+                }
+            ]
+        }
+    },
+    "version" => "1.5.0"
+);
+%output = Gscan2pdf::Config::read_config( $rc, $logger );
+
+is_deeply( \%output, \%example, 'convert old hashed profiles to arrays' );
 
 #########################
 

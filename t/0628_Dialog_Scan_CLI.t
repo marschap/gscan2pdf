@@ -38,31 +38,35 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         $dialog->add_profile(
             'g51',
-            [
-                {
-                    'page-height' => '297'
-                },
-                {
-                    'y' => '297'
-                },
-                {
-                    'resolution' => '51'
-                },
-            ]
+            {
+                backend => [
+                    {
+                        'page-height' => '297'
+                    },
+                    {
+                        'y' => '297'
+                    },
+                    {
+                        'resolution' => '51'
+                    },
+                ]
+            }
         );
         $dialog->add_profile(
             'c50',
-            [
-                {
-                    'page-height' => '297'
-                },
-                {
-                    'y' => '297'
-                },
-                {
-                    'resolution' => '50'
-                },
-            ]
+            {
+                backend => [
+                    {
+                        'page-height' => '297'
+                    },
+                    {
+                        'y' => '297'
+                    },
+                    {
+                        'resolution' => '50'
+                    },
+                ]
+            }
         );
 
         # need a new main loop because of the timeout
@@ -93,14 +97,16 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [
-                        {
-                            'y' => '297'
-                        },
-                        {
-                            'resolution' => '50'
-                        },
-                    ],
+                    {
+                        backend => [
+                            {
+                                'y' => '297'
+                            },
+                            {
+                                'resolution' => '50'
+                            },
+                        ]
+                    },
                     'fired signal and set profile'
                 );
                 $flag = TRUE;

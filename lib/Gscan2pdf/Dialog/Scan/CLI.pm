@@ -188,7 +188,7 @@ sub cache_key {
         Dumper( $self->{current_scan_options} );
 
         # grep the reload triggers from the current options
-        for ( @{ $self->{current_scan_options} } ) {
+        for ( @{ $self->{current_scan_options}{backend} } ) {
             my ( $key, $value ) = each %{$_};
             for ( @{$reload_triggers} ) {
                 if (/^$key$/ixsm) {
@@ -248,7 +248,7 @@ sub scan_options {
         prefix           => $self->get('prefix'),
         frontend         => $self->get('frontend'),
         device           => $self->get('device'),
-        options          => $self->{current_scan_options},
+        options          => $self->{current_scan_options}{backend},
         started_callback => sub {
 
             # Set up ProgressBar
@@ -674,11 +674,17 @@ sub set_paper {
         return;
     }
     for ( @{ $self->{ignored_paper_formats} } ) {
-        if ( $_ eq $paper ) { return }
+        if ( $_ eq $paper ) {
+            if ( defined $logger ) {
+                $logger->info("Ignoring unsupported paper $paper");
+            }
+            return;
+        }
     }
     my $formats = $self->get('paper-formats');
     my $options = $self->get('available-scan-options');
-    my @paper_profile;
+    my $paper_profile;
+    $paper_profile->{backend} = [];
     if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
         and not $options->by_name(SANE_NAME_PAGE_HEIGHT)->{cap} &
         SANE_CAP_INACTIVE
@@ -687,25 +693,25 @@ sub set_paper {
         SANE_CAP_INACTIVE )
     {
         $self->build_profile(
-            \@paper_profile,
+            $paper_profile,
             $options->by_name(SANE_NAME_PAGE_HEIGHT),
             $formats->{$paper}{y} + $formats->{$paper}{t}
         );
         $self->build_profile(
-            \@paper_profile,
+            $paper_profile,
             $options->by_name(SANE_NAME_PAGE_WIDTH),
             $formats->{$paper}{x} + $formats->{$paper}{l}
         );
     }
     for (qw( l t x y )) {
         $self->build_profile(
-            \@paper_profile,
+            $paper_profile,
             $options->by_name($_),
             $formats->{$paper}{$_}
         );
     }
 
-    if ( not @paper_profile ) {
+    if ( not @{ $paper_profile->{backend} } ) {
         $self->hide_geometry($options);
         $self->{paper} = $paper;
         $self->signal_emit( 'changed-paper', $paper );
@@ -725,7 +731,7 @@ sub set_paper {
 
 # Don't trigger the changed-paper signal until we have finished setting the profile
     $self->{setting_profile} = TRUE;
-    $self->_set_option_profile( 0, \@paper_profile );
+    $self->_set_option_profile( 0, $paper_profile );
     return;
 }
 
@@ -830,7 +836,8 @@ sub set_option {
                 prefix   => $self->get('prefix'),
                 frontend => $self->get('frontend'),
                 device   => $self->get('device'),
-                options  => $self->map_options( $self->{current_scan_options} ),
+                options =>
+                  $self->map_options( $self->{current_scan_options}{backend} ),
                 started_callback => sub {
 
                     # Set up ProgressBar
@@ -923,7 +930,7 @@ sub patch_cache {
     # reference tree, parts of $self->{current_scan_options}
     # are undef
     Dumper( $self->{current_scan_options} );
-    for my $hashref ( @{ $self->{current_scan_options} } ) {
+    for my $hashref ( @{ $self->{current_scan_options}{backend} } ) {
         my ( $key, undef ) = each %{$hashref};
         my $updated_option =
           $self->get('available-scan-options')->by_name($key);
@@ -1010,54 +1017,53 @@ sub update_widget {    # FIXME: this is partly duplicated in Sane.pm
 # As scanimage and scanadf rename the geometry options,
 # we have to map them back to the original names
 sub map_geometry_names {
-    my ( $self, $profile ) = @_;
-    for my $i ( 0 .. $#{$profile} ) {
+    my ( $self, $options ) = @_;
+    for my $i ( 0 .. $#{$options} ) {
 
         # for reasons I don't understand, without walking the reference tree,
-        # parts of $profile are undef
-        Dumper($profile);
-        my ( $name, $val ) = each %{ $profile->[$i] };
+        # parts of $options are undef
+        Dumper($options);
+        my ( $name, $val ) = each %{ $options->[$i] };
         given ($name) {
             when (SANE_NAME_SCAN_TL_X) {
                 $name = 'l';
-                $profile->[$i] = { $name => $val };
+                $options->[$i] = { $name => $val };
             }
             when (SANE_NAME_SCAN_TL_Y) {
                 $name = 't';
-                $profile->[$i] = { $name => $val };
+                $options->[$i] = { $name => $val };
             }
             when (SANE_NAME_SCAN_BR_X) {
                 $name = 'x';
-                my $l = $self->get_option_from_profile( 'l', $profile );
+                my $l = $self->get_option_from_profile( 'l', $options );
                 if ( not defined $l ) {
                     $l =
                       $self->get_option_from_profile( SANE_NAME_SCAN_TL_X,
-                        $profile );
+                        $options );
                 }
                 if ( defined $l ) { $val -= $l }
-                $profile->[$i] = { $name => $val };
+                $options->[$i] = { $name => $val };
             }
             when (SANE_NAME_SCAN_BR_Y) {
                 $name = 'y';
-                my $t = $self->get_option_from_profile( 't', $profile );
+                my $t = $self->get_option_from_profile( 't', $options );
                 if ( not defined $t ) {
                     $t =
                       $self->get_option_from_profile( SANE_NAME_SCAN_TL_Y,
-                        $profile );
+                        $options );
                 }
                 if ( defined $t ) { $val -= $t }
-                $profile->[$i] = { $name => $val };
+                $options->[$i] = { $name => $val };
             }
         }
     }
     return;
 }
 
-# Remove paper size from options,
 # change boolean values from TRUE and FALSE to yes and no
 sub map_options {
     my ( $self, $old ) = @_;
-    my $new;
+    my @new;
     my $options = $self->get('available-scan-options');
     for ( @{$old} ) {
 
@@ -1065,15 +1071,13 @@ sub map_options {
         # parts of $_ are undef
         Dumper($_);
         my ( $key, $val ) = each %{$_};
-        if ( $key ne 'Paper size' ) {
-            my $opt = $options->by_name($key);
-            if ( defined( $opt->{type} ) and $opt->{type} == SANE_TYPE_BOOL ) {
-                $val = $val ? 'yes' : 'no';
-            }
-            push @{$new}, { $key => $val };
+        my $opt = $options->by_name($key);
+        if ( defined( $opt->{type} ) and $opt->{type} == SANE_TYPE_BOOL ) {
+            $val = $val ? 'yes' : 'no';
         }
+        push @new, { $key => $val };
     }
-    return $new;
+    return \@new;
 }
 
 sub scan {
@@ -1093,7 +1097,7 @@ sub scan {
 
     # As scanimage and scanadf rename the geometry options,
     # we have to map them back to the original names
-    my $options = $self->{current_scan_options};
+    my $options = $self->{current_scan_options}{backend};
     $self->map_geometry_names($options);
 
     my $i = 1;

@@ -41,7 +41,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 Gtk2->main_quit;
                 is_deeply(
                     $option_array,
-                    [ { $resolution => 51 }, ],
+                    { backend => [ { $resolution => 51 }, ] },
                     'emitted changed-current-scan-options'
                 );
             }

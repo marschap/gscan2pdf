@@ -440,11 +440,17 @@ sub set_paper {
         return;
     }
     for ( @{ $self->{ignored_paper_formats} } ) {
-        if ( $_ eq $paper ) { return }
+        if ( $_ eq $paper ) {
+            if ( defined $logger ) {
+                $logger->info("Ignoring unsupported paper $paper");
+            }
+            return;
+        }
     }
     my $formats = $self->get('paper-formats');
     my $options = $self->get('available-scan-options');
-    my @paper_profile;
+    my $paper_profile;
+    $paper_profile->{backend} = [];
     if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
         and not $options->by_name(SANE_NAME_PAGE_HEIGHT)->{cap} &
         SANE_CAP_INACTIVE
@@ -453,38 +459,38 @@ sub set_paper {
         SANE_CAP_INACTIVE )
     {
         $self->build_profile(
-            \@paper_profile,
+            $paper_profile,
             $options->by_name(SANE_NAME_PAGE_HEIGHT),
             $formats->{$paper}{y} + $formats->{$paper}{t}
         );
         $self->build_profile(
-            \@paper_profile,
+            $paper_profile,
             $options->by_name(SANE_NAME_PAGE_WIDTH),
             $formats->{$paper}{x} + $formats->{$paper}{l}
         );
     }
     $self->build_profile(
-        \@paper_profile,
+        $paper_profile,
         $options->by_name(SANE_NAME_SCAN_TL_X),
         $formats->{$paper}{l}
     );
     $self->build_profile(
-        \@paper_profile,
+        $paper_profile,
         $options->by_name(SANE_NAME_SCAN_TL_Y),
         $formats->{$paper}{t}
     );
     $self->build_profile(
-        \@paper_profile,
+        $paper_profile,
         $options->by_name(SANE_NAME_SCAN_BR_X),
         $formats->{$paper}{x} + $formats->{$paper}{l}
     );
     $self->build_profile(
-        \@paper_profile,
+        $paper_profile,
         $options->by_name(SANE_NAME_SCAN_BR_Y),
         $formats->{$paper}{y} + $formats->{$paper}{t}
     );
 
-    if ( not @paper_profile ) {
+    if ( not @{ $paper_profile->{backend} } ) {
         $self->hide_geometry($options);
         $self->{paper} = $paper;
         $self->signal_emit( 'changed-paper', $paper );
@@ -504,7 +510,7 @@ sub set_paper {
 
 # Don't trigger the changed-paper signal until we have finished setting the profile
     $self->{setting_profile} = TRUE;
-    $self->_set_option_profile( 0, \@paper_profile );
+    $self->_set_option_profile( 0, $paper_profile );
     return;
 }
 
@@ -608,43 +614,43 @@ sub set_option {
 # As scanimage and scanadf rename the geometry options,
 # we have to map them back to the original names
 sub map_geometry_names {
-    my ( $self, $profile ) = @_;
-    for my $i ( 0 .. $#{$profile} ) {
+    my ( $self, $options ) = @_;
+    for my $i ( 0 .. $#{$options} ) {
 
         # for reasons I don't understand, without walking the reference tree,
-        # parts of $profile are undef
-        Dumper( $profile->[$i] );
-        my ( $name, $val ) = each %{ $profile->[$i] };
+        # parts of $options are undef
+        Dumper( $options->[$i] );
+        my ( $name, $val ) = each %{ $options->[$i] };
         given ($name) {
             when ('l') {
                 $name = SANE_NAME_SCAN_TL_X;
-                $profile->[$i] = { $name => $val };
+                $options->[$i] = { $name => $val };
             }
             when ('t') {
                 $name = SANE_NAME_SCAN_TL_Y;
-                $profile->[$i] = { $name => $val };
+                $options->[$i] = { $name => $val };
             }
             when ('x') {
                 $name = SANE_NAME_SCAN_BR_X;
-                my $l = $self->get_option_from_profile( 'l', $profile );
+                my $l = $self->get_option_from_profile( 'l', $options );
                 if ( not defined $l ) {
                     $l =
                       $self->get_option_from_profile( SANE_NAME_SCAN_TL_X,
-                        $profile );
+                        $options );
                 }
                 if ( defined $l ) { $val += $l; }
-                $profile->[$i] = { $name => $val };
+                $options->[$i] = { $name => $val };
             }
             when ('y') {
                 $name = SANE_NAME_SCAN_BR_Y;
-                my $t = $self->get_option_from_profile( 't', $profile );
+                my $t = $self->get_option_from_profile( 't', $options );
                 if ( not defined $t ) {
                     $t =
                       $self->get_option_from_profile( SANE_NAME_SCAN_TL_Y,
-                        $profile );
+                        $options );
                 }
                 if ( defined $t ) { $val += $t; }
-                $profile->[$i] = { $name => $val };
+                $options->[$i] = { $name => $val };
             }
         }
     }

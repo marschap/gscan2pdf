@@ -8,11 +8,12 @@ no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use threads;
 use threads::shared;
 use Thread::Queue;
+use Storable qw(freeze thaw);    # For cloning the options cache
 
 use Glib qw(TRUE FALSE);
 use Sane;
 use Data::UUID;
-use File::Temp;    # To create temporary files
+use File::Temp;                  # To create temporary files
 use Readonly;
 Readonly my $BUFFER_SIZE    => ( 32 * 1024 );     # default size
 Readonly my $_POLL_INTERVAL => 100;               # ms
@@ -302,6 +303,15 @@ sub cancel_scan {
     return;
 }
 
+sub _thaw_deref {
+    my ($ref) = @_;
+    if ( defined $ref ) {
+        $ref = thaw($ref);
+        if ( ref($ref) eq 'SCALAR' ) { $ref = ${$ref} }
+    }
+    return $ref;
+}
+
 sub check_return_queue {
     while ( defined( my $data = $_self->{return}->dequeue_nb() ) ) {
         if ( not defined $data->{type} ) {
@@ -319,7 +329,8 @@ sub check_return_queue {
             if ( $data->{type} eq 'cancelled' ) {
                 $_self->{cancel} = FALSE;
                 if ( defined $callback{ $data->{uuid} }{cancelled} ) {
-                    $callback{ $data->{uuid} }{cancelled}->( $data->{info} );
+                    $callback{ $data->{uuid} }{cancelled}
+                      ->( _thaw_deref( $data->{info} ) );
                     delete $callback{ $data->{uuid} };
                 }
             }
@@ -347,7 +358,7 @@ sub check_return_queue {
             }
             if ( defined $callback{ $data->{uuid} }{finished} ) {
                 $callback{ $data->{uuid} }{finished}
-                  ->( $data->{info}, $data->{status} );
+                  ->( _thaw_deref( $data->{info} ), $data->{status} );
                 delete $callback{ $data->{uuid} };
             }
         }
@@ -403,7 +414,7 @@ sub _thread_get_devices {
             type    => 'finished',
             process => 'get-devices',
             uuid    => $uuid,
-            info    => \@devices,
+            info    => freeze( \@devices ),
             status  => int($Sane::STATUS),
         }
     );
@@ -449,7 +460,7 @@ sub _thread_open_device {
             type    => 'finished',
             process => 'open-device',
             uuid    => $uuid,
-            info    => $device_name,
+            info    => freeze( \$device_name ),
             status  => int($Sane::STATUS),
         }
     );
@@ -484,7 +495,7 @@ sub _thread_get_options {
             type    => 'finished',
             process => 'get-options',
             uuid    => $uuid,
-            info    => \@options,
+            info    => freeze( \@options ),
             status  => int($Sane::STATUS),
         }
     );
@@ -690,7 +701,7 @@ sub _thread_scan_page {
             process => 'scan-page',
             uuid    => $uuid,
             status  => int($Sane::STATUS),
-            info    => $path,
+            info    => freeze( \$path ),
         }
     );
     return;

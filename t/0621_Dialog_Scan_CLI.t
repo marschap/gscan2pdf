@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 49;
+use Test::More tests => 46;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -122,41 +122,21 @@ $signal = $dialog->signal_connect(
                 is( $name, 'my profile', 'added-profile name' );
                 is_deeply(
                     $profile,
-                    [ { $resolution => 52 }, { mode => 'Color' } ],
+                    {
+                        backend =>
+                          [ { $resolution => 52 }, { mode => 'Color' } ]
+                    },
                     'added-profile profile'
                 );
                 $dialog->signal_handler_disconnect($signal);
             }
         );
-        $dialog->add_profile( 'my profile',
-            [ { $resolution => 52 }, { mode => 'Color' } ] );
-
-        ######################################
-
-        $signal = $dialog->signal_connect(
-            'added-profile' => sub {
-                my ( $widget, $name, $profile ) = @_;
-                is( $name, 'old profile', 'added-profile old name' );
-                is_deeply(
-                    $profile,
-                    [ { mode => 'Gray' }, { $resolution => 51 } ],
-                    'added-profile profile as hash'
-                );
-                $dialog->signal_handler_disconnect($signal);
+        $dialog->add_profile(
+            'my profile',
+            {
+                backend => [ { $resolution => 52 }, { mode => 'Color' } ]
             }
         );
-        $dialog->add_profile( 'old profile',
-            { $resolution => 51, mode => 'Gray' } );
-
-        ######################################
-
-        $dialog->signal_connect(
-            'removed-profile' => sub {
-                my ( $widget, $profile ) = @_;
-                is( $profile, 'old profile', 'removed-profile' );
-            }
-        );
-        $dialog->remove_profile('old profile');
 
         ######################################
 
@@ -169,7 +149,11 @@ $signal = $dialog->signal_connect(
                 is( $profile, 'my profile', 'changed-profile' );
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [ { $resolution => 52 }, { mode => 'Color' } ],
+                    {
+                        backend =>
+                          [ { $resolution => 52 }, { mode => 'Color' } ],
+                        'frontend' => { 'num_pages' => 0 }
+                    },
                     'current-scan-options with profile'
                 );
                 is( $reloads, 1, 'reloaded-scan-options not called' );
@@ -183,8 +167,12 @@ $signal = $dialog->signal_connect(
 
         ######################################
 
-        $dialog->add_profile( 'my profile2',
-            [ { $resolution => 52 }, { mode => 'Color' } ] );
+        $dialog->add_profile(
+            'my profile2',
+            {
+                backend => [ { $resolution => 52 }, { mode => 'Color' } ]
+            }
+        );
 
         # need a new main loop because of the timeout
         $loop   = Glib::MainLoop->new;
@@ -215,7 +203,11 @@ $signal = $dialog->signal_connect(
                     undef, 'changing an option deselects the current profile' );
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [ { mode => 'Color' }, { $resolution => 51 } ],
+                    {
+                        backend =>
+                          [ { mode => 'Color' }, { $resolution => 51 } ],
+                        'frontend' => { 'num_pages' => 0 }
+                    },
                     'current-scan-options without profile'
                 );
                 $flag = TRUE;
@@ -246,7 +238,11 @@ $signal = $dialog->signal_connect(
                 is( $profile, 'my profile', 'reset profile name' );
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [ { $resolution => 52 }, { mode => 'Color' } ],
+                    {
+                        backend =>
+                          [ { $resolution => 52 }, { mode => 'Color' } ],
+                        'frontend' => { 'num_pages' => 0 }
+                    },
                     'reset profile options'
                 );
                 $dialog->signal_handler_disconnect($signal);
@@ -278,7 +274,11 @@ $signal = $dialog->signal_connect(
                 $dialog->signal_handler_disconnect($signal2);
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [ { $resolution => 52 }, { mode => 'Gray' } ],
+                    {
+                        backend =>
+                          [ { $resolution => 52 }, { mode => 'Gray' } ],
+                        'frontend' => { 'num_pages' => 0 }
+                    },
                     'current-scan-options without profile (again)'
                 );
                 my $reloaded_options = $dialog->get('available-scan-options');
@@ -304,7 +304,11 @@ $signal = $dialog->signal_connect(
                 $dialog->signal_handler_disconnect($signal);
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [ { $resolution => 52 }, { mode => 'Color' } ],
+                    {
+                        backend =>
+                          [ { $resolution => 52 }, { mode => 'Color' } ],
+                        'frontend' => { 'num_pages' => 0 }
+                    },
 'setting a option with a reload trigger to a non-default value stays set'
                 );
                 $flag = TRUE;
@@ -325,7 +329,14 @@ $signal = $dialog->signal_connect(
                 my ( $widget, $option, $value ) = @_;
                 is_deeply(
                     $dialog->get('current-scan-options'),
-                    [ { $resolution => 52 }, { mode => 'Color' }, { x => 11 } ],
+                    {
+                        backend => [
+                            { $resolution => 52 },
+                            { mode        => 'Color' },
+                            { x           => 11 }
+                        ],
+                        'frontend' => { 'num_pages' => 0 }
+                    },
                     'map option names'
                 );
                 $dialog->signal_handler_disconnect($signal);
@@ -333,20 +344,22 @@ $signal = $dialog->signal_connect(
                 $loop->quit;
             }
         );
-        $dialog->set_current_scan_options( [ { $brx => 11 } ] );
+        $dialog->set_current_scan_options( { backend => [ { $brx => 11 } ] } );
         $loop->run unless ($flag);
 
         ######################################
 
         $dialog->add_profile(
             'cli geometry',
-            [
-                { l           => 1 },
-                { y           => 50 },
-                { x           => 50 },
-                { t           => 2 },
-                { $resolution => 50 }
-            ]
+            {
+                backend => [
+                    { l           => 1 },
+                    { y           => 50 },
+                    { x           => 50 },
+                    { t           => 2 },
+                    { $resolution => 50 }
+                ]
+            }
         );
 
         # need a new main loop because of the timeout
@@ -364,8 +377,14 @@ $signal = $dialog->signal_connect(
                 push @$expected, { l => 1 },
                   { y => 50 }, { x           => 50 },
                   { t => 2 },  { $resolution => 50 };
-                is_deeply( $dialog->get('current-scan-options'),
-                    $expected, 'CLI geometry option names' );
+                is_deeply(
+                    $dialog->get('current-scan-options'),
+                    {
+                        backend    => $expected,
+                        'frontend' => { 'num_pages' => 0 }
+                    },
+                    'CLI geometry option names'
+                );
                 $dialog->signal_handler_disconnect($signal);
                 $flag = TRUE;
                 $loop->quit;
@@ -407,9 +426,14 @@ $signal = $dialog->signal_connect(
                   if ( defined $options->by_name(SANE_NAME_PAGE_WIDTH) );
                 push @$expected, { l => 0 }, { t => 0 }, { x => 10 },
                   { y => 10 };
-                is_deeply( $dialog->get('current-scan-options'),
-                    $expected,
-                    'CLI geometry option names after setting paper' );
+                is_deeply(
+                    $dialog->get('current-scan-options'),
+                    {
+                        backend    => $expected,
+                        'frontend' => { 'num_pages' => 0 }
+                    },
+                    'CLI geometry option names after setting paper'
+                );
             }
         );
         $dialog->set( 'paper', 'new2' );

@@ -6,11 +6,14 @@ no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Carp;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Sane 0.05;              # For enums
+use Storable qw(dclone);    # For cloning the options cache
 use feature 'switch';
 use Readonly;
 Readonly my $MAX_VALUES  => 255;
 Readonly my $EMPTY_ARRAY => -1;
 
+# Have to subclass Glib::Object to be able to name it as an object in
+# Glib::ParamSpec->object in Gscan2pdf::Dialog::Scan
 use Glib::Object::Subclass Glib::Object::;
 
 our $VERSION = '1.5.1';
@@ -25,26 +28,25 @@ sub new_from_data {
     my $self = $class->new();
     if ( not defined $options ) { croak 'Error: no options supplied' }
     if ( ref($options) eq 'ARRAY' ) {
-
-       # do a two level clone to allow us to add extra keys to the option hashes
-        my @options;
-        $self->{array} = \@options;
-        for my $i ( 0 .. $#{$options} ) {
-            my %option;
-            if ( defined $options->[$i] ) { %option = %{ $options->[$i] } }
-            $option{index} = $i;
-            push @options, \%option;
-            if ( defined $options[$i]{name}
-                and $options[$i]{name} ne $EMPTY )
-            {
-                $self->{hash}{ $options[$i]{name} } = $options[$i];
-            }
-        }
+        $self->{array} = $options;
     }
     else {
-        ( $self->{array}, $self->{hash} ) =
-          Gscan2pdf::Scanner::Options->options2hash($options);
+        $self->{array} = _parse_scanimage_output($options);
     }
+
+    # add hash for easy retrieval
+    for my $i ( 0 .. $#{ $self->{array} } ) {
+        my $option;
+        if ( defined $self->{array}[$i] ) { $option = $self->{array}[$i] }
+        $option->{index} = $i;
+        if ( not defined $self->{array}[$i] ) { $self->{array}[$i] = $option }
+        if ( defined $self->{array}[$i]{name}
+            and $self->{array}[$i]{name} ne $EMPTY )
+        {
+            $self->{hash}{ $self->{array}[$i]{name} } = $self->{array}[$i];
+        }
+    }
+
     $self->parse_geometry;
     return $self;
 }
@@ -222,8 +224,8 @@ sub supports_paper {
 
 # parse the scanimage/scanadf output into an array and a hash
 
-sub options2hash {
-    my ( $class, $output ) = @_;
+sub _parse_scanimage_output {
+    my ($output) = @_;
 
     # Remove everything above the options
     if (
@@ -241,8 +243,7 @@ sub options2hash {
         return;
     }
 
-    my ( @options, %hash );
-
+    my @options;
     while (1) {
         my %option;
         $option{unit}            = SANE_UNIT_NONE;
@@ -309,8 +310,6 @@ sub options2hash {
             # Remove everything on the option line and above.
             $output = $4;
 
-            $hash{ $option{name} } = \%option;
-
             $option{title} = $option{name};
             $option{title} =~ s/[-_]/ /xsmg;  # dashes and underscores to spaces
             $option{title} =~
@@ -362,7 +361,7 @@ sub options2hash {
         $option{index} = $#options + 1;
     }
     if (@options) { unshift @options, { index => 0 } }
-    return \@options, \%hash;
+    return \@options;
 }
 
 # parse out range, step and units from the values string

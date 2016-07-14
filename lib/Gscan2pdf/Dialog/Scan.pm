@@ -7,6 +7,7 @@ use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Sane 0.05;             # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Gscan2pdf::Dialog;
 use Data::Dumper;
+use Storable qw(dclone);
 use feature 'switch';
 use Gscan2pdf::Scanner::Options;
 my (
@@ -700,6 +701,7 @@ sub SET_PROPERTY {
                     }
                 );
                 $self->set_paper($newval);
+                $self->{current_scan_options}{frontend}{$name} = $newval;
             }
             when ('paper_formats') {
                 $self->{$name} = $newval;
@@ -783,6 +785,7 @@ sub _set_num_pages {
       )
     {
         $self->{$name} = $newval;
+        $self->{current_scan_options}{frontend}{$name} = $newval;
         $self->signal_emit( 'changed-num-pages', $newval );
     }
     return;
@@ -1231,26 +1234,6 @@ sub edit_paper {
     return;
 }
 
-sub _clone_profile {
-    my ($profile) = @_;
-    my @clone;
-    if ( ref($profile) eq 'ARRAY' ) {
-        for ( @{$profile} ) {
-            my ( $key, $val ) = each %{$_};
-            if ( defined $key ) { push @clone, { $key => $val } }
-        }
-    }
-    elsif ( ref($profile) eq 'HASH' ) {
-
-        # If the profile is a hash, the order is undefined.
-        # Sort it to be consistent for tests.
-        for my $key ( sort keys %{$profile} ) {
-            push @clone, { $key => $profile->{$key} };
-        }
-    }
-    return \@clone;
-}
-
 # keeping this as a separate sub allows us to test it
 sub save_current_profile {
     my ( $self, $name ) = @_;
@@ -1266,7 +1249,7 @@ sub add_profile {
 
         # if we don't clone the profile,
         # we get strange action-at-a-distance problems
-        $self->{profiles}{$name} = _clone_profile($profile);
+        $self->{profiles}{$name} = dclone($profile);
         $self->{combobsp}->append_text($name);
         $logger->debug( "Saved profile '$name':",
             Dumper( $self->{profiles}{$name} ) );
@@ -1289,11 +1272,18 @@ sub set_profile {
                 $self->signal_handler_disconnect($signal);
                 $self->{setting_profile} = FALSE;
 
+                # Having set all backend options, set the frontend options
+                if ( defined $self->{profiles}{$name}{frontend} ) {
+                    for my $key ( keys %{ $self->{profiles}{$name}{frontend} } )
+                    {
+                        $self->set( $key,
+                            $self->{profiles}{$name}{frontend}{$key} );
+                    }
+                }
+
                 # set property before emitting signal to ensure callbacks
                 # receive correct value
                 $self->{profile} = $name;
-                my $paper = $self->get_paper_by_geometry;
-                if ( defined $paper ) { $self->set( 'paper', $paper ) }
                 $self->signal_emit( 'changed-profile', $name );
             }
         );
@@ -1307,10 +1297,10 @@ sub set_profile {
         # but it shouldn't hurt, and otherwise, it fails t/0601_Dialog_Scan.t
 
         # I also don't understand why the $clone variable is necessary: why
-        # I can't simply pass the return value from _clone_profile() directly
+        # I can't simply pass the return value from dclone() directly
         # into set_current_scan_options(),
         # but otherwise it fails t/0610_Dialog_Scan.t
-        my $clone = _clone_profile( $self->{profiles}{$name} );
+        my $clone = dclone( $self->{profiles}{$name} );
         $self->set_current_scan_options($clone);
     }
 
@@ -1347,7 +1337,7 @@ sub remove_profile {
 sub build_profile {
     my ( $self, $profile, $option, $newval ) = @_;
     if ( $option->{val} != $newval ) {
-        push @{$profile}, { $option->{name} => $newval };
+        push @{ $profile->{backend} }, { $option->{name} => $newval };
     }
     return;
 }
@@ -1739,16 +1729,16 @@ sub update_graph {
 # Set options to profile referenced by hashref
 
 sub set_current_scan_options {
-    my ( $self, $profile ) = @_;
+    my ( $self, $options_arrayref ) = @_;
 
-    if ( not defined $profile ) { return }
+    if ( not defined $options_arrayref ) { return }
 
     # First clone the profile, as otherwise it would be self-modifying
-    my $clone = _clone_profile($profile);
+    my $clone = dclone($options_arrayref);
 
     # As scanimage and scanadf rename the geometry options,
     # we have to map them back to the original names
-    $self->map_geometry_names($clone);
+    $self->map_geometry_names( $clone->{backend} );
 
     # Give the GUI a chance to catch up between settings,
     # in case they have to be reloaded.
@@ -1759,24 +1749,18 @@ sub set_current_scan_options {
 
 sub _set_option_profile {
     my ( $self, $i, $profile ) = @_;
-    if ( $i < @{$profile} ) {
+    if ( $i < @{ $profile->{backend} } ) {
 
         # for reasons I don't understand, without walking the reference tree,
-        # parts of $profile are undef
-        Dumper( $profile->[$i] );
-        my ( $name, $val ) = each %{ $profile->[$i] };
-
-        if ( $name eq 'Paper size' ) {
-            $self->set( 'paper', $val );
-            $self->_set_option_profile( $i + 1, $profile );
-            return;
-        }
+        # parts of $profile->{backend} are undef
+        Dumper( $profile->{backend}[$i] );
+        my ( $name, $val ) = each %{ $profile->{backend}[$i] };
 
         my $options = $self->get('available-scan-options');
         my $opt     = $options->by_name($name);
         if ( not defined $opt or $opt->{cap} & SANE_CAP_INACTIVE ) {
             $logger->warn("Ignoring inactive option '$name'.");
-            splice @{$profile}, $i, 1;
+            splice @{ $profile->{backend} }, $i, 1;
             $self->_set_option_profile( $i, $profile );
             return;
         }
@@ -1867,23 +1851,16 @@ sub make_progress_string {
 sub add_to_current_scan_options {
     my ( $self, $option, $val ) = @_;
     my $current = $self->{current_scan_options};
-    if ( not defined $current ) {
-        $current = [];
-    }
-
-    # Config::General flattens an array of hashes with 1 entry to a hash,
-    # so we must check for this
-    elsif ( ref($current) eq 'HASH' ) {
-        my %hash = %{$current};
-        $current = [ \%hash ];
+    if ( not defined $current->{backend} ) {
+        $current->{backend} = [];
     }
 
     # Cache option
-    push @{$current}, { $option->{name} => $val };
+    push @{ $current->{backend} }, { $option->{name} => $val };
 
     # Note any duplicate options, keeping only the last entry.
-    $self->{current_scan_options} =
-      Gscan2pdf::Scanner::Options::prune_duplicates($current);
+    $self->{current_scan_options}{backend} =
+      Gscan2pdf::Scanner::Options::prune_duplicates( $current->{backend} );
     return;
 }
 

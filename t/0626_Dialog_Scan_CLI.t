@@ -42,8 +42,11 @@ my ( $signal, $signal2 );
 $signal = $dialog->signal_connect(
     'changed-options-cache' => sub {
         $dialog->signal_handler_disconnect($signal);
-        is( $#{ $dialog->get('current-scan-options') },
-            -1, 'cached default Gray - no scan option set' );
+        is_deeply(
+            $dialog->get('current-scan-options'),
+            { backend => [] },
+            'cached default Gray - no scan option set'
+        );
 
         $signal = $dialog->signal_connect(
             'reloaded-scan-options' => sub {
