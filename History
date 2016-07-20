@@ -2,6 +2,7 @@
 
 * Fix "Can't use string ("gimp %i") as an ARRAY ref"
   Closes bug #222 (Error when run gscan2pdf 1.5)
+  Closes Debian bug #831597 (Can't use string ("gimp %i") as an ARRAY ref)
 * Store and apply backend (scanner-specific) and gscan2pdf settings separately.
 * Those frontend settings stored in profiles need not be stored in general
   settings.
