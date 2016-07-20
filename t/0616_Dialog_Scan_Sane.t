@@ -79,7 +79,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
                 my $options      = $dialog->get('available-scan-options');
                 my $opt          = $options->by_name('resolution');
-                my $optwidget    = $opt->{widget};
+                my $optwidget    = $widget->{option_widgets}{resolution};
                 my $widget_value = $optwidget->get_value;
                 is( $widget_value, 51, 'correctly updated widget' );
                 $flag = TRUE;

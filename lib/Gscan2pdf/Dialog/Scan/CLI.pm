@@ -12,6 +12,8 @@ use Locale::gettext 1.05;    # For translations
 use feature 'switch';
 use List::MoreUtils qw{any};
 use Data::Dumper;
+use Readonly;
+Readonly my $LAST_PAGE => -1;
 
 my ( $d, $d_sane, $logger, $tooltips, $EMPTY, $COMMA );
 
@@ -212,10 +214,12 @@ sub scan_options {
 
     # Remove any existing pages
     while ( $self->{notebook}->get_n_pages > 1 ) {
-
-        # -1 = last page
-        $self->{notebook}->remove_page(-1);  ## no critic (ProhibitMagicNumbers)
+        $self->{notebook}->remove_page($LAST_PAGE);
     }
+
+    # Remove lookups to geometry boxes and option widgets
+    delete $self->{geometry_boxes};
+    delete $self->{option_widgets};
 
     # Ghost the scan button whilst options being updated
     if ( defined $self->{sbutton} ) { $self->{sbutton}->set_sensitive(FALSE) }
@@ -341,7 +345,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
             $vbox = Gtk2::VBox->new;
             $self->{notebook}
               ->append_page( $vbox, $d_sane->get( $opt->{title} ) );
-            $opt->{widget} = $vbox;
+            $self->{option_widgets}{ $opt->{name} } = $vbox;
             next;
         }
 
@@ -506,8 +510,8 @@ sub _update_option_visibility {
         }
         my $container =
             $opt->{type} == SANE_TYPE_GROUP
-          ? $opt->{widget}
-          : $opt->{widget}->parent;
+          ? $self->{option_widgets}{ $opt->{name} }
+          : $self->{option_widgets}{ $opt->{name} }->parent;
         my $geometry = $self->_geometry_option($opt);
         if ($show) {
             $container->show_all;
@@ -519,8 +523,10 @@ sub _update_option_visibility {
                 and $options->{array}[$j]{type} != SANE_TYPE_GROUP )
             {
             }
-            if ( $j > 0 and not $options->{array}[$j]{widget}->visible ) {
-                my $group = $options->{array}[$j]{widget};
+            if ( $j > 0
+                and not $self->{option_widgets}{ $opt->{name} }->visible )
+            {
+                my $group = $self->{option_widgets}{ $opt->{name} };
                 if ( not $group->visible ) {
                     $group->remove($container);
                     my $move_paper =
@@ -556,12 +562,16 @@ sub _find_visible_group {
     my ( $self, $options, $option_number ) = @_;
     while (
         --$option_number > 0
-        and ( $options->{array}[$option_number]{type} != SANE_TYPE_GROUP
-            or ( not $options->{array}[$option_number]{widget}->visible ) )
+        and (
+            $options->{array}[$option_number]{type} != SANE_TYPE_GROUP
+            or (
+                not $self->{option_widgets}
+                { $options->{array}[$option_number]->{name} }->visible )
+        )
       )
     {
     }
-    return $options->{array}[$option_number]{widget}
+    return $self->{option_widgets}{ $options->{array}[$option_number]->{name} }
       if ( $option_number > 0 );
     return $self->{notebook}->get_nth_page(1);
 }
@@ -582,16 +592,16 @@ sub _geometry_option {
 # Return true if all the geometry widgets have been created
 
 sub _geometry_widgets_created {
-    my ($options) = @_;
+    my ( $self, $options ) = @_;
     return (
-              defined( $options->{box}{x} )
-          and defined( $options->{box}{y} )
-          and defined( $options->{box}{l} )
-          and defined( $options->{box}{t} )
+              defined( $self->{geometry_boxes}{x} )
+          and defined( $self->{geometry_boxes}{y} )
+          and defined( $self->{geometry_boxes}{l} )
+          and defined( $self->{geometry_boxes}{t} )
           and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
-            or defined( $options->{box}{$SANE_NAME_PAGE_HEIGHT} ) )
+            or defined( $self->{geometry_boxes}{$SANE_NAME_PAGE_HEIGHT} ) )
           and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
-            or defined( $options->{box}{$SANE_NAME_PAGE_WIDTH} ) )
+            or defined( $self->{geometry_boxes}{$SANE_NAME_PAGE_WIDTH} ) )
     );
 }
 
@@ -600,7 +610,7 @@ sub create_paper_widget {
 
     # Only define the paper size once the rest of the geometry widgets
     # have been created
-    if (    _geometry_widgets_created($options)
+    if (    $self->_geometry_widgets_created($options)
         and not defined( $self->{combobp} )
         and defined( $self->{hboxp} ) )
     {
@@ -631,8 +641,8 @@ sub create_paper_widget {
                         )
                       )
                     {
-                        if ( defined $options->{box}{$_} ) {
-                            $options->{box}{$_}->show_all;
+                        if ( defined $self->{geometry_boxes}{$_} ) {
+                            $self->{geometry_boxes}{$_}->show_all;
                         }
                     }
                     $self->set( 'paper', undef );
@@ -650,7 +660,7 @@ sub create_paper_widget {
           )
         {
             if ( defined $options->by_name($_) ) {
-                my $widget = $options->by_name($_)->{widget};
+                my $widget = $self->{option_widgets}{$_};
                 $widget->signal_connect(
                     changed => sub {
                         if ( defined $self->get('paper') ) {
@@ -739,7 +749,9 @@ sub hide_geometry {
     my ( $self, $options ) = @_;
     for ( ( 'l', 't', 'x', 'y', SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH ) )
     {
-        if ( defined $options->{box}{$_} ) { $options->{box}{$_}->hide_all; }
+        if ( defined $self->{geometry_boxes}{$_} ) {
+            $self->{geometry_boxes}{$_}->hide_all;
+        }
     }
     return;
 }
@@ -950,7 +962,7 @@ sub update_widget {    # FIXME: this is partly duplicated in Sane.pm
 
     my ( $group, $vbox );
     my $opt    = $self->get('available-scan-options')->by_name($name);
-    my $widget = $opt->{widget};
+    my $widget = $self->{option_widgets}{$name};
 
     # could be undefined for !($opt->{cap} & SANE_CAP_SOFT_DETECT)
     if ( defined $widget ) {

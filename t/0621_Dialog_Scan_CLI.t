@@ -217,7 +217,7 @@ $signal = $dialog->signal_connect(
         my $options = $dialog->get('available-scan-options');
         $dialog->set_option( $options->by_name($resolution), 51 );
         $loop->run unless ($flag);
-        my @geometry_widgets = keys %{ $options->{box} };
+        my @geometry_widgets = keys %{ $dialog->{geometry_boxes} };
         cmp_ok(
             $#geometry_widgets == 3,
             '||',

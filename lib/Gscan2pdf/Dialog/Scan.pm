@@ -884,7 +884,7 @@ sub pack_widget {
     my ( $self, $widget, $data ) = @_;
     my ( $options, $opt, $hbox, $hboxp ) = @{$data};
     if ( defined $widget ) {
-        $opt->{widget} = $widget;
+        $self->{option_widgets}{ $opt->{name} } = $widget;
         if ( $opt->{type} == SANE_TYPE_BUTTON or $opt->{max_values} > 1 ) {
             $hbox->pack_end( $widget, TRUE, TRUE, 0 );
         }
@@ -895,7 +895,7 @@ sub pack_widget {
 
         # Look-up to hide/show the box if necessary
         if ( $self->_geometry_option($opt) ) {
-            $options->{box}{ $opt->{name} } = $hbox;
+            $self->{geometry_boxes}{ $opt->{name} } = $hbox;
         }
 
         $self->create_paper_widget( $options, $hboxp );
@@ -920,13 +920,13 @@ sub update_options {
     my $num_dev_options = $new_options->num_options;
     my $options         = $self->get('available-scan-options');
     for ( 1 .. $num_dev_options - 1 ) {
-        my $widget = $options->by_index($_)->{widget};
+        my $opt    = $options->by_index($_);
+        my $widget = $self->{option_widgets}{ $opt->{name} };
 
         # could be undefined for !($new_opt->{cap} & SANE_CAP_SOFT_DETECT)
         if ( not defined $widget ) { next }
 
         my $new_opt = $new_options->by_index($_);
-        my $opt     = $options->by_index($_);
         if ( $new_opt->{name} ne $opt->{name} ) {
             $logger->error(
 'Error updating options: reloaded options are numbered differently'
@@ -944,7 +944,6 @@ sub update_options {
         # Block the signal handler for the widget to prevent infinite
         # loops of the widget updating the option, updating the widget, etc.
         $widget->signal_handler_block( $widget->{signal} );
-        $new_opt->{widget} = $widget;
         $opt = $new_opt;
         my $value = $opt->{val};
 
@@ -1775,7 +1774,7 @@ sub _set_option_profile {
         );
         $self->set_option( $opt, $val );
 
-        my $widget = $opt->{widget};
+        my $widget = $self->{option_widgets}{ $opt->{name} };
         if ( defined $widget ) {
             $logger->debug("Setting widget '$name' to '$val'.");
             $widget->signal_handler_block( $widget->{signal} );

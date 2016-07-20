@@ -114,6 +114,10 @@ sub scan_options {
         $self->{notebook}->remove_page($LAST_PAGE);
     }
 
+    # Remove lookups to geometry boxes and option widgets
+    delete $self->{geometry_boxes};
+    delete $self->{option_widgets};
+
     # Ghost the scan button whilst options being updated
     if ( defined $self->{sbutton} ) { $self->{sbutton}->set_sensitive(FALSE) }
 
@@ -207,7 +211,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
         # Define HBox for paper size here
         # so that it can be put before first geometry option
-        if ( $self->_geometry_option($opt) and not defined $hboxp ) {
+        if ( not defined $hboxp and $self->_geometry_option($opt) ) {
             $hboxp = Gtk2::HBox->new;
             $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
         }
@@ -355,14 +359,14 @@ sub create_paper_widget {
     # Only define the paper size once the rest of the geometry widgets
     # have been created
     if (
-            defined( $options->{box}{$SANE_NAME_SCAN_BR_X} )
-        and defined( $options->{box}{$SANE_NAME_SCAN_BR_Y} )
-        and defined( $options->{box}{$SANE_NAME_SCAN_TL_X} )
-        and defined( $options->{box}{$SANE_NAME_SCAN_TL_Y} )
+            defined( $self->{geometry_boxes}{$SANE_NAME_SCAN_BR_X} )
+        and defined( $self->{geometry_boxes}{$SANE_NAME_SCAN_BR_Y} )
+        and defined( $self->{geometry_boxes}{$SANE_NAME_SCAN_TL_X} )
+        and defined( $self->{geometry_boxes}{$SANE_NAME_SCAN_TL_Y} )
         and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
-            or defined( $options->{box}{$SANE_NAME_PAGE_HEIGHT} ) )
+            or defined( $self->{geometry_boxes}{$SANE_NAME_PAGE_HEIGHT} ) )
         and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
-            or defined( $options->{box}{$SANE_NAME_PAGE_WIDTH} ) )
+            or defined( $self->{geometry_boxes}{$SANE_NAME_PAGE_WIDTH} ) )
         and not defined( $self->{combobp} )
       )
     {
@@ -394,8 +398,8 @@ sub create_paper_widget {
                         )
                       )
                     {
-                        if ( defined $options->{box}{$_} ) {
-                            $options->{box}{$_}->show_all;
+                        if ( defined $self->{geometry_boxes}{$_} ) {
+                            $self->{geometry_boxes}{$_}->show_all;
                         }
                     }
                     $self->set( 'paper', undef );
@@ -416,7 +420,7 @@ sub create_paper_widget {
           )
         {
             if ( defined $options->by_name($_) ) {
-                my $widget = $options->by_name($_)->{widget};
+                my $widget = $self->{option_widgets}{$_};
                 $widget->signal_connect(
                     changed => sub {
                         if ( defined $self->get('paper') ) {
@@ -523,7 +527,9 @@ sub hide_geometry {
         )
       )
     {
-        if ( defined $options->{box}{$_} ) { $options->{box}{$_}->hide_all; }
+        if ( defined $self->{geometry_boxes}{$_} ) {
+            $self->{geometry_boxes}{$_}->hide_all;
+        }
     }
     return;
 }

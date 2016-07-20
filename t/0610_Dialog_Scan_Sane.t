@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 45;
+use Test::More tests => 46;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -335,10 +335,16 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
             }
         );
 
+        $loop = Glib::MainLoop->new;
+        $flag = FALSE;
         $dialog->signal_connect(
             'changed-paper' => sub {
                 my ( $widget, $paper ) = @_;
                 is( $paper, 'new2', 'changed-paper' );
+                ok( not( $widget->{option_widgets}{'tl-x'}->visible ),
+                    'geometry hidden' );
+                $flag = TRUE;
+                $loop->quit;
             }
         );
         my $s_signal;
@@ -368,6 +374,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
             }
         );
         $dialog->set( 'paper', 'new2' );
+        $loop->run unless ($flag);
 
         my $n = 0;
         $dialog->signal_connect(
@@ -391,7 +398,10 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                                 $dialog->{signal} );
                             is( $name, 'test:1',
                                 'changed-device via combobox' );
-
+                        }
+                    );
+                    $dialog->signal_connect(
+                        'reloaded-scan-options' => sub {
                             my $e_signal;
                             $e_signal = $dialog->signal_connect(
                                 'process-error' => sub {
@@ -406,7 +416,6 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
                             # setting an unknown device should throw an error
                             $dialog->set( 'device', 'error' );
-
                         }
                     );
                     $dialog->{combobd}->set_active(1);

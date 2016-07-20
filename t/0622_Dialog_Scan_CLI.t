@@ -84,12 +84,12 @@ $signal = $dialog->signal_connect(
         pass('reloaded-scan-options');
         $dialog->signal_handler_disconnect($signal);
 
-        my $options = $dialog->get('available-scan-options');
-        my $option  = $options->by_name('mode');
-        is( $option->{widget}->visible, TRUE, 'mode widget visible' );
+        is( $dialog->{option_widgets}{mode}->visible,
+            TRUE, 'mode widget visible' );
 
         $dialog->set( 'visible-scan-options', { mode => 0 } );
-        is( $option->{widget}->visible, '', 'mode widget hidden by title' );
+        is( $dialog->{option_widgets}{mode}->visible,
+            '', 'mode widget hidden by title' );
         Gtk2->main_quit;
     }
 );
