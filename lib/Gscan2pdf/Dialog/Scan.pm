@@ -497,30 +497,7 @@ sub INIT_INSTANCE {
 
     # Save button
     my $vbutton = Gtk2::Button->new_from_stock('gtk-save');
-    $vbutton->signal_connect(
-        clicked => sub {
-            my $dialog = Gtk2::Dialog->new(
-                $d->get('Name of scan profile'), $self,
-                'destroy-with-parent',
-                'gtk-save'   => 'ok',
-                'gtk-cancel' => 'cancel'
-            );
-            my $hbox  = Gtk2::HBox->new;
-            my $label = Gtk2::Label->new( $d->get('Name of scan profile') );
-            $hbox->pack_start( $label, FALSE, FALSE, 0 );
-            my $entry = Gtk2::Entry->new;
-            $entry->set_activates_default(TRUE);
-            $hbox->pack_end( $entry, TRUE, TRUE, 0 );
-            $dialog->vbox->add($hbox);
-            $dialog->set_default_response('ok');
-            $dialog->show_all;
-
-            if ( $dialog->run eq 'ok' and $entry->get_text !~ /^\s*$/xsm ) {
-                $self->save_current_profile( $entry->get_text );
-            }
-            $dialog->destroy;
-        }
-    );
+    $vbutton->signal_connect( clicked => \&_save_profile_callback, $self );
     $hboxsp->pack_start( $vbutton, TRUE, TRUE, 0 );
 
     # Delete button
@@ -602,6 +579,61 @@ sub _add_device_combobox {
         $d->get('Sets the device to be used for the scan') );
     $self->{hboxd}->pack_end( $self->{combobd}, FALSE, FALSE, 0 );
     $vbox->pack_start( $self->{hboxd}, FALSE, FALSE, 0 );
+    return;
+}
+
+sub _save_profile_callback {
+    my ( $widget, $parent ) = @_;
+    my $dialog = Gtk2::Dialog->new(
+        $d->get('Name of scan profile'), $parent,
+        'destroy-with-parent',
+        'gtk-save'   => 'ok',
+        'gtk-cancel' => 'cancel'
+    );
+    my $hbox  = Gtk2::HBox->new;
+    my $label = Gtk2::Label->new( $d->get('Name of scan profile') );
+    $hbox->pack_start( $label, FALSE, FALSE, 0 );
+    my $entry = Gtk2::Entry->new;
+    $entry->set_activates_default(TRUE);
+    $hbox->pack_end( $entry, TRUE, TRUE, 0 );
+    $dialog->vbox->add($hbox);
+    $dialog->set_default_response('ok');
+    $dialog->show_all;
+    my $flag = TRUE;
+
+    while ($flag) {
+        if ( $dialog->run eq 'ok' ) {
+            my $name = $entry->get_text;
+            if ( $name !~ /^\s*$/xsm ) {
+                if ( defined $parent->{profiles}{$name} ) {
+                    my $warning = sprintf
+                      $d->get("Profile '%s' exists. Overwrite?"),
+                      $name;
+                    my $dialog2 = Gtk2::Dialog->new(
+                        $warning, $dialog, 'destroy-with-parent',
+                        'gtk-ok'     => 'ok',
+                        'gtk-cancel' => 'cancel'
+                    );
+                    $label = Gtk2::Label->new($warning);
+                    $dialog2->vbox->add($label);
+                    $label->show;
+                    if ( $dialog2->run eq 'ok' ) {
+                        $parent->save_current_profile( $entry->get_text );
+                        $flag = FALSE;
+                    }
+                    $dialog2->destroy;
+                }
+                else {
+                    $parent->save_current_profile( $entry->get_text );
+                    $flag = FALSE;
+                }
+            }
+        }
+        else {
+            $flag = FALSE;
+        }
+    }
+    $dialog->destroy;
     return;
 }
 
@@ -1249,10 +1281,27 @@ sub add_profile {
         # if we don't clone the profile,
         # we get strange action-at-a-distance problems
         $self->{profiles}{$name} = dclone($profile);
+
+        _combobox_remove_item_by_text( $self->{combobsp}, $name );
+
         $self->{combobsp}->append_text($name);
         $logger->debug( "Saved profile '$name':",
             Dumper( $self->{profiles}{$name} ) );
         $self->signal_emit( 'added-profile', $name, $self->{profiles}{$name} );
+    }
+    return;
+}
+
+sub _combobox_remove_item_by_text {
+    my ( $combobox, $text ) = @_;
+    if ( defined $text ) {
+        my $i = get_combobox_by_text( $combobox, $text );
+        if ( $i > $_NO_INDEX ) {
+            if ( $combobox->get_active == $i ) {
+                $combobox->set_active($_NO_INDEX);
+            }
+            $combobox->remove_text($i);
+        }
     }
     return;
 }
@@ -1318,14 +1367,8 @@ sub set_profile {
 sub remove_profile {
     my ( $self, $name ) = @_;
     if ( defined $name and defined $self->{profiles}{$name} ) {
-        my $i = get_combobox_by_text( $self->{combobsp}, $name );
-        if ( $i > $_NO_INDEX ) {
-            if ( $self->{combobsp}->get_active == $i ) {
-                $self->{combobsp}->set_active($_NO_INDEX);
-            }
-            $self->{combobsp}->remove_text($i);
-            $self->signal_emit( 'removed-profile', $name );
-        }
+        _combobox_remove_item_by_text( $self->{combobsp}, $name );
+        $self->signal_emit( 'removed-profile', $name );
         delete $self->{profiles}{$name};
     }
     return;

@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 46;
+use Test::More tests => 49;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -91,14 +91,43 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
             'added-profile' => sub {
                 my ( $widget, $name, $profile ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
-                is( $name, 'my profile', 'added-profile name' );
+                is( $name, 'my profile', 'added-profile signal emitted' );
+                is_deeply(
+                    $profile,
+                    {
+                        backend =>
+                          [ { $resolution => 51 }, { mode => 'Color' } ]
+                    },
+                    'added-profile profile'
+                );
+            }
+        );
+        $dialog->add_profile(
+            'my profile',
+            {
+                backend => [ { $resolution => 51 }, { mode => 'Color' } ]
+            }
+        );
+
+        $dialog->{signal} = $dialog->signal_connect(
+            'added-profile' => sub {
+                my ( $widget, $name, $profile ) = @_;
+                $dialog->signal_handler_disconnect( $dialog->{signal} );
+                is( $name, 'my profile', 'replaced profile' );
                 is_deeply(
                     $profile,
                     {
                         backend =>
                           [ { $resolution => 52 }, { mode => 'Color' } ]
                     },
-                    'added-profile profile'
+                    'new added-profile profile'
+                );
+                is(
+                    Gscan2pdf::Dialog::Scan::get_combobox_num_rows(
+                        $dialog->{combobsp}
+                    ),
+                    1,
+                    'replaced entry in combobox'
                 );
             }
         );
