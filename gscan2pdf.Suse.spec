@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.5.0
+Version: 1.5.1
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -91,7 +91,9 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sat Jun 11 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Tue Jul 26 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #831597 (Can't use string ("gimp %i") as an ARRAY ref)
   - New upstream release
     Closes: #823626 (Date in file name off by one day when saving)
   - Bumped standards to 3.9.8 (no changes required)
