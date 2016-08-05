@@ -2374,7 +2374,12 @@ sub _thread_save_pdf {
             $message = $d->get('Error appending PDF: %s');
             $logger->info('Appending PDF');
         }
-        my $cmd = "mv $out $bak;pdfunite $file1 $file2 $out";
+
+        # escape inverted commas '
+        for ( $out, $bak, $file1, $file2 ) { s/'/'\\''/gsmx }
+
+        my $cmd = "mv '$out' '$bak';pdfunite '$file1' '$file2' '$out'";
+        $logger->info($cmd);
         my $error = File::Temp->new( DIR => $options{dir}, SUFFIX => '.txt' );
         my $status =
           system "echo $PROCESS_ID > $options{pidfile};$cmd 2>$error";
