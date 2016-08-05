@@ -47,13 +47,13 @@ my $options = [
             'quant' => '0'
         },
         'cap'             => 5,
-        'name'            => 'l',
+        'name'            => SANE_NAME_SCAN_TL_X,
         'constraint_type' => 1
     },
     {
         'cap'             => 5,
         'constraint_type' => 1,
-        'name'            => 't',
+        'name'            => SANE_NAME_SCAN_TL_Y,
         'val'             => '0',
         'title'           => 'Top-left y',
         'unit'            => 3,
@@ -69,8 +69,9 @@ my $options = [
     {
         'unit'       => 3,
         'max_values' => 1,
-        name         => 'x',
-        title        => 'Width',
+        name         => SANE_NAME_SCAN_BR_X,
+        title        => 'Bottom-right x',
+        desc         => 'Bottom-right x position of scan area.',
         'val'        => '215.899993896484',
         'type'       => 2,
         'constraint' => {
@@ -78,17 +79,16 @@ my $options = [
             'min'   => '0',
             'quant' => '0'
         },
-        'desc'            => 'Width of scan-area.',
         'cap'             => 5,
         'constraint_type' => 1
     },
     {
         'val'        => '296.925994873047',
-        name         => 'y',
-        title        => 'Height',
+        name         => SANE_NAME_SCAN_BR_Y,
+        title        => 'Bottom-right y',
+        desc         => 'Bottom-right y position of scan area.',
         'max_values' => 1,
         'unit'       => 3,
-        'desc'       => 'Height of scan-area.',
         'constraint' => {
             'min'   => '0',
             'quant' => '0',
@@ -168,7 +168,6 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
     }
 );
 
-#$dialog->set( 'device', 'test' );
 my $signal = $dialog->signal_connect(
     'changed-device-list' => sub {
 

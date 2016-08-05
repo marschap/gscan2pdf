@@ -15,6 +15,9 @@ use IPC::Open3;
 use IO::Handle;
 use Gscan2pdf::NetPBM;
 use Gscan2pdf::Scanner::Options;
+use Gscan2pdf::Dialog::Scan;
+use Sane 0.05;    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
+use Data::Dumper;
 use Cwd;
 use File::Spec;
 use Readonly;
@@ -295,6 +298,12 @@ sub _create_scanimage_cmd {
     my $device = "--device-name='$options{device}'";
 
     # Add basic options
+    _map_geometry_names( $options{options} );
+
+    # for reasons I don't understand, without walking the reference tree,
+    # parts of $options are undef
+    Dumper( $options{options} );
+
     my @options;
     for ( @{ $options{options} } ) {
         my ( $key, $value ) = each %{$_};
@@ -321,6 +330,51 @@ sub _create_scanimage_cmd {
 
     # Create command
     return "$options{prefix} $options{frontend} $help $device @options";
+}
+
+# As scanimage and scanadf rename the geometry options,
+# we have to map them back to the original names
+sub _map_geometry_names {
+    my ($options) = @_;
+    for my $i ( 0 .. $#{$options} ) {
+
+        # for reasons I don't understand, without walking the reference tree,
+        # parts of $options are undef
+        Dumper( $options->[$i] );
+
+        my ( $name, $val ) = each %{ $options->[$i] };
+        given ($name) {
+            when (SANE_NAME_SCAN_TL_X) {
+                $options->[$i] = { l => $val };
+            }
+            when (SANE_NAME_SCAN_TL_Y) {
+                $options->[$i] = { t => $val };
+            }
+            when (SANE_NAME_SCAN_BR_X) {
+                my $l = Gscan2pdf::Dialog::Scan::get_option_from_profile( 'l',
+                    $options );
+                if ( not defined $l ) {
+                    $l =
+                      Gscan2pdf::Dialog::Scan::get_option_from_profile( SANE_NAME_SCAN_TL_X,
+                        $options );
+                }
+                if ( defined $l ) { $val -= $l }
+                $options->[$i] = { x => $val };
+            }
+            when (SANE_NAME_SCAN_BR_Y) {
+                my $t = Gscan2pdf::Dialog::Scan::get_option_from_profile( 't',
+                    $options );
+                if ( not defined $t ) {
+                    $t =
+                      Gscan2pdf::Dialog::Scan::get_option_from_profile( SANE_NAME_SCAN_TL_Y,
+                        $options );
+                }
+                if ( defined $t ) { $val -= $t }
+                $options->[$i] = { y => $val };
+            }
+        }
+    }
+    return;
 }
 
 # Carry out the scan with scanadf and the options passed.

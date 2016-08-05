@@ -325,6 +325,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
     my ( $self, $options ) = @_;
     $logger->debug( 'scanimage --help returned: ', Dumper($options) );
 
+    my ( $group, $vbox, $hboxp );
     my $num_dev_options = $options->num_options;
 
     # We have hereby removed the active profile and paper,
@@ -332,21 +333,20 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
     $self->{profile} = undef;
     $self->{paper}   = undef;
 
-    # Default tab
-    my $vbox = Gtk2::VBox->new;
-    $self->{notebook}->append_page( $vbox, $d->get('Scan Options') );
-
     delete $self->{combobp}; # So we don't carry over from one device to another
     for ( 1 .. $num_dev_options - 1 ) {
         my $opt = $options->by_index($_);
 
         # Notebook page for group
-        if ( $opt->{type} == SANE_TYPE_GROUP ) {
+        if ( $opt->{type} == SANE_TYPE_GROUP or not defined $vbox ) {
             $vbox = Gtk2::VBox->new;
-            $self->{notebook}
-              ->append_page( $vbox, $d_sane->get( $opt->{title} ) );
-            $self->{option_widgets}{ $opt->{name} } = $vbox;
-            next;
+            $group =
+                $opt->{type} == SANE_TYPE_GROUP
+              ? $d_sane->get( $opt->{title} )
+              : $d->get('Scan Options');
+            $self->{notebook}->append_page( $vbox, $group );
+            $self->{option_widgets}{ $opt->{title} } = $vbox;
+            if ( $opt->{type} == SANE_TYPE_GROUP ) { next }
         }
 
         if ( not( $opt->{cap} & SANE_CAP_SOFT_DETECT ) ) { next }
@@ -357,9 +357,9 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
         # Define HBox for paper size here
         # so that it can be put before first geometry option
-        if ( $self->_geometry_option($opt) and not defined( $self->{hboxp} ) ) {
-            $self->{hboxp} = Gtk2::HBox->new;
-            $vbox->pack_start( $self->{hboxp}, FALSE, FALSE, 0 );
+        if ( not defined $hboxp and $self->_geometry_option($opt) ) {
+            $hboxp = Gtk2::HBox->new;
+            $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
         }
 
         # HBox for option
@@ -472,18 +472,19 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
             );
         }
 
-        $self->pack_widget( $widget, [ $options, $opt, $hbox ] );
+        $self->pack_widget( $widget, [ $options, $opt, $hbox, $hboxp ] );
     }
 
     # Callback for option visibility
     $self->signal_connect(
         'changed-option-visibility' => sub {
             my ( $widget, $visible_options ) = @_;
-            $self->_update_option_visibility( $options, $visible_options );
+            $self->_update_option_visibility( $options, $visible_options,
+                $hboxp );
         }
     );
     $self->_update_option_visibility( $options,
-        $self->get('visible-scan-options') );
+        $self->get('visible-scan-options'), $hboxp );
 
     $self->{sbutton}->set_sensitive(TRUE);
     $self->{sbutton}->grab_focus;
@@ -491,7 +492,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 }
 
 sub _update_option_visibility {
-    my ( $self, $options, $visible_options ) = @_;
+    my ( $self, $options, $visible_options, $hboxp ) = @_;
 
     # Show all notebook tabs
     for ( 1 .. $self->{notebook}->get_n_pages - 1 ) {
@@ -510,7 +511,7 @@ sub _update_option_visibility {
         }
         my $container =
             $opt->{type} == SANE_TYPE_GROUP
-          ? $self->{option_widgets}{ $opt->{name} }
+          ? $self->{option_widgets}{ $opt->{title} }
           : $self->{option_widgets}{ $opt->{name} }->parent;
         my $geometry = $self->_geometry_option($opt);
         if ($show) {
@@ -531,14 +532,14 @@ sub _update_option_visibility {
                     $group->remove($container);
                     my $move_paper =
                       (       $geometry
-                          and defined( $self->{hboxp} )
-                          and $self->{hboxp}->parent eq $group );
-                    if ($move_paper) { $group->remove( $self->{hboxp} ) }
+                          and defined $hboxp
+                          and $hboxp->parent eq $group );
+                    if ($move_paper) { $group->remove($hboxp) }
 
                     # Find visible group
                     $group = $self->_find_visible_group( $options, $j );
                     if ($move_paper) {
-                        $group->pack_start( $self->{hboxp}, FALSE, FALSE, 0 );
+                        $group->pack_start( $hboxp, FALSE, FALSE, 0 );
                     }
                     $group->pack_start( $container, FALSE, FALSE, 0 );
                 }
@@ -550,10 +551,10 @@ sub _update_option_visibility {
     }
 
     if ( defined $visible_options->{'Paper size'} ) {
-        $self->{hboxp}->show_all;
+        $hboxp->show_all;
     }
     else {
-        $self->{hboxp}->hide_all;
+        $hboxp->hide_all;
     }
     return;
 }
@@ -574,208 +575,6 @@ sub _find_visible_group {
     return $self->{option_widgets}{ $options->{array}[$option_number]->{name} }
       if ( $option_number > 0 );
     return $self->{notebook}->get_nth_page(1);
-}
-
-# Return true if we have a valid geometry option
-
-sub _geometry_option {
-    my ( $self, $opt ) = @_;
-    return (
-        ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
-          and
-          ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
-          and ( $opt->{name} =~
-            /^(?:[ltxy]|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/xsm )
-    );
-}
-
-# Return true if all the geometry widgets have been created
-
-sub _geometry_widgets_created {
-    my ( $self, $options ) = @_;
-    return (
-              defined( $self->{geometry_boxes}{x} )
-          and defined( $self->{geometry_boxes}{y} )
-          and defined( $self->{geometry_boxes}{l} )
-          and defined( $self->{geometry_boxes}{t} )
-          and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
-            or defined( $self->{geometry_boxes}{$SANE_NAME_PAGE_HEIGHT} ) )
-          and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
-            or defined( $self->{geometry_boxes}{$SANE_NAME_PAGE_WIDTH} ) )
-    );
-}
-
-sub create_paper_widget {
-    my ( $self, $options ) = @_;
-
-    # Only define the paper size once the rest of the geometry widgets
-    # have been created
-    if (    $self->_geometry_widgets_created($options)
-        and not defined( $self->{combobp} )
-        and defined( $self->{hboxp} ) )
-    {
-        # Paper list
-        my $label = Gtk2::Label->new( $d->get('Paper size') );
-        $self->{hboxp}->pack_start( $label, FALSE, FALSE, 0 );
-
-        $self->{combobp} = Gtk2::ComboBox->new_text;
-        $self->{combobp}->append_text( $d->get('Manual') );
-        $self->{combobp}->append_text( $d->get('Edit') );
-        $tooltips->set_tip( $self->{combobp},
-            $d->get('Selects or edits the paper size') );
-        $self->{hboxp}->pack_end( $self->{combobp}, FALSE, FALSE, 0 );
-        $self->{combobp}->set_active(0);
-        $self->{combobp}->signal_connect(
-            changed => sub {
-                if ( not defined $self->{combobp}->get_active_text ) { return }
-
-                if ( $self->{combobp}->get_active_text eq $d->get('Edit') ) {
-                    $self->edit_paper;
-                }
-                elsif ( $self->{combobp}->get_active_text eq $d->get('Manual') )
-                {
-                    for (
-                        (
-                            'l', 't', 'x', 'y', SANE_NAME_PAGE_HEIGHT,
-                            SANE_NAME_PAGE_WIDTH
-                        )
-                      )
-                    {
-                        if ( defined $self->{geometry_boxes}{$_} ) {
-                            $self->{geometry_boxes}{$_}->show_all;
-                        }
-                    }
-                    $self->set( 'paper', undef );
-                }
-                else {
-                    my $paper = $self->{combobp}->get_active_text;
-                    $self->set( 'paper', $paper );
-                }
-            }
-        );
-
-        # If the geometry is changed, unset the paper size
-        for (
-            ( 'l', 't', 'x', 'y', SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH )
-          )
-        {
-            if ( defined $options->by_name($_) ) {
-                my $widget = $self->{option_widgets}{$_};
-                $widget->signal_connect(
-                    changed => sub {
-                        if ( defined $self->get('paper') ) {
-                            $self->set( 'paper', undef );
-                        }
-                    }
-                );
-            }
-        }
-    }
-    return;
-}
-
-# Treat a paper size as a profile, so build up the required profile of geometry
-# settings and apply it
-sub set_paper {
-    my ( $self, $paper ) = @_;
-    if ( not defined $paper ) {
-        $self->{paper} = $paper;
-        $self->signal_emit( 'changed-paper', $paper );
-        return;
-    }
-    for ( @{ $self->{ignored_paper_formats} } ) {
-        if ( $_ eq $paper ) {
-            if ( defined $logger ) {
-                $logger->info("Ignoring unsupported paper $paper");
-            }
-            return;
-        }
-    }
-    my $formats = $self->get('paper-formats');
-    my $options = $self->get('available-scan-options');
-    my $paper_profile;
-    $paper_profile->{backend} = [];
-    if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
-        and not $options->by_name(SANE_NAME_PAGE_HEIGHT)->{cap} &
-        SANE_CAP_INACTIVE
-        and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) )
-        and not $options->by_name(SANE_NAME_PAGE_WIDTH)->{cap} &
-        SANE_CAP_INACTIVE )
-    {
-        $self->build_profile(
-            $paper_profile,
-            $options->by_name(SANE_NAME_PAGE_HEIGHT),
-            $formats->{$paper}{y} + $formats->{$paper}{t}
-        );
-        $self->build_profile(
-            $paper_profile,
-            $options->by_name(SANE_NAME_PAGE_WIDTH),
-            $formats->{$paper}{x} + $formats->{$paper}{l}
-        );
-    }
-    for (qw( l t x y )) {
-        $self->build_profile(
-            $paper_profile,
-            $options->by_name($_),
-            $formats->{$paper}{$_}
-        );
-    }
-
-    if ( not @{ $paper_profile->{backend} } ) {
-        $self->hide_geometry($options);
-        $self->{paper} = $paper;
-        $self->signal_emit( 'changed-paper', $paper );
-        return;
-    }
-
-    my $signal;
-    $signal = $self->signal_connect(
-        'changed-current-scan-options' => sub {
-            $self->signal_handler_disconnect($signal);
-            $self->hide_geometry($options);
-            $self->{paper} = $paper;
-            $self->set( 'profile', undef );
-            $self->signal_emit( 'changed-paper', $paper );
-        }
-    );
-
-# Don't trigger the changed-paper signal until we have finished setting the profile
-    $self->{setting_profile} = TRUE;
-    $self->_set_option_profile( 0, $paper_profile );
-    return;
-}
-
-sub hide_geometry {
-    my ( $self, $options ) = @_;
-    for ( ( 'l', 't', 'x', 'y', SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH ) )
-    {
-        if ( defined $self->{geometry_boxes}{$_} ) {
-            $self->{geometry_boxes}{$_}->hide_all;
-        }
-    }
-    return;
-}
-
-sub get_paper_by_geometry {
-    my ($self) = @_;
-    my $formats = $self->get('paper-formats');
-    if ( not defined $formats ) { return }
-    my $options = $self->get('available-scan-options');
-    my %current;
-    for (qw(l t x y)) {
-        $current{$_} = $options->by_name($_)->{val};
-    }
-    for my $paper ( keys %{$formats} ) {
-        my $match = TRUE;
-        for (qw(l t x y)) {
-            if ( $formats->{$paper}{$_} != $current{$_} ) {
-                $match = FALSE;
-                last;
-            }
-        }
-        if ($match) { return $paper }
-    }
-    return;
 }
 
 # Update the sane option in the thread
@@ -1026,52 +825,6 @@ sub update_widget {    # FIXME: this is partly duplicated in Sane.pm
     return;
 }
 
-# As scanimage and scanadf rename the geometry options,
-# we have to map them back to the original names
-sub map_geometry_names {
-    my ( $self, $options ) = @_;
-    for my $i ( 0 .. $#{$options} ) {
-
-        # for reasons I don't understand, without walking the reference tree,
-        # parts of $options are undef
-        Dumper($options);
-        my ( $name, $val ) = each %{ $options->[$i] };
-        given ($name) {
-            when (SANE_NAME_SCAN_TL_X) {
-                $name = 'l';
-                $options->[$i] = { $name => $val };
-            }
-            when (SANE_NAME_SCAN_TL_Y) {
-                $name = 't';
-                $options->[$i] = { $name => $val };
-            }
-            when (SANE_NAME_SCAN_BR_X) {
-                $name = 'x';
-                my $l = $self->get_option_from_profile( 'l', $options );
-                if ( not defined $l ) {
-                    $l =
-                      $self->get_option_from_profile( SANE_NAME_SCAN_TL_X,
-                        $options );
-                }
-                if ( defined $l ) { $val -= $l }
-                $options->[$i] = { $name => $val };
-            }
-            when (SANE_NAME_SCAN_BR_Y) {
-                $name = 'y';
-                my $t = $self->get_option_from_profile( 't', $options );
-                if ( not defined $t ) {
-                    $t =
-                      $self->get_option_from_profile( SANE_NAME_SCAN_TL_Y,
-                        $options );
-                }
-                if ( defined $t ) { $val -= $t }
-                $options->[$i] = { $name => $val };
-            }
-        }
-    }
-    return;
-}
-
 # change boolean values from TRUE and FALSE to yes and no
 sub map_options {
     my ( $self, $old ) = @_;
@@ -1110,7 +863,6 @@ sub scan {
     # As scanimage and scanadf rename the geometry options,
     # we have to map them back to the original names
     my $options = $self->{current_scan_options}{backend};
-    $self->map_geometry_names($options);
 
     my $i = 1;
     Gscan2pdf::Frontend::CLI->scan_pages(

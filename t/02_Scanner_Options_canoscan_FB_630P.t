@@ -55,7 +55,7 @@ my @that     = (
         'max_values'    => 1,
     },
     {
-        name       => 'l',
+        name       => SANE_NAME_SCAN_TL_X,
         title      => 'Top-left x',
         index      => 4,
         'desc'     => 'Top-left x position of scan area.',
@@ -72,7 +72,7 @@ my @that     = (
         'max_values'    => 1,
     },
     {
-        name       => 't',
+        name       => SANE_NAME_SCAN_TL_Y,
         title      => 'Top-left y',
         index      => 5,
         'desc'     => 'Top-left y position of scan area.',
@@ -89,10 +89,10 @@ my @that     = (
         'max_values'    => 1,
     },
     {
-        name       => 'x',
-        title      => 'Width',
+        name       => SANE_NAME_SCAN_BR_X,
+        title      => 'Bottom-right x',
+        desc       => 'Bottom-right x position of scan area.',
         index      => 6,
-        'desc'     => 'Width of scan-area.',
         'val'      => 100,
         constraint => {
             'min'   => 3,
@@ -106,10 +106,10 @@ my @that     = (
         'max_values'    => 1,
     },
     {
-        name       => 'y',
-        title      => 'Height',
+        name       => SANE_NAME_SCAN_BR_Y,
+        title      => 'Bottom-right y',
+        desc       => 'Bottom-right y position of scan area.',
         index      => 7,
-        'desc'     => 'Height of scan-area.',
         'val'      => 100,
         constraint => {
             'min' => 1,

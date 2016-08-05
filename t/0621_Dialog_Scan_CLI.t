@@ -115,6 +115,9 @@ $signal = $dialog->signal_connect(
         # So that it can be used in hash
         my $resolution = SANE_NAME_SCAN_RESOLUTION;
         my $brx        = SANE_NAME_SCAN_BR_X;
+        my $bry        = SANE_NAME_SCAN_BR_Y;
+        my $tlx        = SANE_NAME_SCAN_TL_X;
+        my $tly        = SANE_NAME_SCAN_TL_Y;
 
         $signal = $dialog->signal_connect(
             'added-profile' => sub {
@@ -333,7 +336,7 @@ $signal = $dialog->signal_connect(
                         backend => [
                             { $resolution => 52 },
                             { mode        => 'Color' },
-                            { x           => 11 }
+                            { $brx        => 11 }
                         ],
                         'frontend' => { 'num_pages' => 0 }
                     },
@@ -344,7 +347,7 @@ $signal = $dialog->signal_connect(
                 $loop->quit;
             }
         );
-        $dialog->set_current_scan_options( { backend => [ { $brx => 11 } ] } );
+        $dialog->set_current_scan_options( { backend => [ { x => 11 } ] } );
         $loop->run unless ($flag);
 
         ######################################
@@ -374,9 +377,9 @@ $signal = $dialog->signal_connect(
                   if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
                 push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 51 }
                   if ( defined $options->by_name(SANE_NAME_PAGE_WIDTH) );
-                push @$expected, { l => 1 },
-                  { y => 50 }, { x           => 50 },
-                  { t => 2 },  { $resolution => 50 };
+                push @$expected, { $tlx => 1 },
+                  { $bry => 52 }, { $brx        => 51 },
+                  { $tly => 2 },  { $resolution => 50 };
                 is_deeply(
                     $dialog->get('current-scan-options'),
                     {
@@ -424,8 +427,8 @@ $signal = $dialog->signal_connect(
                   if ( defined $options->by_name(SANE_NAME_PAGE_HEIGHT) );
                 push @$expected, { scalar(SANE_NAME_PAGE_WIDTH) => 10 }
                   if ( defined $options->by_name(SANE_NAME_PAGE_WIDTH) );
-                push @$expected, { l => 0 }, { t => 0 }, { x => 10 },
-                  { y => 10 };
+                push @$expected, { $tlx => 0 }, { $tly => 0 }, { $brx => 10 },
+                  { $bry => 10 };
                 is_deeply(
                     $dialog->get('current-scan-options'),
                     {

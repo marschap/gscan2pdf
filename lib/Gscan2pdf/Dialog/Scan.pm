@@ -237,7 +237,13 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
 our $VERSION = '1.5.1';
 
 my ( $d, $d_sane, $logger, $tooltips );
-my $tolerance = 1;
+my $tolerance             = 1;
+my $SANE_NAME_SCAN_TL_X   = SANE_NAME_SCAN_TL_X;
+my $SANE_NAME_SCAN_TL_Y   = SANE_NAME_SCAN_TL_Y;
+my $SANE_NAME_SCAN_BR_X   = SANE_NAME_SCAN_BR_X;
+my $SANE_NAME_SCAN_BR_Y   = SANE_NAME_SCAN_BR_Y;
+my $SANE_NAME_PAGE_HEIGHT = SANE_NAME_PAGE_HEIGHT;
+my $SANE_NAME_PAGE_WIDTH  = SANE_NAME_PAGE_WIDTH;
 
 sub INIT_INSTANCE {
     my $self = shift;
@@ -939,6 +945,141 @@ sub pack_widget {
     return;
 }
 
+# Return true if we have a valid geometry option
+
+sub _geometry_option {
+    my ( $self, $opt ) = @_;
+    return (
+        ( $opt->{type} == SANE_TYPE_FIXED or $opt->{type} == SANE_TYPE_INT )
+          and
+          ( $opt->{unit} == SANE_UNIT_MM or $opt->{unit} == SANE_UNIT_PIXEL )
+          and ( $opt->{name} =~
+/^(?:$SANE_NAME_SCAN_TL_X|$SANE_NAME_SCAN_TL_Y|$SANE_NAME_SCAN_BR_X|$SANE_NAME_SCAN_BR_Y|$SANE_NAME_PAGE_HEIGHT|$SANE_NAME_PAGE_WIDTH)$/xms
+          )
+    );
+}
+
+sub create_paper_widget {
+    my ( $self, $options, $hboxp ) = @_;
+
+    # Only define the paper size once the rest of the geometry widgets
+    # have been created
+    if (
+            defined( $self->{geometry_boxes}{$SANE_NAME_SCAN_BR_X} )
+        and defined( $self->{geometry_boxes}{$SANE_NAME_SCAN_BR_Y} )
+        and defined( $self->{geometry_boxes}{$SANE_NAME_SCAN_TL_X} )
+        and defined( $self->{geometry_boxes}{$SANE_NAME_SCAN_TL_Y} )
+        and ( not defined $options->by_name(SANE_NAME_PAGE_HEIGHT)
+            or defined( $self->{geometry_boxes}{$SANE_NAME_PAGE_HEIGHT} ) )
+        and ( not defined $options->by_name(SANE_NAME_PAGE_WIDTH)
+            or defined( $self->{geometry_boxes}{$SANE_NAME_PAGE_WIDTH} ) )
+        and not defined( $self->{combobp} )
+      )
+    {
+
+        # Paper list
+        my $label = Gtk2::Label->new( $d->get('Paper size') );
+        $hboxp->pack_start( $label, FALSE, FALSE, 0 );
+
+        $self->{combobp} = Gtk2::ComboBox->new_text;
+        $self->{combobp}->append_text( $d->get('Manual') );
+        $self->{combobp}->append_text( $d->get('Edit') );
+        $tooltips->set_tip( $self->{combobp},
+            $d->get('Selects or edits the paper size') );
+        $hboxp->pack_end( $self->{combobp}, FALSE, FALSE, 0 );
+        $self->{combobp}->set_active(0);
+        $self->{combobp}->signal_connect(
+            changed => sub {
+                if ( not defined $self->{combobp}->get_active_text ) { return }
+
+                if ( $self->{combobp}->get_active_text eq $d->get('Edit') ) {
+                    $self->edit_paper;
+                }
+                elsif ( $self->{combobp}->get_active_text eq $d->get('Manual') )
+                {
+                    for (
+                        ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+                            SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+                            SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
+                        )
+                      )
+                    {
+                        if ( defined $self->{geometry_boxes}{$_} ) {
+                            $self->{geometry_boxes}{$_}->show_all;
+                        }
+                    }
+                    $self->set( 'paper', undef );
+                }
+                else {
+                    my $paper = $self->{combobp}->get_active_text;
+                    $self->set( 'paper', $paper );
+                }
+            }
+        );
+
+        # If the geometry is changed, unset the paper size
+        for (
+            ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+                SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+                SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
+            )
+          )
+        {
+            if ( defined $options->by_name($_) ) {
+                my $widget = $self->{option_widgets}{$_};
+                $widget->signal_connect(
+                    changed => sub {
+                        if ( defined $self->get('paper') ) {
+                            $self->set( 'paper', undef );
+                        }
+                    }
+                );
+            }
+        }
+    }
+    return;
+}
+
+sub hide_geometry {
+    my ( $self, $options ) = @_;
+    for (
+        ( SANE_NAME_SCAN_TL_X, SANE_NAME_SCAN_TL_Y,
+            SANE_NAME_SCAN_BR_X,   SANE_NAME_SCAN_BR_Y,
+            SANE_NAME_PAGE_HEIGHT, SANE_NAME_PAGE_WIDTH
+        )
+      )
+    {
+        if ( defined $self->{geometry_boxes}{$_} ) {
+            $self->{geometry_boxes}{$_}->hide_all;
+        }
+    }
+    return;
+}
+
+sub get_paper_by_geometry {
+    my ($self) = @_;
+    my $formats = $self->get('paper-formats');
+    if ( not defined $formats ) { return }
+    my $options = $self->get('available-scan-options');
+    my %current = (
+        l => $options->by_name(SANE_NAME_SCAN_TL_X)->{val},
+        t => $options->by_name(SANE_NAME_SCAN_TL_Y)->{val},
+    );
+    $current{x} = $current{l} + $options->by_name(SANE_NAME_SCAN_BR_X)->{val};
+    $current{y} = $current{t} + $options->by_name(SANE_NAME_SCAN_BR_Y)->{val};
+    for my $paper ( keys %{$formats} ) {
+        my $match = TRUE;
+        for (qw(l t x y)) {
+            if ( $formats->{$paper}{$_} != $current{$_} ) {
+                $match = FALSE;
+                last;
+            }
+        }
+        if ($match) { return $paper }
+    }
+    return;
+}
+
 # If setting an option triggers a reload, the widgets must be updated to reflect
 # the new options
 
@@ -1084,6 +1225,90 @@ sub set_paper_formats {
         if ( not defined $paper ) { $paper = $d->get('Manual') }
         set_combobox_by_text( $combobp, $paper );
     }
+    return;
+}
+
+# Treat a paper size as a profile, so build up the required profile of geometry
+# settings and apply it
+sub set_paper {
+    my ( $self, $paper ) = @_;
+    if ( not defined $paper ) {
+        $self->{paper} = $paper;
+        $self->signal_emit( 'changed-paper', $paper );
+        return;
+    }
+    for ( @{ $self->{ignored_paper_formats} } ) {
+        if ( $_ eq $paper ) {
+            if ( defined $logger ) {
+                $logger->info("Ignoring unsupported paper $paper");
+            }
+            return;
+        }
+    }
+    my $formats = $self->get('paper-formats');
+    my $options = $self->get('available-scan-options');
+    my $paper_profile;
+    $paper_profile->{backend} = [];
+    if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
+        and not $options->by_name(SANE_NAME_PAGE_HEIGHT)->{cap} &
+        SANE_CAP_INACTIVE
+        and defined( $options->by_name(SANE_NAME_PAGE_WIDTH) )
+        and not $options->by_name(SANE_NAME_PAGE_WIDTH)->{cap} &
+        SANE_CAP_INACTIVE )
+    {
+        $self->build_profile(
+            $paper_profile,
+            $options->by_name(SANE_NAME_PAGE_HEIGHT),
+            $formats->{$paper}{y} + $formats->{$paper}{t}
+        );
+        $self->build_profile(
+            $paper_profile,
+            $options->by_name(SANE_NAME_PAGE_WIDTH),
+            $formats->{$paper}{x} + $formats->{$paper}{l}
+        );
+    }
+    $self->build_profile(
+        $paper_profile,
+        $options->by_name(SANE_NAME_SCAN_TL_X),
+        $formats->{$paper}{l}
+    );
+    $self->build_profile(
+        $paper_profile,
+        $options->by_name(SANE_NAME_SCAN_TL_Y),
+        $formats->{$paper}{t}
+    );
+    $self->build_profile(
+        $paper_profile,
+        $options->by_name(SANE_NAME_SCAN_BR_X),
+        $formats->{$paper}{x} + $formats->{$paper}{l}
+    );
+    $self->build_profile(
+        $paper_profile,
+        $options->by_name(SANE_NAME_SCAN_BR_Y),
+        $formats->{$paper}{y} + $formats->{$paper}{t}
+    );
+
+    if ( not @{ $paper_profile->{backend} } ) {
+        $self->hide_geometry($options);
+        $self->{paper} = $paper;
+        $self->signal_emit( 'changed-paper', $paper );
+        return;
+    }
+
+    my $signal;
+    $signal = $self->signal_connect(
+        'changed-current-scan-options' => sub {
+            $self->signal_handler_disconnect($signal);
+            $self->hide_geometry($options);
+            $self->{paper} = $paper;
+            $self->set( 'profile', undef );
+            $self->signal_emit( 'changed-paper', $paper );
+        }
+    );
+
+# Don't trigger the changed-paper signal until we have finished setting the profile
+    $self->{setting_profile} = TRUE;
+    $self->_set_option_profile( 0, $paper_profile );
     return;
 }
 
@@ -1780,7 +2005,7 @@ sub set_current_scan_options {
 
     # As scanimage and scanadf rename the geometry options,
     # we have to map them back to the original names
-    $self->map_geometry_names( $clone->{backend} );
+    $self->_map_geometry_names( $clone->{backend} );
 
     # Give the GUI a chance to catch up between settings,
     # in case they have to be reloaded.
@@ -1868,10 +2093,54 @@ sub _set_option_profile {
     return $i;
 }
 
+# Map scanimage and scanadf geometry options back to the original names
+
+sub _map_geometry_names {
+    my ( $self, $options ) = @_;
+    for my $i ( 0 .. $#{$options} ) {
+
+        # for reasons I don't understand, without walking the reference tree,
+        # parts of $options are undef
+        Dumper($options);
+        my ( $name, $val ) = each %{ $options->[$i] };
+        given ($name) {
+            when ('l') {
+                $name = SANE_NAME_SCAN_TL_X;
+                $options->[$i] = { $name => $val };
+            }
+            when ('t') {
+                $name = SANE_NAME_SCAN_TL_Y;
+                $options->[$i] = { $name => $val };
+            }
+            when ('x') {
+                $name = SANE_NAME_SCAN_BR_X;
+                my $l = get_option_from_profile( 'l', $options );
+                if ( not defined $l ) {
+                    $l =
+                      get_option_from_profile( SANE_NAME_SCAN_TL_X, $options );
+                }
+                if ( defined $l ) { $val += $l }
+                $options->[$i] = { $name => $val };
+            }
+            when ('y') {
+                $name = SANE_NAME_SCAN_BR_Y;
+                my $t = get_option_from_profile( 't', $options );
+                if ( not defined $t ) {
+                    $t =
+                      get_option_from_profile( SANE_NAME_SCAN_TL_Y, $options );
+                }
+                if ( defined $t ) { $val += $t }
+                $options->[$i] = { $name => $val };
+            }
+        }
+    }
+    return;
+}
+
 # Extract a option value from a profile
 
 sub get_option_from_profile {
-    my ( $self, $name, $profile ) = @_;
+    my ( $name, $profile ) = @_;
 
     # for reasons I don't understand, without walking the reference tree,
     # parts of $profile are undef

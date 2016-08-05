@@ -1,6 +1,7 @@
 use warnings;
 use strict;
-use Test::More tests => 29;
+use Sane 0.05;    # To get SANE_* enums
+use Test::More tests => 31;
 
 BEGIN {
     use_ok('Gscan2pdf::Frontend::CLI');
@@ -15,6 +16,9 @@ my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Frontend::CLI->setup($logger);
 
 #########################
+
+my $brx = SANE_NAME_SCAN_BR_X;
+my $bry = SANE_NAME_SCAN_BR_Y;
 
 my $output = <<'END';
 '0','test:0','Noname','frontend-tester','virtual device'
@@ -44,6 +48,30 @@ is_deeply(
 
 is_deeply( Gscan2pdf::Frontend::CLI->parse_device_list(''),
     [], "parse_device_list no devices" );
+
+#########################
+
+is(
+    Gscan2pdf::Frontend::CLI::_create_scanimage_cmd(
+        { device => 'test', prefix => '', options => [ { $brx => 10 } ] }
+    ),
+    " scanimage --help --device-name='test' -x 10",
+    "map Sane geometry options back to scanimage options"
+);
+
+#########################
+
+is(
+    Gscan2pdf::Frontend::CLI::_create_scanimage_cmd(
+        {
+            device  => 'test',
+            prefix  => '',
+            options => [ { $brx => 10 }, { $bry => 10 }, { mode => 'Color' } ]
+        }
+    ),
+    " scanimage --help --device-name='test' -x 10 -y 10 --mode='Color'",
+    "map more Sane geometry options"
+);
 
 #########################
 

@@ -285,7 +285,8 @@ sub _parse_scanimage_output {
           )
         {
 
-       # scanimage & scanadf only display options if SANE_CAP_SOFT_DETECT is set
+            # scanimage & scanadf only display options
+            # if SANE_CAP_SOFT_DETECT is set
             $option{cap} = SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT;
 
             $option{name} = $1;
@@ -316,20 +317,6 @@ sub _parse_scanimage_output {
               s/\b(adf|cct|jpeg)\b/\U$1/xsmg; # upper case comment abbreviations
             $option{title} =~
               s/(^\w)/\U$1/xsmg;    # capitalise at the beginning of the line
-            given ( $option{title} ) {
-                when ('L') {
-                    $option{title} = 'Top-left x';
-                }
-                when ('T') {
-                    $option{title} = 'Top-left y';
-                }
-                when ('X') {
-                    $option{title} = 'Width';
-                }
-                when ('Y') {
-                    $option{title} = 'Height';
-                }
-            }
 
             # Parse option description based on an 8-character indent.
             my $desc = $EMPTY;
@@ -353,6 +340,27 @@ sub _parse_scanimage_output {
             }
 
             $option{desc} = $desc;
+
+            given ( $option{name} ) {
+                when ('l') {
+                    $option{name}  = SANE_NAME_SCAN_TL_X;
+                    $option{title} = 'Top-left x';
+                }
+                when ('t') {
+                    $option{name}  = SANE_NAME_SCAN_TL_Y;
+                    $option{title} = 'Top-left y';
+                }
+                when ('x') {
+                    $option{name}  = SANE_NAME_SCAN_BR_X;
+                    $option{title} = 'Bottom-right x';
+                    $option{desc}  = 'Bottom-right x position of scan area.';
+                }
+                when ('y') {
+                    $option{name}  = SANE_NAME_SCAN_BR_Y;
+                    $option{title} = 'Bottom-right y';
+                    $option{desc}  = 'Bottom-right y position of scan area.';
+                }
+            }
         }
         else {
             last;

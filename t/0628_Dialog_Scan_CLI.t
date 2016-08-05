@@ -1,6 +1,7 @@
 use warnings;
 use strict;
 use Test::More tests => 2;
+use Sane 0.05;              # To get SANE_* enums
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 
@@ -87,8 +88,9 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         $loop->run unless ($flag);
 
         # need a new main loop because of the timeout
-        $loop                     = Glib::MainLoop->new;
-        $flag                     = FALSE;
+        $loop = Glib::MainLoop->new;
+        $flag = FALSE;
+        my $bry = SANE_NAME_SCAN_BR_Y;
         $dialog->{profile_signal} = $dialog->signal_connect(
             'changed-profile' => sub {
                 my ( $widget, $profile ) = @_;
@@ -98,7 +100,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                     {
                         backend => [
                             {
-                                'y' => '297'
+                                $bry => '297'
                             },
                             {
                                 'resolution' => '50'

@@ -127,7 +127,7 @@ my @that     = (
         'constraint_type' => SANE_CONSTRAINT_NONE
     },
     {
-        name       => 'l',
+        name       => SANE_NAME_SCAN_TL_X,
         title      => 'Top-left x',
         index      => 9,
         'desc'     => 'Top-left x position of scan area.',
@@ -143,7 +143,7 @@ my @that     = (
         'max_values'    => 1,
     },
     {
-        name       => 't',
+        name       => SANE_NAME_SCAN_TL_Y,
         title      => 'Top-left y',
         index      => 10,
         'desc'     => 'Top-left y position of scan area.',
@@ -159,10 +159,10 @@ my @that     = (
         'max_values'    => 1,
     },
     {
-        name       => 'x',
-        title      => 'Width',
+        name       => SANE_NAME_SCAN_BR_X,
+        title      => 'Bottom-right x',
+        desc       => 'Bottom-right x position of scan area.',
         index      => 11,
-        'desc'     => 'Width of scan-area.',
         'val'      => 216,
         constraint => {
             'min' => 0,
@@ -175,10 +175,10 @@ my @that     = (
         'max_values'    => 1,
     },
     {
-        name       => 'y',
-        title      => 'Height',
+        name       => SANE_NAME_SCAN_BR_Y,
+        title      => 'Bottom-right y',
+        desc       => 'Bottom-right y position of scan area.',
         index      => 12,
-        'desc'     => 'Height of scan-area.',
         'val'      => 297,
         constraint => {
             'min' => 0,

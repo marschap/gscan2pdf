@@ -346,7 +346,7 @@ my @that     = (
     {
         'cap'        => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
         'max_values' => '1',
-        'name'       => 'l',
+        'name'       => SANE_NAME_SCAN_TL_X,
         'val'        => '0',
         'index'      => 25,
         'unit'       => SANE_UNIT_MM,
@@ -363,7 +363,7 @@ my @that     = (
     {
         'cap'        => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
         'max_values' => '1',
-        'name'       => 't',
+        'name'       => SANE_NAME_SCAN_TL_Y,
         'val'        => '0',
         'index'      => 26,
         'unit'       => SANE_UNIT_MM,
@@ -380,35 +380,35 @@ my @that     = (
     {
         'cap'        => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
         'max_values' => '1',
-        'name'       => 'x',
+        'name'       => SANE_NAME_SCAN_BR_X,
         'val'        => '80',
         'index'      => 27,
         'unit'       => SANE_UNIT_MM,
-        'desc'       => 'Width of scan-area.',
+        'desc'       => 'Bottom-right x position of scan area.',
         'type'       => SANE_TYPE_INT,
         'constraint' => {
             'min'   => '0',
             'max'   => '200',
             'quant' => '1'
         },
-        'title'         => 'Width',
+        'title'         => 'Bottom-right x',
         constraint_type => SANE_CONSTRAINT_RANGE,
     },
     {
         'cap'        => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
         'max_values' => '1',
-        'name'       => 'y',
+        'name'       => SANE_NAME_SCAN_BR_Y,
         'val'        => '100',
         'index'      => 28,
         'unit'       => SANE_UNIT_MM,
-        'desc'       => 'Height of scan-area.',
+        'desc'       => 'Bottom-right y position of scan area.',
         'type'       => SANE_TYPE_INT,
         'constraint' => {
             'min'   => '0',
             'max'   => '200',
             'quant' => '1'
         },
-        'title'         => 'Height',
+        'title'         => 'Bottom-right y',
         constraint_type => SANE_CONSTRAINT_RANGE,
     },
     {
