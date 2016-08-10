@@ -2,6 +2,8 @@
 
 * Fixed bug prepending or appending to a PDF with a space in the path.
 * Refactored code handling geometry options to reduce complexity and duplication
+* Removed metadata variables %h, %i, %s, adding %H, %I, %S.
+  Closes bug #226 (Formatting timestamp for filename template broken)
 
 
 1.5.1 (26.07.2016):

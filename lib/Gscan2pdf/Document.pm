@@ -46,6 +46,8 @@ Readonly my $BITS_PER_BYTE                => 8;
 Readonly my $ALL_PENDING_ZOMBIE_PROCESSES => -1;
 Readonly my $INFINITE                     => -1;
 Readonly my $NOT_FOUND                    => -1;
+Readonly my $MONTHS_PER_YEAR              => 12;
+Readonly my $DAYS_PER_MONTH               => 31;
 
 BEGIN {
     use Exporter ();
@@ -1597,6 +1599,47 @@ sub seconds_to_date {
     $year  += 1900;           ## no critic (ProhibitMagicNumbers)
     $month += 1;
     return $year, $month, $day, $hour, $min, $sec;
+}
+
+sub text_to_date {
+    my ( $text, $time ) = @_;
+    my ( $year, $month, $day );
+    my ( $thisyear, $thismonth, $thisday ) = seconds_to_date($time);
+    if ( $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
+        ( $year, $month, $day ) = ( $1, $2, $3 );
+    }
+    if ( not defined $year ) { $year = $thisyear }
+    if ( not defined $month or $month < 1 or $month > $MONTHS_PER_YEAR ) {
+        $month = $thismonth;
+    }
+    if ( not defined $day or $day < 1 or $day > $DAYS_PER_MONTH ) {
+        $day = $thisday;
+    }
+    return $year, $month, $day;
+}
+
+sub expand_metadata_pattern {
+    my ( $template, $docdate, $time, $author, $title ) = @_;
+    my ( $dyear, $dmonth, $dday ) = text_to_date( $docdate, $time );
+    my ( $tyear, $tmonth, $tday, $thour, $tmin, $tsec ) =
+      seconds_to_date($time);
+    for ( ( $dmonth, $dday, $tmonth, $tday, $thour, $tmin, $tsec ) ) {
+        $_ = sprintf '%02d', $_;
+    }
+
+    $template =~ s/%a/$author/gsm;
+    $template =~ s/%t/$title/gsm;
+    $template =~ s/%y/$dyear/gsm;
+    $template =~ s/%Y/$tyear/gsm;
+    $template =~ s/%m/$dmonth/gsm;
+    $template =~ s/%M/$tmonth/gsm;
+    $template =~ s/%d/$dday/gsm;
+    $template =~ s/%D/$tday/gsm;
+    $template =~ s/%H/$thour/gsm;
+    $template =~ s/%I/$tmin/gsm;
+    $template =~ s/%S/$tsec/gsm;
+
+    return $template;
 }
 
 # Set session dir

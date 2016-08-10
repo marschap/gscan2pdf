@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 25;
+use Test::More tests => 26;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
 
@@ -98,6 +98,17 @@ is( $slist->pages_possible( 2, 1 ),
 
 like( Gscan2pdf::Document::open_three('fc-list : family style file'),
     qr/\w+/, 'open_three produces some output from fc-list' );
+
+#########################
+
+is(
+    Gscan2pdf::Document::expand_metadata_pattern(
+        '%a %t %y %Y %m %M %d %D %H %I %S',
+        '2016-02-01', 999999, 'a.n.other', 'title'
+    ),
+    'a.n.other title 2016 1970 02 01 01 12 14 46 39',
+    'expand_metadata_pattern'
+);
 
 #########################
 
