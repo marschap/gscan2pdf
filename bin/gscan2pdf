@@ -2037,35 +2037,6 @@ sub add_page_range {
     return;
 }
 
-# return string of filenames depending on which radiobutton is active
-
-sub get_pagelist {
-    my $n;
-    my $pagelist;
-    if ( $SETTING{'Page range'} eq 'all' ) {
-        $n        = $#{ $slist->{data} };
-        $pagelist = $slist->{data}[0][2]{filename};
-        my $i = 1;
-        while ( $i < @{ $slist->{data} } ) {
-            $pagelist = $pagelist . $SPACE . $slist->{data}[$i][2]{filename};
-            ++$i;
-        }
-    }
-    elsif ( $SETTING{'Page range'} eq 'selected' ) {
-        my @page = $slist->get_selected_indices;
-        $n        = $#page;
-        $pagelist = $slist->{data}[ $page[0] ][2]{filename};
-        my $i = 1;
-        while ( $i < @page ) {
-            $pagelist =
-              $pagelist . $SPACE . $slist->{data}[ $page[$i] ][2]{filename};
-            ++$i;
-        }
-    }
-
-    return ( $pagelist, $n );
-}
-
 # Add PDF options to $vbox
 
 sub add_metadata_dialog {
