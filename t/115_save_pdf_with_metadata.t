@@ -1,11 +1,11 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use Encode qw(decode);
+use Test::More tests => 3;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
     use Gtk2 -init;    # Could just call init separately
-    use PDF::API2;
 }
 
 #########################
@@ -24,7 +24,13 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-my $metadata = { Title => 'metadata title' };
+my $metadata = Gscan2pdf::Document::prepare_output_metadata(
+    'PDF',
+    {
+        'document date' => decode( 'utf8', '2016-02-10' ),
+        title           => 'metadata title',
+    }
+);
 $slist->import_files(
     paths             => ['test.pnm'],
     finished_callback => sub {
@@ -38,7 +44,12 @@ $slist->import_files(
 );
 Gtk2->main;
 
-like( `pdfinfo test.pdf`, qr/metadata title/, 'metadata in PDF' );
+like( `pdfinfo test.pdf`, qr/metadata title/, 'metadata title in PDF' );
+like(
+    `pdfinfo test.pdf`,
+    qr/Wed Feb 10 00:00:00 2016/,
+    'metadata ModDate in PDF'
+);
 
 #########################
 

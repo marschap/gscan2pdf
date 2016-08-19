@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 26;
+use Test::More tests => 28;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
 
@@ -101,6 +101,11 @@ like( Gscan2pdf::Document::open_three('fc-list : family style file'),
 
 #########################
 
+my @date = Gscan2pdf::Document::text_to_date('2016-02-01');
+is_deeply( \@date, [ 2016, '02', '01' ], 'text_to_date' );
+
+#########################
+
 is(
     Gscan2pdf::Document::expand_metadata_pattern(
         '%a %t %y %Y %m %M %d %D %H %I %S',
@@ -108,6 +113,31 @@ is(
     ),
     'a.n.other title 2016 1970 02 01 01 12 14 46 39',
     'expand_metadata_pattern'
+);
+
+#########################
+
+is_deeply(
+    Gscan2pdf::Document::prepare_output_metadata(
+        'PDF',
+        {
+            'document date' => '2016-02-01',
+            author          => 'a.n.other',
+            title           => 'title',
+            'subject'       => 'subject',
+            'keywords'      => 'keywords'
+        }
+    ),
+    {
+        ModDate      => "D:20160201000000+00'00'",
+        Creator      => 'gscan2pdf v1.5.1',
+        Author       => 'a.n.other',
+        Title        => 'title',
+        Subject      => 'subject',
+        Keywords     => 'keywords',
+        CreationDate => "D:20160201000000+00'00'"
+    },
+    'prepare_output_metadata'
 );
 
 #########################

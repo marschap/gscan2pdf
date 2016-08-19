@@ -4,6 +4,9 @@
 * Refactored code handling geometry options to reduce complexity and duplication
 * Removed metadata variables %h, %i, %s, adding %H, %I, %S.
   Closes bug #226 (Formatting timestamp for filename template broken)
+* Encode document date in ASCII to workaround a bug in PDF::API2 where UTF-8
+  encoding caused garbage in the metadata.
+  Closes bug #224 (CreationDate and ModDate fields are missing)
 
 
 1.5.1 (26.07.2016):

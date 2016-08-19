@@ -2059,12 +2059,10 @@ sub add_metadata_dialog {
     $table->attach( $hboxe, 0, 1, 0, 1, 'fill', 'shrink', 0, 0 );
     my $labele = Gtk2::Label->new( $d->get('Date') );
     $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
-    my ( $year, $month, $day ) =
-      Gscan2pdf::Document::text_to_date( $SETTING{'document date'}, time );
 
     my $entryd =
       Gtk2::Entry->new_with_max_length(10);  ## no critic (ProhibitMagicNumbers)
-    $entryd->set_text( sprintf '%04d-%02d-%02d', $year, $month, $day );
+    $entryd->set_text( $SETTING{'document date'} );
     $entryd->set_activates_default(TRUE);
     $tooltips->set_tip( $entryd, $d->get('Year-Month-Day') );
     $entryd->set_alignment(1.);              # Right justify
@@ -2081,9 +2079,8 @@ sub add_metadata_dialog {
     );
     $entryd->signal_connect(
         'focus-out-event' => sub {
-            my $text = $entryd->get_text;
             $entryd->set_text( sprintf '%04d-%02d-%02d',
-                Gscan2pdf::Document::text_to_date( $text, time ) );
+                Gscan2pdf::Document::text_to_date( $entryd->get_text ) );
             return FALSE;
         }
     );
@@ -2102,8 +2099,8 @@ sub add_metadata_dialog {
 
             # Editing the entry and clicking the edit button bypasses the
             # focus-out-event, so update the date now
-            ( $year, $month, $day ) =
-              Gscan2pdf::Document::text_to_date( $entryd->get_text, time );
+            my ( $year, $month, $day ) =
+              Gscan2pdf::Document::text_to_date( $entryd->get_text );
 
             $calendar->select_day($day);
             $calendar->select_month( $month - 1, $year );
@@ -2235,33 +2232,12 @@ sub update_metadata_settings {
     $SETTING{title}    = $entryt->update( $SETTING{'title-suggestions'} );
     $SETTING{subject}  = $entrys->update( $SETTING{'subject-suggestions'} );
     $SETTING{keywords} = $entryk->update( $SETTING{'keyword-suggestions'} );
-    $SETTING{'document date'} = sprintf '%04d-%02d-%02d',
-      Gscan2pdf::Document::text_to_date( $entryd->get_text, time );
+
+    # the focus-out event validates a new document date before the save button
+    # is pressed, so we can simply take the contents of the field
+    $SETTING{'document date'} = $entryd->get_text;
+
     return;
-}
-
-sub prepare_output_metadata {
-    my $type = shift;
-    my %h;
-
-    if ( $type eq 'PDF' or $type eq 'DjVu' ) {
-        my $dateformat =
-          $type eq 'PDF'
-          ? "D:%4i%02i%02i000000+00'00'"
-          : '%4i-%02i-%02i 00:00:00+00:00';
-        my ( $year, $month, $day ) =
-          Gscan2pdf::Document::text_to_date( $SETTING{'document date'}, time );
-        $h{CreationDate} = sprintf $dateformat, $year, $month, $day;
-        $h{ModDate}      = sprintf $dateformat, $year, $month, $day;
-        $h{Creator}      = "$prog_name v$VERSION";
-        $h{Producer} = $type eq 'PDF' ? 'PDF::API2' : 'djvulibre';
-        for my $key (qw/author title subject keywords/) {
-            if ( defined $SETTING{$key} ) {
-                $h{ ucfirst $key } = $SETTING{$key};
-            }
-        }
-    }
-    return \%h;
 }
 
 # Save selected pages as PDF under given name.
@@ -2288,9 +2264,10 @@ sub save_pdf {
     $logger->debug("Started saving $filename");
     my ( $signal, $pid );
     $pid = $slist->save_pdf(
-        path            => $filename,
-        list_of_pages   => $list_of_pages,
-        metadata        => prepare_output_metadata('PDF'),
+        path          => $filename,
+        list_of_pages => $list_of_pages,
+        metadata =>
+          Gscan2pdf::Document::prepare_output_metadata( 'PDF', \%SETTING ),
         options         => \%options,
         queued_callback => sub {
             return update_tpbar(@_);
@@ -3256,9 +3233,10 @@ sub save_djvu {
     $logger->debug("Started saving $filename");
     my ( $signal, $pid );
     $pid = $slist->save_djvu(
-        path            => $filename,
-        list_of_pages   => $list_of_pages,
-        metadata        => prepare_output_metadata('DjVu'),
+        path          => $filename,
+        list_of_pages => $list_of_pages,
+        metadata =>
+          Gscan2pdf::Document::prepare_output_metadata( 'DjVu', \%SETTING ),
         queued_callback => sub {
             return update_tpbar(@_);
         },
@@ -3500,9 +3478,11 @@ sub email {
             # Create the PDF
             my ( $signal, $pid );
             $pid = $slist->save_pdf(
-                path            => $pdf->filename,
-                list_of_pages   => $list_of_pages,
-                metadata        => prepare_output_metadata('PDF'),
+                path          => $pdf->filename,
+                list_of_pages => $list_of_pages,
+                metadata      => Gscan2pdf::Document::prepare_output_metadata(
+                    'PDF', \%SETTING
+                ),
                 options         => \%options,
                 queued_callback => sub {
                     return update_tpbar(@_);

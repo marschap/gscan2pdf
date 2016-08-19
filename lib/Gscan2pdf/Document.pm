@@ -32,6 +32,7 @@ use Symbol;                          # for gensym
 use Try::Tiny;
 use Set::IntSpan 1.10;               # For size method for page numbering issues
 use PDF::API2;
+use Encode qw(encode);
 use English qw( -no_match_vars );    # for $PROCESS_ID, $INPUT_RECORD_SEPARATOR
                                      # $CHILD_ERROR
 use POSIX qw(:sys_wait_h);
@@ -1603,6 +1604,7 @@ sub seconds_to_date {
 
 sub text_to_date {
     my ( $text, $time ) = @_;
+    if ( not defined $time ) { $time = time }
     my ( $year, $month, $day );
     my ( $thisyear, $thismonth, $thisday ) = seconds_to_date($time);
     if ( $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
@@ -1640,6 +1642,35 @@ sub expand_metadata_pattern {
     $template =~ s/%S/$tsec/gsm;
 
     return $template;
+}
+
+# Normally, it would be more sensible to put this in main::, but in order to
+# run unit tests on the sub, it has been moved here.
+
+sub prepare_output_metadata {
+    my ( $type, $metadata ) = @_;
+    my %h;
+
+    if ( $type eq 'PDF' or $type eq 'DjVu' ) {
+        my $dateformat =
+          $type eq 'PDF'
+          ? "D:%4i%02i%02i000000+00'00'"
+          : '%4i-%02i-%02i 00:00:00+00:00';
+        my ( $year, $month, $day ) =
+          text_to_date( $metadata->{'document date'} );
+        $h{CreationDate} =
+          encode( 'ASCII', sprintf $dateformat, $year, $month, $day );
+        $h{ModDate} = $h{CreationDate};
+        $h{Creator} = "gscan2pdf v$Gscan2pdf::Document::VERSION";
+        if ( $type eq 'DjVu' ) { $h{Producer} = 'djvulibre' }
+        for my $key (qw/author title subject keywords/) {
+            if ( defined $metadata->{$key} ) {
+                $h{ ucfirst $key } = $metadata->{$key};
+            }
+        }
+    }
+
+    return \%h;
 }
 
 # Set session dir
