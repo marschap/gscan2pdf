@@ -7,6 +7,9 @@
 * Encode document date in ASCII to workaround a bug in PDF::API2 where UTF-8
   encoding caused garbage in the metadata.
   Closes bug #224 (CreationDate and ModDate fields are missing)
+* If the output from user-defined tool is pnm, there is no way to tell the
+  resolution, so assume that it is the same as the input.
+  Closes bug #227 (Page size corruption in 1.5.1)
 
 
 1.5.1 (26.07.2016):

@@ -3950,6 +3950,12 @@ sub _thread_user_defined {
             format   => $image->Get('format'),
         );
 
+        # No way to tell what resolution a pnm is,
+        # so assume it hasn't changed
+        if ( $new->{format} =~ /Portable\s(:?any|bit|gray|pix)map/xsm ) {
+            $new->{resolution} = $options{page}{resolution};
+        }
+
         # reuse uuid so that the process chain can find it again
         $new->{uuid} = $options{page}{uuid};
         $self->{return}->enqueue(
