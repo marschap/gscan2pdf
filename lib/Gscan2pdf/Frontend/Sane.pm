@@ -842,7 +842,9 @@ sub _write_buffer_to_fh {
     }
     _thread_write_pnm_header( $fh, $parm->{format}, $parm->{pixels_per_line},
         $image->{height}, $parm->{depth} );
-    for ( @{ $image->{data} } ) { goto CLEANUP if not print $fh }
+    for my $data ( @{ $image->{data} } ) {
+        goto CLEANUP if not print {$fh} $data;
+    }
     return;
 }
 

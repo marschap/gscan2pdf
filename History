@@ -10,6 +10,8 @@
 * If the output from user-defined tool is pnm, there is no way to tell the
   resolution, so assume that it is the same as the input.
   Closes bug #227 (Page size corruption in 1.5.1)
+* Support hand-scanner option in test backend. Closes bug #223
+  ("Auto length detection" option does not work with ScanSnap IX500)
 
 
 1.5.1 (26.07.2016):
