@@ -1,34 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2006-2016 Jeffrey Ratcliffe <Jeffrey.Ratcliffe@gmail.com> -->
-<application>
- <id type="desktop">gscan2pdf.desktop</id>
- <licence>CC0</licence>
- <name>gscan2pdf</name>
- <summary>GUI to produce PDFs or DjVus from scanned documents</summary>
- <description>
-  <p>
-   Only two clicks are required to scan several pages and then save all or a
-   selection as a PDF or DjVu file, including metadata if required.
-  </p>
-  <p>
-   gscan2pdf can control regular or sheet-fed (ADF) scanners with SANE via
-   libsane-perl, scanimage or scanadf, and can scan multiple pages at once.
-   It presents a thumbnail view of scanned pages, and permits simple operations
-   such as cropping, rotating and deleting pages.
-  </p>
-  <p>
-   OCR can be used to recognise text in the scans, and the output
-   embedded in the PDF or DjVu.
-  </p>
-  <p>
-   The resulting document may be saved as a PDF, DjVu, multipage TIFF file, or
-   single page image file.
-  </p>
- </description>
- <screenshots>
-  <screenshot type="default" width="632" height="480">http://sourceforge.net/dbimage.php?id=249848</screenshot>
- </screenshots>
- <url type="homepage">http://gscan2pdf.sourceforge.net/</url>
- <url type="translate">https://translations.launchpad.net/gscan2pdf</url>
- <updatecontact>Jeffrey.Ratcliffe@gmail.com</updatecontact>
-</application>
+<component type="desktop">
+  <id>gscan2pdf.desktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0+</project_license>
+  <name>gscan2pdf</name>
+  <name lang="en_GB">gscan2pdf</name>
+  <summary>GUI to produce PDFs or DjVus from scanned documents</summary>
+  <summary lang="en_GB">GUI to produce PDFs or DjVus from scanned documents</summary>
+  <description>
+    <p>
+      Only two clicks are required to scan several pages and then save all or a
+      selection as a PDF or DjVu file, including metadata if required.
+    </p>
+    <p>
+      gscan2pdf can control regular or sheet-fed (ADF) scanners with SANE via
+      libsane-perl, scanimage or scanadf, and can scan multiple pages at once.
+      It presents a thumbnail view of scanned pages, and permits simple operations
+      such as cropping, rotating and deleting pages.
+    </p>
+    <p>
+      OCR can be used to recognise text in the scans, and the output
+      embedded in the PDF or DjVu.
+    </p>
+    <p>
+      The resulting document may be saved as a PDF, DjVu, multipage TIFF file, or
+      single page image file.
+    </p>
+  </description>
+  <url type="homepage">http://gscan2pdf.sourceforge.net/</url>
+  <url type="translate">https://translations.launchpad.net/gscan2pdf</url>
+  <url type="donation">https://www.paypal.com/cgi-bin/webscr?lc=us&amp;cmd=_s-xclick&amp;hosted_button_id=GYQGXYD5UZS6S</url>
+  <screenshots>
+    <screenshot type="default">
+      <image type="source" width="630" height="480">http://sourceforge.net/dbimage.php?id=249848</image>
+    </screenshot>
+  </screenshots>
+  <update_contact>Jeffrey.Ratcliffe@gmail.com</update_contact>
+</component>
