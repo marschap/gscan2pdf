@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;
 use Scalar::Util;
@@ -82,6 +82,18 @@ is(
     ),
     '[image2 @ %%x] Encoder did not produce proper pts, making some up.',
     'Filter out memory address from unpaper warning'
+);
+
+is(
+    Gscan2pdf::Dialog::filter_message(
+'[image2 @ 0xc596e0] Using AVStream.codec to pass codec parameters to muxers is deprecated, use AVStream.codecpar instead.'
+          . "\n"
+          . '[image2 @ 0x1338180] Encoder did not produce proper pts, making some up.'
+    ),
+'[image2 @ %%x] Using AVStream.codec to pass codec parameters to muxers is deprecated, use AVStream.codecpar instead.'
+      . "\n"
+      . '[image2 @ %%x] Encoder did not produce proper pts, making some up.',
+    'Filter out double memory address from unpaper warning'
 );
 
 __END__

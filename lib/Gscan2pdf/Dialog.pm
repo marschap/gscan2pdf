@@ -105,10 +105,13 @@ sub dump_or_stringify {
 
 sub filter_message {
     my ($message) = @_;
-    $message =~ s{^(.*)           # start of message
+    my $regex = qr{^(.*)           # start of message
                   0x[[:xdigit:]]+ # hex address
                   (.*)$           # rest of message
-                 }{$1%%x$2}xsm;
+                 }xsm;
+    while ( $message =~ /$regex/xsmo ) {
+        $message =~ s/$regex/$1%%x$2/xsmo;
+    }
     return $message;
 }
 
