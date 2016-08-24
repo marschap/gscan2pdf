@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.5.1
+Version: 1.5.2
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -91,7 +91,9 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Tue Jul 26 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Wed Aug 24 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #833521 (unpaper AVStream codec deprecation warning)
   - New upstream release
     Closes: #831597 (Can't use string ("gimp %i") as an ARRAY ref)
   - New upstream release
