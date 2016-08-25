@@ -344,7 +344,10 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
                 $opt->{type} == SANE_TYPE_GROUP
               ? $d_sane->get( $opt->{title} )
               : $d->get('Scan Options');
-            $self->{notebook}->append_page( $vbox, $group );
+            my $scwin = Gtk2::ScrolledWindow->new;
+            $self->{notebook}->append_page( $scwin, $group );
+            $scwin->set_policy( 'automatic', 'automatic' );
+            $scwin->add_with_viewport($vbox);
             $self->{option_widgets}{ $opt->{title} } = $vbox;
             if ( $opt->{type} == SANE_TYPE_GROUP ) { next }
         }
