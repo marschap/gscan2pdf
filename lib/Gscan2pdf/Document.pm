@@ -2904,6 +2904,9 @@ sub _write_image_object {
         or $downsample )
     {
         $logger->info("Writing temporary image $filename");
+        # Reset depth because of ImageMagick bug
+        # <https://github.com/ImageMagick/ImageMagick/issues/277>
+        $image->Set('depth', $image->Get('depth'));
         my $status = $image->Write( filename => $filename );
         return if $_self->{cancel};
         if ("$status") { $logger->warn($status) }
