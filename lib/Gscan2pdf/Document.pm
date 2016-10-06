@@ -2712,7 +2712,7 @@ sub _add_page_to_pdf {
         $pagedata->{depth} = $image->Get('depth');
         $logger->info("Depth of $filename is $pagedata->{depth}");
         if ( $pagedata->{depth} == 1 ) {
-            $pagedata->{compression} = 'lzw';
+            $pagedata->{compression} = 'png';
         }
         else {
             $type = $image->Get('type');
