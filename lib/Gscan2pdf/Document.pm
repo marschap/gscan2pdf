@@ -39,6 +39,7 @@ use POSIX qw(:sys_wait_h);
 use Data::UUID;
 use Readonly;
 Readonly our $POINTS_PER_INCH             => 72;
+Readonly my $STRING_FORMAT                => 8;
 Readonly my $_POLL_INTERVAL               => 100;    # ms
 Readonly my $THUMBNAIL                    => 100;    # pixels
 Readonly my $YEAR                         => 5;
@@ -125,6 +126,76 @@ sub new {
 
     bless $self, $class;
     Glib::Timeout->add( $_POLL_INTERVAL, \&check_return_queue, $self );
+
+    my $target_entry = {
+        target => 'Glib::Scalar',    # some string representing the drag type
+        flags  => 'same-widget',     # Gtk2::TargetFlags
+        info   => 1,                 # some app-defined integer identifier
+    };
+    $self->drag_source_set( 'button1-mask', [ 'copy', 'move' ], $target_entry );
+    $self->drag_dest_set(
+        [ 'motion', 'highlight' ],
+        [ 'copy',   'move' ],
+        $target_entry
+    );
+
+    $self->signal_connect(
+        'drag-data-get' => sub {
+            my ( $tree, $context, $sel ) = @_;
+            $sel->set( $sel->target, $STRING_FORMAT, 'data' );
+        }
+    );
+
+    $self->signal_connect(
+        'drag-data-delete' => sub {
+            my ( $tree, $context ) = @_;
+            my $model = $tree->get_model;
+            my @data  = $tree->get_selection->get_selected_rows;
+
+            for ( reverse @data ) {
+                my $iter = $model->get_iter($_);
+                my $info = $model->get( $iter, 0 );
+                $model->remove($iter);
+            }
+
+            $tree->get_selection->unselect_all;
+        }
+    );
+
+    $self->signal_connect(
+        'drag-data-received' => \&drag_data_received_callback );
+
+    # Callback for dropped signal.
+    $self->signal_connect(
+        drag_drop => sub {
+            my ( $tree, $context, $x, $y, $when ) = @_;
+            if ( my $targ = $context->targets ) {
+                $tree->drag_get_data( $context, $targ, $when );
+                return TRUE;
+            }
+            return FALSE;
+        }
+    );
+
+    # Set the page number to be editable
+    $self->set_column_editable( 0, TRUE );
+
+    # Set-up the callback when the page number has been edited.
+    $self->{row_changed_signal} = $self->get_model->signal_connect(
+        'row-changed' => sub {
+            $self->get_model->signal_handler_block(
+                $self->{row_changed_signal} );
+
+            # Sort pages
+            $self->manual_sort_by_column(0);
+
+            # And make sure there are no duplicates
+            $self->renumber;
+            $self->get_model->signal_handler_unblock(
+                $self->{row_changed_signal} );
+        }
+    );
+
     return $self;
 }
 
@@ -828,6 +899,141 @@ sub get_pixbuf {
     return $pixbuf;
 }
 
+sub drag_data_received_callback {
+    my ( $tree, $context, $x, $y ) = @_;
+    my ( $path, $how ) = $tree->get_dest_row_at_pos( $x, $y );
+    if ( defined $path ) { $path = $path->to_string }
+    my $delete =
+      $context->action == 'move';    ## no critic (ProhibitMismatchedOperators)
+
+    my @rows = $tree->get_selection->get_selected_rows or return;
+    my $data = $tree->copy_selection( not $delete );
+    $tree->paste_selection( $data, $path, $how );
+
+    $context->finish( 1, $delete, time );
+    return;
+}
+
+# Cut the selection
+
+sub cut_selection {
+    my ($self) = @_;
+    my $data = $self->copy_selection(FALSE);
+    $self->delete_selection;
+    $logger->info( "Cut ", $#{$data} + 1, " pages" );
+    return $data;
+}
+
+# Copy the selection
+
+sub copy_selection {
+    my ( $self, $clone ) = @_;
+    my @rows = $self->get_selection->get_selected_rows or return;
+    my $model = $self->get_model;
+    my @data;
+    for (@rows) {
+        my $iter = $model->get_iter($_);
+        my @info = $model->get($iter);
+        my $new  = $info[2]->clone($clone);
+        push @data, [ $info[0], $info[1], $new ];
+    }
+    if ($clone) { $logger->info( "Copied ", $#data + 1, " pages" ) }
+    return \@data;
+}
+
+# Paste the selection
+
+sub paste_selection {
+    my ( $self, $data, $path, $how ) = @_;
+
+    # Block row-changed signal so that the list can be updated before the sort
+    # takes over.
+    if ( defined $self->{row_changed_signal} ) {
+        $self->get_model->signal_handler_block( $self->{row_changed_signal} );
+    }
+
+    my $dest;
+    if ( defined $path ) {
+        $dest = $path;
+        if ( $how eq 'after' or $how eq 'into-or-after' ) {
+            $dest = $path + 1;
+        }
+        splice @{ $self->{data} }, $path + 1, 0, @{$data};
+    }
+    else {
+        $dest = $#{ $self->{data} } + 1;
+        push @{ $self->{data} }, @{$data};
+    }
+
+    # Update the start spinbutton if necessary
+    $self->renumber;
+    $self->get_model->signal_emit( 'row-changed', Gtk2::TreePath->new,
+        $self->get_model->get_iter_first );
+
+    # Select the new pages
+    my @selection;
+    for ( $dest .. $dest + $#{$data} ) {
+        push @selection, $_;
+    }
+    $self->get_selection->unselect_all;
+    $self->select(@selection);
+
+    if ( defined $self->{row_changed_signal} ) {
+        $self->get_model->signal_handler_unblock( $self->{row_changed_signal} );
+    }
+
+    $self->save_session;
+
+    $logger->info( "Pasted ", $#{$data} + 1, " pages at position $dest" );
+    return;
+}
+
+# Delete the selected scans
+
+sub delete_selection {
+    my ($self) = @_;
+
+    my @pages = $self->get_selected_indices;
+    my @page  = @pages;
+    if ( defined $self->{selection_changed_signal} ) {
+        $self->get_selection->signal_handler_block(
+            $self->{selection_changed_signal} );
+    }
+    while (@pages) {
+        splice @{ $self->{data} }, $pages[0], 1;
+        @pages = $self->get_selected_indices;
+    }
+    if ( defined $self->{selection_changed_signal} ) {
+        $self->get_selection->signal_handler_unblock(
+            $self->{selection_changed_signal} );
+    }
+
+    # Select nearest page to last current page
+    if ( @{ $self->{data} } and @page ) {
+
+        # Select just the first one
+        @page = ( $page[0] );
+        if ( $page[0] > $#{ $self->{data} } ) {
+            $page[0] = $#{ $self->{data} };
+        }
+        $self->select(@page);
+    }
+
+    # Select nothing
+    elsif ( @{ $self->{data} } ) {
+        $self->select;
+    }
+
+    # No pages left, and having blocked the selection_changed_signal,
+    # we've got to clear the image
+    else {
+        $self->get_selection->signal_emit('changed');
+    }
+
+    $self->save_session;
+    return;
+}
+
 sub save_pdf {
     my ( $self, %options ) = @_;
 
@@ -1440,6 +1646,9 @@ sub open_session {
 sub renumber {
     my ( $self, $start, $step, $selection ) = @_;
 
+    if ( defined $self->{row_changed_signal} ) {
+        $self->get_model->signal_handler_block( $self->{row_changed_signal} );
+    }
     if ( defined $start ) {
         if ( not defined $step )      { $step      = 1 }
         if ( not defined $selection ) { $selection = 'all' }
@@ -1466,6 +1675,9 @@ sub renumber {
                 $self->{data}[$_][0] = $self->{data}[ $_ - 1 ][0] + 1;
             }
         }
+    }
+    if ( defined $self->{row_changed_signal} ) {
+        $self->get_model->signal_handler_unblock( $self->{row_changed_signal} );
     }
     return;
 }

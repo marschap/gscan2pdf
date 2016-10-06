@@ -105,12 +105,24 @@ sub set_logger {
 }
 
 sub clone {
-    my ($self) = @_;
+    my ( $self, $copy_image ) = @_;
     my $new = {};
     for ( keys %{$self} ) {
         $new->{$_} = $self->{$_};
     }
     $new->{uuid} = $uuid->create_str();
+    if ($copy_image) {
+        my $suffix;
+        if ( $self->{filename} =~ /([.]\w*)$/xsm ) { $suffix = $1 }
+        $new->{filename} =
+          File::Temp->new( DIR => $self->{dir}, SUFFIX => $suffix );
+        $logger->info("Cloning $self->{filename} -> $new->{filename}");
+
+        # stringify filename to prevent copy from mangling it
+        copy( "$self->{filename}", "$new->{filename}" )
+          or croak sprintf $d->get('Error copying image %s: %s'),
+          $self->{filename}, $ERRNO;
+    }
     bless $new, ref $self;
     return $new;
 }

@@ -86,7 +86,6 @@ use Locale::gettext 1.05;    # For translations
 
 use Readonly;
 Readonly my $BORDER_WIDTH            => 6;               # Window parameters
-Readonly my $STRING_FORMAT           => 8;
 Readonly my $_90_DEGREES             => 90;
 Readonly my $_180_DEGREES            => 180;
 Readonly my $_270_DEGREES            => 270;
@@ -221,7 +220,7 @@ my (
     @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     $menubar,     $toolbar,
-    @ocr_engine,  @clipboard,
+    @ocr_engine,  $clipboard,
     $windowr, $view, $windowp,
     $print_settings, $windowc, $current_page, $gconftool,
 
@@ -288,55 +287,6 @@ $scwin_thumbs->set_shadow_type('etched-in');
 # Set up a SimpleList
 $slist = Gscan2pdf::Document->new;
 
-my $target_entry = {
-    target => 'Glib::Scalar',    # some string representing the drag type
-    flags  => 'same-widget',     # Gtk2::TargetFlags
-    info   => 1,                 # some app-defined integer identifier
-};
-$slist->drag_source_set( 'button1-mask', [ 'copy', 'move' ], $target_entry );
-$slist->drag_dest_set(
-    [ 'motion', 'highlight' ],
-    [ 'copy',   'move' ],
-    $target_entry
-);
-
-$slist->signal_connect(
-    'drag-data-get' => sub {
-        my ( $tree, $context, $sel ) = @_;
-        $sel->set( $sel->target, $STRING_FORMAT, 'data' );
-    }
-);
-
-$slist->signal_connect(
-    'drag-data-delete' => sub {
-        my ( $tree, $context ) = @_;
-        my $model = $tree->get_model;
-        my @data  = $tree->get_selection->get_selected_rows;
-
-        for ( reverse @data ) {
-            my $iter = $model->get_iter($_);
-            my $info = $model->get( $iter, 0 );
-            $model->remove($iter);
-        }
-
-        $tree->get_selection->unselect_all;
-    }
-);
-
-$slist->signal_connect( 'drag-data-received' => \&drag_data_received_callback );
-
-# Callback for dropped signal.
-$slist->signal_connect(
-    drag_drop => sub {
-        my ( $tree, $context, $x, $y, $when ) = @_;
-        if ( my $targ = $context->targets ) {
-            $tree->drag_get_data( $context, $targ, $when );
-            return TRUE;
-        }
-        return FALSE;
-    }
-);
-
 # If dragged below the bottom of the window, scroll it.
 $slist->signal_connect( 'drag-motion' => \&drag_motion_callback );
 
@@ -344,26 +294,8 @@ $slist->signal_connect( 'drag-motion' => \&drag_motion_callback );
 $slist->signal_connect( button_press_event   => \&handle_clicks );
 $slist->signal_connect( button_release_event => \&handle_clicks );
 
-# Set the page number to be editable
-$slist->set_column_editable( 0, TRUE );
-
-# Set-up the callback when the page number has been edited.
-$slist->{row_changed_signal} = $slist->get_model->signal_connect(
-    'row-changed' => sub {
-        $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-
-        # Sort pages
-        $slist->manual_sort_by_column(0);
-
-        # And make sure there are no duplicates
-        $slist->renumber;
-        $slist->get_model->signal_handler_unblock(
-            $slist->{row_changed_signal} );
-
-        # Update the start spinbutton if necessary
-        update_start();
-    }
-);
+# Update the start spinbutton if the page number is been edited.
+$slist->get_model->signal_connect( 'row-changed' => sub { update_start() } );
 
 $scwin_thumbs->add($slist);
 
@@ -428,7 +360,7 @@ $window->signal_connect_after(
             $Gtk2::Gdk::Keysyms{Delete} )    ## no critic (ProhibitPackageVars)
           ;
 
-        delete_pages();
+        $slist->delete_pages;
         return TRUE;
     }
 );
@@ -1368,62 +1300,6 @@ sub update_uimanager {
 
    # If the scan dialog has already been drawn, update the start page spinbutton
     update_start();
-    return;
-}
-
-sub drag_data_received_callback {
-    my ( $tree, $context, $x, $y, $sel ) = @_;
-    my ( $path, $how ) = $tree->get_dest_row_at_pos( $x, $y );
-    my $model = $tree->get_model;
-    my $data = $sel->data or return;
-    my $delete =
-      $context->action == 'move';    ## no critic (ProhibitMismatchedOperators)
-
-    my @rows = $tree->get_selection->get_selected_rows or return;
-    my @data;
-    for (@rows) {
-        my $iter = $model->get_iter($_);
-        my @info = $model->get($iter);
-        my $suffix;
-        if ( $info[2]->{filename} =~ /([.]\w*)$/xsm ) { $suffix = $1 }
-        my $new =
-          File::Temp->new( DIR => $SETTING{session}, SUFFIX => $suffix );
-
-        # quotes required to prevent File::Temp objects from being clobbered
-        copy( "$info[2]->{filename}", "$new" )
-          or show_message_dialog(
-            parent  => $window,
-            type    => 'error',
-            buttons => 'close',
-            text    => $d->get('Error copying page')
-          );
-
-        $info[2]->{filename} = $new;
-        push @data, [@info];
-    }
-
-    # Block row-changed signal so that the list can be updated before the sort
-    # takes over.
-    $tree->get_model->signal_handler_block( $tree->{row_changed_signal} );
-
-    if ($path) {
-        if ( $how eq 'after' or $how eq 'into-or-after' ) {
-            splice @{ $tree->{data} }, $path->to_string + 1, 0, @data;
-        }
-        else {
-            splice @{ $tree->{data} }, $path->to_string, 0, @data;
-        }
-    }
-    else {
-        push @{ $tree->{data} }, @data;
-    }
-    $tree->renumber;
-    $tree->get_model->signal_handler_unblock( $tree->{row_changed_signal} );
-
-    # Update the start spinbutton if necessary
-    update_start();
-
-    $context->finish( 1, $delete, time );
     return;
 }
 
@@ -4468,96 +4344,30 @@ sub print_dialog {
 # Cut the selection
 
 sub cut_selection {
-    if ( $slist->has_focus ) {
-        copy_selection();
-        delete_pages();
-    }
-
-    # elsif ($textview -> has_focus) {
-    #  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
-    #  $textbuffer->cut_clipboard ($clipboard, TRUE)
-    # }
+    $clipboard = $slist->cut_selection;
     return;
 }
 
 # Copy the selection
 
 sub copy_selection {
-    if ( $slist->has_focus ) {
-        undef @clipboard;
-        my @pages = $slist->get_selected_indices;
-        for my $page (@pages) {
-            my @copy = map { [ @{$_} ] } $slist->{data}[$page];
-            push @clipboard, @copy;
-        }
-    }
-
-    # elsif ($textview -> has_focus) {
-    #  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
-    #  $textbuffer->copy_clipboard ($clipboard)
-    # }
+    $clipboard = $slist->copy_selection(TRUE);
     return;
 }
 
 # Paste the selection
 
 sub paste_selection {
-
-    # We only add pages if the list of thumbnails has the focus
-    if ( $window->get_focus eq $slist ) {
-        my @page = $slist->get_selected_indices;
-
-        # Create a new image file for each page in the clipboard
-        for (@clipboard) {
-            my $suffix;
-            if ( $_->[2]{filename} =~ /([.]\w*)$/xsm ) { $suffix = $1 }
-            my $new = File::Temp->new( DIR => $session, SUFFIX => $suffix );
-
-            # stringify filename to prevent copy from mangling it
-            if ( not copy( "$_->[2]{filename}", $new ) ) {
-                my $text = sprintf $d->get('Error pasting image - %s'), $ERRNO;
-                show_message_dialog(
-                    parent  => $window,
-                    type    => 'error',
-                    buttons => 'close',
-                    text    => $text
-                );
-                return;
-            }
-            $_->[2]{filename} = $new;
-        }
-
-     # Block the row-changed signal whilst adding the scan (row) and sorting it.
-        $slist->get_model->signal_handler_block( $slist->{row_changed_signal} );
-
-     # If a page is selected, then insert the pasted page immediately afterwards
-        if (@page) {
-            splice @{ $slist->{data} }, $page[0] + 1, 0, @clipboard;
-            @page = ( $page[0] + 1 );
-        }
-
-        # Otherwise append the page to the end
-        else {
-            push @{ $slist->{data} }, @clipboard;
-            @page = ( $#{ $slist->{data} } - $#clipboard );
-        }
-
-        $slist->renumber;
-        $slist->get_model->signal_handler_unblock(
-            $slist->{row_changed_signal} );
-
-        # Select new page, deselecting others. This fires the select callback,
-        # displaying the page
-        $slist->get_selection->unselect_all;
-        $slist->select(@page);
-
-        update_uimanager();
+    if ( not defined $clipboard ) { return }
+    my @pages = $slist->get_selected_indices;
+    if (@pages) {
+        $slist->paste_selection( $clipboard, $pages[-1], 'after' );
+    }
+    else {
+        $slist->paste_selection($clipboard);
     }
 
-    # elsif ($textview -> has_focus) {
-    #  my $clipboard = Gtk2::Clipboard->get(Gtk2::Gdk->SELECTION_CLIPBOARD);
-    #  $textbuffer->paste_clipboard ($clipboard, undef, TRUE)
-    # }
+    update_uimanager();
     return;
 }
 
@@ -4568,44 +4378,12 @@ sub delete_pages {
     # Update undo/redo buffers
     take_snapshot();
 
-    my @pages = $slist->get_selected_indices;
-    my @page  = @pages;
-    $slist->get_selection->signal_handler_block(
-        $slist->{selection_changed_signal} );
-    while (@pages) {
-        splice @{ $slist->{data} }, $pages[0], 1;
-        @pages = $slist->get_selected_indices;
-    }
-    $slist->get_selection->signal_handler_unblock(
-        $slist->{selection_changed_signal} );
-
-    # Select nearest page to last current page
-    if ( @{ $slist->{data} } and @page ) {
-
-        # Select just the first one
-        @page = ( $page[0] );
-        if ( $page[0] > $#{ $slist->{data} } ) {
-            $page[0] = $#{ $slist->{data} };
-        }
-        $slist->select(@page);
-    }
-
-    # Select nothing
-    elsif ( @{ $slist->{data} } ) {
-        $slist->select;
-    }
-
-# No pages left, and having blocked the selection_changed_signal, we've got to clear the image
-    else {
-        $view->set_pixbuf(undef);
-        for ( $scwin_buffer->get_children ) { $scwin_buffer->remove($_) }
-    }
+    $slist->delete_selection;
 
     # Reset start page in scan dialog
     reset_start();
 
     update_uimanager();
-    $slist->save_session;
     return;
 }
 
