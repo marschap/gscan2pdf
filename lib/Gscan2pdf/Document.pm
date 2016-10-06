@@ -4015,8 +4015,8 @@ sub _thread_unpaper {
                 SUFFIX => $suffix,
             );
 
-           # FIXME: need to -compress Zip from perlmagick
-           # "convert -compress Zip $slist->{data}[$pagenum][2]{filename} $in;";
+            # FIXME: need to -compress Zip from perlmagick
+            # "convert -compress Zip $self->{data}[$pagenum][2]{filename} $in;";
             $logger->debug("Converting $filename -> $in for unpaper");
             $image->Write( filename => $in );
         }
