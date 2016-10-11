@@ -2550,8 +2550,10 @@ sub _thread_import_pdf {
                     $d->get('Error extracting images from PDF') );
             }
 
+            my $html =
+              File::Temp->new( DIR => $options{dir}, SUFFIX => '.html' );
             $cmd =
-"pdftotext -bbox -f $i -l $i \"$options{info}->{path}\" text.html";
+              "pdftotext -bbox -f $i -l $i \"$options{info}->{path}\" $html";
             $logger->info($cmd);
             $cmd = "echo $PROCESS_ID > $options{pidfile};$cmd";
             ( $out, $err, $status ) = open_three($cmd);
@@ -2573,7 +2575,7 @@ sub _thread_import_pdf {
                         delete   => TRUE,
                         format   => $format{$ext},
                     );
-                    $page->import_pdftotext( slurp('text.html') );
+                    $page->import_pdftotext( slurp($html) );
                     $self->{return}->enqueue(
                         {
                             type => 'page',

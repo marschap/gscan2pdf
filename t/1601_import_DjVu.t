@@ -96,6 +96,6 @@ Gtk2->main;
 
 #########################
 
-unlink 'test.djvu', 'test.jpg', <$dir/*>;
+unlink 'test.djvu', 'text.txt', 'test.jpg', <$dir/*>;
 rmdir $dir;
 Gscan2pdf::Document->quit();
