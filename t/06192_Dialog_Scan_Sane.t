@@ -46,7 +46,7 @@ $dialog->{signal} = $dialog->signal_connect(
         );
 
         # loop to prevent us going on until setting applied.
-        # alternatively, we could have had a lot of nexting.
+        # alternatively, we could have had a lot of nesting.
         my $loop = Glib::MainLoop->new;
         my $flag = FALSE;
         $dialog->{signal} = $dialog->signal_connect(
