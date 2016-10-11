@@ -3441,6 +3441,7 @@ sub scan_dialog {
         dir                   => $session,
         'hide-on-delete'      => TRUE,
         'paper-formats'       => $SETTING{Paper},
+        'cycle-sane-handle'   => $SETTING{'cycle sane handle'},
         'allow-batch-flatbed' => $SETTING{'allow-batch-flatbed'},
         'page-number-start'   => $#{ $slist->{data} } > $EMPTY_LIST
         ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
@@ -3532,10 +3533,6 @@ sub scan_dialog {
                 $scbutton->signal_handler_disconnect($button_signal);
             }
             $shbox->hide;
-
-            if ( $SETTING{'cycle sane handle'} and $process eq 'scan_pages' ) {
-                $widget->scan_options( $SETTING{device} );
-            }
         }
     );
 
@@ -6289,7 +6286,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     }
     $vbox1->pack_start( $cbcsh, FALSE, FALSE, 0 );
 
-    # Cycle SANE handle after scan
+    # Allow batch scanning from flatbed
     my $cb_batch_flatbed =
       Gtk2::CheckButton->new_with_label(
         $d->get('Allow batch scanning from flatbed') );
@@ -6644,6 +6641,10 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
             $SETTING{'restore window'}        = $cbw->get_active;
 
             if ( defined $windows ) {
+                if ( $SETTING{frontend} eq 'libsane-perl' ) {
+                    $windows->set( 'cycle-sane-handle',
+                        $SETTING{'cycle sane handle'} );
+                }
                 $windows->set( 'allow-batch-flatbed',
                     $SETTING{'allow-batch-flatbed'} );
             }

@@ -22,6 +22,13 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, properties => [
         'Log::Log4perl::get_logger object',    # blurb
         [qw/readable writable/]                # flags
     ),
+    Glib::ParamSpec->boolean(
+        'cycle-sane-handle',                                             # name
+        'Cycle SANE handle after scan',                                  # nick
+        'In some scanners, this allows the ADF to eject the last page',  # blurb
+        FALSE,                     # default_value
+        [qw/readable writable/]    # flags
+    ),
 ];
 
 our $VERSION = '1.5.2';
@@ -436,6 +443,12 @@ sub scan {
         },
         finished_callback => sub {
             $self->signal_emit( 'finished-process', 'scan_pages' );
+
+            if ( $self->get('cycle-sane-handle') ) {
+                my $current = $self->get('current-scan-options');
+                $self->scan_options( $self->get('device') );
+                $self->set_current_scan_options($current);
+            }
         },
         new_page_callback => sub {
             my ( $status, $path, $n ) = @_;
