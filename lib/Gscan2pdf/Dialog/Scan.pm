@@ -783,7 +783,8 @@ sub _set_allow_batch_flatbed {
     }
     else {
         my $options = $self->get('available-scan-options');
-        if ( defined $options
+        if (    defined $options
+            and $options->by_name('source')
             and $options->by_name('source')->{val} =~ /flatbed/xsmi )
         {
             $self->{framen}->set_sensitive(FALSE);
@@ -799,7 +800,8 @@ sub _set_allow_batch_flatbed {
 sub _set_available_scan_options {
     my ( $self, $name, $newval ) = @_;
     $self->{$name} = $newval;
-    if ( not $self->get('allow-batch-flatbed')
+    if (    not $self->get('allow-batch-flatbed')
+        and $newval->by_name('source')
         and $newval->by_name('source')->{val} =~ /flatbed/xsmi )
     {
         if ( $self->get('num-pages') != 1 ) { $self->set( 'num-pages', 1 ) }
@@ -818,7 +820,8 @@ sub _set_num_pages {
     if (
            $newval == 1
         or $self->get('allow-batch-flatbed')
-        or ( defined $options
+        or (    defined $options
+            and $options->by_name('source')
             and $options->by_name('source')->{val} !~ /flatbed/xsmi )
       )
     {

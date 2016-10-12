@@ -6,6 +6,7 @@
   carried out on old pages.
 * Changed default compression for lineart PDFs to PNG.
 * Fixed cycle SANE handle option to reset options after reloading.
+* Fixed Perl warnings if backend offers no "source" scan option.
 * Update to Catalan translation (thanks to Davidmp)
 * Update to Slovak translation (thanks to Dušan Kazik)
 
@@ -45,7 +46,7 @@
 1.5.0 (11.06.2016):
 
 * Also import text layer when importing PDF or DjVu.
-* + option in Edit/Preference to allow/forbid batch scanning from a flatbed
+* + option in Edit/Preferences to allow/forbid batch scanning from a flatbed
 * Store date as string to avoid time zone problems
   Closes Debian bug #823626 (Date in file name off by one day when saving)
 * Show warning when importing a PDF if number of images is not equal to number
