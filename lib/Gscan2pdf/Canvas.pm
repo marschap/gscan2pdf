@@ -14,7 +14,7 @@ BEGIN {
     use Exporter ();
     our ( $VERSION, @EXPORT_OK, %EXPORT_TAGS );
 
-    $VERSION = '1.5.2';
+    $VERSION = '1.5.3';
 
     use base qw(Exporter Goo::Canvas);
     %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],

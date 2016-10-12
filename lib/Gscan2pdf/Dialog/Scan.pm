@@ -234,7 +234,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
     ),
   ];
 
-our $VERSION = '1.5.2';
+our $VERSION = '1.5.3';
 
 my ( $d, $d_sane, $logger, $tooltips );
 my $tolerance             = 1;
