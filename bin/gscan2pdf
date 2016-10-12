@@ -7050,9 +7050,9 @@ C<tar xvfz gscan2pdf-x.x.x.tar.gz
 cd gscan2pdf-x.x.x>
 
 C<perl Makefile.PL>, will create the Makefile.
-There is a C<make test>, but this is not machine-dependent, and therefore really
-just for my benefit to make sure I haven't broken the device-dependent options
-parsing routine.
+
+C<make test> should run several hundred tests to confirm that things will work
+properly on your system.
 
 You can install directly from the source with C<make install>, but building the
 appropriate package for your distribution should be as straightforward as
