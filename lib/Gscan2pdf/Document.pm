@@ -920,7 +920,7 @@ sub cut_selection {
     my ($self) = @_;
     my $data = $self->copy_selection(FALSE);
     $self->delete_selection;
-    $logger->info( "Cut ", $#{$data} + 1, " pages" );
+    $logger->info( 'Cut ', $#{$data} + 1, ' pages' );
     return $data;
 }
 
@@ -937,7 +937,7 @@ sub copy_selection {
         my $new  = $info[2]->clone($clone);
         push @data, [ $info[0], $info[1], $new ];
     }
-    if ($clone) { $logger->info( "Copied ", $#data + 1, " pages" ) }
+    if ($clone) { $logger->info( 'Copied ', $#data + 1, ' pages' ) }
     return \@data;
 }
 
@@ -984,7 +984,7 @@ sub paste_selection {
 
     $self->save_session;
 
-    $logger->info( "Pasted ", $#{$data} + 1, " pages at position $dest" );
+    $logger->info( 'Pasted ', $#{$data} + 1, " pages at position $dest" );
     return;
 }
 
