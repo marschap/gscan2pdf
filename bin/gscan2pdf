@@ -3441,14 +3441,14 @@ sub scan_dialog {
         dir                   => $session,
         'hide-on-delete'      => TRUE,
         'paper-formats'       => $SETTING{Paper},
-        'cycle-sane-handle'   => $SETTING{'cycle sane handle'},
         'allow-batch-flatbed' => $SETTING{'allow-batch-flatbed'},
         'page-number-start'   => $#{ $slist->{data} } > $EMPTY_LIST
         ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
         : 1,
     );
     if ( $SETTING{frontend} eq 'libsane-perl' ) {
-        $windows = Gscan2pdf::Dialog::Scan::Sane->new(%options);
+        $windows = Gscan2pdf::Dialog::Scan::Sane->new( %options,
+            'cycle-sane-handle' => $SETTING{'cycle sane handle'}, );
     }
     else {
         $windows = Gscan2pdf::Dialog::Scan::CLI->new(
