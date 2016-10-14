@@ -53,6 +53,6 @@ ok $dialog->{framen}->is_sensitive, 'num-page gui not ghosted';
 $dialog->set( 'allow-batch-flatbed', FALSE );
 is $dialog->get('num-pages'), 2,
   'with no source, num-pages not affected by allow-batch-flatbed';
-ok $dialog->{framen}->is_sensitive, 'with no source num-page gui not ghosted';
+ok $dialog->{framen}->is_sensitive, 'with no source, num-page gui not ghosted';
 
 __END__
