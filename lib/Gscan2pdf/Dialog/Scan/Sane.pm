@@ -391,10 +391,14 @@ sub set_option {
             if ( not $self->{setting_profile} ) {
                 $self->set( 'profile', undef );
 
-                $self->signal_emit(
-                    'changed-current-scan-options',
-                    $self->get('current-scan-options')
-                );
+                # Emit the changed-current-scan-options signal
+                # unless we are actively setting it
+                if ( not $self->{setting_current_scan_options} ) {
+                    $self->signal_emit(
+                        'changed-current-scan-options',
+                        $self->get('current-scan-options')
+                    );
+                }
             }
 
             $self->signal_emit( 'changed-scan-option', $option->{name}, $val );

@@ -627,17 +627,7 @@ sub set_option {
 
                 $self->signal_emit( 'finished-process', 'find_scan_options' );
 
-                # Unset the profile unless we are actively setting it
-                if ( not $self->{setting_profile} ) {
-                    $self->set( 'profile', undef );
-                    $self->signal_emit(
-                        'changed-current-scan-options',
-                        $self->get('current-scan-options')
-                    );
-                }
-
-                $self->signal_emit( 'changed-scan-option', $option->{name},
-                    $val );
+                $self->_set_option_flags_signals( $option->{name}, $val );
                 $self->signal_emit('reloaded-scan-options');
             }
         }
@@ -695,17 +685,7 @@ sub set_option {
                     $self->signal_emit( 'finished-process',
                         'find_scan_options' );
 
-                    # Unset the profile unless we are actively setting it
-                    if ( not $self->{setting_profile} ) {
-                        $self->set( 'profile', undef );
-                        $self->signal_emit(
-                            'changed-current-scan-options',
-                            $self->get('current-scan-options')
-                        );
-                    }
-
-                    $self->signal_emit( 'changed-scan-option', $option->{name},
-                        $val );
+                    $self->_set_option_flags_signals( $option->{name}, $val );
                     $self->signal_emit('reloaded-scan-options');
                 },
                 error_callback => sub {
@@ -719,18 +699,26 @@ sub set_option {
         }
     }
     else {
+        $self->_set_option_flags_signals( $option->{name}, $val );
+    }
+    return;
+}
 
-        # Unset the profile unless we are actively setting it
-        if ( not $self->{setting_profile} ) {
-            $self->set( 'profile', undef );
+sub _set_option_flags_signals {
+    my ( $self, $name, $val ) = @_;
+
+    # Unset the profile unless we are actively setting it
+    if ( not $self->{setting_profile} ) {
+        $self->set( 'profile', undef );
+        if ( not $self->{setting_current_scan_options} ) {
             $self->signal_emit(
                 'changed-current-scan-options',
                 $self->get('current-scan-options')
             );
         }
-
-        $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
     }
+
+    $self->signal_emit( 'changed-scan-option', $name, $val );
     return;
 }
 

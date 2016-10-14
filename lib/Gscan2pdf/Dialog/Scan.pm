@@ -1548,15 +1548,6 @@ sub set_profile {
                 $self->signal_handler_disconnect($signal);
                 $self->{setting_profile} = FALSE;
 
-                # Having set all backend options, set the frontend options
-                if ( defined $self->{profiles}{$name}{frontend} ) {
-                    for my $key ( keys %{ $self->{profiles}{$name}{frontend} } )
-                    {
-                        $self->set( $key,
-                            $self->{profiles}{$name}{frontend}{$key} );
-                    }
-                }
-
                 # set property before emitting signal to ensure callbacks
                 # receive correct value
                 $self->{profile} = $name;
@@ -1999,12 +1990,13 @@ sub update_graph {
 # Set options to profile referenced by hashref
 
 sub set_current_scan_options {
-    my ( $self, $options_arrayref ) = @_;
+    my ( $self, $profile ) = @_;
 
-    if ( not defined $options_arrayref ) { return }
+    if ( not defined $profile ) { return }
+    $self->{setting_current_scan_options} = TRUE;
 
     # First clone the profile, as otherwise it would be self-modifying
-    my $clone = dclone($options_arrayref);
+    my $clone = dclone($profile);
 
     # As scanimage and scanadf rename the geometry options,
     # we have to map them back to the original names
@@ -2085,9 +2077,18 @@ sub _set_option_profile {
         }
     }
     else {
+
+        # Having set all backend options, set the frontend options
+        if ( defined $profile->{frontend} ) {
+            for my $key ( keys %{ $profile->{frontend} } ) {
+                $self->set( $key, $profile->{frontend}{$key} );
+            }
+        }
+
         if ( not $self->{setting_profile} ) {
             $self->set( 'profile', undef );
         }
+        $self->{setting_current_scan_options} = FALSE;
         $self->signal_emit(
             'changed-current-scan-options',
             $self->get('current-scan-options')
