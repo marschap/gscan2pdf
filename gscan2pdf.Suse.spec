@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.5.3
+Version: 1.5.4
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -91,7 +91,9 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Wed Oct 12 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Fri Oct 14 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+    Closes: #840534 (#Pages scan option always defaults to '1')
   - New upstream release
   - New upstream release
     Closes: #833521 (unpaper AVStream codec deprecation warning)
