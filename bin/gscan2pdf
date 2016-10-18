@@ -4358,10 +4358,10 @@ sub paste_selection {
     if ( not defined $clipboard ) { return }
     my @pages = $slist->get_selected_indices;
     if (@pages) {
-        $slist->paste_selection( $clipboard, $pages[-1], 'after' );
+        $slist->paste_selection( $clipboard, $pages[-1], 'after', TRUE );
     }
     else {
-        $slist->paste_selection($clipboard);
+        $slist->paste_selection( $clipboard, undef, undef, TRUE );
     }
 
     update_uimanager();

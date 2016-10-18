@@ -906,8 +906,11 @@ sub drag_data_received_callback {
     my $delete =
       $context->action == 'move';    ## no critic (ProhibitMismatchedOperators)
 
-    my @rows = $tree->get_selection->get_selected_rows or return;
+    my @rows = $tree->get_selected_indices or return;
     my $data = $tree->copy_selection( not $delete );
+
+    # pasting without updating the selection
+    # in order not to defeat the finish() call below.
     $tree->paste_selection( $data, $path, $how );
 
     $context->finish( 1, $delete, time );
@@ -920,7 +923,6 @@ sub cut_selection {
     my ($self) = @_;
     my $data = $self->copy_selection(FALSE);
     $self->delete_selection;
-    $logger->info( 'Cut ', $#{$data} + 1, ' pages' );
     return $data;
 }
 
@@ -937,14 +939,15 @@ sub copy_selection {
         my $new  = $info[2]->clone($clone);
         push @data, [ $info[0], $info[1], $new ];
     }
-    if ($clone) { $logger->info( 'Copied ', $#data + 1, ' pages' ) }
+    $logger->info( 'Copied ', $clone ? 'and cloned ' : $EMPTY,
+        $#data + 1, ' pages' );
     return \@data;
 }
 
 # Paste the selection
 
 sub paste_selection {
-    my ( $self, $data, $path, $how ) = @_;
+    my ( $self, $data, $path, $how, $select_new_pages ) = @_;
 
     # Block row-changed signal so that the list can be updated before the sort
     # takes over.
@@ -954,11 +957,11 @@ sub paste_selection {
 
     my $dest;
     if ( defined $path ) {
-        $dest = $path;
         if ( $how eq 'after' or $how eq 'into-or-after' ) {
-            $dest = $path + 1;
+            $path++;
         }
-        splice @{ $self->{data} }, $path + 1, 0, @{$data};
+        splice @{ $self->{data} }, $path, 0, @{$data};
+        $dest = $path;
     }
     else {
         $dest = $#{ $self->{data} } + 1;
@@ -971,12 +974,14 @@ sub paste_selection {
         $self->get_model->get_iter_first );
 
     # Select the new pages
-    my @selection;
-    for ( $dest .. $dest + $#{$data} ) {
-        push @selection, $_;
+    if ($select_new_pages) {
+        my @selection;
+        for ( $dest .. $dest + $#{$data} ) {
+            push @selection, $_;
+        }
+        $self->get_selection->unselect_all;
+        $self->select(@selection);
     }
-    $self->get_selection->unselect_all;
-    $self->select(@selection);
 
     if ( defined $self->{row_changed_signal} ) {
         $self->get_model->signal_handler_unblock( $self->{row_changed_signal} );
@@ -993,8 +998,9 @@ sub paste_selection {
 sub delete_selection {
     my ($self) = @_;
 
-    my @pages = $self->get_selected_indices;
-    my @page  = @pages;
+    my @pages  = $self->get_selected_indices;
+    my @page   = @pages;
+    my $npages = $#pages + 1;
     if ( defined $self->{selection_changed_signal} ) {
         $self->get_selection->signal_handler_block(
             $self->{selection_changed_signal} );
@@ -1031,6 +1037,7 @@ sub delete_selection {
     }
 
     $self->save_session;
+    $logger->info("Deleted $npages pages");
     return;
 }
 
