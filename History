@@ -1,3 +1,10 @@
+1.5.5 (14.11.2016):
+
+* Work around bug in imagemagick causing the image depth not to be respected.
+  Closes bug #231 (Saving PDF corrupts 1-bpp images imported from a PDF)
+  Thanks to Petr Písař for the patch.
+
+
 1.5.4 (14.10.2016):
 
 * Fixed cycle SANE handle error when using frontend other than libsane-perl.
