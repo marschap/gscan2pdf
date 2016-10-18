@@ -360,7 +360,7 @@ $window->signal_connect_after(
             $Gtk2::Gdk::Keysyms{Delete} )    ## no critic (ProhibitPackageVars)
           ;
 
-        $slist->delete_pages;
+        delete_selection();
         return TRUE;
     }
 );
@@ -724,7 +724,7 @@ sub create_menu_bar {
         [
             'Delete',                         'gtk-delete',
             $d->get('_Delete'),               undef,
-            $d->get('Delete selected pages'), \&delete_pages
+            $d->get('Delete selected pages'), \&delete_selection
         ],
         [
             'Renumber',                'gtk-sort-ascending',
@@ -4370,7 +4370,7 @@ sub paste_selection {
 
 # Delete the selected scans
 
-sub delete_pages {
+sub delete_selection {
 
     # Update undo/redo buffers
     take_snapshot();

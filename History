@@ -3,6 +3,7 @@
 * Work around bug in imagemagick causing the image depth not to be respected.
   Closes bug #231 (Saving PDF corrupts 1-bpp images imported from a PDF)
   Thanks to Petr Písař for the patch.
+* Fix deleting pages by selecting thumbnails and hitting delete key.
 
 
 1.5.4 (14.10.2016):
