@@ -130,7 +130,7 @@ is_deeply(
     ),
     {
         ModDate      => "D:20160201000000+00'00'",
-        Creator      => 'gscan2pdf v1.5.3',
+        Creator      => "gscan2pdf v$Gscan2pdf::Document::VERSION",
         Author       => 'a.n.other',
         Title        => 'title',
         Subject      => 'subject',
