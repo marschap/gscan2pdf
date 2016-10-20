@@ -146,21 +146,7 @@ sub new {
         }
     );
 
-    $self->signal_connect(
-        'drag-data-delete' => sub {
-            my ( $tree, $context ) = @_;
-            my $model = $tree->get_model;
-            my @data  = $tree->get_selection->get_selected_rows;
-
-            for ( reverse @data ) {
-                my $iter = $model->get_iter($_);
-                my $info = $model->get( $iter, 0 );
-                $model->remove($iter);
-            }
-
-            $tree->get_selection->unselect_all;
-        }
-    );
+    $self->signal_connect( 'drag-data-delete' => \&delete_selection );
 
     $self->signal_connect(
         'drag-data-received' => \&drag_data_received_callback );
@@ -922,7 +908,7 @@ sub drag_data_received_callback {
 sub cut_selection {
     my ($self) = @_;
     my $data = $self->copy_selection(FALSE);
-    $self->delete_selection;
+    $self->delete_selection_extra;
     return $data;
 }
 
@@ -997,18 +983,25 @@ sub paste_selection {
 
 sub delete_selection {
     my ($self) = @_;
+    my $model  = $self->get_model;
+    my @rows   = $self->get_selection->get_selected_rows;
+    for ( reverse @rows ) {
+        my $iter = $model->get_iter($_);
+        $model->remove($iter);
+    }
+    return;
+}
 
-    my @pages  = $self->get_selected_indices;
-    my @page   = @pages;
-    my $npages = $#pages + 1;
+sub delete_selection_extra {
+    my ($self) = @_;
+
+    my @page   = $self->get_selected_indices;
+    my $npages = $#page + 1;
     if ( defined $self->{selection_changed_signal} ) {
         $self->get_selection->signal_handler_block(
             $self->{selection_changed_signal} );
     }
-    while (@pages) {
-        splice @{ $self->{data} }, $pages[0], 1;
-        @pages = $self->get_selected_indices;
-    }
+    $self->delete_selection;
     if ( defined $self->{selection_changed_signal} ) {
         $self->get_selection->signal_handler_unblock(
             $self->{selection_changed_signal} );

@@ -4375,7 +4375,7 @@ sub delete_selection {
     # Update undo/redo buffers
     take_snapshot();
 
-    $slist->delete_selection;
+    $slist->delete_selection_extra;
 
     # Reset start page in scan dialog
     reset_start();
