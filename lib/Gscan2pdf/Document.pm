@@ -2410,7 +2410,15 @@ sub _thread_import_file {
                         format     => 'Tagged Image File Format',
                         resolution => $options{info}->{ppi}[ $i - 1 ],
                     );
-                    $page->import_djvutext( slurp($txt) );
+                    try {
+                        $page->import_djvutext( slurp($txt) );
+                    }
+                    catch {
+                        $logger->error(
+                            "Caught error parsing DjVU text layer: $_");
+                        _thread_throw_error( $self, $options{uuid},
+                            'Error: parsing DjVU text layer' );
+                    };
                     $self->{return}->enqueue(
                         {
                             type => 'page',
