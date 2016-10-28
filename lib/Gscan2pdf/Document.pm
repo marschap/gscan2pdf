@@ -50,6 +50,8 @@ Readonly my $INFINITE                     => -1;
 Readonly my $NOT_FOUND                    => -1;
 Readonly my $MONTHS_PER_YEAR              => 12;
 Readonly my $DAYS_PER_MONTH               => 31;
+Readonly my $ID_URI                       => 0;
+Readonly my $ID_PAGE                      => 1;
 
 BEGIN {
     use Exporter ();
@@ -130,14 +132,17 @@ sub new {
     my $target_entry = {
         target => 'Glib::Scalar',    # some string representing the drag type
         flags  => 'same-widget',     # Gtk2::TargetFlags
-        info   => 1,                 # some app-defined integer identifier
+        info   => $ID_PAGE,          # some app-defined integer identifier
     };
     $self->drag_source_set( 'button1-mask', [ 'copy', 'move' ], $target_entry );
     $self->drag_dest_set(
-        [ 'motion', 'highlight' ],
-        [ 'copy',   'move' ],
-        $target_entry
+        [ 'drop', 'motion', 'highlight' ],
+        [ 'copy', 'move' ],
     );
+    my $target_list = Gtk2::TargetList->new();
+    $target_list->add_uri_targets($ID_URI);
+    $target_list->add_table($target_entry);
+    $self->drag_dest_set_target_list($target_list);
 
     $self->signal_connect(
         'drag-data-get' => sub {
@@ -885,21 +890,51 @@ sub get_pixbuf {
     return $pixbuf;
 }
 
-sub drag_data_received_callback {
-    my ( $tree, $context, $x, $y ) = @_;
-    my ( $path, $how ) = $tree->get_dest_row_at_pos( $x, $y );
-    if ( defined $path ) { $path = $path->to_string }
-    my $delete =
-      $context->action == 'move';    ## no critic (ProhibitMismatchedOperators)
+sub drag_data_received_callback {    ## no critic (ProhibitManyArgs)
+    my ( $tree, $context, $x, $y, $data, $info, $time ) = @_;
 
-    my @rows = $tree->get_selected_indices or return;
-    my $data = $tree->copy_selection( not $delete );
+    if ( $info == $ID_URI ) {
+        my @uris = $data->get_uris;
+        for (@uris) {
+            s{^file://}{}gxsm;
+        }
+        $tree->import_files( paths => \@uris );
+        $context->drag_drop_succeeded;
+    }
+    elsif ( $info == $ID_PAGE ) {
+        my ( $path, $how ) = $tree->get_drag_dest_row;
+        if ( defined $path ) { $path = $path->to_string }
+        my $delete =
+          $context->action == 'move'; ## no critic (ProhibitMismatchedOperators)
 
-    # pasting without updating the selection
-    # in order not to defeat the finish() call below.
-    $tree->paste_selection( $data, $path, $how );
+        # This callback is fired twice, seemingly once for the drop flag,
+        # and once for the copy flag. If the drop flag is disabled, the URI
+        # drop does not work. If the copy flag is disabled, the drag-with-copy
+        # does not work. Therefore if copying, create a hash of the drop times
+        # and ignore the second drop.
+        if ( not $delete ) {
+            if ( defined $tree->{drops}{$time} ) {
+                delete $tree->{drops};
+                $context->finish( 1, $delete, $time );
+                return;
+            }
+            else {
+                $tree->{drops}{$time} = 1;
+            }
+        }
 
-    $context->finish( 1, $delete, time );
+        my @rows = $tree->get_selected_indices or return;
+        my $selection = $tree->copy_selection( not $delete );
+
+        # pasting without updating the selection
+        # in order not to defeat the finish() call below.
+        $tree->paste_selection( $selection, $path, $how );
+
+        $context->finish( 1, $delete, $time );
+    }
+    else {
+        $context->abort;
+    }
     return;
 }
 

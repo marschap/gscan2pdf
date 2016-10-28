@@ -1,7 +1,6 @@
 use warnings;
 use strict;
-use File::Basename;    # Split filename into dir, file, ext
-use Test::More tests => 6;
+use Test::More tests => 8;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gscan2pdf::Document;
 
@@ -43,7 +42,8 @@ $slist->import_files(
         is_deeply( \@rows, [1], 'pasted page selected' );
 
         $clipboard = $slist->cut_selection;
-        is( $#{$clipboard}, 0, 'cut 1 page to clipboard' );
+        is( $#{$clipboard},       0, 'cut 1 page to clipboard' );
+        is( $#{ $slist->{data} }, 0, '1 page left in list' );
 
         $slist->paste_selection( $clipboard, '0', 'before' )
           ;    # paste page before 1
@@ -52,6 +52,14 @@ $slist->import_files(
             $clipboard->[0][2]{uuid},
             'cut page pasted at page 1'
         );
+        @rows = $slist->get_selected_indices;
+        is_deeply( \@rows, [1],
+            'pasted page not selected, as parameter not TRUE' );
+
+        # TODO/FIXME: test drag-and-drop callbacks for move
+
+        # TODO/FIXME: test drag-and-drop callbacks for copy
+
         Gtk2->main_quit;
     }
 );
