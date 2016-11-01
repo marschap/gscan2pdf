@@ -28,6 +28,7 @@ use Archive::Tar;                    # For session files
 use Proc::Killfam;
 use Locale::gettext 1.05;            # For translations
 use IPC::Open3 'open3';
+use IPC::Run3 ();
 use Symbol;                          # for gensym
 use Try::Tiny;
 use Set::IntSpan 1.10;               # For size method for page numbering issues
@@ -3412,17 +3413,38 @@ sub _thread_rotate {
     return;
 }
 
+sub _exec_command {
+    my ($pidfile, $command) = @_;
+
+    open(my $fh, '>', $pidfile) or return -1;
+    $fh->print($PROCESS_ID);
+    close($fh) or return -1;
+
+    $logger->info(join(' ', @$command));
+    IPC::Run3::run3($command, undef, undef, undef,
+        { return_if_system_error => 1 });
+    if ($? == 0) {
+        return 0;
+    }
+
+    if ($? == -1) {
+        $logger->info("Could not execute the command: $!");
+    } elsif ($? & 127) {
+        $logger->info("Command died with signal " . ($? & 127));
+    } else {
+        $logger->info("Command failed with exit code " . ($? >> 8));
+    }
+    return -1;
+}
+
 sub _thread_save_image {
     my ( $self, $path, $list_of_pages, $pidfile, $uuid ) = @_;
 
-    # Escape quotes and spaces
-    $path =~ s/(['" ])/\\$1/gxsm;
-
     if ( @{$list_of_pages} == 1 ) {
-        my $cmd =
-"convert $list_of_pages->[0]{filename} -density $list_of_pages->[0]{resolution} $path";
-        $logger->info($cmd);
-        my $status = system "echo $PROCESS_ID > $pidfile;$cmd";
+        my $status = _exec_command($pidfile,
+            ['convert', $list_of_pages->[0]{filename}, '-density',
+                $list_of_pages->[0]{resolution}, $path]
+        );
         return if $_self->{cancel};
         if ($status) {
             _thread_throw_error( $self, $uuid, $d->get('Error saving image') );
@@ -3433,10 +3455,10 @@ sub _thread_save_image {
         my $i = 1;
         for ( @{$list_of_pages} ) {
             $current_filename = sprintf $path, $i++;
-            my $cmd = sprintf 'convert %s -density %d %s',
-              $_->{filename}, $_->{resolution},
-              $current_filename;
-            my $status = system "echo $PROCESS_ID > $pidfile;$cmd";
+            my $status = _exec_command($pidfile,
+                ['convert',  $_->{filename}, '-density', $_->{resolution},
+                    $current_filename]
+            );
             return if $_self->{cancel};
             if ($status) {
                 _thread_throw_error( $self, $uuid,

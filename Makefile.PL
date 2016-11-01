@@ -49,6 +49,7 @@ WriteMakefile(
         Gtk2::Ex::Simple::List => 0,
         Gtk2::ImageView        => 0,
         Image::Magick          => 0,
+        IPC::Run3              => 0,
         Locale::gettext        => 1.05,
         Config::General        => 2.40,
         PDF::API2              => 0,
