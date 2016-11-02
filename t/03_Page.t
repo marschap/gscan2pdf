@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 21;
+use Test::More tests => 22;
 
 BEGIN {
     use_ok('Gscan2pdf::Page');
@@ -510,6 +510,36 @@ $page->import_djvutext($djvu);
 my @expected = split "\n", $expected;
 my @output   = split "\n", $page->{hocr};
 is_deeply( \@output, \@expected, 'import_djvutext() basic functionality' );
+
+#########################
+
+$djvu = <<'EOS';
+(page 0 0 2480 3507
+  (word 157 3030 241 3095 "("))
+EOS
+
+$expected = <<'EOS';
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name='ocr-system' content='gscan2pdf 1.4.0' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
+ </head>
+ <body>
+  <div class='ocr_page' title="bbox 0 0 2480 3507">
+   <span class='ocr_word' title="bbox 157 412 241 477">(</span>
+  </div>
+ </body>
+</html>
+EOS
+
+$page->import_djvutext($djvu);
+@expected = split "\n", $expected;
+@output   = split "\n", $page->{hocr};
+is_deeply( \@output, \@expected, 'import_djvutext() with quoted brackets' );
 
 #########################
 

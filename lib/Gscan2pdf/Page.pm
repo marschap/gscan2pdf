@@ -526,7 +526,10 @@ sub _djvu2boxes {
     my ( $text, $h ) = @_;
     my @boxes;
     while ( defined $text and $text !~ /\A\s*\z/xsm ) {
-        my @result = extract_bracketed( $text, '()' );
+        my @result = extract_bracketed( $text, '(")' );
+        if ( not defined $result[0] ) {
+            croak "Error parsing brackets in $text";
+        }
         if ( $result[0] =~
             /^\s*[(](\w+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(.*)[)]$/xsm )
         {
