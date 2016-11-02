@@ -32,11 +32,11 @@ use Symbol;                          # for gensym
 use Try::Tiny;
 use Set::IntSpan 1.10;               # For size method for page numbering issues
 use PDF::API2;
-use Encode qw(encode);
 use English qw( -no_match_vars );    # for $PROCESS_ID, $INPUT_RECORD_SEPARATOR
                                      # $CHILD_ERROR
 use POSIX qw(:sys_wait_h);
 use Data::UUID;
+use Date::Calc qw(Add_Delta_Days Today);
 use Readonly;
 Readonly our $POINTS_PER_INCH             => 72;
 Readonly my $STRING_FORMAT                => 8;
@@ -1838,22 +1838,9 @@ sub timestamp {
     return sprintf '%04d%02d%02d%02d%02d%02d', reverse @time[ 0 .. $YEAR ];
 }
 
-sub seconds_to_date {
-    my ($seconds) = @_;
-    my ( $day, $month, $year, $hour, $min, $sec ) =
-      ( localtime $seconds )
-      [ 3, 4, 5, 2, 1, 0 ]    ## no critic (ProhibitMagicNumbers)
-      ;
-    $year  += 1900;           ## no critic (ProhibitMagicNumbers)
-    $month += 1;
-    return $year, $month, $day, $hour, $min, $sec;
-}
-
 sub text_to_date {
-    my ( $text, $time ) = @_;
-    if ( not defined $time ) { $time = time }
+    my ( $text, $thisyear, $thismonth, $thisday ) = @_;
     my ( $year, $month, $day );
-    my ( $thisyear, $thismonth, $thisday ) = seconds_to_date($time);
     if ( $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
         ( $year, $month, $day ) = ( $1, $2, $3 );
     }
@@ -1868,12 +1855,11 @@ sub text_to_date {
 }
 
 sub expand_metadata_pattern {
-    my ( $template, $docdate, $time, $author, $title ) = @_;
-    my ( $dyear, $dmonth, $dday ) = text_to_date( $docdate, $time );
-    my ( $tyear, $tmonth, $tday, $thour, $tmin, $tsec ) =
-      seconds_to_date($time);
+    my ( $template, $author, $title, $docdate, @today_and_now ) = @_;
+    my ( $dyear, $dmonth, $dday ) = text_to_date( $docdate, @today_and_now );
+    my ( $tyear, $tmonth, $tday, $thour, $tmin, $tsec ) = @today_and_now;
     for ( ( $dmonth, $dday, $tmonth, $tday, $thour, $tmin, $tsec ) ) {
-        $_ = sprintf '%02d', $_;
+        if (defined) { $_ = sprintf '%02d', $_ }
     }
 
     $template =~ s/%a/$author/gsm;
@@ -1904,11 +1890,10 @@ sub prepare_output_metadata {
           ? "D:%4i%02i%02i000000+00'00'"
           : '%4i-%02i-%02i 00:00:00+00:00';
         my ( $year, $month, $day ) =
-          text_to_date( $metadata->{'document date'} );
-        $h{CreationDate} =
-          encode( 'ASCII', sprintf $dateformat, $year, $month, $day );
-        $h{ModDate} = $h{CreationDate};
-        $h{Creator} = "gscan2pdf v$Gscan2pdf::Document::VERSION";
+          Add_Delta_Days( Today(), $metadata->{'date offset'} );
+        $h{CreationDate} = sprintf $dateformat, $year, $month, $day;
+        $h{ModDate}      = $h{CreationDate};
+        $h{Creator}      = "gscan2pdf v$Gscan2pdf::Document::VERSION";
         if ( $type eq 'DjVu' ) { $h{Producer} = 'djvulibre' }
         for my $key (qw/author title subject keywords/) {
             if ( defined $metadata->{$key} ) {

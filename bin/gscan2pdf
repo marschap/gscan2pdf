@@ -83,6 +83,7 @@ use English qw( -no_match_vars )
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Locale::gettext 1.05;    # For translations
+use Date::Calc qw(Delta_Days Add_Delta_Days Today Today_and_Now);
 
 use Readonly;
 Readonly my $BORDER_WIDTH            => 6;               # Window parameters
@@ -1938,7 +1939,12 @@ sub add_metadata_dialog {
 
     my $entryd =
       Gtk2::Entry->new_with_max_length(10);  ## no critic (ProhibitMagicNumbers)
-    $entryd->set_text( $SETTING{'document date'} );
+    $entryd->set_text(
+        Gscan2pdf::Document::expand_metadata_pattern(
+            '%Y-%M-%D', undef, undef, undef,
+            Add_Delta_Days( Today(), $SETTING{'date offset'} )
+        )
+    );
     $entryd->set_activates_default(TRUE);
     $tooltips->set_tip( $entryd, $d->get('Year-Month-Day') );
     $entryd->set_alignment(1.);              # Right justify
@@ -2003,8 +2009,7 @@ sub add_metadata_dialog {
             my $today = Gtk2::Button->new( $d->get('Today') );
             $today->signal_connect(
                 clicked => sub {
-                    ( $year, $month, $day ) =
-                      Gscan2pdf::Document::seconds_to_date(time);
+                    ( $year, $month, $day ) = Today();
 
                     # block and unblock signal, and update entry manually
                     # to remove possibility of race conditions
@@ -2111,7 +2116,9 @@ sub update_metadata_settings {
 
     # the focus-out event validates a new document date before the save button
     # is pressed, so we can simply take the contents of the field
-    $SETTING{'document date'} = $entryd->get_text;
+    $SETTING{'date offset'} =
+      Delta_Days( Today(),
+        Gscan2pdf::Document::text_to_date( $entryd->get_text ) );
 
     return;
 }
@@ -2660,9 +2667,8 @@ sub save_button_clicked_callback {
 
                 my $filename = Gscan2pdf::Document::expand_metadata_pattern(
                     $SETTING{'default filename'},
-                    $SETTING{'document date'},
-                    time, $SETTING{author}, $SETTING{title}
-                );
+                    $SETTING{author},
+                    $SETTING{title}, $entryd->get_text, Today_and_Now() );
 
                # avoid leading and trailing blanks in expanded filename template
                 $filename =~ s/^\s*(.*?)\s*$/$1/xsm;
@@ -2708,9 +2714,8 @@ sub save_button_clicked_callback {
 
             my $filename = Gscan2pdf::Document::expand_metadata_pattern(
                 $SETTING{'default filename'},
-                $SETTING{'document date'},
-                time, $SETTING{author}, $SETTING{title}
-            );
+                $SETTING{author},
+                $SETTING{title}, $entryd->get_text, Today_and_Now() );
 
             # avoid leading and trailing blanks in expanded filename template
             $filename =~ s/^\s*(.*?)\s*$/$1/xsm;

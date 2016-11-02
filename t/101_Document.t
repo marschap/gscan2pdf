@@ -3,6 +3,7 @@ use strict;
 use Test::More tests => 28;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
+use Date::Calc qw(Today);
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
@@ -109,7 +110,7 @@ is_deeply( \@date, [ 2016, '02', '01' ], 'text_to_date' );
 is(
     Gscan2pdf::Document::expand_metadata_pattern(
         '%a %t %y %Y %m %M %d %D %H %I %S',
-        '2016-02-01', 999999, 'a.n.other', 'title'
+        'a.n.other', 'title', '2016-02-01', 1970, 01, 12, 14, 46, 39,
     ),
     'a.n.other title 2016 1970 02 01 01 12 14 46 39',
     'expand_metadata_pattern'
@@ -117,25 +118,26 @@ is(
 
 #########################
 
+my $date_string = sprintf "D:%d%02d%02d000000+00'00'", Today();
 is_deeply(
     Gscan2pdf::Document::prepare_output_metadata(
         'PDF',
         {
-            'document date' => '2016-02-01',
-            author          => 'a.n.other',
-            title           => 'title',
-            'subject'       => 'subject',
-            'keywords'      => 'keywords'
+            'date offset' => 0,
+            author        => 'a.n.other',
+            title         => 'title',
+            'subject'     => 'subject',
+            'keywords'    => 'keywords'
         }
     ),
     {
-        ModDate      => "D:20160201000000+00'00'",
+        ModDate      => $date_string,
         Creator      => "gscan2pdf v$Gscan2pdf::Document::VERSION",
         Author       => 'a.n.other',
         Title        => 'title',
         Subject      => 'subject',
         Keywords     => 'keywords',
-        CreationDate => "D:20160201000000+00'00'"
+        CreationDate => $date_string
     },
     'prepare_output_metadata'
 );

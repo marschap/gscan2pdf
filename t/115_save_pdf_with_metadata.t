@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Encode qw(decode);
+use Date::Calc qw(Today Delta_Days);
 use Test::More tests => 3;
 
 BEGIN {
@@ -27,8 +27,8 @@ $slist->set_dir($dir);
 my $metadata = Gscan2pdf::Document::prepare_output_metadata(
     'PDF',
     {
-        'document date' => decode( 'utf8', '2016-02-10' ),
-        title           => 'metadata title',
+        'date offset' => Delta_Days( Today(), 2016, 2, 10 ),
+        title         => 'metadata title',
     }
 );
 $slist->import_files(

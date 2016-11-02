@@ -5,6 +5,8 @@
   delivers URIs). Closes Launchpad (Ubuntu) bug #515854:
   (Drag and drop PDF from Nautilus should import PDF)
 * + support for brackets in imported djvu hidden layer
+* Store document date as offset (reverted code introduced in v1.3.9)
+  Closes Debian bug #842239 (Arbitrary document metadata date chosen)
 
 
 1.5.5 (23.10.2016):

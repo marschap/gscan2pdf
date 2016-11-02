@@ -112,12 +112,6 @@ sub read_config {
         $conf    = JSON::PP->new->ascii;
         $conf    = $conf->pretty->allow_nonref;
         %SETTING = %{ $conf->decode($config) };
-        if ( version->parse($version) < version->parse('1.4.1')
-            and defined $SETTING{'document date'} )
-        {
-            $SETTING{'document date'} = sprintf '%04d-%02d-%02d',
-              Gscan2pdf::Document::seconds_to_date( $SETTING{'document date'} );
-        }
     }
 
     if ( defined $SETTING{user_defined_tools}
@@ -168,17 +162,16 @@ sub add_defaults {
         'unsharp threshold' => 0.05,
         'cache options'     => TRUE,
         'restore window'    => TRUE,
-        'document date'     => sprintf( '%04d-%02d-%02d',
-            Gscan2pdf::Document::seconds_to_date(time) ),
-        'pdf compression'  => 'auto',
-        'quality'          => 75,
-        'unpaper on scan'  => FALSE,
-        'OCR on scan'      => TRUE,
-        'frontend'         => 'libsane-perl',
-        'rotate facing'    => 0,
-        'rotate reverse'   => 0,
-        'default filename' => '%a %y-%m-%d',
-        'scan prefix'      => $EMPTY,
+        'date offset'       => 0,
+        'pdf compression'   => 'auto',
+        'quality'           => 75,
+        'unpaper on scan'   => FALSE,
+        'OCR on scan'       => TRUE,
+        'frontend'          => 'libsane-perl',
+        'rotate facing'     => 0,
+        'rotate reverse'    => 0,
+        'default filename'  => '%a %y-%m-%d',
+        'scan prefix'       => $EMPTY,
         'Blank threshold' => 0.005,    # Blank page standard deviation threshold
         'Dark threshold'  => 0.12,     # Dark page mean threshold
         'ocr engine' => 'tesseract',
