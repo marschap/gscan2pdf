@@ -7,6 +7,9 @@
 * + support for brackets in imported djvu hidden layer
 * Store document date as offset (reverted code introduced in v1.3.9)
   Closes Debian bug #842239 (Arbitrary document metadata date chosen)
+* Support ampersand (&) in filenames whilst saving images
+  Closes bug #233 (Shell command injection when saving to an image format)
+  Thanks to Petr Písař for the patch.
 
 
 1.5.5 (23.10.2016):

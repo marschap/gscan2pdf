@@ -24,12 +24,12 @@ use File::Temp;        # To create temporary files
 use File::Basename;    # Split filename into dir, file, ext
 use File::Copy;
 use Storable qw(store retrieve);
-use Archive::Tar;                    # For session files
+use Archive::Tar;            # For session files
 use Proc::Killfam;
-use Locale::gettext 1.05;            # For translations
+use Locale::gettext 1.05;    # For translations
 use IPC::Open3 'open3';
 use IPC::Run3 ();
-use Symbol;                          # for gensym
+use Symbol;                  # for gensym
 use Try::Tiny;
 use Set::IntSpan 1.10;               # For size method for page numbering issues
 use PDF::API2;
@@ -49,6 +49,8 @@ Readonly my $BITS_PER_BYTE                => 8;
 Readonly my $ALL_PENDING_ZOMBIE_PROCESSES => -1;
 Readonly my $INFINITE                     => -1;
 Readonly my $NOT_FOUND                    => -1;
+Readonly my $PROCESS_FAILED               => -1;
+Readonly my $SIGNAL_MASK                  => 127;
 Readonly my $MONTHS_PER_YEAR              => 12;
 Readonly my $DAYS_PER_MONTH               => 31;
 Readonly my $ID_URI                       => 0;
@@ -3414,36 +3416,42 @@ sub _thread_rotate {
 }
 
 sub _exec_command {
-    my ($pidfile, $command) = @_;
+    my ( $pidfile, $command ) = @_;
 
-    open(my $fh, '>', $pidfile) or return -1;
+    open my $fh, '>', $pidfile or return $PROCESS_FAILED;
     $fh->print($PROCESS_ID);
-    close($fh) or return -1;
+    close $fh or return $PROCESS_FAILED;
 
-    $logger->info(join(' ', @$command));
-    IPC::Run3::run3($command, undef, undef, undef,
-        { return_if_system_error => 1 });
-    if ($? == 0) {
-        return 0;
-    }
+    $logger->info( join $SPACE, @{$command} );
+    IPC::Run3::run3( $command, undef, undef, undef,
+        { return_if_system_error => 1 } );
+    if ( $CHILD_ERROR == 0 ) { return 0 }
 
-    if ($? == -1) {
-        $logger->info("Could not execute the command: $!");
-    } elsif ($? & 127) {
-        $logger->info("Command died with signal " . ($? & 127));
-    } else {
-        $logger->info("Command failed with exit code " . ($? >> 8));
+    if ( $CHILD_ERROR == $PROCESS_FAILED ) {
+        $logger->info("Could not execute the command: $ERRNO");
     }
-    return -1;
+    elsif ( $CHILD_ERROR & $SIGNAL_MASK ) {
+        $logger->info(
+            'Command died with signal ' . ( $CHILD_ERROR & $SIGNAL_MASK ) );
+    }
+    else {
+        $logger->info( 'Command failed with exit code '
+              . ( $CHILD_ERROR >> $BITS_PER_BYTE ) );
+    }
+    return $PROCESS_FAILED;
 }
 
 sub _thread_save_image {
     my ( $self, $path, $list_of_pages, $pidfile, $uuid ) = @_;
 
     if ( @{$list_of_pages} == 1 ) {
-        my $status = _exec_command($pidfile,
-            ['convert', $list_of_pages->[0]{filename}, '-density',
-                $list_of_pages->[0]{resolution}, $path]
+        my $status = _exec_command(
+            $pidfile,
+            [
+                'convert',  $list_of_pages->[0]{filename},
+                '-density', $list_of_pages->[0]{resolution},
+                $path
+            ]
         );
         return if $_self->{cancel};
         if ($status) {
@@ -3455,9 +3463,13 @@ sub _thread_save_image {
         my $i = 1;
         for ( @{$list_of_pages} ) {
             $current_filename = sprintf $path, $i++;
-            my $status = _exec_command($pidfile,
-                ['convert',  $_->{filename}, '-density', $_->{resolution},
-                    $current_filename]
+            my $status = _exec_command(
+                $pidfile,
+                [
+                    'convert',  $_->{filename},
+                    '-density', $_->{resolution},
+                    $current_filename
+                ]
             );
             return if $_self->{cancel};
             if ($status) {
