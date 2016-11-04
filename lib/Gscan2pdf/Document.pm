@@ -1862,7 +1862,7 @@ sub timestamp {
 sub text_to_date {
     my ( $text, $thisyear, $thismonth, $thisday ) = @_;
     my ( $year, $month, $day );
-    if ( $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
+    if ( defined $text and $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
         ( $year, $month, $day ) = ( $1, $2, $3 );
     }
     if ( not defined $year ) { $year = $thisyear }
