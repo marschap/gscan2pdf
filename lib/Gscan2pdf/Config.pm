@@ -74,7 +74,9 @@ sub read_config {
     my ( $filename, $logger ) = @_;
     my ( %SETTING, $conf );
     $logger->info("Reading config from $filename");
-    if ( not -r $filename ) { system "touch $filename" }
+    if ( not -r $filename ) {
+        Gscan2pdf::Document::exec_command( [ 'touch', $filename ] );
+    }
 
     if ( not defined $d ) {
         $d = Locale::gettext->domain(Glib::get_application_name);

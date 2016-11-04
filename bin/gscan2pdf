@@ -2434,8 +2434,8 @@ sub save_dialog {
     $label = Gtk2::Label->new( $d->get('Font for non-ASCII text') );
     $hboxf->pack_start( $label, FALSE, FALSE, 0 );
     my @fonts;
-    my ($stdout) =
-      Gscan2pdf::Document::open_three('fc-list : family style file');
+    my ( undef, $stdout ) =
+      Gscan2pdf::Document::exec_command( ['fc-list : family style file'] );
 
     for ( split /\n/sm, $stdout ) {
         if (/ttf:[ ]/xsm) {
@@ -3226,7 +3226,7 @@ sub save_hocr {
     return;
 }
 
-sub mua_string {
+sub mua {
     my ( $parent, $attachment ) = @_;
 
     # Check for thunderbird
@@ -3234,8 +3234,10 @@ sub mua_string {
     if ( defined $ENV{KDE_FULL_SESSION}
         and $ENV{KDE_FULL_SESSION} eq 'true' )
     {
-        ($client) = Gscan2pdf::Document::open_three(
+        ( undef, $client ) = Gscan2pdf::Document::exec_command(
+            [
 "kreadconfig --file emaildefaults --group PROFILE_Default --key EmailClient| cut -d ' ' -f 1"
+            ]
         );
     }
     elsif (
@@ -3267,8 +3269,10 @@ sub mua_string {
             }
         }
 
-        ($client) = Gscan2pdf::Document::open_three(
+        ( undef, $client ) = Gscan2pdf::Document::exec_command(
+            [
 "$gconftool --get /desktop/gnome/url-handlers/mailto/command | cut -d ' ' -f 1"
+            ]
         );
     }
     else {
@@ -3283,11 +3287,10 @@ sub mua_string {
         return;
     }
 
-    my $mua_string;
     if ( $client =~ /(thunderbird|icedove)/smx ) {
-        return "$1 -compose attachment=file://$attachment";
+        return [ $1, '-compose', "attachment=file://$attachment" ];
     }
-    return "xdg-email --attach $attachment 'x\@y'";
+    return [ 'xdg-email', '--attach', $attachment, 'x@y' ];
 }
 
 # Display page selector and email.
@@ -3353,8 +3356,8 @@ sub email {
             );
 
             $pdf = File::Temp->new( DIR => $session, SUFFIX => '.pdf' );
-            my $mua_string = mua_string( $windowe, $pdf );
-            if ( not defined $mua_string ) { return }
+            my $mua = mua( $windowe, $pdf );
+            if ( not @{$mua} ) { return }
 
             # Create the PDF
             my ( $signal, $pid );
@@ -3390,8 +3393,8 @@ sub email {
                     {
                         system "xdg-open \"$pdf\" &";
                     }
-                    $logger->info($mua_string);
-                    if ( system $mua_string ) {
+                    my $status = Gscan2pdf::Document::exec_command($mua);
+                    if ($status) {
                         show_message_dialog(
                             parent  => $window,
                             type    => 'error',

@@ -97,8 +97,9 @@ is( $slist->pages_possible( 2, 1 ),
 
 #########################
 
-like( Gscan2pdf::Document::open_three('fc-list : family style file'),
-    qr/\w+/, 'open_three produces some output from fc-list' );
+( undef, my $fonts ) =
+  Gscan2pdf::Document::exec_command( ['fc-list : family style file'] );
+like( $fonts, qr/\w+/, 'exec_command produces some output from fc-list' );
 
 #########################
 

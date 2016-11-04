@@ -21,13 +21,15 @@ sub setup {
     ( my $class, $logger ) = @_;
     return $installed if $setup;
 
-    my ( $exe, undef ) = Gscan2pdf::Document::open_three('which tesseract');
+    ( undef, my $exe ) =
+      Gscan2pdf::Document::exec_command( [ 'which', 'tesseract' ] );
     return if ( not defined $exe or $exe eq $EMPTY );
     $installed = 1;
 
     # if we have 3.02.01 or better,
     # we can use --list-langs and not bother with tessdata
-    my ( $out, $err ) = Gscan2pdf::Document::open_three('tesseract -v');
+    ( undef, my $out, my $err ) =
+      Gscan2pdf::Document::exec_command( [ 'tesseract', '-v' ] );
     if ( $err =~ /^tesseract[ ]([\d.]+)/xsm ) {
         $version = $1;
     }
@@ -37,16 +39,19 @@ sub setup {
         return $installed;
     }
 
-    ( $out, $err ) = Gscan2pdf::Document::open_three("tesseract '' '' -l ''");
+    ( $out, $err ) =
+      Gscan2pdf::Document::exec_command( ["tesseract '' '' -l ''"] );
     ( $tessdata, $version, $datasuffix ) = parse_tessdata( $out . $err );
 
     if ( not defined $tessdata ) {
         if ( $version
             and version->parse("v$version") > version->parse('v3.01') )
         {
-            my ( $lib, undef ) = Gscan2pdf::Document::open_three("ldd $exe");
+            ( undef, my $lib ) =
+              Gscan2pdf::Document::exec_command( [ 'ldd', $exe ] );
             if ( $lib =~ /libtesseract[.]so[.]\d+[ ]=>[ ]([\/\w\-.]+)[ ]/xsm ) {
-                ( $out, undef ) = Gscan2pdf::Document::open_three("strings $1");
+                ( undef, $out ) =
+                  Gscan2pdf::Document::exec_command( [ 'strings', $1 ] );
                 $tessdata = parse_strings($out);
             }
             else {
@@ -151,8 +156,9 @@ sub languages {
 
         my @codes;
         if ( version->parse("v$version") > version->parse('v3.02') ) {
-            my ( undef, $codes ) =
-              Gscan2pdf::Document::open_three('tesseract --list-langs');
+            my ( undef, undef, $codes ) =
+              Gscan2pdf::Document::exec_command(
+                [ 'tesseract', '--list-langs' ] );
             @codes = split /\n/xsm, $codes;
             if ( $codes[0] =~ /^List[ ]of[ ]available[ ]languages/xsm ) {
                 shift @codes;
@@ -234,27 +240,26 @@ sub hocr {
         $tif = $options{file};
     }
     if ( version->parse("v$version") >= version->parse('v3.02.02') ) {
-        $cmd =
-"tesseract $tif $path$name -l $options{language} -c tessedit_create_hocr=1";
+        $cmd = [
+            'tesseract',        $tif, $path . $name, '-l',
+            $options{language}, '-c', 'tessedit_create_hocr=1'
+        ];
     }
     elsif ( version->parse("v$version") >= version->parse('v3') ) {
         $cmd =
-"echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $options{language} +hocr.config;rm hocr.config";
+          [
+"echo tessedit_create_hocr 1 > hocr.config;tesseract $tif $path$name -l $options{language} +hocr.config;rm hocr.config"
+          ];
     }
     elsif ( $options{language} ) {
-        $cmd = "tesseract $tif $path$name -l $options{language}";
+        $cmd = [ 'tesseract', $tif, $path . $name, '-l', $options{language} ];
     }
     else {
-        $cmd = "tesseract $tif $path$name";
-    }
-    $logger->info($cmd);
-
-   # File in which to store the process ID so that it can be killed if necessary
-    if ( defined $options{pidfile} ) {
-        $cmd = "echo $PROCESS_ID > $options{pidfile};$cmd";
+        $cmd = [ 'tesseract', $tif, $path . $name ];
     }
 
-    my ( $out, $err ) = Gscan2pdf::Document::open_three($cmd);
+    my ( undef, $out, $err ) =
+      Gscan2pdf::Document::exec_command( $cmd, $options{pidfile} );
     my $warnings = $out . $err;
     my $leading  = 'Tesseract Open Source OCR Engine';
     my $trailing = 'with Leptonica';

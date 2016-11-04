@@ -17,7 +17,7 @@ my ( $exe, $installed, $setup, $logger );
 sub setup {
     ( my $class, $logger ) = @_;
     return $installed if $setup;
-    if ( system('which ocroscript > /dev/null 2> /dev/null') == 0 ) {
+    if ( Gscan2pdf::Document::check_command('ocroscript') ) {
         my $env = $ENV{OCROSCRIPTS};
 
         if ( not defined $env ) {
@@ -85,23 +85,15 @@ sub hocr {
         $png = $options{file};
     }
     if ( $options{language} ) {
-        $cmd = "tesslanguage=$options{language} $exe $png";
+        $cmd = [ "tesslanguage=$options{language}", $exe, $png ];
     }
     else {
-        $cmd = "$exe $png";
+        $cmd = [ $exe, $png ];
     }
-    $logger->info($cmd);
 
     # decode html->utf8
-    my $output;
-    if ( defined $options{pidfile} ) {
-        ( $output, undef ) =
-          Gscan2pdf::Document::open_three(
-            "echo $PROCESS_ID > $options{pidfile};$cmd");
-    }
-    else {
-        ( $output, undef ) = Gscan2pdf::Document::open_three($cmd);
-    }
+    my ( undef, $output ) =
+      Gscan2pdf::Document::exec_command( $cmd, $options{pidfile} );
     my $decoded = decode_entities($output);
 
     # Unfortunately, there seems to be a case (tested in t/31_ocropus_utf8.t)
