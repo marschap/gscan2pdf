@@ -2135,6 +2135,7 @@ sub save_pdf {
         'downsample dpi' => $SETTING{'downsample dpi'},
         quality          => $SETTING{quality},
         font             => $SETTING{'pdf font'},
+        set_timestamp    => $SETTING{set_timestamp},
     );
     if ( $append eq 'prependpdf' ) {
         $options{prepend} = $filename;
@@ -2147,10 +2148,9 @@ sub save_pdf {
     $logger->debug("Started saving $filename");
     my ( $signal, $pid );
     $pid = $slist->save_pdf(
-        path          => $filename,
-        list_of_pages => $list_of_pages,
-        metadata =>
-          Gscan2pdf::Document::prepare_output_metadata( 'PDF', \%SETTING ),
+        path            => $filename,
+        list_of_pages   => $list_of_pages,
+        metadata        => Gscan2pdf::Document::collate_metadata( \%SETTING ),
         options         => \%options,
         queued_callback => sub {
             return update_tpbar(@_);
@@ -3114,10 +3114,10 @@ sub save_djvu {
     $logger->debug("Started saving $filename");
     my ( $signal, $pid );
     $pid = $slist->save_djvu(
-        path          => $filename,
-        list_of_pages => $list_of_pages,
-        metadata =>
-          Gscan2pdf::Document::prepare_output_metadata( 'DjVu', \%SETTING ),
+        path            => $filename,
+        list_of_pages   => $list_of_pages,
+        set_timestamp   => $SETTING{'set_timestamp'},
+        metadata        => Gscan2pdf::Document::collate_metadata( \%SETTING ),
         queued_callback => sub {
             return update_tpbar(@_);
         },
@@ -6481,6 +6481,12 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
         $fileentry->set_text( $SETTING{'default filename'} );
     }
 
+    # Set file timestamp with metadata
+    my $cbt = Gtk2::CheckButton->new_with_label(
+        $d->get('Set access and modification times to metadata date') );
+    if ( $SETTING{set_timestamp} ) { $cbt->set_active(TRUE) }
+    $vbox2->pack_start( $cbt, TRUE, TRUE, 0 );
+
     # Temporary directory settings
     $hbox = Gtk2::HBox->new;
     $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
@@ -6647,6 +6653,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
             $SETTING{'allow-batch-flatbed'}   = $cb_batch_flatbed->get_active;
             $SETTING{'default filename'}      = $fileentry->get_text;
             $SETTING{'restore window'}        = $cbw->get_active;
+            $SETTING{set_timestamp}           = $cbt->get_active;
 
             if ( defined $windows ) {
                 if ( $SETTING{frontend} eq 'libsane-perl' ) {

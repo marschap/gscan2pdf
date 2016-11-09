@@ -36,7 +36,7 @@ use English qw( -no_match_vars );    # for $PROCESS_ID, $INPUT_RECORD_SEPARATOR
                                      # $CHILD_ERROR
 use POSIX qw(:sys_wait_h);
 use Data::UUID;
-use Date::Calc qw(Add_Delta_Days Today);
+use Date::Calc qw(Add_Delta_Days Date_to_Time Today);
 use Readonly;
 Readonly our $POINTS_PER_INCH             => 72;
 Readonly my $STRING_FORMAT                => 8;
@@ -1127,6 +1127,7 @@ sub save_djvu {
             path          => $options{path},
             list_of_pages => $options{list_of_pages},
             metadata      => $options{metadata},
+            set_timestamp => $options{set_timestamp},
             dir           => "$self->{dir}",
             pidfile       => "$pidfile",
             uuid          => $uuid,
@@ -1901,6 +1902,18 @@ sub expand_metadata_pattern {
 # Normally, it would be more sensible to put this in main::, but in order to
 # run unit tests on the sub, it has been moved here.
 
+sub collate_metadata {
+    my ($settings) = @_;
+    my %metadata;
+    for my $key (qw/author title subject keywords/) {
+        if ( defined $settings->{$key} ) {
+            $metadata{$key} = $settings->{$key};
+        }
+    }
+    $metadata{date} = [ Add_Delta_Days( Today(), $settings->{'date offset'} ) ];
+    return \%metadata;
+}
+
 sub prepare_output_metadata {
     my ( $type, $metadata ) = @_;
     my %h;
@@ -1910,8 +1923,7 @@ sub prepare_output_metadata {
           $type eq 'PDF'
           ? "D:%4i%02i%02i000000+00'00'"
           : '%4i-%02i-%02i 00:00:00+00:00';
-        my ( $year, $month, $day ) =
-          Add_Delta_Days( Today(), $metadata->{'date offset'} );
+        my ( $year, $month, $day ) = @{ $metadata->{date} };
         $h{CreationDate} = sprintf $dateformat, $year, $month, $day;
         $h{ModDate}      = $h{CreationDate};
         $h{Creator}      = "gscan2pdf v$Gscan2pdf::Document::VERSION";
@@ -2128,6 +2140,7 @@ sub _thread_main {
                     path          => $request->{path},
                     list_of_pages => $request->{list_of_pages},
                     metadata      => $request->{metadata},
+                    set_timestamp => $request->{set_timestamp},
                     dir           => $request->{dir},
                     pidfile       => $request->{pidfile},
                     uuid          => $request->{uuid}
@@ -2674,7 +2687,10 @@ sub _thread_save_pdf {
     }
     my $pdf = PDF::API2->new( -file => $filename );
 
-    if ( defined $options{metadata} ) { $pdf->info( %{ $options{metadata} } ) }
+    if ( defined $options{metadata} ) {
+        my $metadata = prepare_output_metadata( 'PDF', $options{metadata} );
+        $pdf->info( %{$metadata} );
+    }
     $cache->{core} = $pdf->corefont('Times-Roman');
     if ( defined $options{options}->{font} ) {
         $cache->{ttf} =
@@ -2697,7 +2713,13 @@ sub _thread_save_pdf {
     $pdf->save;
     $pdf->end;
 
-    if (   defined $options{options}{prepend}
+    if ( defined $options{options}{set_timestamp}
+        and $options{options}{set_timestamp} )
+    {
+        my $time = Date_to_Time( @{ $options{metadata}{date} }, 0, 0, 0 );
+        utime $time, $time, $filename;
+    }
+    elsif (defined $options{options}{prepend}
         or defined $options{options}{append} )
     {
         my ( $bak, $file1, $file2, $out, $message );
@@ -3167,6 +3189,12 @@ sub _thread_save_djvu {
             $d->get('Error merging DjVu') );
     }
     _add_metadata_to_djvu( $self, %options );
+
+    if ( defined $options{set_timestamp} and $options{set_timestamp} ) {
+        my $time = Date_to_Time( @{ $options{metadata}{date} }, 0, 0, 0 );
+        utime $time, $time, $options{path};
+    }
+
     $self->{return}->enqueue(
         {
             type    => 'finished',
@@ -3237,8 +3265,9 @@ sub _add_metadata_to_djvu {
           or return;
 
         # Write the metadata
-        for my $key ( keys %{ $options{metadata} } ) {
-            my $val = $options{metadata}{$key};
+        my $metadata = prepare_output_metadata( 'DjVu', $options{metadata} );
+        for my $key ( keys %{$metadata} ) {
+            my $val = $metadata->{$key};
 
             # backslash-escape any double quotes and bashslashes
             $val =~ s/\\/\\\\/gxsm;

@@ -13,6 +13,8 @@
 * Refactor most system() calls to use IPC::Open3 to eliminate need to escape
   special characters from shell.
 * Eliminate warnings when reloading scan options with option groups.
+* + option to change the pdf and djvu access and modification times to the
+  metadata date
 
 
 1.5.5 (23.10.2016):

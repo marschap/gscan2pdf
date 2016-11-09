@@ -124,21 +124,21 @@ is_deeply(
     Gscan2pdf::Document::prepare_output_metadata(
         'PDF',
         {
-            'date offset' => 0,
-            author        => 'a.n.other',
-            title         => 'title',
-            'subject'     => 'subject',
-            'keywords'    => 'keywords'
+            date       => [ 2016, 2, 10 ],
+            author     => 'a.n.other',
+            title      => 'title',
+            'subject'  => 'subject',
+            'keywords' => 'keywords'
         }
     ),
     {
-        ModDate      => $date_string,
+        ModDate      => "D:20160210000000+00'00'",
         Creator      => "gscan2pdf v$Gscan2pdf::Document::VERSION",
         Author       => 'a.n.other',
         Title        => 'title',
         Subject      => 'subject',
         Keywords     => 'keywords',
-        CreationDate => $date_string
+        CreationDate => "D:20160210000000+00'00'"
     },
     'prepare_output_metadata'
 );

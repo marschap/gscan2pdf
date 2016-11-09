@@ -80,6 +80,7 @@ Gscan2pdf::Config::add_defaults( \%output );
     'cache options'         => TRUE,
     'restore window'        => TRUE,
     'date offset'           => 0,
+    set_timestamp           => TRUE,
     'pdf compression'       => 'auto',
     'quality'               => 75,
     'unpaper on scan'       => FALSE,
