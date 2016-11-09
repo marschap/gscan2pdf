@@ -12,6 +12,7 @@
   Thanks to Petr Písař for the patch.
 * Refactor most system() calls to use IPC::Open3 to eliminate need to escape
   special characters from shell.
+* Eliminate warnings when reloading scan options with option groups.
 
 
 1.5.5 (23.10.2016):

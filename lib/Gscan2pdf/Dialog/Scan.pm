@@ -1096,11 +1096,18 @@ sub update_options {
     my $num_dev_options = $new_options->num_options;
     my $options         = $self->get('available-scan-options');
     for ( 1 .. $num_dev_options - 1 ) {
-        my $opt    = $options->by_index($_);
-        my $widget = $self->{option_widgets}{ $opt->{name} };
+        my $opt = $options->by_index($_);
 
         # could be undefined for !($new_opt->{cap} & SANE_CAP_SOFT_DETECT)
-        if ( not defined $widget ) { next }
+        # or where $opt->{name} is not defined
+        # e.g. $opt->{type} == SANE_TYPE_GROUP
+        if (   $opt->{type} == SANE_TYPE_GROUP
+            or not defined $opt->{name}
+            or not defined $self->{option_widgets}{ $opt->{name} } )
+        {
+            next;
+        }
+        my $widget = $self->{option_widgets}{ $opt->{name} };
 
         my $new_opt = $new_options->by_index($_);
         if ( $new_opt->{name} ne $opt->{name} ) {
@@ -1115,7 +1122,6 @@ sub update_options {
             );
             return;
         }
-        if ( $opt->{type} == SANE_TYPE_GROUP ) { next }
 
         # Block the signal handler for the widget to prevent infinite
         # loops of the widget updating the option, updating the widget, etc.
