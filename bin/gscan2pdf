@@ -549,14 +549,12 @@ sub create_main_window {
 
     # If defined in the config file, set the window state, size and position
     if ( $SETTING{'restore window'} ) {
-        $widget->set_default_size( $SETTING{'window_width'},
-            $SETTING{'window_height'} );
-        if (    defined $SETTING{'window_x'}
-            and defined $SETTING{'window_y'} )
-        {
-            $widget->move( $SETTING{'window_x'}, $SETTING{'window_y'} );
+        $widget->set_default_size( $SETTING{window_width},
+            $SETTING{window_height} );
+        if ( defined $SETTING{window_x} and defined $SETTING{window_y} ) {
+            $widget->move( $SETTING{window_x}, $SETTING{window_y} );
         }
-        if ( $SETTING{'window_maximize'} ) { $widget->maximize }
+        if ( $SETTING{window_maximize} ) { $widget->maximize }
     }
 
     try { $widget->set_default_icon_from_file("$iconpath/gscan2pdf.svg"); }
@@ -1691,7 +1689,7 @@ sub open_session_action {
         'gtk-ok'     => 'ok'
     );
     $file_chooser->set_default_response('ok');
-    $file_chooser->set_current_folder( $SETTING{'cwd'} );
+    $file_chooser->set_current_folder( $SETTING{cwd} );
 
     if ( 'ok' eq $file_chooser->run ) {
 
@@ -1792,7 +1790,7 @@ sub update_tpbar {
 sub open_dialog {
 
     # cd back to cwd to get filename
-    chdir $SETTING{'cwd'};
+    chdir $SETTING{cwd};
 
     my $file_chooser = Gtk2::FileChooserDialog->new(
         $d->get('Open image'),
@@ -1802,7 +1800,7 @@ sub open_dialog {
     );
     $file_chooser->set_select_multiple(TRUE);
     $file_chooser->set_default_response('ok');
-    $file_chooser->set_current_folder( $SETTING{'cwd'} );
+    $file_chooser->set_current_folder( $SETTING{cwd} );
     add_filter( $file_chooser, $d->get('Image files'),
         'jpg', 'png', 'pnm', 'gif', 'tif', 'tiff', 'pdf', 'djvu', 'ps',
         'gs2p' );
@@ -1819,7 +1817,7 @@ sub open_dialog {
         $file_chooser->destroy;
 
         # Update cwd
-        $SETTING{'cwd'} = dirname( $filename[0] );
+        $SETTING{cwd} = dirname( $filename[0] );
 
         # FIXME: import_files() now returns an array of pids.
         my ( $signal, $pid );
@@ -2645,12 +2643,12 @@ sub save_button_clicked_callback {
             $SETTING{'downsample dpi'} = $spinbuttond->get_value;
             $SETTING{'pdf compression'} =
               $pdf_compression->[ $combob->get_active ][0];
-            $SETTING{'quality'} = $spinbuttonpq->get_value;
+            $SETTING{quality} = $spinbuttonpq->get_value;
 
             $SETTING{'pdf font'} = $fonts->[ $combof->get_active ][0];
 
             # cd back to cwd to save
-            chdir $SETTING{'cwd'};
+            chdir $SETTING{cwd};
 
             my $file_chooser;
             if ( $_ eq 'pdf' ) {
@@ -2685,7 +2683,7 @@ sub save_button_clicked_callback {
                 );
             }
             add_filter( $file_chooser, $d->get('PDF files'), 'pdf' );
-            $file_chooser->set_current_folder( $SETTING{'cwd'} );
+            $file_chooser->set_current_folder( $SETTING{cwd} );
             $file_chooser->set_default_response('ok');
             $file_chooser->signal_connect(
                 response => \&file_chooser_response_callback,
@@ -2702,7 +2700,7 @@ sub save_button_clicked_callback {
                 $entryk );
 
             # cd back to cwd to save
-            chdir $SETTING{'cwd'};
+            chdir $SETTING{cwd};
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
@@ -2722,7 +2720,7 @@ sub save_button_clicked_callback {
 
             $file_chooser->set_current_name($filename);
             $file_chooser->set_default_response('ok');
-            $file_chooser->set_current_folder( $SETTING{'cwd'} );
+            $file_chooser->set_current_folder( $SETTING{cwd} );
             add_filter( $file_chooser, $d->get('DjVu files'), 'djvu' );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
             $file_chooser->signal_connect(
@@ -2740,7 +2738,7 @@ sub save_button_clicked_callback {
             $SETTING{'quality'} = $spinbuttontq->get_value;
 
             # cd back to cwd to save
-            chdir $SETTING{'cwd'};
+            chdir $SETTING{cwd};
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
@@ -2750,7 +2748,7 @@ sub save_button_clicked_callback {
                 'gtk-save'   => 'ok'
             );
             $file_chooser->set_default_response('ok');
-            $file_chooser->set_current_folder( $SETTING{'cwd'} );
+            $file_chooser->set_current_folder( $SETTING{cwd} );
             add_filter( $file_chooser, $d->get('Image files'),
                 $SETTING{'image type'} );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
@@ -2766,7 +2764,7 @@ sub save_button_clicked_callback {
         when ('txt') {
 
             # cd back to cwd to save
-            chdir $SETTING{'cwd'};
+            chdir $SETTING{cwd};
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
@@ -2776,7 +2774,7 @@ sub save_button_clicked_callback {
                 'gtk-save'   => 'ok'
             );
             $file_chooser->set_default_response('ok');
-            $file_chooser->set_current_folder( $SETTING{'cwd'} );
+            $file_chooser->set_current_folder( $SETTING{cwd} );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
             add_filter( $file_chooser, $d->get('Text files'), 'txt' );
             $file_chooser->signal_connect(
@@ -2791,7 +2789,7 @@ sub save_button_clicked_callback {
         when ('hocr') {
 
             # cd back to cwd to save
-            chdir $SETTING{'cwd'};
+            chdir $SETTING{cwd};
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
@@ -2801,7 +2799,7 @@ sub save_button_clicked_callback {
                 'gtk-save'   => 'ok'
             );
             $file_chooser->set_default_response('ok');
-            $file_chooser->set_current_folder( $SETTING{'cwd'} );
+            $file_chooser->set_current_folder( $SETTING{cwd} );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
             add_filter( $file_chooser, $d->get('hOCR files'), 'hocr' );
             $file_chooser->signal_connect(
@@ -2819,7 +2817,7 @@ sub save_button_clicked_callback {
             $SETTING{'quality'} = $spinbuttontq->get_value;
 
             # cd back to cwd to save
-            chdir $SETTING{'cwd'};
+            chdir $SETTING{cwd};
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
@@ -2829,7 +2827,7 @@ sub save_button_clicked_callback {
                 'gtk-save'   => 'ok'
             );
             $file_chooser->set_default_response('ok');
-            $file_chooser->set_current_folder( $SETTING{'cwd'} );
+            $file_chooser->set_current_folder( $SETTING{cwd} );
             add_filter( $file_chooser, $d->get('Postscript files'), 'ps' );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
             $file_chooser->signal_connect(
@@ -2844,7 +2842,7 @@ sub save_button_clicked_callback {
         when ('session') {
 
             # cd back to cwd to save
-            chdir $SETTING{'cwd'};
+            chdir $SETTING{cwd};
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
@@ -2854,7 +2852,7 @@ sub save_button_clicked_callback {
                 'gtk-save'   => 'ok'
             );
             $file_chooser->set_default_response('ok');
-            $file_chooser->set_current_folder( $SETTING{'cwd'} );
+            $file_chooser->set_current_folder( $SETTING{cwd} );
             add_filter( $file_chooser, $d->get('gscan2pdf session files'),
                 'gs2p' );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
@@ -2868,7 +2866,7 @@ sub save_button_clicked_callback {
             chdir $session;
         }
         when ('jpg') {
-            $SETTING{'quality'} = $spinbuttontq->get_value;
+            $SETTING{quality} = $spinbuttontq->get_value;
             save_image($list_of_pages);
         }
         default {
@@ -2895,7 +2893,7 @@ sub file_chooser_response_callback {
         return if ( file_writable( $dialog, $filename ) );
 
         # Update cwd
-        $SETTING{'cwd'} = dirname($filename);
+        $SETTING{cwd} = dirname($filename);
 
         given ($type) {
             when (/pdf/xsm) {
@@ -2973,7 +2971,7 @@ sub save_image {
     my ($list_of_pages) = @_;
 
     # cd back to cwd to save
-    chdir $SETTING{'cwd'};
+    chdir $SETTING{cwd};
 
     # Set up file selector
     my $file_chooser = Gtk2::FileChooserDialog->new(
@@ -2983,7 +2981,7 @@ sub save_image {
         'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
-    $file_chooser->set_current_folder( $SETTING{'cwd'} );
+    $file_chooser->set_current_folder( $SETTING{cwd} );
     add_filter( $file_chooser, $d->get('Image files'),
         'jpg', 'png', 'pnm', 'gif', 'tif', 'tiff', 'pdf', 'djvu', 'ps' );
     $file_chooser->set_do_overwrite_confirmation(TRUE);
@@ -2992,7 +2990,7 @@ sub save_image {
         my $filename = $file_chooser->get_filename;
 
         # Update cwd
-        $SETTING{'cwd'} = dirname($filename);
+        $SETTING{cwd} = dirname($filename);
 
         # cd back to tempdir
         chdir $session;
@@ -3116,7 +3114,7 @@ sub save_djvu {
     $pid = $slist->save_djvu(
         path            => $filename,
         list_of_pages   => $list_of_pages,
-        set_timestamp   => $SETTING{'set_timestamp'},
+        set_timestamp   => $SETTING{set_timestamp},
         metadata        => Gscan2pdf::Document::collate_metadata( \%SETTING ),
         queued_callback => sub {
             return update_tpbar(@_);
@@ -3340,11 +3338,11 @@ sub email {
             my $list_of_pages = list_of_pages;
 
             # dig out the compression
-            $SETTING{'downsample'}     = $buttond->get_active;
+            $SETTING{downsample} = $buttond->get_active;
             $SETTING{'downsample dpi'} = $spinbuttond->get_value;
             $SETTING{'pdf compression'} =
               $compression[ $combob->get_active ][0];
-            $SETTING{'quality'} = $spinbuttonq->get_value;
+            $SETTING{quality} = $spinbuttonq->get_value;
 
             # Compile options
             my %options = (
@@ -4023,9 +4021,7 @@ sub add_postprocessing_ocr {
               . 'This only affects the image passed to the OCR engine, and not the image stored.'
         )
     );
-    if ( defined $SETTING{'threshold-before-ocr'} ) {
-        $cbt->set_active( $SETTING{'threshold-before-ocr'} );
-    }
+    $cbt->set_active( $SETTING{'threshold-before-ocr'} );
     $vbox->pack_start( $cbt, TRUE, TRUE, 0 );
 
     # SpinButton for threshold
@@ -4274,7 +4270,7 @@ sub update_number {
 # print
 
 sub print_dialog {
-    chdir $SETTING{'cwd'};
+    chdir $SETTING{cwd};
     my $print_op = Gtk2::PrintOperation->new;
 
     if ( defined $print_settings ) {
@@ -5862,7 +5858,7 @@ sub quit {
 
     # Make sure that we are back in the start directory,
     # otherwise we can't delete the temp dir.
-    chdir $SETTING{'cwd'};
+    chdir $SETTING{cwd};
 
     # Remove temporary files
     # (for some reason File::Temp wasn't doing its job here)
@@ -5870,11 +5866,11 @@ sub quit {
     rmdir $session;
 
     # Write window state to settings
-    ( $SETTING{'window_width'}, $SETTING{'window_height'} ) = $window->get_size;
-    ( $SETTING{'window_x'}, $SETTING{'window_y'} ) = $window->get_position;
+    ( $SETTING{window_width}, $SETTING{window_height} ) = $window->get_size;
+    ( $SETTING{window_x},     $SETTING{window_y} )      = $window->get_position;
     $SETTING{'thumb panel'} = $hpaned->get_position;
     if ( defined $windows ) {
-        ( $SETTING{'scan_window_width'}, $SETTING{'scan_window_height'} ) =
+        ( $SETTING{scan_window_width}, $SETTING{scan_window_height} ) =
           $windows->get_size;
     }
 

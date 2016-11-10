@@ -149,37 +149,72 @@ sub _add_profile_backend {
 sub add_defaults {
     my ($SETTING) = @_;
     my %default_settings = (
-        'window_width'      => 800,
-        'window_height'     => 600,
-        'window_maximize'   => TRUE,
-        'thumb panel'       => 100,
-        'Page range'        => 'all',
-        'layout'            => 'single',
-        'downsample'        => FALSE,
-        'downsample dpi'    => 150,
-        'threshold tool'    => 80,
-        'unsharp radius'    => 0,
-        'unsharp sigma'     => 1,
-        'unsharp amount'    => 1,
-        'unsharp threshold' => 0.05,
-        'cache options'     => TRUE,
-        'restore window'    => TRUE,
-        'set_timestamp'     => TRUE,
-        'date offset'       => 0,
-        'pdf compression'   => 'auto',
-        'quality'           => 75,
-        'unpaper on scan'   => FALSE,
-        'OCR on scan'       => TRUE,
-        'frontend'          => 'libsane-perl',
-        'rotate facing'     => 0,
-        'rotate reverse'    => 0,
-        'default filename'  => '%a %y-%m-%d',
-        'scan prefix'       => $EMPTY,
+        window_width           => 800,
+        window_height          => 600,
+        window_maximize        => TRUE,
+        window_x               => undef,
+        window_y               => undef,
+        'thumb panel'          => 100,
+        scan_window_width      => undef,
+        scan_window_height     => undef,
+        TMPDIR                 => undef,
+        'Page range'           => 'all',
+        version                => undef,
+        'SANE version'         => undef,
+        'libsane-perl version' => undef,
+        selection              => undef,
+        cwd                    => undef,
+        title                  => undef,
+        'title-suggestions'    => undef,
+        author                 => undef,
+        'author-suggestions'   => undef,
+        subject                => undef,
+        'subject-suggestions'  => undef,
+        keywords               => undef,
+        'keyword-suggestions'  => undef,
+        'downsample'           => FALSE,
+        'downsample dpi'       => 150,
+        'cache options'        => TRUE,
+        cache                  => undef,
+        'restore window'       => TRUE,
+        'set_timestamp'        => TRUE,
+        'date offset'          => 0,
+        'pdf compression'      => 'auto',
+        'tiff compression'     => undef,
+        'pdf font'             => undef,
+        quality                => 75,
+        'image type'           => undef,
+        device                 => undef,
+        'device blacklist'     => undef,
+        frontend               => 'libsane-perl',
+        'scan prefix'          => $EMPTY,
+        'unpaper on scan'      => FALSE,
+        'unpaper options'      => undef,
+        'unsharp radius'       => 0,
+        'unsharp sigma'        => 1,
+        'unsharp amount'       => 1,
+        'unsharp threshold'    => 0.05,
+        'allow-batch-flatbed'  => FALSE,
+        'cycle sane handle'    => FALSE,
+        profile                => undef,
+        'default profile'      => undef,
+        'default-scan-options' => undef,
+        'rotate facing'        => 0,
+        'rotate reverse'       => 0,
+        'default filename'     => '%a %y-%m-%d',
+        'view files toggle'    => TRUE,
+        'threshold-before-ocr' => FALSE,
+        'threshold tool'       => 80,
         'Blank threshold' => 0.005,    # Blank page standard deviation threshold
         'Dark threshold'  => 0.12,     # Dark page mean threshold
-        'ocr engine' => 'tesseract',
+        'OCR on scan'     => TRUE,
+        'ocr engine'   => 'tesseract',
+        'ocr language' => undef,
         'OCR output' =>
           'replace',   # When a page is re-OCRed, replace old text with new text
+        user_defined_tools      => ['gimp %i'],
+        udt_on_scan             => FALSE,
+        current_udt             => undef,
         'auto-open-scan-dialog' => TRUE,
         'available-tmp-warning' => 10,
         close_dialog_on_save    => TRUE,
@@ -203,7 +238,6 @@ sub add_defaults {
                 t => 0,
             },
         },
-        user_defined_tools => ['gimp %i'],
 
         # show the options marked with 1, hide those with 0
         # for the others, see the value of default-option-visibility
@@ -236,6 +270,7 @@ sub add_defaults {
             t                   => 1,
         },
         'scan-reload-triggers' => qw(mode),
+        message                => undef,
     );
     if (
         defined $SETTING->{frontend}
@@ -249,6 +284,14 @@ sub add_defaults {
         delete $SETTING->{frontend};
     }
 
+    # remove unused settings
+    for ( keys %{$SETTING} ) {
+        if ( not exists $default_settings{$_} ) {
+            delete $SETTING->{$_};
+        }
+    }
+
+    # add default settings
     for ( keys %default_settings ) {
         if ( not defined $SETTING->{$_} ) {
             $SETTING->{$_} = $default_settings{$_};
@@ -300,6 +343,7 @@ sub write_config {
     my ( $rc, $logger, $SETTING ) = @_;
     my $conf = JSON::PP->new->ascii;
     $conf = $conf->pretty->allow_nonref;
+    $conf = $conf->canonical;
     open my $fh, '>', $rc or die "Error: cannot open $rc\n";
     print {$fh} $conf->encode($SETTING) or die "Error: cannot write to $rc\n";
     close $fh or die "Error: cannot close $rc\n";

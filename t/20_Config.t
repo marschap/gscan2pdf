@@ -61,29 +61,56 @@ is_deeply( \@output, \@example, 'Write JSON' );
 #########################
 
 %output = %example;
+$output{'non-existant-option'} = undef;
 Gscan2pdf::Config::add_defaults( \%output );
 %example = (
     version                 => '1.3.3',
-    'window_width'          => 800,
-    'window_height'         => 600,
-    'window_maximize'       => TRUE,
+    'SANE version'          => undef,
+    'libsane-perl version'  => undef,
+    window_width            => 800,
+    window_height           => 600,
+    window_maximize         => TRUE,
+    window_x                => undef,
+    window_y                => undef,
     'thumb panel'           => 100,
+    scan_window_width       => undef,
+    scan_window_height      => undef,
+    TMPDIR                  => undef,
     'Page range'            => 'all',
-    'layout'                => 'single',
+    selection               => undef,
+    cwd                     => undef,
+    title                   => undef,
+    'title-suggestions'     => undef,
+    author                  => undef,
+    'author-suggestions'    => undef,
+    subject                 => undef,
+    'subject-suggestions'   => undef,
+    keywords                => undef,
+    'keyword-suggestions'   => undef,
+    device                  => undef,
+    'device blacklist'      => undef,
+    'allow-batch-flatbed'   => FALSE,
+    'cycle sane handle'     => FALSE,
     'downsample'            => FALSE,
     'downsample dpi'        => 150,
+    'threshold-before-ocr'  => FALSE,
     'threshold tool'        => 80,
     'unsharp radius'        => 0,
     'unsharp sigma'         => 1,
     'unsharp amount'        => 1,
     'unsharp threshold'     => 0.05,
     'cache options'         => TRUE,
+    cache                   => undef,
     'restore window'        => TRUE,
     'date offset'           => 0,
     set_timestamp           => TRUE,
     'pdf compression'       => 'auto',
+    'tiff compression'      => undef,
+    'pdf font'              => undef,
     'quality'               => 75,
+    'image type'            => undef,
     'unpaper on scan'       => FALSE,
+    'unpaper options'       => undef,
     'OCR on scan'           => TRUE,
     'frontend'              => 'libsane-perl',
     'rotate facing'         => 0,
@@ -93,10 +120,12 @@ Gscan2pdf::Config::add_defaults( \%output );
     'Blank threshold'       => 0.005,
     'Dark threshold'        => 0.12,
     'ocr engine'            => 'tesseract',
+    'ocr language'          => undef,
     'OCR output'            => 'replace',
     'auto-open-scan-dialog' => TRUE,
     'available-tmp-warning' => 10,
     close_dialog_on_save    => TRUE,
+    'view files toggle'     => TRUE,
     'Paper'                 => {
         'A4' => {
             x => 210,
@@ -117,7 +146,12 @@ Gscan2pdf::Config::add_defaults( \%output );
             t => 0,
         },
     },
+    profile                => undef,
+    'default profile'      => undef,
+    'default-scan-options' => undef,
     user_defined_tools     => ['gimp %i'],
+    udt_on_scan            => FALSE,
+    current_udt            => undef,
     'visible-scan-options' => {
         mode                => 1,
         compression         => 1,
@@ -147,6 +181,7 @@ Gscan2pdf::Config::add_defaults( \%output );
         t                   => 1,
     },
     'scan-reload-triggers' => qw(mode),
+    message                => undef,
 );
 
 is_deeply( \%output, \%example, 'add_defaults' );
@@ -297,7 +332,7 @@ close $fh or die "Error: cannot close $rc\n";
             }
         ]
     },
-    "profile" => {
+    profile => {
         "10x10" => {
             backend => [
                 {
