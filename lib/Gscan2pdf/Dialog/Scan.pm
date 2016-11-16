@@ -10,6 +10,7 @@ use Data::Dumper;
 use Storable qw(dclone);
 use feature 'switch';
 use Gscan2pdf::Scanner::Options;
+use Gscan2pdf::Scanner::Profile;
 my (
     $_MAX_PAGES,        $_MAX_INCREMENT, $_DOUBLE_INCREMENT,
     $_CANVAS_SIZE,      $_CANVAS_BORDER, $_CANVAS_POINT_SIZE,
@@ -204,11 +205,12 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         'Gscan2pdf::Scanner::Options',       # package
         [qw/readable writable/]              # flags
     ),
-    Glib::ParamSpec->scalar(
-        'current-scan-options',                               # name
-        'Current scan options',                               # nick
-        'Array of scan options making up current profile',    # blurb
-        [qw/readable/]                                        # flags
+    Glib::ParamSpec->object(
+        'current-scan-options',                      # name
+        'Current scan options',                      # nickname
+        'Scan options making up current profile',    # blurb
+        'Gscan2pdf::Scanner::Profile',               # package
+        [qw/readable/]                               # flags
     ),
     Glib::ParamSpec->scalar(
         'visible-scan-options',                                  # name
@@ -489,6 +491,7 @@ sub INIT_INSTANCE {
     );
 
     # Scan profiles
+    $self->{current_scan_options} = Gscan2pdf::Scanner::Profile->new;
     my $framesp = Gtk2::Frame->new( $d->get('Scan profiles') );
     $vbox1->pack_start( $framesp, FALSE, FALSE, 0 );
     my $vboxsp = Gtk2::VBox->new;
@@ -739,7 +742,8 @@ sub SET_PROPERTY {
                     }
                 );
                 $self->set_paper($newval);
-                $self->{current_scan_options}{frontend}{$name} = $newval;
+                $self->{current_scan_options}
+                  ->add_frontend_option( $name, $newval );
             }
             when ('paper_formats') {
                 $self->{$name} = $newval;
@@ -826,7 +830,7 @@ sub _set_num_pages {
       )
     {
         $self->{$name} = $newval;
-        $self->{current_scan_options}{frontend}{$name} = $newval;
+        $self->{current_scan_options}->add_frontend_option( $name, $newval );
         $self->signal_emit( 'changed-num-pages', $newval );
     }
     return;
@@ -1237,6 +1241,7 @@ sub set_paper_formats {
     return;
 }
 
+# FIXME: much of this duplicates stuff in Gscan2pdf::Scanner::Profile
 # Treat a paper size as a profile, so build up the required profile of geometry
 # settings and apply it
 sub set_paper {
@@ -1265,33 +1270,33 @@ sub set_paper {
         and not $options->by_name(SANE_NAME_PAGE_WIDTH)->{cap} &
         SANE_CAP_INACTIVE )
     {
-        $self->build_profile(
+        $self->_build_profile(
             $paper_profile,
             $options->by_name(SANE_NAME_PAGE_HEIGHT),
             $formats->{$paper}{y} + $formats->{$paper}{t}
         );
-        $self->build_profile(
+        $self->_build_profile(
             $paper_profile,
             $options->by_name(SANE_NAME_PAGE_WIDTH),
             $formats->{$paper}{x} + $formats->{$paper}{l}
         );
     }
-    $self->build_profile(
+    $self->_build_profile(
         $paper_profile,
         $options->by_name(SANE_NAME_SCAN_TL_X),
         $formats->{$paper}{l}
     );
-    $self->build_profile(
+    $self->_build_profile(
         $paper_profile,
         $options->by_name(SANE_NAME_SCAN_TL_Y),
         $formats->{$paper}{t}
     );
-    $self->build_profile(
+    $self->_build_profile(
         $paper_profile,
         $options->by_name(SANE_NAME_SCAN_BR_X),
         $formats->{$paper}{x} + $formats->{$paper}{l}
     );
-    $self->build_profile(
+    $self->_build_profile(
         $paper_profile,
         $options->by_name(SANE_NAME_SCAN_BR_Y),
         $formats->{$paper}{y} + $formats->{$paper}{t}
@@ -1315,9 +1320,11 @@ sub set_paper {
         }
     );
 
-# Don't trigger the changed-paper signal until we have finished setting the profile
+    # Don't trigger the changed-paper signal
+    # until we have finished setting the profile
     $self->{setting_profile} = TRUE;
-    $self->_set_option_profile( 0, $paper_profile );
+    $self->_set_option_profile( 0,
+        Gscan2pdf::Scanner::Profile->new_from_data($paper_profile) );
     return;
 }
 
@@ -1510,19 +1517,30 @@ sub save_current_profile {
 
 sub add_profile {
     my ( $self, $name, $profile ) = @_;
-    if ( defined $name and defined $profile ) {
-
-        # if we don't clone the profile,
-        # we get strange action-at-a-distance problems
-        $self->{profiles}{$name} = dclone($profile);
-
-        _combobox_remove_item_by_text( $self->{combobsp}, $name );
-
-        $self->{combobsp}->append_text($name);
-        $logger->debug( "Saved profile '$name':",
-            Dumper( $self->{profiles}{$name} ) );
-        $self->signal_emit( 'added-profile', $name, $self->{profiles}{$name} );
+    if ( not defined $name ) {
+        $logger->error('Cannot add profile with no name');
+        return;
     }
+    elsif ( not defined $profile ) {
+        $logger->error('Cannot add undefined profile');
+        return;
+    }
+    elsif ( ref($profile) ne 'Gscan2pdf::Scanner::Profile' ) {
+        $logger->error(
+            ref($profile) . ' is not a Gscan2pdf::Scanner::Profile object' );
+        return;
+    }
+
+    # if we don't clone the profile,
+    # we get strange action-at-a-distance problems
+    $self->{profiles}{$name} = dclone($profile);
+
+    _combobox_remove_item_by_text( $self->{combobsp}, $name );
+
+    $self->{combobsp}->append_text($name);
+    $logger->debug( "Saved profile '$name':",
+        Dumper( $self->{profiles}{$name}->get_data ) );
+    $self->signal_emit( 'added-profile', $name, $self->{profiles}{$name} );
     return;
 }
 
@@ -1601,7 +1619,7 @@ sub remove_profile {
 
 # Helper function to check the new value is different before adding the option
 # to the profile
-sub build_profile {
+sub _build_profile {
     my ( $self, $profile, $option, $newval ) = @_;
     if ( $option->{val} != $newval ) {
         push @{ $profile->{backend} }, { $option->{name} => $newval };
@@ -1997,16 +2015,20 @@ sub update_graph {
 
 sub set_current_scan_options {
     my ( $self, $profile ) = @_;
+    if ( not defined $profile ) {
+        $logger->error('Cannot add undefined profile');
+        return;
+    }
+    elsif ( ref($profile) ne 'Gscan2pdf::Scanner::Profile' ) {
+        $logger->error(
+            ref($profile) . ' is not a Gscan2pdf::Scanner::Profile object' );
+        return;
+    }
 
-    if ( not defined $profile ) { return }
     $self->{setting_current_scan_options} = TRUE;
 
     # First clone the profile, as otherwise it would be self-modifying
     my $clone = dclone($profile);
-
-    # As scanimage and scanadf rename the geometry options,
-    # we have to map them back to the original names
-    $self->_map_geometry_names( $clone->{backend} );
 
     # Give the GUI a chance to catch up between settings,
     # in case they have to be reloaded.
@@ -2015,20 +2037,21 @@ sub set_current_scan_options {
     return;
 }
 
+# FIXME: refactor this as iterator in Gscan2pdf::Scanner::Profile
 sub _set_option_profile {
     my ( $self, $i, $profile ) = @_;
-    if ( $i < @{ $profile->{backend} } ) {
+    if ( $profile->{data}{backend} and $i < @{ $profile->{data}{backend} } ) {
 
         # for reasons I don't understand, without walking the reference tree,
-        # parts of $profile->{backend} are undef
-        Dumper( $profile->{backend}[$i] );
-        my ( $name, $val ) = each %{ $profile->{backend}[$i] };
+        # parts of $profile->{data}{backend} are undef
+        Dumper( $profile->{data}{backend}[$i] );
+        my ( $name, $val ) = each %{ $profile->{data}{backend}[$i] };
 
         my $options = $self->get('available-scan-options');
         my $opt     = $options->by_name($name);
         if ( not defined $opt or $opt->{cap} & SANE_CAP_INACTIVE ) {
             $logger->warn("Ignoring inactive option '$name'.");
-            splice @{ $profile->{backend} }, $i, 1;
+            splice @{ $profile->{data}{backend} }, $i, 1;
             $self->_set_option_profile( $i, $profile );
             return;
         }
@@ -2085,9 +2108,9 @@ sub _set_option_profile {
     else {
 
         # Having set all backend options, set the frontend options
-        if ( defined $profile->{frontend} ) {
-            for my $key ( keys %{ $profile->{frontend} } ) {
-                $self->set( $key, $profile->{frontend}{$key} );
+        if ( defined $profile->{data}{frontend} ) {
+            for my $key ( keys %{ $profile->{data}{frontend} } ) {
+                $self->set( $key, $profile->{data}{frontend}{$key} );
             }
         }
 
@@ -2103,86 +2126,11 @@ sub _set_option_profile {
     return $i;
 }
 
-# Map scanimage and scanadf geometry options back to the original names
-
-sub _map_geometry_names {
-    my ( $self, $options ) = @_;
-    for my $i ( 0 .. $#{$options} ) {
-
-        # for reasons I don't understand, without walking the reference tree,
-        # parts of $options are undef
-        Dumper($options);
-        my ( $name, $val ) = each %{ $options->[$i] };
-        given ($name) {
-            when ('l') {
-                $name = SANE_NAME_SCAN_TL_X;
-                $options->[$i] = { $name => $val };
-            }
-            when ('t') {
-                $name = SANE_NAME_SCAN_TL_Y;
-                $options->[$i] = { $name => $val };
-            }
-            when ('x') {
-                $name = SANE_NAME_SCAN_BR_X;
-                my $l = get_option_from_profile( 'l', $options );
-                if ( not defined $l ) {
-                    $l =
-                      get_option_from_profile( SANE_NAME_SCAN_TL_X, $options );
-                }
-                if ( defined $l ) { $val += $l }
-                $options->[$i] = { $name => $val };
-            }
-            when ('y') {
-                $name = SANE_NAME_SCAN_BR_Y;
-                my $t = get_option_from_profile( 't', $options );
-                if ( not defined $t ) {
-                    $t =
-                      get_option_from_profile( SANE_NAME_SCAN_TL_Y, $options );
-                }
-                if ( defined $t ) { $val += $t }
-                $options->[$i] = { $name => $val };
-            }
-        }
-    }
-    return;
-}
-
-# Extract a option value from a profile
-
-sub get_option_from_profile {
-    my ( $name, $profile ) = @_;
-
-    # for reasons I don't understand, without walking the reference tree,
-    # parts of $profile are undef
-    Dumper($profile);
-    for ( @{$profile} ) {
-        my ( $key, $val ) = each %{$_};
-        return $val if ( $key eq $name );
-    }
-    return;
-}
-
 sub make_progress_string {
     my ( $i, $npages ) = @_;
     return sprintf $d->get('Scanning page %d of %d'), $i, $npages
       if ( $npages > 0 );
     return sprintf $d->get('Scanning page %d'), $i;
-}
-
-sub add_to_current_scan_options {
-    my ( $self, $option, $val ) = @_;
-    my $current = $self->{current_scan_options};
-    if ( not defined $current->{backend} ) {
-        $current->{backend} = [];
-    }
-
-    # Cache option
-    push @{ $current->{backend} }, { $option->{name} => $val };
-
-    # Note any duplicate options, keeping only the last entry.
-    $self->{current_scan_options}{backend} =
-      Gscan2pdf::Scanner::Options::prune_duplicates( $current->{backend} );
-    return;
 }
 
 1;

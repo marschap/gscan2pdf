@@ -44,12 +44,14 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         $dialog->add_profile(
             'my profile',
-            {
-                backend => [
-                    { 'bool-soft-select-soft-detect' => TRUE },
-                    { mode                           => 'Color' }
-                ]
-            }
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend => [
+                        { 'bool-soft-select-soft-detect' => TRUE },
+                        { mode                           => 'Color' }
+                    ]
+                }
+            )
         );
 
         # need a new main loop because of the timeout
@@ -62,7 +64,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 my ( $widget, $profile ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     { backend => [ { mode => 'Color' } ] },
                     'correctly set rest of profile'
                 );

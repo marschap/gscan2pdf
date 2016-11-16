@@ -35,7 +35,10 @@ $signal = $dialog->signal_connect(
         $dialog->signal_handler_disconnect($signal);
 
         $dialog->set_current_scan_options(
-            { backend => [ { 'invert-endianess' => 0 } ] } );
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                { backend => [ { 'invert-endianess' => 0 } ] }
+            )
+        );
 
         $dialog->signal_connect(
             'new-scan' => sub {
@@ -55,12 +58,14 @@ $signal = $dialog->signal_connect(
                         $dialog->signal_handler_disconnect($signal);
 
                         $dialog->set_current_scan_options(
-                            {
-                                backend => [
-                                    { mode               => 'Gray' },
-                                    { 'invert-endianess' => 0 }
-                                ]
-                            }
+                            Gscan2pdf::Scanner::Profile->new_from_data(
+                                {
+                                    backend => [
+                                        { mode               => 'Gray' },
+                                        { 'invert-endianess' => 0 }
+                                    ]
+                                }
+                            )
                         );
 
                         $dialog->signal_connect(

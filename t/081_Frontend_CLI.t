@@ -53,7 +53,13 @@ is_deeply( Gscan2pdf::Frontend::CLI->parse_device_list(''),
 
 is(
     Gscan2pdf::Frontend::CLI::_create_scanimage_cmd(
-        { device => 'test', prefix => '', options => [ { $brx => 10 } ] }
+        {
+            device  => 'test',
+            prefix  => '',
+            options => Gscan2pdf::Scanner::Profile->new_from_data(
+                { backend => [ { $brx => 10 } ] }
+            )
+        }
     ),
     " scanimage --help --device-name='test' -x 10",
     "map Sane geometry options back to scanimage options"
@@ -66,7 +72,12 @@ is(
         {
             device  => 'test',
             prefix  => '',
-            options => [ { $brx => 10 }, { $bry => 10 }, { mode => 'Color' } ]
+            options => Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend =>
+                      [ { $brx => 10 }, { $bry => 10 }, { mode => 'Color' } ]
+                }
+            )
         }
     ),
     " scanimage --help --device-name='test' -x 10 -y 10 --mode='Color'",
@@ -188,8 +199,10 @@ $loop->run;
 
 $loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI->find_scan_options(
-    device            => 'test',
-    options           => [ { mode => 'Color' } ],
+    device  => 'test',
+    options => Gscan2pdf::Scanner::Profile->new_from_data(
+        { backend => [ { mode => 'Color' } ] }
+    ),
     finished_callback => sub {
         my ($options) = @_;
         is( $options->by_name('mode')->{val},

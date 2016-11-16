@@ -4,6 +4,7 @@ use Test::More tests => 49;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
+use Gscan2pdf::Scanner::Profile;
 
 BEGIN {
     use_ok('Gscan2pdf::Dialog::Scan::Sane');
@@ -93,7 +94,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
                 is( $name, 'my profile', 'added-profile signal emitted' );
                 is_deeply(
-                    $profile,
+                    $profile->get_data,
                     {
                         backend =>
                           [ { $resolution => 51 }, { mode => 'Color' } ]
@@ -104,9 +105,11 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         );
         $dialog->add_profile(
             'my profile',
-            {
-                backend => [ { $resolution => 51 }, { mode => 'Color' } ]
-            }
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend => [ { $resolution => 51 }, { mode => 'Color' } ]
+                }
+            )
         );
 
         $dialog->{signal} = $dialog->signal_connect(
@@ -115,7 +118,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
                 is( $name, 'my profile', 'replaced profile' );
                 is_deeply(
-                    $profile,
+                    $profile->get_data,
                     {
                         backend =>
                           [ { $resolution => 52 }, { mode => 'Color' } ]
@@ -133,9 +136,11 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         );
         $dialog->add_profile(
             'my profile',
-            {
-                backend => [ { $resolution => 52 }, { mode => 'Color' } ]
-            }
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend => [ { $resolution => 52 }, { mode => 'Color' } ]
+                }
+            )
         );
 
         ######################################
@@ -149,7 +154,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
                 is( $profile, 'my profile', 'changed-profile' );
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend =>
                           [ { $resolution => 52 }, { mode => 'Color' } ],
@@ -169,9 +174,11 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         $dialog->add_profile(
             'my profile2',
-            {
-                backend => [ { $resolution => 52 }, { mode => 'Color' } ]
-            }
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend => [ { $resolution => 52 }, { mode => 'Color' } ]
+                }
+            )
         );
 
         # need a new main loop because of the timeout
@@ -202,7 +209,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 is( $dialog->get('profile'),
                     undef, 'changing an option deselects the current profile' );
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend =>
                           [ { mode => 'Color' }, { $resolution => 51 } ],
@@ -239,7 +246,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 is( $profile, 'my profile',
                     'reset profile back to my profile' );
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend =>
                           [ { $resolution => 52 }, { mode => 'Color' } ],
@@ -267,7 +274,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 'changing an option fires the changed-profile signal if a profile is set'
                 );
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend =>
                           [ { mode => 'Color' }, { $resolution => 51 } ],
@@ -300,15 +307,17 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         $dialog->add_profile(
             'cli geometry',
-            {
-                backend => [
-                    { l           => 1 },
-                    { y           => 50 },
-                    { x           => 50 },
-                    { t           => 2 },
-                    { $resolution => 50 }
-                ]
-            }
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend => [
+                        { l           => 1 },
+                        { y           => 50 },
+                        { x           => 50 },
+                        { t           => 2 },
+                        { $resolution => 50 }
+                    ]
+                }
+            )
         );
 
         # need a new main loop because of the timeout
@@ -335,7 +344,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                   { scalar(SANE_NAME_SCAN_BR_X) => 51 },
                   { scalar(SANE_NAME_SCAN_TL_Y) => 2 },
                   { $resolution                 => 50 };
-                is_deeply( $dialog->get('current-scan-options'),
+                is_deeply( $dialog->get('current-scan-options')->get_data,
                     $expected, 'CLI geometry option names' );
                 $flag = TRUE;
                 $loop->quit;
@@ -372,8 +381,6 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 is( $paper, 'new2', 'changed-paper' );
                 ok( not( $widget->{option_widgets}{'tl-x'}->visible ),
                     'geometry hidden' );
-                $flag = TRUE;
-                $loop->quit;
             }
         );
         my $s_signal;
@@ -400,6 +407,8 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                     'set_option tl-x to 0',
                     'finished-process set_option'
                 );
+                $flag = TRUE;
+                $loop->quit;
             }
         );
         $dialog->set( 'paper', 'new2' );

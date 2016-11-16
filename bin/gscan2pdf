@@ -46,6 +46,7 @@ no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Sane;
 use Gscan2pdf::Frontend::CLI;
+use Gscan2pdf::Scanner::Profile;
 use Gscan2pdf::Dialog::Scan::Sane;
 use Gscan2pdf::Dialog::Scan::CLI;
 use Gscan2pdf::Tesseract;
@@ -3549,7 +3550,12 @@ sub scan_dialog {
 
     # Profiles
     for my $profile ( keys %{ $SETTING{profile} } ) {
-        $windows->add_profile( $profile, $SETTING{profile}{$profile} );
+        $windows->add_profile(
+            $profile,
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                $SETTING{profile}{$profile}
+            )
+        );
     }
     $windows->signal_connect(
         'changed-profile' => sub {
@@ -3560,7 +3566,7 @@ sub scan_dialog {
     $windows->signal_connect(
         'added-profile' => sub {
             my ( $widget, $name, $profile ) = @_;
-            $SETTING{profile}{$name} = $profile;
+            $SETTING{profile}{$name} = $profile->get_data;
         }
     );
     $windows->signal_connect(
@@ -3573,8 +3579,8 @@ sub scan_dialog {
     # Update the default profile when the scan options change
     $windows->signal_connect(
         'changed-current-scan-options' => sub {
-            my ( $widget, $option_array ) = @_;
-            $SETTING{'default-scan-options'} = $option_array;
+            my ( $widget, $profile ) = @_;
+            $SETTING{'default-scan-options'} = $profile->get_data;
         }
     );
 
@@ -3685,7 +3691,11 @@ sub reloaded_scan_options_callback {
         $windows->set( 'profile', $SETTING{'default profile'} );
     }
     elsif ( defined $SETTING{'default-scan-options'} ) {
-        $windows->set_current_scan_options( $SETTING{'default-scan-options'} );
+        $windows->set_current_scan_options(
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                $SETTING{'default-scan-options'}
+            )
+        );
     }
     elsif (@profiles) {
         $windows->set( 'profile', $profiles[0] );

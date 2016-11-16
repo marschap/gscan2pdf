@@ -36,11 +36,11 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         $dialog->{signal} = $dialog->signal_connect(
             'changed-current-scan-options' => sub {
-                my ( $widget, $option_array ) = @_;
+                my ( $widget, $profile ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
                 Gtk2->main_quit;
                 is_deeply(
-                    $option_array,
+                    $profile->get_data,
                     { backend => [ { $resolution => 51 }, ] },
                     'emitted changed-current-scan-options'
                 );

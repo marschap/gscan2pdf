@@ -107,8 +107,8 @@ $override->replace(
         if ( defined $options{started_callback} ) {
             $options{started_callback}->();
         }
-        if ( defined $options{options} ) {
-            my ( $key, $value ) = each %{ $options{options}[0] };
+        if ( defined $options{options}{data}{backend} ) {
+            my ( $key, $value ) = each %{ $options{options}{data}{backend}[0] };
             if ( $key eq 'source' and $value eq 'ADF' ) {
                 for (qw(3 5)) {
                     $options->[$_]{constraint}{max} = 800;

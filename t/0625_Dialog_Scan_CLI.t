@@ -43,7 +43,7 @@ $signal = $dialog->signal_connect(
     'changed-options-cache' => sub {
         $dialog->signal_handler_disconnect($signal);
         is_deeply(
-            $dialog->get('current-scan-options'),
+            $dialog->get('current-scan-options')->get_data,
             { backend => [] },
             'cached default Gray - no scan option set'
         );
@@ -56,7 +56,7 @@ $signal = $dialog->signal_connect(
                     'changed-options-cache' => sub {
                         $dialog->signal_handler_disconnect($signal);
                         is_deeply(
-                            $dialog->get('current-scan-options'),
+                            $dialog->get('current-scan-options')->get_data,
                             { backend => [ { mode => 'Color' } ] },
                             'cached Color'
                         );
@@ -72,7 +72,8 @@ $signal = $dialog->signal_connect(
                             'reloaded-scan-options' => sub {
                                 $dialog->signal_handler_disconnect($signal);
                                 is_deeply(
-                                    $dialog->get('current-scan-options'),
+                                    $dialog->get('current-scan-options')
+                                      ->get_data,
                                     { backend => [ { mode => 'Gray' } ] },
                                     'retrieved Gray from cache'
                                 );
@@ -83,7 +84,8 @@ $signal = $dialog->signal_connect(
                                             $signal);
                                         is_deeply(
                                             $dialog->get(
-                                                'current-scan-options'),
+                                                'current-scan-options')
+                                              ->get_data,
                                             {
                                                 backend =>
                                                   [ { mode => 'Color' } ]
@@ -98,7 +100,8 @@ $signal = $dialog->signal_connect(
                                                     $signal);
                                                 is_deeply(
                                                     $dialog->get(
-                                                        'current-scan-options'),
+                                                        'current-scan-options')
+                                                      ->get_data,
                                                     {
                                                         backend => [
                                                             { mode => 'Gray' }

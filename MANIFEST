@@ -45,6 +45,7 @@ lib/Gscan2pdf/Ocropus.pm
 lib/Gscan2pdf/Page.pm
 lib/Gscan2pdf/PageRange.pm
 lib/Gscan2pdf/Scanner/Options.pm
+lib/Gscan2pdf/Scanner/Profile.pm
 lib/Gscan2pdf/Tesseract.pm
 lib/Gscan2pdf/Unpaper.pm
 po/gscan2pdf-ab.po
@@ -143,8 +144,8 @@ t/02_Scanner_Options_officejet_5500.t
 t/02_Scanner_Options_snapscan.t
 t/02_Scanner_Options_test.t
 t/02_Scanner_Options_umax.t
-t/03_Page.t
-t/04_Unpaper.t
+t/03_Scanner_Profile.t
+t/04_Page.t
 t/05_Dialog.t
 t/0601_Dialog_Scan.t
 t/0602_Dialog_Scan.t
@@ -278,6 +279,7 @@ t/283_to_png_with_error.t
 t/31_ocropus.t
 t/32_ocropus_in_thread.t
 t/33_cancel_ocropus.t
+t/34_Unpaper.t
 t/351_unpaper.t
 t/352_unpaper.t
 t/353_cancel_unpaper.t

@@ -43,7 +43,7 @@ $signal = $dialog->signal_connect(
     'changed-options-cache' => sub {
         $dialog->signal_handler_disconnect($signal);
         is_deeply(
-            $dialog->get('current-scan-options'),
+            $dialog->get('current-scan-options')->get_data,
             { backend => [] },
             'cached default Gray - no scan option set'
         );

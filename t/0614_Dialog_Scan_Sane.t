@@ -33,9 +33,11 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         $dialog->add_profile(
             'my profile',
-            {
-                backend => [ { 'enable-test-options' => '' } ]
-            }
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend => [ { 'enable-test-options' => '' } ]
+                }
+            )
         );
 
         # need a new main loop because of the timeout
@@ -46,7 +48,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 my ( $widget, $profile ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     { backend => [ { 'enable-test-options' => '' } ] },
                     'bool false as empty string'
                 );

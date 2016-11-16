@@ -47,10 +47,13 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
             }
         );
         $dialog->set_current_scan_options(
-            {
-                'backend' => [ { 'source' => 'Automatic Document Feeder' } ],
-                'frontend' => { 'num_pages' => '0' }
-            }
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    'backend' =>
+                      [ { 'source' => 'Automatic Document Feeder' } ],
+                    'frontend' => { 'num_pages' => '0' }
+                }
+            )
         );
         $loop->run unless ($flag);
         Gtk2->main_quit;

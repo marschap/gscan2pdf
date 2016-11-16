@@ -357,7 +357,7 @@ sub set_option {
     my ( $self, $option, $val ) = @_;
     if ( not defined $option ) { return }
 
-    $self->add_to_current_scan_options( $option, $val );
+    $self->{current_scan_options}->add_backend_option( $option->{name}, $val );
 
     my $signal;
     my $options = $self->get('available-scan-options');

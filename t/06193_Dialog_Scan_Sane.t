@@ -41,7 +41,7 @@ $dialog->{signal} = $dialog->signal_connect(
                 my ( $widget, $option, $value ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     { backend => [ { $resolution => 51 } ] },
                     'set resolution before scan'
                 );
@@ -71,7 +71,7 @@ $dialog->{signal} = $dialog->signal_connect(
                 my ( $widget, $option, $value ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     { backend => [ { $resolution => 51 } ] },
                     'set resolution after scan'
                 );

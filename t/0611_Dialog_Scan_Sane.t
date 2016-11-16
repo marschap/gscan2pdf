@@ -39,9 +39,11 @@ $signal = $dialog->signal_connect(
 
         $dialog->add_profile(
             'my profile',
-            {
-                backend => [ { $resolution => 52 } ]
-            }
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend => [ { $resolution => 52 } ]
+                }
+            )
         );
 
         my $loop;
@@ -50,7 +52,7 @@ $signal = $dialog->signal_connect(
             'changed-scan-option' => sub {
                 my ( $widget, $option, $value ) = @_;
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     { backend => [ { $resolution => 52 } ] },
                     'current-scan-options'
                 );

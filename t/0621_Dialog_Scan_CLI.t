@@ -124,7 +124,7 @@ $signal = $dialog->signal_connect(
                 my ( $widget, $name, $profile ) = @_;
                 is( $name, 'my profile', 'added-profile name' );
                 is_deeply(
-                    $profile,
+                    $profile->get_data,
                     {
                         backend =>
                           [ { $resolution => 52 }, { mode => 'Color' } ]
@@ -136,9 +136,11 @@ $signal = $dialog->signal_connect(
         );
         $dialog->add_profile(
             'my profile',
-            {
-                backend => [ { $resolution => 52 }, { mode => 'Color' } ]
-            }
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend => [ { $resolution => 52 }, { mode => 'Color' } ]
+                }
+            )
         );
 
         ######################################
@@ -151,7 +153,7 @@ $signal = $dialog->signal_connect(
                 my ( $widget, $profile ) = @_;
                 is( $profile, 'my profile', 'changed-profile' );
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend =>
                           [ { $resolution => 52 }, { mode => 'Color' } ],
@@ -172,9 +174,11 @@ $signal = $dialog->signal_connect(
 
         $dialog->add_profile(
             'my profile2',
-            {
-                backend => [ { $resolution => 52 }, { mode => 'Color' } ]
-            }
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend => [ { $resolution => 52 }, { mode => 'Color' } ]
+                }
+            )
         );
 
         # need a new main loop because of the timeout
@@ -205,7 +209,7 @@ $signal = $dialog->signal_connect(
                 is( $dialog->get('profile'),
                     undef, 'changing an option deselects the current profile' );
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend =>
                           [ { mode => 'Color' }, { $resolution => 51 } ],
@@ -240,7 +244,7 @@ $signal = $dialog->signal_connect(
                 my ( $widget, $profile ) = @_;
                 is( $profile, 'my profile', 'reset profile name' );
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend =>
                           [ { $resolution => 52 }, { mode => 'Color' } ],
@@ -276,7 +280,7 @@ $signal = $dialog->signal_connect(
                 my ( $widget, $name, $value ) = @_;
                 $dialog->signal_handler_disconnect($signal2);
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend =>
                           [ { $resolution => 52 }, { mode => 'Gray' } ],
@@ -306,7 +310,7 @@ $signal = $dialog->signal_connect(
             'reloaded-scan-options' => sub {
                 $dialog->signal_handler_disconnect($signal);
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend =>
                           [ { $resolution => 52 }, { mode => 'Color' } ],
@@ -331,7 +335,7 @@ $signal = $dialog->signal_connect(
             'changed-scan-option' => sub {
                 my ( $widget, $option, $value ) = @_;
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend => [
                             { $resolution => 52 },
@@ -347,22 +351,28 @@ $signal = $dialog->signal_connect(
                 $loop->quit;
             }
         );
-        $dialog->set_current_scan_options( { backend => [ { x => 11 } ] } );
+        $dialog->set_current_scan_options(
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                { backend => [ { x => 11 } ] }
+            )
+        );
         $loop->run unless ($flag);
 
         ######################################
 
         $dialog->add_profile(
             'cli geometry',
-            {
-                backend => [
-                    { l           => 1 },
-                    { y           => 50 },
-                    { x           => 50 },
-                    { t           => 2 },
-                    { $resolution => 50 }
-                ]
-            }
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend => [
+                        { l           => 1 },
+                        { y           => 50 },
+                        { x           => 50 },
+                        { t           => 2 },
+                        { $resolution => 50 }
+                    ]
+                }
+            )
         );
 
         # need a new main loop because of the timeout
@@ -381,7 +391,7 @@ $signal = $dialog->signal_connect(
                   { $bry => 52 }, { $brx        => 51 },
                   { $tly => 2 },  { $resolution => 50 };
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend    => $expected,
                         'frontend' => { 'num_pages' => 0 }
@@ -430,7 +440,7 @@ $signal = $dialog->signal_connect(
                 push @$expected, { $tlx => 0 }, { $tly => 0 }, { $brx => 10 },
                   { $bry => 10 };
                 is_deeply(
-                    $dialog->get('current-scan-options'),
+                    $dialog->get('current-scan-options')->get_data,
                     {
                         backend    => $expected,
                         'frontend' => { 'num_pages' => 0 }
