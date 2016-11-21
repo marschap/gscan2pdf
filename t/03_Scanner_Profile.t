@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 19;
+use Test::More tests => 28;
 use Sane 0.05;    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Profile') }
 
@@ -106,6 +106,14 @@ is_deeply(
 
 #########################
 
+my $iter = $profile->each_frontend_option;
+is( $iter->(), 'num_pages', 'basic functionality each_frontend_option' );
+is( $profile->get_frontend_option('num_pages'),
+    1, 'basic functionality get_frontend_option' );
+is( $iter->(), undef, 'each_frontend_option returns undef when finished' );
+
+#########################
+
 $profile = Gscan2pdf::Scanner::Profile->new_from_data(
     { backend => [ { l => 1 }, { y => 50 }, { x => 50 }, { t => 2 } ] } );
 is_deeply(
@@ -120,3 +128,24 @@ is_deeply(
     },
     'basic functionality map_from_cli'
 );
+
+#########################
+
+$iter = $profile->each_backend_option;
+is( $iter->(), 1, 'basic functionality each_backend_option' );
+is_deeply(
+    [ $profile->get_backend_option_by_index(1) ],
+    [ 'tl-x', 1 ],
+    'basic functionality get_backend_option_by_index'
+);
+is( $iter->(0), 1, 'no iteration' );
+for ( 1 .. 3 ) { $iter->() }
+is( $iter->(), undef, 'each_backend_option returns undef when finished' );
+
+#########################
+
+$iter = $profile->each_backend_option(1);
+is( $iter->(), 4, 'basic functionality each_backend_option reverse' );
+for ( 1 .. 3 ) { $iter->() }
+is( $iter->(), undef,
+    'each_backend_option reverse returns undef when finished' );

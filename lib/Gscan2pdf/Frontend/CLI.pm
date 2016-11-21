@@ -17,7 +17,6 @@ use Gscan2pdf::NetPBM;
 use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Dialog::Scan;
 use Sane 0.05;    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
-use Data::Dumper;
 use Cwd;
 use File::Spec;
 use Readonly;
@@ -283,7 +282,6 @@ qr{^$options{frontend}:[ ]sane_start:[ ]Error[ ]during[ ]device[ ]I/O}xsm
 }
 
 # Helper sub to create the scanimage command
-# FIXME: move this to Gscan2pdf::Scanner::Profile
 
 sub _create_scanimage_cmd {
     my ( $options, $scan ) = @_;
@@ -298,24 +296,18 @@ sub _create_scanimage_cmd {
     # inverted commas needed for strange characters in device name
     my $device = "--device-name='$options{device}'";
 
-    # Add basic options
-    $logger->debug( Dumper( $options{options} ) );
-    if ( defined $options{options} ) { $options{options}->map_to_cli }
-
-    # for reasons I don't understand, without walking the reference tree,
-    # parts of $options are undef
-    Dumper( $options{options} );
-
     my @options;
-
-    # FIXME: refactor some of this into Gscan2pdf::Scanner::Profile
-    for ( @{ $options{options}{data}{backend} } ) {
-        my ( $key, $value ) = each %{$_};
-        if ( $key =~ /^[xytl]$/xsm ) {
-            push @options, "-$key $value";
-        }
-        else {
-            push @options, "--$key='$value'";
+    if ( defined $options{options} ) {
+        my $iter = $options{options}->each_backend_option;
+        while ( my $i = $iter->() ) {
+            my ( $key, $val ) =
+              $options{options}->get_backend_option_by_index($i);
+            if ( $key =~ /^[xytl]$/xsm ) {
+                push @options, "-$key $val";
+            }
+            else {
+                push @options, "--$key='$val'";
+            }
         }
     }
     if ( not $help ) {

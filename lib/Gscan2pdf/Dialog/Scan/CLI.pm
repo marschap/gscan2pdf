@@ -172,7 +172,6 @@ sub cache_key {
 
     my $cache_key = $EMPTY;
     if ( defined $options ) {
-
         for my $opt ( @{ $options->{array} } ) {
             for ( @{$reload_triggers} ) {
                 if ( defined( $opt->{name} ) and /^$opt->{name}$/ixsm ) {
@@ -184,15 +183,10 @@ sub cache_key {
         }
     }
     else {
-
-        # for reasons I don't understand, without walking the reference tree,
-        # parts of $default are undef
-        Dumper( $self->{current_scan_options} );
-
-        # grep the reload triggers from the current options
-        # FIXME: refactor some of this into Gscan2pdf::Scanner::Profile
-        for ( @{ $self->{current_scan_options}{data}{backend} } ) {
-            my ( $key, $value ) = each %{$_};
+        my $next = $self->{current_scan_options}->each_backend_option;
+        while ( my $i = $next->() ) {
+            my ( $key, $value ) =
+              $self->{current_scan_options}->get_backend_option_by_index($i);
             for ( @{$reload_triggers} ) {
                 if (/^$key$/ixsm) {
                     if ( $cache_key ne $EMPTY ) { $cache_key .= $COMMA }
@@ -641,7 +635,8 @@ sub set_option {
                 prefix   => $self->get('prefix'),
                 frontend => $self->get('frontend'),
                 device   => $self->get('device'),
-                options  => $self->map_options( $self->{current_scan_options} ),
+                options  => $self->{current_scan_options}
+                  ->map_to_cli( $self->get('available-scan-options') ),
                 started_callback => sub {
 
                     # Set up ProgressBar
@@ -727,15 +722,10 @@ sub _set_option_flags_signals {
 
 sub patch_cache {
     my ( $self, $options ) = @_;
-
-    # for reasons I don't understand, without walking the
-    # reference tree, parts of $self->{current_scan_options}
-    # are undef
-    Dumper( $self->{current_scan_options} );
-
-    # FIXME: refactor some of this into Gscan2pdf::Scanner::Profile
-    for my $hashref ( @{ $self->{current_scan_options}{data}{backend} } ) {
-        my ( $key, undef ) = each %{$hashref};
+    my $next = $self->{current_scan_options}->each_backend_option;
+    while ( my $i = $next->() ) {
+        my ($key) =
+          $self->{current_scan_options}->get_backend_option_by_index($i);
         my $updated_option =
           $self->get('available-scan-options')->by_name($key);
         if ( defined( $updated_option->{name} )
@@ -818,28 +808,6 @@ sub update_widget {    # FIXME: this is partly duplicated in Sane.pm
     return;
 }
 
-# change boolean values from TRUE and FALSE to yes and no
-# FIXME: move this to Gscan2pdf::Scanner::Profile::map_to_cli
-sub map_options {
-    my ( $self, $old ) = @_;
-    my $new     = Gscan2pdf::Scanner::Profile->new;
-    my $options = $self->get('available-scan-options');
-
-    # for reasons I don't understand, without walking the reference tree,
-    # parts of $old are undef
-    Dumper($old);
-
-    for ( @{ $old->{data}{backend} } ) {
-        my ( $key, $val ) = each %{$_};
-        my $opt = $options->by_name($key);
-        if ( defined( $opt->{type} ) and $opt->{type} == SANE_TYPE_BOOL ) {
-            $val = $val ? 'yes' : 'no';
-        }
-        $new->add_backend_option( $key, $val );
-    }
-    return $new;
-}
-
 sub scan {
     my ($self) = @_;
 
@@ -857,10 +825,11 @@ sub scan {
 
     my $i = 1;
     Gscan2pdf::Frontend::CLI->scan_pages(
-        device           => $self->get('device'),
-        dir              => $self->get('dir'),
-        format           => 'out%d.pnm',
-        options          => $self->map_options( $self->{current_scan_options} ),
+        device  => $self->get('device'),
+        dir     => $self->get('dir'),
+        format  => 'out%d.pnm',
+        options => $self->{current_scan_options}
+          ->map_to_cli( $self->get('available-scan-options') ),
         npages           => $npages,
         start            => $start,
         step             => $step,

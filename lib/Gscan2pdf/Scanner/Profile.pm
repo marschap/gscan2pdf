@@ -11,6 +11,7 @@ use Storable qw(dclone);
 use Data::Dumper;
 use Readonly;
 Readonly my $EMPTY_ARRAY => -1;
+Readonly my $REVERSE     => TRUE;
 
 # Have to subclass Glib::Object to be able to name it as an object in
 # Glib::ParamSpec->object in Gscan2pdf::Dialog::Scan
@@ -24,35 +25,89 @@ sub new_from_data {
     my ( $class, $hash ) = @_;
     my $self = $class->new();
     if ( not defined $hash ) { croak 'Error: no profile supplied' }
-    $self->{data} = dclone($hash);
-    $self->map_from_cli;
-    return $self;
+    $self->{data} = $hash;
+    return $self->map_from_cli;
 }
 
+# the oldval option is a hack to allow us not to apply geometry options
+# if setting paper as part of a profile
+
 sub add_backend_option {
-    my ( $self, $name, $val ) = @_;
+    my ( $self, $name, $val, $oldval ) = @_;
     if ( not defined $name or $name eq $EMPTY ) {
         croak 'Error: no option name';
     }
+    if ( defined $oldval and $val == $oldval ) { return }
     push @{ $self->{data}{backend} }, { $name => $val };
 
     # Note any duplicate options, keeping only the last entry.
     my %seen;
-    my $j = $#{ $self->{data}{backend} };
-    while ( $j > $EMPTY_ARRAY ) {
-        my ($opt) = keys %{ $self->{data}{backend}[$j] };
+
+    my $iter = $self->each_backend_option($REVERSE);
+    while ( my $i = $iter->() ) {
+        my ($opt) = $self->get_backend_option_by_index($i);
         my $synonyms = _synonyms($opt);
         for ( @{$synonyms} ) {
             $seen{$_}++;
             if ( defined $seen{$_} and $seen{$_} > 1 ) {
-                splice @{ $self->{data}{backend} }, $j, 1;
+                $self->remove_backend_option_by_index($i);
                 last;
             }
         }
-        $j--;
     }
-
     return;
+}
+
+sub get_backend_option_by_index {
+    my ( $self, $i ) = @_;
+    return each %{ $self->{data}{backend}[ $i - 1 ] };
+}
+
+sub remove_backend_option_by_index {
+    my ( $self, $i ) = @_;
+    splice @{ $self->{data}{backend} }, $i - 1, 1;
+    return;
+}
+
+# an iterator for backend options
+# index returned by iterator 1 greater than index to allow
+# my $iter = $self->each_backend_option;
+# while (my $i = $iter->()) {}
+# otherwise the first iterator would return 0,
+# which would then not enter the while loop
+
+sub each_backend_option {
+    my ( $self, $backwards ) = @_;
+
+    my $iter;
+
+    return sub {
+        my ($step) = @_;
+
+        # for reasons I don't understand, without walking the reference tree,
+        # parts of $self->{data}{backend} are undef
+        Dumper( $self->{data}{backend} );
+
+        if ( not defined $iter ) {
+            $iter = ( $backwards ? $#{ $self->{data}{backend} } : 0 ) + 1;
+        }
+        elsif ( not defined $step or $step ) {
+            $iter = $backwards ? $iter - 1 : $iter + 1;
+        }
+        if (   ( $backwards and $iter == 0 )
+            or ( not $backwards and $iter == $#{ $self->{data}{backend} } + 2 )
+          )
+        {
+            return;
+        }
+        return $iter;
+    };
+}
+
+sub num_backend_options {
+    my ($self) = @_;
+    if ( not defined $self->{data}{backend} ) { return }
+    return scalar @{ $self->{data}{backend} };
 }
 
 sub add_frontend_option {
@@ -64,6 +119,26 @@ sub add_frontend_option {
     return;
 }
 
+# an iterator for frontend options
+# option name returned by iterator
+# my $iter = $self->each_backend_option;
+# while (my $name = $iter->()) {}
+
+sub each_frontend_option {
+    my ($self) = @_;
+    my @keys   = keys %{ $self->{data}{frontend} };
+    my $next   = 0;
+    return sub {
+        if ( $next > $#keys ) { return }
+        return $keys[ $next++ ];
+    };
+}
+
+sub get_frontend_option {
+    my ( $self, $name ) = @_;
+    return $self->{data}{frontend}{$name};
+}
+
 sub get_data {
     my ($self) = @_;
     return $self->{data};
@@ -73,61 +148,58 @@ sub get_data {
 
 sub map_from_cli {
     my ($self) = @_;
-    for my $i ( 0 .. $#{ $self->{data}{backend} } ) {
-
-        # for reasons I don't understand, without walking the reference tree,
-        # parts of $options are undef
-        Dumper( $self->{data}{backend} );
-        my ( $name, $val ) = each %{ $self->{data}{backend}[$i] };
+    my $new    = Gscan2pdf::Scanner::Profile->new;
+    my $iter   = $self->each_backend_option;
+    while ( my $i = $iter->() ) {
+        my ( $name, $val ) = $self->get_backend_option_by_index($i);
         given ($name) {
             when ('l') {
-                $name = SANE_NAME_SCAN_TL_X;
-                $self->{data}{backend}[$i] = { $name => $val };
+                $new->add_backend_option( SANE_NAME_SCAN_TL_X, $val );
             }
             when ('t') {
-                $name = SANE_NAME_SCAN_TL_Y;
-                $self->{data}{backend}[$i] = { $name => $val };
+                $new->add_backend_option( SANE_NAME_SCAN_TL_Y, $val );
             }
             when ('x') {
-                $name = SANE_NAME_SCAN_BR_X;
                 my $l = $self->get_option_by_name('l');
                 if ( not defined $l ) {
                     $l = $self->get_option_by_name(SANE_NAME_SCAN_TL_X);
                 }
                 if ( defined $l ) { $val += $l }
-                $self->{data}{backend}[$i] = { $name => $val };
+                $new->add_backend_option( SANE_NAME_SCAN_BR_X, $val );
             }
             when ('y') {
-                $name = SANE_NAME_SCAN_BR_Y;
                 my $t = $self->get_option_by_name('t');
                 if ( not defined $t ) {
                     $t = $self->get_option_by_name(SANE_NAME_SCAN_TL_Y);
                 }
                 if ( defined $t ) { $val += $t }
-                $self->{data}{backend}[$i] = { $name => $val };
+                $new->add_backend_option( SANE_NAME_SCAN_BR_Y, $val );
+            }
+            default {
+                $new->add_backend_option( $name, $val );
             }
         }
     }
-    return;
+    if ( defined $self->{data}{frontend} ) {
+        $new->{data}{frontend} = dclone( $self->{data}{frontend} );
+    }
+    return $new;
 }
 
 # Map backend geometry options to the scanimage and scanadf (CLI) geometry names
 
 sub map_to_cli {
-    my ($self) = @_;
-    for my $i ( 0 .. $#{ $self->{data}{backend} } ) {
-
-        # for reasons I don't understand, without walking the reference tree,
-        # parts of $options are undef
-        Dumper( $self->{data}{backend}[$i] );
-
-        my ( $name, $val ) = each %{ $self->{data}{backend}[$i] };
+    my ( $self, $options ) = @_;
+    my $new  = Gscan2pdf::Scanner::Profile->new;
+    my $iter = $self->each_backend_option;
+    while ( my $i = $iter->() ) {
+        my ( $name, $val ) = $self->get_backend_option_by_index($i);
         given ($name) {
             when (SANE_NAME_SCAN_TL_X) {
-                $self->{data}{backend}[$i] = { l => $val };
+                $new->add_backend_option( 'l', $val );
             }
             when (SANE_NAME_SCAN_TL_Y) {
-                $self->{data}{backend}[$i] = { t => $val };
+                $new->add_backend_option( 't', $val );
             }
             when (SANE_NAME_SCAN_BR_X) {
                 my $l = $self->get_option_by_name('l');
@@ -135,7 +207,7 @@ sub map_to_cli {
                     $l = $self->get_option_by_name(SANE_NAME_SCAN_TL_X);
                 }
                 if ( defined $l ) { $val -= $l }
-                $self->{data}{backend}[$i] = { x => $val };
+                $new->add_backend_option( 'x', $val );
             }
             when (SANE_NAME_SCAN_BR_Y) {
                 my $t = $self->get_option_by_name('t');
@@ -143,24 +215,35 @@ sub map_to_cli {
                     $t = $self->get_option_by_name(SANE_NAME_SCAN_TL_Y);
                 }
                 if ( defined $t ) { $val -= $t }
-                $self->{data}{backend}[$i] = { y => $val };
+                $new->add_backend_option( 'y', $val );
+            }
+            default {
+                if ( defined $options ) {
+                    my $opt = $options->by_name($name);
+                    if ( defined( $opt->{type} )
+                        and $opt->{type} == SANE_TYPE_BOOL )
+                    {
+                        $val = $val ? 'yes' : 'no';
+                    }
+                }
+                $new->add_backend_option( $name, $val );
             }
         }
     }
-    return;
+    if ( defined $self->{data}{frontend} ) {
+        $new->{data}{frontend} = dclone( $self->{data}{frontend} );
+    }
+    return $new;
 }
 
 # Extract a option value from a profile
 
 sub get_option_by_name {
     my ( $self, $name ) = @_;
-
-    # for reasons I don't understand, without walking the reference tree,
-    # parts of $profile are undef
-    Dumper($self);
-    for ( @{ $self->{data}{backend} } ) {
-        my ( $key, $val ) = each %{$_};
-        return $val if ( $key eq $name );
+    my $iter = $self->each_backend_option;
+    while ( my $i = $iter->() ) {
+        my ( $key, $val ) = $self->get_backend_option_by_index($i);
+        if ( $key eq $name ) { return $val }
     }
     return;
 }

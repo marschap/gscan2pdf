@@ -58,7 +58,7 @@ is(
             prefix  => '',
             options => Gscan2pdf::Scanner::Profile->new_from_data(
                 { backend => [ { $brx => 10 } ] }
-            )
+            )->map_to_cli
         }
     ),
     " scanimage --help --device-name='test' -x 10",
@@ -77,7 +77,7 @@ is(
                     backend =>
                       [ { $brx => 10 }, { $bry => 10 }, { mode => 'Color' } ]
                 }
-            )
+            )->map_to_cli
         }
     ),
     " scanimage --help --device-name='test' -x 10 -y 10 --mode='Color'",

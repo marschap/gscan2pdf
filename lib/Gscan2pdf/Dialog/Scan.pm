@@ -1241,7 +1241,6 @@ sub set_paper_formats {
     return;
 }
 
-# FIXME: much of this duplicates stuff in Gscan2pdf::Scanner::Profile
 # Treat a paper size as a profile, so build up the required profile of geometry
 # settings and apply it
 sub set_paper {
@@ -1259,10 +1258,9 @@ sub set_paper {
             return;
         }
     }
-    my $formats = $self->get('paper-formats');
-    my $options = $self->get('available-scan-options');
-    my $paper_profile;
-    $paper_profile->{backend} = [];
+    my $formats       = $self->get('paper-formats');
+    my $options       = $self->get('available-scan-options');
+    my $paper_profile = Gscan2pdf::Scanner::Profile->new;
     if ( defined( $options->by_name(SANE_NAME_PAGE_HEIGHT) )
         and not $options->by_name(SANE_NAME_PAGE_HEIGHT)->{cap} &
         SANE_CAP_INACTIVE
@@ -1270,39 +1268,33 @@ sub set_paper {
         and not $options->by_name(SANE_NAME_PAGE_WIDTH)->{cap} &
         SANE_CAP_INACTIVE )
     {
-        $self->_build_profile(
-            $paper_profile,
-            $options->by_name(SANE_NAME_PAGE_HEIGHT),
-            $formats->{$paper}{y} + $formats->{$paper}{t}
+        $paper_profile->add_backend_option( SANE_NAME_PAGE_HEIGHT,
+            $formats->{$paper}{y} + $formats->{$paper}{t},
+            $options->by_name(SANE_NAME_PAGE_HEIGHT)->{val}
         );
-        $self->_build_profile(
-            $paper_profile,
-            $options->by_name(SANE_NAME_PAGE_WIDTH),
-            $formats->{$paper}{x} + $formats->{$paper}{l}
+        $paper_profile->add_backend_option( SANE_NAME_PAGE_WIDTH,
+            $formats->{$paper}{x} + $formats->{$paper}{l},
+            $options->by_name(SANE_NAME_PAGE_WIDTH)->{val}
         );
     }
-    $self->_build_profile(
-        $paper_profile,
-        $options->by_name(SANE_NAME_SCAN_TL_X),
-        $formats->{$paper}{l}
+    $paper_profile->add_backend_option( SANE_NAME_SCAN_TL_X,
+        $formats->{$paper}{l},
+        $options->by_name(SANE_NAME_SCAN_TL_X)->{val}
     );
-    $self->_build_profile(
-        $paper_profile,
-        $options->by_name(SANE_NAME_SCAN_TL_Y),
-        $formats->{$paper}{t}
+    $paper_profile->add_backend_option( SANE_NAME_SCAN_TL_Y,
+        $formats->{$paper}{t},
+        $options->by_name(SANE_NAME_SCAN_TL_Y)->{val}
     );
-    $self->_build_profile(
-        $paper_profile,
-        $options->by_name(SANE_NAME_SCAN_BR_X),
-        $formats->{$paper}{x} + $formats->{$paper}{l}
+    $paper_profile->add_backend_option( SANE_NAME_SCAN_BR_X,
+        $formats->{$paper}{x} + $formats->{$paper}{l},
+        $options->by_name(SANE_NAME_SCAN_BR_X)->{val}
     );
-    $self->_build_profile(
-        $paper_profile,
-        $options->by_name(SANE_NAME_SCAN_BR_Y),
-        $formats->{$paper}{y} + $formats->{$paper}{t}
+    $paper_profile->add_backend_option( SANE_NAME_SCAN_BR_Y,
+        $formats->{$paper}{y} + $formats->{$paper}{t},
+        $options->by_name(SANE_NAME_SCAN_BR_Y)->{val}
     );
 
-    if ( not @{ $paper_profile->{backend} } ) {
+    if ( not $paper_profile->num_backend_options ) {
         $self->hide_geometry($options);
         $self->{paper} = $paper;
         $self->signal_emit( 'changed-paper', $paper );
@@ -1323,8 +1315,8 @@ sub set_paper {
     # Don't trigger the changed-paper signal
     # until we have finished setting the profile
     $self->{setting_profile} = TRUE;
-    $self->_set_option_profile( 0,
-        Gscan2pdf::Scanner::Profile->new_from_data($paper_profile) );
+    $self->_set_option_profile( $paper_profile,
+        $paper_profile->each_backend_option );
     return;
 }
 
@@ -1578,21 +1570,7 @@ sub set_profile {
                 $self->signal_emit( 'changed-profile', $name );
             }
         );
-
-        # for reasons I don't understand, without walking the reference tree,
-        # parts of $self->{profiles}{$name} are undef
-        Dumper( $self->{profiles}{$name} );
-
-        # I don't understand why it necessary to clone the profile here,
-        # since it is cloned again in set_current_scan_options(),
-        # but it shouldn't hurt, and otherwise, it fails t/0601_Dialog_Scan.t
-
-        # I also don't understand why the $clone variable is necessary: why
-        # I can't simply pass the return value from dclone() directly
-        # into set_current_scan_options(),
-        # but otherwise it fails t/0610_Dialog_Scan.t
-        my $clone = dclone( $self->{profiles}{$name} );
-        $self->set_current_scan_options($clone);
+        $self->set_current_scan_options($self->{profiles}{$name});
     }
 
     # no need to wait - nothing to do
@@ -1613,16 +1591,6 @@ sub remove_profile {
         _combobox_remove_item_by_text( $self->{combobsp}, $name );
         $self->signal_emit( 'removed-profile', $name );
         delete $self->{profiles}{$name};
-    }
-    return;
-}
-
-# Helper function to check the new value is different before adding the option
-# to the profile
-sub _build_profile {
-    my ( $self, $profile, $option, $newval ) = @_;
-    if ( $option->{val} != $newval ) {
-        push @{ $profile->{backend} }, { $option->{name} => $newval };
     }
     return;
 }
@@ -2033,26 +2001,24 @@ sub set_current_scan_options {
     # Give the GUI a chance to catch up between settings,
     # in case they have to be reloaded.
     # Use the callback to trigger the next loop
-    $self->_set_option_profile( 0, $clone );
+    $self->_set_option_profile( $clone, $clone->each_backend_option );
     return;
 }
 
-# FIXME: refactor this as iterator in Gscan2pdf::Scanner::Profile
 sub _set_option_profile {
-    my ( $self, $i, $profile ) = @_;
-    if ( $profile->{data}{backend} and $i < @{ $profile->{data}{backend} } ) {
+    my ( $self, $profile, $next, $step ) = @_;
 
-        # for reasons I don't understand, without walking the reference tree,
-        # parts of $profile->{data}{backend} are undef
-        Dumper( $profile->{data}{backend}[$i] );
-        my ( $name, $val ) = each %{ $profile->{data}{backend}[$i] };
+    if ( my $i = $next->($step) ) {
+        my ( $name, $val ) = $profile->get_backend_option_by_index($i);
 
         my $options = $self->get('available-scan-options');
         my $opt     = $options->by_name($name);
         if ( not defined $opt or $opt->{cap} & SANE_CAP_INACTIVE ) {
             $logger->warn("Ignoring inactive option '$name'.");
-            splice @{ $profile->{data}{backend} }, $i, 1;
-            $self->_set_option_profile( $i, $profile );
+            $profile->remove_backend_option_by_index($i);
+
+            # no increment, as we have removed an option
+            $self->_set_option_profile( $profile, $next, FALSE );
             return;
         }
 
@@ -2061,7 +2027,7 @@ sub _set_option_profile {
         $signal = $self->signal_connect(
             'changed-scan-option' => sub {
                 $self->signal_handler_disconnect($signal);
-                $self->_set_option_profile( $i + 1, $profile );
+                $self->_set_option_profile( $profile, $next );
             }
         );
         $self->set_option( $opt, $val );
@@ -2108,10 +2074,9 @@ sub _set_option_profile {
     else {
 
         # Having set all backend options, set the frontend options
-        if ( defined $profile->{data}{frontend} ) {
-            for my $key ( keys %{ $profile->{data}{frontend} } ) {
-                $self->set( $key, $profile->{data}{frontend}{$key} );
-            }
+        my $iter = $profile->each_frontend_option;
+        while ( my $key = $iter->() ) {
+            $self->set( $key, $profile->get_frontend_option($key) );
         }
 
         if ( not $self->{setting_profile} ) {
@@ -2123,7 +2088,7 @@ sub _set_option_profile {
             $self->get('current-scan-options')
         );
     }
-    return $i;
+    return;
 }
 
 sub make_progress_string {
