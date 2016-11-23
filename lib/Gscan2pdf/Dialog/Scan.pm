@@ -1570,7 +1570,7 @@ sub set_profile {
                 $self->signal_emit( 'changed-profile', $name );
             }
         );
-        $self->set_current_scan_options($self->{profiles}{$name});
+        $self->set_current_scan_options( $self->{profiles}{$name} );
     }
 
     # no need to wait - nothing to do
