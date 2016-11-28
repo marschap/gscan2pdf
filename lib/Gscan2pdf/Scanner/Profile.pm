@@ -8,7 +8,6 @@ use Carp;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Sane 0.05;              # For enums
 use Storable qw(dclone);
-use Data::Dumper;
 use Readonly;
 Readonly my $EMPTY_ARRAY => -1;
 Readonly my $REVERSE     => TRUE;
@@ -60,7 +59,7 @@ sub add_backend_option {
 
 sub get_backend_option_by_index {
     my ( $self, $i ) = @_;
-    return each %{ $self->{data}{backend}[ $i - 1 ] };
+    return %{ $self->{data}{backend}[ $i - 1 ] };
 }
 
 sub remove_backend_option_by_index {
@@ -83,10 +82,6 @@ sub each_backend_option {
 
     return sub {
         my ($step) = @_;
-
-        # for reasons I don't understand, without walking the reference tree,
-        # parts of $self->{data}{backend} are undef
-        Dumper( $self->{data}{backend} );
 
         if ( not defined $iter ) {
             $iter = ( $backwards ? $#{ $self->{data}{backend} } : 0 ) + 1;
