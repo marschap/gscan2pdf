@@ -26,17 +26,18 @@
 # 4.  make remote-html
 # 5. create version directory in https://sourceforge.net/projects/gscan2pdf/files/gscan2pdf
 #     make file_releases
-# 6. make ppa
-#    name the release -0~ppa1<release>, where release is yakkety, xenial, wily, vivid, trusty, precise, etc
-#     debuild -S -sa
-#     dput gscan2pdf-ppa .changes
-#    https://launchpad.net/~jeffreyratcliffe/+archive
-#    gscan2pdf-announce@lists.sourceforge.net, gscan2pdf-help@lists.sourceforge.net, gnome-announce-list@gnome.org, sane-devel@lists.alioth.debian.org
+# 6. Build package for debian
 #     sudo DIST=sid pbuilder update
 #     DIST=sid pdebuild
 #     lintian -iI --pedantic .changes
 #    check contents with dpkg-deb --contents
-#     dput ftp-master
+#     dput ftp-master .changes
+# 7. Build packages for Ubuntu
+#    name the release -0~ppa1<release>, where release is zesty, yakkety, xenial, wily, vivid, trusty, precise, etc
+#     debuild --no-lintian -S -sa
+#     dput gscan2pdf-ppa .changes
+#    https://launchpad.net/~jeffreyratcliffe/+archive
+# 8. gscan2pdf-announce@lists.sourceforge.net, gscan2pdf-help@lists.sourceforge.net, gnome-announce-list@gnome.org, sane-devel@lists.alioth.debian.org
 
 use warnings;
 use strict;
