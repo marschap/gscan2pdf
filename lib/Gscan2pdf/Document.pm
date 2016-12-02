@@ -904,7 +904,7 @@ sub drag_data_received_callback {    ## no critic (ProhibitManyArgs)
         $context->drag_drop_succeeded;
     }
     elsif ( $info == $ID_PAGE ) {
-        my ( $path, $how ) = $tree->get_drag_dest_row;
+        my ( $path, $how ) = $tree->get_dest_row_at_pos( $x, $y );
         if ( defined $path ) { $path = $path->to_string }
         my $delete =
           $context->action == 'move'; ## no critic (ProhibitMismatchedOperators)
