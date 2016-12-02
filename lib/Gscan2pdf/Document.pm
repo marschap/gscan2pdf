@@ -1848,7 +1848,7 @@ sub exec_command {
 sub check_command {
     my ($cmd) = @_;
     my ( undef, $exe ) = exec_command( [ 'which', $cmd ] );
-    return ( defined $exe and $exe ne '' ? TRUE : FALSE );
+    return ( defined $exe and $exe ne $EMPTY ? TRUE : FALSE );
 }
 
 # Compute a timestamp
