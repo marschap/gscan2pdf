@@ -215,6 +215,8 @@ sub add_defaults {
         user_defined_tools      => ['gimp %i'],
         udt_on_scan             => FALSE,
         current_udt             => undef,
+        post_save_hook          => FALSE,
+        current_psh             => undef,
         'auto-open-scan-dialog' => TRUE,
         'available-tmp-warning' => 10,
         close_dialog_on_save    => TRUE,

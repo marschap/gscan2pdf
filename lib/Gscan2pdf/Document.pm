@@ -1127,7 +1127,7 @@ sub save_djvu {
             path          => $options{path},
             list_of_pages => $options{list_of_pages},
             metadata      => $options{metadata},
-            set_timestamp => $options{set_timestamp},
+            options       => $options{options},
             dir           => "$self->{dir}",
             pidfile       => "$pidfile",
             uuid          => $uuid,
@@ -1215,6 +1215,7 @@ sub save_image {
         {
             path          => $options{path},
             list_of_pages => $options{list_of_pages},
+            options       => $options{options},
             pidfile       => "$pidfile",
             uuid          => $uuid,
         }
@@ -1250,6 +1251,7 @@ sub save_text {
         {
             path          => $options{path},
             list_of_pages => $options{list_of_pages},
+            options       => $options{options},
             uuid          => $uuid,
         }
     );
@@ -1273,6 +1275,7 @@ sub save_hocr {
         {
             path          => $options{path},
             list_of_pages => $options{list_of_pages},
+            options       => $options{options},
             uuid          => $uuid,
         }
     );
@@ -2140,7 +2143,7 @@ sub _thread_main {
                     path          => $request->{path},
                     list_of_pages => $request->{list_of_pages},
                     metadata      => $request->{metadata},
-                    set_timestamp => $request->{set_timestamp},
+                    options       => $request->{options},
                     dir           => $request->{dir},
                     pidfile       => $request->{pidfile},
                     uuid          => $request->{uuid}
@@ -2150,13 +2153,18 @@ sub _thread_main {
             when ('save-hocr') {
                 _thread_save_hocr( $self, $request->{path},
                     $request->{list_of_pages},
-                    $request->{uuid} );
+                    $request->{options}, $request->{uuid} );
             }
 
             when ('save-image') {
-                _thread_save_image( $self, $request->{path},
-                    $request->{list_of_pages},
-                    $request->{pidfile}, $request->{uuid} );
+                _thread_save_image(
+                    $self,
+                    path          => $request->{path},
+                    list_of_pages => $request->{list_of_pages},
+                    pidfile       => $request->{pidfile},
+                    options       => $request->{options},
+                    uuid          => $request->{uuid}
+                );
             }
 
             when ('save-pdf') {
@@ -2175,7 +2183,7 @@ sub _thread_main {
             when ('save-text') {
                 _thread_save_text( $self, $request->{path},
                     $request->{list_of_pages},
-                    $request->{uuid} );
+                    $request->{options}, $request->{uuid} );
             }
 
             when ('save-tiff') {
@@ -2758,6 +2766,8 @@ sub _thread_save_pdf {
         }
     }
 
+    _post_save_hook( $filename, %{ $options{options} } );
+
     $self->{return}->enqueue(
         {
             type    => 'finished',
@@ -3072,6 +3082,22 @@ sub _wrap_text_to_page {
     return;
 }
 
+sub _post_save_hook {
+    my ( $filename, %options ) = @_;
+    if ( defined $options{post_save_hook} ) {
+        my $command = $options{post_save_hook};
+        $command =~ s/%i/"$filename"/gxsm;
+        if ( not defined $options{post_save_hook_options}
+            or $options{post_save_hook_options} ne 'fg' )
+        {
+            $command .= ' &';
+        }
+        $logger->info($command);
+        system $command;
+    }
+    return;
+}
+
 sub _thread_save_djvu {
     my ( $self, %options ) = @_;
 
@@ -3190,10 +3216,14 @@ sub _thread_save_djvu {
     }
     _add_metadata_to_djvu( $self, %options );
 
-    if ( defined $options{set_timestamp} and $options{set_timestamp} ) {
+    if ( defined $options{options}{set_timestamp}
+        and $options{options}{set_timestamp} )
+    {
         my $time = Date_to_Time( @{ $options{metadata}{date} }, 0, 0, 0 );
         utime $time, $time, $options{path};
     }
+
+    _post_save_hook( $options{path}, %{ $options{options} } );
 
     $self->{return}->enqueue(
         {
@@ -3393,6 +3423,9 @@ sub _thread_save_tiff {
         @cmd = ( 'tiff2ps', '-a', $options{path}, '>', $options{ps} );
         exec_command( \@cmd, $options{pidfile} );
     }
+
+    _post_save_hook( $options{path}, %{ $options{options} } );
+
     $self->{return}->enqueue(
         {
             type    => 'finished',
@@ -3465,54 +3498,58 @@ sub _thread_rotate {
 }
 
 sub _thread_save_image {
-    my ( $self, $path, $list_of_pages, $pidfile, $uuid ) = @_;
+    my ( $self, %options ) = @_;
 
-    if ( @{$list_of_pages} == 1 ) {
+    if ( @{ $options{list_of_pages} } == 1 ) {
         my $status = exec_command(
             [
-                'convert',  $list_of_pages->[0]{filename},
-                '-density', $list_of_pages->[0]{resolution},
-                $path
+                'convert',  $options{list_of_pages}->[0]{filename},
+                '-density', $options{list_of_pages}->[0]{resolution},
+                $options{path}
             ],
-            $pidfile
+            $options{pidfile}
         );
         return if $_self->{cancel};
         if ($status) {
-            _thread_throw_error( $self, $uuid, $d->get('Error saving image') );
+            _thread_throw_error( $self, $options{uuid},
+                $d->get('Error saving image') );
         }
+        _post_save_hook( $options{list_of_pages}->[0]{filename},
+            %{ $options{options} } );
     }
     else {
         my $current_filename;
         my $i = 1;
-        for ( @{$list_of_pages} ) {
-            $current_filename = sprintf $path, $i++;
+        for ( @{ $options{list_of_pages} } ) {
+            $current_filename = sprintf $options{path}, $i++;
             my $status = exec_command(
                 [
                     'convert',  $_->{filename},
                     '-density', $_->{resolution},
                     $current_filename
                 ],
-                $pidfile
+                $options{pidfile}
             );
             return if $_self->{cancel};
             if ($status) {
-                _thread_throw_error( $self, $uuid,
+                _thread_throw_error( $self, $options{uuid},
                     $d->get('Error saving image') );
             }
+            _post_save_hook( $_->{filename}, %{ $options{options} } );
         }
     }
     $self->{return}->enqueue(
         {
             type    => 'finished',
             process => 'save-image',
-            uuid    => $uuid,
+            uuid    => $options{uuid},
         }
     );
     return;
 }
 
 sub _thread_save_text {
-    my ( $self, $path, $list_of_pages, $uuid ) = @_;
+    my ( $self, $path, $list_of_pages, $options, $uuid ) = @_;
     my $fh;
     my $string = $EMPTY;
 
@@ -3530,6 +3567,7 @@ sub _thread_save_text {
         _thread_throw_error( $self, $uuid,
             sprintf $d->get("Can't close file: %s"), $path );
     }
+    _post_save_hook( $path, %{$options} );
     $self->{return}->enqueue(
         {
             type    => 'finished',
@@ -3541,7 +3579,7 @@ sub _thread_save_text {
 }
 
 sub _thread_save_hocr {
-    my ( $self, $path, $list_of_pages, $uuid ) = @_;
+    my ( $self, $path, $list_of_pages, $options, $uuid ) = @_;
     my $fh;
 
     if ( not open $fh, '>', $path ) {    ## no critic (RequireBriefOpen)
@@ -3559,6 +3597,7 @@ sub _thread_save_hocr {
         _thread_throw_error( $self, $uuid,
             sprintf $d->get("Can't close file: %s"), $path );
     }
+    _post_save_hook( $path, %{$options} );
     $self->{return}->enqueue(
         {
             type    => 'finished',

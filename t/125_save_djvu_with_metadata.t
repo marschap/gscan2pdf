@@ -33,10 +33,12 @@ $slist->import_files(
     paths             => [$pnm],
     finished_callback => sub {
         $slist->save_djvu(
-            path              => $djvu,
-            list_of_pages     => [ $slist->{data}[0][2] ],
-            metadata          => \%metadata,
-            set_timestamp     => TRUE,
+            path          => $djvu,
+            list_of_pages => [ $slist->{data}[0][2] ],
+            metadata      => \%metadata,
+            options       => {
+                set_timestamp => TRUE,
+            },
             finished_callback => sub { Gtk2->main_quit }
         );
     }

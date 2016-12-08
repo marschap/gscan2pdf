@@ -152,6 +152,8 @@ Gscan2pdf::Config::add_defaults( \%output );
     user_defined_tools     => ['gimp %i'],
     udt_on_scan            => FALSE,
     current_udt            => undef,
+    post_save_hook         => FALSE,
+    current_psh            => undef,
     'visible-scan-options' => {
         mode                => 1,
         compression         => 1,

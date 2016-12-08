@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 8;
+use Test::More tests => 9;
 use Gtk2 -init;    # Could just call init separately
 
 BEGIN {
@@ -42,6 +42,10 @@ $slist->import_files(
                 is( $completed, 0, 'completed counter re-initialised' );
                 is( $total,     0, 'total counter re-initialised' );
             },
+            options => {
+                post_save_hook         => 'convert %i test2.png',
+                post_save_hook_options => 'fg',
+            },
             finished_callback => sub {
                 is(
                     `pdfinfo test.pdf | grep 'Page size:'`,
@@ -56,7 +60,13 @@ $slist->import_files(
 );
 Gtk2->main;
 
+is(
+    `identify test2.png`,
+    "test2.png PNG 70x46 70x46+0+0 8-bit sRGB 8.1KB 0.000u 0:00.000\n",
+    'ran post-save hook on pdf'
+);
+
 #########################
 
-unlink 'test.pnm', 'test.pdf';
+unlink 'test.png', 'test.pdf', 'test2.png';
 Gscan2pdf::Document->quit();

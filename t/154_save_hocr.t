@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 BEGIN {
     use Gscan2pdf::Document;
@@ -48,17 +48,22 @@ $slist->import_files(
     finished_callback => sub {
         $slist->{data}[0][2]{hocr} = $hocr;
         $slist->save_hocr(
-            path              => 'test.txt',
-            list_of_pages     => [ $slist->{data}[0][2] ],
+            path          => 'test.txt',
+            list_of_pages => [ $slist->{data}[0][2] ],
+            options       => {
+                post_save_hook         => 'cp %i test2.txt',
+                post_save_hook_options => 'fg',
+            },
             finished_callback => sub { Gtk2->main_quit }
         );
     }
 );
 Gtk2->main;
 
-is( `cat test.txt`, $hocr, 'saved ASCII' );
+is( `cat test.txt`,  $hocr, 'saved ASCII' );
+is( `cat test2.txt`, $hocr, 'post-save hook' );
 
 #########################
 
-unlink 'test.pnm', 'test.txt';
+unlink 'test.pnm', 'test.txt', 'test2.txt';
 Gscan2pdf::Document->quit();

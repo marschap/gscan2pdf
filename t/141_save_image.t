@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
@@ -27,15 +27,28 @@ $slist->import_files(
     paths             => ['test.pnm'],
     finished_callback => sub {
         $slist->save_image(
-            path              => 'test.jpg',
-            list_of_pages     => [ $slist->{data}[0][2] ],
+            path          => 'test.jpg',
+            list_of_pages => [ $slist->{data}[0][2] ],
+            options       => {
+                post_save_hook         => 'convert %i test2.png',
+                post_save_hook_options => 'fg',
+            },
             finished_callback => sub { Gtk2->main_quit }
         );
     }
 );
 Gtk2->main;
 
-is( system('identify test.jpg'), 0, 'valid JPG created' );
+is(
+    `identify test.jpg`,
+    "test.jpg JPEG 70x46 70x46+0+0 8-bit sRGB 2.04KB 0.000u 0:00.000\n",
+    'valid JPG created'
+);
+is(
+    `identify test2.png`,
+    "test2.png PNG 70x46 70x46+0+0 8-bit sRGB 7KB 0.000u 0:00.000\n",
+    'ran post-save hook'
+);
 
 #########################
 

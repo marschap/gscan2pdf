@@ -2143,6 +2143,9 @@ sub save_pdf {
     elsif ( $append eq 'appendpdf' ) {
         $options{append} = $filename;
     }
+    if ( $SETTING{post_save_hook} ) {
+        $options{post_save_hook} = $SETTING{current_psh};
+    }
 
     # Create the PDF
     $logger->debug("Started saving $filename");
@@ -2471,6 +2474,25 @@ sub save_dialog {
     combobox_set_active( $combobi, $SETTING{'image type'}, @type );
     $hboxi->pack_end( $combobi, FALSE, FALSE, 0 );
 
+    # Post-save hook
+    my $pshbutton = Gtk2::CheckButton->new( $d->get('Post-save hook') );
+    $tooltips->set_tip( $pshbutton, $d->get('Run command on saved file') );
+    $vbox->pack_start( $pshbutton, FALSE, TRUE, 0 );
+    my @pshooks;
+    for my $tool ( @{ $SETTING{user_defined_tools} } ) {
+        if ( $tool !~ /%o/xsm ) { push @pshooks, [ $tool, $tool ] }
+    }
+    my $pshcombo = combobox_from_array(@pshooks);
+    combobox_set_active( $pshcombo, $SETTING{current_psh}, @pshooks );
+    $vbox->pack_start( $pshcombo, FALSE, TRUE, 0 );
+    $pshbutton->signal_connect(
+        toggled => sub {
+            $pshcombo->set_sensitive( $pshbutton->get_active );
+        }
+    );
+    $pshbutton->set_active( $SETTING{post_save_hook} );
+    $pshcombo->set_sensitive( $pshbutton->get_active );
+
     my $kbutton = Gtk2::CheckButton->new( $d->get('Close dialog on save') );
     $tooltips->set_tip( $kbutton, $d->get('Close dialog on save') );
     $kbutton->set_active( $SETTING{close_dialog_on_save} );
@@ -2494,7 +2516,8 @@ sub save_dialog {
             $spinbuttonpq, \@fonts,           $combof,
             $entryd,       $entrya,           $entryt,
             $entrys,       $entryk,           \@tiff_compression,
-            $combobtc,     $spinbuttontq,     $kbutton
+            $combobtc,     $spinbuttontq,     $kbutton,
+            $pshbutton,    $pshcombo,         \@pshooks
         ]
     );
 
@@ -2627,7 +2650,8 @@ sub save_button_clicked_callback {
         $pdf_compression, $combob,  $spinbuttonpq,     $fonts,
         $combof,          $entryd,  $entrya,           $entryt,
         $entrys,          $entryk,  $tiff_compression, $combobtc,
-        $spinbuttontq,    $kbutton
+        $spinbuttontq,    $kbutton, $pshbutton,        $pshcombo,
+        $pshooks
     ) = @{$data};
 
     # Compile list of pages
@@ -2636,6 +2660,9 @@ sub save_button_clicked_callback {
     # dig out the image type, compression and quality
     $SETTING{'image type'} = $type->[ $combobi->get_active ][0];
     $SETTING{close_dialog_on_save} = $kbutton->get_active;
+
+    $SETTING{post_save_hook} = $pshbutton->get_active;
+    $SETTING{current_psh}    = $pshooks->[ $pshcombo->get_active ][0];
 
     given ( $SETTING{'image type'} ) {
         when (/pdf/xsm) {
@@ -3065,6 +3092,9 @@ sub save_tiff {
         compression => $SETTING{'tiff compression'},
         quality     => $SETTING{quality},
     );
+    if ( $SETTING{post_save_hook} ) {
+        $options{post_save_hook} = $SETTING{current_psh};
+    }
 
     my ( $signal, $pid );
     $pid = $slist->save_tiff(
@@ -3112,11 +3142,14 @@ sub save_djvu {
 
     # Create the DjVu
     $logger->debug("Started saving $filename");
-    my ( $signal, $pid );
+    my ( $signal, $pid, %options );
+    if ( $SETTING{post_save_hook} ) {
+        $options{post_save_hook} = $SETTING{current_psh};
+    }
     $pid = $slist->save_djvu(
         path            => $filename,
         list_of_pages   => $list_of_pages,
-        set_timestamp   => $SETTING{set_timestamp},
+        options         => \%options,
         metadata        => Gscan2pdf::Document::collate_metadata( \%SETTING ),
         queued_callback => sub {
             return update_tpbar(@_);
@@ -3153,10 +3186,14 @@ sub save_djvu {
 sub save_text {
     my ( $filename, $list_of_pages ) = @_;
 
-    my ( $signal, $pid );
+    my ( $signal, $pid, %options );
+    if ( $SETTING{post_save_hook} ) {
+        $options{post_save_hook} = $SETTING{current_psh};
+    }
     $pid = $slist->save_text(
         path            => $filename,
         list_of_pages   => $list_of_pages,
+        options         => \%options,
         queued_callback => sub {
             return update_tpbar(@_);
         },
@@ -3191,10 +3228,14 @@ sub save_text {
 sub save_hocr {
     my ( $filename, $list_of_pages ) = @_;
 
-    my ( $signal, $pid );
+    my ( $signal, $pid, %options );
+    if ( $SETTING{post_save_hook} ) {
+        $options{post_save_hook} = $SETTING{current_psh};
+    }
     $pid = $slist->save_hocr(
         path            => $filename,
         list_of_pages   => $list_of_pages,
+        options         => \%options,
         queued_callback => sub {
             return update_tpbar(@_);
         },

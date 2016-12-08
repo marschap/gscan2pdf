@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
@@ -27,17 +27,30 @@ $slist->import_files(
     paths             => ['test.pnm'],
     finished_callback => sub {
         $slist->save_tiff(
-            path              => 'test.tif',
-            list_of_pages     => [ $slist->{data}[0][2] ],
+            path          => 'test.tif',
+            list_of_pages => [ $slist->{data}[0][2] ],
+            options       => {
+                post_save_hook         => 'convert %i test2.png',
+                post_save_hook_options => 'fg',
+            },
             finished_callback => sub { Gtk2->main_quit }
         );
     }
 );
 Gtk2->main;
 
-is( system('identify test.tif'), 0, 'valid TIFF created' );
+is(
+    `identify test.tif`,
+    "test.tif TIFF 70x46 70x46+0+0 8-bit sRGB 7.74KB 0.000u 0:00.000\n",
+    'valid TIFF created'
+);
+is(
+    `identify test2.png`,
+    "test2.png PNG 70x46 70x46+0+0 8-bit sRGB 7.12KB 0.000u 0:00.000\n",
+    'ran post-save hook'
+);
 
 #########################
 
-unlink 'test.pnm', 'test.tif';
+unlink 'test.pnm', 'test.tif', 'test2.png';
 Gscan2pdf::Document->quit();
