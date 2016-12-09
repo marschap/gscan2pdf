@@ -6316,6 +6316,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
           ];
     }
     my $combob = combobox_from_array(@frontends);
+    $tooltips->set_tip( $hbox, $d->get('Interface used for scanner access') );
     $hbox->pack_end( $combob, TRUE, TRUE, 0 );
 
     # Device blacklist
@@ -6336,7 +6337,11 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     my $cbcsh =
       Gtk2::CheckButton->new_with_label(
         $d->get('Cycle SANE handle after scan') );
-    $tooltips->set_tip( $hbox, $d->get('Interface used for scanner access') );
+    $tooltips->set_tip(
+        $cbcsh,
+        $d->get(
+            'Some ADFs do not feed out the last page if this is not enabled')
+    );
     if ( defined $SETTING{'cycle sane handle'} ) {
         $cbcsh->set_active( $SETTING{'cycle sane handle'} );
     }
@@ -6347,14 +6352,12 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
       Gtk2::CheckButton->new_with_label(
         $d->get('Allow batch scanning from flatbed') );
     $tooltips->set_tip(
-        $hbox,
+        $cb_batch_flatbed,
         $d->get(
 'If not set, switching to a flatbed scanner will force # pages to 1.'
         )
     );
-    if ( defined $SETTING{'allow-batch-flatbed'} ) {
-        $cb_batch_flatbed->set_active( $SETTING{'allow-batch-flatbed'} );
-    }
+    $cb_batch_flatbed->set_active( $SETTING{'allow-batch-flatbed'} );
     $vbox1->pack_start( $cb_batch_flatbed, FALSE, FALSE, 0 );
 
     # scan command prefix
