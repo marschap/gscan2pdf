@@ -234,6 +234,13 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         FALSE,                                                   # default_value
         [qw/readable writable/]                                  # flags
     ),
+    Glib::ParamSpec->boolean(
+        'adf-defaults-scan-all-pages',                           # name
+        'Select # pages = all on selecting ADF',                 # nick
+        'Select # pages = all on selecting ADF',                 # blurb
+        TRUE,                                                    # default_value
+        [qw/readable writable/]                                  # flags
+    ),
   ];
 
 our $VERSION = '1.6.0';
@@ -331,8 +338,14 @@ sub INIT_INSTANCE {
                 }
                 else {
                     $bscannum->set_active(TRUE);
-                    $self->set( 'num_pages', 1 );
+                    $self->set( 'num-pages', 1 );
                     $self->{framen}->set_sensitive(FALSE);
+                }
+
+                if (    $self->get('adf-defaults-scan-all-pages')
+                    and $value =~ /(ADF|Automatic[ ]Document[ ]Feeder)/xsmi )
+                {
+                    $self->set( 'num-pages', 0 );
                 }
             }
 

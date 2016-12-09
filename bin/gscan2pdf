@@ -3491,7 +3491,9 @@ sub scan_dialog {
         'hide-on-delete'      => TRUE,
         'paper-formats'       => $SETTING{Paper},
         'allow-batch-flatbed' => $SETTING{'allow-batch-flatbed'},
-        'page-number-start'   => $#{ $slist->{data} } > $EMPTY_LIST
+        'adf-defaults-scan-all-pages' =>
+          $SETTING{'adf-defaults-scan-all-pages'},
+        'page-number-start' => $#{ $slist->{data} } > $EMPTY_LIST
         ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
         : 1,
     );
@@ -6359,6 +6361,19 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     );
     $cb_batch_flatbed->set_active( $SETTING{'allow-batch-flatbed'} );
     $vbox1->pack_start( $cb_batch_flatbed, FALSE, FALSE, 0 );
+
+    # Select num-pages = all on selecting ADF
+    my $cb_adf_all_pages =
+      Gtk2::CheckButton->new_with_label(
+        $d->get('Select # pages = all on selecting ADF') );
+    $tooltips->set_tip(
+        $cb_adf_all_pages,
+        $d->get(
+'If this option is enabled, when switching to source=ADF, # pages = all is selected'
+        )
+    );
+    $cb_adf_all_pages->set_active( $SETTING{'adf-defaults-scan-all-pages'} );
+    $vbox1->pack_start( $cb_adf_all_pages, FALSE, FALSE, 0 );
 
     # scan command prefix
     my $hboxp = Gtk2::HBox->new;

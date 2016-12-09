@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 11;
+use Test::More tests => 14;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -142,10 +142,58 @@ $signal = $dialog->signal_connect(
                   'allow-batch-flatbed should force num-pages3';
                 is $dialog->{framen}->is_sensitive, FALSE,
                   'num-page gui ghosted2';
-                Gtk2->main_quit;
             }
         );
         $dialog->set( 'allow-batch-flatbed', FALSE );
+
+        # need a new main loop to avoid nesting
+        my $loop = Glib::MainLoop->new;
+        my $flag = FALSE;
+        is $dialog->get('adf-defaults-scan-all-pages'), 1,
+          'default adf-defaults-scan-all-pages';
+        $signal = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                my ( $widget, $option, $value ) = @_;
+                if ( $option eq 'source' ) {
+                    $dialog->signal_handler_disconnect($signal);
+                    is $dialog->get('num-pages'), 0,
+                      'adf-defaults-scan-all-pages should force num-pages';
+                    $flag = TRUE;
+                    $loop->quit;
+                }
+            }
+        );
+        $dialog->set_option( $options->by_name('source'),
+            'Automatic Document Feeder' );
+        $loop->run unless ($flag);
+
+        # need a new main loop to avoid nesting
+        $loop   = Glib::MainLoop->new;
+        $flag   = FALSE;
+        $signal = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                my ( $widget, $option, $value ) = @_;
+                $dialog->signal_handler_disconnect($signal);
+                $dialog->set( 'num-pages', 1 );
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+        $dialog->set_option( $options->by_name('source'), 'Flatbed' );
+        $loop->run unless ($flag);
+
+        $dialog->set( 'adf-defaults-scan-all-pages', 0 );
+        $signal = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                my ( $widget, $option, $value ) = @_;
+                $dialog->signal_handler_disconnect($signal);
+                is $dialog->get('num-pages'), 1,
+                  'adf-defaults-scan-all-pages should force num-pages 2';
+                Gtk2->main_quit;
+            }
+        );
+        $dialog->set_option( $options->by_name('source'),
+            'Automatic Document Feeder' );
     }
 );
 $dialog->set( 'device', 'test' );
