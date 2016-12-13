@@ -6254,7 +6254,7 @@ sub expand_tildes {
 
 # Preferences dialog
 
-sub preferences {    ## no critic (ProhibitExcessComplexity)
+sub preferences {
 
     if ( defined $windowr ) {
         $windowr->present;
@@ -6272,9 +6272,114 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     # Notebook for scan and general options
     my $notebook = Gtk2::Notebook->new;
     $vbox->pack_start( $notebook, TRUE, TRUE, 0 );
-    my $vbox1 = Gtk2::VBox->new;
+
+    my (
+        $vbox1,     $frontends, $combob,
+        $preentry,  $cbc,       $cbo,
+        $blacklist, $cbcsh,     $cb_batch_flatbed
+    ) = _preferences_scan_options();
     $notebook->append_page( $vbox1, $d->get('Scan options') );
-    $vbox1->set_border_width($BORDER_WIDTH);
+
+    my (
+        $vbox2,        $fileentry,   $cbw,         $cbt,
+        $tmpentry,     $spinbuttonw, $spinbuttonb, $spinbuttond,
+        $ocr_function, $comboo,      $cbv
+    ) = _preferences_general_options();
+    $notebook->append_page( $vbox2, $d->get('General options') );
+
+    # Apply button
+    my $hbox = _hbox_with_apply_cancel_buttons(
+        sub {
+            $windowr->hide;
+            if ( $SETTING{frontend} ne $frontends->[ $combob->get_active ][0] )
+            {
+                $SETTING{frontend} = $frontends->[ $combob->get_active ][0];
+                $windows->hide;
+                undef $windows;
+            }
+            else {
+                $SETTING{'visible-scan-options'} = ();
+                $SETTING{'scan-reload-triggers'} = ();
+                for ( @{ $option_visibility_list->{data} } ) {
+                    $SETTING{'visible-scan-options'}{ $_->[0] } = $_->[2];
+                    if ( $_->[3] ) {    ## no critic (ProhibitMagicNumbers)
+                        push @{ $SETTING{'scan-reload-triggers'} }, $_->[0];
+                    }
+                }
+                if ( $SETTING{frontend} ne 'libsane-perl' ) {
+                    $windows->set( 'visible-scan-options',
+                        $SETTING{'visible-scan-options'} );
+                    $windows->set( 'reload-triggers',
+                        $SETTING{'scan-reload-triggers'} );
+                    $SETTING{'scan prefix'}   = $preentry->get_text;
+                    $SETTING{'cache options'} = $cbc->get_active;
+                    if ( defined $windows ) {
+                        $windows->set( 'prefix', $SETTING{'scan prefix'} );
+                        $windows->set( 'cache-options',
+                            $SETTING{'cache options'} );
+                    }
+                    if ( defined $SETTING{cache}
+                        and not $SETTING{'cache options'} )
+                    {
+                        delete $SETTING{cache};
+                    }
+                }
+            }
+            $SETTING{'auto-open-scan-dialog'} = $cbo->get_active;
+            $SETTING{'device blacklist'}      = $blacklist->get_text;
+            $SETTING{'cycle sane handle'}     = $cbcsh->get_active;
+            $SETTING{'allow-batch-flatbed'}   = $cb_batch_flatbed->get_active;
+            $SETTING{'default filename'}      = $fileentry->get_text;
+            $SETTING{'restore window'}        = $cbw->get_active;
+            $SETTING{set_timestamp}           = $cbt->get_active;
+
+            if ( defined $windows ) {
+                if ( $SETTING{frontend} eq 'libsane-perl' ) {
+                    $windows->set( 'cycle-sane-handle',
+                        $SETTING{'cycle sane handle'} );
+                }
+                $windows->set( 'allow-batch-flatbed',
+                    $SETTING{'allow-batch-flatbed'} );
+            }
+
+            my @tmpdirs = File::Spec->splitdir($session);
+            pop @tmpdirs;    # Remove the top level
+            my $tmp = File::Spec->catdir(@tmpdirs);
+
+            # Expand tildes in the filename
+            my $newdir = expand_tildes( $tmpentry->get_text );
+
+            if ( $newdir ne $tmp ) {
+                $SETTING{TMPDIR} = $newdir;
+                show_message_dialog(
+                    parent  => $window,
+                    type    => 'warning',
+                    buttons => 'close',
+                    text    => $d->get(
+'You will have to restart gscanp2df for changes to the temporary directory to take effect.'
+                    )
+                );
+            }
+            $SETTING{'available-tmp-warning'} = $spinbuttonw->get_value;
+            $SETTING{'Blank threshold'}       = $spinbuttonb->get_value;
+            $SETTING{'Dark threshold'}        = $spinbuttond->get_value;
+            $SETTING{'OCR output'} = $ocr_function->[ $comboo->get_active ][0];
+
+            # Store viewer preferences
+            $SETTING{'view files toggle'} = $cbv->get_active;
+        },
+        sub {
+            $windowr->hide;
+        }
+    );
+    $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
+    $windowr->show_all;
+    return;
+}
+
+sub _preferences_scan_options {
+    my $vbox = Gtk2::VBox->new;
+    $vbox->set_border_width($BORDER_WIDTH);
 
     my $cbo =
       Gtk2::CheckButton->new_with_label(
@@ -6290,11 +6395,11 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     if ( defined $SETTING{'auto-open-scan-dialog'} ) {
         $cbo->set_active( $SETTING{'auto-open-scan-dialog'} );
     }
-    $vbox1->pack_start( $cbo, TRUE, TRUE, 0 );
+    $vbox->pack_start( $cbo, TRUE, TRUE, 0 );
 
     # Frontends
     my $hbox = Gtk2::HBox->new;
-    $vbox1->pack_start( $hbox, FALSE, FALSE, 0 );
+    $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
     my $label = Gtk2::Label->new( $d->get('Frontend') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my @frontends = (
@@ -6332,7 +6437,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
 
     # Device blacklist
     my $hboxb = Gtk2::HBox->new;
-    $vbox1->pack_start( $hboxb, FALSE, FALSE, 0 );
+    $vbox->pack_start( $hboxb, FALSE, FALSE, 0 );
     $label = Gtk2::Label->new( $d->get('Device blacklist') );
     $hboxb->pack_start( $label, FALSE, FALSE, 0 );
     my $blacklist = Gtk2::Entry->new;
@@ -6356,7 +6461,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     if ( defined $SETTING{'cycle sane handle'} ) {
         $cbcsh->set_active( $SETTING{'cycle sane handle'} );
     }
-    $vbox1->pack_start( $cbcsh, FALSE, FALSE, 0 );
+    $vbox->pack_start( $cbcsh, FALSE, FALSE, 0 );
 
     # Allow batch scanning from flatbed
     my $cb_batch_flatbed =
@@ -6369,7 +6474,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
         )
     );
     $cb_batch_flatbed->set_active( $SETTING{'allow-batch-flatbed'} );
-    $vbox1->pack_start( $cb_batch_flatbed, FALSE, FALSE, 0 );
+    $vbox->pack_start( $cb_batch_flatbed, FALSE, FALSE, 0 );
 
     # Select num-pages = all on selecting ADF
     my $cb_adf_all_pages =
@@ -6382,11 +6487,11 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
         )
     );
     $cb_adf_all_pages->set_active( $SETTING{'adf-defaults-scan-all-pages'} );
-    $vbox1->pack_start( $cb_adf_all_pages, FALSE, FALSE, 0 );
+    $vbox->pack_start( $cb_adf_all_pages, FALSE, FALSE, 0 );
 
     # scan command prefix
     my $hboxp = Gtk2::HBox->new;
-    $vbox1->pack_start( $hboxp, FALSE, FALSE, 0 );
+    $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
     $label = Gtk2::Label->new( $d->get('Scan command prefix') );
     $hboxp->pack_start( $label, FALSE, FALSE, 0 );
     my $preentry = Gtk2::Entry->new;
@@ -6399,12 +6504,12 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     my $cbc = Gtk2::CheckButton->new_with_label(
         $d->get('Cache device-dependent options') );
     if ( $SETTING{'cache options'} ) { $cbc->set_active(TRUE) }
-    $vbox1->pack_start( $cbc, FALSE, FALSE, 0 );
+    $vbox->pack_start( $cbc, FALSE, FALSE, 0 );
 
     # Clear options cache
     my $buttonc =
       Gtk2::Button->new( $d->get('Clear device-dependent options cache') );
-    $vbox1->pack_start( $buttonc, FALSE, FALSE, 0 );
+    $vbox->pack_start( $buttonc, FALSE, FALSE, 0 );
     $buttonc->signal_connect(
         clicked => sub {
             if ( defined $SETTING{cache} ) { delete $SETTING{cache} }
@@ -6414,7 +6519,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
 
     # Option visibility
     my $oframe = Gtk2::Frame->new( $d->get('Option visibility & control') );
-    $vbox1->pack_start( $oframe, TRUE, TRUE, 0 );
+    $vbox->pack_start( $oframe, TRUE, TRUE, 0 );
     my $vvbox = Gtk2::VBox->new;
     $vvbox->set_border_width($BORDER_WIDTH);
     $oframe->add($vvbox);
@@ -6519,16 +6624,19 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
         }
     );
     combobox_set_active( $combob, $SETTING{frontend}, @frontends );
+    return $vbox, $combob, $preentry, $cbc, $cbo, $blacklist, $cbcsh,
+      $cb_batch_flatbed;
+}
 
-    my $vbox2 = Gtk2::VBox->new;
-    $notebook->append_page( $vbox2, $d->get('General options') );
-    $vbox2->set_border_width($BORDER_WIDTH);
+sub _preferences_general_options {
+    my $vbox = Gtk2::VBox->new;
+    $vbox->set_border_width($BORDER_WIDTH);
 
     # Restore window setting
     my $cbw = Gtk2::CheckButton->new_with_label(
         $d->get('Restore window settings on startup') );
     if ( $SETTING{'restore window'} ) { $cbw->set_active(TRUE) }
-    $vbox2->pack_start( $cbw, TRUE, TRUE, 0 );
+    $vbox->pack_start( $cbw, TRUE, TRUE, 0 );
 
     # View saved files
     my $cbv =
@@ -6536,12 +6644,12 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     if ( defined $SETTING{'view files toggle'} ) {
         $cbv->set_active( $SETTING{'view files toggle'} );
     }
-    $vbox2->pack_start( $cbv, TRUE, TRUE, 0 );
+    $vbox->pack_start( $cbv, TRUE, TRUE, 0 );
 
     # Default filename
-    $hbox = Gtk2::HBox->new;
-    $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('Default filename for PDFs') );
+    my $hbox = Gtk2::HBox->new;
+    $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+    my $label = Gtk2::Label->new( $d->get('Default filename for PDFs') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $fileentry = Gtk2::Entry->new;
     $tooltips->set_tip(
@@ -6560,11 +6668,11 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     my $cbt = Gtk2::CheckButton->new_with_label(
         $d->get('Set access and modification times to metadata date') );
     if ( $SETTING{set_timestamp} ) { $cbt->set_active(TRUE) }
-    $vbox2->pack_start( $cbt, TRUE, TRUE, 0 );
+    $vbox->pack_start( $cbt, TRUE, TRUE, 0 );
 
     # Temporary directory settings
     $hbox = Gtk2::HBox->new;
-    $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
+    $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
     $label = Gtk2::Label->new( $d->get('Temporary directory') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $tmpentry = Gtk2::Entry->new;
@@ -6590,7 +6698,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
 
     # Available space in temporary directory
     $hbox = Gtk2::HBox->new;
-    $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
+    $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
     $label =
       Gtk2::Label->new( $d->get('Warn if available space less than (Mb)') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
@@ -6606,7 +6714,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
 
     # Blank page standard deviation threshold
     $hbox = Gtk2::HBox->new;
-    $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
+    $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
     $label = Gtk2::Label->new( $d->get('Blank threshold') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $spinbuttonb =
@@ -6618,7 +6726,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
 
     # Dark page mean threshold
     $hbox = Gtk2::HBox->new;
-    $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
+    $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
     $label = Gtk2::Label->new( $d->get('Dark threshold') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $spinbuttond =
@@ -6630,10 +6738,10 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
 
     # OCR output
     $hbox = Gtk2::HBox->new;
-    $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
+    $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
     $label = Gtk2::Label->new( $d->get('OCR output') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
-    my @array = (
+    my @ocr_function = (
         [
             'replace',
             $d->get('Replace'),
@@ -6650,13 +6758,13 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
             $d->get('Append the OCR output to the text buffer.')
         ],
     );
-    my $comboo = combobox_from_array(@array);
-    combobox_set_active( $comboo, $SETTING{'OCR output'}, @array );
+    my $comboo = combobox_from_array(@ocr_function);
+    combobox_set_active( $comboo, $SETTING{'OCR output'}, @ocr_function );
     $hbox->pack_end( $comboo, TRUE, TRUE, 0 );
 
     # Manage user-defined tools
     my $frame = Gtk2::Frame->new( $d->get('Manage user-defined tools') );
-    $vbox2->pack_start( $frame, TRUE, TRUE, 0 );
+    $vbox->pack_start( $frame, TRUE, TRUE, 0 );
     my $vboxt = Gtk2::VBox->new;
     $vboxt->set_border_width($BORDER_WIDTH);
     $frame->add($vboxt);
@@ -6679,94 +6787,8 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
                 [ $comboboxudt, $windows->{comboboxudt} ], $udtools );
         }
     );
-
-    # Apply button
-    $hbox = _hbox_with_apply_cancel_buttons(
-        sub {
-            $windowr->hide;
-            if ( $SETTING{frontend} ne $frontends[ $combob->get_active ][0] ) {
-                $SETTING{frontend} = $frontends[ $combob->get_active ][0];
-                $windows->hide;
-                undef $windows;
-            }
-            else {
-                $SETTING{'visible-scan-options'} = ();
-                $SETTING{'scan-reload-triggers'} = ();
-                for ( @{ $option_visibility_list->{data} } ) {
-                    $SETTING{'visible-scan-options'}{ $_->[0] } = $_->[2];
-                    if ( $_->[3] ) {    ## no critic (ProhibitMagicNumbers)
-                        push @{ $SETTING{'scan-reload-triggers'} }, $_->[0];
-                    }
-                }
-                if ( $SETTING{frontend} ne 'libsane-perl' ) {
-                    $windows->set( 'visible-scan-options',
-                        $SETTING{'visible-scan-options'} );
-                    $windows->set( 'reload-triggers',
-                        $SETTING{'scan-reload-triggers'} );
-                    $SETTING{'scan prefix'}   = $preentry->get_text;
-                    $SETTING{'cache options'} = $cbc->get_active;
-                    if ( defined $windows ) {
-                        $windows->set( 'prefix', $SETTING{'scan prefix'} );
-                        $windows->set( 'cache-options',
-                            $SETTING{'cache options'} );
-                    }
-                    if ( defined $SETTING{cache}
-                        and not $SETTING{'cache options'} )
-                    {
-                        delete $SETTING{cache};
-                    }
-                }
-            }
-            $SETTING{'auto-open-scan-dialog'} = $cbo->get_active;
-            $SETTING{'device blacklist'}      = $blacklist->get_text;
-            $SETTING{'cycle sane handle'}     = $cbcsh->get_active;
-            $SETTING{'allow-batch-flatbed'}   = $cb_batch_flatbed->get_active;
-            $SETTING{'default filename'}      = $fileentry->get_text;
-            $SETTING{'restore window'}        = $cbw->get_active;
-            $SETTING{set_timestamp}           = $cbt->get_active;
-
-            if ( defined $windows ) {
-                if ( $SETTING{frontend} eq 'libsane-perl' ) {
-                    $windows->set( 'cycle-sane-handle',
-                        $SETTING{'cycle sane handle'} );
-                }
-                $windows->set( 'allow-batch-flatbed',
-                    $SETTING{'allow-batch-flatbed'} );
-            }
-
-            my @tmpdirs = File::Spec->splitdir($session);
-            pop @tmpdirs;    # Remove the top level
-            my $tmp = File::Spec->catdir(@tmpdirs);
-
-            # Expand tildes in the filename
-            my $newdir = expand_tildes( $tmpentry->get_text );
-
-            if ( $newdir ne $tmp ) {
-                $SETTING{TMPDIR} = $newdir;
-                show_message_dialog(
-                    parent  => $window,
-                    type    => 'warning',
-                    buttons => 'close',
-                    text    => $d->get(
-'You will have to restart gscanp2df for changes to the temporary directory to take effect.'
-                    )
-                );
-            }
-            $SETTING{'available-tmp-warning'} = $spinbuttonw->get_value;
-            $SETTING{'Blank threshold'}       = $spinbuttonb->get_value;
-            $SETTING{'Dark threshold'}        = $spinbuttond->get_value;
-            $SETTING{'OCR output'} = $array[ $comboo->get_active ][0];
-
-            # Store viewer preferences
-            $SETTING{'view files toggle'} = $cbv->get_active;
-        },
-        sub {
-            $windowr->hide;
-        }
-    );
-    $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
-    $windowr->show_all;
-    return;
+    return $vbox, $fileentry, $cbw, $cbt, $tmpentry, $spinbuttonw,
+      $spinbuttonb, $spinbuttond, \@ocr_function, $comboo, $cbv;
 }
 
 sub _hbox_with_apply_cancel_buttons {
