@@ -74,26 +74,26 @@ sub parse_tessdata {
     my $output = join $COMMA, @output;
     my ( $v, $suffix );
     if ( $output =~ /[ ]v(\d[.]\d\d)[ ]/xsm ) {
-        $v = $1 + 0;
+        $v = $1;
     }
     if ( $output =~ /Unable[ ]to[ ]load[ ]unicharset[ ]file[ ]([^\n]+)/xsm ) {
         $output = $1;
-        if ( not defined $v ) { $v = 2 }
+        if ( not defined $v ) { $v = '2' }
         $suffix = '.unicharset';
     }
     elsif ( $output =~ /Error[ ]openn?ing[ ]data[ ]file[ ]([^\n]+)/xsm ) {
         $output = $1;
-        if ( not defined $v ) { $v = 3 }    ## no critic (ProhibitMagicNumbers)
+        if ( not defined $v ) { $v = '3' }
         $suffix = '.traineddata';
     }
     elsif ( defined $v and version->parse("v$v") > version->parse('v3.01') ) {
-        return ( undef, $v, '.traineddata' );
+        return ( undef, $v + 0, '.traineddata' );
     }
     else {
         return;
     }
     $output =~ s/\/ $suffix $//xsm;
-    return $output, $v, $suffix;
+    return $output, $v + 0, $suffix;
 }
 
 sub parse_strings {

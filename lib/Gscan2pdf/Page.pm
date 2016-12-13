@@ -24,6 +24,7 @@ Readonly my $MM_PER_CM      => 10;
 Readonly my $MM_PER_INCH    => $CM_PER_INCH * $MM_PER_CM;
 Readonly my $PAGE_TOLERANCE => 0.02;
 Readonly my $EMPTY_LIST     => -1;
+Readonly my $HALF           => 0.5;
 my $EMPTY         = q{};
 my $SPACE         = q{ };
 my $DOUBLE_QUOTES = q{"};
@@ -397,7 +398,7 @@ sub _pdftotext2boxes {
 
 sub round {
     my ($f) = @_;
-    return int( $f + 0.5 );    ## no critic (ProhibitMagicNumbers)
+    return int( $f + $HALF );
 }
 
 # return hocr output as string

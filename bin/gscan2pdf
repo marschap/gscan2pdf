@@ -88,7 +88,12 @@ use Locale::gettext 1.05;    # For translations
 use Date::Calc qw(Delta_Days Add_Delta_Days Today Today_and_Now);
 
 use Readonly;
+Readonly my $HALF                    => 0.5;
+Readonly my $UNIT_SLIDER_STEP        => 0.001;
+Readonly my $SIGMA_STEP              => 0.1;
+Readonly my $MAX_SIGMA               => 5;
 Readonly my $BORDER_WIDTH            => 6;               # Window parameters
+Readonly my $ENTRY_WIDTH             => 10;
 Readonly my $_90_DEGREES             => 90;
 Readonly my $_180_DEGREES            => 180;
 Readonly my $_270_DEGREES            => 270;
@@ -109,6 +114,7 @@ Readonly my $HELP_WINDOW_HEIGHT      => 600;
 Readonly my $HELP_WINDOW_DIVIDER_POS => 200;
 Readonly my $_1KB                    => 1024;
 Readonly my $_1MB                    => $_1KB * $_1KB;
+Readonly my $_100_000MB              => 100_000;
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
@@ -1736,9 +1742,7 @@ sub setup_tpbar {
             $completed + 1,
             $total, $process
         );
-        $tpbar->set_fraction(
-            ( $completed + 0.5 ) / $total )  ## no critic (ProhibitMagicNumbers)
-          ;
+        $tpbar->set_fraction( ( $completed + $HALF ) / $total );
         $thbox->show_all;
 
         # Pass the signal back to:
@@ -1785,10 +1789,7 @@ sub update_tpbar {
         }
         else {
             $tpbar->set_fraction(
-                ( $options{jobs_completed} +
-                      0.5 )    ## no critic (ProhibitMagicNumbers)
-                / $options{jobs_total}
-            );
+                ( $options{jobs_completed} + $HALF ) / $options{jobs_total} );
         }
         $thbox->show_all;
         return TRUE;
@@ -1952,8 +1953,7 @@ sub add_metadata_dialog {
     my $labele = Gtk2::Label->new( $d->get('Date') );
     $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
 
-    my $entryd =
-      Gtk2::Entry->new_with_max_length(10);  ## no critic (ProhibitMagicNumbers)
+    my $entryd = Gtk2::Entry->new_with_max_length($ENTRY_WIDTH);
     $entryd->set_text(
         Gscan2pdf::Document::expand_metadata_pattern(
             '%Y-%M-%D', undef, undef, undef,
@@ -1962,7 +1962,7 @@ sub add_metadata_dialog {
     );
     $entryd->set_activates_default(TRUE);
     $tooltips->set_tip( $entryd, $d->get('Year-Month-Day') );
-    $entryd->set_alignment(1.);              # Right justify
+    $entryd->set_alignment(1.);    # Right justify
     $entryd->signal_connect(
         'insert-text' => sub {
             my ( $widget, $string, $len, $position ) = @_;
@@ -5030,10 +5030,7 @@ sub unsharp {
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, 1, 2, 0, 1 );
-    my $spinbuttonr = Gtk2::SpinButton->new_with_range(
-        0, 100,                              ## no critic (ProhibitMagicNumbers)
-        1
-    );
+    my $spinbuttonr = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
     $spinbuttonr->set_value( $SETTING{'unsharp radius'} );
     $tooltips->set_tip(
         $spinbuttonr,
@@ -5057,10 +5054,8 @@ sub unsharp {
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, 1, 2, 1, 2 );
-    my $spinbuttons = Gtk2::SpinButton->new_with_range(
-        0, 5,    ## no critic (ProhibitMagicNumbers)
-        .1       ## no critic (ProhibitMagicNumbers)
-    );
+    my $spinbuttons =
+      Gtk2::SpinButton->new_with_range( 0, $MAX_SIGMA, $SIGMA_STEP );
     $spinbuttons->set_value( $SETTING{'unsharp sigma'} );
     $tooltips->set_tip( $spinbuttons,
         $d->get('The standard deviation of the Gaussian.') );
@@ -5114,9 +5109,8 @@ sub unsharp {
         $hbox, 1, 2, 3,    ## no critic (ProhibitMagicNumbers)
         4                  ## no critic (ProhibitMagicNumbers)
     );
-    my $spinbuttont = Gtk2::SpinButton->new_with_range( 0, 1,
-        0.01 )             ## no critic (ProhibitMagicNumbers)
-      ;
+    my $spinbuttont =
+      Gtk2::SpinButton->new_with_range( 0, 1, $UNIT_SLIDER_STEP );
     $spinbuttont->set_value( $SETTING{'unsharp threshold'} );
     $tooltips->set_tip(
         $spinbuttont,
@@ -6600,10 +6594,7 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     $label =
       Gtk2::Label->new( $d->get('Warn if available space less than (Mb)') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
-    my $spinbuttonw = Gtk2::SpinButton->new_with_range(
-        0, 100_000,    ## no critic (ProhibitMagicNumbers)
-        1
-    );
+    my $spinbuttonw = Gtk2::SpinButton->new_with_range( 0, $_100_000MB, 1 );
     $spinbuttonw->set_value( $SETTING{'available-tmp-warning'} );
     $tooltips->set_tip(
         $spinbuttonw,
@@ -6618,9 +6609,8 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
     $label = Gtk2::Label->new( $d->get('Blank threshold') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
-    my $spinbuttonb = Gtk2::SpinButton->new_with_range( 0, 1,
-        0.001 )    ## no critic (ProhibitMagicNumbers)
-      ;
+    my $spinbuttonb =
+      Gtk2::SpinButton->new_with_range( 0, 1, $UNIT_SLIDER_STEP );
     $spinbuttonb->set_value( $SETTING{'Blank threshold'} );
     $tooltips->set_tip( $spinbuttonb,
         $d->get('Threshold used for selecting blank pages') );
@@ -6631,9 +6621,8 @@ sub preferences {    ## no critic (ProhibitExcessComplexity)
     $vbox2->pack_start( $hbox, TRUE, TRUE, 0 );
     $label = Gtk2::Label->new( $d->get('Dark threshold') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
-    my $spinbuttond = Gtk2::SpinButton->new_with_range( 0, 1,
-        0.01 )    ## no critic (ProhibitMagicNumbers)
-      ;
+    my $spinbuttond =
+      Gtk2::SpinButton->new_with_range( 0, 1, $UNIT_SLIDER_STEP );
     $spinbuttond->set_value( $SETTING{'Dark threshold'} );
     $tooltips->set_tip( $spinbuttond,
         $d->get('Threshold used for selecting dark pages') );
@@ -6897,10 +6886,7 @@ sub properties {
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
     my $label = Gtk2::Label->new( $d->get('Resolution') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
-    my $spinbutton = Gtk2::SpinButton->new_with_range(
-        0, 9999,    ## no critic (ProhibitMagicNumbers)
-        1
-    );
+    my $spinbutton = Gtk2::SpinButton->new_with_range( 0, $MAX_DPI, 1 );
     $spinbutton->set_digits(1);
     $spinbutton->set_value( get_selected_properties() );
     $slist->get_selection->signal_connect(
