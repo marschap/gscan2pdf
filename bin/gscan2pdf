@@ -1949,7 +1949,8 @@ sub add_metadata_dialog {
 
     # Date/time
     my $hboxe = Gtk2::HBox->new;
-    $table->attach( $hboxe, 0, 1, 0, 1, 'fill', 'shrink', 0, 0 );
+    my $row   = 0;
+    $table->attach( $hboxe, 0, 1, $row, $row + 1, 'fill', 'shrink', 0, 0 );
     my $labele = Gtk2::Label->new( $d->get('Date') );
     $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
 
@@ -2043,70 +2044,50 @@ sub add_metadata_dialog {
     );
     $tooltips->set_tip( $button, $d->get('Select date with calendar') );
     $hboxe = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxe, 1, 2, 0, 1 );
+    $table->attach_defaults( $hboxe, 1, 2, $row, $row + 1 );
     $hboxe->pack_end( $button, FALSE, FALSE, 0 );
     $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
 
     # Title
     my $hboxt = Gtk2::HBox->new;
-    $table->attach( $hboxt, 0, 1, 1, 2, 'fill', 'shrink', 0, 0 );
+    $table->attach( $hboxt, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
     my $labelt = Gtk2::Label->new( $d->get('Title') );
     $hboxt->pack_start( $labelt, FALSE, TRUE, 0 );
     $hboxt = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxt, 1, 2, 1, 2 );
+    $table->attach_defaults( $hboxt, 1, 2, $row, $row + 1 );
     my $entryt = Gscan2pdf::EntryCompletion->new( $SETTING{title},
         $SETTING{'title-suggestions'} );
     $hboxt->pack_start( $entryt, TRUE, TRUE, 0 );
 
     # Document author
     my $hboxa = Gtk2::HBox->new;
-    $table->attach(
-        $hboxa, 0, 1, 2, 3, 'fill',    ## no critic (ProhibitMagicNumbers)
-        'shrink',
-        0, 0
-    );
+    $table->attach( $hboxa, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
     my $labela = Gtk2::Label->new( $d->get('Author') );
     $hboxa->pack_start( $labela, FALSE, TRUE, 0 );
     $hboxa = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxa, 1, 2, 2,
-        3 )                            ## no critic (ProhibitMagicNumbers)
-      ;
+    $table->attach_defaults( $hboxa, 1, 2, $row, $row + 1 );
     my $entrya = Gscan2pdf::EntryCompletion->new( $SETTING{author},
         $SETTING{'author-suggestions'} );
     $hboxa->pack_start( $entrya, TRUE, TRUE, 0 );
 
     # Subject
     my $hboxs = Gtk2::HBox->new;
-    $table->attach(
-        $hboxs, 0, 1, 3, 4, 'fill',    ## no critic (ProhibitMagicNumbers)
-        'shrink',
-        0, 0
-    );
+    $table->attach( $hboxs, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
     my $labels = Gtk2::Label->new( $d->get('Subject') );
     $hboxs->pack_start( $labels, FALSE, TRUE, 0 );
     $hboxs = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hboxs, 1, 2, 3,               ## no critic (ProhibitMagicNumbers)
-        4                              ## no critic (ProhibitMagicNumbers)
-    );
+    $table->attach_defaults( $hboxs, 1, 2, $row, $row + 1 );
     my $entrys = Gscan2pdf::EntryCompletion->new( $SETTING{subject},
         $SETTING{'subject-suggestions'} );
     $hboxs->pack_end( $entrys, TRUE, TRUE, 0 );
 
     # Keywords
     my $hboxk = Gtk2::HBox->new;
-    $table->attach(
-        $hboxk, 0, 1, 4, 5, 'fill',    ## no critic (ProhibitMagicNumbers)
-        'shrink',
-        0, 0
-    );
+    $table->attach( $hboxk, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
     my $labelk = Gtk2::Label->new( $d->get('Keywords') );
     $hboxk->pack_start( $labelk, FALSE, TRUE, 0 );
     $hboxk = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hboxk, 1, 2, 4,               ## no critic (ProhibitMagicNumbers)
-        5                              ## no critic (ProhibitMagicNumbers)
-    );
+    $table->attach_defaults( $hboxk, 1, 2, $row, $row + 1 );
     my $entryk = Gscan2pdf::EntryCompletion->new( $SETTING{keywords},
         $SETTING{'keyword-suggestions'} );
     $hboxk->pack_end( $entryk, TRUE, TRUE, 0 );
@@ -5025,11 +5006,12 @@ sub unsharp {
 
     # SpinButton for radius
     my $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 0, 1 );
+    my ( $row, $desc, $widget, $units ) = ( 0, 0, 1, 2 );
+    $table->attach_defaults( $hbox, $desc, $desc + 1, $row, $row + 1 );
     my $label = Gtk2::Label->new( $d->get('Radius') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 0, 1 );
+    $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     my $spinbuttonr = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
     $spinbuttonr->set_value( $SETTING{'unsharp radius'} );
     $tooltips->set_tip(
@@ -5040,20 +5022,17 @@ sub unsharp {
     );
     $hbox->pack_end( $spinbuttonr, TRUE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hbox, 2, 3, 0,    ## no critic (ProhibitMagicNumbers)
-        1
-    );
+    $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for sigma
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 1, 2 );
+    $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('Sigma') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 1, 2 );
+    $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     my $spinbuttons =
       Gtk2::SpinButton->new_with_range( 0, $MAX_SIGMA, $SIGMA_STEP );
     $spinbuttons->set_value( $SETTING{'unsharp sigma'} );
@@ -5061,24 +5040,17 @@ sub unsharp {
         $d->get('The standard deviation of the Gaussian.') );
     $hbox->pack_end( $spinbuttons, TRUE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hbox, 2, 3, 1,    ## no critic (ProhibitMagicNumbers)
-        2
-    );
+    $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for amount
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 2,
-        3 )                ## no critic (ProhibitMagicNumbers)
-      ;
+    $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('Amount') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 2,
-        3 )                ## no critic (ProhibitMagicNumbers)
-      ;
+    $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     my $spinbuttona = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
     $spinbuttona->set_value( $SETTING{'unsharp amount'} );
     $tooltips->set_tip(
@@ -5089,26 +5061,17 @@ sub unsharp {
     );
     $hbox->pack_end( $spinbuttona, TRUE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hbox, 2, 3, 2,    ## no critic (ProhibitMagicNumbers)
-        3                  ## no critic (ProhibitMagicNumbers)
-    );
+    $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
     $label = Gtk2::Label->new($PERCENT);
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for threshold
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hbox, 0, 1, 3,    ## no critic (ProhibitMagicNumbers)
-        4                  ## no critic (ProhibitMagicNumbers)
-    );
+    $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('Threshold') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hbox, 1, 2, 3,    ## no critic (ProhibitMagicNumbers)
-        4                  ## no critic (ProhibitMagicNumbers)
-    );
+    $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     my $spinbuttont =
       Gtk2::SpinButton->new_with_range( 0, 1, $UNIT_SLIDER_STEP );
     $spinbuttont->set_value( $SETTING{'unsharp threshold'} );
@@ -5233,89 +5196,68 @@ sub crop {
 
     # SpinButton for x
     my $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 0, 1 );
+    my ( $row, $desc, $widget, $units ) = ( 0, 0, 1, 2 );
+    $table->attach_defaults( $hbox, $desc, $desc + 1, $row, $row + 1 );
     my $label = Gtk2::Label->new( $d->get('x') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 0, 1 );
+    $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     $sb_selector_x =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
     $tooltips->set_tip( $sb_selector_x,
         $d->get('The x-position of the left hand edge of the crop.') );
     $hbox->pack_end( $sb_selector_x, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hbox, 2, 3, 0,    ## no critic (ProhibitMagicNumbers)
-        1
-    );
+    $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for y
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 1, 2 );
+    $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('y') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 1, 2 );
+    $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     $sb_selector_y =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
     $tooltips->set_tip( $sb_selector_y,
         $d->get('The y-position of the top edge of the crop.') );
     $hbox->pack_end( $sb_selector_y, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hbox, 2, 3, 1,    ## no critic (ProhibitMagicNumbers)
-        2
-    );
+    $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for w
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 0, 1, 2,
-        3 )                ## no critic (ProhibitMagicNumbers)
-      ;
+    $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('Width') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults( $hbox, 1, 2, 2,
-        3 )                ## no critic (ProhibitMagicNumbers)
-      ;
+    $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     $sb_selector_w =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
     $tooltips->set_tip( $sb_selector_w, $d->get('The width of the crop.') );
     $hbox->pack_end( $sb_selector_w, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hbox, 2, 3, 2,    ## no critic (ProhibitMagicNumbers)
-        3                  ## no critic (ProhibitMagicNumbers)
-    );
+    $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for h
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hbox, 0, 1, 3,    ## no critic (ProhibitMagicNumbers)
-        4                  ## no critic (ProhibitMagicNumbers)
-    );
+    $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('Height') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hbox, 1, 2, 3,    ## no critic (ProhibitMagicNumbers)
-        4                  ## no critic (ProhibitMagicNumbers)
-    );
+    $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     $sb_selector_h =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
     $tooltips->set_tip( $sb_selector_h, $d->get('The height of the crop.') );
     $hbox->pack_end( $sb_selector_h, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
-    $table->attach_defaults(
-        $hbox, 2, 3, 3,    ## no critic (ProhibitMagicNumbers)
-        4                  ## no critic (ProhibitMagicNumbers)
-    );
+    $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
     $label = Gtk2::Label->new( $d->get('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
