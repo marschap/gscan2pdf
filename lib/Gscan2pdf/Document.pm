@@ -2762,8 +2762,8 @@ sub _thread_save_pdf {
     elsif ( defined $options{options}{set_timestamp}
         and $options{options}{set_timestamp} )
     {
-        my $time = Date_to_Time( @{ $options{metadata}{date} }, 0, 0, 0 );
-        utime $time, $time, $filename;
+        _set_timestamp( $self, $filename, $options{uuid},
+            @{ $options{metadata}{date} } );
     }
 
     _post_save_hook( $filename, %{ $options{options} } );
@@ -2775,6 +2775,20 @@ sub _thread_save_pdf {
             uuid    => $options{uuid},
         }
     );
+    return;
+}
+
+sub _set_timestamp {
+    my ( $self, $filename, $uuid, @date ) = @_;
+    try {
+        my $time = Date_to_Time( @date, 0, 0, 0 );
+        utime $time, $time, $filename;
+    }
+    catch {
+        $logger->error('Unable to set file timestamp for dates prior to 1970');
+        _thread_throw_error( $self, $uuid,
+            $d->get('Unable to set file timestamp for dates prior to 1970') );
+    };
     return;
 }
 
@@ -3219,8 +3233,8 @@ sub _thread_save_djvu {
     if ( defined $options{options}{set_timestamp}
         and $options{options}{set_timestamp} )
     {
-        my $time = Date_to_Time( @{ $options{metadata}{date} }, 0, 0, 0 );
-        utime $time, $time, $options{path};
+        _set_timestamp( $self, $options{path}, $options{uuid},
+            @{ $options{metadata}{date} } );
     }
 
     _post_save_hook( $options{path}, %{ $options{options} } );
