@@ -2721,13 +2721,7 @@ sub _thread_save_pdf {
     $pdf->save;
     $pdf->end;
 
-    if ( defined $options{options}{set_timestamp}
-        and $options{options}{set_timestamp} )
-    {
-        my $time = Date_to_Time( @{ $options{metadata}{date} }, 0, 0, 0 );
-        utime $time, $time, $filename;
-    }
-    elsif (defined $options{options}{prepend}
+    if (   defined $options{options}{prepend}
         or defined $options{options}{append} )
     {
         my ( $bak, $file1, $file2, $out, $message );
@@ -2764,6 +2758,12 @@ sub _thread_save_pdf {
                 $error );
             return;
         }
+    }
+    elsif ( defined $options{options}{set_timestamp}
+        and $options{options}{set_timestamp} )
+    {
+        my $time = Date_to_Time( @{ $options{metadata}{date} }, 0, 0, 0 );
+        utime $time, $time, $filename;
     }
 
     _post_save_hook( $filename, %{ $options{options} } );
