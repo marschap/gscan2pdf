@@ -1,3 +1,11 @@
+gscan2pdf (1.6.0-2) unstable; urgency=low
+
+  * Fixed bug preventing append prepend PDF in combination with timestamp
+    Closes: #848318 (append and prepend to PDF no longer work)
+  * Catch error setting timestamp for dates prior to 1970
+
+ -- Jeffrey Ratcliffe <jjr@debian.org>  Fri, 16 Dec 2016 21:27:48 +0100
+
 gscan2pdf (1.6.0-1) unstable; urgency=low
 
   * New upstream release
