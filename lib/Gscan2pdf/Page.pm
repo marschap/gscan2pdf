@@ -18,6 +18,7 @@ use POSIX qw(locale_h);
 use Data::UUID;
 use Text::Balanced qw ( extract_bracketed );
 use English qw( -no_match_vars );    # for $ERRNO
+use Gscan2pdf::Document;
 use Readonly;
 Readonly my $CM_PER_INCH    => 2.54;
 Readonly my $MM_PER_CM      => 10;
@@ -329,7 +330,7 @@ sub _prune_empty_branches {
 }
 
 sub _pdftotext2boxes {
-    my ($html) = @_;
+    my ( $self, $html ) = @_;
     my $p = HTML::TokeParser->new( \$html );
     my ( $data, @stack, $boxes );
     while ( my $token = $p->get_token ) {
@@ -345,8 +346,8 @@ sub _pdftotext2boxes {
                     if ( defined $attrs{width} and defined $attrs{height} ) {
                         $data->{bbox} = [
                             0, 0,
-                            round( $attrs{width} ),
-                            round( $attrs{height} )
+                            scale( $attrs{width},  $self->resolution ),
+                            scale( $attrs{height}, $self->resolution )
                         ];
                     }
                     push @{$boxes}, $data;
@@ -359,10 +360,10 @@ sub _pdftotext2boxes {
                         and defined $attrs{ymax} )
                     {
                         $data->{bbox} = [
-                            round( $attrs{xmin} ),
-                            round( $attrs{ymin} ),
-                            round( $attrs{xmax} ),
-                            round( $attrs{ymax} )
+                            scale( $attrs{xmin}, $self->resolution ),
+                            scale( $attrs{ymin}, $self->resolution ),
+                            scale( $attrs{xmax}, $self->resolution ),
+                            scale( $attrs{ymax}, $self->resolution )
                         ];
                     }
                 }
@@ -396,9 +397,10 @@ sub _pdftotext2boxes {
     return $boxes;
 }
 
-sub round {
-    my ($f) = @_;
-    return int( $f + $HALF );
+sub scale {
+    my ( $f, $resolution ) = @_;
+    return
+      int( $f * $resolution / $Gscan2pdf::Document::POINTS_PER_INCH + $HALF );
 }
 
 # return hocr output as string
@@ -567,7 +569,7 @@ sub import_djvutext {
 
 sub import_pdftotext {
     my ( $self, $html ) = @_;
-    my $boxes = _pdftotext2boxes($html);
+    my $boxes = $self->_pdftotext2boxes($html);
     $self->{hocr} = _boxes2hocr($boxes);
     return;
 }
@@ -608,6 +610,24 @@ sub resolution {
     my $image  = $self->im_object;
     my $format = $image->Get('format');
     setlocale( LC_NUMERIC, 'C' );
+
+    if ( defined $self->{size} ) {
+        my $width  = $image->Get('width');
+        my $height = $image->Get('height');
+        $logger->debug("PDF size @{$self->{size}}");
+        $logger->debug("image size $width $height");
+        my $scale = $Gscan2pdf::Document::POINTS_PER_INCH;
+        if ( $self->{size}[2] ne 'pts' ) {
+            croak "Error: unknown units '$self->{size}[2]'";
+        }
+        my $xres = $width / $self->{size}[0] * $scale;
+        my $yres = $height / $self->{size}[1] * $scale;
+        $logger->debug("resolution $xres $yres");
+        if ( abs( $xres - $yres ) / $yres < $PAGE_TOLERANCE ) {
+            $self->{resolution} = ( $xres + $yres ) / 2;
+            return $self->{resolution};
+        }
+    }
 
     # Imagemagick always reports PNMs as 72ppi
     # Some versions of imagemagick report colour PNM as Portable pixmap (PPM)

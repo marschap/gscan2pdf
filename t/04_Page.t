@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 22;
+use Test::More tests => 24;
 
 BEGIN {
     use_ok('Gscan2pdf::Page');
@@ -591,6 +591,35 @@ is_deeply( \@output, \@expected, 'import_pdftotext() basic functionality' );
 
 #########################
 
+$expected = <<'EOS';
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name='ocr-system' content='gscan2pdf 1.4.0' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
+ </head>
+ <body>
+  <div class='ocr_page' title="bbox 0 0 1937 244">
+   <span class='ocr_word' title="bbox 4 95 364 193">The</span>
+   <span class='ocr_word' title="bbox 438 95 926 193">quick</span>
+   <span class='ocr_word' title="bbox 1004 95 1561 193">brown</span>
+   <span class='ocr_word' title="bbox 1638 95 1920 193">fox</span>
+  </div>
+ </body>
+</html>
+EOS
+
+$page->{resolution} = 300;
+$page->import_pdftotext($pdftext);
+@expected = split "\n", $expected;
+@output   = split "\n", $page->{hocr};
+is_deeply( \@output, \@expected, 'import_pdftotext() with resolution' );
+
+#########################
+
 my %paper_sizes = (
     A4 => {
         x => 210,
@@ -662,6 +691,17 @@ $page = Gscan2pdf::Page->new(
     dir      => File::Temp->newdir,
 );
 is( $page->resolution( \%paper_sizes ), 300, 'undefined' );
+
+#########################
+
+system('convert -size 210x297 xc:white test.pnm');
+$page = Gscan2pdf::Page->new(
+    filename => 'test.pnm',
+    format   => 'Portable anymap',
+    dir      => File::Temp->newdir,
+    size     => [ 105, 148, 'pts' ],
+);
+is( $page->resolution, 144.243243243243, 'from pdfinfo paper size' );
 
 #########################
 

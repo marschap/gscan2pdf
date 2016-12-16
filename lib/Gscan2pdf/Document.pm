@@ -2355,12 +2355,16 @@ sub _thread_get_file_info {
               exec_command( [ 'pdfinfo', $filename ], $pidfile );
             return if $_self->{cancel};
             $logger->info($info);
-            my $pages = 1;
+            $info{pages} = 1;
             if ( $info =~ /Pages:\s+(\d+)/xsm ) {
-                $pages = $1;
+                $info{pages} = $1;
             }
-            $logger->info("$pages pages");
-            $info{pages} = $pages;
+            $logger->info("$info{pages} pages");
+            my $float = qr{\d+(?:[.]\d*)?}xsm;
+            if ( $info =~ /Page\ssize:\s+($float)\s+x\s+($float)\s+(\w+)/xsm ) {
+                $info{page_size} = [ $1, $2, $3 ];
+                $logger->info("Page size: $1 x $2 $3");
+            }
         }
 
         # A JPEG which I was unable to reproduce as a test case had what
@@ -2375,9 +2379,8 @@ sub _thread_get_file_info {
             $logger->info($info);
 
             # Count number of pages
-            my $pages = () = $info =~ /TIFF[ ]Directory[ ]at[ ]offset/xsmg;
-            $logger->info("$pages pages");
-            $info{pages} = $pages;
+            $info{pages} = () = $info =~ /TIFF[ ]Directory[ ]at[ ]offset/xsmg;
+            $logger->info("$info{pages} pages");
         }
         default {
 
@@ -2650,6 +2653,7 @@ sub _thread_import_pdf {
                         dir      => $options{dir},
                         delete   => TRUE,
                         format   => $format{$ext},
+                        size     => $options{info}{page_size},
                     );
                     $page->import_pdftotext( slurp($html) );
                     $self->{return}->enqueue(
