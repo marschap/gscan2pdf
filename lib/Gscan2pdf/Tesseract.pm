@@ -227,6 +227,7 @@ sub hocr {
             $logger->info("thresholding at $options{threshold} to $tif");
             $image->BlackThreshold( threshold => "$options{threshold}%" );
             $image->WhiteThreshold( threshold => "$options{threshold}%" );
+            $x = $image->Set(alpha => 'Off');
             $x = $image->Quantize( colors => 2 );
             $x = $image->Write( depth => 1, filename => $tif );
         }
