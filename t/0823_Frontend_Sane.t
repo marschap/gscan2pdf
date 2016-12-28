@@ -36,7 +36,7 @@ Gscan2pdf::Frontend::Sane->open_device(
                                 is( $status, 5, 'SANE_STATUS_GOOD' );
                                 like(
                                     `file $path`,
-                                    qr/Netpbm PGM/,
+                                    qr/Netpbm /,
                                     'Output has valid header'
                                 );
                                 like(
