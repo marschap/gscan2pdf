@@ -60,6 +60,10 @@ WriteMakefile(
         List::MoreUtils        => 0,
         Filesys::Df            => 0,
     },
+    BUILD_REQUIRES => {
+        Test::More    => 0,
+        Sub::Override => 0,
+    },
     clean => { FILES    => '$(SOURCE_TIDY)' },
     dist  => { COMPRESS => 'xz -9', SUFFIX => '.xz', },
     (
