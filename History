@@ -12,6 +12,8 @@
 * Correctly scale boundary boxes when importing text layer of PDF
 * Cherry-picked several merge requests from Chris Mayo fixing tests and
   documentation.
+* Fix saving TIFF with compression (introduced in 1.6.0).
+  Closes bug #235 (Saving a PNG with alpha channel as TIFF fails)
 
 
 1.6.0 (02.12.2016):

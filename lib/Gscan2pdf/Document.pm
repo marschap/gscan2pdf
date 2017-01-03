@@ -3380,16 +3380,16 @@ sub _thread_save_tiff {
             my $resolution = $pagedata->{resolution};
 
             # Convert to tiff
-            my $depth = $EMPTY;
+            my @depth;
             if ( defined( $options{options}->{compression} )
                 and $options{options}->{compression} eq 'jpeg' )
             {
-                $depth = '-depth 8';
+                @depth = qw(-depth 8);
             }
 
             my @cmd = (
                 'convert', '-units', 'PixelsPerInch', '-density', $resolution,
-                $depth, $filename, $tif,
+                @depth, $filename, $tif,
             );
             my ($status) = exec_command( \@cmd, $options{pidfile} );
             return if $_self->{cancel};
@@ -3405,28 +3405,23 @@ sub _thread_save_tiff {
         push @filelist, $filename;
     }
 
-    my $compression = $EMPTY;
+    my @compression;
     if ( defined $options{options}->{compression} ) {
-        $compression = "-c $options{options}->{compression}";
-        if ( $compression eq 'jpeg' ) {
-            $compression .= ":$options{options}->{quality}";
+        @compression = ( '-c', "$options{options}->{compression}" );
+        if ( $options{options}->{compression} eq 'jpeg' ) {
+            $compression[1] .= ":$options{options}->{quality}";
+            push @compression, qw(-r 16);
         }
     }
 
     # Create the tiff
     $self->{progress} = 1;
     $self->{message}  = $d->get('Concatenating TIFFs');
-    my $rows = $EMPTY;
-    if ( defined( $options{options}->{compression} )
-        and $options{options}->{compression} eq 'jpeg' )
-    {
-        $rows = '-r 16';
-    }
-    my @cmd = ( 'tiffcp', $rows, $compression, @filelist, $options{path} );
+    my @cmd = ( 'tiffcp', @compression, @filelist, $options{path} );
     my ( $status, undef, $error ) = exec_command( \@cmd, $options{pidfile} );
     return if $_self->{cancel};
 
-    if ($status) {
+    if ( $status or $error =~ /(?:usage|TIFFOpen):/xsm ) {
         $logger->info($error);
         _thread_throw_error( $self, $options{uuid},
             sprintf $d->get('Error compressing image: %s'), $error );
