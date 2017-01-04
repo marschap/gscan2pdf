@@ -4652,15 +4652,23 @@ EOS
       <<'EOS'; # inverted commas required around EOS because of UTF-8 in $translators
 Davidmp
 Whistle
-Микола Ткач
 Dusan Kazik
-Pavel Borecki
-Jean-Marc
-NSV
 Cédric VALMARY (Tot en òc)
-JeromeJ
-Alan Mortensen
+Eric Spierings
+Milo Casagrande
+Raúl González Duque
+R120X
+NSV
+Alexandre Prokoudine
 Aputsiaĸ Niels Janussen
+Paul Wohlhart
+Pierre Slamich
+Tiago Silva
+Igor Zubarev
+Jarosław Ogrodnik
+liorda
+Clopy
+Daniel Nylander
 EOS
     $about->set_translator_credits($translators);
     $about->set_artists('lodp, Andreas E.');
