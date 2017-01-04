@@ -1,31 +1,42 @@
 Name:      gscan2pdf
-Version: 1.6.0
-Release:   1%{?dist}
-Summary:   A GUI to produce PDFs from scanned documents
-
+Version: 1.7.0
+Release:   0%{?dist}
+Summary:   GUI to ease the process of scanning multipage documents
 Group:     Applications/Publishing
 License:   GPL
-URL:       http://%{name}.sourceforge.net/
-Source0:   %{name}-%{version}.tar.xz
+Url:       http://sourceforge.net/projects/gscan2pdf/
+Source0:   http://sourceforge.net/projects/gscan2pdf/files/gscan2pdf/%{version}/gscan2pdf-%{version}.tar.xz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
-
-BuildRequires: perl(ExtUtils::MakeMaker), perl(Test::More)
-BuildRequires: gettext, desktop-file-utils
-Requires: perl(Gtk2::ImageView), perl-Gtk2-Ex-Simple-List
-Requires: perl-Sane, perl-Locale-gettext
-Requires: sane-utils, libtiff-tools, perl(PDF::API2)
-Requires: perl(Config::General), perl-PerlMagick, ImageMagick
-Requires: librsvg-2-2, perl(Set::Intspan), perl(List::MoreUtils)
-Requires: perl-HTML-Parser, perl(Goo::Canvas), perl-Proc-ProcessTable
-Requires: perl(Readonly), perl(Log::Log4perl), perl(Try::Tiny), perl-Filesys-Df
-Requires: perl(OSSP::uuid), perl(Gtk2::Ex::PodViewer), sane-backends >= 1.0.17
-Requires: xdg-utils, djvulibre
-Requires: unpaper, sane-frontends
+BuildRequires: perl(ExtUtils::MakeMaker)
+BuildRequires: update-desktop-files
+Requires:       perl(Config::General)
+Requires:       perl(Glib)
+Requires:       perl(Goo::Canvas)
+Requires:       perl(Gtk2)
+Requires:       perl(Gtk2::Ex::Simple::List)
+Requires:       perl(Gtk2::ImageView)
+Requires:       perl(Image::Magick)
+Requires:       perl(List::MoreUtils)
+Requires:       perl(Log::Log4perl)
+Requires:       perl(PDF::API2)
+Requires:       perl(Proc::Killfam)
+Requires:       perl(Readonly)
+Requires:       perl(Sane)
+Requires:       perl(Set::IntSpan)
+Requires:       perl(Try::Tiny)
+Requires:       perl(Filesys::Df)
+Requires:       perl(Data::UUID)
+Requires:       perl(Date::Calc)
+Requires:       unpaper
+Recommends:     djvulibre
+Recommends:     gocr
+Recommends:     tesseract-ocr 
+Recommends:     tiff
 
 %description
 Only two clicks are required to scan several pages and then save all or a
-selection as a PDF file, including metadata if required.
+selection as a PDF or DjVu file, including metadata if required.
 
 gscan2pdf can control regular or sheet-fed (ADF) scanners with SANE via
 scanimage or scanadf, and can scan multiple pages at once. It presents a
@@ -34,7 +45,7 @@ and deleting pages.
 
 PDF conversion is done by PDF::API2.
 
-The resulting document may be saved as a PDF or a multipage TIFF file.
+The resulting document may be saved as a PDF, DjVu or a multipage TIFF file.
 
 %prep
 %setup -q
@@ -42,7 +53,6 @@ The resulting document may be saved as a PDF or a multipage TIFF file.
 %build
 %{__perl} Makefile.PL INSTALLDIRS=vendor
 make %{?_smp_mflags}
-
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -91,7 +101,12 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Fri Dec 02 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Wed Jan 04 2017 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+  - + patch to fix bug saving TIFF with compression
+  - Fixed bug preventing append prepend PDF in combination with timestamp
+    Closes: #848318 (append and prepend to PDF no longer work)
+  - Catch error setting timestamp for dates prior to 1970
   - New upstream release
     Closes: #842239 (Arbitrary document metadata date chosen)
     New Depends: libdate-calc-perl

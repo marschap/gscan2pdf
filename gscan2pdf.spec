@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.6.0
+Version: 1.7.0
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -92,7 +92,12 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Fri Dec 02 2016 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Wed Jan 04 2017 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
+  - + patch to fix bug saving TIFF with compression
+  - Fixed bug preventing append prepend PDF in combination with timestamp
+    Closes: #848318 (append and prepend to PDF no longer work)
+  - Catch error setting timestamp for dates prior to 1970
   - New upstream release
     Closes: #842239 (Arbitrary document metadata date chosen)
     New Depends: libdate-calc-perl
