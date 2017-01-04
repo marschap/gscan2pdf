@@ -33,7 +33,7 @@
 #    check contents with dpkg-deb --contents
 #     dput ftp-master .changes
 # 7. Build packages for Ubuntu
-#    name the release -0~ppa1<release>, where release is zesty, yakkety, xenial, wily, vivid, trusty, precise, etc
+#    name the release -0~ppa1<release>, where release is zesty, yakkety, xenial, vivid, trusty, precise, etc
 #     debuild --no-lintian -S -sa
 #     dput gscan2pdf-ppa .changes
 #    https://launchpad.net/~jeffreyratcliffe/+archive
