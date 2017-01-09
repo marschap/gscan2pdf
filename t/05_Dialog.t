@@ -1,9 +1,10 @@
 use warnings;
 use strict;
-use Test::More tests => 19;
-use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
+use Test::More tests => 24;
+use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
 use Gtk2 -init;
 use Scalar::Util;
+use Locale::gettext 1.05;    # For translations
 
 BEGIN {
     use_ok('Gscan2pdf::Dialog');
@@ -11,6 +12,7 @@ BEGIN {
 
 #########################
 
+Glib::set_application_name('gscan2pdf');
 my $window = Gtk2::Window->new;
 
 ok(
@@ -75,6 +77,37 @@ $dialog->signal_connect_after(
 $event = Gtk2::Gdk::Event->new('key-press');
 $event->keyval( $Gtk2::Gdk::Keysyms{Delete} );
 $dialog->signal_emit( 'key_press_event', $event );
+
+my ( $hboxmd, $entryd, $entrya, $entryt, $entrys, $entryk ) =
+  $dialog->add_metadata_dialog(
+    {
+        date => {
+            today  => [ 2017, 01, 01 ],
+            offset => 0,
+        },
+        title => {
+            default     => 'title',
+            suggestions => ['title-suggestion'],
+        },
+        author => {
+            default     => 'author',
+            suggestions => ['author-suggestion'],
+        },
+        subject => {
+            default     => 'subject',
+            suggestions => ['subject-suggestion'],
+        },
+        keywords => {
+            default     => 'keywords',
+            suggestions => ['keywords-suggestion'],
+        },
+    }
+  );
+is( $entryd->get_text, '2017-01-01', 'date' );
+is( $entrya->get_text, 'author',     'author' );
+is( $entryt->get_text, 'title',      'title' );
+is( $entrys->get_text, 'subject',    'subject' );
+is( $entryk->get_text, 'keywords',   'keywords' );
 
 is(
     Gscan2pdf::Dialog::filter_message(

@@ -57,7 +57,6 @@ use Gscan2pdf::Unpaper;
 use Gscan2pdf::Dialog::Renumber;
 use Gscan2pdf::Canvas;
 use Gscan2pdf::Config;
-use Gscan2pdf::EntryCompletion;
 use Sane 0.05;    # To get SANE_* enums
 use Gtk2::ImageView;
 use Gtk2::Ex::Simple::List;
@@ -93,7 +92,6 @@ Readonly my $UNIT_SLIDER_STEP        => 0.001;
 Readonly my $SIGMA_STEP              => 0.1;
 Readonly my $MAX_SIGMA               => 5;
 Readonly my $BORDER_WIDTH            => 6;               # Window parameters
-Readonly my $ENTRY_WIDTH             => 10;
 Readonly my $_90_DEGREES             => 90;
 Readonly my $_180_DEGREES            => 180;
 Readonly my $_270_DEGREES            => 270;
@@ -1930,171 +1928,6 @@ sub add_page_range {
     return;
 }
 
-# Add PDF options to $vbox
-
-sub add_metadata_dialog {
-    my ($vbox) = @_;
-
-    # Frame for metadata
-    my $frame = Gtk2::Frame->new( $d->get('Document Metadata') );
-    $vbox->pack_start( $frame, TRUE, TRUE, 0 );
-    my $vboxm = Gtk2::VBox->new;
-    $vboxm->set_border_width($BORDER_WIDTH);
-    $frame->add($vboxm);
-
-    # table-view
-    my $table = Gtk2::Table->new( 5, 2 );    ## no critic (ProhibitMagicNumbers)
-    $table->set_row_spacings($BORDER_WIDTH);
-    $vboxm->pack_start( $table, TRUE, TRUE, 0 );
-
-    # Date/time
-    my $hboxe = Gtk2::HBox->new;
-    my $row   = 0;
-    $table->attach( $hboxe, 0, 1, $row, $row + 1, 'fill', 'shrink', 0, 0 );
-    my $labele = Gtk2::Label->new( $d->get('Date') );
-    $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
-
-    my $entryd = Gtk2::Entry->new_with_max_length($ENTRY_WIDTH);
-    $entryd->set_text(
-        Gscan2pdf::Document::expand_metadata_pattern(
-            '%Y-%M-%D', undef, undef, undef,
-            Add_Delta_Days( Today(), $SETTING{'date offset'} )
-        )
-    );
-    $entryd->set_activates_default(TRUE);
-    $tooltips->set_tip( $entryd, $d->get('Year-Month-Day') );
-    $entryd->set_alignment(1.);    # Right justify
-    $entryd->signal_connect(
-        'insert-text' => sub {
-            my ( $widget, $string, $len, $position ) = @_;
-
-            # only allow integers and -
-            if ( $string !~ /^[\d\-]+$/smx ) {
-                $entryd->signal_stop_emission_by_name('insert-text');
-            }
-            ()    # this callback must return either 2 or 0 items.
-        }
-    );
-    $entryd->signal_connect(
-        'focus-out-event' => sub {
-            $entryd->set_text( sprintf '%04d-%02d-%02d',
-                Gscan2pdf::Document::text_to_date( $entryd->get_text ) );
-            return FALSE;
-        }
-    );
-    my $button = Gtk2::Button->new;
-    $button->set_image( Gtk2::Image->new_from_stock( 'gtk-edit', 'button' ) );
-    $button->signal_connect(
-        clicked => sub {
-            my $window_date = Gscan2pdf::Dialog->new(
-                'transient-for' => $windowi,
-                title           => $d->get('Select Date'),
-                border_width    => $BORDER_WIDTH
-            );
-            my $vbox_date = $window_date->get('vbox');
-            $window_date->set_resizable(FALSE);
-            my $calendar = Gtk2::Calendar->new;
-
-            # Editing the entry and clicking the edit button bypasses the
-            # focus-out-event, so update the date now
-            my ( $year, $month, $day ) =
-              Gscan2pdf::Document::text_to_date( $entryd->get_text );
-
-            $calendar->select_day($day);
-            $calendar->select_month( $month - 1, $year );
-            my $calendar_s;
-            $calendar_s = $calendar->signal_connect(
-                day_selected => sub {
-                    ( $year, $month, $day ) = $calendar->get_date;
-                    $month += 1;
-                    $entryd->set_text( sprintf '%04d-%02d-%02d',
-                        $year, $month, $day );
-                }
-            );
-            $calendar->signal_connect(
-                day_selected_double_click => sub {
-                    ( $year, $month, $day ) = $calendar->get_date;
-                    $month += 1;
-                    $entryd->set_text( sprintf '%04d-%02d-%02d',
-                        $year, $month, $day );
-                    $window_date->destroy;
-                }
-            );
-            $vbox_date->pack_start( $calendar, TRUE, TRUE, 0 );
-
-            my $today = Gtk2::Button->new( $d->get('Today') );
-            $today->signal_connect(
-                clicked => sub {
-                    ( $year, $month, $day ) = Today();
-
-                    # block and unblock signal, and update entry manually
-                    # to remove possibility of race conditions
-                    $calendar->signal_handler_block($calendar_s);
-                    $calendar->select_day($day);
-                    $calendar->select_month( $month - 1, $year );
-                    $calendar->signal_handler_unblock($calendar_s);
-                    $entryd->set_text( sprintf '%04d-%02d-%02d',
-                        $year, $month, $day );
-                }
-            );
-            $vbox_date->pack_start( $today, TRUE, TRUE, 0 );
-
-            $window_date->show_all;
-        }
-    );
-    $tooltips->set_tip( $button, $d->get('Select date with calendar') );
-    $hboxe = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxe, 1, 2, $row, $row + 1 );
-    $hboxe->pack_end( $button, FALSE, FALSE, 0 );
-    $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
-
-    # Title
-    my $hboxt = Gtk2::HBox->new;
-    $table->attach( $hboxt, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
-    my $labelt = Gtk2::Label->new( $d->get('Title') );
-    $hboxt->pack_start( $labelt, FALSE, TRUE, 0 );
-    $hboxt = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxt, 1, 2, $row, $row + 1 );
-    my $entryt = Gscan2pdf::EntryCompletion->new( $SETTING{title},
-        $SETTING{'title-suggestions'} );
-    $hboxt->pack_start( $entryt, TRUE, TRUE, 0 );
-
-    # Document author
-    my $hboxa = Gtk2::HBox->new;
-    $table->attach( $hboxa, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
-    my $labela = Gtk2::Label->new( $d->get('Author') );
-    $hboxa->pack_start( $labela, FALSE, TRUE, 0 );
-    $hboxa = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxa, 1, 2, $row, $row + 1 );
-    my $entrya = Gscan2pdf::EntryCompletion->new( $SETTING{author},
-        $SETTING{'author-suggestions'} );
-    $hboxa->pack_start( $entrya, TRUE, TRUE, 0 );
-
-    # Subject
-    my $hboxs = Gtk2::HBox->new;
-    $table->attach( $hboxs, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
-    my $labels = Gtk2::Label->new( $d->get('Subject') );
-    $hboxs->pack_start( $labels, FALSE, TRUE, 0 );
-    $hboxs = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxs, 1, 2, $row, $row + 1 );
-    my $entrys = Gscan2pdf::EntryCompletion->new( $SETTING{subject},
-        $SETTING{'subject-suggestions'} );
-    $hboxs->pack_end( $entrys, TRUE, TRUE, 0 );
-
-    # Keywords
-    my $hboxk = Gtk2::HBox->new;
-    $table->attach( $hboxk, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
-    my $labelk = Gtk2::Label->new( $d->get('Keywords') );
-    $hboxk->pack_start( $labelk, FALSE, TRUE, 0 );
-    $hboxk = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxk, 1, 2, $row, $row + 1 );
-    my $entryk = Gscan2pdf::EntryCompletion->new( $SETTING{keywords},
-        $SETTING{'keyword-suggestions'} );
-    $hboxk->pack_end( $entryk, TRUE, TRUE, 0 );
-
-    return ( $entryd, $entrya, $entryt, $entrys, $entryk );
-}
-
 sub update_metadata_settings {
     my ( $entryd, $entrya, $entryt, $entrys, $entryk ) = @_;
 
@@ -2408,11 +2241,31 @@ sub save_dialog {
     $hboxc->pack_end( $combobtc, FALSE, FALSE, 0 );
 
     # metadata options
-    my $hboxmd = Gtk2::HBox->new;
-    $vbox->pack_start( $hboxmd, FALSE, FALSE, 0 );
-
-    my ( $entryd, $entrya, $entryt, $entrys, $entryk ) =
-      add_metadata_dialog($hboxmd);
+    my ( $hboxmd, $entryd, $entrya, $entryt, $entrys, $entryk ) =
+      $windowi->add_metadata_dialog(
+        {
+            date => {
+                today  => [ Today() ],
+                offset => $SETTING{'date offset'},
+            },
+            title => {
+                default     => $SETTING{'title'},
+                suggestions => $SETTING{'title-suggestions'},
+            },
+            author => {
+                default     => $SETTING{'author'},
+                suggestions => $SETTING{'author-suggestions'},
+            },
+            subject => {
+                default     => $SETTING{'subject'},
+                suggestions => $SETTING{'subject-suggestions'},
+            },
+            keywords => {
+                default     => $SETTING{'keywords'},
+                suggestions => $SETTING{'keywords-suggestions'},
+            },
+        }
+      );
 
     # PDF options
     my $vboxp = Gtk2::VBox->new;
@@ -3352,8 +3205,31 @@ sub email {
     add_page_range($vbox);
 
     # PDF options
-    my ( $entryd, $entrya, $entryt, $entrys, $entryk ) =
-      add_metadata_dialog($vbox);
+    my ( $hboxmd, $entryd, $entrya, $entryt, $entrys, $entryk ) =
+      $windowi->add_metadata_dialog(
+        {
+            date => {
+                today  => [ Today() ],
+                offset => $SETTING{'date offset'},
+            },
+            title => {
+                default     => $SETTING{'title'},
+                suggestions => $SETTING{'title-suggestions'},
+            },
+            author => {
+                default     => $SETTING{'author'},
+                suggestions => $SETTING{'author-suggestions'},
+            },
+            subject => {
+                default     => $SETTING{'subject'},
+                suggestions => $SETTING{'subject-suggestions'},
+            },
+            keywords => {
+                default     => $SETTING{'keywords'},
+                suggestions => $SETTING{'keywords-suggestions'},
+            },
+        }
+      );
 
     # Compression options
     my ( $buttond, $spinbuttond, $combob, $hboxq, $spinbuttonq, @compression )

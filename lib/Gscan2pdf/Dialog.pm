@@ -5,7 +5,12 @@ use strict;
 use Gtk2;
 use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2::Gdk::Keysyms;
+use Gscan2pdf::Document;
+use Gscan2pdf::EntryCompletion;
+use Date::Calc qw(Add_Delta_Days Today);
 use Data::Dumper;
+use Readonly;
+Readonly my $ENTRY_WIDTH => 10;
 
 use Glib::Object::Subclass Gtk2::Window::,
   signals => {
@@ -40,11 +45,15 @@ use Glib::Object::Subclass Gtk2::Window::,
 
 our $VERSION = '1.7.0';
 my $EMPTY = q{};
+my ( $d, $tooltips );
 
 sub INIT_INSTANCE {
     my $self = shift;
 
     $self->set_position('center-on-parent');
+    $d        = Locale::gettext->domain(Glib::get_application_name);
+    $tooltips = Gtk2::Tooltips->new;
+    $tooltips->enable;
 
     # VBox for window
     my $vbox = Gtk2::VBox->new;
@@ -88,6 +97,179 @@ sub on_key_press_event {
         $widget->destroy;
     }
     return Gtk2::EVENT_STOP;
+}
+
+sub add_metadata_dialog {
+    my ( $self, $defaults ) = @_;
+    my ($vbox) = $self->get('vbox');
+
+    # it needs its own box to be able to hide it if necessary
+    my $hboxmd = Gtk2::HBox->new;
+    $vbox->pack_start( $hboxmd, FALSE, FALSE, 0 );
+
+    # Frame for metadata
+    my $frame = Gtk2::Frame->new( $d->get('Document Metadata') );
+    $hboxmd->pack_start( $frame, TRUE, TRUE, 0 );
+    my $vboxm = Gtk2::VBox->new;
+    $vboxm->set_border_width( $self->get('border-width') );
+    $frame->add($vboxm);
+
+    # table-view
+    my $table = Gtk2::Table->new( 5, 2 );    ## no critic (ProhibitMagicNumbers)
+    $table->set_row_spacings( $self->get('border-width') );
+    $vboxm->pack_start( $table, TRUE, TRUE, 0 );
+
+    # Date/time
+    my $hboxe = Gtk2::HBox->new;
+    my $row   = 0;
+    $table->attach( $hboxe, 0, 1, $row, $row + 1, 'fill', 'shrink', 0, 0 );
+    my $labele = Gtk2::Label->new( $d->get('Date') );
+    $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
+
+    my $entryd = Gtk2::Entry->new_with_max_length($ENTRY_WIDTH);
+    $entryd->set_text(
+        Gscan2pdf::Document::expand_metadata_pattern(
+            '%Y-%M-%D',
+            undef, undef, undef,
+            Add_Delta_Days(
+                @{ $defaults->{date}{today} },
+                $defaults->{date}{offset}
+            )
+        )
+    );
+    $entryd->set_activates_default(TRUE);
+    $tooltips->set_tip( $entryd, $d->get('Year-Month-Day') );
+    $entryd->set_alignment(1.);    # Right justify
+    $entryd->signal_connect(
+        'insert-text' => sub {
+            my ( $widget, $string, $len, $position ) = @_;
+
+            # only allow integers and -
+            if ( $string !~ /^[\d\-]+$/smx ) {
+                $entryd->signal_stop_emission_by_name('insert-text');
+            }
+            ()    # this callback must return either 2 or 0 items.
+        }
+    );
+    $entryd->signal_connect(
+        'focus-out-event' => sub {
+            $entryd->set_text( sprintf '%04d-%02d-%02d',
+                Gscan2pdf::Document::text_to_date( $entryd->get_text ) );
+            return FALSE;
+        }
+    );
+    my $button = Gtk2::Button->new;
+    $button->set_image( Gtk2::Image->new_from_stock( 'gtk-edit', 'button' ) );
+    $button->signal_connect(
+        clicked => sub {
+            my $window_date = Gscan2pdf::Dialog->new(
+                'transient-for' => $self,
+                title           => $d->get('Select Date'),
+                border_width    => $self->get('border-width')
+            );
+            my $vbox_date = $window_date->get('vbox');
+            $window_date->set_resizable(FALSE);
+            my $calendar = Gtk2::Calendar->new;
+
+            # Editing the entry and clicking the edit button bypasses the
+            # focus-out-event, so update the date now
+            my ( $year, $month, $day ) =
+              Gscan2pdf::Document::text_to_date( $entryd->get_text );
+
+            $calendar->select_day($day);
+            $calendar->select_month( $month - 1, $year );
+            my $calendar_s;
+            $calendar_s = $calendar->signal_connect(
+                day_selected => sub {
+                    ( $year, $month, $day ) = $calendar->get_date;
+                    $month += 1;
+                    $entryd->set_text( sprintf '%04d-%02d-%02d',
+                        $year, $month, $day );
+                }
+            );
+            $calendar->signal_connect(
+                day_selected_double_click => sub {
+                    ( $year, $month, $day ) = $calendar->get_date;
+                    $month += 1;
+                    $entryd->set_text( sprintf '%04d-%02d-%02d',
+                        $year, $month, $day );
+                    $window_date->destroy;
+                }
+            );
+            $vbox_date->pack_start( $calendar, TRUE, TRUE, 0 );
+
+            my $today = Gtk2::Button->new( $d->get('Today') );
+            $today->signal_connect(
+                clicked => sub {
+                    ( $year, $month, $day ) = Today();
+
+                    # block and unblock signal, and update entry manually
+                    # to remove possibility of race conditions
+                    $calendar->signal_handler_block($calendar_s);
+                    $calendar->select_day($day);
+                    $calendar->select_month( $month - 1, $year );
+                    $calendar->signal_handler_unblock($calendar_s);
+                    $entryd->set_text( sprintf '%04d-%02d-%02d',
+                        $year, $month, $day );
+                }
+            );
+            $vbox_date->pack_start( $today, TRUE, TRUE, 0 );
+
+            $window_date->show_all;
+        }
+    );
+    $tooltips->set_tip( $button, $d->get('Select date with calendar') );
+    $hboxe = Gtk2::HBox->new;
+    $table->attach_defaults( $hboxe, 1, 2, $row, $row + 1 );
+    $hboxe->pack_end( $button, FALSE, FALSE, 0 );
+    $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
+
+    # Title
+    my $hboxt = Gtk2::HBox->new;
+    $table->attach( $hboxt, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
+    my $labelt = Gtk2::Label->new( $d->get('Title') );
+    $hboxt->pack_start( $labelt, FALSE, TRUE, 0 );
+    $hboxt = Gtk2::HBox->new;
+    $table->attach_defaults( $hboxt, 1, 2, $row, $row + 1 );
+    my $entryt = Gscan2pdf::EntryCompletion->new( $defaults->{title}{default},
+        $defaults->{title}{suggestions} );
+    $hboxt->pack_start( $entryt, TRUE, TRUE, 0 );
+
+    # Document author
+    my $hboxa = Gtk2::HBox->new;
+    $table->attach( $hboxa, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
+    my $labela = Gtk2::Label->new( $d->get('Author') );
+    $hboxa->pack_start( $labela, FALSE, TRUE, 0 );
+    $hboxa = Gtk2::HBox->new;
+    $table->attach_defaults( $hboxa, 1, 2, $row, $row + 1 );
+    my $entrya = Gscan2pdf::EntryCompletion->new( $defaults->{author}{default},
+        $defaults->{author}{suggestions} );
+    $hboxa->pack_start( $entrya, TRUE, TRUE, 0 );
+
+    # Subject
+    my $hboxs = Gtk2::HBox->new;
+    $table->attach( $hboxs, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
+    my $labels = Gtk2::Label->new( $d->get('Subject') );
+    $hboxs->pack_start( $labels, FALSE, TRUE, 0 );
+    $hboxs = Gtk2::HBox->new;
+    $table->attach_defaults( $hboxs, 1, 2, $row, $row + 1 );
+    my $entrys = Gscan2pdf::EntryCompletion->new( $defaults->{subject}{default},
+        $defaults->{subject}{suggestions} );
+    $hboxs->pack_end( $entrys, TRUE, TRUE, 0 );
+
+    # Keywords
+    my $hboxk = Gtk2::HBox->new;
+    $table->attach( $hboxk, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
+    my $labelk = Gtk2::Label->new( $d->get('Keywords') );
+    $hboxk->pack_start( $labelk, FALSE, TRUE, 0 );
+    $hboxk = Gtk2::HBox->new;
+    $table->attach_defaults( $hboxk, 1, 2, $row, $row + 1 );
+    my $entryk =
+      Gscan2pdf::EntryCompletion->new( $defaults->{keywords}{default},
+        $defaults->{keywords}{suggestions} );
+    $hboxk->pack_end( $entryk, TRUE, TRUE, 0 );
+
+    return ( $hboxmd, $entryd, $entrya, $entryt, $entrys, $entryk );
 }
 
 sub dump_or_stringify {
