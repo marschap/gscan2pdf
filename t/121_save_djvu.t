@@ -43,9 +43,9 @@ $slist->import_files(
 );
 Gtk2->main;
 
-is(
+like(
     `identify test2.png`,
-    "test2.png PNG 70x46 70x46+0+0 8-bit sRGB 7.77KB 0.000u 0:00.000\n",
+    qr/test2.png PNG 70x46 70x46\+0\+0 8-bit sRGB/,
     'ran post-save hook'
 );
 

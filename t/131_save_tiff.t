@@ -39,9 +39,9 @@ $slist->import_files(
 );
 Gtk2->main;
 
-is(
+like(
     `identify test.tif`,
-    "test.tif TIFF 70x46 70x46+0+0 8-bit sRGB 7.74KB 0.000u 0:00.000\n",
+    qr/test.tif TIFF 70x46 70x46\+0\+0 8-bit sRGB 7.74KB/,
     'valid TIFF created'
 );
 is(

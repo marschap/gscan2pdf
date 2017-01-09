@@ -40,9 +40,9 @@ $slist->import_files(
 );
 Gtk2->main;
 
-is(
+like(
     `identify test.tif`,
-    "test.tif TIFF 452x57 452x57+0+0 16-bit sRGB 23KB 0.000u 0:00.000\n",
+    qr/test.tif TIFF 4\d\dx\d\d 4\d\dx\d\d\+0\+0 16-bit sRGB/,
     'valid TIFF created'
 );
 

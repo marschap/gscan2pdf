@@ -39,9 +39,9 @@ $slist->import_files(
 );
 Gtk2->main;
 
-is(
+like(
     `identify test.jpg`,
-    "test.jpg JPEG 70x46 70x46+0+0 8-bit sRGB 2.04KB 0.000u 0:00.000\n",
+    qr/test.jpg JPEG 70x46 70x46\+0\+0 8-bit sRGB/,
     'valid JPG created'
 );
 is(

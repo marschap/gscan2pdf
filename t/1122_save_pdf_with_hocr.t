@@ -17,8 +17,11 @@ Gscan2pdf::Document->setup($logger);
 
 # Create test image
 system(
-'convert +matte -depth 1 -colorspace Gray -pointsize 12 -density 300 label:"The quick brown fox" test.png'
+'convert +matte -depth 1 -colorspace Gray -pointsize 12 -density 300 label:"The quick brown fox" -border 20x10 test.png'
 );
+my $info = `identify test.png`;
+my ( $width, $height );
+if ( $info =~ /(\d+)+x(\d+)/ ) { ( $width, $height ) = ( $1, $2 ) }
 
 my $slist = Gscan2pdf::Document->new;
 
@@ -69,7 +72,7 @@ $slist->import_files(
                         # that we have scaled the page size correctly.
                         like(
                             $slist->{data}[1][2]{hocr},
-                            qr/bbox\s0\s0\s452\s57/xsm,
+                            qr/bbox\s0\s0\s$width\s$height/xsm,
                             'import text layer'
                         );
                         Gtk2->main_quit;
