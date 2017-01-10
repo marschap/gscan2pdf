@@ -70,6 +70,18 @@ sub _pre_151 {
     return;
 }
 
+sub _pre_171 {
+    my ( $version, $SETTING ) = @_;
+    if ( version->parse($version) < version->parse('1.7.1') ) {
+        if ( defined $SETTING->{'keyword-suggestions'} ) {
+            $SETTING->{'keywords-suggestions'} =
+              $SETTING->{'keyword-suggestions'};
+            delete $SETTING->{'keyword-suggestions'};
+        }
+    }
+    return;
+}
+
 sub read_config {
     my ( $filename, $logger ) = @_;
     my ( %SETTING, $conf );
@@ -124,6 +136,8 @@ sub read_config {
 
     _pre_151( $version, \%SETTING );
 
+    _pre_171( $version, \%SETTING );
+
     $logger->debug( Dumper( \%SETTING ) );
     return %SETTING;
 }
@@ -171,7 +185,7 @@ sub add_defaults {
         subject                       => undef,
         'subject-suggestions'         => undef,
         keywords                      => undef,
-        'keyword-suggestions'         => undef,
+        'keywords-suggestions'        => undef,
         'downsample'                  => FALSE,
         'downsample dpi'              => 150,
         'cache options'               => TRUE,

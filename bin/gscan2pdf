@@ -1929,25 +1929,22 @@ sub add_page_range {
 }
 
 sub update_metadata_settings {
-    my ( $entryd, $entrya, $entryt, $entrys, $entryk ) = @_;
+    my ($mdwidgets) = @_;
 
     # Get metadata
-    for (
-        qw(author-suggestions title-suggestions subject-suggestions keyword-suggestions)
-      )
-    {
-        if ( not defined $SETTING{$_} ) { $SETTING{$_} = [] }
+    for my $name (qw(author title subject keywords)) {
+        if ( not defined $SETTING{"$name-suggestions"} ) {
+            $SETTING{"$name-suggestions"} = [];
+        }
+        $SETTING{$name} =
+          $mdwidgets->{$name}->update( $SETTING{"$name-suggestions"} );
     }
-    $SETTING{author}   = $entrya->update( $SETTING{'author-suggestions'} );
-    $SETTING{title}    = $entryt->update( $SETTING{'title-suggestions'} );
-    $SETTING{subject}  = $entrys->update( $SETTING{'subject-suggestions'} );
-    $SETTING{keywords} = $entryk->update( $SETTING{'keyword-suggestions'} );
 
     # the focus-out event validates a new document date before the save button
     # is pressed, so we can simply take the contents of the field
     $SETTING{'date offset'} =
       Delta_Days( Today(),
-        Gscan2pdf::Document::text_to_date( $entryd->get_text ) );
+        Gscan2pdf::Document::text_to_date( $mdwidgets->{date}->get_text ) );
 
     return;
 }
@@ -2241,8 +2238,7 @@ sub save_dialog {
     $hboxc->pack_end( $combobtc, FALSE, FALSE, 0 );
 
     # metadata options
-    my ( $hboxmd, $entryd, $entrya, $entryt, $entrys, $entryk ) =
-      $windowi->add_metadata_dialog(
+    my %mdwidgets = $windowi->add_metadata_dialog(
         {
             date => {
                 today  => [ Today() ],
@@ -2265,7 +2261,7 @@ sub save_dialog {
                 suggestions => $SETTING{'keywords-suggestions'},
             },
         }
-      );
+    );
 
     # PDF options
     my $vboxp = Gtk2::VBox->new;
@@ -2315,9 +2311,10 @@ sub save_dialog {
     $combobi->signal_connect(
         changed => \&image_type_changed_callback,
         [
-            \@type,    $vboxp,  $hboxf, \@pdf_compression,
-            $combob,   $hboxpq, $hboxc, \@tiff_compression,
-            $combobtc, $hboxtq, $hboxmd
+            \@type,            $vboxp,             $hboxf,
+            \@pdf_compression, $combob,            $hboxpq,
+            $hboxc,            \@tiff_compression, $combobtc,
+            $hboxtq,           $mdwidgets{box}
         ]
     );
     combobox_set_active( $combobi, $SETTING{'image type'}, @type );
@@ -2360,13 +2357,12 @@ sub save_dialog {
     $sbutton->signal_connect(
         clicked => \&save_button_clicked_callback,
         [
-            \@type,        $combobi,          $buttond,
-            $spinbuttond,  \@pdf_compression, $combob,
-            $spinbuttonpq, \@fonts,           $combof,
-            $entryd,       $entrya,           $entryt,
-            $entrys,       $entryk,           \@tiff_compression,
-            $combobtc,     $spinbuttontq,     $kbutton,
-            $pshbutton,    $pshcombo,         \@pshooks
+            \@type,        $combobi,           $buttond,
+            $spinbuttond,  \@pdf_compression,  $combob,
+            $spinbuttonpq, \@fonts,            $combof,
+            \%mdwidgets,   \@tiff_compression, $combobtc,
+            $spinbuttontq, $kbutton,           $pshbutton,
+            $pshcombo,     \@pshooks
         ]
     );
 
@@ -2395,7 +2391,7 @@ sub save_dialog {
 
     if ( $type[ $combobi->get_active ][0] ne 'pdf' ) {
         if ( $type[ $combobi->get_active ][0] ne 'djvu' ) {
-            $hboxmd->hide_all;
+            $mdwidgets{box}->hide_all;
         }
         $vboxp->hide_all;
         $hboxf->hide_all;
@@ -2495,11 +2491,10 @@ sub list_of_pages {
 sub save_button_clicked_callback {
     my ( $widget, $data ) = @_;
     my (
-        $type,            $combobi, $buttond,          $spinbuttond,
-        $pdf_compression, $combob,  $spinbuttonpq,     $fonts,
-        $combof,          $entryd,  $entrya,           $entryt,
-        $entrys,          $entryk,  $tiff_compression, $combobtc,
-        $spinbuttontq,    $kbutton, $pshbutton,        $pshcombo,
+        $type,            $combobi,   $buttond,          $spinbuttond,
+        $pdf_compression, $combob,    $spinbuttonpq,     $fonts,
+        $combof,          $mdwidgets, $tiff_compression, $combobtc,
+        $spinbuttontq,    $kbutton,   $pshbutton,        $pshcombo,
         $pshooks
     ) = @{$data};
 
@@ -2530,8 +2525,7 @@ sub save_button_clicked_callback {
 
             my $file_chooser;
             if ( $_ eq 'pdf' ) {
-                update_metadata_settings( $entryd, $entrya, $entryt, $entrys,
-                    $entryk );
+                update_metadata_settings($mdwidgets);
 
                 # Set up file selector
                 $file_chooser = Gtk2::FileChooserDialog->new(
@@ -2543,8 +2537,10 @@ sub save_button_clicked_callback {
 
                 my $filename = Gscan2pdf::Document::expand_metadata_pattern(
                     $SETTING{'default filename'},
-                    $SETTING{author},
-                    $SETTING{title}, $entryd->get_text, Today_and_Now() );
+                    $SETTING{author}, $SETTING{title},
+                    $mdwidgets->{date}->get_text,
+                    Today_and_Now()
+                );
 
                # avoid leading and trailing blanks in expanded filename template
                 $filename =~ s/^\s*(.*?)\s*$/$1/xsm;
@@ -2574,8 +2570,7 @@ sub save_button_clicked_callback {
         }
         when ('djvu') {
 
-            update_metadata_settings( $entryd, $entrya, $entryt, $entrys,
-                $entryk );
+            update_metadata_settings($mdwidgets);
 
             # cd back to cwd to save
             chdir $SETTING{cwd};
@@ -2590,8 +2585,9 @@ sub save_button_clicked_callback {
 
             my $filename = Gscan2pdf::Document::expand_metadata_pattern(
                 $SETTING{'default filename'},
-                $SETTING{author},
-                $SETTING{title}, $entryd->get_text, Today_and_Now() );
+                $SETTING{author}, $SETTING{title}, $mdwidgets->{date}->get_text,
+                Today_and_Now()
+            );
 
             # avoid leading and trailing blanks in expanded filename template
             $filename =~ s/^\s*(.*?)\s*$/$1/xsm;
@@ -3205,8 +3201,7 @@ sub email {
     add_page_range($vbox);
 
     # PDF options
-    my ( $hboxmd, $entryd, $entrya, $entryt, $entrys, $entryk ) =
-      $windowi->add_metadata_dialog(
+    my %mdwidgets = $windowi->add_metadata_dialog(
         {
             date => {
                 today  => [ Today() ],
@@ -3229,7 +3224,7 @@ sub email {
                 suggestions => $SETTING{'keywords-suggestions'},
             },
         }
-      );
+    );
 
     # Compression options
     my ( $buttond, $spinbuttond, $combob, $hboxq, $spinbuttonq, @compression )
@@ -3246,8 +3241,7 @@ sub email {
         clicked => sub {
 
             # Set options
-            update_metadata_settings( $entryd, $entrya, $entryt, $entrys,
-                $entryk );
+            update_metadata_settings( \%mdwidgets );
 
             # Compile list of pages
             my $list_of_pages = list_of_pages;

@@ -224,52 +224,31 @@ sub add_metadata_dialog {
     $hboxe->pack_end( $button, FALSE, FALSE, 0 );
     $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
 
-    # Title
-    my $hboxt = Gtk2::HBox->new;
-    $table->attach( $hboxt, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
-    my $labelt = Gtk2::Label->new( $d->get('Title') );
-    $hboxt->pack_start( $labelt, FALSE, TRUE, 0 );
-    $hboxt = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxt, 1, 2, $row, $row + 1 );
-    my $entryt = Gscan2pdf::EntryCompletion->new( $defaults->{title}{default},
-        $defaults->{title}{suggestions} );
-    $hboxt->pack_start( $entryt, TRUE, TRUE, 0 );
-
-    # Document author
-    my $hboxa = Gtk2::HBox->new;
-    $table->attach( $hboxa, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
-    my $labela = Gtk2::Label->new( $d->get('Author') );
-    $hboxa->pack_start( $labela, FALSE, TRUE, 0 );
-    $hboxa = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxa, 1, 2, $row, $row + 1 );
-    my $entrya = Gscan2pdf::EntryCompletion->new( $defaults->{author}{default},
-        $defaults->{author}{suggestions} );
-    $hboxa->pack_start( $entrya, TRUE, TRUE, 0 );
-
-    # Subject
-    my $hboxs = Gtk2::HBox->new;
-    $table->attach( $hboxs, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
-    my $labels = Gtk2::Label->new( $d->get('Subject') );
-    $hboxs->pack_start( $labels, FALSE, TRUE, 0 );
-    $hboxs = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxs, 1, 2, $row, $row + 1 );
-    my $entrys = Gscan2pdf::EntryCompletion->new( $defaults->{subject}{default},
-        $defaults->{subject}{suggestions} );
-    $hboxs->pack_end( $entrys, TRUE, TRUE, 0 );
-
-    # Keywords
-    my $hboxk = Gtk2::HBox->new;
-    $table->attach( $hboxk, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
-    my $labelk = Gtk2::Label->new( $d->get('Keywords') );
-    $hboxk->pack_start( $labelk, FALSE, TRUE, 0 );
-    $hboxk = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxk, 1, 2, $row, $row + 1 );
-    my $entryk =
-      Gscan2pdf::EntryCompletion->new( $defaults->{keywords}{default},
-        $defaults->{keywords}{suggestions} );
-    $hboxk->pack_end( $entryk, TRUE, TRUE, 0 );
-
-    return ( $hboxmd, $entryd, $entrya, $entryt, $entrys, $entryk );
+    my @label = (
+        { title    => $d->get('Title') },
+        { author   => $d->get('Author') },
+        { subject  => $d->get('Subject') },
+        { keywords => $d->get('Keywords') },
+    );
+    my %widgets = (
+        box  => $hboxmd,
+        date => $entryd,
+    );
+    for my $entry (@label) {
+        my ( $name, $label ) = %{$entry};
+        my $hbox = Gtk2::HBox->new;
+        $table->attach( $hbox, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
+        $label = Gtk2::Label->new($label);
+        $hbox->pack_start( $label, FALSE, TRUE, 0 );
+        $hbox = Gtk2::HBox->new;
+        $table->attach_defaults( $hbox, 1, 2, $row, $row + 1 );
+        my $entry =
+          Gscan2pdf::EntryCompletion->new( $defaults->{$name}{default},
+            $defaults->{$name}{suggestions} );
+        $hbox->pack_start( $entry, TRUE, TRUE, 0 );
+        $widgets{$name} = $entry;
+    }
+    return %widgets;
 }
 
 sub dump_or_stringify {

@@ -78,8 +78,7 @@ $event = Gtk2::Gdk::Event->new('key-press');
 $event->keyval( $Gtk2::Gdk::Keysyms{Delete} );
 $dialog->signal_emit( 'key_press_event', $event );
 
-my ( $hboxmd, $entryd, $entrya, $entryt, $entrys, $entryk ) =
-  $dialog->add_metadata_dialog(
+my %widgets = $dialog->add_metadata_dialog(
     {
         date => {
             today  => [ 2017, 01, 01 ],
@@ -102,12 +101,12 @@ my ( $hboxmd, $entryd, $entrya, $entryt, $entrys, $entryk ) =
             suggestions => ['keywords-suggestion'],
         },
     }
-  );
-is( $entryd->get_text, '2017-01-01', 'date' );
-is( $entrya->get_text, 'author',     'author' );
-is( $entryt->get_text, 'title',      'title' );
-is( $entrys->get_text, 'subject',    'subject' );
-is( $entryk->get_text, 'keywords',   'keywords' );
+);
+is( $widgets{date}->get_text,     '2017-01-01', 'date' );
+is( $widgets{author}->get_text,   'author',     'author' );
+is( $widgets{title}->get_text,    'title',      'title' );
+is( $widgets{subject}->get_text,  'subject',    'subject' );
+is( $widgets{keywords}->get_text, 'keywords',   'keywords' );
 
 is(
     Gscan2pdf::Dialog::filter_message(

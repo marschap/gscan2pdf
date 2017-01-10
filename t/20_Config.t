@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Gscan2pdf::Document;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Test::More tests => 11;
+use Test::More tests => 12;
 
 BEGIN {
     use_ok('Gscan2pdf::Config');
@@ -86,7 +86,7 @@ Gscan2pdf::Config::add_defaults( \%output );
     subject                       => undef,
     'subject-suggestions'         => undef,
     keywords                      => undef,
-    'keyword-suggestions'         => undef,
+    'keywords-suggestions'        => undef,
     device                        => undef,
     'device blacklist'            => undef,
     'allow-batch-flatbed'         => FALSE,
@@ -356,6 +356,27 @@ close $fh or die "Error: cannot close $rc\n";
 %output = Gscan2pdf::Config::read_config( $rc, $logger );
 
 is_deeply( \%output, \%example, 'convert old hashed profiles to arrays' );
+
+#########################
+
+$config = <<'EOS';
+{
+   "keyword-suggestions" : [ "key1", "key2" ],
+   "version" : "1.7.0"
+}
+EOS
+open $fh, '>', $rc or die "Error: cannot open $rc\n";
+print $fh $config;
+close $fh or die "Error: cannot close $rc\n";
+
+%example = (
+    "keywords-suggestions" => [ "key1", "key2" ],
+    "version"              => "1.7.0"
+);
+%output = Gscan2pdf::Config::read_config( $rc, $logger );
+
+is_deeply( \%output, \%example,
+    'convert keyword-suggestions->keywords-suggestions' );
 
 #########################
 
