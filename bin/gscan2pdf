@@ -6444,8 +6444,8 @@ sub _preferences_scan_options {
         }
     );
     combobox_set_active( $combob, $SETTING{frontend}, @frontends );
-    return $vbox, $combob, $preentry, $cbc, $cbo, $blacklist, $cbcsh,
-      $cb_batch_flatbed;
+    return $vbox, \@frontends, $combob, $preentry, $cbc, $cbo, $blacklist,
+      $cbcsh, $cb_batch_flatbed;
 }
 
 sub _preferences_general_options {
