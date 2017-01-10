@@ -2506,7 +2506,9 @@ sub save_button_clicked_callback {
     $SETTING{close_dialog_on_save} = $kbutton->get_active;
 
     $SETTING{post_save_hook} = $pshbutton->get_active;
-    $SETTING{current_psh}    = $pshooks->[ $pshcombo->get_active ][0];
+    if ( $SETTING{post_save_hook} and $pshcombo->get_active > $EMPTY_LIST ) {
+        $SETTING{current_psh} = $pshooks->[ $pshcombo->get_active ][0];
+    }
 
     given ( $SETTING{'image type'} ) {
         when (/pdf/xsm) {
