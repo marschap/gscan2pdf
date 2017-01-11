@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.7.0
+Version: 1.7.1
 Release:   0%{?dist}
 Summary:   GUI to ease the process of scanning multipage documents
 Group:     Applications/Publishing
@@ -101,7 +101,8 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Wed Jan 04 2017 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Thu Jan 12 2017 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+  - New upstream release
   - New upstream release
   - + patch to fix bug saving TIFF with compression
   - Fixed bug preventing append prepend PDF in combination with timestamp
