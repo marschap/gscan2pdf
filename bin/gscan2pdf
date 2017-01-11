@@ -3203,7 +3203,7 @@ sub email {
     add_page_range($vbox);
 
     # PDF options
-    my %mdwidgets = $windowi->add_metadata_dialog(
+    my %mdwidgets = $windowe->add_metadata_dialog(
         {
             date => {
                 today  => [ Today() ],
@@ -3273,10 +3273,8 @@ sub email {
             $pid = $slist->save_pdf(
                 path          => $pdf->filename,
                 list_of_pages => $list_of_pages,
-                metadata      => Gscan2pdf::Document::prepare_output_metadata(
-                    'PDF', \%SETTING
-                ),
-                options         => \%options,
+                metadata => Gscan2pdf::Document::collate_metadata( \%SETTING ),
+                options  => \%options,
                 queued_callback => sub {
                     return update_tpbar(@_);
                 },
