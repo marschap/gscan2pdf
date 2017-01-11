@@ -48,5 +48,5 @@ Gtk2->main;
 
 #########################
 
-unlink 'test.pbm', 'test.pdf', 'x-000.p*m';
+unlink 'test.pbm', 'test.pdf', <x-000.p*m>;
 Gscan2pdf::Document->quit();
