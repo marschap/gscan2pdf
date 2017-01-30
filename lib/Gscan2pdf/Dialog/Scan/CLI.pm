@@ -655,7 +655,7 @@ sub set_option {
                     my ($options) = @_;
                     $pbar->destroy;
                     $hboxd->show_all;
-                    $logger->info($options);
+                    $logger->info( Dumper($options) );
                     if ( $self->get('cache-options') ) {
                         my $cache = $self->get('options-cache');
 

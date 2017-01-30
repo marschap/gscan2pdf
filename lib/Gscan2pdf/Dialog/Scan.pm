@@ -819,6 +819,7 @@ sub _set_available_scan_options {
     $self->{$name} = $newval;
     if (    not $self->get('allow-batch-flatbed')
         and $newval->by_name('source')
+        and $newval->by_name('source')->{val}
         and $newval->by_name('source')->{val} =~ /flatbed/xsmi )
     {
         if ( $self->get('num-pages') != 1 ) { $self->set( 'num-pages', 1 ) }
