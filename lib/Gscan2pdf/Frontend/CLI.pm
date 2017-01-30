@@ -108,12 +108,19 @@ sub find_scan_options {
         running_callback  => $options{running_callback},
         finished_callback => sub {
             my ( $output, $error ) = @_;
-            if ( defined $error and $error =~ /^$options{frontend}:[ ](.*)/xsm )
-            {
-                $error = $1;
-            }
             if ( defined $error and defined $options{error_callback} ) {
-                $options{error_callback}->($error);
+                while ( $error =~ /([\r\n])/xsm ) {
+                    my $le = $1;
+                    my $line = substr $error, 0, index $error, $le;
+                    $error = substr $error, index( $error, $le ) + 1,
+                      length $error;
+                    if ( $line =~ /^$options{frontend}:[ ](.*)/xsm ) {
+                        my $msg = $1;
+                        if ( $msg !~ /rounded/xsm ) {
+                            $options{error_callback}->($msg);
+                        }
+                    }
+                }
             }
             my $options = Gscan2pdf::Scanner::Options->new_from_data($output);
             $_self->{device_name} = Gscan2pdf::Scanner::Options->device;
