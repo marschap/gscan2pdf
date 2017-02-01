@@ -3494,10 +3494,6 @@ sub scan_dialog {
         }
     );
 
-    # Can't set the profile until the options have been loaded
-    $windows->{reloaded_signal} = $windows->signal_connect(
-        'reloaded-scan-options' => \&reloaded_scan_options_callback );
-
     $windows->signal_connect(
         'changed-paper-formats' => sub {
             my ( $widget, $formats ) = @_;
@@ -3533,6 +3529,11 @@ sub changed_device_callback {
     else {
         $logger->info("signal 'changed-device' emitted with data: undef");
     }
+
+    # Can't set the profile until the options have been loaded. This
+    # should only be called the first time after loading the available options
+    $windows->{reloaded_signal} = $windows->signal_connect(
+        'reloaded-scan-options' => \&reloaded_scan_options_callback );
     return;
 }
 
