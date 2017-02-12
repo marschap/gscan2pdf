@@ -31,7 +31,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, properties => [
     ),
 ];
 
-our $VERSION = '1.7.1';
+our $VERSION = '1.7.2';
 
 my $SANE_NAME_SCAN_TL_X   = SANE_NAME_SCAN_TL_X;
 my $SANE_NAME_SCAN_TL_Y   = SANE_NAME_SCAN_TL_Y;
