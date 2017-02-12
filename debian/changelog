@@ -1,8 +1,22 @@
-gscan2pdf (1.7.1-1) experimental; urgency=low
+gscan2pdf (1.7.2-1) experimental; urgency=low
 
   * New upstream release
 
+ -- Jeffrey Ratcliffe <jjr@debian.org>  Sun, 12 Feb 2017 22:03:47 +0100
+
+gscan2pdf (1.7.1-1) experimental; urgency=low
+
+  * New upstream release
+    Closes: #852506 (Command-line option to import file)
+
  -- Jeffrey Ratcliffe <jjr@debian.org>  Thu, 26 Jan 2017 19:35:20 +0100
+
+gscan2pdf (1.6.0-5) unstable; urgency=low
+
+  * Closes: #854956 (fails to reload settings after scanning for devices)
+  * Closes: #854957 (rounding error from scanimage causes device to be rejected)
+
+ -- Jeffrey Ratcliffe <jjr@debian.org>  Sun, 12 Feb 2017 16:01:45 +0100
 
 gscan2pdf (1.6.0-4) unstable; urgency=low
 

@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.7.1
+Version: 1.7.2
 Release:   0%{?dist}
 Summary:   GUI to ease the process of scanning multipage documents
 Group:     Applications/Publishing
@@ -101,9 +101,13 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Thu Jan 12 2017 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
+* Sun Feb 12 2017 Jeffrey Ratcliffe <ra28145@users.sourceforge.net>
   - New upstream release
   - New upstream release
+    Closes: #852506 (Command-line option to import file)
+  - Closes: #854956 (fails to reload settings after scanning for devices)
+  - Closes: #854957 (rounding error from scanimage causes device to be rejected)
+  - + patch to fix bug attaching PDF to email
   - + patch to fix bug saving TIFF with compression
   - Fixed bug preventing append prepend PDF in combination with timestamp
     Closes: #848318 (append and prepend to PDF no longer work)
