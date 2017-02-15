@@ -35,6 +35,9 @@
 # 7. Build packages for Ubuntu
 #    name the release -0~ppa1<release>, where release is zesty, yakkety, xenial, vivid, trusty, precise, etc
 #     debuild --no-lintian -S -sa
+#    if necessary, sed out the .buildinfo line and
+#     debsign --re-sign .changes
+#    before
 #     dput gscan2pdf-ppa .changes
 #    https://launchpad.net/~jeffreyratcliffe/+archive
 # 8. gscan2pdf-announce@lists.sourceforge.net, gscan2pdf-help@lists.sourceforge.net, gnome-announce-list@gnome.org, sane-devel@lists.alioth.debian.org

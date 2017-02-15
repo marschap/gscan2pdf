@@ -59,6 +59,7 @@ WriteMakefile(
         Try::Tiny              => 0,
         List::MoreUtils        => 0,
         Filesys::Df            => 0,
+        Date::Calc             => 0,
     },
     BUILD_REQUIRES => {
         Test::More    => 0,
