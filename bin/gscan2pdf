@@ -3544,7 +3544,7 @@ sub changed_device_list_callback {
     my ( $widget, $device_list ) = @_;
     $logger->info( "signal 'changed-device-list' emitted with data: "
           . Dumper($device_list) );
-    if ( defined $device_list ) {
+    if ( defined $device_list and @{$device_list} ) {
 
         # Apply the device blacklist
         if ( defined $SETTING{'device blacklist'}
@@ -3580,6 +3580,9 @@ sub changed_device_list_callback {
             }
         }
         $windows->set( 'device', $device_list->[0]{name} );
+    }
+    else {
+        undef $windows;
     }
     return;
 }
