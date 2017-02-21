@@ -2325,22 +2325,22 @@ sub save_dialog {
 
     # Post-save hook
     my $pshbutton = Gtk2::CheckButton->new( $d->get('Post-save hook') );
-    $tooltips->set_tip( $pshbutton, $d->get('Run command on saved file') );
+    $tooltips->set_tip(
+        $pshbutton,
+        $d->get(
+'Run command on saved file. The available commands are those user-defined tools that do not specify %o'
+        )
+    );
     $vbox->pack_start( $pshbutton, FALSE, TRUE, 0 );
-    my @pshooks;
-    for my $tool ( @{ $SETTING{user_defined_tools} } ) {
-        if ( $tool !~ /%o/xsm ) { push @pshooks, [ $tool, $tool ] }
-    }
-    my $pshcombo = combobox_from_array(@pshooks);
-    combobox_set_active( $pshcombo, $SETTING{current_psh}, @pshooks );
-    $vbox->pack_start( $pshcombo, FALSE, TRUE, 0 );
+    update_post_save_hooks();
+    $vbox->pack_start( $windowi->{comboboxpsh}, FALSE, TRUE, 0 );
     $pshbutton->signal_connect(
         toggled => sub {
-            $pshcombo->set_sensitive( $pshbutton->get_active );
+            $windowi->{comboboxpsh}->set_sensitive( $pshbutton->get_active );
         }
     );
     $pshbutton->set_active( $SETTING{post_save_hook} );
-    $pshcombo->set_sensitive( $pshbutton->get_active );
+    $windowi->{comboboxpsh}->set_sensitive( $pshbutton->get_active );
 
     my $kbutton = Gtk2::CheckButton->new( $d->get('Close dialog on save') );
     $tooltips->set_tip( $kbutton, $d->get('Close dialog on save') );
@@ -2364,8 +2364,7 @@ sub save_dialog {
             $spinbuttond,  \@pdf_compression,  $combob,
             $spinbuttonpq, \@fonts,            $combof,
             \%mdwidgets,   \@tiff_compression, $combobtc,
-            $spinbuttontq, $kbutton,           $pshbutton,
-            $pshcombo,     \@pshooks
+            $spinbuttontq, $kbutton,           $pshbutton
         ]
     );
 
@@ -2497,8 +2496,7 @@ sub save_button_clicked_callback {
         $type,            $combobi,   $buttond,          $spinbuttond,
         $pdf_compression, $combob,    $spinbuttonpq,     $fonts,
         $combof,          $mdwidgets, $tiff_compression, $combobtc,
-        $spinbuttontq,    $kbutton,   $pshbutton,        $pshcombo,
-        $pshooks
+        $spinbuttontq,    $kbutton,   $pshbutton
     ) = @{$data};
 
     # Compile list of pages
@@ -2509,8 +2507,10 @@ sub save_button_clicked_callback {
     $SETTING{close_dialog_on_save} = $kbutton->get_active;
 
     $SETTING{post_save_hook} = $pshbutton->get_active;
-    if ( $SETTING{post_save_hook} and $pshcombo->get_active > $EMPTY_LIST ) {
-        $SETTING{current_psh} = $pshooks->[ $pshcombo->get_active ][0];
+    if (    $SETTING{post_save_hook}
+        and $windowi->{comboboxpsh}->get_active > $EMPTY_LIST )
+    {
+        $SETTING{current_psh} = $windowi->{comboboxpsh}->get_active_text;
     }
 
     given ( $SETTING{'image type'} ) {
@@ -6671,6 +6671,7 @@ sub update_list_user_defined_tools {
         }
     }
     $SETTING{user_defined_tools} = \@list;
+    update_post_save_hooks();
     for my $combobox ( @{$combobox_array} ) {
         if ( defined $combobox ) {
             combobox_set_active( $combobox, $SETTING{current_udt},
@@ -6713,6 +6714,40 @@ sub add_user_defined_tool_entry {
     );
     $hbox->pack_end( $button, FALSE, FALSE, 0 );
     $hbox->show_all;
+    return;
+}
+
+sub update_post_save_hooks {
+    if ( defined $windowi ) {
+
+        if ( defined $windowi->{comboboxpsh} ) {
+
+            # empty combobox
+            for (
+                1 .. Gscan2pdf::Dialog::Scan::get_combobox_num_rows(
+                    $windowi->{comboboxpsh}
+                )
+              )
+            {
+                $windowi->{comboboxpsh}->remove_text(0);
+            }
+        }
+        else {
+            # create it
+            $windowi->{comboboxpsh} = Gtk2::ComboBox->new_text;
+        }
+
+        # fill it again
+        my @pshooks;
+        for my $tool ( @{ $SETTING{user_defined_tools} } ) {
+            if ( $tool !~ /%o/xsm ) {
+                push @pshooks, [ $tool, $tool ];
+                $windowi->{comboboxpsh}->append_text($tool);
+            }
+        }
+        combobox_set_active( $windowi->{comboboxpsh},
+            $SETTING{current_psh}, @pshooks );
+    }
     return;
 }
 
