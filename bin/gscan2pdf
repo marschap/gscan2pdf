@@ -1684,6 +1684,8 @@ sub error_callback {
         text             => $message,
         'store-response' => TRUE
     );
+    $thbox->hide_all;
+    update_uimanager();
     return;
 }
 
