@@ -2387,7 +2387,7 @@ sub save_dialog {
 
     # HBox for buttons
     my $hboxb = Gtk2::HBox->new;
-    $vbox->pack_start( $hboxb, FALSE, TRUE, 0 );
+    $vbox->pack_end( $hboxb, FALSE, TRUE, 0 );
 
     # Save button
     my $sbutton = Gtk2::Button->new_from_stock('gtk-save');
