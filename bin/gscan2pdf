@@ -6612,7 +6612,7 @@ sub _preferences_general_options {
     # Default filename
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-    my $label = Gtk2::Label->new( $d->get('Default filename for PDFs') );
+    my $label = Gtk2::Label->new( $d->get('Default PDF & DjVu filename') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $fileentry = Gtk2::Entry->new;
     $tooltips->set_tip(
