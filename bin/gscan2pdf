@@ -856,9 +856,9 @@ sub create_menu_bar {
         [
             'Rotate 90',
             'rotate90',
-            $d->get('Rotate 90 clockwise'),
+            $d->get('Rotate 90° clockwise'),
             '<control><shift>R',
-            $d->get('Rotate 90 clockwise'),
+            $d->get('Rotate 90° clockwise'),
             sub {
                 rotate( $_90_DEGREES,
                     [ indices2pages( $slist->get_selected_indices ) ] );
@@ -867,9 +867,9 @@ sub create_menu_bar {
         [
             'Rotate 180',
             'rotate180',
-            $d->get('Rotate 180'),
+            $d->get('Rotate 180°'),
             '<control><shift>F',
-            $d->get('Rotate 180'),
+            $d->get('Rotate 180°'),
             sub {
                 rotate( $_180_DEGREES,
                     [ indices2pages( $slist->get_selected_indices ) ] );
@@ -878,9 +878,9 @@ sub create_menu_bar {
         [
             'Rotate 270',
             'rotate270',
-            $d->get('Rotate 90 anticlockwise'),
+            $d->get('Rotate 90° anticlockwise'),
             '<control><shift>C',
-            $d->get('Rotate 90 anticlockwise'),
+            $d->get('Rotate 90° anticlockwise'),
             sub {
                 rotate( $_270_DEGREES,
                     [ indices2pages( $slist->get_selected_indices ) ] );
@@ -7566,14 +7566,14 @@ Scales the view such that all the page is visible.
 
 =head3 Zoom out
 
-=head3 Rotate 90 clockwise
+=head3 Rotate 90° clockwise
 
 The rotate options require the package imagemagick and, if this is not present,
 are ghosted out.
 
-=head3 Rotate 180
+=head3 Rotate 180°
 
-=head3 Rotate 90 anticlockwise
+=head3 Rotate 90° anticlockwise
 
 =head2 Tools
 
