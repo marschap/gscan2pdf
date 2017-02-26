@@ -149,8 +149,24 @@ local $SIG{__WARN__} = sub {
     $logger->warn(@_);
 };
 
-my $rc = "$ENV{'HOME'}/.$prog_name";
-my %SETTING = Gscan2pdf::Config::read_config( $rc, $logger );
+# config files:
+# - old: $HOME/.gscan2pdf
+# - new: $XDG_CONFIG_HOME/gscan2pdfrc resp. $HOME/.config/gscan2pdfrc
+my $rc = "$ENV{'HOME'}/.${prog_name}";
+my $newrcdir = $ENV{'XDG_CONFIG_HOME'} || "$ENV{'HOME'}/.config";
+my $newrc = "${newrcdir}/${prog_name}rc";
+
+my %SETTING = Gscan2pdf::Config::read_config(
+    ( -e $newrc ) ? $newrc : $rc,	# use new config file if it exists
+    $logger );
+
+# migrate from old config file location to XDG-compliant one
+if ( -d $newrcdir &&  ! -e $newrc ) {
+    Gscan2pdf::Config::write_config( $newrc, $logger, \%SETTING );
+    unlink($rc);
+    $rc = $newrc;
+}
+
 Gscan2pdf::Config::add_defaults( \%SETTING );
 Gscan2pdf::Config::remove_invalid_paper( $SETTING{Paper} );
 
