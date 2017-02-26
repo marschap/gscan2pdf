@@ -2180,7 +2180,7 @@ sub save_dialog {
 
     # Image type ComboBox
     my $hboxi = Gtk2::HBox->new;
-    $vbox->pack_start( $hboxi, TRUE, TRUE, 0 );
+    $vbox->pack_start( $hboxi, FALSE, FALSE, 0 );
     my $label = Gtk2::Label->new( $d->get('Image type') );
     $hboxi->pack_start( $label, FALSE, FALSE, 0 );
 
