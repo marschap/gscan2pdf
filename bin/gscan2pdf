@@ -1978,6 +1978,7 @@ sub save_pdf {
         quality          => $SETTING{quality},
         font             => $SETTING{'pdf font'},
         set_timestamp    => $SETTING{set_timestamp},
+        'save blanks as underscores' => $SETTING{'save blanks as underscores'},
     );
     if ( $append eq 'prependpdf' ) {
         $options{prepend} = $filename;
@@ -2555,6 +2556,7 @@ sub save_button_clicked_callback {
 
                 my $filename = Gscan2pdf::Document::expand_metadata_pattern(
                     $SETTING{'default filename'},
+                    $SETTING{'save blanks as underscores'},
                     $SETTING{author}, $SETTING{title},
                     $mdwidgets->{date}->get_text,
                     Today_and_Now()
@@ -2603,6 +2605,7 @@ sub save_button_clicked_callback {
 
             my $filename = Gscan2pdf::Document::expand_metadata_pattern(
                 $SETTING{'default filename'},
+                $SETTING{'save blanks as underscores'},
                 $SETTING{author}, $SETTING{title}, $mdwidgets->{date}->get_text,
                 Today_and_Now()
             );
@@ -6219,7 +6222,7 @@ sub preferences {
     my (
         $vbox2,        $fileentry,   $cbw,         $cbt,
         $tmpentry,     $spinbuttonw, $spinbuttonb, $spinbuttond,
-        $ocr_function, $comboo,      $cbv
+        $ocr_function, $comboo,      $cbv,         $cbb
     ) = _preferences_general_options();
     $notebook->append_page( $vbox2, $d->get('General options') );
 
@@ -6268,6 +6271,7 @@ sub preferences {
             $SETTING{'default filename'}      = $fileentry->get_text;
             $SETTING{'restore window'}        = $cbw->get_active;
             $SETTING{set_timestamp}           = $cbt->get_active;
+            $SETTING{'save blanks as underscores'} = $cbb->get_active;
 
             if ( defined $windows ) {
                 if ( $SETTING{frontend} eq 'libsane-perl' ) {
@@ -6600,6 +6604,12 @@ sub _preferences_general_options {
         $fileentry->set_text( $SETTING{'default filename'} );
     }
 
+    # Replace blanks in filenames with underscores
+    my $cbb = Gtk2::CheckButton->new_with_label(
+        $d->get('Replace blanks in filenames with underscores') );
+    if ( $SETTING{'save blanks as underscores'} ) { $cbb->set_active(TRUE) }
+    $vbox->pack_start( $cbb, TRUE, TRUE, 0 );
+
     # Set file timestamp with metadata
     my $cbt = Gtk2::CheckButton->new_with_label(
         $d->get('Set access and modification times to metadata date') );
@@ -6724,7 +6734,7 @@ sub _preferences_general_options {
         }
     );
     return $vbox, $fileentry, $cbw, $cbt, $tmpentry, $spinbuttonw,
-      $spinbuttonb, $spinbuttond, \@ocr_function, $comboo, $cbv;
+      $spinbuttonb, $spinbuttond, \@ocr_function, $comboo, $cbv, $cbb;
 }
 
 sub _hbox_with_apply_cancel_buttons {

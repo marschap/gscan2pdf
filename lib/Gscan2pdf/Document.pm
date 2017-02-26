@@ -1904,7 +1904,7 @@ sub text_to_date {
 }
 
 sub expand_metadata_pattern {
-    my ( $template, $author, $title, $docdate, @today_and_now ) = @_;
+    my ( $template, $blank2_, $author, $title, $docdate, @today_and_now ) = @_;
     my ( $dyear, $dmonth, $dday ) = text_to_date( $docdate, @today_and_now );
     my ( $tyear, $tmonth, $tday, $thour, $tmin, $tsec ) = @today_and_now;
     for ( ( $dmonth, $dday, $tmonth, $tday, $thour, $tmin, $tsec ) ) {
@@ -1922,6 +1922,8 @@ sub expand_metadata_pattern {
     $template =~ s/%H/$thour/gsm;
     $template =~ s/%I/$tmin/gsm;
     $template =~ s/%S/$tsec/gsm;
+
+    $template =~ s/\s/_/gsm  if ( $blank2_ );
 
     return $template;
 }

@@ -130,6 +130,7 @@ sub add_metadata_dialog {
     $entryd->set_text(
         Gscan2pdf::Document::expand_metadata_pattern(
             '%Y-%M-%D',
+            undef,
             undef, undef, undef,
             Add_Delta_Days(
                 @{ $defaults->{date}{today} },

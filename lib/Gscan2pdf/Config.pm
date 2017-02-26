@@ -217,6 +217,7 @@ sub add_defaults {
         'rotate facing'               => 0,
         'rotate reverse'              => 0,
         'default filename'            => '%a %y-%m-%d',
+        'save blanks as underscores'  => FALSE,
         'view files toggle'           => TRUE,
         'threshold-before-ocr'        => FALSE,
         'brightness tool'             => 65,
