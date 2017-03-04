@@ -289,6 +289,7 @@ sub add_options {
 
     # Notebook page 1
     my $vbox1 = Gtk2::VBox->new;
+    $vbox1->set_border_width($BORDER_WIDTH);
     $notebook->append_page( $vbox1, $d->get('Deskew') );
 
     my $dsbutton = $self->add_widget( $vbox1, $options, 'no-deskew' );
@@ -321,6 +322,7 @@ sub add_options {
 
     # Notebook page 2
     my $vbox2 = Gtk2::VBox->new;
+    $vbox2->set_border_width($BORDER_WIDTH);
     $notebook->append_page( $vbox2, $d->get('Border') );
 
     my $bsbutton = $self->add_widget( $vbox2, $options, 'no-border-scan' );
@@ -380,6 +382,7 @@ sub add_options {
 
     # Notebook page 3
     my $vbox3 = Gtk2::VBox->new;
+    $vbox3->set_border_width($BORDER_WIDTH);
     $notebook->append_page( $vbox3, $d->get('Filters') );
 
     my $spinbuttonwt = $self->add_widget( $vbox3, $options, 'white-threshold' );
