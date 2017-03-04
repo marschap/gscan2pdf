@@ -11,6 +11,9 @@ use Storable qw(dclone);
 use feature 'switch';
 use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Scanner::Profile;
+use Readonly;
+Readonly my $BORDER_WIDTH => 6;
+
 my (
     $_MAX_PAGES,        $_MAX_INCREMENT, $_DOUBLE_INCREMENT,
     $_CANVAS_SIZE,      $_CANVAS_BORDER, $_CANVAS_POINT_SIZE,
@@ -276,6 +279,7 @@ sub INIT_INSTANCE {
     $scwin->set_policy( 'automatic', 'automatic' );
     my $vbox1 = Gtk2::VBox->new;
     $self->{vbox} = $vbox1;
+    $vbox1->set_border_width($BORDER_WIDTH);
     $scwin->add_with_viewport($vbox1);
 
     # Frame for # pages
