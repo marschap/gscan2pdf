@@ -202,6 +202,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
         # Notebook page for group
         if ( $opt->{type} == SANE_TYPE_GROUP or not defined $vbox ) {
             $vbox = Gtk2::VBox->new;
+            $vbox->set_border_width( $self->get('border-width') );
             $group =
                 $opt->{type} == SANE_TYPE_GROUP
               ? $d_sane->get( $opt->{title} )
