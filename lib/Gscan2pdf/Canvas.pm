@@ -84,14 +84,21 @@ sub boxed_text {
         'line-width'   => ( $box->{text} ? 2 : 1 )
     );
 
-    if ( $box->{text} ) {
+    # show text baseline (currently of no use)
+    #if ( $box->{baseline} ) {
+    #    my ( $slope, $offs ) = @{ $box->{baseline} }[-2,-1];
+    #    # "real" baseline with slope
+    #    $rect = Goo::Canvas::Polyline->new_line( $g,
+    #        0, $y_size + $offs, $x_size, $y_size + $offs + $x_size * $slope,
+    #        'stroke-color' => 'green' );
+    #    # virtual, horizontally aligned baseline
+    #    my $y_offs = $y_size + $offs + 0.5 * $x_size * $slope;
+    #    $rect = Goo::Canvas::Polyline->new_line( $g,
+    #        0, $y_offs, $x_size, $y_offs,
+    #        'stroke-color' => 'orange' );
+    #}
 
-        #        # show text baseline (currently of no use)
-        #        if ($box->{baseline} and $box->{baseline} >= $y1) {
-        #            $rect = Goo::Canvas::Rect->new( $g,
-        #                 0, $box->{baseline} - $y1, $x_size, 1,
-        #                'stroke-color' => 'yellow');
-        #        }
+    if ( $box->{text} ) {
 
         # create text and then scale, shift & rotate it into the bounding box
         my $text = Goo::Canvas::Text->new(
@@ -248,7 +255,8 @@ sub _group2hocr {
                         $title .= '; textangle ' . $group->{textangle};
                     }
                     if ( $group->{baseline} ) {
-                        $title .= '; baseline ' . $group->{baseline};
+                        $title .= '; baseline ' .
+                            join( $SPACE, @{ $group->{baseline} } );
                     }
                     if ( $group->{confidence} ) {
                         $title .= '; x_wconf ' . $group->{confidence};

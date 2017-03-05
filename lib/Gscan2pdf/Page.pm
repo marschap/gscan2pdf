@@ -294,13 +294,12 @@ sub _parse_tag_data {
     }
     if ( $title =~ /\btextangle\s+(\d+)/xsm ) { $data->{textangle}  = $1 }
     if ( $title =~ /\bx_wconf\s+(-?\d+)/xsm ) { $data->{confidence} = $1 }
-    if ( $title =~ /\bbaseline\s+(?:-?\d+(?:[.]\d+)?\s+)*(-?\d+)/xsm ) {
-        $data->{baseline} = $1;
+    if ( $title =~ /\bbaseline\s+((?:-?\d+(?:[.]\d+)?\s+)*-?\d+)/xsm ) {
+        my @values = split /\s+/sm, $1;
 
-        # slightly kludgy: textangle defined means 90°
-        $data->{base} = $data->{baseline} + defined $data->{textangle}
-          ? $data->{bbox}[3]    ## no critic (ProhibitMagicNumbers)
-          : $data->{bbox}[2];
+        # make sure we at least have 2 coefficients
+        if ( $#values <= 0 ) { unshift @values, 0; }
+        $data->{baseline} = \@values;
     }
     return;
 }
