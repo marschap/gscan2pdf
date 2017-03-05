@@ -41,7 +41,7 @@ sub new {
 
     # Attach the text to the canvas
     for my $box ( @{ $page->boxes } ) {
-        boxed_text( $self->get_root_item, $box, $edit_callback );
+        boxed_text( $self->get_root_item, $box, $edit_callback, 0, 0, 0 );
     }
     $self->{page} = $page;
     bless $self, $class;
@@ -51,12 +51,13 @@ sub new {
 # Draw text on the canvas with a box around it
 
 sub boxed_text {
-    my ( $root, $box, $edit_callback ) = @_;
+    my ( $root, $box, $edit_callback, $rotation, $x0, $y0 ) = @_;
     my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
     my $x_size = abs $x2 - $x1;
     my $y_size = abs $y2 - $y1;
     my $g      = Goo::Canvas::Group->new($root);
-    $g->translate( $x1, $y1 );
+    $g->translate( $x1 - $x0, $y1 - $y0 );
+    my $textangle = $box->{textangle} || 0;
 
     # add box properties to group properties
     map { $g->{$_} = $box->{$_}; } keys %{$box};
@@ -70,12 +71,17 @@ sub boxed_text {
       + 10                                   ## no critic (ProhibitMagicNumbers)
       : 0;
     my $color = defined $box->{confidence}
-      ? sprintf '#%xfff%xfff%xfff',
-      0xf - int( $confidence / 10 ),         ## no critic (ProhibitMagicNumbers)
-      $confidence, $confidence
+      ? sprintf(
+        '#%xfff%xfff%xfff',
+        0xf - int( $confidence / 10 ),       ## no critic (ProhibitMagicNumbers)
+        $confidence, $confidence
+      )
       : '#7fff7fff7fff';
-    my $rect = Goo::Canvas::Rect->new( $g, 0, 0, $x_size, $y_size,
-        'stroke-color' => $color );
+    my $rect = Goo::Canvas::Rect->new(
+        $g, 0, 0, $x_size, $y_size,
+        'stroke-color' => $color,
+        'line-width'   => ( $box->{text} ? 2 : 1 )
+    );
 
     if ( $box->{text} ) {
 
@@ -95,10 +101,7 @@ sub boxed_text {
         }
         else {
            # create text and then scale, shift & rotate it into the bounding box
-            my $angle =
-              defined( $box->{textangle} )
-              ? ( -$box->{textangle} % $_360_DEGREES )
-              : 0;
+            my $angle = -( $textangle + $rotation ) % $_360_DEGREES;
             $text = Goo::Canvas::Text->new(
                 $g,
                 $box->{text},
@@ -120,6 +123,9 @@ sub boxed_text {
             my $x_offset = ( $x1 + $x2 - $bounds->x1 - $bounds->x2 ) / 2;
             my $y_offset = ( $y1 + $y2 - $bounds->y1 - $bounds->y2 ) / 2;
             $text->set_simple_transform( $x_offset, $y_offset, $scale, $angle );
+
+	    $g->{_angle} = $angle;
+	    $g->{_scale} = $scale;
         }
 
         # clicking text box produces a dialog to edit the text
@@ -129,7 +135,8 @@ sub boxed_text {
     }
     if ( $box->{contents} ) {
         for my $box ( @{ $box->{contents} } ) {
-            boxed_text( $g, $box, $edit_callback );
+            boxed_text( $g, $box, $edit_callback, $textangle + $rotation,
+                $x1, $y1 );
         }
     }
 
@@ -180,10 +187,7 @@ sub set_box_text {
             my $x_size = abs $x2 - $x1;
             my $y_size = abs $y2 - $y1;
             $widget->set_simple_transform( 0, 0, 1, 0 );
-            my $angle =
-              defined( $g->{textangle} )
-              ? ( -$g->{textangle} % $_360_DEGREES )
-              : 0;
+            my $angle = $g->{_angle} || 0;
             my $bounds = $widget->get_bounds;
             my $scale =
               ( $angle ? $y_size : $x_size ) / ( $bounds->x2 - $bounds->x1 );
