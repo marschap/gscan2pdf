@@ -5,8 +5,9 @@ use warnings;
 use Goo::Canvas;
 use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
 use Readonly;
-Readonly my $_100_PERCENT => 100;
-Readonly my $_360_DEGREES => 360;
+Readonly my $_100_PERCENT       => 100;
+Readonly my $_360_DEGREES       => 360;
+Readonly my $FULLPAGE_OCR_SCALE => 0.8;
 my $SPACE = q{ };
 my $EMPTY = q{};
 
@@ -92,41 +93,33 @@ sub boxed_text {
         #                'stroke-color' => 'yellow');
         #        }
 
-        my $text;
+        # create text and then scale, shift & rotate it into the bounding box
+        my $text = Goo::Canvas::Text->new(
+            $g,
+            $box->{text},
+            $x_size / 2,
+            $y_size / 2,
+            -1, 'center',    ## no critic (ProhibitMagicNumbers)
+            'font' => 'Sans'
+        );
+        my $angle  = -( $textangle + $rotation ) % $_360_DEGREES;
+        my $bounds = $text->get_bounds;
+        my $scale =
+          ( $angle ? $y_size : $x_size ) / ( $bounds->x2 - $bounds->x1 );
+
+        # gocr case: gocr creates text only which we treat as page text
         if ( $box->{type} eq 'page' ) {
-
-            # only basic info on text, so simply create it
-            $text = Goo::Canvas::Text->new( $g, $box->{text}, 0, 0, $x_size,
-                'nw', 'height' => $y_size );
+            $scale *= $FULLPAGE_OCR_SCALE;
         }
-        else {
-           # create text and then scale, shift & rotate it into the bounding box
-            my $angle = -( $textangle + $rotation ) % $_360_DEGREES;
-            $text = Goo::Canvas::Text->new(
-                $g,
-                $box->{text},
-                $x_size / 2,
-                $y_size / 2,
-                -1, 'center',    ## no critic (ProhibitMagicNumbers)
-                'font' => 'Sans '
-                  . (
-                      $angle
-                    ? $x_size
-                    : $y_size
-                  )
-            );
-            my $bounds = $text->get_bounds;
-            my $scale =
-              ( $angle ? $y_size : $x_size ) / ( $bounds->x2 - $bounds->x1 );
-            $text->set_simple_transform( 0, 0, $scale, $angle );
-            $bounds = $text->get_bounds;
-            my $x_offset = ( $x1 + $x2 - $bounds->x1 - $bounds->x2 ) / 2;
-            my $y_offset = ( $y1 + $y2 - $bounds->y1 - $bounds->y2 ) / 2;
-            $text->set_simple_transform( $x_offset, $y_offset, $scale, $angle );
 
-	    $g->{_angle} = $angle;
-	    $g->{_scale} = $scale;
-        }
+        $g->{_angle} = $angle;
+        $g->{_scale} = $scale;
+
+        $text->set_simple_transform( 0, 0, $scale, $angle );
+        $bounds = $text->get_bounds;
+        my $x_offset = ( $x1 + $x2 - $bounds->x1 - $bounds->x2 ) / 2;
+        my $y_offset = ( $y1 + $y2 - $bounds->y1 - $bounds->y2 ) / 2;
+        $text->set_simple_transform( $x_offset, $y_offset, $scale, $angle );
 
         # clicking text box produces a dialog to edit the text
         if ($edit_callback) {
