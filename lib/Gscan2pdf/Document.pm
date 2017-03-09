@@ -3203,7 +3203,11 @@ sub _thread_save_djvu {
 
         # Create the djvu
         my ($status) = exec_command(
-            [ $compression, '-dpi', $pagedata->{resolution}, $filename, $djvu ],
+            [
+                $compression,                   '-dpi',
+                int( $pagedata->{resolution} ), $filename,
+                $djvu
+            ],
             $options{pidfile}
         );
         my $size =

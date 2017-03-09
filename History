@@ -4,6 +4,7 @@
   (Scan Document window cannot be opened if no scanner was found)
 * Fixed bug updating post-save hooks if save dialog already opened.
   Closes Debian bug #756897 (Specify ways to proof-read document post-save)
+* Force resolution to be integer for DjVu to prevent errors whilst saving
 
 
 1.7.2 (12.02.2017):
