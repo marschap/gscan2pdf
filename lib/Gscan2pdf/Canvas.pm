@@ -2,8 +2,11 @@ package Gscan2pdf::Canvas;
 
 use strict;
 use warnings;
+use feature 'switch';
+no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Goo::Canvas;
 use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
+use HTML::Entities;
 use Readonly;
 Readonly my $_100_PERCENT       => 100;
 Readonly my $_360_DEGREES       => 360;
@@ -213,25 +216,29 @@ sub set_box_text {
 sub canvas2hocr {
     my ($self) = @_;
     my ( $x, $y, $w, $h ) = $self->get_bounds;
-    my $root   = $self->get_root_item;
-    my $string = _group2hocr($root);
+    my $root = $self->get_root_item;
+    my $string = _group2hocr( $root, 2 );
+
     $self->{page}{hocr} = <<"EOS";
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN
- http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html>
-<head>
- <title>OCR Output</title>
-</head>
-<body>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name='ocr-system' content='gscan2pdf $Gscan2pdf::Canvas::VERSION' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
+ </head>
+ <body>
 $string
-</body>
+ </body>
 </html>
 EOS
     return;
 }
 
 sub _group2hocr {
-    my ($parent) = @_;
+    my ( $parent, $indent ) = @_;
     my $string = $EMPTY;
 
     for my $i ( 0 .. $parent->get_n_children - 1 ) {
@@ -241,32 +248,56 @@ sub _group2hocr {
 
             # try to preserve as much information as possible
             if ( $group->{bbox} and $group->{type} ) {
-                my $block_type = (
-                         $group->{type} eq 'page'
-                      or $group->{type} eq 'column'
-                ) ? 'div' : 'span';
-                my $type =
-                  $group->{type} eq 'column' ? 'carea' : $group->{type};
-                $string .= "<$block_type class='ocr_$type'";
-                if ( $group->{id} ) { $string .= " id='$group->{id}'" }
-                my $title = " title='bbox " . join $SPACE, @{ $group->{bbox} };
-                if ( $group->{text} ) {
-                    if ( $group->{textangle} ) {
-                        $title .= '; textangle ' . $group->{textangle};
+
+                # determine hOCR element types & mapping to HTML tags
+                my $type = 'ocr_' . $group->{type};
+                my $tag  = 'span';
+                given ( $group->{type} ) {
+                    when ('page') {
+                        $tag = 'div';
                     }
-                    if ( $group->{baseline} ) {
-                        $title .= '; baseline ' .
-                            join( $SPACE, @{ $group->{baseline} } );
+                    when (/^(?:carea|column)$/xsm) {
+                        $type = 'ocr_carea';
+                        $tag  = 'div';
                     }
-                    if ( $group->{confidence} ) {
-                        $title .= '; x_wconf ' . $group->{confidence};
+                    when ('para') {
+                        $type = 'ocr_par';
+                        $tag  = 'p';
                     }
-                    $title .= "'>$group->{text}";
                 }
-                else {
-                    $title .= "'>";
-                }
-                $string .= $title . _group2hocr($group) . "</$block_type>";
+
+                # build properties of hOCR elements
+                my $id = $group->{id} ? "id='$group->{id}'" : $EMPTY;
+                my $title =
+                    'title=' . q{'} . 'bbox '
+                  . join( $SPACE, @{ $group->{bbox} } )
+                  . (
+                      $group->{textangle} ? '; textangle ' . $group->{textangle}
+                    : $EMPTY
+                  )
+                  . (
+                    $group->{baseline}
+                    ? '; baseline ' . join( $SPACE, @{ $group->{baseline} } )
+                    : $EMPTY
+                  )
+                  . (
+                      $group->{confidence} ? '; x_wconf ' . $group->{confidence}
+                    : $EMPTY
+                  ) . q{'};
+
+                # append to output (recurse to nested levels)
+                if ( $string ne $EMPTY ) { $string .= "\n" }
+                $string .=
+                    $SPACE x $indent
+                  . "<$tag class='$type' "
+                  . join( $SPACE, $id, $title ) . '>'
+                  . (
+                    $group->{text}
+                    ? HTML::Entities::encode( $group->{text}, "<>&\"'" )
+                    : "\n"
+                      . _group2hocr( $group, $indent + 1 ) . "\n"
+                      . $SPACE x $indent
+                  ) . "</$tag>";
             }
         }
     }
