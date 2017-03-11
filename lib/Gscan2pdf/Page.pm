@@ -468,59 +468,57 @@ sub _boxes2hocr {
     my ( $pointer, $indent ) = @_;
     my $string = $EMPTY;
     if ( not defined $indent ) { $indent = 0 }
-
-    # Write the text boxes
-    for my $box ( @{$pointer} ) {
-        my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
-        if ( $indent == 0 ) {
-            $string .= <<'EOS';
+    if ( $indent == 0 ) {
+        $string .= <<"EOS";
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf 1.4.0' />
+  <meta name='ocr-system' content='gscan2pdf $Gscan2pdf::Page::VERSION' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
 EOS
-        }
-        else {
-            $string .= "\n";
-        }
-        for ( 0 .. $indent + 1 ) { $string .= $SPACE }
-        my $type  = $box->{type};
-        my $class = 'span';
+    }
+
+    # Write the text boxes
+    for my $box ( @{$pointer} ) {
+        my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
+        my $type = 'ocr_' . $box->{type};
+        my $tag  = 'span';
         given ( $box->{type} ) {
             when ('page') {
-                $class = 'div';
+                $tag = 'div';
             }
-            when ('column') {
-                $type  = 'carea';
-                $class = 'div';
+            when (/^(?:carea|column)$/xsm) {
+                $type = 'ocr_carea';
+                $tag  = 'div';
             }
             when ('para') {
-                $type  = 'par';
-                $class = 'p';
+                $type = 'ocr_par';
+                $tag  = 'p';
             }
         }
         $string .=
-          sprintf "<$class class='ocr_$type' title=\"bbox %d %d %d %d\">", $x1,
-          $y1, $x2, $y2;
-        if ( defined $box->{text} ) {
-            $string .= $box->{text};
-        }
-        if ( defined $box->{contents} ) {
-            $string .= _boxes2hocr( $box->{contents}, $indent + 1 ) . "\n";
-            for ( 0 .. $indent + 1 ) { $string .= $SPACE }
-            $string .= "</$class>";
-        }
-        else {
-            $string .= "</$class>";
-        }
+            $SPACE x ( 2 + $indent )
+          . "<$tag class='$type' title='bbox $x1 $y1 $x2 $y2'>"
+          . (
+            defined $box->{text}
+            ? HTML::Entities::encode( $box->{text}, "<>&\"'" )
+            : $EMPTY
+          )
+          . (
+            defined $box->{contents}
+            ? "\n"
+              . _boxes2hocr( $box->{contents}, $indent + 1 )
+              . $SPACE x ( 2 + $indent )
+            : $EMPTY
+          ) . "</$tag>" . "\n";
     }
-    if ( $indent == 0 ) { $string .= "\n </body>\n</html>\n" }
+
+    if ( $indent == 0 ) { $string .= " </body>\n</html>\n" }
     return $string;
 }
 

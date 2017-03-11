@@ -41,33 +41,32 @@ my $slist = Gscan2pdf::Document->new;
 my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
-my $expected = <<'EOS';
-<?xml version="1.0" encoding="UTF-8"?>
+my $expected =
+qr{^<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf 1.4.0' />
+  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
-  <div class='ocr_page' title="bbox 0 0 2236 3185">
-   <div class='ocr_carea' title="bbox 157 80 1725 174">
-    <p class='ocr_par' title="bbox 157 84 1725 171">
-     <span class='ocr_line' title="bbox 157 84 1725 171">
-      <span class='ocr_word' title="bbox 157 90 241 155">28</span>
-      <span class='ocr_word' title="bbox 533 86 645 152">LA</span>
-      <span class='ocr_word' title="bbox 695 86 1188 171">MARQUISE</span>
-      <span class='ocr_word' title="bbox 1229 87 1365 151">DE</span>
-      <span class='ocr_word' title="bbox 1409 84 1725 154">GANGE</span>
+  <div class='ocr_page' title='bbox 0 0 2236 3185'>
+   <div class='ocr_carea' title='bbox 157 80 1725 174'>
+    <p class='ocr_par' title='bbox 157 84 1725 171'>
+     <span class='ocr_line' title='bbox 157 84 1725 171'>
+      <span class='ocr_word' title='bbox 157 90 241 155'>28</span>
+      <span class='ocr_word' title='bbox 533 86 645 152'>LA</span>
+      <span class='ocr_word' title='bbox 695 86 1188 171'>MARQUISE</span>
+      <span class='ocr_word' title='bbox 1229 87 1365 151'>DE</span>
+      <span class='ocr_word' title='bbox 1409 84 1725 154'>GANGE</span>
      </span>
     </p>
    </div>
   </div>
  </body>
-</html>
-EOS
+</html>$};
 
 $slist->import_files(
     paths            => ['test.djvu'],
@@ -85,7 +84,7 @@ $slist->import_files(
         );
         is( dirname("$slist->{data}[0][2]{filename}"),
             "$dir", 'using session directory' );
-        is( $slist->{data}[0][2]{hocr}, $expected, 'hocr layer' );
+        like( $slist->{data}[0][2]{hocr}, $expected, 'hocr layer' );
         Gtk2->main_quit;
     }
 );

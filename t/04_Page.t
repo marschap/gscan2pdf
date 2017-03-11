@@ -478,38 +478,35 @@ my $djvu = <<'EOS';
         (word 1409 3031 1725 3101 "GANGE")))))
 EOS
 
-$expected = <<'EOS';
-<?xml version="1.0" encoding="UTF-8"?>
+$expected =
+qr{^<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf 1.4.0' />
+  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
-  <div class='ocr_page' title="bbox 0 0 2236 3185">
-   <div class='ocr_carea' title="bbox 157 80 1725 174">
-    <p class='ocr_par' title="bbox 157 84 1725 171">
-     <span class='ocr_line' title="bbox 157 84 1725 171">
-      <span class='ocr_word' title="bbox 157 90 241 155">28</span>
-      <span class='ocr_word' title="bbox 533 86 645 152">LA</span>
-      <span class='ocr_word' title="bbox 695 86 1188 171">MARQUISE</span>
-      <span class='ocr_word' title="bbox 1229 87 1365 151">DE</span>
-      <span class='ocr_word' title="bbox 1409 84 1725 154">GANGE</span>
+  <div class='ocr_page' title='bbox 0 0 2236 3185'>
+   <div class='ocr_carea' title='bbox 157 80 1725 174'>
+    <p class='ocr_par' title='bbox 157 84 1725 171'>
+     <span class='ocr_line' title='bbox 157 84 1725 171'>
+      <span class='ocr_word' title='bbox 157 90 241 155'>28</span>
+      <span class='ocr_word' title='bbox 533 86 645 152'>LA</span>
+      <span class='ocr_word' title='bbox 695 86 1188 171'>MARQUISE</span>
+      <span class='ocr_word' title='bbox 1229 87 1365 151'>DE</span>
+      <span class='ocr_word' title='bbox 1409 84 1725 154'>GANGE</span>
      </span>
     </p>
    </div>
   </div>
  </body>
-</html>
-EOS
+</html>};
 
 $page->import_djvutext($djvu);
-my @expected = split "\n", $expected;
-my @output   = split "\n", $page->{hocr};
-is_deeply( \@output, \@expected, 'import_djvutext() basic functionality' );
+like( $page->{hocr}, $expected, 'import_djvutext() basic functionality' );
 
 #########################
 
@@ -518,28 +515,25 @@ $djvu = <<'EOS';
   (word 157 3030 241 3095 "("))
 EOS
 
-$expected = <<'EOS';
-<?xml version="1.0" encoding="UTF-8"?>
+$expected =
+qr{^<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf 1.4.0' />
+  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
-  <div class='ocr_page' title="bbox 0 0 2480 3507">
-   <span class='ocr_word' title="bbox 157 412 241 477">(</span>
+  <div class='ocr_page' title='bbox 0 0 2480 3507'>
+   <span class='ocr_word' title='bbox 157 412 241 477'>\(</span>
   </div>
  </body>
-</html>
-EOS
+</html>$};
 
 $page->import_djvutext($djvu);
-@expected = split "\n", $expected;
-@output   = split "\n", $page->{hocr};
-is_deeply( \@output, \@expected, 'import_djvutext() with quoted brackets' );
+like( $page->{hocr}, $expected, 'import_djvutext() with quoted brackets' );
 
 #########################
 
@@ -563,60 +557,54 @@ my $pdftext = <<'EOS';
 </html>
 EOS
 
-$expected = <<'EOS';
-<?xml version="1.0" encoding="UTF-8"?>
+$expected =
+qr{^<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf 1.4.0' />
+  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
-  <div class='ocr_page' title="bbox 0 0 465 59">
-   <span class='ocr_word' title="bbox 1 23 87 46">The</span>
-   <span class='ocr_word' title="bbox 105 23 222 46">quick</span>
-   <span class='ocr_word' title="bbox 241 23 375 46">brown</span>
-   <span class='ocr_word' title="bbox 393 23 461 46">fox</span>
+  <div class='ocr_page' title='bbox 0 0 465 59'>
+   <span class='ocr_word' title='bbox 1 23 87 46'>The</span>
+   <span class='ocr_word' title='bbox 105 23 222 46'>quick</span>
+   <span class='ocr_word' title='bbox 241 23 375 46'>brown</span>
+   <span class='ocr_word' title='bbox 393 23 461 46'>fox</span>
   </div>
  </body>
-</html>
-EOS
+</html>};
 
 $page->import_pdftotext($pdftext);
-@expected = split "\n", $expected;
-@output   = split "\n", $page->{hocr};
-is_deeply( \@output, \@expected, 'import_pdftotext() basic functionality' );
+like( $page->{hocr}, $expected, 'import_pdftotext() basic functionality' );
 
 #########################
 
-$expected = <<'EOS';
-<?xml version="1.0" encoding="UTF-8"?>
+$expected =
+qr{^<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf 1.4.0' />
+  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
-  <div class='ocr_page' title="bbox 0 0 1937 244">
-   <span class='ocr_word' title="bbox 4 95 364 193">The</span>
-   <span class='ocr_word' title="bbox 438 95 926 193">quick</span>
-   <span class='ocr_word' title="bbox 1004 95 1561 193">brown</span>
-   <span class='ocr_word' title="bbox 1638 95 1920 193">fox</span>
+  <div class='ocr_page' title='bbox 0 0 1937 244'>
+   <span class='ocr_word' title='bbox 4 95 364 193'>The</span>
+   <span class='ocr_word' title='bbox 438 95 926 193'>quick</span>
+   <span class='ocr_word' title='bbox 1004 95 1561 193'>brown</span>
+   <span class='ocr_word' title='bbox 1638 95 1920 193'>fox</span>
   </div>
  </body>
-</html>
-EOS
+</html>};
 
 $page->{resolution} = 300;
 $page->import_pdftotext($pdftext);
-@expected = split "\n", $expected;
-@output   = split "\n", $page->{hocr};
-is_deeply( \@output, \@expected, 'import_pdftotext() with resolution' );
+like( $page->{hocr}, $expected, 'import_pdftotext() with resolution' );
 
 #########################
 
