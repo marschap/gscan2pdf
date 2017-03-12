@@ -35,7 +35,9 @@
 # 7. Build packages for Ubuntu
 #    name the release -0~ppa1<release>, where release is zesty, yakkety, xenial, vivid, trusty, precise, etc
 #     debuild --no-lintian -S -sa
-#    if necessary, sed out the .buildinfo line and
+#    if necessary, sed out the .buildinfo line
+#     sed -i '/\.buildinfo$/d' .changes
+#    and
 #     debsign --re-sign .changes
 #    before
 #     dput gscan2pdf-ppa .changes
