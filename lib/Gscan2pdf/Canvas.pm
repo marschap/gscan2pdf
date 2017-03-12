@@ -122,14 +122,7 @@ sub boxed_text {
             $scale *= $FULLPAGE_OCR_SCALE;
         }
 
-        $g->{_angle} = $angle;
-        $g->{_scale} = $scale;
-
-        $text->set_simple_transform( 0, 0, $scale, $angle );
-        $bounds = $text->get_bounds;
-        my $x_offset = ( $x1 + $x2 - $bounds->x1 - $bounds->x2 ) / 2;
-        my $y_offset = ( $y1 + $y2 - $bounds->y1 - $bounds->y2 ) / 2;
-        $text->set_simple_transform( $x_offset, $y_offset, $scale, $angle );
+        _transform_text( $g, $text, $scale, $angle );
 
         # clicking text box produces a dialog to edit the text
         if ($edit_callback) {
@@ -190,16 +183,12 @@ sub set_box_text {
             my $x_size = abs $x2 - $x1;
             my $y_size = abs $y2 - $y1;
             $widget->set_simple_transform( 0, 0, 1, 0 );
-            my $angle = $g->{_angle} || 0;
             my $bounds = $widget->get_bounds;
+            my $angle = $g->{_angle} || 0;
             my $scale =
               ( $angle ? $y_size : $x_size ) / ( $bounds->x2 - $bounds->x1 );
-            $widget->set_simple_transform( 0, 0, $scale, $angle );
-            $bounds = $widget->get_bounds;
-            my $x_offset = ( $x1 + $x2 - $bounds->x1 - $bounds->x2 ) / 2;
-            my $y_offset = ( $y1 + $y2 - $bounds->y1 - $bounds->y2 ) / 2;
-            $widget->set_simple_transform( $x_offset,
-                $y_offset, $scale, $angle );
+
+            _transform_text( $g, $widget, $scale, $angle );
         }
     }
     else {
@@ -208,6 +197,27 @@ sub set_box_text {
         $g->remove_child(1);
     }
     $self->canvas2hocr();
+    return;
+}
+
+# scale, rotate & shift text
+
+sub _transform_text {
+    my ( $g, $text, $scale, $angle ) = @_;
+    $angle ||= 0;
+
+    if ( $g->{bbox} && $g->{text} ) {
+        my ( $x1, $y1, $x2, $y2 ) = @{ $g->{bbox} };
+        my $x_size = abs $x2 - $x1;
+        my $y_size = abs $y2 - $y1;
+        $g->{_scale} = $scale;
+        $g->{_angle} = $angle;
+        $text->set_simple_transform( 0, 0, $scale, $angle );
+        my $bounds   = $text->get_bounds;
+        my $x_offset = ( $x1 + $x2 - $bounds->x1 - $bounds->x2 ) / 2;
+        my $y_offset = ( $y1 + $y2 - $bounds->y1 - $bounds->y2 ) / 2;
+        $text->set_simple_transform( $x_offset, $y_offset, $scale, $angle );
+    }
     return;
 }
 
