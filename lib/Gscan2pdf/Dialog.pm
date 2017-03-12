@@ -43,7 +43,7 @@ use Glib::Object::Subclass Gtk2::Window::,
     ),
   ];
 
-our $VERSION = '1.7.2';
+our $VERSION = '1.7.3';
 my $EMPTY = q{};
 my ( $d, $tooltips );
 
