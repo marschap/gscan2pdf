@@ -1,12 +1,9 @@
 use ExtUtils::MakeMaker;
 
-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
-# the contents of the Makefile that is written.
-
 my $program = "gscan2pdf";
 my $year    = (localtime)[5] + 1900;
 my $author  = "Jeffrey Ratcliffe";
-my $email   = 'ra28145@users.sourceforge.net';
+my $email   = 'jffry@posteo.net';
 
 # Slurp the program source and dig out the version number.
 my $text = do { local ( @ARGV, $/ ) = "bin/$program"; <> };
