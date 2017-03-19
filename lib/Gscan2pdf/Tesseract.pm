@@ -33,6 +33,9 @@ sub setup {
     if ( $err =~ /^tesseract[ ]([\d.]+)/xsm ) {
         $version = $1;
     }
+    elsif ( $out =~ /^tesseract[ ]([\d.]+)/xsm ) {
+        $version = $1;
+    }
     if ( $version and version->parse("v$version") > version->parse('v3.02') ) {
         $logger->info("Found tesseract version $version.");
         $setup = 1;
@@ -156,10 +159,10 @@ sub languages {
 
         my @codes;
         if ( version->parse("v$version") > version->parse('v3.02') ) {
-            my ( undef, undef, $codes ) =
+            my ( undef, $out, $err ) =
               Gscan2pdf::Document::exec_command(
                 [ 'tesseract', '--list-langs' ] );
-            @codes = split /\n/xsm, $codes;
+            @codes = split /\n/xsm, $err ? $err: $out;
             if ( $codes[0] =~ /^List[ ]of[ ]available[ ]languages/xsm ) {
                 shift @codes;
             }
