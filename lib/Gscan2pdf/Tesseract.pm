@@ -4,6 +4,7 @@ use 5.008005;
 use strict;
 use warnings;
 use Carp;
+use Encode;
 use File::Temp;    # To create temporary files
 use File::Basename;
 use Gscan2pdf::Document;             # for slurp
@@ -194,22 +195,25 @@ sub languages {
 
 sub hocr {
     my ( $class, %options ) = @_;
-    my ( $tif, $cmd, $name, $path );
+    my ( $tif, $cmd, $name, $path, $txt );
     if ( not $setup ) { Gscan2pdf::Tesseract->setup( $options{logger} ) }
 
-    # Temporary filename for output
-    my $suffix;
     if ( version->parse("v$version") >= version->parse('v3.03') ) {
-        $suffix = '.hocr';
-    }
-    elsif ( version->parse("v$version") >= version->parse('v3') ) {
-        $suffix = '.html';
+        $name = 'stdout';
+        $path = '';
     }
     else {
-        $suffix = '.txt';
+        # Temporary filename for output
+        my $suffix;
+        if ( version->parse("v$version") >= version->parse('v3') ) {
+            $suffix = '.html';
+        }
+        else {
+            $suffix = '.txt';
+        }
+        $txt = File::Temp->new( SUFFIX => $suffix );
+        ( $name, $path, undef ) = fileparse( $txt, $suffix );
     }
-    my $txt = File::Temp->new( SUFFIX => $suffix );
-    ( $name, $path, undef ) = fileparse( $txt, $suffix );
 
     if (
         (
@@ -264,14 +268,19 @@ sub hocr {
 
     my ( undef, $out, $err ) =
       Gscan2pdf::Document::exec_command( $cmd, $options{pidfile} );
-    my $warnings = $out . $err;
+    my $warnings = $out ? $name ne 'stdout': '' . $err;
     my $leading  = 'Tesseract Open Source OCR Engine';
     my $trailing = 'with Leptonica';
     $warnings =~ s/$leading v\d[.]\d\d $trailing\n//xsm;
     $warnings =~ s/^Page[ ]0\n//xsm;
     $logger->debug( 'Warnings from Tesseract: ', $warnings );
 
-    return Gscan2pdf::Document::slurp($txt), $warnings;
+    if ( $name eq 'stdout') {
+        return Encode::decode_utf8($out), $warnings;
+    }
+    else {
+        return Gscan2pdf::Document::slurp($txt), $warnings;
+    }
 }
 
 1;
