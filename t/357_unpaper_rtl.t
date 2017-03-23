@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use File::Basename;    # Split filename into dir, file, ext
-use Test::More tests => 3;
+use Test::More tests => 2;
 
 BEGIN {
     use Gscan2pdf::Document;
@@ -13,7 +13,8 @@ SKIP: {
     skip 'unpaper not installed', 2
       unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
     my $unpaper =
-      Gscan2pdf::Unpaper->new( { 'output-pages' => 2, layout => 'double' } );
+      Gscan2pdf::Unpaper->new(
+        { 'output-pages' => 2, layout => 'double', direction => 'rtl' } );
 
     use Log::Log4perl qw(:easy);
     Log::Log4perl->easy_init($WARN);
@@ -39,18 +40,24 @@ SKIP: {
         paths             => ['test.pnm'],
         finished_callback => sub {
             $slist->unpaper(
-                page              => $slist->{data}[0][2],
-                options           => { command => $unpaper->get_cmdline },
+                page    => $slist->{data}[0][2],
+                options => {
+                    command   => $unpaper->get_cmdline,
+                    direction => $unpaper->get_option('direction')
+                },
                 finished_callback => sub {
-                    is( system("identify $slist->{data}[0][2]{filename}"),
-                        0, 'valid PNM created for LH' );
-                    is( system("identify $slist->{data}[1][2]{filename}"),
-                        0, 'valid PNM created for RH' );
-                    is( dirname("$slist->{data}[0][2]{filename}"),
-                        "$dir", 'using session directory' );
-
+                    is(
+`convert $slist->{data}[0][2]{filename} -depth 1 -resize 1x1 txt:-`,
+"# ImageMagick pixel enumeration: 1,1,255,gray\n0,0: (199,199,199)  #C7C7C7  gray(199)\n",
+                        'valid PNM created for RH'
+                    );
+                    is(
+`convert $slist->{data}[1][2]{filename} -depth 1 -resize 1x1 txt:-`,
+"# ImageMagick pixel enumeration: 1,1,255,gray\n0,0: (202,202,202)  #CACACA  gray(202)\n",
+                        'valid PNM created for LH'
+                    );
                     Gtk2->main_quit;
-                }
+                },
             );
         }
     );

@@ -61,7 +61,7 @@ SKIP: {
                 0, 'Resolution of imported image' );
             $slist->unpaper(
                 page              => $slist->{data}[0][2],
-                options           => $unpaper->get_cmdline,
+                options           => { command => $unpaper->get_cmdline },
                 finished_callback => sub {
                     is( int( abs( $slist->{data}[0][2]{resolution} - 254 ) ),
                         0, 'Resolution of processed image' );

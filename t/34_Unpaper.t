@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 BEGIN {
     use_ok('Gscan2pdf::Unpaper');
@@ -37,6 +37,8 @@ is(
     'Defaults'
 );
 
+is( $unpaper->get_option('direction'), 'ltr', 'get_option' );
+
 is_deeply(
     $unpaper->get_options,
     {
@@ -53,7 +55,8 @@ is_deeply(
         'no-border-align'       => '',
         'black-threshold'       => '0.33',
         'deskew-scan-direction' => 'left,right',
-        'border-margin'         => '0,0'
+        'border-margin'         => '0,0',
+        'direction'             => 'ltr',
     },
     'get_options'
 );

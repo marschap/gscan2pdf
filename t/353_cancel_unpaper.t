@@ -43,7 +43,7 @@ SKIP: {
             my $md5sum = `md5sum $slist->{data}[0][2]{filename} | cut -c -32`;
             $slist->unpaper(
                 page              => $slist->{data}[0][2],
-                options           => $unpaper->get_cmdline,
+                options           => { command => $unpaper->get_cmdline },
                 finished_callback => sub { ok 0, 'Finished callback' }
             );
             $slist->cancel(

@@ -69,6 +69,24 @@ sub new {
             step    => 1,
             default => 1,
         },
+        'direction' => {
+            type    => 'ComboBox',
+            string  => $d->get('Writing system'),
+            options => {
+                ltr => {
+                    string  => $d->get('Left-to-right'),
+                    tooltip => $d->get(
+                        'Most writings systems, e.g. Latin, Greek, Cyrillic.'
+                    ),
+                },
+                rtl => {
+                    string  => $d->get('Right-to-left'),
+                    tooltip => $d->get('Scripts like Arabic or Hebrew.'),
+                },
+            },
+            default => 'ltr',
+            export  => FALSE,
+        },
         'no-deskew' => {
             type    => 'CheckButton',
             string  => $d->get('No deskew'),
@@ -251,6 +269,13 @@ sub add_options {
             }
         }
     );
+    my $combobw = $self->add_widget( $vbox, $options, 'direction' );
+    $outpages->signal_connect(
+        'value-changed' => sub {
+            $combobw->parent->set_sensitive( $outpages->get_value == 2 );
+        }
+    );
+    $combobw->parent->set_sensitive(FALSE);
 
     # Notebook to collate options
     my $notebook = Gtk2::Notebook->new;
@@ -475,51 +500,60 @@ sub add_widget {
     return $widget;
 }
 
+sub get_option {
+    my ( $self, $option ) = @_;
+    my $hashref = $self->{options};
+    my $default = $self->{default};
+
+    if ( defined $hashref->{$option}{widget} ) {
+
+        given ( $hashref->{$option}{type} ) {
+            when ('ComboBox') {
+                my $i = $hashref->{$option}{widget}->get_active;
+                for ( keys %{ $hashref->{$option}{options} } ) {
+                    if ( $hashref->{$option}{options}{$_}{index} == $i ) {
+                        return $_;
+                    }
+                }
+            }
+            when ('CheckButton') {
+                return $hashref->{$option}{widget}->get_active ? TRUE : FALSE;
+            }
+            when ('SpinButton') {
+                return $hashref->{$option}{widget}->get_value;
+            }
+            when ('CheckButtonGroup') {
+                my @items;
+                for ( sort keys %{ $hashref->{$option}{options} } ) {
+                    if ( $hashref->{$option}{options}{$_}{widget}->get_active )
+                    {
+                        push @items, $_;
+                    }
+                }
+                if (@items) { return join $COMMA, @items }
+            }
+            when ('SpinButtonGroup') {
+                my @items;
+                for ( keys %{ $hashref->{$option}{options} } ) {
+                    push @items,
+                      $hashref->{$option}{options}{$_}{widget}->get_value;
+                }
+                if (@items) { return join $COMMA, @items }
+            }
+        }
+    }
+    elsif ( defined $default->{$option} ) { return $default->{$option} }
+    return;
+}
+
 sub get_options {
     my ($self)  = @_;
     my $hashref = $self->{options};
     my $default = $self->{default};
 
     for my $option ( keys %{$hashref} ) {
-        if ( defined $hashref->{$option}{widget} ) {
-            given ( $hashref->{$option}{type} ) {
-                when ('ComboBox') {
-                    my $i = $hashref->{$option}{widget}->get_active;
-                    for ( keys %{ $hashref->{$option}{options} } ) {
-                        if ( $hashref->{$option}{options}{$_}{index} == $i ) {
-                            $default->{$option} = $_;
-                        }
-                    }
-                }
-                when ('CheckButton') {
-                    $default->{$option} =
-                      $hashref->{$option}{widget}->get_active ? TRUE : FALSE;
-                }
-                when ('SpinButton') {
-                    $default->{$option} =
-                      $hashref->{$option}{widget}->get_value;
-                }
-                when ('CheckButtonGroup') {
-                    my @items;
-                    for ( sort keys %{ $hashref->{$option}{options} } ) {
-                        if ( $hashref->{$option}{options}{$_}{widget}
-                            ->get_active )
-                        {
-                            push @items, $_;
-                        }
-                    }
-                    if (@items) { $default->{$option} = join $COMMA, @items }
-                }
-                when ('SpinButtonGroup') {
-                    my @items;
-                    for ( keys %{ $hashref->{$option}{options} } ) {
-                        push @items,
-                          $hashref->{$option}{options}{$_}{widget}->get_value;
-                    }
-                    if (@items) { $default->{$option} = join $COMMA, @items }
-                }
-            }
-        }
+        my $value = $self->get_option($option);
+        if ( defined $value ) { $default->{$option} = $value }
     }
     return $default;
 }
@@ -589,6 +623,11 @@ sub get_cmdline {
 
     my @items;
     for my $option ( sort keys %{$hashref} ) {
+        if ( defined $hashref->{$option}{export}
+            and not $hashref->{$option}{export} )
+        {
+            next;
+        }
         if ( $hashref->{$option}{type} eq 'CheckButton' ) {
             if ( defined $default->{$option} and $default->{$option} ) {
                 push @items, "--$option";

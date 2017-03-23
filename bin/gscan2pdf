@@ -5263,8 +5263,6 @@ sub update_selector {
     return;
 }
 
-# Run unpaper to clean up scan.
-
 sub user_defined_dialog {
 
     if ( defined $windowudt ) {
@@ -5448,7 +5446,13 @@ sub unpaper {
                 )
             );
             if ( not @pagelist ) { return }
-            unpaper_page( \@pagelist, $unpaper->get_cmdline );
+            unpaper_page(
+                \@pagelist,
+                {
+                    command   => $unpaper->get_cmdline,
+                    direction => $unpaper->get_option('direction')
+                }
+            );
 
             $windowu->hide;
         }

@@ -441,8 +441,11 @@ sub _post_process_scan {
     }
     if ( $options{unpaper} ) {
         $self->unpaper(
-            page              => $page,
-            options           => $options{unpaper}->get_cmdline,
+            page    => $page,
+            options => {
+                command   => $options{unpaper}->get_cmdline,
+                direction => $options{unpaper}->get_option('writing-system')
+            },
             queued_callback   => $options{queued_callback},
             started_callback  => $options{started_callback},
             finished_callback => sub {
@@ -4175,7 +4178,7 @@ sub _thread_unpaper {
             UNLINK => FALSE
         );
         my $out2 = $EMPTY;
-        if ( $options{options} =~ /--output-pages[ ]2[ ]/xsm ) {
+        if ( $options{options}{command} =~ /--output-pages[ ]2[ ]/xsm ) {
             $out2 = File::Temp->new(
                 DIR    => $options{dir},
                 SUFFIX => '.pnm',
@@ -4184,7 +4187,8 @@ sub _thread_unpaper {
         }
 
         # --overwrite needed because $out exists with 0 size
-        my @cmd = split $SPACE, sprintf "$options{options}", $in, $out, $out2;
+        my @cmd = split $SPACE, sprintf "$options{options}{command}", $in,
+          $out, $out2;
         ( undef, my $stdout, my $stderr ) =
           exec_command( \@cmd, $options{pidfile} );
         $logger->info($stdout);
@@ -4195,6 +4199,13 @@ sub _thread_unpaper {
             if ( not -s $out ) { return }
         }
         return if $_self->{cancel};
+
+        if (    $options{options}{command} =~ /--output-pages[ ]2[ ]/xsm
+            and defined $options{options}{direction}
+            and $options{options}{direction} eq 'rtl' )
+        {
+            ( $out, $out2 ) = ( $out2, $out );
+        }
 
         my $new = Gscan2pdf::Page->new(
             filename => $out,
