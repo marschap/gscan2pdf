@@ -2,6 +2,8 @@
 
 * Added "Writing system" option in "Clean Up" (unpaper) dialogue, affecting
   the order in which the pages are imported when scans are split.
+  Closes feature request #94
+  (add "Deskew", "Descreen", "Split image" to "Save" dialog)
 
 
 1.7.3 (12.03.2017):
@@ -54,6 +56,7 @@
 * + support for dragging files from Nautilus (or Konqueror, or anything that
   delivers URIs). Closes Launchpad (Ubuntu) bug #515854:
   (Drag and drop PDF from Nautilus should import PDF)
+  and feature request #90 (Drag & drop image files into the application window)
 * + support for brackets in imported djvu hidden layer
 * Store document date as offset (reverted code introduced in v1.3.9)
   Closes Debian bug #842239 (Arbitrary document metadata date chosen)
@@ -134,6 +137,7 @@
 1.5.0 (11.06.2016):
 
 * Also import text layer when importing PDF or DjVu.
+  Closes feature request #55 (Import text from PDF/DjVu)
 * + option in Edit/Preferences to allow/forbid batch scanning from a flatbed
 * Store date as string to avoid time zone problems
   Closes Debian bug #823626 (Date in file name off by one day when saving)
@@ -150,6 +154,7 @@
 * Update paper size combobox after setting profile
 * Integrate user-defined tools into scan post-process
 * + dialog window for user-defined tools
+  Closes feature request #39 (automatic color correction with aaphoto)
 * Fixed extended page numbering toggle
 * Fixed restoring crashed session
 * Fixed paper sizes after switching device. Closes bug #216
@@ -316,6 +321,7 @@
 * Use icons for 'email as PDF' and the hand tool designed by Andreas E.
   Closes LP: #1197264 (wrong icons in toolbar)
 * + threshold as part of OCR process
+  Closes feature request #35 (Image threshold adjustment for Tesseract alone)
 * Fix bug saving encoded characters in hOCR
 * Fix bug saving defaults that are not part of a profile
 * Add scrollbars to the 'Page Options' tab to make the scan button visible on
