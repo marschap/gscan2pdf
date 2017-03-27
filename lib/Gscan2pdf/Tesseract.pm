@@ -163,7 +163,7 @@ sub languages {
             my ( undef, $out, $err ) =
               Gscan2pdf::Document::exec_command(
                 [ 'tesseract', '--list-langs' ] );
-            @codes = split /\n/xsm, $err ? $err: $out;
+            @codes = split /\n/xsm, $err ? $err : $out;
             if ( $codes[0] =~ /^List[ ]of[ ]available[ ]languages/xsm ) {
                 shift @codes;
             }
@@ -200,16 +200,13 @@ sub hocr {
 
     if ( version->parse("v$version") >= version->parse('v3.03') ) {
         $name = 'stdout';
-        $path = '';
+        $path = $EMPTY;
     }
     else {
         # Temporary filename for output
-        my $suffix;
+        my $suffix = '.txt';
         if ( version->parse("v$version") >= version->parse('v3') ) {
             $suffix = '.html';
-        }
-        else {
-            $suffix = '.txt';
         }
         $txt = File::Temp->new( SUFFIX => $suffix );
         ( $name, $path, undef ) = fileparse( $txt, $suffix );
@@ -268,19 +265,17 @@ sub hocr {
 
     my ( undef, $out, $err ) =
       Gscan2pdf::Document::exec_command( $cmd, $options{pidfile} );
-    my $warnings = $out ? $name ne 'stdout': '' . $err;
+    my $warnings = $out ? $name ne 'stdout' : $EMPTY . $err;
     my $leading  = 'Tesseract Open Source OCR Engine';
     my $trailing = 'with Leptonica';
     $warnings =~ s/$leading v\d[.]\d\d $trailing\n//xsm;
     $warnings =~ s/^Page[ ]0\n//xsm;
     $logger->debug( 'Warnings from Tesseract: ', $warnings );
 
-    if ( $name eq 'stdout') {
+    if ( $name eq 'stdout' ) {
         return Encode::decode_utf8($out), $warnings;
     }
-    else {
-        return Gscan2pdf::Document::slurp($txt), $warnings;
-    }
+    return Gscan2pdf::Document::slurp($txt), $warnings;
 }
 
 1;

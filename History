@@ -1,9 +1,11 @@
 1.8.0 (12.04.2017):
 
-* Added "Writing system" option in "Clean Up" (unpaper) dialogue, affecting
+* + "Writing system" option in "Clean Up" (unpaper) dialogue, affecting
   the order in which the pages are imported when scans are split.
   Closes feature request #94
   (add "Deskew", "Descreen", "Split image" to "Save" dialog)
+* + support for Tesseract 3.05. Thanks to Chris Mayo for the patch
+  Closes bug #243 (tesseract 3.05 OCR Engine not recogized)
 
 
 1.7.3 (12.03.2017):
