@@ -872,9 +872,9 @@ sub create_menu_bar {
             \&threshold
         ],
         [
-            'BrightnessContrast', undef, $d->get('_Brightness / Contrast'),
-            undef, $d->get('Change brightness & contrast'),
-            \&brightness_contrast
+            'BrightnessContrast',                    undef,
+            $d->get('_Brightness / Contrast'),       undef,
+            $d->get('Change brightness & contrast'), \&brightness_contrast
         ],
         [
             'Negate', undef, $d->get('_Negate'), undef,
@@ -1145,7 +1145,8 @@ EOS
     $uimanager->get_widget('/Thumb_Popup/Print')->set_sensitive(FALSE);
 
     $uimanager->get_widget('/MenuBar/Tools/Threshold')->set_sensitive(FALSE);
-    $uimanager->get_widget('/MenuBar/Tools/BrightnessContrast')->set_sensitive(FALSE);
+    $uimanager->get_widget('/MenuBar/Tools/BrightnessContrast')
+      ->set_sensitive(FALSE);
     $uimanager->get_widget('/MenuBar/Tools/Negate')->set_sensitive(FALSE);
     $uimanager->get_widget('/MenuBar/Tools/Unsharp')->set_sensitive(FALSE);
     $uimanager->get_widget('/MenuBar/Tools/Crop')->set_sensitive(FALSE);
@@ -4828,7 +4829,7 @@ sub brightness_contrast {
         border_width    => $BORDER_WIDTH
     );
     my $vbox = $windowt->get('vbox');
-    my ($hbox, $label);
+    my ( $hbox, $label );
 
     # Frame for page range
     add_page_range($vbox);
@@ -4863,7 +4864,7 @@ sub brightness_contrast {
             take_snapshot();
 
             $SETTING{'brightness tool'} = $spinbuttonb->get_value;
-            $SETTING{'contrast tool'} = $spinbuttonc->get_value;
+            $SETTING{'contrast tool'}   = $spinbuttonc->get_value;
 
             my @pagelist =
               $slist->get_page_index( $SETTING{'Page range'},

@@ -96,6 +96,8 @@ Gscan2pdf::Config::add_defaults( \%output );
     'downsample dpi'              => 150,
     'threshold-before-ocr'        => FALSE,
     'threshold tool'              => 80,
+    'contrast tool'               => 65,
+    'brightness tool'             => 65,
     'unsharp radius'              => 0,
     'unsharp sigma'               => 1,
     'unsharp amount'              => 1,

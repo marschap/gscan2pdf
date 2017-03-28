@@ -42,6 +42,7 @@ Readonly our $POINTS_PER_INCH             => 72;
 Readonly my $STRING_FORMAT                => 8;
 Readonly my $_POLL_INTERVAL               => 100;    # ms
 Readonly my $THUMBNAIL                    => 100;    # pixels
+Readonly my $_100PERCENT                  => 100;
 Readonly my $YEAR                         => 5;
 Readonly my $BOX_TOLERANCE                => 5;
 Readonly my $BITS_PER_BYTE                => 8;
@@ -1326,13 +1327,13 @@ sub brightness_contrast {
     my ( $self, %options ) = @_;
     my $uuid     = $self->_note_callbacks(%options);
     my $sentinel = _enqueue_request(
-         'brightness-contrast',
+        'brightness-contrast',
         {
+            page       => $options{page}->freeze,
             brightness => $options{brightness},
             contrast   => $options{contrast},
-            page       => $options{page}->freeze,
             dir        => "$self->{dir}",
-            uuid => $uuid
+            uuid       => $uuid
         }
     );
 
@@ -2077,8 +2078,14 @@ sub _thread_main {
             }
 
             when ('brightness-contrast') {
-                _thread_brightness_contrast( $self, $request->{brightness},
-                    $request->{contrast}, $request->{page}, $request->{dir}, $request->{uuid} );
+                _thread_brightness_contrast(
+                    $self,
+                    page       => $request->{page},
+                    brightness => $request->{brightness},
+                    contrast   => $request->{contrast},
+                    dir        => $request->{dir},
+                    uuid       => $request->{uuid}
+                );
             }
 
             when ('cancel') {
@@ -3767,8 +3774,8 @@ sub _thread_threshold {
 }
 
 sub _thread_brightness_contrast {
-    my ( $self, $brightness, $contrast, $page, $dir, $uuid ) = @_;
-    my $filename = $page->{filename};
+    my ( $self, %options ) = @_;
+    my $filename = $options{page}{filename};
 
     my $image = Image::Magick->new;
     my $e     = $image->Read($filename);
@@ -3778,10 +3785,14 @@ sub _thread_brightness_contrast {
     my $depth = $image->Get('depth');
 
     # BrightnessContrast the image
-    $image->BrightnessContrast(brightness => 2 * $brightness - 100, contrast => 2 * $contrast - 100);
+    $image->BrightnessContrast(
+        brightness => 2 * $options{brightness} - $_100PERCENT,
+        contrast   => 2 * $options{contrast} - $_100PERCENT
+    );
     if ("$e") {
         $logger->error($e);
-        _thread_throw_error( $self, $uuid, "Error running BrightnessContrast: $e." );
+        _thread_throw_error( $self, $options{uuid},
+            "Error running BrightnessContrast: $e." );
         return;
     }
     return if $_self->{cancel};
@@ -3791,36 +3802,41 @@ sub _thread_brightness_contrast {
     try {
         my $suffix;
         if ( $filename =~ /([.]\w*)$/xsm ) { $suffix = $1 }
-        $filename =
-          File::Temp->new( DIR => $dir, SUFFIX => $suffix, UNLINK => FALSE );
+        $filename = File::Temp->new(
+            DIR    => $options{dir},
+            SUFFIX => $suffix,
+            UNLINK => FALSE
+        );
         $e = $image->Write( depth => $depth, filename => $filename );
         if ("$e") { $logger->warn($e) }
     }
     catch {
         $logger->error("Error changing brightness / contrast: $_");
-        _thread_throw_error( $self, $uuid,
+        _thread_throw_error( $self, $options{uuid},
             "Error changing brightness / contrast: $_." );
         $error = TRUE;
     };
     if ($error) { return }
     return if $_self->{cancel};
-    $logger->info("Wrote $filename with brightness / contrast changed to $brightness / $contrast");
+    $logger->info(
+"Wrote $filename with brightness / contrast changed to $options{brightness} / $options{contrast}"
+    );
 
-    $page->{filename}   = $filename->filename;
-    $page->{dirty_time} = timestamp();           #flag as dirty
+    $options{page}{filename}   = $filename->filename;
+    $options{page}{dirty_time} = timestamp();           #flag as dirty
     $self->{return}->enqueue(
         {
             type => 'page',
-            uuid => $uuid,
-            page => $page,
-            info => { replace => $page->{uuid} }
+            uuid => $options{uuid},
+            page => $options{page},
+            info => { replace => $options{page}{uuid} }
         }
     );
     $self->{return}->enqueue(
         {
             type    => 'finished',
             process => 'brightness-contrast',
-            uuid    => $uuid,
+            uuid    => $options{uuid},
         }
     );
     return;
