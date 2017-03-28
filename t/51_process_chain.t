@@ -28,6 +28,8 @@ SKIP: {
       unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
 
     my $unpaper = Gscan2pdf::Unpaper->new;
+    my $vbox    = Gtk2::VBox->new;
+    $unpaper->add_options($vbox);
 
     # Create b&w test image
     system(

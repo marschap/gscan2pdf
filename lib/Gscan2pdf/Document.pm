@@ -444,7 +444,7 @@ sub _post_process_scan {
             page    => $page,
             options => {
                 command   => $options{unpaper}->get_cmdline,
-                direction => $options{unpaper}->get_option('writing-system')
+                direction => $options{unpaper}->get_option('direction'),
             },
             queued_callback   => $options{queued_callback},
             started_callback  => $options{started_callback},
