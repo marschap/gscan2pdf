@@ -51,6 +51,7 @@ is_deeply(
         'white-threshold'       => '0.9',
         'layout'                => 'double',
         'no-mask-scan'          => '',
+        'no-mask-center'        => '',
         'no-grayfilter'         => '',
         'no-border-align'       => '',
         'black-threshold'       => '0.33',
