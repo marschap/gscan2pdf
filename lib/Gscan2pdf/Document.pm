@@ -1904,28 +1904,33 @@ sub text_to_date {
 }
 
 sub expand_metadata_pattern {
-    my ( $template, $blank2_, $author, $title, $docdate, @today_and_now ) = @_;
-    my ( $dyear, $dmonth, $dday ) = text_to_date( $docdate, @today_and_now );
-    my ( $tyear, $tmonth, $tday, $thour, $tmin, $tsec ) = @today_and_now;
+    my (%data) = @_;
+    my ( $dyear, $dmonth, $dday ) =
+      text_to_date( $data{docdate}, @{ $data{today_and_now} } );
+    my ( $tyear, $tmonth, $tday, $thour, $tmin, $tsec ) =
+      @{ $data{today_and_now} };
     for ( ( $dmonth, $dday, $tmonth, $tday, $thour, $tmin, $tsec ) ) {
         if (defined) { $_ = sprintf '%02d', $_ }
     }
 
-    $template =~ s/%a/$author/gsm;
-    $template =~ s/%t/$title/gsm;
-    $template =~ s/%y/$dyear/gsm;
-    $template =~ s/%Y/$tyear/gsm;
-    $template =~ s/%m/$dmonth/gsm;
-    $template =~ s/%M/$tmonth/gsm;
-    $template =~ s/%d/$dday/gsm;
-    $template =~ s/%D/$tday/gsm;
-    $template =~ s/%H/$thour/gsm;
-    $template =~ s/%I/$tmin/gsm;
-    $template =~ s/%S/$tsec/gsm;
+    $data{template} =~ s/%a/$data{author}/gsm;
+    $data{template} =~ s/%t/$data{title}/gsm;
+    $data{template} =~ s/%y/$dyear/gsm;
+    $data{template} =~ s/%Y/$tyear/gsm;
+    $data{template} =~ s/%m/$dmonth/gsm;
+    $data{template} =~ s/%M/$tmonth/gsm;
+    $data{template} =~ s/%d/$dday/gsm;
+    $data{template} =~ s/%D/$tday/gsm;
+    $data{template} =~ s/%H/$thour/gsm;
+    $data{template} =~ s/%I/$tmin/gsm;
+    $data{template} =~ s/%S/$tsec/gsm;
 
-    $template =~ s/\s/_/gsm  if ( $blank2_ );
+    # avoid leading and trailing whitespace in expanded filename template
+    $data{template} =~ s/^\s*(.*?)\s*$/$1/xsm;
 
-    return $template;
+    if ( $data{convert_whitespace} ) { $data{template} =~ s/\s/_/gsm }
+
+    return $data{template};
 }
 
 # Normally, it would be more sensible to put this in main::, but in order to

@@ -129,13 +129,13 @@ sub add_metadata_dialog {
     my $entryd = Gtk2::Entry->new_with_max_length($ENTRY_WIDTH);
     $entryd->set_text(
         Gscan2pdf::Document::expand_metadata_pattern(
-            '%Y-%M-%D',
-            undef,
-            undef, undef, undef,
-            Add_Delta_Days(
-                @{ $defaults->{date}{today} },
-                $defaults->{date}{offset}
-            )
+            template      => '%Y-%M-%D',
+            today_and_now => [
+                Add_Delta_Days(
+                    @{ $defaults->{date}{today} },
+                    $defaults->{date}{offset}
+                )
+            ]
         )
     );
     $entryd->set_activates_default(TRUE);

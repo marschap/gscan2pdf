@@ -1978,7 +1978,8 @@ sub save_pdf {
         quality          => $SETTING{quality},
         font             => $SETTING{'pdf font'},
         set_timestamp    => $SETTING{set_timestamp},
-        'save blanks as underscores' => $SETTING{'save blanks as underscores'},
+        'convert whitespace to underscores' =>
+          $SETTING{'convert whitespace to underscores'},
     );
     if ( $append eq 'prependpdf' ) {
         $options{prepend} = $filename;
@@ -2555,15 +2556,14 @@ sub save_button_clicked_callback {
                 );
 
                 my $filename = Gscan2pdf::Document::expand_metadata_pattern(
-                    $SETTING{'default filename'},
-                    $SETTING{'save blanks as underscores'},
-                    $SETTING{author}, $SETTING{title},
-                    $mdwidgets->{date}->get_text,
-                    Today_and_Now()
+                    template => $SETTING{'default filename'},
+                    convert_whitespace =>
+                      $SETTING{'convert whitespace to underscores'},
+                    author        => $SETTING{author},
+                    title         => $SETTING{title},
+                    docdate       => $mdwidgets->{date}->get_text,
+                    today_and_now => [ Today_and_Now() ]
                 );
-
-               # avoid leading and trailing blanks in expanded filename template
-                $filename =~ s/^\s*(.*?)\s*$/$1/xsm;
 
                 $file_chooser->set_current_name($filename);
                 $file_chooser->set_do_overwrite_confirmation(TRUE);
@@ -2604,14 +2604,14 @@ sub save_button_clicked_callback {
             );
 
             my $filename = Gscan2pdf::Document::expand_metadata_pattern(
-                $SETTING{'default filename'},
-                $SETTING{'save blanks as underscores'},
-                $SETTING{author}, $SETTING{title}, $mdwidgets->{date}->get_text,
-                Today_and_Now()
+                template => $SETTING{'default filename'},
+                convert_whitespace =>
+                  $SETTING{'convert whitespace to underscores'},
+                author        => $SETTING{author},
+                title         => $SETTING{title},
+                docdate       => $mdwidgets->{date}->get_text,
+                today_and_now => [ Today_and_Now() ]
             );
-
-            # avoid leading and trailing blanks in expanded filename template
-            $filename =~ s/^\s*(.*?)\s*$/$1/xsm;
 
             $file_chooser->set_current_name($filename);
             $file_chooser->set_default_response('ok');
@@ -6271,7 +6271,7 @@ sub preferences {
             $SETTING{'default filename'}      = $fileentry->get_text;
             $SETTING{'restore window'}        = $cbw->get_active;
             $SETTING{set_timestamp}           = $cbt->get_active;
-            $SETTING{'save blanks as underscores'} = $cbb->get_active;
+            $SETTING{'convert whitespace to underscores'} = $cbb->get_active;
 
             if ( defined $windows ) {
                 if ( $SETTING{frontend} eq 'libsane-perl' ) {
@@ -6604,10 +6604,12 @@ sub _preferences_general_options {
         $fileentry->set_text( $SETTING{'default filename'} );
     }
 
-    # Replace blanks in filenames with underscores
+    # Replace whitespace in filenames with underscores
     my $cbb = Gtk2::CheckButton->new_with_label(
-        $d->get('Replace blanks in filenames with underscores') );
-    if ( $SETTING{'save blanks as underscores'} ) { $cbb->set_active(TRUE) }
+        $d->get('Replace whitespace in filenames with underscores') );
+    if ( $SETTING{'convert whitespace to underscores'} ) {
+        $cbb->set_active(TRUE);
+    }
     $vbox->pack_start( $cbb, TRUE, TRUE, 0 );
 
     # Set file timestamp with metadata

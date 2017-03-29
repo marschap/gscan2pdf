@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 28;
+use Test::More tests => 29;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
 use Date::Calc qw(Today);
@@ -110,11 +110,29 @@ is_deeply( \@date, [ 2016, '02', '01' ], 'text_to_date' );
 
 is(
     Gscan2pdf::Document::expand_metadata_pattern(
-        '%a %t %y %Y %m %M %d %D %H %I %S',
-        'a.n.other', 'title', '2016-02-01', 1970, 01, 12, 14, 46, 39,
+        template      => '%a %t %y %Y %m %M %d %D %H %I %S',
+        author        => 'a.n.other',
+        title         => 'title',
+        docdate       => '2016-02-01',
+        today_and_now => [ 1970, 01, 12, 14, 46, 39 ],
     ),
     'a.n.other title 2016 1970 02 01 01 12 14 46 39',
     'expand_metadata_pattern'
+);
+
+#########################
+
+is(
+    Gscan2pdf::Document::expand_metadata_pattern(
+        template           => '%a %t %y %Y %m %M %d %D %H %I %S',
+        convert_whitespace => TRUE,
+        author             => 'a.n.other',
+        title              => 'title',
+        docdate            => '2016-02-01',
+        today_and_now      => [ 1970, 01, 12, 14, 46, 39 ],
+    ),
+    'a.n.other_title_2016_1970_02_01_01_12_14_46_39',
+    'expand_metadata_pattern with underscores'
 );
 
 #########################
