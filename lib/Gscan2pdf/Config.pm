@@ -134,6 +134,15 @@ sub read_config {
         $SETTING{user_defined_tools} = [ $SETTING{user_defined_tools} ];
     }
 
+    # remove undefined profiles
+    if ( defined $SETTING{profile} ) {
+        for my $profile ( keys %{ $SETTING{profile} } ) {
+            if ( not defined $SETTING{profile}{$profile} ) {
+                delete $SETTING{profile}{$profile};
+            }
+        }
+    }
+
     _pre_151( $version, \%SETTING );
 
     _pre_171( $version, \%SETTING );

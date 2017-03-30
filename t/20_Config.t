@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Gscan2pdf::Document;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Test::More tests => 12;
+use Test::More tests => 13;
 
 BEGIN {
     use_ok('Gscan2pdf::Config');
@@ -380,6 +380,28 @@ close $fh or die "Error: cannot close $rc\n";
 
 is_deeply( \%output, \%example,
     'convert keyword-suggestions->keywords-suggestions' );
+
+#########################
+
+$config = <<'EOS';
+{
+   "profile" : {
+      "crash" : null
+   },
+   "version" : "1.7.3"
+}
+EOS
+open $fh, '>', $rc or die "Error: cannot open $rc\n";
+print $fh $config;
+close $fh or die "Error: cannot close $rc\n";
+
+%example = (
+    profile   => {},
+    "version" => "1.7.3"
+);
+%output = Gscan2pdf::Config::read_config( $rc, $logger );
+
+is_deeply( \%output, \%example, 'remove undefined profiles' );
 
 #########################
 
