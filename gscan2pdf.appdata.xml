@@ -5,11 +5,15 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0+</project_license>
   <name>gscan2pdf</name>
-  <name lang="en_GB">gscan2pdf</name>
+  <name xml:lang="en_GB">gscan2pdf</name>
   <summary>GUI to produce PDFs or DjVus from scanned documents</summary>
-  <summary lang="en_GB">GUI to produce PDFs or DjVus from scanned documents</summary>
+  <summary xml:lang="en_GB">GUI to produce PDFs or DjVus from scanned documents</summary>
   <description>
     <p>
+      Only two clicks are required to scan several pages and then save all or a
+      selection as a PDF or DjVu file, including metadata if required.
+    </p>
+    <p xml:lang="en_GB">
       Only two clicks are required to scan several pages and then save all or a
       selection as a PDF or DjVu file, including metadata if required.
     </p>
@@ -19,11 +23,25 @@
       It presents a thumbnail view of scanned pages, and permits simple operations
       such as cropping, rotating and deleting pages.
     </p>
+    <p xml:lang="en_GB">
+      gscan2pdf can control regular or sheet-fed (ADF) scanners with SANE via
+      libsane-perl, scanimage or scanadf, and can scan multiple pages at once.
+      It presents a thumbnail view of scanned pages, and permits simple operations
+      such as cropping, rotating and deleting pages.
+    </p>
     <p>
       OCR can be used to recognise text in the scans, and the output
       embedded in the PDF or DjVu.
     </p>
+    <p xml:lang="en_GB">
+      OCR can be used to recognise text in the scans, and the output
+      embedded in the PDF or DjVu.
+    </p>
     <p>
+      The resulting document may be saved as a PDF, DjVu, multipage TIFF file, or
+      single page image file.
+    </p>
+    <p xml:lang="en_GB">
       The resulting document may be saved as a PDF, DjVu, multipage TIFF file, or
       single page image file.
     </p>
@@ -37,4 +55,5 @@
     </screenshot>
   </screenshots>
   <update_contact>Jeffrey.Ratcliffe@gmail.com</update_contact>
+  <translation type="gettext">gscan2pdf</translation>
 </component>
