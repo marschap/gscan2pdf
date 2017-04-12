@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.7.3
+Version: 1.8.0
 Release:   0%{?dist}
 Summary:   GUI to ease the process of scanning multipage documents
 Group:     Applications/Publishing
@@ -101,7 +101,8 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Sun Mar 12 2017 Jeffrey Ratcliffe <jffry@posteo.net>
+* Wed Apr 12 2017 Jeffrey Ratcliffe <jffry@posteo.net>
+  - New upstream release
   - New upstream release
     Closes: #756897 (Specify ways to proof-read document post-save)
   - New upstream release
