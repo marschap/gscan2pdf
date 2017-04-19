@@ -15,6 +15,7 @@
 * + support for unpaper --no-mask-center option.
   Thanks to Peter Marschall for the patch
 * + contrast + brightness tool. Thanks to Peter Marschall for the patch
+  Closes bug #208 (allow luminance/contrast manipulation after scanning)
 * + option to convert filename whitespace to underscores.
   Thanks to Peter Marschall for the patch
 * Fix crash caused by undefined profiles in .gscan2pdf
@@ -53,6 +54,7 @@
 
 * + post-save hook.
   Closes feature request #93 (post-save arbitrary command capability)
+  Closes feature requests #61-3 (Run userscript after every scan)
 * + option in Edit/Preferences to force # pages = all if ADF if selected
   Closes feature request #54 (When changing to ADF auto select All)
 * + --import command-line option. Closes Launchpad (Ubuntu) bug #312839:
@@ -159,6 +161,8 @@
 * Also import text layer when importing PDF or DjVu.
   Closes feature request #55 (Import text from PDF/DjVu)
 * + option in Edit/Preferences to allow/forbid batch scanning from a flatbed
+  Closes bug #194 (Scanning "All" pages using Epson WorkForce 845 flatbed source
+  scans in an infinite loop)
 * Store date as string to avoid time zone problems
   Closes Debian bug #823626 (Date in file name off by one day when saving)
 * Show warning when importing a PDF if number of images is not equal to number
@@ -507,7 +511,8 @@
 * Fix applying default settings to widgets in scanimage dialog
   Closes debian bug #682818 (Presets aren't working)
 * Fixed bug editing OCR output.
-* Add profiles to libsane-perl frontend
+* Add profiles to libsane-perl frontend. Closes feature request #59
+  (Add profiles to define actions to be executed automatically)
 * Fixed switching to last directory on open/save
 * Fixed extracting image resolution in non-English locales
   Closes bug 3572463 (After update suse 12.2 pdf blank page)
