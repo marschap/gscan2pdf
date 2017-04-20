@@ -2,6 +2,8 @@
 
 * Consistently ghost OCR and unpaper tools if the appropriate executables are
   not available. Closes bug #151 (Unpaper detection is not handled correctly).
+* Fixed display of tesseract error messages, broken by commit
+  "Gscan2pdf::Tesseract: support output to stdout instead of temporary file"
 
 
 1.8.0 (12.04.2017):

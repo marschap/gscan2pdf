@@ -4092,11 +4092,15 @@ sub _thread_tesseract {
     catch {
         $logger->error("Error processing with tesseract: $_");
         _thread_throw_error( $self, $options{uuid},
-            "Error processing with tesseract: $_." );
+            "Error processing with tesseract: $_" );
         $error = TRUE;
     };
     if ($error) { return }
     return if $_self->{cancel};
+    if ( defined $stderr and $stderr ne $EMPTY ) {
+        _thread_throw_error( $self, $options{uuid},
+            "Error processing with tesseract: $stderr" );
+    }
     $options{page}{ocr_flag} = 1;    #FlagOCR
     $options{page}{ocr_time} =
       timestamp();                   #remember when we ran OCR on this page

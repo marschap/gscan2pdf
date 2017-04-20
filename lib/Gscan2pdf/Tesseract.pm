@@ -265,12 +265,11 @@ sub hocr {
 
     my ( undef, $out, $err ) =
       Gscan2pdf::Document::exec_command( $cmd, $options{pidfile} );
-    my $warnings = $out ? $name ne 'stdout' : $EMPTY . $err;
+    my $warnings = ( $out ? $name ne 'stdout' : $EMPTY ) . $err;
     my $leading  = 'Tesseract Open Source OCR Engine';
     my $trailing = 'with Leptonica';
     $warnings =~ s/$leading v\d[.]\d\d $trailing\n//xsm;
     $warnings =~ s/^Page[ ]0\n//xsm;
-    $logger->debug( 'Warnings from Tesseract: ', $warnings );
 
     if ( $name eq 'stdout' ) {
         return Encode::decode_utf8($out), $warnings;
