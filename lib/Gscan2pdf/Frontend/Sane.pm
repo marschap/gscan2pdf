@@ -509,14 +509,14 @@ sub _thread_set_option {
 
     # FIXME: Stringification to force this SV to have a PV slot.  This seems to
     # be necessary to get through Sane.pm's value checks.
-    $value = "$value";
+    if ( $opt->{type} != SANE_TYPE_BUTTON ) { $value = "$value" }
 
     my $info = $self->{device_handle}->set_option( $index, $value );
     if ( $logger->is_info ) {
         my $status = $Sane::STATUS;
-        $logger->info(
-"sane_set_option $index ($opt->{name}) to $value returned status $status with info $info"
-        );
+        $logger->info( "sane_set_option $index ($opt->{name})"
+              . ( $opt->{type} == SANE_TYPE_BUTTON ? $EMPTY : " to $value" )
+              . " returned status $status with info $info" );
     }
 
     if ( $info & SANE_INFO_RELOAD_OPTIONS ) {

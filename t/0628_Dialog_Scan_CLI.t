@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 2;
+use Test::More tests => 4;
 use Sane 0.05;              # To get SANE_* enums
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
@@ -120,7 +120,70 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         $dialog->set( 'profile', 'c50' );
         $loop->run unless ($flag);
 
-        Gtk2->main_quit;
+        ######################################
+
+        # need a new main loop because of the timeout
+        $loop                     = Glib::MainLoop->new;
+        $flag                     = FALSE;
+        $dialog->{profile_signal} = $dialog->signal_connect(
+            'changed-profile' => sub {
+                my ( $widget, $profile ) = @_;
+                $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+
+        my $options = $dialog->get('available-scan-options');
+        $dialog->set_option( $options->by_name('enable-test-options'), TRUE );
+        $loop->run unless ($flag);
+
+        # need a new main loop because of the timeout
+        $loop                    = Glib::MainLoop->new;
+        $flag                    = FALSE;
+        $dialog->{option_signal} = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                my ( $widget, $option, $value ) = @_;
+                $dialog->signal_handler_disconnect( $dialog->{option_signal} );
+                use Data::Dumper;
+                $logger->debug(
+                    Dumper( $dialog->get('current-scan-options')->get_data ) );
+                is_deeply(
+                    $dialog->get('current-scan-options')->get_data,
+                    {
+                        backend => [
+                            {
+                                $bry => '297'
+                            },
+                            {
+                                'resolution' => '50'
+                            },
+                            { 'enable-test-options' => 1 },
+                            { 'button'              => undef }
+                        ]
+                    },
+                    'button'
+                );
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+
+        $dialog->set_option( $options->by_name('button') );
+        $loop->run unless ($flag);
+
+        ######################################
+
+        $dialog->signal_connect(
+            'new-scan' => sub {
+                my ( $widget, $path, $n ) = @_;
+                pass 'new_scan';
+                Gtk2->main_quit;
+            }
+        );
+        $dialog->set( 'num-pages',             1 );
+        $dialog->set( 'page-number-increment', 1 );
+        $dialog->scan;
     }
 );
 $dialog->{signal} = $dialog->signal_connect(

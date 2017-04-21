@@ -2040,7 +2040,8 @@ sub _set_option_profile {
             return;
         }
 
-        $logger->debug("Setting option '$name' to '$val'.");
+        $logger->debug( "Setting option '$name'"
+              . ( $opt->{type} == SANE_TYPE_BUTTON ? $EMPTY : " to '$val'." ) );
         my $signal;
         $signal = $self->signal_connect(
             'changed-scan-option' => sub {
@@ -2052,7 +2053,10 @@ sub _set_option_profile {
 
         my $widget = $self->{option_widgets}{ $opt->{name} };
         if ( defined $widget ) {
-            $logger->debug("Setting widget '$name' to '$val'.");
+            $logger->debug( "Setting widget '$name'"
+                  . (
+                    $opt->{type} == SANE_TYPE_BUTTON ? $EMPTY : " to '$val'." )
+            );
             $widget->signal_handler_block( $widget->{signal} );
             given ($widget) {
                 when ( $widget->isa('Gtk2::CheckButton') ) {

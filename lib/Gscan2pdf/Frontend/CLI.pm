@@ -312,8 +312,11 @@ sub _create_scanimage_cmd {
             if ( $key =~ /^[xytl]$/xsm ) {
                 push @options, "-$key $val";
             }
-            else {
+            elsif ( defined $val ) {
                 push @options, "--$key='$val'";
+            }
+            else {
+                push @options, "--$key";
             }
         }
     }

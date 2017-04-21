@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Sane 0.05;    # To get SANE_* enums
-use Test::More tests => 31;
+use Test::More tests => 32;
 
 BEGIN {
     use_ok('Gscan2pdf::Frontend::CLI');
@@ -82,6 +82,25 @@ is(
     ),
     " scanimage --help --device-name='test' -x 10 -y 10 --mode='Color'",
     "map more Sane geometry options"
+);
+
+#########################
+
+is(
+    Gscan2pdf::Frontend::CLI::_create_scanimage_cmd(
+        {
+            device  => 'test',
+            prefix  => '',
+            options => Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    backend =>
+                      [ { $brx => 10 }, { $bry => 10 }, { button => undef } ]
+                }
+            )->map_to_cli
+        }
+    ),
+    " scanimage --help --device-name='test' -x 10 -y 10 --button",
+    "map button option"
 );
 
 #########################

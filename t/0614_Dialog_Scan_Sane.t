@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
@@ -57,6 +57,35 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
             }
         );
         $dialog->set( 'profile', 'my profile' );
+        $loop->run unless ($flag);
+
+        ######################################
+
+        # need a new main loop because of the timeout
+        $loop                     = Glib::MainLoop->new;
+        $flag                     = FALSE;
+        $dialog->{profile_signal} = $dialog->signal_connect(
+            'changed-profile' => sub {
+                my ( $widget, $profile ) = @_;
+                $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
+                is_deeply(
+                    $dialog->get('current-scan-options')->get_data,
+                    {
+                        backend => [
+                            { 'enable-test-options' => 1 },
+                            { 'button'              => undef }
+                        ]
+                    },
+                    'button'
+                );
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+
+        my $options = $dialog->get('available-scan-options');
+        $dialog->set_option( $options->by_name('enable-test-options'), TRUE );
+        $dialog->set_option( $options->by_name('button') );
         $loop->run unless ($flag);
         Gtk2->main_quit;
     }

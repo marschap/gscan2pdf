@@ -262,7 +262,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
                 $widget = Gtk2::Button->new( $d_sane->get( $opt->{title} ) );
                 $widget->{signal} = $widget->signal_connect(
                     clicked => sub {
-                        $self->set_option( $opt, $val );
+                        $self->set_option($opt);
                     }
                 );
             }
@@ -375,18 +375,22 @@ sub set_option {
         },
         finished_callback => sub {
             my ($data) = @_;
+            my $opt;
             if ($data) {
                 $self->update_options(
                     Gscan2pdf::Scanner::Options->new_from_data($data) );
+                $opt = $options->by_name( $option->{name} );
             }
             else {
-                my $opt = $options->by_name( $option->{name} );
+                $opt = $options->by_name( $option->{name} );
                 $opt->{val} = $val;
             }
 
             # We can carry on applying defaults now, if necessary.
             $self->signal_emit( 'finished-process',
-                "set_option $option->{name} to $val" );
+                "set_option $option->{name}"
+                  . ( $opt->{type} == SANE_TYPE_BUTTON ? $EMPTY : " to $val" )
+            );
 
             # Unset the profile unless we are actively setting it
             if ( not $self->{setting_profile} ) {
