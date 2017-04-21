@@ -4138,7 +4138,9 @@ sub add_postprocessing_options {
             $SETTING{udt_on_scan} = $udtbutton->get_active;
             $SETTING{current_udt} = $self->{comboboxudt}->get_active_text;
             $logger->info("UDT $SETTING{udt_on_scan}");
-            $logger->info("Current UDT $SETTING{current_udt}");
+            if ( defined $SETTING{current_udt} ) {
+                $logger->info("Current UDT $SETTING{current_udt}");
+            }
 
             $SETTING{'OCR on scan'} = $obutton->get_active;
             $logger->info("OCR $SETTING{'OCR on scan'}");
