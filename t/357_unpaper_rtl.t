@@ -46,14 +46,14 @@ SKIP: {
                     direction => $unpaper->get_option('direction')
                 },
                 finished_callback => sub {
-                    is(
+                    like(
 `convert $slist->{data}[0][2]{filename} -depth 1 -resize 1x1 txt:-`,
-"# ImageMagick pixel enumeration: 1,1,255,gray\n0,0: (199,199,199)  #C7C7C7  gray(199)\n",
+                        qr/gray\((199|200)\)/,
                         'valid PNM created for RH'
                     );
-                    is(
+                    like(
 `convert $slist->{data}[1][2]{filename} -depth 1 -resize 1x1 txt:-`,
-"# ImageMagick pixel enumeration: 1,1,255,gray\n0,0: (202,202,202)  #CACACA  gray(202)\n",
+                        qr/gray\((202|203)\)/,
                         'valid PNM created for LH'
                     );
                     Gtk2->main_quit;
