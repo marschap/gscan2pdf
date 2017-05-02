@@ -1864,8 +1864,8 @@ sub open_dialog {
     $file_chooser->set_default_response('ok');
     $file_chooser->set_current_folder( $SETTING{cwd} );
     add_filter( $file_chooser, $d->get('Image files'),
-        'jpg', 'png', 'pnm', 'gif', 'tif', 'tiff', 'pdf', 'djvu', 'ps',
-        'gs2p' );
+        'jpg', 'png', 'pnm', 'ppm', 'pbm', 'gif', 'tif', 'tiff', 'pdf', 'djvu',
+        'ps', 'gs2p' );
 
     if ( 'ok' eq $file_chooser->run ) {
 
