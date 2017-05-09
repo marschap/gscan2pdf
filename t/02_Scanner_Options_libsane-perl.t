@@ -231,7 +231,7 @@ my @that    = (
         'constraint_type' => '1'
     },
 );
-is_deeply( $options->{array}, \@that, 'libsane-perl' );
+is_deeply( $options->{array}, \@that, 'libimage-sane-perl' );
 
 is(
     $options->supports_paper(

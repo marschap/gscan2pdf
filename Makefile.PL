@@ -38,11 +38,12 @@ $localedir = $sharedir . "/locale" unless ($localedir);
 WriteMakefile(
     NAME      => $program,
     VERSION   => $version,
-    EXE_FILES => [ "bin/$program", 'bin/scanimage-perl', 'bin/scanadf-perl' ],
+    EXE_FILES => ["bin/$program"],
     PREREQ_PM => {
         Glib                   => 1.210,
         Gtk2                   => 1.090,
         Sane                   => 0.05,
+        Image::Sane            => 0,
         Gtk2::Ex::Simple::List => 0,
         Gtk2::ImageView        => 0,
         Image::Magick          => 0,

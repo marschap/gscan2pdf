@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Sane 0.05;    # To get SANE_* enums
+use Image::Sane ':all';    # To get SANE_* enums
 use Test::More tests => 48;
 
 BEGIN {

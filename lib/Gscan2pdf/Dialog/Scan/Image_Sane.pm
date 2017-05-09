@@ -1,4 +1,4 @@
-package Gscan2pdf::Dialog::Scan::Sane;
+package Gscan2pdf::Dialog::Scan::Image_Sane;
 
 use warnings;
 use strict;
@@ -6,7 +6,7 @@ no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Gscan2pdf::Dialog::Scan;
 use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Image::Sane ':all';    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
-use Gscan2pdf::Frontend::Sane;
+use Gscan2pdf::Frontend::Image_Sane;
 use Locale::gettext 1.05;    # For translations
 use feature 'switch';
 use Data::Dumper;
@@ -31,7 +31,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, properties => [
     ),
 ];
 
-our $VERSION = '1.8.2';
+our $VERSION = '1.8.0';
 
 my $SANE_NAME_SCAN_TL_X   = SANE_NAME_SCAN_TL_X;
 my $SANE_NAME_SCAN_TL_Y   = SANE_NAME_SCAN_TL_Y;
@@ -62,7 +62,7 @@ sub SET_PROPERTY {
     {
         if ( $name eq 'logger' ) {
             $logger = $newval;
-            $logger->debug('Set logger in Gscan2pdf::Dialog::Scan::Sane');
+            $logger->debug('Set logger in Gscan2pdf::Dialog::Scan::Image_Sane');
         }
     }
     $self->SUPER::SET_PROPERTY( $pspec, $newval );
@@ -76,7 +76,7 @@ sub get_devices {
 
     my $pbar;
     my $hboxd = $self->{hboxd};
-    Gscan2pdf::Frontend::Sane->get_devices(
+    Gscan2pdf::Frontend::Image_Sane->get_devices(
         sub {
 
             # Set up ProgressBar
@@ -129,7 +129,7 @@ sub scan_options {
     if ( defined $self->{sbutton} ) { $self->{sbutton}->set_sensitive(FALSE) }
 
     my $signal;
-    Gscan2pdf::Frontend::Sane->open_device(
+    Gscan2pdf::Frontend::Image_Sane->open_device(
         device_name      => $self->get('device'),
         started_callback => sub {
             $self->signal_emit( 'started-process', $d->get('Opening device') );
@@ -139,7 +139,7 @@ sub scan_options {
         },
         finished_callback => sub {
             $self->signal_emit( 'finished-process', 'open_device' );
-            Gscan2pdf::Frontend::Sane->find_scan_options(
+            Gscan2pdf::Frontend::Image_Sane->find_scan_options(
                 sub {    # started callback
                     $self->signal_emit( 'started-process',
                         $d->get('Retrieving options') );
@@ -362,7 +362,7 @@ sub set_option {
 
     my $signal;
     my $options = $self->get('available-scan-options');
-    Gscan2pdf::Frontend::Sane->set_option(
+    Gscan2pdf::Frontend::Image_Sane->set_option(
         index            => $option->{index},
         value            => $val,
         started_callback => sub {
@@ -433,7 +433,7 @@ sub scan {
     }
 
     my $i = 1;
-    Gscan2pdf::Frontend::Sane->scan_pages(
+    Gscan2pdf::Frontend::Image_Sane->scan_pages(
         dir              => $self->get('dir'),
         npages           => $npages,
         start            => $start,
@@ -475,7 +475,7 @@ sub scan {
 }
 
 sub cancel_scan {
-    Gscan2pdf::Frontend::Sane->cancel_scan;
+    Gscan2pdf::Frontend::Image_Sane->cancel_scan;
     $logger->info('Cancelled scan');
     return;
 }

@@ -5,7 +5,7 @@ use warnings;
 no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Carp;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Sane 0.05;              # For enums
+use Image::Sane ':all';     # For enums
 use Storable qw(dclone);    # For cloning the options cache
 use feature 'switch';
 use Readonly;
@@ -109,7 +109,7 @@ sub device {
     return $device;
 }
 
-# Parse out the geometry from libsane-perl or scanimage option names
+# Parse out the geometry from libimage-sane-perl or scanimage option names
 
 sub parse_geometry {
     my ($self) = @_;

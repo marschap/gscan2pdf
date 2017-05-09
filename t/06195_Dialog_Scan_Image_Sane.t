@@ -6,7 +6,7 @@ use Gtk2 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 
 BEGIN {
-    use Gscan2pdf::Dialog::Scan::CLI;
+    use Gscan2pdf::Dialog::Scan::Image_Sane;
 }
 
 #########################
@@ -17,9 +17,9 @@ Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;
-Gscan2pdf::Frontend::CLI->setup($logger);
+Gscan2pdf::Frontend::Image_Sane->setup($logger);
 
-my $dialog = Gscan2pdf::Dialog::Scan::CLI->new(
+my $dialog = Gscan2pdf::Dialog::Scan::Image_Sane->new(
     title           => 'title',
     'transient-for' => $window,
     'logger'        => $logger
@@ -69,4 +69,5 @@ $dialog->set( 'device-list',
     [ { 'name' => 'test:0' }, { 'name' => 'test:1' } ] );
 Gtk2->main;
 
+Gscan2pdf::Frontend::Image_Sane->quit;
 __END__

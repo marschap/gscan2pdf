@@ -6,7 +6,7 @@ no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use feature 'switch';
 use Carp;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Sane 0.05;              # For enums
+use Image::Sane ':all';     # For enums
 use Storable qw(dclone);
 use Readonly;
 Readonly my $EMPTY_ARRAY => -1;

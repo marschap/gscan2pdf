@@ -46,9 +46,11 @@ no if $] >= 5.018, warnings => 'experimental::smartmatch';
 
 use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Sane;
+use Gscan2pdf::Frontend::Image_Sane;
 use Gscan2pdf::Frontend::CLI;
 use Gscan2pdf::Scanner::Profile;
 use Gscan2pdf::Dialog::Scan::Sane;
+use Gscan2pdf::Dialog::Scan::Image_Sane;
 use Gscan2pdf::Dialog::Scan::CLI;
 use Gscan2pdf::Tesseract;
 use Gscan2pdf::Ocropus;
@@ -57,15 +59,15 @@ use Gscan2pdf::Unpaper;
 use Gscan2pdf::Dialog::Renumber;
 use Gscan2pdf::Canvas;
 use Gscan2pdf::Config;
-use Sane 0.05;    # To get SANE_* enums
+use Image::Sane ':all';    # To get SANE_* enums
 use Gtk2::ImageView;
 use Gtk2::Ex::Simple::List;
-use Gtk2 -init;    # Could just call init separately
+use Gtk2 -init;            # Could just call init separately
 use Gtk2::Gdk::Keysyms;
-use Cwd;               # To obtain current working directory
-use File::Basename;    # Split filename into dir, file, ext
+use Cwd;                   # To obtain current working directory
+use File::Basename;        # Split filename into dir, file, ext
 use File::Copy;
-use File::Temp;        # To create temporary files
+use File::Temp;            # To create temporary files
 use File::Path qw(remove_tree);
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use PDF::API2;
@@ -172,8 +174,9 @@ $logger->info( 'Using GtkImageView version ',
     Gtk2::ImageView->library_version );
 $logger->info("Using Gtk2::ImageView version $Gtk2::ImageView::VERSION");
 $logger->info("Using PDF::API2 version $PDF::API2::VERSION");
-$logger->info( 'Using Sane version ' . join $DOT, Sane->get_version );
+$logger->info( 'Using Sane version ' . join $DOT, Image::Sane->get_version );
 $logger->info("Using libsane-perl version $Sane::VERSION");
+$logger->info("Using libimage-sane-perl version $Image::Sane::VERSION");
 
 if ($debug) { $logger->debug( Dumper( \%SETTING ) ) }
 
@@ -189,6 +192,7 @@ Gscan2pdf::Document->setup($logger);
 
 # Initialise SANE frontends
 Gscan2pdf::Frontend::Sane->setup($logger);
+Gscan2pdf::Frontend::Image_Sane->setup($logger);
 Gscan2pdf::Frontend::CLI->setup($logger);
 
 # Update list in Gscan2pdf::Document so that it can be used by get_resolution
@@ -424,7 +428,7 @@ sub parse_arguments {
         'version' => sub { warn "$prog_name $VERSION\n"; exit 0 },
     );
     if ( not GetOptions(@args) ) { exit 1 }
-    $Sane::DEBUG = $debug;
+    $Image::Sane::DEBUG = $debug;
 
     if ( not defined $log_level ) {
         if ( defined $log ) {
@@ -509,8 +513,8 @@ sub read_config {
 
     # Delete the options cache if there is a new version of SANE
     Gscan2pdf::Config::check_sane_version( \%config,
-        join( $DOT, Sane->get_version ),
-        $Sane::VERSION );
+        join( $DOT, Image::Sane->get_version ),
+        $Image::Sane::VERSION );
     return $rcf, %config;
 }
 
@@ -3420,6 +3424,10 @@ sub scan_dialog {
         $windows = Gscan2pdf::Dialog::Scan::Sane->new( %options,
             'cycle-sane-handle' => $SETTING{'cycle sane handle'}, );
     }
+    elsif ( $SETTING{frontend} eq 'libimage-sane-perl' ) {
+        $windows = Gscan2pdf::Dialog::Scan::Image_Sane->new( %options,
+            'cycle-sane-handle' => $SETTING{'cycle sane handle'}, );
+    }
     else {
         $windows = Gscan2pdf::Dialog::Scan::CLI->new(
             %options,
@@ -5923,6 +5931,7 @@ sub quit {
 sub kill_threads {
     $logger->info('Killing Sane thread(s)');
     Gscan2pdf::Frontend::Sane->quit();
+    Gscan2pdf::Frontend::Image_Sane->quit();
     $logger->info('Killing document thread(s)');
     Gscan2pdf::Document->quit();
     return;
@@ -6279,7 +6288,9 @@ sub preferences {
                         push @{ $SETTING{'scan-reload-triggers'} }, $_->[0];
                     }
                 }
-                if ( $SETTING{frontend} ne 'libsane-perl' ) {
+                if (    $SETTING{frontend} ne 'libsane-perl'
+                    and $SETTING{frontend} ne 'libimage-sane-perl' )
+                {
                     $windows->set( 'visible-scan-options',
                         $SETTING{'visible-scan-options'} );
                     $windows->set( 'reload-triggers',
@@ -6308,7 +6319,9 @@ sub preferences {
             $SETTING{'convert whitespace to underscores'} = $cbb->get_active;
 
             if ( defined $windows ) {
-                if ( $SETTING{frontend} eq 'libsane-perl' ) {
+                if (   $SETTING{frontend} eq 'libsane-perl'
+                    or $SETTING{frontend} eq 'libimage-sane-perl' )
+                {
                     $windows->set( 'cycle-sane-handle',
                         $SETTING{'cycle sane handle'} );
                 }
@@ -6383,19 +6396,14 @@ sub _preferences_scan_options {
             $d->get('Scan using the perl bindings for SANE.')
         ],
         [
+            'libimage-sane-perl',
+            $d->get('libimage-sane-perl'),
+            $d->get('Scan using the perl bindings for SANE.')
+        ],
+        [
             'scanimage',
             $d->get('scanimage'),
             $d->get('Scan using the scanimage frontend.')
-        ],
-        [
-            'scanimage-perl',
-            $d->get('scanimage-perl'),
-            $d->get('Scan using the scanimage-perl frontend.')
-        ],
-        [
-            'scanadf-perl',
-            $d->get('scanadf-perl'),
-            $d->get('Scan using the scanadf-perl frontend.')
         ],
     );
     if ( $dependencies{scanadf} ) {
@@ -6581,20 +6589,13 @@ sub _preferences_scan_options {
 
     $combob->signal_connect(
         changed => sub {
-            if ( $frontends[ $combob->get_active ][0] eq 'libsane-perl' ) {
-                $cbcsh->set_sensitive(TRUE);
-                $hboxp->set_sensitive(FALSE);
-                $cbc->set_sensitive(FALSE);
-                $buttonc->set_sensitive(FALSE);
-                $oframe->set_sensitive(FALSE);
-            }
-            else {
-                $cbcsh->set_sensitive(FALSE);
-                $hboxp->set_sensitive(TRUE);
-                $cbc->set_sensitive(TRUE);
-                $buttonc->set_sensitive(TRUE);
-                $oframe->set_sensitive(TRUE);
-            }
+            my $libsane_active = $frontends[ $combob->get_active ][0] =~
+              /lib(:?image-)?sane-perl/xsm;
+            $cbcsh->set_sensitive($libsane_active);
+            $hboxp->set_sensitive( not $libsane_active );
+            $cbc->set_sensitive( not $libsane_active );
+            $buttonc->set_sensitive( not $libsane_active );
+            $oframe->set_sensitive( not $libsane_active );
         }
     );
     combobox_set_active( $combob, $SETTING{frontend}, @frontends );
@@ -7011,7 +7012,7 @@ sub show_message_dialog {
         try { $area = $dialog->get_message_area }
         catch {
             try { $area = $dialog->get_content_area }
-            catch { $area = $dialog->vbox }
+            catch { $area = $dialog->vbox };
         };
         if ( defined $area ) { $area->add($cb) }
     }
@@ -7232,7 +7233,11 @@ API library for scanners
 
 =item libsane-perl
 
-Perl bindings for libsane.
+Original Perl bindings for libsane.
+
+=item libimage-sane-perl
+
+New Perl bindings for libsane.
 
 =item libset-intspan-perl
 
@@ -7522,22 +7527,25 @@ unsharp, etc., since the last OCR run was made.
 The preferences menu item allows the control of the default behaviour of various
 functions. Most of these are self-explanatory.
 
-=head4 Frontend
+=head4 Frontends
 
-gscan2pdf supports two frontends, scanimage and scanadf.
+gscan2pdf initially supported two frontends, scanimage and scanadf.
 scanadf support was added when it was realised that scanadf works better than
 scanimage with some scanners. On Debian-based systems, scanadf is in the sane package,
 not, like scanimage, in sane-utils. If scanadf is not present, the option is
 obviously ghosted out.
 
-In 0.9.27, Perl bindings for SANE were introduced and two further frontends,
-scanimage-perl and scanadf-perl (scanimage and scanadf transliterated from C into
-Perl) were added.
+In 0.9.27, Perl bindings for SANE were introduced. These are called
+libsane-perl.
 
 Before 1.2.0, options available through CLI frontends like scanimage were made
 visible as users asked for them. In 1.2.0, all options can be shown or hidden
 via Edit/Preferences, along with the ability to specify which options trigger a
 reload.
+
+In 1.8.0, New Perl bindings for SANE were introduced. These are called
+libimage-sane-perl and are the preferred frontend. Support for libsane-perl is
+likely to be removed as soon as libimage-sane-perl is seen to be stable.
 
 =head4 Device blacklist
 

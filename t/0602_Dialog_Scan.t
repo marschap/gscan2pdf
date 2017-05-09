@@ -3,10 +3,10 @@ use strict;
 use Test::More tests => 14;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
-use Sane 0.05;              # To get SANE_* enums
+use Image::Sane ':all';     # To get SANE_* enums
 
 BEGIN {
-    use Gscan2pdf::Dialog::Scan::Sane;
+    use Gscan2pdf::Dialog::Scan::Image_Sane;
 }
 
 #########################
@@ -17,9 +17,9 @@ Glib::set_application_name('gscan2pdf');
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;
-Gscan2pdf::Frontend::Sane->setup($logger);
+Gscan2pdf::Frontend::Image_Sane->setup($logger);
 
-my $dialog = Gscan2pdf::Dialog::Scan::Sane->new(
+my $dialog = Gscan2pdf::Dialog::Scan::Image_Sane->new(
     title           => 'title',
     'transient-for' => $window,
     'logger'        => $logger
@@ -205,5 +205,5 @@ is( Gscan2pdf::Dialog::Scan::get_combobox_num_rows( $dialog->{combobp} ),
 is( $dialog->{combobp}->get_active_text,
     'Manual', 'paper combobox has a value' );
 
-Gscan2pdf::Frontend::Sane->quit;
+Gscan2pdf::Frontend::Image_Sane->quit;
 __END__

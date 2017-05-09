@@ -67,6 +67,7 @@ Gscan2pdf::Config::add_defaults( \%output );
     version                             => '1.3.3',
     'SANE version'                      => undef,
     'libsane-perl version'              => undef,
+    'libimage-sane-perl version'        => undef,
     window_width                        => 800,
     window_height                       => 600,
     window_maximize                     => TRUE,

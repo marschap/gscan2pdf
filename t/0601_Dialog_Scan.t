@@ -3,7 +3,7 @@ use strict;
 use Test::More tests => 10;
 use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
 use Gtk2 -init;              # Could just call init separately
-use Sane 0.05;               # To get SANE_* enums
+use Image::Sane ':all';      # To get SANE_* enums
 use Locale::gettext 1.05;    # For translations
 
 BEGIN {

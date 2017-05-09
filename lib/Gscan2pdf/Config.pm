@@ -210,6 +210,7 @@ sub add_defaults {
         version                             => undef,
         'SANE version'                      => undef,
         'libsane-perl version'              => undef,
+        'libimage-sane-perl version'        => undef,
         selection                           => undef,
         cwd                                 => undef,
         title                               => undef,
@@ -384,12 +385,19 @@ sub check_sane_version {
         )
         or ( defined $SETTING->{'libsane-perl version'}
             and $SETTING->{'libsane-perl version'} ne $LIBSANEPERL )
+
+      #        or ( not defined $SETTING->{'libimage-sane-perl version'}
+      #            or $SETTING->{'libimage-sane-perl version'} ne $LIBSANEPERL )
       )
     {
         if ( defined $SETTING->{cache} ) { delete $SETTING->{cache} }
     }
     $SETTING->{'SANE version'}         = $SANE;
     $SETTING->{'libsane-perl version'} = $LIBSANEPERL;
+
+    #    if ( defined $SETTING->{'libsane-perl version'} ) {
+    #        delete $SETTING->{'libsane-perl version'};
+    #    }
     return;
 }
 

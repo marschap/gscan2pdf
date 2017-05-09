@@ -16,7 +16,7 @@ use IO::Handle;
 use Gscan2pdf::NetPBM;
 use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Dialog::Scan;
-use Sane 0.05;    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
+use Image::Sane ':all';    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Cwd;
 use File::Spec;
 use Readonly;

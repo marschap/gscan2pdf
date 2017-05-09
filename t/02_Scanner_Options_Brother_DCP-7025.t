@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Sane 0.05;    # For enums
+use Image::Sane ':all';    # For enums
 use Test::More tests => 3;
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
