@@ -332,28 +332,8 @@ sub INIT_INSTANCE {
         }
     );
     $self->signal_connect(
-        'changed-scan-option' => sub {
-            my ( $widget, $name, $value ) = @_;
-            if ( $name eq 'source' ) {
-                if (   $self->get('allow-batch-flatbed')
-                    or $value !~ /flatbed/xsmi )
-                {
-                    $self->{framen}->set_sensitive(TRUE);
-                }
-                else {
-                    $bscannum->set_active(TRUE);
-                    $self->set( 'num-pages', 1 );
-                    $self->{framen}->set_sensitive(FALSE);
-                }
-
-                if (    $self->get('adf-defaults-scan-all-pages')
-                    and $value =~ /(ADF|Automatic[ ]Document[ ]Feeder)/xsmi )
-                {
-                    $self->set( 'num-pages', 0 );
-                }
-            }
-
-        }
+        'changed-scan-option' => \&_changed_scan_option_callback,
+        $bscannum
     );
 
     # Actively set a radio button to synchronise GUI and properties
@@ -796,6 +776,33 @@ sub SET_PROPERTY {
     return;
 }
 
+sub _changed_scan_option_callback {
+    my ( $self, $name, $value, $bscannum ) = @_;
+    my $options = $self->get('available-scan-options');
+    if (    defined $options
+        and defined $options->{source}
+        and $name eq $options->{source}{name} )
+    {
+        if (   $self->get('allow-batch-flatbed')
+            or $value !~ /flatbed/xsmi )
+        {
+            $self->{framen}->set_sensitive(TRUE);
+        }
+        else {
+            $bscannum->set_active(TRUE);
+            $self->set( 'num-pages', 1 );
+            $self->{framen}->set_sensitive(FALSE);
+        }
+
+        if (    $self->get('adf-defaults-scan-all-pages')
+            and $value =~ /(ADF|Automatic[ ]Document[ ]Feeder)/xsmi )
+        {
+            $self->set( 'num-pages', 0 );
+        }
+    }
+    return;
+}
+
 sub _set_allow_batch_flatbed {
     my ( $self, $name, $newval ) = @_;
     $self->{$name} = $newval;
@@ -805,8 +812,8 @@ sub _set_allow_batch_flatbed {
     else {
         my $options = $self->get('available-scan-options');
         if (    defined $options
-            and $options->by_name('source')
-            and $options->by_name('source')->{val} =~ /flatbed/xsmi )
+            and defined $options->{source}
+            and $options->{source}{val} =~ /flatbed/xsmi )
         {
             $self->{framen}->set_sensitive(FALSE);
 
@@ -822,9 +829,9 @@ sub _set_available_scan_options {
     my ( $self, $name, $newval ) = @_;
     $self->{$name} = $newval;
     if (    not $self->get('allow-batch-flatbed')
-        and $newval->by_name('source')
-        and $newval->by_name('source')->{val}
-        and $newval->by_name('source')->{val} =~ /flatbed/xsmi )
+        and defined $newval->{source}
+        and defined $newval->{source}{val}
+        and $newval->{source}{val} =~ /flatbed/xsmi )
     {
         if ( $self->get('num-pages') != 1 ) { $self->set( 'num-pages', 1 ) }
         $self->{framen}->set_sensitive(FALSE);
@@ -843,8 +850,8 @@ sub _set_num_pages {
            $newval == 1
         or $self->get('allow-batch-flatbed')
         or (    defined $options
-            and $options->by_name('source')
-            and $options->by_name('source')->{val} !~ /flatbed/xsmi )
+            and defined $options->{source}
+            and $options->{source}{val} !~ /flatbed/xsmi )
       )
     {
         $self->{$name} = $newval;

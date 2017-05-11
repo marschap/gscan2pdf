@@ -47,6 +47,19 @@ sub new_from_data {
         }
     }
 
+    # find source option
+    if ( defined $self->by_name('source') ) {
+        $self->{source} = $self->by_name('source');
+    }
+    else {
+        for my $option ( @{ $self->{array} } ) {
+            if ( defined $option->{name} and $option->{name} =~ /source/xsm ) {
+                $self->{source} = $option;
+                last;
+            }
+        }
+    }
+
     $self->parse_geometry;
     return $self;
 }
