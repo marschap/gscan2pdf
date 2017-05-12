@@ -230,7 +230,8 @@ sub scan_options {
                 $cache->{ $self->get('device') }{$cache_key} );
             $self->signal_emit( 'fetched-options-cache', $self->get('device'),
                 $cache_key );
-            $logger->info($options);
+            $logger->info( "Fetched cached options for key $cache_key: ",
+                Dumper($options) );
             $self->_initialise_options($options);
 
             $self->signal_emit( 'finished-process', 'find_scan_options' );
@@ -264,6 +265,7 @@ sub scan_options {
         },
         finished_callback => sub {
             my ($options) = @_;
+            $logger->debug( 'scanimage --help returned: ', Dumper($options) );
             $pbar->destroy;
             $hboxd->show_all;
             if ( $self->get('cache-options') ) {
@@ -295,6 +297,7 @@ sub scan_options {
                 }
                 $self->set( 'options-cache', $cache );
                 $self->signal_emit( 'changed-options-cache', $cache );
+                $logger->debug("Cached options with key: $cache_key");
             }
             $self->_initialise_options($options);
 
@@ -318,7 +321,6 @@ sub scan_options {
 
 sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
     my ( $self, $options ) = @_;
-    $logger->debug( 'scanimage --help returned: ', Dumper($options) );
 
     my ( $group, $vbox, $hboxp );
     my $num_dev_options = $options->num_options;
