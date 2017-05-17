@@ -210,7 +210,6 @@ sub _transform_text {
         my ( $x1, $y1, $x2, $y2 ) = @{ $g->{bbox} };
         my $x_size = abs $x2 - $x1;
         my $y_size = abs $y2 - $y1;
-        $g->{_scale} = $scale;
         $g->{_angle} = $angle;
         $text->set_simple_transform( 0, 0, $scale, $angle );
         my $bounds   = $text->get_bounds;
