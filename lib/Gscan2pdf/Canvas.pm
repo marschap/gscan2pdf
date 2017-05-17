@@ -45,7 +45,7 @@ sub new {
 
     # Attach the text to the canvas
     for my $box ( @{ $page->boxes } ) {
-        boxed_text( $self->get_root_item, $box, $edit_callback, 0, 0, 0 );
+        boxed_text( $self->get_root_item, $box, [ 0, 0, 0 ], $edit_callback );
     }
     $self->{page} = $page;
     bless $self, $class;
@@ -55,7 +55,8 @@ sub new {
 # Draw text on the canvas with a box around it
 
 sub boxed_text {
-    my ( $root, $box, $edit_callback, $rotation, $x0, $y0 ) = @_;
+    my ( $root, $box, $transformation, $edit_callback ) = @_;
+    my ( $rotation, $x0, $y0 ) = @{$transformation};
     my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
     my $x_size = abs $x2 - $x1;
     my $y_size = abs $y2 - $y1;
@@ -131,8 +132,8 @@ sub boxed_text {
     }
     if ( $box->{contents} ) {
         for my $box ( @{ $box->{contents} } ) {
-            boxed_text( $g, $box, $edit_callback, $textangle + $rotation,
-                $x1, $y1 );
+            boxed_text( $g, $box, [ $textangle + $rotation, $x1, $y1 ],
+                $edit_callback );
         }
     }
 
