@@ -478,14 +478,14 @@ my $djvu = <<'EOS';
         (word 1409 3031 1725 3101 "GANGE")))))
 EOS
 
-$expected =
-qr{^<\?xml version="1.0" encoding="UTF-8"\?>
+$expected = <<"EOS";
+<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
+  <meta name='ocr-system' content='gscan2pdf $Gscan2pdf::Page::VERSION' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
@@ -503,10 +503,11 @@ qr{^<\?xml version="1.0" encoding="UTF-8"\?>
    </div>
   </div>
  </body>
-</html>};
+</html>
+EOS
 
 $page->import_djvutext($djvu);
-like( $page->{hocr}, $expected, 'import_djvutext() basic functionality' );
+is( $page->{hocr}, $expected, 'import_djvutext() basic functionality' );
 
 #########################
 
@@ -515,14 +516,14 @@ $djvu = <<'EOS';
   (word 157 3030 241 3095 "("))
 EOS
 
-$expected =
-qr{^<\?xml version="1.0" encoding="UTF-8"\?>
+$expected = <<"EOS";
+<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
+  <meta name='ocr-system' content='gscan2pdf $Gscan2pdf::Page::VERSION' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
@@ -530,10 +531,11 @@ qr{^<\?xml version="1.0" encoding="UTF-8"\?>
    <span class='ocr_word' title='bbox 157 412 241 477'>\(</span>
   </div>
  </body>
-</html>$};
+</html>
+EOS
 
 $page->import_djvutext($djvu);
-like( $page->{hocr}, $expected, 'import_djvutext() with quoted brackets' );
+is( $page->{hocr}, $expected, 'import_djvutext() with quoted brackets' );
 
 #########################
 
@@ -557,14 +559,14 @@ my $pdftext = <<'EOS';
 </html>
 EOS
 
-$expected =
-qr{^<\?xml version="1.0" encoding="UTF-8"\?>
+$expected = <<"EOS";
+<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
+  <meta name='ocr-system' content='gscan2pdf $Gscan2pdf::Page::VERSION' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
@@ -575,21 +577,22 @@ qr{^<\?xml version="1.0" encoding="UTF-8"\?>
    <span class='ocr_word' title='bbox 393 23 461 46'>fox</span>
   </div>
  </body>
-</html>};
+</html>
+EOS
 
 $page->import_pdftotext($pdftext);
-like( $page->{hocr}, $expected, 'import_pdftotext() basic functionality' );
+is( $page->{hocr}, $expected, 'import_pdftotext() basic functionality' );
 
 #########################
 
-$expected =
-qr{^<\?xml version="1.0" encoding="UTF-8"\?>
+$expected = <<"EOS";
+<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
+  <meta name='ocr-system' content='gscan2pdf $Gscan2pdf::Page::VERSION' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
@@ -600,11 +603,12 @@ qr{^<\?xml version="1.0" encoding="UTF-8"\?>
    <span class='ocr_word' title='bbox 1638 95 1920 193'>fox</span>
   </div>
  </body>
-</html>};
+</html>
+EOS
 
 $page->{resolution} = 300;
 $page->import_pdftotext($pdftext);
-like( $page->{hocr}, $expected, 'import_pdftotext() with resolution' );
+is( $page->{hocr}, $expected, 'import_pdftotext() with resolution' );
 
 #########################
 

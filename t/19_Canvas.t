@@ -68,14 +68,14 @@ my $text = $group->get_child(1);
 
 $canvas->set_box_text( $text, 'No' );
 
-my $example1 =
-qr{^<\?xml version="1.0" encoding="UTF-8"\?>
+my $expected = <<"EOS";
+<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
+  <meta name='ocr-system' content='gscan2pdf $Gscan2pdf::Canvas::VERSION' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
@@ -90,22 +90,23 @@ qr{^<\?xml version="1.0" encoding="UTF-8"\?>
    </div>
   </div>
  </body>
-</html>$};
+</html>
+EOS
 
-like($page->{hocr}, $example1, 'updated hocr' );
+is( $page->{hocr}, $expected, 'updated hocr' );
 
 #########################
 
 $canvas->set_box_text( $text, '<em>No</em>' );
 
-my $example2 =
-qr{^<\?xml version="1.0" encoding="UTF-8"\?>
+$expected = <<"EOS";
+<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
+  <meta name='ocr-system' content='gscan2pdf $Gscan2pdf::Canvas::VERSION' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
@@ -120,9 +121,10 @@ qr{^<\?xml version="1.0" encoding="UTF-8"\?>
    </div>
   </div>
  </body>
-</html>$};
+</html>
+EOS
 
-like($page->{hocr}, $example2, 'updated hocr with HTML-escape characters' );
+is( $page->{hocr}, $expected, 'updated hocr with HTML-escape characters' );
 
 #########################
 
@@ -180,21 +182,21 @@ $text = $group->get_child(1);
 
 $canvas->set_box_text( $text, 'No' );
 
-my $example3 =
-qr{^<\?xml version="1.0" encoding="UTF-8"\?>
+$expected = <<"EOS";
+<\?xml version="1.0" encoding="UTF-8"\?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
  <head>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-  <meta name='ocr-system' content='gscan2pdf \d+(?:\.\d+)+' />
+  <meta name='ocr-system' content='gscan2pdf $Gscan2pdf::Canvas::VERSION' />
   <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
  </head>
  <body>
   <div class='ocr_page' id='page_1' title='bbox 0 0 204 288'>
    <div class='ocr_carea' id='block_1_1' title='bbox 1 14 202 286'>
     <span class='ocr_line' id='line_1_1' title='bbox 1 14 202 59; baseline 0.008 -9'>
-     <span class='ocr_word' id='word_1_1' title='bbox 1 14 77 48; x_wconf 100'>No</span>
+     <span class='ocr_word' id='word_1_1' title='bbox 1 14 77 48; x_wconf -3'>The</span>
      <span class='ocr_word' id='word_1_2' title='bbox 92 14 202 59; x_wconf -3'>quick</span>
     </span>
     <span class='ocr_line' id='line_1_2' title='bbox 1 80 35 286; textangle 90'>
