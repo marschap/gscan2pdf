@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 4;
+use Test::More tests => 11;
 use Gscan2pdf::Page;
 
 BEGIN {
@@ -174,13 +174,25 @@ EOS
 
 $canvas = Gscan2pdf::Canvas->new($page);
 $group  = $canvas->get_root_item;
-$group = $group->get_child(0);
-$group = $group->get_child(1);
-$group = $group->get_child(1);
-$group = $group->get_child(1);
-$text = $group->get_child(1);
+$group  = $group->get_child(0);
+$group  = $group->get_child(1);
+$group  = $group->get_child(1);
+$group  = $group->get_child(2);
+$text   = $group->get_child(1);
 
-$canvas->set_box_text( $text, 'No' );
+SKIP: {
+    if ( $Goo::Canvas::VERSION < 0.07 ) {
+        skip 'Goo::Canvas::get_transform() segfaults', 6;
+    }
+    my $matrix = $text->get_transform;
+
+    is( $matrix->x0, -103.251044000815, 'rotated text x0' );
+    is( $matrix->y0, -42.1731768180892, 'rotated text y0' );
+    is( $matrix->xx, 2.86820126298635,  'rotated text xx' );
+    is( $matrix->xy, 0,                 'rotated text xy' );
+    is( $matrix->yx, 0,                 'rotated text yx' );
+    is( $matrix->yy, 2.86820126298635,  'rotated text yy' );
+}
 
 $expected = <<"EOS";
 <\?xml version="1.0" encoding="UTF-8"\?>
@@ -206,9 +218,42 @@ $expected = <<"EOS";
    </div>
   </div>
  </body>
-</html>$};
+</html>
+EOS
 
-like($page->{hocr}, $example3, 'updated hocr with extended hOCR properties' );
+$canvas->canvas2hocr;
+is( $page->{hocr}, $expected, 'updated hocr with extended hOCR properties' );
+
+#########################
+
+$page = Gscan2pdf::Page->new(
+    filename   => 'test.pnm',
+    format     => 'Portable anymap',
+    resolution => 72,
+    dir        => File::Temp->newdir,
+);
+
+$page->{hocr} = 'The quick brown fox';
+
+$canvas   = Gscan2pdf::Canvas->new($page);
+$expected = <<"EOS";
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name='ocr-system' content='gscan2pdf $Gscan2pdf::Canvas::VERSION' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocr_word'/>
+ </head>
+ <body>
+  <div class='ocr_page'  title='bbox 0 0 70 46'>The quick brown fox</div>
+ </body>
+</html>
+EOS
+
+$canvas->canvas2hocr;
+is( $canvas->{page}{hocr}, $expected, 'canvas2hocr from simple text' );
 
 #########################
 
