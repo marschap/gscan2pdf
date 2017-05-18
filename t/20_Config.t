@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Gscan2pdf::Document;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Test::More tests => 13;
+use Test::More tests => 14;
 
 BEGIN {
     use_ok('Gscan2pdf::Config');
@@ -118,7 +118,7 @@ Gscan2pdf::Config::add_defaults( \%output );
     'frontend'                          => 'libsane-perl',
     'rotate facing'                     => 0,
     'rotate reverse'                    => 0,
-    'default filename'                  => '%a %y-%m-%d',
+    'default filename'                  => '%Da %DY-%Dm-%Dd',
     'convert whitespace to underscores' => FALSE,
     'scan prefix'                       => $EMPTY,
     'Blank threshold'                   => 0.005,
@@ -402,6 +402,26 @@ close $fh or die "Error: cannot close $rc\n";
 %output = Gscan2pdf::Config::read_config( $rc, $logger );
 
 is_deeply( \%output, \%example, 'remove undefined profiles' );
+
+#########################
+
+$config = <<'EOS';
+{
+   "default filename" : "%a %t %y %Y %m %M %d %D %H %I %S",
+   "version" : "1.8.0"
+}
+EOS
+open $fh, '>', $rc or die "Error: cannot open $rc\n";
+print $fh $config;
+close $fh or die "Error: cannot close $rc\n";
+
+%example = (
+    "default filename" => "%Da %Dt %DY %Y %Dm %m %Dd %d %H %M %S",
+    "version"          => "1.8.0"
+);
+%output = Gscan2pdf::Config::read_config( $rc, $logger );
+
+is_deeply( \%output, \%example, 'convert pre-1.8.1 filename codes' );
 
 #########################
 

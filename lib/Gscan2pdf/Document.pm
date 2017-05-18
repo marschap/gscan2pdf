@@ -34,14 +34,14 @@ use Set::IntSpan 1.10;               # For size method for page numbering issues
 use PDF::API2;
 use English qw( -no_match_vars );    # for $PROCESS_ID, $INPUT_RECORD_SEPARATOR
                                      # $CHILD_ERROR
-use POSIX qw(:sys_wait_h);
+use POSIX qw(:sys_wait_h strftime);
 use Data::UUID;
 use Date::Calc qw(Add_Delta_Days Date_to_Time Today);
 use Readonly;
 Readonly our $POINTS_PER_INCH             => 72;
 Readonly my $STRING_FORMAT                => 8;
-Readonly my $_POLL_INTERVAL               => 100;    # ms
-Readonly my $THUMBNAIL                    => 100;    # pixels
+Readonly my $_POLL_INTERVAL               => 100;     # ms
+Readonly my $THUMBNAIL                    => 100;     # pixels
 Readonly my $_100PERCENT                  => 100;
 Readonly my $YEAR                         => 5;
 Readonly my $BOX_TOLERANCE                => 5;
@@ -55,6 +55,8 @@ Readonly my $MONTHS_PER_YEAR              => 12;
 Readonly my $DAYS_PER_MONTH               => 31;
 Readonly my $ID_URI                       => 0;
 Readonly my $ID_PAGE                      => 1;
+Readonly my $STRFTIME_YEAR_OFFSET         => -1900;
+Readonly my $STRFTIME_MONTH_OFFSET        => -1;
 
 BEGIN {
     use Exporter ();
@@ -84,6 +86,7 @@ my $jobs_total     = 0;
 my $uuid_object    = Data::UUID->new;
 my $EMPTY          = q{};
 my $SPACE          = q{ };
+my $PERCENT        = q{%};
 my ( $_self, $d, $logger, $paper_sizes, %callback );
 
 my %format = (
@@ -1909,21 +1912,32 @@ sub expand_metadata_pattern {
       text_to_date( $data{docdate}, @{ $data{today_and_now} } );
     my ( $tyear, $tmonth, $tday, $thour, $tmin, $tsec ) =
       @{ $data{today_and_now} };
-    for ( ( $dmonth, $dday, $tmonth, $tday, $thour, $tmin, $tsec ) ) {
-        if (defined) { $_ = sprintf '%02d', $_ }
+    if ( not defined $thour ) { $thour = 0 }
+    if ( not defined $tmin )  { $tmin  = 0 }
+    if ( not defined $tsec )  { $tsec  = 0 }
+
+    # Expand author and title
+    $data{template} =~ s/%Da/$data{author}/gsm;
+    $data{template} =~ s/%Dt/$data{title}/gsm;
+
+    # Expand convert %Dx code to %x, convert using strftime and replace
+    while ( $data{template} =~ /%D([[:alpha:]])/smx ) {
+        my $code     = $1;
+        my $template = "$PERCENT$code";
+        my $result   = POSIX::strftime(
+            $template, $tsec, $tmin, $thour, $dday,
+            $dmonth + $STRFTIME_MONTH_OFFSET,
+            $dyear + $STRFTIME_YEAR_OFFSET
+        );
+        $data{template} =~ s/%D$code/$result/gsmx;
     }
 
-    $data{template} =~ s/%a/$data{author}/gsm;
-    $data{template} =~ s/%t/$data{title}/gsm;
-    $data{template} =~ s/%y/$dyear/gsm;
-    $data{template} =~ s/%Y/$tyear/gsm;
-    $data{template} =~ s/%m/$dmonth/gsm;
-    $data{template} =~ s/%M/$tmonth/gsm;
-    $data{template} =~ s/%d/$dday/gsm;
-    $data{template} =~ s/%D/$tday/gsm;
-    $data{template} =~ s/%H/$thour/gsm;
-    $data{template} =~ s/%I/$tmin/gsm;
-    $data{template} =~ s/%S/$tsec/gsm;
+    # Expand basic strftime codes
+    $data{template} = POSIX::strftime(
+        $data{template}, $tsec, $tmin, $thour, $tday,
+        $tmonth + $STRFTIME_MONTH_OFFSET,
+        $tyear + $STRFTIME_YEAR_OFFSET
+    );
 
     # avoid leading and trailing whitespace in expanded filename template
     $data{template} =~ s/^\s*(.*?)\s*$/$1/xsm;

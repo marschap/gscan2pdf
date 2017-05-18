@@ -6630,7 +6630,7 @@ sub _preferences_general_options {
     $tooltips->set_tip(
         $fileentry,
         $d->get(
-"\%a\t author\n\%t\t title\n\%y\t document's year\n\%Y\t today's year\n\%m\t document's month\n\%M\t today's month\n\%d\t document's day\n\%D\t today's day\n\%H\t today's hour\n\%I\t today's minute\n\%S\t today's second"
+"strftime codes, e.g.:\n\%Y\tcurrent year\n\nwith the following additions:\n\%Da\t author\n\%Dt\t title\n\nAll document date codes use strftime codes with a leading D, e.g.:\n\%DY\t document year\n\%Dm\t document month\n\%Dd\t document day"
         )
     );
     $hbox->add($fileentry);

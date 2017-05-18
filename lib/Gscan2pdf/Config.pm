@@ -82,6 +82,29 @@ sub _pre_171 {
     return;
 }
 
+sub _pre_181 {
+    my ( $version, $SETTING ) = @_;
+    if ( version->parse($version) < version->parse('1.8.1') ) {
+
+        #        if ( defined $SETTING->{'frontend'}
+        #            and $SETTING->{'frontend'} eq 'libsane-perl' )
+        #        {
+        #            $SETTING->{'frontend'} = 'libimage-sane-perl';
+        #        }
+        if ( defined $SETTING->{'default filename'} ) {
+            $SETTING->{'default filename'} =~ s/%a/%Da/gsm;
+            $SETTING->{'default filename'} =~ s/%t/%Dt/gsm;
+            $SETTING->{'default filename'} =~ s/%y/%DY/gsm;
+            $SETTING->{'default filename'} =~ s/%m/%Dm/gsm;
+            $SETTING->{'default filename'} =~ s/%d/%Dd/gsm;
+            $SETTING->{'default filename'} =~ s/%M/%m/gsm;
+            $SETTING->{'default filename'} =~ s/%D\b/%d/gsmx;
+            $SETTING->{'default filename'} =~ s/%I/%M/gsm;
+        }
+    }
+    return;
+}
+
 sub read_config {
     my ( $filename, $logger ) = @_;
     my ( %SETTING, $conf );
@@ -146,6 +169,8 @@ sub read_config {
     _pre_151( $version, \%SETTING );
 
     _pre_171( $version, \%SETTING );
+
+    _pre_181( $version, \%SETTING );
 
     $logger->debug( Dumper( \%SETTING ) );
     return %SETTING;
@@ -225,7 +250,7 @@ sub add_defaults {
         'default-scan-options'              => undef,
         'rotate facing'                     => 0,
         'rotate reverse'                    => 0,
-        'default filename'                  => '%a %y-%m-%d',
+        'default filename'                  => '%Da %DY-%Dm-%Dd',
         'convert whitespace to underscores' => FALSE,
         'view files toggle'                 => TRUE,
         'threshold-before-ocr'              => FALSE,
