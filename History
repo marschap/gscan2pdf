@@ -1,4 +1,4 @@
-1.8.1 (12.05.2017):
+1.8.1 (27.05.2017):
 
 * Consistently ghost OCR and unpaper tools if the appropriate executables are
   not available. Closes bug #151 (Unpaper detection is not handled correctly).
@@ -13,6 +13,9 @@
   Closes bug #252 (Support for pbm nd ppm bitmap formats)
 * Fixed multipage scanning for Samsung CLX-4190.
 * Change metadata filename codes to use strftime
+* Many improvements to the display of OCR output.
+  Thanks to Peter Marschall for the patches.
+  Closes Debian bug #858767 (fixes & improvements to gscan2pdf)
 * Update to Hungarian translation (thanks to csola)
 * Update to Traditional Chinese translation (thanks to Po-Hsu Lin)
 * Update to Slovak translation (thanks to Dušan Kazik)
