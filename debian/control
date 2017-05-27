@@ -3,11 +3,21 @@ Section: utils
 Priority: optional
 Build-Depends: debhelper (>= 9)
 Build-Depends-Indep: perl (>= 5.8.0-7), gettext, libtest-pod-perl
+# libgtk2-imageview-perl, libgtk2-ex-simple-list-perl,
+# libsane-perl (>= 0.05~0), liblocale-gettext-perl (>= 1.05),
+# sane-utils (>= 1.0.17), libtiff-tools, libpdf-api2-perl,
+# libconfig-general-perl (>= 2.40), libimage-magick-perl, imagemagick,
+# librsvg2-common, libset-intspan-perl (>= 1.10), liblist-moreutils-perl,
+# libhtml-parser-perl, libgoo-canvas-perl, libproc-processtable-perl,
+# libreadonly-perl, liblog-log4perl-perl, libtry-tiny-perl,
+# libossp-uuid-perl | libdata-uuid-perl, libdate-calc-perl, xauth, xfonts-base,
+# xvfb, libatk-adaptor, libgail-common, libsub-override-perl, poppler-utils
 Maintainer: Jeffrey Ratcliffe <jjr@debian.org>
 Standards-Version: 3.9.8
 Vcs-git: https://gscan2pdf.git.sourceforge.net/gitroot/gscan2pdf
 Vcs-Browser: https://sourceforge.net/p/gscan2pdf/code/ci/master/tree/
 Homepage: http://gscan2pdf.sourceforge.net/
+#Testsuite: autopkgtest-pkg-perl
 
 Package: gscan2pdf
 Architecture: all
