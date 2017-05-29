@@ -4,8 +4,8 @@ use Test::More tests => 1;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Sane 0.05;              # To get SANE_* enums
-use Sub::Override;    # Override Frontend::Sane to test functionality that
-                      # we can't with the test backend
+use Sub::Override;          # Override Frontend::Sane to test functionality that
+                            # we can't with the test backend
 use Storable qw(freeze);    # For cloning the options cache
 
 BEGIN {
