@@ -48,12 +48,12 @@ SKIP: {
                 finished_callback => sub {
                     like(
 `convert $slist->{data}[0][2]{filename} -depth 1 -resize 1x1 txt:-`,
-                        qr/gray\((199|200)\)/,
+                        qr/gray\((199|200|201)\)/,
                         'valid PNM created for RH'
                     );
                     like(
 `convert $slist->{data}[1][2]{filename} -depth 1 -resize 1x1 txt:-`,
-                        qr/gray\((202|203)\)/,
+                        qr/gray\((202|203|204)\)/,
                         'valid PNM created for LH'
                     );
                     Gtk2->main_quit;
