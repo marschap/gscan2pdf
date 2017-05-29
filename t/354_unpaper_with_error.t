@@ -63,14 +63,14 @@ SKIP: {
 
             $slist->unpaper(
                 page           => $slist->{data}[0][2],
-                options        => $unpaper->get_cmdline,
+                options        => { command => $unpaper->get_cmdline },
                 error_callback => sub {
                     pass('caught error injected before unpaper');
                     chmod 0700, $dir;    # allow write access
 
                     $slist->unpaper(
                         page            => $slist->{data}[0][2],
-                        options         => $unpaper->get_cmdline,
+                        options         => { command => $unpaper->get_cmdline },
                         queued_callback => sub {
 
                             # inject error during unpaper

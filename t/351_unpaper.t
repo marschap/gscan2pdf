@@ -74,6 +74,9 @@ SKIP: {
                         list_of_pages     => [ $slist->{data}[0][2] ],
                         finished_callback => sub { Gtk2->main_quit }
                     );
+                },
+                error_callback => sub {
+                    fail 'no warnings';
                 }
             );
         }

@@ -62,7 +62,7 @@ SKIP: {
             system("echo '' > $slist->{data}[0][2]->{filename}");
             $slist->unpaper(
                 page              => $slist->{data}[0][2],
-                options           => $unpaper->get_cmdline,
+                options           => { command => $unpaper->get_cmdline },
                 finished_callback => sub {
                     Gtk2->main_quit;
                 },

@@ -4326,6 +4326,14 @@ sub _thread_unpaper {
         }
         return if $_self->{cancel};
 
+        $stdout =~ s/Processing[ ]sheet.*[.]pnm\n//xsm;
+        if ($stdout) {
+            $logger->warn($stdout);
+            _thread_throw_error( $self, $options{uuid},
+                "Warning running unpaper: $stdout" );
+            if ( not -s $out ) { return }
+        }
+
         if (    $options{options}{command} =~ /--output-pages[ ]2[ ]/xsm
             and defined $options{options}{direction}
             and $options{options}{direction} eq 'rtl' )
