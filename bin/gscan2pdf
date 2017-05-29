@@ -1185,11 +1185,14 @@ EOS
     }
 
     # Ghost ocr item if ocr not available
-    $dependencies{ocr} =
-          $dependencies{gocr}
-      or $dependencies{tesseract}
-      or $dependencies{ocropus}
-      or $dependencies{cuneiform};
+    # Brackets required, as otherwise = would have higher precedence. See
+    # http://perldoc.perl.org/perlop.html#Logical-or-and-Exclusive-Or
+    $dependencies{ocr} = (
+             $dependencies{gocr}
+          or $dependencies{tesseract}
+          or $dependencies{ocropus}
+          or $dependencies{cuneiform}
+    );
     if ( not $dependencies{ocr} ) {
         $msg .=
           $d->get("OCR requires gocr, tesseract, ocropus, or cuneiform\n");
