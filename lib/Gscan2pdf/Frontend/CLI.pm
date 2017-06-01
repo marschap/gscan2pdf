@@ -26,7 +26,7 @@ Readonly my $_1KB                         => 1024;
 Readonly my $ALL_PENDING_ZOMBIE_PROCESSES => -1;
 Readonly my $INFINITE_DOCUMENTS           => -1;
 
-our $VERSION = '1.8.1';
+our $VERSION = '1.8.2';
 
 my $EMPTY = q{};
 my $COMMA = q{,};
