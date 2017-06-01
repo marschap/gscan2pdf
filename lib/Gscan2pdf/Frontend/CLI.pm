@@ -22,9 +22,9 @@ use File::Spec;
 use Readonly;
 Readonly my $_POLL_INTERVAL               => 100;    # ms
 Readonly my $_100                         => 100;
-Readonly my $_SANE_STATUS_EOF             => 5;      # or we could use Sane
 Readonly my $_1KB                         => 1024;
 Readonly my $ALL_PENDING_ZOMBIE_PROCESSES => -1;
+Readonly my $INFINITE_DOCUMENTS           => -1;
 
 our $VERSION = '1.8.1';
 
@@ -153,6 +153,115 @@ sub scan_pages {
     return;
 }
 
+sub parse_scanimage_output {
+    my ( $line, $options ) = @_;
+    given ($line) {
+
+        # scanimage seems to produce negative progress percentages
+        # in some circumstances
+        when (/^Progress:[ ](-?\d*[.]\d*)%/xsm) {
+            if ( defined $options->{running_callback} ) {
+                $options->{running_callback}->( $1 / $_100 );
+            }
+        }
+        when (/^Scanning[ ](-?\d*|infinity)[ ]pages?/xsm) {
+            my $num = $1 eq 'infinity' ? $INFINITE_DOCUMENTS : $1;
+            if ( defined $options->{running_callback} ) {
+                $options->{running_callback}
+                  ->( 0, sprintf $d->get('Scanning %i pages...'), $num );
+            }
+        }
+        when (/^Scanning[ ]$page_no/xsm) {
+            if ( defined $options->{running_callback} ) {
+                $options->{running_callback}
+                  ->( 0, sprintf $d->get('Scanning page %i...'), $1 );
+            }
+        }
+        when (/^Scanned[ ]$page_no [.][ ][(]scanner[ ]status[ ]=[ ](\d)[)]/xsm)
+        {
+            my ( $id, $return ) = ( $1, $2 );
+            if ( $return == SANE_STATUS_EOF ) {
+                my $timer = Glib::Timeout->add(
+                    $_POLL_INTERVAL,
+                    sub {
+                        my $path =
+                          defined( $options->{dir} )
+                          ? File::Spec->catfile( $options->{dir}, "out$id.pnm" )
+                          : "out$id.pnm";
+                        if ( not -e $path ) {
+                            return Glib::SOURCE_CONTINUE;
+                        }
+                        if ( defined $options->{new_page_callback} ) {
+                            $options->{new_page_callback}->( $path, $id );
+                        }
+                        $options->{num_scans}++;
+                        return Glib::SOURCE_REMOVE;
+                    }
+                );
+            }
+        }
+        when ($mess_warmingup) {
+            if ( defined $options->{running_callback} ) {
+                $options->{running_callback}
+                  ->( 0, $d->get('Scanner warming up') );
+            }
+        }
+        when (
+/^$options->{frontend}:[ ]sane_start:[ ]Document[ ]feeder[ ]out[ ]of[ ]documents/xsm ## no critic (ProhibitComplexRegexes)
+          )
+        {
+            if ( defined $options->{error_callback}
+                and $options->{num_scans} == 0 )
+            {
+                $options->{error_callback}
+                  ->( $d->get('Document feeder out of documents') );
+            }
+        }
+        when (
+            $_self->{abort_scan} == TRUE
+              and ( $line =~
+qr{^$options->{frontend}:[ ]sane_start:[ ]Error[ ]during[ ]device[ ]I/O}xsm
+                or $line =~ /^$options->{frontend}:[ ]received[ ]signal/xsm
+                or $line =~ /^$options->{frontend}:[ ]aborting/xsm
+                or $line =~
+                /^$options->{frontend}:[ ]trying[ ]to[ ]stop[ ]scanner/xsm )
+          )
+        {
+            ;
+        }
+        when (/^$options->{frontend}:[ ]rounded/xsm) {
+            $logger->info( substr $line, 0, index( $line, "\n" ) + 1 );
+        }
+        when (/^Batch[ ]terminated,[ ]\d+[ ]pages?[ ]scanned/xsm) {
+            $logger->info( substr $line, 0, index( $line, "\n" ) + 1 );
+        }
+        when (
+            /^$options->{frontend}:[ ]sane_(?:start|read):[ ]Device[ ]busy/xsm)
+        {
+            if ( defined $options->{error_callback} ) {
+                $options->{error_callback}->( $d->get('Device busy') );
+            }
+        }
+        when (
+/^$options->{frontend}:[ ]sane_(?:start|read):[ ]Operation[ ]was[ ]cancelled/xsm
+          )
+        {
+            if ( defined $options->{error_callback} ) {
+                $options->{error_callback}->( $d->get('Operation cancelled') );
+            }
+        }
+        default {
+            if ( defined $options->{error_callback} ) {
+                $options->{error_callback}->(
+                    $d->get('Unknown message: ') . substr $line,
+                    0, index $line, "\n"
+                );
+            }
+        }
+    }
+    return;
+}
+
 # Carry out the scan with scanimage and the options passed.
 
 sub _scanimage {
@@ -168,7 +277,7 @@ sub _scanimage {
 
     # flag to ignore out of documents message
     # if successfully scanned at least one page
-    my $num_scans = 0;
+    $options{num_scans} = 0;
 
     _watch_cmd(
         cmd              => $cmd,
@@ -176,112 +285,7 @@ sub _scanimage {
         started_callback => $options{started_callback},
         err_callback     => sub {
             my ($line) = @_;
-            given ($line) {
-
-                # scanimage seems to produce negative progress percentages
-                # in some circumstances
-                when (/^Progress:[ ](-?\d*[.]\d*)%/xsm) {
-                    if ( defined $options{running_callback} ) {
-                        $options{running_callback}->( $1 / $_100 );
-                    }
-                }
-                when (/^Scanning[ ](-?\d*)[ ]pages/xsm) {
-                    if ( defined $options{running_callback} ) {
-                        $options{running_callback}
-                          ->( 0, sprintf $d->get('Scanning %i pages...'), $1 );
-                    }
-                }
-                when (/^Scanning[ ]$page_no/xsm) {
-                    if ( defined $options{running_callback} ) {
-                        $options{running_callback}
-                          ->( 0, sprintf $d->get('Scanning page %i...'), $1 );
-                    }
-                }
-                when (
-/^Scanned[ ]$page_no [.][ ][(]scanner[ ]status[ ]=[ ](\d)[)]/xsm
-                  )
-                {
-                    my ( $id, $return ) = ( $1, $2 );
-                    if ( $return == $_SANE_STATUS_EOF ) {
-                        my $timer = Glib::Timeout->add(
-                            $_POLL_INTERVAL,
-                            sub {
-                                my $path =
-                                  defined( $options{dir} )
-                                  ? File::Spec->catfile( $options{dir},
-                                    "out$id.pnm" )
-                                  : "out$id.pnm";
-                                if ( not -e $path ) {
-                                    return Glib::SOURCE_CONTINUE;
-                                }
-                                if ( defined $options{new_page_callback} ) {
-                                    $options{new_page_callback}->( $path, $id );
-                                }
-                                $num_scans++;
-                                return Glib::SOURCE_REMOVE;
-                            }
-                        );
-                    }
-                }
-                when ($mess_warmingup) {
-                    if ( defined $options{running_callback} ) {
-                        $options{running_callback}
-                          ->( 0, $d->get('Scanner warming up') );
-                    }
-                }
-                when (
-/^$options{frontend}:[ ]sane_start:[ ]Document[ ]feeder[ ]out[ ]of[ ]documents/xsm ## no critic (ProhibitComplexRegexes)
-                  )
-                {
-                    if ( defined $options{error_callback}
-                        and $num_scans == 0 )
-                    {
-                        $options{error_callback}
-                          ->( $d->get('Document feeder out of documents') );
-                    }
-                }
-                when (
-                    $_self->{abort_scan} == TRUE
-                      and ( $line =~
-qr{^$options{frontend}:[ ]sane_start:[ ]Error[ ]during[ ]device[ ]I/O}xsm
-                        or $line =~
-                        /^$options{frontend}:[ ]received[ ]signal[ ]2/xsm
-                        or $line =~
-                        /^$options{frontend}:[ ]trying[ ]to[ ]stop[ ]scanner/xsm
-                      )
-                  )
-                {
-                    ;
-                }
-                when (/^$options{frontend}:[ ]rounded/xsm) {
-                    $logger->info( substr $line, 0, index( $line, "\n" ) + 1 );
-                }
-                when (
-/^$options{frontend}:[ ]sane_(?:start|read):[ ]Device[ ]busy/xsm
-                  )
-                {
-                    if ( defined $options{error_callback} ) {
-                        $options{error_callback}->( $d->get('Device busy') );
-                    }
-                }
-                when (
-/^$options{frontend}:[ ]sane_(?:start|read):[ ]Operation[ ]was[ ]cancelled/xsm
-                  )
-                {
-                    if ( defined $options{error_callback} ) {
-                        $options{error_callback}
-                          ->( $d->get('Operation cancelled') );
-                    }
-                }
-                default {
-                    if ( defined $options{error_callback} ) {
-                        $options{error_callback}->(
-                            $d->get('Unknown message: ') . substr $line,
-                            0, index $line, "\n"
-                        );
-                    }
-                }
-            }
+            parse_scanimage_output( $line, \%options );
         },
         finished_callback => $options{finished_callback}
     );
@@ -486,6 +490,13 @@ sub _scanadf {
 
 sub cancel_scan {
     $_self->{abort_scan} = TRUE;
+    return;
+}
+
+# Only needed by unit tests to reset $_self->{abort_scan}
+
+sub uncancel_scan {
+    $_self->{abort_scan} = FALSE;
     return;
 }
 

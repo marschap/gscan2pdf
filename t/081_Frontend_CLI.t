@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Sane 0.05;    # To get SANE_* enums
-use Test::More tests => 32;
+use Test::More tests => 48;
 
 BEGIN {
     use_ok('Gscan2pdf::Frontend::CLI');
@@ -105,7 +105,132 @@ is(
 
 #########################
 
+my $running  = 0;
+my $new_page = 0;
+my $error    = 0;
+my %options  = (
+    frontend          => 'scanimage',
+    num_scans         => 0,
+    running_callback  => sub { $running++ },
+    new_page_callback => sub { $new_page++ },
+    error_callback    => sub { $error++ }
+);
+
+# error strings from scanimage 1.0.25
+for my $msg (
+    (
+        sprintf( "%s: received signal %d",     $options{frontend}, 13 ),
+        sprintf( "%s: trying to stop scanner", $options{frontend} ),
+        sprintf( "%s: aborting",               $options{frontend} )
+    )
+  )
+{
+    Gscan2pdf::Frontend::CLI::cancel_scan();
+    Gscan2pdf::Frontend::CLI::parse_scanimage_output( $msg, \%options );
+    is( $error, 0, "$msg with cancel" );
+    $error = 0;
+}
+
+for my $msg (
+    (
+        sprintf(
+            "%s: sane_start: %s",
+            $options{frontend}, 'Document feeder out of documents'
+        ),
+        sprintf( "%s: received signal %d",     $options{frontend}, 13 ),
+        sprintf( "%s: trying to stop scanner", $options{frontend} ),
+        sprintf( "%s: aborting",               $options{frontend} )
+    )
+  )
+{
+    Gscan2pdf::Frontend::CLI::uncancel_scan();
+    Gscan2pdf::Frontend::CLI::parse_scanimage_output( $msg, \%options );
+    is( $error, 1, "$msg without cancel" );
+    $error = 0;
+}
+
+# progress strings from scanimage 1.0.25
+for my $msg (
+    (
+        sprintf( "Progress: %3.1f%%", 81.3 ),
+        sprintf(
+            "Scanning %d pages, incrementing by %d, numbering from %d",
+            -1, 1, 1
+        ),
+        sprintf( "Scanning page %d", 1 )
+    )
+  )
+{
+    Gscan2pdf::Frontend::CLI::parse_scanimage_output( $msg, \%options );
+    is( $running, 1, $msg );
+    $running = 0;
+}
+
+# new page strings from scanimage 1.0.25
+# loop required due to Glib::Timeout
 my $loop = Glib::MainLoop->new;
+$options{new_page_callback} = sub {
+    $new_page++;
+    $loop->quit;
+};
+my $msg = sprintf "Scanned page %d. (scanner status = %d)", 1, SANE_STATUS_EOF;
+system 'touch out1.pnm';
+Gscan2pdf::Frontend::CLI::parse_scanimage_output( $msg, \%options );
+$loop->run;
+unlink 'out1.pnm';
+is( $new_page, 1, $msg );
+$new_page = 0;
+
+# ignored strings from scanimage 1.0.25
+for my $msg (
+    (
+        sprintf(
+            "%s: rounded value of %s from %d to %d",
+            $options{frontend}, 'xxx', 11, 11
+        ),
+        sprintf(
+            "%s: sane_start: %s",
+            $options{frontend}, 'Document feeder out of documents'
+        ),
+    )
+  )
+{
+    Gscan2pdf::Frontend::CLI::parse_scanimage_output( $msg, \%options );
+    is( $running + $new_page + $error, 0, $msg );
+    $error = 0;
+}
+
+#########################
+
+# ignored strings from scanimage 1.0.27
+for my $msg ( ( sprintf( "Batch terminated, %d pages scanned", 2 ), ) ) {
+    Gscan2pdf::Frontend::CLI::parse_scanimage_output( $msg, \%options );
+    is( $running + $new_page + $error, 0, $msg );
+    $error = 0;
+}
+
+# progress strings from scanimage 1.0.27
+for my $msg (
+    (
+        sprintf(
+            "Scanning %d page, incrementing by %d, numbering from %d",
+            1, 1, 1
+        ),
+        sprintf(
+            "Scanning %s pages, incrementing by %d, numbering from %d",
+            'infinity', 1, 1
+        ),
+    )
+  )
+{
+    Gscan2pdf::Frontend::CLI::parse_scanimage_output( $msg, \%options );
+    is( $running, 1, $msg );
+    $running = 0;
+}
+
+#########################
+
+$loop = Glib::MainLoop->new;
 Gscan2pdf::Frontend::CLI::_watch_cmd(
     cmd              => 'echo hello stdout',
     started_callback => sub {
@@ -249,6 +374,10 @@ Gscan2pdf::Frontend::CLI->scan_pages(
     finished_callback => sub {
         pass('scanimage finishes');
         $loop->quit;
+    },
+    error_callback => sub {
+        my ($msg) = @_;
+        fail "error callback called: $msg";
     },
 );
 $loop->run;
