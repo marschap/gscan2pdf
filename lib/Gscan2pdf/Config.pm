@@ -378,26 +378,13 @@ sub remove_invalid_paper {
 # Delete the options cache if there is a new version of SANE
 sub check_sane_version {
     my ( $SETTING, $SANE, $LIBSANEPERL ) = @_;
-    if (
-        (
-            defined $SETTING->{'SANE version'}
-            and $SETTING->{'SANE version'} ne $SANE
-        )
-        or ( defined $SETTING->{'libsane-perl version'}
-            and $SETTING->{'libsane-perl version'} ne $LIBSANEPERL )
-
-      #        or ( not defined $SETTING->{'libimage-sane-perl version'}
-      #            or $SETTING->{'libimage-sane-perl version'} ne $LIBSANEPERL )
-      )
+    if ( defined $SETTING->{'SANE version'}
+        and $SETTING->{'SANE version'} ne $SANE )
     {
         if ( defined $SETTING->{cache} ) { delete $SETTING->{cache} }
     }
     $SETTING->{'SANE version'}         = $SANE;
     $SETTING->{'libsane-perl version'} = $LIBSANEPERL;
-
-    #    if ( defined $SETTING->{'libsane-perl version'} ) {
-    #        delete $SETTING->{'libsane-perl version'};
-    #    }
     return;
 }
 

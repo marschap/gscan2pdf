@@ -514,7 +514,7 @@ sub read_config {
     # Delete the options cache if there is a new version of SANE
     Gscan2pdf::Config::check_sane_version( \%config,
         join( $DOT, Image::Sane->get_version ),
-        $Image::Sane::VERSION );
+        $Sane::VERSION );
     return $rcf, %config;
 }
 

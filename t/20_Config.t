@@ -227,10 +227,10 @@ is_deeply( \%output, \%example, 'remove_invalid_paper (name)' );
     'libsane-perl version' => 0.05,
     cache                  => ['stuff'],
 );
-Gscan2pdf::Config::check_sane_version( \%output, '1.2.3', 0.06 );
+Gscan2pdf::Config::check_sane_version( \%output, '1.2.4', 0.05 );
 %example = (
-    'SANE version'         => '1.2.3',
-    'libsane-perl version' => 0.06,
+    'SANE version'         => '1.2.4',
+    'libsane-perl version' => 0.05,
 );
 is_deeply( \%output, \%example, 'check_sane_version' );
 
