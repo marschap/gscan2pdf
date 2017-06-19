@@ -329,11 +329,8 @@ sub add_defaults {
     );
     if (
         defined $SETTING->{frontend}
-        and (  $SETTING->{frontend} eq 'scanimage-perl'
-            or $SETTING->{frontend} eq 'scanadf-perl'
-            or $SETTING->{frontend} eq 'scanimage.pl'
-            or $SETTING->{frontend} eq
-            'scanadf.pl' )    # these frontends are just for testing purposes
+        and ( $SETTING->{frontend} !~
+            /^(?:scanimage|scanadf|libsane-perl|libimage-sane-perl)$/xsm )
       )
     {
         delete $SETTING->{frontend};

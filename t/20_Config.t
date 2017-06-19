@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Gscan2pdf::Document;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Test::More tests => 14;
+use Test::More tests => 15;
 
 BEGIN {
     use_ok('Gscan2pdf::Config');
@@ -192,6 +192,21 @@ Gscan2pdf::Config::add_defaults( \%output );
 );
 
 is_deeply( \%output, \%example, 'add_defaults' );
+
+#########################
+
+$config = <<'EOS';
+{
+   "version" : "1.3.3",
+   "frontend" : "scanimage-perl"
+}
+EOS
+open $fh, '>', $rc or die "Error: cannot open $rc\n";
+print $fh $config;
+close $fh or die "Error: cannot close $rc\n";
+%output = Gscan2pdf::Config::read_config( $rc, $logger );
+Gscan2pdf::Config::add_defaults( \%output );
+is_deeply( \%output, \%example, 'ignore invalid frontends' );
 
 #########################
 
