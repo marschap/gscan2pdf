@@ -60,7 +60,7 @@ $slist->import_files(
 );
 Gtk2->main;
 
-is( `cat test.txt`,  $hocr, 'saved ASCII' );
+is( `cat test.txt`,  $hocr, 'saved hOCR' );
 is( `cat test2.txt`, $hocr, 'post-save hook' );
 
 #########################

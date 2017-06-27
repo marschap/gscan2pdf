@@ -3660,12 +3660,24 @@ sub _thread_save_hocr {
             sprintf $d->get("Can't open file: %s"), $path );
         return;
     }
+
+    my $written_header = FALSE;
     for ( @{$list_of_pages} ) {
-        if ( $_->{hocr} =~ /<body>([\s\S]*)<\/body>/xsm ) {
-            _write_file( $self, $fh, $path, $_->{hocr}, $uuid ) or return;
+        if ( $_->{hocr} =~ /([\s\S]*<body>)([\s\S]*)<\/body>/xsm ) {
+            my $header    = $1;
+            my $hocr_page = $2;
+            if ( not $written_header ) {
+                _write_file( $self, $fh, $path, $header, $uuid ) or return;
+                $written_header = TRUE;
+            }
+            _write_file( $self, $fh, $path, $hocr_page, $uuid ) or return;
             return if $_self->{cancel};
         }
     }
+    if ($written_header) {
+        _write_file( $self, $fh, $path, "</body>\n</html>\n", $uuid ) or return;
+    }
+
     if ( not close $fh ) {
         _thread_throw_error( $self, $uuid,
             sprintf $d->get("Can't close file: %s"), $path );
