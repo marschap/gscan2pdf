@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 BEGIN {
     use_ok('Gscan2pdf::Cuneiform');
@@ -63,6 +63,14 @@ SKIP: {
         my $c2 = decode_utf8($c);
         like( $got, qr/$c2/, "Cuneiform returned $c" );
     }
+
+    $got = Gscan2pdf::Cuneiform->hocr(
+        file     => 'test.png',
+        language => 'deu',
+        logger   => $logger
+    );
+    my $c = decode_utf8('ö');
+    like( $got, qr/$c/, "understands iso639" );
 
     unlink 'test.png';
 }

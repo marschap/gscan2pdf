@@ -15,6 +15,35 @@ my $SPACE = q{ };
 my $EMPTY = q{};
 my ( %languages, $version, $setup, $logger );
 
+# cuneiform language codes
+my %iso639 = (
+    bul    => { code => 'bul',    name => 'Bulgarian' },
+    ces    => { code => 'cze',    name => 'Czech' },
+    dan    => { code => 'dan',    name => 'Danish' },
+    deu    => { code => 'ger',    name => 'German' },
+    eng    => { code => 'eng',    name => 'English' },
+    est    => { code => 'est',    name => 'Estonian' },
+    fra    => { code => 'fra',    name => 'French' },
+    hrv    => { code => 'hrv',    name => 'Croatian' },
+    hun    => { code => 'hun',    name => 'Hungarian' },
+    lav    => { code => 'lav',    name => 'Latvian' },
+    lit    => { code => 'lit',    name => 'Lithuanian' },
+    nld    => { code => 'dut',    name => 'Dutch' },
+    ita    => { code => 'ita',    name => 'Italian' },
+    pol    => { code => 'pol',    name => 'Polish' },
+    por    => { code => 'por',    name => 'Portuguese' },
+    ron    => { code => 'rum',    name => 'Romanian' },
+    rus    => { code => 'rus',    name => 'Russian' },
+    ruseng => { code => 'ruseng', name => 'Russian+English' },
+    slk    => { code => 'slo',    name => 'Slovak' },
+    slv    => { code => 'slv',    name => 'Slovenian' },
+    spa    => { code => 'spa',    name => 'Spanish' },
+    srp    => { code => 'srp',    name => 'Serbian' },
+    swe    => { code => 'swe',    name => 'Swedish' },
+    tur    => { code => 'tur',    name => 'Turkish' },
+    ukr    => { code => 'ukr',    name => 'Ukrainian' },
+);
+
 sub setup {
     ( my $class, $logger ) = @_;
     return $version if $setup;
@@ -32,35 +61,10 @@ sub setup {
 
 sub languages {
     if ( not %languages ) {
-
-        # cuneiform language codes
-        my %lang = (
-            eng    => 'English',
-            ger    => 'German',
-            fra    => 'French',
-            rus    => 'Russian',
-            swe    => 'Swedish',
-            spa    => 'Spanish',
-            ita    => 'Italian',
-            ruseng => 'Russian+English',
-            ukr    => 'Ukrainian',
-            srp    => 'Serbian',
-            hrv    => 'Croatian',
-            pol    => 'Polish',
-            dan    => 'Danish',
-            por    => 'Portuguese',
-            dut    => 'Dutch',
-            cze    => 'Czech',
-            rum    => 'Romanian',
-            hun    => 'Hungarian',
-            bul    => 'Bulgarian',
-            slo    => 'Slovak',
-            slv    => 'Slovenian',
-            lav    => 'Latvian',
-            lit    => 'Lithuanian',
-            est    => 'Estonian',
-            tur    => 'Turkish',
-        );
+        my %cunmap;
+        for my $key ( keys %iso639 ) {
+            $cunmap{ $iso639{$key}{code} } = $key;
+        }
 
         # Dig out supported languages
         my ( undef, $output ) =
@@ -70,8 +74,8 @@ sub languages {
         if ( $output =~ /Supported[ ]languages:[ ](.*)[.]/xsm ) {
             $langs = $1;
             for ( split $SPACE, $langs ) {
-                if ( defined $lang{$_} ) {
-                    $languages{$_} = $lang{$_};
+                if ( defined $cunmap{$_} ) {
+                    $languages{ $cunmap{$_} } = $iso639{ $cunmap{$_} }{name};
                 }
                 else {
                     $languages{$_} = $_;
@@ -128,6 +132,12 @@ sub hocr {
     else {
         $bmp = $options{file};
     }
+
+    # Map the iso639 language code back to an cuneiform code
+    if ( defined $iso639{ $options{language} } ) {
+        $options{language} = $iso639{ $options{language} }{code};
+    }
+
     my $cmd = "cuneiform -l $options{language} -f hocr -o $txt $bmp";
     $logger->info($cmd);
     if ( defined $options{pidfile} ) {
