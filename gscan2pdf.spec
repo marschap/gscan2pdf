@@ -1,5 +1,5 @@
 Name:      gscan2pdf
-Version: 1.8.2
+Version: 1.8.3
 Release:   1%{?dist}
 Summary:   A GUI to produce PDFs from scanned documents
 
@@ -92,7 +92,11 @@ fi
 %{_mandir}/man1/*.1*
 
 %changelog
-* Thu Jun 01 2017 Jeffrey Ratcliffe <jffry@posteo.net>
+* Sat Jul 01 2017 Jeffrey Ratcliffe <jffry@posteo.net>
+  - New upstream release
+    New Depends: libimage-sane-perl
+  - Reformatted extended description
+  - Bumped standards to 4.0.0 (no changes required)
   - New upstream release
   - New upstream release
     Closes: #858767 (fixes & improvements to gscan2pdf)
