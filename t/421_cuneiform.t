@@ -14,7 +14,7 @@ Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;
 
 SKIP: {
-    skip 'Cuneiform not installed', 6
+    skip 'Cuneiform not installed', 7
       unless Gscan2pdf::Cuneiform->setup($logger);
 
     # Create test image
