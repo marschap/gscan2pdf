@@ -269,7 +269,7 @@ sub hocr {
     my $leading  = 'Tesseract Open Source OCR Engine';
     my $trailing = 'with Leptonica';
     $warnings =~ s/$leading v\d[.]\d\d $trailing\n//xsm;
-    $warnings =~ s/^Page[ ]0\n//xsm;
+    $warnings =~ s/^Page[ ][01]\n//xsm;
 
     if ( $name eq 'stdout' ) {
         return Encode::decode_utf8($out), $warnings;
