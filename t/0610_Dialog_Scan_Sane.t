@@ -381,6 +381,8 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 is( $paper, 'new2', 'changed-paper' );
                 ok( not( $widget->{option_widgets}{'tl-x'}->visible ),
                     'geometry hidden' );
+                $flag = TRUE;
+                $loop->quit;
             }
         );
         my $s_signal;
@@ -407,8 +409,6 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                     'set_option tl-x to 0',
                     'finished-process set_option'
                 );
-                $flag = TRUE;
-                $loop->quit;
             }
         );
         $dialog->set( 'paper', 'new2' );
