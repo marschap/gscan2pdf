@@ -15,7 +15,7 @@ my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Document->setup($logger);
 
 # Create test image
-system('convert rose: test.jpg');
+system('convert -units PixelsPerInch -density 70 rose: test.jpg');
 
 my $slist = Gscan2pdf::Document->new;
 

@@ -19,6 +19,8 @@ SKIP: {
       unless Gscan2pdf::Tesseract->setup($logger);
 
     # Create test image
+    # Deliberately not setting -units to provoke
+    # "Invalid resolution 0 dpi. Using 70 instead." warning from tesseract
     system(
 'convert +matte -depth 1 -colorspace Gray -pointsize 12 -density 300 label:"The quick brown fox" test.png'
     );
@@ -33,8 +35,11 @@ SKIP: {
         paths             => ['test.png'],
         finished_callback => sub {
             $slist->tesseract(
-                page              => $slist->{data}[0][2],
-                language          => 'eng',
+                page           => $slist->{data}[0][2],
+                language       => 'eng',
+                error_callback => sub {
+                    fail('error thrown running tesseract');
+                },
                 finished_callback => sub {
                     like( $slist->{data}[0][2]{hocr},
                         qr/The/, 'Tesseract returned "The"' );

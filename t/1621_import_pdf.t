@@ -19,7 +19,7 @@ Gscan2pdf::Document->setup($logger);
 
 # Create b&w test image
 system(
-'convert +matte -depth 1 -colorspace Gray -pointsize 12 -density 300 label:"The quick brown fox" test.png'
+'convert +matte -depth 1 -colorspace Gray -pointsize 12 -units PixelsPerInch -density 300 label:"The quick brown fox" test.png'
 );
 
 # Add text layer with tesseract

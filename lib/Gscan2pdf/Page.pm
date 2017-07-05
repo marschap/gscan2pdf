@@ -98,6 +98,20 @@ sub new {
     }
 
     bless $self, $class;
+
+    # Add units if not defined
+    if ( $suffix{ $options{format} } !~ /^[.]p.m$/xsm ) {
+        my $image = $self->im_object;
+        my $units = $image->Get('units');
+        if ( $units =~ /undefined/xsm ) {
+            $image->Write(
+                units    => 'PixelsPerInch',
+                density  => $self->resolution,
+                filename => $self->{filename}
+            );
+        }
+    }
+
     return $self;
 }
 
