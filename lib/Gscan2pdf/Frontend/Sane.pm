@@ -259,7 +259,9 @@ sub scan_pages {
         ),
         started_callback => $options{started_callback},
         running_callback => sub {
-            $options{running_callback}->( $_self->{scan_progress} );
+            if ( defined $options{running_callback} ) {
+                $options{running_callback}->( $_self->{scan_progress} );
+            }
         },
         error_callback    => $options{error_callback},
         finished_callback => sub {
