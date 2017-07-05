@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 24;
+use Test::More tests => 25;
 
 BEGIN {
     use_ok('Gscan2pdf::Page');
@@ -463,6 +463,48 @@ $expected = <<'EOS';
 EOS
 
 is_deeply( $page->djvu_text, $expected, 'deal with encoded characters' );
+
+#########################
+
+# hOCR created with:
+# convert +matte -depth 1 -pointsize 12 -units PixelsPerInch -density 300 label:"The\nquick brown fox\n\njumps over the lazy dog." test.png
+# tesseract -l eng -c tessedit_create_hocr=1 test.png stdout
+$page->{hocr} = <<'EOS';
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <title></title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name='ocr-system' content='tesseract 3.05.01' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocrx_word'/>
+</head>
+<body>
+  <div class='ocr_page' id='page_1' title='image "test.png"; bbox 0 0 545 229; ppageno 0'>
+   <div class='ocr_carea' id='block_1_1' title="bbox 1 10 348 113">
+    <p class='ocr_par' id='par_1_1' lang='eng' title="bbox 1 10 348 113">
+     <span class='ocr_line' id='line_1_1' title="bbox 1 10 85 46; baseline 0 0; x_size 46.247379; x_descenders 10.247379; x_ascenders 10"><span class='ocrx_word' id='word_1_1' title='bbox 1 10 85 46; x_wconf 90'>The</span>
+     </span>
+     <span class='ocr_line' id='line_1_2' title="bbox 2 67 348 113; baseline 0 -10; x_size 46; x_descenders 10; x_ascenders 10"><span class='ocrx_word' id='word_1_2' title='bbox 2 67 116 113; x_wconf 89'>quick</span> <span class='ocrx_word' id='word_1_3' title='bbox 134 67 264 103; x_wconf 94'>brown</span> <span class='ocrx_word' id='word_1_4' title='bbox 282 67 348 103; x_wconf 94'>fox</span>
+     </span>
+    </p>
+   </div>
+   <div class='ocr_carea' id='block_1_2' title="bbox 0 181 541 227">
+    <p class='ocr_par' id='par_1_2' lang='eng' title="bbox 0 181 541 227">
+     <span class='ocr_line' id='line_1_3' title="bbox 0 181 541 227; baseline 0 -10; x_size 46; x_descenders 10; x_ascenders 10"><span class='ocrx_word' id='word_1_5' title='bbox 0 181 132 227; x_wconf 90'>jumps</span> <span class='ocrx_word' id='word_1_6' title='bbox 150 191 246 217; x_wconf 90'>over</span> <span class='ocrx_word' id='word_1_7' title='bbox 261 181 328 217; x_wconf 90'>the</span> <span class='ocrx_word' id='word_1_8' title='bbox 347 181 432 227; x_wconf 90'>lazy</span> <span class='ocrx_word' id='word_1_9' title='bbox 449 181 541 227; x_wconf 93'>dog.</span>
+     </span>
+    </p>
+   </div>
+  </div>
+ </body>
+</html>
+EOS
+
+is_deeply(
+    $page->string,
+    "The quick brown fox\n\njumps over the lazy dog.",
+    'string with paragraphs'
+);
 
 #########################
 

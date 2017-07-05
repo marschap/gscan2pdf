@@ -1,9 +1,11 @@
 1.8.4 (01.08.2017):
 
 * Cope with Tesseract 3.0.5 writing Page 1 instead of Page 0
-  Thanks to Chris Mayo for the patch. Closes merge request 14
+  Thanks to Chris Mayo for the patch. Closes merge request #14
 * Assume pixels/inch if the image doesn't know better. Closes bug #258
   (Tesseract 3.05.01: Warning. Invalid resolution 0 dpi. Using 70 instead)
+* Fix paragraph formatting in save as text output.
+  Thanks to Chris Mayo for the patch. Closes merge request #16
 
 
 1.8.3 (01.07.2017):

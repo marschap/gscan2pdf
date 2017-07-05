@@ -425,22 +425,26 @@ sub string {
 
 sub _boxes2string {
     my ($boxes) = @_;
-    my $string = $EMPTY;
+    my $string  = $EMPTY;
+    my $para    = FALSE;
 
-    # Note y value to be able to put line breaks
-    # at appropriate positions
-    my ( $oldx, $oldy );
     for my $box ( @{$boxes} ) {
         if ( defined $box->{contents} ) {
             $string .= _boxes2string( $box->{contents} );
+            if ( $box->{type} eq 'line' ) { $string .= $SPACE }
+            if ( $box->{type} eq 'para' ) {
+                $string .= "\n\n";
+                $para = TRUE;
+            }
+            else {
+                $para = FALSE;
+            }
         }
-        if ( not defined $box->{text} ) { next }
-        my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
-        if ( defined $oldx and $x1 > $oldx ) { $string .= $SPACE }
-        if ( defined $oldy and $y1 > $oldy ) { $string .= "\n" }
-        ( $oldx, $oldy ) = ( $x1, $y1 );
-        $string .= $box->{text};
+        if ( defined $box->{text} ) { $string .= $box->{text} . $SPACE }
     }
+
+    # squashes whitespace at the end of the string
+    if ( not $para ) { $string =~ s/\s+\z//xsm }
     return $string;
 }
 
