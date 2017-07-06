@@ -17,7 +17,7 @@ Gscan2pdf::Document->setup($logger);
 
 # Create test image
 system(
-'convert +matte -depth 1 -colorspace Gray -pointsize 12 -density 300 label:"The quick brown fox" -border 20x10 test.png'
+'convert +matte -depth 1 -colorspace Gray -pointsize 12 -units PixelsPerInch -density 300 label:"The quick brown fox" -border 20x10 test.png'
 );
 my $info = `identify test.png`;
 my ( $width, $height );

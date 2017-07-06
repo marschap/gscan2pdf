@@ -16,7 +16,7 @@ Gscan2pdf::Document->setup($logger);
 
 # Create test image
 system(
-'convert -fill lightblue -pointsize 12 -density 300 label:"The quick brown fox" test.png'
+'convert -fill lightblue -pointsize 12 -units PixelsPerInch -density 300 label:"The quick brown fox" test.png'
 );
 
 my $slist = Gscan2pdf::Document->new;
