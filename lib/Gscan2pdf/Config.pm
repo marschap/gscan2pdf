@@ -85,12 +85,6 @@ sub _pre_171 {
 sub _pre_181 {
     my ( $version, $SETTING ) = @_;
     if ( version->parse($version) < version->parse('1.8.1') ) {
-
-        #        if ( defined $SETTING->{'frontend'}
-        #            and $SETTING->{'frontend'} eq 'libsane-perl' )
-        #        {
-        #            $SETTING->{'frontend'} = 'libimage-sane-perl';
-        #        }
         if ( defined $SETTING->{'default filename'} ) {
             $SETTING->{'default filename'} =~ s/%a/%Da/gsm;
             $SETTING->{'default filename'} =~ s/%t/%Dt/gsm;
@@ -100,6 +94,18 @@ sub _pre_181 {
             $SETTING->{'default filename'} =~ s/%M/%m/gsm;
             $SETTING->{'default filename'} =~ s/%D\b/%d/gsmx;
             $SETTING->{'default filename'} =~ s/%I/%M/gsm;
+        }
+    }
+    return;
+}
+
+sub _pre_184 {
+    my ( $version, $SETTING ) = @_;
+    if ( version->parse($version) < version->parse('1.8.4') ) {
+        if ( defined $SETTING->{'frontend'}
+            and $SETTING->{'frontend'} eq 'libsane-perl' )
+        {
+            $SETTING->{'frontend'} = 'libimage-sane-perl';
         }
     }
     return;
@@ -172,6 +178,8 @@ sub read_config {
 
     _pre_181( $version, \%SETTING );
 
+    _pre_184( $version, \%SETTING );
+
     $logger->debug( Dumper( \%SETTING ) );
     return %SETTING;
 }
@@ -235,7 +243,7 @@ sub add_defaults {
         'image type'                        => undef,
         device                              => undef,
         'device blacklist'                  => undef,
-        frontend                            => 'libsane-perl',
+        frontend                            => 'libimage-sane-perl',
         'scan prefix'                       => $EMPTY,
         'unpaper on scan'                   => FALSE,
         'unpaper options'                   => undef,

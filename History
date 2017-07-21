@@ -6,6 +6,10 @@
   (Tesseract 3.05.01: Warning. Invalid resolution 0 dpi. Using 70 instead)
 * Fix paragraph formatting in save as text output.
   Thanks to Chris Mayo for the patch. Closes merge request #16
+* In preparation for future removal of libsane-perl frontend, change default
+  frontend libsane-perl -> libimage-sane-perl, and similarly switch selected
+  frontend on upgrade from older version. Assuming no major problems occur,
+  support for libsane-perl will be removed in the next release.
 
 
 1.8.3 (01.07.2017):
