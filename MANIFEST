@@ -222,6 +222,7 @@ t/1151_save_pdf_with_metadata.t
 t/1152_save_pdf_with_old_metadata.t
 t/1161_save_multipage_pdf_with_utf8.t
 t/1162_save_multipage_pdf.t
+t/1163_save_multipage_pdf_as_ps.t
 t/1171_prepend_pdf.t
 t/1172_append_pdf.t
 t/1173_prepend_pdf_with_space.t
@@ -239,6 +240,7 @@ t/131_save_tiff.t
 t/132_cancel_save_tiff.t
 t/133_save_tiff_with_error.t
 t/134_save_tiff_alpha.t
+t/135_save_tiff_as_ps_with_space.t
 t/141_save_image.t
 t/142_save_image_with_quote.t
 t/143_save_image_with_ampersand.t
@@ -276,15 +278,12 @@ t/172_open_session.t
 t/173_open_multiple_session.t
 t/174_open_crashed_session.t
 t/175_open_session2.t
-t/18_PageRange.t
-t/19_Canvas.t
-t/20_Config.t
 t/211_rotate.t
 t/212_cancel_rotate.t
 t/213_rotate_with_error.t
 t/214_rotate_corrupt_image.t
-t/22_analyse_blank.t
-t/23_analyse_dark.t
+t/231_analyse_blank.t
+t/232_analyse_dark.t
 t/241_threshold.t
 t/242_cancel_threshold.t
 t/243_threshold_with_error.t
@@ -340,6 +339,9 @@ t/433_cancel_gocr.t
 t/434_gocr_with_error.t
 t/51_process_chain.t
 t/52_process_chain_udt.t
+t/6_PageRange.t
+t/7_Canvas.t
+t/8_Config.t
 t/90_MANIFEST.t
 t/91_critic.t
 t/99_pod.t

@@ -2006,7 +2006,7 @@ sub update_metadata_settings {
 # Save selected pages as PDF under given name.
 
 sub save_pdf {
-    my ( $filename, $append, $list_of_pages ) = @_;
+    my ( $filename, $option, $list_of_pages ) = @_;
 
     # Compile options
     my %options = (
@@ -2019,11 +2019,14 @@ sub save_pdf {
         'convert whitespace to underscores' =>
           $SETTING{'convert whitespace to underscores'},
     );
-    if ( $append eq 'prependpdf' ) {
+    if ( $option eq 'prependpdf' ) {
         $options{prepend} = $filename;
     }
-    elsif ( $append eq 'appendpdf' ) {
+    elsif ( $option eq 'appendpdf' ) {
         $options{append} = $filename;
+    }
+    elsif ( $option eq 'ps' ) {
+        $options{ps} = $filename;
     }
     if ( $SETTING{post_save_hook} ) {
         $options{post_save_hook} = $SETTING{current_psh};
@@ -2033,8 +2036,8 @@ sub save_pdf {
     $logger->debug("Started saving $filename");
     my ( $signal, $pid );
     $pid = $slist->save_pdf(
-        path            => $filename,
-        list_of_pages   => $list_of_pages,
+        path          => "$filename",      # stringify in case of PS
+        list_of_pages => $list_of_pages,
         metadata        => Gscan2pdf::Document::collate_metadata( \%SETTING ),
         options         => \%options,
         queued_callback => sub {
@@ -2059,7 +2062,12 @@ sub save_pdf {
             if ( defined $SETTING{'view files toggle'}
                 and $SETTING{'view files toggle'} )
             {
-                system "xdg-open \"$filename\" &";
+                if ( defined $options{ps} ) {
+                    system "xdg-open \"$options{ps}\" &";
+                }
+                else {
+                    system "xdg-open \"$filename\" &";
+                }
             }
             $logger->debug("Finished saving $filename");
         },
@@ -2845,8 +2853,14 @@ sub file_chooser_response_callback {
                 save_hocr( $filename, $list_of_pages );
             }
             when ('ps') {
-                my $tif = File::Temp->new( DIR => $session, SUFFIX => '.tif' );
-                save_tiff( $tif->filename, $filename, $list_of_pages );
+                if ( $SETTING{ps_backend} eq 'libtiff' ) {
+                    my $tif =
+                      File::Temp->new( DIR => $session, SUFFIX => '.tif' );
+                    save_tiff( $tif->filename, $filename, $list_of_pages );
+                }
+                else {
+                    save_pdf( $filename, 'ps', $list_of_pages );
+                }
             }
             when ('gs2p') {
                 $slist->save_session($filename);
@@ -6652,6 +6666,28 @@ sub _preferences_general_options {
         $d->get('Set access and modification times to metadata date') );
     if ( $SETTING{set_timestamp} ) { $cbt->set_active(TRUE) }
     $vbox->pack_start( $cbt, TRUE, TRUE, 0 );
+
+    # Postscript backend
+    $hbox = Gtk2::HBox->new;
+    $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+    $label = Gtk2::Label->new( $d->get('Postscript backend') );
+    $hbox->pack_start( $label, FALSE, FALSE, 0 );
+    my @ps_backend = (
+        [
+            'ghostscript',
+            $d->get('Ghostscript'),
+            $d->get('Use Ghostscript to create Postscript files from PDF.')
+        ],
+        [
+            'libtiff',
+            $d->get('LibTIFF'),
+            $d->get(
+                'Use LibTIFF (tiff2ps) to create Postscript files from TIFF.')
+        ],
+    );
+    my $combop = combobox_from_array(@ps_backend);
+    combobox_set_active( $combop, $SETTING{ps_backend}, @ps_backend );
+    $hbox->pack_end( $combop, TRUE, TRUE, 0 );
 
     # Temporary directory settings
     $hbox = Gtk2::HBox->new;

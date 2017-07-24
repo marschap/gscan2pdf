@@ -2743,13 +2743,14 @@ sub _thread_save_pdf {
     my ( $self, %options ) = @_;
 
     my $pagenr = 0;
-    my $cache;
+    my ( $cache, $resolution );
 
     # Create PDF with PDF::API2
     $self->{message} = $d->get('Setting up PDF');
     my $filename = $options{path};
     if (   defined $options{options}{prepend}
-        or defined $options{options}{append} )
+        or defined $options{options}{append}
+        or defined $options{options}{ps} )
     {
         $filename = File::Temp->new( DIR => $options{dir}, SUFFIX => '.pdf' );
     }
@@ -2773,6 +2774,7 @@ sub _thread_save_pdf {
           $pagenr, $#{ $options{list_of_pages} } + 1;
         my $status =
           _add_page_to_pdf( $self, $pdf, $pagedata, $cache, %options );
+        if ( not defined $resolution ) { $resolution = $pagedata->resolution }
         return if ( $status or $_self->{cancel} );
     }
 
@@ -2784,40 +2786,7 @@ sub _thread_save_pdf {
     if (   defined $options{options}{prepend}
         or defined $options{options}{append} )
     {
-        my ( $bak, $file1, $file2, $out, $message );
-        if ( defined $options{options}{prepend} ) {
-            $file1   = $filename;
-            $file2   = "$options{options}{prepend}.bak";
-            $bak     = $file2;
-            $out     = $options{options}{prepend};
-            $message = $d->get('Error prepending PDF: %s');
-            $logger->info('Prepending PDF');
-        }
-        else {
-            $file2   = $filename;
-            $file1   = "$options{options}{append}.bak";
-            $bak     = $file1;
-            $out     = $options{options}{append};
-            $message = $d->get('Error appending PDF: %s');
-            $logger->info('Appending PDF');
-        }
-
-        if ( not move( $out, $bak ) ) {
-            _thread_throw_error( $self, $options{uuid},
-                $d->get('Error creating backup of PDF') );
-            return;
-        }
-
-        my ( $status, undef, $error ) =
-          exec_command( [ 'pdfunite', $file1, $file2, $out ],
-            $options{pidfile} );
-        return if $_self->{cancel};
-        if ($status) {
-            $logger->info($error);
-            _thread_throw_error( $self, $options{uuid}, sprintf $message,
-                $error );
-            return;
-        }
+        return if _append_pdf( $self, $filename, %options );
     }
     elsif ( defined $options{options}{set_timestamp}
         and $options{options}{set_timestamp} )
@@ -2826,7 +2795,29 @@ sub _thread_save_pdf {
             @{ $options{metadata}{date} } );
     }
 
-    _post_save_hook( $filename, %{ $options{options} } );
+    if ( defined $options{options}->{ps} ) {
+        $self->{message} = $d->get('Converting to PS');
+
+        # Note: -a option causes tiff2ps to generate multiple output
+        # pages, one for each page in the input TIFF file.  Without it, it
+        # only generates output for the first page.
+        my @cmd = (
+            'gs', '-dSAFER', '-sDEVICE=pswrite', "-r$resolution", '-o',
+            $options{options}->{ps}, $filename,
+        );
+        my ( $status, undef, $error ) =
+          exec_command( \@cmd, $options{pidfile} );
+        if ( $status or $error ) {
+            $logger->info($error);
+            _thread_throw_error( $self, $options{uuid},
+                sprintf $d->get('Error converting PDF to PS: %s'), $error );
+            return;
+        }
+        _post_save_hook( $options{options}->{ps}, %{ $options{options} } );
+    }
+    else {
+        _post_save_hook( $filename, %{ $options{options} } );
+    }
 
     $self->{return}->enqueue(
         {
@@ -2836,6 +2827,41 @@ sub _thread_save_pdf {
         }
     );
     return;
+}
+
+sub _append_pdf {
+    my ( $self, $filename, %options ) = @_;
+    my ( $bak, $file1, $file2, $out, $message );
+    if ( defined $options{options}{prepend} ) {
+        $file1   = $filename;
+        $file2   = "$options{options}{prepend}.bak";
+        $bak     = $file2;
+        $out     = $options{options}{prepend};
+        $message = $d->get('Error prepending PDF: %s');
+        $logger->info('Prepending PDF');
+    }
+    else {
+        $file2   = $filename;
+        $file1   = "$options{options}{append}.bak";
+        $bak     = $file1;
+        $out     = $options{options}{append};
+        $message = $d->get('Error appending PDF: %s');
+        $logger->info('Appending PDF');
+    }
+
+    if ( not move( $out, $bak ) ) {
+        _thread_throw_error( $self, $options{uuid},
+            $d->get('Error creating backup of PDF') );
+        return;
+    }
+
+    my ( $status, undef, $error ) =
+      exec_command( [ 'pdfunite', $file1, $file2, $out ], $options{pidfile} );
+    if ($status) {
+        $logger->info($error);
+        _thread_throw_error( $self, $options{uuid}, sprintf $message, $error );
+        return $status;
+    }
 }
 
 sub _set_timestamp {
@@ -3487,17 +3513,26 @@ sub _thread_save_tiff {
             sprintf $d->get('Error compressing image: %s'), $error );
         return;
     }
-    if ( defined $options{ps} ) {
+    if ( defined $options{options}->{ps} ) {
         $self->{message} = $d->get('Converting to PS');
 
         # Note: -a option causes tiff2ps to generate multiple output
         # pages, one for each page in the input TIFF file.  Without it, it
         # only generates output for the first page.
-        @cmd = ( 'tiff2ps', '-a', $options{path}, '>', $options{ps} );
-        exec_command( \@cmd, $options{pidfile} );
+        @cmd =
+          ( 'tiff2ps', '-a', $options{path}, '-O', $options{options}->{ps} );
+        ( $status, undef, $error ) = exec_command( \@cmd, $options{pidfile} );
+        if ( $status or $error ) {
+            $logger->info($error);
+            _thread_throw_error( $self, $options{uuid},
+                sprintf $d->get('Error converting TIFF to PS: %s'), $error );
+            return;
+        }
+        _post_save_hook( $options{options}->{ps}, %{ $options{options} } );
     }
-
-    _post_save_hook( $options{path}, %{ $options{options} } );
+    else {
+        _post_save_hook( $options{path}, %{ $options{options} } );
+    }
 
     $self->{return}->enqueue(
         {

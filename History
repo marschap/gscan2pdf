@@ -10,6 +10,8 @@
   frontend libsane-perl -> libimage-sane-perl, and similarly switch selected
   frontend on upgrade from older version. Assuming no major problems occur,
   support for libsane-perl will be removed in the next release.
+* Fixed bug writing postscript file.
+* + support for ghostscript backend due to apparent bug in tiff2ps.
 
 
 1.8.3 (01.07.2017):

@@ -127,6 +127,7 @@ Gscan2pdf::Config::add_defaults( \%output );
     'ocr engine'                        => 'tesseract',
     'ocr language'                      => undef,
     'OCR output'                        => 'replace',
+    ps_backend                          => 'ghostscript',
     'auto-open-scan-dialog'             => TRUE,
     'available-tmp-warning'             => 10,
     close_dialog_on_save                => TRUE,

@@ -273,6 +273,7 @@ sub add_defaults {
         'ocr language' => undef,
         'OCR output' =>
           'replace',   # When a page is re-OCRed, replace old text with new text
+        ps_backend              => 'ghostscript',
         user_defined_tools      => ['gimp %i'],
         udt_on_scan             => FALSE,
         current_udt             => undef,
