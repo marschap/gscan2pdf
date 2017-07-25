@@ -358,6 +358,14 @@ sub set_option {
     my ( $self, $option, $val ) = @_;
     if ( not defined $option ) { return }
 
+    if ( $option->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
+        if ( $val < $option->{constraint}{min} ) {
+            $val = $option->{constraint}{min};
+        }
+        elsif ( $val > $option->{constraint}{max} ) {
+            $val = $option->{constraint}{max};
+        }
+    }
     $self->{current_scan_options}->add_backend_option( $option->{name}, $val );
 
     my $signal;

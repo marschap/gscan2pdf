@@ -105,7 +105,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                     {
                         backend => [
                             {
-                                'br-y' => '297'
+                                'br-y' => '200'
                             },
                             {
                                 'resolution' => '50'
