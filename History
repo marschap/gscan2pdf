@@ -12,8 +12,9 @@
   support for libsane-perl will be removed in the next release.
 * Fixed bug writing postscript file.
 * + support for ghostscript backend due to apparent bug in tiff2ps.
-* Round scan options with ranges to valid values before applying. Closes bug
-  #264 (Effective resolution is 75 DPI despite selecting 600 or 1200).
+* Round scan options with ranges to valid values before applying.
+* Fixed bug updating list of option-dependent values. Closes bug #264
+  (Effective resolution is 75 DPI despite selecting 600 or 1200).
 
 
 1.8.3 (01.07.2017):

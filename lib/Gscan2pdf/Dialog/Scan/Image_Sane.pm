@@ -308,6 +308,11 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
                 $widget->{signal} = $widget->signal_connect(
                     changed => sub {
                         my $i = $widget->get_active;
+
+                        # refetch options in case they have changed.
+                        # tested by t/06197_Dialog_Scan_Image_Sane.t
+                        $options = $self->get('available-scan-options');
+                        $opt     = $options->by_name( $opt->{name} );
                         $self->set_option( $opt, $opt->{constraint}[$i] );
                     }
                 );
