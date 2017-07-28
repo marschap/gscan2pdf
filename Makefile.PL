@@ -139,7 +139,7 @@ icon_install : $(NAME).desktop $(ICONS) $(NAME).appdata.xml \
 	$(CP) $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
 	$(CP) $(ICONS) $(DESTDIR)$(SHAREDIR)/$(NAME)
 	$(CP) icons/$(NAME).svg $(DESTDIR)$(SHAREDIR)/pixmaps
-	$(CP) $(NAME).appdata.xml $(DESTDIR)$(SHAREDIR)/appdata
+	$(CP) $(NAME).appdata.xml $(DESTDIR)$(SHAREDIR)/metainfo/.
 
 html : htdocs/index.html
 
@@ -168,6 +168,9 @@ debdist : tardist
               /tmp/$(NAME)/$(NAME)_$(VERSION)*.dsc \
               /tmp/$(NAME)/$(NAME)_$(VERSION).orig.tar.xz .
 
+signed_tardist : tardist
+	gpg --armor --detach-sign $(NAME)-$(VERSION).tar.xz
+
 htdocs/index.html : bin/$(NAME)
 	[ -d htdocs ] || mkdir htdocs
 	pod2html --noindex --title=$(NAME)-$(VERSION) bin/$(NAME) > htdocs/index.html
@@ -177,6 +180,7 @@ remote-html : htdocs/index.html
 
 file_releases :
 	scp $(NAME)-$(VERSION).tar.xz \
+         $(NAME)-$(VERSION).tar.xz.asc \
          rpm/RPMS/noarch/$(NAME)-$(VERSION)* \
          rpm/SRPMS/$(NAME)-$(VERSION)* \
          /tmp/$(NAME)/$(NAME)_$(VERSION)*.deb \
