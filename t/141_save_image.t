@@ -44,9 +44,9 @@ like(
     qr/test.jpg JPEG 70x46 70x46\+0\+0 8-bit sRGB/,
     'valid JPG created'
 );
-is(
+like(
     `identify test2.png`,
-    "test2.png PNG 70x46 70x46+0+0 8-bit sRGB 7KB 0.000u 0:00.000\n",
+    qr/test2\.png PNG 70x46 70x46\+0\+0 8-bit sRGB \d+K?B 0\.000u 0:00\.000\b/,
     'ran post-save hook'
 );
 

@@ -42,17 +42,17 @@ Gtk2->main;
 
 like(
     `identify 'te st.ps'`,
-    qr/te st.ps\[0\] PS 70x46 70x46\+0\+0 16-bit sRGB 7.92KB/,
+    qr/te st.ps\[0\] PS 70x46 70x46\+0\+0 16-bit sRGB .*B/,
     'valid postscript created (p1)'
 );
 like(
     `identify 'te st.ps'`,
-    qr/te st.ps\[1\] PS 70x46 70x46\+0\+0 16-bit sRGB 7.92KB/,
+    qr/te st.ps\[1\] PS 70x46 70x46\+0\+0 16-bit sRGB .*B/,
     'valid postscript created (p2)'
 );
 like(
     `identify test2.ps`,
-    qr/test2.ps\[0\] PS 70x46 70x46\+0\+0 16-bit sRGB 7.92KB/,
+    qr/test2.ps\[0\] PS 70x46 70x46\+0\+0 16-bit sRGB .*B/,
     'ran post-save hook'
 );
 
