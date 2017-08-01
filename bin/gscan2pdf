@@ -623,6 +623,8 @@ sub check_dependencies {
     $dependencies{unpaper}   = Gscan2pdf::Unpaper->version;
     $dependencies{libtiff}   = Gscan2pdf::Document::check_command('tiffcp');
     $dependencies{pdfunite}  = Gscan2pdf::Document::check_command('pdfunite');
+    $dependencies{pdf2ps}    = Gscan2pdf::Document::check_command('pdf2ps');
+    $dependencies{pdftops}   = Gscan2pdf::Document::check_command('pdftops');
     if ( $dependencies{perlmagick} )  { $logger->info('Found Image::Magick') }
     if ( $dependencies{imagemagick} ) { $logger->info('Found ImageMagick') }
     if ( $dependencies{scanadf} )     { $logger->info('Found scanadf') }
@@ -631,6 +633,8 @@ sub check_dependencies {
     if ( $dependencies{djvu} )     { $logger->info('Found cjb2 (djvu)') }
     if ( $dependencies{libtiff} )  { $logger->info('Found libtiff') }
     if ( $dependencies{pdfunite} ) { $logger->info('Found pdfunite') }
+    if ( $dependencies{pdf2ps} ) { $logger->info('Found pdf2ps (ghostscript)') }
+    if ( $dependencies{pdftops} ) { $logger->info('Found pdftops (poppler)') }
     if ( $dependencies{unpaper} ) {
         $logger->info("Found unpaper $dependencies{unpaper}");
     }
@@ -2026,7 +2030,8 @@ sub save_pdf {
         $options{append} = $filename;
     }
     elsif ( $option eq 'ps' ) {
-        $options{ps} = $filename;
+        $options{ps}     = $filename;
+        $options{pstool} = $SETTING{ps_backend};
     }
     if ( $SETTING{post_save_hook} ) {
         $options{post_save_hook} = $SETTING{current_psh};
@@ -2241,6 +2246,42 @@ sub save_dialog {
         push @type, [ 'djvu', $d->get('DjVu'), $d->get('Deja Vu') ];
     }
 
+    # Postscript backend
+    my $hboxps = Gtk2::HBox->new;
+    $vbox->pack_start( $hboxps, TRUE, TRUE, 0 );
+    $label = Gtk2::Label->new( $d->get('Postscript backend') );
+    $hboxps->pack_start( $label, FALSE, FALSE, 0 );
+    my @ps_backend;
+    my @backends = (
+        [
+            'libtiff',
+            $d->get('LibTIFF'),
+            $d->get(
+                'Use LibTIFF (tiff2ps) to create Postscript files from TIFF.')
+        ],
+        [
+            'pdf2ps',
+            $d->get('Ghostscript'),
+            $d->get(
+                'Use Ghostscript (pdf2ps) to create Postscript files from PDF.')
+        ],
+        [
+            'pdftops',
+            $d->get('Poppler'),
+            $d->get(
+                'Use Poppler (pdftops) to create Postscript files from PDF.')
+        ],
+    );
+    for my $backend (@backends) {
+        $logger->debug("checking $backend->[0]");
+        if ( $dependencies{ $backend->[0] } ) {
+            push @ps_backend, $backend;
+        }
+    }
+    my $combops = combobox_from_array(@ps_backend);
+    combobox_set_active( $combops, $SETTING{ps_backend}, @ps_backend );
+    $hboxps->pack_end( $combops, TRUE, TRUE, 0 );
+
     my @tiff_compression = (
         [
             'lzw', $d->get('LZW'),
@@ -2378,7 +2419,8 @@ sub save_dialog {
             \@type,            $vboxp,             $hboxf,
             \@pdf_compression, $combob,            $hboxpq,
             $hboxc,            \@tiff_compression, $combobtc,
-            $hboxtq,           $mdwidgets{box}
+            $hboxtq,           $mdwidgets{box},    $hboxps,
+            \@ps_backend,
         ]
     );
     combobox_set_active( $combobi, $SETTING{'image type'}, @type );
@@ -2425,7 +2467,8 @@ sub save_dialog {
             $spinbuttond,  \@pdf_compression,  $combob,
             $spinbuttonpq, \@fonts,            $combof,
             \%mdwidgets,   \@tiff_compression, $combobtc,
-            $spinbuttontq, $kbutton,           $pshbutton
+            $spinbuttontq, $kbutton,           $pshbutton,
+            $combops,      \@ps_backend,
         ]
     );
 
@@ -2446,9 +2489,7 @@ sub save_dialog {
     {
         $hboxtq->hide_all;
     }
-    if (    $type[ $combobi->get_active ][0] ne 'tif'
-        and $type[ $combobi->get_active ][0] ne 'ps' )
-    {
+    if ( $type[ $combobi->get_active ][0] ne 'tif' ) {
         $hboxc->hide_all;
     }
 
@@ -2466,9 +2507,10 @@ sub save_dialog {
 sub image_type_changed_callback {
     my ( $widget, $data ) = @_;
     my (
-        $type,     $vboxp,  $hboxf, $pdf_compression,
-        $combob,   $hboxpq, $hboxc, $tiff_compression,
-        $combobtc, $hboxtq, $hboxmd
+        $type,     $vboxp,  $hboxf,  $pdf_compression,
+        $combob,   $hboxpq, $hboxc,  $tiff_compression,
+        $combobtc, $hboxtq, $hboxmd, $hboxps,
+        $ps_backend,
     ) = @{$data};
     given ( $type->[ $widget->get_active ][0] ) {
         when (/pdf/xsm) {
@@ -2476,6 +2518,7 @@ sub image_type_changed_callback {
             $hboxf->show_all;
             $hboxc->hide_all;
             $hboxtq->hide_all;
+            $hboxps->hide_all;
             if ( $_ eq 'pdf' ) {
                 $hboxmd->show_all;
             }
@@ -2511,12 +2554,13 @@ sub image_type_changed_callback {
             }
         }
         when ('ps') {
-            $hboxc->show_all;
+            $hboxc->hide_all;
             $hboxmd->hide_all;
             $vboxp->hide_all;
             $hboxf->hide_all;
             $hboxpq->hide_all;
             $hboxtq->hide_all;
+            $hboxps->show_all;
         }
         when ('jpg') {
             $hboxmd->hide_all;
@@ -2557,7 +2601,8 @@ sub save_button_clicked_callback {
         $type,            $combobi,   $buttond,          $spinbuttond,
         $pdf_compression, $combob,    $spinbuttonpq,     $fonts,
         $combof,          $mdwidgets, $tiff_compression, $combobtc,
-        $spinbuttontq,    $kbutton,   $pshbutton
+        $spinbuttontq,    $kbutton,   $pshbutton,        $combops,
+        $ps_backend
     ) = @{$data};
 
     # Compile list of pages
@@ -2753,9 +2798,7 @@ sub save_button_clicked_callback {
             chdir $session;
         }
         when ('ps') {
-            $SETTING{'tiff compression'} =
-              $tiff_compression->[ $combobtc->get_active ][0];
-            $SETTING{'quality'} = $spinbuttontq->get_value;
+            $SETTING{ps_backend} = $ps_backend->[ $combops->get_active ][0];
 
             # cd back to cwd to save
             chdir $SETTING{cwd};
@@ -3009,6 +3052,7 @@ sub save_tiff {
     my %options = (
         compression => $SETTING{'tiff compression'},
         quality     => $SETTING{quality},
+        ps          => $ps,
     );
     if ( $SETTING{post_save_hook} ) {
         $options{post_save_hook} = $SETTING{current_psh};
@@ -3019,7 +3063,6 @@ sub save_tiff {
         path            => $filename,
         list_of_pages   => $list_of_pages,
         options         => \%options,
-        ps              => $ps,
         queued_callback => sub {
             return update_tpbar(@_);
         },
@@ -6666,28 +6709,6 @@ sub _preferences_general_options {
         $d->get('Set access and modification times to metadata date') );
     if ( $SETTING{set_timestamp} ) { $cbt->set_active(TRUE) }
     $vbox->pack_start( $cbt, TRUE, TRUE, 0 );
-
-    # Postscript backend
-    $hbox = Gtk2::HBox->new;
-    $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('Postscript backend') );
-    $hbox->pack_start( $label, FALSE, FALSE, 0 );
-    my @ps_backend = (
-        [
-            'ghostscript',
-            $d->get('Ghostscript'),
-            $d->get('Use Ghostscript to create Postscript files from PDF.')
-        ],
-        [
-            'libtiff',
-            $d->get('LibTIFF'),
-            $d->get(
-                'Use LibTIFF (tiff2ps) to create Postscript files from TIFF.')
-        ],
-    );
-    my $combop = combobox_from_array(@ps_backend);
-    combobox_set_active( $combop, $SETTING{ps_backend}, @ps_backend );
-    $hbox->pack_end( $combop, TRUE, TRUE, 0 );
 
     # Temporary directory settings
     $hbox = Gtk2::HBox->new;

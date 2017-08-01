@@ -1169,7 +1169,6 @@ sub save_tiff {
             path          => $options{path},
             list_of_pages => $options{list_of_pages},
             options       => $options{options},
-            ps            => $options{ps},
             dir           => "$self->{dir}",
             pidfile       => "$pidfile",
             uuid          => $uuid,
@@ -2248,7 +2247,6 @@ sub _thread_main {
                     path          => $request->{path},
                     list_of_pages => $request->{list_of_pages},
                     options       => $request->{options},
-                    ps            => $request->{ps},
                     dir           => $request->{dir},
                     pidfile       => $request->{pidfile},
                     uuid          => $request->{uuid}
@@ -2798,13 +2796,8 @@ sub _thread_save_pdf {
     if ( defined $options{options}->{ps} ) {
         $self->{message} = $d->get('Converting to PS');
 
-        # Note: -a option causes tiff2ps to generate multiple output
-        # pages, one for each page in the input TIFF file.  Without it, it
-        # only generates output for the first page.
-        my @cmd = (
-            'gs', '-dSAFER', '-sDEVICE=pswrite', "-r$resolution", '-o',
-            $options{options}->{ps}, $filename,
-        );
+        my @cmd =
+          ( $options{options}->{pstool}, $filename, $options{options}->{ps} );
         my ( $status, undef, $error ) =
           exec_command( \@cmd, $options{pidfile} );
         if ( $status or $error ) {

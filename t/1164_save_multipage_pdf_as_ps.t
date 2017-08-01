@@ -10,6 +10,8 @@ BEGIN {
 #########################
 
 use Log::Log4perl qw(:easy);
+
+#Log::Log4perl->easy_init($WARN);
 Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Document->setup($logger);
@@ -31,7 +33,7 @@ $slist->import_files(
             list_of_pages => [ $slist->{data}[0][2], $slist->{data}[1][2] ],
             options       => {
                 ps                     => 'te st.ps',
-                pstool                 => 'pdf2ps',
+                pstool                 => 'pdftops',
                 post_save_hook         => 'cp %i test2.ps',
                 post_save_hook_options => 'fg',
             },
@@ -43,21 +45,21 @@ Gtk2->main;
 
 like(
     `identify 'te st.ps'`,
-    qr/te st.ps\[0\] PS \d+x\d+ \d+x\d+\+0\+0 16-bit sRGB .*B/,
+    qr/te st.ps\[0\] PS 70x46 70x46\+0\+0 16-bit sRGB .*B/,
     'valid postscript created (p1)'
 );
 like(
     `identify 'te st.ps'`,
-    qr/te st.ps\[1\] PS \d+x\d+ \d+x\d+\+0\+0 16-bit sRGB .*B/,
+    qr/te st.ps\[1\] PS 70x46 70x46\+0\+0 16-bit sRGB .*B/,
     'valid postscript created (p2)'
 );
 like(
     `identify test2.ps`,
-    qr/test2.ps\[0\] PS \d+x\d+ \d+x\d+\+0\+0 16-bit sRGB .*B/,
+    qr/test2.ps\[0\] PS 70x46 70x46\+0\+0 16-bit sRGB .*B/,
     'ran post-save hook'
 );
 
 #########################
 
-unlink 'test.pnm', 'test2.ps', 'te st.ps';
+unlink 'test.pnm', 'test.pdf', 'test2.ps', 'te st.ps';
 Gscan2pdf::Document->quit();
