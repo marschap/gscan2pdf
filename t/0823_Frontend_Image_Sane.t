@@ -34,11 +34,15 @@ Gscan2pdf::Frontend::Image_Sane->open_device(
                             new_page_callback => sub {
                                 ( my $status, $path ) = @_;
                                 is( $status, 5, 'SANE_STATUS_GOOD' );
-                                like(
-                                    `file $path`,
-                                    qr/Netpbm /,
-                                    'Output has valid header'
-                                );
+                              SKIP: {
+                                    skip 'file-5.31 cannot detect PGM', 1
+                                      if `file --version` =~ /file-5\.31$/m;
+                                    like(
+                                        `file $path`,
+                                        qr/Netpbm /,
+                                        'Output has valid header'
+                                    );
+                                }
                                 like(
                                     `identify $path`,
 qr/PGM 216x334 216x334\+0\+0 8-bit Grayscale Gray/,
