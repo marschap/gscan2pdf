@@ -155,8 +155,10 @@ if ( $OSNAME eq 'linux' ) {
     my @files = glob '/etc/*-release';
     for (@files) {
         my $output = Gscan2pdf::Document::slurp($_);
-        chomp $output;
-        $logger->info($output);
+        if ( defined $output ) {
+            chomp $output;
+            $logger->info($output);
+        }
     }
 }
 $logger->info("Perl version $PERL_VERSION");
