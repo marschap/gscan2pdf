@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 30;
+use Test::More tests => 36;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
 use Date::Calc qw(Today);
@@ -173,6 +173,49 @@ is_deeply(
         CreationDate => "D:20160210000000+00'00'"
     },
     'prepare_output_metadata'
+);
+
+#########################
+
+is(
+    Gscan2pdf::Document::_program_version(
+        'stdout', qr/file-(\d+\.\d+)/xsm, 0, "file-5.22\nmagic file from"
+    ),
+    '5.22',
+    'file version'
+);
+is(
+    Gscan2pdf::Document::_program_version(
+        'stdout', qr/Version:\sImageMagick\s([\d.-]+)/xsm,
+        0,        "Version: ImageMagick 6.9.0-3 Q16"
+    ),
+    '6.9.0-3',
+    'imagemagick version'
+);
+is(
+    Gscan2pdf::Document::_program_version(
+        'stdout', qr/Version:\sImageMagick\s([\d.-]+)/xsm,
+        0,        "Version:ImageMagick 6.9.0-3 Q16"
+    ),
+    undef,
+    'unable to parse version'
+);
+is(
+    Gscan2pdf::Document::_program_version(
+        'stdout', qr/Version:\sImageMagick\s([\d.-]+)/xsm,
+        -1, "", 'convert: command not found'
+    ),
+    -1,
+    'command not found'
+);
+
+my ( $status, $out, $err ) =
+  Gscan2pdf::Document::exec_command( ['/command/not/found'] );
+is( $status, -1, 'status open3 running unknown command' );
+is(
+    $err,
+    '/command/not/found: command not found',
+    'stderr open3 running unknown command'
 );
 
 #########################

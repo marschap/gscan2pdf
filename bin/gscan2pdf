@@ -613,42 +613,59 @@ sub create_main_window {
 # Check for presence of various packages
 
 sub check_dependencies {
-    $dependencies{perlmagick}  = try { require Image::Magick };
-    $dependencies{imagemagick} = Gscan2pdf::Document::check_command('convert');
-    $dependencies{scanadf}     = Gscan2pdf::Document::check_command('scanadf');
-    $dependencies{xdg}       = Gscan2pdf::Document::check_command('xdg-email');
-    $dependencies{gocr}      = Gscan2pdf::Document::check_command('gocr');
-    $dependencies{tesseract} = Gscan2pdf::Tesseract->setup($logger);
-    $dependencies{ocropus}   = Gscan2pdf::Ocropus->setup($logger);
-    $dependencies{cuneiform} = Gscan2pdf::Cuneiform->setup($logger);
-    $dependencies{djvu}      = Gscan2pdf::Document::check_command('cjb2');
-    $dependencies{unpaper}   = Gscan2pdf::Unpaper->version;
-    $dependencies{libtiff}   = Gscan2pdf::Document::check_command('tiffcp');
-    $dependencies{pdfunite}  = Gscan2pdf::Document::check_command('pdfunite');
-    $dependencies{pdf2ps}    = Gscan2pdf::Document::check_command('pdf2ps');
-    $dependencies{pdftops}   = Gscan2pdf::Document::check_command('pdftops');
-    if ( $dependencies{perlmagick} )  { $logger->info('Found Image::Magick') }
-    if ( $dependencies{imagemagick} ) { $logger->info('Found ImageMagick') }
-    if ( $dependencies{scanadf} )     { $logger->info('Found scanadf') }
-    if ( $dependencies{xdg} )         { $logger->info('Found xdg-email') }
-
-    if ( $dependencies{djvu} )     { $logger->info('Found cjb2 (djvu)') }
-    if ( $dependencies{libtiff} )  { $logger->info('Found libtiff') }
-    if ( $dependencies{pdfunite} ) { $logger->info('Found pdfunite') }
-    if ( $dependencies{pdf2ps} ) { $logger->info('Found pdf2ps (ghostscript)') }
-    if ( $dependencies{pdftops} ) { $logger->info('Found pdftops (poppler)') }
+    $dependencies{perlmagick} = try { require Image::Magick };
+    $dependencies{tesseract}  = Gscan2pdf::Tesseract->setup($logger);
+    $dependencies{ocropus}    = Gscan2pdf::Ocropus->setup($logger);
+    $dependencies{cuneiform}  = Gscan2pdf::Cuneiform->setup($logger);
+    $dependencies{unpaper}    = Gscan2pdf::Unpaper->version;
+    if ( $dependencies{perlmagick} ) { $logger->info('Found Image::Magick') }
     if ( $dependencies{unpaper} ) {
         $logger->info("Found unpaper $dependencies{unpaper}");
+    }
+    my @dependencies = (
+        [
+            'imagemagick', 'stdout',
+            qr/Version:\sImageMagick\s([\d.-]+)/xsm,
+            [ 'convert', '--version' ]
+        ],
+        [
+            'scanadf', 'stdout',
+            qr/scanadf\s[(]sane-frontends[)]\s([\d.]+)/xsm,
+            [ 'scanadf', '--version' ]
+        ],
+        [
+            'xdg', 'stdout',
+            qr/xdg-email\s([^\n]+)/xsm, [ 'xdg-email', '--version' ]
+        ],
+        [ 'gocr', 'stderr', qr/gocr\s([^\n]+)/xsm, [ 'gocr', '-h' ] ],
+        [
+            'djvu', 'stderr', qr/DjVuLibre-([\d.]+)/xsm, [ 'cjb2', '--version' ]
+        ],
+        [
+            'libtiff', 'stderr',
+            qr/LIBTIFF,\sVersion\s([\d.]+)/xsm, [ 'tiffcp', '-h' ]
+        ],
+        [
+            'pdfunite', 'stderr',
+            qr/pdfunite\sversion\s([\d.]+)/xsm, [ 'pdfunite', '--version' ]
+        ],
+        [ 'pdf2ps', 'stdout', qr/([\d.]+)/xsm, [ 'gs', '--version' ] ],
+    );
+    for (@dependencies) {
+        my ( $name, $stream, $regex, $cmd ) = @{$_};
+        $dependencies{$name} =
+          Gscan2pdf::Document::program_version( $stream, $regex, $cmd );
+        if ( $dependencies{$name} ) {
+            $logger->info("Found $name $dependencies{$name}");
+        }
     }
 
     # OCR engine options
     if ( $dependencies{gocr} ) {
-        $logger->info('Found gocr');
         push @ocr_engine,
           [ 'gocr', $d->get('GOCR'), $d->get('Process image with GOCR.') ];
     }
     if ( $dependencies{tesseract} ) {
-        $logger->info('Found tesseract');
         push @ocr_engine,
           [
             'tesseract', $d->get('Tesseract'),

@@ -672,15 +672,9 @@ sub get_cmdline {
 
 sub version {
     if ( not defined $version ) {
-        if ( Gscan2pdf::Document::check_command('unpaper') ) {
-            ( undef, $version ) =
-              Gscan2pdf::Document::exec_command( [ 'unpaper', '--version' ] );
-            chomp $version;
-            $version = "v$version";
-        }
-        else {
-            $version = 0;
-        }
+        $version =
+          Gscan2pdf::Document::program_version( 'stdout', qr/([\d.]+)/xsm,
+            [ 'unpaper', '--version' ] );
     }
     return $version;
 }

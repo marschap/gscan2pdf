@@ -1859,7 +1859,17 @@ sub exec_command {
 
     # we create a symbol for the err because open3 will not do that for us
     my $err = gensym();
-    my $pid = open3( undef, my $reader, $err, @{$cmd} );
+    my ( $pid, $reader );
+    try {
+        $pid = open3( undef, $reader, $err, @{$cmd} );
+    }
+    catch {
+        $pid = 0;
+    };
+    if ( $pid == 0 ) {
+        return $PROCESS_FAILED, undef,
+          join( $SPACE, @{$cmd} ) . ': command not found';
+    }
 
     if ( defined $pidfile ) {
         open my $fh, '>', $pidfile or return $PROCESS_FAILED;
@@ -1870,6 +1880,30 @@ sub exec_command {
     waitpid $ALL_PENDING_ZOMBIE_PROCESSES, WNOHANG;
     my $child_exit_status = $CHILD_ERROR >> $BITS_PER_BYTE;
     return $child_exit_status, slurp($reader), slurp($err);
+}
+
+# wrapper for _program_version below
+
+sub program_version {
+    my ( $stream, $regex, $cmd ) = @_;
+    return _program_version( $stream, $regex,
+        Gscan2pdf::Document::exec_command($cmd) );
+}
+
+# Check exec_command output for version number
+# Don't call exec_command directly to allow us to test output we can't reproduce.
+
+sub _program_version {
+    my ( $stream, $regex, @output ) = @_;
+    my ( $status, $out,   $err )    = @output;
+    my $output = $stream eq 'stdout' ? $out : $err;
+    if ( $output =~ $regex ) { return $1 }
+    if ( $status == $PROCESS_FAILED ) {
+        $logger->info($err);
+        return $PROCESS_FAILED;
+    }
+    $logger->info("Unable to parse version string from: '$output'");
+    return;
 }
 
 # Check that a command exists
