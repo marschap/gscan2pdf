@@ -45,11 +45,9 @@ use feature 'switch';
 no if $] >= 5.018, warnings => 'experimental::smartmatch';
 
 use Gscan2pdf::Document;
-use Gscan2pdf::Frontend::Sane;
 use Gscan2pdf::Frontend::Image_Sane;
 use Gscan2pdf::Frontend::CLI;
 use Gscan2pdf::Scanner::Profile;
-use Gscan2pdf::Dialog::Scan::Sane;
 use Gscan2pdf::Dialog::Scan::Image_Sane;
 use Gscan2pdf::Dialog::Scan::CLI;
 use Gscan2pdf::Tesseract;
@@ -177,7 +175,6 @@ $logger->info( 'Using GtkImageView version ',
 $logger->info("Using Gtk2::ImageView version $Gtk2::ImageView::VERSION");
 $logger->info("Using PDF::API2 version $PDF::API2::VERSION");
 $logger->info( 'Using Sane version ' . join $DOT, Image::Sane->get_version );
-$logger->info("Using libsane-perl version $Sane::VERSION");
 $logger->info("Using libimage-sane-perl version $Image::Sane::VERSION");
 
 if ($debug) { $logger->debug( Dumper( \%SETTING ) ) }
@@ -193,7 +190,6 @@ $SETTING{version} = $VERSION;
 Gscan2pdf::Document->setup($logger);
 
 # Initialise SANE frontends
-Gscan2pdf::Frontend::Sane->setup($logger);
 Gscan2pdf::Frontend::Image_Sane->setup($logger);
 Gscan2pdf::Frontend::CLI->setup($logger);
 
@@ -516,7 +512,7 @@ sub read_config {
     # Delete the options cache if there is a new version of SANE
     Gscan2pdf::Config::check_sane_version( \%config,
         join( $DOT, Image::Sane->get_version ),
-        $Sane::VERSION );
+        $Image::Sane::VERSION );
     return $rcf, %config;
 }
 
@@ -3496,11 +3492,7 @@ sub scan_dialog {
         ? $slist->{data}[ $#{ $slist->{data} } ][0] + 1
         : 1,
     );
-    if ( $SETTING{frontend} eq 'libsane-perl' ) {
-        $windows = Gscan2pdf::Dialog::Scan::Sane->new( %options,
-            'cycle-sane-handle' => $SETTING{'cycle sane handle'}, );
-    }
-    elsif ( $SETTING{frontend} eq 'libimage-sane-perl' ) {
+    if ( $SETTING{frontend} eq 'libimage-sane-perl' ) {
         $windows = Gscan2pdf::Dialog::Scan::Image_Sane->new( %options,
             'cycle-sane-handle' => $SETTING{'cycle sane handle'}, );
     }
@@ -6006,7 +5998,6 @@ sub quit {
 
 sub kill_threads {
     $logger->info('Killing Sane thread(s)');
-    Gscan2pdf::Frontend::Sane->quit();
     Gscan2pdf::Frontend::Image_Sane->quit();
     $logger->info('Killing document thread(s)');
     Gscan2pdf::Document->quit();

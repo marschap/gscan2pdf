@@ -217,7 +217,6 @@ sub add_defaults {
         'Page range'                        => 'all',
         version                             => undef,
         'SANE version'                      => undef,
-        'libsane-perl version'              => undef,
         'libimage-sane-perl version'        => undef,
         selection                           => undef,
         cwd                                 => undef,
@@ -339,7 +338,7 @@ sub add_defaults {
     if (
         defined $SETTING->{frontend}
         and ( $SETTING->{frontend} !~
-            /^(?:scanimage|scanadf|libsane-perl|libimage-sane-perl)$/xsm )
+            /^(?:scanimage|scanadf|libimage-sane-perl)$/xsm )
       )
     {
         delete $SETTING->{frontend};
@@ -389,8 +388,8 @@ sub check_sane_version {
     {
         if ( defined $SETTING->{cache} ) { delete $SETTING->{cache} }
     }
-    $SETTING->{'SANE version'}         = $SANE;
-    $SETTING->{'libsane-perl version'} = $LIBSANEPERL;
+    $SETTING->{'SANE version'}               = $SANE;
+    $SETTING->{'libimage-sane-perl version'} = $LIBSANEPERL;
     return;
 }
 

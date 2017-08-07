@@ -66,7 +66,6 @@ Gscan2pdf::Config::add_defaults( \%output );
 %example = (
     version                             => '1.3.3',
     'SANE version'                      => undef,
-    'libsane-perl version'              => undef,
     'libimage-sane-perl version'        => undef,
     window_width                        => 800,
     window_height                       => 600,
@@ -239,14 +238,14 @@ is_deeply( \%output, \%example, 'remove_invalid_paper (name)' );
 #########################
 
 %output = (
-    'SANE version'         => '1.2.3',
-    'libsane-perl version' => 0.05,
-    cache                  => ['stuff'],
+    'SANE version'               => '1.2.3',
+    'libimage-sane-perl version' => 0.05,
+    cache                        => ['stuff'],
 );
 Gscan2pdf::Config::check_sane_version( \%output, '1.2.4', 0.05 );
 %example = (
-    'SANE version'         => '1.2.4',
-    'libsane-perl version' => 0.05,
+    'SANE version'               => '1.2.4',
+    'libimage-sane-perl version' => 0.05,
 );
 is_deeply( \%output, \%example, 'check_sane_version' );
 

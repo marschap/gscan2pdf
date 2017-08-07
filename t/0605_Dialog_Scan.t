@@ -3,13 +3,13 @@ use strict;
 use Test::More tests => 1;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
-use Sane 0.05;              # To get SANE_* enums
-use Sub::Override;          # Override Frontend::Sane to test functionality that
-                            # we can't with the test backend
+use Image::Sane ':all';     # To get SANE_* enums
+use Sub::Override;    # Override Frontend::Image_Sane to test functionality that
+                      # we can't with the test backend
 use Storable qw(freeze);    # For cloning the options cache
 
 BEGIN {
-    use Gscan2pdf::Dialog::Scan::Sane;
+    use Gscan2pdf::Dialog::Scan::Image_Sane;
 }
 
 #########################
@@ -24,7 +24,7 @@ my $logger = Log::Log4perl::get_logger;
 # The overrides must occur before the thread is spawned in setup.
 my $override = Sub::Override->new;
 $override->replace(
-    'Gscan2pdf::Frontend::Sane::_thread_get_devices' => sub {
+    'Gscan2pdf::Frontend::Image_Sane::_thread_get_devices' => sub {
         my ( $self, $uuid ) = @_;
         $self->{return}->enqueue(
             {
@@ -46,7 +46,7 @@ $override->replace(
     }
 );
 $override->replace(
-    'Gscan2pdf::Frontend::Sane::_thread_open_device' => sub {
+    'Gscan2pdf::Frontend::Image_Sane::_thread_open_device' => sub {
         my ( $self, $uuid, $device_name ) = @_;
         $self->{return}->enqueue(
             {
@@ -81,7 +81,7 @@ my $options = [
     },
 ];
 $override->replace(
-    'Gscan2pdf::Frontend::Sane::_thread_get_options' => sub {
+    'Gscan2pdf::Frontend::Image_Sane::_thread_get_options' => sub {
         my ( $self, $uuid ) = @_;
         $self->{return}->enqueue(
             {
@@ -96,9 +96,9 @@ $override->replace(
     }
 );
 
-Gscan2pdf::Frontend::Sane->setup($logger);
+Gscan2pdf::Frontend::Image_Sane->setup($logger);
 
-my $dialog = Gscan2pdf::Dialog::Scan::Sane->new(
+my $dialog = Gscan2pdf::Dialog::Scan::Image_Sane->new(
     title           => 'title',
     'transient-for' => $window,
     'logger'        => $logger
@@ -138,5 +138,5 @@ $dialog->get_devices;
 
 Gtk2->main;
 
-Gscan2pdf::Frontend::Sane->quit;
+Gscan2pdf::Frontend::Image_Sane->quit;
 __END__
