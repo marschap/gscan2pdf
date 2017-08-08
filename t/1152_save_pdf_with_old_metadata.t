@@ -45,7 +45,7 @@ $slist->import_files(
 Gtk2->main;
 
 my $info = `pdfinfo $pdf`;
-like( $info, qr/Thu Feb 10 00:00:00 1966/, 'metadata ModDate in PDF' );
+like( $info, qr/Thu Feb 10 0\d:00:00 1966/, 'metadata ModDate in PDF' );
 
 #########################
 
