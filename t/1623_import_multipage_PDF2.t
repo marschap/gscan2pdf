@@ -11,7 +11,7 @@ BEGIN {
 #########################
 
 SKIP: {
-    skip 'pdftk not installed', 1 unless `which pdftk`;
+    skip 'pdftk not installed', 2 unless `which pdftk`;
 
     use Log::Log4perl qw(:easy);
 
