@@ -11,7 +11,7 @@ BEGIN {
 }
 
 SKIP: {
-    skip 'unpaper not installed', 2
+    skip 'unpaper not installed', 5
       unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
     my $unpaper = Gscan2pdf::Unpaper->new;
 
@@ -76,7 +76,18 @@ SKIP: {
                     );
                 },
                 error_callback => sub {
-                    fail 'no warnings';
+                    my ($msgs) = @_;
+                    for my $msg ( split "\n", $msgs ) {
+
+                        # if we use unlike, we no longer
+                        # know how many tests there will be
+                        if ( $msg !~
+/(deprecated|Encoder did not produce proper pts, making some up)/
+                          )
+                        {
+                            fail 'no warnings';
+                        }
+                    }
                 }
             );
         }
