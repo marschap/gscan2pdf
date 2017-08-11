@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 28;
+use Test::More tests => 29;
 use Image::Sane ':all';    # For enums
 BEGIN { use_ok('Gscan2pdf::Scanner::Profile') }
 
@@ -149,3 +149,12 @@ is( $iter->(), 4, 'basic functionality each_backend_option reverse' );
 for ( 1 .. 3 ) { $iter->() }
 is( $iter->(), undef,
     'each_backend_option reverse returns undef when finished' );
+
+#########################
+
+$profile->remove_backend_option_by_name('tl-x');
+is_deeply(
+    $profile->get_data,
+    { backend => [ { 'br-y' => 52 }, { 'br-x' => 51 }, { 'tl-y' => 2 } ] },
+    'basic functionality remove_backend_option_by_name'
+);

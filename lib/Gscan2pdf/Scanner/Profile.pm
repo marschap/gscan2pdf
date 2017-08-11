@@ -68,6 +68,20 @@ sub remove_backend_option_by_index {
     return;
 }
 
+sub remove_backend_option_by_name {
+    my ( $self, $name ) = @_;
+    my $iter = $self->each_backend_option;
+    my $i;
+    while ( $i = $iter->() ) {
+        my ( $key, $val ) = $self->get_backend_option_by_index($i);
+        if ( $key eq $name ) { last }
+    }
+    if ( $i <= $self->num_backend_options ) {
+        splice @{ $self->{data}{backend} }, $i - 1, 1;
+    }
+    return;
+}
+
 # an iterator for backend options
 # index returned by iterator 1 greater than index to allow
 # my $iter = $self->each_backend_option;
