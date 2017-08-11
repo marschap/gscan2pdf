@@ -678,7 +678,9 @@ sub set_option {
                         }
                         $self->signal_emit( 'changed-options-cache', $cache );
                     }
-                    if ($options) { $self->update_options($options) }
+                    if ($options) {
+                        $self->update_options( $options, $option->{name} );
+                    }
 
                     $self->signal_emit( 'finished-process',
                         'find_scan_options' );

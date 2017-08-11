@@ -1116,7 +1116,18 @@ sub get_paper_by_geometry {
 # the new options
 
 sub update_options {
-    my ( $self, $new_options ) = @_;
+    my ( $self, $new_options, $triggered_by ) = @_;
+
+    # Clone the current scan options in case they are changed by the reload,
+    # so that we can reapply it afterwards to ensure the same values are still
+    # set.
+    my $current_scan_options;
+    if ( defined $triggered_by ) {
+        $current_scan_options = dclone( $self->{current_scan_options} );
+
+        # remove $triggered_by to prevent an infinite loop
+        $current_scan_options->remove_backend_option_by_name($triggered_by);
+    }
 
     # walk the widget tree and update them from the hash
     $logger->debug( 'Sane->get_option_descriptor returned: ',
@@ -1125,111 +1136,123 @@ sub update_options {
     my $num_dev_options = $new_options->num_options;
     my $options         = $self->get('available-scan-options');
     for ( 1 .. $num_dev_options - 1 ) {
-        my $opt = $options->by_index($_);
-
-        # could be undefined for !($new_opt->{cap} & SANE_CAP_SOFT_DETECT)
-        # or where $opt->{name} is not defined
-        # e.g. $opt->{type} == SANE_TYPE_GROUP
-        if (   $opt->{type} == SANE_TYPE_GROUP
-            or not defined $opt->{name}
-            or not defined $self->{option_widgets}{ $opt->{name} } )
+        if (
+            $self->_update_option(
+                $options->by_index($_),
+                $new_options->by_index($_)
+            )
+          )
         {
-            next;
-        }
-        my $widget = $self->{option_widgets}{ $opt->{name} };
-
-        my $new_opt = $new_options->by_index($_);
-        if ( $new_opt->{name} ne $opt->{name} ) {
-            $logger->error(
-'Error updating options: reloaded options are numbered differently'
-            );
             return;
         }
-        if ( $opt->{type} != $new_opt->{type} ) {
-            $logger->error(
-                'Error updating options: reloaded options have different types'
-            );
-            return;
-        }
-
-        # Block the signal handler for the widget to prevent infinite
-        # loops of the widget updating the option, updating the widget, etc.
-        $widget->signal_handler_block( $widget->{signal} );
-        $opt = $new_opt;
-        my $value = $opt->{val};
-
-        # HBox for option
-        my $hbox = $widget->parent;
-        $hbox->set_sensitive( ( not $opt->{cap} & SANE_CAP_INACTIVE )
-              and $opt->{cap} & SANE_CAP_SOFT_SELECT );
-
-        if ( $opt->{max_values} < 2 ) {
-
-            # CheckButton
-            if ( $opt->{type} == SANE_TYPE_BOOL ) {
-                if ( $self->value_for_active_option( $value, $opt ) ) {
-                    $widget->set_active($value);
-                }
-            }
-            else {
-                given ( $opt->{constraint_type} ) {
-
-                    # SpinButton
-                    when (SANE_CONSTRAINT_RANGE) {
-                        my ( $step, $page ) = $widget->get_increments;
-                        $step = 1;
-                        if ( $opt->{constraint}{quant} ) {
-                            $step = $opt->{constraint}{quant};
-                        }
-                        $widget->set_range( $opt->{constraint}{min},
-                            $opt->{constraint}{max} );
-                        $widget->set_increments( $step, $page );
-                        if ( $self->value_for_active_option( $value, $opt ) ) {
-                            $widget->set_value($value);
-                        }
-                    }
-
-                    # ComboBox
-                    when (
-                        [
-                            SANE_CONSTRAINT_STRING_LIST,
-                            SANE_CONSTRAINT_WORD_LIST
-                        ]
-                      )
-                    {
-                        $widget->get_model->clear;
-                        my $index = 0;
-                        for ( 0 .. $#{ $opt->{constraint} } ) {
-                            $widget->append_text(
-                                $d_sane->get( $opt->{constraint}[$_] ) );
-                            if ( defined $value
-                                and $opt->{constraint}[$_] eq $value )
-                            {
-                                $index = $_;
-                            }
-                        }
-                        if ( defined $index ) { $widget->set_active($index) }
-                    }
-
-                    # Entry
-                    when (SANE_CONSTRAINT_NONE) {
-                        if ( $self->value_for_active_option( $value, $opt ) ) {
-                            $widget->set_text($value);
-                        }
-                    }
-                }
-            }
-        }
-        $widget->signal_handler_unblock( $widget->{signal} );
     }
 
     # This fires the reloaded-scan-options signal,
     # so don't set this until we have finished
     $self->set( 'available-scan-options', $new_options );
 
+    # Reapply current options to ensure the same values are still set.
+    if ( defined $triggered_by ) {
+        $self->set_current_scan_options($current_scan_options);
+    }
+
     # In case the geometry values have changed,
     # update the available paper formats
     $self->set_paper_formats( $self->{paper_formats} );
+    return;
+}
+
+sub _update_option {
+    my ( $self, $opt, $new_opt ) = @_;
+
+    # could be undefined for !($new_opt->{cap} & SANE_CAP_SOFT_DETECT)
+    # or where $opt->{name} is not defined
+    # e.g. $opt->{type} == SANE_TYPE_GROUP
+    if (   $opt->{type} == SANE_TYPE_GROUP
+        or not defined $opt->{name}
+        or not defined $self->{option_widgets}{ $opt->{name} } )
+    {
+        return;
+    }
+    my $widget = $self->{option_widgets}{ $opt->{name} };
+
+    if ( $new_opt->{name} ne $opt->{name} ) {
+        $logger->error(
+            'Error updating options: reloaded options are numbered differently'
+        );
+        return TRUE;
+    }
+    if ( $opt->{type} != $new_opt->{type} ) {
+        $logger->error(
+            'Error updating options: reloaded options have different types');
+        return TRUE;
+    }
+
+    # Block the signal handler for the widget to prevent infinite
+    # loops of the widget updating the option, updating the widget, etc.
+    $widget->signal_handler_block( $widget->{signal} );
+    $opt = $new_opt;
+    my $value = $opt->{val};
+
+    # HBox for option
+    my $hbox = $widget->parent;
+    $hbox->set_sensitive( ( not $opt->{cap} & SANE_CAP_INACTIVE )
+          and $opt->{cap} & SANE_CAP_SOFT_SELECT );
+
+    if ( $opt->{max_values} < 2 ) {
+
+        # CheckButton
+        if ( $opt->{type} == SANE_TYPE_BOOL ) {
+            if ( $self->value_for_active_option( $value, $opt ) ) {
+                $widget->set_active($value);
+            }
+        }
+        else {
+            given ( $opt->{constraint_type} ) {
+
+                # SpinButton
+                when (SANE_CONSTRAINT_RANGE) {
+                    my ( $step, $page ) = $widget->get_increments;
+                    $step = 1;
+                    if ( $opt->{constraint}{quant} ) {
+                        $step = $opt->{constraint}{quant};
+                    }
+                    $widget->set_range( $opt->{constraint}{min},
+                        $opt->{constraint}{max} );
+                    $widget->set_increments( $step, $page );
+                    if ( $self->value_for_active_option( $value, $opt ) ) {
+                        $widget->set_value($value);
+                    }
+                }
+
+                # ComboBox
+                when (
+                    [ SANE_CONSTRAINT_STRING_LIST, SANE_CONSTRAINT_WORD_LIST ] )
+                {
+                    $widget->get_model->clear;
+                    my $index = 0;
+                    for ( 0 .. $#{ $opt->{constraint} } ) {
+                        $widget->append_text(
+                            $d_sane->get( $opt->{constraint}[$_] ) );
+                        if ( defined $value
+                            and $opt->{constraint}[$_] eq $value )
+                        {
+                            $index = $_;
+                        }
+                    }
+                    if ( defined $index ) { $widget->set_active($index) }
+                }
+
+                # Entry
+                when (SANE_CONSTRAINT_NONE) {
+                    if ( $self->value_for_active_option( $value, $opt ) ) {
+                        $widget->set_text($value);
+                    }
+                }
+            }
+        }
+    }
+    $widget->signal_handler_unblock( $widget->{signal} );
     return;
 }
 

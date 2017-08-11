@@ -324,7 +324,7 @@ sub check_return_queue {
         }
 
         # if we have pressed the cancel button, ignore everything in the returns
-        # queue until it flags cancelled.
+        # queue until it flags 'cancelled'.
         if ( $_self->{cancel} ) {
             if ( $data->{type} eq 'cancelled' ) {
                 $_self->{cancel} = FALSE;

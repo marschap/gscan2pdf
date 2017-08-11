@@ -391,7 +391,8 @@ sub set_option {
             my $opt;
             if ($data) {
                 $self->update_options(
-                    Gscan2pdf::Scanner::Options->new_from_data($data) );
+                    Gscan2pdf::Scanner::Options->new_from_data($data),
+                    $option->{name} );
                 $opt = $options->by_name( $option->{name} );
             }
             else {
