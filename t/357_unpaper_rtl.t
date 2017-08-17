@@ -12,6 +12,7 @@ BEGIN {
 SKIP: {
     skip 'unpaper not installed', 2
       unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
+    Gscan2pdf::Translation::set_domain('gscan2pdf');
     my $unpaper =
       Gscan2pdf::Unpaper->new(
         { 'output-pages' => 2, layout => 'double', direction => 'rtl' } );

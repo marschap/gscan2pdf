@@ -186,7 +186,7 @@ file_releases :
 	  ra28145,$(NAME)@frs.sf.net:/home/frs/project/g/gs/$(NAME)/$(NAME)/$(VERSION)/
 
 po/$(NAME).pot : $(SOURCE)
-	xgettext -L perl --keyword=get --from-code=UTF-8 -o - -f MANIFEST | \
+	xgettext -L perl --keyword=__ --from-code=UTF-8 -o - -f MANIFEST | \
          sed 's/SOME DESCRIPTIVE TITLE/messages.pot for $(NAME)/' | \
          sed 's/PACKAGE VERSION/$(NAME)-$(VERSION)/' | \
          sed "s/YEAR THE PACKAGE'S COPYRIGHT HOLDER/$(YEAR) $(AUTHOR)/" | \

@@ -3,11 +3,12 @@ package Gscan2pdf::Dialog::Scan::Image_Sane;
 use warnings;
 use strict;
 no if $] >= 5.018, warnings => 'experimental::smartmatch';
-use Gscan2pdf::Dialog::Scan;
 use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Image::Sane ':all';    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
+use Gscan2pdf::Dialog::Scan;
 use Gscan2pdf::Frontend::Image_Sane;
-use Locale::gettext 1.05;    # For translations
+use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
+use Locale::gettext 1.05;           # For translations
 use feature 'switch';
 use Data::Dumper;
 use Readonly;
@@ -40,14 +41,13 @@ my $SANE_NAME_SCAN_BR_Y   = SANE_NAME_SCAN_BR_Y;
 my $SANE_NAME_PAGE_HEIGHT = SANE_NAME_PAGE_HEIGHT;
 my $SANE_NAME_PAGE_WIDTH  = SANE_NAME_PAGE_WIDTH;
 my $EMPTY                 = q{};
-my ( $d, $d_sane, $logger, $tooltips );
+my ( $d_sane, $logger, $tooltips );
 
 sub INIT_INSTANCE {
     my $self = shift;
     $tooltips = Gtk2::Tooltips->new;
     $tooltips->enable;
 
-    $d      = Locale::gettext->domain(Glib::get_application_name);
     $d_sane = Locale::gettext->domain('sane-backends');
     return $self;
 }
@@ -82,7 +82,7 @@ sub get_devices {
             # Set up ProgressBar
             $pbar = Gtk2::ProgressBar->new;
             $pbar->set_pulse_step( $self->get('progress-pulse-step') );
-            $pbar->set_text( $d->get('Fetching list of devices') );
+            $pbar->set_text( __('Fetching list of devices') );
             $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
             $hboxd->hide_all;
             $hboxd->show;
@@ -99,7 +99,7 @@ sub get_devices {
                 Dumper( \@device_list ) );
             if ( @device_list == 0 ) {
                 $self->signal_emit( 'process-error', 'get_devices',
-                    $d->get('No devices found') );
+                    __('No devices found') );
                 $self->destroy;
                 undef $self;
                 return FALSE;
@@ -132,7 +132,7 @@ sub scan_options {
     Gscan2pdf::Frontend::Image_Sane->open_device(
         device_name      => $self->get('device'),
         started_callback => sub {
-            $self->signal_emit( 'started-process', $d->get('Opening device') );
+            $self->signal_emit( 'started-process', __('Opening device') );
         },
         running_callback => sub {
             $self->signal_emit( 'changed-progress', undef, undef );
@@ -142,7 +142,7 @@ sub scan_options {
             Gscan2pdf::Frontend::Image_Sane->find_scan_options(
                 sub {    # started callback
                     $self->signal_emit( 'started-process',
-                        $d->get('Retrieving options') );
+                        __('Retrieving options') );
                 },
                 sub {    # running callback
                     $self->signal_emit( 'changed-progress', undef, undef );
@@ -163,20 +163,16 @@ sub scan_options {
                 },
                 sub {    # error callback
                     my ($message) = @_;
-                    $self->signal_emit(
-                        'process-error',
+                    $self->signal_emit( 'process-error',
                         'find_scan_options',
-                        $d->get(
-                            'Error retrieving scanner options: ' . $message
-                        )
-                    );
+                        __( 'Error retrieving scanner options: ' . $message ) );
                 }
             );
         },
         error_callback => sub {
             my ($message) = @_;
             $self->signal_emit( 'process-error', 'open_device',
-                $d->get( 'Error opening device: ' . $message ) );
+                __( 'Error opening device: ' . $message ) );
         }
     );
     return;
@@ -206,7 +202,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
             $group =
                 $opt->{type} == SANE_TYPE_GROUP
               ? $d_sane->get( $opt->{title} )
-              : $d->get('Scan Options');
+              : __('Scan Options');
             my $scwin = Gtk2::ScrolledWindow->new;
             $self->{notebook}->append_page( $scwin, $group );
             $scwin->set_policy( 'automatic', 'automatic' );
@@ -380,7 +376,7 @@ sub set_option {
         value            => $val,
         started_callback => sub {
             $self->signal_emit( 'started-process',
-                sprintf $d->get('Setting option %s'),
+                sprintf __('Setting option %s'),
                 $option->{name} );
         },
         running_callback => sub {
@@ -425,7 +421,7 @@ sub set_option {
         error_callback => sub {
             my ($message) = @_;
             $self->signal_emit( 'process-error', 'set_option',
-                $d->get( 'Error setting option: ' . $message ) );
+                __( 'Error setting option: ' . $message ) );
         },
     );
     return;
@@ -442,7 +438,7 @@ sub scan {
 
     if ( $start == 1 and $step < 0 ) {
         $self->signal_emit( 'process-error', 'scan',
-            $d->get('Must scan facing pages first') );
+            __('Must scan facing pages first') );
         return TRUE;
     }
 

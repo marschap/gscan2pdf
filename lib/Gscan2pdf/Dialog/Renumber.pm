@@ -2,10 +2,11 @@ package Gscan2pdf::Dialog::Renumber;
 
 use strict;
 use warnings;
-use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
+use Glib 1.220 qw(TRUE FALSE);      # To get TRUE and FALSE
 use Gscan2pdf::Dialog;
 use Gscan2pdf::Document;
 use Gscan2pdf::PageRange;
+use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
 use Readonly;
 Readonly my $_MAX_PAGES     => 9999;
 Readonly my $_MAX_INCREMENT => 99;
@@ -84,13 +85,12 @@ sub new {
     my ( $class, @arguments ) = @_;
     my $self = Glib::Object::new( $class, @arguments );
 
-    my $d = Locale::gettext->domain(Glib::get_application_name);
-    $self->set( 'title', $d->get('Renumber') );
+    $self->set( 'title', __('Renumber') );
 
     my $vbox = $self->get('vbox');
 
     # Frame for page range
-    my $frame = Gtk2::Frame->new( $d->get('Page Range') );
+    my $frame = Gtk2::Frame->new( __('Page Range') );
     $vbox->pack_start( $frame, FALSE, FALSE, 0 );
     my $pr = Gscan2pdf::PageRange->new;
     $pr->signal_connect(
@@ -109,7 +109,7 @@ sub new {
     $frame->add($pr);
 
     # Frame for page numbering
-    my $framex = Gtk2::Frame->new( $d->get('Page numbering') );
+    my $framex = Gtk2::Frame->new( __('Page numbering') );
     $vbox->pack_start( $framex, FALSE, FALSE, 0 );
     my $vboxx = Gtk2::VBox->new;
     $vboxx->set_border_width( $self->get('border_width') );
@@ -118,7 +118,7 @@ sub new {
     # SpinButton for starting page number
     my $hboxxs = Gtk2::HBox->new;
     $vboxx->pack_start( $hboxxs, FALSE, FALSE, 0 );
-    my $labelxs = Gtk2::Label->new( $d->get('Start') );
+    my $labelxs = Gtk2::Label->new( __('Start') );
     $hboxxs->pack_start( $labelxs, FALSE, FALSE, 0 );
     my $spin_buttons = Gtk2::SpinButton->new_with_range( 1, $_MAX_PAGES, 1 );
     $spin_buttons->signal_connect(
@@ -139,7 +139,7 @@ sub new {
     # SpinButton for page number increment
     my $hboxi = Gtk2::HBox->new;
     $vboxx->pack_start( $hboxi, FALSE, FALSE, 0 );
-    my $labelxi = Gtk2::Label->new( $d->get('Increment') );
+    my $labelxi = Gtk2::Label->new( __('Increment') );
     $hboxi->pack_start( $labelxi, FALSE, FALSE, 0 );
     my $spin_buttoni =
       Gtk2::SpinButton->new_with_range( -$_MAX_INCREMENT, $_MAX_INCREMENT, 1 );
@@ -188,7 +188,7 @@ sub new {
     $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
 
     # Start button
-    my $obutton = Gtk2::Button->new( $d->get('Renumber') );
+    my $obutton = Gtk2::Button->new( __('Renumber') );
     $hbox->pack_start( $obutton, TRUE, TRUE, 0 );
     $obutton->signal_connect( clicked => sub { $self->renumber } );
 
@@ -337,8 +337,7 @@ sub renumber {
         $slist->select(@page);
     }
     else {
-        my $d   = Locale::gettext->domain(Glib::get_application_name);
-        my $msg = $d->get(
+        my $msg = __(
 'The current settings would result in duplicate page numbers. Please select new start and increment values.'
         );
         $logger->error($msg);

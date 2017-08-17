@@ -1,10 +1,9 @@
 use warnings;
 use strict;
 use Test::More tests => 24;
-use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
+use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;
 use Scalar::Util;
-use Locale::gettext 1.05;    # For translations
 
 BEGIN {
     use_ok('Gscan2pdf::Dialog');
@@ -12,7 +11,7 @@ BEGIN {
 
 #########################
 
-Glib::set_application_name('gscan2pdf');
+Gscan2pdf::Translation::set_domain('gscan2pdf');
 my $window = Gtk2::Window->new;
 
 ok(

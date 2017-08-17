@@ -57,20 +57,21 @@ use Gscan2pdf::Unpaper;
 use Gscan2pdf::Dialog::Renumber;
 use Gscan2pdf::Canvas;
 use Gscan2pdf::Config;
-use Image::Sane ':all';    # To get SANE_* enums
+use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
+use Image::Sane ':all';             # To get SANE_* enums
 use Gtk2::ImageView;
 use Gtk2::Ex::Simple::List;
-use Gtk2 -init;            # Could just call init separately
+use Gtk2 -init;                     # Could just call init separately
 use Gtk2::Gdk::Keysyms;
-use Cwd;                   # To obtain current working directory
-use File::Basename;        # Split filename into dir, file, ext
+use Cwd;                            # To obtain current working directory
+use File::Basename;                 # Split filename into dir, file, ext
 use File::Copy;
-use File::Temp;            # To create temporary files
+use File::Temp;                     # To create temporary files
 use File::Path qw(remove_tree);
-use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
+use Glib qw(TRUE FALSE);            # To get TRUE and FALSE
 use PDF::API2;
 use Getopt::Long;
-use Set::IntSpan 1.10;      # For size method for page numbering issues
+use Set::IntSpan 1.10;              # For size method for page numbering issues
 use Proc::Killfam;
 use Fcntl qw(:flock)
   ;    # import LOCK_* constants to prevent us clobbering running instances
@@ -83,7 +84,6 @@ use English qw( -no_match_vars )
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
-use Locale::gettext 1.05;    # For translations
 use Date::Calc qw(Delta_Days Add_Delta_Days Today Today_and_Now);
 
 use Readonly;
@@ -120,12 +120,6 @@ my $VERSION   = '1.8.4';
 
 # Image border to ensure that a scaled to fit image gets no scrollbars
 my $border = 1;
-
-# Set up domain for gettext (internationalisation)
-# Expects /usr/share/locale/LANGUAGE/LC_MESSAGES/$prog_name.mo
-# or whatever is set by $d->dir([NEWDIR]);
-my $d      = Locale::gettext->domain($prog_name);
-my $d_sane = Locale::gettext->domain('sane-backends');
 
 my $debug   = FALSE;
 my $EMPTY   = q{};
@@ -312,7 +306,7 @@ $view = Gtk2::ImageView->new;
 my $dragger  = Gtk2::ImageView::Tool::Dragger->new($view);
 my $selector = Gtk2::ImageView::Tool::Selector->new($view);
 my $painter  = Gtk2::ImageView::Tool::Painter->new($view);
-$vnotebook->append_page( $view, $d->get('Image') );
+$vnotebook->append_page( $view, __('Image') );
 
 $view->signal_connect(
     button_press_event => sub {
@@ -347,7 +341,7 @@ $selector->{selection_changed_signal} = $selector->signal_connect(
 my $scwin_buffer = Gtk2::ScrolledWindow->new;
 $scwin_buffer->set_policy( 'automatic', 'automatic' );
 $scwin_buffer->set_shadow_type('etched-in');
-$vnotebook->append_page( $scwin_buffer, $d->get('OCR Output') );
+$vnotebook->append_page( $scwin_buffer, __('OCR Output') );
 
 # Set up call back for list selection to update detail view
 $slist->{selection_changed_signal} = $slist->get_selection->signal_connect(
@@ -459,7 +453,7 @@ EOS
 
     if ( defined $help ) {
         system("perldoc $PROGRAM_NAME") == 0
-          or die $d->get('Error displaying help'), "\n";
+          or die __('Error displaying help'), "\n";
     }
 
     Log::Log4perl::init( \$log_conf );
@@ -470,11 +464,15 @@ EOS
 
     if ( defined $locale ) {
         if ( $locale =~ /^\//xsm ) {
-            $d->dir($locale);
+            Gscan2pdf::Translation::set_domain( $prog_name, $locale );
         }
         else {
-            $d->dir( getcwd . "/$locale" );
+            Gscan2pdf::Translation::set_domain( $prog_name,
+                getcwd . "/$locale" );
         }
+    }
+    else {
+        Gscan2pdf::Translation::set_domain($prog_name);
     }
 
     # Set LC_NUMERIC to C to prevent decimal commas (or anything else) confusing
@@ -530,8 +528,7 @@ sub set_up_test_mode {
             $logger->debug("'$file','$device'");
             if ( $file !~ /^\//xsm ) { $file = getcwd . "/$file" }
             if ( !-r $file ) {
-                $logger->fatal( sprintf $d->get('Cannot read file: %s'),
-                    $file );
+                $logger->fatal( sprintf __('Cannot read file: %s'), $file );
                 exit 1;
             }
             push @{ $test->{file} }, $file;
@@ -552,8 +549,7 @@ sub set_up_test_mode {
             $logger->info("Using test image $test_image");
         }
         else {
-            $logger->fatal( sprintf $d->get('Cannot read file: %s'),
-                $test_image );
+            $logger->fatal( sprintf __('Cannot read file: %s'), $test_image );
             exit 1;
         }
     }
@@ -659,30 +655,21 @@ sub check_dependencies {
     # OCR engine options
     if ( $dependencies{gocr} ) {
         push @ocr_engine,
-          [ 'gocr', $d->get('GOCR'), $d->get('Process image with GOCR.') ];
+          [ 'gocr', __('GOCR'), __('Process image with GOCR.') ];
     }
     if ( $dependencies{tesseract} ) {
         push @ocr_engine,
-          [
-            'tesseract', $d->get('Tesseract'),
-            $d->get('Process image with Tesseract.')
-          ];
+          [ 'tesseract', __('Tesseract'), __('Process image with Tesseract.') ];
     }
     if ( $dependencies{ocropus} ) {
         $logger->info('Found ocropus');
         push @ocr_engine,
-          [
-            'ocropus', $d->get('Ocropus'),
-            $d->get('Process image with Ocropus.')
-          ];
+          [ 'ocropus', __('Ocropus'), __('Process image with Ocropus.') ];
     }
     if ( $dependencies{cuneiform} ) {
         $logger->info("Found cuneiform v$dependencies{cuneiform}");
         push @ocr_engine,
-          [
-            'cuneiform', $d->get('Cuneiform'),
-            $d->get('Process image with Cuneiform.')
-          ];
+          [ 'cuneiform', __('Cuneiform'), __('Process image with Cuneiform.') ];
     }
     return;
 }
@@ -704,179 +691,175 @@ sub create_menu_bar {
         # [name, stock_id, value, label, accelerator, tooltip, callback]
 
         # File menu
-        [ 'File', undef, $d->get('_File') ],
+        [ 'File', undef, __('_File') ],
         [
-            'New',                       'gtk-new',
-            $d->get('_New'),             '<control>n',
-            $d->get('Clears all pages'), \&new
+            'New',                  'gtk-new',
+            __('_New'),             '<control>n',
+            __('Clears all pages'), \&new
         ],
         [
-            'Open',                        'gtk-open',
-            $d->get('_Open'),              '<control>o',
-            $d->get('Open image file(s)'), \&open_dialog
+            'Open',                   'gtk-open',
+            __('_Open'),              '<control>o',
+            __('Open image file(s)'), \&open_dialog
         ],
         [
-            'Open crashed session',           undef,
-            $d->get('Open c_rashed session'), undef,
-            $d->get('Open crashed session'),  \&open_session_action
+            'Open crashed session',      undef,
+            __('Open c_rashed session'), undef,
+            __('Open crashed session'),  \&open_session_action
         ],
         [
-            'Scan',                   'scanner',
-            $d->get('S_can'),         '<control>g',
-            $d->get('Scan document'), \&scan_dialog
+            'Scan',              'scanner',
+            __('S_can'),         '<control>g',
+            __('Scan document'), \&scan_dialog
         ],
         [
-            'Save',          'gtk-save', $d->get('Save'), '<control>s',
-            $d->get('Save'), \&save_dialog
+            'Save',     'gtk-save', __('Save'), '<control>s',
+            __('Save'), \&save_dialog
         ],
         [
-            'Email as PDF',                          'mail-attach',
-            $d->get('_Email as PDF'),                '<control>e',
-            $d->get('Attach as PDF to a new email'), \&email
+            'Email as PDF',                     'mail-attach',
+            __('_Email as PDF'),                '<control>e',
+            __('Attach as PDF to a new email'), \&email
         ],
         [
-            'Print',           'gtk-print',
-            $d->get('_Print'), '<control>p',
-            $d->get('Print'),  \&print_dialog
+            'Print',     'gtk-print', __('_Print'), '<control>p',
+            __('Print'), \&print_dialog
         ],
         [
-            'Compress',                           undef,
-            $d->get('_Compress temporary files'), undef,
-            $d->get('Compress temporary files'),  \&compress_temp
+            'Compress',                      undef,
+            __('_Compress temporary files'), undef,
+            __('Compress temporary files'),  \&compress_temp
         ],
         [
             'Quit',
             'gtk-quit',
-            $d->get('_Quit'),
+            __('_Quit'),
             '<control>q',
-            $d->get('Quit'),
+            __('Quit'),
             sub {
                 if ( quit() ) { Gtk2->main_quit }
             }
         ],
 
         # Edit menu
-        [ 'Edit', undef, $d->get('_Edit') ],
+        [ 'Edit', undef, __('_Edit') ],
+        [ 'Undo', 'gtk-undo', __('_Undo'), '<control>z', __('Undo'), \&undo ],
         [
-            'Undo',          'gtk-undo', $d->get('_Undo'), '<control>z',
-            $d->get('Undo'), \&undo
+            'Redo',      'gtk-redo',
+            __('_Redo'), '<shift><control>z',
+            __('Redo'),  \&unundo
         ],
         [
-            'Redo',           'gtk-redo',
-            $d->get('_Redo'), '<shift><control>z',
-            $d->get('Redo'),  \&unundo
+            'Cut',               'gtk-cut',
+            __('Cu_t'),          '<control>x',
+            __('Cut selection'), \&cut_selection
         ],
         [
-            'Cut',                    'gtk-cut',
-            $d->get('Cu_t'),          '<control>x',
-            $d->get('Cut selection'), \&cut_selection
+            'Copy',               'gtk-copy',
+            __('_Copy'),          '<control>c',
+            __('Copy selection'), \&copy_selection
         ],
         [
-            'Copy',                    'gtk-copy',
-            $d->get('_Copy'),          '<control>c',
-            $d->get('Copy selection'), \&copy_selection
+            'Paste',               'gtk-paste',
+            __('_Paste'),          '<control>v',
+            __('Paste selection'), \&paste_selection
         ],
         [
-            'Paste',                    'gtk-paste',
-            $d->get('_Paste'),          '<control>v',
-            $d->get('Paste selection'), \&paste_selection
+            'Delete',                    'gtk-delete',
+            __('_Delete'),               undef,
+            __('Delete selected pages'), \&delete_selection
         ],
         [
-            'Delete',                         'gtk-delete',
-            $d->get('_Delete'),               undef,
-            $d->get('Delete selected pages'), \&delete_selection
+            'Renumber',           'gtk-sort-ascending',
+            __('_Renumber'),      '<control>r',
+            __('Renumber pages'), \&renumber_dialog
+        ],
+        [ 'Select', undef, __('_Select') ],
+        [
+            'Select All',           'gtk-select-all',
+            __('_All'),             '<control>a',
+            __('Select all pages'), \&select_all
         ],
         [
-            'Renumber',                'gtk-sort-ascending',
-            $d->get('_Renumber'),      '<control>r',
-            $d->get('Renumber pages'), \&renumber_dialog
-        ],
-        [ 'Select', undef, $d->get('_Select') ],
-        [
-            'Select All',                'gtk-select-all',
-            $d->get('_All'),             '<control>a',
-            $d->get('Select all pages'), \&select_all
-        ],
-        [
-            'Select Odd', undef, $d->get('_Odd'), '<control>1',
-            $d->get('Select all odd-numbered pages'),
+            'Select Odd', undef, __('_Odd'), '<control>1',
+            __('Select all odd-numbered pages'),
             sub { select_odd_even(0); }
         ],
         [
-            'Select Even', undef, $d->get('_Even'), '<control>2',
-            $d->get('Select all evenly-numbered pages'),
+            'Select Even', undef, __('_Even'), '<control>2',
+            __('Select all evenly-numbered pages'),
             sub { select_odd_even(1); }
         ],
         [
             'Select Blank',
             'gtk-select-blank',
-            $d->get('_Blank'),
+            __('_Blank'),
             '<control>b',
-            $d->get('Select pages with low standard deviation'),
+            __('Select pages with low standard deviation'),
             \&analyse_select_blank
         ],
         [
-            'Select Dark',                'gtk-select-blank',
-            $d->get('_Dark'),             '<control>d',
-            $d->get('Select dark pages'), \&analyse_select_dark
+            'Select Dark',           'gtk-select-blank',
+            __('_Dark'),             '<control>d',
+            __('Select dark pages'), \&analyse_select_dark
         ],
         [
             'Select Modified',
             'gtk-select-modified',
-            $d->get('_Modified'),
+            __('_Modified'),
             '<control>m',
-            $d->get('Select modified pages since last OCR'),
+            __('Select modified pages since last OCR'),
             \&select_modified_since_ocr
         ],
         [
-            'Select No OCR',                            undef,
-            $d->get('_No OCR'),                         undef,
-            $d->get('Select pages with no OCR output'), \&select_no_ocr
+            'Select No OCR',                       undef,
+            __('_No OCR'),                         undef,
+            __('Select pages with no OCR output'), \&select_no_ocr
         ],
         [
-            'Clear OCR',                                     'gtk-clear',
-            $d->get('_Clear OCR'),                           undef,
-            $d->get('Clear OCR output from selected pages'), \&clear_ocr
+            'Clear OCR',                                'gtk-clear',
+            __('_Clear OCR'),                           undef,
+            __('Clear OCR output from selected pages'), \&clear_ocr
         ],
         [
-            'Properties',                     'gtk-properties',
-            $d->get('Propert_ies'),           undef,
-            $d->get('Edit image properties'), \&properties
+            'Properties',                'gtk-properties',
+            __('Propert_ies'),           undef,
+            __('Edit image properties'), \&properties
         ],
         [
-            'Preferences',               'gtk-preferences',
-            $d->get('Prefere_nces'),     undef,
-            $d->get('Edit preferences'), \&preferences
+            'Preferences',          'gtk-preferences',
+            __('Prefere_nces'),     undef,
+            __('Edit preferences'), \&preferences
         ],
 
         # View menu
-        [ 'View', undef, $d->get('_View') ],
+        [ 'View', undef, __('_View') ],
         [
-            'Zoom 100',            'gtk-zoom-100',
-            $d->get('Zoom _100%'), undef,
-            $d->get('Zoom to 100%'), sub { $view->set_zoom(1.0); }
+            'Zoom 100',       'gtk-zoom-100',
+            __('Zoom _100%'), undef,
+            __('Zoom to 100%'), sub { $view->set_zoom(1.0); }
         ],
         [
-            'Zoom to fit',           'gtk-zoom-fit',
-            $d->get('Zoom to _fit'), undef,
-            $d->get('Zoom to fit'), sub { $view->set_fitting(TRUE); }
+            'Zoom to fit',      'gtk-zoom-fit',
+            __('Zoom to _fit'), undef,
+            __('Zoom to fit'), sub { $view->set_fitting(TRUE); }
         ],
         [
-            'Zoom in',           'gtk-zoom-in',
-            $d->get('Zoom _in'), 'plus',
-            $d->get('Zoom in'), sub { $view->zoom_in; }
+            'Zoom in',      'gtk-zoom-in',
+            __('Zoom _in'), 'plus',
+            __('Zoom in'), sub { $view->zoom_in; }
         ],
         [
-            'Zoom out',           'gtk-zoom-out',
-            $d->get('Zoom _out'), 'minus',
-            $d->get('Zoom out'), sub { $view->zoom_out; }
+            'Zoom out',      'gtk-zoom-out',
+            __('Zoom _out'), 'minus',
+            __('Zoom out'), sub { $view->zoom_out; }
         ],
         [
             'Rotate 90',
             'rotate90',
-            $d->get('Rotate 90° clockwise'),
+            __('Rotate 90° clockwise'),
             '<control><shift>R',
-            $d->get('Rotate 90° clockwise'),
+            __('Rotate 90° clockwise'),
             sub {
                 rotate( $_90_DEGREES,
                     [ indices2pages( $slist->get_selected_indices ) ] );
@@ -885,9 +868,9 @@ sub create_menu_bar {
         [
             'Rotate 180',
             'rotate180',
-            $d->get('Rotate 180°'),
+            __('Rotate 180°'),
             '<control><shift>F',
-            $d->get('Rotate 180°'),
+            __('Rotate 180°'),
             sub {
                 rotate( $_180_DEGREES,
                     [ indices2pages( $slist->get_selected_indices ) ] );
@@ -896,9 +879,9 @@ sub create_menu_bar {
         [
             'Rotate 270',
             'rotate270',
-            $d->get('Rotate 90° anticlockwise'),
+            __('Rotate 90° anticlockwise'),
             '<control><shift>C',
-            $d->get('Rotate 90° anticlockwise'),
+            __('Rotate 90° anticlockwise'),
             sub {
                 rotate( $_270_DEGREES,
                     [ indices2pages( $slist->get_selected_indices ) ] );
@@ -906,73 +889,69 @@ sub create_menu_bar {
         ],
 
         # Tools menu
-        [ 'Tools', undef, $d->get('_Tools') ],
+        [ 'Tools', undef, __('_Tools') ],
         [
-            'Threshold', undef, $d->get('_Threshold'),
-            undef, $d->get('Change each pixel above this threshold to black'),
+            'Threshold', undef, __('_Threshold'), undef,
+            __('Change each pixel above this threshold to black'),
             \&threshold
         ],
         [
-            'BrightnessContrast',                    undef,
-            $d->get('_Brightness / Contrast'),       undef,
-            $d->get('Change brightness & contrast'), \&brightness_contrast
+            'BrightnessContrast',               undef,
+            __('_Brightness / Contrast'),       undef,
+            __('Change brightness & contrast'), \&brightness_contrast
         ],
         [
-            'Negate', undef, $d->get('_Negate'), undef,
-            $d->get('Converts black to white and vice versa'), \&negate
+            'Negate', undef, __('_Negate'), undef,
+            __('Converts black to white and vice versa'), \&negate
         ],
         [
-            'Unsharp',                        undef,
-            $d->get('_Unsharp Mask'),         undef,
-            $d->get('Apply an unsharp mask'), \&unsharp
+            'Unsharp',                   undef,
+            __('_Unsharp Mask'),         undef,
+            __('Apply an unsharp mask'), \&unsharp
         ],
         [
-            'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', $d->get('_Crop'), undef,
-            $d->get('Crop pages'), \&crop
+            'Crop', 'GTK_STOCK_LEAVE_FULLSCREEN', __('_Crop'), undef,
+            __('Crop pages'), \&crop
         ],
         [
-            'unpaper',                                       undef,
-            $d->get('_Clean up'),                            undef,
-            $d->get('Clean up scanned images with unpaper'), \&unpaper
+            'unpaper', undef, __('_Clean up'), undef,
+            __('Clean up scanned images with unpaper'), \&unpaper
         ],
         [
-            'OCR', undef, $d->get('_OCR'), undef,
-            $d->get('Optical Character Recognition'),
+            'OCR', undef, __('_OCR'), undef,
+            __('Optical Character Recognition'),
             \&ocr_dialog
         ],
         [
-            'User-defined', undef, $d->get('U_ser-defined'),
-            undef, $d->get('Process images with user-defined tool'),
+            'User-defined', undef, __('U_ser-defined'), undef,
+            __('Process images with user-defined tool'),
             \&user_defined_dialog
         ],
 
         # Help menu
-        [ 'Help menu', undef, $d->get('_Help') ],
+        [ 'Help menu', undef, __('_Help') ],
         [
-            'Help',          'gtk-help', $d->get('_Help'), '<control>h',
-            $d->get('Help'), \&view_pod
+            'Help',     'gtk-help', __('_Help'), '<control>h',
+            __('Help'), \&view_pod
         ],
-        [
-            'About',           'gtk-about', $d->get('_About'), undef,
-            $d->get('_About'), \&about
-        ],
+        [ 'About', 'gtk-about', __('_About'), undef, __('_About'), \&about ],
     );
 
     my @image_tools = (
         [
-            'DraggerTool',                'hand-tool',
-            $d->get('_Drag'),             undef,
-            $d->get('Use the hand tool'), $DRAGGER_TOOL
+            'DraggerTool',           'hand-tool',
+            __('_Drag'),             undef,
+            __('Use the hand tool'), $DRAGGER_TOOL
         ],
         [
-            'SelectorTool',                                'selection',
-            $d->get('_Select'),                            undef,
-            $d->get('Use the rectangular selection tool'), $SELECTOR_TOOL
+            'SelectorTool',                           'selection',
+            __('_Select'),                            undef,
+            __('Use the rectangular selection tool'), $SELECTOR_TOOL
         ],
         [
-            'PainterTool',                   'gtk-media-play',
-            $d->get('_Paint'),               undef,
-            $d->get('Use the painter tool'), $PAINTER_TOOL
+            'PainterTool',              'gtk-media-play',
+            __('_Paint'),               undef,
+            __('Use the painter tool'), $PAINTER_TOOL
         ],
     );
 
@@ -1149,23 +1128,22 @@ EOS
     # Ghost save image item if imagemagick not available
     my $msg = $EMPTY;
     if ( not $dependencies{imagemagick} ) {
-        $msg .=
-          $d->get("Save image and Save as PDF both require imagemagick\n");
+        $msg .= __("Save image and Save as PDF both require imagemagick\n");
     }
 
     # Ghost save image item if libtiff not available
     if ( not $dependencies{libtiff} ) {
-        $msg .= $d->get("Save image requires libtiff\n");
+        $msg .= __("Save image requires libtiff\n");
     }
 
     # Ghost djvu item if cjb2 not available
     if ( not $dependencies{djvu} ) {
-        $msg .= $d->get("Save as DjVu requires djvulibre-bin\n");
+        $msg .= __("Save as DjVu requires djvulibre-bin\n");
     }
 
     # Ghost email item if xdg-email not available
     if ( not $dependencies{xdg} ) {
-        $msg .= $d->get("Email as PDF requires xdg-email\n");
+        $msg .= __("Email as PDF requires xdg-email\n");
     }
 
     # Undo/redo start off ghosted anyway-
@@ -1199,12 +1177,11 @@ EOS
     # Ghost rotations and unpaper if perlmagick not available
     if ( not $dependencies{perlmagick} ) {
         $msg .=
-          $d->get(
-            "The rotating options and unpaper support require perlmagick\n");
+          __("The rotating options and unpaper support require perlmagick\n");
     }
 
     if ( not $dependencies{unpaper} ) {
-        $msg .= $d->get("unpaper missing\n");
+        $msg .= __("unpaper missing\n");
     }
 
     # Ghost ocr item if ocr not available
@@ -1217,13 +1194,12 @@ EOS
           or $dependencies{cuneiform}
     );
     if ( not $dependencies{ocr} ) {
-        $msg .=
-          $d->get("OCR requires gocr, tesseract, ocropus, or cuneiform\n");
+        $msg .= __("OCR requires gocr, tesseract, ocropus, or cuneiform\n");
     }
 
     # Put up warning if needed
     if ( $msg ne $EMPTY ) {
-        $msg = $d->get('Warning: missing packages') . "\n$msg";
+        $msg = __('Warning: missing packages') . "\n$msg";
         show_message_dialog(
             parent           => $window,
             type             => 'warning',
@@ -1460,7 +1436,7 @@ sub create_temp_directory {
             catch {
                 $session = File::Temp->newdir( 'gscan2pdf-XXXX', TMPDIR => 1 );
                 $logger->warn(
-                    sprintf $d->get(
+                    sprintf __(
 'Warning: unable to use %s for temporary storage. Defaulting to %s instead.'
                     ),
                     $SETTING{TMPDIR},
@@ -1520,7 +1496,7 @@ sub find_crashed_sessions {
     }
     if (@missing) {
         my $dialog = Gtk2::Dialog->new(
-            $d->get('Crashed sessions'),
+            __('Crashed sessions'),
             $window, 'modal',
             'gtk-delete' => 'ok',
             'gtk-cancel' => 'cancel'
@@ -1528,7 +1504,7 @@ sub find_crashed_sessions {
         my $text = Gtk2::TextView->new;
         $text->set_wrap_mode('word');
         $text->get_buffer->set_text(
-            $d->get(
+            __(
                     'The following list of sessions cannot be restored.'
                   . ' Please retrieve any images you require from them.'
                   . ' Selected sessions will be deleted.'
@@ -1536,7 +1512,7 @@ sub find_crashed_sessions {
         );
         $dialog->vbox->add($text);
         my $sessionlist =
-          Gtk2::Ex::Simple::List->new( $d->get('Session') => 'text', );
+          Gtk2::Ex::Simple::List->new( __('Session') => 'text', );
         push @{ $sessionlist->{data} }, @missing;
         $dialog->vbox->add($sessionlist);
         $dialog->show_all;
@@ -1552,16 +1528,15 @@ sub find_crashed_sessions {
     # Allow user to pick a crashed session to restore
     if (@crashed) {
         my $dialog = Gtk2::Dialog->new(
-            $d->get('Pick crashed session to restore'),
+            __('Pick crashed session to restore'),
             $window, 'modal',
             'gtk-ok'     => 'ok',
             'gtk-cancel' => 'cancel'
         );
-        my $label =
-          Gtk2::Label->new( $d->get('Pick crashed session to restore') );
+        my $label = Gtk2::Label->new( __('Pick crashed session to restore') );
         $dialog->vbox->add($label);
         my $sessionlist =
-          Gtk2::Ex::Simple::List->new( $d->get('Session') => 'text', );
+          Gtk2::Ex::Simple::List->new( __('Session') => 'text', );
         push @{ $sessionlist->{data} }, @crashed;
         $dialog->vbox->add($sessionlist);
         $dialog->show_all;
@@ -1640,7 +1615,7 @@ sub create_canvas {
 sub edit_ocr_text {
     my ( $widget, $target, $ev ) = @_;
     my $dialog = Gtk2::Dialog->new(
-        $d->get('Editing text') . '...', $window,
+        __('Editing text') . '...', $window,
         'modal',
         'gtk-ok'     => 'ok',
         'gtk-cancel' => 'cancel'
@@ -1684,7 +1659,7 @@ sub new {
 
     if (
         not scans_saved(
-            $d->get(
+            __(
 "Some pages have not been saved.\nDo you really want to clear all pages?"
             )
         )
@@ -1771,7 +1746,7 @@ sub open_session_file {
 sub open_session_action {
     my ($action) = @_;
     my $file_chooser = Gtk2::FileChooserDialog->new(
-        $d->get('Open crashed session'),
+        __('Open crashed session'),
         $window, 'select-folder',
         'gtk-cancel' => 'cancel',
         'gtk-ok'     => 'ok'
@@ -1809,7 +1784,7 @@ sub setup_tpbar {
     my ( $thread, $process, $completed, $total, $pid ) = @_;
     if ( $total and defined $process ) {
         $tpbar->set_text(
-            sprintf $d->get('Process %i of %i (%s)'),
+            sprintf __('Process %i of %i (%s)'),
             $completed + 1,
             $total, $process
         );
@@ -1841,14 +1816,14 @@ sub update_tpbar {
                 $options{process} .= " - $options{message}";
             }
             $tpbar->set_text(
-                sprintf $d->get('Process %i of %i (%s)'),
+                sprintf __('Process %i of %i (%s)'),
                 $options{jobs_completed} + 1,
                 $options{jobs_total}, $options{process}
             );
         }
         else {
             $tpbar->set_text(
-                sprintf $d->get('Process %i of %i'),
+                sprintf __('Process %i of %i'),
                 $options{jobs_completed} + 1,
                 $options{jobs_total}
             );
@@ -1876,7 +1851,7 @@ sub open_dialog {
     chdir $SETTING{cwd};
 
     my $file_chooser = Gtk2::FileChooserDialog->new(
-        $d->get('Open image'),
+        __('Open image'),
         $window, 'open',
         'gtk-cancel' => 'cancel',
         'gtk-ok'     => 'ok'
@@ -1884,7 +1859,7 @@ sub open_dialog {
     $file_chooser->set_select_multiple(TRUE);
     $file_chooser->set_default_response('ok');
     $file_chooser->set_current_folder( $SETTING{cwd} );
-    add_filter( $file_chooser, $d->get('Image files'),
+    add_filter( $file_chooser, __('Image files'),
         'jpg', 'png', 'pnm', 'ppm', 'pbm', 'gif', 'tif', 'tiff', 'pdf', 'djvu',
         'ps', 'gs2p' );
 
@@ -1934,7 +1909,7 @@ sub import_files {
         pagerange_callback => sub {
             my ($info) = @_;
             my $dialog = Gtk2::Dialog->new(
-                $d->get('Pages to extract'),
+                __('Pages to extract'),
                 $window, [qw/modal destroy-with-parent/],
                 'gtk-ok'     => 'ok',
                 'gtk-cancel' => 'cancel'
@@ -1942,14 +1917,14 @@ sub import_files {
             my $vbox = $dialog->get_content_area;
             my $hbox = Gtk2::HBox->new;
             $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-            my $label = Gtk2::Label->new( $d->get('First page to extract') );
+            my $label = Gtk2::Label->new( __('First page to extract') );
             $hbox->pack_start( $label, FALSE, FALSE, 0 );
             my $spinbuttonf =
               Gtk2::SpinButton->new_with_range( 1, $info->{pages}, 1 );
             $hbox->pack_end( $spinbuttonf, FALSE, FALSE, 0 );
             $hbox = Gtk2::HBox->new;
             $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-            $label = Gtk2::Label->new( $d->get('Last page to extract') );
+            $label = Gtk2::Label->new( __('Last page to extract') );
             $hbox->pack_start( $label, FALSE, FALSE, 0 );
             my $spinbuttonl =
               Gtk2::SpinButton->new_with_range( 1, $info->{pages}, 1 );
@@ -1985,7 +1960,7 @@ sub import_files {
 # Add a frame and radio buttons to $vbox,
 sub add_page_range {
     my ($vbox) = @_;
-    my $frame = Gtk2::Frame->new( $d->get('Page Range') );
+    my $frame = Gtk2::Frame->new( __('Page Range') );
     $vbox->pack_start( $frame, FALSE, FALSE, 0 );
 
     my $pr = Gscan2pdf::PageRange->new;
@@ -2102,7 +2077,7 @@ sub add_quality_spinbutton {
     my ($vbox) = @_;
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-    my $label = Gtk2::Label->new( $d->get('JPEG Quality') );
+    my $label = Gtk2::Label->new( __('JPEG Quality') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $spinbutton = Gtk2::SpinButton->new_with_range( 1, $_100_PERCENT, 1 );
     $spinbutton->set_value( $SETTING{'quality'} );
@@ -2116,12 +2091,12 @@ sub add_pdf_compression {
     # Downsample options
     my $hboxd = Gtk2::HBox->new;
     $vbox->pack_start( $hboxd, FALSE, FALSE, 0 );
-    my $button = Gtk2::CheckButton->new( $d->get('Downsample to') );
+    my $button = Gtk2::CheckButton->new( __('Downsample to') );
     $button->set_active(TRUE);
     $hboxd->pack_start( $button, FALSE, FALSE, 0 );
     my $spinbutton = Gtk2::SpinButton->new_with_range( 1, $MAX_DPI, 1 );
     $spinbutton->set_value( $SETTING{'downsample dpi'} );
-    my $label = Gtk2::Label->new( $d->get('PPI') );
+    my $label = Gtk2::Label->new( __('PPI') );
     $hboxd->pack_end( $label,      FALSE, FALSE, 0 );
     $hboxd->pack_end( $spinbutton, FALSE, FALSE, 0 );
     $button->signal_connect(
@@ -2140,43 +2115,31 @@ sub add_pdf_compression {
     # Compression options
     my @compression = (
         [
-            'auto',
-            $d->get('Automatic'),
-            $d->get('Let gscan2pdf which type of compression to use.')
+            'auto', __('Automatic'),
+            __('Let gscan2pdf which type of compression to use.')
         ],
         [
-            'lzw', $d->get('LZW'),
-            $d->get('Compress output with Lempel-Ziv & Welch encoding.')
+            'lzw', __('LZW'),
+            __('Compress output with Lempel-Ziv & Welch encoding.')
         ],
+        [ 'zip', __('Zip'), __('Compress output with deflate encoding.') ],
         [
-            'zip', $d->get('Zip'),
-            $d->get('Compress output with deflate encoding.')
-        ],
-        [
-            'packbits', $d->get('Packbits'),
-            $d->get('Compress output with Packbits encoding.')
+            'packbits', __('Packbits'),
+            __('Compress output with Packbits encoding.')
         ],
 
-# g3 and 4 give an error message
-#  [ 'g3', $d->get('G3'), $d->get('Compress output with CCITT Group 3 encoding.') ],
-#  [ 'g4', $d->get('G4'), $d->get('Compress output with CCITT Group 4 encoding.') ],
-        [
-            'png', $d->get('PNG'), $d->get('Compress output with PNG encoding.')
-        ],
-        [
-            'jpg', $d->get('JPEG'),
-            $d->get('Compress output with JPEG encoding.')
-        ],
-        [
-            'none', $d->get('None'),
-            $d->get('Use no compression algorithm on output.')
-        ],
+      # g3 and 4 give an error message
+      #  [ 'g3', __('G3'), __('Compress output with CCITT Group 3 encoding.') ],
+      #  [ 'g4', __('G4'), __('Compress output with CCITT Group 4 encoding.') ],
+        [ 'png',  __('PNG'),  __('Compress output with PNG encoding.') ],
+        [ 'jpg',  __('JPEG'), __('Compress output with JPEG encoding.') ],
+        [ 'none', __('None'), __('Use no compression algorithm on output.') ],
     );
 
     # Compression ComboBox
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('Compression') );
+    $label = Gtk2::Label->new( __('Compression') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
 
   # Set up quality spinbutton here so that it can be shown or hidden by callback
@@ -2212,7 +2175,7 @@ sub save_dialog {
 
     $windowi = Gscan2pdf::Dialog->new(
         'transient-for'  => $window,
-        title            => $d->get('Save'),
+        title            => __('Save'),
         'hide-on-delete' => TRUE,
         border_width     => $BORDER_WIDTH
     );
@@ -2224,67 +2187,56 @@ sub save_dialog {
     # Image type ComboBox
     my $hboxi = Gtk2::HBox->new;
     $vbox->pack_start( $hboxi, FALSE, FALSE, 0 );
-    my $label = Gtk2::Label->new( $d->get('Image type') );
+    my $label = Gtk2::Label->new( __('Image type') );
     $hboxi->pack_start( $label, FALSE, FALSE, 0 );
 
     my @type = (
-        [ 'pdf', $d->get('PDF'), $d->get('Portable Document Format') ],
+        [ 'pdf', __('PDF'), __('Portable Document Format') ],
+        [ 'gif', __('GIF'), __('CompuServe graphics interchange format') ],
         [
-            'gif', $d->get('GIF'),
-            $d->get('CompuServe graphics interchange format')
+            'jpg', __('JPEG'),
+            __('Joint Photographic Experts Group JFIF format')
         ],
-        [
-            'jpg', $d->get('JPEG'),
-            $d->get('Joint Photographic Experts Group JFIF format')
-        ],
-        [ 'png',     $d->get('PNG'),     $d->get('Portable Network Graphics') ],
-        [ 'pnm',     $d->get('PNM'),     $d->get('Portable anymap') ],
-        [ 'ps',      $d->get('PS'),      $d->get('Postscript') ],
-        [ 'tif',     $d->get('TIFF'),    $d->get('Tagged Image File Format') ],
-        [ 'txt',     $d->get('Text'),    $d->get('Plain text') ],
-        [ 'hocr',    $d->get('hOCR'),    $d->get('hOCR markup language') ],
-        [ 'session', $d->get('Session'), $d->get('gscan2pdf session file') ],
+        [ 'png',     __('PNG'),     __('Portable Network Graphics') ],
+        [ 'pnm',     __('PNM'),     __('Portable anymap') ],
+        [ 'ps',      __('PS'),      __('Postscript') ],
+        [ 'tif',     __('TIFF'),    __('Tagged Image File Format') ],
+        [ 'txt',     __('Text'),    __('Plain text') ],
+        [ 'hocr',    __('hOCR'),    __('hOCR markup language') ],
+        [ 'session', __('Session'), __('gscan2pdf session file') ],
     );
     if ( $dependencies{pdfunite} ) {
         push @type,
           [
-            'prependpdf', $d->get('Prepend to PDF'),
-            $d->get('Prepend to an existing PDF')
+            'prependpdf', __('Prepend to PDF'),
+            __('Prepend to an existing PDF')
           ];
         push @type,
-          [
-            'appendpdf', $d->get('Append to PDF'),
-            $d->get('Append to an existing PDF')
-          ];
+          [ 'appendpdf', __('Append to PDF'), __('Append to an existing PDF') ];
     }
     if ( $dependencies{djvu} ) {
-        push @type, [ 'djvu', $d->get('DjVu'), $d->get('Deja Vu') ];
+        push @type, [ 'djvu', __('DjVu'), __('Deja Vu') ];
     }
 
     # Postscript backend
     my $hboxps = Gtk2::HBox->new;
     $vbox->pack_start( $hboxps, TRUE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('Postscript backend') );
+    $label = Gtk2::Label->new( __('Postscript backend') );
     $hboxps->pack_start( $label, FALSE, FALSE, 0 );
     my @ps_backend;
     my @backends = (
         [
-            'libtiff',
-            $d->get('LibTIFF'),
-            $d->get(
-                'Use LibTIFF (tiff2ps) to create Postscript files from TIFF.')
+            'libtiff', __('LibTIFF'),
+            __('Use LibTIFF (tiff2ps) to create Postscript files from TIFF.')
         ],
         [
             'pdf2ps',
-            $d->get('Ghostscript'),
-            $d->get(
-                'Use Ghostscript (pdf2ps) to create Postscript files from PDF.')
+            __('Ghostscript'),
+            __('Use Ghostscript (pdf2ps) to create Postscript files from PDF.')
         ],
         [
-            'pdftops',
-            $d->get('Poppler'),
-            $d->get(
-                'Use Poppler (pdftops) to create Postscript files from PDF.')
+            'pdftops', __('Poppler'),
+            __('Use Poppler (pdftops) to create Postscript files from PDF.')
         ],
     );
     for my $backend (@backends) {
@@ -2299,41 +2251,26 @@ sub save_dialog {
 
     my @tiff_compression = (
         [
-            'lzw', $d->get('LZW'),
-            $d->get('Compress output with Lempel-Ziv & Welch encoding.')
+            'lzw', __('LZW'),
+            __('Compress output with Lempel-Ziv & Welch encoding.')
         ],
-        [
-            'zip', $d->get('Zip'),
-            $d->get('Compress output with deflate encoding.')
-        ],
+        [ 'zip', __('Zip'), __('Compress output with deflate encoding.') ],
 
         # jpeg rather than jpg needed here because tiffcp uses -c jpeg
+        [ 'jpeg', __('JPEG'), __('Compress output with JPEG encoding.') ],
         [
-            'jpeg', $d->get('JPEG'),
-            $d->get('Compress output with JPEG encoding.')
+            'packbits', __('Packbits'),
+            __('Compress output with Packbits encoding.')
         ],
-        [
-            'packbits', $d->get('Packbits'),
-            $d->get('Compress output with Packbits encoding.')
-        ],
-        [
-            'g3', $d->get('G3'),
-            $d->get('Compress output with CCITT Group 3 encoding.')
-        ],
-        [
-            'g4', $d->get('G4'),
-            $d->get('Compress output with CCITT Group 4 encoding.')
-        ],
-        [
-            'none', $d->get('None'),
-            $d->get('Use no compression algorithm on output.')
-        ],
+        [ 'g3', __('G3'), __('Compress output with CCITT Group 3 encoding.') ],
+        [ 'g4', __('G4'), __('Compress output with CCITT Group 4 encoding.') ],
+        [ 'none', __('None'), __('Use no compression algorithm on output.') ],
     );
 
     # Compression ComboBox
     my $hboxc = Gtk2::HBox->new;
     $vbox->pack_start( $hboxc, FALSE, FALSE, 0 );
-    $label = Gtk2::Label->new( $d->get('Compression') );
+    $label = Gtk2::Label->new( __('Compression') );
     $hboxc->pack_start( $label, FALSE, FALSE, 0 );
 
     # Set up quality spinbutton here
@@ -2399,7 +2336,7 @@ sub save_dialog {
     my $hboxf = Gtk2::HBox->new;
     $scwinf->add_with_viewport($hboxf);
     $scwinf->get_child->set_shadow_type('none');
-    $label = Gtk2::Label->new( $d->get('Font for non-ASCII text') );
+    $label = Gtk2::Label->new( __('Font for non-ASCII text') );
     $hboxf->pack_start( $label, FALSE, FALSE, 0 );
     my @fonts;
     my ( undef, $stdout ) =
@@ -2442,10 +2379,10 @@ sub save_dialog {
     $hboxi->pack_end( $combobi, FALSE, FALSE, 0 );
 
     # Post-save hook
-    my $pshbutton = Gtk2::CheckButton->new( $d->get('Post-save hook') );
+    my $pshbutton = Gtk2::CheckButton->new( __('Post-save hook') );
     $tooltips->set_tip(
         $pshbutton,
-        $d->get(
+        __(
 'Run command on saved file. The available commands are those user-defined tools that do not specify %o'
         )
     );
@@ -2460,8 +2397,8 @@ sub save_dialog {
     $pshbutton->set_active( $SETTING{post_save_hook} );
     $windowi->{comboboxpsh}->set_sensitive( $pshbutton->get_active );
 
-    my $kbutton = Gtk2::CheckButton->new( $d->get('Close dialog on save') );
-    $tooltips->set_tip( $kbutton, $d->get('Close dialog on save') );
+    my $kbutton = Gtk2::CheckButton->new( __('Close dialog on save') );
+    $tooltips->set_tip( $kbutton, __('Close dialog on save') );
     $kbutton->set_active( $SETTING{close_dialog_on_save} );
     $vbox->pack_start( $kbutton, FALSE, TRUE, 0 );
 
@@ -2655,7 +2592,7 @@ sub save_button_clicked_callback {
 
                 # Set up file selector
                 $file_chooser = Gtk2::FileChooserDialog->new(
-                    $d->get('PDF filename'),
+                    __('PDF filename'),
                     $windowi, 'save',
                     'gtk-cancel' => 'cancel',
                     'gtk-save'   => 'ok'
@@ -2676,13 +2613,13 @@ sub save_button_clicked_callback {
             }
             else {
                 $file_chooser = Gtk2::FileChooserDialog->new(
-                    $d->get('PDF filename'),
+                    __('PDF filename'),
                     $windowi, 'open',
                     'gtk-cancel' => 'cancel',
                     'gtk-open'   => 'ok'
                 );
             }
-            add_filter( $file_chooser, $d->get('PDF files'), 'pdf' );
+            add_filter( $file_chooser, __('PDF files'), 'pdf' );
             $file_chooser->set_current_folder( $SETTING{cwd} );
             $file_chooser->set_default_response('ok');
             $file_chooser->signal_connect(
@@ -2703,7 +2640,7 @@ sub save_button_clicked_callback {
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
-                $d->get('DjVu filename'),
+                __('DjVu filename'),
                 $windowi, 'save',
                 'gtk-cancel' => 'cancel',
                 'gtk-save'   => 'ok'
@@ -2722,7 +2659,7 @@ sub save_button_clicked_callback {
             $file_chooser->set_current_name($filename);
             $file_chooser->set_default_response('ok');
             $file_chooser->set_current_folder( $SETTING{cwd} );
-            add_filter( $file_chooser, $d->get('DjVu files'), 'djvu' );
+            add_filter( $file_chooser, __('DjVu files'), 'djvu' );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
             $file_chooser->signal_connect(
                 response => \&file_chooser_response_callback,
@@ -2743,14 +2680,14 @@ sub save_button_clicked_callback {
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
-                $d->get('TIFF filename'),
+                __('TIFF filename'),
                 $windowi, 'save',
                 'gtk-cancel' => 'cancel',
                 'gtk-save'   => 'ok'
             );
             $file_chooser->set_default_response('ok');
             $file_chooser->set_current_folder( $SETTING{cwd} );
-            add_filter( $file_chooser, $d->get('Image files'),
+            add_filter( $file_chooser, __('Image files'),
                 $SETTING{'image type'} );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
             $file_chooser->signal_connect(
@@ -2769,7 +2706,7 @@ sub save_button_clicked_callback {
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
-                $d->get('Text filename'),
+                __('Text filename'),
                 $windowi, 'save',
                 'gtk-cancel' => 'cancel',
                 'gtk-save'   => 'ok'
@@ -2777,7 +2714,7 @@ sub save_button_clicked_callback {
             $file_chooser->set_default_response('ok');
             $file_chooser->set_current_folder( $SETTING{cwd} );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
-            add_filter( $file_chooser, $d->get('Text files'), 'txt' );
+            add_filter( $file_chooser, __('Text files'), 'txt' );
             $file_chooser->signal_connect(
                 response => \&file_chooser_response_callback,
                 [ 'txt', $list_of_pages ]
@@ -2794,7 +2731,7 @@ sub save_button_clicked_callback {
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
-                $d->get('hOCR filename'),
+                __('hOCR filename'),
                 $windowi, 'save',
                 'gtk-cancel' => 'cancel',
                 'gtk-save'   => 'ok'
@@ -2802,7 +2739,7 @@ sub save_button_clicked_callback {
             $file_chooser->set_default_response('ok');
             $file_chooser->set_current_folder( $SETTING{cwd} );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
-            add_filter( $file_chooser, $d->get('hOCR files'), 'hocr' );
+            add_filter( $file_chooser, __('hOCR files'), 'hocr' );
             $file_chooser->signal_connect(
                 response => \&file_chooser_response_callback,
                 [ 'hocr', $list_of_pages ]
@@ -2820,14 +2757,14 @@ sub save_button_clicked_callback {
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
-                $d->get('PS filename'),
+                __('PS filename'),
                 $windowi, 'save',
                 'gtk-cancel' => 'cancel',
                 'gtk-save'   => 'ok'
             );
             $file_chooser->set_default_response('ok');
             $file_chooser->set_current_folder( $SETTING{cwd} );
-            add_filter( $file_chooser, $d->get('Postscript files'), 'ps' );
+            add_filter( $file_chooser, __('Postscript files'), 'ps' );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
             $file_chooser->signal_connect(
                 response => \&file_chooser_response_callback,
@@ -2845,15 +2782,14 @@ sub save_button_clicked_callback {
 
             # Set up file selector
             my $file_chooser = Gtk2::FileChooserDialog->new(
-                $d->get('gscan2pdf session filename'),
+                __('gscan2pdf session filename'),
                 $windowi, 'save',
                 'gtk-cancel' => 'cancel',
                 'gtk-save'   => 'ok'
             );
             $file_chooser->set_default_response('ok');
             $file_chooser->set_current_folder( $SETTING{cwd} );
-            add_filter( $file_chooser, $d->get('gscan2pdf session files'),
-                'gs2p' );
+            add_filter( $file_chooser, __('gscan2pdf session files'), 'gs2p' );
             $file_chooser->set_do_overwrite_confirmation(TRUE);
             $file_chooser->signal_connect(
                 response => \&file_chooser_response_callback,
@@ -2949,8 +2885,7 @@ sub file_exists {
 sub file_writable {
     my ( $chooser, $filename ) = @_;
     if ( not -w dirname($filename) ) {
-        my $text = sprintf $d->get('Directory %s is read-only'),
-          dirname($filename);
+        my $text = sprintf __('Directory %s is read-only'), dirname($filename);
         show_message_dialog(
             parent  => $chooser,
             type    => 'error',
@@ -2960,7 +2895,7 @@ sub file_writable {
         return TRUE;
     }
     elsif ( -f $filename and not -w $filename ) {
-        my $text = sprintf $d->get('File %s is read-only'), $filename;
+        my $text = sprintf __('File %s is read-only'), $filename;
         show_message_dialog(
             parent  => $chooser,
             type    => 'error',
@@ -2980,14 +2915,14 @@ sub save_image {
 
     # Set up file selector
     my $file_chooser = Gtk2::FileChooserDialog->new(
-        $d->get('Image filename'),
+        __('Image filename'),
         $windowi, 'save',
         'gtk-cancel' => 'cancel',
         'gtk-save'   => 'ok'
     );
     $file_chooser->set_default_response('ok');
     $file_chooser->set_current_folder( $SETTING{cwd} );
-    add_filter( $file_chooser, $d->get('Image files'),
+    add_filter( $file_chooser, __('Image files'),
         'jpg', 'png', 'pnm', 'gif', 'tif', 'tiff', 'pdf', 'djvu', 'ps' );
     $file_chooser->set_do_overwrite_confirmation(TRUE);
 
@@ -3278,7 +3213,7 @@ sub mua {
                     parent  => $parent,
                     type    => 'error',
                     buttons => 'close',
-                    text    => $d->get(
+                    text    => __(
 'You seem to be using Gnome or XFCE, but do not have gconftool installed. Unable to determine email client.'
                     )
                 );
@@ -3297,7 +3232,7 @@ sub mua {
             parent  => $parent,
             type    => 'error',
             buttons => 'close',
-            text    => $d->get(
+            text    => __(
 'Unable to determine your desktop enviroment, and therefore your email client.'
             )
         );
@@ -3322,7 +3257,7 @@ sub email {
     # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
     $windowe = Gscan2pdf::Dialog->new(
         'transient-for'  => $window,
-        title            => $d->get('Email as PDF'),
+        title            => __('Email as PDF'),
         'hide-on-delete' => TRUE,
         'border-width'   => $BORDER_WIDTH
     );
@@ -3435,7 +3370,7 @@ sub email {
                             parent  => $window,
                             type    => 'error',
                             buttons => 'close',
-                            text    => $d->get('Error creating email')
+                            text    => __('Error creating email')
                         );
                     }
                 },
@@ -3477,7 +3412,7 @@ sub scan_dialog {
     # scan pop-up window
     my %options = (
         'transient-for'       => $window,
-        title                 => $d->get('Scan Document'),
+        title                 => __('Scan Document'),
         'border-width'        => $BORDER_WIDTH,
         'default-width'       => $SETTING{scan_window_width},
         'default-height'      => $SETTING{scan_window_height},
@@ -3858,46 +3793,40 @@ sub add_postprocessing_rotate {
     my ($vbox) = @_;
     my $hboxr = Gtk2::HBox->new;
     $vbox->pack_start( $hboxr, FALSE, FALSE, 0 );
-    my $rbutton = Gtk2::CheckButton->new( $d->get('Rotate') );
-    $tooltips->set_tip( $rbutton, $d->get('Rotate image after scanning') );
+    my $rbutton = Gtk2::CheckButton->new( __('Rotate') );
+    $tooltips->set_tip( $rbutton, __('Rotate image after scanning') );
     $hboxr->pack_start( $rbutton, TRUE, TRUE, 0 );
     my @side = (
-        [ 'both',    $d->get('Both sides'),   $d->get('Both sides.') ],
-        [ 'facing',  $d->get('Facing side'),  $d->get('Facing side.') ],
-        [ 'reverse', $d->get('Reverse side'), $d->get('Reverse side.') ],
+        [ 'both',    __('Both sides'),   __('Both sides.') ],
+        [ 'facing',  __('Facing side'),  __('Facing side.') ],
+        [ 'reverse', __('Reverse side'), __('Reverse side.') ],
     );
     my $comboboxs = combobox_from_array(@side);
-    $tooltips->set_tip( $comboboxs, $d->get('Select side to rotate') );
+    $tooltips->set_tip( $comboboxs, __('Select side to rotate') );
     $hboxr->pack_start( $comboboxs, TRUE, TRUE, 0 );
     my @rotate = (
+        [ $_90_DEGREES,  __('90'),  __('Rotate image 90 degrees clockwise.') ],
+        [ $_180_DEGREES, __('180'), __('Rotate image 180 degrees clockwise.') ],
         [
-            $_90_DEGREES, $d->get('90'),
-            $d->get('Rotate image 90 degrees clockwise.')
-        ],
-        [
-            $_180_DEGREES, $d->get('180'),
-            $d->get('Rotate image 180 degrees clockwise.')
-        ],
-        [
-            $_270_DEGREES, $d->get('270'),
-            $d->get('Rotate image 90 degrees anticlockwise.')
+            $_270_DEGREES, __('270'),
+            __('Rotate image 90 degrees anticlockwise.')
         ],
     );
     my $comboboxr = combobox_from_array(@rotate);
-    $tooltips->set_tip( $comboboxr, $d->get('Select direction of rotation') );
+    $tooltips->set_tip( $comboboxr, __('Select direction of rotation') );
     $hboxr->pack_end( $comboboxr, TRUE, TRUE, 0 );
 
     $hboxr = Gtk2::HBox->new;
     $vbox->pack_start( $hboxr, FALSE, FALSE, 0 );
-    my $r2button = Gtk2::CheckButton->new( $d->get('Rotate') );
-    $tooltips->set_tip( $r2button, $d->get('Rotate image after scanning') );
+    my $r2button = Gtk2::CheckButton->new( __('Rotate') );
+    $tooltips->set_tip( $r2button, __('Rotate image after scanning') );
     $hboxr->pack_start( $r2button, TRUE, TRUE, 0 );
     my @side2;
     my $comboboxs2 = Gtk2::ComboBox->new_text;
-    $tooltips->set_tip( $comboboxs2, $d->get('Select side to rotate') );
+    $tooltips->set_tip( $comboboxs2, __('Select side to rotate') );
     $hboxr->pack_start( $comboboxs2, TRUE, TRUE, 0 );
     my $comboboxr2 = combobox_from_array(@rotate);
-    $tooltips->set_tip( $comboboxr2, $d->get('Select direction of rotation') );
+    $tooltips->set_tip( $comboboxr2, __('Select direction of rotation') );
     $hboxr->pack_end( $comboboxr2, TRUE, TRUE, 0 );
 
     $rbutton->signal_connect(
@@ -3975,9 +3904,9 @@ sub add_postprocessing_udt {
     my $hboxudt = Gtk2::HBox->new;
     $vboxp->pack_start( $hboxudt, FALSE, FALSE, 0 );
     my $udtbutton =
-      Gtk2::CheckButton->new( $d->get('Process with user-defined tool') );
+      Gtk2::CheckButton->new( __('Process with user-defined tool') );
     $tooltips->set_tip( $udtbutton,
-        $d->get('Process scanned images with user-defined tool') );
+        __('Process scanned images with user-defined tool') );
     $hboxudt->pack_start( $udtbutton, TRUE, TRUE, 0 );
     if ( not $SETTING{user_defined_tools} ) {
         $hboxudt->set_sensitive(FALSE);
@@ -4005,8 +3934,8 @@ sub add_postprocessing_ocr {
     my ($vbox) = @_;
     my $hboxo = Gtk2::HBox->new;
     $vbox->pack_start( $hboxo, FALSE, FALSE, 0 );
-    my $obutton = Gtk2::CheckButton->new( $d->get('OCR scanned pages') );
-    $tooltips->set_tip( $obutton, $d->get('OCR scanned pages') );
+    my $obutton = Gtk2::CheckButton->new( __('OCR scanned pages') );
+    $tooltips->set_tip( $obutton, __('OCR scanned pages') );
     if ( not $dependencies{ocr} ) {
         $hboxo->set_sensitive(FALSE);
         $obutton->set_active(FALSE);
@@ -4016,7 +3945,7 @@ sub add_postprocessing_ocr {
     }
     $hboxo->pack_start( $obutton, TRUE, TRUE, 0 );
     my $comboboxe = combobox_from_array(@ocr_engine);
-    $tooltips->set_tip( $comboboxe, $d->get('Select OCR engine') );
+    $tooltips->set_tip( $comboboxe, __('Select OCR engine') );
     $hboxo->pack_end( $comboboxe, TRUE, TRUE, 0 );
     my ( $comboboxtl, $hboxtl, @tesslang, $comboboxcl, $hboxcl, @cflang );
     if ( $dependencies{tesseract} ) {
@@ -4061,11 +3990,10 @@ sub add_postprocessing_ocr {
     }
     combobox_set_active( $comboboxe, $SETTING{'ocr engine'}, @ocr_engine );
 
-    my $cbt =
-      Gtk2::CheckButton->new_with_label( $d->get('Threshold before OCR') );
+    my $cbt = Gtk2::CheckButton->new_with_label( __('Threshold before OCR') );
     $tooltips->set_tip(
         $cbt,
-        $d->get(
+        __(
                 'Threshold the image before performing OCR. '
               . 'This only affects the image passed to the OCR engine, and not the image stored.'
         )
@@ -4076,7 +4004,7 @@ sub add_postprocessing_ocr {
     # SpinButton for threshold
     my $hboxt = Gtk2::HBox->new;
     $vbox->pack_start( $hboxt, FALSE, TRUE, 0 );
-    my $label = Gtk2::Label->new( $d->get('Threshold') );
+    my $label = Gtk2::Label->new( __('Threshold') );
     $hboxt->pack_start( $label, FALSE, TRUE, 0 );
     my $labelp = Gtk2::Label->new($PERCENT);
     $hboxt->pack_end( $labelp, FALSE, TRUE, 0 );
@@ -4101,7 +4029,7 @@ sub add_postprocessing_options {
     my $vbox = $self->get('vbox');
 
     # Frame for post-processing
-    my $framep = Gtk2::Frame->new( $d->get('Post-processing') );
+    my $framep = Gtk2::Frame->new( __('Post-processing') );
     $vbox->pack_start( $framep, FALSE, FALSE, 0 );
     my $vboxp = Gtk2::VBox->new;
     $vboxp->set_border_width($BORDER_WIDTH);
@@ -4116,9 +4044,8 @@ sub add_postprocessing_options {
     # CheckButton for unpaper
     my $hboxu = Gtk2::HBox->new;
     $vboxp->pack_start( $hboxu, FALSE, FALSE, 0 );
-    my $ubutton = Gtk2::CheckButton->new( $d->get('Clean up images') );
-    $tooltips->set_tip( $ubutton,
-        $d->get('Clean up scanned images with unpaper') );
+    my $ubutton = Gtk2::CheckButton->new( __('Clean up images') );
+    $tooltips->set_tip( $ubutton, __('Clean up scanned images with unpaper') );
     $hboxu->pack_start( $ubutton, TRUE, TRUE, 0 );
     if ( not $dependencies{unpaper} ) {
         $ubutton->set_sensitive(FALSE);
@@ -4127,14 +4054,14 @@ sub add_postprocessing_options {
     elsif ( $SETTING{'unpaper on scan'} ) {
         $ubutton->set_active(TRUE);
     }
-    my $button = Gtk2::Button->new( $d->get('Options') );
-    $tooltips->set_tip( $button, $d->get('Set unpaper options') );
+    my $button = Gtk2::Button->new( __('Options') );
+    $tooltips->set_tip( $button, __('Set unpaper options') );
     $hboxu->pack_end( $button, TRUE, TRUE, 0 );
     $button->signal_connect(
         clicked => sub {
             my $windowuo = Gscan2pdf::Dialog->new(
                 'transient-for' => $window,
-                title           => $d->get('unpaper options'),
+                title           => __('unpaper options'),
                 border_width    => $BORDER_WIDTH
             );
             my $vbox1 = $windowuo->get('vbox');
@@ -4627,10 +4554,10 @@ Wikinaut
 Jakub Wilk
 EOS
     $about->set_authors( "Jeff Ratcliffe\n\n"
-          . $d->get('Patches gratefully received from:')
+          . __('Patches gratefully received from:')
           . "\n$authors" );
-    $about->set_comments( $d->get('To aid the scan-to-PDF process') );
-    $about->set_copyright( $d->get('Copyright 2006--2017 Jeffrey Ratcliffe') );
+    $about->set_comments( __('To aid the scan-to-PDF process') );
+    $about->set_copyright( __('Copyright 2006--2017 Jeffrey Ratcliffe') );
     my $licence = <<'EOS';
 gscan2pdf --- to aid the scan to PDF or DjVu process
 Copyright 2006 -- 2017 Jeffrey Ratcliffe <jffry@posteo.net>
@@ -4858,7 +4785,7 @@ sub threshold {
 
     my $windowt = Gscan2pdf::Dialog->new(
         'transient-for' => $window,
-        title           => $d->get('Threshold'),
+        title           => __('Threshold'),
         border_width    => $BORDER_WIDTH
     );
     my $vbox = $windowt->get('vbox');
@@ -4869,7 +4796,7 @@ sub threshold {
     # SpinButton for threshold
     my $hboxt = Gtk2::HBox->new;
     $vbox->pack_start( $hboxt, FALSE, TRUE, 0 );
-    my $label = Gtk2::Label->new( $d->get('Threshold') );
+    my $label = Gtk2::Label->new( __('Threshold') );
     $hboxt->pack_start( $label, FALSE, TRUE, 0 );
     my $labelp = Gtk2::Label->new($PERCENT);
     $hboxt->pack_end( $labelp, FALSE, TRUE, 0 );
@@ -4938,7 +4865,7 @@ sub brightness_contrast {
 
     my $windowt = Gscan2pdf::Dialog->new(
         'transient-for' => $window,
-        title           => $d->get('Brightness / Contrast'),
+        title           => __('Brightness / Contrast'),
         border_width    => $BORDER_WIDTH
     );
     my $vbox = $windowt->get('vbox');
@@ -4950,7 +4877,7 @@ sub brightness_contrast {
     # SpinButton for brightness
     $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('Brightness') );
+    $label = Gtk2::Label->new( __('Brightness') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $label = Gtk2::Label->new($PERCENT);
     $hbox->pack_end( $label, FALSE, TRUE, 0 );
@@ -4961,7 +4888,7 @@ sub brightness_contrast {
     # SpinButton for contrast
     $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('Contrast') );
+    $label = Gtk2::Label->new( __('Contrast') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $label = Gtk2::Label->new($PERCENT);
     $hbox->pack_end( $label, FALSE, TRUE, 0 );
@@ -5030,7 +4957,7 @@ sub negate {
 
     my $windowt = Gscan2pdf::Dialog->new(
         'transient-for' => $window,
-        title           => $d->get('Negate'),
+        title           => __('Negate'),
         border_width    => $BORDER_WIDTH
     );
     my $vbox = $windowt->get('vbox');
@@ -5094,7 +5021,7 @@ sub unsharp {
 
     my $windowum = Gscan2pdf::Dialog->new(
         'transient-for' => $window,
-        title           => $d->get('Unsharp mask'),
+        title           => __('Unsharp mask'),
         border_width    => $BORDER_WIDTH
     );
     my $vbox = $windowum->get('vbox');
@@ -5111,7 +5038,7 @@ sub unsharp {
     my $hbox = Gtk2::HBox->new;
     my ( $row, $desc, $widget, $units ) = ( 0, 0, 1, 2 );
     $table->attach_defaults( $hbox, $desc, $desc + 1, $row, $row + 1 );
-    my $label = Gtk2::Label->new( $d->get('Radius') );
+    my $label = Gtk2::Label->new( __('Radius') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
@@ -5119,20 +5046,20 @@ sub unsharp {
     $spinbuttonr->set_value( $SETTING{'unsharp radius'} );
     $tooltips->set_tip(
         $spinbuttonr,
-        $d->get(
+        __(
 'The radius of the Gaussian, in pixels, not counting the center pixel (0 = automatic).'
         )
     );
     $hbox->pack_end( $spinbuttonr, TRUE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('pixels') );
+    $label = Gtk2::Label->new( __('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for sigma
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('Sigma') );
+    $label = Gtk2::Label->new( __('Sigma') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
@@ -5140,17 +5067,17 @@ sub unsharp {
       Gtk2::SpinButton->new_with_range( 0, $MAX_SIGMA, $SIGMA_STEP );
     $spinbuttons->set_value( $SETTING{'unsharp sigma'} );
     $tooltips->set_tip( $spinbuttons,
-        $d->get('The standard deviation of the Gaussian.') );
+        __('The standard deviation of the Gaussian.') );
     $hbox->pack_end( $spinbuttons, TRUE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('pixels') );
+    $label = Gtk2::Label->new( __('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for amount
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('Amount') );
+    $label = Gtk2::Label->new( __('Amount') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
@@ -5158,7 +5085,7 @@ sub unsharp {
     $spinbuttona->set_value( $SETTING{'unsharp amount'} );
     $tooltips->set_tip(
         $spinbuttona,
-        $d->get(
+        __(
 'The percentage of the difference between the original and the blur image that is added back into the original.'
         )
     );
@@ -5171,7 +5098,7 @@ sub unsharp {
     # SpinButton for threshold
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('Threshold') );
+    $label = Gtk2::Label->new( __('Threshold') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
@@ -5180,7 +5107,7 @@ sub unsharp {
     $spinbuttont->set_value( $SETTING{'unsharp threshold'} );
     $tooltips->set_tip(
         $spinbuttont,
-        $d->get(
+        __(
 'The threshold, as a fraction of QuantumRange, needed to apply the difference amount.'
         )
     );
@@ -5283,7 +5210,7 @@ sub crop {
 
     $windowc = Gscan2pdf::Dialog->new(
         'transient-for'  => $window,
-        title            => $d->get('Crop'),
+        title            => __('Crop'),
         'hide-on-delete' => TRUE,
         border_width     => $BORDER_WIDTH
     );
@@ -5301,67 +5228,67 @@ sub crop {
     my $hbox = Gtk2::HBox->new;
     my ( $row, $desc, $widget, $units ) = ( 0, 0, 1, 2 );
     $table->attach_defaults( $hbox, $desc, $desc + 1, $row, $row + 1 );
-    my $label = Gtk2::Label->new( $d->get('x') );
+    my $label = Gtk2::Label->new( __('x') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     $sb_selector_x =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
     $tooltips->set_tip( $sb_selector_x,
-        $d->get('The x-position of the left hand edge of the crop.') );
+        __('The x-position of the left hand edge of the crop.') );
     $hbox->pack_end( $sb_selector_x, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('pixels') );
+    $label = Gtk2::Label->new( __('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for y
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('y') );
+    $label = Gtk2::Label->new( __('y') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     $sb_selector_y =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
     $tooltips->set_tip( $sb_selector_y,
-        $d->get('The y-position of the top edge of the crop.') );
+        __('The y-position of the top edge of the crop.') );
     $hbox->pack_end( $sb_selector_y, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('pixels') );
+    $label = Gtk2::Label->new( __('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for w
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('Width') );
+    $label = Gtk2::Label->new( __('Width') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     $sb_selector_w =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
-    $tooltips->set_tip( $sb_selector_w, $d->get('The width of the crop.') );
+    $tooltips->set_tip( $sb_selector_w, __('The width of the crop.') );
     $hbox->pack_end( $sb_selector_w, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('pixels') );
+    $label = Gtk2::Label->new( __('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # SpinButton for h
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('Height') );
+    $label = Gtk2::Label->new( __('Height') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
     $sb_selector_h =
       Gtk2::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
-    $tooltips->set_tip( $sb_selector_h, $d->get('The height of the crop.') );
+    $tooltips->set_tip( $sb_selector_h, __('The height of the crop.') );
     $hbox->pack_end( $sb_selector_h, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
-    $label = Gtk2::Label->new( $d->get('pixels') );
+    $label = Gtk2::Label->new( __('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # Callbacks if the spinbuttons change
@@ -5486,7 +5413,7 @@ sub user_defined_dialog {
 
     $windowudt = Gscan2pdf::Dialog->new(
         'transient-for'  => $window,
-        title            => $d->get('User-defined tools'),
+        title            => __('User-defined tools'),
         'hide-on-delete' => TRUE,
         border_width     => $BORDER_WIDTH
     );
@@ -5497,7 +5424,7 @@ sub user_defined_dialog {
 
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
-    my $label = Gtk2::Label->new( $d->get('Selected tool') );
+    my $label = Gtk2::Label->new( __('Selected tool') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $comboboxudt = add_udt_combobox($hbox);
 
@@ -5627,7 +5554,7 @@ sub unpaper {
 
     $windowu = Gscan2pdf::Dialog->new(
         'transient-for'  => $window,
-        title            => $d->get('unpaper'),
+        title            => __('unpaper'),
         'hide-on-delete' => TRUE,
         border_width     => $BORDER_WIDTH
     );
@@ -5721,19 +5648,18 @@ sub add_tess_languages {
 
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
-    my $label = Gtk2::Label->new( $d->get('Language to recognise') );
+    my $label = Gtk2::Label->new( __('Language to recognise') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # Tesseract language files
     my @tesslang;
     for ( sort { $a cmp $b } keys %{ Gscan2pdf::Tesseract->languages } ) {
-        push @tesslang,
-          [ $_, $d->get( ${ Gscan2pdf::Tesseract->languages }{$_} ) ];
+        push @tesslang, [ $_, __( ${ Gscan2pdf::Tesseract->languages }{$_} ) ];
     }
 
     # If there are no language files, then we have tesseract-1.0, i.e. English
     if ( not @tesslang ) {
-        push @tesslang, [ undef, $d->get('English') ];
+        push @tesslang, [ undef, __('English') ];
         $logger->info('No tesseract languages found');
     }
 
@@ -5750,13 +5676,13 @@ sub add_cf_languages {
 
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
-    my $label = Gtk2::Label->new( $d->get('Language to recognise') );
+    my $label = Gtk2::Label->new( __('Language to recognise') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
     # Tesseract language files
     my @lang;
     for ( sort { $a cmp $b } keys %{ Gscan2pdf::Cuneiform->languages } ) {
-        push @lang, [ $_, $d->get( ${ Gscan2pdf::Cuneiform->languages }{$_} ) ];
+        push @lang, [ $_, __( ${ Gscan2pdf::Cuneiform->languages }{$_} ) ];
     }
 
     my $combobox = combobox_from_array(@lang);
@@ -5776,7 +5702,7 @@ sub ocr_dialog {
 
     $windowo = Gscan2pdf::Dialog->new(
         'transient-for'  => $window,
-        title            => $d->get('OCR'),
+        title            => __('OCR'),
         'hide-on-delete' => TRUE,
         border_width     => $BORDER_WIDTH
     );
@@ -5788,7 +5714,7 @@ sub ocr_dialog {
     # OCR engine selection
     my $hboxe = Gtk2::HBox->new;
     $vbox->pack_start( $hboxe, FALSE, TRUE, 0 );
-    my $label = Gtk2::Label->new( $d->get('OCR Engine') );
+    my $label = Gtk2::Label->new( __('OCR Engine') );
     $hboxe->pack_start( $label, FALSE, TRUE, 0 );
     my $combobe = combobox_from_array(@ocr_engine);
     combobox_set_active( $combobe, $SETTING{'ocr engine'}, @ocr_engine );
@@ -5824,11 +5750,10 @@ sub ocr_dialog {
         );
     }
 
-    my $cbt =
-      Gtk2::CheckButton->new_with_label( $d->get('Threshold before OCR') );
+    my $cbt = Gtk2::CheckButton->new_with_label( __('Threshold before OCR') );
     $tooltips->set_tip(
         $cbt,
-        $d->get(
+        __(
                 'Threshold the image before performing OCR. '
               . 'This only affects the image passed to the OCR engine, and not the image stored.'
         )
@@ -5842,7 +5767,7 @@ sub ocr_dialog {
     my $hboxt = Gtk2::HBox->new;
     $hboxt->set_sensitive( $cbt->get_active ? TRUE : FALSE );
     $vbox->pack_start( $hboxt, FALSE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('Threshold') );
+    $label = Gtk2::Label->new( __('Threshold') );
     $hboxt->pack_start( $label, FALSE, TRUE, 0 );
     my $labelp = Gtk2::Label->new($PERCENT);
     $hboxt->pack_end( $labelp, FALSE, TRUE, 0 );
@@ -5860,7 +5785,7 @@ sub ocr_dialog {
     $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
 
     # Start button
-    my $obutton = Gtk2::Button->new( $d->get('Start OCR') );
+    my $obutton = Gtk2::Button->new( __('Start OCR') );
     $hbox->pack_start( $obutton, TRUE, TRUE, 0 );
     $obutton->grab_focus;
     $obutton->signal_connect(
@@ -5960,8 +5885,7 @@ sub quit {
 
     if (
         not scans_saved(
-            $d->get(
-                "Some pages have not been saved.\nDo you really want to quit?")
+            __("Some pages have not been saved.\nDo you really want to quit?")
         )
       )
     {
@@ -6017,7 +5941,7 @@ sub view_pod {
     try { require Gtk2::Ex::PodViewer }
     catch {
         $error = TRUE;
-        my $text = sprintf $d->get(
+        my $text = sprintf __(
                 "The help viewer requires module Gtk2::Ex::PodViewer\n"
               . "Alternatively, try: %s %s\n\n" ),
           $prog_name,
@@ -6125,8 +6049,7 @@ sub take_snapshot {
 "Free space in $session (Mb): $df->{bavail} (warning at $SETTING{'available-tmp-warning'})"
         );
         if ( $df->{bavail} < $SETTING{'available-tmp-warning'} ) {
-            my $text = sprintf $d->get('%dMb free in %s.'), $df->{bavail},
-              $session;
+            my $text = sprintf __('%dMb free in %s.'), $df->{bavail}, $session;
             show_message_dialog(
                 parent  => $window,
                 type    => 'warning',
@@ -6255,7 +6178,7 @@ sub compress_temp {
             parent  => $window,
             type    => 'question',
             buttons => 'ok-cancel',
-            text => $d->get('This operation cannot be undone. Are you sure?'),
+            text    => __('This operation cannot be undone. Are you sure?'),
             'store-response'   => TRUE,
             'stored-responses' => ['ok']
         ) ne 'ok'
@@ -6312,7 +6235,7 @@ sub preferences {
 
     $windowr = Gscan2pdf::Dialog->new(
         'transient-for'  => $window,
-        title            => $d->get('Preferences'),
+        title            => __('Preferences'),
         'hide-on-delete' => TRUE,
         border_width     => $BORDER_WIDTH
     );
@@ -6327,14 +6250,14 @@ sub preferences {
         $preentry,  $cbc,       $cbo,
         $blacklist, $cbcsh,     $cb_batch_flatbed
     ) = _preferences_scan_options();
-    $notebook->append_page( $vbox1, $d->get('Scan options') );
+    $notebook->append_page( $vbox1, __('Scan options') );
 
     my (
         $vbox2,        $fileentry,   $cbw,         $cbt,
         $tmpentry,     $spinbuttonw, $spinbuttonb, $spinbuttond,
         $ocr_function, $comboo,      $cbv,         $cbb
     ) = _preferences_general_options();
-    $notebook->append_page( $vbox2, $d->get('General options') );
+    $notebook->append_page( $vbox2, __('General options') );
 
     # Apply button
     my $hbox = _hbox_with_apply_cancel_buttons(
@@ -6409,7 +6332,7 @@ sub preferences {
                     parent  => $window,
                     type    => 'warning',
                     buttons => 'close',
-                    text    => $d->get(
+                    text    => __(
 'You will have to restart gscanp2df for changes to the temporary directory to take effect.'
                     )
                 );
@@ -6437,10 +6360,10 @@ sub _preferences_scan_options {
 
     my $cbo =
       Gtk2::CheckButton->new_with_label(
-        $d->get('Open scan dialog at program start') );
+        __('Open scan dialog at program start') );
     $tooltips->set_tip(
         $cbo,
-        $d->get(
+        __(
 'Automatically open the scan dialog in the background at program start. '
               . 'This saves time clicking the scan button and waiting for the program to find the list of scanners'
         )
@@ -6454,45 +6377,39 @@ sub _preferences_scan_options {
     # Frontends
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, FALSE, FALSE, 0 );
-    my $label = Gtk2::Label->new( $d->get('Frontend') );
+    my $label = Gtk2::Label->new( __('Frontend') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my @frontends = (
         [
-            'libsane-perl',
-            $d->get('libsane-perl'),
-            $d->get('Scan using the perl bindings for SANE.')
+            'libsane-perl', __('libsane-perl'),
+            __('Scan using the perl bindings for SANE.')
         ],
         [
             'libimage-sane-perl',
-            $d->get('libimage-sane-perl'),
-            $d->get('Scan using the perl bindings for SANE.')
+            __('libimage-sane-perl'),
+            __('Scan using the perl bindings for SANE.')
         ],
         [
-            'scanimage',
-            $d->get('scanimage'),
-            $d->get('Scan using the scanimage frontend.')
+            'scanimage', __('scanimage'),
+            __('Scan using the scanimage frontend.')
         ],
     );
     if ( $dependencies{scanadf} ) {
         push @frontends,
-          [
-            'scanadf', $d->get('scanadf'),
-            $d->get('Scan using the scanadf frontend.')
-          ];
+          [ 'scanadf', __('scanadf'), __('Scan using the scanadf frontend.') ];
     }
     my $combob = combobox_from_array(@frontends);
-    $tooltips->set_tip( $hbox, $d->get('Interface used for scanner access') );
+    $tooltips->set_tip( $hbox, __('Interface used for scanner access') );
     $hbox->pack_end( $combob, TRUE, TRUE, 0 );
 
     # Device blacklist
     my $hboxb = Gtk2::HBox->new;
     $vbox->pack_start( $hboxb, FALSE, FALSE, 0 );
-    $label = Gtk2::Label->new( $d->get('Device blacklist') );
+    $label = Gtk2::Label->new( __('Device blacklist') );
     $hboxb->pack_start( $label, FALSE, FALSE, 0 );
     my $blacklist = Gtk2::Entry->new;
     $hboxb->add($blacklist);
-    $tooltips->set_tip( $hboxb,
-        $d->get('Device blacklist (regular expression)') );
+    $tooltips->set_tip( $hboxb, __('Device blacklist (regular expression)') );
 
     if ( defined $SETTING{'device blacklist'} ) {
         $blacklist->set_text( $SETTING{'device blacklist'} );
@@ -6500,13 +6417,9 @@ sub _preferences_scan_options {
 
     # Cycle SANE handle after scan
     my $cbcsh =
-      Gtk2::CheckButton->new_with_label(
-        $d->get('Cycle SANE handle after scan') );
-    $tooltips->set_tip(
-        $cbcsh,
-        $d->get(
-            'Some ADFs do not feed out the last page if this is not enabled')
-    );
+      Gtk2::CheckButton->new_with_label( __('Cycle SANE handle after scan') );
+    $tooltips->set_tip( $cbcsh,
+        __('Some ADFs do not feed out the last page if this is not enabled') );
     if ( defined $SETTING{'cycle sane handle'} ) {
         $cbcsh->set_active( $SETTING{'cycle sane handle'} );
     }
@@ -6515,10 +6428,10 @@ sub _preferences_scan_options {
     # Allow batch scanning from flatbed
     my $cb_batch_flatbed =
       Gtk2::CheckButton->new_with_label(
-        $d->get('Allow batch scanning from flatbed') );
+        __('Allow batch scanning from flatbed') );
     $tooltips->set_tip(
         $cb_batch_flatbed,
-        $d->get(
+        __(
 'If not set, switching to a flatbed scanner will force # pages to 1.'
         )
     );
@@ -6528,10 +6441,10 @@ sub _preferences_scan_options {
     # Select num-pages = all on selecting ADF
     my $cb_adf_all_pages =
       Gtk2::CheckButton->new_with_label(
-        $d->get('Select # pages = all on selecting ADF') );
+        __('Select # pages = all on selecting ADF') );
     $tooltips->set_tip(
         $cb_adf_all_pages,
-        $d->get(
+        __(
 'If this option is enabled, when switching to source=ADF, # pages = all is selected'
         )
     );
@@ -6541,7 +6454,7 @@ sub _preferences_scan_options {
     # scan command prefix
     my $hboxp = Gtk2::HBox->new;
     $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
-    $label = Gtk2::Label->new( $d->get('Scan command prefix') );
+    $label = Gtk2::Label->new( __('Scan command prefix') );
     $hboxp->pack_start( $label, FALSE, FALSE, 0 );
     my $preentry = Gtk2::Entry->new;
     $hboxp->add($preentry);
@@ -6550,14 +6463,14 @@ sub _preferences_scan_options {
     }
 
     # Cache options?
-    my $cbc = Gtk2::CheckButton->new_with_label(
-        $d->get('Cache device-dependent options') );
+    my $cbc =
+      Gtk2::CheckButton->new_with_label( __('Cache device-dependent options') );
     if ( $SETTING{'cache options'} ) { $cbc->set_active(TRUE) }
     $vbox->pack_start( $cbc, FALSE, FALSE, 0 );
 
     # Clear options cache
     my $buttonc =
-      Gtk2::Button->new( $d->get('Clear device-dependent options cache') );
+      Gtk2::Button->new( __('Clear device-dependent options cache') );
     $vbox->pack_start( $buttonc, FALSE, FALSE, 0 );
     $buttonc->signal_connect(
         clicked => sub {
@@ -6567,7 +6480,7 @@ sub _preferences_scan_options {
     );
 
     # Option visibility
-    my $oframe = Gtk2::Frame->new( $d->get('Option visibility & control') );
+    my $oframe = Gtk2::Frame->new( __('Option visibility & control') );
     $vbox->pack_start( $oframe, TRUE, TRUE, 0 );
     my $vvbox = Gtk2::VBox->new;
     $vvbox->set_border_width($BORDER_WIDTH);
@@ -6576,16 +6489,16 @@ sub _preferences_scan_options {
     $vvbox->pack_start( $scwin, TRUE, TRUE, 0 );
     $scwin->set_policy(qw/never automatic/);
     $option_visibility_list = Gtk2::Ex::Simple::List->new(
-        $d->get('Title')  => 'text',
-        $d->get('Type')   => 'text',
-        $d->get('Show')   => 'bool',
-        $d->get('Reload') => 'bool'
+        __('Title')  => 'text',
+        __('Type')   => 'text',
+        __('Show')   => 'bool',
+        __('Reload') => 'bool'
     );
     $option_visibility_list->get_selection->set_mode('multiple');
     $scwin->add($option_visibility_list);
     my $bhbox = Gtk2::HBox->new;
     $vvbox->pack_start( $bhbox, FALSE, FALSE, 0 );
-    my $sbutton = Gtk2::Button->new( $d->get('Show') );
+    my $sbutton = Gtk2::Button->new( __('Show') );
     $sbutton->signal_connect(
         clicked => sub {
 
@@ -6595,7 +6508,7 @@ sub _preferences_scan_options {
         }
     );
     $bhbox->pack_start( $sbutton, TRUE, TRUE, 0 );
-    my $hbutton = Gtk2::Button->new( $d->get('Hide') );
+    my $hbutton = Gtk2::Button->new( __('Hide') );
     $hbutton->signal_connect(
         clicked => sub {
             for ( $option_visibility_list->get_selected_indices ) {
@@ -6604,7 +6517,7 @@ sub _preferences_scan_options {
         }
     );
     $bhbox->pack_start( $hbutton, TRUE, TRUE, 0 );
-    my $fbutton = Gtk2::Button->new( $d->get('List current options') );
+    my $fbutton = Gtk2::Button->new( __('List current options') );
     $fbutton->signal_connect(
         clicked => sub {
             if ( defined $windows ) {
@@ -6623,7 +6536,7 @@ sub _preferences_scan_options {
                     parent  => $windowr,
                     type    => 'error',
                     buttons => 'close',
-                    text    => $d->get(
+                    text    => __(
                         'No scanner currently open with command line frontend.')
                 );
             }
@@ -6632,7 +6545,7 @@ sub _preferences_scan_options {
     );
     $bhbox->pack_start( $fbutton, TRUE, TRUE, 0 );
     my $show_not_listed =
-      Gtk2::CheckButton->new_with_label( $d->get('Show options not listed') );
+      Gtk2::CheckButton->new_with_label( __('Show options not listed') );
     $vvbox->pack_start( $show_not_listed, FALSE, FALSE, 0 );
 
     # fill the list
@@ -6676,13 +6589,12 @@ sub _preferences_general_options {
 
     # Restore window setting
     my $cbw = Gtk2::CheckButton->new_with_label(
-        $d->get('Restore window settings on startup') );
+        __('Restore window settings on startup') );
     if ( $SETTING{'restore window'} ) { $cbw->set_active(TRUE) }
     $vbox->pack_start( $cbw, TRUE, TRUE, 0 );
 
     # View saved files
-    my $cbv =
-      Gtk2::CheckButton->new_with_label( $d->get('View files on saving') );
+    my $cbv = Gtk2::CheckButton->new_with_label( __('View files on saving') );
     if ( defined $SETTING{'view files toggle'} ) {
         $cbv->set_active( $SETTING{'view files toggle'} );
     }
@@ -6691,12 +6603,12 @@ sub _preferences_general_options {
     # Default filename
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-    my $label = Gtk2::Label->new( $d->get('Default PDF & DjVu filename') );
+    my $label = Gtk2::Label->new( __('Default PDF & DjVu filename') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $fileentry = Gtk2::Entry->new;
     $tooltips->set_tip(
         $fileentry,
-        $d->get(
+        __(
 "strftime codes, e.g.:\n\%Y\tcurrent year\n\nwith the following additions:\n\%Da\t author\n\%Dt\t title\n\nAll document date codes use strftime codes with a leading D, e.g.:\n\%DY\t document year\n\%Dm\t document month\n\%Dd\t document day"
         )
     );
@@ -6708,7 +6620,7 @@ sub _preferences_general_options {
 
     # Replace whitespace in filenames with underscores
     my $cbb = Gtk2::CheckButton->new_with_label(
-        $d->get('Replace whitespace in filenames with underscores') );
+        __('Replace whitespace in filenames with underscores') );
     if ( $SETTING{'convert whitespace to underscores'} ) {
         $cbb->set_active(TRUE);
     }
@@ -6716,23 +6628,23 @@ sub _preferences_general_options {
 
     # Set file timestamp with metadata
     my $cbt = Gtk2::CheckButton->new_with_label(
-        $d->get('Set access and modification times to metadata date') );
+        __('Set access and modification times to metadata date') );
     if ( $SETTING{set_timestamp} ) { $cbt->set_active(TRUE) }
     $vbox->pack_start( $cbt, TRUE, TRUE, 0 );
 
     # Temporary directory settings
     $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('Temporary directory') );
+    $label = Gtk2::Label->new( __('Temporary directory') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $tmpentry = Gtk2::Entry->new;
     $hbox->add($tmpentry);
     $tmpentry->set_text( dirname($session) );
-    my $button = Gtk2::Button->new( $d->get('Browse') );
+    my $button = Gtk2::Button->new( __('Browse') );
     $button->signal_connect(
         clicked => sub {
             my $file_chooser = Gtk2::FileChooserDialog->new(
-                $d->get('Select temporary directory'),
+                __('Select temporary directory'),
                 $windowr, 'select-folder',
                 'gtk-cancel' => 'cancel',
                 'gtk-ok'     => 'ok'
@@ -6749,14 +6661,13 @@ sub _preferences_general_options {
     # Available space in temporary directory
     $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-    $label =
-      Gtk2::Label->new( $d->get('Warn if available space less than (Mb)') );
+    $label = Gtk2::Label->new( __('Warn if available space less than (Mb)') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $spinbuttonw = Gtk2::SpinButton->new_with_range( 0, $_100_000MB, 1 );
     $spinbuttonw->set_value( $SETTING{'available-tmp-warning'} );
     $tooltips->set_tip(
         $spinbuttonw,
-        $d->get(
+        __(
 'Warn if the available space in the temporary directory is less than this value'
         )
     );
@@ -6765,47 +6676,47 @@ sub _preferences_general_options {
     # Blank page standard deviation threshold
     $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('Blank threshold') );
+    $label = Gtk2::Label->new( __('Blank threshold') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $spinbuttonb =
       Gtk2::SpinButton->new_with_range( 0, 1, $UNIT_SLIDER_STEP );
     $spinbuttonb->set_value( $SETTING{'Blank threshold'} );
     $tooltips->set_tip( $spinbuttonb,
-        $d->get('Threshold used for selecting blank pages') );
+        __('Threshold used for selecting blank pages') );
     $hbox->add($spinbuttonb);
 
     # Dark page mean threshold
     $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('Dark threshold') );
+    $label = Gtk2::Label->new( __('Dark threshold') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $spinbuttond =
       Gtk2::SpinButton->new_with_range( 0, 1, $UNIT_SLIDER_STEP );
     $spinbuttond->set_value( $SETTING{'Dark threshold'} );
     $tooltips->set_tip( $spinbuttond,
-        $d->get('Threshold used for selecting dark pages') );
+        __('Threshold used for selecting dark pages') );
     $hbox->add($spinbuttond);
 
     # OCR output
     $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-    $label = Gtk2::Label->new( $d->get('OCR output') );
+    $label = Gtk2::Label->new( __('OCR output') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my @ocr_function = (
         [
             'replace',
-            $d->get('Replace'),
-            $d->get(
+            __('Replace'),
+            __(
 'Replace the contents of the text buffer with that from the OCR output.'
             )
         ],
         [
-            'prepend', $d->get('Prepend'),
-            $d->get('Prepend the OCR output to the text buffer.')
+            'prepend', __('Prepend'),
+            __('Prepend the OCR output to the text buffer.')
         ],
         [
-            'append', $d->get('Append'),
-            $d->get('Append the OCR output to the text buffer.')
+            'append', __('Append'),
+            __('Append the OCR output to the text buffer.')
         ],
     );
     my $comboo = combobox_from_array(@ocr_function);
@@ -6813,7 +6724,7 @@ sub _preferences_general_options {
     $hbox->pack_end( $comboo, TRUE, TRUE, 0 );
 
     # Manage user-defined tools
-    my $frame = Gtk2::Frame->new( $d->get('Manage user-defined tools') );
+    my $frame = Gtk2::Frame->new( __('Manage user-defined tools') );
     $vbox->pack_start( $frame, TRUE, TRUE, 0 );
     my $vboxt = Gtk2::VBox->new;
     $vboxt->set_border_width($BORDER_WIDTH);
@@ -6922,7 +6833,7 @@ sub add_user_defined_tool_entry {
 
     $tooltips->set_tip(
         $entry,
-        $d->get(
+        __(
 "Use \%i and \%o for the input and output filenames respectively, or a single \%i if the image is to be modified in-place.\n\nThe other variable available is:\n\n\%r resolution"
         )
     );
@@ -6983,7 +6894,7 @@ sub properties {
 
     $windowp = Gscan2pdf::Dialog->new(
         'transient-for'  => $window,
-        title            => $d->get('Properties'),
+        title            => __('Properties'),
         'hide-on-delete' => TRUE,
         border_width     => $BORDER_WIDTH
     );
@@ -6991,7 +6902,7 @@ sub properties {
 
     my $hbox = Gtk2::HBox->new;
     $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-    my $label = Gtk2::Label->new( $d->get('Resolution') );
+    my $label = Gtk2::Label->new( __('Resolution') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my $spinbutton = Gtk2::SpinButton->new_with_range( 0, $MAX_DPI, 1 );
     $spinbutton->set_digits(1);
@@ -7003,7 +6914,7 @@ sub properties {
     );
     $hbox->pack_start( $spinbutton, TRUE, TRUE, 0 );
 
-    $label = Gtk2::Label->new( $d->get('dpi') );
+    $label = Gtk2::Label->new( __('dpi') );
     $hbox->pack_end( $label, FALSE, FALSE, 0 );
 
     $hbox = Gtk2::HBox->new;
@@ -7072,7 +6983,7 @@ sub show_message_dialog {
     my $cb;
     if ( $options{'store-response'} ) {
         $cb = Gtk2::CheckButton->new_with_label(
-            $d->get("Don't show this message again") );
+            __("Don't show this message again") );
 
         # older gtks don't have get_message_area() or get_content_area()
         my $area;

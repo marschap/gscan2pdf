@@ -3,8 +3,8 @@ package Gscan2pdf::Config;
 use strict;
 use warnings;
 use Gscan2pdf::Document;
-use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
-use Locale::gettext 1.05;    # For translations
+use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
+use Glib qw(TRUE FALSE);            # To get TRUE and FALSE
 use File::Copy;
 use Try::Tiny;
 use Data::Dumper;
@@ -27,7 +27,6 @@ BEGIN {
 }
 
 my $EMPTY = q{};
-my $d;
 
 sub _pre_151 {
     my ( $version, $SETTING ) = @_;
@@ -119,10 +118,6 @@ sub read_config {
         Gscan2pdf::Document::exec_command( [ 'touch', $filename ] );
     }
 
-    if ( not defined $d ) {
-        $d = Locale::gettext->domain(Glib::get_application_name);
-    }
-
     # from v1.3.3 onwards, the config file is saved as JSON
     my $config  = Gscan2pdf::Document::slurp($filename);
     my $version = '2';
@@ -141,9 +136,7 @@ sub read_config {
         }
         catch {
             $logger->error(
-                $d->get(
 "Error: unable to load settings.\nBacking up settings\nReverting to defaults"
-                )
             );
             move( $filename, "$filename.old" );
         }
@@ -282,19 +275,19 @@ sub add_defaults {
         'available-tmp-warning' => 10,
         close_dialog_on_save    => TRUE,
         'Paper'                 => {
-            $d->get('A4') => {
+            __('A4') => {
                 x => 210,
                 y => 297,
                 l => 0,
                 t => 0,
             },
-            $d->get('US Letter') => {
+            __('US Letter') => {
                 x => 216,
                 y => 279,
                 l => 0,
                 t => 0,
             },
-            $d->get('US Legal') => {
+            __('US Legal') => {
                 x => 216,
                 y => 356,
                 l => 0,

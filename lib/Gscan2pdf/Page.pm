@@ -13,12 +13,12 @@ use HTML::TokeParser;
 use HTML::Entities;
 use Image::Magick;
 use Encode;
-use Locale::gettext 1.05;    # For translations
 use POSIX qw(locale_h);
 use Data::UUID;
 use Text::Balanced qw ( extract_bracketed );
 use English qw( -no_match_vars );    # for $ERRNO
 use Gscan2pdf::Document;
+use Gscan2pdf::Translation '__';     # easier to extract strings with xgettext
 use Readonly;
 Readonly my $CM_PER_INCH    => 2.54;
 Readonly my $MM_PER_CM      => 10;
@@ -45,15 +45,12 @@ BEGIN {
 }
 our @EXPORT_OK;
 
-my ( $d, $logger );
+my ($logger);
 my $uuid = Data::UUID->new;
 
 sub new {
     my ( $class, %options ) = @_;
     my $self = {};
-    if ( not defined $d ) {
-        $d = Locale::gettext->domain(Glib::get_application_name);
-    }
 
     if ( not defined $options{filename} ) {
         croak 'Error: filename not supplied';
@@ -88,12 +85,12 @@ sub new {
     );
     if ( defined $options{delete} and $options{delete} ) {
         move( $options{filename}, $self->{filename} )
-          or croak sprintf $d->get('Error importing image %s: %s'),
+          or croak sprintf __('Error importing image %s: %s'),
           $options{filename}, $ERRNO;
     }
     else {
         copy( $options{filename}, $self->{filename} )
-          or croak sprintf $d->get('Error importing image %s: %s'),
+          or croak sprintf __('Error importing image %s: %s'),
           $options{filename}, $ERRNO;
     }
 
@@ -136,7 +133,7 @@ sub clone {
 
         # stringify filename to prevent copy from mangling it
         copy( "$self->{filename}", "$new->{filename}" )
-          or croak sprintf $d->get('Error copying image %s: %s'),
+          or croak sprintf __('Error copying image %s: %s'),
           $self->{filename}, $ERRNO;
     }
     bless $new, ref $self;

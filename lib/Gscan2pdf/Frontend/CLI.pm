@@ -16,6 +16,7 @@ use IO::Handle;
 use Gscan2pdf::NetPBM;
 use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Dialog::Scan;
+use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
 use Image::Sane ':all';    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Cwd;
 use File::Spec;
@@ -30,7 +31,7 @@ our $VERSION = '1.8.4';
 
 my $EMPTY = q{};
 my $COMMA = q{,};
-my ( $_self, $logger, $d );
+my ( $_self, $logger );
 my $mess_warmingup1 =
   qr/Scanner[ ]warming[ ]up[ ]-[ ]waiting[ ]\d*[ ]seconds/xsm;
 my $mess_warmingup2 = qr/wait[ ]for[ ]lamp[ ]warm-up/xsm;
@@ -40,7 +41,6 @@ my $page_no         = qr/page[ ](\d*)/xsm;
 sub setup {
     ( my $class, $logger ) = @_;
     $_self = {};
-    $d     = Locale::gettext->domain(Glib::get_application_name);
     return;
 }
 
@@ -168,13 +168,13 @@ sub parse_scanimage_output {
             my $num = $1 eq 'infinity' ? $INFINITE_DOCUMENTS : $1;
             if ( defined $options->{running_callback} ) {
                 $options->{running_callback}
-                  ->( 0, sprintf $d->get('Scanning %i pages...'), $num );
+                  ->( 0, sprintf __('Scanning %i pages...'), $num );
             }
         }
         when (/^Scanning[ ]$page_no/xsm) {
             if ( defined $options->{running_callback} ) {
                 $options->{running_callback}
-                  ->( 0, sprintf $d->get('Scanning page %i...'), $1 );
+                  ->( 0, sprintf __('Scanning page %i...'), $1 );
             }
         }
         when (/^Scanned[ ]$page_no [.][ ][(]scanner[ ]status[ ]=[ ](\d)[)]/xsm)
@@ -202,8 +202,7 @@ sub parse_scanimage_output {
         }
         when ($mess_warmingup) {
             if ( defined $options->{running_callback} ) {
-                $options->{running_callback}
-                  ->( 0, $d->get('Scanner warming up') );
+                $options->{running_callback}->( 0, __('Scanner warming up') );
             }
         }
         when (
@@ -214,7 +213,7 @@ sub parse_scanimage_output {
                 and $options->{num_scans} == 0 )
             {
                 $options->{error_callback}
-                  ->( $d->get('Document feeder out of documents') );
+                  ->( __('Document feeder out of documents') );
             }
         }
         when (
@@ -239,7 +238,7 @@ qr{^$options->{frontend}:[ ]sane_start:[ ]Error[ ]during[ ]device[ ]I/O}xsm
             /^$options->{frontend}:[ ]sane_(?:start|read):[ ]Device[ ]busy/xsm)
         {
             if ( defined $options->{error_callback} ) {
-                $options->{error_callback}->( $d->get('Device busy') );
+                $options->{error_callback}->( __('Device busy') );
             }
         }
         when (
@@ -247,13 +246,13 @@ qr{^$options->{frontend}:[ ]sane_start:[ ]Error[ ]during[ ]device[ ]I/O}xsm
           )
         {
             if ( defined $options->{error_callback} ) {
-                $options->{error_callback}->( $d->get('Operation cancelled') );
+                $options->{error_callback}->( __('Operation cancelled') );
             }
         }
         default {
             if ( defined $options->{error_callback} ) {
                 $options->{error_callback}->(
-                    $d->get('Unknown message: ') . substr $line,
+                    __('Unknown message: ') . substr $line,
                     0, index $line, "\n"
                 );
             }
@@ -414,7 +413,7 @@ sub _scanadf {
                 when ($mess_warmingup) {
                     if ( defined $options{running_callback} ) {
                         $options{running_callback}
-                          ->( 0, $d->get('Scanner warming up') );
+                          ->( 0, __('Scanner warming up') );
                     }
                 }
                 when (/^Scanned[ ]document[ ]out(\d*)[.]pnm/xsm) {
@@ -452,7 +451,7 @@ sub _scanadf {
                 }
                 when (/^$options{frontend}:[ ]sane_start:[ ]Device[ ]busy/xsm) {
                     if ( defined $options{error_callback} ) {
-                        $options{error_callback}->( $d->get('Device busy') );
+                        $options{error_callback}->( __('Device busy') );
                     }
                     $running = FALSE;
                 }
@@ -461,15 +460,14 @@ sub _scanadf {
                   )
                 {
                     if ( defined $options{error_callback} ) {
-                        $options{error_callback}
-                          ->( $d->get('Operation cancelled') );
+                        $options{error_callback}->( __('Operation cancelled') );
                     }
                     $running = FALSE;
                 }
                 default {
                     if ( defined $options{error_callback} ) {
                         $options{error_callback}->(
-                            $d->get('Unknown message: ') . substr $line,
+                            __('Unknown message: ') . substr $line,
                             0, index $line, "\n"
                         );
                     }

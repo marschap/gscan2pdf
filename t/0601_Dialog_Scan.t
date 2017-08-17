@@ -1,10 +1,9 @@
 use warnings;
 use strict;
 use Test::More tests => 10;
-use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
-use Gtk2 -init;              # Could just call init separately
-use Image::Sane ':all';      # To get SANE_* enums
-use Locale::gettext 1.05;    # For translations
+use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
+use Gtk2 -init;             # Could just call init separately
+use Image::Sane ':all';     # To get SANE_* enums
 
 BEGIN {
     use_ok('Gscan2pdf::Dialog::Scan');
@@ -14,7 +13,7 @@ BEGIN {
 
 my $window = Gtk2::Window->new;
 
-Glib::set_application_name('gscan2pdf');
+Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;

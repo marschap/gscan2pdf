@@ -8,6 +8,7 @@ BEGIN {
     use Gtk2 -init;    # Could just call init separately
 }
 
+Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
 Gscan2pdf::Document->setup(Log::Log4perl::get_logger);

@@ -14,6 +14,7 @@ SKIP: {
     skip 'gocr not installed', 4
       unless ( system("which gocr > /dev/null 2> /dev/null") == 0 );
 
+    Gscan2pdf::Translation::set_domain('gscan2pdf');
     use Log::Log4perl qw(:easy);
     Log::Log4perl->easy_init($WARN);
     my $logger = Log::Log4perl::get_logger;

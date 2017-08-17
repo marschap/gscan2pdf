@@ -2,9 +2,9 @@ package Gscan2pdf::PageRange;
 
 use strict;
 use warnings;
-use Locale::gettext 1.05;    # For translations
+use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
 use Gtk2;
-use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
+use Glib qw(TRUE FALSE);            # To get TRUE and FALSE
 
 # Note: in a BEGIN block to ensure that the registration is complete
 #       by the time the use Subclass goes to look for it.
@@ -34,10 +34,9 @@ my @widget_list;
 
 sub INIT_INSTANCE {
     my $self    = shift;
-    my $d       = Locale::gettext->domain(Glib::get_application_name);
     my %buttons = (
-        'selected' => $d->get('Selected'),
-        'all'      => $d->get('All'),
+        'selected' => __('Selected'),
+        'all'      => __('All'),
     );
     my $vbox = Gtk2::VBox->new;
     $self->add($vbox);

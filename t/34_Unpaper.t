@@ -10,6 +10,7 @@ BEGIN {
 
 #########################
 
+Gscan2pdf::Translation::set_domain('gscan2pdf');
 my $unpaper = Gscan2pdf::Unpaper->new;
 my $vbox    = Gtk2::VBox->new;
 $unpaper->add_options($vbox);

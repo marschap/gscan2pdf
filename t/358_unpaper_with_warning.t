@@ -13,6 +13,7 @@ BEGIN {
 SKIP: {
     skip 'unpaper not installed', 1
       unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
+    Gscan2pdf::Translation::set_domain('gscan2pdf');
     my $unpaper =
       Gscan2pdf::Unpaper->new( { 'deskew-scan-direction' => 'bottom,top' } );
 

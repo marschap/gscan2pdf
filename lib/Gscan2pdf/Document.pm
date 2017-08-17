@@ -15,6 +15,7 @@ use Gscan2pdf::Tesseract;
 use Gscan2pdf::Ocropus;
 use Gscan2pdf::Cuneiform;
 use Gscan2pdf::NetPBM;
+use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
 use Glib 1.210 qw(TRUE FALSE)
   ; # To get TRUE and FALSE. 1.210 necessary for Glib::SOURCE_REMOVE and Glib::SOURCE_CONTINUE
 use Socket;
@@ -24,11 +25,10 @@ use File::Temp;        # To create temporary files
 use File::Basename;    # Split filename into dir, file, ext
 use File::Copy;
 use Storable qw(store retrieve);
-use Archive::Tar;                    # For session files
+use Archive::Tar;      # For session files
 use Proc::Killfam;
-use Locale::gettext 1.05;            # For translations
 use IPC::Open3 'open3';
-use Symbol;                          # for gensym
+use Symbol;            # for gensym
 use Try::Tiny;
 use Set::IntSpan 1.10;               # For size method for page numbering issues
 use PDF::API2;
@@ -87,7 +87,7 @@ my $uuid_object    = Data::UUID->new;
 my $EMPTY          = q{};
 my $SPACE          = q{ };
 my $PERCENT        = q{%};
-my ( $_self, $d, $logger, $paper_sizes, %callback );
+my ( $_self, $logger, $paper_sizes, %callback );
 
 my %format = (
     'pnm' => 'Portable anymap',
@@ -99,7 +99,6 @@ my %format = (
 sub setup {
     ( my $class, $logger ) = @_;
     $_self = {};
-    $d     = Locale::gettext->domain(Glib::get_application_name);
     Gscan2pdf::Page->set_logger($logger);
 
     $_self->{requests} = Thread::Queue->new;
@@ -117,9 +116,9 @@ sub setup {
 sub new {
     my ( $class, %options ) = @_;
     my $self = Gtk2::Ex::Simple::List->new(
-        q{#}                  => 'int',
-        $d->get('Thumbnails') => 'pixbuf',
-        'Page Data'           => 'hstring',
+        q{#}             => 'int',
+        __('Thumbnails') => 'pixbuf',
+        'Page Data'      => 'hstring',
     );
     $self->get_selection->set_mode('multiple');
     $self->set_headers_visible(FALSE);
@@ -311,7 +310,7 @@ sub _get_file_info_finished_callback {
                 );
                 if ( $options{error_callback} ) {
                     $options{error_callback}->(
-                        $d->get(
+                        __(
 'Error: cannot open a session file at the same time as another file.'
                         )
                     );
@@ -324,7 +323,7 @@ sub _get_file_info_finished_callback {
                 );
                 if ( $options{error_callback} ) {
                     $options{error_callback}->(
-                        $d->get(
+                        __(
 'Error: import a multipage file at the same time as another file.'
                         )
                     );
@@ -554,8 +553,7 @@ sub import_scan {
                 );
                 my $index = $self->add_page( 'none', $page, $options{page} );
                 if ( $index == $NOT_FOUND and $options{error_callback} ) {
-                    $options{error_callback}
-                      ->( $d->get('Unable to load image') );
+                    $options{error_callback}->( __('Unable to load image') );
                 }
                 else {
                     if ( $options{display_callback} ) {
@@ -1695,8 +1693,7 @@ sub open_session {
         catch {
             if ( $options{error_callback} ) {
                 $options{error_callback}->(
-                    sprintf $d->get('Error importing page %d. Ignoring.'),
-                    $pagenum
+                    sprintf __('Error importing page %d. Ignoring.'), $pagenum
                 );
             }
         };
@@ -1808,14 +1805,14 @@ sub get_page_index {
             return 0 .. $#{ $self->{data} };
         }
         else {
-            $error_callback->( $d->get('No pages to process') );
+            $error_callback->( __('No pages to process') );
             return;
         }
     }
     elsif ( $page_range eq 'selected' ) {
         @index = $self->get_selected_indices;
         if ( @index == 0 ) {
-            $error_callback->( $d->get('No pages selected') );
+            $error_callback->( __('No pages selected') );
             return;
         }
     }
@@ -2376,7 +2373,7 @@ sub _thread_get_file_info {
     my ( $self, $filename, $pidfile, $uuid, %info ) = @_;
 
     if ( not -e $filename ) {
-        _thread_throw_error( $self, $uuid, sprintf $d->get('File %s not found'),
+        _thread_throw_error( $self, $uuid, sprintf __('File %s not found'),
             $filename );
         return;
     }
@@ -2389,8 +2386,7 @@ sub _thread_get_file_info {
     given ($format) {
         when ('very short file (no magic)') {
             _thread_throw_error( $self, $uuid,
-                sprintf $d->get('Error importing zero-length file %s.'),
-                $filename );
+                sprintf __('Error importing zero-length file %s.'), $filename );
             return;
         }
         when (/gzip[ ]compressed[ ]data/xsm) {
@@ -2424,7 +2420,7 @@ sub _thread_get_file_info {
             if ( $pages != @ppi ) {
                 _thread_throw_error(
                     $self, $uuid,
-                    $d->get(
+                    __(
 'Unknown DjVu file structure. Please contact the author.'
                     )
                 );
@@ -2478,7 +2474,7 @@ sub _thread_get_file_info {
             if ("$e") {
                 $logger->error($e);
                 _thread_throw_error( $self, $uuid,
-                    sprintf $d->get('%s is not a recognised image type'),
+                    sprintf __('%s is not a recognised image type'),
                     $filename );
                 return;
             }
@@ -2486,7 +2482,7 @@ sub _thread_get_file_info {
             $format = $image->Get('format');
             if ( not defined $format ) {
                 _thread_throw_error( $self, $uuid,
-                    sprintf $d->get('%s is not a recognised image type'),
+                    sprintf __('%s is not a recognised image type'),
                     $filename );
                 return;
             }
@@ -2516,7 +2512,7 @@ sub _thread_import_file {
                     $self->{progress} =
                       ( $i - 1 ) / ( $options{last} - $options{first} + 1 );
                     $self->{message} =
-                      sprintf $d->get('Importing page %i of %i'),
+                      sprintf __('Importing page %i of %i'),
                       $i, $options{last} - $options{first} + 1;
 
                     my ( $tif, $txt, $error );
@@ -2594,7 +2590,7 @@ sub _thread_import_file {
                     $self->{progress} =
                       $i / ( $options{last} - $options{first} + 1 );
                     $self->{message} =
-                      sprintf $d->get('Importing page %i of %i'),
+                      sprintf __('Importing page %i of %i'),
                       $i, $options{last} - $options{first} + 1;
 
                     my ( $tif, $error );
@@ -2712,7 +2708,7 @@ sub _thread_import_pdf {
             return if $_self->{cancel};
             if ($status) {
                 _thread_throw_error( $self, $options{uuid},
-                    $d->get('Error extracting images from PDF') );
+                    __('Error extracting images from PDF') );
             }
 
             my $html =
@@ -2727,7 +2723,7 @@ sub _thread_import_pdf {
             return if $_self->{cancel};
             if ($status) {
                 _thread_throw_error( $self, $options{uuid},
-                    $d->get('Error extracting text layer from PDF') );
+                    __('Error extracting text layer from PDF') );
             }
 
             # Import each image
@@ -2755,13 +2751,13 @@ sub _thread_import_pdf {
                 catch {
                     $logger->error("Caught error importing PDF: $_");
                     _thread_throw_error( $self, $options{uuid},
-                        $d->get('Error importing PDF') );
+                        __('Error importing PDF') );
                 };
             }
         }
 
         if ($warning_flag) {
-            _thread_throw_error( $self, $options{uuid}, $d->get(<<'EOS') );
+            _thread_throw_error( $self, $options{uuid}, __(<<'EOS') );
 Warning: gscan2pdf expects one image per page, but this was not satisfied. It is probable that the PDF has not been correcly imported.
 
 If you wish to add scans to an existing PDF, use the prepend/append to PDF options in the Save dialogue.
@@ -2778,7 +2774,7 @@ sub _thread_save_pdf {
     my ( $cache, $resolution );
 
     # Create PDF with PDF::API2
-    $self->{message} = $d->get('Setting up PDF');
+    $self->{message} = __('Setting up PDF');
     my $filename = $options{path};
     if (   defined $options{options}{prepend}
         or defined $options{options}{append}
@@ -2802,7 +2798,7 @@ sub _thread_save_pdf {
     for my $pagedata ( @{ $options{list_of_pages} } ) {
         ++$pagenr;
         $self->{progress} = $pagenr / ( $#{ $options{list_of_pages} } + 2 );
-        $self->{message} = sprintf $d->get('Saving page %i of %i'),
+        $self->{message} = sprintf __('Saving page %i of %i'),
           $pagenr, $#{ $options{list_of_pages} } + 1;
         my $status =
           _add_page_to_pdf( $self, $pdf, $pagedata, $cache, %options );
@@ -2810,7 +2806,7 @@ sub _thread_save_pdf {
         return if ( $status or $_self->{cancel} );
     }
 
-    $self->{message} = $d->get('Closing PDF');
+    $self->{message} = __('Closing PDF');
     $logger->info('Closing PDF');
     $pdf->save;
     $pdf->end;
@@ -2828,7 +2824,7 @@ sub _thread_save_pdf {
     }
 
     if ( defined $options{options}->{ps} ) {
-        $self->{message} = $d->get('Converting to PS');
+        $self->{message} = __('Converting to PS');
 
         my @cmd =
           ( $options{options}->{pstool}, $filename, $options{options}->{ps} );
@@ -2837,7 +2833,7 @@ sub _thread_save_pdf {
         if ( $status or $error ) {
             $logger->info($error);
             _thread_throw_error( $self, $options{uuid},
-                sprintf $d->get('Error converting PDF to PS: %s'), $error );
+                sprintf __('Error converting PDF to PS: %s'), $error );
             return;
         }
         _post_save_hook( $options{options}->{ps}, %{ $options{options} } );
@@ -2864,7 +2860,7 @@ sub _append_pdf {
         $file2   = "$options{options}{prepend}.bak";
         $bak     = $file2;
         $out     = $options{options}{prepend};
-        $message = $d->get('Error prepending PDF: %s');
+        $message = __('Error prepending PDF: %s');
         $logger->info('Prepending PDF');
     }
     else {
@@ -2872,13 +2868,13 @@ sub _append_pdf {
         $file1   = "$options{options}{append}.bak";
         $bak     = $file1;
         $out     = $options{options}{append};
-        $message = $d->get('Error appending PDF: %s');
+        $message = __('Error appending PDF: %s');
         $logger->info('Appending PDF');
     }
 
     if ( not move( $out, $bak ) ) {
         _thread_throw_error( $self, $options{uuid},
-            $d->get('Error creating backup of PDF') );
+            __('Error creating backup of PDF') );
         return;
     }
 
@@ -2900,7 +2896,7 @@ sub _set_timestamp {
     catch {
         $logger->error('Unable to set file timestamp for dates prior to 1970');
         _thread_throw_error( $self, $uuid,
-            $d->get('Unable to set file timestamp for dates prior to 1970') );
+            __('Unable to set file timestamp for dates prior to 1970') );
     };
     return;
 }
@@ -3003,7 +2999,7 @@ sub _add_page_to_pdf {
     if ($msg) {
         $logger->warn($msg);
         _thread_throw_error( $self, $options{uuid},
-            sprintf $d->get('Error creating PDF image object: %s'), $msg );
+            sprintf __('Error creating PDF image object: %s'), $msg );
         return 1;
     }
 
@@ -3016,14 +3012,9 @@ sub _add_page_to_pdf {
     }
     catch {
         $logger->warn($_);
-        _thread_throw_error(
-            $self,
-            $options{uuid},
-            sprintf $d->get(
-                'Error embedding file image in %s format to PDF: %s'),
-            $format,
-            $_
-        );
+        _thread_throw_error( $self, $options{uuid},
+            sprintf __('Error embedding file image in %s format to PDF: %s'),
+            $format, $_ );
         $error = TRUE;
     };
     if ($error) { return 1 }
@@ -3099,7 +3090,7 @@ sub _convert_image_for_pdf {
             if ($status) {
                 $logger->info($error);
                 _thread_throw_error( $self, $options{uuid},
-                    sprintf $d->get('Error compressing image: %s'), $error );
+                    sprintf __('Error compressing image: %s'), $error );
                 return;
             }
             $filename = $filename2;
@@ -3234,7 +3225,7 @@ sub _thread_save_djvu {
     for my $pagedata ( @{ $options{list_of_pages} } ) {
         ++$page;
         $self->{progress} = $page / ( $#{ $options{list_of_pages} } + 2 );
-        $self->{message} = sprintf $d->get('Writing page %i of %i'),
+        $self->{message} = sprintf __('Writing page %i of %i'),
           $page, $#{ $options{list_of_pages} } + 1;
 
         my $filename = $pagedata->{filename};
@@ -3327,7 +3318,7 @@ sub _thread_save_djvu {
 "Error writing image for page $page of DjVu (process returned $status, image size $size)"
             );
             _thread_throw_error( $self, $options{uuid},
-                $d->get('Error writing DjVu') );
+                __('Error writing DjVu') );
             return;
         }
         push @filelist, $djvu;
@@ -3335,15 +3326,14 @@ sub _thread_save_djvu {
             $options{uuid} );
     }
     $self->{progress} = 1;
-    $self->{message}  = $d->get('Merging DjVu');
+    $self->{message}  = __('Merging DjVu');
     my ( $status, $out, $err ) =
       exec_command( [ 'djvm', '-c', $options{path}, @filelist ],
         $options{pidfile} );
     return if $_self->{cancel};
     if ($status) {
         $logger->error('Error merging DjVu');
-        _thread_throw_error( $self, $options{uuid},
-            $d->get('Error merging DjVu') );
+        _thread_throw_error( $self, $options{uuid}, __('Error merging DjVu') );
     }
     _add_metadata_to_djvu( $self, %options );
 
@@ -3370,7 +3360,7 @@ sub _write_file {
     my ( $self, $fh, $filename, $data, $uuid ) = @_;
     if ( not print {$fh} $data ) {
         _thread_throw_error( $self, $uuid,
-            sprintf $d->get("Can't write to file: %s"), $filename );
+            sprintf __("Can't write to file: %s"), $filename );
         return FALSE;
     }
     return TRUE;
@@ -3389,11 +3379,11 @@ sub _add_text_to_djvu {
         $logger->debug( $pagedata->{hocr} );
         $logger->debug( $pagedata->djvu_text );
         open my $fh, '>:encoding(UTF8)', $djvusedtxtfile
-          or croak( sprintf $d->get("Can't open file: %s"), $djvusedtxtfile );
+          or croak( sprintf __("Can't open file: %s"), $djvusedtxtfile );
         _write_file( $self, $fh, $djvusedtxtfile, $txt, $uuid )
           or return;
         close $fh
-          or croak( sprintf $d->get("Can't close file: %s"), $djvusedtxtfile );
+          or croak( sprintf __("Can't close file: %s"), $djvusedtxtfile );
 
         # Run djvusedtxtfile
         my @cmd =
@@ -3405,7 +3395,7 @@ sub _add_text_to_djvu {
                 "Error adding text layer to DjVu page $pagedata->{page_number}"
             );
             _thread_throw_error( $self, $uuid,
-                $d->get('Error adding text layer to DjVu') );
+                __('Error adding text layer to DjVu') );
         }
     }
     return;
@@ -3420,7 +3410,7 @@ sub _add_metadata_to_djvu {
           File::Temp->new( DIR => $options{dir}, SUFFIX => '.txt' );
         open my $fh, '>:encoding(UTF8)',    ## no critic (RequireBriefOpen)
           $djvusedmetafile
-          or croak( sprintf $d->get("Can't open file: %s"), $djvusedmetafile );
+          or croak( sprintf __("Can't open file: %s"), $djvusedmetafile );
         _write_file( $self, $fh, $djvusedmetafile, "(metadata\n",
             $options{uuid} )
           or return;
@@ -3440,7 +3430,7 @@ sub _add_metadata_to_djvu {
         _write_file( $self, $fh, $djvusedmetafile, ')', $options{uuid} )
           or return;
         close $fh
-          or croak( sprintf $d->get("Can't close file: %s"), $djvusedmetafile );
+          or croak( sprintf __("Can't close file: %s"), $djvusedmetafile );
 
         # Write djvusedmetafile
         my @cmd = (
@@ -3451,7 +3441,7 @@ sub _add_metadata_to_djvu {
         if ($status) {
             $logger->error('Error adding metadata info to DjVu file');
             _thread_throw_error( $self, $options{uuid},
-                $d->get('Error adding metadata to DjVu') );
+                __('Error adding metadata to DjVu') );
         }
     }
     return;
@@ -3468,7 +3458,7 @@ sub _thread_save_tiff {
         $self->{progress} =
           ( $page - 1 ) / ( $#{ $options{list_of_pages} } + 2 );
         $self->{message} =
-          sprintf $d->get('Converting image %i of %i to TIFF'),
+          sprintf __('Converting image %i of %i to TIFF'),
           $page, $#{ $options{list_of_pages} } + 1;
 
         my $filename = $pagedata->{filename};
@@ -3510,7 +3500,7 @@ sub _thread_save_tiff {
             if ($status) {
                 $logger->error('Error writing TIFF');
                 _thread_throw_error( $self, $options{uuid},
-                    $d->get('Error writing TIFF') );
+                    __('Error writing TIFF') );
                 return;
             }
             $filename = $tif;
@@ -3529,7 +3519,7 @@ sub _thread_save_tiff {
 
     # Create the tiff
     $self->{progress} = 1;
-    $self->{message}  = $d->get('Concatenating TIFFs');
+    $self->{message}  = __('Concatenating TIFFs');
     my @cmd = ( 'tiffcp', @compression, @filelist, $options{path} );
     my ( $status, undef, $error ) = exec_command( \@cmd, $options{pidfile} );
     return if $_self->{cancel};
@@ -3537,11 +3527,11 @@ sub _thread_save_tiff {
     if ( $status or $error =~ /(?:usage|TIFFOpen):/xsm ) {
         $logger->info($error);
         _thread_throw_error( $self, $options{uuid},
-            sprintf $d->get('Error compressing image: %s'), $error );
+            sprintf __('Error compressing image: %s'), $error );
         return;
     }
     if ( defined $options{options}->{ps} ) {
-        $self->{message} = $d->get('Converting to PS');
+        $self->{message} = __('Converting to PS');
 
         # Note: -a option causes tiff2ps to generate multiple output
         # pages, one for each page in the input TIFF file.  Without it, it
@@ -3552,7 +3542,7 @@ sub _thread_save_tiff {
         if ( $status or $error ) {
             $logger->info($error);
             _thread_throw_error( $self, $options{uuid},
-                sprintf $d->get('Error converting TIFF to PS: %s'), $error );
+                sprintf __('Error converting TIFF to PS: %s'), $error );
             return;
         }
         _post_save_hook( $options{options}->{ps}, %{ $options{options} } );
@@ -3647,7 +3637,7 @@ sub _thread_save_image {
         return if $_self->{cancel};
         if ($status) {
             _thread_throw_error( $self, $options{uuid},
-                $d->get('Error saving image') );
+                __('Error saving image') );
         }
         _post_save_hook( $options{list_of_pages}->[0]{filename},
             %{ $options{options} } );
@@ -3668,7 +3658,7 @@ sub _thread_save_image {
             return if $_self->{cancel};
             if ($status) {
                 _thread_throw_error( $self, $options{uuid},
-                    $d->get('Error saving image') );
+                    __('Error saving image') );
             }
             _post_save_hook( $_->{filename}, %{ $options{options} } );
         }
@@ -3694,13 +3684,13 @@ sub _thread_save_text {
     }
     if ( not open $fh, '>', $path ) {
         _thread_throw_error( $self, $uuid,
-            sprintf $d->get("Can't open file: %s"), $path );
+            sprintf __("Can't open file: %s"), $path );
         return;
     }
     _write_file( $self, $fh, $path, $string, $uuid ) or return;
     if ( not close $fh ) {
         _thread_throw_error( $self, $uuid,
-            sprintf $d->get("Can't close file: %s"), $path );
+            sprintf __("Can't close file: %s"), $path );
     }
     _post_save_hook( $path, %{$options} );
     $self->{return}->enqueue(
@@ -3719,7 +3709,7 @@ sub _thread_save_hocr {
 
     if ( not open $fh, '>', $path ) {    ## no critic (RequireBriefOpen)
         _thread_throw_error( $self, $uuid,
-            sprintf $d->get("Can't open file: %s"), $path );
+            sprintf __("Can't open file: %s"), $path );
         return;
     }
 
@@ -3742,7 +3732,7 @@ sub _thread_save_hocr {
 
     if ( not close $fh ) {
         _thread_throw_error( $self, $uuid,
-            sprintf $d->get("Can't close file: %s"), $path );
+            sprintf __("Can't close file: %s"), $path );
     }
     _post_save_hook( $path, %{$options} );
     $self->{return}->enqueue(
@@ -4498,7 +4488,7 @@ sub _thread_user_defined {
         else {
             if ( not copy( $in, $out ) ) {
                 _thread_throw_error( $self, $options{uuid},
-                    $d->get('Error copying page') );
+                    __('Error copying page') );
                 return;
             }
             $options{command} =~ s/%i/$out/gxsm;

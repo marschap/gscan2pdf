@@ -12,7 +12,7 @@ BEGIN {
 #########################
 
 setlocale( LC_NUMERIC, "de_DE" );
-Glib::set_application_name('gscan2pdf');
+Gscan2pdf::Translation::set_domain('gscan2pdf');
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);

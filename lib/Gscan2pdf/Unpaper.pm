@@ -6,11 +6,11 @@ use warnings;
 use feature 'switch';
 no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Carp;
-use Glib qw(TRUE FALSE);     # To get TRUE and FALSE
+use Glib qw(TRUE FALSE);            # To get TRUE and FALSE
 use Gtk2;
-use Locale::gettext 1.05;    # For translations
 use version;
 use Gscan2pdf::Document;
+use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
 use Readonly;
 Readonly my $BORDER_WIDTH => 6;
 
@@ -21,7 +21,7 @@ BEGIN {
     $VERSION = '1.8.4';
 
     use base qw(Exporter);
-    %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
+    %EXPORT_TAGS = ();              # eg: TAG => [ qw!name1 name2! ],
 
     # your exported package globals go here,
     # as well as any optionally exported functions
@@ -31,29 +31,28 @@ our @EXPORT_OK;
 
 my $COMMA = q{,};
 my $SPACE = q{ };
-my ( $d, $version );
+my ($version);
 
 sub new {
     my ( $class, $default ) = @_;
     my $self = {};
-    $d = Locale::gettext->domain(Glib::get_application_name);
     $self->{default} = defined $default ? $default : {};
 
     # Set up hash for options
     $self->{options} = {
         layout => {
             type    => 'ComboBox',
-            string  => $d->get('Layout'),
+            string  => __('Layout'),
             options => {
                 single => {
-                    string  => $d->get('Single'),
-                    tooltip => $d->get(
+                    string  => __('Single'),
+                    tooltip => __(
                         'One page per sheet, oriented upwards without rotation.'
                     ),
                 },
                 double => {
-                    string  => $d->get('Double'),
-                    tooltip => $d->get(
+                    string  => __('Double'),
+                    tooltip => __(
 'Two pages per sheet, landscape orientation (one page on the left half, one page on the right half).'
                     ),
                 },
@@ -62,8 +61,8 @@ sub new {
         },
         'output-pages' => {
             type    => 'SpinButton',
-            string  => $d->get('# Output pages'),
-            tooltip => $d->get('Number of pages to output.'),
+            string  => __('# Output pages'),
+            tooltip => __('Number of pages to output.'),
             min     => 1,
             max     => 2,
             step    => 1,
@@ -71,17 +70,17 @@ sub new {
         },
         'direction' => {
             type    => 'ComboBox',
-            string  => $d->get('Writing system'),
+            string  => __('Writing system'),
             options => {
                 ltr => {
-                    string  => $d->get('Left-to-right'),
-                    tooltip => $d->get(
+                    string  => __('Left-to-right'),
+                    tooltip => __(
                         'Most writings systems, e.g. Latin, Greek, Cyrillic.'
                     ),
                 },
                 rtl => {
-                    string  => $d->get('Right-to-left'),
-                    tooltip => $d->get('Scripts like Arabic or Hebrew.'),
+                    string  => __('Right-to-left'),
+                    tooltip => __('Scripts like Arabic or Hebrew.'),
                 },
             },
             default => 'ltr',
@@ -89,129 +88,126 @@ sub new {
         },
         'no-deskew' => {
             type    => 'CheckButton',
-            string  => $d->get('No deskew'),
-            tooltip => $d->get('Disable deskewing.'),
+            string  => __('No deskew'),
+            tooltip => __('Disable deskewing.'),
             default => FALSE,
         },
         'no-mask-scan' => {
             type    => 'CheckButton',
-            string  => $d->get('No mask scan'),
-            tooltip => $d->get('Disable mask detection.'),
+            string  => __('No mask scan'),
+            tooltip => __('Disable mask detection.'),
             default => FALSE,
         },
         'no-mask-center' => {
             type    => 'CheckButton',
-            string  => $d->get('No mask centering'),
-            tooltip => $d->get('Disable mask centering.'),
+            string  => __('No mask centering'),
+            tooltip => __('Disable mask centering.'),
             default => FALSE,
         },
         'no-blackfilter' => {
             type    => 'CheckButton',
-            string  => $d->get('No black filter'),
-            tooltip => $d->get('Disable black area scan.'),
+            string  => __('No black filter'),
+            tooltip => __('Disable black area scan.'),
             default => FALSE,
         },
         'no-grayfilter' => {
             type    => 'CheckButton',
-            string  => $d->get('No gray filter'),
-            tooltip => $d->get('Disable gray area scan.'),
+            string  => __('No gray filter'),
+            tooltip => __('Disable gray area scan.'),
             default => FALSE,
         },
         'no-noisefilter' => {
             type    => 'CheckButton',
-            string  => $d->get('No noise filter'),
-            tooltip => $d->get('Disable noise filter.'),
+            string  => __('No noise filter'),
+            tooltip => __('Disable noise filter.'),
             default => FALSE,
         },
         'no-blurfilter' => {
             type    => 'CheckButton',
-            string  => $d->get('No blur filter'),
-            tooltip => $d->get('Disable blur filter.'),
+            string  => __('No blur filter'),
+            tooltip => __('Disable blur filter.'),
             default => FALSE,
         },
         'no-border-scan' => {
             type    => 'CheckButton',
-            string  => $d->get('No border scan'),
-            tooltip => $d->get('Disable border scanning.'),
+            string  => __('No border scan'),
+            tooltip => __('Disable border scanning.'),
             default => FALSE,
         },
         'no-border-align' => {
-            type    => 'CheckButton',
-            string  => $d->get('No border align'),
-            tooltip => $d->get(
-                'Disable aligning of the area detected by border scanning.'),
+            type   => 'CheckButton',
+            string => __('No border align'),
+            tooltip =>
+              __('Disable aligning of the area detected by border scanning.'),
             default => FALSE,
         },
         'deskew-scan-direction' => {
             type    => 'CheckButtonGroup',
-            string  => $d->get('Deskew to edge'),
-            tooltip => $d->get(
+            string  => __('Deskew to edge'),
+            tooltip => __(
 "Edges from which to scan for rotation. Each edge of a mask can be used to detect the mask's rotation. If multiple edges are specified, the average value will be used, unless the statistical deviation exceeds --deskew-scan-deviation."
             ),
             options => {
                 left => {
                     type   => 'CheckButton',
-                    string => $d->get('Left'),
+                    string => __('Left'),
                     tooltip =>
-                      $d->get("Use 'left' for scanning from the left edge."),
+                      __("Use 'left' for scanning from the left edge."),
                 },
                 top => {
-                    type   => 'CheckButton',
-                    string => $d->get('Top'),
-                    tooltip =>
-                      $d->get("Use 'top' for scanning from the top edge."),
+                    type    => 'CheckButton',
+                    string  => __('Top'),
+                    tooltip => __("Use 'top' for scanning from the top edge."),
                 },
                 right => {
                     type   => 'CheckButton',
-                    string => $d->get('Right'),
+                    string => __('Right'),
                     tooltip =>
-                      $d->get("Use 'right' for scanning from the right edge."),
+                      __("Use 'right' for scanning from the right edge."),
                 },
                 bottom => {
-                    type   => 'CheckButton',
-                    string => $d->get('Bottom'),
-                    tooltip =>
-                      $d->get("Use 'bottom' for scanning from the bottom."),
+                    type    => 'CheckButton',
+                    string  => __('Bottom'),
+                    tooltip => __("Use 'bottom' for scanning from the bottom."),
                 },
             },
             default => 'left,right',
         },
         'border-align' => {
             type    => 'CheckButtonGroup',
-            string  => $d->get('Align to edge'),
-            tooltip => $d->get('Edge to which to align the page.'),
+            string  => __('Align to edge'),
+            tooltip => __('Edge to which to align the page.'),
             options => {
                 left => {
                     type    => 'CheckButton',
-                    string  => $d->get('Left'),
-                    tooltip => $d->get("Use 'left' to align to the left edge."),
+                    string  => __('Left'),
+                    tooltip => __("Use 'left' to align to the left edge."),
                 },
                 top => {
                     type    => 'CheckButton',
-                    string  => $d->get('Top'),
-                    tooltip => $d->get("Use 'top' to align to the top edge."),
+                    string  => __('Top'),
+                    tooltip => __("Use 'top' to align to the top edge."),
                 },
                 right => {
-                    type   => 'CheckButton',
-                    string => $d->get('Right'),
-                    tooltip =>
-                      $d->get("Use 'right' to align to the right edge."),
+                    type    => 'CheckButton',
+                    string  => __('Right'),
+                    tooltip => __("Use 'right' to align to the right edge."),
                 },
                 bottom => {
                     type    => 'CheckButton',
-                    string  => $d->get('Bottom'),
-                    tooltip => $d->get("Use 'bottom' to align to the bottom."),
+                    string  => __('Bottom'),
+                    tooltip => __("Use 'bottom' to align to the bottom."),
                 },
             },
         },
         'border-margin' => {
             type    => 'SpinButtonGroup',
-            string  => $d->get('Border margin'),
+            string  => __('Border margin'),
             options => {
                 vertical => {
                     type    => 'SpinButton',
-                    string  => $d->get('Vertical margin'),
-                    tooltip => $d->get(
+                    string  => __('Vertical margin'),
+                    tooltip => __(
 'Vertical distance to keep from the sheet edge when aligning a border area.'
                     ),
                     min   => 0,
@@ -221,8 +217,8 @@ sub new {
                 },
                 horizontal => {
                     type    => 'SpinButton',
-                    string  => $d->get('Horizontal margin'),
-                    tooltip => $d->get(
+                    string  => __('Horizontal margin'),
+                    tooltip => __(
 'Horizontal distance to keep from the sheet edge when aligning a border area.'
                     ),
                     min   => 0,
@@ -233,10 +229,10 @@ sub new {
             },
         },
         'white-threshold' => {
-            type    => 'SpinButton',
-            string  => $d->get('White threshold'),
-            tooltip => $d->get(
-                'Brightness ratio above which a pixel is considered white.'),
+            type   => 'SpinButton',
+            string => __('White threshold'),
+            tooltip =>
+              __('Brightness ratio above which a pixel is considered white.'),
             min     => 0,
             max     => 1,
             step    => .01,
@@ -244,8 +240,8 @@ sub new {
         },
         'black-threshold' => {
             type    => 'SpinButton',
-            string  => $d->get('Black threshold'),
-            tooltip => $d->get(
+            string  => __('Black threshold'),
+            tooltip => __(
 'Brightness ratio below which a pixel is considered black (non-gray). This is used by the gray-filter. This value is also used when converting a grayscale image to black-and-white mode.'
             ),
             min     => 0,
@@ -290,7 +286,7 @@ sub add_options {
     # Notebook page 1
     my $vbox1 = Gtk2::VBox->new;
     $vbox1->set_border_width($BORDER_WIDTH);
-    $notebook->append_page( $vbox1, $d->get('Deskew') );
+    $notebook->append_page( $vbox1, __('Deskew') );
 
     my $dsbutton = $self->add_widget( $vbox1, $options, 'no-deskew' );
 
@@ -323,7 +319,7 @@ sub add_options {
     # Notebook page 2
     my $vbox2 = Gtk2::VBox->new;
     $vbox2->set_border_width($BORDER_WIDTH);
-    $notebook->append_page( $vbox2, $d->get('Border') );
+    $notebook->append_page( $vbox2, __('Border') );
 
     my $bsbutton = $self->add_widget( $vbox2, $options, 'no-border-scan' );
     my $babutton = $self->add_widget( $vbox2, $options, 'no-border-align' );
@@ -383,7 +379,7 @@ sub add_options {
     # Notebook page 3
     my $vbox3 = Gtk2::VBox->new;
     $vbox3->set_border_width($BORDER_WIDTH);
-    $notebook->append_page( $vbox3, $d->get('Filters') );
+    $notebook->append_page( $vbox3, __('Filters') );
 
     my $spinbuttonwt = $self->add_widget( $vbox3, $options, 'white-threshold' );
     my $spinbuttonbt = $self->add_widget( $vbox3, $options, 'black-threshold' );

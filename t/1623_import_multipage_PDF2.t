@@ -13,6 +13,7 @@ BEGIN {
 SKIP: {
     skip 'pdftk not installed', 2 unless `which pdftk`;
 
+    Gscan2pdf::Translation::set_domain('gscan2pdf');
     use Log::Log4perl qw(:easy);
 
     Log::Log4perl->easy_init($WARN);

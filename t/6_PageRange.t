@@ -9,6 +9,7 @@ BEGIN {
 
 #########################
 
+Gscan2pdf::Translation::set_domain('gscan2pdf');
 ok( my $range = Gscan2pdf::PageRange->new, 'Created PageRange widget' );
 isa_ok( $range, 'Gscan2pdf::PageRange' );
 

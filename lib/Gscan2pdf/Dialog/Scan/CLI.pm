@@ -3,19 +3,20 @@ package Gscan2pdf::Dialog::Scan::CLI;
 use warnings;
 use strict;
 no if $] >= 5.018, warnings => 'experimental::smartmatch';
-use Gscan2pdf::Dialog::Scan;
 use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Image::Sane ':all';    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
+use Gscan2pdf::Dialog::Scan;
 use Gscan2pdf::Frontend::CLI;
-use Storable qw(dclone);     # For cloning the options cache
-use Locale::gettext 1.05;    # For translations
+use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
+use Storable qw(dclone);            # For cloning the options cache
+use Locale::gettext 1.05;           # For translations
 use feature 'switch';
 use List::MoreUtils qw{any};
 use Data::Dumper;
 use Readonly;
 Readonly my $LAST_PAGE => -1;
 
-my ( $d, $d_sane, $logger, $tooltips, $EMPTY, $COMMA );
+my ( $d_sane, $logger, $tooltips, $EMPTY, $COMMA );
 
 # otherwise older version of perl complain that $EMPTY is not defined
 # in the subclass
@@ -89,7 +90,6 @@ sub INIT_INSTANCE {
     $tooltips = Gtk2::Tooltips->new;
     $tooltips->enable;
 
-    $d      = Locale::gettext->domain(Glib::get_application_name);
     $d_sane = Locale::gettext->domain('sane-backends');
     return $self;
 }
@@ -131,7 +131,7 @@ sub get_devices {
             # Set up ProgressBar
             $pbar = Gtk2::ProgressBar->new;
             $pbar->set_pulse_step( $self->get('progress-pulse-step') );
-            $pbar->set_text( $d->get('Fetching list of devices') );
+            $pbar->set_text( __('Fetching list of devices') );
             $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
             $hboxd->hide_all;
             $hboxd->show;
@@ -146,7 +146,7 @@ sub get_devices {
                 Dumper( \@device_list ) );
             if ( @device_list == 0 ) {
                 $self->signal_emit( 'process-error', 'get_devices',
-                    $d->get('No devices found') );
+                    __('No devices found') );
                 $self->destroy;
                 undef $self;
                 return FALSE;
@@ -254,7 +254,7 @@ sub scan_options {
             # Set up ProgressBar
             $pbar = Gtk2::ProgressBar->new;
             $pbar->set_pulse_step( $self->get('progress-pulse-step') );
-            $pbar->set_text( $d->get('Updating options') );
+            $pbar->set_text( __('Updating options') );
             $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
             $hboxd->hide_all;
             $hboxd->show;
@@ -341,7 +341,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
             $group =
                 $opt->{type} == SANE_TYPE_GROUP
               ? $d_sane->get( $opt->{title} )
-              : $d->get('Scan Options');
+              : __('Scan Options');
             my $scwin = Gtk2::ScrolledWindow->new;
             $self->{notebook}->append_page( $scwin, $group );
             $scwin->set_policy( 'automatic', 'automatic' );
@@ -645,7 +645,7 @@ sub set_option {
                     # Set up ProgressBar
                     $pbar = Gtk2::ProgressBar->new;
                     $pbar->set_pulse_step( $self->get('progress-pulse-step') );
-                    $pbar->set_text( $d->get('Updating options') );
+                    $pbar->set_text( __('Updating options') );
                     $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
                     $hboxd->hide_all;
                     $hboxd->show;
@@ -824,7 +824,7 @@ sub scan {
 
     if ( $start == 1 and $step < 0 ) {
         $self->signal_emit( 'process-error', 'scan',
-            $d->get('Must scan facing pages first') );
+            __('Must scan facing pages first') );
         return TRUE;
     }
 

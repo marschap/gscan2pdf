@@ -3,10 +3,11 @@ package Gscan2pdf::Dialog;
 use warnings;
 use strict;
 use Gtk2;
-use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
+use Glib 1.220 qw(TRUE FALSE);      # To get TRUE and FALSE
 use Gtk2::Gdk::Keysyms;
 use Gscan2pdf::Document;
 use Gscan2pdf::EntryCompletion;
+use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
 use Date::Calc qw(Add_Delta_Days Today);
 use Data::Dumper;
 use Readonly;
@@ -45,13 +46,12 @@ use Glib::Object::Subclass Gtk2::Window::,
 
 our $VERSION = '1.8.4';
 my $EMPTY = q{};
-my ( $d, $tooltips );
+my ($tooltips);
 
 sub INIT_INSTANCE {
     my $self = shift;
 
     $self->set_position('center-on-parent');
-    $d        = Locale::gettext->domain(Glib::get_application_name);
     $tooltips = Gtk2::Tooltips->new;
     $tooltips->enable;
 
@@ -108,7 +108,7 @@ sub add_metadata_dialog {
     $vbox->pack_start( $hboxmd, FALSE, FALSE, 0 );
 
     # Frame for metadata
-    my $frame = Gtk2::Frame->new( $d->get('Document Metadata') );
+    my $frame = Gtk2::Frame->new( __('Document Metadata') );
     $hboxmd->pack_start( $frame, TRUE, TRUE, 0 );
     my $vboxm = Gtk2::VBox->new;
     $vboxm->set_border_width( $self->get('border-width') );
@@ -123,7 +123,7 @@ sub add_metadata_dialog {
     my $hboxe = Gtk2::HBox->new;
     my $row   = 0;
     $table->attach( $hboxe, 0, 1, $row, $row + 1, 'fill', 'shrink', 0, 0 );
-    my $labele = Gtk2::Label->new( $d->get('Date') );
+    my $labele = Gtk2::Label->new( __('Date') );
     $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
 
     my $entryd = Gtk2::Entry->new_with_max_length($ENTRY_WIDTH);
@@ -139,7 +139,7 @@ sub add_metadata_dialog {
         )
     );
     $entryd->set_activates_default(TRUE);
-    $tooltips->set_tip( $entryd, $d->get('Year-Month-Day') );
+    $tooltips->set_tip( $entryd, __('Year-Month-Day') );
     $entryd->set_alignment(1.);    # Right justify
     $entryd->signal_connect(
         'insert-text' => sub {
@@ -165,7 +165,7 @@ sub add_metadata_dialog {
         clicked => sub {
             my $window_date = Gscan2pdf::Dialog->new(
                 'transient-for' => $self,
-                title           => $d->get('Select Date'),
+                title           => __('Select Date'),
                 border_width    => $self->get('border-width')
             );
             my $vbox_date = $window_date->get('vbox');
@@ -199,7 +199,7 @@ sub add_metadata_dialog {
             );
             $vbox_date->pack_start( $calendar, TRUE, TRUE, 0 );
 
-            my $today = Gtk2::Button->new( $d->get('Today') );
+            my $today = Gtk2::Button->new( __('Today') );
             $today->signal_connect(
                 clicked => sub {
                     ( $year, $month, $day ) = Today();
@@ -219,17 +219,17 @@ sub add_metadata_dialog {
             $window_date->show_all;
         }
     );
-    $tooltips->set_tip( $button, $d->get('Select date with calendar') );
+    $tooltips->set_tip( $button, __('Select date with calendar') );
     $hboxe = Gtk2::HBox->new;
     $table->attach_defaults( $hboxe, 1, 2, $row, $row + 1 );
     $hboxe->pack_end( $button, FALSE, FALSE, 0 );
     $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
 
     my @label = (
-        { title    => $d->get('Title') },
-        { author   => $d->get('Author') },
-        { subject  => $d->get('Subject') },
-        { keywords => $d->get('Keywords') },
+        { title    => __('Title') },
+        { author   => __('Author') },
+        { subject  => __('Subject') },
+        { keywords => __('Keywords') },
     );
     my %widgets = (
         box  => $hboxmd,
