@@ -275,6 +275,12 @@ sub add_defaults {
         'available-tmp-warning' => 10,
         close_dialog_on_save    => TRUE,
         'Paper'                 => {
+            __('A3') => {
+                x => 297,
+                y => 420,
+                l => 0,
+                t => 0,
+            },
             __('A4') => {
                 x => 210,
                 y => 297,

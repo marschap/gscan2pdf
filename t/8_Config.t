@@ -132,6 +132,12 @@ Gscan2pdf::Config::add_defaults( \%output );
     close_dialog_on_save                => TRUE,
     'view files toggle'                 => TRUE,
     'Paper'                             => {
+        'A3' => {
+            x => 297,
+            y => 420,
+            l => 0,
+            t => 0,
+        },
         'A4' => {
             x => 210,
             y => 297,
