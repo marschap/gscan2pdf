@@ -44,7 +44,7 @@ use Glib::Object::Subclass Gtk2::Window::,
     ),
   ];
 
-our $VERSION = '1.8.4';
+our $VERSION = '1.8.5';
 my $EMPTY = q{};
 my ($tooltips);
 
