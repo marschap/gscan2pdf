@@ -177,12 +177,10 @@ htdocs/index.html : bin/$(NAME)
 remote-html : htdocs/index.html
 	scp htdocs/index.html ra28145,$(NAME)@web.sf.net:/home/groups/g/gs/$(NAME)/htdocs/
 
-file_releases :
+file_releases : /var/cache/pbuilder/sid-amd64/result/$(NAME)_$(VERSION)-1_all.deb
 	scp $(NAME)-$(VERSION).tar.xz \
          $(NAME)-$(VERSION).tar.xz.asc \
-         rpm/RPMS/noarch/$(NAME)-$(VERSION)* \
-         rpm/SRPMS/$(NAME)-$(VERSION)* \
-         /tmp/$(NAME)/$(NAME)_$(VERSION)*.deb \
+         /var/cache/pbuilder/sid-amd64/result/$(NAME)_$(VERSION)-1_all.deb \
 	  ra28145,$(NAME)@frs.sf.net:/home/frs/project/g/gs/$(NAME)/$(NAME)/$(VERSION)/
 
 po/$(NAME).pot : $(SOURCE)
