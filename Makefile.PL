@@ -128,17 +128,17 @@ $(DESTDIR)$(LOCALEDIR)/%/LC_MESSAGES/$(NAME).mo : po/$(NAME)-%.po
 	msgfmt -c $< -o $@
 	$(CHMOD) 755 $(@D)
 
-$(DESTDIR)$(SHAREDIR)/$(NAME) $(DESTDIR)$(SHAREDIR)/applications $(DESTDIR)$(SHAREDIR)/pixmaps $(DESTDIR)$(SHAREDIR)/appdata :
+$(DESTDIR)$(SHAREDIR)/$(NAME) $(DESTDIR)$(SHAREDIR)/applications $(DESTDIR)$(SHAREDIR)/pixmaps $(DESTDIR)$(SHAREDIR)/metainfo :
 	$(MKPATH) $@
 
 icon_install : $(NAME).desktop $(ICONS) $(NAME).appdata.xml \
              | $(DESTDIR)$(SHAREDIR)/$(NAME) $(DESTDIR)$(SHAREDIR)/applications \
                $(DESTDIR)$(SHAREDIR)/pixmaps \
-               $(DESTDIR)$(SHAREDIR)/appdata
+               $(DESTDIR)$(SHAREDIR)/metainfo
 	$(CP) $(NAME).desktop $(DESTDIR)$(SHAREDIR)/applications
 	$(CP) $(ICONS) $(DESTDIR)$(SHAREDIR)/$(NAME)
 	$(CP) icons/$(NAME).svg $(DESTDIR)$(SHAREDIR)/pixmaps
-	$(CP) $(NAME).appdata.xml $(DESTDIR)$(SHAREDIR)/metainfo/.
+	$(CP) $(NAME).appdata.xml $(DESTDIR)$(SHAREDIR)/metainfo
 
 html : htdocs/index.html
 

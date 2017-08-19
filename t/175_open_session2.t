@@ -22,11 +22,15 @@ $slist->open_session_file( info => 't/1.gs2p' );
 use Data::Dumper;
 my $string = Dumper( $slist->{data} );
 
-like(
-    `file $slist->{data}[0][2]{filename}`,
-    qr/image data/,
-    'extracted valid image'
-);
+SKIP: {
+    skip 'file-5.31 cannot detect PGM', 1
+      if `file --version` =~ /file-5\.31$/m;
+    like(
+         `file $slist->{data}[0][2]{filename}`,
+         qr/image data/,
+         'extracted valid image'
+        );
+}
 
 #########################
 

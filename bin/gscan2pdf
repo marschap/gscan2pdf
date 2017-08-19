@@ -18,7 +18,7 @@
 #     xargs sed -i "s/\(\$VERSION *= \)'1\.8\.4'/\1'1.8.5'/" < MANIFEST
 #    Make appropriate updates to ../debian/changelog
 # 2.  perl Makefile.PL
-#     make rpmdist debdist
+#     make signed_tardist
 #    test dist sudo dpkg -i gscan2pdf_x.x.x_all.deb
 # 3.  git status
 #     git tag vx.x.x
