@@ -2491,6 +2491,7 @@ sub image_type_changed_callback {
             $hboxf->hide_all;
             $hboxpq->hide_all;
             $hboxtq->hide_all;
+            $hboxps->hide_all;
         }
         when ('tif') {
             $hboxc->show_all;
@@ -2504,6 +2505,7 @@ sub image_type_changed_callback {
             else {
                 $hboxtq->hide_all;
             }
+            $hboxps->hide_all;
         }
         when ('ps') {
             $hboxc->hide_all;
@@ -2518,8 +2520,10 @@ sub image_type_changed_callback {
             $hboxmd->hide_all;
             $hboxf->hide_all;
             $hboxc->hide_all;
+            $vboxp->hide_all;
             $hboxpq->hide_all;
             $hboxtq->show_all;
+            $hboxps->hide_all;
         }
         default {
             $hboxmd->hide_all;
@@ -2528,6 +2532,7 @@ sub image_type_changed_callback {
             $hboxc->hide_all;
             $hboxpq->hide_all;
             $hboxtq->hide_all;
+            $hboxps->hide_all;
         }
     }
     $windowi->resize( 1, 1 );
