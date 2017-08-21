@@ -6250,11 +6250,9 @@ sub preferences {
     my $notebook = Gtk2::Notebook->new;
     $vbox->pack_start( $notebook, TRUE, TRUE, 0 );
 
-    my (
-        $vbox1,     $frontends, $combob,
-        $preentry,  $cbc,       $cbo,
-        $blacklist, $cbcsh,     $cb_batch_flatbed
-    ) = _preferences_scan_options();
+    my ( $vbox1, $frontends, $combob, $preentry, $cbc, $cbo,
+        $blacklist, $cbcsh, $cb_batch_flatbed, $sb_reload_limit )
+      = _preferences_scan_options();
     $notebook->append_page( $vbox1, __('Scan options') );
 
     my (
@@ -6312,6 +6310,7 @@ sub preferences {
             $SETTING{'restore window'}        = $cbw->get_active;
             $SETTING{set_timestamp}           = $cbt->get_active;
             $SETTING{'convert whitespace to underscores'} = $cbb->get_active;
+            $SETTING{'reload-recursion-limit'} = $sb_reload_limit->get_value;
 
             if ( defined $windows ) {
                 if (   $SETTING{frontend} eq 'libsane-perl'
@@ -6322,6 +6321,8 @@ sub preferences {
                 }
                 $windows->set( 'allow-batch-flatbed',
                     $SETTING{'allow-batch-flatbed'} );
+                $windows->set( 'reload-recursion-limit',
+                    $SETTING{'reload-recursion-limit'} );
             }
 
             my @tmpdirs = File::Spec->splitdir($session);
@@ -6456,6 +6457,22 @@ sub _preferences_scan_options {
     $cb_adf_all_pages->set_active( $SETTING{'adf-defaults-scan-all-pages'} );
     $vbox->pack_start( $cb_adf_all_pages, FALSE, FALSE, 0 );
 
+    # Reload recursion limit
+    $hbox = Gtk2::HBox->new;
+    $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
+    $label = Gtk2::Label->new( __('Reload recursion limit') );
+    $hbox->pack_start( $label, FALSE, FALSE, 0 );
+    my $sb_reload_limit =
+      Gtk2::SpinButton->new_with_range( 2, $_100_PERCENT, 1 );
+    $sb_reload_limit->set_value( $SETTING{'reload-recursion-limit'} );
+    $tooltips->set_tip(
+        $sb_reload_limit,
+        __(
+'Prevent infinte loop by breaking out if more reload loops than this occur'
+        )
+    );
+    $hbox->add($sb_reload_limit);
+
     # scan command prefix
     my $hboxp = Gtk2::HBox->new;
     $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
@@ -6585,7 +6602,7 @@ sub _preferences_scan_options {
     );
     combobox_set_active( $combob, $SETTING{frontend}, @frontends );
     return $vbox, \@frontends, $combob, $preentry, $cbc, $cbo, $blacklist,
-      $cbcsh, $cb_batch_flatbed;
+      $cbcsh, $cb_batch_flatbed, $sb_reload_limit;
 }
 
 sub _preferences_general_options {

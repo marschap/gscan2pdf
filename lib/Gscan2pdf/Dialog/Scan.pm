@@ -16,9 +16,10 @@ use Readonly;
 Readonly my $BORDER_WIDTH => 6;
 
 my (
-    $_MAX_PAGES,        $_MAX_INCREMENT, $_DOUBLE_INCREMENT,
-    $_CANVAS_SIZE,      $_CANVAS_BORDER, $_CANVAS_POINT_SIZE,
-    $_CANVAS_MIN_WIDTH, $_NO_INDEX,      $EMPTY
+    $MAX_PAGES,         $MAX_INCREMENT,    $MAX_RELOADS,
+    $DOUBLE_INCREMENT,  $CANVAS_SIZE,      $CANVAS_BORDER,
+    $CANVAS_POINT_SIZE, $CANVAS_MIN_WIDTH, $NO_INDEX,
+    $EMPTY,
 );
 
 # need to register this with Glib before we can use it below
@@ -28,14 +29,15 @@ BEGIN {
     Glib::Type->register_enum( 'Gscan2pdf::Dialog::Scan::Sided',
         qw(single double) );
     use Readonly;
-    Readonly $_MAX_PAGES         => 9999;
-    Readonly $_MAX_INCREMENT     => 99;
-    Readonly $_DOUBLE_INCREMENT  => 2;
-    Readonly $_CANVAS_SIZE       => 200;
-    Readonly $_CANVAS_BORDER     => 10;
-    Readonly $_CANVAS_POINT_SIZE => 10;
-    Readonly $_CANVAS_MIN_WIDTH  => 1;
-    Readonly $_NO_INDEX          => -1;
+    Readonly $MAX_PAGES         => 9999;
+    Readonly $MAX_INCREMENT     => 99;
+    Readonly $DOUBLE_INCREMENT  => 2;
+    Readonly $CANVAS_SIZE       => 200;
+    Readonly $CANVAS_BORDER     => 10;
+    Readonly $CANVAS_POINT_SIZE => 10;
+    Readonly $CANVAS_MIN_WIDTH  => 1;
+    Readonly $NO_INDEX          => -1;
+    Readonly $MAX_RELOADS       => 5;
     $EMPTY = q{};
 }
 
@@ -153,7 +155,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         'Number of pages',                  # nickname
         'Number of pages to be scanned',    # blurb
         0,                                  # min 0 implies all
-        $_MAX_PAGES,                        # max
+        $MAX_PAGES,                         # max
         1,                                  # default
         [qw/readable writable/]             # flags
     ),
@@ -163,7 +165,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
 'Maximum number of pages that can be scanned with current page-number-start and page-number-increment'
         ,                                   # blurb
         -1,                                 # min -1 implies all
-        $_MAX_PAGES,                        # max
+        $MAX_PAGES,                         # max
         0,                                  # default
         [qw/readable writable/]             # flags
     ),
@@ -172,7 +174,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         'Starting page number',                       # nickname
         'Page number of first page to be scanned',    # blurb
         1,                                            # min
-        $_MAX_PAGES,                                  # max
+        $MAX_PAGES,                                   # max
         1,                                            # default
         [qw/readable writable/]                       # flags
     ),
@@ -180,8 +182,8 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         'page-number-increment',                      # name
         'Page number increment',                      # nickname
         'Amount to increment page number when scanning multiple pages',  # blurb
-        -$_MAX_INCREMENT,                                                # min
-        $_MAX_INCREMENT,                                                 # max
+        -$MAX_INCREMENT,                                                 # min
+        $MAX_INCREMENT,                                                  # max
         1,                         # default
         [qw/readable writable/]    # flags
     ),
@@ -244,6 +246,24 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         'Select # pages = all on selecting ADF',                 # blurb
         TRUE,                                                    # default_value
         [qw/readable writable/]                                  # flags
+    ),
+    Glib::ParamSpec->int(
+        'reload-recursion-limit',                                 # name
+        'Reload recursion limit',                                 # nickname
+        'More reloads than this are considered infinite loop',    # blurb
+        0,                                                        # min
+        $MAX_INCREMENT,                                           # max
+        $MAX_RELOADS,                                             # default
+        [qw/readable writable/]                                   # flags
+    ),
+    Glib::ParamSpec->int(
+        'num-reloads',                                            # name
+        'Number of reloads',                                      # nickname
+        'To compare against reload-recursion-limit',              # blurb
+        0,                                                        # min
+        $MAX_INCREMENT,                                           # max
+        0,                                                        # default
+        [qw/readable/]                                            # flags
     ),
   ];
 
@@ -310,7 +330,7 @@ sub INIT_INSTANCE {
     $hboxn->pack_start( $bscannum, FALSE, FALSE, 0 );
 
     # Number of pages
-    my $spin_buttonn = Gtk2::SpinButton->new_with_range( 1, $_MAX_PAGES, 1 );
+    my $spin_buttonn = Gtk2::SpinButton->new_with_range( 1, $MAX_PAGES, 1 );
     $tooltips->set_tip( $spin_buttonn, __('Set number of pages to scan') );
     $hboxn->pack_end( $spin_buttonn, FALSE, FALSE, 0 );
     $bscannum->signal_connect(
@@ -361,7 +381,7 @@ sub INIT_INSTANCE {
     $vboxx->pack_start( $hboxxs, FALSE, FALSE, 0 );
     my $labelxs = Gtk2::Label->new( __('Start') );
     $hboxxs->pack_start( $labelxs, FALSE, FALSE, 0 );
-    my $spin_buttons = Gtk2::SpinButton->new_with_range( 1, $_MAX_PAGES, 1 );
+    my $spin_buttons = Gtk2::SpinButton->new_with_range( 1, $MAX_PAGES, 1 );
     $hboxxs->pack_end( $spin_buttons, FALSE, FALSE, 0 );
     $spin_buttons->signal_connect(
         'value-changed' => sub {
@@ -381,7 +401,7 @@ sub INIT_INSTANCE {
     my $labelxi = Gtk2::Label->new( __('Increment') );
     $hboxi->pack_start( $labelxi, FALSE, FALSE, 0 );
     my $spin_buttoni =
-      Gtk2::SpinButton->new_with_range( -$_MAX_INCREMENT, $_MAX_INCREMENT, 1 );
+      Gtk2::SpinButton->new_with_range( -$MAX_INCREMENT, $MAX_INCREMENT, 1 );
     $spin_buttoni->set_value( $self->get('page-number-increment') );
     $hboxi->pack_end( $spin_buttoni, FALSE, FALSE, 0 );
     $spin_buttoni->signal_connect(
@@ -458,7 +478,7 @@ sub INIT_INSTANCE {
         'changed-side-to-scan' => sub {
             my ( $widget, $value ) = @_;
             $self->set( 'page-number-increment',
-                $value eq 'facing' ? $_DOUBLE_INCREMENT : -$_DOUBLE_INCREMENT );
+                $value eq 'facing' ? $DOUBLE_INCREMENT : -$DOUBLE_INCREMENT );
         }
     );
     $tooltips->set_tip( $self->{combobs},
@@ -474,8 +494,8 @@ sub INIT_INSTANCE {
         clicked => sub {
             $spin_buttoni->set_value(
                   $self->{combobs}->get_active == 0
-                ? $_DOUBLE_INCREMENT
-                : -$_DOUBLE_INCREMENT
+                ? $DOUBLE_INCREMENT
+                : -$DOUBLE_INCREMENT
             );
         }
     );
@@ -495,8 +515,12 @@ sub INIT_INSTANCE {
     $vboxsp->set_border_width($border_width);
     $framesp->add($vboxsp);
     $self->{combobsp} = Gtk2::ComboBox->new_text;
-    $self->{combobsp}->signal_connect( changed =>
-          sub { $self->set( 'profile', $self->{combobsp}->get_active_text ) } );
+    $self->{combobsp}->signal_connect(
+        changed => sub {
+            $self->{num_reloads} = 0;    # num-reloads is read-only
+            $self->set( 'profile', $self->{combobsp}->get_active_text );
+        }
+    );
     $vboxsp->pack_start( $self->{combobsp}, FALSE, FALSE, 0 );
     my $hboxsp = Gtk2::HBox->new;
     $vboxsp->pack_end( $hboxsp, FALSE, FALSE, 0 );
@@ -557,7 +581,7 @@ sub _add_device_combobox {
                   ;    # to make sure that the device is reloaded
                 $self->get_devices;
             }
-            elsif ( $index > $_NO_INDEX ) {
+            elsif ( $index > $NO_INDEX ) {
                 $self->set( 'device', $device_list->[$index]{name} );
             }
         }
@@ -577,7 +601,7 @@ sub _add_device_combobox {
                 }
             }
             else {
-                $self->{combobd}->set_active($_NO_INDEX);
+                $self->{combobd}->set_active($NO_INDEX);
             }
         }
     );
@@ -1116,6 +1140,22 @@ sub get_paper_by_geometry {
 sub update_options {
     my ( $self, $new_options, $triggered_by ) = @_;
 
+    my $loops = $self->get('num-reloads');
+    $self->{num_reloads} = ++$loops;    # num-reloads is read-only
+    my $limit = $self->get('reload-recursion-limit');
+    if ( $self->get('num-reloads') > $limit ) {
+        $logger->error("reload-recursion-limit ($limit) exceeded.");
+        $self->signal_emit(
+            'process-error',
+            'update_options',
+            sprintf __(
+'Reload recursion limit (%d) exceeded. Please file a bug, attaching a log file reproducing the problem.'
+            ),
+            $limit
+        );
+        return;
+    }
+
     # Clone the current scan options in case they are changed by the reload,
     # so that we can reapply it afterwards to ensure the same values are still
     # set.
@@ -1586,9 +1626,9 @@ sub _combobox_remove_item_by_text {
     my ( $combobox, $text ) = @_;
     if ( defined $text ) {
         my $i = get_combobox_by_text( $combobox, $text );
-        if ( $i > $_NO_INDEX ) {
+        if ( $i > $NO_INDEX ) {
             if ( $combobox->get_active == $i ) {
-                $combobox->set_active($_NO_INDEX);
+                $combobox->set_active($NO_INDEX);
             }
             $combobox->remove_text($i);
         }
@@ -1656,8 +1696,8 @@ sub get_combobox_num_rows {
 
 sub get_combobox_by_text {
     my ( $combobox, $text ) = @_;
-    if ( not( defined $combobox and defined $text ) ) { return $_NO_INDEX }
-    my $o = $_NO_INDEX;
+    if ( not( defined $combobox and defined $text ) ) { return $NO_INDEX }
+    my $o = $NO_INDEX;
     my $i = 0;
     $combobox->get_model->foreach(
         sub {
@@ -1679,7 +1719,7 @@ sub set_combobox_by_text {
     my ( $combobox, $text ) = @_;
     if ( defined $combobox ) {
         my $index = get_combobox_by_text( $combobox, $text );
-        if ( $index > $_NO_INDEX or not defined $text ) {
+        if ( $index > $NO_INDEX or not defined $text ) {
             $combobox->set_active($index);
             return TRUE;
         }
@@ -1764,8 +1804,8 @@ sub set_options {
     );
     my $vbox   = $window->vbox;
     my $canvas = Goo::Canvas->new;
-    $canvas->set_size_request( $_CANVAS_SIZE, $_CANVAS_SIZE );
-    $canvas->{border} = $_CANVAS_BORDER;
+    $canvas->set_size_request( $CANVAS_SIZE, $CANVAS_SIZE );
+    $canvas->{border} = $CANVAS_BORDER;
     $vbox->add($canvas);
     my $root = $canvas->get_root_item;
 
@@ -1859,7 +1899,7 @@ sub set_options {
 sub add_value {
     my ( $root, $canvas ) = @_;
     my $item = Goo::Canvas::Rect->new(
-        $root, 0, 0, $_CANVAS_POINT_SIZE, $_CANVAS_POINT_SIZE,
+        $root, 0, 0, $CANVAS_POINT_SIZE, $CANVAS_POINT_SIZE,
         'fill-color' => 'black',
         'line-width' => 0,
     );
@@ -1939,7 +1979,7 @@ sub add_value {
             }
             $canvas->{val}[ $widget->{index} ] = $ygr;
             ( $x, $y ) = to_canvas( $canvas, $xgr, $ygr );
-            $widget->set( y => $y - $_CANVAS_POINT_SIZE / 2 );
+            $widget->set( y => $y - $CANVAS_POINT_SIZE / 2 );
             return TRUE;
         }
     );
@@ -1984,8 +2024,8 @@ sub update_graph {
     $xbounds[0] = 0;
     $xbounds[1] = $#{ $canvas->{val} };
     if ( $xbounds[0] >= $xbounds[1] ) {
-        $xbounds[0] = -$_CANVAS_MIN_WIDTH / 2;
-        $xbounds[1] = $_CANVAS_MIN_WIDTH / 2;
+        $xbounds[0] = -$CANVAS_MIN_WIDTH / 2;
+        $xbounds[1] = $CANVAS_MIN_WIDTH / 2;
     }
     if ( $opt->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
         $ybounds[0] = $opt->{constraint}{min};
@@ -2018,8 +2058,8 @@ sub update_graph {
         $item->{index} = $_;
         my ( $xc, $yc ) = to_canvas( $canvas, $_, $canvas->{val}[$_] );
         $item->set(
-            x => $xc - $_CANVAS_BORDER / 2,
-            y => $yc - $_CANVAS_BORDER / 2
+            x => $xc - $CANVAS_BORDER / 2,
+            y => $yc - $CANVAS_BORDER / 2
         );
     }
     return;

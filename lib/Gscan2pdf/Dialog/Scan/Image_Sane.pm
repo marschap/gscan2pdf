@@ -247,6 +247,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
                 if ($val) { $widget->set_active(TRUE) }
                 $widget->{signal} = $widget->signal_connect(
                     toggled => sub {
+                        $self->{num_reloads} = 0;    # num-reloads is read-only
                         my $value = $widget->get_active;
                         $self->set_option( $opt, $value );
                     }
@@ -258,6 +259,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
                 $widget = Gtk2::Button->new( $d_sane->get( $opt->{title} ) );
                 $widget->{signal} = $widget->signal_connect(
                     clicked => sub {
+                        $self->{num_reloads} = 0;    # num-reloads is read-only
                         $self->set_option($opt);
                     }
                 );
@@ -279,6 +281,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
                 }
                 $widget->{signal} = $widget->signal_connect(
                     'value-changed' => sub {
+                        $self->{num_reloads} = 0;    # num-reloads is read-only
                         my $value = $widget->get_value;
                         $self->set_option( $opt, $value );
                     }
@@ -303,6 +306,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
                 if ( defined $index ) { $widget->set_active($index) }
                 $widget->{signal} = $widget->signal_connect(
                     changed => sub {
+                        $self->{num_reloads} = 0;    # num-reloads is read-only
                         my $i = $widget->get_active;
 
                         # refetch options in case they have changed.
@@ -324,13 +328,14 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
                 }
                 $widget->{signal} = $widget->signal_connect(
                     activate => sub {
+                        $self->{num_reloads} = 0;    # num-reloads is read-only
                         my $value = $widget->get_text;
                         $self->set_option( $opt, $value );
                     }
                 );
             }
         }
-        else {    # $opt->{max_values} > 1
+        else {                                       # $opt->{max_values} > 1
             $widget = Gtk2::Button->new( $d_sane->get( $opt->{title} ) );
             $widget->{signal} = $widget->signal_connect(
                 clicked => \&multiple_values_button_callback,

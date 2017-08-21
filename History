@@ -1,6 +1,8 @@
 1.8.6 (22.08.2017):
 
 * Fixed visibility of options for DjVu, JPEG, & TIFF in save dialogue.
+* + Reload recursion limit in Edit/Preferences
+  Break of out reload recursion loop if maximum number of reloads is exceeded.
 
 
 1.8.5 (18.08.2017):
