@@ -4,6 +4,8 @@
 * + Reload recursion limit in Edit/Preferences
   Break of out reload recursion loop if maximum number of reloads is exceeded.
 * Reapply only those current scan settings that were reset by the reload
+* Fixed unpaper detection for v0.3.
+  Closes #273 (t/355_unpaper2.t test fails in gscan2pdf-1.8.5)
 
 
 1.8.5 (18.08.2017):

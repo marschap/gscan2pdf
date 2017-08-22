@@ -1,6 +1,7 @@
 use warnings;
 use strict;
-use Test::More tests => 6;
+use Sub::Override;
+use Test::More tests => 7;
 
 BEGIN {
     use_ok('Gscan2pdf::Unpaper');
@@ -10,31 +11,33 @@ BEGIN {
 
 #########################
 
+my $unpaper_version = 0.3;
+my $override        = Sub::Override->new;
+$override->replace(
+    'Gscan2pdf::Unpaper::version' => sub { return $unpaper_version } );
+
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 my $unpaper = Gscan2pdf::Unpaper->new;
 my $vbox    = Gtk2::VBox->new;
 $unpaper->add_options($vbox);
 is(
     $unpaper->get_cmdline,
-'unpaper --black-threshold 0.33 --border-margin 0,0 --deskew-scan-direction left,right --layout single --output-pages 1 --white-threshold 0.9 --overwrite '
-      . (
-        version->parse( $unpaper->version ) > version->parse('v0.3')
-        ? '%s %s %s'
-        : '--input-file-sequence %s --output-file-sequence %s %s'
-      ),
-    'Basic functionality'
+'unpaper --black-threshold 0.33 --border-margin 0,0 --deskew-scan-direction left,right --layout single --output-pages 1 --white-threshold 0.9 --overwrite --input-file-sequence %s --output-file-sequence %s %s',
+    'Basic functionality 0.3'
+);
+
+$unpaper_version = 0.6;
+is(
+    $unpaper->get_cmdline,
+'unpaper --black-threshold 0.33 --border-margin 0,0 --deskew-scan-direction left,right --layout single --output-pages 1 --white-threshold 0.9 --overwrite %s %s %s',
+    'Basic functionality > 0.3'
 );
 
 $unpaper = Gscan2pdf::Unpaper->new( { layout => 'double' } );
 $unpaper->add_options($vbox);
 is(
     $unpaper->get_cmdline,
-'unpaper --black-threshold 0.33 --border-margin 0,0 --deskew-scan-direction left,right --layout double --output-pages 1 --white-threshold 0.9 --overwrite '
-      . (
-        version->parse( $unpaper->version ) > version->parse('v0.3')
-        ? '%s %s %s'
-        : '--input-file-sequence %s --output-file-sequence %s %s'
-      ),
+'unpaper --black-threshold 0.33 --border-margin 0,0 --deskew-scan-direction left,right --layout double --output-pages 1 --white-threshold 0.9 --overwrite %s %s %s',
     'Defaults'
 );
 
@@ -74,12 +77,7 @@ $unpaper = Gscan2pdf::Unpaper->new(
 
 is(
     $unpaper->get_cmdline,
-    'unpaper --black-threshold 0.35 --white-threshold 0.8 --overwrite '
-      . (
-        version->parse( $unpaper->version ) > version->parse('v0.3')
-        ? '%s %s %s'
-        : '--input-file-sequence %s --output-file-sequence %s %s'
-      ),
+    'unpaper --black-threshold 0.35 --white-threshold 0.8 --overwrite %s %s %s',
     'no GUI'
 );
 
@@ -96,12 +94,7 @@ $unpaper->set_options( { 'output-pages' => 2 } );
 # before output-pages. Don't know how to solve that, so commenting out for now
 #is(
 #    $unpaper->get_cmdline,
-#'unpaper --black-threshold 0.33 --border-margin 0,0 --deskew-scan-direction left,right --layout double --output-pages 2 --white-threshold 0.9 --overwrite '
-#      . (
-#        version->parse( $unpaper->version ) > version->parse('v0.3')
-#        ? '%s %s %s'
-#        : '--input-file-sequence %s --output-file-sequence %s %s'
-#      ),
+#'unpaper --black-threshold 0.33 --border-margin 0,0 --deskew-scan-direction left,right --layout double --output-pages 2 --white-threshold 0.9 --overwrite %s %s %s',
 #    'output-pages = 2'
 #);
 
