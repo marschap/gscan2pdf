@@ -338,9 +338,9 @@ $signal = $dialog->signal_connect(
                     $dialog->get('current-scan-options')->get_data,
                     {
                         backend => [
-                            { mode        => 'Color' },
                             { $resolution => 52 },
-                            { $brx        => 11 }
+                            { mode        => 'Color' },
+                            { $brx        => 11 },
                         ],
                         'frontend' => { 'num_pages' => 0 }
                     },

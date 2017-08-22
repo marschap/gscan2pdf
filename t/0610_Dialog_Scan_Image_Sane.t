@@ -157,7 +157,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                     $dialog->get('current-scan-options')->get_data,
                     {
                         backend =>
-                          [ { mode => 'Color' }, { $resolution => 52 } ],
+                          [ { $resolution => 52 }, { mode => 'Color' } ],
                         'frontend' => { 'num_pages' => 0 }
 
                     },

@@ -1138,7 +1138,7 @@ sub get_paper_by_geometry {
 # the new options
 
 sub update_options {
-    my ( $self, $new_options, $triggered_by ) = @_;
+    my ( $self, $new_options ) = @_;
 
     my $loops = $self->get('num-reloads');
     $self->{num_reloads} = ++$loops;    # num-reloads is read-only
@@ -1159,12 +1159,22 @@ sub update_options {
     # Clone the current scan options in case they are changed by the reload,
     # so that we can reapply it afterwards to ensure the same values are still
     # set.
-    my $current_scan_options;
-    if ( defined $triggered_by ) {
-        $current_scan_options = dclone( $self->{current_scan_options} );
+    my $current_scan_options = dclone( $self->{current_scan_options} );
 
-        # remove $triggered_by to prevent an infinite loop
-        $current_scan_options->remove_backend_option_by_name($triggered_by);
+    # Loop through the cloned profile, and remove those options that have
+    # correct values in the reload
+    my $num = $current_scan_options->num_backend_options;
+    my $i   = 0;
+    while ( $i < $num ) {
+        my ( $name, $val ) =
+          $current_scan_options->get_backend_option_by_index($i);
+        if ( not defined $val or $val eq $new_options->by_name($name)->{val} ) {
+            $current_scan_options->remove_backend_option_by_name($name);
+            --$num;
+        }
+        else {
+            ++$i;
+        }
     }
 
     # walk the widget tree and update them from the hash
@@ -1190,9 +1200,7 @@ sub update_options {
     $self->set( 'available-scan-options', $new_options );
 
     # Reapply current options to ensure the same values are still set.
-    if ( defined $triggered_by ) {
-        $self->set_current_scan_options($current_scan_options);
-    }
+    $self->set_current_scan_options($current_scan_options);
 
     # In case the geometry values have changed,
     # update the available paper formats

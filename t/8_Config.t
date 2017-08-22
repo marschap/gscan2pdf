@@ -195,7 +195,7 @@ Gscan2pdf::Config::add_defaults( \%output );
     },
     'scan-reload-triggers'   => qw(mode),
     message                  => undef,
-    'reload-recursion-limit' => 5,
+    'reload-recursion-limit' => 10,
 );
 
 is_deeply( \%output, \%example, 'add_defaults' );

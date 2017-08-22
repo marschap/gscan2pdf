@@ -179,9 +179,7 @@ $override->replace(
 $override->replace(
     'Gscan2pdf::Frontend::Image_Sane::_thread_set_option' => sub {
         my ( $self, $uuid, $index, $value ) = @_;
-
-        # don't update the value to force gscan2pdf to try again
-        # $raw_options->[$index]{val} = $value;
+        $raw_options->[$index]{val} = $value;
 
         # Reload
         Gscan2pdf::Frontend::Image_Sane::_thread_get_options( $self, $uuid );
@@ -242,7 +240,8 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 $dialog->get_devices;
 
 Gtk2->main;
-ok $dialog->get('num-reloads') > 6, 'broke out of reload infinite loop';
+ok $dialog->get('num-reloads') < 6,
+  'finished reload loops without recursion limit';
 
 Gscan2pdf::Frontend::Image_Sane->quit;
 __END__
