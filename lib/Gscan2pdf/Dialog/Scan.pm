@@ -977,6 +977,34 @@ sub pack_widget {
     my ( $self, $widget, $data ) = @_;
     my ( $options, $opt, $hbox, $hboxp ) = @{$data};
     if ( defined $widget ) {
+
+        # Add label for units
+        if ( $opt->{unit} != SANE_UNIT_NONE ) {
+            my $text;
+            given ( $opt->{unit} ) {
+                when (SANE_UNIT_PIXEL) {
+                    $text = $d_sane->get('pel')
+                }
+                when (SANE_UNIT_BIT) {
+                    $text = $d_sane->get('bit')
+                }
+                when (SANE_UNIT_MM) {
+                    $text = $d_sane->get('mm')
+                }
+                when (SANE_UNIT_DPI) {
+                    $text = $d_sane->get('dpi')
+                }
+                when (SANE_UNIT_PERCENT) {
+                    $text = $d_sane->get(q{%})
+                }
+                when (SANE_UNIT_MICROSECOND) {
+                    $text = $d_sane->get('us')
+                }
+            }
+            my $label = Gtk2::Label->new($text);
+            $hbox->pack_end( $label, FALSE, FALSE, 0 );
+        }
+
         $self->{option_widgets}{ $opt->{name} } = $widget;
         if ( $opt->{type} == SANE_TYPE_BUTTON or $opt->{max_values} > 1 ) {
             $hbox->pack_end( $widget, TRUE, TRUE, 0 );
@@ -992,7 +1020,6 @@ sub pack_widget {
         }
 
         $self->create_paper_widget( $options, $hboxp );
-
     }
     else {
         $logger->warn("Unknown type $opt->{type}");
