@@ -1472,19 +1472,20 @@ sub edit_paper {
         __('Width')  => 'int',
         __('Height') => 'int',
         __('Left')   => 'int',
-        __('Top')    => 'int'
+        __('Top')    => 'int',
+        __('Units')  => 'text',
     );
     for ( keys %{$formats} ) {
         push @{ $slist->{data} },
           [
             $_,                $formats->{$_}{x}, $formats->{$_}{y},
-            $formats->{$_}{l}, $formats->{$_}{t}
+            $formats->{$_}{l}, $formats->{$_}{t}, 'mm',
           ];
     }
 
-    # Set everything to be editable
+    # Set everything to be editable except the units
     my @columns = $slist->get_columns;
-    for ( 0 .. $#columns ) {
+    for ( 0 .. $#columns - 1 ) {
         $slist->set_column_editable( $_, TRUE );
     }
     $slist->get_column(0)->set_sort_column_id(0);
