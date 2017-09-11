@@ -7227,13 +7227,9 @@ provides the functions for creating PDF documents in Perl
 
 API library for scanners
 
-=item libsane-perl
-
-Original Perl bindings for libsane.
-
 =item libimage-sane-perl
 
-New Perl bindings for libsane.
+Perl bindings for libsane.
 
 =item libset-intspan-perl
 
@@ -7539,9 +7535,10 @@ visible as users asked for them. In 1.2.0, all options can be shown or hidden
 via Edit/Preferences, along with the ability to specify which options trigger a
 reload.
 
-In 1.8.0, New Perl bindings for SANE were introduced. These are called
-libimage-sane-perl and are the preferred frontend. Support for libsane-perl is
-likely to be removed as soon as libimage-sane-perl is seen to be stable.
+In 1.8.3, New Perl bindings for SANE were introduced. These are called
+libimage-sane-perl and are the preferred frontend.
+
+In 1.8.5, support for libsane-perl was removed.
 
 =head4 Device blacklist
 
