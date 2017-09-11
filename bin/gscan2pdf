@@ -6387,13 +6387,9 @@ sub _preferences_scan_options {
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
     my @frontends = (
         [
-            'libsane-perl', __('libsane-perl'),
-            __('Scan using the perl bindings for SANE.')
-        ],
-        [
             'libimage-sane-perl',
             __('libimage-sane-perl'),
-            __('Scan using the perl bindings for SANE.')
+            __('Scan using the Perl bindings for SANE.')
         ],
         [
             'scanimage', __('scanimage'),
