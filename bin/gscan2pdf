@@ -637,9 +637,17 @@ sub check_dependencies {
             'libtiff', 'stderr',
             qr/LIBTIFF,\sVersion\s([\d.]+)/xsm, [ 'tiffcp', '-h' ]
         ],
+
+        # pdftops and pdfunite are both in poppler-utils, and so the version is
+        # the version is the same.
+        # Both are needed, though to update %dependencies
+        [
+            'pdftops', 'stderr',
+            qr/pdftops\sversion\s([\d.]+)/xsm, [ 'pdftops', '-v' ]
+        ],
         [
             'pdfunite', 'stderr',
-            qr/pdfunite\sversion\s([\d.]+)/xsm, [ 'pdfunite', '--version' ]
+            qr/pdfunite\sversion\s([\d.]+)/xsm, [ 'pdfunite', '-v' ]
         ],
         [ 'pdf2ps', 'stdout', qr/([\d.]+)/xsm, [ 'gs', '--version' ] ],
     );
