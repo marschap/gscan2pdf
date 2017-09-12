@@ -16,10 +16,9 @@ use Readonly;
 Readonly my $BORDER_WIDTH => 6;
 
 my (
-    $MAX_PAGES,         $MAX_INCREMENT,    $MAX_RELOADS,
-    $DOUBLE_INCREMENT,  $CANVAS_SIZE,      $CANVAS_BORDER,
-    $CANVAS_POINT_SIZE, $CANVAS_MIN_WIDTH, $NO_INDEX,
-    $EMPTY,
+    $MAX_PAGES,        $MAX_INCREMENT, $DOUBLE_INCREMENT,
+    $CANVAS_SIZE,      $CANVAS_BORDER, $CANVAS_POINT_SIZE,
+    $CANVAS_MIN_WIDTH, $NO_INDEX,      $EMPTY
 );
 
 # need to register this with Glib before we can use it below
@@ -37,7 +36,6 @@ BEGIN {
     Readonly $CANVAS_POINT_SIZE => 10;
     Readonly $CANVAS_MIN_WIDTH  => 1;
     Readonly $NO_INDEX          => -1;
-    Readonly $MAX_RELOADS       => 5;
     $EMPTY = q{};
 }
 
@@ -253,8 +251,8 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         'More reloads than this are considered infinite loop',    # blurb
         0,                                                        # min
         $MAX_INCREMENT,                                           # max
-        $MAX_RELOADS,                                             # default
-        [qw/readable writable/]                                   # flags
+        0,                                                        # default
+        [qw/readable/]                                            # flags
     ),
     Glib::ParamSpec->int(
         'num-reloads',                                            # name
@@ -862,6 +860,12 @@ sub _set_available_scan_options {
     else {
         $self->{framen}->set_sensitive(TRUE);
     }
+
+    # reload-recursion-limit is read-only
+    # Triangular number n + n-1 + n-2 + ... + 1 = n*(n+1)/2
+    my $n = $newval->num_options;
+    $self->{reload_recursion_limit} = $n * ( $n + 1 ) / 2;
+
     $self->signal_emit('reloaded-scan-options');
     return;
 }

@@ -331,9 +331,8 @@ sub add_defaults {
             l                   => 1,
             t                   => 1,
         },
-        'scan-reload-triggers'   => qw(mode),
-        message                  => undef,
-        'reload-recursion-limit' => 10,
+        'scan-reload-triggers' => qw(mode),
+        message                => undef,
     );
     if (
         defined $SETTING->{frontend}
