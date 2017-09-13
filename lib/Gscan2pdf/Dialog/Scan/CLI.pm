@@ -228,19 +228,21 @@ sub scan_options {
         if ( defined $cache->{ $self->get('device') }{$cache_key} ) {
             my $options = Gscan2pdf::Scanner::Options->new_from_data(
                 $cache->{ $self->get('device') }{$cache_key} );
-            $self->signal_emit( 'fetched-options-cache', $self->get('device'),
-                $cache_key );
-            $logger->info( "Fetched cached options for key $cache_key: ",
-                Dumper($options) );
-            $self->_initialise_options($options);
+            if ( $options->num_options > 0 ) {
+                $self->signal_emit( 'fetched-options-cache',
+                    $self->get('device'), $cache_key );
+                $logger->info( "Fetched cached options for key $cache_key: ",
+                    Dumper($options) );
+                $self->_initialise_options($options);
 
-            $self->signal_emit( 'finished-process', 'find_scan_options' );
+                $self->signal_emit( 'finished-process', 'find_scan_options' );
 
-            # This fires the reloaded-scan-options signal,
-            # so don't set this until we have finished
-            $self->set( 'available-scan-options', $options );
-            $self->set_paper_formats( $self->{paper_formats} );
-            return;
+                # This fires the reloaded-scan-options signal,
+                # so don't set this until we have finished
+                $self->set( 'available-scan-options', $options );
+                $self->set_paper_formats( $self->{paper_formats} );
+                return;
+            }
         }
     }
 
@@ -271,8 +273,8 @@ sub scan_options {
             if ( $self->get('cache-options') ) {
                 my $cache = $self->get('options-cache');
 
-        # Don't assume that the options we have are those we are looking for yet
-        # Recalculating cache_key based on contents of options
+                # Don't assume that the options we have are those we are looking
+                # for yet. Recalculating cache_key based on contents of options
                 if ( $cache_key ne 'default' ) {
                     $cache_key = $self->cache_key($options);
                 }
@@ -288,7 +290,8 @@ sub scan_options {
                     $cache->{$device}{$cache_key} = $clone;
                     if ( $cache_key eq 'default' ) {
 
-     # For default settings, additionally store the cache under the option names
+                        # For default settings, additionally store the cache
+                        # under the option names
                         $cache_key = $self->cache_key($options);
                         $cache->{$device}{$cache_key} =
                           $cache->{$device}{default};
@@ -322,7 +325,10 @@ sub scan_options {
 sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
     my ( $self, $options ) = @_;
 
-    my ( $group, $vbox, $hboxp );
+    # Define HBox for paper size here
+    # so that it can be put before first geometry option
+    my $hboxp = Gtk2::HBox->new;
+    my ( $group, $vbox );
     my $num_dev_options = $options->num_options;
 
     # We have hereby removed the active profile and paper,
@@ -355,11 +361,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
         # Widget
         my ( $widget, $val );
         $val = $opt->{val};
-
-        # Define HBox for paper size here
-        # so that it can be put before first geometry option
-        if ( not defined $hboxp and $self->_geometry_option($opt) ) {
-            $hboxp = Gtk2::HBox->new;
+        if ( not defined $hboxp->parent and $self->_geometry_option($opt) ) {
             $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
         }
 
@@ -619,19 +621,22 @@ sub set_option {
 
             my $cache = $self->get('options-cache');
             if ( defined $cache->{ $self->get('device') }{$cache_key} ) {
-                $reload_flag = TRUE;
                 my $options = Gscan2pdf::Scanner::Options->new_from_data(
                     $cache->{ $self->get('device') }{$cache_key} );
-                $self->signal_emit( 'fetched-options-cache',
-                    $self->get('device'), $cache_key );
-                $logger->info($options);
+                if ( $options->num_options > 0 ) {
+                    $reload_flag = TRUE;
+                    $self->signal_emit( 'fetched-options-cache',
+                        $self->get('device'), $cache_key );
+                    $logger->info($options);
 
-                if ($options) { $self->patch_cache($options) }
+                    if ($options) { $self->patch_cache($options) }
 
-                $self->signal_emit( 'finished-process', 'find_scan_options' );
+                    $self->signal_emit( 'finished-process',
+                        'find_scan_options' );
 
-                $self->_set_option_flags_signals( $option->{name}, $val );
-                $self->signal_emit('reloaded-scan-options');
+                    $self->_set_option_flags_signals( $option->{name}, $val );
+                    $self->signal_emit('reloaded-scan-options');
+                }
             }
         }
 

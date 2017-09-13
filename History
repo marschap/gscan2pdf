@@ -9,6 +9,7 @@
   Set reload recursion limit as triangular number of number of scan options.
   i.e. if there are 5 scan options, the recursion limit is 5+4+3+2+1=15
   Closes bug #275 (reload recursion limit)
+* Fixed crash with scanimage frontend due to empty cache
 
 
 1.8.6 (22.08.2017):
