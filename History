@@ -10,6 +10,8 @@
   i.e. if there are 5 scan options, the recursion limit is 5+4+3+2+1=15
   Closes bug #275 (reload recursion limit)
 * Fixed crash with scanimage frontend due to empty cache
+* Ghost save button, rather than hiding save dialogue if all pages removed.
+  Closes bug #253 (Save dialoque does not stay open)
 
 
 1.8.6 (22.08.2017):

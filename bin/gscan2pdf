@@ -213,8 +213,8 @@ init_icons(
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
 my (
-    $slist,   $windowi, $windowe, $windows, $windowh, $windowo, $windowrn,
-    $windowu, $windowudt,
+    $slist,   $windowi,   $windowe, $windows, $windowh, $windowo, $windowrn,
+    $windowu, $windowudt, $save_button,
     @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     $menubar,     $toolbar,
@@ -1179,9 +1179,6 @@ EOS
     $uimanager->get_widget('/MenuBar/Tools/Crop')->set_sensitive(FALSE);
     $uimanager->get_widget('/MenuBar/Tools/User-defined')->set_sensitive(FALSE);
 
-    # a convenient place to put these
-    $dependencies{pages} = $EMPTY_LIST;
-
     # Ghost rotations and unpaper if perlmagick not available
     if ( not $dependencies{perlmagick} ) {
         $msg .=
@@ -1317,54 +1314,43 @@ sub update_uimanager {
     }
 
     if ( $#{ $slist->{data} } > $EMPTY_LIST ) {
-        if ( $dependencies{pages} == $EMPTY_LIST ) {
-            if ( $dependencies{xdg} ) {
-                $uimanager->get_widget('/MenuBar/File/Email as PDF')
-                  ->set_sensitive(TRUE);
-                $uimanager->get_widget('/ToolBar/Email as PDF')
-                  ->set_sensitive(TRUE);
-                $uimanager->get_widget('/Thumb_Popup/Email as PDF')
-                  ->set_sensitive(TRUE);
-            }
-            if ( $dependencies{imagemagick} and $dependencies{libtiff} ) {
-                $uimanager->get_widget('/MenuBar/File/Save')
-                  ->set_sensitive(TRUE);
-                $uimanager->get_widget('/ToolBar/Save')->set_sensitive(TRUE);
-                $uimanager->get_widget('/Thumb_Popup/Save')
-                  ->set_sensitive(TRUE);
-            }
-            $uimanager->get_widget('/MenuBar/File/Print')->set_sensitive(TRUE);
-            $uimanager->get_widget('/ToolBar/Print')->set_sensitive(TRUE);
-            $uimanager->get_widget('/Thumb_Popup/Print')->set_sensitive(TRUE);
-
-            $dependencies{pages} = $#{ $slist->{data} };
+        if ( $dependencies{xdg} ) {
+            $uimanager->get_widget('/MenuBar/File/Email as PDF')
+              ->set_sensitive(TRUE);
+            $uimanager->get_widget('/ToolBar/Email as PDF')
+              ->set_sensitive(TRUE);
+            $uimanager->get_widget('/Thumb_Popup/Email as PDF')
+              ->set_sensitive(TRUE);
         }
+        if ( $dependencies{imagemagick} and $dependencies{libtiff} ) {
+            $uimanager->get_widget('/MenuBar/File/Save')->set_sensitive(TRUE);
+            $uimanager->get_widget('/ToolBar/Save')->set_sensitive(TRUE);
+            $uimanager->get_widget('/Thumb_Popup/Save')->set_sensitive(TRUE);
+        }
+        $uimanager->get_widget('/MenuBar/File/Print')->set_sensitive(TRUE);
+        $uimanager->get_widget('/ToolBar/Print')->set_sensitive(TRUE);
+        $uimanager->get_widget('/Thumb_Popup/Print')->set_sensitive(TRUE);
+        if ( defined $save_button ) { $save_button->set_sensitive(TRUE) }
     }
     else {
-        if ( $dependencies{pages} > $EMPTY_LIST ) {
-            if ( $dependencies{xdg} ) {
-                $uimanager->get_widget('/MenuBar/File/Email as PDF')
-                  ->set_sensitive(FALSE);
-                $uimanager->get_widget('/ToolBar/Email as PDF')
-                  ->set_sensitive(FALSE);
-                $uimanager->get_widget('/Thumb_Popup/Email as PDF')
-                  ->set_sensitive(FALSE);
-                if ( defined $windowe ) { $windowe->hide }
-            }
-            if ( $dependencies{imagemagick} and $dependencies{libtiff} ) {
-                $uimanager->get_widget('/MenuBar/File/Save')
-                  ->set_sensitive(FALSE);
-                $uimanager->get_widget('/ToolBar/Save')->set_sensitive(FALSE);
-                $uimanager->get_widget('/Thumb_Popup/Save')
-                  ->set_sensitive(FALSE);
-            }
-            $uimanager->get_widget('/MenuBar/File/Print')->set_sensitive(FALSE);
-            $uimanager->get_widget('/ToolBar/Print')->set_sensitive(FALSE);
-            $uimanager->get_widget('/Thumb_Popup/Print')->set_sensitive(FALSE);
-            if ( defined $windowi ) { $windowi->hide }
-
-            $dependencies{pages} = $#{ $slist->{data} };
+        if ( $dependencies{xdg} ) {
+            $uimanager->get_widget('/MenuBar/File/Email as PDF')
+              ->set_sensitive(FALSE);
+            $uimanager->get_widget('/ToolBar/Email as PDF')
+              ->set_sensitive(FALSE);
+            $uimanager->get_widget('/Thumb_Popup/Email as PDF')
+              ->set_sensitive(FALSE);
+            if ( defined $windowe ) { $windowe->hide }
         }
+        if ( $dependencies{imagemagick} and $dependencies{libtiff} ) {
+            $uimanager->get_widget('/MenuBar/File/Save')->set_sensitive(FALSE);
+            $uimanager->get_widget('/ToolBar/Save')->set_sensitive(FALSE);
+            $uimanager->get_widget('/Thumb_Popup/Save')->set_sensitive(FALSE);
+        }
+        $uimanager->get_widget('/MenuBar/File/Print')->set_sensitive(FALSE);
+        $uimanager->get_widget('/ToolBar/Print')->set_sensitive(FALSE);
+        $uimanager->get_widget('/Thumb_Popup/Print')->set_sensitive(FALSE);
+        if ( defined $save_button ) { $save_button->set_sensitive(FALSE) }
     }
 
    # If the scan dialog has already been drawn, update the start page spinbutton
@@ -2415,12 +2401,12 @@ sub save_dialog {
     $vbox->pack_end( $hboxb, FALSE, TRUE, 0 );
 
     # Save button
-    my $sbutton = Gtk2::Button->new_from_stock('gtk-save');
-    $hboxb->pack_start( $sbutton, TRUE, TRUE, 0 );
-    $sbutton->grab_focus;
-    $sbutton->can_default(TRUE);
-    $sbutton->grab_default;
-    $sbutton->signal_connect(
+    $save_button = Gtk2::Button->new_from_stock('gtk-save');
+    $hboxb->pack_start( $save_button, TRUE, TRUE, 0 );
+    $save_button->grab_focus;
+    $save_button->can_default(TRUE);
+    $save_button->grab_default;
+    $save_button->signal_connect(
         clicked => \&save_button_clicked_callback,
         [
             \@type,        $combobi,           $buttond,
