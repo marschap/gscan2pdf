@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 1;
+use Test::More tests => 2;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
@@ -19,6 +19,8 @@ my $window = Gtk2::Window->new;
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
+
+#Log::Log4perl->easy_init($DEBUG);
 my $logger = Log::Log4perl::get_logger;
 
 # The overrides must occur before the thread is spawned in setup.
@@ -174,8 +176,9 @@ $override->replace(
     }
 );
 
-# Force a reload for every option to trigger an infinite reload loop and test
-# that the reload-recursion-limit is respected.
+# The change-profile signal was being emitted too early, due to the extra
+# reloads introduced in v1.8.5, tested in t/0607 and t/0608, resulting in
+# the profile dropdown being set to undef
 $override->replace(
     'Gscan2pdf::Frontend::Image_Sane::_thread_set_option' => sub {
         my ( $self, $uuid, $index, $value ) = @_;
@@ -195,16 +198,13 @@ my $dialog = Gscan2pdf::Dialog::Scan::Image_Sane->new(
     'logger'        => $logger
 );
 
-$dialog->set(
-    'paper-formats',
-    {
-        'A4' => {
-            'x' => 210,
-            'y' => 297,
-            't' => 0,
-            'l' => 0
-        },
-    }
+$dialog->add_profile(
+    'my profile',
+    Gscan2pdf::Scanner::Profile->new_from_data(
+        {
+            backend => [ { 'resolution' => '100' }, { 'source' => 'Flatbed' } ],
+        }
+    )
 );
 
 $dialog->{signal} = $dialog->signal_connect(
@@ -218,30 +218,40 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
     'reloaded-scan-options' => sub {
         $dialog->signal_handler_disconnect( $dialog->{reloaded_signal} );
 
-        my $signal;
-        $signal = $dialog->signal_connect(
-            'changed-paper' => sub {
-                my ( $dialog, $paper ) = @_;
-                $dialog->signal_handler_disconnect($signal);
-                Gtk2->main_quit;
+        ######################################
+
+        # need a new main loop because of the timeout
+        my $loop = Glib::MainLoop->new;
+        my $flag = FALSE;
+        $dialog->{signal} = $dialog->signal_connect(
+            'changed-profile' => sub {
+                my ( $widget, $profile ) = @_;
+                $dialog->signal_handler_disconnect( $dialog->{signal} );
+                is( $profile, 'my profile', 'changed-profile' );
+                is_deeply(
+                    $dialog->get('current-scan-options')->get_data,
+                    {
+                        backend => [
+                            { 'resolution' => '100' },
+                            { 'source'     => 'Flatbed' }
+                        ],
+
+                    },
+                    'current-scan-options with profile'
+                );
+                $flag = TRUE;
+                $loop->quit;
             }
         );
-        $dialog->set_current_scan_options(
-            Gscan2pdf::Scanner::Profile->new_from_data(
-                {
-                    backend =>
-                      [ { 'resolution' => '100' }, { 'source' => 'Flatbed' } ],
-                    frontend => { paper => 'A4' }
-                }
-            )
-        );
+        $dialog->set( 'profile', 'my profile' );
+        $loop->run unless ($flag);
+        Gtk2->main_quit;
+
     }
 );
 $dialog->get_devices;
 
 Gtk2->main;
-ok $dialog->get('num-reloads') < 6,
-  'finished reload loops without recursion limit';
 
 Gscan2pdf::Frontend::Image_Sane->quit;
 __END__

@@ -719,10 +719,8 @@ sub _set_option_flags_signals {
     if ( not $self->{setting_profile} ) {
         $self->set( 'profile', undef );
         if ( not $self->{setting_current_scan_options} ) {
-            $self->signal_emit(
-                'changed-current-scan-options',
-                $self->get('current-scan-options')
-            );
+            $self->signal_emit( 'changed-current-scan-options',
+                $self->get('current-scan-options'), $EMPTY );
         }
     }
 

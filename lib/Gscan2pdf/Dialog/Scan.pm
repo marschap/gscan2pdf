@@ -6,6 +6,7 @@ no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Image::Sane ':all';    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Data::Dumper;
+use Data::UUID;
 use Storable qw(dclone);
 use feature 'switch';
 use Gscan2pdf::Dialog;
@@ -20,6 +21,7 @@ my (
     $CANVAS_SIZE,      $CANVAS_BORDER, $CANVAS_POINT_SIZE,
     $CANVAS_MIN_WIDTH, $NO_INDEX,      $EMPTY
 );
+my $uuid_object = Data::UUID->new;
 
 # need to register this with Glib before we can use it below
 BEGIN {
@@ -69,11 +71,11 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         param_types => ['Glib::Scalar'],    # array of options to hide
     },
     'changed-current-scan-options' => {
-        param_types => ['Glib::Scalar'],    # profile array
+        param_types => [ 'Glib::Scalar', 'Glib::String' ], # profile array, UUID
     },
     'reloaded-scan-options' => {},
     'changed-profile'       => {
-        param_types => ['Glib::Scalar'],    # name
+        param_types => ['Glib::Scalar'],                   # name
     },
     'added-profile' => {
         param_types => [ 'Glib::Scalar', 'Glib::Scalar' ], # name, profile array
@@ -1682,21 +1684,35 @@ sub set_profile {
 
         # If we are setting the profile, don't unset the profile name
         $self->{setting_profile} = TRUE;
+        my $uuid;
 
         # Only emit the changed-profile signal when the GUI has caught up
         my $signal;
         $signal = $self->signal_connect(
             'changed-current-scan-options' => sub {
-                $self->signal_handler_disconnect($signal);
-                $self->{setting_profile} = FALSE;
+                my ( undef, undef, $uuid_found ) = @_;
 
-                # set property before emitting signal to ensure callbacks
-                # receive correct value
-                $self->{profile} = $name;
-                $self->signal_emit( 'changed-profile', $name );
+                # there seems to be a race condition in t/0621_Dialog_Scan_CLI.t
+                # where the uuid set below is not set in time to be tested in
+                # this if.
+                if (
+                    not defined $uuid
+                    or ( defined $uuid_found
+                        and $uuid_found eq $uuid )
+                  )
+                {
+
+                    $self->signal_handler_disconnect($signal);
+                    $self->{setting_profile} = FALSE;
+
+                    # set property before emitting signal to ensure callbacks
+                    # receive correct value
+                    $self->{profile} = $name;
+                    $self->signal_emit( 'changed-profile', $name );
+                }
             }
         );
-        $self->set_current_scan_options( $self->{profiles}{$name} );
+        $uuid = $self->set_current_scan_options( $self->{profiles}{$name} );
     }
 
     # no need to wait - nothing to do
@@ -2124,11 +2140,14 @@ sub set_current_scan_options {
     # First clone the profile, as otherwise it would be self-modifying
     my $clone = dclone($profile);
 
+    # add uuid to identify later which callback has finished
+    $clone->{uuid} = $uuid_object->create_str;
+
     # Give the GUI a chance to catch up between settings,
     # in case they have to be reloaded.
     # Use the callback to trigger the next loop
     $self->_set_option_profile( $clone, $clone->each_backend_option );
-    return;
+    return $clone->{uuid};
 }
 
 sub _set_option_profile {
@@ -2215,7 +2234,8 @@ sub _set_option_profile {
         $self->{setting_current_scan_options} = FALSE;
         $self->signal_emit(
             'changed-current-scan-options',
-            $self->get('current-scan-options')
+            $self->get('current-scan-options'),
+            $profile->{uuid}
         );
     }
     return;
