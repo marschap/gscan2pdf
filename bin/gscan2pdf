@@ -2424,28 +2424,16 @@ sub save_dialog {
     $cbutton->signal_connect( clicked => sub { $windowi->hide; } );
 
     $windowi->show_all;
-    if ( $pdf_compression[ $combob->get_active ][0] ne 'jpg' ) {
-        $hboxpq->hide_all;
-    }
-    if (
-        $type[ $combobi->get_active ][0] ne 'jpg'
-        or (    $type[ $combobi->get_active ][0] eq 'tif'
-            and $tiff_compression[ $combobtc->get_active ][0] ne 'jpg' )
-      )
-    {
-        $hboxtq->hide_all;
-    }
-    if ( $type[ $combobi->get_active ][0] ne 'tif' ) {
-        $hboxc->hide_all;
-    }
-
-    if ( $type[ $combobi->get_active ][0] ne 'pdf' ) {
-        if ( $type[ $combobi->get_active ][0] ne 'djvu' ) {
-            $mdwidgets{box}->hide_all;
-        }
-        $vboxp->hide_all;
-        $hboxf->hide_all;
-    }
+    image_type_changed_callback(
+        $combobi,
+        [
+            \@type,            $vboxp,             $hboxf,
+            \@pdf_compression, $combob,            $hboxpq,
+            $hboxc,            \@tiff_compression, $combobtc,
+            $hboxtq,           $mdwidgets{box},    $hboxps,
+            \@ps_backend,
+        ]
+    );
     $windowi->resize( 1, 1 );
     return;
 }
