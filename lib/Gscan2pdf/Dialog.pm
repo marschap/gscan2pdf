@@ -261,18 +261,25 @@ sub dump_or_stringify {
     );
 }
 
-# Unpaper sometimes throws warning messages including a memory address.
-# As the address is very rarely the same, although the message itself is,
-# filter out the address from the message
+# External tools sometimes throws warning messages including a number,
+# e.g. hex address. As the number is very rarely the same, although the message
+# itself is, filter out the number from the message
 
 sub filter_message {
     my ($message) = @_;
-    my $regex = qr{^(.*)           # start of message
-                  0x[[:xdigit:]]+ # hex address
+    my $hexregex = qr{^(.*)           # start of message
+                  0x[[:xdigit:]]+ # hex (e.g. address)
                   (.*)$           # rest of message
                  }xsm;
-    while ( $message =~ /$regex/xsmo ) {
-        $message =~ s/$regex/$1%%x$2/xsmo;
+    my $intregex = qr{^(.*)           # start of message
+                  \w[[:digit:]]+\w # integer
+                  (.*)$           # rest of message
+                 }xsm;
+    while ( $message =~ /$hexregex/xsmo ) {
+        $message =~ s/$hexregex/$1%%x$2/xsmo;
+    }
+    while ( $message =~ /$intregex/xsmo ) {
+        $message =~ s/$intregex/$1%%d$2/xsmo;
     }
     return $message;
 }

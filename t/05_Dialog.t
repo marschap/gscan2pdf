@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 24;
+use Test::More tests => 25;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;
 use Scalar::Util;
@@ -125,6 +125,14 @@ is(
       . "\n"
       . '[image2 @ %%x] Encoder did not produce proper pts, making some up.',
     'Filter out double memory address from unpaper warning'
+);
+
+is(
+    Gscan2pdf::Dialog::filter_message(
+        'Error processing with tesseract: Detected 440 diacritics'
+    ),
+    'Error processing with tesseract: Detected %%d diacritics',
+    'Filter out integer from tesseract warning'
 );
 
 __END__
