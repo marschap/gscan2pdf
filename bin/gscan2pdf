@@ -2160,8 +2160,6 @@ sub add_pdf_compression {
 
 sub save_dialog {
 
-    # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
-
     if ( defined $windowi ) {
         $windowi->present;
         return;
@@ -3241,7 +3239,6 @@ sub email {
         return;
     }
 
-    # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
     $windowe = Gscan2pdf::Dialog->new(
         'transient-for'  => $window,
         title            => __('Email as PDF'),
@@ -4741,9 +4738,6 @@ sub analyse {
 sub handle_clicks {
     my ( $widget, $event ) = @_;
 
-    # $SETTING{'RMB'} = ($event->button == 3);
-    #warn "rmb $SETTING{'RMB'}\n";
-
     if ( $event->button == $RIGHT_MOUSE_BUTTON ) {
         if ( $widget->isa('Gtk2::ImageView') ) {    # main image
             $uimanager->get_widget('/Detail_Popup')
@@ -4751,6 +4745,7 @@ sub handle_clicks {
                 $event->time );
         }
         else {                                      # Thumbnail simplelist
+            $SETTING{'Page range'} = 'selected';
             $uimanager->get_widget('/Thumb_Popup')
               ->popup( undef, undef, undef, undef, $event->button,
                 $event->time );
@@ -4767,8 +4762,6 @@ sub handle_clicks {
 # Display page selector and on apply threshold accordingly
 
 sub threshold {
-
-    # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
     my $windowt = Gscan2pdf::Dialog->new(
         'transient-for' => $window,
@@ -4847,8 +4840,6 @@ sub threshold {
 # Display page selector and on apply brightness & contrast accordingly
 
 sub brightness_contrast {
-
-    # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
     my $windowt = Gscan2pdf::Dialog->new(
         'transient-for' => $window,
@@ -4940,8 +4931,6 @@ sub brightness_contrast {
 
 sub negate {
 
-    # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
-
     my $windowt = Gscan2pdf::Dialog->new(
         'transient-for' => $window,
         title           => __('Negate'),
@@ -5003,8 +4992,6 @@ sub negate {
 # Display page selector and on apply unsharp accordingly
 
 sub unsharp {
-
-    # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
     my $windowum = Gscan2pdf::Dialog->new(
         'transient-for' => $window,
@@ -5192,8 +5179,6 @@ sub crop {
         $windowc->present;
         return;
     }
-
-    # $SETTING{'Page range'} = 'selected' if $SETTING{'RMB'};
 
     $windowc = Gscan2pdf::Dialog->new(
         'transient-for'  => $window,
