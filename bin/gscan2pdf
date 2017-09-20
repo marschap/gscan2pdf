@@ -3312,14 +3312,24 @@ sub email {
                 font             => $SETTING{'pdf font'},
             );
 
-            $pdf = File::Temp->new( DIR => $session, SUFFIX => '.pdf' );
+            my $filename = Gscan2pdf::Document::expand_metadata_pattern(
+                template => $SETTING{'default filename'},
+                convert_whitespace =>
+                  $SETTING{'convert whitespace to underscores'},
+                author        => $SETTING{author},
+                title         => $SETTING{title},
+                docdate       => $mdwidgets{date}->get_text,
+                today_and_now => [ Today_and_Now() ]
+            );
+            if ( $filename =~ /^\s+$/xsm ) { $filename = 'document' }
+            $pdf = "$session/$filename.pdf";
             my $mua = mua( $windowe, $pdf );
-            if ( not @{$mua} ) { return }
+            if ( not defined $mua or not @{$mua} ) { return }
 
             # Create the PDF
             my ( $signal, $pid );
             $pid = $slist->save_pdf(
-                path          => $pdf->filename,
+                path          => $pdf,
                 list_of_pages => $list_of_pages,
                 metadata => Gscan2pdf::Document::collate_metadata( \%SETTING ),
                 options  => \%options,
