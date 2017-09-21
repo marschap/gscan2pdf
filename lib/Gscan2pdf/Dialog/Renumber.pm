@@ -69,7 +69,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
     ),
   ];
 
-our $VERSION = '1.8.6';
+our $VERSION = '1.8.7';
 
 my ( $start_old, $step_old, $logger );
 
