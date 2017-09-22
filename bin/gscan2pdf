@@ -24,14 +24,14 @@
 #     git tag vx.x.x
 #     git push --tags ssh://ra28145@git.code.sf.net/p/gscan2pdf/code master
 # 4.  make remote-html
-# 5. create version directory in https://sourceforge.net/projects/gscan2pdf/files/gscan2pdf
-#     make file_releases
-# 6. Build package for debian
+# 5. Build package for debian
 #     sudo DIST=sid pbuilder update
 #     DIST=sid pdebuild
 #     lintian -iI --pedantic .changes
 #    check contents with dpkg-deb --contents
 #     dput ftp-master .changes
+# 6. create version directory in https://sourceforge.net/projects/gscan2pdf/files/gscan2pdf
+#     make file_releases
 # 7. Build packages for Ubuntu
 #    name the release -0~ppa1<release>, where release is artful, zesty, xenial, vivid, trusty, precise, etc
 #     debuild -S -sa
