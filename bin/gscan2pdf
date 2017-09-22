@@ -394,7 +394,7 @@ $tcbutton->set_image( Gtk2::Image->new_from_stock( 'gtk-cancel', 'button' ) );
 $thbox->pack_end( $tcbutton, FALSE, FALSE, 0 );
 
 # Open scan dialog in background
-if ( $SETTING{'auto-open-scan-dialog'} ) { scan_dialog(TRUE) }
+if ( $SETTING{'auto-open-scan-dialog'} ) { scan_dialog( undef, TRUE ) }
 
 # Deal with --import command line option
 if ( defined $import ) { import_files($import) }
@@ -3389,7 +3389,7 @@ sub email {
 # Scan
 
 sub scan_dialog {
-    my ($hidden) = @_;
+    my ( $action, $hidden ) = @_;
 
     if ( defined $windows ) {
         $windows->show_all;
