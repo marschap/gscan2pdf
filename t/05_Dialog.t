@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 25;
+use Test::More tests => 26;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;
 use Scalar::Util;
@@ -133,6 +133,14 @@ is(
     ),
     'Error processing with tesseract: Detected %%d diacritics',
     'Filter out integer from tesseract warning'
+);
+
+is(
+    Gscan2pdf::Dialog::filter_message(
+'Error processing with tesseract: Warning. Invalid resolution 0 dpi. Using 70 instead.'
+    ),
+'Error processing with tesseract: Warning. Invalid resolution %%d dpi. Using %%d instead.',
+    'Filter out 1 and 2 digit integers from tesseract warning'
 );
 
 __END__

@@ -6957,7 +6957,7 @@ sub show_message_dialog {
     my $dialog =
       Gtk2::MessageDialog->new( $options{parent},
         [ 'destroy-with-parent', 'modal' ],
-        $options{type}, $options{buttons}, $text );
+        $options{type}, $options{buttons}, $options{text} );
     my $cb;
     if ( $options{'store-response'} ) {
         $cb = Gtk2::CheckButton->new_with_label(

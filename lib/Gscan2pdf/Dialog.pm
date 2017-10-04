@@ -45,7 +45,15 @@ use Glib::Object::Subclass Gtk2::Window::,
   ];
 
 our $VERSION = '1.8.7';
-my $EMPTY = q{};
+my $EMPTY    = q{};
+my $HEXREGEX = qr{^(.*)           # start of message
+                  \b0x[[:xdigit:]]+\b # hex (e.g. address)
+                  (.*)$           # rest of message
+                 }xsm;
+my $INTREGEX = qr{^(.*)           # start of message
+                  \b[[:digit:]]+\b # integer
+                  (.*)$           # rest of message
+                 }xsm;
 my ($tooltips);
 
 sub INIT_INSTANCE {
@@ -267,19 +275,11 @@ sub dump_or_stringify {
 
 sub filter_message {
     my ($message) = @_;
-    my $hexregex = qr{^(.*)           # start of message
-                  0x[[:xdigit:]]+ # hex (e.g. address)
-                  (.*)$           # rest of message
-                 }xsm;
-    my $intregex = qr{^(.*)           # start of message
-                  \w[[:digit:]]+\w # integer
-                  (.*)$           # rest of message
-                 }xsm;
-    while ( $message =~ /$hexregex/xsmo ) {
-        $message =~ s/$hexregex/$1%%x$2/xsmo;
+    while ( $message =~ /$HEXREGEX/xsmo ) {
+        $message =~ s/$HEXREGEX/$1%%x$2/xsmo;
     }
-    while ( $message =~ /$intregex/xsmo ) {
-        $message =~ s/$intregex/$1%%d$2/xsmo;
+    while ( $message =~ /$INTREGEX/xsmo ) {
+        $message =~ s/$INTREGEX/$1%%d$2/xsmo;
     }
     return $message;
 }
