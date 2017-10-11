@@ -49,8 +49,30 @@ $signal = $dialog->signal_connect(
 
         # v1.3.7 had the bug that profiles were not being saved properly,
         # due to the profiles not being cloned in the set and get routines
+
+        # need a new main loop to avoid nesting
+        my $loop = Glib::MainLoop->new;
+        my $flag = FALSE;
+        $signal = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
         $dialog->set_option( $options->by_name('tl-x'), 10 );
+        $loop->run unless ($flag);
+
+        $loop   = Glib::MainLoop->new;
+        $flag   = FALSE;
+        $signal = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
         $dialog->set_option( $options->by_name('tl-y'), 10 );
+        $loop->run unless ($flag);
+
         $dialog->save_current_profile('profile 1');
         is_deeply(
             $dialog->{profiles},
@@ -70,8 +92,29 @@ $signal = $dialog->signal_connect(
             },
             'applied 1st profile'
         );
+
+        $loop   = Glib::MainLoop->new;
+        $flag   = FALSE;
+        $signal = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
         $dialog->set_option( $options->by_name('tl-x'), 20 );
+        $loop->run unless ($flag);
+
+        $loop   = Glib::MainLoop->new;
+        $flag   = FALSE;
+        $signal = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
         $dialog->set_option( $options->by_name('tl-y'), 20 );
+        $loop->run unless ($flag);
+
         $dialog->save_current_profile('profile 2');
         is_deeply(
             $dialog->{profiles},
@@ -147,8 +190,8 @@ $signal = $dialog->signal_connect(
         $dialog->set( 'allow-batch-flatbed', FALSE );
 
         # need a new main loop to avoid nesting
-        my $loop = Glib::MainLoop->new;
-        my $flag = FALSE;
+        $loop = Glib::MainLoop->new;
+        $flag = FALSE;
         is $dialog->get('adf-defaults-scan-all-pages'), 1,
           'default adf-defaults-scan-all-pages';
         $signal = $dialog->signal_connect(

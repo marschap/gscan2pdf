@@ -372,7 +372,6 @@ sub set_option {
             $val = $option->{constraint}{max};
         }
     }
-    $self->{current_scan_options}->add_backend_option( $option->{name}, $val );
 
     my $signal;
     my $options = $self->get('available-scan-options');
@@ -388,7 +387,13 @@ sub set_option {
             $self->signal_emit( 'changed-progress', undef, undef );
         },
         finished_callback => sub {
-            my ($data) = @_;
+            my ( $data, $status ) = @_;
+
+            if ( $status != SANE_STATUS_INVAL ) {
+                $self->{current_scan_options}
+                  ->add_backend_option( $option->{name}, $val );
+            }
+
             my $opt;
             if ($data) {
                 $self->update_options(

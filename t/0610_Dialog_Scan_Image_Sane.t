@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 49;
+use Test::More tests => 50;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
@@ -291,6 +291,31 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         );
         $options = $dialog->get('available-scan-options');
         $dialog->set_option( $options->by_name($resolution), 51 );
+        $loop->run unless ($flag);
+
+        ######################################
+
+        # need a new main loop because of the timeout
+        $loop             = Glib::MainLoop->new;
+        $flag             = FALSE;
+        $dialog->{signal} = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                my ( $widget, $option, $value ) = @_;
+                $dialog->signal_handler_disconnect( $dialog->{signal} );
+                is_deeply(
+                    $dialog->get('current-scan-options')->get_data,
+                    {
+                        backend =>
+                          [ { mode => 'Color' }, { $resolution => 51 } ],
+                        'frontend' => { 'num_pages' => 0 }
+                    },
+                    'current-scan-options unchanged if invalid option requested'
+                );
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+        $dialog->set_option( $options->by_name('mode'), 'non-existent mode' );
         $loop->run unless ($flag);
 
         ######################################

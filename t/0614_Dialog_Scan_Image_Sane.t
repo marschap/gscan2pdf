@@ -66,6 +66,20 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         $flag                     = FALSE;
         $dialog->{profile_signal} = $dialog->signal_connect(
             'changed-profile' => sub {
+                $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+        my $options = $dialog->get('available-scan-options');
+        $dialog->set_option( $options->by_name('enable-test-options'), TRUE );
+        $loop->run unless ($flag);
+
+        # have to use changed-scan-option callback because profile now undef
+        $loop                     = Glib::MainLoop->new;
+        $flag                     = FALSE;
+        $dialog->{profile_signal} = $dialog->signal_connect(
+            'changed-scan-option' => sub {
                 my ( $widget, $profile ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
                 is_deeply(
@@ -82,11 +96,9 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 $loop->quit;
             }
         );
-
-        my $options = $dialog->get('available-scan-options');
-        $dialog->set_option( $options->by_name('enable-test-options'), TRUE );
         $dialog->set_option( $options->by_name('button') );
         $loop->run unless ($flag);
+
         Gtk2->main_quit;
     }
 );

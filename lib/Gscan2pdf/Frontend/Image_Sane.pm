@@ -556,10 +556,14 @@ sub _thread_set_option {
     if ( $logger->is_info ) {
         $logger->info( "sane_set_option $index ($opt->{name})"
               . ( $opt->{type} == SANE_TYPE_BUTTON ? $EMPTY : " to $value" )
-              . " returned status $status with info $info" );
+              . " returned status $status ("
+              . Image::Sane::strstatus($status)
+              . ") with info "
+              . ( defined $info ? $info : "undefined" ) );
     }
 
-    if ( $info & SANE_INFO_RELOAD_OPTIONS ) {
+    # $info could be undefined if status is invalid
+    if ( defined $info and $info & SANE_INFO_RELOAD_OPTIONS ) {
         $status = _thread_get_options( $self, $uuid );
     }
     else {
