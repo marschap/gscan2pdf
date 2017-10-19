@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use File::Basename;    # Split filename into dir, file, ext
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 BEGIN {
     use Gscan2pdf::Document;
@@ -10,7 +10,7 @@ BEGIN {
 }
 
 SKIP: {
-    skip 'unpaper not installed', 2
+    skip 'unpaper not installed', 3
       unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
     Gscan2pdf::Translation::set_domain('gscan2pdf');
     my $unpaper =
@@ -47,16 +47,20 @@ SKIP: {
                     direction => $unpaper->get_option('direction')
                 },
                 finished_callback => sub {
-                    like(
-`convert $slist->{data}[0][2]{filename} -depth 1 -resize 1x1 txt:-`,
-                        qr/gray\((199|200|201)\)/,
-                        'valid PNM created for RH'
-                    );
-                    like(
-`convert $slist->{data}[1][2]{filename} -depth 1 -resize 1x1 txt:-`,
-                        qr/gray\((202|203|204)\)/,
-                        'valid PNM created for LH'
-                    );
+                    my @level;
+                    for my $i ( 0 .. 1 ) {
+                        if (
+`convert $slist->{data}[$i][2]{filename} -depth 1 -resize 1x1 txt:-`
+                            =~ qr/gray\((\d\d\d)\)/ )
+                        {
+                            $level[$i] = $1;
+                            pass "valid PNM created for page $i";
+                        }
+                        else {
+                            fail "valid PNM created for page $i";
+                        }
+                    }
+                    ok( $level[1] > $level[0], 'rtl' );
                     Gtk2->main_quit;
                 },
             );
