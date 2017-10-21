@@ -562,6 +562,9 @@ sub get_option {
         }
     }
     elsif ( defined $default->{$option} ) { return $default->{$option} }
+    elsif ( defined $hashref->{$option} ) {
+        return $hashref->{$option}{default};
+    }
     return;
 }
 

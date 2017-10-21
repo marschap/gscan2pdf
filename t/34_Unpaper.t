@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Sub::Override;
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 BEGIN {
     use_ok('Gscan2pdf::Unpaper');
@@ -18,7 +18,10 @@ $override->replace(
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 my $unpaper = Gscan2pdf::Unpaper->new;
-my $vbox    = Gtk2::VBox->new;
+
+is( $unpaper->get_option('direction'), 'ltr', 'default direction' );
+
+my $vbox = Gtk2::VBox->new;
 $unpaper->add_options($vbox);
 is(
     $unpaper->get_cmdline,
@@ -77,7 +80,7 @@ $unpaper = Gscan2pdf::Unpaper->new(
 
 is(
     $unpaper->get_cmdline,
-    'unpaper --black-threshold 0.35 --white-threshold 0.8 --overwrite %s %s %s',
+'unpaper --black-threshold 0.35 --deskew-scan-direction left,right --layout single --output-pages 1 --white-threshold 0.8 --overwrite %s %s %s',
     'no GUI'
 );
 
