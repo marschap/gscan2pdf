@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
@@ -75,6 +75,11 @@ $dialog->{signal} = $dialog->signal_connect(
                     { backend => [ { $resolution => 51 } ] },
                     'set resolution after scan'
                 );
+
+                # The resolution widget should be defined by the time the
+                # scan options have been updated
+                isnt( $dialog->{option_widgets}{$resolution},
+                    undef, 'resolution widget defined' );
                 $flag = TRUE;
                 $loop->quit;
             }
