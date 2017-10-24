@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 36;
+use Test::More tests => 38;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
 use Date::Calc qw(Today);
@@ -220,6 +220,43 @@ is(
 
 #########################
 
+$slist = Gscan2pdf::Document->new;
+
+# dir for temporary files
+my $dir = File::Temp->newdir;
+
+# build a cropped (i.e. too little data compared with header) pnm
+# to test padding code
+system('convert rose: test.ppm');
+my $old = `identify -format '%m %G %g %z-bit %r' test.ppm`;
+system('convert rose: - | head -c -1K > test.pnm');
+
+$slist->set_dir($dir);
+$slist->import_scan(
+    filename          => 'test.pnm',
+    page              => 1,
+    delete            => 1,
+    dir               => $dir,
+    finished_callback => sub {
+        is(
+`identify -format '%m %G %g %z-bit %r' $slist->{data}[0][2]{filename}`,
+            $old,
+            'padded pnm imported correctly'
+        );
+        is(
+            -s "$slist->{data}[0][2]{filename}",
+            -s 'test.ppm',
+            'padded pnm correct size'
+        );
+        Gtk2->main_quit;
+    }
+);
+Gtk2->main;
+
+#########################
+
+unlink 'test.ppm', 'test.pnm', <$dir/*>;
+rmdir $dir;
 Gscan2pdf::Document->quit();
 
 __END__
