@@ -11,13 +11,13 @@
 # 0. Test scan in lineart, greyscale and colour.
 # 1. New screendump required? Print screen creates screenshot.png in Desktop.
 #    Download new translations (https://translations.launchpad.net/gscan2pdf)
-#    Upload .pot
 #    Update translators in credits (https://launchpad.net/gscan2pdf/+topcontributors)
 #    Check a locale with LC_ALL=de_DE LC_MESSAGES=de_DE LC_CTYPE=de_DE LANG=de_DE LANGUAGE=de_DE bin/gscan2pdf --log=log --locale=<wherever the locale directory is>
 #    Check $VERSION. If necessary bump with something like
-#     xargs sed -i "s/\(\$VERSION *= \)'1\.8\.6'/\1'1.8.7'/" < MANIFEST
+#     xargs sed -i "s/\(\$VERSION *= \)'1\.8\.7'/\1'1.8.8'/" < MANIFEST
 #    Make appropriate updates to ../debian/changelog
 # 2.  perl Makefile.PL
+#     Upload .pot
 #     make signed_tardist
 #    test dist sudo dpkg -i gscan2pdf_x.x.x_all.deb
 # 3.  git status
@@ -116,7 +116,7 @@ Readonly my $_100_000MB              => 100_000;
 
 Glib::set_application_name('gscan2pdf');
 my $prog_name = Glib::get_application_name;
-my $VERSION   = '1.8.7';
+my $VERSION   = '1.8.8';
 
 # Image border to ensure that a scaled to fit image gets no scrollbars
 my $border = 1;
@@ -7065,10 +7065,10 @@ None
 
 =head1 CONFIGURATION
 
-gscan2pdf creates a text resource file called .gscan2pdf in the user's home
-directory. Generally, however, preferences should be changed via the
-Edit/Preferences menu, or are captured automatically during normal usage of the
-program.
+gscan2pdf creates a text resource file in ~/.config/gscan2pdfrc. The directory
+can be changed by setting the $XDG_CONFIG_HOME variable. Generally, however,
+preferences should be changed via the Edit/Preferences menu, or are captured
+automatically during normal usage of the program.
 
 =head1 INCOMPATIBILITIES
 
