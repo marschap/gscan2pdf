@@ -6342,7 +6342,7 @@ sub _preferences_scan_options {
 
     my $cbo =
       Gtk2::CheckButton->new_with_label(
-        __('Open scan dialog at program start') );
+        __('Open scanner at program start') );
     $tooltips->set_tip(
         $cbo,
         __(
