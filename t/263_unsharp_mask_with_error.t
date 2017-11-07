@@ -35,7 +35,7 @@ $slist->import_files(
             page           => $slist->{data}[0][2],
             radius         => 100,
             sigma          => 5,
-            amount         => 100,
+            gain           => 100,
             threshold      => 0.5,
             error_callback => sub {
                 pass('caught error injected before negate');
@@ -45,7 +45,7 @@ $slist->import_files(
                     page            => $slist->{data}[0][2],
                     radius          => 100,
                     sigma           => 5,
-                    amount          => 100,
+                    gain            => 100,
                     threshold       => 0.5,
                     queued_callback => sub {
 

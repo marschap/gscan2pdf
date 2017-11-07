@@ -36,7 +36,7 @@ $slist->import_files(
             page              => $slist->{data}[0][2],
             radius            => 100,
             sigma             => 5,
-            amount            => 100,
+            gain              => 100,
             threshold         => 0.5,
             finished_callback => sub {
                 fail('caught errors from unsharp');

@@ -59,6 +59,7 @@ use Gscan2pdf::Canvas;
 use Gscan2pdf::Config;
 use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
 use Image::Sane ':all';             # To get SANE_* enums
+use Image::Magick;
 use Gtk2::ImageView;
 use Gtk2::Ex::Simple::List;
 use Gtk2 -init;                     # Could just call init separately
@@ -605,12 +606,17 @@ sub create_main_window {
 # Check for presence of various packages
 
 sub check_dependencies {
-    $dependencies{perlmagick} = try { require Image::Magick };
-    $dependencies{tesseract}  = Gscan2pdf::Tesseract->setup($logger);
-    $dependencies{ocropus}    = Gscan2pdf::Ocropus->setup($logger);
-    $dependencies{cuneiform}  = Gscan2pdf::Cuneiform->setup($logger);
-    $dependencies{unpaper}    = Gscan2pdf::Unpaper->version;
-    if ( $dependencies{perlmagick} ) { $logger->info('Found Image::Magick') }
+    my $image = Image::Magick->new;
+    if ( $image->Get('version') =~ /ImageMagick\s([\d.]+)/xsm ) {
+        $dependencies{perlmagick} = $1;
+    }
+    $dependencies{tesseract} = Gscan2pdf::Tesseract->setup($logger);
+    $dependencies{ocropus}   = Gscan2pdf::Ocropus->setup($logger);
+    $dependencies{cuneiform} = Gscan2pdf::Cuneiform->setup($logger);
+    $dependencies{unpaper}   = Gscan2pdf::Unpaper->version;
+    if ( $dependencies{perlmagick} ) {
+        $logger->info("Found Image::Magick $dependencies{perlmagick}");
+    }
     if ( $dependencies{unpaper} ) {
         $logger->info("Found unpaper $dependencies{unpaper}");
     }
@@ -5058,22 +5064,22 @@ sub unsharp {
     $label = Gtk2::Label->new( __('pixels') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
 
-    # SpinButton for amount
+    # SpinButton for gain
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $desc, $desc + 1, ++$row, $row + 1 );
-    $label = Gtk2::Label->new( __('Amount') );
+    $label = Gtk2::Label->new( __('Gain') );
     $hbox->pack_start( $label, FALSE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $widget, $widget + 1, $row, $row + 1 );
-    my $spinbuttona = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
-    $spinbuttona->set_value( $SETTING{'unsharp amount'} );
+    my $spinbuttong = Gtk2::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
+    $spinbuttong->set_value( $SETTING{'unsharp gain'} );
     $tooltips->set_tip(
-        $spinbuttona,
+        $spinbuttong,
         __(
 'The percentage of the difference between the original and the blur image that is added back into the original.'
         )
     );
-    $hbox->pack_end( $spinbuttona, TRUE, TRUE, 0 );
+    $hbox->pack_end( $spinbuttong, TRUE, TRUE, 0 );
     $hbox = Gtk2::HBox->new;
     $table->attach_defaults( $hbox, $units, $units + 1, $row, $row + 1 );
     $label = Gtk2::Label->new($PERCENT);
@@ -5106,7 +5112,7 @@ sub unsharp {
 
             $SETTING{'unsharp radius'}    = $spinbuttonr->get_value;
             $SETTING{'unsharp sigma'}     = $spinbuttons->get_value;
-            $SETTING{'unsharp amount'}    = $spinbuttona->get_value;
+            $SETTING{'unsharp gain'}      = $spinbuttong->get_value;
             $SETTING{'unsharp threshold'} = $spinbuttont->get_value;
 
             my @pagelist =
@@ -5119,7 +5125,7 @@ sub unsharp {
                     page            => $slist->{data}[$i][2],
                     radius          => $SETTING{'unsharp radius'},
                     sigma           => $SETTING{'unsharp sigma'},
-                    amount          => $SETTING{'unsharp amount'},
+                    gain            => $SETTING{'unsharp gain'},
                     threshold       => $SETTING{'unsharp threshold'},
                     queued_callback => sub {
                         return update_tpbar(@_);

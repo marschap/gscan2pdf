@@ -37,6 +37,7 @@ use English qw( -no_match_vars );    # for $PROCESS_ID, $INPUT_RECORD_SEPARATOR
 use POSIX qw(:sys_wait_h strftime);
 use Data::UUID;
 use Date::Calc qw(Add_Delta_Days Date_to_Time Today);
+use version;
 use Readonly;
 Readonly our $POINTS_PER_INCH             => 72;
 Readonly my $STRING_FORMAT                => 8;
@@ -1375,7 +1376,7 @@ sub unsharp {
             page      => $options{page}->freeze,
             radius    => $options{radius},
             sigma     => $options{sigma},
-            amount    => $options{amount},
+            gain      => $options{gain},
             threshold => $options{threshold},
             dir       => "$self->{dir}",
             uuid      => $uuid,
@@ -2332,7 +2333,7 @@ sub _thread_main {
                     page      => $request->{page},
                     radius    => $request->{radius},
                     sigma     => $request->{sigma},
-                    amount    => $request->{amount},
+                    gain      => $request->{gain},
                     threshold => $request->{threshold},
                     dir       => $request->{dir},
                     uuid      => $request->{uuid},
@@ -3997,19 +3998,33 @@ sub _thread_negate {
 sub _thread_unsharp {
     my ( $self, %options ) = @_;
     my $filename = $options{page}->{filename};
-
+    my $version;
     my $image = Image::Magick->new;
-    my $e     = $image->Read($filename);
+    if ( $image->Get('version') =~ /ImageMagick\s([\d.]+)/xsm ) {
+        $version = $1;
+    }
+    $logger->debug("Image::Magick->version $version");
+    my $e = $image->Read($filename);
     return if $_self->{cancel};
     if ("$e") { $logger->warn($e) }
 
     # Unsharp the image
-    $e = $image->UnsharpMask(
-        radius    => $options{radius},
-        sigma     => $options{sigma},
-        amount    => $options{amount},
-        threshold => $options{threshold},
-    );
+    if ( version->parse("v$version") > version->parse('v7') ) {
+        $e = $image->UnsharpMask(
+            radius    => $options{radius},
+            sigma     => $options{sigma},
+            gain      => $options{gain},
+            threshold => $options{threshold},
+        );
+    }
+    else {
+        $e = $image->UnsharpMask(
+            radius    => $options{radius},
+            sigma     => $options{sigma},
+            amount    => $options{gain},
+            threshold => $options{threshold},
+        );
+    }
     if ("$e") {
         $logger->error($e);
         _thread_throw_error( $self, $options{uuid},
@@ -4040,7 +4055,7 @@ sub _thread_unsharp {
     if ($error) { return }
     return if $_self->{cancel};
     $logger->info(
-"Wrote $filename with unsharp mask: r=$options{radius}, s=$options{sigma}, a=$options{amount}, t=$options{threshold}"
+"Wrote $filename with unsharp mask: radius=$options{radius}, sigma=$options{sigma}, gain=$options{gain}, threshold=$options{threshold}"
     );
 
     $options{page}{filename}   = $filename->filename;
