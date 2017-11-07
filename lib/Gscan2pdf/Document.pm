@@ -80,7 +80,6 @@ BEGIN {
 }
 our @EXPORT_OK;
 
-my $_PID           = 0;               # flag to identify which process to cancel
 my $jobs_completed = 0;
 my $jobs_total     = 0;
 my $uuid_object    = Data::UUID->new;
@@ -213,7 +212,7 @@ sub quit {
 # Kill all running processes
 
 sub cancel {
-    my ( $self, $callback ) = @_;
+    my ( $self, $cancel_callback, $process_callback ) = @_;
 
     # Empty process queue first to stop any new process from starting
     $logger->info('Emptying process queue');
@@ -226,15 +225,22 @@ sub cancel {
     $_self->{cancel} = TRUE;
 
     # Kill all running processes in the thread
-    for my $pid ( keys %{ $self->{running_pids} } ) {
-        $logger->info("Killing pid $pid");
-        local $SIG{HUP} = 'IGNORE';
-        killfam 'HUP', ($pid);
-        delete $self->{running_pids}{$pid};
+    for my $pidfile ( keys %{ $self->{running_pids} } ) {
+        my $pid = slurp($pidfile);
+        if ( $pid ne $EMPTY ) {
+            if ( $pid == 1 ) { next }
+            if ( defined $process_callback ) {
+                $process_callback->($pid);
+            }
+            $logger->info("Killing PID $pid");
+            local $SIG{HUP} = 'IGNORE';
+            killfam 'HUP', ($pid);
+            delete $self->{running_pids}{$pidfile};
+        }
     }
 
     my $uuid = $uuid_object->create_str;
-    $callback{$uuid}{cancelled} = $callback;
+    $callback{$uuid}{cancelled} = $cancel_callback;
 
     # Add a cancel request to ensure the reply is not blocked
     $logger->info('Requesting cancel');
@@ -1867,6 +1873,7 @@ sub exec_command {
         return $PROCESS_FAILED, undef,
           join( $SPACE, @{$cmd} ) . ': command not found';
     }
+    if ( defined $logger ) { $logger->info("Spawned PID $pid") }
 
     if ( defined $pidfile ) {
         open my $fh, '>', $pidfile or return $PROCESS_FAILED;
@@ -2041,9 +2048,9 @@ sub _enqueue_request {
 sub _monitor_process {
     my ( $self, %options ) = @_;
 
-    # Get new process ID
-    my $pid = ++$_PID;
-    $self->{running_pids}{$pid} = 1;
+    if ( defined $options{pidfile} ) {
+        $self->{running_pids}{"$options{pidfile}"} = "$options{pidfile}";
+    }
 
     if ( $callback{ $options{uuid} }{queued} ) {
         $callback{ $options{uuid} }{queued}->(
@@ -2057,21 +2064,21 @@ sub _monitor_process {
         $_POLL_INTERVAL,
         sub {
             if ( ${ $options{sentinel} } == 2 ) {
-                $self->_monitor_process_finished_callback( $pid, \%options );
+                $self->_monitor_process_finished_callback( \%options );
                 return Glib::SOURCE_REMOVE;
             }
             elsif ( ${ $options{sentinel} } == 1 ) {
-                $self->_monitor_process_running_callback( $pid, \%options );
+                $self->_monitor_process_running_callback( \%options );
                 return Glib::SOURCE_CONTINUE;
             }
             return Glib::SOURCE_CONTINUE;
         }
     );
-    return $pid;
+    return $options{pidfile};
 }
 
 sub _monitor_process_running_callback {
-    my ( $self, $pid, $options ) = @_;
+    my ( $self, $options ) = @_;
     if ( $_self->{cancel} ) { return }
     if ( $callback{ $options->{uuid} }{started} ) {
         $callback{ $options->{uuid} }{started}->(
@@ -2093,7 +2100,7 @@ sub _monitor_process_running_callback {
 }
 
 sub _monitor_process_finished_callback {
-    my ( $self, $pid, $options ) = @_;
+    my ( $self, $options ) = @_;
     if ( $_self->{cancel} ) { return }
     if ( $callback{ $options->{uuid} }{started} ) {
         $callback{ $options->{uuid} }{started}->(
@@ -2109,8 +2116,9 @@ sub _monitor_process_finished_callback {
         return;
     }
     $self->check_return_queue;
-    delete $self->{cancel_cb}{$pid};
-    delete $self->{running_pids}{$pid};
+    if ( defined $options->{pidfile} ) {
+        delete $self->{running_pids}{"$options->{pidfile}"};
+    }
     return;
 }
 

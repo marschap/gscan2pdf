@@ -6341,8 +6341,7 @@ sub _preferences_scan_options {
     $vbox->set_border_width($BORDER_WIDTH);
 
     my $cbo =
-      Gtk2::CheckButton->new_with_label(
-        __('Open scanner at program start') );
+      Gtk2::CheckButton->new_with_label( __('Open scanner at program start') );
     $tooltips->set_tip(
         $cbo,
         __(
