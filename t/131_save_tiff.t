@@ -42,12 +42,12 @@ Gtk2->main;
 
 like(
     `identify test.tif`,
-    qr/test.tif TIFF 70x46 70x46\+0\+0 8-bit sRGB 7.74KB/,
+    qr/test.tif TIFF 70x46 70x46\+0\+0 8-bit sRGB 7[.\d]+K?B/,
     'valid TIFF created'
 );
-is(
+like(
     `identify test2.png`,
-    "test2.png PNG 70x46 70x46+0+0 8-bit sRGB 7.12KB 0.000u 0:00.000\n",
+    qr/test2.png PNG 70x46 70x46\+0\+0 8-bit sRGB 7[.\d]+K?B.*/,
     'ran post-save hook'
 );
 
