@@ -27,26 +27,26 @@ Start image acquisition on a scanner device and write PNM image data to standard
 -V, --version              print version information
 
 Options specific to device `brother2:net1;dev0':
- Mode:
-   --mode Black & White|Gray[Error Diffusion]|True Gray|24bit Color|24bit Color[Fast] [24bit Color]
-       Select the scan mode
-   --resolution 100|150|200|300|400|600|1200|2400|4800|9600dpi [200]
-       Sets the resolution of the scanned image.
-   --source FlatBed|Automatic Document Feeder|Automatic Document Feeder(Duplex) [Automatic Document Feeder]
-       Selects the scan source (such as a document-feeder).
-   --brightness -50..50% (in steps of 1) [inactive]
-       Controls the brightness of the acquired image.
-   --contrast -50..50% (in steps of 1) [inactive]
-       Controls the contrast of the acquired image.
- Geometry:
-   -l 0..215.9mm (in steps of 0.0999908) [0]
-       Top-left x position of scan area.
-   -t 0..355.6mm (in steps of 0.0999908) [0]
-       Top-left y position of scan area.
-   -x 0..215.9mm (in steps of 0.0999908) [215.88]
-       Width of scan-area.
-   -y 0..355.6mm (in steps of 0.0999908) [355.567]
-       Height of scan-area.
+  Mode:
+    --mode Black & White|Gray[Error Diffusion]|True Gray|24bit Color|24bit Color[Fast] [24bit Color]
+        Select the scan mode
+    --resolution 100|150|200|300|400|600|1200|2400|4800|9600dpi [200]
+        Sets the resolution of the scanned image.
+    --source FlatBed|Automatic Document Feeder|Automatic Document Feeder(Duplex) [Automatic Document Feeder]
+        Selects the scan source (such as a document-feeder).
+    --brightness -50..50% (in steps of 1) [inactive]
+        Controls the brightness of the acquired image.
+    --contrast -50..50% (in steps of 1) [inactive]
+        Controls the contrast of the acquired image.
+  Geometry:
+    -l 0..215.9mm (in steps of 0.0999908) [0]
+        Top-left x position of scan area.
+    -t 0..355.6mm (in steps of 0.0999908) [0]
+        Top-left y position of scan area.
+    -x 0..215.9mm (in steps of 0.0999908) [215.88]
+        Width of scan-area.
+    -y 0..355.6mm (in steps of 0.0999908) [355.567]
+        Height of scan-area.
 
 Type ``scanimage --help -d DEVICE'' to get list of all options for DEVICE.
 

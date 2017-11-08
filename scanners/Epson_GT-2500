@@ -43,7 +43,7 @@ Options specific to device `epkowa:libusb:006:011':
     --brightness -4..3 [0]
         Selects the brightness.
     --sharpness -2..2 [0]
-
+        
     --gamma-correction Default|User defined (Gamma=1.0)|User defined (Gamma=1.8)|High density printing|Low density printing|High contrast printing [Default]
         Selects the gamma correction value from a list of pre-defined devices
         or the user defined table, which can be downloaded to the scanner
@@ -59,7 +59,7 @@ Options specific to device `epkowa:libusb:006:011':
     --speed[=(yes|no)] [no]
         Determines the speed at which the scan proceeds.
     --auto-area-segmentation[=(yes|no)] [no]
-
+        
     --short-resolution[=(yes|no)] [no]
         Display short resolution list
     --zoom 50..200 [100]
@@ -99,7 +99,6 @@ Options specific to device `epkowa:libusb:006:011':
     --preview[=(yes|no)] [no]
         Request a preview-quality scan.
     --preview-speed[=(yes|no)] [no]
-
   Geometry:
     -l 0..215.9mm [0]
         Top-left x position of scan area.
@@ -110,14 +109,13 @@ Options specific to device `epkowa:libusb:006:011':
     -y 0..297.18mm [297.18]
         Height of scan-area.
     --quick-format CD|A5 portrait|A5 landscape|Letter|A4|Max [Max]
-
   Optional equipment:
     --source Flatbed|Automatic Document Feeder [Flatbed]
         Selects the scan source (such as a document-feeder).
     --auto-eject[=(yes|no)] [yes]
         Eject document after scanning
     --film-type Positive Film|Negative Film [inactive]
-
+        
     --focus-position Focus on glass|Focus 2.5mm above glass [inactive]
         Sets the focus position to either the glass or 2.5mm above the glass
     --bay  1 | 2 | 3 | 4 | 5 | 6  [inactive]

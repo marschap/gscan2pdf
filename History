@@ -3,6 +3,10 @@
 * Rename preference "Open scan dialog at program start"
   -> "Open scanner at program start"
 * Fix killing processes on cancel
+* Hide extended page numbering checkbox and source document frame unless scanner
+  is not capable of duplex and ADF is selected. Therefore, for duplex-capable
+  scanners, this is never shown. For duplex-incapable scanners, this is shown if
+  the ADF is selected, but otherwise hidden.
 
 
 1.8.8 (29.10.2017):

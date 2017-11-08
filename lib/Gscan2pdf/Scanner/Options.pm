@@ -194,6 +194,35 @@ sub supports_paper {
     return 0;
 }
 
+# returns TRUE if the current options support duplex, even if not currently
+# selected. Alternatively expressed, return FALSE if the scanner is not capable
+# of duplex scanner, or if the capability is inactive.
+
+sub can_duplex {
+    my ($self) = @_;
+    for my $option ( @{ $self->{array} } ) {
+        if (
+            not( defined $option->{cap}
+                and ( $option->{cap} & SANE_CAP_INACTIVE ) )
+          )
+        {
+            if ( defined $option->{name} and $option->{name} =~ /duplex/xsmi ) {
+                return TRUE;
+            }
+            elsif ( defined $option->{constraint_type}
+                and $option->{constraint_type} == SANE_CONSTRAINT_STRING_LIST )
+            {
+                for my $item ( @{ $option->{constraint} } ) {
+                    if ( $item =~ /duplex/xsmi ) {
+                        return TRUE;
+                    }
+                }
+            }
+        }
+    }
+    return FALSE;
+}
+
 # parse the scanimage/scanadf output into an array and a hash
 
 sub _parse_scanimage_output {

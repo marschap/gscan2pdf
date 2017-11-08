@@ -431,11 +431,11 @@ sub INIT_INSTANCE {
     );
 
     # Frame for standard mode
-    my $frames = Gtk2::Frame->new( __('Source document') );
-    $vbox1->pack_start( $frames, FALSE, FALSE, 0 );
+    $self->{frames} = Gtk2::Frame->new( __('Source document') );
+    $vbox1->pack_start( $self->{frames}, FALSE, FALSE, 0 );
     my $vboxs = Gtk2::VBox->new;
     $vboxs->set_border_width($border_width);
-    $frames->add($vboxs);
+    $self->{frames}->add($vboxs);
 
     # Single sided button
     $self->{buttons} = Gtk2::RadioButton->new( undef, __('Single sided') );
@@ -504,7 +504,7 @@ sub INIT_INSTANCE {
     # to reference simple controls
     $self->{checkx}->signal_connect(
         toggled => \&_extended_pagenumber_checkbox_callback,
-        [ $self, $frames, $spin_buttoni ]
+        [ $self, $spin_buttoni ]
     );
 
     # Scan profiles
@@ -799,11 +799,35 @@ sub SET_PROPERTY {
     return;
 }
 
+sub _flatbed_or_duplex_callback {
+    my ($self)  = @_;
+    my $options = $self->get('available-scan-options');
+    my $flatbed = FALSE;
+    if ( defined $options ) {
+        if ( defined $options->{source}{val}
+            and $options->{source}{val} =~ /flatbed/xsmi )
+        {
+            $flatbed = TRUE;
+        }
+        if ( $flatbed or $options->can_duplex ) {
+            $self->{checkx}->hide;
+            $self->{framex}->hide;
+            $self->{frames}->hide;
+        }
+        else {
+            $self->{checkx}->show;
+            $self->{framex}->show;
+            $self->{frames}->show;
+        }
+    }
+    return;
+}
+
 sub _changed_scan_option_callback {
     my ( $self, $name, $value, $bscannum ) = @_;
     my $options = $self->get('available-scan-options');
     if (    defined $options
-        and defined $options->{source}
+        and defined $options->{source}{name}
         and $name eq $options->{source}{name} )
     {
         if (   $self->get('allow-batch-flatbed')
@@ -823,6 +847,7 @@ sub _changed_scan_option_callback {
             $self->set( 'num-pages', 0 );
         }
     }
+    $self->_flatbed_or_duplex_callback;
     return;
 }
 
@@ -863,6 +888,8 @@ sub _set_available_scan_options {
         $self->{framen}->set_sensitive(TRUE);
     }
 
+    $self->_flatbed_or_duplex_callback;
+
     # reload-recursion-limit is read-only
     # Triangular number n + n-1 + n-2 + ... + 1 = n*(n+1)/2
     my $n = $newval->num_options;
@@ -879,7 +906,7 @@ sub _set_num_pages {
            $newval == 1
         or $self->get('allow-batch-flatbed')
         or (    defined $options
-            and defined $options->{source}
+            and defined $options->{source}{val}
             and $options->{source}{val} !~ /flatbed/xsmi )
       )
     {
@@ -1784,10 +1811,10 @@ sub set_combobox_by_text {
 }
 
 sub _extended_pagenumber_checkbox_callback {
-    my ( $widget, $data ) = @_;
-    my ( $dialog, $frames, $spin_buttoni ) = @{$data};
+    my ( $widget, $data )         = @_;
+    my ( $dialog, $spin_buttoni ) = @{$data};
     if ( $widget->get_active ) {
-        $frames->hide_all;
+        $dialog->{frames}->hide_all;
         $dialog->{framex}->show_all;
     }
     else {
@@ -1802,7 +1829,7 @@ sub _extended_pagenumber_checkbox_callback {
             $dialog->{buttond}->set_active(TRUE);
             $dialog->{combobs}->set_active(TRUE);
         }
-        $frames->show_all;
+        $dialog->{frames}->show_all;
         $dialog->{framex}->hide_all;
     }
     return;

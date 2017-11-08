@@ -7,7 +7,7 @@ BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 #########################
 
-my $filename = 'scanners/Brother_MFC_5100c';
+my $filename = 'scanners/Brother_MFC-8860DN';
 my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
 my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
@@ -37,6 +37,7 @@ my @that     = (
             'Gray[Error Diffusion]',
             'True Gray',
             '24bit Color',
+            '24bit Color[Fast]',
         ],
         constraint_type => SANE_CONSTRAINT_STRING_LIST,
         'unit'          => SANE_UNIT_NONE,
@@ -66,8 +67,12 @@ my @that     = (
         index        => 4,
         'desc'       => 'Selects the scan source (such as a document-feeder).',
         'val'        => 'Automatic Document Feeder',
-        'constraint' => [ 'FlatBed', 'Automatic Document Feeder' ],
-        'unit'       => SANE_UNIT_NONE,
+        'constraint' => [
+            'FlatBed',
+            'Automatic Document Feeder',
+            'Automatic Document Feeder(Duplex)'
+        ],
+        'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_STRING_LIST,
         type            => SANE_TYPE_STRING,
         'cap'           => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
@@ -128,7 +133,7 @@ my @that     = (
         'val'      => 0,
         constraint => {
             'min'   => 0,
-            'max'   => 208,
+            'max'   => 215.9,
             'quant' => 0.0999908,
         },
         constraint_type => SANE_CONSTRAINT_RANGE,
@@ -159,10 +164,10 @@ my @that     = (
         title      => 'Bottom-right x',
         desc       => 'Bottom-right x position of scan area.',
         index      => 10,
-        'val'      => 207.981,
+        'val'      => 215.88,
         constraint => {
             'min'   => 0,
-            'max'   => 208,
+            'max'   => 215.9,
             'quant' => 0.0999908,
         },
         constraint_type => SANE_CONSTRAINT_RANGE,
@@ -176,7 +181,7 @@ my @that     = (
         title      => 'Bottom-right y',
         desc       => 'Bottom-right y position of scan area.',
         index      => 11,
-        'val'      => 296.973,
+        'val'      => 355.567,
         constraint => {
             'min'   => 0,
             'max'   => 355.6,
@@ -189,6 +194,6 @@ my @that     = (
         'max_values'    => 1,
     }
 );
-is_deeply( $options->{array}, \@that, 'Brother_MFC_5100c' );
-is( Gscan2pdf::Scanner::Options->device, 'brother:bus1;dev2', 'device name' );
-is( $options->can_duplex, FALSE, 'can duplex' );
+is_deeply( $options->{array}, \@that, 'Brother_MFC-8860DN' );
+is( Gscan2pdf::Scanner::Options->device, 'brother2:net1;dev0', 'device name' );
+is( $options->can_duplex, TRUE, 'can duplex' );

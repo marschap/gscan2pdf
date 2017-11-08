@@ -7,7 +7,7 @@ BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 #########################
 
-my $filename = 'scanners/epson1';
+my $filename = 'scanners/Epson_GT-2500';
 my $output   = do { local ( @ARGV, $/ ) = $filename; <> };
 my $options  = Gscan2pdf::Scanner::Options->new_from_data($output);
 my @that     = (
@@ -26,12 +26,11 @@ my @that     = (
         'constraint_type' => SANE_CONSTRAINT_NONE
     },
     {
-        name  => 'mode',
-        title => 'Mode',
-        index => 2,
-        'desc' =>
-          'Selects the scan mode (e.g., lineart, monochrome, or color).',
-        'val'           => 'Binary',
+        name   => 'mode',
+        title  => 'Mode',
+        index  => 2,
+        'desc' => 'Selects the scan mode (e.g., lineart,monochrome, or color).',
+        'val'  => 'Binary',
         'constraint'    => [ 'Binary', 'Gray', 'Color' ],
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_STRING_LIST,
@@ -59,7 +58,7 @@ my @that     = (
         title        => 'Halftoning',
         index        => 4,
         'desc'       => 'Selects the halftone.',
-        'val'        => 'Halftone A (Hard Tone)',
+        'val'        => 'None',
         'constraint' => [
             'None',
             'Halftone A (Hard Tone)',
@@ -133,7 +132,8 @@ my @that     = (
         'val'        => 'Default',
         'constraint' => [
             'Default',
-            'User defined',
+            'User defined (Gamma=1.0)',
+            'User defined (Gamma=1.8)',
             'High density printing',
             'Low density printing',
             'High contrast printing'
@@ -170,16 +170,13 @@ my @that     = (
         title        => 'Resolution',
         index        => 10,
         'desc'       => 'Sets the resolution of the scanned image.',
-        'val'        => '50',
-        'constraint' => [
-            '50',  '60',  '72',  '75',  '80',   '90',   '100',  '120',
-            '133', '144', '150', '160', '175',  '180',  '200',  '216',
-            '240', '266', '300', '320', '350',  '360',  '400',  '480',
-            '600', '720', '800', '900', '1200', '1600', '1800', '2400',
-            '3200'
-        ],
+        'val'        => '300',
+        'constraint' => {
+            'max' => '2400',
+            'min' => '50'
+        },
         'unit'          => SANE_UNIT_DPI,
-        constraint_type => SANE_CONSTRAINT_WORD_LIST,
+        constraint_type => SANE_CONSTRAINT_RANGE,
         type            => SANE_TYPE_INT,
         'cap'           => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
         'max_values'    => 1,
@@ -196,10 +193,9 @@ my @that     = (
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_RANGE,
         type            => SANE_TYPE_INT,
-        'cap'           => SANE_CAP_SOFT_DETECT +
-          SANE_CAP_SOFT_SELECT +
-          SANE_CAP_INACTIVE,
-        'max_values' => 1,
+        'cap'           => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
+        'max_values'    => 1,
+        'val'           => '128',
     },
     {
         index             => 12,
@@ -241,7 +237,7 @@ my @that     = (
         title             => 'Auto area segmentation',
         index             => 15,
         'desc'            => '',
-        'val'             => SANE_TRUE,
+        'val'             => SANE_FALSE,
         'unit'            => SANE_UNIT_NONE,
         'type'            => SANE_TYPE_BOOL,
         'constraint_type' => SANE_CONSTRAINT_NONE,
@@ -272,10 +268,9 @@ my @that     = (
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_RANGE,
         type            => SANE_TYPE_INT,
-        'cap'           => SANE_CAP_SOFT_DETECT +
-          SANE_CAP_SOFT_SELECT +
-          SANE_CAP_INACTIVE,
-        'max_values' => 1,
+        'cap'           => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
+        'max_values'    => 1,
+        'val'           => '100',
     },
     {
         name       => 'red-gamma-table',
@@ -342,7 +337,20 @@ my @that     = (
         'max_values'      => 1,
     },
     {
-        index             => 22,
+        'cap' => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
+        'desc' =>
+'Indicates whether a button on the scanner has been pressed (read-only option).',
+        'title'           => 'Monitor button',
+        'index'           => 22,
+        'constraint_type' => SANE_CONSTRAINT_NONE,
+        'max_values'      => 1,
+        'val'             => SANE_FALSE,
+        'name'            => 'monitor-button',
+        'type'            => SANE_TYPE_BOOL,
+        'unit'            => SANE_UNIT_NONE,
+    },
+    {
+        index             => 23,
         title             => 'Color correction coefficients',
         'cap'             => 0,
         'max_values'      => 0,
@@ -355,11 +363,11 @@ my @that     = (
     {
         name       => 'cct-1',
         title      => 'CCT 1',
-        index      => 23,
-        'desc'     => 'Controls green level',
+        index      => 24,
+        'desc'     => 'Controls red level',
         constraint => {
-            'min' => -127,
-            'max' => 127,
+            'min' => -2,
+            'max' => 2,
         },
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_RANGE,
@@ -372,11 +380,11 @@ my @that     = (
     {
         name       => 'cct-2',
         title      => 'CCT 2',
-        index      => 24,
+        index      => 25,
         'desc'     => 'Adds to red based on green level',
         constraint => {
-            'min' => -127,
-            'max' => 127,
+            'min' => -2,
+            'max' => 2,
         },
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_RANGE,
@@ -389,11 +397,11 @@ my @that     = (
     {
         name       => 'cct-3',
         title      => 'CCT 3',
-        index      => 25,
-        'desc'     => 'Adds to blue based on green level',
+        index      => 26,
+        'desc'     => 'Adds to red based on blue level',
         constraint => {
-            'min' => -127,
-            'max' => 127,
+            'min' => -2,
+            'max' => 2,
         },
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_RANGE,
@@ -406,11 +414,11 @@ my @that     = (
     {
         name       => 'cct-4',
         title      => 'CCT 4',
-        index      => 26,
+        index      => 27,
         'desc'     => 'Adds to green based on red level',
         constraint => {
-            'min' => -127,
-            'max' => 127,
+            'min' => -2,
+            'max' => 2,
         },
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_RANGE,
@@ -423,11 +431,11 @@ my @that     = (
     {
         name       => 'cct-5',
         title      => 'CCT 5',
-        index      => 27,
-        'desc'     => 'Controls red level',
+        index      => 28,
+        'desc'     => 'Controls green level',
         constraint => {
-            'min' => -127,
-            'max' => 127,
+            'min' => -2,
+            'max' => 2,
         },
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_RANGE,
@@ -440,11 +448,11 @@ my @that     = (
     {
         name       => 'cct-6',
         title      => 'CCT 6',
-        index      => 28,
-        'desc'     => 'Adds to blue based on red level',
+        index      => 29,
+        'desc'     => 'Adds to green based on blue level',
         constraint => {
-            'min' => -127,
-            'max' => 127,
+            'min' => -2,
+            'max' => 2,
         },
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_RANGE,
@@ -457,11 +465,11 @@ my @that     = (
     {
         name       => 'cct-7',
         title      => 'CCT 7',
-        index      => 29,
-        'desc'     => 'Adds to green based on blue level',
+        index      => 30,
+        'desc'     => 'Adds to blue based on red level',
         constraint => {
-            'min' => -127,
-            'max' => 127,
+            'min' => -2,
+            'max' => 2,
         },
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_RANGE,
@@ -474,11 +482,11 @@ my @that     = (
     {
         name       => 'cct-8',
         title      => 'CCT 8',
-        index      => 30,
-        'desc'     => 'Adds to red based on blue level',
+        index      => 31,
+        'desc'     => 'Adds to blue based on green level',
         constraint => {
-            'min' => -127,
-            'max' => 127,
+            'min' => -2,
+            'max' => 2,
         },
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_RANGE,
@@ -491,11 +499,11 @@ my @that     = (
     {
         name       => 'cct-9',
         title      => 'CCT 9',
-        index      => 31,
-        'desc'     => 'Controls blue level',
+        index      => 32,
+        'desc'     => 'Control blue level',
         constraint => {
-            'min' => -127,
-            'max' => 127,
+            'min' => -2,
+            'max' => 2,
         },
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_RANGE,
@@ -506,7 +514,7 @@ my @that     = (
         'max_values' => 1,
     },
     {
-        index             => 32,
+        index             => 33,
         title             => 'Preview',
         'cap'             => 0,
         'max_values'      => 0,
@@ -519,7 +527,7 @@ my @that     = (
     {
         name              => 'preview',
         title             => 'Preview',
-        index             => 33,
+        index             => 34,
         'desc'            => 'Request a preview-quality scan.',
         'val'             => SANE_FALSE,
         'unit'            => SANE_UNIT_NONE,
@@ -531,7 +539,7 @@ my @that     = (
     {
         name              => 'preview-speed',
         title             => 'Preview speed',
-        index             => 34,
+        index             => 35,
         'desc'            => '',
         'val'             => SANE_FALSE,
         'unit'            => SANE_UNIT_NONE,
@@ -541,7 +549,7 @@ my @that     = (
         'max_values'      => 1,
     },
     {
-        index             => 35,
+        index             => 36,
         title             => 'Geometry',
         'cap'             => 0,
         'max_values'      => 0,
@@ -554,7 +562,7 @@ my @that     = (
     {
         name       => SANE_NAME_SCAN_TL_X,
         title      => 'Top-left x',
-        index      => 36,
+        index      => 37,
         'desc'     => 'Top-left x position of scan area.',
         'val'      => 0,
         constraint => {
@@ -570,7 +578,7 @@ my @that     = (
     {
         name       => SANE_NAME_SCAN_TL_Y,
         title      => 'Top-left y',
-        index      => 37,
+        index      => 38,
         'desc'     => 'Top-left y position of scan area.',
         'val'      => 0,
         constraint => {
@@ -587,7 +595,7 @@ my @that     = (
         name       => SANE_NAME_SCAN_BR_X,
         title      => 'Bottom-right x',
         desc       => 'Bottom-right x position of scan area.',
-        index      => 38,
+        index      => 39,
         'val'      => 215.9,
         constraint => {
             'min' => 0,
@@ -603,7 +611,7 @@ my @that     = (
         name       => SANE_NAME_SCAN_BR_Y,
         title      => 'Bottom-right y',
         desc       => 'Bottom-right y position of scan area.',
-        index      => 39,
+        index      => 40,
         'val'      => 297.18,
         constraint => {
             'min' => 0,
@@ -618,7 +626,7 @@ my @that     = (
     {
         name   => 'quick-format',
         title  => 'Quick format',
-        index  => 40,
+        index  => 41,
         'desc' => '',
         'val'  => 'Max',
         'constraint' =>
@@ -630,7 +638,7 @@ my @that     = (
         'max_values'    => 1,
     },
     {
-        index             => 41,
+        index             => 42,
         title             => 'Optional equipment',
         'cap'             => 0,
         'max_values'      => 0,
@@ -643,10 +651,10 @@ my @that     = (
     {
         name         => 'source',
         title        => 'Source',
-        index        => 42,
+        index        => 43,
         'desc'       => 'Selects the scan source (such as a document-feeder).',
         'val'        => 'Flatbed',
-        'constraint' => [ 'Flatbed', 'Transparency Unit' ],
+        'constraint' => [ 'Flatbed', 'Automatic Document Feeder' ],
         'unit'       => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_STRING_LIST,
         type            => SANE_TYPE_STRING,
@@ -656,20 +664,19 @@ my @that     = (
     {
         name              => 'auto-eject',
         title             => 'Auto eject',
-        index             => 43,
+        index             => 44,
         'desc'            => 'Eject document after scanning',
         'unit'            => SANE_UNIT_NONE,
         'type'            => SANE_TYPE_BOOL,
         'constraint_type' => SANE_CONSTRAINT_NONE,
-        'cap'             => SANE_CAP_SOFT_DETECT +
-          SANE_CAP_SOFT_SELECT +
-          SANE_CAP_INACTIVE,
-        'max_values' => 1,
+        'cap'             => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
+        'max_values'      => 1,
+        'val'             => SANE_TRUE,
     },
     {
         name            => 'film-type',
         title           => 'Film type',
-        index           => 44,
+        index           => 45,
         'desc'          => '',
         'constraint'    => [ 'Positive Film', 'Negative Film' ],
         'unit'          => SANE_UNIT_NONE,
@@ -683,21 +690,22 @@ my @that     = (
     {
         name  => 'focus-position',
         title => 'Focus position',
-        index => 45,
+        index => 46,
         'desc' =>
 'Sets the focus position to either the glass or 2.5mm above the glass',
-        'val'           => 'Focus on glass',
-        'constraint'    => [ 'Focus on glass', 'Focus 2.5mm above glass' ],
-        'unit'          => SANE_UNIT_NONE,
+        'constraint' => [ 'Focus on glass', 'Focus 2.5mm above glass' ],
+        'unit'       => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_STRING_LIST,
         type            => SANE_TYPE_STRING,
-        'cap'           => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
-        'max_values'    => 1,
+        'cap'           => SANE_CAP_SOFT_DETECT +
+          SANE_CAP_SOFT_SELECT +
+          SANE_CAP_INACTIVE,
+        'max_values' => 1,
     },
     {
         name            => 'bay',
         title           => 'Bay',
-        index           => 46,
+        index           => 47,
         'desc'          => 'Select bay to scan',
         'constraint'    => [ ' 1 ', ' 2 ', ' 3 ', ' 4 ', ' 5 ', ' 6 ' ],
         'unit'          => SANE_UNIT_NONE,
@@ -711,32 +719,30 @@ my @that     = (
     {
         name            => 'eject',
         title           => 'Eject',
-        index           => 47,
+        index           => 48,
         'desc'          => 'Eject the sheet in the ADF',
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_NONE,
         type            => SANE_TYPE_BUTTON,
-        'cap'           => SANE_CAP_SOFT_DETECT +
-          SANE_CAP_SOFT_SELECT +
-          SANE_CAP_INACTIVE,
-        'max_values' => 0,
+        'cap'           => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
+        'max_values'    => 0,
+        'val'           => '',
     },
     {
         name            => 'adf_mode',
         title           => 'ADF mode',
-        index           => 48,
+        index           => 49,
         'desc'          => 'Selects the ADF mode (simplex/duplex)',
         'constraint'    => [ 'Simplex', 'Duplex' ],
         'unit'          => SANE_UNIT_NONE,
         constraint_type => SANE_CONSTRAINT_STRING_LIST,
         type            => SANE_TYPE_STRING,
-        'cap'           => SANE_CAP_SOFT_DETECT +
-          SANE_CAP_SOFT_SELECT +
-          SANE_CAP_INACTIVE,
-        'max_values' => 1,
+        'cap'           => SANE_CAP_SOFT_DETECT + SANE_CAP_SOFT_SELECT,
+        'max_values'    => 1,
+        'val'           => 'Simplex',
     },
 );
-is_deeply( $options->{array}, \@that, 'epson1' );
-is( Gscan2pdf::Scanner::Options->device, 'epson:libusb:005:007',
-    'device name' );
-is( $options->can_duplex, FALSE, 'can duplex' );    # inactive
+is_deeply( $options->{array}, \@that, 'epson_GT_2500' );
+is( Gscan2pdf::Scanner::Options->device,
+    'epkowa:libusb:006:011', 'device name' );
+is( $options->can_duplex, TRUE, 'can duplex' );
