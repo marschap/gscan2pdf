@@ -249,8 +249,8 @@ my (
     # Simple::List in preferences dialog
     $option_visibility_list,
 
-    # Comboboxes for user-defined tools
-    $comboboxudt,
+    # Comboboxes for user-defined tools and rotate buttons
+    $comboboxudt, $rotate_side_cmbx, $rotate_side_cmbx2,
 
     # Declare the XML structure
     $uimanager,
@@ -3399,6 +3399,7 @@ sub scan_dialog {
 
     if ( defined $windows ) {
         $windows->show_all;
+        update_postprocessing_options_callback();
         return;
     }
 
@@ -3479,6 +3480,7 @@ sub scan_dialog {
                     $windows->get('page-number-start'), $step
                 )
             );
+            update_postprocessing_options_callback();
         }
     );
 
@@ -3567,9 +3569,14 @@ sub scan_dialog {
 
     $windows->signal_connect( 'new-scan' => \&new_scan_callback );
 
+    $windows->signal_connect(
+        'changed-scan-option' => \&update_postprocessing_options_callback );
+
     add_postprocessing_options($windows);
 
     if ( not $hidden ) { $windows->show_all }
+
+    update_postprocessing_options_callback();
 
     if (@device) {
         my @device_list;
@@ -3678,6 +3685,7 @@ sub reloaded_scan_options_callback {
     elsif (@profiles) {
         $windows->set( 'profile', $profiles[0] );
     }
+    update_postprocessing_options_callback();
     return;
 }
 
@@ -3789,6 +3797,22 @@ sub process_error_callback {
     return;
 }
 
+sub update_postprocessing_options_callback {
+    my $options   = $windows->get('available-scan-options');
+    my $increment = $windows->get('page-number-increment');
+    if ( defined $options ) {
+        if ( $increment != 1 or $options->can_duplex ) {
+            $rotate_side_cmbx->show;
+            $rotate_side_cmbx2->show;
+        }
+        else {
+            $rotate_side_cmbx->hide;
+            $rotate_side_cmbx2->hide;
+        }
+    }
+    return;
+}
+
 sub add_postprocessing_rotate {
     my ($vbox) = @_;
     my $hboxr = Gtk2::HBox->new;
@@ -3801,9 +3825,9 @@ sub add_postprocessing_rotate {
         [ 'facing',  __('Facing side'),  __('Facing side.') ],
         [ 'reverse', __('Reverse side'), __('Reverse side.') ],
     );
-    my $comboboxs = combobox_from_array(@side);
-    $tooltips->set_tip( $comboboxs, __('Select side to rotate') );
-    $hboxr->pack_start( $comboboxs, TRUE, TRUE, 0 );
+    $rotate_side_cmbx = combobox_from_array(@side);
+    $tooltips->set_tip( $rotate_side_cmbx, __('Select side to rotate') );
+    $hboxr->pack_start( $rotate_side_cmbx, TRUE, TRUE, 0 );
     my @rotate = (
         [ $_90_DEGREES,  __('90'),  __('Rotate image 90 degrees clockwise.') ],
         [ $_180_DEGREES, __('180'), __('Rotate image 180 degrees clockwise.') ],
@@ -3822,9 +3846,9 @@ sub add_postprocessing_rotate {
     $tooltips->set_tip( $r2button, __('Rotate image after scanning') );
     $hboxr->pack_start( $r2button, TRUE, TRUE, 0 );
     my @side2;
-    my $comboboxs2 = Gtk2::ComboBox->new_text;
-    $tooltips->set_tip( $comboboxs2, __('Select side to rotate') );
-    $hboxr->pack_start( $comboboxs2, TRUE, TRUE, 0 );
+    $rotate_side_cmbx2 = Gtk2::ComboBox->new_text;
+    $tooltips->set_tip( $rotate_side_cmbx2, __('Select side to rotate') );
+    $hboxr->pack_start( $rotate_side_cmbx2, TRUE, TRUE, 0 );
     my $comboboxr2 = combobox_from_array(@rotate);
     $tooltips->set_tip( $comboboxr2, __('Select direction of rotation') );
     $hboxr->pack_end( $comboboxr2, TRUE, TRUE, 0 );
@@ -3832,7 +3856,7 @@ sub add_postprocessing_rotate {
     $rbutton->signal_connect(
         toggled => sub {
             if ( $rbutton->get_active ) {
-                if ( $side[ $comboboxs->get_active ]->[0] ne 'both' ) {
+                if ( $side[ $rotate_side_cmbx->get_active ]->[0] ne 'both' ) {
                     $hboxr->set_sensitive(TRUE);
                 }
             }
@@ -3841,9 +3865,9 @@ sub add_postprocessing_rotate {
             }
         }
     );
-    $comboboxs->signal_connect(
+    $rotate_side_cmbx->signal_connect(
         changed => sub {
-            if ( $side[ $comboboxs->get_active ]->[0] eq 'both' ) {
+            if ( $side[ $rotate_side_cmbx->get_active ]->[0] eq 'both' ) {
                 $hboxr->set_sensitive(FALSE);
                 $r2button->set_active(FALSE);
             }
@@ -3851,20 +3875,21 @@ sub add_postprocessing_rotate {
                 if ( $rbutton->get_active ) { $hboxr->set_sensitive(TRUE) }
 
                 # Empty combobox
-                while ( $comboboxs2->get_active > $EMPTY_LIST ) {
-                    $comboboxs2->remove_text(0);
-                    $comboboxs2->set_active(0);
+                while ( $rotate_side_cmbx2->get_active > $EMPTY_LIST ) {
+                    $rotate_side_cmbx2->remove_text(0);
+                    $rotate_side_cmbx2->set_active(0);
                 }
                 @side2 = ();
                 for (@side) {
                     if (    $_->[0] ne 'both'
-                        and $_->[0] ne $side[ $comboboxs->get_active ]->[0] )
+                        and $_->[0] ne
+                        $side[ $rotate_side_cmbx->get_active ]->[0] )
                     {
                         push @side2, $_;
                     }
                 }
-                $comboboxs2->append_text( $side2[0]->[1] );
-                $comboboxs2->set_active(0);
+                $rotate_side_cmbx2->append_text( $side2[0]->[1] );
+                $rotate_side_cmbx2->set_active(0);
             }
         }
     );
@@ -3876,27 +3901,25 @@ sub add_postprocessing_rotate {
         $rbutton->set_active(TRUE);
     }
     if ( $SETTING{'rotate facing'} == $SETTING{'rotate reverse'} ) {
-        combobox_set_active( $comboboxs, 'both', @side );
+        combobox_set_active( $rotate_side_cmbx, 'both', @side );
         combobox_set_active( $comboboxr, $SETTING{'rotate facing'}, @rotate );
     }
     elsif ( $SETTING{'rotate facing'} ) {
-        combobox_set_active( $comboboxs, 'facing', @side );
+        combobox_set_active( $rotate_side_cmbx, 'facing', @side );
         combobox_set_active( $comboboxr, $SETTING{'rotate facing'}, @rotate );
         if ( $SETTING{'rotate reverse'} ) {
             $r2button->set_active(TRUE);
-            combobox_set_active( $comboboxs2, 'reverse', @side2 );
+            combobox_set_active( $rotate_side_cmbx2, 'reverse', @side2 );
             combobox_set_active( $comboboxr2, $SETTING{'rotate reverse'},
                 @rotate );
         }
     }
     else {
-        combobox_set_active( $comboboxs, 'reverse', @side );
+        combobox_set_active( $rotate_side_cmbx, 'reverse', @side );
         combobox_set_active( $comboboxr, $SETTING{'rotate reverse'}, @rotate );
     }
-    return (
-        \@rotate,   \@side,      \@side2,    $rbutton, $r2button,
-        $comboboxs, $comboboxs2, $comboboxr, $comboboxr2
-    );
+    return ( \@rotate, \@side, \@side2, $rbutton, $r2button,
+        $comboboxr, $comboboxr2 );
 }
 
 sub add_postprocessing_udt {
@@ -4036,10 +4059,8 @@ sub add_postprocessing_options {
     $framep->add($vboxp);
 
     # Rotate
-    my (
-        $rotate,    $side,       $side2,     $rbutton, $r2button,
-        $comboboxs, $comboboxs2, $comboboxr, $comboboxr2
-    ) = add_postprocessing_rotate($vboxp);
+    my ( $rotate, $side, $side2, $rbutton, $r2button, $comboboxr, $comboboxr2 )
+      = add_postprocessing_rotate($vboxp);
 
     # CheckButton for unpaper
     my $hboxu = Gtk2::HBox->new;
@@ -4106,12 +4127,14 @@ sub add_postprocessing_options {
             $SETTING{'rotate facing'}  = 0;
             $SETTING{'rotate reverse'} = 0;
             if ( $rbutton->get_active ) {
-                if ( $side->[ $comboboxs->get_active ][0] eq 'both' ) {
+                if ( $side->[ $rotate_side_cmbx->get_active ][0] eq 'both' ) {
                     $SETTING{'rotate facing'} =
                       $rotate->[ $comboboxr->get_active ][0];
                     $SETTING{'rotate reverse'} = $SETTING{'rotate facing'};
                 }
-                elsif ( $side->[ $comboboxs->get_active ][0] eq 'facing' ) {
+                elsif (
+                    $side->[ $rotate_side_cmbx->get_active ][0] eq 'facing' )
+                {
                     $SETTING{'rotate facing'} =
                       $rotate->[ $comboboxr->get_active ][0];
                 }
@@ -4120,7 +4143,9 @@ sub add_postprocessing_options {
                       $rotate->[ $comboboxr->get_active ][0];
                 }
                 if ( $r2button->get_active ) {
-                    if ( $side2->[ $comboboxs2->get_active ][0] eq 'facing' ) {
+                    if ( $side2->[ $rotate_side_cmbx2->get_active ][0] eq
+                        'facing' )
+                    {
                         $SETTING{'rotate facing'} =
                           $rotate->[ $comboboxr2->get_active ][0];
                     }
