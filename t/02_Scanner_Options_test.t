@@ -1,7 +1,8 @@
 use warnings;
 use strict;
-use Test::More tests => 3;
-use Image::Sane ':all';    # For enums
+use Test::More tests => 11;
+use Image::Sane ':all';     # For enums
+use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
 
 #########################
@@ -769,3 +770,41 @@ my @that     = (
 );
 is_deeply( $options->{array}, \@that, 'test' );
 is( Gscan2pdf::Scanner::Options->device, 'test:0', 'device name' );
+
+is(
+    Gscan2pdf::Scanner::Options::within_tolerance(
+        $options->{array}[1], 'value'
+    ),
+    undef,
+    'SANE_CONSTRAINT_NONE'
+);
+is(
+    Gscan2pdf::Scanner::Options::within_tolerance(
+        $options->{array}[2], 'Gray'
+    ),
+    TRUE,
+    'SANE_CONSTRAINT_STRING_LIST positive'
+);
+is( Gscan2pdf::Scanner::Options::within_tolerance( $options->{array}[3], 8 ),
+    TRUE, 'SANE_CONSTRAINT_WORD_LIST positive' );
+is( Gscan2pdf::Scanner::Options::within_tolerance( $options->{array}[7], 50 ),
+    TRUE, 'SANE_CONSTRAINT_RANGE exact' );
+is(
+    Gscan2pdf::Scanner::Options::within_tolerance( $options->{array}[7], 50.1 ),
+    TRUE,
+    'SANE_CONSTRAINT_RANGE inexact'
+);
+is(
+    Gscan2pdf::Scanner::Options::within_tolerance(
+        $options->{array}[2], 'gray'
+    ),
+    FALSE,
+    'SANE_CONSTRAINT_STRING_LIST negative'
+);
+is( Gscan2pdf::Scanner::Options::within_tolerance( $options->{array}[3], 7 ),
+    FALSE, 'SANE_CONSTRAINT_WORD_LIST negative' );
+is(
+    Gscan2pdf::Scanner::Options::within_tolerance( $options->{array}[7], 51.1 ),
+    FALSE,
+    'SANE_CONSTRAINT_RANGE negative'
+);

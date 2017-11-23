@@ -223,6 +223,27 @@ sub can_duplex {
     return FALSE;
 }
 
+# returns TRUE/FALSE if the value is within the tolerance of the given option or
+# not, and undef for options with no value or for an invalid value
+
+sub within_tolerance {
+    my ( $option, $value ) = @_;
+    if ( $option->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
+        if ( defined $option->{constraint}{quant} ) {
+            return (
+                abs( $value - $option->{val} ) <=
+                  $option->{constraint}{quant} / 2 );
+        }
+    }
+    elsif ( $option->{constraint_type} == SANE_CONSTRAINT_STRING_LIST ) {
+        return ( $value eq $option->{val} );
+    }
+    elsif ( $option->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
+        return ( $value == $option->{val} );
+    }
+    return;
+}
+
 # parse the scanimage/scanadf output into an array and a hash
 
 sub _parse_scanimage_output {

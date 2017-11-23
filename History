@@ -10,6 +10,8 @@
 * + support for the new API in ImageMagick 7 for unsharp mask
 * For single-sided documents, hide rotate facing/reverse/both side dropdown.
 * + missing documentation for Edit/Properties
+* Don't reapply scan settings if value is within tolerance.
+  Closes bug #287 (Reload recursion limit (5050) exceeded)
 
 
 1.8.8 (29.10.2017):

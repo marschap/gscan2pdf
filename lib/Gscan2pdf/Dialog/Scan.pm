@@ -1228,7 +1228,15 @@ sub update_options {
     while ( $i < $num ) {
         my ( $name, $val ) =
           $current_scan_options->get_backend_option_by_index($i);
-        if ( not defined $val or $val eq $new_options->by_name($name)->{val} ) {
+        if (
+            not defined $val
+            or Gscan2pdf::Scanner::Options::within_tolerance(
+                $new_options->by_name($name), $val
+            )
+          )
+        {
+            $logger->info(
+                "No need to update option '$name': already within tolerance.");
             $current_scan_options->remove_backend_option_by_name($name);
             --$num;
         }
