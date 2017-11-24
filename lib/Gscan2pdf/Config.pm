@@ -145,9 +145,17 @@ sub read_config {
         };
     }
     elsif ( length $config > 0 ) {
-        $conf    = JSON::PP->new->ascii;
-        $conf    = $conf->pretty->allow_nonref;
-        %SETTING = %{ $conf->decode($config) };
+        $conf = JSON::PP->new->ascii;
+        $conf = $conf->pretty->allow_nonref;
+        try {
+            %SETTING = %{ $conf->decode($config) };
+        }
+        catch {
+            $logger->error(
+"Error: unable to load settings.\nBacking up settings\nReverting to defaults"
+            );
+            move( $filename, "$filename.old" );
+        }
     }
 
     if ( defined $SETTING{user_defined_tools}

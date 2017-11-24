@@ -12,6 +12,8 @@
 * + missing documentation for Edit/Properties
 * Don't reapply scan settings if value is within tolerance.
   Closes bug #287 (Reload recursion limit (5050) exceeded)
+* Fix crash reading corrupt config file
+  Closes bug #288 (gscan2pdf-1.8.8 does not run in Ubuntu 16.04)
 
 
 1.8.8 (29.10.2017):

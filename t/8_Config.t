@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Gscan2pdf::Document;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Test::More tests => 16;
+use Test::More tests => 17;
 
 BEGIN {
     use_ok('Gscan2pdf::Config');
@@ -13,7 +13,7 @@ BEGIN {
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($WARN);
+Log::Log4perl->easy_init($FATAL);
 my $logger = Log::Log4perl::get_logger;
 
 my $EMPTY = q{};
@@ -464,6 +464,22 @@ close $fh or die "Error: cannot close $rc\n";
 %output = Gscan2pdf::Config::read_config( $rc, $logger );
 
 is_deeply( \%output, \%example, 'convert pre-1.8.4 frontend' );
+
+#########################
+
+$config = <<'EOS';
+{
+   "version" : "
+}
+EOS
+open $fh, '>', $rc or die "Error: cannot open $rc\n";
+print $fh $config;
+close $fh or die "Error: cannot close $rc\n";
+
+%example = ();
+%output = Gscan2pdf::Config::read_config( $rc, $logger );
+
+is_deeply( \%output, \%example, 'deal with corrupt config' );
 
 #########################
 
