@@ -228,18 +228,31 @@ sub can_duplex {
 
 sub within_tolerance {
     my ( $option, $value ) = @_;
-    if ( $option->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
-        if ( defined $option->{constraint}{quant} ) {
-            return (
-                abs( $value - $option->{val} ) <=
-                  $option->{constraint}{quant} / 2 );
+    given ( $option->{constraint_type} ) {
+        when (SANE_CONSTRAINT_RANGE) {
+            if ( defined $option->{constraint}{quant} ) {
+                return (
+                    abs( $value - $option->{val} ) <=
+                      $option->{constraint}{quant} / 2 );
+            }
+        }
+        when (SANE_CONSTRAINT_STRING_LIST) {
+            return ( $value eq $option->{val} );
+        }
+        when (SANE_CONSTRAINT_WORD_LIST) {
+            return ( $value == $option->{val} );
         }
     }
-    elsif ( $option->{constraint_type} == SANE_CONSTRAINT_STRING_LIST ) {
-        return ( $value eq $option->{val} );
-    }
-    elsif ( $option->{constraint_type} == SANE_CONSTRAINT_WORD_LIST ) {
-        return ( $value == $option->{val} );
+    given ( $option->{type} ) {
+        when (SANE_TYPE_BOOL) {
+            return not( $value xor $option->{val} );
+        }
+        when (SANE_TYPE_STRING) {
+            return ( $value eq $option->{val} );
+        }
+        when ( $_ == SANE_TYPE_INT or $_ == SANE_TYPE_FIXED ) {
+            return ( $value == $option->{val} );
+        }
     }
     return;
 }

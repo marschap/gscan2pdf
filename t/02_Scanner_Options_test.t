@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 11;
+use Test::More tests => 19;
 use Image::Sane ':all';     # For enums
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 BEGIN { use_ok('Gscan2pdf::Scanner::Options') }
@@ -807,4 +807,47 @@ is(
     Gscan2pdf::Scanner::Options::within_tolerance( $options->{array}[7], 51.1 ),
     FALSE,
     'SANE_CONSTRAINT_RANGE negative'
+);
+is( Gscan2pdf::Scanner::Options::within_tolerance( $options->{array}[4], '' ),
+    TRUE, 'SANE_TYPE_BOOL positive but empty string instead of 0' );
+is( Gscan2pdf::Scanner::Options::within_tolerance( $options->{array}[4], 1 ),
+    FALSE, 'SANE_TYPE_BOOL negative' );
+$options->{array}[36]{val} = '20';
+is(
+    Gscan2pdf::Scanner::Options::within_tolerance( $options->{array}[36], 20 ),
+    TRUE,
+    'SANE_TYPE_INT positive'
+);
+is(
+    Gscan2pdf::Scanner::Options::within_tolerance( $options->{array}[36], 21 ),
+    FALSE,
+    'SANE_TYPE_INT negative'
+);
+$options->{array}[43]{val} = '20.5';
+is(
+    Gscan2pdf::Scanner::Options::within_tolerance(
+        $options->{array}[43], 20.5
+    ),
+    TRUE,
+    'SANE_TYPE_FIXED positive'
+);
+is(
+    Gscan2pdf::Scanner::Options::within_tolerance( $options->{array}[43], 21 ),
+    FALSE,
+    'SANE_TYPE_FIXED negative'
+);
+$options->{array}[47]{val} = '20.5';
+is(
+    Gscan2pdf::Scanner::Options::within_tolerance(
+        $options->{array}[47], '20.5'
+    ),
+    TRUE,
+    'SANE_TYPE_STRING positive'
+);
+is(
+    Gscan2pdf::Scanner::Options::within_tolerance(
+        $options->{array}[47], '21'
+    ),
+    FALSE,
+    'SANE_TYPE_STRING negative'
 );

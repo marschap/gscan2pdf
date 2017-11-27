@@ -157,6 +157,18 @@ my $raw_options = [
             'min'   => 0
         }
     },
+    {
+        'unit'            => 0,
+        'name'            => 'swcrop',
+        'constraint_type' => 0,
+        'type'            => 0,
+        'index'           => 7,
+        'cap'             => 69,
+        'val'             => 0,
+        'max_values'      => 1,
+        'desc'  => 'Request driver to remove border from pages digitally.',
+        'title' => 'Software crop'
+    },
 ];
 $override->replace(
     'Gscan2pdf::Frontend::Image_Sane::_thread_get_options' => sub {
@@ -250,8 +262,11 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         $dialog->set_current_scan_options(
             Gscan2pdf::Scanner::Profile->new_from_data(
                 {
-                    backend =>
-                      [ { 'resolution' => '100' }, { 'source' => 'Flatbed' } ],
+                    backend => [
+                        { 'resolution' => '100' },
+                        { 'source'     => 'Flatbed' },
+                        { 'swcrop'     => '' }
+                    ],
                     frontend => { paper => 'A4' }
                 }
             )
