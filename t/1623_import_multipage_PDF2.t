@@ -11,7 +11,7 @@ BEGIN {
 #########################
 
 SKIP: {
-    skip 'pdftk not installed', 2 unless `which pdftk`;
+    skip 'pdfunite (poppler utils) not installed', 2 unless `which pdfunite`;
 
     Gscan2pdf::Translation::set_domain('gscan2pdf');
     use Log::Log4perl qw(:easy);
@@ -48,15 +48,25 @@ endobj
   << /Type /Page
       /Parent 3 0 R
       /MediaBox [ 0 0 612 792 ]
-      /Contents 5 0 R
-      /Resources << /ProcSet 6 0 R
-      /Font << /F1 7 0 R >>
+      /Contents 7 0 R
+      /Resources 5 0 R
   >>
->>
 endobj
 
 5 0 obj
-  << /Length 73 >>
+  << /Font <</F1 6 0 R >> >>
+endobj
+
+6 0 obj
+  << /Type /Font
+      /Subtype /Type1
+      /Name /F1
+      /BaseFont /Courier
+  >>
+endobj
+
+7 0 obj
+  << /Length 62 >>
 stream
   BT
     /F1 24 Tf
@@ -65,26 +75,26 @@ stream
   ET
 endstream
 endobj
-xref 
-0 8 
+xref
+0 8
 0000000000 65535 f 
-0000000010 00000 n 
-0000000020 00000 n 
-0000000030 00000 n 
-0000000040 00000 n 
-0000000050 00000 n 
-0000000060 00000 n 
-0000000070 00000 n 
-trailer 
+0000000009 00000 n 
+0000000091 00000 n 
+0000000148 00000 n 
+0000000224 00000 n 
+0000000359 00000 n 
+0000000404 00000 n 
+0000000505 00000 n 
+trailer
 <</Size 8/Root 1 0 R>> 
-startxref 
-555 
-%%EOF 
+startxref
+618
+%%EOF
 EOS
     open my $fh, '>', 'page2.pdf' or die 'Cannot open page2.pdf';
     print $fh $content;
     close $fh;
-    system('pdftk page1.pdf page2.pdf cat output test.pdf');
+    system('pdfunite page1.pdf page2.pdf test.pdf');
 
     my $slist = Gscan2pdf::Document->new;
 

@@ -11,7 +11,7 @@ BEGIN {
 #########################
 
 TODO: {
-    todo_skip 'pdftk not installed', 1 unless `which pdftk`;
+    todo_skip 'pdfunite (poppler utils) not installed', 1 unless `which pdfunite`;
     todo_skip '2000 page pdf import cannot succeede with current architecture',
       1
       if 1;
@@ -26,15 +26,15 @@ TODO: {
     # Create test image
     system('convert rose: page1.pdf');
     system(
-'pdftk page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf cat output 10.pdf'
+'pdfunite page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf page1.pdf 10.pdf'
     );
     system(
-'pdftk 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf cat output 100.pdf'
+'pdfunite 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf 10.pdf 100.pdf'
     );
     system(
-'pdftk 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf cat output 1000.pdf'
+'pdfunite 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf 100.pdf 1000.pdf'
     );
-    system('pdftk 1000.pdf 1000.pdf cat output 2000.pdf');
+    system('pdfunite 1000.pdf 1000.pdf 2000.pdf');
 
     my $slist = Gscan2pdf::Document->new;
 
