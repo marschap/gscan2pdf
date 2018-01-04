@@ -5,7 +5,7 @@ use Test::More tests => 5;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
@@ -70,7 +70,7 @@ $slist->import_files(
                         $slist->save_pdf(
                             path              => 'test.pdf',
                             list_of_pages     => [ $slist->{data}[0][2] ],
-                            finished_callback => sub { Gtk2->main_quit }
+                            finished_callback => sub { Gtk3->main_quit }
                         );
                     }
                 );
@@ -78,7 +78,7 @@ $slist->import_files(
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 like( `pdfinfo test.pdf`, qr/A4/, 'PDF is A4' );
 

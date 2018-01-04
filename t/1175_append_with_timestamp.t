@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 2;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 
 BEGIN {
     use Gscan2pdf::Document;
@@ -39,11 +39,11 @@ $slist->import_files(
                 append        => 'test.pdf',
                 set_timestamp => TRUE,
             },
-            finished_callback => sub { Gtk2->main_quit }
+            finished_callback => sub { Gtk3->main_quit }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is( `pdfinfo test.pdf | grep 'Pages:'`, "Pages:          2\n", 'PDF appended' );
 is( -f 'test.pdf.bak', 1, 'Backed up original' );

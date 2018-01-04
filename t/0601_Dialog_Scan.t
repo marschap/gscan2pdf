@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 10;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 
 BEGIN {
@@ -11,7 +11,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);

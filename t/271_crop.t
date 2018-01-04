@@ -5,7 +5,7 @@ use Test::More tests => 3;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -41,12 +41,12 @@ $slist->import_files(
                 is( $got, "10x10+0+0", 'GIF cropped correctly' );
                 is( dirname("$slist->{data}[0][2]{filename}"),
                     "$dir", 'using session directory' );
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

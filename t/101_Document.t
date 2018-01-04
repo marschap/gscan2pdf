@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 39;
 use Glib 1.210 qw(TRUE FALSE);
-use Gtk2 -init;    # Could just call init separately
+use Gtk3 -init;    # Could just call init separately
 use Date::Calc qw(Today);
 
 BEGIN {
@@ -256,10 +256,10 @@ $slist->import_scan(
             -s 'test.ppm',
             'padded pnm correct size'
         );
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

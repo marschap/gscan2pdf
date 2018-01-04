@@ -4,7 +4,7 @@ use Test::More tests => 3;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -34,11 +34,11 @@ $slist->import_files(
                 post_save_hook         => 'convert %i test2.png',
                 post_save_hook_options => 'fg',
             },
-            finished_callback => sub { Gtk2->main_quit }
+            finished_callback => sub { Gtk3->main_quit }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 like(
     `identify test.tif`,

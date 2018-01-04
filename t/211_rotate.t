@@ -5,7 +5,7 @@ use Test::More tests => 5;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -39,12 +39,12 @@ $slist->import_files(
                 is( dirname("$slist->{data}[0][2]{filename}"),
                     "$dir", 'using session directory' );
                 is( $slist->scans_saved, '', 'modification removed saved tag' );
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

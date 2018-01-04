@@ -5,7 +5,7 @@ use Test::More tests => 1;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
@@ -32,12 +32,12 @@ $slist->import_files(
             finished_callback => sub {
                 is( $slist->{data}[0][2]{resolution},
                     10, 'Resolution of converted image taken from input' );
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

@@ -4,7 +4,7 @@ use Test::More tests => 2;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
     use File::Copy;
 }
 
@@ -37,13 +37,13 @@ system('echo "" > 5.tif');
 $slist->import_files(
     paths             => \@files,
     finished_callback => sub {
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     },
     error_callback => sub {
         pass('caught error importing corrupt file');
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is( $#{ $slist->{data} }, 8, 'Imported 9 images' );
 

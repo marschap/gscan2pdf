@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Test::More tests => 1;
-use Gtk2 -init;    # Could just call init separately
+use Gtk3 -init;    # Could just call init separately
 use POSIX qw(locale_h);
 
 BEGIN {
@@ -34,11 +34,11 @@ $slist->import_files(
         $slist->save_pdf(
             path              => 'test.pdf',
             list_of_pages     => [ $slist->{data}[0][2] ],
-            finished_callback => sub { Gtk2->main_quit }
+            finished_callback => sub { Gtk3->main_quit }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is( system('identify test.pdf'), 0, 'valid PDF created' );
 

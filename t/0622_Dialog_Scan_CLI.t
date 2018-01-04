@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 13;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 
 BEGIN {
     use_ok('Gscan2pdf::Dialog::Scan::CLI');
@@ -10,7 +10,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -84,15 +84,15 @@ $signal = $dialog->signal_connect(
         pass('reloaded-scan-options');
         $dialog->signal_handler_disconnect($signal);
 
-        is( $dialog->{option_widgets}{mode}->visible,
+        is( $dialog->{option_widgets}{mode}->is_visible,
             TRUE, 'mode widget visible' );
 
         $dialog->set( 'visible-scan-options', { mode => 0 } );
-        is( $dialog->{option_widgets}{mode}->visible,
+        is( $dialog->{option_widgets}{mode}->is_visible,
             '', 'mode widget hidden by title' );
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 __END__

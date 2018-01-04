@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Test::More tests => 1;
-use Gtk2 -init;    # Could just call init separately
+use Gtk3 -init;    # Could just call init separately
 
 BEGIN {
     use Gscan2pdf::Document;
@@ -39,12 +39,12 @@ $slist->import_files(
                     qr/1-bit Bilevel Gray/,
                     'PDF with 1bpp created'
                 );
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

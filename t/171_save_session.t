@@ -5,7 +5,7 @@ use File::Basename;    # Split filename into dir, file, ext
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -26,10 +26,10 @@ $slist->import_files(
     finished_callback => sub {
         $slist->{data}[0][2]{hocr} = 'The quick brown fox';
         $slist->save_session('test.gs2p');
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is(
     `file test.gs2p`,

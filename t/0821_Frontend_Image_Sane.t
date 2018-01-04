@@ -4,7 +4,7 @@ use Test::More tests => 3;
 
 BEGIN {
     use_ok('Gscan2pdf::Frontend::Image_Sane');
-    use Gtk2;
+    use Gtk3;
 }
 
 #########################
@@ -28,12 +28,12 @@ Gscan2pdf::Frontend::Image_Sane->open_device(
                 is( -s $path, 30807, 'PNM created with expected size' );
             },
             finished_callback => sub {
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             },
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

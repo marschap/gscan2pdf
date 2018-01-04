@@ -5,7 +5,7 @@ use Test::More tests => 1;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
@@ -55,7 +55,7 @@ $slist->import_files(
             page              => $slist->{data}[0][2],
             command           => 'convert %i -negate %o',
             finished_callback => sub {
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             },
             error_callback => sub {
                 pass('caught errors from user-defined');
@@ -63,7 +63,7 @@ $slist->import_files(
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

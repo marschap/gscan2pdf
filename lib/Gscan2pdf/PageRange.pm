@@ -3,7 +3,7 @@ package Gscan2pdf::PageRange;
 use strict;
 use warnings;
 use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
-use Gtk2;
+use Gtk3;
 use Glib qw(TRUE FALSE);            # To get TRUE and FALSE
 
 # Note: in a BEGIN block to ensure that the registration is complete
@@ -15,7 +15,7 @@ BEGIN {
 
 # this big hairy statement registers our Glib::Object-derived class
 # and sets up all the signals and properties for it.
-use Glib::Object::Subclass Gtk2::VBox::,
+use Glib::Object::Subclass Gtk3::VBox::,
   signals    => { changed => {}, },
   properties => [
     Glib::ParamSpec->enum(
@@ -38,7 +38,7 @@ sub INIT_INSTANCE {
         'selected' => __('Selected'),
         'all'      => __('All'),
     );
-    my $vbox = Gtk2::VBox->new;
+    my $vbox = Gtk3::VBox->new;
     $self->add($vbox);
 
     #the first radio button has to set the group,
@@ -46,7 +46,7 @@ sub INIT_INSTANCE {
     my $group;
     for my $nick ( sort keys %buttons ) {
         $self->{button}{$nick} =
-          Gtk2::RadioButton->new( $group, $buttons{$nick} );
+          Gtk3::RadioButton->new( $group, $buttons{$nick} );
         $self->{button}{$nick}->signal_connect(
             'toggled' => sub {
                 if ( $self->{button}{$nick}->get_active ) {

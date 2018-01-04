@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use feature 'switch';
 no if $] >= 5.018, warnings => 'experimental::smartmatch';
-use Goo::Canvas;
+use GooCanvas2;
 use Glib 1.220 qw(TRUE FALSE);    # To get TRUE and FALSE
 use HTML::Entities;
 use Readonly;
@@ -20,7 +20,7 @@ BEGIN {
 
     $VERSION = '1.8.11';
 
-    use base qw(Exporter Goo::Canvas);
+    use base qw(Exporter GooCanvas2);
     %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
 
     # your exported package globals go here,
@@ -32,12 +32,12 @@ sub new {
     my ( $class, $page, $edit_callback ) = @_;
 
     # Set up the canvas
-    my $self = Goo::Canvas->new;
+    my $self = GooCanvas2::Canvas->new;
     my $root = $self->get_root_item;
     if ( not defined $page->{w} ) {
 
         # quotes required to prevent File::Temp object being clobbered
-        my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file("$page->{filename}");
+        my $pixbuf = Gtk3::Gdk::Pixbuf->new_from_file("$page->{filename}");
         $page->{w} = $pixbuf->get_width;
         $page->{h} = $pixbuf->get_height;
     }
@@ -60,7 +60,7 @@ sub boxed_text {
     my ( $x1, $y1, $x2, $y2 ) = @{ $box->{bbox} };
     my $x_size = abs $x2 - $x1;
     my $y_size = abs $y2 - $y1;
-    my $g      = Goo::Canvas::Group->new($root);
+    my $g      = GooCanvas2::CanvasGroup->new( parent => $root );
     $g->translate( $x1 - $x0, $y1 - $y0 );
     my $textangle = $box->{textangle} || 0;
 
@@ -82,8 +82,12 @@ sub boxed_text {
         $confidence, $confidence
       )
       : '#7fff7fff7fff';
-    my $rect = Goo::Canvas::Rect->new(
-        $g, 0, 0, $x_size, $y_size,
+    my $rect = GooCanvas2::CanvasRect->new(
+        parent         => $g,
+        x              => 0,
+        y              => 0,
+        width          => $x_size,
+        height         => $y_size,
         'stroke-color' => $color,
         'line-width'   => ( $box->{text} ? 2 : 1 )
     );
@@ -92,12 +96,12 @@ sub boxed_text {
     #if ( $box->{baseline} ) {
     #    my ( $slope, $offs ) = @{ $box->{baseline} }[-2,-1];
     #    # "real" baseline with slope
-    #    $rect = Goo::Canvas::Polyline->new_line( $g,
+    #    $rect = GooCanvas2::CanvasPolyline->new_line( $g,
     #        0, $y_size + $offs, $x_size, $y_size + $offs + $x_size * $slope,
     #        'stroke-color' => 'green' );
     #    # virtual, horizontally aligned baseline
     #    my $y_offs = $y_size + $offs + 0.5 * $x_size * $slope;
-    #    $rect = Goo::Canvas::Polyline->new_line( $g,
+    #    $rect = GooCanvas2::CanvasPolyline->new_line( $g,
     #        0, $y_offs, $x_size, $y_offs,
     #        'stroke-color' => 'orange' );
     #}
@@ -105,12 +109,13 @@ sub boxed_text {
     if ( $box->{text} ) {
 
         # create text and then scale, shift & rotate it into the bounding box
-        my $text = Goo::Canvas::Text->new(
-            $g,
-            $box->{text},
-            $x_size / 2,
-            $y_size / 2,
-            -1, 'center',    ## no critic (ProhibitMagicNumbers)
+        my $text = GooCanvas2::CanvasText->new(
+            parent => $g,
+            text   => $box->{text},
+            x      => ( $x_size / 2 ),
+            y      => ( $y_size / 2 ),
+            width  => -1,
+            anchor => 'center',          ## no critic (ProhibitMagicNumbers)
             'font' => 'Sans'
         );
         my $angle  = -( $textangle + $rotation ) % $_360_DEGREES;
@@ -151,7 +156,7 @@ sub boxed_text {
     #   my $n = $widget->get_n_children;
     #   for ( my $i = 0 ; $i < $n ; $i++ ) {
     #    my $item = $widget->get_child($i);
-    #    if ( $item->isa('Goo::Canvas::Text') ) {
+    #    if ( $item->isa('GooCanvas2::CanvasText') ) {
     #     print "contains $item\n", $item->get('text'), "\n";
     #     last;
     #    }
@@ -254,7 +259,7 @@ sub _group2hocr {
     for my $i ( 0 .. $parent->get_n_children - 1 ) {
         my $group = $parent->get_child($i);
 
-        if ( ref($group) eq 'Goo::Canvas::Group' ) {
+        if ( ref($group) eq 'GooCanvas2::CanvasGroup' ) {
 
             # try to preserve as much information as possible
             if ( $group->{bbox} and $group->{type} ) {

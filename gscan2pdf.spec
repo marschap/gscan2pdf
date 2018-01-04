@@ -13,14 +13,14 @@ BuildArch: noarch
 BuildRequires: perl(ExtUtils::MakeMaker), perl(Test::More)
 BuildRequires: gettext, desktop-file-utils
 Requires: perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
-Requires: perl(Gtk2::ImageView), perl-Gtk2-Ex-Simple-List
+Requires: perl(Gtk3::ImageView), perl-Gtk2-Ex-Simple-List
 Requires: perl-Sane, perl-Locale-gettext
 Requires: sane-utils, libtiff-tools, perl(PDF::API2)
 Requires: perl(Config::General), ImageMagick-perl, ImageMagick
 Requires: librsvg-2-2, perl(Set::Intspan), perl(List::MoreUtils)
 Requires: perl-HTML-Parser, perl(Goo::Canvas), perl-Proc-ProcessTable
 Requires: perl(Readonly), perl(Log::Log4perl), perl(Try::Tiny), perl-Filesys-Df
-Requires: perl(OSSP::uuid), perl(Gtk2::Ex::PodViewer), sane-backends >= 1.0.17
+Requires: perl(OSSP::uuid), perl(Gtk3::Ex::PodViewer), sane-backends >= 1.0.17
 Requires: xdg-utils, djvulibre
 Requires: unpaper, sane-frontends
 

@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 5;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 
 BEGIN {
@@ -11,7 +11,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -74,13 +74,13 @@ $signal = $dialog->signal_connect(
                                 is( $n, 1,
 'error-free scan despite illegal option following an ignored one'
                                 );
-                                Gtk2->main_quit;
+                                Gtk3->main_quit;
                             }
                         );
                         $dialog->signal_connect(
                             'process-error' => sub {
                                 my ( $widget, $process, $msg ) = @_;
-                                Gtk2->main_quit;
+                                Gtk3->main_quit;
                             }
                         );
                         $dialog->set( 'num-pages',             1 );
@@ -96,7 +96,7 @@ $signal = $dialog->signal_connect(
             'process-error' => sub {
                 my ( $widget, $process, $msg ) = @_;
                 ok 0, 'error-free scan despite illegal option';
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
         $dialog->set( 'num-pages',             1 );
@@ -109,6 +109,6 @@ $dialog->set( 'device', 'test' );
 
 #########################
 
-Gtk2->main;
+Gtk3->main;
 
 __END__

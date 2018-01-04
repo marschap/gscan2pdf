@@ -3,7 +3,7 @@ use strict;
 use Test::More tests => 5;
 
 BEGIN {
-    use Gtk2 -init;
+    use Gtk3 -init;
     use_ok('Gscan2pdf::EntryCompletion');
 }
 

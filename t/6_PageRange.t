@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Gtk2 -init;
+use Gtk3 -init;
 use Test::More tests => 7;
 
 BEGIN {

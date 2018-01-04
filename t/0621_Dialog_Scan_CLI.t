@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 46;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 
 BEGIN {
@@ -11,7 +11,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -479,7 +479,7 @@ $signal = $dialog->signal_connect(
                 my ( $widget, $path, $n ) = @_;
                 is( $n, 2, 'new_scan' );
                 $flag = TRUE;
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
         $dialog->set( 'num-pages',             1 );
@@ -488,7 +488,7 @@ $signal = $dialog->signal_connect(
         $dialog->scan;
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is( $reloads, 3, 'Final number of calls reloaded-scan-options' );
 is( $dialog->get('available-scan-options')->by_name('mode')->{val},

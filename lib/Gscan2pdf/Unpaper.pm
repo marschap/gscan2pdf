@@ -7,7 +7,7 @@ use feature 'switch';
 no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Carp;
 use Glib qw(TRUE FALSE);            # To get TRUE and FALSE
-use Gtk2;
+use Gtk3;
 use version;
 use Gscan2pdf::Document;
 use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
@@ -274,19 +274,19 @@ sub add_options {
     my $combobw = $self->add_widget( $vbox, $options, 'direction' );
     $outpages->signal_connect(
         'value-changed' => sub {
-            $combobw->parent->set_sensitive( $outpages->get_value == 2 );
+            $combobw->get_parent->set_sensitive( $outpages->get_value == 2 );
         }
     );
-    $combobw->parent->set_sensitive(FALSE);
+    $combobw->get_parent->set_sensitive(FALSE);
 
     # Notebook to collate options
-    my $notebook = Gtk2::Notebook->new;
+    my $notebook = Gtk3::Notebook->new;
     $vbox->pack_start( $notebook, TRUE, TRUE, 0 );
 
     # Notebook page 1
-    my $vbox1 = Gtk2::VBox->new;
+    my $vbox1 = Gtk3::VBox->new;
     $vbox1->set_border_width($BORDER_WIDTH);
-    $notebook->append_page( $vbox1, __('Deskew') );
+    $notebook->append_page( $vbox1, Gtk3::Label->new( __('Deskew') ) );
 
     my $dsbutton = $self->add_widget( $vbox1, $options, 'no-deskew' );
 
@@ -317,9 +317,9 @@ sub add_options {
     }
 
     # Notebook page 2
-    my $vbox2 = Gtk2::VBox->new;
+    my $vbox2 = Gtk3::VBox->new;
     $vbox2->set_border_width($BORDER_WIDTH);
-    $notebook->append_page( $vbox2, __('Border') );
+    $notebook->append_page( $vbox2, Gtk3::Label->new( __('Border') ) );
 
     my $bsbutton = $self->add_widget( $vbox2, $options, 'no-border-scan' );
     my $babutton = $self->add_widget( $vbox2, $options, 'no-border-align' );
@@ -377,9 +377,9 @@ sub add_options {
     }
 
     # Notebook page 3
-    my $vbox3 = Gtk2::VBox->new;
+    my $vbox3 = Gtk3::VBox->new;
     $vbox3->set_border_width($BORDER_WIDTH);
-    $notebook->append_page( $vbox3, __('Filters') );
+    $notebook->append_page( $vbox3, Gtk3::Label->new( __('Filters') ) );
 
     my $spinbuttonwt = $self->add_widget( $vbox3, $options, 'white-threshold' );
     my $spinbuttonbt = $self->add_widget( $vbox3, $options, 'black-threshold' );
@@ -421,10 +421,7 @@ sub count_active_children {
 
 sub add_widget {
     my ( $self, $vbox, $hashref, $option ) = @_;
-    my $default  = $self->{default};
-    my $tooltips = Gtk2::Tooltips->new;
-    $tooltips->enable;
-
+    my $default = $self->{default};
     my $widget;
     if ( defined( $hashref->{$option}{default} )
         and not defined( $default->{$option} ) )
@@ -434,11 +431,11 @@ sub add_widget {
 
     given ( $hashref->{$option}{type} ) {
         when ('ComboBox') {
-            my $hbox = Gtk2::HBox->new;
+            my $hbox = Gtk3::HBox->new;
             $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-            my $label = Gtk2::Label->new( $hashref->{$option}{string} );
+            my $label = Gtk3::Label->new( $hashref->{$option}{string} );
             $hbox->pack_start( $label, FALSE, FALSE, 0 );
-            $widget = Gtk2::ComboBox->new_text;
+            $widget = Gtk3::ComboBoxText->new;
             $hbox->pack_end( $widget, FALSE, FALSE, 0 );
 
             # Add text and tooltips
@@ -453,7 +450,7 @@ sub add_widget {
             $widget->signal_connect(
                 changed => sub {
                     if ( defined $tooltip[ $widget->get_active ] ) {
-                        $tooltips->set_tip( $widget,
+                        $widget->set_tooltip_text(
                             $tooltip[ $widget->get_active ] );
                     }
                 }
@@ -461,18 +458,18 @@ sub add_widget {
         }
 
         when ('CheckButton') {
-            $widget = Gtk2::CheckButton->new( $hashref->{$option}{string} );
-            $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
+            $widget = Gtk3::CheckButton->new( $hashref->{$option}{string} );
+            $widget->set_tooltip_text( $hashref->{$option}{tooltip} );
             $vbox->pack_start( $widget, TRUE, TRUE, 0 );
         }
 
         when ('CheckButtonGroup') {
-            $widget = Gtk2::Frame->new( $hashref->{$option}{string} );
+            $widget = Gtk3::Frame->new( $hashref->{$option}{string} );
             $vbox->pack_start( $widget, TRUE, TRUE, 0 );
-            my $vboxf = Gtk2::VBox->new;
+            my $vboxf = Gtk3::VBox->new;
             $vboxf->set_border_width($BORDER_WIDTH);
             $widget->add($vboxf);
-            $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
+            $widget->set_tooltip_text( $hashref->{$option}{tooltip} );
             for ( keys %{ $hashref->{$option}{options} } ) {
                 my $button =
                   $self->add_widget( $vboxf, $hashref->{$option}{options}, $_ );
@@ -480,26 +477,26 @@ sub add_widget {
         }
 
         when ('SpinButton') {
-            my $hbox = Gtk2::HBox->new;
+            my $hbox = Gtk3::HBox->new;
             $vbox->pack_start( $hbox, TRUE, TRUE, 0 );
-            my $label = Gtk2::Label->new( $hashref->{$option}{string} );
+            my $label = Gtk3::Label->new( $hashref->{$option}{string} );
             $hbox->pack_start( $label, FALSE, FALSE, 0 );
-            $widget = Gtk2::SpinButton->new_with_range(
+            $widget = Gtk3::SpinButton->new_with_range(
                 $hashref->{$option}{min},
                 $hashref->{$option}{max},
                 $hashref->{$option}{step}
             );
             $hbox->pack_end( $widget, FALSE, FALSE, 0 );
-            $tooltips->set_tip( $widget, $hashref->{$option}{tooltip} );
+            $widget->set_tooltip_text( $hashref->{$option}{tooltip} );
             if ( defined $default->{$option} ) {
                 $widget->set_value( $default->{$option} );
             }
         }
 
         when ('SpinButtonGroup') {
-            $widget = Gtk2::Frame->new( $hashref->{$option}{string} );
+            $widget = Gtk3::Frame->new( $hashref->{$option}{string} );
             $vbox->pack_start( $widget, TRUE, TRUE, 0 );
-            my $vboxf = Gtk2::VBox->new;
+            my $vboxf = Gtk3::VBox->new;
             $vboxf->set_border_width($BORDER_WIDTH);
             $widget->add($vboxf);
             for (

@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Test::More tests => 2;
-use Gtk2 -init;    # Could just call init separately
+use Gtk3 -init;    # Could just call init separately
 
 BEGIN {
     use Gscan2pdf::Document;
@@ -50,7 +50,7 @@ $slist->import_files(
                     error_callback => sub {
                         pass('save_pdf caught error injected in queue');
                         chmod 0700, $dir;    # allow write access
-                        Gtk2->main_quit;
+                        Gtk3->main_quit;
                     }
                 );
 
@@ -58,7 +58,7 @@ $slist->import_files(
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

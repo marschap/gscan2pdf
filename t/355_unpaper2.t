@@ -6,7 +6,7 @@ use Test::More tests => 3;
 BEGIN {
     use Gscan2pdf::Document;
     use Gscan2pdf::Unpaper;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 SKIP: {
@@ -50,12 +50,12 @@ SKIP: {
                     is( dirname("$slist->{data}[0][2]{filename}"),
                         "$dir", 'using session directory' );
 
-                    Gtk2->main_quit;
+                    Gtk3->main_quit;
                 }
             );
         }
     );
-    Gtk2->main;
+    Gtk3->main;
 
     unlink 'test.pnm', '1.pnm', '2.pnm', 'black.pnm', <$dir/*>;
     rmdir $dir;

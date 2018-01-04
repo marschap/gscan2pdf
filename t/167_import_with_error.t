@@ -4,7 +4,7 @@ use Test::More tests => 3;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -52,24 +52,24 @@ $slist->import_files(
                             $old,
                             'TIFF imported correctly after previous errors'
                         );
-                        Gtk2->main_quit;
+                        Gtk3->main_quit;
                     },
                     error_callback => sub {
                         fail('error callback triggered after previous errors');
-                        Gtk2->main_quit;
+                        Gtk3->main_quit;
                     }
                 );
             },
             finished_callback => sub {
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
     },
     finished_callback => sub {
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

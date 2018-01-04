@@ -6,7 +6,7 @@ use Test::More tests => 1;
 BEGIN {
     use Gscan2pdf::Document;
     use Gscan2pdf::Unpaper;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
     use version;
 }
 
@@ -65,7 +65,7 @@ SKIP: {
                 page              => $slist->{data}[0][2],
                 options           => { command => $unpaper->get_cmdline },
                 finished_callback => sub {
-                    Gtk2->main_quit;
+                    Gtk3->main_quit;
                 },
                 error_callback => sub {
                     pass('caught errors from unpaper');
@@ -73,7 +73,7 @@ SKIP: {
             );
         }
     );
-    Gtk2->main;
+    Gtk3->main;
 
     unlink 'test.pnm', <$dir/*>;
     rmdir $dir;

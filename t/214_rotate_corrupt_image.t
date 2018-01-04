@@ -5,7 +5,7 @@ use Test::More tests => 1;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -37,16 +37,16 @@ $slist->import_files(
             page              => $slist->{data}[0][2],
             finished_callback => sub {
                 fail('caught errors from rotate');
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             },
             error_callback => sub {
                 pass('caught errors from rotate');
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

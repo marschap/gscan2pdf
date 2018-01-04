@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Test::More tests => 4;
-use Gtk2 -init;    # Could just call init separately
+use Gtk3 -init;    # Could just call init separately
 use Gscan2pdf::Tesseract;
 use Gscan2pdf::Document;
 use Gscan2pdf::Unpaper;
@@ -28,7 +28,7 @@ SKIP: {
       unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
 
     my $unpaper = Gscan2pdf::Unpaper->new;
-    my $vbox    = Gtk2::VBox->new;
+    my $vbox    = Gtk3::VBox->new;
     $unpaper->add_options($vbox);
 
     # Create b&w test image
@@ -56,10 +56,10 @@ SKIP: {
                 qr/brown/, 'Tesseract returned "brown"' );
             like( $slist->{data}[0][2]{hocr},
                 qr/f(o|0)x/, 'Tesseract returned "fox"' );
-            Gtk2->main_quit;
+            Gtk3->main_quit;
         }
     );
-    Gtk2->main;
+    Gtk3->main;
 }
 
 #########################

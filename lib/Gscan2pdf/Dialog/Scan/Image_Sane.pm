@@ -50,13 +50,10 @@ my $SANE_NAME_SCAN_BR_Y   = SANE_NAME_SCAN_BR_Y;
 my $SANE_NAME_PAGE_HEIGHT = SANE_NAME_PAGE_HEIGHT;
 my $SANE_NAME_PAGE_WIDTH  = SANE_NAME_PAGE_WIDTH;
 my $EMPTY                 = q{};
-my ( $d_sane, $logger, $tooltips );
+my ( $d_sane, $logger );
 
 sub INIT_INSTANCE {
     my $self = shift;
-    $tooltips = Gtk2::Tooltips->new;
-    $tooltips->enable;
-
     $d_sane = Locale::gettext->domain('sane-backends');
     return $self;
 }
@@ -89,11 +86,11 @@ sub get_devices {
         sub {
 
             # Set up ProgressBar
-            $pbar = Gtk2::ProgressBar->new;
+            $pbar = Gtk3::ProgressBar->new;
             $pbar->set_pulse_step( $self->get('progress-pulse-step') );
             $pbar->set_text( __('Fetching list of devices') );
             $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
-            $hboxd->hide_all;
+            $hboxd->hide;
             $hboxd->show;
             $pbar->show;
         },
@@ -192,7 +189,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
     $logger->debug( 'Sane->get_option_descriptor returned: ',
         Dumper($options) );
 
-    my ( $group, $vbox, $hboxp );
+    my ( $vbox, $hboxp );
     my $num_dev_options = $options->num_options;
 
     # We have hereby removed the active profile and paper,
@@ -206,14 +203,14 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
         # Notebook page for group
         if ( $opt->{type} == SANE_TYPE_GROUP or not defined $vbox ) {
-            $vbox = Gtk2::VBox->new;
+            $vbox = Gtk3::VBox->new;
             $vbox->set_border_width( $self->get('border-width') );
-            $group =
+            my $text =
                 $opt->{type} == SANE_TYPE_GROUP
               ? $d_sane->get( $opt->{title} )
               : __('Scan Options');
-            my $scwin = Gtk2::ScrolledWindow->new;
-            $self->{notebook}->append_page( $scwin, $group );
+            my $scwin = Gtk3::ScrolledWindow->new;
+            $self->{notebook}->append_page( $scwin, Gtk3::Label->new($text) );
             $scwin->set_policy( 'automatic', 'automatic' );
             $scwin->add_with_viewport($vbox);
             if ( $opt->{type} == SANE_TYPE_GROUP ) { next }
@@ -228,12 +225,12 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
         # Define HBox for paper size here
         # so that it can be put before first geometry option
         if ( not defined $hboxp and $self->_geometry_option($opt) ) {
-            $hboxp = Gtk2::HBox->new;
+            $hboxp = Gtk3::HBox->new;
             $vbox->pack_start( $hboxp, FALSE, FALSE, 0 );
         }
 
         # HBox for option
-        my $hbox = Gtk2::HBox->new;
+        my $hbox = Gtk3::HBox->new;
         $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
         if ( $opt->{cap} & SANE_CAP_INACTIVE
             or not $opt->{cap} & SANE_CAP_SOFT_SELECT )
@@ -245,14 +242,14 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
             # Label
             if ( $opt->{type} != SANE_TYPE_BUTTON ) {
-                my $label = Gtk2::Label->new( $d_sane->get( $opt->{title} ) );
+                my $label = Gtk3::Label->new( $d_sane->get( $opt->{title} ) );
                 $hbox->pack_start( $label, FALSE, FALSE, 0 );
             }
 
             # CheckButton
             if ( $opt->{type} == SANE_TYPE_BOOL )
             {    ## no critic (ProhibitCascadingIfElse)
-                $widget = Gtk2::CheckButton->new;
+                $widget = Gtk3::CheckButton->new;
                 if ($val) { $widget->set_active(TRUE) }
                 $widget->{signal} = $widget->signal_connect(
                     toggled => sub {
@@ -265,7 +262,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
             # Button
             elsif ( $opt->{type} == SANE_TYPE_BUTTON ) {
-                $widget = Gtk2::Button->new( $d_sane->get( $opt->{title} ) );
+                $widget = Gtk3::Button->new( $d_sane->get( $opt->{title} ) );
                 $widget->{signal} = $widget->signal_connect(
                     clicked => sub {
                         $self->{num_reloads} = 0;    # num-reloads is read-only
@@ -281,7 +278,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
                     $step = $opt->{constraint}{quant};
                 }
                 $widget =
-                  Gtk2::SpinButton->new_with_range( $opt->{constraint}{min},
+                  Gtk3::SpinButton->new_with_range( $opt->{constraint}{min},
                     $opt->{constraint}{max}, $step );
 
                 # Set the default
@@ -301,7 +298,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
             elsif ($opt->{constraint_type} == SANE_CONSTRAINT_STRING_LIST
                 or $opt->{constraint_type} == SANE_CONSTRAINT_WORD_LIST )
             {
-                $widget = Gtk2::ComboBox->new_text;
+                $widget = Gtk3::ComboBoxText->new;
                 my $index = 0;
                 for ( 0 .. $#{ $opt->{constraint} } ) {
                     $widget->append_text(
@@ -329,7 +326,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 
             # Entry
             elsif ( $opt->{constraint_type} == SANE_CONSTRAINT_NONE ) {
-                $widget = Gtk2::Entry->new;
+                $widget = Gtk3::Entry->new;
 
                 # Set the default
                 if ( defined $val and not $opt->{cap} & SANE_CAP_INACTIVE ) {
@@ -345,7 +342,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
             }
         }
         else {                                       # $opt->{max_values} > 1
-            $widget = Gtk2::Button->new( $d_sane->get( $opt->{title} ) );
+            $widget = Gtk3::Button->new( $d_sane->get( $opt->{title} ) );
             $widget->{signal} = $widget->signal_connect(
                 clicked => \&multiple_values_button_callback,
                 [ $self, $opt ]

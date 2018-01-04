@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 50;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 use Gscan2pdf::Scanner::Profile;
 
@@ -12,7 +12,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -404,7 +404,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
             'changed-paper' => sub {
                 my ( $widget, $paper ) = @_;
                 is( $paper, 'new2', 'changed-paper' );
-                ok( not( $widget->{option_widgets}{'tl-x'}->visible ),
+                ok( not( $widget->{option_widgets}{'tl-x'}->is_visible ),
                     'geometry hidden' );
                 $flag = TRUE;
                 $loop->quit;
@@ -473,7 +473,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                                         $e_signal);
                                     is( $process, 'open_device',
                                         'caught error opening device' );
-                                    Gtk2->main_quit;
+                                    Gtk3->main_quit;
                                 }
                             );
 
@@ -533,7 +533,7 @@ $dialog->{signal} = $dialog->signal_connect(
 );
 $dialog->set( 'device-list',
     [ { 'name' => 'test:0' }, { 'name' => 'test:1' } ] );
-Gtk2->main;
+Gtk3->main;
 
 Gscan2pdf::Frontend::Image_Sane->quit;
 __END__

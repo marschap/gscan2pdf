@@ -4,7 +4,7 @@ use Test::More tests => 2;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -55,11 +55,11 @@ $slist->import_files(
                 post_save_hook         => 'cp %i test2.txt',
                 post_save_hook_options => 'fg',
             },
-            finished_callback => sub { Gtk2->main_quit }
+            finished_callback => sub { Gtk3->main_quit }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is( `cat test.txt`,  $hocr, 'saved hOCR' );
 is( `cat test2.txt`, $hocr, 'post-save hook' );

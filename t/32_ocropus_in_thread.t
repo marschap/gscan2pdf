@@ -46,12 +46,12 @@ SKIP: {
                     );
                     is( dirname("$slist->{data}[0][2]{filename}"),
                         "$dir", 'using session directory' );
-                    Gtk2->main_quit;
+                    Gtk3->main_quit;
                 }
             );
         }
     );
-    Gtk2->main;
+    Gtk3->main;
 
     unlink 'test.png', <$dir/*>;
     rmdir $dir;

@@ -4,7 +4,7 @@ use Test::More tests => 2;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -55,7 +55,7 @@ $slist->import_files(
                     error_callback => sub {
                         pass('crop caught error injected in queue');
                         chmod 0700, $dir;    # allow write access
-                        Gtk2->main_quit;
+                        Gtk3->main_quit;
                     }
                 );
 
@@ -63,7 +63,7 @@ $slist->import_files(
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

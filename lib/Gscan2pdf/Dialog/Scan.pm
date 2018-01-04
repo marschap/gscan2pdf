@@ -269,7 +269,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
 
 our $VERSION = '1.8.11';
 
-my ( $d_sane, $logger, $tooltips );
+my ( $d_sane, $logger );
 my $tolerance             = 1;
 my $SANE_NAME_SCAN_TL_X   = SANE_NAME_SCAN_TL_X;
 my $SANE_NAME_SCAN_TL_Y   = SANE_NAME_SCAN_TL_Y;
@@ -282,30 +282,29 @@ sub INIT_INSTANCE {
     my $self = shift;
 
     my $vbox = $self->get('vbox');
-    $tooltips = Gtk2::Tooltips->new;
-    $tooltips->enable;
 
     $d_sane = Locale::gettext->domain('sane-backends');
 
     $self->_add_device_combobox($vbox);
 
     # Notebook to collate options
-    $self->{notebook} = Gtk2::Notebook->new;
+    $self->{notebook} = Gtk3::Notebook->new;
     $vbox->pack_start( $self->{notebook}, TRUE, TRUE, 0 );
 
     # Notebook page 1
-    my $scwin = Gtk2::ScrolledWindow->new;
-    $self->{notebook}->append_page( $scwin, __('Page Options') );
+    my $scwin = Gtk3::ScrolledWindow->new;
+    $self->{notebook}
+      ->append_page( $scwin, Gtk3::Label->new( __('Page Options') ) );
     $scwin->set_policy( 'automatic', 'automatic' );
-    my $vbox1 = Gtk2::VBox->new;
+    my $vbox1 = Gtk3::VBox->new;
     $self->{vbox} = $vbox1;
     $vbox1->set_border_width($BORDER_WIDTH);
     $scwin->add_with_viewport($vbox1);
 
     # Frame for # pages
-    $self->{framen} = Gtk2::Frame->new( __('# Pages') );
+    $self->{framen} = Gtk3::Frame->new( __('# Pages') );
     $vbox1->pack_start( $self->{framen}, FALSE, FALSE, 0 );
-    my $vboxn        = Gtk2::VBox->new;
+    my $vboxn        = Gtk3::VBox->new;
     my $border_width = $self->get('border_width');
     $vboxn->set_border_width($border_width);
     $self->{framen}->add($vboxn);
@@ -313,8 +312,9 @@ sub INIT_INSTANCE {
     # the first radio button has to set the group,
     # which is undef for the first button
     # All button
-    my $bscanall = Gtk2::RadioButton->new( undef, __('All') );
-    $tooltips->set_tip( $bscanall, __('Scan all pages') );
+    my $bscanall =
+      Gtk3::RadioButton->new_with_label_from_widget( undef, __('All') );
+    $bscanall->set_tooltip_text( __('Scan all pages') );
     $vboxn->pack_start( $bscanall, TRUE, TRUE, 0 );
     $bscanall->signal_connect(
         clicked => sub {
@@ -323,15 +323,16 @@ sub INIT_INSTANCE {
     );
 
     # Entry button
-    my $hboxn = Gtk2::HBox->new;
+    my $hboxn = Gtk3::HBox->new;
     $vboxn->pack_start( $hboxn, TRUE, TRUE, 0 );
-    my $bscannum = Gtk2::RadioButton->new( $bscanall->get_group, q{#:} );
-    $tooltips->set_tip( $bscannum, __('Set number of pages to scan') );
+    my $bscannum =
+      Gtk3::RadioButton->new_with_label_from_widget( $bscanall, q{#:} );
+    $bscannum->set_tooltip_text( __('Set number of pages to scan') );
     $hboxn->pack_start( $bscannum, FALSE, FALSE, 0 );
 
     # Number of pages
-    my $spin_buttonn = Gtk2::SpinButton->new_with_range( 1, $MAX_PAGES, 1 );
-    $tooltips->set_tip( $spin_buttonn, __('Set number of pages to scan') );
+    my $spin_buttonn = Gtk3::SpinButton->new_with_range( 1, $MAX_PAGES, 1 );
+    $spin_buttonn->set_tooltip_text( __('Set number of pages to scan') );
     $hboxn->pack_end( $spin_buttonn, FALSE, FALSE, 0 );
     $bscannum->signal_connect(
         clicked => sub {
@@ -366,22 +367,22 @@ sub INIT_INSTANCE {
 
     # Toggle to switch between basic and extended modes
     $self->{checkx} =
-      Gtk2::CheckButton->new( __('Extended page numbering') );
+      Gtk3::CheckButton->new( __('Extended page numbering') );
     $vbox1->pack_start( $self->{checkx}, FALSE, FALSE, 0 );
 
     # Frame for extended mode
-    $self->{framex} = Gtk2::Frame->new( __('Page number') );
+    $self->{framex} = Gtk3::Frame->new( __('Page number') );
     $vbox1->pack_start( $self->{framex}, FALSE, FALSE, 0 );
-    my $vboxx = Gtk2::VBox->new;
+    my $vboxx = Gtk3::VBox->new;
     $vboxx->set_border_width($border_width);
     $self->{framex}->add($vboxx);
 
     # SpinButton for starting page number
-    my $hboxxs = Gtk2::HBox->new;
+    my $hboxxs = Gtk3::HBox->new;
     $vboxx->pack_start( $hboxxs, FALSE, FALSE, 0 );
-    my $labelxs = Gtk2::Label->new( __('Start') );
+    my $labelxs = Gtk3::Label->new( __('Start') );
     $hboxxs->pack_start( $labelxs, FALSE, FALSE, 0 );
-    my $spin_buttons = Gtk2::SpinButton->new_with_range( 1, $MAX_PAGES, 1 );
+    my $spin_buttons = Gtk3::SpinButton->new_with_range( 1, $MAX_PAGES, 1 );
     $hboxxs->pack_end( $spin_buttons, FALSE, FALSE, 0 );
     $spin_buttons->signal_connect(
         'value-changed' => sub {
@@ -396,12 +397,12 @@ sub INIT_INSTANCE {
     );
 
     # SpinButton for page number increment
-    my $hboxi = Gtk2::HBox->new;
+    my $hboxi = Gtk3::HBox->new;
     $vboxx->pack_start( $hboxi, FALSE, FALSE, 0 );
-    my $labelxi = Gtk2::Label->new( __('Increment') );
+    my $labelxi = Gtk3::Label->new( __('Increment') );
     $hboxi->pack_start( $labelxi, FALSE, FALSE, 0 );
     my $spin_buttoni =
-      Gtk2::SpinButton->new_with_range( -$MAX_INCREMENT, $MAX_INCREMENT, 1 );
+      Gtk3::SpinButton->new_with_range( -$MAX_INCREMENT, $MAX_INCREMENT, 1 );
     $spin_buttoni->set_value( $self->get('page-number-increment') );
     $hboxi->pack_end( $spin_buttoni, FALSE, FALSE, 0 );
     $spin_buttoni->signal_connect(
@@ -431,16 +432,16 @@ sub INIT_INSTANCE {
     );
 
     # Frame for standard mode
-    $self->{frames} = Gtk2::Frame->new( __('Source document') );
+    $self->{frames} = Gtk3::Frame->new( __('Source document') );
     $vbox1->pack_start( $self->{frames}, FALSE, FALSE, 0 );
-    my $vboxs = Gtk2::VBox->new;
+    my $vboxs = Gtk3::VBox->new;
     $vboxs->set_border_width($border_width);
     $self->{frames}->add($vboxs);
 
     # Single sided button
-    $self->{buttons} = Gtk2::RadioButton->new( undef, __('Single sided') );
-    $tooltips->set_tip( $self->{buttons},
-        __('Source document is single-sided') );
+    $self->{buttons} = Gtk3::RadioButton->new_with_label_from_widget( undef,
+        __('Single sided') );
+    $self->{buttons}->set_tooltip_text( __('Source document is single-sided') );
     $vboxs->pack_start( $self->{buttons}, TRUE, TRUE, 0 );
     $self->{buttons}->signal_connect(
         clicked => sub {
@@ -452,18 +453,18 @@ sub INIT_INSTANCE {
 
     # Double sided button
     $self->{buttond} =
-      Gtk2::RadioButton->new( $self->{buttons}->get_group, __('Double sided') );
-    $tooltips->set_tip( $self->{buttond},
-        __('Source document is double-sided') );
+      Gtk3::RadioButton->new_with_label_from_widget( $self->{buttons},
+        __('Double sided') );
+    $self->{buttond}->set_tooltip_text( __('Source document is double-sided') );
     $vboxs->pack_start( $self->{buttond}, FALSE, FALSE, 0 );
 
     # Facing/reverse page button
-    my $hboxs = Gtk2::HBox->new;
+    my $hboxs = Gtk3::HBox->new;
     $vboxs->pack_start( $hboxs, TRUE, TRUE, 0 );
-    my $labels = Gtk2::Label->new( __('Side to scan') );
+    my $labels = Gtk3::Label->new( __('Side to scan') );
     $hboxs->pack_start( $labels, FALSE, FALSE, 0 );
 
-    $self->{combobs} = Gtk2::ComboBox->new_text;
+    $self->{combobs} = Gtk3::ComboBoxText->new;
     for ( ( __('Facing'), __('Reverse') ) ) {
         $self->{combobs}->append_text($_);
     }
@@ -481,7 +482,7 @@ sub INIT_INSTANCE {
                 $value eq 'facing' ? $DOUBLE_INCREMENT : -$DOUBLE_INCREMENT );
         }
     );
-    $tooltips->set_tip( $self->{combobs},
+    $self->{combobs}->set_tooltip_text(
         __('Sets which side of a double-sided document is scanned') );
     $self->{combobs}->set_active(0);
 
@@ -509,12 +510,12 @@ sub INIT_INSTANCE {
 
     # Scan profiles
     $self->{current_scan_options} = Gscan2pdf::Scanner::Profile->new;
-    my $framesp = Gtk2::Frame->new( __('Scan profiles') );
+    my $framesp = Gtk3::Frame->new( __('Scan profiles') );
     $vbox1->pack_start( $framesp, FALSE, FALSE, 0 );
-    my $vboxsp = Gtk2::VBox->new;
+    my $vboxsp = Gtk3::VBox->new;
     $vboxsp->set_border_width($border_width);
     $framesp->add($vboxsp);
-    $self->{combobsp} = Gtk2::ComboBox->new_text;
+    $self->{combobsp} = Gtk3::ComboBoxText->new;
     $self->{combobsp}->signal_connect(
         changed => sub {
             $self->{num_reloads} = 0;    # num-reloads is read-only
@@ -522,16 +523,16 @@ sub INIT_INSTANCE {
         }
     );
     $vboxsp->pack_start( $self->{combobsp}, FALSE, FALSE, 0 );
-    my $hboxsp = Gtk2::HBox->new;
+    my $hboxsp = Gtk3::HBox->new;
     $vboxsp->pack_end( $hboxsp, FALSE, FALSE, 0 );
 
     # Save button
-    my $vbutton = Gtk2::Button->new_from_stock('gtk-save');
+    my $vbutton = Gtk3::Button->new_from_stock('gtk-save');
     $vbutton->signal_connect( clicked => \&_save_profile_callback, $self );
     $hboxsp->pack_start( $vbutton, TRUE, TRUE, 0 );
 
     # Delete button
-    my $dbutton = Gtk2::Button->new_from_stock('gtk-delete');
+    my $dbutton = Gtk3::Button->new_from_stock('gtk-delete');
     $dbutton->signal_connect(
         clicked => sub {
             $self->remove_profile( $self->{combobsp}->get_active_text );
@@ -540,11 +541,11 @@ sub INIT_INSTANCE {
     $hboxsp->pack_start( $dbutton, FALSE, FALSE, 0 );
 
     # HBox for buttons
-    my $hboxb = Gtk2::HBox->new;
+    my $hboxb = Gtk3::HBox->new;
     $vbox->pack_end( $hboxb, FALSE, FALSE, 0 );
 
     # Scan button
-    $self->{sbutton} = Gtk2::Button->new( __('Scan') );
+    $self->{sbutton} = Gtk3::Button->new( __('Scan') );
     $hboxb->pack_start( $self->{sbutton}, TRUE, TRUE, 0 );
     $self->{sbutton}->signal_connect(
         clicked => sub {
@@ -555,7 +556,7 @@ sub INIT_INSTANCE {
     $self->{sbutton}->grab_focus;
 
     # Cancel button
-    my $cbutton = Gtk2::Button->new_from_stock('gtk-close');
+    my $cbutton = Gtk3::Button->new_from_stock('gtk-close');
     $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
     $cbutton->signal_connect( clicked => sub { $self->hide; } );
 
@@ -570,10 +571,10 @@ sub INIT_INSTANCE {
 
 sub _add_device_combobox {
     my ( $self, $vbox ) = @_;
-    $self->{hboxd} = Gtk2::HBox->new;
-    my $labeld = Gtk2::Label->new( __('Device') );
+    $self->{hboxd} = Gtk3::HBox->new;
+    my $labeld = Gtk3::Label->new( __('Device') );
     $self->{hboxd}->pack_start( $labeld, FALSE, FALSE, 0 );
-    $self->{combobd} = Gtk2::ComboBox->new_text;
+    $self->{combobd} = Gtk3::ComboBoxText->new;
     $self->{combobd}->append_text( __('Rescan for devices') );
 
     $self->{combobd_changed_signal} = $self->{combobd}->signal_connect(
@@ -611,8 +612,8 @@ sub _add_device_combobox {
             }
         }
     );
-    $tooltips->set_tip( $self->{combobd},
-        __('Sets the device to be used for the scan') );
+    $self->{combobd}
+      ->set_tooltip_text( __('Sets the device to be used for the scan') );
     $self->{hboxd}->pack_end( $self->{combobd}, FALSE, FALSE, 0 );
     $vbox->pack_start( $self->{hboxd}, FALSE, FALSE, 0 );
     return;
@@ -620,16 +621,16 @@ sub _add_device_combobox {
 
 sub _save_profile_callback {
     my ( $widget, $parent ) = @_;
-    my $dialog = Gtk2::Dialog->new(
+    my $dialog = Gtk3::Dialog->new(
         __('Name of scan profile'), $parent,
         'destroy-with-parent',
         'gtk-save'   => 'ok',
         'gtk-cancel' => 'cancel'
     );
-    my $hbox  = Gtk2::HBox->new;
-    my $label = Gtk2::Label->new( __('Name of scan profile') );
+    my $hbox  = Gtk3::HBox->new;
+    my $label = Gtk3::Label->new( __('Name of scan profile') );
     $hbox->pack_start( $label, FALSE, FALSE, 0 );
-    my $entry = Gtk2::Entry->new;
+    my $entry = Gtk3::Entry->new;
     $entry->set_activates_default(TRUE);
     $hbox->pack_end( $entry, TRUE, TRUE, 0 );
     $dialog->vbox->add($hbox);
@@ -645,12 +646,12 @@ sub _save_profile_callback {
                     my $warning = sprintf
                       __("Profile '%s' exists. Overwrite?"),
                       $name;
-                    my $dialog2 = Gtk2::Dialog->new(
+                    my $dialog2 = Gtk3::Dialog->new(
                         $warning, $dialog, 'destroy-with-parent',
                         'gtk-ok'     => 'ok',
                         'gtk-cancel' => 'cancel'
                     );
-                    $label = Gtk2::Label->new($warning);
+                    $label = Gtk3::Label->new($warning);
                     $dialog2->vbox->add($label);
                     $label->show;
                     if ( $dialog2->run eq 'ok' ) {
@@ -931,7 +932,7 @@ sub _set_num_pages {
 sub show {
     my $self = shift;
     $self->signal_chain_from_overridden;
-    $self->{framex}->hide_all;
+    $self->{framex}->hide;
     if (    defined $self->{combobp}
         and defined $self->{combobp}->get_active_text
         and $self->{combobp}->get_active_text ne __('Manual') )
@@ -1045,7 +1046,7 @@ sub pack_widget {
                     $text = $d_sane->get('us')
                 }
             }
-            my $label = Gtk2::Label->new($text);
+            my $label = Gtk3::Label->new($text);
             $hbox->pack_end( $label, FALSE, FALSE, 0 );
         }
 
@@ -1056,7 +1057,7 @@ sub pack_widget {
         else {
             $hbox->pack_end( $widget, FALSE, FALSE, 0 );
         }
-        $tooltips->set_tip( $widget, $d_sane->get( $opt->{desc} ) );
+        $widget->set_tooltip_text( $d_sane->get( $opt->{desc} ) );
 
         # Look-up to hide/show the box if necessary
         if ( $self->_geometry_option($opt) ) {
@@ -1104,14 +1105,14 @@ sub create_paper_widget {
     {
 
         # Paper list
-        my $label = Gtk2::Label->new( __('Paper size') );
+        my $label = Gtk3::Label->new( __('Paper size') );
         $hboxp->pack_start( $label, FALSE, FALSE, 0 );
 
-        $self->{combobp} = Gtk2::ComboBox->new_text;
+        $self->{combobp} = Gtk3::ComboBoxText->new;
         $self->{combobp}->append_text( __('Manual') );
         $self->{combobp}->append_text( __('Edit') );
-        $tooltips->set_tip( $self->{combobp},
-            __('Selects or edits the paper size') );
+        $self->{combobp}
+          ->set_tooltip_text( __('Selects or edits the paper size') );
         $hboxp->pack_end( $self->{combobp}, FALSE, FALSE, 0 );
         $self->{combobp}->set_active(0);
         $self->{combobp}->signal_connect(
@@ -1175,7 +1176,7 @@ sub hide_geometry {
       )
     {
         if ( defined $self->{geometry_boxes}{$_} ) {
-            $self->{geometry_boxes}{$_}->hide_all;
+            $self->{geometry_boxes}{$_}->hide;
         }
     }
     return;
@@ -1320,7 +1321,7 @@ sub _update_option {
     my $value = $opt->{val};
 
     # HBox for option
-    my $hbox = $widget->parent;
+    my $hbox = $widget->get_parent;
     $hbox->set_sensitive( ( not $opt->{cap} & SANE_CAP_INACTIVE )
           and $opt->{cap} & SANE_CAP_SOFT_SELECT );
 
@@ -1391,7 +1392,7 @@ sub set_paper_formats {
 
         # Remove all formats, leaving Manual and Edit
         my $n = get_combobox_num_rows($combobp);
-        while ( $n-- > 2 ) { $combobp->remove_text(0) }
+        while ( $n-- > 2 ) { $combobp->remove(0) }
 
         $self->{ignored_paper_formats} = ();
         my $options = $self->get('available-scan-options');
@@ -1507,17 +1508,17 @@ sub edit_paper {
     my $vbox = $window->get('vbox');
 
     # Buttons for SimpleList
-    my $hboxl = Gtk2::HBox->new;
+    my $hboxl = Gtk3::HBox->new;
     $vbox->pack_start( $hboxl, FALSE, FALSE, 0 );
-    my $vboxb = Gtk2::VBox->new;
+    my $vboxb = Gtk3::VBox->new;
     $hboxl->pack_start( $vboxb, FALSE, FALSE, 0 );
-    my $dbutton = Gtk2::Button->new_from_stock('gtk-add');
+    my $dbutton = Gtk3::Button->new_from_stock('gtk-add');
     $vboxb->pack_start( $dbutton, TRUE, FALSE, 0 );
-    my $rbutton = Gtk2::Button->new_from_stock('gtk-remove');
+    my $rbutton = Gtk3::Button->new_from_stock('gtk-remove');
     $vboxb->pack_end( $rbutton, TRUE, FALSE, 0 );
 
     # Set up a SimpleList
-    my $slist = Gtk2::Ex::Simple::List->new(
+    my $slist = Gtk3::SimpleList->new(
         __('Name')   => 'text',
         __('Width')  => 'int',
         __('Height') => 'int',
@@ -1619,9 +1620,9 @@ sub edit_paper {
     $hboxl->pack_end( $slist, FALSE, FALSE, 0 );
 
     # Buttons
-    my $hboxb = Gtk2::HBox->new;
+    my $hboxb = Gtk3::HBox->new;
     $vbox->pack_start( $hboxb, FALSE, FALSE, 0 );
-    my $abutton = Gtk2::Button->new_from_stock('gtk-apply');
+    my $abutton = Gtk3::Button->new_from_stock('gtk-apply');
     $abutton->signal_connect(
         clicked => sub {
             my %formats;
@@ -1655,7 +1656,7 @@ sub edit_paper {
         }
     );
     $hboxb->pack_start( $abutton, TRUE, FALSE, 0 );
-    my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
+    my $cbutton = Gtk3::Button->new_from_stock('gtk-cancel');
     $cbutton->signal_connect(
         clicked => sub {
 
@@ -1716,7 +1717,7 @@ sub _combobox_remove_item_by_text {
             if ( $combobox->get_active == $i ) {
                 $combobox->set_active($NO_INDEX);
             }
-            $combobox->remove_text($i);
+            $combobox->remove($i);
         }
     }
     return;
@@ -1778,35 +1779,40 @@ sub remove_profile {
 
 sub get_combobox_num_rows {
     my ($combobox) = @_;
-    if ( not defined $combobox ) { return }
     my $i = 0;
-    $combobox->get_model->foreach(
-        sub {
-            ++$i;
-            return FALSE;    # continue the foreach()
-        }
-    );
+    if ( defined $combobox and defined( $combobox->get_model ) ) {
+        $combobox->get_model->foreach(
+            sub {
+                ++$i;
+                return FALSE;    # continue the foreach()
+            }
+        );
+    }
     return $i;
 }
 
 sub get_combobox_by_text {
     my ( $combobox, $text ) = @_;
-    if ( not( defined $combobox and defined $text ) ) { return $NO_INDEX }
     my $o = $NO_INDEX;
     my $i = 0;
-    $combobox->get_model->foreach(
-        sub {
-            my ( $model, $path, $iter ) = @_;
-            if ( $model->get( $iter, 0 ) eq $text ) {
-                $o = $i;
-                return TRUE;    # found - stop the foreach()
+    if (    defined $combobox
+        and defined( $combobox->get_model )
+        and defined $text )
+    {
+        $combobox->get_model->foreach(
+            sub {
+                my ( $model, $path, $iter ) = @_;
+                if ( $model->get( $iter, 0 ) eq $text ) {
+                    $o = $i;
+                    return TRUE;    # found - stop the foreach()
+                }
+                else {
+                    ++$i;
+                    return FALSE;    # not found - continue the foreach()
+                }
             }
-            else {
-                ++$i;
-                return FALSE;    # not found - continue the foreach()
-            }
-        }
-    );
+        );
+    }
     return $o;
 }
 
@@ -1826,7 +1832,7 @@ sub _extended_pagenumber_checkbox_callback {
     my ( $widget, $data )         = @_;
     my ( $dialog, $spin_buttoni ) = @{$data};
     if ( $widget->get_active ) {
-        $dialog->{frames}->hide_all;
+        $dialog->{frames}->hide;
         $dialog->{framex}->show_all;
     }
     else {
@@ -1842,7 +1848,7 @@ sub _extended_pagenumber_checkbox_callback {
             $dialog->{combobs}->set_active(TRUE);
         }
         $dialog->{frames}->show_all;
-        $dialog->{framex}->hide_all;
+        $dialog->{framex}->hide;
     }
     return;
 }
@@ -1914,7 +1920,7 @@ sub set_options {
             return FALSE
               if ( $#{ $widget->{val} } + 1 >= $opt->{max_values}
                 or $widget->{on_val} );
-            my $fleur = Gtk2::Gdk::Cursor->new('fleur');
+            my $fleur = Gtk3::Gdk::Cursor->new('fleur');
             my ( $x, $y ) = to_graph( $widget, $event->x, $event->y );
             $x = int($x) + 1;
             splice @{ $widget->{val} }, $x, 0, $y;
@@ -1928,11 +1934,8 @@ sub set_options {
         'key_press_event',
         sub {
             my ( $widget, $event ) = @_;
-            if (
-                $event->keyval ==
-                $Gtk2::Gdk::Keysyms{Delete}   ## no critic (ProhibitPackageVars)
-                and defined $widget->{selected}
-              )
+            if ( $event->keyval == Gtk3::Gdk::KEY_Delete
+                and defined $widget->{selected} )
             {
                 my $item = $widget->{selected};
                 undef $widget->{selected};
@@ -1963,11 +1966,11 @@ sub set_options {
     }
 
     # HBox for buttons
-    my $hbox = Gtk2::HBox->new;
+    my $hbox = Gtk3::HBox->new;
     $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
 
     # Apply button
-    my $abutton = Gtk2::Button->new_from_stock('gtk-apply');
+    my $abutton = Gtk3::Button->new_from_stock('gtk-apply');
     $hbox->pack_start( $abutton, TRUE, TRUE, 0 );
     $abutton->signal_connect(
         clicked => sub {
@@ -1981,7 +1984,7 @@ sub set_options {
     );
 
     # Cancel button
-    my $cbutton = Gtk2::Button->new_from_stock('gtk-cancel');
+    my $cbutton = Gtk3::Button->new_from_stock('gtk-cancel');
     $hbox->pack_end( $cbutton, FALSE, FALSE, 0 );
     $cbutton->signal_connect( clicked => sub { $window->destroy } );
 
@@ -2015,7 +2018,7 @@ sub add_value {
             my ( $widget, $target, $ev ) = @_;
             $canvas->{selected} = $item;
             $item->set( 'fill-color' => 'red' );
-            my $fleur = Gtk2::Gdk::Cursor->new('fleur');
+            my $fleur = Gtk3::Gdk::Cursor->new('fleur');
             $widget->get_canvas->pointer_grab( $widget,
                 [ 'pointer-motion-mask', 'button-release-mask' ],
                 $fleur, $ev->time );
@@ -2253,18 +2256,18 @@ sub update_widget_value {
               . ( $opt->{type} == SANE_TYPE_BUTTON ? $EMPTY : " to '$val'." ) );
         $widget->signal_handler_block( $widget->{signal} );
         given ($widget) {
-            when ( $widget->isa('Gtk2::CheckButton') ) {
+            when ( $widget->isa('Gtk3::CheckButton') ) {
                 if ( $val eq $EMPTY ) { $val = 0 }
                 if ( $widget->get_active != $val ) {
                     $widget->set_active($val);
                 }
             }
-            when ( $widget->isa('Gtk2::SpinButton') ) {
+            when ( $widget->isa('Gtk3::SpinButton') ) {
                 if ( $widget->get_value != $val ) {
                     $widget->set_value($val);
                 }
             }
-            when ( $widget->isa('Gtk2::ComboBox') ) {
+            when ( $widget->isa('Gtk3::ComboBox') ) {
                 if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
                     my $index;
                     for ( 0 .. $#{ $opt->{constraint} } ) {
@@ -2275,7 +2278,7 @@ sub update_widget_value {
                     if ( defined $index ) { $widget->set_active($index) }
                 }
             }
-            when ( $widget->isa('Gtk2::Entry') ) {
+            when ( $widget->isa('Gtk3::Entry') ) {
                 if ( $widget->get_text ne $val ) {
                     $widget->set_text($val);
                 }

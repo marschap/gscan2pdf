@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 6;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 
 BEGIN {
@@ -11,7 +11,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -77,7 +77,7 @@ $signal = $dialog->signal_connect(
             'reloaded-scan-options' => sub {
                 is( $dialog->get('profile'),
                     undef, 'reloading scan options unsets profile' );
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
         $dialog->scan_options('test');
@@ -85,7 +85,7 @@ $signal = $dialog->signal_connect(
 );
 $dialog->set( 'device', 'test' );
 $dialog->scan_options('test');
-Gtk2->main;
+Gtk3->main;
 
 Gscan2pdf::Frontend::Image_Sane->quit;
 __END__

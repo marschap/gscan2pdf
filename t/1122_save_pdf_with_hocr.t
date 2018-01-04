@@ -4,7 +4,7 @@ use Test::More tests => 2;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
     use PDF::API2;
 }
 
@@ -76,14 +76,14 @@ $slist->import_files(
                             qr/bbox\s0\s0\s$width\s$height/xsm,
                             'import text layer'
                         );
-                        Gtk2->main_quit;
+                        Gtk3->main_quit;
                     }
                 );
             }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 like(
     `pdftotext test.pdf -`,

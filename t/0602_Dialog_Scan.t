@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 23;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 
 BEGIN {
@@ -11,7 +11,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -168,11 +168,11 @@ $signal = $dialog->signal_connect(
         ok $dialog->_flatbed_selected($options),
           '_flatbed_selected() via value';
 
-        is $dialog->{checkx}->visible, FALSE,
+        is $dialog->{checkx}->is_visible, FALSE,
           'flatbed, so hide checkbox for extended page numbering';
-        is $dialog->{framex}->visible, FALSE,
+        is $dialog->{framex}->is_visible, FALSE,
           'flatbed, so hide frame for extended page numbering';
-        is $dialog->{frames}->visible, FALSE,
+        is $dialog->{frames}->is_visible, FALSE,
           'flatbed, so hide frame for page side radio buttons';
 
         $dialog->set( 'allow-batch-flatbed', TRUE );
@@ -234,14 +234,14 @@ $signal = $dialog->signal_connect(
                 is $dialog->get('num-pages'), 1,
                   'adf-defaults-scan-all-pages should force num-pages 2';
 
-                is $dialog->{checkx}->visible, TRUE,
+                is $dialog->{checkx}->is_visible, TRUE,
                   'simplex ADF, so hide checkbox for extended page numbering';
-                is $dialog->{framex}->visible, TRUE,
+                is $dialog->{framex}->is_visible, TRUE,
                   'simplex ADF, so hide frame for extended page numbering';
-                is $dialog->{frames}->visible, TRUE,
+                is $dialog->{frames}->is_visible, TRUE,
                   'simplex ADF, so hide frame for page side radio buttons';
 
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
         $dialog->set_option( $options->by_name('source'),
@@ -250,7 +250,7 @@ $signal = $dialog->signal_connect(
 );
 $dialog->set( 'device', 'test' );
 $dialog->scan_options;
-Gtk2->main;
+Gtk3->main;
 
 is( Gscan2pdf::Dialog::Scan::get_combobox_num_rows( $dialog->{combobp} ),
     3, 'available paper reapplied after setting/changing device' );

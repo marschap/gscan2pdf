@@ -5,7 +5,7 @@ use Test::More tests => 2;
 BEGIN {
     use Gscan2pdf::Document;
     use Gscan2pdf::Tesseract;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -45,13 +45,13 @@ SKIP: {
                     $slist->save_image(
                         path              => 'test.jpg',
                         list_of_pages     => [ $slist->{data}[0][2] ],
-                        finished_callback => sub { Gtk2->main_quit }
+                        finished_callback => sub { Gtk3->main_quit }
                     );
                 }
             );
         }
     );
-    Gtk2->main;
+    Gtk3->main;
 
     is( system('identify test.jpg'),
         0, 'can create a valid JPG after cancelling previous process' );

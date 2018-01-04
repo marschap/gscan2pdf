@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 1;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 
 BEGIN {
@@ -11,7 +11,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -34,11 +34,11 @@ $dialog->{signal} = $dialog->signal_connect(
     'reloaded-scan-options' => sub {
         $dialog->signal_handler_disconnect( $dialog->{signal} );
         pass('Initialised scan dialog after setting paper formats');
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
 $dialog->set( 'device', 'test' );
 $dialog->scan_options;
-Gtk2->main;
+Gtk3->main;
 
 __END__

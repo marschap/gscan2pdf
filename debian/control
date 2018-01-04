@@ -21,7 +21,7 @@ Homepage: http://gscan2pdf.sourceforge.net/
 
 Package: gscan2pdf
 Architecture: all
-Depends: libgtk2-imageview-perl, libgtk2-ex-simple-list-perl,
+Depends: libgtk2-imageview-perl, libgtk3-simplelist-perl,
  libimage-sane-perl, liblocale-gettext-perl (>= 1.05),
  sane-utils (>= 1.0.17), libtiff-tools, libpdf-api2-perl,
  libconfig-general-perl (>= 2.40), libimage-magick-perl, imagemagick,

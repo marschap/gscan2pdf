@@ -90,7 +90,7 @@ sub new {
     my $vbox = $self->get('vbox');
 
     # Frame for page range
-    my $frame = Gtk2::Frame->new( __('Page Range') );
+    my $frame = Gtk3::Frame->new( __('Page Range') );
     $vbox->pack_start( $frame, FALSE, FALSE, 0 );
     my $pr = Gscan2pdf::PageRange->new;
     $pr->signal_connect(
@@ -109,18 +109,18 @@ sub new {
     $frame->add($pr);
 
     # Frame for page numbering
-    my $framex = Gtk2::Frame->new( __('Page numbering') );
+    my $framex = Gtk3::Frame->new( __('Page numbering') );
     $vbox->pack_start( $framex, FALSE, FALSE, 0 );
-    my $vboxx = Gtk2::VBox->new;
+    my $vboxx = Gtk3::VBox->new;
     $vboxx->set_border_width( $self->get('border_width') );
     $framex->add($vboxx);
 
     # SpinButton for starting page number
-    my $hboxxs = Gtk2::HBox->new;
+    my $hboxxs = Gtk3::HBox->new;
     $vboxx->pack_start( $hboxxs, FALSE, FALSE, 0 );
-    my $labelxs = Gtk2::Label->new( __('Start') );
+    my $labelxs = Gtk3::Label->new( __('Start') );
     $hboxxs->pack_start( $labelxs, FALSE, FALSE, 0 );
-    my $spin_buttons = Gtk2::SpinButton->new_with_range( 1, $_MAX_PAGES, 1 );
+    my $spin_buttons = Gtk3::SpinButton->new_with_range( 1, $_MAX_PAGES, 1 );
     $spin_buttons->signal_connect(
         'value-changed' => sub {
             $self->set( 'start', $spin_buttons->get_value );
@@ -137,12 +137,12 @@ sub new {
     $hboxxs->pack_end( $spin_buttons, FALSE, FALSE, 0 );
 
     # SpinButton for page number increment
-    my $hboxi = Gtk2::HBox->new;
+    my $hboxi = Gtk3::HBox->new;
     $vboxx->pack_start( $hboxi, FALSE, FALSE, 0 );
-    my $labelxi = Gtk2::Label->new( __('Increment') );
+    my $labelxi = Gtk3::Label->new( __('Increment') );
     $hboxi->pack_start( $labelxi, FALSE, FALSE, 0 );
     my $spin_buttoni =
-      Gtk2::SpinButton->new_with_range( -$_MAX_INCREMENT, $_MAX_INCREMENT, 1 );
+      Gtk3::SpinButton->new_with_range( -$_MAX_INCREMENT, $_MAX_INCREMENT, 1 );
     $spin_buttoni->signal_connect(
         'value-changed' => sub {
             $self->set( 'increment', $spin_buttoni->get_value );
@@ -184,16 +184,16 @@ sub new {
     );
 
     # HBox for buttons
-    my $hbox = Gtk2::HBox->new;
+    my $hbox = Gtk3::HBox->new;
     $vbox->pack_start( $hbox, FALSE, TRUE, 0 );
 
     # Start button
-    my $obutton = Gtk2::Button->new( __('Renumber') );
+    my $obutton = Gtk3::Button->new( __('Renumber') );
     $hbox->pack_start( $obutton, TRUE, TRUE, 0 );
     $obutton->signal_connect( clicked => sub { $self->renumber } );
 
     # Close button
-    my $cbutton = Gtk2::Button->new_from_stock('gtk-close');
+    my $cbutton = Gtk3::Button->new_from_stock('gtk-close');
     $hbox->pack_end( $cbutton, FALSE, FALSE, 0 );
     $cbutton->signal_connect( clicked => sub { $self->hide; } );
 

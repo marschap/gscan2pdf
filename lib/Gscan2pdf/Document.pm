@@ -65,7 +65,7 @@ BEGIN {
 
     $VERSION = '1.8.11';
 
-    use base qw(Exporter Gtk2::Ex::Simple::List);
+    use base qw(Exporter Gtk3::SimpleList);
     %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
 
     # your exported package globals go here,
@@ -73,7 +73,7 @@ BEGIN {
     @EXPORT_OK = qw();
 
     # define hidden string column for page data
-    Gtk2::Ex::Simple::List->add_column_type(
+    Gtk3::SimpleList->add_column_type(
         'hstring',
         type => 'Glib::Scalar',
         attr => 'hidden'
@@ -115,7 +115,7 @@ sub setup {
 
 sub new {
     my ( $class, %options ) = @_;
-    my $self = Gtk2::Ex::Simple::List->new(
+    my $self = Gtk3::SimpleList->new(
         q{#}             => 'int',
         __('Thumbnails') => 'pixbuf',
         'Page Data'      => 'hstring',
@@ -134,21 +134,21 @@ sub new {
     bless $self, $class;
     Glib::Timeout->add( $_POLL_INTERVAL, \&check_return_queue, $self );
 
-    my $target_entry = {
-        target => 'Glib::Scalar',    # some string representing the drag type
-        flags  => 'same-widget',     # Gtk2::TargetFlags
-        info   => $ID_PAGE,          # some app-defined integer identifier
-    };
-    $self->drag_source_set( 'button1-mask', [ 'copy', 'move' ], $target_entry );
+    my $dnd_source = Gtk3::TargetEntry->new(
+        'Glib::Scalar',    # some string representing the drag type
+        ${ Gtk3::TargetFlags->new(qw/same-widget/) },
+        $ID_PAGE,          # some app-defined integer identifier
+    );
+    $self->drag_source_set( 'button1-mask', [$dnd_source], [ 'copy', 'move' ] );
+    my $dnd_dest = Gtk3::TargetEntry->new(
+        'Glib::Scalar',    # some string representing the drag type
+        ${ Gtk3::TargetFlags->new(qw/same-widget/) },
+        $ID_URI,           # some app-defined integer identifier
+    );
     $self->drag_dest_set(
         [ 'drop', 'motion', 'highlight' ],
-        [ 'copy', 'move' ],
+        [$dnd_dest], [ 'copy', 'move' ],
     );
-    my $target_list = Gtk2::TargetList->new();
-    $target_list->add_uri_targets($ID_URI);
-    $target_list->add_table($target_entry);
-    $self->drag_dest_set_target_list($target_list);
-
     $self->signal_connect(
         'drag-data-get' => sub {
             my ( $tree, $context, $sel ) = @_;
@@ -895,7 +895,7 @@ sub get_pixbuf {
     my $pixbuf;
     try {
         $pixbuf =
-          Gtk2::Gdk::Pixbuf->new_from_file_at_scale( $filename, $width, $height,
+          Gtk3::Gdk::Pixbuf->new_from_file_at_scale( $filename, $width, $height,
             TRUE );
     }
     catch {
@@ -965,15 +965,17 @@ sub cut_selection {
 
 sub copy_selection {
     my ( $self, $clone ) = @_;
-    my @rows = $self->get_selection->get_selected_rows or return;
+    my $rows = $self->get_selection->get_selected_rows or return;
     my $model = $self->get_model;
     my @data;
-    for (@rows) {
-        my $iter = $model->get_iter($_);
-        my @info = $model->get($iter);
-        my $new  = $info[2]->clone($clone);
-        push @data, [ $info[0], $info[1], $new ];
-    }
+    $rows->foreach(
+        sub {
+            my ( $model, $path, $iter ) = @_;
+            my @info = $model->get($iter);
+            my $new  = $info[2]->clone($clone);
+            push @data, [ $info[0], $info[1], $new ];
+        }
+    );
     $logger->info( 'Copied ', $clone ? 'and cloned ' : $EMPTY,
         $#data + 1, ' pages' );
     return \@data;
@@ -1005,7 +1007,7 @@ sub paste_selection {
 
     # Update the start spinbutton if necessary
     $self->renumber;
-    $self->get_model->signal_emit( 'row-changed', Gtk2::TreePath->new,
+    $self->get_model->signal_emit( 'row-changed', Gtk3::TreePath->new,
         $self->get_model->get_iter_first );
 
     # Select the new pages
@@ -1033,11 +1035,15 @@ sub paste_selection {
 sub delete_selection {
     my ($self) = @_;
     my $model  = $self->get_model;
-    my @rows   = $self->get_selection->get_selected_rows;
-    for ( reverse @rows ) {
-        my $iter = $model->get_iter($_);
-        $model->remove($iter);
-    }
+    my $rows   = $self->get_selection->get_selected_rows;
+
+    #for ( reverse @rows ) {
+    $rows->foreach(    # might have to fix this. previously, order was reversed
+        sub {
+            my ( $model, $path, $iter ) = @_;
+            $model->remove($iter);
+        }
+    );
     return;
 }
 

@@ -7,7 +7,7 @@ use Test::More tests => 4;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
-    use Gtk2 -init;         # Could just call init separately
+    use Gtk3 -init;         # Could just call init separately
 }
 
 #########################
@@ -38,11 +38,11 @@ $slist->import_files(
             list_of_pages     => [ $slist->{data}[0][2] ],
             metadata          => \%metadata,
             options           => { set_timestamp => TRUE },
-            finished_callback => sub { Gtk2->main_quit }
+            finished_callback => sub { Gtk3->main_quit }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 my $info = `pdfinfo $pdf`;
 like( $info, qr/metadata title/,            'metadata title in PDF' );

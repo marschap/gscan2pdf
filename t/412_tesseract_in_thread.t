@@ -6,7 +6,7 @@ use Test::More tests => 6;
 BEGIN {
     use Gscan2pdf::Document;
     use_ok('Gscan2pdf::Tesseract');
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
@@ -52,12 +52,12 @@ SKIP: {
                         qr/f(o|0)x/, 'Tesseract returned "fox"' );
                     is( dirname("$slist->{data}[0][2]{filename}"),
                         "$dir", 'using session directory' );
-                    Gtk2->main_quit;
+                    Gtk3->main_quit;
                 }
             );
         }
     );
-    Gtk2->main;
+    Gtk3->main;
 
     unlink 'test.png', <$dir/*>;
     rmdir $dir;

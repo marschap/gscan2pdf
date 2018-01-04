@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 26;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;
+use Gtk3 -init;
 use Scalar::Util;
 
 BEGIN {
@@ -12,7 +12,7 @@ BEGIN {
 #########################
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 ok(
     my $dialog =
@@ -27,7 +27,7 @@ ok( $dialog->get('hide-on-delete') == FALSE, 'default destroy' );
 is( $dialog->get('border-width'), 0, 'default border width' );
 
 ok( my $vbox = $dialog->get('vbox'), 'Get vbox' );
-isa_ok( $vbox, 'Gtk2::VBox' );
+isa_ok( $vbox, 'Gtk3::VBox' );
 is(
     $vbox->get('border-width'),
     $dialog->get('border-width'),
@@ -51,8 +51,8 @@ Scalar::Util::weaken($dialog);
 isnt( $dialog, undef, 'hidden on delete_event' );
 
 $dialog = Gscan2pdf::Dialog->new;
-my $event = Gtk2::Gdk::Event->new('key-press');
-$event->keyval( $Gtk2::Gdk::Keysyms{Escape} );
+my $event = Gtk3::Gdk::Event->new('key-press');
+$event->keyval(Gtk3::Gdk::KEY_Escape);
 $dialog->signal_emit( 'key_press_event', $event );
 Scalar::Util::weaken($dialog);
 is( $dialog, undef, 'destroyed on escape' );
@@ -66,15 +66,12 @@ $dialog = Gscan2pdf::Dialog->new;
 $dialog->signal_connect_after(
     key_press_event => sub {
         my ( $widget, $event ) = @_;
-        is(
-            $event->keyval,
-            $Gtk2::Gdk::Keysyms{Delete},
-            'other key press events still propagate'
-        );
+        is( $event->keyval, Gtk3::Gdk::KEY_Delete,
+            'other key press events still propagate' );
     }
 );
-$event = Gtk2::Gdk::Event->new('key-press');
-$event->keyval( $Gtk2::Gdk::Keysyms{Delete} );
+$event = Gtk3::Gdk::Event->new('key-press');
+$event->keyval(Gtk3::Gdk::KEY_Delete);
 $dialog->signal_emit( 'key_press_event', $event );
 
 my %widgets = $dialog->add_metadata_dialog(

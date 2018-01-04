@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Test::More tests => 1;
-use Gtk2 -init;    # Could just call init separately
+use Gtk3 -init;    # Could just call init separately
 use Gscan2pdf::Tesseract;
 use Gscan2pdf::Document;
 use Gscan2pdf::Unpaper;
@@ -37,12 +37,12 @@ $slist->import_scan(
             finished_callback => sub {
                 is( $slist->{data}[0][2]{mean},
                     0, 'User-defined with %i and %o' );
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

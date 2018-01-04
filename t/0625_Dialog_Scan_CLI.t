@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 9;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 
 BEGIN {
     use_ok('Gscan2pdf::Dialog::Scan::CLI');
@@ -10,7 +10,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -34,7 +34,7 @@ $dialog->set( 'cache-options', TRUE );
 $dialog->signal_connect(
     'process-error' => sub {
         my ( $widget, $process, $msg ) = @_;
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
 
@@ -109,7 +109,7 @@ $signal = $dialog->signal_connect(
                                                     },
 'retrieved Gray from cache #2'
                                                 );
-                                                Gtk2->main_quit;
+                                                Gtk3->main_quit;
                                             }
                                         );
                                         $dialog->set_option(
@@ -147,7 +147,7 @@ $signal = $dialog->signal_connect(
 $dialog->set( 'device-list', [ { 'name' => 'test' } ] );
 $dialog->set( 'device', 'test' );
 
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

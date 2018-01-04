@@ -4,7 +4,7 @@ use Test::More tests => 1;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
     use PDF::API2;
 }
 
@@ -40,11 +40,11 @@ $slist->import_files(
             path              => 'test.pdf',
             list_of_pages     => [ $slist->{data}[0][2] ],
             options           => \%options,
-            finished_callback => sub { Gtk2->main_quit }
+            finished_callback => sub { Gtk3->main_quit }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 like(
     `pdftotext test.pdf -`,

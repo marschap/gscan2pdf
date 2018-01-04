@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2;
+use Gtk3;
 use Gscan2pdf::Frontend::Image_Sane;
 use Gscan2pdf::Scanner::Options;
 use Test::More tests => 3;
@@ -50,7 +50,7 @@ qr/PGM 216x334 216x334\+0\+0 8-bit Grayscale Gray/,
                                 );
                             },
                             finished_callback => sub {
-                                Gtk2->main_quit;
+                                Gtk3->main_quit;
                             },
                         );
                     }
@@ -59,7 +59,7 @@ qr/PGM 216x334 216x334\+0\+0 8-bit Grayscale Gray/,
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

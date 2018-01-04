@@ -8,7 +8,7 @@ use Sub::Override;     # Override Page to test functionality that
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -57,10 +57,10 @@ $slist->import_files(
             qr/^TIFF/,
             'DjVu otherwise imported correctly'
         );
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

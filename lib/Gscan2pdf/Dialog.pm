@@ -2,9 +2,8 @@ package Gscan2pdf::Dialog;
 
 use warnings;
 use strict;
-use Gtk2;
+use Gtk3;
 use Glib 1.220 qw(TRUE FALSE);      # To get TRUE and FALSE
-use Gtk2::Gdk::Keysyms;
 use Gscan2pdf::Document;
 use Gscan2pdf::EntryCompletion;
 use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
@@ -14,7 +13,7 @@ $Data::Dumper::Sortkeys = 1;
 use Readonly;
 Readonly my $ENTRY_WIDTH => 10;
 
-use Glib::Object::Subclass Gtk2::Window::,
+use Glib::Object::Subclass Gtk3::Window::,
   signals => {
     delete_event    => \&on_delete_event,
     key_press_event => \&on_key_press_event,
@@ -40,7 +39,7 @@ use Glib::Object::Subclass Gtk2::Window::,
         'vbox',                                                       # name
         'VBox',                                                       # nickname
         'VBox which is automatically added to the Gscan2pdf::Dialog', # blurb
-        'Gtk2::VBox',                                                 # package
+        'Gtk3::VBox',                                                 # package
         [qw/readable writable/]                                       # flags
     ),
   ];
@@ -55,17 +54,14 @@ my $INTREGEX = qr{^(.*)           # start of message
                   \b[[:digit:]]+\b # integer
                   (.*)$           # rest of message
                  }xsm;
-my ($tooltips);
 
 sub INIT_INSTANCE {
     my $self = shift;
 
     $self->set_position('center-on-parent');
-    $tooltips = Gtk2::Tooltips->new;
-    $tooltips->enable;
 
     # VBox for window
-    my $vbox = Gtk2::VBox->new;
+    my $vbox = Gtk3::VBox->new;
     $self->add($vbox);
     $self->set( 'vbox', $vbox );
     return $self;
@@ -85,19 +81,17 @@ sub on_delete_event {
     my ( $widget, $event ) = @_;
     if ( $widget->get('hide-on-delete') ) {
         $widget->hide;
-        return Gtk2::EVENT_STOP;    # ensures that the window is not destroyed
+        return Gtk3::EVENT_STOP;    # ensures that the window is not destroyed
     }
     $widget->destroy;
-    return Gtk2::EVENT_PROPAGATE;
+    return Gtk3::EVENT_PROPAGATE;
 }
 
 sub on_key_press_event {
     my ( $widget, $event ) = @_;
-    if ( $event->keyval !=
-        $Gtk2::Gdk::Keysyms{Escape} )    ## no critic (ProhibitPackageVars)
-    {
+    if ( $event->keyval != Gtk3::Gdk::KEY_Escape ) {
         $widget->signal_chain_from_overridden($event);
-        return Gtk2::EVENT_PROPAGATE;
+        return Gtk3::EVENT_PROPAGATE;
     }
     if ( $widget->get('hide-on-delete') ) {
         $widget->hide;
@@ -105,7 +99,7 @@ sub on_key_press_event {
     else {
         $widget->destroy;
     }
-    return Gtk2::EVENT_STOP;
+    return Gtk3::EVENT_STOP;
 }
 
 sub add_metadata_dialog {
@@ -113,29 +107,29 @@ sub add_metadata_dialog {
     my ($vbox) = $self->get('vbox');
 
     # it needs its own box to be able to hide it if necessary
-    my $hboxmd = Gtk2::HBox->new;
+    my $hboxmd = Gtk3::HBox->new;
     $vbox->pack_start( $hboxmd, FALSE, FALSE, 0 );
 
     # Frame for metadata
-    my $frame = Gtk2::Frame->new( __('Document Metadata') );
+    my $frame = Gtk3::Frame->new( __('Document Metadata') );
     $hboxmd->pack_start( $frame, TRUE, TRUE, 0 );
-    my $vboxm = Gtk2::VBox->new;
+    my $vboxm = Gtk3::VBox->new;
     $vboxm->set_border_width( $self->get('border-width') );
     $frame->add($vboxm);
 
-    # table-view
-    my $table = Gtk2::Table->new( 5, 2 );    ## no critic (ProhibitMagicNumbers)
-    $table->set_row_spacings( $self->get('border-width') );
-    $vboxm->pack_start( $table, TRUE, TRUE, 0 );
+    # grid to align widgets
+    my $grid = Gtk3::Grid->new;
+    $vboxm->pack_start( $grid, TRUE, TRUE, 0 );
 
     # Date/time
-    my $hboxe = Gtk2::HBox->new;
+    my $hboxe = Gtk3::HBox->new;
     my $row   = 0;
-    $table->attach( $hboxe, 0, 1, $row, $row + 1, 'fill', 'shrink', 0, 0 );
-    my $labele = Gtk2::Label->new( __('Date') );
+    $grid->attach( $hboxe, 0, 1, 1, 1 );
+    my $labele = Gtk3::Label->new( __('Date') );
     $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
 
-    my $entryd = Gtk2::Entry->new_with_max_length($ENTRY_WIDTH);
+    my $entryd = Gtk3::Entry->new;
+    $entryd->set_max_length($ENTRY_WIDTH);
     $entryd->set_text(
         Gscan2pdf::Document::expand_metadata_pattern(
             template      => '%Y-%m-%d',
@@ -148,7 +142,7 @@ sub add_metadata_dialog {
         )
     );
     $entryd->set_activates_default(TRUE);
-    $tooltips->set_tip( $entryd, __('Year-Month-Day') );
+    $entryd->set_tooltip_text( __('Year-Month-Day') );
     $entryd->set_alignment(1.);    # Right justify
     $entryd->signal_connect(
         'insert-text' => sub {
@@ -168,8 +162,8 @@ sub add_metadata_dialog {
             return FALSE;
         }
     );
-    my $button = Gtk2::Button->new;
-    $button->set_image( Gtk2::Image->new_from_stock( 'gtk-edit', 'button' ) );
+    my $button = Gtk3::Button->new;
+    $button->set_image( Gtk3::Image->new_from_stock( 'gtk-edit', 'button' ) );
     $button->signal_connect(
         clicked => sub {
             my $window_date = Gscan2pdf::Dialog->new(
@@ -179,7 +173,7 @@ sub add_metadata_dialog {
             );
             my $vbox_date = $window_date->get('vbox');
             $window_date->set_resizable(FALSE);
-            my $calendar = Gtk2::Calendar->new;
+            my $calendar = Gtk3::Calendar->new;
 
             # Editing the entry and clicking the edit button bypasses the
             # focus-out-event, so update the date now
@@ -208,7 +202,7 @@ sub add_metadata_dialog {
             );
             $vbox_date->pack_start( $calendar, TRUE, TRUE, 0 );
 
-            my $today = Gtk2::Button->new( __('Today') );
+            my $today = Gtk3::Button->new( __('Today') );
             $today->signal_connect(
                 clicked => sub {
                     ( $year, $month, $day ) = Today();
@@ -228,9 +222,9 @@ sub add_metadata_dialog {
             $window_date->show_all;
         }
     );
-    $tooltips->set_tip( $button, __('Select date with calendar') );
-    $hboxe = Gtk2::HBox->new;
-    $table->attach_defaults( $hboxe, 1, 2, $row, $row + 1 );
+    $button->set_tooltip_text( __('Select date with calendar') );
+    $hboxe = Gtk3::HBox->new;
+    $grid->attach( $hboxe, 1, 2, 1, 1 );
     $hboxe->pack_end( $button, FALSE, FALSE, 0 );
     $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
 
@@ -246,12 +240,12 @@ sub add_metadata_dialog {
     );
     for my $entry (@label) {
         my ( $name, $label ) = %{$entry};
-        my $hbox = Gtk2::HBox->new;
-        $table->attach( $hbox, 0, 1, ++$row, $row + 1, 'fill', 'shrink', 0, 0 );
-        $label = Gtk2::Label->new($label);
+        my $hbox = Gtk3::HBox->new;
+        $grid->attach( $hbox, 0, 1, 1, 1 );
+        $label = Gtk3::Label->new($label);
         $hbox->pack_start( $label, FALSE, TRUE, 0 );
-        $hbox = Gtk2::HBox->new;
-        $table->attach_defaults( $hbox, 1, 2, $row, $row + 1 );
+        $hbox = Gtk3::HBox->new;
+        $grid->attach( $hbox, 1, 2, 1, 1 );
         my $entry =
           Gscan2pdf::EntryCompletion->new( $defaults->{$name}{default},
             $defaults->{$name}{suggestions} );

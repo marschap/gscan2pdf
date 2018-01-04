@@ -4,7 +4,7 @@ use Test::More tests => 4;
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -37,12 +37,12 @@ $slist->import_files(
             finished_callback => sub {
                 is( -s 'test.djvu', 1054, 'DjVu created with expected size' );
                 is( $slist->scans_saved, 1, 'pages tagged as saved' );
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 like(
     `identify test2.png`,

@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 14;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;
+use Gtk3 -init;
 
 BEGIN {
     use_ok('Gscan2pdf::Dialog::Renumber');
@@ -16,7 +16,7 @@ Log::Log4perl->easy_init($WARN);
 my $logger = Log::Log4perl::get_logger;
 Gscan2pdf::Document->setup($logger);
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 my $slist = Gscan2pdf::Document->new;
 

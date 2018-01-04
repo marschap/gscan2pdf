@@ -5,7 +5,7 @@ use Test::More tests => 8;
 
 BEGIN {
     use_ok('Gscan2pdf::Unpaper');
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
     use version;
 }
 
@@ -21,7 +21,7 @@ my $unpaper = Gscan2pdf::Unpaper->new;
 
 is( $unpaper->get_option('direction'), 'ltr', 'default direction' );
 
-my $vbox = Gtk2::VBox->new;
+my $vbox = Gtk3::VBox->new;
 $unpaper->add_options($vbox);
 is(
     $unpaper->get_cmdline,

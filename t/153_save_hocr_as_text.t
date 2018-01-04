@@ -4,7 +4,7 @@ use Test::More tests => 1;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -49,11 +49,11 @@ EOS
         $slist->save_text(
             path              => 'test.txt',
             list_of_pages     => [ $slist->{data}[0][2] ],
-            finished_callback => sub { Gtk2->main_quit }
+            finished_callback => sub { Gtk3->main_quit }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is( `cat test.txt`, 'The quick brown fox', 'saved ASCII' );
 

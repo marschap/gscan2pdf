@@ -4,7 +4,7 @@ use Test::More tests => 1;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -52,11 +52,11 @@ $slist->import_files(
         $slist->save_hocr(
             path              => 'test.txt',
             list_of_pages     => [ $slist->{data}[0][2], $slist->{data}[1][2] ],
-            finished_callback => sub { Gtk2->main_quit }
+            finished_callback => sub { Gtk3->main_quit }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 my $expected = <<'EOS';
                   '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">

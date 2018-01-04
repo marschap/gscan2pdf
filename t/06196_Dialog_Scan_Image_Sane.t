@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 5;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 use Sub::Override;    # Override Frontend::Image_Sane to test functionality that
                       # we can't with the test backend
@@ -14,7 +14,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -214,14 +214,14 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
             'changed-paper' => sub {
                 my ( $widget, $paper ) = @_;
                 is( $paper, 'US Letter', 'changed-paper' );
-                ok( not( $widget->{option_widgets}{'tl-x'}->visible ),
+                ok( not( $widget->{option_widgets}{'tl-x'}->is_visible ),
                     'geometry hidden' );
 
                 my $reloaded_options = $dialog->get('available-scan-options');
                 is( $reloaded_options->by_name(SANE_NAME_SCAN_BR_X)->{val},
                     215.900009155273, 'option value rounded down to max' );
 
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
         $dialog->set( 'paper', 'US Letter' );
@@ -229,7 +229,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 );
 $dialog->get_devices;
 
-Gtk2->main;
+Gtk3->main;
 
 Gscan2pdf::Frontend::Image_Sane->quit;
 __END__

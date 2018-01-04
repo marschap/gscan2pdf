@@ -5,7 +5,7 @@ use Test::More tests => 4;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -45,12 +45,12 @@ SKIP: {
                         like( $slist->{data}[0][2]{hocr},
                             qr/$c2/, "gocr returned $c" );
                     }
-                    Gtk2->main_quit;
+                    Gtk3->main_quit;
                 }
             );
         }
     );
-    Gtk2->main;
+    Gtk3->main;
 
     unlink 'test.pnm';
     Gscan2pdf::Document->quit();

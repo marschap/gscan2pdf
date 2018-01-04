@@ -5,7 +5,7 @@ use Test::More tests => 4;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -38,10 +38,10 @@ $slist->import_files(
     paths             => ['test.pnm'],
     finished_callback => sub {
         $slist->save_session('test2.gs2p');
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is(
     `file test2.gs2p`,

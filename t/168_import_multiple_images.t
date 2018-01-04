@@ -4,7 +4,7 @@ use Test::More tests => 1;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
     use File::Copy;
 }
 
@@ -33,10 +33,10 @@ for my $i ( 1 .. 10 ) {
 $slist->import_files(
     paths             => \@files,
     finished_callback => sub {
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is( $#{ $slist->{data} }, 9, 'Imported 10 images' );
 

@@ -5,7 +5,7 @@ use Test::More tests => 2;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -110,10 +110,10 @@ EOS
         },
         finished_callback => sub {
             is( $#{ $slist->{data} }, 0, 'imported 1 image' );
-            Gtk2->main_quit;
+            Gtk3->main_quit;
         }
     );
-    Gtk2->main;
+    Gtk3->main;
 
 #########################
 

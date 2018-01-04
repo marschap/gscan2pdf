@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 5;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 
 BEGIN {
     use_ok('Gscan2pdf::Dialog::Scan::CLI');
@@ -10,7 +10,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -34,7 +34,7 @@ $dialog->set( 'cache-options', TRUE );
 $dialog->signal_connect(
     'process-error' => sub {
         my ( $widget, $process, $msg ) = @_;
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
 
@@ -53,7 +53,7 @@ $signal = $dialog->signal_connect(
                     [ 'default', 'mode,Color', 'mode,Gray' ],
                     'starting with a non-default profile'
                 );
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
         $dialog->set_option(
@@ -70,7 +70,7 @@ my $opt      = $options->by_name('contrast');
 is( $dialog->value_for_active_option( TRUE, $opt ),
     FALSE, 'value_for_active_option() with defined value and inactive option' );
 
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

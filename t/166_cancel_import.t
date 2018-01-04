@@ -4,7 +4,7 @@ use Test::More tests => 2;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;    # Could just call init separately
+    use Gtk3 -init;    # Could just call init separately
 }
 
 #########################
@@ -29,7 +29,7 @@ $slist->import_files(
     paths             => ['test.tif'],
     finished_callback => sub {
         fail('TIFF not imported');
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
 $slist->cancel(
@@ -39,12 +39,12 @@ $slist->cancel(
             paths             => ['test.tif'],
             finished_callback => sub {
                 system("cp $slist->{data}[0][2]{filename} test.tif");
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is( `identify -format '%m %G %g %z-bit %r' test.tif`,
     $old, 'TIFF imported correctly after cancelling previous import' );

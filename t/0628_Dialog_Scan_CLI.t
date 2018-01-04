@@ -3,7 +3,7 @@ use strict;
 use Test::More tests => 4;
 use Image::Sane ':all';     # To get SANE_* enums
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 
 BEGIN {
     use Gscan2pdf::Dialog::Scan::CLI;
@@ -11,7 +11,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -178,7 +178,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
             'new-scan' => sub {
                 my ( $widget, $path, $n ) = @_;
                 pass 'new_scan';
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
         $dialog->set( 'num-pages',             1 );
@@ -195,7 +195,7 @@ $dialog->{signal} = $dialog->signal_connect(
 $dialog->set( 'device-list',
     [ { 'name' => 'test:0' }, { 'name' => 'test:1' } ] );
 
-Gtk2->main;
+Gtk3->main;
 
 #########################
 

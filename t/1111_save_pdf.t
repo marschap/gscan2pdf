@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Test::More tests => 9;
-use Gtk2 -init;    # Could just call init separately
+use Gtk3 -init;    # Could just call init separately
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
@@ -53,12 +53,12 @@ $slist->import_files(
                     'valid PDF created'
                 );
                 is( $slist->scans_saved, 1, 'pages tagged as saved' );
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 like(
     `identify test2.png`,

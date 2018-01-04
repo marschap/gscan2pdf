@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 3;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 use Sub::Override;    # Override Frontend::Image_Sane to test functionality that
                       # we can't with the test backend
@@ -14,7 +14,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -169,18 +169,19 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         $dialog->{signal} = $dialog->signal_connect(
             'changed-scan-option' => sub {
                 my ( $widget, $option, $value ) = @_;
-
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
 
                 my $res_widget = $widget->{option_widgets}{resolution};
                 my $model      = $res_widget->get_model;
-                my $iter       = $model->get_iter_first;
                 my @list;
-                while ($iter) {
-                    my $info = $model->get($iter);
-                    push @list, $info;
-                    $iter = $model->iter_next($iter);
-                }
+                $model->foreach(
+                    sub {
+                        my ( $model, $path, $iter ) = @_;
+                        my $info = $model->get_value( $iter, 0 );
+                        push @list, $info;
+                        return FALSE;    # continue
+                    }
+                );
                 is_deeply(
                     \@list,
                     [ 75, 100, 200, 300, 600, 1200 ],
@@ -201,7 +202,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 my ( $widget, $option, $value ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
                 is( $value, 600, 'got 600' );
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
         my $res_widget = $dialog->{option_widgets}{resolution};
@@ -210,7 +211,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 );
 $dialog->get_devices;
 
-Gtk2->main;
+Gtk3->main;
 
 Gscan2pdf::Frontend::Image_Sane->quit;
 __END__

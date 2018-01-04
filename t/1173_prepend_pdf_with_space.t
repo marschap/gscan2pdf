@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Test::More tests => 2;
-use Gtk2 -init;    # Could just call init separately
+use Gtk3 -init;    # Could just call init separately
 
 BEGIN {
     use Gscan2pdf::Document;
@@ -35,11 +35,11 @@ $slist->import_files(
             options       => {
                 prepend => 'te st.pdf',
             },
-            finished_callback => sub { Gtk2->main_quit }
+            finished_callback => sub { Gtk3->main_quit }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is(
     `pdfinfo 'te st.pdf' | grep 'Pages:'`,

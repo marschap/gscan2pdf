@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 4;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 
 BEGIN {
     use_ok('Gscan2pdf::Dialog::Scan::CLI');
@@ -10,7 +10,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -40,7 +40,7 @@ isa_ok( $dialog, 'Gscan2pdf::Dialog::Scan::CLI' );
 $dialog->signal_connect(
     'process-error' => sub {
         my ( $widget, $process, $msg ) = @_;
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
 
@@ -52,7 +52,7 @@ $signal = $dialog->signal_connect(
 
         isnt( $dialog->get('available-scan-options')->num_options,
             0, 'starting with an empty cache should force a real reload' );
-        if ($flag) { Gtk2->main_quit }
+        if ($flag) { Gtk3->main_quit }
         $flag = TRUE;
     }
 );
@@ -61,7 +61,7 @@ $dialog->set( 'device', 'test' );
 
 if ( not $flag ) {
     $flag = TRUE;
-    Gtk2->main;
+    Gtk3->main;
 }
 
 #########################

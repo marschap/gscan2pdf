@@ -7,7 +7,7 @@ use Test::More tests => 2;
 
 BEGIN {
     use Gscan2pdf::Document;
-    use Gtk2 -init;         # Could just call init separately
+    use Gtk3 -init;         # Could just call init separately
 }
 
 #########################
@@ -40,12 +40,12 @@ $slist->import_files(
             options       => {
                 set_timestamp => TRUE,
             },
-            finished_callback => sub { Gtk2->main_quit },
+            finished_callback => sub { Gtk3->main_quit },
             error_callback    => sub { pass('caught errors setting timestamp') }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 my $info = `djvused $djvu -e 'print-meta'`;
 like( $info, qr/1966-02-10/, 'metadata ModDate in DjVu' );

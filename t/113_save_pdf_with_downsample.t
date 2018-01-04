@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Test::More tests => 2;
-use Gtk2 -init;    # Could just call init separately
+use Gtk3 -init;    # Could just call init separately
 
 BEGIN {
     use Gscan2pdf::Document;
@@ -41,13 +41,13 @@ $slist->import_files(
                         downsample       => 1,
                         'downsample dpi' => 150,
                     },
-                    finished_callback => sub { Gtk2->main_quit }
+                    finished_callback => sub { Gtk3->main_quit }
                 );
             }
         );
     }
 );
-Gtk2->main;
+Gtk3->main;
 
 is( -s 'test.pdf' > -s 'test2.pdf', 1,
     'downsampled PDF smaller than original' );

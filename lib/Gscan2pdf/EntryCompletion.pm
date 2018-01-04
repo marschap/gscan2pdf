@@ -2,7 +2,7 @@ package Gscan2pdf::EntryCompletion;
 
 use strict;
 use warnings;
-use Gtk2;
+use Gtk3;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 
 BEGIN {
@@ -11,7 +11,7 @@ BEGIN {
 
     $VERSION = '1.8.11';
 
-    use base qw(Exporter Gtk2::Entry);
+    use base qw(Exporter Gtk3::Entry);
     %EXPORT_TAGS = ();      # eg: TAG => [ qw!name1 name2! ],
 
     # your exported package globals go here,
@@ -21,12 +21,12 @@ BEGIN {
 
 sub new {
     my ( $class, $default, $suggestions ) = @_;
-    my $self       = Gtk2::Entry->new;
-    my $completion = Gtk2::EntryCompletion->new;
+    my $self       = Gtk3::Entry->new;
+    my $completion = Gtk3::EntryCompletion->new;
     $completion->set_inline_completion(TRUE);
     $completion->set_text_column(0);
     $self->set_completion($completion);
-    my $model = Gtk2::ListStore->new('Glib::String');
+    my $model = Gtk3::ListStore->new('Glib::String');
     $completion->set_model($model);
 
     if ( defined $suggestions ) {
@@ -47,11 +47,14 @@ sub update {
     my $model      = $completion->get_model;
     my $flag       = FALSE;
     my $iter       = $model->get_iter_first;
-    while ( defined $iter and not $flag ) {
-        my $suggestion = $model->get( $iter, 0 );
-        if ( $suggestion eq $text ) { $flag = TRUE }
-        $iter = $model->iter_next($iter);
-    }
+    $model->foreach(
+        sub {
+            my ( $model, $path, $iter ) = @_;
+            my $suggestion = $model->get( $iter, 0 );
+            if ( $suggestion eq $text ) { $flag = TRUE }
+            return $flag;    # FALSE=continue
+        }
+    );
     if ( not $flag ) {
         $model->set( $model->append, 0, $text );
         push @{$suggestions}, $text;

@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 3;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 use Sub::Override;    # Override Frontend::Image_Sane to test functionality that
                       # we can't with the test backend
@@ -14,7 +14,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -238,7 +238,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
                 my ( $widget, $option, $value ) = @_;
                 is_deeply( $dialog->{ignored_paper_formats},
                     undef, 'ADF paper' );
-                Gtk2->main_quit;
+                Gtk3->main_quit;
             }
         );
         my $options = $dialog->get('available-scan-options');
@@ -247,7 +247,7 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 );
 $dialog->get_devices;
 
-Gtk2->main;
+Gtk3->main;
 
 Gscan2pdf::Frontend::Image_Sane->quit;
 __END__

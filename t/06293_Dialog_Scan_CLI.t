@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 1;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 use Sub::Override;          # Override Frontend::CLI to test functionality that
                             # we can't with the test backend
@@ -13,7 +13,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -120,7 +120,7 @@ $dialog->signal_connect(
 
 $dialog->signal_connect(
     'reloaded-scan-options' => sub {
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
 
@@ -146,6 +146,6 @@ Glib::Idle->add(
     }
 );
 
-Gtk2->main;
+Gtk3->main;
 
 __END__
