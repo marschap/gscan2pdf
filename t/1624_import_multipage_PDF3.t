@@ -11,7 +11,8 @@ BEGIN {
 #########################
 
 TODO: {
-    todo_skip 'pdfunite (poppler utils) not installed', 1 unless `which pdfunite`;
+    todo_skip 'pdfunite (poppler utils) not installed', 1
+      unless `which pdfunite`;
     todo_skip '2000 page pdf import cannot succeede with current architecture',
       1
       if 1;
