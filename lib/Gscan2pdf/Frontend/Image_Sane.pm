@@ -558,8 +558,8 @@ sub _thread_set_option {
               . ( $opt->{type} == SANE_TYPE_BUTTON ? $EMPTY : " to $value" )
               . " returned status $status ("
               . Image::Sane::strstatus($status)
-              . ") with info "
-              . ( defined $info ? $info : "undefined" ) );
+              . ') with info '
+              . ( defined $info ? $info : 'undefined' ) );
     }
 
     # $info could be undefined if status is invalid
