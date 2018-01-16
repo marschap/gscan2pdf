@@ -2101,13 +2101,7 @@ sub add_pdf_compression {
     $hboxd->pack_end( $spinbutton, FALSE, FALSE, 0 );
     $button->signal_connect(
         toggled => sub {
-
-            if ( $button->get_active ) {
-                $spinbutton->set_sensitive(TRUE);
-            }
-            else {
-                $spinbutton->set_sensitive(FALSE);
-            }
+            $spinbutton->set_sensitive( $button->get_active );
         }
     );
     $button->set_active( $SETTING{'downsample'} );
