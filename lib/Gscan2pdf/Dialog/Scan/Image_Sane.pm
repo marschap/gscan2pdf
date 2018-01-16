@@ -30,6 +30,14 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::Scan::, properties => [
         FALSE,                     # default_value
         [qw/readable writable/]    # flags
     ),
+    Glib::ParamSpec->boolean(
+        'cancel-between-pages',                          # name
+        'Cancel previous page when starting new one',    # nick
+'Otherwise, some Brother scanners report out of documents, despite scanning from flatbed.'
+        ,                                                # blurb
+        FALSE,                                           # default_value
+        [qw/readable writable/]                          # flags
+    ),
 ];
 
 our $VERSION = '1.8.10';
@@ -451,11 +459,12 @@ sub scan {
 
     my $i = 1;
     Gscan2pdf::Frontend::Image_Sane->scan_pages(
-        dir              => $self->get('dir'),
-        npages           => $npages,
-        start            => $start,
-        step             => $step,
-        started_callback => sub {
+        dir                  => $self->get('dir'),
+        npages               => $npages,
+        start                => $start,
+        step                 => $step,
+        cancel_between_pages => $self->get('cancel-between-pages'),
+        started_callback     => sub {
             if ( $npages == 0 and $self->get('max-pages') > 0 ) {
                 $npages = $self->get('max-pages');
             }

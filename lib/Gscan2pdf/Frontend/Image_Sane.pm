@@ -222,6 +222,9 @@ sub scan_page_finished_callback {
         }
         return;
     }
+    elsif ( $options{cancel_between_pages} ) {
+        _enqueue_request( 'cancel', { uuid => $uuid_object->create_str } );
+    }
 
     if ( not defined $options{step} ) { $options{step} = 1 }
     $options{start} += $options{step};

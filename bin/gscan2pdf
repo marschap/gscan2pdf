@@ -3423,8 +3423,14 @@ sub scan_dialog {
         : 1,
     );
     if ( $SETTING{frontend} eq 'libimage-sane-perl' ) {
-        $windows = Gscan2pdf::Dialog::Scan::Image_Sane->new( %options,
-            'cycle-sane-handle' => $SETTING{'cycle sane handle'}, );
+        $windows = Gscan2pdf::Dialog::Scan::Image_Sane->new(
+            %options,
+            'cycle-sane-handle'    => $SETTING{'cycle sane handle'},
+            'cancel-between-pages' => (
+                      $SETTING{'allow-batch-flatbed'}
+                  and $SETTING{'cancel-between-pages'}
+            ),
+        );
     }
     else {
         $windows = Gscan2pdf::Dialog::Scan::CLI->new(
@@ -6252,11 +6258,9 @@ sub preferences {
     my $notebook = Gtk2::Notebook->new;
     $vbox->pack_start( $notebook, TRUE, TRUE, 0 );
 
-    my (
-        $vbox1,     $frontends, $combob,
-        $preentry,  $cbc,       $cbo,
-        $blacklist, $cbcsh,     $cb_batch_flatbed
-    ) = _preferences_scan_options();
+    my ( $vbox1, $frontends, $combob, $preentry, $cbc, $cbo,
+        $blacklist, $cbcsh, $cb_batch_flatbed, $cb_cancel_btw_pages )
+      = _preferences_scan_options();
     $notebook->append_page( $vbox1, __('Scan options') );
 
     my (
@@ -6310,9 +6314,10 @@ sub preferences {
             $SETTING{'device blacklist'}      = $blacklist->get_text;
             $SETTING{'cycle sane handle'}     = $cbcsh->get_active;
             $SETTING{'allow-batch-flatbed'}   = $cb_batch_flatbed->get_active;
-            $SETTING{'default filename'}      = $fileentry->get_text;
-            $SETTING{'restore window'}        = $cbw->get_active;
-            $SETTING{set_timestamp}           = $cbt->get_active;
+            $SETTING{'cancel-between-pages'} = $cb_cancel_btw_pages->get_active;
+            $SETTING{'default filename'}     = $fileentry->get_text;
+            $SETTING{'restore window'}       = $cbw->get_active;
+            $SETTING{set_timestamp}          = $cbt->get_active;
             $SETTING{'convert whitespace to underscores'} = $cbb->get_active;
 
             if ( defined $windows ) {
@@ -6324,6 +6329,8 @@ sub preferences {
                 }
                 $windows->set( 'allow-batch-flatbed',
                     $SETTING{'allow-batch-flatbed'} );
+                $windows->set( 'cancel-between-pages',
+                    $SETTING{'cancel-between-pages'} );
             }
 
             my @tmpdirs = File::Spec->splitdir($session);
@@ -6439,6 +6446,26 @@ sub _preferences_scan_options {
     );
     $cb_batch_flatbed->set_active( $SETTING{'allow-batch-flatbed'} );
     $vbox->pack_start( $cb_batch_flatbed, FALSE, FALSE, 0 );
+
+    # Force new scan job between pages
+    my $cb_cancel_btw_pages =
+      Gtk2::CheckButton->new_with_label(
+        __('Force new scan job between pages') );
+    $tooltips->set_tip(
+        $cb_cancel_btw_pages,
+        __(
+'Otherwise, some Brother scanners report out of documents, despite scanning from flatbed.'
+        )
+    );
+    $cb_cancel_btw_pages->set_active( $SETTING{'cancel-between-pages'} );
+    $vbox->pack_start( $cb_cancel_btw_pages, FALSE, FALSE, 0 );
+    $cb_cancel_btw_pages->set_sensitive( $SETTING{'allow-batch-flatbed'} );
+    $cb_batch_flatbed->signal_connect(
+        toggled => sub {
+            $cb_cancel_btw_pages->set_sensitive(
+                $cb_batch_flatbed->get_active );
+        }
+    );
 
     # Select num-pages = all on selecting ADF
     my $cb_adf_all_pages =
@@ -6582,7 +6609,7 @@ sub _preferences_scan_options {
     );
     combobox_set_active( $combob, $SETTING{frontend}, @frontends );
     return $vbox, \@frontends, $combob, $preentry, $cbc, $cbo, $blacklist,
-      $cbcsh, $cb_batch_flatbed;
+      $cbcsh, $cb_batch_flatbed, $cb_cancel_btw_pages;
 }
 
 sub _preferences_general_options {
