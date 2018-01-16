@@ -314,13 +314,13 @@ $view = Gscan2pdf::ImageView->new;
 #my $painter  = Gtk3::ImageView::Tool::Painter->new($view);
 $vnotebook->append_page( $view, Gtk3::Label->new( __('Image') ) );
 
-#$view->signal_connect(
-#    button_press_event => sub {
-#        my ( $widget, $event ) = @_;
-#        handle_clicks( $widget, $event );
-#    }
-#);
-#$view->signal_connect( button_release_event => \&handle_clicks );
+$view->signal_connect(
+    button_press_event => sub {
+        my ( $widget, $event ) = @_;
+        handle_clicks( $widget, $event );
+    }
+);
+$view->signal_connect( button_release_event => \&handle_clicks );
 $view->signal_connect(
     'zoom-changed' => sub {
         if ( defined $canvas ) { $canvas->set_scale( $view->get_zoom ) }
