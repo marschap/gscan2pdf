@@ -7308,7 +7308,7 @@ Before reporting bugs, please read the L<"FAQs"> section.
 
 Please report any bugs found, preferably against the Debian package[1][2].
 You do not need to be a Debian user, or set up an account to do this.
-The Debian reportbug tool provides a convenient GUI for doing so.
+The Debian tool "reportbug" provides a convenient GUI for doing so.
 
 =over
 
@@ -7504,7 +7504,7 @@ unsharp, etc., since the last OCR run was made.
 When an image is scanned, gscan2pdf attempts to extract the resolution from the
 scan options. This nearly always works without problem.
 
-Importing an image can be tricker, however. Some image formats such as PNM do
+Importing an image can be trickier, however. Some image formats such as PNM do
 not encode metadata for resolution. In other cases, the data is incorrect.
 Edit/Properties allows the user to manually correct the metadata for a
 particular page, thus correcting the size of final PDF or DjVu. The image
