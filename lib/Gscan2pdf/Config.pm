@@ -252,6 +252,7 @@ sub add_defaults {
         'unsharp amount'                    => 1,
         'unsharp threshold'                 => 0.05,
         'allow-batch-flatbed'               => FALSE,
+        'cancel-between-pages'              => FALSE,
         'adf-defaults-scan-all-pages'       => TRUE,
         'cycle sane handle'                 => FALSE,
         profile                             => undef,

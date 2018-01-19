@@ -90,6 +90,7 @@ Gscan2pdf::Config::add_defaults( \%output );
     device                              => undef,
     'device blacklist'                  => undef,
     'allow-batch-flatbed'               => FALSE,
+    'cancel-between-pages'              => FALSE,
     'adf-defaults-scan-all-pages'       => TRUE,
     'cycle sane handle'                 => FALSE,
     'downsample'                        => FALSE,
