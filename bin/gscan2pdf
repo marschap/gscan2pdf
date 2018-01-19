@@ -7678,10 +7678,19 @@ use isn't available, send me the output and I will look at implementing it.
 =head2 I've only got an old flatbed scanner with no automatic sheetfeeder.
 How do I scan a multipage document?
 
+In Edit/Preferences, tick the checkbox "Allow batch scanning from flatbed".
+
+Some Brother scanners report "out of documents", despite scanning from flatbed.
+This can be worked around by ticking the checkbox
+"Force new scan job between pages".
+
 If you are lucky, you have an option like Wait-for-button or Button-wait, where
 the scanner will wait for you to press the scan button on the device before it
 starts the scan, allowing you to scan multiple pages without touching the
 computer.
+
+If you are quick, you might be able to change the document on the flatbed whilst
+the scan head is returning.
 
 Otherwise, you have to set the number of pages to scan to 1 and hit the scan
 button on the scan window for each page.
