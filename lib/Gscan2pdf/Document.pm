@@ -1902,7 +1902,7 @@ sub _program_version {
     my ( $stream, $regex, @output ) = @_;
     my ( $status, $out,   $err )    = @output;
     my $output = $stream eq 'stdout' ? $out : $err;
-    if ( $output =~ $regex ) { return $1 }
+    if ( defined $output and $output =~ $regex ) { return $1 }
     if ( $status == $PROCESS_FAILED ) {
         $logger->info($err);
         return $PROCESS_FAILED;

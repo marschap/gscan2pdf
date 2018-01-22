@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 38;
+use Test::More tests => 39;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk2 -init;    # Could just call init separately
 use Date::Calc qw(Today);
@@ -207,6 +207,14 @@ is(
     ),
     -1,
     'command not found'
+);
+is(
+    Gscan2pdf::Document::_program_version(
+        'stdout', qr/Version:\sImageMagick\s([\d.-]+)/xsm,
+        -1, undef, 'convert: command not found'
+    ),
+    -1,
+    'catch undefined stdout'
 );
 
 my ( $status, $out, $err ) =
