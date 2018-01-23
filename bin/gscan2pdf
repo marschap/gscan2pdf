@@ -79,6 +79,7 @@ use Fcntl qw(:flock)
 use Log::Log4perl;
 use Try::Tiny;
 use Data::Dumper;
+$Data::Dumper::Sortkeys = 1;
 use Filesys::Df;
 use English qw( -no_match_vars )
   ;    # for $PERL_VERSION, $PROGRAM_NAME, $EVAL_ERROR, $ERRNO

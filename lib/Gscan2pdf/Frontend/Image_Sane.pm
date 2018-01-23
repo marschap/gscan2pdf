@@ -11,6 +11,7 @@ use Thread::Queue;
 use Storable qw(freeze thaw);    # For cloning the options cache
 use Try::Tiny;
 use Data::Dumper;
+$Data::Dumper::Sortkeys = 1;
 use Glib qw(TRUE FALSE);
 use Image::Sane ':all';
 use Data::UUID;

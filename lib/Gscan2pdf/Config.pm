@@ -8,6 +8,7 @@ use Glib qw(TRUE FALSE);            # To get TRUE and FALSE
 use File::Copy;
 use Try::Tiny;
 use Data::Dumper;
+$Data::Dumper::Sortkeys = 1;
 use Config::General 2.40;
 use JSON::PP;
 use version;

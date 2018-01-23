@@ -10,6 +10,7 @@ use Gscan2pdf::EntryCompletion;
 use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
 use Date::Calc qw(Add_Delta_Days Today);
 use Data::Dumper;
+$Data::Dumper::Sortkeys = 1;
 use Readonly;
 Readonly my $ENTRY_WIDTH => 10;
 

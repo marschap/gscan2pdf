@@ -13,6 +13,7 @@ use Locale::gettext 1.05;           # For translations
 use feature 'switch';
 use List::MoreUtils qw{any};
 use Data::Dumper;
+$Data::Dumper::Sortkeys = 1;
 use Readonly;
 Readonly my $LAST_PAGE => -1;
 

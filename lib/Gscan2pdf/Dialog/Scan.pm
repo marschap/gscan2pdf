@@ -6,6 +6,7 @@ no if $] >= 5.018, warnings => 'experimental::smartmatch';
 use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Image::Sane ':all';    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Data::Dumper;
+$Data::Dumper::Sortkeys = 1;
 use Data::UUID;
 use Storable qw(dclone);
 use feature 'switch';
