@@ -19,8 +19,6 @@ my $window = Gtk2::Window->new;
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($WARN);
-
-#Log::Log4perl->easy_init($DEBUG);
 my $logger = Log::Log4perl::get_logger;
 
 # The overrides must occur before the thread is spawned in setup.
@@ -176,7 +174,7 @@ $override->replace(
     }
 );
 
-# The change-profile signal was being emitted too early, due to the extra
+# The changed-profile signal was being emitted too early, due to the extra
 # reloads introduced in v1.8.5, tested in t/0607 and t/0608, resulting in
 # the profile dropdown being set to undef
 $override->replace(
@@ -246,7 +244,6 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         $dialog->set( 'profile', 'my profile' );
         $loop->run unless ($flag);
         Gtk2->main_quit;
-
     }
 );
 $dialog->get_devices;

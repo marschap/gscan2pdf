@@ -30,7 +30,7 @@ $dialog->{signal} = $dialog->signal_connect(
     'reloaded-scan-options' => sub {
         $dialog->signal_handler_disconnect( $dialog->{signal} );
 
-        # v1.3.8 had the bug that having applied geometry settings via a paper
+        # v1.3.8 had the bug that, having applied geometry settings via a paper
         # size, if a profile was set that changed the geometry, the paper size
         # was not unset.
         $dialog->set(

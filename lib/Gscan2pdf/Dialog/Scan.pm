@@ -7,7 +7,6 @@ use Glib qw(TRUE FALSE);   # To get TRUE and FALSE
 use Image::Sane ':all';    # To get SANE_NAME_PAGE_WIDTH & SANE_NAME_PAGE_HEIGHT
 use Data::Dumper;
 $Data::Dumper::Sortkeys = 1;
-use Data::UUID;
 use Storable qw(dclone);
 use feature 'switch';
 use Gscan2pdf::Dialog;
@@ -22,7 +21,6 @@ my (
     $CANVAS_SIZE,      $CANVAS_BORDER, $CANVAS_POINT_SIZE,
     $CANVAS_MIN_WIDTH, $NO_INDEX,      $EMPTY
 );
-my $uuid_object = Data::UUID->new;
 
 # need to register this with Glib before we can use it below
 BEGIN {
@@ -66,7 +64,8 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, signals => {
         param_types => ['Glib::String'],    # facing or reverse
     },
     'changed-scan-option' => {
-        param_types => [ 'Glib::Scalar', 'Glib::Scalar' ],    # name, value
+        param_types => [ 'Glib::Scalar', 'Glib::Scalar', 'Glib::Scalar' ]
+        ,                                   # name, value, profile uuid
     },
     'changed-option-visibility' => {
         param_types => ['Glib::Scalar'],    # array of options to hide
@@ -560,6 +559,12 @@ sub INIT_INSTANCE {
     $hboxb->pack_end( $cbutton, FALSE, FALSE, 0 );
     $cbutton->signal_connect( clicked => sub { $self->hide; } );
 
+    # initialise stack of uuids - needed for cases where setting a profile
+    # requires several reloads, and therefore reapplying the same profile
+    # several times. Tested by t/06198_Dialog_Scan_Image_Sane.t
+    $self->{setting_profile}              = [];
+    $self->{setting_current_scan_options} = [];
+
     return $self;
 }
 
@@ -825,7 +830,7 @@ sub _flatbed_or_duplex_callback {
 }
 
 sub _changed_scan_option_callback {
-    my ( $self, $name, $value, $bscannum ) = @_;
+    my ( $self, $name, $value, $uuid, $bscannum ) = @_;
     my $options = $self->get('available-scan-options');
     if (    defined $options
         and defined $options->{source}{name}
@@ -1477,9 +1482,7 @@ sub set_paper {
 
     # Don't trigger the changed-paper signal
     # until we have finished setting the profile
-    $self->{setting_profile} = TRUE;
-    $self->_set_option_profile( $paper_profile,
-        $paper_profile->each_backend_option );
+    $self->set_current_scan_options($paper_profile);
     return;
 }
 
@@ -1718,28 +1721,20 @@ sub set_profile {
     my ( $self, $name ) = @_;
     if ( defined $name and $name ne $EMPTY ) {
 
-        # If we are setting the profile, don't unset the profile name
-        $self->{setting_profile} = TRUE;
-        my $uuid;
-
         # Only emit the changed-profile signal when the GUI has caught up
         my $signal;
         $signal = $self->signal_connect(
             'changed-current-scan-options' => sub {
                 my ( undef, undef, $uuid_found ) = @_;
 
+                my $uuid = $self->{setting_profile}->[0];
+
                 # there seems to be a race condition in t/0621_Dialog_Scan_CLI.t
                 # where the uuid set below is not set in time to be tested in
                 # this if.
-                if (
-                    not defined $uuid
-                    or ( defined $uuid_found
-                        and $uuid_found eq $uuid )
-                  )
-                {
-
+                if ( $uuid eq $uuid_found ) {
                     $self->signal_handler_disconnect($signal);
-                    $self->{setting_profile} = FALSE;
+                    $self->{setting_profile} = [];
 
                     # set property before emitting signal to ensure callbacks
                     # receive correct value
@@ -1748,7 +1743,10 @@ sub set_profile {
                 }
             }
         );
-        $uuid = $self->set_current_scan_options( $self->{profiles}{$name} );
+
+        # Add UUID to the stack and therefore don't unset the profile name
+        push @{ $self->{setting_profile} }, $self->{profiles}{$name}->{uuid};
+        $self->set_current_scan_options( $self->{profiles}{$name} );
     }
 
     # no need to wait - nothing to do
@@ -2171,13 +2169,10 @@ sub set_current_scan_options {
         return;
     }
 
-    $self->{setting_current_scan_options} = TRUE;
-
     # First clone the profile, as otherwise it would be self-modifying
     my $clone = dclone($profile);
 
-    # add uuid to identify later which callback has finished
-    $clone->{uuid} = $uuid_object->create_str;
+    push @{ $self->{setting_current_scan_options} }, $clone->{uuid};
 
     # Give the GUI a chance to catch up between settings,
     # in case they have to be reloaded.
@@ -2196,65 +2191,33 @@ sub _set_option_profile {
         my $opt     = $options->by_name($name);
         if ( not defined $opt or $opt->{cap} & SANE_CAP_INACTIVE ) {
             $logger->warn("Ignoring inactive option '$name'.");
-            $profile->remove_backend_option_by_index($i);
-
-            # no increment, as we have removed an option
-            $self->_set_option_profile( $profile, $next, FALSE );
+            $self->_set_option_profile( $profile, $next );
             return;
         }
 
-        $logger->debug( "Setting option '$name'"
-              . ( $opt->{type} == SANE_TYPE_BUTTON ? $EMPTY : " to '$val'." ) );
+        $logger->debug(
+            "Setting option '$name'"
+              . (
+                  $opt->{type} == SANE_TYPE_BUTTON
+                ? $EMPTY
+                : " from '$opt->{val}' to '$val'."
+              )
+        );
         my $signal;
         $signal = $self->signal_connect(
             'changed-scan-option' => sub {
-                $self->signal_handler_disconnect($signal);
-                $self->_set_option_profile( $profile, $next );
+                my ( $widget, $optname, $optval, $uuid ) = @_;
+
+                # With multiple reloads, this can get called several times,
+                # so only react to to signal from the correct profile
+                if ( defined $uuid and $uuid eq $profile->{uuid} ) {
+                    $self->signal_handler_disconnect($signal);
+                    $self->_set_option_profile( $profile, $next );
+                }
             }
         );
-        $self->set_option( $opt, $val );
-
-        my $widget = $self->{option_widgets}{ $opt->{name} };
-        if ( defined $widget ) {
-            $logger->debug( "Setting widget '$name'"
-                  . (
-                    $opt->{type} == SANE_TYPE_BUTTON ? $EMPTY : " to '$val'." )
-            );
-            $widget->signal_handler_block( $widget->{signal} );
-            given ($widget) {
-                when ( $widget->isa('Gtk2::CheckButton') ) {
-                    if ( $val eq $EMPTY ) { $val = 0 }
-                    if ( $widget->get_active != $val ) {
-                        $widget->set_active($val);
-                    }
-                }
-                when ( $widget->isa('Gtk2::SpinButton') ) {
-                    if ( $widget->get_value != $val ) {
-                        $widget->set_value($val);
-                    }
-                }
-                when ( $widget->isa('Gtk2::ComboBox') ) {
-                    if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
-                        my $index;
-                        for ( 0 .. $#{ $opt->{constraint} } ) {
-                            if ( $opt->{constraint}[$_] eq $val ) {
-                                $index = $_;
-                            }
-                        }
-                        if ( defined $index ) { $widget->set_active($index) }
-                    }
-                }
-                when ( $widget->isa('Gtk2::Entry') ) {
-                    if ( $widget->get_text ne $val ) {
-                        $widget->set_text($val);
-                    }
-                }
-            }
-            $widget->signal_handler_unblock( $widget->{signal} );
-        }
-        else {
-            $logger->warn("Widget for option '$name' undefined.");
-        }
+        $self->set_option( $opt, $val, $profile->{uuid} );
+        $self->update_widget_value( $opt, $val );
     }
     else {
 
@@ -2264,15 +2227,59 @@ sub _set_option_profile {
             $self->set( $key, $profile->get_frontend_option($key) );
         }
 
-        if ( not $self->{setting_profile} ) {
+        if ( not @{ $self->{setting_profile} } ) {
             $self->set( 'profile', undef );
         }
-        $self->{setting_current_scan_options} = FALSE;
+        pop @{ $self->{setting_current_scan_options} };
         $self->signal_emit(
             'changed-current-scan-options',
             $self->get('current-scan-options'),
             $profile->{uuid}
         );
+    }
+    return;
+}
+
+sub update_widget_value {
+    my ( $self, $opt, $val ) = @_;
+    my $widget = $self->{option_widgets}{ $opt->{name} };
+    if ( defined $widget ) {
+        $logger->debug( "Setting widget '$opt->{name}'"
+              . ( $opt->{type} == SANE_TYPE_BUTTON ? $EMPTY : " to '$val'." ) );
+        $widget->signal_handler_block( $widget->{signal} );
+        given ($widget) {
+            when ( $widget->isa('Gtk2::CheckButton') ) {
+                if ( $val eq $EMPTY ) { $val = 0 }
+                if ( $widget->get_active != $val ) {
+                    $widget->set_active($val);
+                }
+            }
+            when ( $widget->isa('Gtk2::SpinButton') ) {
+                if ( $widget->get_value != $val ) {
+                    $widget->set_value($val);
+                }
+            }
+            when ( $widget->isa('Gtk2::ComboBox') ) {
+                if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
+                    my $index;
+                    for ( 0 .. $#{ $opt->{constraint} } ) {
+                        if ( $opt->{constraint}[$_] eq $val ) {
+                            $index = $_;
+                        }
+                    }
+                    if ( defined $index ) { $widget->set_active($index) }
+                }
+            }
+            when ( $widget->isa('Gtk2::Entry') ) {
+                if ( $widget->get_text ne $val ) {
+                    $widget->set_text($val);
+                }
+            }
+        }
+        $widget->signal_handler_unblock( $widget->{signal} );
+    }
+    else {
+        $logger->warn("Widget for option '$opt->{name}' undefined.");
     }
     return;
 }

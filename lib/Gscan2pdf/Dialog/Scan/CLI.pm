@@ -591,7 +591,7 @@ sub _find_visible_group {
 # and walking the options tree, update the widgets
 
 sub set_option {
-    my ( $self, $option, $val ) = @_;
+    my ( $self, $option, $val, $uuid ) = @_;
     $option->{val} = $val;
     $self->update_widget( $option->{name}, $val );
 
@@ -708,24 +708,24 @@ sub set_option {
         }
     }
     else {
-        $self->_set_option_flags_signals( $option->{name}, $val );
+        $self->_set_option_flags_signals( $option->{name}, $val, $uuid );
     }
     return;
 }
 
 sub _set_option_flags_signals {
-    my ( $self, $name, $val ) = @_;
+    my ( $self, $name, $val, $uuid ) = @_;
 
     # Unset the profile unless we are actively setting it
-    if ( not $self->{setting_profile} ) {
+    if ( not @{ $self->{setting_profile} } ) {
         $self->set( 'profile', undef );
-        if ( not $self->{setting_current_scan_options} ) {
+        if ( not @{ $self->{setting_current_scan_options} } ) {
             $self->signal_emit( 'changed-current-scan-options',
                 $self->get('current-scan-options'), $EMPTY );
         }
     }
 
-    $self->signal_emit( 'changed-scan-option', $name, $val );
+    $self->signal_emit( 'changed-scan-option', $name, $val, $uuid );
     return;
 }
 

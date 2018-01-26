@@ -370,7 +370,7 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
 # and walking the options tree, update the widgets
 
 sub set_option {
-    my ( $self, $option, $val ) = @_;
+    my ( $self, $option, $val, $uuid ) = @_;
     if ( not defined $option ) { return }
 
     if ( $option->{constraint_type} == SANE_CONSTRAINT_RANGE ) {
@@ -421,18 +421,19 @@ sub set_option {
             );
 
             # Unset the profile unless we are actively setting it
-            if ( not $self->{setting_profile} ) {
+            if ( not @{ $self->{setting_profile} } ) {
                 $self->set( 'profile', undef );
 
                 # Emit the changed-current-scan-options signal
                 # unless we are actively setting it
-                if ( not $self->{setting_current_scan_options} ) {
+                if ( not @{ $self->{setting_current_scan_options} } ) {
                     $self->signal_emit( 'changed-current-scan-options',
                         $self->get('current-scan-options'), $EMPTY );
                 }
             }
 
-            $self->signal_emit( 'changed-scan-option', $option->{name}, $val );
+            $self->signal_emit( 'changed-scan-option', $option->{name}, $val,
+                $uuid );
         },
         error_callback => sub {
             my ($message) = @_;

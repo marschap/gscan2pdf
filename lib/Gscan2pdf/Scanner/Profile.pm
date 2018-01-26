@@ -8,6 +8,7 @@ use Carp;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Image::Sane ':all';     # For enums
 use Storable qw(dclone);
+use Data::UUID;
 use Readonly;
 Readonly my $EMPTY_ARRAY => -1;
 Readonly my $REVERSE     => TRUE;
@@ -18,7 +19,16 @@ use Glib::Object::Subclass Glib::Object::;
 
 our $VERSION = '1.8.10';
 
-my $EMPTY = q{};
+my $EMPTY       = q{};
+my $uuid_object = Data::UUID->new;
+
+sub INIT_INSTANCE {
+    my $self = shift;
+
+    # add uuid to identify later which callback has finished
+    $self->{uuid} = $uuid_object->create_str;
+    return $self;
+}
 
 sub new_from_data {
     my ( $class, $hash ) = @_;
@@ -54,6 +64,7 @@ sub add_backend_option {
             }
         }
     }
+    $self->{uuid} = $uuid_object->create_str;
     return;
 }
 
@@ -65,6 +76,7 @@ sub get_backend_option_by_index {
 sub remove_backend_option_by_index {
     my ( $self, $i ) = @_;
     splice @{ $self->{data}{backend} }, $i - 1, 1;
+    $self->{uuid} = $uuid_object->create_str;
     return;
 }
 
@@ -79,6 +91,7 @@ sub remove_backend_option_by_name {
     if ( $i <= $self->num_backend_options ) {
         splice @{ $self->{data}{backend} }, $i - 1, 1;
     }
+    $self->{uuid} = $uuid_object->create_str;
     return;
 }
 
@@ -125,6 +138,7 @@ sub add_frontend_option {
         croak 'Error: no option name';
     }
     $self->{data}{frontend}{$name} = $val;
+    $self->{uuid} = $uuid_object->create_str;
     return;
 }
 

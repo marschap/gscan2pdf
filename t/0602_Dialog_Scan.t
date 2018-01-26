@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
@@ -75,20 +75,16 @@ $signal = $dialog->signal_connect(
 
         $dialog->save_current_profile('profile 1');
         is_deeply(
-            $dialog->{profiles},
+            $dialog->{profiles}{'profile 1'}->get_data,
             {
-                'profile 1' => {
-                    data => {
-                        backend => [
-                            {
-                                'tl-x' => '10'
-                            },
-                            {
-                                'tl-y' => '10'
-                            },
-                        ]
-                    }
-                }
+                backend => [
+                    {
+                        'tl-x' => '10'
+                    },
+                    {
+                        'tl-y' => '10'
+                    },
+                ]
             },
             'applied 1st profile'
         );
@@ -117,52 +113,46 @@ $signal = $dialog->signal_connect(
 
         $dialog->save_current_profile('profile 2');
         is_deeply(
-            $dialog->{profiles},
+            $dialog->{profiles}{'profile 1'}->get_data,
             {
-                'profile 1' => {
-                    data => {
-                        backend => [
-                            {
-                                'tl-x' => '10'
-                            },
-                            {
-                                'tl-y' => '10'
-                            },
-                        ]
-                    }
-                },
-                'profile 2' => {
-                    data => {
-                        backend => [
-                            {
-                                'tl-x' => '20'
-                            },
-                            {
-                                'tl-y' => '20'
-                            },
-                        ]
-                    }
-                },
+                backend => [
+                    {
+                        'tl-x' => '10'
+                    },
+                    {
+                        'tl-y' => '10'
+                    },
+                ]
+            },
+            'applied 2nd profile'
+        );
+        is_deeply(
+            $dialog->{profiles}{'profile 2'}->get_data,
+            {
+                backend => [
+                    {
+                        'tl-x' => '20'
+                    },
+                    {
+                        'tl-y' => '20'
+                    },
+                ]
             },
             'applied 2nd profile without affecting 1st'
         );
 
         $dialog->remove_profile('profile 1');
         is_deeply(
-            $dialog->{profiles},
+            $dialog->{profiles}{'profile 2'}->get_data,
             {
-                'profile 2' => {
-                    data => {
-                        backend => [
-                            {
-                                'tl-x' => '20'
-                            },
-                            {
-                                'tl-y' => '20'
-                            },
-                        ]
-                    }
-                },
+                backend => [
+                    {
+                        'tl-x' => '20'
+                    },
+                    {
+                        'tl-y' => '20'
+                    },
+                ]
             },
             'remove_profile()'
         );
