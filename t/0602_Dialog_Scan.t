@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 21;
+use Test::More tests => 23;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk2 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
@@ -165,6 +165,8 @@ $signal = $dialog->signal_connect(
         $dialog->set( 'num-pages', 2 );
         is $dialog->get('num-pages'), 1,
           'allow-batch-flatbed should force num-pages2';
+        ok $dialog->_flatbed_selected($options),
+          '_flatbed_selected() via value';
 
         is $dialog->{checkx}->visible, FALSE,
           'flatbed, so hide checkbox for extended page numbering';
@@ -198,6 +200,8 @@ $signal = $dialog->signal_connect(
                     $dialog->signal_handler_disconnect($signal);
                     is $dialog->get('num-pages'), 0,
                       'adf-defaults-scan-all-pages should force num-pages';
+                    is $dialog->_flatbed_selected($options), FALSE,
+                      'not _flatbed_selected() via value';
                     $flag = TRUE;
                     $loop->quit;
                 }
