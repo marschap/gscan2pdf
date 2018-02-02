@@ -22,10 +22,11 @@ SKIP: {
 
 system('convert rose: test.png');
 $view->set_pixbuf( Cairo::ImageSurface->create_from_png('test.png'), TRUE );
+is_deeply( $view->get_viewport, { x => 0, y => 0, width => 70, height => 46 },
+    'get_viewport' );
 
 SKIP: {
-    skip 'not yet', 3;
-    isa_ok( $view->get_viewport, 'Gtk3::Gdk::Rectangle' );
+    skip 'not yet', 2;
 
     isa_ok( $view->get_draw_rect, 'Gtk3::Gdk::Rectangle' );
 
@@ -34,7 +35,7 @@ SKIP: {
 
 ok( defined $view->get_pixbuf, 'get_pixbuf() works' );
 
-ok( defined $view->get_zoom, 'get_zoom() works' );
+is( $view->get_zoom, 0.0142857143655419, 'get_zoom() works' );
 
 my $signal = $view->signal_connect(
     'zoom-changed' => sub { pass 'emitted zoom-changed signal' } );
@@ -63,11 +64,11 @@ like( $@, qr/type/,
 );
 
 $view->set_pixbuf( undef, TRUE );
-ok( !$view->get_pixbuf, 'correctly cleared pixbuf' );
+is( defined $view->get_pixbuf,   FALSE, 'correctly cleared pixbuf' );
+is( defined $view->get_viewport, FALSE, 'correctly cleared viewport' );
 
 SKIP: {
-    skip 'not yet', 11;
-    ok( !$view->get_viewport, 'correctly cleared viewport' );
+    skip 'not yet', 10;
 
     ok( !$view->get_draw_rect, 'correctly cleared draw rectangle' );
 

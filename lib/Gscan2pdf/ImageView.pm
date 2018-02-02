@@ -25,8 +25,8 @@ use Glib::Object::Subclass Gtk3::DrawingArea::, signals => {
         [qw/readable writable/]               # flags
     ),
     Glib::ParamSpec->scalar(
-        'offset',                                               # name
-        'Image offset',                                         # nick
+        'viewport',                                             # name
+        'Image viewport',                                       # nick
         'Gdk::Rectangle hash of image x, y, width, height.',    # blurb
         [qw/readable writable/]                                 # flags
     ),
@@ -99,12 +99,15 @@ sub set_pixbuf {
     }
     $self->set( 'pixbuf', $pixbuf );
     if ( defined $pixbuf ) {
-        my $offset = $self->get('offset');
-        $offset->{width}  = $pixbuf->get_width;
-        $offset->{height} = $pixbuf->get_height;
-        if ( not defined $offset->{x} ) { $offset->{x} = 0 }
-        if ( not defined $offset->{y} ) { $offset->{y} = 0 }
-        $self->set( 'offset', $offset );
+        my $viewport = $self->get_viewport;
+        $viewport->{width}  = $pixbuf->get_width;
+        $viewport->{height} = $pixbuf->get_height;
+        if ( not defined $viewport->{x} ) { $viewport->{x} = 0 }
+        if ( not defined $viewport->{y} ) { $viewport->{y} = 0 }
+        $self->set( 'viewport', $viewport );
+    }
+    else {
+        $self->set( 'viewport', undef );
     }
     if ($zoom_to_fit) {
         $self->zoom_to_fit;
@@ -142,22 +145,22 @@ sub _motion {
     my ( $self, $event ) = @_;
     if ( not $self->{panning} ) { return FALSE }
 
-    my $offset = $self->get('offset');
-    $offset->{x} += $event->x - $self->{pan_start}{x};
-    $offset->{y} += $event->y - $self->{pan_start}{y};
+    my $viewport = $self->get_viewport;
+    $viewport->{x} += $event->x - $self->{pan_start}{x};
+    $viewport->{y} += $event->y - $self->{pan_start}{y};
     ( $self->{pan_start}{x}, $self->{pan_start}{y} ) = ( $event->x, $event->y );
     my $allocation = $self->get_allocation;
 
-    if ( $offset->{x} > 0 ) { $offset->{x} = 0 }
-    elsif ( $offset->{width} + $offset->{x} < $allocation->{width} ) {
-        $offset->{x} = $allocation->{width} - $offset->{width};
+    if ( $viewport->{x} > 0 ) { $viewport->{x} = 0 }
+    elsif ( $viewport->{width} + $viewport->{x} < $allocation->{width} ) {
+        $viewport->{x} = $allocation->{width} - $viewport->{width};
     }
-    if ( $offset->{y} > 0 ) { $offset->{y} = 0 }
-    elsif ( $offset->{height} + $offset->{y} < $allocation->{height} ) {
-        $offset->{y} = $allocation->{height} - $offset->{height};
+    if ( $viewport->{y} > 0 ) { $viewport->{y} = 0 }
+    elsif ( $viewport->{height} + $viewport->{y} < $allocation->{height} ) {
+        $viewport->{y} = $allocation->{height} - $viewport->{height};
     }
 
-    $self->set( 'offset', $offset );
+    $self->set( 'viewport', $viewport );
     my $win = $self->get_window();
     $win->invalidate_rect( $allocation, FALSE );
     return;
@@ -180,13 +183,15 @@ sub _draw {
     $context->scale( $zoom, $zoom );
 
     # Create pixbuf
-    my $offset = $self->get('offset');
+    my $pixbuf = $self->get_pixbuf;
+    if ( defined $pixbuf ) {
+        my $viewport = $self->get_viewport;
 
-#    Gtk3::Gdk::Cairo($context, set_source_pixbuf( $self->get_pixbuf, $offset->{x},
-#        $offset->{y} ));
-    $context->set_source_surface( $self->get_pixbuf, $offset->{x},
-        $offset->{y} );
-    $context->paint;
+        # Gtk3::Gdk::Cairo($context, set_source_pixbuf( $pixbuf, $viewport->{x},
+        #        $viewport->{y} ));
+        $context->set_source_surface( $pixbuf, $viewport->{x}, $viewport->{y} );
+        $context->paint;
+    }
     return TRUE;
 }
 
@@ -210,9 +215,9 @@ sub zoom_to_fit {
     my $pixbuf = $self->get('pixbuf');
     if ( not defined $pixbuf ) { return }
     my $allocation  = $self->get_allocation;
-    my $offset      = $self->get('offset');
-    my $sc_factor_w = $allocation->{width} / $offset->{width};
-    my $sc_factor_h = $allocation->{height} / $offset->{height};
+    my $viewport    = $self->get_viewport;
+    my $sc_factor_w = $allocation->{width} / $viewport->{width};
+    my $sc_factor_h = $allocation->{height} / $viewport->{height};
     $self->set( 'zoom', min( $sc_factor_w, $sc_factor_h ) );
     return;
 }
@@ -227,6 +232,11 @@ sub zoom_out {
     my ($self) = @_;
     $self->set_zoom( $self->get_zoom / 2 );
     return;
+}
+
+sub get_viewport {
+    my ($self) = @_;
+    return $self->get('viewport');
 }
 
 1;
