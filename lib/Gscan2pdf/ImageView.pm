@@ -158,8 +158,9 @@ sub _motion {
     if ( not $self->{panning} ) { return FALSE }
 
     my $offset = $self->get_offset;
-    $offset->{x} += $self->{pan_start}{x} - $event->x;
-    $offset->{y} += $self->{pan_start}{y} - $event->y;
+    my $zoom   = $self->get_zoom;
+    $offset->{x} += ( $self->{pan_start}{x} - $event->x ) / $zoom;
+    $offset->{y} += ( $self->{pan_start}{y} - $event->y ) / $zoom;
     ( $self->{pan_start}{x}, $self->{pan_start}{y} ) = ( $event->x, $event->y );
 
     $self->set_offset( $offset->{x}, $offset->{y} );
