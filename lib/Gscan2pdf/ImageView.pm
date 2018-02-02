@@ -27,19 +27,19 @@ use Glib::Object::Subclass Gtk3::DrawingArea::, signals => {
         [qw/readable writable/]               # flags
     ),
     Glib::ParamSpec->scalar(
-        'viewport',                                             # name
-        'Image viewport',                                       # nick
-        'Gdk::Rectangle hash of image x, y, width, height.',    # blurb
-        [qw/readable writable/]                                 # flags
+        'offset',                             # name
+        'Image offset',                       # nick
+        'Gdk::Rectangle hash of x, y',        # blurb
+        [qw/readable writable/]               # flags
     ),
     Glib::ParamSpec->float(
-        'zoom',                                                 # name
-        'zoom',                                                 # nick
-        'zoom level',                                           # blurb
-        0.001,                                                  # minimum
-        1000.0,                                                 # maximum
-        1.0,                                                    # default_value
-        [qw/readable writable/]                                 # flags
+        'zoom',                               # name
+        'zoom',                               # nick
+        'zoom level',                         # blurb
+        0.001,                                # minimum
+        1000.0,                               # maximum
+        1.0,                                  # default_value
+        [qw/readable writable/]               # flags
     ),
   ];
 
@@ -100,23 +100,11 @@ sub set_pixbuf {
         croak 'Error type ', ref($pixbuf), ' is not a Cairo::ImageSurface';
     }
     $self->set( 'pixbuf', $pixbuf );
-    if ( defined $pixbuf ) {
-        my $viewport = $self->get_viewport;
-        $viewport->{width}  = $pixbuf->get_width;
-        $viewport->{height} = $pixbuf->get_height;
-        if ( not defined $viewport->{x} ) { $viewport->{x} = 0 }
-        if ( not defined $viewport->{y} ) { $viewport->{y} = 0 }
-        $self->set( 'viewport', $viewport );
-    }
-    else {
-        $self->set( 'viewport', undef );
-    }
     if ($zoom_to_fit) {
         $self->zoom_to_fit;
     }
     else {
-        my $win = $self->get_window();
-        $win->invalidate_rect( $self->get_allocation, FALSE );
+        $self->set_offset( 0, 0 );
     }
     return;
 }
@@ -169,24 +157,12 @@ sub _motion {
     my ( $self, $event ) = @_;
     if ( not $self->{panning} ) { return FALSE }
 
-    my $viewport = $self->get_viewport;
-    $viewport->{x} += $event->x - $self->{pan_start}{x};
-    $viewport->{y} += $event->y - $self->{pan_start}{y};
+    my $offset = $self->get_offset;
+    $offset->{x} += $self->{pan_start}{x} - $event->x;
+    $offset->{y} += $self->{pan_start}{y} - $event->y;
     ( $self->{pan_start}{x}, $self->{pan_start}{y} ) = ( $event->x, $event->y );
-    my $allocation = $self->get_allocation;
 
-    if ( $viewport->{x} > 0 ) { $viewport->{x} = 0 }
-    elsif ( $viewport->{width} + $viewport->{x} < $allocation->{width} ) {
-        $viewport->{x} = $allocation->{width} - $viewport->{width};
-    }
-    if ( $viewport->{y} > 0 ) { $viewport->{y} = 0 }
-    elsif ( $viewport->{height} + $viewport->{y} < $allocation->{height} ) {
-        $viewport->{y} = $allocation->{height} - $viewport->{height};
-    }
-
-    $self->set( 'viewport', $viewport );
-    my $win = $self->get_window();
-    $win->invalidate_rect( $allocation, FALSE );
+    $self->set_offset( $offset->{x}, $offset->{y} );
     return;
 }
 
@@ -209,11 +185,11 @@ sub _draw {
     # Create pixbuf
     my $pixbuf = $self->get_pixbuf;
     if ( defined $pixbuf ) {
-        my $viewport = $self->get_viewport;
+        my $offset = $self->get_offset;
 
-        # Gtk3::Gdk::Cairo($context, set_source_pixbuf( $pixbuf, $viewport->{x},
-        #        $viewport->{y} ));
-        $context->set_source_surface( $pixbuf, $viewport->{x}, $viewport->{y} );
+        # Gtk3::Gdk::Cairo($context, set_source_pixbuf( $pixbuf, $offset->{x},
+        #        $offset->{y} ));
+        $context->set_source_surface( $pixbuf, -$offset->{x}, -$offset->{y} );
         $context->paint;
     }
     return TRUE;
@@ -234,6 +210,25 @@ sub get_zoom {
     return $self->get('zoom');
 }
 
+# set zoom and centre image
+sub _set_zoom_with_center {
+    my ( $self, $zoom, $center_x, $center_y ) = @_;
+    $self->set_zoom($zoom);
+    $self->set_offset( $center_x, $center_y );
+    return;
+}
+
+sub _set_zoom_no_center {
+    my ( $self, $zoom ) = @_;
+    my $allocation  = $self->get_allocation;
+    my $pixbuf_size = $self->get_pixbuf_size;
+    my $center_x = ( $pixbuf_size->{width} - $allocation->{width} / $zoom ) / 2;
+    my $center_y =
+      ( $pixbuf_size->{height} - $allocation->{height} / $zoom ) / 2;
+    $self->_set_zoom_with_center( $zoom, $center_x, $center_y );
+    return;
+}
+
 sub zoom_to_fit {
     my ($self) = @_;
     my $pixbuf_size = $self->get_pixbuf_size;
@@ -241,7 +236,7 @@ sub zoom_to_fit {
     my $allocation  = $self->get_allocation;
     my $sc_factor_w = $allocation->{width} / $pixbuf_size->{width};
     my $sc_factor_h = $allocation->{height} / $pixbuf_size->{height};
-    $self->set_zoom( min( $sc_factor_w, $sc_factor_h ) );
+    $self->_set_zoom_no_center( min( $sc_factor_w, $sc_factor_h ) );
     return;
 }
 
@@ -257,9 +252,47 @@ sub zoom_out {
     return;
 }
 
-sub get_viewport {
+sub set_offset {
+    my ( $self, $offset_x, $offset_y ) = @_;
+
+    #    my $allocation  = $self->get_allocation;
+    #    my $pixbuf_size = $self->get_pixbuf_size;
+    #    if ( $offset_x < 0 ) { $offset_x = 0 }
+    #    elsif ( $allocation->{width} + $offset_x > $pixbuf_size->{width} ) {
+    #        $offset_x = $pixbuf_size->{width} - $allocation->{width};
+    #    }
+    #    if ( $offset_y < 0 ) { $offset_y = 0 }
+    #    elsif ( $allocation->{height} + $offset_y > $pixbuf_size->{height} ) {
+    #        $offset_y = $pixbuf_size->{height} - $allocation->{height};
+    #    }
+
+    $self->set( 'offset', { x => $offset_x, y => $offset_y } );
+    my $win = $self->get_window();
+    if ( defined $win ) {
+        $win->invalidate_rect( $self->get_allocation, FALSE );
+    }
+    return;
+}
+
+sub get_offset {
     my ($self) = @_;
-    return $self->get('viewport');
+    return $self->get('offset');
+}
+
+sub get_viewport {
+    my ($self)     = @_;
+    my $allocation = $self->get_allocation;
+    my $zoomed     = $self->get_zoomed_size;
+    my $offset     = $self->get_offset;
+    if ( defined $zoomed ) {
+        return {
+            x      => $offset->{x},
+            y      => $offset->{y},
+            width  => min( $allocation->{width}, $zoomed->{width} ),
+            height => min( $allocation->{height}, $zoomed->{height} )
+        };
+    }
+    return;
 }
 
 1;
