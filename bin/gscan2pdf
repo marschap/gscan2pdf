@@ -1374,7 +1374,8 @@ sub selection_changed_callback {
     if (@page) {
 
         my $path = Gtk3::TreePath->new_from_indices( $page[0] );
-        $slist->scroll_to_cell( $path, $slist->get_column(0), TRUE, 0.5, 0.5 );
+        $slist->scroll_to_cell( $path, $slist->get_column(0),
+            TRUE, $HALF, $HALF );
 
         #        my $sel = $selector->get_selection;
         display_image( $slist->{data}[ $page[0] ][2] );
@@ -1568,7 +1569,8 @@ sub display_image {
     $current_page = $page;
 
     # quotes required to prevent File::Temp object being clobbered
-    my $pixbuf = Gtk3::Gdk::Pixbuf->new_from_file("$current_page->{filename}");
+    my $pixbuf =
+      Cairo::ImageSurface->create_from_png("$current_page->{filename}");
     $view->set_pixbuf( $pixbuf, TRUE );
 
     # Get image dimensions to constrain selector spinbuttons on crop dialog

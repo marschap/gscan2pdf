@@ -20,8 +20,8 @@ SKIP: {
     isa_ok( $view->get_tool, 'Gscan2pdf::ImageView::Tool::Dragger' );
 }
 
-system('convert rose: test.jpg');
-$view->set_pixbuf( Gtk3::Gdk::Pixbuf->new_from_file('test.jpg'), TRUE );
+system('convert rose: test.png');
+$view->set_pixbuf( Cairo::ImageSurface->create_from_png('test.png'), TRUE );
 
 SKIP: {
     skip 'not yet', 3;
