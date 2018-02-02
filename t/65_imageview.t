@@ -9,12 +9,12 @@ BEGIN {
 #########################
 
 my $view = Gscan2pdf::ImageView->new;
-ok( defined $view, 'new() works' );
+is( defined $view, TRUE, 'new()' );
 isa_ok( $view, 'Gscan2pdf::ImageView' );
 
 SKIP: {
     skip 'not yet', 2;
-    ok( defined $view->get_tool, 'get_tool() works' );
+    is( defined $view->get_tool, TRUE, 'get_tool()' );
 
     # The default tool is Gscan2pdf::ImageView::Tool::Dragger.
     isa_ok( $view->get_tool, 'Gscan2pdf::ImageView::Tool::Dragger' );
@@ -30,7 +30,7 @@ SKIP: {
 
     isa_ok( $view->get_draw_rect, 'Gtk3::Gdk::Rectangle' );
 
-    ok( $view->get_check_colors, 'get_check_colors() works' );
+    ok( $view->get_check_colors, 'get_check_colors()' );
 }
 
 ok( defined $view->get_pixbuf, 'get_pixbuf()' );
@@ -41,7 +41,7 @@ is_deeply( $view->get_allocation, { x => -1, y => -1, width => 1, height => 1 },
 is_deeply( $view->get_zoomed_size, { width => 1, height => 1 },
     'get_zoomed_size' );
 
-is( $view->get_zoom, 0.0142857143655419, 'get_zoom() works' );
+is( $view->get_zoom, 0.0142857143655419, 'get_zoom()' );
 
 my $signal = $view->signal_connect(
     'zoom-changed' => sub { pass 'emitted zoom-changed signal' } );
@@ -55,13 +55,13 @@ SKIP: {
 'Ensure that the gtkimageview.zooms_* functions are present and work as expected.'
     );
 
-    ok( defined $view->get_black_bg, 'get_black_bg() works' );
+    is( defined $view->get_black_bg, TRUE, 'get_black_bg()' );
 
-    ok( defined $view->get_show_frame, 'get_show_frame() works' );
+    is( defined $view->get_show_frame, TRUE, 'get_show_frame()' );
 
-    ok( defined $view->get_interpolation, 'get_interpolation() works' );
+    is( defined $view->get_interpolation, TRUE, 'get_interpolation()' );
 
-    ok( defined $view->get_show_cursor, 'get_show_cursor() works' );
+    is( defined $view->get_show_cursor, TRUE, 'get_show_cursor()' );
 }
 
 eval { $view->set_pixbuf( 'Hi mom!', TRUE ) };
