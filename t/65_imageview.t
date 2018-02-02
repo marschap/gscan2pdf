@@ -1,4 +1,4 @@
-use Test::More tests => 29;
+use Test::More tests => 30;
 
 BEGIN {
     use Glib qw/TRUE FALSE/;
@@ -33,7 +33,9 @@ SKIP: {
     ok( $view->get_check_colors, 'get_check_colors() works' );
 }
 
-ok( defined $view->get_pixbuf, 'get_pixbuf() works' );
+ok( defined $view->get_pixbuf, 'get_pixbuf()' );
+is_deeply( $view->get_pixbuf_size, { width => 70, height => 46 },
+    'get_pixbuf_size' );
 
 is( $view->get_zoom, 0.0142857143655419, 'get_zoom() works' );
 

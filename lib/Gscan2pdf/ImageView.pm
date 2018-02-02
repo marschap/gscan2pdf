@@ -124,6 +124,15 @@ sub get_pixbuf {
     return $self->get('pixbuf');
 }
 
+sub get_pixbuf_size {
+    my ($self) = @_;
+    my $pixbuf = $self->get_pixbuf;
+    if ( defined $pixbuf ) {
+        return { width => $pixbuf->get_width, height => $pixbuf->get_height };
+    }
+    return;
+}
+
 sub _button_pressed {
     my ( $self, $event ) = @_;
 
@@ -212,13 +221,12 @@ sub get_zoom {
 
 sub zoom_to_fit {
     my ($self) = @_;
-    my $pixbuf = $self->get('pixbuf');
-    if ( not defined $pixbuf ) { return }
+    my $pixbuf_size = $self->get_pixbuf_size;
+    if ( not defined $pixbuf_size ) { return }
     my $allocation  = $self->get_allocation;
-    my $viewport    = $self->get_viewport;
-    my $sc_factor_w = $allocation->{width} / $viewport->{width};
-    my $sc_factor_h = $allocation->{height} / $viewport->{height};
-    $self->set( 'zoom', min( $sc_factor_w, $sc_factor_h ) );
+    my $sc_factor_w = $allocation->{width} / $pixbuf_size->{width};
+    my $sc_factor_h = $allocation->{height} / $pixbuf_size->{height};
+    $self->set_zoom( min( $sc_factor_w, $sc_factor_h ) );
     return;
 }
 
