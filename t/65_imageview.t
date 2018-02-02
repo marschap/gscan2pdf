@@ -1,4 +1,4 @@
-use Test::More tests => 30;
+use Test::More tests => 32;
 
 BEGIN {
     use Glib qw/TRUE FALSE/;
@@ -36,6 +36,10 @@ SKIP: {
 ok( defined $view->get_pixbuf, 'get_pixbuf()' );
 is_deeply( $view->get_pixbuf_size, { width => 70, height => 46 },
     'get_pixbuf_size' );
+is_deeply( $view->get_allocation, { x => -1, y => -1, width => 1, height => 1 },
+    'get_allocation' );
+is_deeply( $view->get_zoomed_size, { width => 1, height => 1 },
+    'get_zoomed_size' );
 
 is( $view->get_zoom, 0.0142857143655419, 'get_zoom() works' );
 

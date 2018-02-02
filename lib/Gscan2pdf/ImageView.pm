@@ -9,6 +9,8 @@ use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk3;
 use List::Util qw(min);
 use Carp;
+use Readonly;
+Readonly my $HALF => 0.5;
 
 our $VERSION = '1.8.11';
 
@@ -129,6 +131,19 @@ sub get_pixbuf_size {
     my $pixbuf = $self->get_pixbuf;
     if ( defined $pixbuf ) {
         return { width => $pixbuf->get_width, height => $pixbuf->get_height };
+    }
+    return;
+}
+
+sub get_zoomed_size {
+    my ($self) = @_;
+    my $size = $self->get_pixbuf_size;
+    if ( defined $size ) {
+        my $zoom = $self->get_zoom;
+        return {
+            width  => int( $size->{width} * $zoom + $HALF ),
+            height => int( $size->{height} * $zoom + $HALF )
+        };
     }
     return;
 }
