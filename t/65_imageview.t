@@ -22,7 +22,7 @@ SKIP: {
 
 system('convert rose: test.png');
 $view->set_pixbuf( Cairo::ImageSurface->create_from_png('test.png'), TRUE );
-is_deeply( $view->get_viewport, { x => 0, y => -12, width => 1, height => 1 },
+is_deeply( $view->get_viewport, { x => 0, y => 12, width => 1, height => 1 },
     'get_viewport' );
 
 SKIP: {

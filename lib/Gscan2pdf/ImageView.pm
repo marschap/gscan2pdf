@@ -159,8 +159,8 @@ sub _motion {
 
     my $offset = $self->get_offset;
     my $zoom   = $self->get_zoom;
-    $offset->{x} += ( $self->{pan_start}{x} - $event->x ) / $zoom;
-    $offset->{y} += ( $self->{pan_start}{y} - $event->y ) / $zoom;
+    $offset->{x} += ( $event->x - $self->{pan_start}{x} ) / $zoom;
+    $offset->{y} += ( $event->y - $self->{pan_start}{y} ) / $zoom;
     ( $self->{pan_start}{x}, $self->{pan_start}{y} ) = ( $event->x, $event->y );
 
     $self->set_offset( $offset->{x}, $offset->{y} );
@@ -170,10 +170,12 @@ sub _motion {
 sub _scroll {
     my ( $self, $event ) = @_;
     if ( $event->direction eq 'up' ) {
-        $self->zoom_in;
+        $self->_set_zoom_with_center( $self->get_zoom * 2,
+            $event->x, $event->y );
     }
     else {
-        $self->zoom_out;
+        $self->_set_zoom_with_center( $self->get_zoom / 2,
+            $event->x, $event->y );
     }
     return;
 }
@@ -190,7 +192,7 @@ sub _draw {
 
         # Gtk3::Gdk::Cairo($context, set_source_pixbuf( $pixbuf, $offset->{x},
         #        $offset->{y} ));
-        $context->set_source_surface( $pixbuf, -$offset->{x}, -$offset->{y} );
+        $context->set_source_surface( $pixbuf, $offset->{x}, $offset->{y} );
         $context->paint;
     }
     return TRUE;
@@ -211,22 +213,57 @@ sub get_zoom {
     return $self->get('zoom');
 }
 
-# set zoom and centre image
+# convert x, y in image coords to widget coords
+sub _to_widget_coords {
+    my ( $self, $x, $y ) = @_;
+    my $zoom   = $self->get_zoom;
+    my $offset = $self->get_offset;
+    return ( $x + $offset->{x} ) * $zoom, ( $y + $offset->{y} ) * $zoom;
+}
+
+# convert x, y in widget coords to image coords
+sub _to_image_coords {
+    my ( $self, $x, $y, $zoom ) = @_;
+    if ( not defined $zoom ) { $zoom = $self->get_zoom }
+    my $offset = $self->get_offset;
+    return $x / $zoom - $offset->{x}, $y / $zoom - $offset->{y};
+}
+
+# set zoom and centre image (widget, not image coordinates)
 sub _set_zoom_with_center {
     my ( $self, $zoom, $center_x, $center_y ) = @_;
+    my $allocation = $self->get_allocation;
+    my $offset     = $self->get_offset;
+    my ( $offset_x, $offset_y );
+
+    # if no offset, then we must be zooming to fit for the first time
+    if ( not defined $offset->{x} or not defined $offset->{y} ) {
+        my $pixbuf_size = $self->get_pixbuf_size;
+        $offset_x =
+          ( $allocation->{width} / $zoom - $pixbuf_size->{width} ) / 2;
+        $offset_y =
+          ( $allocation->{height} / $zoom - $pixbuf_size->{height} ) / 2;
+    }
+    else {
+        ( $center_x, $center_y ) =
+          $self->_to_image_coords( $center_x, $center_y );
+        $offset_x = $allocation->{width} / 2 / $zoom - $center_x;
+        $offset_y = $allocation->{height} / 2 / $zoom - $center_y;
+    }
     $self->set_zoom($zoom);
-    $self->set_offset( $center_x, $center_y );
+    $self->set_offset( $offset_x, $offset_y );
     return;
 }
 
+# sets zoom, centred on the viewport
 sub _set_zoom_no_center {
     my ( $self, $zoom ) = @_;
-    my $allocation  = $self->get_allocation;
-    my $pixbuf_size = $self->get_pixbuf_size;
-    my $center_x = ( $pixbuf_size->{width} - $allocation->{width} / $zoom ) / 2;
-    my $center_y =
-      ( $pixbuf_size->{height} - $allocation->{height} / $zoom ) / 2;
-    $self->_set_zoom_with_center( $zoom, $center_x, $center_y );
+    my $allocation = $self->get_allocation;
+    $self->_set_zoom_with_center(
+        $zoom,
+        $allocation->{width} / 2,
+        $allocation->{height} / 2
+    );
     return;
 }
 
@@ -243,13 +280,13 @@ sub zoom_to_fit {
 
 sub zoom_in {
     my ($self) = @_;
-    $self->set_zoom( $self->get_zoom * 2 );
+    $self->_set_zoom_no_center( $self->get_zoom * 2 );
     return;
 }
 
 sub zoom_out {
     my ($self) = @_;
-    $self->set_zoom( $self->get_zoom / 2 );
+    $self->_set_zoom_no_center( $self->get_zoom / 2 );
     return;
 }
 
