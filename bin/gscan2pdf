@@ -87,6 +87,17 @@ use English qw( -no_match_vars )
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
 use Date::Calc qw(Delta_Days Add_Delta_Days Today Today_and_Now);
 
+# Bind the Gio API
+# This is necessary mainly for Gtk3::Application
+BEGIN {
+    use Glib::Object::Introspection;
+    Glib::Object::Introspection->setup(
+        basename => 'Gio',
+        version  => '2.0',
+        package  => 'Glib::IO'
+    );
+}
+
 use Readonly;
 Readonly my $HALF                    => 0.5;
 Readonly my $UNIT_SLIDER_STEP        => 0.001;
@@ -221,8 +232,9 @@ init_icons(
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
 my (
-    $slist,   $windowi,   $windowe, $windows, $windowh, $windowo, $windowrn,
-    $windowu, $windowudt, $save_button,
+    $slist, $windowi, $windowe, $windows, $windowh, $windowo, $windowrn,
+    $windowu, $windowudt, $save_button, $window, $scwin_buffer, $thbox, $tpbar,
+    $tcbutton, $spbar, $shbox, $scbutton, $unpaper, $hpaned,
     @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     $menubar,     $toolbar,
@@ -264,145 +276,153 @@ my (
 );
 
 # Create the window
-my $window = create_main_window();
+my $app = Gtk3::Application->new( 'org.gscan2pdf', 'flags-none' );
+$app->signal_connect( 'activate' => \&create_main_window );
+$app->run;
 
-my $main_vbox = Gtk3::VBox->new;
-$window->add($main_vbox);
+sub activate_app {
+    my $main_vbox = Gtk3::VBox->new;
+    $window->add($main_vbox);
 
-# Create the menu bar
-create_menu_bar();
-$main_vbox->pack_start( $menubar, FALSE, TRUE,  0 );
-$main_vbox->pack_start( $toolbar, FALSE, FALSE, 0 );
+    # Create the menu bar
+    create_menu_bar($window);
+    $main_vbox->pack_start( $menubar, FALSE, TRUE,  0 );
+    $main_vbox->pack_start( $toolbar, FALSE, FALSE, 0 );
 
-# HPaned for thumbnails and detail view
-my $hpaned = Gtk3::HPaned->new;
-$hpaned->set_position( $SETTING{'thumb panel'} );
-$main_vbox->pack_start( $hpaned, TRUE, TRUE, 0 );
+    # HPaned for thumbnails and detail view
+    $hpaned = Gtk3::HPaned->new;
+    $hpaned->set_position( $SETTING{'thumb panel'} );
+    $main_vbox->pack_start( $hpaned, TRUE, TRUE, 0 );
 
-# Scrolled window for thumbnails
-my $scwin_thumbs = Gtk3::ScrolledWindow->new;
+    # Scrolled window for thumbnails
+    my $scwin_thumbs = Gtk3::ScrolledWindow->new;
 
-# resize = FALSE to stop the panel expanding on being resized (Debian #507032)
-$hpaned->pack1( $scwin_thumbs, FALSE, TRUE );
-$scwin_thumbs->set_policy( 'automatic', 'automatic' );
-$scwin_thumbs->set_shadow_type('etched-in');
+    # resize = FALSE to stop the panel expanding on being resized
+    # (Debian #507032)
+    $hpaned->pack1( $scwin_thumbs, FALSE, TRUE );
+    $scwin_thumbs->set_policy( 'automatic', 'automatic' );
+    $scwin_thumbs->set_shadow_type('etched-in');
 
-# Set up a SimpleList
-$slist = Gscan2pdf::Document->new;
+    # Set up a SimpleList
+    $slist = Gscan2pdf::Document->new;
 
-# If dragged below the bottom of the window, scroll it.
-$slist->signal_connect( 'drag-motion' => \&drag_motion_callback );
+    # If dragged below the bottom of the window, scroll it.
+    $slist->signal_connect( 'drag-motion' => \&drag_motion_callback );
 
-# Set up callback for right mouse clicks.
-$slist->signal_connect( button_press_event   => \&handle_clicks );
-$slist->signal_connect( button_release_event => \&handle_clicks );
+    # Set up callback for right mouse clicks.
+    $slist->signal_connect( button_press_event   => \&handle_clicks );
+    $slist->signal_connect( button_release_event => \&handle_clicks );
 
-# Update the start spinbutton if the page number is been edited.
-$slist->get_model->signal_connect( 'row-changed' => sub { update_start() } );
+    # Update the start spinbutton if the page number is been edited.
+    $slist->get_model->signal_connect( 'row-changed' => sub { update_start() }
+    );
 
-$scwin_thumbs->add($slist);
+    $scwin_thumbs->add($slist);
 
-# Notebook for detail view and OCR output
-my $vnotebook = Gtk3::Notebook->new;
-$hpaned->pack2( $vnotebook, TRUE, TRUE );
+    # Notebook for detail view and OCR output
+    my $vnotebook = Gtk3::Notebook->new;
+    $hpaned->pack2( $vnotebook, TRUE, TRUE );
 
-# ImageView for detail view
-$view = Gscan2pdf::ImageView->new;
+    # ImageView for detail view
+    $view = Gscan2pdf::ImageView->new;
 
-#my $dragger  = Gtk3::ImageView::Tool::Dragger->new($view);
-#my $selector = Gtk3::ImageView::Tool::Selector->new($view);
-#my $painter  = Gtk3::ImageView::Tool::Painter->new($view);
-$vnotebook->append_page( $view, Gtk3::Label->new( __('Image') ) );
+    #my $dragger  = Gtk3::ImageView::Tool::Dragger->new($view);
+    #my $selector = Gtk3::ImageView::Tool::Selector->new($view);
+    #my $painter  = Gtk3::ImageView::Tool::Painter->new($view);
+    $vnotebook->append_page( $view, Gtk3::Label->new( __('Image') ) );
 
-$view->signal_connect(
-    button_press_event => sub {
-        my ( $widget, $event ) = @_;
-        handle_clicks( $widget, $event );
-    }
-);
-$view->signal_connect( button_release_event => \&handle_clicks );
-$view->signal_connect(
-    'zoom-changed' => sub {
-        if ( defined $canvas ) { $canvas->set_scale( $view->get_zoom ) }
-    }
-);
+    $view->signal_connect(
+        button_press_event => sub {
+            my ( $widget, $event ) = @_;
+            handle_clicks( $widget, $event );
+        }
+    );
+    $view->signal_connect( button_release_event => \&handle_clicks );
+    $view->signal_connect(
+        'zoom-changed' => sub {
+            if ( defined $canvas ) { $canvas->set_scale( $view->get_zoom ) }
+        }
+    );
 
-# Callback if the selection changes
-#$selector->{selection_changed_signal} = $selector->signal_connect(
-#    'selection-changed' => sub {
-#        my $sel = $selector->get_selection;
-#        if ( defined $sel ) {
-#            $SETTING{selection} = [ $sel->values ];
-#            if ( defined $sb_selector_x ) {
-#                $sb_selector_x->set_value( $SETTING{selection}[$SELECTOR_X] );
-#                $sb_selector_y->set_value( $SETTING{selection}[$SELECTOR_Y] );
-#                $sb_selector_w->set_value( $SETTING{selection}[$SELECTOR_W] );
-#                $sb_selector_h->set_value( $SETTING{selection}[$SELECTOR_H] );
-#            }
-#        }
-#    }
-#);
+ # Callback if the selection changes
+ #$selector->{selection_changed_signal} = $selector->signal_connect(
+ #    'selection-changed' => sub {
+ #        my $sel = $selector->get_selection;
+ #        if ( defined $sel ) {
+ #            $SETTING{selection} = [ $sel->values ];
+ #            if ( defined $sb_selector_x ) {
+ #                $sb_selector_x->set_value( $SETTING{selection}[$SELECTOR_X] );
+ #                $sb_selector_y->set_value( $SETTING{selection}[$SELECTOR_Y] );
+ #                $sb_selector_w->set_value( $SETTING{selection}[$SELECTOR_W] );
+ #                $sb_selector_h->set_value( $SETTING{selection}[$SELECTOR_H] );
+ #            }
+ #        }
+ #    }
+ #);
 
-# ScrolledWindow for Goo::Canvas for OCR output
-my $scwin_buffer = Gtk3::ScrolledWindow->new;
-$scwin_buffer->set_policy( 'automatic', 'automatic' );
-$scwin_buffer->set_shadow_type('etched-in');
-$vnotebook->append_page( $scwin_buffer, Gtk3::Label->new( __('OCR Output') ) );
+    # ScrolledWindow for Goo::Canvas for OCR output
+    $scwin_buffer = Gtk3::ScrolledWindow->new;
+    $scwin_buffer->set_policy( 'automatic', 'automatic' );
+    $scwin_buffer->set_shadow_type('etched-in');
+    $vnotebook->append_page( $scwin_buffer,
+        Gtk3::Label->new( __('OCR Output') ) );
 
-# Set up call back for list selection to update detail view
-$slist->{selection_changed_signal} = $slist->get_selection->signal_connect(
-    changed => \&selection_changed_callback );
+    # Set up call back for list selection to update detail view
+    $slist->{selection_changed_signal} = $slist->get_selection->signal_connect(
+        changed => \&selection_changed_callback );
 
-# _after ensures that Editables get first bite
-$window->signal_connect_after(
-    key_press_event => sub {
-        my ( $widget, $event ) = @_;
+    # _after ensures that Editables get first bite
+    $window->signal_connect_after(
+        key_press_event => sub {
+            my ( $widget, $event ) = @_;
 
-        # Let the keypress propagate
-        if ( $event->keyval != Gtk3::Gdk::KEY_Delete ) { return FALSE }
+            # Let the keypress propagate
+            if ( $event->keyval != Gtk3::Gdk::KEY_Delete ) { return FALSE }
 
-        delete_selection();
-        return TRUE;
-    }
-);
+            delete_selection();
+            return TRUE;
+        }
+    );
 
-# If defined in the config file, set the current directory
-if ( not defined $SETTING{'cwd'} ) { $SETTING{'cwd'} = getcwd }
+    # If defined in the config file, set the current directory
+    if ( not defined $SETTING{'cwd'} ) { $SETTING{'cwd'} = getcwd }
 
-my $unpaper = Gscan2pdf::Unpaper->new( $SETTING{'unpaper options'} );
+    $unpaper = Gscan2pdf::Unpaper->new( $SETTING{'unpaper options'} );
 
-update_uimanager();
+    update_uimanager();
 
-create_temp_directory();
+    create_temp_directory();
 
-$window->show_all;
+    $window->show_all;
 
-# Progress bars below window
-my $phbox = Gtk3::HBox->new;
-$main_vbox->pack_end( $phbox, FALSE, FALSE, 0 );
-$phbox->show;
-my $shbox = Gtk3::HBox->new;
-$phbox->add($shbox);
-my $spbar = Gtk3::ProgressBar->new;
-$shbox->add($spbar);
-my $scbutton = Gtk3::Button->new;
-$scbutton->set_image( Gtk3::Image->new_from_stock( 'gtk-cancel', 'button' ) );
-$shbox->pack_end( $scbutton, FALSE, FALSE, 0 );
-my $thbox = Gtk3::HBox->new;
-$phbox->add($thbox);
-my $tpbar = Gtk3::ProgressBar->new;
-$thbox->add($tpbar);
-my $tcbutton = Gtk3::Button->new;
-$tcbutton->set_image( Gtk3::Image->new_from_stock( 'gtk-cancel', 'button' ) );
-$thbox->pack_end( $tcbutton, FALSE, FALSE, 0 );
+    # Progress bars below window
+    my $phbox = Gtk3::HBox->new;
+    $main_vbox->pack_end( $phbox, FALSE, FALSE, 0 );
+    $phbox->show;
+    $shbox = Gtk3::HBox->new;
+    $phbox->add($shbox);
+    $spbar = Gtk3::ProgressBar->new;
+    $shbox->add($spbar);
+    $scbutton = Gtk3::Button->new;
+    $scbutton->set_image(
+        Gtk3::Image->new_from_stock( 'gtk-cancel', 'button' ) );
+    $shbox->pack_end( $scbutton, FALSE, FALSE, 0 );
+    $thbox = Gtk3::HBox->new;
+    $phbox->add($thbox);
+    $tpbar = Gtk3::ProgressBar->new;
+    $thbox->add($tpbar);
+    $tcbutton = Gtk3::Button->new;
+    $tcbutton->set_image(
+        Gtk3::Image->new_from_stock( 'gtk-cancel', 'button' ) );
+    $thbox->pack_end( $tcbutton, FALSE, FALSE, 0 );
 
-# Open scan dialog in background
-if ( $SETTING{'auto-open-scan-dialog'} ) { scan_dialog( undef, TRUE ) }
+    # Open scan dialog in background
+    if ( $SETTING{'auto-open-scan-dialog'} ) { scan_dialog( undef, TRUE ) }
 
-# Deal with --import command line option
-if ( defined $import ) { import_files($import) }
-
-Gtk3->main;
+    # Deal with --import command line option
+    if ( defined $import ) { import_files($import) }
+    return;
+}
 
 ### Subroutines
 
@@ -560,12 +580,12 @@ sub set_up_test_mode {
 }
 
 sub create_main_window {
-    my $widget = Gtk3::Window->new;
-    $widget->set_title("$prog_name v$VERSION");
-    $widget->signal_connect(
+    $window = Gtk3::ApplicationWindow->new($app);
+    $window->set_title("$prog_name v$VERSION");
+    $window->signal_connect(
         'delete-event' => sub {
             if ( quit() ) {
-                Gtk3->main_quit;
+                $app->quit;
             }
             else {
                 return TRUE;
@@ -574,7 +594,7 @@ sub create_main_window {
     );
 
     # Note when the window is maximised or not.
-    $widget->signal_connect(
+    $window->signal_connect(
         window_state_event => sub {
             my ( $w, $event ) = @_;
             if ( $event->new_window_state & ['maximized'] ) {
@@ -588,21 +608,23 @@ sub create_main_window {
 
     # If defined in the config file, set the window state, size and position
     if ( $SETTING{'restore window'} ) {
-        $widget->set_default_size( $SETTING{window_width},
+        $window->set_default_size( $SETTING{window_width},
             $SETTING{window_height} );
         if ( defined $SETTING{window_x} and defined $SETTING{window_y} ) {
-            $widget->move( $SETTING{window_x}, $SETTING{window_y} );
+            $window->move( $SETTING{window_x}, $SETTING{window_y} );
         }
-        if ( $SETTING{window_maximize} ) { $widget->maximize }
+        if ( $SETTING{window_maximize} ) { $window->maximize }
     }
 
-    #    try { $widget->set_default_icon_from_file("$iconpath/gscan2pdf.svg"); }
-    #    catch {
-    #        $logger->warn(
-    #            "Unable to load icon `$iconpath/gscan2pdf.svg': $EVAL_ERROR");
-    #    };
+    try { $window->set_icon_from_file("$iconpath/gscan2pdf.svg"); }
+    catch {
+        $logger->warn(
+            "Unable to load icon `$iconpath/gscan2pdf.svg': $EVAL_ERROR");
+    };
 
-    return $widget;
+    $app->add_window($window);
+    activate_app($window);
+    return;
 }
 
 # Check for presence of various packages
@@ -753,7 +775,7 @@ sub create_menu_bar {
             '<control>q',
             __('Quit'),
             sub {
-                if ( quit() ) { Gtk3->main_quit }
+                if ( quit() ) { $app->quit }
             }
         ],
 
