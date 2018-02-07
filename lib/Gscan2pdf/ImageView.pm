@@ -184,8 +184,6 @@ sub _draw {
     my ( $self, $context ) = @_;
     my $zoom = $self->get_zoom;
     $context->scale( $zoom, $zoom );
-
-    # Create pixbuf
     my $pixbuf = $self->get_pixbuf;
     if ( defined $pixbuf ) {
         my $offset = $self->get_offset;
@@ -221,10 +219,17 @@ sub _to_widget_coords {
 
 # convert x, y in widget coords to image coords
 sub _to_image_coords {
-    my ( $self, $x, $y, $zoom ) = @_;
-    if ( not defined $zoom ) { $zoom = $self->get_zoom }
+    my ( $self, $x, $y ) = @_;
+    my $zoom   = $self->get_zoom;
     my $offset = $self->get_offset;
     return $x / $zoom - $offset->{x}, $y / $zoom - $offset->{y};
+}
+
+# convert x, y in widget distance to image distance
+sub _to_image_distance {
+    my ( $self, $x, $y ) = @_;
+    my $zoom = $self->get_zoom;
+    return $x / $zoom, $y / $zoom;
 }
 
 # set zoom with centre in image coordinates
@@ -276,19 +281,39 @@ sub zoom_out {
     return;
 }
 
+sub _clamp_direction {
+    my ( $offset, $allocation, $pixbuf_size ) = @_;
+
+    # Centre the image if it is smaller than the widget
+    if ( $allocation > $pixbuf_size ) {
+        $offset = ( $allocation - $pixbuf_size ) / 2;
+    }
+
+    # Otherwise don't allow the LH/top edge of the image to be visible
+    elsif ( $offset > 0 ) {
+        $offset = 0;
+    }
+
+    # Otherwise don't allow the RH/bottom edge of the image to be visible
+    elsif ( $offset < $allocation - $pixbuf_size ) {
+        $offset = $allocation - $pixbuf_size;
+    }
+    return $offset;
+}
+
 sub set_offset {
     my ( $self, $offset_x, $offset_y ) = @_;
 
-    #    my $allocation  = $self->get_allocation;
-    #    my $pixbuf_size = $self->get_pixbuf_size;
-    #    if ( $offset_x < 0 ) { $offset_x = 0 }
-    #    elsif ( $allocation->{width} + $offset_x > $pixbuf_size->{width} ) {
-    #        $offset_x = $pixbuf_size->{width} - $allocation->{width};
-    #    }
-    #    if ( $offset_y < 0 ) { $offset_y = 0 }
-    #    elsif ( $allocation->{height} + $offset_y > $pixbuf_size->{height} ) {
-    #        $offset_y = $pixbuf_size->{height} - $allocation->{height};
-    #    }
+    # Convert the widget size to image scale to make the comparisons easier
+    my $allocation = $self->get_allocation;
+    ( $allocation->{width}, $allocation->{height} ) =
+      $self->_to_image_distance( $allocation->{width}, $allocation->{height} );
+    my $pixbuf_size = $self->get_pixbuf_size;
+
+    $offset_x = _clamp_direction( $offset_x, $allocation->{width},
+        $pixbuf_size->{width} );
+    $offset_y = _clamp_direction( $offset_y, $allocation->{height},
+        $pixbuf_size->{height} );
 
     $self->set( 'offset', { x => $offset_x, y => $offset_y } );
     my $win = $self->get_window();
