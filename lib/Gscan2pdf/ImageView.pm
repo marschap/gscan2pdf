@@ -169,14 +169,16 @@ sub _motion {
 
 sub _scroll {
     my ( $self, $event ) = @_;
+    my ( $center_x, $center_y ) =
+      $self->_to_image_coords( $event->x, $event->y );
+    my $zoom;
     if ( $event->direction eq 'up' ) {
-        $self->_set_zoom_with_center( $self->get_zoom * 2,
-            $event->x, $event->y );
+        $zoom = $self->get_zoom * 2;
     }
     else {
-        $self->_set_zoom_with_center( $self->get_zoom / 2,
-            $event->x, $event->y );
+        $zoom = $self->get_zoom / 2;
     }
+    $self->_set_zoom_with_center( $zoom, $center_x, $center_y );
     return;
 }
 
@@ -229,27 +231,12 @@ sub _to_image_coords {
     return $x / $zoom - $offset->{x}, $y / $zoom - $offset->{y};
 }
 
-# set zoom and centre image (widget, not image coordinates)
+# set zoom with centre in image coordinates
 sub _set_zoom_with_center {
     my ( $self, $zoom, $center_x, $center_y ) = @_;
     my $allocation = $self->get_allocation;
-    my $offset     = $self->get_offset;
-    my ( $offset_x, $offset_y );
-
-    # if no offset, then we must be zooming to fit for the first time
-    if ( not defined $offset->{x} or not defined $offset->{y} ) {
-        my $pixbuf_size = $self->get_pixbuf_size;
-        $offset_x =
-          ( $allocation->{width} / $zoom - $pixbuf_size->{width} ) / 2;
-        $offset_y =
-          ( $allocation->{height} / $zoom - $pixbuf_size->{height} ) / 2;
-    }
-    else {
-        ( $center_x, $center_y ) =
-          $self->_to_image_coords( $center_x, $center_y );
-        $offset_x = $allocation->{width} / 2 / $zoom - $center_x;
-        $offset_y = $allocation->{height} / 2 / $zoom - $center_y;
-    }
+    my $offset_x   = $allocation->{width} / 2 / $zoom - $center_x;
+    my $offset_y   = $allocation->{height} / 2 / $zoom - $center_y;
     $self->set_zoom($zoom);
     $self->set_offset( $offset_x, $offset_y );
     return;
@@ -259,11 +246,10 @@ sub _set_zoom_with_center {
 sub _set_zoom_no_center {
     my ( $self, $zoom ) = @_;
     my $allocation = $self->get_allocation;
-    $self->_set_zoom_with_center(
-        $zoom,
-        $allocation->{width} / 2,
-        $allocation->{height} / 2
-    );
+    my ( $center_x, $center_y ) =
+      $self->_to_image_coords( $allocation->{width} / 2,
+        $allocation->{height} / 2 );
+    $self->_set_zoom_with_center( $zoom, $center_x, $center_y );
     return;
 }
 
@@ -274,7 +260,11 @@ sub zoom_to_fit {
     my $allocation  = $self->get_allocation;
     my $sc_factor_w = $allocation->{width} / $pixbuf_size->{width};
     my $sc_factor_h = $allocation->{height} / $pixbuf_size->{height};
-    $self->_set_zoom_no_center( min( $sc_factor_w, $sc_factor_h ) );
+    $self->_set_zoom_with_center(
+        min( $sc_factor_w, $sc_factor_h ),
+        $pixbuf_size->{width} / 2,
+        $pixbuf_size->{height} / 2
+    );
     return;
 }
 
