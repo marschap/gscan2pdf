@@ -20,26 +20,27 @@ use Glib::Object::Subclass Gtk3::DrawingArea::, signals => {
     },
   },
   properties => [
-    Glib::ParamSpec->scalar(
-        'pixbuf',                             # name
-        'pixbuf',                             # nickname
-        'Cairo::ImageSurface to be shown',    # blurb
-        [qw/readable writable/]               # flags
+    Glib::ParamSpec->object(
+        'pixbuf',                           # name
+        'pixbuf',                           # nickname
+        'Gtk3::Gdk::Pixbuf to be shown',    # blurb
+        'Gtk3::Gdk::Pixbuf',
+        [qw/readable writable/]             # flags
     ),
     Glib::ParamSpec->scalar(
-        'offset',                             # name
-        'Image offset',                       # nick
-        'Gdk::Rectangle hash of x, y',        # blurb
-        [qw/readable writable/]               # flags
+        'offset',                           # name
+        'Image offset',                     # nick
+        'Gdk::Rectangle hash of x, y',      # blurb
+        [qw/readable writable/]             # flags
     ),
     Glib::ParamSpec->float(
-        'zoom',                               # name
-        'zoom',                               # nick
-        'zoom level',                         # blurb
-        0.001,                                # minimum
-        1000.0,                               # maximum
-        1.0,                                  # default_value
-        [qw/readable writable/]               # flags
+        'zoom',                             # name
+        'zoom',                             # nick
+        'zoom level',                       # blurb
+        0.001,                              # minimum
+        1000.0,                             # maximum
+        1.0,                                # default_value
+        [qw/readable writable/]             # flags
     ),
   ];
 
@@ -96,9 +97,6 @@ sub SET_PROPERTY {
 
 sub set_pixbuf {
     my ( $self, $pixbuf, $zoom_to_fit ) = @_;
-    if ( defined $pixbuf and not $pixbuf->isa('Cairo::ImageSurface') ) {
-        croak 'Error type ', ref($pixbuf), ' is not a Cairo::ImageSurface';
-    }
     $self->set( 'pixbuf', $pixbuf );
     if ($zoom_to_fit) {
         $self->zoom_to_fit;
@@ -191,10 +189,8 @@ sub _draw {
     my $pixbuf = $self->get_pixbuf;
     if ( defined $pixbuf ) {
         my $offset = $self->get_offset;
-
-        # Gtk3::Gdk::Cairo($context, set_source_pixbuf( $pixbuf, $offset->{x},
-        #        $offset->{y} ));
-        $context->set_source_surface( $pixbuf, $offset->{x}, $offset->{y} );
+        Gtk3::Gdk::cairo_set_source_pixbuf( $context, $pixbuf, $offset->{x},
+            $offset->{y} );
         $context->paint;
     }
     return TRUE;

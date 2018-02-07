@@ -20,8 +20,8 @@ SKIP: {
     isa_ok( $view->get_tool, 'Gscan2pdf::ImageView::Tool::Dragger' );
 }
 
-system('convert rose: test.png');
-$view->set_pixbuf( Cairo::ImageSurface->create_from_png('test.png'), TRUE );
+system('convert rose: test.jpg');
+$view->set_pixbuf( Gtk3::Gdk::Pixbuf->new_from_file('test.jpg'), TRUE );
 is_deeply( $view->get_viewport, { x => 0, y => 12, width => 1, height => 1 },
     'get_viewport' );
 

@@ -1591,8 +1591,7 @@ sub display_image {
     $current_page = $page;
 
     # quotes required to prevent File::Temp object being clobbered
-    my $pixbuf =
-      Cairo::ImageSurface->create_from_png("$current_page->{filename}");
+    my $pixbuf = Gtk3::Gdk::Pixbuf->new_from_file("$current_page->{filename}");
     $view->set_pixbuf( $pixbuf, TRUE );
 
     # Get image dimensions to constrain selector spinbuttons on crop dialog
