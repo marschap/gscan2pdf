@@ -1,4 +1,4 @@
-use Test::More tests => 32;
+use Test::More tests => 34;
 
 BEGIN {
     use Glib qw/TRUE FALSE/;
@@ -21,6 +21,13 @@ SKIP: {
 }
 
 system('convert rose: test.jpg');
+$signal = $view->signal_connect(
+    'offset-changed' => sub {
+        my ( $widget, $x, $y ) = @_;
+        is $x, 0,  'emitted offset-changed signal x';
+        is $y, 11, 'emitted offset-changed signal y';
+    }
+);
 $view->set_pixbuf( Gtk3::Gdk::Pixbuf->new_from_file('test.jpg'), TRUE );
 is_deeply( $view->get_viewport,
     { x => 0, y => 11.9999998044223, width => 1, height => 1 },
@@ -44,8 +51,12 @@ is_deeply( $view->get_zoomed_size, { width => 1, height => 1 },
 
 is( $view->get_zoom, 0.0142857143655419, 'get_zoom()' );
 
-my $signal = $view->signal_connect(
-    'zoom-changed' => sub { pass 'emitted zoom-changed signal' } );
+$signal = $view->signal_connect(
+    'zoom-changed' => sub {
+        my ( $widget, $zoom ) = @_;
+        is $zoom, 1, 'emitted zoom-changed signal';
+    }
+);
 $view->set_zoom(1);
 
 SKIP: {

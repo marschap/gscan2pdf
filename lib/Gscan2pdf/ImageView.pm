@@ -18,29 +18,32 @@ use Glib::Object::Subclass Gtk3::DrawingArea::, signals => {
     'zoom-changed' => {
         param_types => ['Glib::Float'],    # new zoom
     },
+    'offset-changed' => {
+        param_types => [ 'Glib::Int', 'Glib::Int' ],    # new offset
+    },
   },
   properties => [
     Glib::ParamSpec->object(
-        'pixbuf',                           # name
-        'pixbuf',                           # nickname
-        'Gtk3::Gdk::Pixbuf to be shown',    # blurb
+        'pixbuf',                                       # name
+        'pixbuf',                                       # nickname
+        'Gtk3::Gdk::Pixbuf to be shown',                # blurb
         'Gtk3::Gdk::Pixbuf',
-        [qw/readable writable/]             # flags
+        [qw/readable writable/]                         # flags
     ),
     Glib::ParamSpec->scalar(
-        'offset',                           # name
-        'Image offset',                     # nick
-        'Gdk::Rectangle hash of x, y',      # blurb
-        [qw/readable writable/]             # flags
+        'offset',                                       # name
+        'Image offset',                                 # nick
+        'Gdk::Rectangle hash of x, y',                  # blurb
+        [qw/readable writable/]                         # flags
     ),
     Glib::ParamSpec->float(
-        'zoom',                             # name
-        'zoom',                             # nick
-        'zoom level',                       # blurb
-        0.001,                              # minimum
-        1000.0,                             # maximum
-        1.0,                                # default_value
-        [qw/readable writable/]             # flags
+        'zoom',                                         # name
+        'zoom',                                         # nick
+        'zoom level',                                   # blurb
+        0.001,                                          # minimum
+        1000.0,                                         # maximum
+        1.0,                                            # default_value
+        [qw/readable writable/]                         # flags
     ),
   ];
 
@@ -65,15 +68,14 @@ sub INIT_INSTANCE {
             'Gtk3::Gdk::EventMask', 'scroll-mask'
           )
     );
-
-    #   $self->signal_connect( 'zoom-changed' => sub { $self->_update_image } );
     return $self;
 }
 
 sub SET_PROPERTY {
     my ( $self, $pspec, $newval ) = @_;
-    my $name   = $pspec->get_name;
-    my $oldval = $self->get($name);
+    my $name       = $pspec->get_name;
+    my $oldval     = $self->get($name);
+    my $invalidate = FALSE;
     if (   ( defined $newval and defined $oldval and $newval ne $oldval )
         or ( defined $newval xor defined $oldval ) )
     {
@@ -84,11 +86,29 @@ sub SET_PROPERTY {
             when ('zoom') {
                 $self->{$name} = $newval;
                 $self->signal_emit( 'zoom-changed', $newval );
+                $invalidate = TRUE;
+            }
+            when ('offset') {
+                if (   ( defined $newval xor defined $oldval )
+                    or $oldval->{x} != $newval->{x}
+                    or $oldval->{y} != $newval->{y} )
+                {
+                    $self->{$name} = $newval;
+                    $self->signal_emit( 'offset-changed', $newval->{x},
+                        $newval->{y} );
+                    $invalidate = TRUE;
+                }
             }
             default {
                 $self->{$name} = $newval;
 
                 #                $self->SUPER::SET_PROPERTY( $pspec, $newval );
+            }
+        }
+        if ($invalidate) {
+            my $win = $self->get_window();
+            if ( defined $win ) {
+                $win->invalidate_rect( $self->get_allocation, FALSE );
             }
         }
     }
@@ -197,10 +217,6 @@ sub _draw {
 sub set_zoom {
     my ( $self, $zoom ) = @_;
     $self->set( 'zoom', $zoom );
-    my $win = $self->get_window();
-    if ( defined $win ) {
-        $win->invalidate_rect( $self->get_allocation, FALSE );
-    }
     return;
 }
 
@@ -316,10 +332,6 @@ sub set_offset {
         $pixbuf_size->{height} );
 
     $self->set( 'offset', { x => $offset_x, y => $offset_y } );
-    my $win = $self->get_window();
-    if ( defined $win ) {
-        $win->invalidate_rect( $self->get_allocation, FALSE );
-    }
     return;
 }
 
