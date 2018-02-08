@@ -14,6 +14,13 @@ Readonly my $HALF => 0.5;
 
 our $VERSION = '1.8.11';
 
+# Note: in a BEGIN block to ensure that the registration is complete
+#       by the time the use Subclass goes to look for it.
+BEGIN {
+    Glib::Type->register_enum( 'Gscan2pdf::ImageView::Tool',
+        qw(dragger selector) );
+}
+
 use Glib::Object::Subclass Gtk3::DrawingArea::, signals => {
     'zoom-changed' => {
         param_types => ['Glib::Float'],    # new zoom
@@ -45,6 +52,14 @@ use Glib::Object::Subclass Gtk3::DrawingArea::, signals => {
         1.0,                                            # default_value
         [qw/readable writable/]                         # flags
     ),
+    Glib::ParamSpec->enum(
+        'tool',                                         # name
+        'tool',                                         # nickname
+        'Active Gscan2pdf::ImageView::Tool',            # blurb
+        'Gscan2pdf::ImageView::Tool',
+        'dragger',                                      # default
+        [qw/readable writable/]                         #flags
+    ),
   ];
 
 sub INIT_INSTANCE {
@@ -68,6 +83,7 @@ sub INIT_INSTANCE {
             'Gtk3::Gdk::EventMask', 'scroll-mask'
           )
     );
+    $self->set_tool('dragger');
     return $self;
 }
 
@@ -354,6 +370,17 @@ sub get_viewport {
         };
     }
     return;
+}
+
+sub set_tool {
+    my ( $self, $tool ) = @_;
+    $self->set( 'tool', $tool );
+    return;
+}
+
+sub get_tool {
+    my ($self) = @_;
+    return $self->get('tool');
 }
 
 1;

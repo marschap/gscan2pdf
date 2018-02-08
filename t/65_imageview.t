@@ -1,4 +1,4 @@
-use Test::More tests => 34;
+use Test::More tests => 32;
 
 BEGIN {
     use Glib qw/TRUE FALSE/;
@@ -9,16 +9,8 @@ BEGIN {
 #########################
 
 my $view = Gscan2pdf::ImageView->new;
-is( defined $view, TRUE, 'new()' );
 isa_ok( $view, 'Gscan2pdf::ImageView' );
-
-SKIP: {
-    skip 'not yet', 2;
-    is( defined $view->get_tool, TRUE, 'get_tool()' );
-
-    # The default tool is Gscan2pdf::ImageView::Tool::Dragger.
-    isa_ok( $view->get_tool, 'Gscan2pdf::ImageView::Tool::Dragger' );
-}
+is( $view->get_tool, 'dragger', 'get_tool() defaults to dragger' );
 
 system('convert rose: test.jpg');
 $signal = $view->signal_connect(
