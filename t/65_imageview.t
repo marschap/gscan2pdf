@@ -1,4 +1,4 @@
-use Test::More tests => 32;
+use Test::More tests => 34;
 
 BEGIN {
     use Glib qw/TRUE FALSE/;
@@ -33,7 +33,7 @@ SKIP: {
     ok( $view->get_check_colors, 'get_check_colors()' );
 }
 
-ok( defined $view->get_pixbuf, 'get_pixbuf()' );
+isa_ok( $view->get_pixbuf, 'Gtk3::Gdk::Pixbuf', 'get_pixbuf()' );
 is_deeply( $view->get_pixbuf_size, { width => 70, height => 46 },
     'get_pixbuf_size' );
 is_deeply( $view->get_allocation, { x => -1, y => -1, width => 1, height => 1 },
@@ -50,6 +50,21 @@ $signal = $view->signal_connect(
     }
 );
 $view->set_zoom(1);
+
+$signal = $view->signal_connect(
+    'selection-changed' => sub {
+        my ( $widget, $selection ) = @_;
+        is_deeply(
+            $selection,
+            { x => 10, y => 10, width => 10, height => 10 },
+            'emitted selection-changed signal'
+        );
+    }
+);
+$view->set_selection( { x => 10, y => 10, width => 10, height => 10 } );
+is_deeply( $view->get_selection,
+    { x => 10, y => 10, width => 10, height => 10 },
+    'get_selection' );
 
 SKIP: {
     skip 'not yet', 5;

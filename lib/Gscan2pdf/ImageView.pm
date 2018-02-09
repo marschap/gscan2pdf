@@ -28,37 +28,46 @@ use Glib::Object::Subclass Gtk3::DrawingArea::, signals => {
     'offset-changed' => {
         param_types => [ 'Glib::Int', 'Glib::Int' ],    # new offset
     },
+    'selection-changed' => {
+        param_types => ['Glib::Scalar'],    # Gdk::Rectangle of selection area
+    },
   },
   properties => [
     Glib::ParamSpec->object(
-        'pixbuf',                                       # name
-        'pixbuf',                                       # nickname
-        'Gtk3::Gdk::Pixbuf to be shown',                # blurb
+        'pixbuf',                           # name
+        'pixbuf',                           # nickname
+        'Gtk3::Gdk::Pixbuf to be shown',    # blurb
         'Gtk3::Gdk::Pixbuf',
-        [qw/readable writable/]                         # flags
+        [qw/readable writable/]             # flags
     ),
     Glib::ParamSpec->scalar(
-        'offset',                                       # name
-        'Image offset',                                 # nick
-        'Gdk::Rectangle hash of x, y',                  # blurb
-        [qw/readable writable/]                         # flags
+        'offset',                           # name
+        'Image offset',                     # nick
+        'Gdk::Rectangle hash of x, y',      # blurb
+        [qw/readable writable/]             # flags
     ),
     Glib::ParamSpec->float(
-        'zoom',                                         # name
-        'zoom',                                         # nick
-        'zoom level',                                   # blurb
-        0.001,                                          # minimum
-        1000.0,                                         # maximum
-        1.0,                                            # default_value
-        [qw/readable writable/]                         # flags
+        'zoom',                             # name
+        'zoom',                             # nick
+        'zoom level',                       # blurb
+        0.001,                              # minimum
+        1000.0,                             # maximum
+        1.0,                                # default_value
+        [qw/readable writable/]             # flags
     ),
     Glib::ParamSpec->enum(
-        'tool',                                         # name
-        'tool',                                         # nickname
-        'Active Gscan2pdf::ImageView::Tool',            # blurb
+        'tool',                                 # name
+        'tool',                                 # nickname
+        'Active Gscan2pdf::ImageView::Tool',    # blurb
         'Gscan2pdf::ImageView::Tool',
-        'dragger',                                      # default
-        [qw/readable writable/]                         #flags
+        'dragger',                              # default
+        [qw/readable writable/]                 #flags
+    ),
+    Glib::ParamSpec->scalar(
+        'selection',                                 # name
+        'Selection',                                 # nick
+        'Gdk::Rectangle hash of selected region',    # blurb
+        [qw/readable writable/]                      # flags
     ),
   ];
 
@@ -113,6 +122,17 @@ sub SET_PROPERTY {
                     $self->signal_emit( 'offset-changed', $newval->{x},
                         $newval->{y} );
                     $invalidate = TRUE;
+                }
+            }
+            when ('selection') {
+                if (   ( defined $newval xor defined $oldval )
+                    or $oldval->{x} != $newval->{x}
+                    or $oldval->{y} != $newval->{y}
+                    or $oldval->{width} != $newval->{width}
+                    or $oldval->{height} != $newval->{height} )
+                {
+                    $self->{$name} = $newval;
+                    $self->signal_emit( 'selection-changed', $newval );
                 }
             }
             default {
@@ -381,6 +401,17 @@ sub set_tool {
 sub get_tool {
     my ($self) = @_;
     return $self->get('tool');
+}
+
+sub set_selection {
+    my ( $self, $selection ) = @_;
+    $self->set( 'selection', $selection );
+    return;
+}
+
+sub get_selection {
+    my ($self) = @_;
+    return $self->get('selection');
 }
 
 1;

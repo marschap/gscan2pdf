@@ -115,10 +115,6 @@ Readonly my $_100_PERCENT            => 100;
 Readonly my $MAX_DPI                 => 2400;
 Readonly my $BITS_PER_BYTE           => 8;
 Readonly my $RIGHT_MOUSE_BUTTON      => 3;
-Readonly my $SELECTOR_X              => 0;
-Readonly my $SELECTOR_Y              => 1;
-Readonly my $SELECTOR_W              => 2;
-Readonly my $SELECTOR_H              => 3;
 Readonly my $HELP_WINDOW_WIDTH       => 800;
 Readonly my $HELP_WINDOW_HEIGHT      => 600;
 Readonly my $HELP_WINDOW_DIVIDER_POS => 200;
@@ -325,10 +321,6 @@ sub activate_app {
 
     # ImageView for detail view
     $view = Gscan2pdf::ImageView->new;
-
-    #my $dragger  = Gtk3::ImageView::Tool::Dragger->new($view);
-    #my $selector = Gtk3::ImageView::Tool::Selector->new($view);
-    #my $painter  = Gtk3::ImageView::Tool::Painter->new($view);
     $vnotebook->append_page( $view, Gtk3::Label->new( __('Image') ) );
 
     $view->signal_connect(
@@ -344,21 +336,21 @@ sub activate_app {
         }
     );
 
- # Callback if the selection changes
- #$selector->{selection_changed_signal} = $selector->signal_connect(
- #    'selection-changed' => sub {
- #        my $sel = $selector->get_selection;
- #        if ( defined $sel ) {
- #            $SETTING{selection} = [ $sel->values ];
- #            if ( defined $sb_selector_x ) {
- #                $sb_selector_x->set_value( $SETTING{selection}[$SELECTOR_X] );
- #                $sb_selector_y->set_value( $SETTING{selection}[$SELECTOR_Y] );
- #                $sb_selector_w->set_value( $SETTING{selection}[$SELECTOR_W] );
- #                $sb_selector_h->set_value( $SETTING{selection}[$SELECTOR_H] );
- #            }
- #        }
- #    }
- #);
+    # Callback if the selection changes
+    $view->{selection_changed_signal} = $view->signal_connect(
+        'selection-changed' => sub {
+            my ( $widget, $sel ) = @_;
+            if ( defined $sel ) {
+                $SETTING{selection} = $sel;
+                if ( defined $sb_selector_x ) {
+                    $sb_selector_x->set_value( $SETTING{selection}{x} );
+                    $sb_selector_y->set_value( $SETTING{selection}{y} );
+                    $sb_selector_w->set_value( $SETTING{selection}{width} );
+                    $sb_selector_h->set_value( $SETTING{selection}{height} );
+                }
+            }
+        }
+    );
 
     # ScrolledWindow for Goo::Canvas for OCR output
     $scwin_buffer = Gtk3::ScrolledWindow->new;
@@ -1398,11 +1390,9 @@ sub selection_changed_callback {
         my $path = Gtk3::TreePath->new_from_indices( $page[0] );
         $slist->scroll_to_cell( $path, $slist->get_column(0),
             TRUE, $HALF, $HALF );
-
-        #        my $sel = $selector->get_selection;
+        my $sel = $view->get_selection;
         display_image( $slist->{data}[ $page[0] ][2] );
-
-        #        if ( defined $sel ) { $selector->set_selection($sel) }
+        if ( defined $sel ) { $view->set_selection($sel) }
     }
     else {
         $view->set_pixbuf(undef);
@@ -1609,13 +1599,11 @@ sub display_image {
         $sb_selector_y->set_range( 0,
             $current_page->{h} - $sb_selector_h->get_value );
 
-        $SETTING{selection}[$SELECTOR_X] = $sb_selector_x->get_value;
-        $SETTING{selection}[$SELECTOR_Y] = $sb_selector_y->get_value;
-        $SETTING{selection}[$SELECTOR_W] = $sb_selector_w->get_value;
-        $SETTING{selection}[$SELECTOR_H] = $sb_selector_h->get_value;
-
-        #        $selector->set_selection(
-        #            Gtk3::Gdk::Rectangle->new( @{ $SETTING{selection} } ) );
+        $SETTING{selection}{x}      = $sb_selector_x->get_value;
+        $SETTING{selection}{y}      = $sb_selector_y->get_value;
+        $SETTING{selection}{width}  = $sb_selector_w->get_value;
+        $SETTING{selection}{height} = $sb_selector_h->get_value;
+        $view->set_selection( $SETTING{selection} );
     }
 
     # Convert hocr output to Goo:Canvas if defined
@@ -5213,25 +5201,22 @@ sub change_image_tool_cb {
     my ( $action, $current ) = @_;
     my $value = $current->get_current_value();
 
-    #    my $tool  = $selector;
-    #    if ( $value == $DRAGGER_TOOL ) {
-    #        $tool = $dragger;
-    #    }
-    #    elsif ( $value == $PAINTER_TOOL ) {
-    #        $tool = $painter;
-    #    }
-    #    $view->set_tool($tool);
-    #    if (    $value == $SELECTOR_TOOL
-    #        and defined $SETTING{selection}
-    #        and @{ $SETTING{selection} } )
-    #    {
-    #        $selector->signal_handler_block(
-    #            $selector->{selection_changed_signal} );
-    #        $selector->set_selection(
-    #            Gtk3::Gdk::Rectangle->new( @{ $SETTING{selection} } ) );
-    #        $selector->signal_handler_unblock(
-    #            $selector->{selection_changed_signal} );
-    #    }
+    my $tool = 'selector';
+    if ( $value == $DRAGGER_TOOL ) {
+        $tool = 'dragger';
+    }
+    elsif ( $value == $PAINTER_TOOL ) {
+        $tool = 'painter';
+    }
+    $view->set_tool($tool);
+    if (    $value == $SELECTOR_TOOL
+        and defined $SETTING{selection}
+        and @{ $SETTING{selection} } )
+    {
+        $view->signal_handler_block( $view->{selection_changed_signal} );
+        $view->set_selection( $SETTING{selection} );
+        $view->signal_handler_unblock( $view->{selection_changed_signal} );
+    }
     return;
 }
 
@@ -5330,48 +5315,48 @@ sub crop {
     # Callbacks if the spinbuttons change
     $sb_selector_x->signal_connect(
         'value-changed' => sub {
-            $SETTING{selection}[$SELECTOR_X] = $sb_selector_x->get_value;
+            $SETTING{selection}{x} = $sb_selector_x->get_value;
             $sb_selector_w->set_range( 0,
-                $current_page->{w} - $SETTING{selection}[$SELECTOR_X] );
+                $current_page->{w} - $SETTING{selection}{x} );
             update_selector();
         }
     );
     $sb_selector_y->signal_connect(
         'value-changed' => sub {
-            $SETTING{selection}[$SELECTOR_Y] = $sb_selector_y->get_value;
+            $SETTING{selection}{y} = $sb_selector_y->get_value;
             $sb_selector_h->set_range( 0,
-                $current_page->{h} - $SETTING{selection}[$SELECTOR_Y] );
+                $current_page->{h} - $SETTING{selection}{y} );
             update_selector();
         }
     );
     $sb_selector_w->signal_connect(
         'value-changed' => sub {
-            $SETTING{selection}[$SELECTOR_W] = $sb_selector_w->get_value;
+            $SETTING{selection}{width} = $sb_selector_w->get_value;
             $sb_selector_x->set_range( 0,
-                $current_page->{w} - $SETTING{selection}[$SELECTOR_W] );
+                $current_page->{w} - $SETTING{selection}{width} );
             update_selector();
         }
     );
     $sb_selector_h->signal_connect(
         'value-changed' => sub {
-            $SETTING{selection}[$SELECTOR_H] = $sb_selector_h->get_value;
+            $SETTING{selection}{height} = $sb_selector_h->get_value;
             $sb_selector_y->set_range( 0,
-                $current_page->{h} - $SETTING{selection}[$SELECTOR_H] );
+                $current_page->{h} - $SETTING{selection}{height} );
             update_selector();
         }
     );
 
-    if ( defined $SETTING{selection}[$SELECTOR_X] ) {
-        $sb_selector_x->set_value( $SETTING{selection}[$SELECTOR_X] );
+    if ( defined $SETTING{selection}{x} ) {
+        $sb_selector_x->set_value( $SETTING{selection}{x} );
     }
-    if ( defined $SETTING{selection}[$SELECTOR_Y] ) {
-        $sb_selector_y->set_value( $SETTING{selection}[$SELECTOR_Y] );
+    if ( defined $SETTING{selection}{y} ) {
+        $sb_selector_y->set_value( $SETTING{selection}{y} );
     }
-    if ( defined $SETTING{selection}[$SELECTOR_W] ) {
-        $sb_selector_w->set_value( $SETTING{selection}[$SELECTOR_W] );
+    if ( defined $SETTING{selection}{width} ) {
+        $sb_selector_w->set_value( $SETTING{selection}{width} );
     }
-    if ( defined $SETTING{selection}[$SELECTOR_H] ) {
-        $sb_selector_h->set_value( $SETTING{selection}[$SELECTOR_H] );
+    if ( defined $SETTING{selection}{height} ) {
+        $sb_selector_h->set_value( $SETTING{selection}{height} );
     }
 
     # HBox for buttons
@@ -5391,10 +5376,10 @@ sub crop {
                 my ( $signal, $pid );
                 $pid = $slist->crop(
                     page            => $slist->{data}[$i][2],
-                    x               => $SETTING{selection}[$SELECTOR_X],
-                    y               => $SETTING{selection}[$SELECTOR_Y],
-                    w               => $SETTING{selection}[$SELECTOR_W],
-                    h               => $SETTING{selection}[$SELECTOR_H],
+                    x               => $SETTING{selection}{x},
+                    y               => $SETTING{selection}{y},
+                    w               => $SETTING{selection}{width},
+                    h               => $SETTING{selection}{height},
                     queued_callback => sub {
                         return update_tpbar(@_);
                     },
@@ -5430,14 +5415,12 @@ sub crop {
 }
 
 sub update_selector {
-
-#    my $sel = $selector->get_selection;
-#    $selector->signal_handler_block( $selector->{selection_changed_signal} );
-#    if ( defined $sel ) {
-#        $selector->set_selection(
-#            Gtk3::Gdk::Rectangle->new( @{ $SETTING{selection} } ) );
-#    }
-#    $selector->signal_handler_unblock( $selector->{selection_changed_signal} );
+    my $sel = $view->get_selection;
+    $view->signal_handler_block( $view->{selection_changed_signal} );
+    if ( defined $sel ) {
+        $view->set_selection( $SETTING{selection} );
+    }
+    $view->signal_handler_unblock( $view->{selection_changed_signal} );
     return;
 }
 
