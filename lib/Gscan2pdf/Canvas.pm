@@ -20,7 +20,7 @@ BEGIN {
 
     $VERSION = '1.8.11';
 
-    use base qw(Exporter GooCanvas2);
+    use base qw(Exporter GooCanvas2::Canvas);
     %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],
 
     # your exported package globals go here,
