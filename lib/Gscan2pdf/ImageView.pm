@@ -224,11 +224,13 @@ sub _motion {
     if ( $self->get_tool eq 'dragger' ) {
         my $offset = $self->get_offset;
         my $zoom   = $self->get_zoom;
-        $offset->{x} += ( $event->x - $self->{drag_start}{x} ) / $zoom;
-        $offset->{y} += ( $event->y - $self->{drag_start}{y} ) / $zoom;
+        my $offset_x =
+          $offset->{x} + ( $event->x - $self->{drag_start}{x} ) / $zoom;
+        my $offset_y =
+          $offset->{y} + ( $event->y - $self->{drag_start}{y} ) / $zoom;
         ( $self->{drag_start}{x}, $self->{drag_start}{y} ) =
           ( $event->x, $event->y );
-        $self->set_offset( $offset->{x}, $offset->{y} );
+        $self->set_offset( $offset_x, $offset_y );
     }
     elsif ( $self->get_tool eq 'selector' ) {
 
