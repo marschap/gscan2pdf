@@ -46,7 +46,8 @@ sub INIT_INSTANCE {
     my $group;
     for my $nick ( sort keys %buttons ) {
         $self->{button}{$nick} =
-          Gtk3::RadioButton->new( $group, $buttons{$nick} );
+          Gtk3::RadioButton->new_with_label_from_widget( $group,
+            $buttons{$nick} );
         $self->{button}{$nick}->signal_connect(
             'toggled' => sub {
                 if ( $self->{button}{$nick}->get_active ) {
@@ -55,7 +56,7 @@ sub INIT_INSTANCE {
             }
         );
         $vbox->pack_start( $self->{button}{$nick}, TRUE, TRUE, 0 );
-        if ( not $group ) { $group = $self->{button}{$nick}->get_group }
+        if ( not $group ) { $group = $self->{button}{all} }
     }
     push @widget_list, $self;
     return;
