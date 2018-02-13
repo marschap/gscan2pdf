@@ -111,6 +111,23 @@ sub _pre_184 {
     return;
 }
 
+sub _pre_200 {
+    my ( $version, $SETTING ) = @_;
+    if ( version->parse($version) < version->parse('2.0.0') ) {
+        if ( defined $SETTING->{selection}
+            and ref( $SETTING->{selection} ) eq 'ARRAY' )
+        {
+            my %selection;
+            my $i = 0;
+            for my $key (qw(x y width height)) {
+                $selection{$key} = $SETTING->{selection}[ $i++ ];
+            }
+            $SETTING->{selection} = \%selection;
+        }
+    }
+    return;
+}
+
 sub read_config {
     my ( $filename, $logger ) = @_;
     my ( %SETTING, $conf );
@@ -181,6 +198,8 @@ sub read_config {
     _pre_181( $version, \%SETTING );
 
     _pre_184( $version, \%SETTING );
+
+    _pre_200( $version, \%SETTING );
 
     $logger->debug( Dumper( \%SETTING ) );
     return %SETTING;

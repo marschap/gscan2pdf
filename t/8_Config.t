@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Gscan2pdf::Document;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Test::More tests => 17;
+use Test::More tests => 18;
 
 BEGIN {
     use_ok('Gscan2pdf::Config');
@@ -481,6 +481,26 @@ close $fh or die "Error: cannot close $rc\n";
 %output = Gscan2pdf::Config::read_config( $rc, $logger );
 
 is_deeply( \%output, \%example, 'deal with corrupt config' );
+
+#########################
+
+$config = <<'EOS';
+{
+   "selection" : [ 0, 0, 1289, 2009 ],
+   "version" : "1.8.11"
+}
+EOS
+open $fh, '>', $rc or die "Error: cannot open $rc\n";
+print $fh $config;
+close $fh or die "Error: cannot close $rc\n";
+
+%example = (
+    "selection" => { x => 0, y => 0, width => 1289, height => 2009 },
+    "version"   => "1.8.11"
+);
+%output = Gscan2pdf::Config::read_config( $rc, $logger );
+
+is_deeply( \%output, \%example, 'convert pre-2.0.0 selection' );
 
 #########################
 
