@@ -31,6 +31,9 @@ use Glib::Object::Subclass Gtk3::DrawingArea::, signals => {
     'selection-changed' => {
         param_types => ['Glib::Scalar'],    # Gdk::Rectangle of selection area
     },
+    'tool-changed' => {
+        param_types => ['Glib::String'],    # new tool
+    },
   },
   properties => [
     Glib::ParamSpec->object(
@@ -132,8 +135,15 @@ sub SET_PROPERTY {
                     or $oldval->{height} != $newval->{height} )
                 {
                     $self->{$name} = $newval;
+                    if ( $self->get_tool eq 'selector' ) {
+                        $invalidate = TRUE;
+                    }
                     $self->signal_emit( 'selection-changed', $newval );
                 }
+            }
+            when ('tool') {
+                $self->{$name} = $newval;
+                $self->signal_emit( 'tool-changed', $newval );
             }
             default {
                 $self->{$name} = $newval;
@@ -196,33 +206,47 @@ sub _button_pressed {
     # left mouse button
     if ( $event->button != 1 ) { return FALSE }
 
-    $self->{pan_start} = { x => $event->x, y => $event->y };
-    $self->{panning} = TRUE;
+    $self->{drag_start} = { x => $event->x, y => $event->y };
+    $self->{dragging} = TRUE;
     return TRUE;
 }
 
 sub _button_released {
     my ( $self, $event ) = @_;
-    $self->{panning} = FALSE;
+    $self->{dragging} = FALSE;
     return;
 }
 
 sub _motion {
     my ( $self, $event ) = @_;
-    if ( not $self->{panning} ) { return FALSE }
+    if ( not $self->{dragging} ) { return FALSE }
 
-    my $offset = $self->get_offset;
-    my $zoom   = $self->get_zoom;
-    $offset->{x} += ( $event->x - $self->{pan_start}{x} ) / $zoom;
-    $offset->{y} += ( $event->y - $self->{pan_start}{y} ) / $zoom;
-    ( $self->{pan_start}{x}, $self->{pan_start}{y} ) = ( $event->x, $event->y );
+    if ( $self->get_tool eq 'dragger' ) {
+        my $offset = $self->get_offset;
+        my $zoom   = $self->get_zoom;
+        $offset->{x} += ( $event->x - $self->{drag_start}{x} ) / $zoom;
+        $offset->{y} += ( $event->y - $self->{drag_start}{y} ) / $zoom;
+        ( $self->{drag_start}{x}, $self->{drag_start}{y} ) =
+          ( $event->x, $event->y );
+        $self->set_offset( $offset->{x}, $offset->{y} );
+    }
+    elsif ( $self->get_tool eq 'selector' ) {
 
-    $self->set_offset( $offset->{x}, $offset->{y} );
+        # calculate the rectangle, give it the right orientation
+        my $x = int( min( $self->{drag_start}{x}, $event->x ) );
+        my $y = int( min( $self->{drag_start}{y}, $event->y ) );
+        my $w = int( abs( $self->{drag_start}{x} - $event->x ) );
+        my $h = int( abs( $self->{drag_start}{y} - $event->y ) );
+        ( $x, $y ) = $self->_to_image_coords( $x, $y );
+        ( $w, $h ) = $self->_to_image_distance( $w, $h );
+        $self->set_selection( { x => $x, y => $y, width => $w, height => $h } );
+    }
     return;
 }
 
 sub _scroll {
     my ( $self, $event ) = @_;
+    if ( $self->get_tool ne 'dragger' ) { return }
     my ( $center_x, $center_y ) =
       $self->_to_image_coords( $event->x, $event->y );
     my $zoom;
@@ -238,14 +262,39 @@ sub _scroll {
 
 sub _draw {
     my ( $self, $context ) = @_;
+    my $pixbuf = $self->get_pixbuf;
+    if ( not defined $pixbuf ) { return TRUE }
     my $zoom = $self->get_zoom;
     $context->scale( $zoom, $zoom );
-    my $pixbuf = $self->get_pixbuf;
-    if ( defined $pixbuf ) {
-        my $offset = $self->get_offset;
-        Gtk3::Gdk::cairo_set_source_pixbuf( $context, $pixbuf, $offset->{x},
-            $offset->{y} );
-        $context->paint;
+    my $offset = $self->get_offset;
+    $context->translate( $offset->{x}, $offset->{y} );
+    Gtk3::Gdk::cairo_set_source_pixbuf( $context, $pixbuf, 0, 0 );
+    $context->paint;
+
+    if ( $self->get_tool eq 'selector' ) {
+        my $selection = $self->get_selection;
+        if ( defined $selection ) {
+            my ( $x, $y, $w, $h ) = (
+                $selection->{x},     $selection->{y},
+                $selection->{width}, $selection->{height}
+            );
+            if ( $w <= 0 or $h <= 0 ) { return TRUE }
+
+            $context->set_line_width(1);
+            $context->set_source_rgb( 0, 0, 0 );
+
+            # to get a non-antialiased rubber band rectangle,
+            # stroke needs half-integer coordinates,
+            # and fill/clip integer coordinates to be sharp.
+            $context->rectangle( $x + 1, $y + 1, $w - 2, $h - 2 );
+            $context->set_source_rgba( 0.2, 0.6, 0.8, 0.2 );
+            $context->fill();
+
+            $context->rectangle( $x + 0.5, $y + 0.5, $w - 1, $h - 1 );
+            $context->set_source_rgba( 0.2, 0.6, 0.8, 0.35 );
+            $context->set_line_width(1);
+            $context->stroke();
+        }
     }
     return TRUE;
 }

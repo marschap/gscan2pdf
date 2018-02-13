@@ -5195,7 +5195,7 @@ sub unsharp {
     return;
 }
 
-# Callback for change Gtk3::ImageView::Tool
+# Callback for tool-changed signal Gscan2pdf::ImageView
 
 sub change_image_tool_cb {
     my ( $action, $current ) = @_;
@@ -5209,10 +5209,7 @@ sub change_image_tool_cb {
         $tool = 'painter';
     }
     $view->set_tool($tool);
-    if (    $value == $SELECTOR_TOOL
-        and defined $SETTING{selection}
-        and @{ $SETTING{selection} } )
-    {
+    if ( $value == $SELECTOR_TOOL and defined $SETTING{selection} ) {
         $view->signal_handler_block( $view->{selection_changed_signal} );
         $view->set_selection( $SETTING{selection} );
         $view->signal_handler_unblock( $view->{selection_changed_signal} );

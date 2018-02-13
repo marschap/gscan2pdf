@@ -1,4 +1,4 @@
-use Test::More tests => 34;
+use Test::More tests => 35;
 
 BEGIN {
     use Glib qw/TRUE FALSE/;
@@ -65,6 +65,14 @@ $view->set_selection( { x => 10, y => 10, width => 10, height => 10 } );
 is_deeply( $view->get_selection,
     { x => 10, y => 10, width => 10, height => 10 },
     'get_selection' );
+
+$signal = $view->signal_connect(
+    'tool-changed' => sub {
+        my ( $widget, $tool ) = @_;
+        is $tool, 'selector', 'emitted tool-changed signal';
+    }
+);
+$view->set_tool('selector');
 
 SKIP: {
     skip 'not yet', 5;
