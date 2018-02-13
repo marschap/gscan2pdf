@@ -143,6 +143,9 @@ sub SET_PROPERTY {
             }
             when ('tool') {
                 $self->{$name} = $newval;
+                if ( defined $self->get_selection ) {
+                    $invalidate = TRUE;
+                }
                 $self->signal_emit( 'tool-changed', $newval );
             }
             default {
