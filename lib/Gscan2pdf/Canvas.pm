@@ -115,7 +115,7 @@ sub boxed_text {
             x      => ( $x_size / 2 ),
             y      => ( $y_size / 2 ),
             width  => -1,
-            anchor => 'center',          ## no critic (ProhibitMagicNumbers)
+            anchor => 'center',
             'font' => 'Sans'
         );
         my $angle  = -( $textangle + $rotation ) % $_360_DEGREES;
