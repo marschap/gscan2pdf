@@ -966,7 +966,6 @@ sub cut_selection {
 sub copy_selection {
     my ( $self, $clone ) = @_;
     my $rows = $self->get_selection->get_selected_rows or return;
-    my $model = $self->get_model;
     my @data;
     $rows->foreach(
         sub {
@@ -1034,16 +1033,13 @@ sub paste_selection {
 
 sub delete_selection {
     my ($self) = @_;
-    my $model  = $self->get_model;
-    my $rows   = $self->get_selection->get_selected_rows;
+    my ( $paths, $model ) = $self->get_selection->get_selected_rows;
 
-    #for ( reverse @rows ) {
-    $rows->foreach(    # might have to fix this. previously, order was reversed
-        sub {
-            my ( $model, $path, $iter ) = @_;
-            $model->remove($iter);
-        }
-    );
+    # Reverse the rows in order not to invalid the iters
+    for my $path ( reverse @{$paths} ) {
+        my $iter = $model->get_iter($path);
+        $model->remove($iter);
+    }
     return;
 }
 

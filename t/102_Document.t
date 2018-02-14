@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 8;
+use Test::More tests => 10;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gscan2pdf::Document;
 
@@ -56,6 +56,12 @@ $slist->import_files(
         @rows = $slist->get_selected_indices;
         is_deeply( \@rows, [1],
             'pasted page not selected, as parameter not TRUE' );
+
+        $slist->select( 0, 1 );
+        @rows = $slist->get_selected_indices;
+        is_deeply( \@rows, [ 0, 1 ], 'selected all pages' );
+        $slist->delete_selection;
+        is( $#{ $slist->{data} }, -1, 'deleted all pages' );
 
         # TODO/FIXME: test drag-and-drop callbacks for move
 
