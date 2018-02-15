@@ -5056,85 +5056,72 @@ sub unsharp {
     # Frame for page range
     add_page_range($vbox);
 
-    # table for nice layout
+    my $spinbuttonr = Gtk3::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
+    my $spinbuttons =
+      Gtk3::SpinButton->new_with_range( 0, $MAX_SIGMA, $SIGMA_STEP );
+    my $spinbuttong = Gtk3::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
+    my $spinbuttont =
+      Gtk3::SpinButton->new_with_range( 0, 1, $UNIT_SLIDER_STEP );
+    my @layout = (
+        [
+            __('Radius'),
+            $spinbuttonr,
+            __('pixels'),
+            $SETTING{'unsharp radius'},
+            __(
+'The radius of the Gaussian, in pixels, not counting the center pixel (0 = automatic).'
+            ),
+        ],
+        [
+            __('Sigma'), $spinbuttons, __('pixels'),
+            $SETTING{'unsharp sigma'},
+            __('The standard deviation of the Gaussian.'),
+        ],
+        [
+            __('Gain'),
+            $spinbuttong,
+            $PERCENT,
+            $SETTING{'unsharp gain'},
+            __(
+'The percentage of the difference between the original and the blur image that is added back into the original.'
+            ),
+        ],
+        [
+            __('Threshold'),
+            $spinbuttont,
+            undef,
+            $SETTING{'unsharp threshold'},
+            __(
+'The threshold, as a fraction of QuantumRange, needed to apply the difference amount.'
+            ),
+        ],
+    );
+
+    # grid for layout
     my $grid = Gtk3::Grid->new;
     $vbox->pack_start( $grid, TRUE, TRUE, 0 );
 
-    # SpinButton for radius
-    my $hbox = Gtk3::HBox->new;
-    my ( $row, $desc, $widget, $units ) = ( 0, 0, 1, 2 );
-    $grid->attach( $hbox, $desc, $row, 1, 1 );
-    my $label = Gtk3::Label->new( __('Radius') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $widget, $row, 1, 1 );
-    my $spinbuttonr = Gtk3::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
-    $spinbuttonr->set_value( $SETTING{'unsharp radius'} );
-    $spinbuttonr->set_tooltip_text(
-        __(
-'The radius of the Gaussian, in pixels, not counting the center pixel (0 = automatic).'
-        )
-    );
-    $hbox->pack_end( $spinbuttonr, TRUE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $units, $row, 1, 1 );
-    $label = Gtk3::Label->new( __('pixels') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
+    for my $row ( 0 .. $#layout ) {
+        my $col   = 0;
+        my $hbox  = Gtk3::HBox->new;
+        my $label = Gtk3::Label->new( $layout[$row][$col] );
+        $grid->attach( $hbox, $col++, $row, 1, 1 );
+        $hbox->pack_start( $label, FALSE, TRUE, 0 );
+        $hbox = Gtk3::HBox->new;
+        $hbox->pack_end( $layout[$row][$col], TRUE, TRUE, 0 );
+        $grid->attach( $hbox, $col, $row, 1, 1 );
 
-    # SpinButton for sigma
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $desc, ++$row, 1, 1 );
-    $label = Gtk3::Label->new( __('Sigma') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $widget, $row, 1, 1 );
-    my $spinbuttons =
-      Gtk3::SpinButton->new_with_range( 0, $MAX_SIGMA, $SIGMA_STEP );
-    $spinbuttons->set_value( $SETTING{'unsharp sigma'} );
-    $spinbuttons->set_tooltip_text(
-        __('The standard deviation of the Gaussian.') );
-    $hbox->pack_end( $spinbuttons, TRUE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $units, $row, 1, 1 );
-    $label = Gtk3::Label->new( __('pixels') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-
-    # SpinButton for gain
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $desc, ++$row, 1, 1 );
-    $label = Gtk3::Label->new( __('Gain') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $widget, $row, 1, 1 );
-    my $spinbuttong = Gtk3::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
-    $spinbuttong->set_value( $SETTING{'unsharp gain'} );
-    $spinbuttong->set_tooltip_text(
-        __(
-'The percentage of the difference between the original and the blur image that is added back into the original.'
-        )
-    );
-    $hbox->pack_end( $spinbuttong, TRUE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $units, $row, 1, 1 );
-    $label = Gtk3::Label->new($PERCENT);
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-
-    # SpinButton for threshold
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $desc, ++$row, 1, 1 );
-    $label = Gtk3::Label->new( __('Threshold') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $widget, $row, 1, 1 );
-    my $spinbuttont =
-      Gtk3::SpinButton->new_with_range( 0, 1, $UNIT_SLIDER_STEP );
-    $spinbuttont->set_value( $SETTING{'unsharp threshold'} );
-    $spinbuttont->set_tooltip_text(
-        __(
-'The threshold, as a fraction of QuantumRange, needed to apply the difference amount.'
-        )
-    );
-    $hbox->pack_end( $spinbuttont, TRUE, TRUE, 0 );
+        if ( defined $layout[$row][ ++$col ] ) {
+            $hbox = Gtk3::HBox->new;
+            $grid->attach( $hbox, $col, $row, 1, 1 );
+            $label = Gtk3::Label->new( $layout[$row][$col] );
+            $hbox->pack_start( $label, FALSE, TRUE, 0 );
+        }
+        if ( defined $layout[$row][ ++$col ] ) {
+            $layout[$row][1]->set_value( $layout[$row][$col] );
+        }
+        $layout[$row][1]->set_tooltip_text( $layout[$row][ ++$col ] );
+    }
 
     # HBox for buttons
     my $hboxb = _hbox_with_apply_cancel_buttons(
@@ -5235,76 +5222,47 @@ sub crop {
     # Frame for page range
     add_page_range($vbox);
 
-    # table for nice layout
+    $sb_selector_x =
+      Gtk3::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
+    $sb_selector_y =
+      Gtk3::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
+    $sb_selector_w =
+      Gtk3::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
+    $sb_selector_h =
+      Gtk3::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
+    my @layout = (
+        [
+            __('x'),
+            $sb_selector_x,
+            __('The x-position of the left hand edge of the crop.'),
+        ],
+        [
+            __('y'), $sb_selector_y,
+            __('The y-position of the top edge of the crop.'),
+        ],
+        [ __('Width'),  $sb_selector_w, __('The width of the crop.'), ],
+        [ __('Height'), $sb_selector_h, __('The height of the crop.'), ],
+    );
+
+    # grid for layout
     my $grid = Gtk3::Grid->new;
     $vbox->pack_start( $grid, TRUE, TRUE, 0 );
 
-    # SpinButton for x
-    my $hbox = Gtk3::HBox->new;
-    my ( $row, $desc, $widget, $units ) = ( 0, 0, 1, 2 );
-    $grid->attach( $hbox, $desc, $row, 1, 1 );
-    my $label = Gtk3::Label->new( __('x') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $widget, $row, 1, 1 );
-    $sb_selector_x =
-      Gtk3::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
-    $sb_selector_x->set_tooltip_text(
-        __('The x-position of the left hand edge of the crop.') );
-    $hbox->pack_end( $sb_selector_x, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $units, $row, 1, 1 );
-    $label = Gtk3::Label->new( __('pixels') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-
-    # SpinButton for y
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $desc, ++$row, 1, 1 );
-    $label = Gtk3::Label->new( __('y') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $widget, $row, 1, 1 );
-    $sb_selector_y =
-      Gtk3::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
-    $sb_selector_y->set_tooltip_text(
-        __('The y-position of the top edge of the crop.') );
-    $hbox->pack_end( $sb_selector_y, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $units, $row, 1, 1 );
-    $label = Gtk3::Label->new( __('pixels') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-
-    # SpinButton for w
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $desc, ++$row, 1, 1 );
-    $label = Gtk3::Label->new( __('Width') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $widget, $row, 1, 1 );
-    $sb_selector_w =
-      Gtk3::SpinButton->new_with_range( 0, $current_page->{w}, 1 );
-    $sb_selector_w->set_tooltip_text( __('The width of the crop.') );
-    $hbox->pack_end( $sb_selector_w, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $units, $row, 1, 1 );
-    $label = Gtk3::Label->new( __('pixels') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-
-    # SpinButton for h
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $desc, ++$row, 1, 1 );
-    $label = Gtk3::Label->new( __('Height') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $widget, $row, 1, 1 );
-    $sb_selector_h =
-      Gtk3::SpinButton->new_with_range( 0, $current_page->{h}, 1 );
-    $sb_selector_h->set_tooltip_text( __('The height of the crop.') );
-    $hbox->pack_end( $sb_selector_h, FALSE, TRUE, 0 );
-    $hbox = Gtk3::HBox->new;
-    $grid->attach( $hbox, $units, $row, 1, 1 );
-    $label = Gtk3::Label->new( __('pixels') );
-    $hbox->pack_start( $label, FALSE, TRUE, 0 );
+    for my $row ( 0 .. $#layout ) {
+        my $col   = 0;
+        my $hbox  = Gtk3::HBox->new;
+        my $label = Gtk3::Label->new( $layout[$row][$col] );
+        $grid->attach( $hbox, $col++, $row, 1, 1 );
+        $hbox->pack_start( $label, FALSE, TRUE, 0 );
+        $hbox = Gtk3::HBox->new;
+        $hbox->pack_end( $layout[$row][$col], TRUE, TRUE, 0 );
+        $grid->attach( $hbox, $col, $row, 1, 1 );
+        $hbox = Gtk3::HBox->new;
+        $grid->attach( $hbox, ++$col, $row, 1, 1 );
+        $label = Gtk3::Label->new( __('pixels') );
+        $hbox->pack_start( $label, FALSE, TRUE, 0 );
+        $layout[$row][1]->set_tooltip_text( $layout[$row][$col] );
+    }
 
     # Callbacks if the spinbuttons change
     $sb_selector_x->signal_connect(
@@ -5357,7 +5315,7 @@ sub crop {
     my $hboxb = _hbox_with_apply_cancel_buttons(
         sub {
 
-            if ( not @{ $SETTING{selection} } ) { return }
+            if ( not %{ $SETTING{selection} } ) { return }
 
             # Update undo/redo buffers
             take_snapshot();
