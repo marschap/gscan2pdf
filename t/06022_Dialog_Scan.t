@@ -2,7 +2,7 @@ use warnings;
 use strict;
 use Test::More tests => 5;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
-use Gtk2 -init;             # Could just call init separately
+use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
 use Sub::Override;    # Override Frontend::Image_Sane to test functionality that
                       # we can't with the test backend
@@ -14,7 +14,7 @@ BEGIN {
 
 #########################
 
-my $window = Gtk2::Window->new;
+my $window = Gtk3::Window->new;
 
 Gscan2pdf::Translation::set_domain('gscan2pdf');
 use Log::Log4perl qw(:easy);
@@ -131,12 +131,12 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         is $dialog->get('num-pages'), 2, 'num-pages';
         ok $dialog->{framen}->is_sensitive, 'num-page gui not ghosted';
 
-        Gtk2->main_quit;
+        Gtk3->main_quit;
     }
 );
 $dialog->get_devices;
 
-Gtk2->main;
+Gtk3->main;
 
 Gscan2pdf::Frontend::Image_Sane->quit;
 __END__
