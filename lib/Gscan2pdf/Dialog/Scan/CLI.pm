@@ -519,9 +519,6 @@ sub _update_option_visibility {
             $opt->{type} == SANE_TYPE_GROUP
           ? $self->{option_widgets}{ $opt->{title} }
           : $self->{option_widgets}{ $opt->{name} }->get_parent;
-        use Data::Dumper;
-        print "container $opt->{title}\n";
-        print Dumper($container);
         my $geometry = $self->_geometry_option($opt);
         if ($show) {
             $container->show_all;
@@ -534,12 +531,10 @@ sub _update_option_visibility {
             {
             }
             if ( $j > 0
-                and not $self->{option_widgets}{ $opt->{name} }->is_visible )
+                and not $self->{option_widgets}{ $opt->{name} }->get_visible )
             {
                 my $group = $self->{option_widgets}{ $opt->{name} };
-                print "group\n";
-                print Dumper($group);
-                if ( not $group->is_visible ) {
+                if ( not $group->get_visible ) {
                     $group->remove($container);
                     my $move_paper =
                       (       $geometry
@@ -549,8 +544,6 @@ sub _update_option_visibility {
 
                     # Find visible group
                     $group = $self->_find_visible_group( $options, $j );
-                    print "visible group\n";
-                    print Dumper($group);
                     if ($move_paper) {
                         $group->pack_start( $hboxp, FALSE, FALSE, 0 );
                     }
@@ -580,7 +573,7 @@ sub _find_visible_group {
             $options->{array}[$option_number]{type} != SANE_TYPE_GROUP
             or (
                 not $self->{option_widgets}
-                { $options->{array}[$option_number]->{name} }->is_visible )
+                { $options->{array}[$option_number]->{name} }->get_visible )
         )
       )
     {
