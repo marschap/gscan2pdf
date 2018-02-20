@@ -409,6 +409,7 @@ sub _clamp_direction {
 
 sub set_offset {
     my ( $self, $offset_x, $offset_y ) = @_;
+    if ( not defined $self->get_pixbuf ) { return }
 
     # Convert the widget size to image scale to make the comparisons easier
     my $allocation = $self->get_allocation;

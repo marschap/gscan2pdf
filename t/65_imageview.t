@@ -1,4 +1,5 @@
-use Test::More tests => 35;
+use Try::Tiny;
+use Test::More tests => 36;
 
 BEGIN {
     use Glib qw/TRUE FALSE/;
@@ -91,14 +92,24 @@ SKIP: {
     is( defined $view->get_show_cursor, TRUE, 'get_show_cursor()' );
 }
 
-eval { $view->set_pixbuf( 'Hi mom!', TRUE ) };
-like( $@, qr/type/,
+try { $view->set_pixbuf( 'Hi mom!', TRUE ) }
+catch {
+    like( $_, qr/type/,
 'A TypeError is raised when set_pixbuf() is called with something that is not a pixbuf.'
-);
+      )
+};
 
 $view->set_pixbuf( undef, TRUE );
 is( defined $view->get_pixbuf,   FALSE, 'correctly cleared pixbuf' );
 is( defined $view->get_viewport, FALSE, 'correctly cleared viewport' );
+
+try {
+    $view->set_pixbuf( undef, FALSE );
+    pass 'correctly cleared pixbuf2'
+}
+catch {
+    fail 'correctly cleared pixbuf2'
+};
 
 SKIP: {
     skip 'not yet', 10;
