@@ -168,11 +168,11 @@ $signal = $dialog->signal_connect(
         ok $dialog->_flatbed_selected($options),
           '_flatbed_selected() via value';
 
-        is $dialog->{checkx}->is_visible, FALSE,
+        is $dialog->{checkx}->get_visible, FALSE,
           'flatbed, so hide checkbox for extended page numbering';
-        is $dialog->{framex}->is_visible, FALSE,
+        is $dialog->{framex}->get_visible, FALSE,
           'flatbed, so hide frame for extended page numbering';
-        is $dialog->{frames}->is_visible, FALSE,
+        is $dialog->{frames}->get_visible, FALSE,
           'flatbed, so hide frame for page side radio buttons';
 
         $dialog->set( 'allow-batch-flatbed', TRUE );
@@ -234,11 +234,11 @@ $signal = $dialog->signal_connect(
                 is $dialog->get('num-pages'), 1,
                   'adf-defaults-scan-all-pages should force num-pages 2';
 
-                is $dialog->{checkx}->is_visible, TRUE,
+                is $dialog->{checkx}->get_visible, TRUE,
                   'simplex ADF, so hide checkbox for extended page numbering';
-                is $dialog->{framex}->is_visible, TRUE,
+                is $dialog->{framex}->get_visible, TRUE,
                   'simplex ADF, so hide frame for extended page numbering';
-                is $dialog->{frames}->is_visible, TRUE,
+                is $dialog->{frames}->get_visible, TRUE,
                   'simplex ADF, so hide frame for page side radio buttons';
 
                 Gtk3->main_quit;
