@@ -124,7 +124,7 @@ sub add_metadata_dialog {
     # Date/time
     my $hboxe = Gtk3::HBox->new;
     my $row   = 0;
-    $grid->attach( $hboxe, 0, 1, 1, 1 );
+    $grid->attach( $hboxe, 0, $row, 1, 1 );
     my $labele = Gtk3::Label->new( __('Date') );
     $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
 
@@ -224,7 +224,7 @@ sub add_metadata_dialog {
     );
     $button->set_tooltip_text( __('Select date with calendar') );
     $hboxe = Gtk3::HBox->new;
-    $grid->attach( $hboxe, 1, 2, 1, 1 );
+    $grid->attach( $hboxe, 1, $row++, 1, 1 );
     $hboxe->pack_end( $button, FALSE, FALSE, 0 );
     $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
 
@@ -241,11 +241,11 @@ sub add_metadata_dialog {
     for my $entry (@label) {
         my ( $name, $label ) = %{$entry};
         my $hbox = Gtk3::HBox->new;
-        $grid->attach( $hbox, 0, 1, 1, 1 );
+        $grid->attach( $hbox, 0, $row, 1, 1 );
         $label = Gtk3::Label->new($label);
         $hbox->pack_start( $label, FALSE, TRUE, 0 );
         $hbox = Gtk3::HBox->new;
-        $grid->attach( $hbox, 1, 2, 1, 1 );
+        $grid->attach( $hbox, 1, $row++, 1, 1 );
         my $entry =
           Gscan2pdf::EntryCompletion->new( $defaults->{$name}{default},
             $defaults->{$name}{suggestions} );

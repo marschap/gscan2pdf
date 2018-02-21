@@ -2415,7 +2415,7 @@ sub save_dialog {
     $save_button = Gtk3::Button->new_from_stock('gtk-save');
     $hboxb->pack_start( $save_button, TRUE, TRUE, 0 );
     $save_button->grab_focus;
-    $save_button->can_default(TRUE);
+    $save_button->set_can_default(TRUE);
     $save_button->grab_default;
     $save_button->signal_connect(
         clicked => \&save_button_clicked_callback,
