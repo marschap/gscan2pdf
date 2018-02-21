@@ -3889,7 +3889,7 @@ sub add_postprocessing_rotate {
 
                 # Empty combobox
                 while ( $rotate_side_cmbx2->get_active > $EMPTY_LIST ) {
-                    $rotate_side_cmbx2->remove_text(0);
+                    $rotate_side_cmbx2->remove(0);
                     $rotate_side_cmbx2->set_active(0);
                 }
                 @side2 = ();
@@ -6768,7 +6768,7 @@ sub update_list_user_defined_tools {
     while ( $#{$udtools} > $EMPTY_LIST ) {
         for my $combobox ( @{$combobox_array} ) {
             if ( defined $combobox ) {
-                $combobox->remove_text(0);
+                $combobox->remove(0);
             }
         }
         pop @{$udtools};
@@ -6843,7 +6843,7 @@ sub update_post_save_hooks {
                 )
               )
             {
-                $windowi->{comboboxpsh}->remove_text(0);
+                $windowi->{comboboxpsh}->remove(0);
             }
         }
         else {

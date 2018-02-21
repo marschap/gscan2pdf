@@ -1006,7 +1006,7 @@ sub set_device_list {
     # Remove all entries apart from rescan
     my $num_rows = get_combobox_num_rows( $self->{combobd} );
     while ( $num_rows-- > 1 ) {
-        $self->{combobd}->remove_text(0);
+        $self->{combobd}->remove(0);
     }
 
     # read the model names into the combobox
