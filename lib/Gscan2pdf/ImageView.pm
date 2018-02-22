@@ -10,7 +10,10 @@ use Gtk3;
 use List::Util qw(min);
 use Carp;
 use Readonly;
-Readonly my $HALF => 0.5;
+Readonly my $HALF         => 0.5;
+Readonly my @PALE_BLUE    => ( 0.2, 0.6, 0.8 );
+Readonly my $ALPHA_FILL   => 0.2;
+Readonly my $ALPHA_BORDER => 0.35;
 
 our $VERSION = '2.0.0';
 
@@ -279,9 +282,9 @@ sub _draw {
     if ( $self->get_tool eq 'selector' ) {
         my $selection = $self->get_selection;
         if ( defined $selection ) {
-            my ( $x, $y, $w, $h ) = (
+            my ( $x, $y, $w, $h, ) = (
                 $selection->{x},     $selection->{y},
-                $selection->{width}, $selection->{height}
+                $selection->{width}, $selection->{height},
             );
             if ( $w <= 0 or $h <= 0 ) { return TRUE }
 
@@ -292,11 +295,11 @@ sub _draw {
             # stroke needs half-integer coordinates,
             # and fill/clip integer coordinates to be sharp.
             $context->rectangle( $x + 1, $y + 1, $w - 2, $h - 2 );
-            $context->set_source_rgba( 0.2, 0.6, 0.8, 0.2 );
+            $context->set_source_rgba( @PALE_BLUE, $ALPHA_FILL );
             $context->fill();
 
-            $context->rectangle( $x + 0.5, $y + 0.5, $w - 1, $h - 1 );
-            $context->set_source_rgba( 0.2, 0.6, 0.8, 0.35 );
+            $context->rectangle( $x + $HALF, $y + $HALF, $w - 1, $h - 1 );
+            $context->set_source_rgba( @PALE_BLUE, $ALPHA_BORDER );
             $context->set_line_width(1);
             $context->stroke();
         }
