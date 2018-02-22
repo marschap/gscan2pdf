@@ -12,7 +12,7 @@ use Carp;
 use Readonly;
 Readonly my $HALF => 0.5;
 
-our $VERSION = '1.8.11';
+our $VERSION = '2.0.0';
 
 # Note: in a BEGIN block to ensure that the registration is complete
 #       by the time the use Subclass goes to look for it.

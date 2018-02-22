@@ -1,5 +1,7 @@
-1.8.12 (26.02.2018):
+2.0.0 (22.02.2018):
 
+* Switch from gtk+-2 to gtk+-3, requiring the reimplementation of GtkImageview
+  in pure Perl, as C library not compatible with gtk+-3.
 * Fixed ghosting if flatbed only source option but not set.
   Closes #290 (Page Options -> Pages: scanning only first page of n)
 * Fixed setting preferences if frontend not set to libsane-image-perl and no

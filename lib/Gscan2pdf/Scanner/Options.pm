@@ -16,7 +16,7 @@ Readonly my $EMPTY_ARRAY => -1;
 # Glib::ParamSpec->object in Gscan2pdf::Dialog::Scan
 use Glib::Object::Subclass Glib::Object::;
 
-our $VERSION = '1.8.11';
+our $VERSION = '2.0.0';
 
 my $units = qr{(pel|bit|mm|dpi|%|us)}xsm;
 my $EMPTY = q{};
