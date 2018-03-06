@@ -6293,16 +6293,16 @@ sub preferences {
                 if (    $SETTING{frontend} ne 'libsane-perl'
                     and $SETTING{frontend} ne 'libimage-sane-perl' )
                 {
-                    $windows->set( 'visible-scan-options',
-                        $SETTING{'visible-scan-options'} );
-                    $windows->set( 'reload-triggers',
-                        $SETTING{'scan-reload-triggers'} );
                     $SETTING{'scan prefix'}   = $preentry->get_text;
                     $SETTING{'cache options'} = $cbc->get_active;
                     if ( defined $windows ) {
                         $windows->set( 'prefix', $SETTING{'scan prefix'} );
                         $windows->set( 'cache-options',
                             $SETTING{'cache options'} );
+                        $windows->set( 'visible-scan-options',
+                            $SETTING{'visible-scan-options'} );
+                        $windows->set( 'reload-triggers',
+                            $SETTING{'scan-reload-triggers'} );
                     }
                     if ( defined $SETTING{cache}
                         and not $SETTING{'cache options'} )

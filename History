@@ -2,6 +2,8 @@
 
 * Fixed ghosting if flatbed only source option but not set.
   Closes #290 (Page Options -> Pages: scanning only first page of n)
+* Fixed setting preferences if frontend not set to libsane-image-perl and no
+  scanner available. Closes #291 (Cannot change temporary directory)
 
 
 1.8.11 (26.01.2018):
