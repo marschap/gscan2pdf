@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 23;
+use Test::More tests => 19;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk3 -init;             # Could just call init separately
 use Image::Sane ':all';     # To get SANE_* enums
@@ -168,12 +168,8 @@ $signal = $dialog->signal_connect(
         ok $dialog->_flatbed_selected($options),
           '_flatbed_selected() via value';
 
-        is $dialog->{checkx}->get_visible, FALSE,
-          'flatbed, so hide checkbox for extended page numbering';
-        is $dialog->{framex}->get_visible, FALSE,
-          'flatbed, so hide frame for extended page numbering';
-        is $dialog->{frames}->get_visible, FALSE,
-          'flatbed, so hide frame for page side radio buttons';
+        is $dialog->{vboxx}->get_visible, FALSE,
+          'flatbed, so hide vbox for page numbering';
 
         $dialog->set( 'allow-batch-flatbed', TRUE );
         $dialog->set( 'num-pages',           2 );
@@ -234,12 +230,8 @@ $signal = $dialog->signal_connect(
                 is $dialog->get('num-pages'), 1,
                   'adf-defaults-scan-all-pages should force num-pages 2';
 
-                is $dialog->{checkx}->get_visible, TRUE,
-                  'simplex ADF, so hide checkbox for extended page numbering';
-                is $dialog->{framex}->get_visible, TRUE,
-                  'simplex ADF, so hide frame for extended page numbering';
-                is $dialog->{frames}->get_visible, TRUE,
-                  'simplex ADF, so hide frame for page side radio buttons';
+                is $dialog->{vboxx}->get_visible, TRUE,
+                  'simplex ADF, so show vbox for page numbering';
 
                 Gtk3->main_quit;
             }

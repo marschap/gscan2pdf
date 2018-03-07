@@ -365,14 +365,19 @@ sub INIT_INSTANCE {
         $bscanall->set_active(TRUE);
     }
 
+    # vbox for duplex/simplex page numbering in order to be able to show/hide
+    # them together.
+    $self->{vboxx} = Gtk3::VBox->new;
+    $vbox1->pack_start( $self->{vboxx}, FALSE, FALSE, 0 );
+
     # Toggle to switch between basic and extended modes
     $self->{checkx} =
       Gtk3::CheckButton->new( __('Extended page numbering') );
-    $vbox1->pack_start( $self->{checkx}, FALSE, FALSE, 0 );
+    $self->{vboxx}->pack_start( $self->{checkx}, FALSE, FALSE, 0 );
 
     # Frame for extended mode
     $self->{framex} = Gtk3::Frame->new( __('Page number') );
-    $vbox1->pack_start( $self->{framex}, FALSE, FALSE, 0 );
+    $self->{vboxx}->pack_start( $self->{framex}, FALSE, FALSE, 0 );
     my $vboxx = Gtk3::VBox->new;
     $vboxx->set_border_width($border_width);
     $self->{framex}->add($vboxx);
@@ -433,7 +438,7 @@ sub INIT_INSTANCE {
 
     # Frame for standard mode
     $self->{frames} = Gtk3::Frame->new( __('Source document') );
-    $vbox1->pack_start( $self->{frames}, FALSE, FALSE, 0 );
+    $self->{vboxx}->pack_start( $self->{frames}, FALSE, FALSE, 0 );
     my $vboxs = Gtk3::VBox->new;
     $vboxs->set_border_width($border_width);
     $self->{frames}->add($vboxs);
@@ -807,22 +812,14 @@ sub SET_PROPERTY {
 }
 
 sub _flatbed_or_duplex_callback {
-    my ($self)  = @_;
+    my ($self) = @_;
     my $options = $self->get('available-scan-options');
-    my $flatbed = FALSE;
     if ( defined $options ) {
-        if ( $self->_flatbed_selected($options) ) {
-            $flatbed = TRUE;
-        }
-        if ( $flatbed or $options->can_duplex ) {
-            $self->{checkx}->hide;
-            $self->{framex}->hide;
-            $self->{frames}->hide;
+        if ( $self->_flatbed_selected($options) or $options->can_duplex ) {
+            $self->{vboxx}->hide;
         }
         else {
-            $self->{checkx}->show;
-            $self->{framex}->show;
-            $self->{frames}->show;
+            $self->{vboxx}->show;
         }
     }
     return;
@@ -933,6 +930,7 @@ sub show {
     my $self = shift;
     $self->signal_chain_from_overridden;
     $self->{framex}->hide;
+    $self->_flatbed_or_duplex_callback;
     if (    defined $self->{combobp}
         and defined $self->{combobp}->get_active_text
         and $self->{combobp}->get_active_text ne __('Manual') )
