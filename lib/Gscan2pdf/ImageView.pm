@@ -270,19 +270,38 @@ sub _scroll {
 
 sub _draw {
     my ( $self, $context ) = @_;
+    my $allocation = $self->get_allocation;
+    my $style      = $self->get_style_context;
+    $style->add_class(Gtk3::STYLE_CLASS_BUTTON);
     my $pixbuf = $self->get_pixbuf;
-    if ( not defined $pixbuf ) { return TRUE }
-    my $zoom = $self->get_zoom;
-    $context->scale( $zoom, $zoom );
-    my $offset = $self->get_offset;
-    $context->translate( $offset->{x}, $offset->{y} );
-    Gtk3::Gdk::cairo_set_source_pixbuf( $context, $pixbuf, 0, 0 );
+    my ( $x, $y, $w, $h );
+    if ( defined $pixbuf ) {
+        my $zoom = $self->get_zoom;
+        $context->scale( $zoom, $zoom );
+        my $offset = $self->get_offset;
+        $context->translate( $offset->{x}, $offset->{y} );
+        ( $x, $y, $w, $h ) = (
+            $self->_to_image_coords( 0, 0 ),
+            $self->_to_image_coords(
+                $allocation->{width}, $allocation->{height}
+            )
+        );
+    }
+    else {
+        ( $x, $y, $w, $h ) =
+          ( 0, 0, $allocation->{width}, $allocation->{height} );
+    }
+    Gtk3::render_background( $style, $context, $x, $y, $w, $h );
+    Gtk3::render_frame( $style, $context, $x, $y, $w, $h );
+    if ( defined $pixbuf ) {
+        Gtk3::Gdk::cairo_set_source_pixbuf( $context, $pixbuf, 0, 0 );
+    }
     $context->paint;
 
-    if ( $self->get_tool eq 'selector' ) {
+    if ( defined $pixbuf and $self->get_tool eq 'selector' ) {
         my $selection = $self->get_selection;
         if ( defined $selection ) {
-            my ( $x, $y, $w, $h, ) = (
+            ( $x, $y, $w, $h, ) = (
                 $selection->{x},     $selection->{y},
                 $selection->{width}, $selection->{height},
             );
