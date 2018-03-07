@@ -140,19 +140,22 @@ sub new {
         $ID_PAGE,          # some app-defined integer identifier
     );
     $self->drag_source_set( 'button1-mask', [$dnd_source], [ 'copy', 'move' ] );
-    my $dnd_dest = Gtk3::TargetEntry->new(
-        'Glib::Scalar',    # some string representing the drag type
-        ${ Gtk3::TargetFlags->new(qw/same-widget/) },
-        $ID_URI,           # some app-defined integer identifier
-    );
+
+    #    my $dnd_dest = Gtk3::TargetEntry->new(
+    #        'Glib::Scalar',    # some string representing the drag type
+    #        ${ Gtk3::TargetFlags->new(qw/same-widget/) },
+    #        $ID_URI,           # some app-defined integer identifier
+    #    );
     $self->drag_dest_set(
         [ 'drop', 'motion', 'highlight' ],
-        [$dnd_dest], [ 'copy', 'move' ],
+        [$dnd_source], [ 'copy', 'move' ],
     );
     $self->signal_connect(
         'drag-data-get' => sub {
             my ( $tree, $context, $sel ) = @_;
-            $sel->set( $sel->target, $STRING_FORMAT, 'data' );
+
+            # set dummy data which we'll ignore and use selected rows
+            $sel->set( $sel->get_target, $STRING_FORMAT, [] );
         }
     );
 
@@ -165,8 +168,11 @@ sub new {
     $self->signal_connect(
         drag_drop => sub {
             my ( $tree, $context, $x, $y, $when ) = @_;
-            if ( my $targ = $context->targets ) {
-                $tree->drag_get_data( $context, $targ, $when );
+            my $targets = $tree->drag_dest_get_target_list;
+            if ( my $target =
+                $tree->drag_dest_find_target( $context, $targets ) )
+            {
+                $tree->drag_get_data( $context, $target, $when );
                 return TRUE;
             }
             return FALSE;
@@ -793,18 +799,18 @@ sub add_page {
 
     if ( defined $i ) {
         if ( defined $ref->{replace} ) {
+            $pagenum = $self->{data}[$i][0];
+            $logger->info(
+"Replaced $self->{data}[$i][2]->{filename} ($self->{data}[$i][2]->{uuid}) at page $pagenum with $new->{filename} ($new->{uuid}), resolution $resolution"
+            );
             $self->{data}[$i][1] = $thumb;
             $self->{data}[$i][2] = $new;
-            $pagenum             = $self->{data}[$i][0];
-            $logger->info(
-"Replaced $self->{data}[$i][2]->{filename} at page $pagenum with $new->{filename}, resolution $resolution"
-            );
         }
         elsif ( defined $ref->{'insert-after'} ) {
             $pagenum = $self->{data}[$i][0] + 1;
             splice @{ $self->{data} }, $i + 1, 0, [ $pagenum, $thumb, $new ];
             $logger->info(
-"Inserted $new->{filename} at page $pagenum with resolution $resolution"
+"Inserted $new->{filename} ($new->{uuid}) at page $pagenum with resolution $resolution"
             );
         }
     }
@@ -813,7 +819,7 @@ sub add_page {
         if ( not defined $pagenum ) { $pagenum = $#{ $self->{data} } + 2 }
         push @{ $self->{data} }, [ $pagenum, $thumb, $new ];
         $logger->info(
-"Added $page->{filename} at page $pagenum with resolution $resolution"
+"Added $page->{filename} ($new->{uuid}) at page $pagenum with resolution $resolution"
         );
     }
 
@@ -919,7 +925,8 @@ sub drag_data_received_callback {    ## no critic (ProhibitManyArgs)
         my ( $path, $how ) = $tree->get_dest_row_at_pos( $x, $y );
         if ( defined $path ) { $path = $path->to_string }
         my $delete =
-          $context->action == 'move'; ## no critic (ProhibitMismatchedOperators)
+          $context->get_actions ==    ## no critic (ProhibitMismatchedOperators)
+          'move';
 
         # This callback is fired twice, seemingly once for the drop flag,
         # and once for the copy flag. If the drop flag is disabled, the URI
@@ -929,7 +936,7 @@ sub drag_data_received_callback {    ## no critic (ProhibitManyArgs)
         if ( not $delete ) {
             if ( defined $tree->{drops}{$time} ) {
                 delete $tree->{drops};
-                $context->finish( 1, $delete, $time );
+                Gtk3::drag_finish( $context, TRUE, $delete, $time );
                 return;
             }
             else {
@@ -944,7 +951,7 @@ sub drag_data_received_callback {    ## no critic (ProhibitManyArgs)
         # in order not to defeat the finish() call below.
         $tree->paste_selection( $selection, $path, $how );
 
-        $context->finish( 1, $delete, $time );
+        Gtk3::drag_finish( $context, TRUE, $delete, $time );
     }
     else {
         $context->abort;
@@ -965,16 +972,12 @@ sub cut_selection {
 
 sub copy_selection {
     my ( $self, $clone ) = @_;
-    my $rows = $self->get_selection->get_selected_rows or return;
+    my @selection = $self->get_selected_indices or return;
     my @data;
-    $rows->foreach(
-        sub {
-            my ( $model, $path, $iter ) = @_;
-            my @info = $model->get($iter);
-            my $new  = $info[2]->clone($clone);
-            push @data, [ $info[0], $info[1], $new ];
-        }
-    );
+    for my $index (@selection) {
+        my $page = $self->{data}[$index];
+        push @data, [ $page->[0], $page->[1], $page->[2]->clone($clone) ];
+    }
     $logger->info( 'Copied ', $clone ? 'and cloned ' : $EMPTY,
         $#data + 1, ' pages' );
     return \@data;
@@ -1032,13 +1035,28 @@ sub paste_selection {
 # Delete the selected scans
 
 sub delete_selection {
-    my ($self) = @_;
+    my ( $self, $context ) = @_;
+
+    # The drag-data-delete callback seems to be fired twice. Therefore, create
+    # a hash of the context hashes and ignore the second drop.
+    if ( defined $context ) {
+        if ( defined $self->{context}{$context} ) {
+            delete $self->{context};
+            return;
+        }
+        else {
+            $self->{context}{$context} = 1;
+        }
+    }
+
     my ( $paths, $model ) = $self->get_selection->get_selected_rows;
 
     # Reverse the rows in order not to invalid the iters
-    for my $path ( reverse @{$paths} ) {
-        my $iter = $model->get_iter($path);
-        $model->remove($iter);
+    if ($paths) {
+        for my $path ( reverse @{$paths} ) {
+            my $iter = $model->get_iter($path);
+            $model->remove($iter);
+        }
     }
     return;
 }

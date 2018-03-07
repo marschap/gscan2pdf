@@ -1411,26 +1411,28 @@ sub drag_motion_callback {
     # Make move the default
     my @action;
     if (
-        $context->actions == 'copy' ) ## no critic (ProhibitMismatchedOperators)
+        $context->get_actions ==    ## no critic (ProhibitMismatchedOperators)
+        'copy'
+      )
     {
         @action = ('copy');
     }
     else {
         @action = ('move');
     }
-    $context->status( @action, $t );
+    Gtk3::Gdk::drag_status( $context, @action, $t );
 
     my $adj = $scroll->get_vadjustment;
-    my ( $value, $step ) = ( $adj->value, $adj->step_increment );
+    my ( $value, $step ) = ( $adj->get_value, $adj->get_step_increment );
 
-    if ( $y > $adj->page_size - $step / 2 ) {
+    if ( $y > $adj->get_page_size - $step / 2 ) {
         my $v = $value + $step;
-        my $m = $adj->upper - $adj->page_size;
+        my $m = $adj->get_upper - $adj->get_page_size;
         $adj->set_value( $v > $m ? $m : $v );
     }
     elsif ( $y < $step / 2 ) {
         my $v = $value - $step;
-        my $m = $adj->lower;
+        my $m = $adj->get_lower;
         $adj->set_value( $v < $m ? $m : $v );
     }
 

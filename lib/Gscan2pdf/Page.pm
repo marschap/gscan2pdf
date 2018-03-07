@@ -129,7 +129,9 @@ sub clone {
         if ( $self->{filename} =~ /([.]\w*)$/xsm ) { $suffix = $1 }
         $new->{filename} =
           File::Temp->new( DIR => $self->{dir}, SUFFIX => $suffix );
-        $logger->info("Cloning $self->{filename} -> $new->{filename}");
+        $logger->info(
+"Cloning $self->{filename} ($self->{uuid}) -> $new->{filename} ($new->{uuid})"
+        );
 
         # stringify filename to prevent copy from mangling it
         copy( "$self->{filename}", "$new->{filename}" )
