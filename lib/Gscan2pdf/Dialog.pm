@@ -152,7 +152,6 @@ sub add_metadata_dialog {
             if ( $string !~ /^[\d\-]+$/smx ) {
                 $entryd->signal_stop_emission_by_name('insert-text');
             }
-            ()    # this callback must return either 2 or 0 items.
         }
     );
     $entryd->signal_connect(
