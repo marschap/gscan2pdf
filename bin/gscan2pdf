@@ -4570,31 +4570,30 @@ sub about {
     # Gtk3::AboutDialog->set_email_hook ($func, $data=undef);
     $about->set_program_name($prog_name);
     $about->set_version($VERSION);
-    my $authors = <<'EOS';
-Frederik Elwert
-Klaus Ethgen
-Andy Fingerhut
-Leon Fisk
-John Goerzen
-Alistair Grant
-David Hampton
-Sascha Hunold
-Jason Kankiewicz
-Matthijs Kooijman
-Peter Marschall
-Chris Mayo
-Hiroshi Miura
-Petr Písař
-Pablo Saratxaga
-Torsten Schönfeld
-Roy Shahbazian
-Jarl Stefansson
-Wikinaut
-Jakub Wilk
-EOS
-    $about->set_authors( "Jeff Ratcliffe\n\n"
-          . __('Patches gratefully received from:')
-          . "\n$authors" );
+    my $authors = [
+        'Frederik Elwert',
+        'Klaus Ethgen',
+        'Andy Fingerhut',
+        'Leon Fisk',
+        'John Goerzen',
+        'Alistair Grant',
+        'David Hampton',
+        'Sascha Hunold',
+        'Jason Kankiewicz',
+        'Matthijs Kooijman',
+        'Peter Marschall',
+        'Chris Mayo',
+        'Hiroshi Miura',
+        'Petr Písař',
+        'Pablo Saratxaga',
+        'Torsten Schönfeld',
+        'Roy Shahbazian',
+        'Jarl Stefansson',
+        'Wikinaut',
+        'Jakub Wilk'
+    ];
+    $about->set_authors( ['Jeff Ratcliffe'] );
+    $about->add_credit_section( "Patches gratefully received from", $authors );
     $about->set_comments( __('To aid the scan-to-PDF process') );
     $about->set_copyright( __('Copyright 2006--2018 Jeffrey Ratcliffe') );
     my $licence = <<'EOS';
@@ -4640,7 +4639,10 @@ csola
 Po-Hsu Lin
 EOS
     $about->set_translator_credits($translators);
-    $about->set_artists('lodp, Andreas E.');
+    $about->set_artists( ['lodp, Andreas E.'] );
+    $about->set_logo(
+        Gtk3::Gdk::Pixbuf->new_from_file("$iconpath/gscan2pdf.svg") );
+    $about->set_transient_for($window);
     $about->run;
     $about->destroy;
     return;
