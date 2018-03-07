@@ -1,5 +1,7 @@
+use warnings;
+use strict;
 use Try::Tiny;
-use Test::More tests => 36;
+use Test::More tests => 38;
 
 BEGIN {
     use Glib qw/TRUE FALSE/;
@@ -14,9 +16,11 @@ isa_ok( $view, 'Gscan2pdf::ImageView' );
 is( $view->get_tool, 'dragger', 'get_tool() defaults to dragger' );
 
 system('convert rose: test.jpg');
+my $signal;
 $signal = $view->signal_connect(
     'offset-changed' => sub {
         my ( $widget, $x, $y ) = @_;
+        $view->signal_handler_disconnect($signal);
         is $x, 0,  'emitted offset-changed signal x';
         is $y, 11, 'emitted offset-changed signal y';
     }
@@ -47,6 +51,7 @@ is( $view->get_zoom, 0.0142857143655419, 'get_zoom()' );
 $signal = $view->signal_connect(
     'zoom-changed' => sub {
         my ( $widget, $zoom ) = @_;
+        $view->signal_handler_disconnect($signal);
         is $zoom, 1, 'emitted zoom-changed signal';
     }
 );
@@ -55,6 +60,7 @@ $view->set_zoom(1);
 $signal = $view->signal_connect(
     'selection-changed' => sub {
         my ( $widget, $selection ) = @_;
+        $view->signal_handler_disconnect($signal);
         is_deeply(
             $selection,
             { x => 10, y => 10, width => 10, height => 10 },
@@ -70,10 +76,25 @@ is_deeply( $view->get_selection,
 $signal = $view->signal_connect(
     'tool-changed' => sub {
         my ( $widget, $tool ) = @_;
+        $view->signal_handler_disconnect($signal);
         is $tool, 'selector', 'emitted tool-changed signal';
     }
 );
 $view->set_tool('selector');
+
+$view->set_selection( { x => -10, y => -10, width => 20, height => 20 } );
+is_deeply(
+    $view->get_selection,
+    { x => 0, y => 0, width => 10, height => 10 },
+    'selection cannot overlap top left border'
+);
+
+$view->set_selection( { x => 10, y => 10, width => 80, height => 50 } );
+is_deeply(
+    $view->get_selection,
+    { x => 10, y => 10, width => 60, height => 36 },
+    'selection cannot overlap bottom right border'
+);
 
 SKIP: {
     skip 'not yet', 5;
@@ -118,7 +139,11 @@ SKIP: {
 
     $view->size_allocate( Gtk3::Gdk::Rectangle->new( 0, 0, 100, 100 ) );
     $view->set_pixbuf(
-        Gtk3::Gdk::Pixbuf->new( GDK_COLORSPACE_RGB, FALSE, 8, 50, 50 ) );
+        Gtk3::Gdk::Pixbuf->new(
+            Gtk3::Gdk::colormap_get_system(),
+            FALSE, 8, 50, 50
+        )
+    );
     my $rect = $view->get_viewport;
     ok(
         (
@@ -142,7 +167,11 @@ SKIP: {
     );
 
     $view->set_pixbuf(
-        Gtk3::Gdk::Pixbuf->new( GDK_COLORSPACE_RGB, FALSE, 8, 200, 200 ) );
+        Gtk3::Gdk::Pixbuf->new(
+            Gtk3::Gdk::colormap_get_system(),
+            FALSE, 8, 200, 200
+        )
+    );
     $view->set_zoom(1);
     $view->set_offset( 0, 0 );
     $rect = $view->get_viewport;
@@ -165,4 +194,5 @@ SKIP: {
     ok( defined Glib::Type->list_values('Gscan2pdf::ImageView::Transp'),
         'Check GtkImageTransp enum.' );
 }
+
 unlink 'test.jpg';

@@ -463,6 +463,22 @@ sub get_tool {
 
 sub set_selection {
     my ( $self, $selection ) = @_;
+    my $pixbuf_size = $self->get_pixbuf_size;
+    if ( not defined $pixbuf_size ) { return }
+    if ( $selection->{x} < 0 ) {
+        $selection->{width} += $selection->{x};
+        $selection->{x} = 0;
+    }
+    if ( $selection->{y} < 0 ) {
+        $selection->{height} += $selection->{y};
+        $selection->{y} = 0;
+    }
+    if ( $selection->{x} + $selection->{width} > $pixbuf_size->{width} ) {
+        $selection->{width} = $pixbuf_size->{width} - $selection->{x};
+    }
+    if ( $selection->{y} + $selection->{height} > $pixbuf_size->{height} ) {
+        $selection->{height} = $pixbuf_size->{height} - $selection->{y};
+    }
     $self->set( 'selection', $selection );
     return;
 }
