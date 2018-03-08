@@ -513,7 +513,7 @@ sub read_config {
     );
 
     # migrate from old config file location to XDG-compliant one
-    if ( -d $newrcdir && !-e $newrc ) {
+    if ( -d $newrcdir and not -e $newrc ) {
         Gscan2pdf::Config::write_config( $newrc, $logger, \%config );
         unlink $rcf;
     }
@@ -542,7 +542,7 @@ sub set_up_test_mode {
             $device =~ s/\\n/\n/gsm;
             $logger->debug("'$file','$device'");
             if ( $file !~ /^\//xsm ) { $file = getcwd . "/$file" }
-            if ( !-r $file ) {
+            if ( not -r $file ) {
                 $logger->fatal( sprintf __('Cannot read file: %s'), $file );
                 exit 1;
             }
