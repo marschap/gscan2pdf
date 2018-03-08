@@ -18,18 +18,20 @@
 #    Make appropriate updates to ../debian/changelog
 # 2.  perl Makefile.PL
 #     Upload .pot
+# 3.  make remote-html
 #     make signed_tardist
-#    test dist sudo dpkg -i gscan2pdf_x.x.x_all.deb
-# 3.  git status
-#     git tag vx.x.x
-#     git push --tags ssh://ra28145@git.code.sf.net/p/gscan2pdf/code master
-# 4.  make remote-html
-# 5. Build package for debian
+# 4. Build package for debian
 #     sudo DIST=sid pbuilder update
 #     DIST=sid pdebuild
 #     lintian -iI --pedantic .changes
 #    check contents with dpkg-deb --contents
+#    test dist sudo dpkg -i gscan2pdf_x.x.x_all.deb
 #     dput ftp-master .changes
+# 5.  git status
+#     git tag vx.x.x
+#     git push --tags ssh://ra28145@git.code.sf.net/p/gscan2pdf/code master
+#    If the latter doesn't work, try:
+#     git push --tags https://ra28145@git.code.sf.net/p/gscan2pdf/code master
 # 6. create version directory in https://sourceforge.net/projects/gscan2pdf/files/gscan2pdf
 #     make file_releases
 # 7. Build packages for Ubuntu
