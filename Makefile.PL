@@ -95,7 +95,8 @@ sub MY::macro {
 sub MY::install {
     my $self   = shift;
     my $string = $self->MM::install();
-    $string =~ s/doc_install/doc_install locale_install icon_install/;
+    $string =~
+      s/doc_install/doc_install locale_install icon_install html_install/;
     return $string;
 }
 
@@ -139,7 +140,10 @@ icon_install : $(NAME).desktop $(ICONS) $(NAME).appdata.xml \
 	$(CP) icons/$(NAME).svg $(DESTDIR)$(SHAREDIR)/pixmaps
 	$(CP) $(NAME).appdata.xml $(DESTDIR)$(SHAREDIR)/metainfo
 
-html : htdocs/index.html
+# remove the =for html sections to satisfy lintian
+html_install :
+	$(MKPATH) $(DESTDIR)$(SHAREDIR)/help/C/$(NAME)
+	awk -v RS='' '{gsub(/=for html.*/, ""); print; print ""}' bin/$(NAME) | pod2html --noindex --title=$(NAME)-$(VERSION) > $(DESTDIR)$(SHAREDIR)/help/C/$(NAME)/documentation.html
 
 pot : po/$(NAME).pot
 

@@ -228,9 +228,9 @@ init_icons(
 # Define application-wide variables here so that they can be referenced
 # in the menu callbacks
 my (
-    $slist, $windowi, $windowe, $windows, $windowh, $windowo, $windowrn,
-    $windowu, $windowudt, $save_button, $window, $scwin_buffer, $thbox, $tpbar,
-    $tcbutton, $spbar, $shbox, $scbutton, $unpaper, $hpaned,
+    $slist, $windowi, $windowe, $windows, $windowo, $windowrn, $windowu,
+    $windowudt, $save_button, $window, $scwin_buffer, $thbox,   $tpbar,
+    $tcbutton,  $spbar,       $shbox,  $scbutton,     $unpaper, $hpaned,
     @undo_buffer,
     @redo_buffer, @undo_selection, @redo_selection, %dependencies,
     $menubar,     $toolbar,
@@ -962,7 +962,7 @@ sub create_menu_bar {
         [ 'Help menu', undef, __('_Help') ],
         [
             'Help',     'gtk-help', __('_Help'), '<control>h',
-            __('Help'), \&view_pod
+            __('Help'), \&view_html
         ],
         [ 'About', 'gtk-about', __('_About'), undef, __('_About'), \&about ],
     );
@@ -5903,105 +5903,19 @@ sub kill_threads {
     return;
 }
 
-# View POD
+# Perhaps we should use gtk and mallard for this in the future
 
-sub view_pod {
+sub view_html {
 
-    if ( defined $windowh ) {
-        $windowh->present;
-        return;
+    # At the moment, we have no translations,
+    # but when we do, replace C with $locale
+    my $html = "/usr/share/help/C/$prog_name/documentation.html";
+    if ( not -e $html ) {
+        $html = 'http://gscan2pdf.sf.net';
     }
-
-    my $error;
-    try { require Gtk3::Ex::PodViewer }
-    catch {
-        $error = TRUE;
-        my $text = sprintf __(
-                "The help viewer requires module Gtk3::Ex::PodViewer\n"
-              . "Alternatively, try: %s %s\n\n" ),
-          $prog_name,
-          '--help';
-        show_message_dialog(
-            parent  => $window,
-            type    => 'error',
-            buttons => 'close',
-            text    => $text
-        );
-    };
-    return if $error;
-
-    # Window
-    $windowh = Gtk3::Window->new;
-    $windowh->set_transient_for($window);    # Assigns parent
-    $windowh->signal_connect(
-        delete_event => sub {
-            $windowh->hide;
-            return TRUE;    # ensures that the window is not destroyed
-        }
-    );
-    $windowh->set_default_size( $HELP_WINDOW_WIDTH, $HELP_WINDOW_HEIGHT );
-
-    # Vertical divider between index and viewer
-    my $pane = Gtk3::HPaned->new;
-    $pane->set_position($HELP_WINDOW_DIVIDER_POS);
-    $windowh->add($pane);
-
-    # Index list
-    my $index = Gtk3::SimpleList->new(
-        'icon'  => 'pixbuf',
-        'title' => 'text',
-        'link'  => 'hstring'
-    );
-    $index->set_headers_visible(FALSE);
-    $index->get_column(1)->set_sizing('autosize');
-
-    # Index
-    my $index_scrwin = Gtk3::ScrolledWindow->new;
-    $index_scrwin->set_shadow_type('in');
-    $index_scrwin->set_policy( 'automatic', 'automatic' );
-    $index_scrwin->add_with_viewport($index);
-    $index_scrwin->get_child->set_shadow_type('none');
-
-    # Viewer
-    my $viewer = Gtk3::Ex::PodViewer->new;
-    $viewer->set_border_width($BORDER_WIDTH);
-    $viewer->set_cursor_visible(FALSE);
-    $index->get_selection->signal_connect(
-        'changed',
-        sub {
-            my $idx  = ( $index->get_selected_indices )[0];
-            my $mark = $index->{data}[$idx][2];
-            $viewer->jump_to($mark);
-            return TRUE;
-        }
-    );
-
-    my $viewer_scrwin = Gtk3::ScrolledWindow->new;
-    $viewer_scrwin->set_shadow_type('in');
-    $viewer_scrwin->set_policy( 'automatic', 'automatic' );
-    $viewer_scrwin->add($viewer);
-
-    $pane->add1($index_scrwin);
-    $pane->add2($viewer_scrwin);
-
-    $viewer->load($PROGRAM_NAME);
-
-    # Index contents
-    my $idx_pbf = Gtk3::Image->new->render_icon( 'gtk-jump-to', 'menu' );
-    map { push @{ $index->{data} }, [ $idx_pbf, strippod($_), $_ ] }
-      $viewer->get_marks;
-
-    $windowh->show_all;
+    $logger->info("Opening $html in default webbrowser via xdg-open");
+    system "xdg-open $html";
     return;
-}
-
-# Remove formatting characters
-
-sub strippod {
-    my $text = shift;
-    $text =~ s/B<([^<]*)>/$1/gxsm;
-    $text =~ s/E<gt>/>/gxsm;
-    return $text;
 }
 
 # Update undo/redo buffers before doing something
@@ -7226,12 +7140,6 @@ API library for scanners -- utilities.
 =item sane
 
 scanner graphical frontends. Only required for the scanadf frontend.
-
-=item libgtk2-ex-podviewer-perl
-
-Perl Gtk3 widget for displaying Plain Old Documentation (POD). Not required if
-you don't need the gscan2pdf documentation (which is anyway repeated on the
-website).
 
 =item unpaper
 
