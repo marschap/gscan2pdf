@@ -1,8 +1,11 @@
 gscan2pdf (2.0.0-1) unstable; urgency=low
 
   * New upstream release
+    Removed Depends: libgtk2-ex-simple-list-perl, libgtk2-imageview-perl,
+                     libgoo-canvas-perl, libgtk2-ex-podviewer-perl
+    Added Depends: libgoocanvas2-perl, libgtk3-simplelist-perl
 
- -- Jeffrey Ratcliffe <jjr@debian.org>
+ -- Jeffrey Ratcliffe <jjr@debian.org>  Thu, 08 Mar 2018 08:50:35 +0100
 
 gscan2pdf (1.8.11-1) unstable; urgency=low
 

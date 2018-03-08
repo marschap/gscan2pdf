@@ -181,7 +181,7 @@ $logger->info("Gscan2pdf::Document version $Gscan2pdf::Document::VERSION");
 
 #$logger->info( 'Using GtkImageView version ',
 #    Gtk3::ImageView->library_version );
-#$logger->info("Using Gtk3::ImageView version $Gtk2::ImageView::VERSION");
+#$logger->info("Using Gtk3::ImageView version $Gtk3::ImageView::VERSION");
 $logger->info("Using PDF::API2 version $PDF::API2::VERSION");
 $logger->info( 'Using Sane version ' . join $DOT, Image::Sane->get_version );
 $logger->info("Using libimage-sane-perl version $Image::Sane::VERSION");
@@ -7074,23 +7074,6 @@ perl(module) where Debian has libmodule-perl.
 
 =over
 
-=item libgtk2.0-0 (>= 2.4)
-
-The GTK+ graphical user interface library.
-
-=item libglib-perl (>= 1.100-1)
-
-Perl interface to the GLib and GObject libraries
-
-=item libgtk2-perl (>= 1:1.043-1)
-
-Perl interface to the 2.x series of the Gimp Toolkit library
-
-=item libgtk2-imageview-perl
-
-Perl bindings to the gtkimageview widget.
-See L<https://metacpan.org/release/Gtk3-ImageView>
-
 =item libgtk3-simplelist-perl
 
 A simple interface to Gtk3's complex MVC list widget
@@ -7633,10 +7616,10 @@ Jeffrey Ratcliffe (jffry at posteo dot net)
 all the people who have sent patches, translations, bugs and feedback.
 
 =item *
-the GTK2 project for a most excellent graphics toolkit.
+the gtk+ project for a most excellent graphics toolkit.
 
 =item *
-the Gtk3-Perl project for their superb Perl bindings for GTK2.
+the Gtk3-Perl project for their superb Perl bindings for GTK3.
 
 =item *
 The SANE project for scanner access

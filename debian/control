@@ -3,12 +3,12 @@ Section: utils
 Priority: optional
 Build-Depends: debhelper (>= 11)
 Build-Depends-Indep: perl (>= 5.8.0-7), gettext, libtest-pod-perl
-# libgtk2-imageview-perl, libgtk2-ex-simple-list-perl,
+# libgtk3-imageview-perl, libgtk3-simplelist-perl,
 # libimage-sane-perl, liblocale-gettext-perl (>= 1.05),
 # sane-utils (>= 1.0.17), libtiff-tools, libpdf-api2-perl,
 # libconfig-general-perl (>= 2.40), libimage-magick-perl, imagemagick,
 # librsvg2-common, libset-intspan-perl (>= 1.10), liblist-moreutils-perl,
-# libhtml-parser-perl, libgoo-canvas-perl, libproc-processtable-perl,
+# libhtml-parser-perl, libgoocanvas2-perl, libproc-processtable-perl,
 # libreadonly-perl, liblog-log4perl-perl, libtry-tiny-perl,
 # libossp-uuid-perl | libdata-uuid-perl, libdate-calc-perl, xauth, xfonts-base,
 # xvfb, libatk-adaptor, libgail-common, libsub-override-perl, poppler-utils
@@ -21,15 +21,16 @@ Homepage: http://gscan2pdf.sourceforge.net/
 
 Package: gscan2pdf
 Architecture: all
-Depends: libgtk2-imageview-perl, libgtk3-simplelist-perl,
+Depends: libgtk3-simplelist-perl,
  libimage-sane-perl, liblocale-gettext-perl (>= 1.05),
  sane-utils (>= 1.0.17), libtiff-tools, libpdf-api2-perl,
  libconfig-general-perl (>= 2.40), libimage-magick-perl, imagemagick,
  librsvg2-common, libset-intspan-perl (>= 1.10), liblist-moreutils-perl,
- libhtml-parser-perl, libgoo-canvas-perl, libproc-processtable-perl,
+ libhtml-parser-perl, libgoocanvas2-perl, libproc-processtable-perl,
  libreadonly-perl, liblog-log4perl-perl, libtry-tiny-perl, libfilesys-df-perl,
  libossp-uuid-perl | libdata-uuid-perl, libdate-calc-perl, ${misc:Depends}
-Recommends: libgtk2-ex-podviewer-perl, sane, xdg-utils, djvulibre-bin,
+# libgtk2-imageview-perl,
+Recommends: sane, xdg-utils, djvulibre-bin,
  unpaper, tesseract-ocr | gocr | cuneiform
 Description: GUI to produce PDFs or DjVus from scanned documents
  Only five clicks are required to scan several pages and then save all or a
