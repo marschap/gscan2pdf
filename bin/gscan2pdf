@@ -1641,7 +1641,7 @@ sub edit_ocr_text {
     my $textview   = Gtk3::TextView->new;
     my $textbuffer = $textview->get_buffer;
     $textbuffer->set( text => $widget->get('text') );
-    $dialog->vbox->add($textview);
+    $dialog->get_content_area->add($textview);
     $dialog->set_default_response('ok');
     $dialog->show_all;
 
