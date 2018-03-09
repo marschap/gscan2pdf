@@ -4595,7 +4595,7 @@ sub about {
         'Jakub Wilk'
     ];
     $about->set_authors( ['Jeff Ratcliffe'] );
-    $about->add_credit_section( "Patches gratefully received from", $authors );
+    $about->add_credit_section( 'Patches gratefully received from', $authors );
     $about->set_comments( __('To aid the scan-to-PDF process') );
     $about->set_copyright( __('Copyright 2006--2018 Jeffrey Ratcliffe') );
     my $licence = <<'EOS';
