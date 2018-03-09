@@ -396,6 +396,7 @@ sub activate_app {
     $shbox = Gtk3::HBox->new;
     $phbox->add($shbox);
     $spbar = Gtk3::ProgressBar->new;
+    $spbar->set_show_text(TRUE);
     $shbox->add($spbar);
     $scbutton = Gtk3::Button->new;
     $scbutton->set_image(
@@ -404,6 +405,7 @@ sub activate_app {
     $thbox = Gtk3::HBox->new;
     $phbox->add($thbox);
     $tpbar = Gtk3::ProgressBar->new;
+    $tpbar->set_show_text(TRUE);
     $thbox->add($tpbar);
     $tcbutton = Gtk3::Button->new;
     $tcbutton->set_image(
