@@ -1078,6 +1078,7 @@ sub delete_selection_extra {
 
     # Select nearest page to last current page
     if ( @{ $self->{data} } and @page ) {
+        my $old_selection = $page[0];
 
         # Select just the first one
         @page = ( $page[0] );
@@ -1085,6 +1086,12 @@ sub delete_selection_extra {
             $page[0] = $#{ $self->{data} };
         }
         $self->select(@page);
+
+        # If the index hasn't changed, the signal won't have emitted,
+        # so do it manually
+        if ( $old_selection == $page[0] ) {
+            $self->get_selection->signal_emit('changed');
+        }
     }
 
     # Select nothing
