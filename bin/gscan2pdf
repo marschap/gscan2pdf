@@ -4412,16 +4412,20 @@ sub delete_selection {
 # Reset start page number after delete or new
 
 sub reset_start {
-    if ( $#{ $slist->{data} } > $EMPTY_LIST ) {
-        my $start_page = $windows->get('page-number-start');
-        my $step       = $windows->get('page-number-increment');
-        if ( $start_page > $slist->{data}[ $#{ $slist->{data} } ][0] + $step ) {
-            $windows->set( 'page-number-start',
-                $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
+    if ( defined $windows ) {
+        if ( $#{ $slist->{data} } > $EMPTY_LIST ) {
+            my $start_page = $windows->get('page-number-start');
+            my $step       = $windows->get('page-number-increment');
+            if ( $start_page >
+                $slist->{data}[ $#{ $slist->{data} } ][0] + $step )
+            {
+                $windows->set( 'page-number-start',
+                    $slist->{data}[ $#{ $slist->{data} } ][0] + $step );
+            }
         }
-    }
-    else {
-        $windows->set( 'page-number-start', 1 );
+        else {
+            $windows->set( 'page-number-start', 1 );
+        }
     }
     return;
 }
