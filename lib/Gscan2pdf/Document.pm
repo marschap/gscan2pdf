@@ -63,7 +63,7 @@ BEGIN {
     use Exporter ();
     our ( $VERSION, @EXPORT_OK, %EXPORT_TAGS );
 
-    $VERSION = '2.0.0';
+    $VERSION = '2.0.1';
 
     use base qw(Exporter Gtk3::SimpleList);
     %EXPORT_TAGS = ();    # eg: TAG => [ qw!name1 name2! ],

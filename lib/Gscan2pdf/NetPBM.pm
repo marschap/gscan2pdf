@@ -10,7 +10,7 @@ Readonly my $BITMAP_BYTES_PER_PIXEL => 1 / $BITS_PER_BYTE;
 Readonly my $GRAYMAP_CHANNELS       => 1;
 Readonly my $PIXMAP_CHANNELS        => 3;
 
-our $VERSION = '2.0.0';
+our $VERSION = '2.0.1';
 
 # Return file size expected by PNM header
 

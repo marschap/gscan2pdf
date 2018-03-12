@@ -15,7 +15,7 @@ Readonly my @PALE_BLUE    => ( 0.2, 0.6, 0.8 );
 Readonly my $ALPHA_FILL   => 0.2;
 Readonly my $ALPHA_BORDER => 0.35;
 
-our $VERSION = '2.0.0';
+our $VERSION = '2.0.1';
 
 # Note: in a BEGIN block to ensure that the registration is complete
 #       by the time the use Subclass goes to look for it.
