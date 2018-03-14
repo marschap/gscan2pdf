@@ -380,13 +380,13 @@ sub _initialise_options {    ## no critic (ProhibitExcessComplexity)
                 $hbox->pack_start( $label, FALSE, FALSE, 0 );
             }
 
-            # CheckButton
+            # Switch
             if ( $opt->{type} == SANE_TYPE_BOOL )
             {    ## no critic (ProhibitCascadingIfElse)
-                $widget = Gtk3::CheckButton->new;
+                $widget = Gtk3::Switch->new;
                 if ($val) { $widget->set_active(TRUE) }
                 $widget->{signal} = $widget->signal_connect(
-                    toggled => sub {
+                    'notify::active' => sub {
                         $self->{num_reloads} = 0;    # num-reloads is read-only
                         my $value = $widget->get_active;
                         $self->set_option( $opt, $value );
@@ -766,7 +766,7 @@ sub update_widget {    # FIXME: this is partly duplicated in Sane.pm
 
         if ( $opt->{max_values} < 2 ) {
 
-            # CheckButton
+            # Switch
             if ( $opt->{type} == SANE_TYPE_BOOL )
             {    ## no critic (ProhibitCascadingIfElse)
                 if ( $self->value_for_active_option( $value, $opt ) ) {

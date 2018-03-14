@@ -370,10 +370,13 @@ sub INIT_INSTANCE {
     $self->{vboxx} = Gtk3::VBox->new;
     $vbox1->pack_start( $self->{vboxx}, FALSE, FALSE, 0 );
 
-    # Toggle to switch between basic and extended modes
-    $self->{checkx} =
-      Gtk3::CheckButton->new( __('Extended page numbering') );
-    $self->{vboxx}->pack_start( $self->{checkx}, FALSE, FALSE, 0 );
+    # Switch between basic and extended modes
+    my $hbox  = Gtk3::HBox->new;
+    my $label = Gtk3::Label->new( __('Extended page numbering') );
+    $hbox->pack_start( $label, FALSE, FALSE, 0 );
+    $self->{checkx} = Gtk3::Switch->new;
+    $hbox->pack_end( $self->{checkx}, FALSE, FALSE, 0 );
+    $self->{vboxx}->pack_start( $hbox, FALSE, FALSE, 0 );
 
     # Frame for extended mode
     $self->{framex} = Gtk3::Frame->new( __('Page number') );
@@ -509,7 +512,7 @@ sub INIT_INSTANCE {
     # Have to put the extended pagenumber checkbox here
     # to reference simple controls
     $self->{checkx}->signal_connect(
-        toggled => \&_extended_pagenumber_checkbox_callback,
+        'notify::active' => \&_extended_pagenumber_checkbox_callback,
         [ $self, $spin_buttoni ]
     );
 
@@ -1325,7 +1328,7 @@ sub _update_option {
 
     if ( $opt->{max_values} < 2 ) {
 
-        # CheckButton
+        # Switch
         if ( $opt->{type} == SANE_TYPE_BOOL ) {
             if ( $self->value_for_active_option( $value, $opt ) ) {
                 $widget->set_active($value);
@@ -1827,7 +1830,7 @@ sub set_combobox_by_text {
 }
 
 sub _extended_pagenumber_checkbox_callback {
-    my ( $widget, $data )         = @_;
+    my ( $widget, $param, $data ) = @_;
     my ( $dialog, $spin_buttoni ) = @{$data};
     if ( $widget->get_active ) {
         $dialog->{frames}->hide;
