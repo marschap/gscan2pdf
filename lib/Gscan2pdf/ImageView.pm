@@ -113,6 +113,9 @@ sub SET_PROPERTY {
         given ($name) {
             when ('pixbuf') {
                 $self->{$name} = $newval;
+                if ( not defined $newval ) {
+                    $invalidate = TRUE;
+                }
             }
             when ('zoom') {
                 $self->{$name} = $newval;
