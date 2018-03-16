@@ -144,20 +144,13 @@ sub add_metadata_dialog {
     $entryd->set_activates_default(TRUE);
     $entryd->set_tooltip_text( __('Year-Month-Day') );
     $entryd->set_alignment(1.);    # Right justify
-    $entryd->signal_connect(
-        'insert-text' => sub {
-            my ( $widget, $string, $len, $position ) = @_;
-
-            # only allow integers and -
-            if ( $string !~ /^[\d\-]+$/smx ) {
-                $entryd->signal_stop_emission_by_name('insert-text');
-            }
-        }
-    );
+    $entryd->signal_connect( 'insert-text' => \&insert_text_handler );
     $entryd->signal_connect(
         'focus-out-event' => sub {
-            $entryd->set_text( sprintf '%04d-%02d-%02d',
-                Gscan2pdf::Document::text_to_date( $entryd->get_text ) );
+            my $text = Gscan2pdf::Document::text_to_date( $entryd->get_text );
+            if ( defined $text ) {
+                $entryd->set_text( sprintf '%04d-%02d-%02d', $text );
+            }
             return FALSE;
         }
     );
@@ -252,6 +245,19 @@ sub add_metadata_dialog {
         $widgets{$name} = $entry;
     }
     return %widgets;
+}
+
+sub insert_text_handler {
+    my ( $widget, $string, $len, $position ) = @_;
+
+    # only allow integers and -
+    if ( $string =~ /^[\d\-]+$/smx ) {
+        $widget->signal_handlers_block_by_func( \&insert_text_handler );
+        $widget->insert_text( $string, $len, $position++ );
+        $widget->signal_handlers_unblock_by_func( \&insert_text_handler );
+    }
+    $widget->signal_stop_emission_by_name('insert-text');
+    return $position;
 }
 
 sub dump_or_stringify {
