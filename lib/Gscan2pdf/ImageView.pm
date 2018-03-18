@@ -10,10 +10,7 @@ use Gtk3;
 use List::Util qw(min);
 use Carp;
 use Readonly;
-Readonly my $HALF         => 0.5;
-Readonly my @PALE_BLUE    => ( 0.2, 0.6, 0.8 );
-Readonly my $ALPHA_FILL   => 0.2;
-Readonly my $ALPHA_BORDER => 0.35;
+Readonly my $HALF => 0.5;
 
 our $VERSION = '2.0.1';
 
@@ -275,8 +272,7 @@ sub _draw {
     my ( $self, $context ) = @_;
     my $allocation = $self->get_allocation;
     my $style      = $self->get_style_context;
-    $style->add_class(Gtk3::STYLE_CLASS_BUTTON);
-    my $pixbuf = $self->get_pixbuf;
+    my $pixbuf     = $self->get_pixbuf;
     my ( $x, $y, $w, $h );
     if ( defined $pixbuf ) {
         my $zoom = $self->get_zoom;
@@ -294,10 +290,16 @@ sub _draw {
         ( $x, $y, $w, $h ) =
           ( 0, 0, $allocation->{width}, $allocation->{height} );
     }
+    $style->save;
+    $style->add_class(Gtk3::STYLE_CLASS_BACKGROUND);
     Gtk3::render_background( $style, $context, $x, $y, $w, $h );
-    Gtk3::render_frame( $style, $context, $x, $y, $w, $h );
+    $style->restore;
     if ( defined $pixbuf ) {
         Gtk3::Gdk::cairo_set_source_pixbuf( $context, $pixbuf, 0, 0 );
+    }
+    else {
+        my $bgcol = $style->get( 'normal', 'background-color' );
+        Gtk3::Gdk::cairo_set_source_rgba( $context, $bgcol );
     }
     $context->paint;
 
@@ -310,20 +312,11 @@ sub _draw {
             );
             if ( $w <= 0 or $h <= 0 ) { return TRUE }
 
-            $context->set_line_width(1);
-            $context->set_source_rgb( 0, 0, 0 );
-
-            # to get a non-antialiased rubber band rectangle,
-            # stroke needs half-integer coordinates,
-            # and fill/clip integer coordinates to be sharp.
-            $context->rectangle( $x + 1, $y + 1, $w - 2, $h - 2 );
-            $context->set_source_rgba( @PALE_BLUE, $ALPHA_FILL );
-            $context->fill();
-
-            $context->rectangle( $x + $HALF, $y + $HALF, $w - 1, $h - 1 );
-            $context->set_source_rgba( @PALE_BLUE, $ALPHA_BORDER );
-            $context->set_line_width(1);
-            $context->stroke();
+            $style->save;
+            $style->add_class(Gtk3::STYLE_CLASS_RUBBERBAND);
+            Gtk3::render_background( $style, $context, $x, $y, $w, $h );
+            Gtk3::render_frame( $style, $context, $x, $y, $w, $h );
+            $style->restore;
         }
     }
     return TRUE;
