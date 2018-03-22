@@ -193,19 +193,6 @@ sub get_pixbuf_size {
     return;
 }
 
-sub get_zoomed_size {
-    my ($self) = @_;
-    my $size = $self->get_pixbuf_size;
-    if ( defined $size ) {
-        my $zoom = $self->get_zoom;
-        return {
-            width  => int( $size->{width} * $zoom + $HALF ),
-            height => int( $size->{height} * $zoom + $HALF )
-        };
-    }
-    return;
-}
-
 sub _button_pressed {
     my ( $self, $event ) = @_;
 
@@ -273,26 +260,17 @@ sub _draw {
     my $allocation = $self->get_allocation;
     my $style      = $self->get_style_context;
     my $pixbuf     = $self->get_pixbuf;
-    my ( $x, $y, $w, $h );
+    my $viewport   = $self->get_viewport;
     if ( defined $pixbuf ) {
         my $zoom = $self->get_zoom;
         $context->scale( $zoom, $zoom );
         my $offset = $self->get_offset;
         $context->translate( $offset->{x}, $offset->{y} );
-        ( $x, $y, $w, $h ) = (
-            $self->_to_image_coords( 0, 0 ),
-            $self->_to_image_coords(
-                $allocation->{width}, $allocation->{height}
-            )
-        );
-    }
-    else {
-        ( $x, $y, $w, $h ) =
-          ( 0, 0, $allocation->{width}, $allocation->{height} );
     }
     $style->save;
     $style->add_class(Gtk3::STYLE_CLASS_BACKGROUND);
-    Gtk3::render_background( $style, $context, $x, $y, $w, $h );
+    Gtk3::render_background( $style, $context, $viewport->{x}, $viewport->{y},
+        $viewport->{width}, $viewport->{height} );
     $style->restore;
     if ( defined $pixbuf ) {
         Gtk3::Gdk::cairo_set_source_pixbuf( $context, $pixbuf, 0, 0 );
@@ -306,7 +284,7 @@ sub _draw {
     if ( defined $pixbuf and $self->get_tool eq 'selector' ) {
         my $selection = $self->get_selection;
         if ( defined $selection ) {
-            ( $x, $y, $w, $h, ) = (
+            my ( $x, $y, $w, $h, ) = (
                 $selection->{x},     $selection->{y},
                 $selection->{width}, $selection->{height},
             );
@@ -452,17 +430,21 @@ sub get_offset {
 sub get_viewport {
     my ($self)     = @_;
     my $allocation = $self->get_allocation;
-    my $zoomed     = $self->get_zoomed_size;
-    my $offset     = $self->get_offset;
-    if ( defined $zoomed ) {
-        return {
-            x      => $offset->{x},
-            y      => $offset->{y},
-            width  => min( $allocation->{width}, $zoomed->{width} ),
-            height => min( $allocation->{height}, $zoomed->{height} )
-        };
+    my $pixbuf     = $self->get_pixbuf;
+    my ( $x, $y, $w, $h );
+    if ( defined $pixbuf ) {
+        ( $x, $y, $w, $h ) = (
+            $self->_to_image_coords( 0, 0 ),
+            $self->_to_image_distance(
+                $allocation->{width}, $allocation->{height}
+            )
+        );
     }
-    return;
+    else {
+        ( $x, $y, $w, $h ) =
+          ( 0, 0, $allocation->{width}, $allocation->{height} );
+    }
+    return { x => $x, y => $y, width => $w, height => $h };
 }
 
 sub set_tool {

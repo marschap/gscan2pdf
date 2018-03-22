@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 use Try::Tiny;
-use Test::More tests => 38;
+use Test::More tests => 37;
 
 BEGIN {
     use Glib qw/TRUE FALSE/;
@@ -26,9 +26,16 @@ $signal = $view->signal_connect(
     }
 );
 $view->set_pixbuf( Gtk3::Gdk::Pixbuf->new_from_file('test.jpg'), TRUE );
-is_deeply( $view->get_viewport,
-    { x => 0, y => 11.9999998044223, width => 1, height => 1 },
-    'get_viewport' );
+is_deeply(
+    $view->get_viewport,
+    {
+        x      => 0,
+        y      => -11.9999998044223,
+        width  => 69.9999996088445,
+        height => 69.9999996088445
+    },
+    'get_viewport'
+);
 
 SKIP: {
     skip 'not yet', 2;
@@ -43,8 +50,6 @@ is_deeply( $view->get_pixbuf_size, { width => 70, height => 46 },
     'get_pixbuf_size' );
 is_deeply( $view->get_allocation, { x => -1, y => -1, width => 1, height => 1 },
     'get_allocation' );
-is_deeply( $view->get_zoomed_size, { width => 1, height => 1 },
-    'get_zoomed_size' );
 
 is( $view->get_zoom, 0.0142857143655419, 'get_zoom()' );
 
@@ -121,8 +126,12 @@ catch {
 };
 
 $view->set_pixbuf( undef, TRUE );
-is( defined $view->get_pixbuf,   FALSE, 'correctly cleared pixbuf' );
-is( defined $view->get_viewport, FALSE, 'correctly cleared viewport' );
+is( defined $view->get_pixbuf, FALSE, 'correctly cleared pixbuf' );
+is_deeply(
+    $view->get_viewport,
+    { x => 0, y => 0, width => 1, height => 1 },
+    'correctly cleared viewport'
+);
 
 try {
     $view->set_pixbuf( undef, FALSE );
