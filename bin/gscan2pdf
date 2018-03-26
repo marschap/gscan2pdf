@@ -165,6 +165,9 @@ if ( $OSNAME eq 'linux' ) {
 }
 $logger->info("Perl version $PERL_VERSION");
 $logger->info("Glib-Perl version $Glib::VERSION");
+$logger->info(
+    "Glib::Object::Introspection version $Glib::Object::Introspection::VERSION"
+);
 $logger->info( 'Built for Glib ' . join $DOT, Glib->GET_VERSION_INFO );
 $logger->info(
     'Running with Glib ' . join $DOT, Glib::major_version,

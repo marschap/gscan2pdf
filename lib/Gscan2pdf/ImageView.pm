@@ -82,19 +82,33 @@ sub INIT_INSTANCE {
     $self->signal_connect( 'motion-notify-event'  => \&_motion );
     $self->signal_connect( 'scroll-event'         => \&_scroll );
     $self->set_app_paintable(TRUE);
-    $self->add_events(
-        Glib::Object::Introspection->convert_sv_to_flags(
-            'Gtk3::Gdk::EventMask', 'exposure-mask' ) |
-          Glib::Object::Introspection->convert_sv_to_flags(
-            'Gtk3::Gdk::EventMask', 'button-press-mask' ) |
-          Glib::Object::Introspection->convert_sv_to_flags(
-            'Gtk3::Gdk::EventMask', 'button-release-mask' ) |
-          Glib::Object::Introspection->convert_sv_to_flags(
-            'Gtk3::Gdk::EventMask', 'pointer-motion-mask' ) |
-          Glib::Object::Introspection->convert_sv_to_flags(
-            'Gtk3::Gdk::EventMask', 'scroll-mask'
-          )
-    );
+    if (
+        $Glib::Object::Introspection::VERSION <
+        0.043    ## no critic (ProhibitMagicNumbers)
+      )
+    {
+        $self->add_events(
+            ${ Gtk3::Gdk::EventMask->new(qw/exposure-mask/) } |
+              ${ Gtk3::Gdk::EventMask->new(qw/button-press-mask/) } |
+              ${ Gtk3::Gdk::EventMask->new(qw/button-release-mask/) } |
+              ${ Gtk3::Gdk::EventMask->new(qw/pointer-motion-mask/) } |
+              ${ Gtk3::Gdk::EventMask->new(qw/scroll-mask/) } );
+    }
+    else {
+        $self->add_events(
+            Glib::Object::Introspection->convert_sv_to_flags(
+                'Gtk3::Gdk::EventMask', 'exposure-mask' ) |
+              Glib::Object::Introspection->convert_sv_to_flags(
+                'Gtk3::Gdk::EventMask', 'button-press-mask' ) |
+              Glib::Object::Introspection->convert_sv_to_flags(
+                'Gtk3::Gdk::EventMask', 'button-release-mask' ) |
+              Glib::Object::Introspection->convert_sv_to_flags(
+                'Gtk3::Gdk::EventMask', 'pointer-motion-mask' ) |
+              Glib::Object::Introspection->convert_sv_to_flags(
+                'Gtk3::Gdk::EventMask', 'scroll-mask'
+              )
+        );
+    }
     $self->set_tool('dragger');
     return $self;
 }
