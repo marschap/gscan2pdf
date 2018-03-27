@@ -72,6 +72,14 @@ use Glib::Object::Subclass Gtk3::DrawingArea::, signals => {
         'Gdk::Rectangle hash of selected region',    # blurb
         [qw/readable writable/]                      # flags
     ),
+    Glib::ParamSpec->boolean(
+        'zoom-to-fit',                               # name
+        'Zoom to fit',                               # nickname
+        'Whether the zoom factor is automatically calculated to fit the window'
+        ,                                            # blurb
+        TRUE,                                        # default
+        [qw/readable writable/]                      # flags
+    ),
   ];
 
 sub INIT_INSTANCE {
@@ -81,7 +89,9 @@ sub INIT_INSTANCE {
     $self->signal_connect( 'button-release-event' => \&_button_released );
     $self->signal_connect( 'motion-notify-event'  => \&_motion );
     $self->signal_connect( 'scroll-event'         => \&_scroll );
+    $self->signal_connect( configure_event        => \&_configure_event );
     $self->set_app_paintable(TRUE);
+
     if (
         $Glib::Object::Introspection::VERSION <
         0.043    ## no critic (ProhibitMagicNumbers)
@@ -110,6 +120,7 @@ sub INIT_INSTANCE {
         );
     }
     $self->set_tool('dragger');
+    $self->set_redraw_on_allocate(FALSE);
     return $self;
 }
 
@@ -170,10 +181,7 @@ sub SET_PROPERTY {
             }
         }
         if ($invalidate) {
-            my $win = $self->get_window();
-            if ( defined $win ) {
-                $win->invalidate_rect( $self->get_allocation, FALSE );
-            }
+            $self->queue_draw();
         }
     }
     return;
@@ -182,10 +190,8 @@ sub SET_PROPERTY {
 sub set_pixbuf {
     my ( $self, $pixbuf, $zoom_to_fit ) = @_;
     $self->set( 'pixbuf', $pixbuf );
-    if ($zoom_to_fit) {
-        $self->zoom_to_fit;
-    }
-    else {
+    $self->set_zoom_to_fit($zoom_to_fit);
+    if ( not $zoom_to_fit ) {
         $self->set_offset( 0, 0 );
     }
     return;
@@ -257,6 +263,7 @@ sub _scroll {
     my ( $center_x, $center_y ) =
       $self->_to_image_coords( $event->x, $event->y );
     my $zoom;
+    $self->set_zoom_to_fit(FALSE);
     if ( $event->direction eq 'up' ) {
         $zoom = $self->get_zoom * 2;
     }
@@ -312,7 +319,24 @@ sub _draw {
     return TRUE;
 }
 
+sub _configure_event {
+    my ( $self, $event ) = @_;
+    if ( $self->get_zoom_to_fit ) {
+        $self->_calculate_zoom_to_fit;
+    }
+    return;
+}
+
+# setting the zoom via the public API disables zoom-to-fit
+
 sub set_zoom {
+    my ( $self, $zoom ) = @_;
+    $self->set_zoom_to_fit(FALSE);
+    $self->_set_zoom_no_center($zoom);
+    return;
+}
+
+sub _set_zoom {
     my ( $self, $zoom ) = @_;
     $self->set( 'zoom', $zoom );
     return;
@@ -352,7 +376,7 @@ sub _set_zoom_with_center {
     my $allocation = $self->get_allocation;
     my $offset_x   = $allocation->{width} / 2 / $zoom - $center_x;
     my $offset_y   = $allocation->{height} / 2 / $zoom - $center_y;
-    $self->set_zoom($zoom);
+    $self->_set_zoom($zoom);
     $self->set_offset( $offset_x, $offset_y );
     return;
 }
@@ -368,7 +392,15 @@ sub _set_zoom_no_center {
     return;
 }
 
-sub zoom_to_fit {
+sub set_zoom_to_fit {
+    my ( $self, $zoom_to_fit ) = @_;
+    $self->set( 'zoom-to-fit', $zoom_to_fit );
+    if ( not $zoom_to_fit ) { return }
+    $self->_calculate_zoom_to_fit;
+    return;
+}
+
+sub _calculate_zoom_to_fit {
     my ($self) = @_;
     my $pixbuf_size = $self->get_pixbuf_size;
     if ( not defined $pixbuf_size ) { return }
@@ -383,15 +415,28 @@ sub zoom_to_fit {
     return;
 }
 
+sub get_zoom_to_fit {
+    my ($self) = @_;
+    return $self->get('zoom-to-fit');
+}
+
 sub zoom_in {
     my ($self) = @_;
+    $self->set_zoom_to_fit(FALSE);
     $self->_set_zoom_no_center( $self->get_zoom * 2 );
     return;
 }
 
 sub zoom_out {
     my ($self) = @_;
+    $self->set_zoom_to_fit(FALSE);
     $self->_set_zoom_no_center( $self->get_zoom / 2 );
+    return;
+}
+
+sub zoom_to_fit {
+    my ($self) = @_;
+    $self->set_zoom_to_fit(TRUE);
     return;
 }
 
