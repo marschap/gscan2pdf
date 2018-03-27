@@ -147,9 +147,10 @@ sub add_metadata_dialog {
     $entryd->signal_connect( 'insert-text' => \&insert_text_handler );
     $entryd->signal_connect(
         'focus-out-event' => sub {
-            my $text = Gscan2pdf::Document::text_to_date( $entryd->get_text );
-            if ( defined $text ) {
-                $entryd->set_text( sprintf '%04d-%02d-%02d', $text );
+            my $text = $entryd->get_text;
+            if ( defined $text and $text ne $EMPTY ) {
+                $entryd->set_text( sprintf '%04d-%02d-%02d',
+                    Gscan2pdf::Document::text_to_date($text) );
             }
             return FALSE;
         }
