@@ -219,17 +219,20 @@ sub _button_pressed {
 
     $self->{drag_start} = { x => $event->x, y => $event->y };
     $self->{dragging} = TRUE;
+    $self->update_cursor( $event->x, $event->y );
     return TRUE;
 }
 
 sub _button_released {
     my ( $self, $event ) = @_;
     $self->{dragging} = FALSE;
+    $self->update_cursor( $event->x, $event->y );
     return;
 }
 
 sub _motion {
     my ( $self, $event ) = @_;
+    $self->update_cursor( $event->x, $event->y );
     if ( not $self->{dragging} ) { return FALSE }
 
     if ( $self->get_tool eq 'dragger' ) {
@@ -540,6 +543,37 @@ sub set_selection {
 sub get_selection {
     my ($self) = @_;
     return $self->get('selection');
+}
+
+sub update_cursor {
+    my ( $self, $x, $y ) = @_;
+    my $pixbuf_size = $self->get_pixbuf_size;
+    if ( not defined $pixbuf_size ) { return }
+    my $win     = $self->get_window;
+    my $display = Gtk3::Gdk::Display::get_default;
+    ( $x, $y ) = $self->_to_image_coords( $x, $y );
+    my $tool = $self->get_tool;
+    my $cursor;
+
+    if (    $x > 0
+        and $x < $pixbuf_size->{width}
+        and $y > 0
+        and $y < $pixbuf_size->{height} )
+    {
+        if ( $tool eq 'dragger' ) {
+            if ( $self->{dragging} ) {
+                $cursor = Gtk3::Gdk::Cursor->new('hand2');
+            }
+            else {
+                $cursor = Gtk3::Gdk::Cursor->new('hand1');
+            }
+        }
+        elsif ( $tool eq 'selector' ) {
+            $cursor = Gtk3::Gdk::Cursor->new('crosshair');
+        }
+    }
+    $win->set_cursor($cursor);
+    return;
 }
 
 1;
