@@ -438,6 +438,25 @@ sub import_file {
 
 sub _post_process_scan {
     my ( $self, $page, %options ) = @_;
+
+    # tesseract can't extract resolution from pnm, so convert to png
+    if ( defined $page
+        and $page->{format} =~ /Portable[ ](any|pix|gray|bit)map/xsm )
+    {
+        $self->to_png(
+            page              => $page,
+            queued_callback   => $options{queued_callback},
+            started_callback  => $options{started_callback},
+            finished_callback => sub {
+                my $finished_page = $self->find_page_by_uuid( $page->{uuid} );
+                $self->_post_process_scan( $self->{data}[$finished_page][2],
+                    %options );
+            },
+            error_callback   => $options{error_callback},
+            display_callback => $options{display_callback},
+        );
+        return;
+    }
     if ( $options{rotate} ) {
         $self->rotate(
             angle             => $options{rotate},
@@ -2694,7 +2713,8 @@ sub _thread_import_file {
             };
         }
 
-   # only 1-bit Portable anymap is properly supported, so convert ANY pnm to png
+        # only 1-bit Portable anymap is properly supported,
+        # so convert ANY pnm to png
         default {
             try {
                 my $page = Gscan2pdf::Page->new(
@@ -4179,6 +4199,7 @@ sub _thread_to_png {
     my ( $new, $error );
     try {
         $new = $page->to_png($paper_sizes);
+        $new->{uuid} = $page->{uuid};
     }
     catch {
         $logger->error("Error converting to png: $_");

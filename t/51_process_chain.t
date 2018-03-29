@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 4;
+use Test::More tests => 5;
 use Gtk3 -init;    # Could just call init separately
 use Gscan2pdf::Tesseract;
 use Gscan2pdf::Document;
@@ -48,6 +48,8 @@ SKIP: {
         engine            => 'tesseract',
         language          => 'eng',
         finished_callback => sub {
+            like( $slist->{data}[0][2]{filename},
+                qr/png$/, 'convert PNM to PNG' );
             like( $slist->{data}[0][2]{hocr},
                 qr/The/, 'Tesseract returned "The"' );
             like( $slist->{data}[0][2]{hocr},

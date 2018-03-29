@@ -246,16 +246,10 @@ $slist->import_scan(
     delete            => 1,
     dir               => $dir,
     finished_callback => sub {
-        is(
-`identify -format '%m %G %g %z-bit %r' $slist->{data}[0][2]{filename}`,
-            $old,
-            'padded pnm imported correctly'
-        );
-        is(
-            -s "$slist->{data}[0][2]{filename}",
-            -s 'test.ppm',
-            'padded pnm correct size'
-        );
+        system("convert $slist->{data}[0][2]{filename} test2.ppm");
+        is( `identify -format '%m %G %g %z-bit %r' test2.ppm`,
+            $old, 'padded pnm imported correctly (as PNG)' );
+        is( -s 'test2.ppm', -s 'test.ppm', 'padded pnm correct size' );
         Gtk3->main_quit;
     }
 );
@@ -263,7 +257,7 @@ Gtk3->main;
 
 #########################
 
-unlink 'test.ppm', 'test.pnm', <$dir/*>;
+unlink 'test.ppm', 'test2.ppm', 'test.pnm', <$dir/*>;
 rmdir $dir;
 Gscan2pdf::Document->quit();
 
