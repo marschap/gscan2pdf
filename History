@@ -7,6 +7,9 @@
 * If image is zoomed to fit viewer, update zoom when the size of the viewer
   changes
 * Update cursor depending on selected tool and position
+* Build corrupt session file by hand rather than storing binary file that is
+  not universally compatible. Closes bug #293
+  (t/175_open_session2.t fails on i686: Long integer size is not compatible)
 
 
 2.0.2 (26.03.2018):
