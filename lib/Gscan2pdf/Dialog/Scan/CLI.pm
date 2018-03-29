@@ -128,6 +128,7 @@ sub get_devices {
 
             # Set up ProgressBar
             $pbar = Gtk3::ProgressBar->new;
+            $pbar->set_show_text(TRUE);
             $pbar->set_pulse_step( $self->get('progress-pulse-step') );
             $pbar->set_text( __('Fetching list of devices') );
             $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
@@ -253,6 +254,7 @@ sub scan_options {
 
             # Set up ProgressBar
             $pbar = Gtk3::ProgressBar->new;
+            $pbar->set_show_text(TRUE);
             $pbar->set_pulse_step( $self->get('progress-pulse-step') );
             $pbar->set_text( __('Updating options') );
             $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
@@ -652,6 +654,7 @@ sub set_option {
 
                     # Set up ProgressBar
                     $pbar = Gtk3::ProgressBar->new;
+                    $pbar->set_show_text(TRUE);
                     $pbar->set_pulse_step( $self->get('progress-pulse-step') );
                     $pbar->set_text( __('Updating options') );
                     $hboxd->pack_start( $pbar, TRUE, TRUE, 0 );
