@@ -1237,7 +1237,6 @@ sub update_options {
     # set.
     my $current_scan_options = dclone( $self->{current_scan_options} );
 
-
     # walk the widget tree and update them from the hash
     my $num_dev_options = $new_options->num_options;
     my $options         = $self->get('available-scan-options');
@@ -2214,7 +2213,7 @@ sub _set_option_profile {
                 my ( $widget, $optname, $optval, $uuid ) = @_;
 
                 # With multiple reloads, this can get called several times,
-                # so only react to to signal from the correct profile
+                # so only react to signal from the correct profile
                 if ( defined $uuid and $uuid eq $profile->{uuid} ) {
                     $self->signal_handler_disconnect($signal);
                     $self->_set_option_profile( $profile, $next );

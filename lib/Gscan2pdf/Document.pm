@@ -2815,7 +2815,7 @@ sub _thread_import_pdf {
 
         if ($warning_flag) {
             _thread_throw_error( $self, $options{uuid}, __(<<'EOS') );
-Warning: gscan2pdf expects one image per page, but this was not satisfied. It is probable that the PDF has not been correcly imported.
+Warning: gscan2pdf expects one image per page, but this was not satisfied. It is probable that the PDF has not been correctly imported.
 
 If you wish to add scans to an existing PDF, use the prepend/append to PDF options in the Save dialogue.
 EOS
