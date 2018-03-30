@@ -252,6 +252,36 @@ $signal = $dialog->signal_connect(
         );
         $loop->run unless ($flag);
 
+        # need a new main loop to avoid nesting
+        $loop   = Glib::MainLoop->new;
+        $flag   = FALSE;
+        $signal = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                my ( $widget, $option, $value ) = @_;
+                $dialog->signal_handler_disconnect($signal);
+                $dialog->signal_handler_disconnect($signal2);
+                fail 'should not try to set option if value already correct';
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+        $signal2 = $dialog->signal_connect(
+            'changed-current-scan-options' => sub {
+                $dialog->signal_handler_disconnect($signal);
+                $dialog->signal_handler_disconnect($signal2);
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+        $dialog->set_current_scan_options(
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    'backend' => [ { 'mode' => 'Gray' } ]
+                }
+            )
+        );
+        $loop->run unless ($flag);
+
         $dialog->set( 'adf-defaults-scan-all-pages', 0 );
         $signal = $dialog->signal_connect(
             'changed-scan-option' => sub {

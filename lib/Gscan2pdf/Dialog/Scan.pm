@@ -2216,6 +2216,13 @@ sub _set_option_profile {
             }
         }
 
+        # Ignore option if value already correctly set
+        if ( $opt->{val} eq $val ) {
+            $logger->warn("Option '$name' already set to '$val', ignoring.");
+            $self->_set_option_profile( $profile, $next );
+            return;
+        }
+
         $logger->debug(
             "Setting option '$name'"
               . (
