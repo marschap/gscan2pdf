@@ -40,7 +40,7 @@ $dialog->set(
 $dialog->set( 'num-pages', 2 );
 
 my $profile_changes = 0;
-my $signal;
+my ( $signal, $signal2 );
 $signal = $dialog->signal_connect(
     'reloaded-scan-options' => sub {
         $dialog->signal_handler_disconnect($signal);
@@ -220,6 +220,36 @@ $signal = $dialog->signal_connect(
             }
         );
         $dialog->set_option( $options->by_name('source'), 'Flatbed' );
+        $loop->run unless ($flag);
+
+        # need a new main loop to avoid nesting
+        $loop   = Glib::MainLoop->new;
+        $flag   = FALSE;
+        $signal = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                my ( $widget, $option, $value ) = @_;
+                $dialog->signal_handler_disconnect($signal);
+                $dialog->signal_handler_disconnect($signal2);
+                fail 'should not try to set invalid option';
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+        $signal2 = $dialog->signal_connect(
+            'changed-current-scan-options' => sub {
+                $dialog->signal_handler_disconnect($signal);
+                $dialog->signal_handler_disconnect($signal2);
+                $flag = TRUE;
+                $loop->quit;
+            }
+        );
+        $dialog->set_current_scan_options(
+            Gscan2pdf::Scanner::Profile->new_from_data(
+                {
+                    'backend' => [ { 'mode' => 'Lineart' } ]
+                }
+            )
+        );
         $loop->run unless ($flag);
 
         $dialog->set( 'adf-defaults-scan-all-pages', 0 );

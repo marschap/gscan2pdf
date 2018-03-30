@@ -13,6 +13,7 @@ use Gscan2pdf::Dialog;
 use Gscan2pdf::Scanner::Options;
 use Gscan2pdf::Scanner::Profile;
 use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
+use List::MoreUtils qw(first_index);
 use Readonly;
 Readonly my $BORDER_WIDTH => 6;
 
@@ -2204,6 +2205,17 @@ sub _set_option_profile {
             return;
         }
 
+        # Don't try to set invalid option
+        if ( $opt->{constraint} and ref( $opt->{constraint} ) eq 'ARRAY' ) {
+            my $index = first_index { $_ eq $val } @{ $opt->{constraint} };
+            if ( $index == $NO_INDEX ) {
+                $logger->warn(
+                    "Ignoring invalid argument '$val' for option '$name'.");
+                $self->_set_option_profile( $profile, $next );
+                return;
+            }
+        }
+
         $logger->debug(
             "Setting option '$name'"
               . (
@@ -2270,13 +2282,9 @@ sub update_widget_value {
             }
             when ( $widget->isa('Gtk3::ComboBox') ) {
                 if ( $opt->{constraint}[ $widget->get_active ] ne $val ) {
-                    my $index;
-                    for ( 0 .. $#{ $opt->{constraint} } ) {
-                        if ( $opt->{constraint}[$_] eq $val ) {
-                            $index = $_;
-                        }
-                    }
-                    if ( defined $index ) { $widget->set_active($index) }
+                    my $index =
+                      first_index { $_ eq $val } @{ $opt->{constraint} };
+                    if ( $index > $NO_INDEX ) { $widget->set_active($index) }
                 }
             }
             when ( $widget->isa('Gtk3::Entry') ) {
