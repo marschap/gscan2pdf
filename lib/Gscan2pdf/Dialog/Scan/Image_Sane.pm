@@ -483,12 +483,9 @@ sub scan {
                 my $current = $self->get('current-scan-options');
                 my $signal;
                 $signal = $self->signal_connect(
-                    'finished-process' => sub {
-                        my ( $widget, $data ) = @_;
-                        if ( $data eq 'find_scan_options' ) {
-                            $self->signal_handler_disconnect($signal);
-                            $self->set_current_scan_options($current);
-                        }
+                    'reloaded-scan-options' => sub {
+                        $self->signal_handler_disconnect($signal);
+                        $self->set_current_scan_options($current);
                     }
                 );
                 $self->scan_options( $self->get('device') );

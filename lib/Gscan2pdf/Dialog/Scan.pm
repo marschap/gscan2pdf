@@ -1213,6 +1213,8 @@ sub get_paper_by_geometry {
 
 sub update_options {
     my ( $self, $new_options ) = @_;
+    $logger->debug( 'Sane->get_option_descriptor returned: ',
+        Dumper($new_options) );
 
     my $loops = $self->get('num-reloads');
     $self->{num_reloads} = ++$loops;    # num-reloads is read-only
@@ -1235,34 +1237,8 @@ sub update_options {
     # set.
     my $current_scan_options = dclone( $self->{current_scan_options} );
 
-    # Loop through the cloned profile, and remove those options that have
-    # correct values in the reload
-    my $num = $current_scan_options->num_backend_options;
-    my $i   = 0;
-    while ( $i < $num ) {
-        my ( $name, $val ) =
-          $current_scan_options->get_backend_option_by_index($i);
-        my $opt = $new_options->by_name($name);
-        if ( not defined $val
-            or Gscan2pdf::Scanner::Options::within_tolerance( $opt, $val ) )
-        {
-            $logger->info(
-                "No need to update option '$name': already within tolerance.");
-            $current_scan_options->remove_backend_option_by_name($name);
-            --$num;
-        }
-        else {
-            $logger->info(
-"Setting option '$name' to '$val' (again): '$opt->{val}' out of tolerance."
-            );
-            ++$i;
-        }
-    }
 
     # walk the widget tree and update them from the hash
-    $logger->debug( 'Sane->get_option_descriptor returned: ',
-        Dumper($new_options) );
-
     my $num_dev_options = $new_options->num_options;
     my $options         = $self->get('available-scan-options');
     for ( 1 .. $num_dev_options - 1 ) {
@@ -2216,9 +2192,10 @@ sub _set_option_profile {
             }
         }
 
-        # Ignore option if value already correctly set
-        if ( $opt->{val} eq $val ) {
-            $logger->warn("Option '$name' already set to '$val', ignoring.");
+        # Ignore option if value already within tolerance
+        if ( Gscan2pdf::Scanner::Options::within_tolerance( $opt, $val ) ) {
+            $logger->info(
+                "No need to set option '$name': already within tolerance.");
             $self->_set_option_profile( $profile, $next );
             return;
         }

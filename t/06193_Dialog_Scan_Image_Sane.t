@@ -67,7 +67,7 @@ $dialog->{signal} = $dialog->signal_connect(
             }
         );
         $dialog->{signal} = $dialog->signal_connect(
-            'changed-current-scan-options' => sub {
+            'changed-scan-option' => sub {
                 my ( $widget, $option, $value ) = @_;
                 $dialog->signal_handler_disconnect( $dialog->{signal} );
                 is_deeply(

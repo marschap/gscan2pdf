@@ -31,42 +31,17 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
 
         ######################################
 
-        $dialog->add_profile(
-            'my profile',
-            Gscan2pdf::Scanner::Profile->new_from_data(
-                {
-                    backend => [ { 'enable-test-options' => '' } ]
-                }
-            )
-        );
-
         # need a new main loop because of the timeout
         my $loop = Glib::MainLoop->new;
         my $flag = FALSE;
-        $dialog->{profile_signal} = $dialog->signal_connect(
-            'changed-profile' => sub {
-                my ( $widget, $profile ) = @_;
-                $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
+        $dialog->{signal} = $dialog->signal_connect(
+            'changed-scan-option' => sub {
+                $dialog->signal_handler_disconnect( $dialog->{signal} );
                 is_deeply(
                     $dialog->get('current-scan-options')->get_data,
-                    { backend => [ { 'enable-test-options' => '' } ] },
-                    'bool false as empty string'
+                    { backend => [ { 'enable-test-options' => 1 } ] },
+                    'enabled test options'
                 );
-                $flag = TRUE;
-                $loop->quit;
-            }
-        );
-        $dialog->set( 'profile', 'my profile' );
-        $loop->run unless ($flag);
-
-        ######################################
-
-        # need a new main loop because of the timeout
-        $loop                     = Glib::MainLoop->new;
-        $flag                     = FALSE;
-        $dialog->{profile_signal} = $dialog->signal_connect(
-            'changed-profile' => sub {
-                $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
                 $flag = TRUE;
                 $loop->quit;
             }
@@ -76,12 +51,12 @@ $dialog->{reloaded_signal} = $dialog->signal_connect(
         $loop->run unless ($flag);
 
         # have to use changed-scan-option callback because profile now undef
-        $loop                     = Glib::MainLoop->new;
-        $flag                     = FALSE;
-        $dialog->{profile_signal} = $dialog->signal_connect(
+        $loop             = Glib::MainLoop->new;
+        $flag             = FALSE;
+        $dialog->{signal} = $dialog->signal_connect(
             'changed-scan-option' => sub {
                 my ( $widget, $profile ) = @_;
-                $dialog->signal_handler_disconnect( $dialog->{profile_signal} );
+                $dialog->signal_handler_disconnect( $dialog->{signal} );
                 is_deeply(
                     $dialog->get('current-scan-options')->get_data,
                     {
