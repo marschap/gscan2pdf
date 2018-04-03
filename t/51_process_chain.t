@@ -22,9 +22,9 @@ my $dir = File::Temp->newdir;
 $slist->set_dir($dir);
 
 SKIP: {
-    skip 'Tesseract not installed', 4
+    skip 'Tesseract not installed', 5
       unless Gscan2pdf::Tesseract->setup($logger);
-    skip 'unpaper not installed', 4
+    skip 'unpaper not installed', 5
       unless ( system("which unpaper > /dev/null 2> /dev/null") == 0 );
 
     my $unpaper = Gscan2pdf::Unpaper->new;
