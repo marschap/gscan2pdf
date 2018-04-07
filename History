@@ -12,7 +12,8 @@
   (t/175_open_session2.t fails on i686: Long integer size is not compatible)
 * Convert all scans to PNG to allow tesseract to extract resolution
 * Ignore invalid options in profile
-* Ignore options in profile that are already within tolerance
+* Ignore options in profile that are already within tolerance. Closes #294
+  (Hangs on "Setting Option Source" When Changing Between Feeder and Flatbed)
 * Update to Hungarian translation (thanks to csola)
 
 
