@@ -1917,7 +1917,29 @@ sub import_files {
     # FIXME: import_files() now returns an array of pids.
     my ( $signal, $pid );
     $pid = $slist->import_files(
-        paths           => $filenames,
+        paths             => $filenames,
+        password_callback => sub {
+            my ($filename) = @_;
+            my $text = sprintf __('Enter user password for PDF %s'), $filename;
+            my $dialog =
+              Gtk3::MessageDialog->new( $window,
+                [ 'destroy-with-parent', 'modal' ],
+                'question', 'ok-cancel', $text );
+            $dialog->set_title($text);
+            my $vbox  = $dialog->get_content_area;
+            my $entry = Gtk3::Entry->new;
+            $entry->set_visibility(FALSE);
+            $entry->set_invisible_char('*');
+            $vbox->pack_end( $entry, FALSE, FALSE, 0 );
+            $dialog->show_all;
+            my $response = $dialog->run;
+            $text = $entry->get_text;
+            $dialog->destroy;
+            if ( $response == 'ok' and $text ne $EMPTY ) {
+                return $text;
+            }
+            return;
+        },
         queued_callback => sub {
             $logger->debug("import_files queued @{$filenames}");
             return update_tpbar(@_);

@@ -278,45 +278,71 @@ sub import_files {
     my ( $self, %options ) = @_;
 
     my @info;
+    $options{passwords} = [];
     for my $i ( 0 .. $#{ $options{paths} } ) {
-        my $path = $options{paths}->[$i];
-
-        # File in which to store the process ID
-        # so that it can be killed if necessary
-        my $pidfile = $self->create_pidfile(%options);
-        if ( not defined $pidfile ) { return }
-
-        my $uuid = $self->_note_callbacks(%options);
-        $callback{$uuid}{finished} = sub {
-            my ($info) = @_;
-            $logger->debug("In finished_callback for $path");
-            push @info, $info;
-            if ( $i == $#{ $options{paths} } ) {
-                $self->_get_file_info_finished_callback(
-                    \@info,
-                    uuid => $uuid,
-                    %options
-                );
-            }
-        };
-        my $sentinel =
-          _enqueue_request( 'get-file-info',
-            { path => $path, pidfile => "$pidfile", uuid => $uuid } );
-
-        $self->_monitor_process(
-            sentinel => $sentinel,
-            pidfile  => $pidfile,
-            info     => TRUE,
-            uuid     => $uuid,
-        );
+        $self->_get_file_info_finished_callback1( $i, \@info, %options );
     }
     return;
 }
 
-sub _get_file_info_finished_callback {
+sub _get_file_info_finished_callback1 {
+    my ( $self, $i, $infolist, %options ) = @_;
+    my $path = $options{paths}->[$i];
+
+    # File in which to store the process ID
+    # so that it can be killed if necessary
+    my $pidfile = $self->create_pidfile(%options);
+    if ( not defined $pidfile ) { return }
+
+    my $uuid = $self->_note_callbacks(%options);
+    $callback{$uuid}{finished} = sub {
+        my ($info) = @_;
+        $logger->debug("In finished_callback for $path");
+        if ( $info->{encrypted} and $options{password_callback} ) {
+            $options{passwords}[$i] = $options{password_callback}->($path);
+            if ( defined $options{passwords}[$i]
+                and $options{passwords}[$i] ne $EMPTY )
+            {
+                $self->_get_file_info_finished_callback1( $i, $infolist,
+                    %options );
+            }
+            return;
+        }
+        $infolist->[$i] = $info;
+        if ( $i == $#{ $options{paths} } ) {
+            $self->_get_file_info_finished_callback2(
+                $infolist,
+                uuid => $uuid,
+                %options
+            );
+        }
+    };
+    my $sentinel = _enqueue_request(
+        'get-file-info',
+        {
+            path     => $path,
+            pidfile  => "$pidfile",
+            uuid     => $uuid,
+            password => $options{passwords}[$i]
+        }
+    );
+
+    $self->_monitor_process(
+        sentinel => $sentinel,
+        pidfile  => $pidfile,
+        info     => TRUE,
+        uuid     => $uuid,
+    );
+    return;
+}
+
+sub _get_file_info_finished_callback2 {
     my ( $self, $info, %options ) = @_;
     if ( @{$info} > 1 ) {
         for ( @{$info} ) {
+            if ( not defined ) {
+                next;
+            }
             if ( $_->{format} eq 'session file' ) {
                 $logger->error(
 'Cannot open a session file at the same time as another file.'
@@ -370,10 +396,15 @@ sub _get_file_info_finished_callback {
             ( $first_page, $last_page ) =
               $options{pagerange_callback}->( $info->[0] );
         }
+        my $password = $options{passwords}[0];
+        delete $options{paths};
+        delete $options{passwords};
+        delete $options{password_callback};
         $self->import_file(
-            info  => $info->[0],
-            first => $first_page,
-            last  => $last_page,
+            info     => $info->[0],
+            password => $password,
+            first    => $first_page,
+            last     => $last_page,
             %options
         );
     }
@@ -421,12 +452,13 @@ sub import_file {
     my $sentinel = _enqueue_request(
         'import-file',
         {
-            info    => $options{info},
-            first   => $options{first},
-            last    => $options{last},
-            dir     => $dirname,
-            pidfile => "$pidfile",
-            uuid    => $uuid,
+            info     => $options{info},
+            password => $options{password},
+            first    => $options{first},
+            last     => $options{last},
+            dir      => $dirname,
+            pidfile  => "$pidfile",
+            uuid     => $uuid,
         }
     );
     return $self->_monitor_process(
@@ -2225,8 +2257,13 @@ sub _thread_main {
             }
 
             when ('get-file-info') {
-                _thread_get_file_info( $self, $request->{path},
-                    $request->{pidfile}, $request->{uuid} );
+                _thread_get_file_info(
+                    $self,
+                    filename => $request->{path},
+                    password => $request->{password},
+                    pidfile  => $request->{pidfile},
+                    uuid     => $request->{uuid}
+                );
             }
 
             when ('gocr') {
@@ -2237,12 +2274,13 @@ sub _thread_main {
             when ('import-file') {
                 _thread_import_file(
                     $self,
-                    info    => $request->{info},
-                    first   => $request->{first},
-                    last    => $request->{last},
-                    dir     => $request->{dir},
-                    pidfile => $request->{pidfile},
-                    uuid    => $request->{uuid}
+                    info     => $request->{info},
+                    password => $request->{password},
+                    first    => $request->{first},
+                    last     => $request->{last},
+                    dir      => $request->{dir},
+                    pidfile  => $request->{pidfile},
+                    uuid     => $request->{uuid}
                 );
             }
 
@@ -2426,37 +2464,46 @@ sub _thread_throw_error {
 }
 
 sub _thread_get_file_info {
-    my ( $self, $filename, $pidfile, $uuid, %info ) = @_;
+    my ( $self, %options ) = @_;
 
-    if ( not -e $filename ) {
-        _thread_throw_error( $self, $uuid, sprintf __('File %s not found'),
-            $filename );
+    if ( not -e $options{filename} ) {
+        _thread_throw_error( $self, $options{uuid},
+            sprintf __('File %s not found'),
+            $options{filename} );
         return;
     }
 
-    $logger->info("Getting info for $filename");
-    ( undef, my $format ) = exec_command( [ 'file', '-b', $filename ] );
+    $logger->info("Getting info for $options{filename}");
+    ( undef, my $format ) =
+      exec_command( [ 'file', '-b', $options{filename} ] );
     chomp $format;
     $logger->info("Format: '$format'");
 
     given ($format) {
         when ('very short file (no magic)') {
-            _thread_throw_error( $self, $uuid,
-                sprintf __('Error importing zero-length file %s.'), $filename );
+            _thread_throw_error( $self, $options{uuid},
+                sprintf __('Error importing zero-length file %s.'),
+                $options{filename} );
             return;
         }
         when (/gzip[ ]compressed[ ]data/xsm) {
-            $info{path}   = $filename;
-            $info{format} = 'session file';
+            $options{info}{path}   = $options{filename};
+            $options{info}{format} = 'session file';
             $self->{return}->enqueue(
-                { type => 'file-info', uuid => $uuid, info => \%info } );
+                {
+                    type => 'file-info',
+                    uuid => $options{uuid},
+                    info => $options{info}
+                }
+            );
             return;
         }
         when (/DjVu/xsm) {
 
             # Dig out the number of pages
             ( undef, my $info ) =
-              exec_command( [ 'djvudump', $filename ], $pidfile );
+              exec_command( [ 'djvudump', $options{filename} ],
+                $options{pidfile} );
             $logger->info($info);
             return if $_self->{cancel};
 
@@ -2467,7 +2514,7 @@ sub _thread_get_file_info {
 
             # Dig out and the resolution of each page
             my (@ppi);
-            $info{format} = 'DJVU';
+            $options{info}{format} = 'DJVU';
             while ( $info =~ /\s(\d+)\s+dpi(.*)/xsm ) {
                 push @ppi, $1;
                 $info = $2;
@@ -2475,35 +2522,54 @@ sub _thread_get_file_info {
             }
             if ( $pages != @ppi ) {
                 _thread_throw_error(
-                    $self, $uuid,
+                    $self,
+                    $options{uuid},
                     __(
 'Unknown DjVu file structure. Please contact the author.'
                     )
                 );
                 return;
             }
-            $info{ppi}   = \@ppi;
-            $info{pages} = $pages;
-            $info{path}  = $filename;
+            $options{info}{ppi}   = \@ppi;
+            $options{info}{pages} = $pages;
+            $options{info}{path}  = $options{filename};
             $self->{return}->enqueue(
-                { type => 'file-info', uuid => $uuid, info => \%info } );
+                {
+                    type => 'file-info',
+                    uuid => $options{uuid},
+                    info => $options{info}
+                }
+            );
             return;
         }
         when (/PDF[ ]document/xsm) {
             $format = 'Portable Document Format';
-            ( undef, my $info ) =
-              exec_command( [ 'pdfinfo', $filename ], $pidfile );
-            return if $_self->{cancel};
-            $logger->info($info);
-            $info{pages} = 1;
-            if ( $info =~ /Pages:\s+(\d+)/xsm ) {
-                $info{pages} = $1;
+            my $args = [ 'pdfinfo', $options{filename} ];
+            if ( defined $options{password} ) {
+                $args =
+                  [ 'pdfinfo', '-upw', $options{password}, $options{filename} ];
             }
-            $logger->info("$info{pages} pages");
-            my $float = qr{\d+(?:[.]\d*)?}xsm;
-            if ( $info =~ /Page\ssize:\s+($float)\s+x\s+($float)\s+(\w+)/xsm ) {
-                $info{page_size} = [ $1, $2, $3 ];
-                $logger->info("Page size: $1 x $2 $3");
+            ( undef, my $info, my $error ) =
+              exec_command( $args, $options{pidfile} );
+            return if $_self->{cancel};
+            $logger->info("stdout: $info");
+            $logger->info("stderr: $error");
+            if ( defined $error and $error =~ /Incorrect[ ]password/xsm ) {
+                $options{info}{encrypted} = TRUE;
+            }
+            else {
+                $options{info}{pages} = 1;
+                if ( $info =~ /Pages:\s+(\d+)/xsm ) {
+                    $options{info}{pages} = $1;
+                }
+                $logger->info("$options{info}{pages} pages");
+                my $float = qr{\d+(?:[.]\d*)?}xsm;
+                if ( $info =~
+                    /Page\ssize:\s+($float)\s+x\s+($float)\s+(\w+)/xsm )
+                {
+                    $options{info}{page_size} = [ $1, $2, $3 ];
+                    $logger->info("Page size: $1 x $2 $3");
+                }
             }
         }
 
@@ -2514,47 +2580,51 @@ sub _thread_get_file_info {
         when (/^TIFF[ ]image[ ]data/xsm) {
             $format = 'Tagged Image File Format';
             ( undef, my $info ) =
-              exec_command( [ 'tiffinfo', $filename ], $pidfile );
+              exec_command( [ 'tiffinfo', $options{filename} ],
+                $options{pidfile} );
             return if $_self->{cancel};
             $logger->info($info);
 
             # Count number of pages
-            $info{pages} = () = $info =~ /TIFF[ ]Directory[ ]at[ ]offset/xsmg;
-            $logger->info("$info{pages} pages");
+            $options{info}{pages} = () =
+              $info =~ /TIFF[ ]Directory[ ]at[ ]offset/xsmg;
+            $logger->info("$options{info}{pages} pages");
         }
         default {
 
             # Get file type
             my $image = Image::Magick->new;
-            my $e     = $image->Read($filename);
+            my $e     = $image->Read( $options{filename} );
             if ("$e") {
                 $logger->error($e);
-                _thread_throw_error( $self, $uuid,
+                _thread_throw_error( $self, $options{uuid},
                     sprintf __('%s is not a recognised image type'),
-                    $filename );
+                    $options{filename} );
                 return;
             }
             return if $_self->{cancel};
             $format = $image->Get('format');
             if ( not defined $format ) {
-                _thread_throw_error( $self, $uuid,
+                _thread_throw_error( $self, $options{uuid},
                     sprintf __('%s is not a recognised image type'),
-                    $filename );
+                    $options{filename} );
                 return;
             }
             $logger->info("Format $format");
-            $info{pages} = 1;
+            $options{info}{pages} = 1;
         }
     }
-    $info{format} = $format;
-    $info{path}   = $filename;
-    $self->{return}
-      ->enqueue( { type => 'file-info', uuid => $uuid, info => \%info } );
+    $options{info}{format} = $format;
+    $options{info}{path}   = $options{filename};
+    $self->{return}->enqueue(
+        { type => 'file-info', uuid => $options{uuid}, info => $options{info} }
+    );
     return;
 }
 
 sub _thread_import_file {
     my ( $self, %options ) = @_;
+    if ( not defined $options{info} ) { return }
     my $PNG = qr/Portable[ ]Network[ ]Graphics/xsm;
     my $JPG = qr/Joint[ ]Photographic[ ]Experts[ ]Group[ ]JFIF[ ]format/xsm;
     my $GIF = qr/CompuServe[ ]graphics[ ]interchange[ ]format/xsm;
@@ -2754,14 +2824,16 @@ sub _thread_import_pdf {
     # Extract images from PDF
     if ( $options{last} >= $options{first} and $options{first} > 0 ) {
         for my $i ( $options{first} .. $options{last} ) {
-
-            my ( $status, $out, $err ) = exec_command(
-                [
-                    'pdfimages', '-f', $i, '-l', $i, $options{info}->{path},
-                    'x'
-                ],
-                $options{pidfile}
-            );
+            my $args =
+              [ 'pdfimages', '-f', $i, '-l', $i, $options{info}->{path}, 'x' ];
+            if ( defined $options{password} ) {
+                $args = [
+                    'pdfimages', '-upw', $options{password}, '-f', $i, '-l',
+                    $i, $options{info}->{path}, 'x'
+                ];
+            }
+            my ( $status, $out, $err ) =
+              exec_command( $args, $options{pidfile} );
             return if $_self->{cancel};
             if ($status) {
                 _thread_throw_error( $self, $options{uuid},
@@ -2770,13 +2842,20 @@ sub _thread_import_pdf {
 
             my $html =
               File::Temp->new( DIR => $options{dir}, SUFFIX => '.html' );
-            ( $status, $out, $err ) = exec_command(
-                [
-                    'pdftotext', '-bbox', '-f', $i, '-l', $i,
+            $args = [
+                'pdftotext', '-bbox', '-f', $i, '-l', $i,
+                $options{info}->{path}, $html
+            ];
+            if ( defined $options{password} ) {
+                $args = [
+                    'pdftotext',            '-upw',
+                    $options{password},     '-bbox',
+                    '-f',                   $i,
+                    '-l',                   $i,
                     $options{info}->{path}, $html
-                ],
-                $options{pidfile}
-            );
+                ];
+            }
+            ( $status, $out, $err ) = exec_command( $args, $options{pidfile} );
             return if $_self->{cancel};
             if ($status) {
                 _thread_throw_error( $self, $options{uuid},
