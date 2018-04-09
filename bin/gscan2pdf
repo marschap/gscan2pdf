@@ -64,7 +64,7 @@ use Image::Sane ':all';             # To get SANE_* enums
 use Image::Magick;
 use Gscan2pdf::ImageView;
 use Gtk3::SimpleList;
-use Gtk3 -init;                     # Could just call init separately
+use Gtk3 0.028 -init;               # Could just call init separately
 use Cwd;                            # To obtain current working directory
 use File::Basename;                 # Split filename into dir, file, ext
 use File::Copy;
@@ -7088,6 +7088,12 @@ perl(module) where Debian has libmodule-perl.
 =item Required
 
 =over
+
+=item libgtk3-perl >= 0.028
+
+There is a bug in version of libgtk3-perl before 0.028 that causes gscan2pdf to
+crash when saving. Whilst I could prevent gscan2pdf from crashing, it would
+still be impossible to save anything, rendering gscan2pdf rather useless.
 
 =item libgtk3-simplelist-perl
 

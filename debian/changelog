@@ -1,3 +1,11 @@
+gscan2pdf (2.0.4-1) unstable; urgency=medium
+
+  * New upstream release
+  * + Depends: libgtk3-perl (>= 0.028) as older versions do not pass callback
+    data from filechooser
+
+ --
+
 gscan2pdf (2.0.3-1) unstable; urgency=low
 
   * New upstream release
