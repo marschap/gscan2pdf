@@ -266,14 +266,52 @@ sub _motion {
         $self->set_offset( $offset_x, $offset_y );
     }
     elsif ( $self->get_tool eq 'selector' ) {
-
-        # calculate the rectangle, give it the right orientation
-        my $x = int( min( $self->{drag_start}{x}, $event->x ) );
-        my $y = int( min( $self->{drag_start}{y}, $event->y ) );
-        my $w = int( abs( $self->{drag_start}{x} - $event->x ) );
-        my $h = int( abs( $self->{drag_start}{y} - $event->y ) );
-        ( $x, $y ) = $self->_to_image_coords( $x, $y );
-        ( $w, $h ) = $self->_to_image_distance( $w, $h );
+        my ( $x, $y, $x2, $y2, $x_old, $y_old, $x2_old, $y2_old );
+        if ( $self->{h_edge} eq 'left' ) {
+            $x = $event->x;
+        }
+        elsif ( $self->{h_edge} eq 'right' ) {
+            $x2 = $event->x;
+        }
+        if ( $self->{v_edge} eq 'top' ) {
+            $y = $event->y;
+        }
+        elsif ( $self->{v_edge} eq 'bottom' ) {
+            $y2 = $event->y;
+        }
+        if ( $self->{h_edge} eq 'mid' and $self->{v_edge} eq 'mid' ) {
+            $x  = $self->{drag_start}{x};
+            $x2 = $event->x;
+            $y  = $self->{drag_start}{y};
+            $y2 = $event->y;
+        }
+        else {
+            my $selection = $self->get_selection;
+            if ( not defined $x or not defined $y ) {
+                ( $x_old, $y_old ) =
+                  $self->_to_widget_coords( $selection->{x}, $selection->{y} );
+            }
+            if ( not defined $x2 or not defined $y2 ) {
+                ( $x2_old, $y2_old ) = $self->_to_widget_coords(
+                    $selection->{x} + $selection->{width},
+                    $selection->{y} + $selection->{height}
+                );
+            }
+            if ( not defined $x ) {
+                $x = $x_old;
+            }
+            if ( not defined $x2 ) {
+                $x2 = $x2_old;
+            }
+            if ( not defined $y ) {
+                $y = $y_old;
+            }
+            if ( not defined $y2 ) {
+                $y2 = $y2_old;
+            }
+        }
+        my ( $w, $h ) = $self->_to_image_distance( abs $x2 - $x, abs $y2 - $y );
+        ( $x, $y ) = $self->_to_image_coords( min( $x, $x2 ), min( $y, $y2 ) );
         $self->set_selection( { x => $x, y => $y, width => $w, height => $h } );
     }
     return;
@@ -589,6 +627,7 @@ sub update_cursor {
         }
     }
     elsif ( $tool eq 'selector' ) {
+        if ( $self->{dragging} ) { return }
         my $selection = $self->get_selection;
         my ( $sx1, $sy1 ) =
           $self->_to_widget_coords( $selection->{x}, $selection->{y} );
@@ -596,20 +635,21 @@ sub update_cursor {
             $selection->{x} + $selection->{width},
             $selection->{y} + $selection->{height}
         );
-        my ( $hori, $vert ) = qw( mid mid );
+        ( $self->{h_edge}, $self->{v_edge} ) = qw( mid mid );
         if ( _between( $x, $sx1 - $CURSOR_PIXELS, $sx1 + $CURSOR_PIXELS ) ) {
-            $hori = 'left';
+            $self->{h_edge} = 'left';
         }
         elsif ( _between( $x, $sx2 - $CURSOR_PIXELS, $sx2 + $CURSOR_PIXELS ) ) {
-            $hori = 'right';
+            $self->{h_edge} = 'right';
         }
         if ( _between( $y, $sy1 - $CURSOR_PIXELS, $sy1 + $CURSOR_PIXELS ) ) {
-            $vert = 'top';
+            $self->{v_edge} = 'top';
         }
         elsif ( _between( $y, $sy2 - $CURSOR_PIXELS, $sy2 + $CURSOR_PIXELS ) ) {
-            $vert = 'bottom';
+            $self->{v_edge} = 'bottom';
         }
-        $cursor = Gtk3::Gdk::Cursor->new( $cursorhash{$hori}{$vert} );
+        $cursor = Gtk3::Gdk::Cursor->new(
+            $cursorhash{ $self->{h_edge} }{ $self->{v_edge} } );
     }
     $win->set_cursor($cursor);
     return;
