@@ -10,9 +10,28 @@ use Gtk3;
 use List::Util qw(min);
 use Carp;
 use Readonly;
-Readonly my $HALF => 0.5;
+Readonly my $HALF          => 0.5;
+Readonly my $CURSOR_PIXELS => 5;
 
 our $VERSION = '2.0.3';
+
+my %cursorhash = (
+    left => {
+        top    => 'top-left-corner',
+        mid    => 'left-side',
+        bottom => 'bottom-left-corner',
+    },
+    mid => {
+        top    => 'top-side',
+        mid    => 'crosshair',
+        bottom => 'bottom-side',
+    },
+    right => {
+        top    => 'top-right-corner',
+        mid    => 'right-side',
+        bottom => 'bottom-right-corner',
+    },
+);
 
 # Note: in a BEGIN block to ensure that the registration is complete
 #       by the time the use Subclass goes to look for it.
@@ -551,16 +570,16 @@ sub update_cursor {
     if ( not defined $pixbuf_size ) { return }
     my $win     = $self->get_window;
     my $display = Gtk3::Gdk::Display::get_default;
-    ( $x, $y ) = $self->_to_image_coords( $x, $y );
-    my $tool = $self->get_tool;
+    my $tool    = $self->get_tool;
     my $cursor;
 
-    if (    $x > 0
-        and $x < $pixbuf_size->{width}
-        and $y > 0
-        and $y < $pixbuf_size->{height} )
-    {
-        if ( $tool eq 'dragger' ) {
+    if ( $tool eq 'dragger' ) {
+        ( $x, $y ) = $self->_to_image_coords( $x, $y );
+        if (    $x > 0
+            and $x < $pixbuf_size->{width}
+            and $y > 0
+            and $y < $pixbuf_size->{height} )
+        {
             if ( $self->{dragging} ) {
                 $cursor = Gtk3::Gdk::Cursor->new('hand2');
             }
@@ -568,12 +587,37 @@ sub update_cursor {
                 $cursor = Gtk3::Gdk::Cursor->new('hand1');
             }
         }
-        elsif ( $tool eq 'selector' ) {
-            $cursor = Gtk3::Gdk::Cursor->new('crosshair');
+    }
+    elsif ( $tool eq 'selector' ) {
+        my $selection = $self->get_selection;
+        my ( $sx1, $sy1 ) =
+          $self->_to_widget_coords( $selection->{x}, $selection->{y} );
+        my ( $sx2, $sy2 ) = $self->_to_widget_coords(
+            $selection->{x} + $selection->{width},
+            $selection->{y} + $selection->{height}
+        );
+        my ( $hori, $vert ) = qw( mid mid );
+        if ( _between( $x, $sx1 - $CURSOR_PIXELS, $sx1 + $CURSOR_PIXELS ) ) {
+            $hori = 'left';
         }
+        elsif ( _between( $x, $sx2 - $CURSOR_PIXELS, $sx2 + $CURSOR_PIXELS ) ) {
+            $hori = 'right';
+        }
+        if ( _between( $y, $sy1 - $CURSOR_PIXELS, $sy1 + $CURSOR_PIXELS ) ) {
+            $vert = 'top';
+        }
+        elsif ( _between( $y, $sy2 - $CURSOR_PIXELS, $sy2 + $CURSOR_PIXELS ) ) {
+            $vert = 'bottom';
+        }
+        $cursor = Gtk3::Gdk::Cursor->new( $cursorhash{$hori}{$vert} );
     }
     $win->set_cursor($cursor);
     return;
+}
+
+sub _between {
+    my ( $value, $lower, $upper ) = @_;
+    return ( $value > $lower and $value < $upper );
 }
 
 1;
