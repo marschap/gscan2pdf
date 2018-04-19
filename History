@@ -48,7 +48,8 @@
 2.0.0 (08.03.2018):
 
 * Switch from gtk+-2 to gtk+-3, requiring the reimplementation of GtkImageview
-  in pure Perl, as C library not compatible with gtk+-3.
+  in pure Perl, as C library not compatible with gtk+-3. Closes Debian bug
+  #884030 (Depends on obsolete libgoo-canvas-perl)
 * Fixed ghosting if flatbed only source option but not set.
   Closes #290 (Page Options -> Pages: scanning only first page of n)
 * Fixed setting preferences if frontend not set to libsane-image-perl and no
