@@ -1,11 +1,11 @@
-gscan2pdf (2.1.0-1) unstable; urgency=medium
+gscan2pdf (2.1.0-1) unstable; urgency=low
 
   * New upstream release
     Closes: #894764 (Please prompt for password on import of encrypted file)
   * + Depends: libgtk3-perl (>= 0.028) as older versions do not pass callback
     data from filechooser
 
- --
+ -- Jeffrey Ratcliffe <jjr@debian.org>  Fri, 20 Apr 2018 18:08:52 +0200
 
 gscan2pdf (2.0.3-1) unstable; urgency=low
 
