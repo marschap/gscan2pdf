@@ -28,7 +28,7 @@ use Glib::Object::Subclass Gtk3::VBox::,
     ),
   ];
 
-our $VERSION = '2.0.3';
+our $VERSION = '2.1.0';
 
 my @widget_list;
 
