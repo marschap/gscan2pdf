@@ -5924,19 +5924,12 @@ sub quit {
     # Write config file
     Gscan2pdf::Config::write_config( $rc, $logger, \%SETTING );
 
-    kill_threads();
-    $logger->debug('Quitting');
-    return TRUE;
-}
-
-# kill all threads
-
-sub kill_threads {
     $logger->info('Killing Sane thread(s)');
     Gscan2pdf::Frontend::Image_Sane->quit();
     $logger->info('Killing document thread(s)');
     Gscan2pdf::Document->quit();
-    return;
+    $logger->debug('Quitting');
+    return TRUE;
 }
 
 # Perhaps we should use gtk and mallard for this in the future
