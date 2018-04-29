@@ -131,11 +131,12 @@ my $VERSION   = '2.1.0';
 # Image border to ensure that a scaled to fit image gets no scrollbars
 my $border = 1;
 
-my $debug   = FALSE;
-my $EMPTY   = q{};
-my $SPACE   = q{ };
-my $DOT     = q{.};
-my $PERCENT = q{%};
+my $debug    = FALSE;
+my $EMPTY    = q{};
+my $SPACE    = q{ };
+my $DOT      = q{.};
+my $PERCENT  = q{%};
+my $ASTERISK = q{*};
 my (
     $test,   $help,       $log,    $log_level, @device,
     $locale, $test_image, $logger, $import
@@ -1929,13 +1930,14 @@ sub import_files {
             my $vbox  = $dialog->get_content_area;
             my $entry = Gtk3::Entry->new;
             $entry->set_visibility(FALSE);
-            $entry->set_invisible_char('*');
+            $entry->set_invisible_char($ASTERISK);
             $vbox->pack_end( $entry, FALSE, FALSE, 0 );
             $dialog->show_all;
             my $response = $dialog->run;
             $text = $entry->get_text;
             $dialog->destroy;
-            if ( $response == 'ok' and $text ne $EMPTY ) {
+
+            if ( $response eq 'ok' and $text ne $EMPTY ) {
                 return $text;
             }
             return;
