@@ -642,7 +642,7 @@ sub _save_profile_callback {
     my $entry = Gtk3::Entry->new;
     $entry->set_activates_default(TRUE);
     $hbox->pack_end( $entry, TRUE, TRUE, 0 );
-    $dialog->vbox->add($hbox);
+    $dialog->get_content_area->add($hbox);
     $dialog->set_default_response('ok');
     $dialog->show_all;
     my $flag = TRUE;
