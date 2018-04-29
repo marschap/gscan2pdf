@@ -64,7 +64,7 @@ use Image::Sane ':all';             # To get SANE_* enums
 use Image::Magick;
 use Gscan2pdf::ImageView;
 use Gtk3::SimpleList;
-use Gtk3 0.028 -init;               # Could just call init separately
+use Gtk3 0.028;                     # Could just call init separately
 use Cwd;                            # To obtain current working directory
 use File::Basename;                 # Split filename into dir, file, ext
 use File::Copy;
@@ -277,11 +277,11 @@ my (
 );
 
 # Create the window
-my $app = Gtk3::Application->new( 'org.gscan2pdf', 'flags-none' );
-$app->signal_connect( 'activate' => \&create_main_window );
+my $app = Gtk3::Application->new( 'org.gscan2pdf', 'handles-open' );
+$app->signal_connect( 'startup' => \&application_startup_callback );
 $app->run;
 
-sub activate_app {
+sub populate_main_window {
     my $main_vbox = Gtk3::VBox->new;
     $window->add($main_vbox);
 
@@ -578,7 +578,7 @@ sub set_up_test_mode {
     return;
 }
 
-sub create_main_window {
+sub application_startup_callback {
     $window = Gtk3::ApplicationWindow->new($app);
     $window->set_title("$prog_name v$VERSION");
     $window->signal_connect(
@@ -622,7 +622,7 @@ sub create_main_window {
     };
 
     $app->add_window($window);
-    activate_app($window);
+    populate_main_window($window);
     return;
 }
 
