@@ -141,14 +141,15 @@ sub new {
     );
     $self->drag_source_set( 'button1-mask', [$dnd_source], [ 'copy', 'move' ] );
 
-    #    my $dnd_dest = Gtk3::TargetEntry->new(
-    #        'Glib::Scalar',    # some string representing the drag type
-    #        ${ Gtk3::TargetFlags->new(qw/same-widget/) },
-    #        $ID_URI,           # some app-defined integer identifier
-    #    );
+    my $dnd_dest = Gtk3::TargetEntry->new(
+        'text/uri-list',    # some string representing the drag type
+        0,                  # flags
+        $ID_URI,            # some app-defined integer identifier
+    );
     $self->drag_dest_set(
-        [ 'drop', 'motion', 'highlight' ],
-        [$dnd_source], [ 'copy', 'move' ],
+        [ 'drop',      'motion', 'highlight' ],
+        [ $dnd_source, $dnd_dest ],
+        [ 'copy',      'move' ],
     );
     $self->signal_connect(
         'drag-data-get' => sub {
@@ -963,37 +964,37 @@ sub get_pixbuf {
 
 sub drag_data_received_callback {    ## no critic (ProhibitManyArgs)
     my ( $tree, $context, $x, $y, $data, $info, $time ) = @_;
+    my $delete =
+      $context->get_actions ==       ## no critic (ProhibitMismatchedOperators)
+      'move';
+
+    # This callback is fired twice, seemingly once for the drop flag,
+    # and once for the copy flag. If the drop flag is disabled, the URI
+    # drop does not work. If the copy flag is disabled, the drag-with-copy
+    # does not work. Therefore if copying, create a hash of the drop times
+    # and ignore the second drop.
+    if ( not $delete ) {
+        if ( defined $tree->{drops}{$time} ) {
+            delete $tree->{drops};
+            Gtk3::drag_finish( $context, TRUE, $delete, $time );
+            return;
+        }
+        else {
+            $tree->{drops}{$time} = 1;
+        }
+    }
 
     if ( $info == $ID_URI ) {
-        my @uris = $data->get_uris;
-        for (@uris) {
+        my $uris = $data->get_uris;
+        for ( @{$uris} ) {
             s{^file://}{}gxsm;
         }
-        $tree->import_files( paths => \@uris );
-        $context->drag_drop_succeeded;
+        $tree->import_files( paths => $uris );
+        Gtk3::drag_finish( $context, TRUE, FALSE, $time );
     }
     elsif ( $info == $ID_PAGE ) {
         my ( $path, $how ) = $tree->get_dest_row_at_pos( $x, $y );
         if ( defined $path ) { $path = $path->to_string }
-        my $delete =
-          $context->get_actions ==    ## no critic (ProhibitMismatchedOperators)
-          'move';
-
-        # This callback is fired twice, seemingly once for the drop flag,
-        # and once for the copy flag. If the drop flag is disabled, the URI
-        # drop does not work. If the copy flag is disabled, the drag-with-copy
-        # does not work. Therefore if copying, create a hash of the drop times
-        # and ignore the second drop.
-        if ( not $delete ) {
-            if ( defined $tree->{drops}{$time} ) {
-                delete $tree->{drops};
-                Gtk3::drag_finish( $context, TRUE, $delete, $time );
-                return;
-            }
-            else {
-                $tree->{drops}{$time} = 1;
-            }
-        }
 
         my @rows = $tree->get_selected_indices or return;
         my $selection = $tree->copy_selection( not $delete );

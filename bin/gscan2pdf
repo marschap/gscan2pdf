@@ -1405,6 +1405,7 @@ sub selection_changed_callback {
         $view->set_pixbuf(undef);
         undef $current_page;
     }
+    update_uimanager();
     return;
 }
 
@@ -1704,7 +1705,6 @@ sub new {
     # Reset start page in scan dialog
     reset_start();
 
-    update_uimanager();
     return;
 }
 
@@ -1752,7 +1752,6 @@ sub error_callback {
         'store-response' => TRUE
     );
     $thbox->hide;
-    update_uimanager();
     return;
 }
 
@@ -1763,7 +1762,6 @@ sub open_session_file {
         info           => $filename,
         error_callback => \&error_callback
     );
-    update_uimanager();
     return;
 }
 
@@ -1798,7 +1796,6 @@ sub open_session {
         delete         => FALSE,
         error_callback => \&error_callback
     );
-    update_uimanager();
     return;
 }
 
@@ -1996,7 +1993,6 @@ sub import_files {
             if ( defined $signal ) {
                 $tcbutton->signal_handler_disconnect($signal);
             }
-            update_uimanager();
             $slist->save_session;
         },
         error_callback => \&error_callback
@@ -3781,7 +3777,6 @@ sub new_scan_callback {
             $slist->save_session;
         },
         error_callback => \&error_callback,
-        display_callback => sub { update_uimanager() },
     );
     if ( $SETTING{'unpaper on scan'} ) {
         $options{unpaper} = $unpaper;
@@ -4415,8 +4410,6 @@ sub paste_selection {
     else {
         $slist->paste_selection( $clipboard, undef, undef, TRUE );
     }
-
-    update_uimanager();
     return;
 }
 
@@ -4431,8 +4424,6 @@ sub delete_selection {
 
     # Reset start page in scan dialog
     reset_start();
-
-    update_uimanager();
     return;
 }
 
