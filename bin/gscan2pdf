@@ -282,7 +282,7 @@ my (
 
 # Create the window
 my $app = Gtk3::Application->new( 'org.gscan2pdf', 'handles-open' );
-$app->signal_connect( 'startup' => \&application_startup_callback );
+$app->signal_connect( 'startup'  => \&application_startup_callback );
 $app->signal_connect( 'activate' => \&application_activate_callback );
 $app->run;
 
