@@ -26,7 +26,7 @@ Readonly my $MAXVAL_16_BIT  => 2**$_16_BIT - 1;
 my $uuid_object = Data::UUID->new;
 my $EMPTY       = q{};
 
-our $VERSION = '2.1.1';
+our $VERSION = '2.1.2';
 
 my ( $prog_name, $logger, %callback, $_self );
 

@@ -9,7 +9,7 @@ use Gscan2pdf::Document;             # for slurp
 use version;
 use English qw( -no_match_vars );    # for $PROCESS_ID
 
-our $VERSION = '2.1.1';
+our $VERSION = '2.1.2';
 
 my $SPACE = q{ };
 my $EMPTY = q{};
