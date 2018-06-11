@@ -4,6 +4,7 @@ use MIME::Base64 qw( decode_base64 );
 use Storable qw(thaw store);
 use File::Path qw(make_path remove_tree);
 use Glib 1.210 qw(TRUE FALSE);
+use Try::Tiny;
 use Test::More tests => 2;
 
 BEGIN {
@@ -41,17 +42,26 @@ b25pY2EKCAAAAHdhcm5pbmdzCLMKAAAAcmVzb2x1dGlvbhciL3RtcC9nc2NhbjJwZGYtVDB5TC9P
 ck9MZzl6WGFsLnBubQgAAABmaWxlbmFtZQoOMDExNTA0MDQwOTI4NTEIAAAAb2NyX3RpbWUGkQEA
 AAAAAAABAAAAdwiBBgAAAGRlbGV0ZQoPUG9ydGFibGUgYW55bWFwBgAAAGZvcm1hdAEAAAAx
 EOS
-my $sessionref = thaw( decode_base64 $str);
+my $sessionref;
+try {
+    $sessionref = thaw( decode_base64 $str);
+}
+catch {
+};
 
-# This segfaults, so don't do it here:
-# use Data::Dumper;
-# my $string = Dumper( $sessionref );
+SKIP: {
+    skip 'test only valid on machine with compatible long integer size', 2
+      unless defined $sessionref;
 
-make_path('tmp/gscan2pdf-T0yL');
-store( $sessionref, 'tmp/gscan2pdf-T0yL/session' );
+    # This segfaults, so don't do it here:
+    # use Data::Dumper;
+    # my $string = Dumper( $sessionref );
 
-# base64 encoded image data
-$str = <<'EOS';
+    make_path('tmp/gscan2pdf-T0yL');
+    store( $sessionref, 'tmp/gscan2pdf-T0yL/session' );
+
+    # base64 encoded image data
+    $str = <<'EOS';
 UDQKIyBTQU5FIGRhdGEgZm9sbG93cwo0MDEgNDAxCv//////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -413,45 +423,46 @@ UDQKIyBTQU5FIGRhdGEgZm9sbG93cwo0MDEgNDAxCv//////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 /////////////////////////w==
 EOS
-open my $fh, '>', 'tmp/gscan2pdf-T0yL/OrOLg9zXal.pnm';
-$fh->print( decode_base64 $str);
-close $fh;
-my $tar = Archive::Tar->new;
-$tar->add_files( 'tmp/gscan2pdf-T0yL/session',
-    'tmp/gscan2pdf-T0yL/OrOLg9zXal.pnm' );
-$tar->write( 't/old.gs2p', TRUE, '' );
-remove_tree('tmp');
+    open my $fh, '>', 'tmp/gscan2pdf-T0yL/OrOLg9zXal.pnm';
+    $fh->print( decode_base64 $str);
+    close $fh;
+    my $tar = Archive::Tar->new;
+    $tar->add_files( 'tmp/gscan2pdf-T0yL/session',
+        'tmp/gscan2pdf-T0yL/OrOLg9zXal.pnm' );
+    $tar->write( 't/old.gs2p', TRUE, '' );
+    remove_tree('tmp');
 
-my $slist = Gscan2pdf::Document->new;
-$slist->set_dir( File::Temp->newdir );
-$slist->open_session_file( info => 't/old.gs2p' );
+    my $slist = Gscan2pdf::Document->new;
+    $slist->set_dir( File::Temp->newdir );
+    $slist->open_session_file( info => 't/old.gs2p' );
 
-# At some point the main window widget was being stored on the
-# Page object. Restoring this and dumping it via Dumper segfaults.
-# Try and provoke that here:
-use Data::Dumper;
-my $string = Dumper( $slist->{data} );
+    # At some point the main window widget was being stored on the
+    # Page object. Restoring this and dumping it via Dumper segfaults.
+    # Try and provoke that here:
+    use Data::Dumper;
+    my $string = Dumper( $slist->{data} );
 
-SKIP: {
-    skip 'file-5.31 cannot detect PGM', 1
-      if `file --version` =~ /file-5\.31$/m;
-    like(
-        `file $slist->{data}[0][2]{filename}`,
-        qr/image data/,
-        'extracted valid image'
-    );
-}
+  SKIP: {
+        skip 'file-5.31 cannot detect PGM', 1
+          if `file --version` =~ /file-5\.31$/m;
+        like(
+            `file $slist->{data}[0][2]{filename}`,
+            qr/image data/,
+            'extracted valid image'
+        );
+    }
 
 #########################
 
-$slist = Gscan2pdf::Document->new;
-$slist->set_dir( File::Temp->newdir );
-$slist->open_session_file(
-    info              => 't/old.gs2p',
-    finished_callback => sub {
-        pass('in finished_callback');
-    }
-);
+    $slist = Gscan2pdf::Document->new;
+    $slist->set_dir( File::Temp->newdir );
+    $slist->open_session_file(
+        info              => 't/old.gs2p',
+        finished_callback => sub {
+            pass('in finished_callback');
+        }
+    );
+}
 
 #########################
 
