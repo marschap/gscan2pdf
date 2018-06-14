@@ -90,7 +90,7 @@ use English qw( -no_match_vars )
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
-use Date::Calc qw(Delta_Days Add_Delta_Days Today Today_and_Now);
+use Date::Calc qw(Delta_Days Add_Delta_Days Today Today_and_Now Timezone);
 
 # Bind the Gio API
 # This is necessary mainly for Gtk3::Application
@@ -2084,7 +2084,11 @@ sub save_pdf {
     $pid = $slist->save_pdf(
         path          => "$filename",      # stringify in case of PS
         list_of_pages => $list_of_pages,
-        metadata        => Gscan2pdf::Document::collate_metadata( \%SETTING ),
+        metadata => Gscan2pdf::Document::collate_metadata(
+            \%SETTING,
+            [ Today() ],
+            [ Timezone() ]
+        ),
         options         => \%options,
         queued_callback => sub {
             return update_tpbar(@_);
@@ -3093,10 +3097,14 @@ sub save_djvu {
         $options{post_save_hook} = $SETTING{current_psh};
     }
     $pid = $slist->save_djvu(
-        path            => $filename,
-        list_of_pages   => $list_of_pages,
-        options         => \%options,
-        metadata        => Gscan2pdf::Document::collate_metadata( \%SETTING ),
+        path          => $filename,
+        list_of_pages => $list_of_pages,
+        options       => \%options,
+        metadata      => Gscan2pdf::Document::collate_metadata(
+            \%SETTING,
+            [ Today() ],
+            [ Timezone() ]
+        ),
         queued_callback => sub {
             return update_tpbar(@_);
         },
@@ -3381,8 +3389,12 @@ sub email {
             $pid = $slist->save_pdf(
                 path          => $pdf,
                 list_of_pages => $list_of_pages,
-                metadata => Gscan2pdf::Document::collate_metadata( \%SETTING ),
-                options  => \%options,
+                metadata      => Gscan2pdf::Document::collate_metadata(
+                    \%SETTING,
+                    [ Today() ],
+                    [ Timezone() ]
+                ),
+                options         => \%options,
                 queued_callback => sub {
                     return update_tpbar(@_);
                 },
@@ -4062,15 +4074,15 @@ sub add_postprocessing_ocr {
     }
     combobox_set_active( $comboboxe, $SETTING{'ocr engine'}, @ocr_engine );
 
-    my $cbt = Gtk3::CheckButton->new_with_label( __('Threshold before OCR') );
-    $cbt->set_tooltip_text(
+    my $cbto = Gtk3::CheckButton->new_with_label( __('Threshold before OCR') );
+    $cbto->set_tooltip_text(
         __(
                 'Threshold the image before performing OCR. '
               . 'This only affects the image passed to the OCR engine, and not the image stored.'
         )
     );
-    $cbt->set_active( $SETTING{'threshold-before-ocr'} );
-    $vbox->pack_start( $cbt, TRUE, TRUE, 0 );
+    $cbto->set_active( $SETTING{'threshold-before-ocr'} );
+    $vbox->pack_start( $cbto, TRUE, TRUE, 0 );
 
     # SpinButton for threshold
     my $hboxt = Gtk3::HBox->new;
@@ -4081,17 +4093,17 @@ sub add_postprocessing_ocr {
     $hboxt->pack_end( $labelp, FALSE, TRUE, 0 );
     my $spinbutton = Gtk3::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
     $spinbutton->set_value( $SETTING{'threshold tool'} );
-    $spinbutton->set_sensitive( $cbt->get_active ? TRUE : FALSE );
+    $spinbutton->set_sensitive( $cbto->get_active ? TRUE : FALSE );
     $hboxt->pack_end( $spinbutton, FALSE, TRUE, 0 );
-    $cbt->signal_connect(
+    $cbto->signal_connect(
         toggled => sub {
-            $spinbutton->set_sensitive( $cbt->get_active ? TRUE : FALSE );
+            $spinbutton->set_sensitive( $cbto->get_active ? TRUE : FALSE );
         }
     );
 
     return (
         $obutton,    $comboboxe, $hboxtl,  $comboboxtl, $hboxcl,
-        $comboboxcl, \@tesslang, \@cflang, $cbt,        $spinbutton,
+        $comboboxcl, \@tesslang, \@cflang, $cbto,       $spinbutton,
     );
 }
 
@@ -5761,21 +5773,21 @@ sub ocr_dialog {
         );
     }
 
-    my $cbt = Gtk3::CheckButton->new_with_label( __('Threshold before OCR') );
-    $cbt->set_tooltip_text(
+    my $cbto = Gtk3::CheckButton->new_with_label( __('Threshold before OCR') );
+    $cbto->set_tooltip_text(
         __(
                 'Threshold the image before performing OCR. '
               . 'This only affects the image passed to the OCR engine, and not the image stored.'
         )
     );
     if ( defined $SETTING{'threshold-before-ocr'} ) {
-        $cbt->set_active( $SETTING{'threshold-before-ocr'} );
+        $cbto->set_active( $SETTING{'threshold-before-ocr'} );
     }
-    $vbox->pack_start( $cbt, TRUE, TRUE, 0 );
+    $vbox->pack_start( $cbto, TRUE, TRUE, 0 );
 
     # SpinButton for threshold
     my $hboxt = Gtk3::HBox->new;
-    $hboxt->set_sensitive( $cbt->get_active ? TRUE : FALSE );
+    $hboxt->set_sensitive( $cbto->get_active ? TRUE : FALSE );
     $vbox->pack_start( $hboxt, FALSE, TRUE, 0 );
     $label = Gtk3::Label->new( __('Threshold') );
     $hboxt->pack_start( $label, FALSE, TRUE, 0 );
@@ -5784,9 +5796,9 @@ sub ocr_dialog {
     my $spinbutton = Gtk3::SpinButton->new_with_range( 0, $_100_PERCENT, 1 );
     $spinbutton->set_value( $SETTING{'threshold tool'} );
     $hboxt->pack_end( $spinbutton, FALSE, TRUE, 0 );
-    $cbt->signal_connect(
+    $cbto->signal_connect(
         toggled => sub {
-            $hboxt->set_sensitive( $cbt->get_active ? TRUE : FALSE );
+            $hboxt->set_sensitive( $cbto->get_active ? TRUE : FALSE );
         }
     );
 
@@ -5808,7 +5820,7 @@ sub ocr_dialog {
                 $cflang = $cflang[ $comboboxcl->get_active ]->[0];
             }
             run_ocr( $ocr_engine[ $combobe->get_active ]->[0],
-                $tesslang, $cflang, $cbt->get_active, $spinbutton->get_value );
+                $tesslang, $cflang, $cbto->get_active, $spinbutton->get_value );
         }
     );
 
@@ -6172,9 +6184,10 @@ sub preferences {
     $notebook->append_page( $vbox1, Gtk3::Label->new( __('Scan options') ) );
 
     my (
-        $vbox2,        $fileentry,   $cbw,         $cbt,
-        $tmpentry,     $spinbuttonw, $spinbuttonb, $spinbuttond,
-        $ocr_function, $comboo,      $cbv,         $cbb
+        $vbox2,       $fileentry,    $cbw,         $cbtz,
+        $cbts,        $tmpentry,     $spinbuttonw, $spinbuttonb,
+        $spinbuttond, $ocr_function, $comboo,      $cbv,
+        $cbb
     ) = _preferences_general_options();
     $notebook->append_page( $vbox2, Gtk3::Label->new( __('General options') ) );
 
@@ -6225,7 +6238,8 @@ sub preferences {
             $SETTING{'cancel-between-pages'} = $cb_cancel_btw_pages->get_active;
             $SETTING{'default filename'}     = $fileentry->get_text;
             $SETTING{'restore window'}       = $cbw->get_active;
-            $SETTING{set_timestamp}          = $cbt->get_active;
+            $SETTING{use_timezone}           = $cbtz->get_active;
+            $SETTING{set_timestamp}          = $cbts->get_active;
             $SETTING{'convert whitespace to underscores'} = $cbb->get_active;
 
             if ( defined $windows ) {
@@ -6558,11 +6572,17 @@ sub _preferences_general_options {
     }
     $vbox->pack_start( $cbb, TRUE, TRUE, 0 );
 
+    # Timezone
+    my $cbtz =
+      Gtk3::CheckButton->new_with_label( __('Use timezone from locale') );
+    if ( $SETTING{use_timezone} ) { $cbtz->set_active(TRUE) }
+    $vbox->pack_start( $cbtz, TRUE, TRUE, 0 );
+
     # Set file timestamp with metadata
-    my $cbt = Gtk3::CheckButton->new_with_label(
+    my $cbts = Gtk3::CheckButton->new_with_label(
         __('Set access and modification times to metadata date') );
-    if ( $SETTING{set_timestamp} ) { $cbt->set_active(TRUE) }
-    $vbox->pack_start( $cbt, TRUE, TRUE, 0 );
+    if ( $SETTING{set_timestamp} ) { $cbts->set_active(TRUE) }
+    $vbox->pack_start( $cbts, TRUE, TRUE, 0 );
 
     # Temporary directory settings
     $hbox = Gtk3::HBox->new;
@@ -6679,7 +6699,7 @@ sub _preferences_general_options {
                 [ $comboboxudt, $windows->{comboboxudt} ], $udtools );
         }
     );
-    return $vbox, $fileentry, $cbw, $cbt, $tmpentry, $spinbuttonw,
+    return $vbox, $fileentry, $cbw, $cbtz, $cbts, $tmpentry, $spinbuttonw,
       $spinbuttonb, $spinbuttond, \@ocr_function, $comboo, $cbv, $cbb;
 }
 

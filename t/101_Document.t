@@ -1,9 +1,8 @@
 use warnings;
 use strict;
-use Test::More tests => 39;
+use Test::More tests => 42;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk3 -init;    # Could just call init separately
-use Date::Calc qw(Today);
 
 BEGIN {
     use_ok('Gscan2pdf::Document');
@@ -151,7 +150,6 @@ is(
 
 #########################
 
-my $date_string = sprintf "D:%d%02d%02d000000+00'00'", Today();
 is_deeply(
     Gscan2pdf::Document::prepare_output_metadata(
         'PDF',
@@ -173,6 +171,67 @@ is_deeply(
         CreationDate => "D:20160210000000+00'00'"
     },
     'prepare_output_metadata'
+);
+
+is_deeply(
+    Gscan2pdf::Document::prepare_output_metadata(
+        'PDF',
+        {
+            date => [ 2016, 2, 10 ],
+            tz   => [ 0,    0, 0, 1, 0, 0, 0 ],
+            author     => 'a.n.other',
+            title      => 'title',
+            'subject'  => 'subject',
+            'keywords' => 'keywords'
+        }
+    ),
+    {
+        ModDate      => "D:20160210000000+01'00'",
+        Creator      => "gscan2pdf v$Gscan2pdf::Document::VERSION",
+        Author       => 'a.n.other',
+        Title        => 'title',
+        Subject      => 'subject',
+        Keywords     => 'keywords',
+        CreationDate => "D:20160210000000+01'00'"
+    },
+    'prepare_output_metadata with tz'
+);
+
+#########################
+
+my %settings = (
+    author        => 'a.n.other',
+    title         => 'title',
+    subject       => 'subject',
+    keywords      => 'keywords',
+    'date offset' => 2
+);
+my @today = ( 2016, 2, 10 );
+my @timezone = ( 0, 0, 0, 1, 0, 0, 0 );
+is_deeply(
+    Gscan2pdf::Document::collate_metadata( \%settings, \@today ),
+    {
+        date       => [ 2016, 2, 12 ],
+        author     => 'a.n.other',
+        title      => 'title',
+        'subject'  => 'subject',
+        'keywords' => 'keywords'
+    },
+    'collate basic metadata'
+);
+
+$settings{'use_timezone'} = TRUE;
+is_deeply(
+    Gscan2pdf::Document::collate_metadata( \%settings, \@today, \@timezone ),
+    {
+        date => [ 2016, 2, 12 ],
+        tz   => [ 0,    0, 0, 1, 0, 0, 0 ],
+        author     => 'a.n.other',
+        title      => 'title',
+        'subject'  => 'subject',
+        'keywords' => 'keywords'
+    },
+    'collate basic metadata'
 );
 
 #########################

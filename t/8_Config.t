@@ -108,6 +108,7 @@ Gscan2pdf::Config::add_defaults( \%output );
     'restore window'                    => TRUE,
     'date offset'                       => 0,
     set_timestamp                       => TRUE,
+    use_timezone                        => TRUE,
     'pdf compression'                   => 'auto',
     'tiff compression'                  => undef,
     'pdf font'                          => undef,

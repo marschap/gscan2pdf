@@ -54,6 +54,7 @@ Readonly my $PROCESS_FAILED               => -1;
 Readonly my $SIGNAL_MASK                  => 127;
 Readonly my $MONTHS_PER_YEAR              => 12;
 Readonly my $DAYS_PER_MONTH               => 31;
+Readonly my $MINUTES_PER_HOUR             => 60;
 Readonly my $ID_URI                       => 0;
 Readonly my $ID_PAGE                      => 1;
 Readonly my $STRFTIME_YEAR_OFFSET         => -1900;
@@ -2069,14 +2070,18 @@ sub expand_metadata_pattern {
 # run unit tests on the sub, it has been moved here.
 
 sub collate_metadata {
-    my ($settings) = @_;
+    my ( $settings, $today, $timezone ) = @_;
     my %metadata;
     for my $key (qw/author title subject keywords/) {
         if ( defined $settings->{$key} ) {
             $metadata{$key} = $settings->{$key};
         }
     }
-    $metadata{date} = [ Add_Delta_Days( Today(), $settings->{'date offset'} ) ];
+    $metadata{date} =
+      [ Add_Delta_Days( @{$today}, $settings->{'date offset'} ) ];
+    if ( defined $settings->{use_timezone} ) {
+        $metadata{tz} = $timezone;
+    }
     return \%metadata;
 }
 
@@ -2087,12 +2092,21 @@ sub prepare_output_metadata {
     if ( $type eq 'PDF' or $type eq 'DjVu' ) {
         my $dateformat =
           $type eq 'PDF'
-          ? "D:%4i%02i%02i000000+00'00'"
-          : '%4i-%02i-%02i 00:00:00+00:00';
+          ? "D:%4i%02i%02i000000%1s%02i'%02i'"
+          : '%4i-%02i-%02i 00:00:00%1s%02i:%02i';
         my ( $year, $month, $day ) = @{ $metadata->{date} };
-        $h{CreationDate} = sprintf $dateformat, $year, $month, $day;
-        $h{ModDate}      = $h{CreationDate};
-        $h{Creator}      = "gscan2pdf v$Gscan2pdf::Document::VERSION";
+        my ( $sign, $dh, $dm ) = ( q{+}, 0, 0 );
+        if ( defined $metadata->{tz} ) {
+            ( undef, undef, undef, $dh, $dm, undef, undef ) =
+              @{ $metadata->{tz} };
+            if ( $dh * $MINUTES_PER_HOUR + $dm < 0 ) { $sign = q{-} }
+            $dh = abs $dh;
+            $dm = abs $dm;
+        }
+        $h{CreationDate} = sprintf $dateformat, $year, $month, $day, $sign,
+          $dh, $dm;
+        $h{ModDate} = $h{CreationDate};
+        $h{Creator} = "gscan2pdf v$Gscan2pdf::Document::VERSION";
         if ( $type eq 'DjVu' ) { $h{Producer} = 'djvulibre' }
         for my $key (qw/author title subject keywords/) {
             if ( defined $metadata->{$key} ) {
