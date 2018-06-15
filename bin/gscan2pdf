@@ -7474,22 +7474,19 @@ Ignore listed devices.
 Note that this is a device name regular expression, e.g. /dev/video, and not the
 name as listed in the scan window, e.g. Noname Integrated_Webcam_HD.
 
-=head4 Default filename for PDF files
+=head4 Default filename for PDF or DjVu files
 
-The following variables are available, which are replaced by the corresponding
-metadata:
+All strftime codes (e.g. %Y for the current year) are available as variables,
+with the following additions:
 
- %a	author
- %t	title
- %y	document's year
- %Y	today's year
- %m	document's month
- %M	today's month
- %d	document's day
- %D	today's day
- %H	today's hour
- %I	today's minute
- %S	today's second
+ %Da	author
+ %Dt	title
+
+All document date codes use strftime codes with a leading D, e.g.:
+
+ %DY	document year
+ %Dm	document month
+ %Dd	document day
 
 =head2 View
 
