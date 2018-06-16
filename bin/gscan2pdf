@@ -67,6 +67,7 @@ use Gtk3::SimpleList;
 
 # -init should not be necessary, as we use $app->run, but without it,
 # the config file is saved with the numeric locale
+# and the application name is shown as Perl in GNOME 3
 use Gtk3 0.028 -init;
 use Cwd;               # To obtain current working directory
 use File::Basename;    # Split filename into dir, file, ext
