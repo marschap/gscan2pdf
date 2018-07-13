@@ -109,6 +109,7 @@ sub new {
         }
     }
 
+    $logger->info("New page written as $self->{filename} ($self->{uuid})");
     return $self;
 }
 
@@ -720,7 +721,7 @@ sub im_object {
     my ($self) = @_;
     my $image  = Image::Magick->new;
     my $x      = $image->Read( $self->{filename} );
-    if ("$x") { $logger->warn($x) }
+    if ("$x") { $logger->warn("Error creating IM object - $x") }
     return $image;
 }
 
