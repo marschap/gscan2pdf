@@ -4,6 +4,7 @@
   (t/175_open_session2.t fails on i686: Long integer size is not compatible)
 * Optionally also include timezone and time information in metadata of PDF or
   DjVU. Closes feature request #102 (always sets the time to 0 UTC)
+* Don't unnecessarily use tiffcp on single-page TIFFs
 
 
 2.1.2 (23.05.2018):

@@ -2725,8 +2725,28 @@ sub _thread_import_file {
         }
         when ('Tagged Image File Format') {
 
+            # Only one page, so skip tiffcp in case it gives us problems
+            if ( $options{last} == 1 ) {
+                $self->{progress} = 1;
+                $self->{message} = sprintf __('Importing page %i of %i'), 1, 1;
+                my $page = Gscan2pdf::Page->new(
+                    filename => $options{info}->{path},
+                    dir      => $options{dir},
+                    delete   => FALSE,
+                    format   => $options{info}->{format},
+                );
+                $self->{return}->enqueue(
+                    {
+                        type => 'page',
+                        uuid => $options{uuid},
+                        page => $page->freeze
+                    }
+                );
+            }
+
             # Split the tiff into its pages and import them individually
-            if ( $options{last} >= $options{first} and $options{first} > 0 ) {
+            elsif ( $options{last} >= $options{first} and $options{first} > 0 )
+            {
                 for my $i ( $options{first} - 1 .. $options{last} - 1 ) {
                     $self->{progress} =
                       $i / ( $options{last} - $options{first} + 1 );
@@ -2741,9 +2761,18 @@ sub _thread_import_file {
                             SUFFIX => '.tif',
                             UNLINK => FALSE
                         );
-                        exec_command(
+                        my ( $status, $out, $err ) =
+                          exec_command(
                             [ 'tiffcp', "$options{info}->{path},$i", $tif ],
                             $options{pidfile} );
+                        if ( defined $err and $err ne $EMPTY ) {
+                            $logger->error(
+"Caught error extracting page $i from $options{info}->{path}: $err"
+                            );
+                            _thread_throw_error( $self, $options{uuid},
+"Caught error extracting page $i from $options{info}->{path}: $err"
+                            );
+                        }
                     }
                     catch {
                         if ( defined $tif ) {
