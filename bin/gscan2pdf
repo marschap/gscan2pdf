@@ -7654,6 +7654,19 @@ terrier (L<http://www.lesbonscomptes.com/recoll/>)
 
 =back
 
+=head2 How can I change the colour of the selection box in the image viewer?
+
+Create a file called C<~/.config/gtk-3.0/gtk.css> with the following content:
+
+ .rubberband,
+ rubberband,
+ flowbox rubberband,
+ treeview.view rubberband,
+ .content-view rubberband,
+ .content-view .rubberband {
+   border: 1px solid #2a76c6;
+   background-color: rgba(42, 118, 198, 0.2); }
+
 =head1 See Also
 
 XSane (L<http://xsane.org/>)
