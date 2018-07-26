@@ -634,6 +634,7 @@ sub application_startup_callback {
 
 sub application_activate_callback {
     $window->present;
+    return;
 }
 
 # Check for presence of various packages
