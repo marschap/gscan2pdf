@@ -11,7 +11,8 @@ use Date::Calc qw(Add_Delta_Days Today);
 use Data::Dumper;
 $Data::Dumper::Sortkeys = 1;
 use Readonly;
-Readonly my $ENTRY_WIDTH => 10;
+Readonly my $ENTRY_WIDTH_DATE     => 10;
+Readonly my $ENTRY_WIDTH_DATETIME => 19;
 
 use Glib::Object::Subclass Gtk3::Window::,
   signals => {
@@ -42,6 +43,13 @@ use Glib::Object::Subclass Gtk3::Window::,
         'Gtk3::VBox',                                                 # package
         [qw/readable writable/]                                       # flags
     ),
+    Glib::ParamSpec->boolean(
+        'include-time',                                               # name
+        'Specify the time as well as date',                           # nickname
+        'Whether to allow the time, as well as the date, to be entered', # blurb
+        FALSE,                     # default
+        [qw/readable writable/]    # flags
+    ),
   ];
 
 our $VERSION = '2.1.2';
@@ -54,6 +62,8 @@ my $INTREGEX = qr{^(.*)           # start of message
                   \b[[:digit:]]+\b # integer
                   (.*)$           # rest of message
                  }xsm;
+my $DATE_FORMAT     = '%04d-%02d-%02d';
+my $DATETIME_FORMAT = '%04d-%02d-%02d %02d:%02d:%02d';
 
 sub INIT_INSTANCE {
     my $self = shift;
@@ -73,6 +83,9 @@ sub SET_PROPERTY {
     $self->{$name} = $newval;
     if ( $name eq 'border_width' ) {
         $self->get('vbox')->set( 'border-width', $newval );
+    }
+    elsif ( $name eq 'include_time' ) {
+        $self->on_toggle_include_time($newval);
     }
     return;
 }
@@ -102,7 +115,39 @@ sub on_key_press_event {
     return Gtk3::EVENT_STOP;
 }
 
-sub add_metadata_dialog {
+sub on_toggle_include_time {
+    my ( $self, $newval ) = @_;
+    if ( defined $self->{mdwidgets} ) {
+        if ($newval) {
+            $self->{mdwidgets}{button_now}->get_child->set_text( __('Now') );
+            $self->{mdwidgets}{button_now}
+              ->set_tooltip_text( __('Use current date and time') );
+            $self->{mdwidgets}{date}->set_max_length($ENTRY_WIDTH_DATETIME);
+            $self->{mdwidgets}{date}
+              ->set_text( $self->{mdwidgets}{date}->get_text . ' 00:00:00' );
+        }
+        else {
+            $self->{mdwidgets}{button_now}->get_child->set_text( __('Today') );
+            $self->{mdwidgets}{button_now}
+              ->set_tooltip_text( __("Use today's date") );
+            $self->{mdwidgets}{date}->set_max_length($ENTRY_WIDTH_DATE);
+        }
+    }
+    return;
+}
+
+sub on_clicked_specify_datetime {
+    my ( $widget, $self ) = @_;
+    if ( $self->{mdwidgets}{button_specify_dt}->get_active ) {
+        $self->{mdwidgets}{datetime_box}->show;
+    }
+    else {
+        $self->{mdwidgets}{datetime_box}->hide;
+    }
+    return;
+}
+
+sub add_metadata {
     my ( $self, $defaults ) = @_;
     my ($vbox) = $self->get('vbox');
 
@@ -113,44 +158,72 @@ sub add_metadata_dialog {
     # Frame for metadata
     my $frame = Gtk3::Frame->new( __('Document Metadata') );
     $hboxmd->pack_start( $frame, TRUE, TRUE, 0 );
-    my $vboxm = Gtk3::VBox->new;
-    $vboxm->set_border_width( $self->get('border-width') );
-    $frame->add($vboxm);
+    my $hboxm = Gtk3::VBox->new;
+    $hboxm->set_border_width( $self->get('border-width') );
+    $frame->add($hboxm);
 
     # grid to align widgets
     my $grid = Gtk3::Grid->new;
-    $vboxm->pack_start( $grid, TRUE, TRUE, 0 );
+    my $row  = 0;
+    $hboxm->pack_start( $grid, TRUE, TRUE, 0 );
 
     # Date/time
-    my $hboxe = Gtk3::HBox->new;
-    my $row   = 0;
-    $grid->attach( $hboxe, 0, $row, 1, 1 );
-    my $labele = Gtk3::Label->new( __('Date') );
-    $hboxe->pack_start( $labele, FALSE, TRUE, 0 );
+    my $dtframe = Gtk3::Frame->new( __('Date/Time') );
+    $grid->attach( $dtframe, 0, $row++, 2, 1 );
+    $dtframe->set_hexpand(TRUE);
+    my $vboxdt = Gtk3::VBox->new;
+    $vboxdt->set_border_width( $self->get('border-width') );
+    $dtframe->add($vboxdt);
 
-    my $entryd = Gtk3::Entry->new;
-    $entryd->set_max_length($ENTRY_WIDTH);
+    # the first radio button has to set the group,
+    # which is undef for the first button
+    # Now button
+    my $bnow = Gtk3::RadioButton->new_with_label( undef, __('Now') );
+    $bnow->set_tooltip_text( __('Use current date and time') );
+    $vboxdt->pack_start( $bnow, TRUE, TRUE, 0 );
+
+    # Specify button
+    my $bspecify_dt =
+      Gtk3::RadioButton->new_with_label_from_widget( $bnow, __('Specify') );
+    $bspecify_dt->set_tooltip_text( __('Specify date and time') );
+    $vboxdt->pack_start( $bspecify_dt, TRUE, TRUE, 0 );
+
+    $bspecify_dt->signal_connect(
+        clicked => \&on_clicked_specify_datetime,
+        $self
+    );
+
+    my $entryd        = Gtk3::Entry->new;
+    my @today_and_now = Add_Delta_Days( @{ $defaults->{date}{today} },
+        $defaults->{date}{offset} );
+    if ( defined $defaults->{date}{time} ) {
+        push @today_and_now, @{ $defaults->{date}{time} };
+    }
     $entryd->set_text(
         Gscan2pdf::Document::expand_metadata_pattern(
-            template      => '%Y-%m-%d',
-            today_and_now => [
-                Add_Delta_Days(
-                    @{ $defaults->{date}{today} },
-                    $defaults->{date}{offset}
-                )
-            ]
+            template => defined $defaults->{date}{time}
+            ? '%Y-%m-%d %H:%M:%S'
+            : '%Y-%m-%d',
+            today_and_now => \@today_and_now,
         )
     );
     $entryd->set_activates_default(TRUE);
     $entryd->set_tooltip_text( __('Year-Month-Day') );
     $entryd->set_alignment(1.);    # Right justify
-    $entryd->signal_connect( 'insert-text' => \&insert_text_handler );
+    $entryd->signal_connect( 'insert-text' => \&insert_text_handler, $self );
     $entryd->signal_connect(
         'focus-out-event' => sub {
             my $text = $entryd->get_text;
             if ( defined $text and $text ne $EMPTY ) {
-                $entryd->set_text( sprintf '%04d-%02d-%02d',
-                    Gscan2pdf::Document::text_to_date($text) );
+                if ( $self->get('include-time') ) {
+                    $text = sprintf $DATETIME_FORMAT,
+                      Gscan2pdf::Document::text_to_datetime($text);
+                }
+                else {
+                    $text = sprintf $DATE_FORMAT,
+                      Gscan2pdf::Document::text_to_datetime($text);
+                }
+                $entryd->set_text($text);
             }
             return FALSE;
         }
@@ -170,8 +243,8 @@ sub add_metadata_dialog {
 
             # Editing the entry and clicking the edit button bypasses the
             # focus-out-event, so update the date now
-            my ( $year, $month, $day ) =
-              Gscan2pdf::Document::text_to_date( $entryd->get_text );
+            my ( $year, $month, $day, $hour, $min, $sec ) =
+              Gscan2pdf::Document::text_to_datetime( $entryd->get_text );
 
             $calendar->select_day($day);
             $calendar->select_month( $month - 1, $year );
@@ -180,16 +253,16 @@ sub add_metadata_dialog {
                 day_selected => sub {
                     ( $year, $month, $day ) = $calendar->get_date;
                     $month += 1;
-                    $entryd->set_text( sprintf '%04d-%02d-%02d',
-                        $year, $month, $day );
+                    $entryd->set_text( sprintf $DATETIME_FORMAT,
+                        $year, $month, $day, $hour, $min, $sec );
                 }
             );
             $calendar->signal_connect(
                 day_selected_double_click => sub {
                     ( $year, $month, $day ) = $calendar->get_date;
                     $month += 1;
-                    $entryd->set_text( sprintf '%04d-%02d-%02d',
-                        $year, $month, $day );
+                    $entryd->set_text( sprintf $DATETIME_FORMAT,
+                        $year, $month, $day, $hour, $min, $sec );
                     $window_date->destroy;
                 }
             );
@@ -206,8 +279,8 @@ sub add_metadata_dialog {
                     $calendar->select_day($day);
                     $calendar->select_month( $month - 1, $year );
                     $calendar->signal_handler_unblock($calendar_s);
-                    $entryd->set_text( sprintf '%04d-%02d-%02d',
-                        $year, $month, $day );
+                    $entryd->set_text( sprintf $DATETIME_FORMAT,
+                        $year, $month, $day, $hour, $min, $sec );
                 }
             );
             $vbox_date->pack_start( $today, TRUE, TRUE, 0 );
@@ -216,10 +289,15 @@ sub add_metadata_dialog {
         }
     );
     $button->set_tooltip_text( __('Select date with calendar') );
-    $hboxe = Gtk3::HBox->new;
-    $grid->attach( $hboxe, 1, $row++, 1, 1 );
+    my $hboxe = Gtk3::HBox->new;
+    $vboxdt->pack_start( $hboxe, TRUE, TRUE, 0 );
     $hboxe->pack_end( $button, FALSE, FALSE, 0 );
     $hboxe->pack_end( $entryd, FALSE, FALSE, 0 );
+
+    # Don't show these widgets when the window is shown
+    $hboxe->set_no_show_all(TRUE);
+    $entryd->show;
+    $button->show;
 
     my @label = (
         { title    => __('Title') },
@@ -228,8 +306,11 @@ sub add_metadata_dialog {
         { keywords => __('Keywords') },
     );
     my %widgets = (
-        box  => $hboxmd,
-        date => $entryd,
+        box               => $hboxmd,
+        datetime_box      => $hboxe,
+        date              => $entryd,
+        button_now        => $bnow,
+        button_specify_dt => $bspecify_dt,
     );
     for my $entry (@label) {
         my ( $name, $label ) = %{$entry};
@@ -245,14 +326,24 @@ sub add_metadata_dialog {
         $hbox->pack_start( $entry, TRUE, TRUE, 0 );
         $widgets{$name} = $entry;
     }
-    return %widgets;
+    $self->{mdwidgets} = \%widgets;
+    $self->on_toggle_include_time( $self->get('include-time') );
+    on_clicked_specify_datetime( $bspecify_dt, $self );
+    return;
 }
 
 sub insert_text_handler {
-    my ( $widget, $string, $len, $position ) = @_;
+    my ( $widget, $string, $len, $position, $self ) = @_;
 
     # only allow integers and -
-    if ( $string =~ /^[\d\-]+$/smx ) {
+    if (
+        ( not $self->get('include-time') and $string =~ /^[\d\-]+$/smx )
+        or
+
+        # only allow integers, space, : and -
+        ( $self->get('include-time') and $string =~ /^[\d\- :]+$/smx )
+      )
+    {
         $widget->signal_handlers_block_by_func( \&insert_text_handler );
         $widget->insert_text( $string, $len, $position++ );
         $widget->signal_handlers_unblock_by_func( \&insert_text_handler );

@@ -255,6 +255,7 @@ sub add_defaults {
         cache                               => undef,
         'restore window'                    => TRUE,
         set_timestamp                       => TRUE,
+        use_time                            => FALSE,
         use_timezone                        => TRUE,
         'date offset'                       => 0,
         'pdf compression'                   => 'auto',

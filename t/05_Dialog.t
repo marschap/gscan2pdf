@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 26;
+use Test::More tests => 27;
 use Glib qw(TRUE FALSE);    # To get TRUE and FALSE
 use Gtk3 -init;
 use Scalar::Util;
@@ -74,11 +74,11 @@ $event = Gtk3::Gdk::Event->new('key-press');
 $event->keyval(Gtk3::Gdk::KEY_Delete);
 $dialog->signal_emit( 'key_press_event', $event );
 
-my %widgets = $dialog->add_metadata_dialog(
+$dialog->add_metadata(
     {
         date => {
             today  => [ 2017, 01, 01 ],
-            offset => 0,
+            offset => 0
         },
         title => {
             default     => 'title',
@@ -98,11 +98,29 @@ my %widgets = $dialog->add_metadata_dialog(
         },
     }
 );
-is( $widgets{date}->get_text,     '2017-01-01', 'date' );
-is( $widgets{author}->get_text,   'author',     'author' );
-is( $widgets{title}->get_text,    'title',      'title' );
-is( $widgets{subject}->get_text,  'subject',    'subject' );
-is( $widgets{keywords}->get_text, 'keywords',   'keywords' );
+is( $dialog->{mdwidgets}{date}->get_text,     '2017-01-01', 'date' );
+is( $dialog->{mdwidgets}{author}->get_text,   'author',     'author' );
+is( $dialog->{mdwidgets}{title}->get_text,    'title',      'title' );
+is( $dialog->{mdwidgets}{subject}->get_text,  'subject',    'subject' );
+is( $dialog->{mdwidgets}{keywords}->get_text, 'keywords',   'keywords' );
+
+$dialog = Gscan2pdf::Dialog->new;
+$dialog->set( 'include-time', TRUE );
+$dialog->add_metadata(
+    {
+        date => {
+            today  => [ 2017, 01, 01 ],
+            offset => 0,
+            time   => [ 23,   59, 5 ],
+            now    => FALSE
+        },
+    }
+);
+is(
+    $dialog->{mdwidgets}{date}->get_text,
+    '2017-01-01 23:59:05',
+    'date and time'
+);
 
 is(
     Gscan2pdf::Dialog::filter_message(

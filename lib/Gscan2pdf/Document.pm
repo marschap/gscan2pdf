@@ -54,7 +54,9 @@ Readonly my $PROCESS_FAILED               => -1;
 Readonly my $SIGNAL_MASK                  => 127;
 Readonly my $MONTHS_PER_YEAR              => 12;
 Readonly my $DAYS_PER_MONTH               => 31;
+Readonly my $HOURS_PER_DAY                => 24;
 Readonly my $MINUTES_PER_HOUR             => 60;
+Readonly my $SECONDS_PER_MINUTE           => 60;
 Readonly my $ID_URI                       => 0;
 Readonly my $ID_PAGE                      => 1;
 Readonly my $STRFTIME_YEAR_OFFSET         => -1900;
@@ -2009,11 +2011,15 @@ sub timestamp {
     return sprintf '%04d%02d%02d%02d%02d%02d', reverse @time[ 0 .. $YEAR ];
 }
 
-sub text_to_date {
+sub text_to_datetime {
     my ( $text, $thisyear, $thismonth, $thisday ) = @_;
-    my ( $year, $month, $day );
-    if ( defined $text and $text =~ /^(\d+)?-?(\d+)?-?(\d+)?$/smx ) {
-        ( $year, $month, $day ) = ( $1, $2, $3 );
+    my ( $year, $month, $day, $hour, $minute, $sec );
+    if ( defined $text
+        and $text =~
+        /^(\d+)?-?(\d+)?-?(\d+)?(?:\s(\d+)?:?(\d+)?:?(\d+)?)?$/smx )
+    {
+        ( $year, $month, $day, $hour, $minute, $sec ) =
+          ( $1, $2, $3, $4, $5, $6 );
     }
     if ( not defined $year ) { $year = $thisyear }
     if ( not defined $month or $month < 1 or $month > $MONTHS_PER_YEAR ) {
@@ -2022,13 +2028,22 @@ sub text_to_date {
     if ( not defined $day or $day < 1 or $day > $DAYS_PER_MONTH ) {
         $day = $thisday;
     }
-    return $year, $month, $day;
+    if ( not defined $hour or $hour > $HOURS_PER_DAY - 1 ) {
+        $hour = 0;
+    }
+    if ( not defined $minute or $minute > $MINUTES_PER_HOUR - 1 ) {
+        $minute = 0;
+    }
+    if ( not defined $sec or $sec > $SECONDS_PER_MINUTE - 1 ) {
+        $sec = 0;
+    }
+    return $year + 0, $month + 0, $day + 0, $hour + 0, $minute + 0, $sec + 0;
 }
 
 sub expand_metadata_pattern {
     my (%data) = @_;
-    my ( $dyear, $dmonth, $dday ) =
-      text_to_date( $data{docdate}, @{ $data{today_and_now} } );
+    my ( $dyear, $dmonth, $dday, $dhour, $dmin, $dsec ) =
+      text_to_datetime( $data{docdate}, @{ $data{today_and_now} } );
     my ( $tyear, $tmonth, $tday, $thour, $tmin, $tsec ) =
       @{ $data{today_and_now} };
     if ( not defined $thour ) { $thour = 0 }
@@ -2044,7 +2059,7 @@ sub expand_metadata_pattern {
         my $code     = $1;
         my $template = "$PERCENT$code";
         my $result   = POSIX::strftime(
-            $template, $tsec, $tmin, $thour, $dday,
+            $template, $dsec, $dmin, $dhour, $dday,
             $dmonth + $STRFTIME_MONTH_OFFSET,
             $dyear + $STRFTIME_YEAR_OFFSET
         );
@@ -2070,7 +2085,7 @@ sub expand_metadata_pattern {
 # run unit tests on the sub, it has been moved here.
 
 sub collate_metadata {
-    my ( $settings, $today, $timezone ) = @_;
+    my ( $settings, $today, $timezone, $time ) = @_;
     my %metadata;
     for my $key (qw/author title subject keywords/) {
         if ( defined $settings->{$key} ) {
@@ -2082,6 +2097,9 @@ sub collate_metadata {
     if ( defined $settings->{use_timezone} ) {
         $metadata{tz} = $timezone;
     }
+    if ( defined $settings->{use_time} ) {
+        $metadata{time} = $time;
+    }
     return \%metadata;
 }
 
@@ -2092,10 +2110,10 @@ sub prepare_output_metadata {
     if ( $type eq 'PDF' or $type eq 'DjVu' ) {
         my $dateformat =
           $type eq 'PDF'
-          ? "D:%4i%02i%02i000000%1s%02i'%02i'"
-          : '%4i-%02i-%02i 00:00:00%1s%02i:%02i';
+          ? "D:%4i%02i%02i%02i%02i%02i%1s%02i'%02i'"
+          : '%4i-%02i-%02i %02i:%02i:%02i%1s%02i:%02i';
         my ( $year, $month, $day ) = @{ $metadata->{date} };
-        my ( $sign, $dh, $dm ) = ( q{+}, 0, 0 );
+        my ( $hour, $min, $sec, $sign, $dh, $dm ) = ( 0, 0, 0, q{+}, 0, 0 );
         if ( defined $metadata->{tz} ) {
             ( undef, undef, undef, $dh, $dm, undef, undef ) =
               @{ $metadata->{tz} };
@@ -2103,7 +2121,11 @@ sub prepare_output_metadata {
             $dh = abs $dh;
             $dm = abs $dm;
         }
-        $h{CreationDate} = sprintf $dateformat, $year, $month, $day, $sign,
+        if ( defined $metadata->{time} ) {
+            ( $hour, $min, $sec ) = @{ $metadata->{time} };
+        }
+        $h{CreationDate} = sprintf $dateformat, $year, $month, $day, $hour,
+          $min, $sec, $sign,
           $dh, $dm;
         $h{ModDate} = $h{CreationDate};
         $h{Creator} = "gscan2pdf v$Gscan2pdf::Document::VERSION";

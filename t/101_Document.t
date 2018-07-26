@@ -1,6 +1,6 @@
 use warnings;
 use strict;
-use Test::More tests => 42;
+use Test::More tests => 46;
 use Glib 1.210 qw(TRUE FALSE);
 use Gtk3 -init;    # Could just call init separately
 
@@ -102,8 +102,11 @@ like( $fonts, qr/\w+/, 'exec_command produces some output from fc-list' );
 
 #########################
 
-my @date = Gscan2pdf::Document::text_to_date('2016-02-01');
-is_deeply( \@date, [ 2016, '02', '01' ], 'text_to_date' );
+my @date = Gscan2pdf::Document::text_to_datetime('2016-02-01');
+is_deeply( \@date, [ 2016, 2, 1, 0, 0, 0 ], 'text_to_datetime just date' );
+
+@date = Gscan2pdf::Document::text_to_datetime('2016-02-01 10:11:12');
+is_deeply( \@date, [ 2016, 2, 1, 10, 11, 12 ], 'text_to_datetime' );
 
 #########################
 
@@ -117,6 +120,18 @@ is(
     ),
     'a.n.other title 2016 1970 02 01 01 12 14 46 39',
     'expand_metadata_pattern'
+);
+
+is(
+    Gscan2pdf::Document::expand_metadata_pattern(
+        template      => '%Da %Dt %DY %Y %Dm %m %Dd %d %H %M %S %DH %DM %DS',
+        author        => 'a.n.other',
+        title         => 'title',
+        docdate       => '2016-02-01 10:11:12',
+        today_and_now => [ 1970, 01, 12, 14, 46, 39 ],
+    ),
+    'a.n.other title 2016 1970 02 01 01 12 14 46 39 10 11 12',
+    'expand_metadata_pattern with doc time'
 );
 
 #########################
@@ -197,6 +212,31 @@ is_deeply(
     'prepare_output_metadata with tz'
 );
 
+is_deeply(
+    Gscan2pdf::Document::prepare_output_metadata(
+        'PDF',
+        {
+            date => [ 2016, 2,  10 ],
+            time => [ 19,   59, 5 ],
+            tz   => [ 0,    0,  0, 1, 0, 0, 0 ],
+            author     => 'a.n.other',
+            title      => 'title',
+            'subject'  => 'subject',
+            'keywords' => 'keywords'
+        }
+    ),
+    {
+        ModDate      => "D:20160210195905+01'00'",
+        Creator      => "gscan2pdf v$Gscan2pdf::Document::VERSION",
+        Author       => 'a.n.other',
+        Title        => 'title',
+        Subject      => 'subject',
+        Keywords     => 'keywords',
+        CreationDate => "D:20160210195905+01'00'"
+    },
+    'prepare_output_metadata with time'
+);
+
 #########################
 
 my %settings = (
@@ -206,10 +246,13 @@ my %settings = (
     keywords      => 'keywords',
     'date offset' => 2
 );
-my @today = ( 2016, 2, 10 );
-my @timezone = ( 0, 0, 0, 1, 0, 0, 0 );
+my @today    = ( 2016, 2,  10 );
+my @timezone = ( 0,    0,  0, 1, 0, 0, 0 );
+my @time     = ( 19,   59, 5 );
 is_deeply(
-    Gscan2pdf::Document::collate_metadata( \%settings, \@today ),
+    Gscan2pdf::Document::collate_metadata(
+        \%settings, \@today, \@timezone, \@time
+    ),
     {
         date       => [ 2016, 2, 12 ],
         author     => 'a.n.other',
@@ -222,7 +265,9 @@ is_deeply(
 
 $settings{'use_timezone'} = TRUE;
 is_deeply(
-    Gscan2pdf::Document::collate_metadata( \%settings, \@today, \@timezone ),
+    Gscan2pdf::Document::collate_metadata(
+        \%settings, \@today, \@timezone, \@time
+    ),
     {
         date => [ 2016, 2, 12 ],
         tz   => [ 0,    0, 0, 1, 0, 0, 0 ],
@@ -231,7 +276,24 @@ is_deeply(
         'subject'  => 'subject',
         'keywords' => 'keywords'
     },
-    'collate basic metadata'
+    'collate timezone'
+);
+
+$settings{'use_time'} = TRUE;
+is_deeply(
+    Gscan2pdf::Document::collate_metadata(
+        \%settings, \@today, \@timezone, \@time
+    ),
+    {
+        date => [ 2016, 2,  12 ],
+        time => [ 19,   59, 5 ],
+        tz   => [ 0,    0,  0, 1, 0, 0, 0 ],
+        author     => 'a.n.other',
+        title      => 'title',
+        'subject'  => 'subject',
+        'keywords' => 'keywords'
+    },
+    'collate time'
 );
 
 #########################

@@ -91,7 +91,7 @@ use English qw( -no_match_vars )
 
 # To sort out LC_NUMERIC and $SIG{CHLD}
 use POSIX qw(locale_h :signal_h :errno_h :sys_wait_h);
-use Date::Calc qw(Delta_Days Add_Delta_Days Today Today_and_Now Timezone);
+use Date::Calc qw(Delta_Days Add_Delta_Days Today Now Today_and_Now Timezone);
 
 # Bind the Gio API
 # This is necessary mainly for Gtk3::Application
@@ -135,12 +135,14 @@ my $VERSION   = '2.1.2';
 # Image border to ensure that a scaled to fit image gets no scrollbars
 my $border = 1;
 
-my $debug    = FALSE;
-my $EMPTY    = q{};
-my $SPACE    = q{ };
-my $DOT      = q{.};
-my $PERCENT  = q{%};
-my $ASTERISK = q{*};
+my $debug           = FALSE;
+my $EMPTY           = q{};
+my $SPACE           = q{ };
+my $DOT             = q{.};
+my $PERCENT         = q{%};
+my $ASTERISK        = q{*};
+my $DATE_FORMAT     = '%04d-%02d-%02d';
+my $DATETIME_FORMAT = '%04d-%02d-%02d %02d:%02d:%02d';
 my (
     $test,   $help,       $log,    $log_level, @device,
     $locale, $test_image, $logger, $import
@@ -2041,11 +2043,18 @@ sub update_metadata_settings {
           $mdwidgets->{$name}->update( $SETTING{"$name-suggestions"} );
     }
 
+    if ( $mdwidgets->{button_now}->get_active ) {
+        $mdwidgets->{date}->set_text( $SETTING{use_time}
+            ? sprintf $DATETIME_FORMAT,
+            Today_and_Now()
+            : sprintf $DATE_FORMAT, Today() );
+    }
+
     # the focus-out event validates a new document date before the save button
     # is pressed, so we can simply take the contents of the field
-    $SETTING{'date offset'} =
-      Delta_Days( Today(),
-        Gscan2pdf::Document::text_to_date( $mdwidgets->{date}->get_text ) );
+    my @datetime =
+      Gscan2pdf::Document::text_to_datetime( $mdwidgets->{date}->get_text );
+    $SETTING{'date offset'} = Delta_Days( Today(), @datetime[ 0 .. 2 ] );
 
     return;
 }
@@ -2226,7 +2235,8 @@ sub save_dialog {
         'transient-for'  => $window,
         title            => __('Save'),
         'hide-on-delete' => TRUE,
-        border_width     => $BORDER_WIDTH
+        border_width     => $BORDER_WIDTH,
+        'include-time'   => $SETTING{use_time},
     );
     my $vbox = $windowi->get('vbox');
 
@@ -2344,30 +2354,35 @@ sub save_dialog {
     $hboxc->pack_end( $combobtc, FALSE, FALSE, 0 );
 
     # metadata options
-    my %mdwidgets = $windowi->add_metadata_dialog(
-        {
-            date => {
-                today  => [ Today() ],
-                offset => $SETTING{'date offset'},
-            },
-            title => {
-                default     => $SETTING{'title'},
-                suggestions => $SETTING{'title-suggestions'},
-            },
-            author => {
-                default     => $SETTING{'author'},
-                suggestions => $SETTING{'author-suggestions'},
-            },
-            subject => {
-                default     => $SETTING{'subject'},
-                suggestions => $SETTING{'subject-suggestions'},
-            },
-            keywords => {
-                default     => $SETTING{'keywords'},
-                suggestions => $SETTING{'keywords-suggestions'},
-            },
-        }
+    my %metadata = (
+        date => {
+            today  => [ Today() ],
+            offset => $SETTING{'date offset'},
+        },
+        title => {
+            default     => $SETTING{'title'},
+            suggestions => $SETTING{'title-suggestions'},
+        },
+        author => {
+            default     => $SETTING{'author'},
+            suggestions => $SETTING{'author-suggestions'},
+        },
+        subject => {
+            default     => $SETTING{'subject'},
+            suggestions => $SETTING{'subject-suggestions'},
+        },
+        keywords => {
+            default     => $SETTING{'keywords'},
+            suggestions => $SETTING{'keywords-suggestions'},
+        },
     );
+    if ( $SETTING{use_time} ) {
+        $metadata{date}{time} = [ Now() ];
+        if ( $SETTING{'date offset'} ) {
+            $metadata{date}{now} = TRUE;
+        }
+    }
+    $windowi->add_metadata( \%metadata );
 
     # PDF options
     my $vboxp = Gtk3::VBox->new;
@@ -2417,11 +2432,9 @@ sub save_dialog {
     $combobi->signal_connect(
         changed => \&image_type_changed_callback,
         [
-            \@type,            $vboxp,             $hboxf,
-            \@pdf_compression, $combob,            $hboxpq,
-            $hboxc,            \@tiff_compression, $combobtc,
-            $hboxtq,           $mdwidgets{box},    $hboxps,
-            \@ps_backend,
+            \@type,    $vboxp,  $hboxf,  \@pdf_compression,
+            $combob,   $hboxpq, $hboxc,  \@tiff_compression,
+            $combobtc, $hboxtq, $hboxps, \@ps_backend,
         ]
     );
     combobox_set_active( $combobi, $SETTING{'image type'}, @type );
@@ -2463,12 +2476,12 @@ sub save_dialog {
     $save_button->signal_connect(
         clicked => \&save_button_clicked_callback,
         [
-            \@type,        $combobi,           $buttond,
-            $spinbuttond,  \@pdf_compression,  $combob,
-            $spinbuttonpq, \@fonts,            $combof,
-            \%mdwidgets,   \@tiff_compression, $combobtc,
-            $spinbuttontq, $kbutton,           $pshbutton,
-            $combops,      \@ps_backend,
+            \@type,             $combobi,          $buttond,
+            $spinbuttond,       \@pdf_compression, $combob,
+            $spinbuttonpq,      \@fonts,           $combof,
+            \@tiff_compression, $combobtc,         $spinbuttontq,
+            $kbutton,           $pshbutton,        $combops,
+            \@ps_backend,
         ]
     );
 
@@ -2481,11 +2494,9 @@ sub save_dialog {
     image_type_changed_callback(
         $combobi,
         [
-            \@type,            $vboxp,             $hboxf,
-            \@pdf_compression, $combob,            $hboxpq,
-            $hboxc,            \@tiff_compression, $combobtc,
-            $hboxtq,           $mdwidgets{box},    $hboxps,
-            \@ps_backend,
+            \@type,    $vboxp,  $hboxf,  \@pdf_compression,
+            $combob,   $hboxpq, $hboxc,  \@tiff_compression,
+            $combobtc, $hboxtq, $hboxps, \@ps_backend,
         ]
     );
     $windowi->resize( 1, 1 );
@@ -2497,8 +2508,7 @@ sub image_type_changed_callback {
     my (
         $type,     $vboxp,  $hboxf,  $pdf_compression,
         $combob,   $hboxpq, $hboxc,  $tiff_compression,
-        $combobtc, $hboxtq, $hboxmd, $hboxps,
-        $ps_backend,
+        $combobtc, $hboxtq, $hboxps, $ps_backend,
     ) = @{$data};
     given ( $type->[ $widget->get_active ][0] ) {
         when (/pdf/xsm) {
@@ -2508,10 +2518,10 @@ sub image_type_changed_callback {
             $hboxtq->hide;
             $hboxps->hide;
             if ( $_ eq 'pdf' ) {
-                $hboxmd->show_all;
+                $windowi->{mdwidgets}{box}->show;
             }
             else {    # don't show metadata for pre-/append to pdf
-                $hboxmd->hide;
+                $windowi->{mdwidgets}{box}->hide;
             }
             if ( $pdf_compression->[ $combob->get_active ][0] eq 'jpg' ) {
                 $hboxpq->show_all;
@@ -2521,7 +2531,7 @@ sub image_type_changed_callback {
             }
         }
         when ('djvu') {
-            $hboxmd->show_all;
+            $windowi->{mdwidgets}{box}->show;
             $hboxc->hide;
             $vboxp->hide;
             $hboxf->hide;
@@ -2531,7 +2541,7 @@ sub image_type_changed_callback {
         }
         when ('tif') {
             $hboxc->show_all;
-            $hboxmd->hide;
+            $windowi->{mdwidgets}{box}->hide;
             $vboxp->hide;
             $hboxf->hide;
             $hboxpq->hide;
@@ -2545,7 +2555,7 @@ sub image_type_changed_callback {
         }
         when ('ps') {
             $hboxc->hide;
-            $hboxmd->hide;
+            $windowi->{mdwidgets}{box}->hide;
             $vboxp->hide;
             $hboxf->hide;
             $hboxpq->hide;
@@ -2553,7 +2563,7 @@ sub image_type_changed_callback {
             $hboxps->show_all;
         }
         when ('jpg') {
-            $hboxmd->hide;
+            $windowi->{mdwidgets}{box}->hide;
             $hboxf->hide;
             $hboxc->hide;
             $vboxp->hide;
@@ -2562,7 +2572,7 @@ sub image_type_changed_callback {
             $hboxps->hide;
         }
         default {
-            $hboxmd->hide;
+            $windowi->{mdwidgets}{box}->hide;
             $vboxp->hide;
             $hboxf->hide;
             $hboxc->hide;
@@ -2591,10 +2601,11 @@ sub list_of_pages {
 sub save_button_clicked_callback {
     my ( $widget, $data ) = @_;
     my (
-        $type,            $combobi,   $buttond,          $spinbuttond,
-        $pdf_compression, $combob,    $spinbuttonpq,     $fonts,
-        $combof,          $mdwidgets, $tiff_compression, $combobtc,
-        $spinbuttontq,    $kbutton,   $pshbutton,        $combops,
+        $type,             $combobi,         $buttond,
+        $spinbuttond,      $pdf_compression, $combob,
+        $spinbuttonpq,     $fonts,           $combof,
+        $tiff_compression, $combobtc,        $spinbuttontq,
+        $kbutton,          $pshbutton,       $combops,
         $ps_backend
     ) = @{$data};
 
@@ -2629,7 +2640,7 @@ sub save_button_clicked_callback {
 
             my $file_chooser;
             if ( $_ eq 'pdf' ) {
-                update_metadata_settings($mdwidgets);
+                update_metadata_settings( $windowi->{mdwidgets} );
 
                 # Set up file selector
                 $file_chooser = Gtk3::FileChooserDialog->new(
@@ -2645,7 +2656,7 @@ sub save_button_clicked_callback {
                       $SETTING{'convert whitespace to underscores'},
                     author        => $SETTING{author},
                     title         => $SETTING{title},
-                    docdate       => $mdwidgets->{date}->get_text,
+                    docdate       => $windowi->{mdwidgets}{date}->get_text,
                     today_and_now => [ Today_and_Now() ]
                 );
 
@@ -2674,7 +2685,7 @@ sub save_button_clicked_callback {
         }
         when ('djvu') {
 
-            update_metadata_settings($mdwidgets);
+            update_metadata_settings( $windowi->{mdwidgets} );
 
             # cd back to cwd to save
             chdir $SETTING{cwd};
@@ -2693,7 +2704,7 @@ sub save_button_clicked_callback {
                   $SETTING{'convert whitespace to underscores'},
                 author        => $SETTING{author},
                 title         => $SETTING{title},
-                docdate       => $mdwidgets->{date}->get_text,
+                docdate       => $windowi->{mdwidgets}{date}->get_text,
                 today_and_now => [ Today_and_Now() ]
             );
 
@@ -3311,7 +3322,7 @@ sub email {
     add_page_range($vbox);
 
     # PDF options
-    my %mdwidgets = $windowe->add_metadata_dialog(
+    $windowe->add_metadata(
         {
             date => {
                 today  => [ Today() ],
@@ -3351,7 +3362,7 @@ sub email {
         clicked => sub {
 
             # Set options
-            update_metadata_settings( \%mdwidgets );
+            update_metadata_settings( $windowe->{mdwidgets} );
 
             # Compile list of pages
             my $list_of_pages = list_of_pages;
@@ -3378,7 +3389,7 @@ sub email {
                   $SETTING{'convert whitespace to underscores'},
                 author        => $SETTING{author},
                 title         => $SETTING{title},
-                docdate       => $mdwidgets{date}->get_text,
+                docdate       => $windowe->{mdwidgets}{date}->get_text,
                 today_and_now => [ Today_and_Now() ]
             );
             if ( $filename =~ /^\s+$/xsm ) { $filename = 'document' }
@@ -6186,10 +6197,10 @@ sub preferences {
     $notebook->append_page( $vbox1, Gtk3::Label->new( __('Scan options') ) );
 
     my (
-        $vbox2,       $fileentry,    $cbw,         $cbtz,
-        $cbts,        $tmpentry,     $spinbuttonw, $spinbuttonb,
-        $spinbuttond, $ocr_function, $comboo,      $cbv,
-        $cbb
+        $vbox2,       $fileentry,   $cbw,          $cbtz,
+        $cbtm,        $cbts,        $tmpentry,     $spinbuttonw,
+        $spinbuttonb, $spinbuttond, $ocr_function, $comboo,
+        $cbv,         $cbb
     ) = _preferences_general_options();
     $notebook->append_page( $vbox2, Gtk3::Label->new( __('General options') ) );
 
@@ -6241,6 +6252,7 @@ sub preferences {
             $SETTING{'default filename'}     = $fileentry->get_text;
             $SETTING{'restore window'}       = $cbw->get_active;
             $SETTING{use_timezone}           = $cbtz->get_active;
+            $SETTING{use_time}               = $cbtm->get_active;
             $SETTING{set_timestamp}          = $cbts->get_active;
             $SETTING{'convert whitespace to underscores'} = $cbb->get_active;
 
@@ -6255,6 +6267,10 @@ sub preferences {
                     $SETTING{'allow-batch-flatbed'} );
                 $windows->set( 'cancel-between-pages',
                     $SETTING{'cancel-between-pages'} );
+            }
+
+            if ( defined $windowi ) {
+                $windowi->set( 'include-time', $SETTING{use_time} );
             }
 
             my @tmpdirs = File::Spec->splitdir($session);
@@ -6580,6 +6596,12 @@ sub _preferences_general_options {
     if ( $SETTING{use_timezone} ) { $cbtz->set_active(TRUE) }
     $vbox->pack_start( $cbtz, TRUE, TRUE, 0 );
 
+    # Time
+    my $cbtm =
+      Gtk3::CheckButton->new_with_label( __('Specify time as well as date') );
+    if ( $SETTING{use_time} ) { $cbtm->set_active(TRUE) }
+    $vbox->pack_start( $cbtm, TRUE, TRUE, 0 );
+
     # Set file timestamp with metadata
     my $cbts = Gtk3::CheckButton->new_with_label(
         __('Set access and modification times to metadata date') );
@@ -6701,7 +6723,8 @@ sub _preferences_general_options {
                 [ $comboboxudt, $windows->{comboboxudt} ], $udtools );
         }
     );
-    return $vbox, $fileentry, $cbw, $cbtz, $cbts, $tmpentry, $spinbuttonw,
+    return $vbox, $fileentry, $cbw, $cbtz, $cbtm, $cbts, $tmpentry,
+      $spinbuttonw,
       $spinbuttonb, $spinbuttond, \@ocr_function, $comboo, $cbv, $cbb;
 }
 
