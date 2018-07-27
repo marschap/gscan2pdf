@@ -46,17 +46,18 @@ use strict;
 use feature 'switch';
 no if $] >= 5.018, warnings => 'experimental::smartmatch';
 
+use Gscan2pdf::Dialog::Renumber;
+use Gscan2pdf::Dialog::Save;
+use Gscan2pdf::Dialog::Scan::CLI;
+use Gscan2pdf::Dialog::Scan::Image_Sane;
 use Gscan2pdf::Document;
 use Gscan2pdf::Frontend::Image_Sane;
 use Gscan2pdf::Frontend::CLI;
 use Gscan2pdf::Scanner::Profile;
-use Gscan2pdf::Dialog::Scan::Image_Sane;
-use Gscan2pdf::Dialog::Scan::CLI;
 use Gscan2pdf::Tesseract;
 use Gscan2pdf::Ocropus;
 use Gscan2pdf::Cuneiform;
 use Gscan2pdf::Unpaper;
-use Gscan2pdf::Dialog::Renumber;
 use Gscan2pdf::Canvas;
 use Gscan2pdf::Config;
 use Gscan2pdf::Translation '__';    # easier to extract strings with xgettext
@@ -2231,7 +2232,7 @@ sub save_dialog {
         return;
     }
 
-    $windowi = Gscan2pdf::Dialog->new(
+    $windowi = Gscan2pdf::Dialog::Save->new(
         'transient-for'  => $window,
         title            => __('Save'),
         'hide-on-delete' => TRUE,
@@ -3310,7 +3311,7 @@ sub email {
         return;
     }
 
-    $windowe = Gscan2pdf::Dialog->new(
+    $windowe = Gscan2pdf::Dialog::Save->new(
         'transient-for'  => $window,
         title            => __('Email as PDF'),
         'hide-on-delete' => TRUE,
