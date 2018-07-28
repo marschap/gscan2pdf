@@ -35,7 +35,7 @@
 # 6. create version directory in https://sourceforge.net/projects/gscan2pdf/files/gscan2pdf
 #     make file_releases
 # 7. Build packages for Ubuntu
-#    name the release -0~ppa1<release>, where release is cosmic, bionic, artful (dh9), xenial (dh9), trusty (< v2), precise (< v2), etc
+#    name the release -0~ppa1<release>, where release is cosmic, bionic, xenial (dh9), trusty (< v2), precise (< v2), etc
 #     debuild -S -sa
 #     dput gscan2pdf-ppa .changes
 #    https://launchpad.net/~jeffreyratcliffe/+archive
