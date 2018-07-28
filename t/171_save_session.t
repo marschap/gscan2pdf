@@ -31,9 +31,9 @@ $slist->import_files(
 );
 Gtk3->main;
 
-is(
+like(
     `file test.gs2p`,
-    "test.gs2p: gzip compressed data\n",
+    qr/test.gs2p: gzip compressed data(?:, original size 9728)?/,
     'Session file created'
 );
 cmp_ok( -s 'test.gs2p', '>', 0, 'Non-empty Session file created' );
