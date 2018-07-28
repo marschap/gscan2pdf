@@ -24,7 +24,7 @@ use Glib::Object::Subclass Gscan2pdf::Dialog::, properties => [
     ),
 ];
 
-our $VERSION = '2.1.2';
+our $VERSION = '2.1.3';
 my $EMPTY           = q{};
 my $DATE_FORMAT     = '%04d-%02d-%02d';
 my $DATETIME_FORMAT = '%04d-%02d-%02d %02d:%02d:%02d';

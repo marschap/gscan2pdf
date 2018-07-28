@@ -38,7 +38,7 @@ use Glib::Object::Subclass Gtk3::Window::,
     ),
   ];
 
-our $VERSION = '2.1.2';
+our $VERSION = '2.1.3';
 my $EMPTY    = q{};
 my $HEXREGEX = qr{^(.*)           # start of message
                   \b0x[[:xdigit:]]+\b # hex (e.g. address)
