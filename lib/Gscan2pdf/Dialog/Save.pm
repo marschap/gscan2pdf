@@ -120,20 +120,13 @@ sub add_metadata {
         $self
     );
 
-    my $entryd        = Gtk3::Entry->new;
-    my @today_and_now = Add_Delta_Days( @{ $defaults->{date}{today} },
+    my $entryd   = Gtk3::Entry->new;
+    my @datetime = Add_Delta_Days( @{ $defaults->{date}{today} },
         $defaults->{date}{offset} );
     if ( defined $defaults->{date}{time} ) {
-        push @today_and_now, @{ $defaults->{date}{time} };
+        push @datetime, @{ $defaults->{date}{time} };
     }
-    $entryd->set_text(
-        Gscan2pdf::Document::expand_metadata_pattern(
-            template => defined $defaults->{date}{time}
-            ? '%Y-%m-%d %H:%M:%S'
-            : '%Y-%m-%d',
-            today_and_now => \@today_and_now,
-        )
-    );
+    $entryd->set_text( $self->datetime_string(@datetime) );
     $entryd->set_activates_default(TRUE);
     $entryd->set_tooltip_text( __('Year-Month-Day') );
     $entryd->set_alignment(1.);    # Right justify
@@ -142,15 +135,11 @@ sub add_metadata {
         'focus-out-event' => sub {
             my $text = $entryd->get_text;
             if ( defined $text and $text ne $EMPTY ) {
-                if ( $self->get('include-time') ) {
-                    $text = sprintf $DATETIME_FORMAT,
-                      Gscan2pdf::Document::text_to_datetime($text);
-                }
-                else {
-                    $text = sprintf $DATE_FORMAT,
-                      Gscan2pdf::Document::text_to_datetime($text);
-                }
-                $entryd->set_text($text);
+                $entryd->set_text(
+                    $self->datetime_string(
+                        Gscan2pdf::Document::text_to_datetime($text)
+                    )
+                );
             }
             return FALSE;
         }
@@ -180,16 +169,22 @@ sub add_metadata {
                 day_selected => sub {
                     ( $year, $month, $day ) = $calendar->get_date;
                     $month += 1;
-                    $entryd->set_text( sprintf $DATETIME_FORMAT,
-                        $year, $month, $day, $hour, $min, $sec );
+                    $entryd->set_text(
+                        $self->datetime_string(
+                            $year, $month, $day, $hour, $min, $sec
+                        )
+                    );
                 }
             );
             $calendar->signal_connect(
                 day_selected_double_click => sub {
                     ( $year, $month, $day ) = $calendar->get_date;
                     $month += 1;
-                    $entryd->set_text( sprintf $DATETIME_FORMAT,
-                        $year, $month, $day, $hour, $min, $sec );
+                    $entryd->set_text(
+                        $self->datetime_string(
+                            $year, $month, $day, $hour, $min, $sec
+                        )
+                    );
                     $window_date->destroy;
                 }
             );
@@ -206,8 +201,11 @@ sub add_metadata {
                     $calendar->select_day($day);
                     $calendar->select_month( $month - 1, $year );
                     $calendar->signal_handler_unblock($calendar_s);
-                    $entryd->set_text( sprintf $DATETIME_FORMAT,
-                        $year, $month, $day, $hour, $min, $sec );
+                    $entryd->set_text(
+                        $self->datetime_string(
+                            $year, $month, $day, $hour, $min, $sec
+                        )
+                    );
                 }
             );
             $vbox_date->pack_start( $today, TRUE, TRUE, 0 );
@@ -257,6 +255,14 @@ sub add_metadata {
     $self->on_toggle_include_time( $self->get('include-time') );
     on_clicked_specify_datetime( $bspecify_dt, $self );
     return;
+}
+
+# helper function to return correctly formatted date or datetime string
+sub datetime_string {
+    my ( $self, @datetime ) = @_;
+    return $self->get('include-time')
+      ? sprintf $DATETIME_FORMAT, @datetime
+      : sprintf $DATE_FORMAT, @datetime[ 0 .. 2 ];
 }
 
 sub insert_text_handler {

@@ -136,14 +136,12 @@ my $VERSION   = '2.1.2';
 # Image border to ensure that a scaled to fit image gets no scrollbars
 my $border = 1;
 
-my $debug           = FALSE;
-my $EMPTY           = q{};
-my $SPACE           = q{ };
-my $DOT             = q{.};
-my $PERCENT         = q{%};
-my $ASTERISK        = q{*};
-my $DATE_FORMAT     = '%04d-%02d-%02d';
-my $DATETIME_FORMAT = '%04d-%02d-%02d %02d:%02d:%02d';
+my $debug    = FALSE;
+my $EMPTY    = q{};
+my $SPACE    = q{ };
+my $DOT      = q{.};
+my $PERCENT  = q{%};
+my $ASTERISK = q{*};
 my (
     $test,   $help,       $log,    $log_level, @device,
     $locale, $test_image, $logger, $import
@@ -2045,10 +2043,8 @@ sub update_metadata_settings {
     }
 
     if ( $mdwidgets->{button_now}->get_active ) {
-        $mdwidgets->{date}->set_text( $SETTING{use_time}
-            ? sprintf $DATETIME_FORMAT,
-            Today_and_Now()
-            : sprintf $DATE_FORMAT, Today() );
+        $mdwidgets->{date}
+          ->set_text( $windowi->datetime_string( Today_and_Now() ) );
     }
 
     # the focus-out event validates a new document date before the save button
