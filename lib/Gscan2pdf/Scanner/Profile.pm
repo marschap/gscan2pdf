@@ -17,7 +17,7 @@ Readonly my $REVERSE     => TRUE;
 # Glib::ParamSpec->object in Gscan2pdf::Dialog::Scan
 use Glib::Object::Subclass Glib::Object::;
 
-our $VERSION = '2.1.3';
+our $VERSION = '2.1.4';
 
 my $EMPTY       = q{};
 my $uuid_object = Data::UUID->new;
