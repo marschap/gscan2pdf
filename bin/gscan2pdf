@@ -2031,7 +2031,8 @@ sub add_page_range {
 }
 
 sub update_metadata_settings {
-    my ($mdwidgets) = @_;
+    my ($dialog)    = @_;
+    my ($mdwidgets) = $dialog->{mdwidgets};
 
     # Get metadata
     for my $name (qw(author title subject keywords)) {
@@ -2044,7 +2045,7 @@ sub update_metadata_settings {
 
     if ( $mdwidgets->{button_now}->get_active ) {
         $mdwidgets->{date}
-          ->set_text( $windowi->datetime_string( Today_and_Now() ) );
+          ->set_text( $dialog->datetime_string( Today_and_Now() ) );
     }
 
     # the focus-out event validates a new document date before the save button
@@ -2637,7 +2638,7 @@ sub save_button_clicked_callback {
 
             my $file_chooser;
             if ( $_ eq 'pdf' ) {
-                update_metadata_settings( $windowi->{mdwidgets} );
+                update_metadata_settings($windowi);
 
                 # Set up file selector
                 $file_chooser = Gtk3::FileChooserDialog->new(
@@ -2682,7 +2683,7 @@ sub save_button_clicked_callback {
         }
         when ('djvu') {
 
-            update_metadata_settings( $windowi->{mdwidgets} );
+            update_metadata_settings($windowi);
 
             # cd back to cwd to save
             chdir $SETTING{cwd};
@@ -3359,7 +3360,7 @@ sub email {
         clicked => sub {
 
             # Set options
-            update_metadata_settings( $windowe->{mdwidgets} );
+            update_metadata_settings($windowe);
 
             # Compile list of pages
             my $list_of_pages = list_of_pages;
