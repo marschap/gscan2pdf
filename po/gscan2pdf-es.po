@@ -3,14 +3,15 @@ msgstr ""
 "Project-Id-Version: gscan2pdf-0.8.7\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2018-04-20 18:10+0200\n"
-"PO-Revision-Date: 2018-05-14 10:09+0000\n"
-"Last-Translator: rodrigo <Unknown>\n"
+"PO-Revision-Date: 2018-10-04 22:57-0300\n"
+"Last-Translator: Eric Brandwein <brandweineric@gmail.com>\n"
 "Language-Team: Spanish <es@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Launchpad-Export-Date: 2018-05-14 11:28+0000\n"
-"X-Generator: Launchpad (build 18640)\n"
+"X-Generator: Poedit 2.1.1\n"
+"Language: es\n"
 
 #: bin/gscan2pdf:329
 msgid "Image"
@@ -27,7 +28,7 @@ msgstr "Error al mostrar la ayuda"
 #: bin/gscan2pdf:553 bin/gscan2pdf:574
 #, perl-format
 msgid "Cannot read file: %s"
-msgstr "No se puede leer el archivo:% s"
+msgstr "No se puede leer el archivo: %s"
 
 #: bin/gscan2pdf:695
 msgid "GOCR"
@@ -43,7 +44,7 @@ msgstr "Tesseract"
 
 #: bin/gscan2pdf:699
 msgid "Process image with Tesseract."
-msgstr "Procesar imagen con Tessract"
+msgstr "Procesar imagen con Tesseract."
 
 #: bin/gscan2pdf:704
 msgid "Ocropus"
@@ -51,7 +52,7 @@ msgstr "Ocropus"
 
 #: bin/gscan2pdf:704
 msgid "Process image with Ocropus."
-msgstr "Procesar imagen con Ocropus"
+msgstr "Procesar imagen con Ocropus."
 
 #: bin/gscan2pdf:709
 msgid "Cuneiform"
@@ -63,19 +64,19 @@ msgstr "Procesar imagen con Cuneiform."
 
 #: bin/gscan2pdf:731
 msgid "_File"
-msgstr "Archivo"
+msgstr "_Archivo"
 
 #: bin/gscan2pdf:734
 msgid "_New"
-msgstr "Nuevo"
+msgstr "_Nuevo"
 
 #: bin/gscan2pdf:735
 msgid "Clears all pages"
-msgstr "Elimina todas las paginas"
+msgstr "Elimina todas las páginas"
 
 #: bin/gscan2pdf:739
 msgid "_Open"
-msgstr "Abrir"
+msgstr "_Abrir"
 
 #: bin/gscan2pdf:740
 msgid "Open image file(s)"
@@ -107,7 +108,7 @@ msgstr "_Enviar en correo como PDF"
 
 #: bin/gscan2pdf:759
 msgid "Attach as PDF to a new email"
-msgstr "Adjuntar como PDF en un mail nuevo"
+msgstr "Adjuntar como PDF en un correo nuevo"
 
 #: bin/gscan2pdf:762
 msgid "_Print"
@@ -183,7 +184,7 @@ msgstr "_Eliminar"
 
 #: bin/gscan2pdf:807
 msgid "Delete selected pages"
-msgstr "Eliminar las paginas seleccionadas"
+msgstr "Eliminar las páginas seleccionadas"
 
 #: bin/gscan2pdf:811
 msgid "_Renumber"
@@ -203,7 +204,7 @@ msgstr "_Todas"
 
 #: bin/gscan2pdf:818
 msgid "Select all pages"
-msgstr "Seleccionar todas las paginas"
+msgstr "Seleccionar todas las páginas"
 
 #: bin/gscan2pdf:821
 msgid "_Odd"
@@ -227,7 +228,7 @@ msgstr "_Blanco"
 
 #: bin/gscan2pdf:835
 msgid "Select pages with low standard deviation"
-msgstr "Selecciona páginas con menor desviación estándar"
+msgstr "Selecciona páginas con desviación estándar baja"
 
 #: bin/gscan2pdf:840
 msgid "_Dark"
@@ -311,7 +312,7 @@ msgstr "Z_oom alejar"
 
 #: bin/gscan2pdf:892
 msgid "Zoom out"
-msgstr "Zoom alejar"
+msgstr "Alejar"
 
 #: bin/gscan2pdf:897 bin/gscan2pdf:899
 msgid "Rotate 90° clockwise"
@@ -335,7 +336,7 @@ msgstr "U_mbral"
 
 #: bin/gscan2pdf:932
 msgid "Change each pixel above this threshold to black"
-msgstr "Cambiar cada pixel debajo de este umbral a negro"
+msgstr "Cambiar cada píxel sobre este umbral a negro"
 
 #: bin/gscan2pdf:937
 msgid "_Brightness / Contrast"
@@ -375,7 +376,7 @@ msgstr "Limpiar"
 
 #: bin/gscan2pdf:955 bin/gscan2pdf:4112
 msgid "Clean up scanned images with unpaper"
-msgstr "Limpiar las imágenes escaneadas con quitapapel"
+msgstr "Limpiar las imágenes escaneadas con unpaper"
 
 #: bin/gscan2pdf:958
 msgid "_OCR"
@@ -391,7 +392,7 @@ msgstr "Definido por el u_suario"
 
 #: bin/gscan2pdf:964
 msgid "Process images with user-defined tool"
-msgstr ""
+msgstr "Procesar imágenes con herramienta definida por el usuario"
 
 #: bin/gscan2pdf:969 bin/gscan2pdf:971
 msgid "_Help"
@@ -443,8 +444,7 @@ msgstr "Email como PDF necesita xdg-email\n"
 
 #: bin/gscan2pdf:1214
 msgid "The rotating options and unpaper support require perlmagick\n"
-msgstr ""
-"Las opciones para rotar y el soporte de unpaper requieren perlmagick\n"
+msgstr "Las opciones para rotar y el soporte de unpaper requieren perlmagick\n"
 
 #: bin/gscan2pdf:1218
 msgid "unpaper missing\n"
@@ -456,7 +456,7 @@ msgstr "OCR requiere gocr, tesseract, ocropus, o cuneiform\n"
 
 #: bin/gscan2pdf:1236
 msgid "Warning: missing packages"
-msgstr "Aviso: paquetes perdidos"
+msgstr "Aviso: paquetes faltantes"
 
 #: bin/gscan2pdf:1465
 #, perl-format
@@ -540,7 +540,7 @@ msgstr "Rango de página"
 
 #: bin/gscan2pdf:2125
 msgid "JPEG Quality"
-msgstr "Qualidad del JPEG"
+msgstr "Calidad del JPEG"
 
 #: bin/gscan2pdf:2139
 msgid "Downsample to"
@@ -572,7 +572,7 @@ msgstr "Zip"
 
 #: bin/gscan2pdf:2164 bin/gscan2pdf:2294
 msgid "Compress output with deflate encoding."
-msgstr "Comprimir salida con codificación deflate"
+msgstr "Comprimir salida con codificación deflate."
 
 #: bin/gscan2pdf:2166 bin/gscan2pdf:2299
 msgid "Packbits"
@@ -580,7 +580,7 @@ msgstr "Packbits"
 
 #: bin/gscan2pdf:2167 bin/gscan2pdf:2300
 msgid "Compress output with Packbits encoding."
-msgstr "Comprimir salida con codificación Packbits"
+msgstr "Comprimir salida con codificación Packbits."
 
 #: bin/gscan2pdf:2173 bin/gscan2pdf:2237
 msgid "PNG"
@@ -596,7 +596,7 @@ msgstr "JPEG"
 
 #: bin/gscan2pdf:2174 bin/gscan2pdf:2297
 msgid "Compress output with JPEG encoding."
-msgstr "Comprimir salida con codificación JPG"
+msgstr "Comprimir salida con codificación JPEG."
 
 #: bin/gscan2pdf:2175 bin/gscan2pdf:2304
 msgid "None"
@@ -676,7 +676,7 @@ msgstr "hOCR"
 
 #: bin/gscan2pdf:2242
 msgid "hOCR markup language"
-msgstr "Lenguaje de anotaciones para hOCR"
+msgstr "Lenguaje de anotaciones hOCR"
 
 #: bin/gscan2pdf:2243
 msgid "gscan2pdf session file"
@@ -684,7 +684,7 @@ msgstr "archivo de sesión gscan2pdf"
 
 #: bin/gscan2pdf:2248
 msgid "Prepend to PDF"
-msgstr ""
+msgstr "Aduntar delante de PDF"
 
 #: bin/gscan2pdf:2249
 msgid "Prepend to an existing PDF"
@@ -704,13 +704,11 @@ msgstr "DjVu"
 
 #: bin/gscan2pdf:2255
 msgid "Deja Vu"
-msgstr ""
-"Copy text   \t\r\n"
-"Deja Vu"
+msgstr "Deja Vu"
 
 #: bin/gscan2pdf:2261
 msgid "Postscript backend"
-msgstr ""
+msgstr "Backend de Postscript"
 
 #: bin/gscan2pdf:2266
 msgid "LibTIFF"
@@ -718,7 +716,7 @@ msgstr "LibTIFF"
 
 #: bin/gscan2pdf:2267
 msgid "Use LibTIFF (tiff2ps) to create Postscript files from TIFF."
-msgstr "Usar LibTIFF (tiff2ps) para crear archivos Postscript desde TIFF"
+msgstr "Usar LibTIFF (tiff2ps) para crear archivos Postscript desde TIFF."
 
 #: bin/gscan2pdf:2271
 msgid "Ghostscript"
@@ -726,7 +724,7 @@ msgstr "Ghostscript"
 
 #: bin/gscan2pdf:2272
 msgid "Use Ghostscript (pdf2ps) to create Postscript files from PDF."
-msgstr "Usar Ghostscript (pdf2ps) para crear archivos Postscript desde PDF"
+msgstr "Usar Ghostscript (pdf2ps) para crear archivos Postscript desde PDF."
 
 #: bin/gscan2pdf:2275
 msgid "Poppler"
@@ -734,7 +732,7 @@ msgstr "Poppler"
 
 #: bin/gscan2pdf:2276
 msgid "Use Poppler (pdftops) to create Postscript files from PDF."
-msgstr "Usar Poppler (pdfrops) para crear archivos Postscript desde PDF"
+msgstr "Usar Poppler (pdfrops) para crear archivos Postscript desde PDF."
 
 #: bin/gscan2pdf:2302
 msgid "G3"
@@ -742,7 +740,7 @@ msgstr "G3"
 
 #: bin/gscan2pdf:2302
 msgid "Compress output with CCITT Group 3 encoding."
-msgstr "Comprimir salida con codificación CCITT Group 3"
+msgstr "Comprimir salida con codificación CCITT Group 3."
 
 #: bin/gscan2pdf:2303
 msgid "G4"
@@ -750,7 +748,7 @@ msgstr "G4"
 
 #: bin/gscan2pdf:2303
 msgid "Compress output with CCITT Group 4 encoding."
-msgstr "Comprimir salida con codificación CCITT Group 4"
+msgstr "Comprimir salida con codificación CCITT Group 4."
 
 #: bin/gscan2pdf:2376
 msgid "Font for non-ASCII text"
@@ -758,7 +756,7 @@ msgstr "Tipografía para el texto no-ASCII"
 
 #: bin/gscan2pdf:2419
 msgid "Post-save hook"
-msgstr ""
+msgstr "Gancho de pos-guardado"
 
 #: bin/gscan2pdf:2422
 #, perl-format
@@ -766,14 +764,16 @@ msgid ""
 "Run command on saved file. The available commands are those user-defined "
 "tools that do not specify %o"
 msgstr ""
+"Ejecutar comando en archivo guardado. Los comandos disponibles son las "
+"herramientas definidas por el usuario que no especifican %o"
 
 #: bin/gscan2pdf:2436 bin/gscan2pdf:2437
 msgid "Close dialog on save"
-msgstr ""
+msgstr "Cerrar diálogo al guardar"
 
 #: bin/gscan2pdf:2624 bin/gscan2pdf:2645
 msgid "PDF filename"
-msgstr "Nombre del fichero PDF"
+msgstr "Nombre del archivo PDF"
 
 #: bin/gscan2pdf:2651
 msgid "PDF files"
@@ -789,7 +789,7 @@ msgstr "Archivos DjVu"
 
 #: bin/gscan2pdf:2712
 msgid "TIFF filename"
-msgstr "Nombre del fichero TIFF"
+msgstr "Nombre del archivo TIFF"
 
 #: bin/gscan2pdf:2738
 msgid "Text filename"
@@ -809,7 +809,7 @@ msgstr "Archivos hOCR"
 
 #: bin/gscan2pdf:2789
 msgid "PS filename"
-msgstr "PS nombre de archivo"
+msgstr "Nombre de archivo PS"
 
 #: bin/gscan2pdf:2796
 msgid "Postscript files"
@@ -826,7 +826,7 @@ msgstr "Archivos de sesión de gscan2pdf"
 #: bin/gscan2pdf:2917
 #, perl-format
 msgid "Directory %s is read-only"
-msgstr "Directorio %s es de sólo lectura"
+msgstr "Directorio %s es de solo lectura"
 
 #: bin/gscan2pdf:2927
 #, perl-format
@@ -835,7 +835,7 @@ msgstr "Archivo %s es de solo lectura"
 
 #: bin/gscan2pdf:2947
 msgid "Image filename"
-msgstr "Nombre de archivo de la imagen"
+msgstr "Nombre de archivo de imagen"
 
 #: bin/gscan2pdf:3246
 msgid ""
@@ -882,11 +882,11 @@ msgstr "Ambos lados."
 
 #: bin/gscan2pdf:3869
 msgid "Facing side"
-msgstr "Orientando lado"
+msgstr "Lado anverso"
 
 #: bin/gscan2pdf:3869
 msgid "Facing side."
-msgstr "Orientando lado."
+msgstr "Lado anverso."
 
 #: bin/gscan2pdf:3870
 msgid "Reverse side"
@@ -926,7 +926,7 @@ msgstr "Rotar imagen 90 grados en sentido contrario al reloj."
 
 #: bin/gscan2pdf:3884 bin/gscan2pdf:3897
 msgid "Select direction of rotation"
-msgstr "Seleccione direccion de la rotación"
+msgstr "Seleccione dirección de la rotación"
 
 #: bin/gscan2pdf:3974
 msgid "Process with user-defined tool"
@@ -938,7 +938,7 @@ msgstr "Procesar imágenes escaneadas con herramienta definida por el usuario"
 
 #: bin/gscan2pdf:4004 bin/gscan2pdf:4005
 msgid "OCR scanned pages"
-msgstr "páginas escanadas OCR"
+msgstr "Páginas escaneadas OCR"
 
 #: bin/gscan2pdf:4015
 msgid "Select OCR engine"
@@ -946,13 +946,16 @@ msgstr "Selecciona motor OCR"
 
 #: bin/gscan2pdf:4060 bin/gscan2pdf:5763
 msgid "Threshold before OCR"
-msgstr ""
+msgstr "Umbral antes de OCR"
 
 #: bin/gscan2pdf:4063 bin/gscan2pdf:5766
+#, fuzzy
 msgid ""
 "Threshold the image before performing OCR. This only affects the image "
 "passed to the OCR engine, and not the image stored."
 msgstr ""
+"Umbralizar la imagen antes de aplicarle OCR. Esto solo afecta la imagen "
+"pasada al motor OCR, y no a la imagen guardada."
 
 #: bin/gscan2pdf:4073 bin/gscan2pdf:4859 bin/gscan2pdf:4870 bin/gscan2pdf:5128
 #: bin/gscan2pdf:5779
@@ -961,7 +964,7 @@ msgstr "Umbral"
 
 #: bin/gscan2pdf:4098
 msgid "Post-processing"
-msgstr "Pos-procesando"
+msgstr "Pos-procesado"
 
 #: bin/gscan2pdf:4111
 msgid "Clean up images"
@@ -973,11 +976,11 @@ msgstr "Opciones"
 
 #: bin/gscan2pdf:4122
 msgid "Set unpaper options"
-msgstr "Configurar opciones unpaper"
+msgstr "Configurar opciones de unpaper"
 
 #: bin/gscan2pdf:4128
 msgid "unpaper options"
-msgstr "opciones unpaper"
+msgstr "opciones de unpaper"
 
 #: bin/gscan2pdf:4630
 msgid "To aid the scan-to-PDF process"
@@ -1020,8 +1023,8 @@ msgid ""
 "The radius of the Gaussian, in pixels, not counting the center pixel (0 = "
 "automatic)."
 msgstr ""
-"El radio de Gaussian, en píxeles, no contando el pixel central (0 = "
-"automático)"
+"El radio de la Gaussiana, en píxeles, no contando el píxel central (0 = "
+"automático)."
 
 #: bin/gscan2pdf:5114
 msgid "Sigma"
@@ -1029,7 +1032,7 @@ msgstr "Sigma"
 
 #: bin/gscan2pdf:5116
 msgid "The standard deviation of the Gaussian."
-msgstr "La desviación estandar del Gaussian."
+msgstr "La desviación estándar de la Gaussiana."
 
 #: bin/gscan2pdf:5119
 msgid "Gain"
@@ -1040,16 +1043,16 @@ msgid ""
 "The percentage of the difference between the original and the blur image "
 "that is added back into the original."
 msgstr ""
-"El porcentaje de la diferencia entre el orginal y la imagen blur que es "
-"agregado nuevamente dentro del original."
+"El porcentaje de la diferencia entre el original y la imagen difuminada que "
+"es agregada nuevamente dentro del original."
 
 #: bin/gscan2pdf:5133
 msgid ""
 "The threshold, as a fraction of QuantumRange, needed to apply the difference "
 "amount."
 msgstr ""
-"El umbral, como una fracción de QuantumRange, necesaria para aplicar la suma "
-"diferente."
+"El umbral, como una fracción de QuantumRange, necesaria para aplicar la "
+"diferencia."
 
 #: bin/gscan2pdf:5254
 msgid "Crop"
@@ -1061,7 +1064,7 @@ msgstr "x"
 
 #: bin/gscan2pdf:5275
 msgid "The x-position of the left hand edge of the crop."
-msgstr "La posición-x a la izquierda del borde del recorte."
+msgstr "La posición x del borde de la izquierda del recorte."
 
 #: bin/gscan2pdf:5278
 msgid "y"
@@ -1069,7 +1072,7 @@ msgstr "y"
 
 #: bin/gscan2pdf:5279
 msgid "The y-position of the top edge of the crop."
-msgstr "La posición-y a hacia arriba del borde del recorte."
+msgstr "La posición y del borde superior del recorte."
 
 #: bin/gscan2pdf:5281 lib/Gscan2pdf/Dialog/Scan.pm:1500
 msgid "Width"
@@ -1093,7 +1096,7 @@ msgstr "Herramientas definidas por el usuario"
 
 #: bin/gscan2pdf:5437
 msgid "Selected tool"
-msgstr ""
+msgstr "Herramienta seleccionada"
 
 #: bin/gscan2pdf:5567
 msgid "unpaper"
@@ -1124,17 +1127,17 @@ msgid ""
 "Some pages have not been saved.\n"
 "Do you really want to quit?"
 msgstr ""
-"Algunas páginas no han sido salvadas.\n"
+"Algunas páginas no han sido guardadas.\n"
 "Realmente desea salir?"
 
 #: bin/gscan2pdf:5975
 #, perl-format
 msgid "%dMb free in %s."
-msgstr ""
+msgstr "%dMb libres en %s."
 
 #: bin/gscan2pdf:6108
 msgid "This operation cannot be undone. Are you sure?"
-msgstr "Esta operación no puede ser deshecha. Esta Ud. seguro?"
+msgstr "Esta operación no puede ser deshecha. ¿Está seguro?"
 
 #: bin/gscan2pdf:6165
 msgid "Preferences"
@@ -1153,7 +1156,7 @@ msgid ""
 "You will have to restart gscanp2df for changes to the temporary directory to "
 "take effect."
 msgstr ""
-"Tiene que reiniciar gscanp2df para que se apliquen los cambios en el "
+"Tiene que reiniciar gscan2pdf para que se apliquen los cambios en el "
 "directorio temporal."
 
 #: bin/gscan2pdf:6290
@@ -1166,6 +1169,9 @@ msgid ""
 "saves time clicking the scan button and waiting for the program to find the "
 "list of scanners"
 msgstr ""
+"Abrir automáticamente el diálogo de escaneo en segundo plano al iniciar el "
+"programa. Esto ahorra tiempo de hacer clic en el botón de escanear y esperar "
+"a que el programa encuentre la lista de escáneres"
 
 #: bin/gscan2pdf:6306
 msgid "Frontend"
@@ -1177,7 +1183,7 @@ msgstr ""
 
 #: bin/gscan2pdf:6312
 msgid "Scan using the Perl bindings for SANE."
-msgstr ""
+msgstr "Escanear usando los bindings de Perl para SANE."
 
 #: bin/gscan2pdf:6315
 msgid "scanimage"
@@ -1197,7 +1203,7 @@ msgstr "Escanee usando la interfaz scanadf."
 
 #: bin/gscan2pdf:6324
 msgid "Interface used for scanner access"
-msgstr ""
+msgstr "Interfaz usada para el acceso al escáner"
 
 #: bin/gscan2pdf:6330
 msgid "Device blacklist"
@@ -1215,15 +1221,17 @@ msgstr ""
 msgid "Some ADFs do not feed out the last page if this is not enabled"
 msgstr ""
 "Algunos ADF (alimentador automático de documentos) no expulsan la última "
-"página si no esta activado"
+"página si no está activado"
 
 #: bin/gscan2pdf:6353
 msgid "Allow batch scanning from flatbed"
-msgstr "Permitir escaneado en lotes desde plano"
+msgstr "Permitir escaneado en lotes desde flatbed"
 
 #: bin/gscan2pdf:6356
 msgid "If not set, switching to a flatbed scanner will force # pages to 1."
 msgstr ""
+"Si no está habilitado, cambiar a un escáner flatbed forzará el # de páginas "
+"a 1."
 
 #: bin/gscan2pdf:6365
 msgid "Force new scan job between pages"
@@ -1234,6 +1242,8 @@ msgid ""
 "Otherwise, some Brother scanners report out of documents, despite scanning "
 "from flatbed."
 msgstr ""
+"Sino, otros escáneres Brother reportan sin más documentos, a pesar de "
+"escanear desde flatbed."
 
 #: bin/gscan2pdf:6384
 msgid "Select # pages = all on selecting ADF"
@@ -1244,14 +1254,16 @@ msgid ""
 "If this option is enabled, when switching to source=ADF, # pages = all is "
 "selected"
 msgstr ""
+"Si esta opción está habilitada, cuando se cambie a fuente=ADF, # páginas = "
+"todas es seleccionado"
 
 #: bin/gscan2pdf:6396
 msgid "Scan command prefix"
-msgstr "Prefijo de orden de escaneo"
+msgstr "Prefijo de comando de escaneo"
 
 #: bin/gscan2pdf:6406
 msgid "Cache device-dependent options"
-msgstr "Opciones dependientes de dispositivo de la caché"
+msgstr "Cachear opciones dependientes de dispositivo"
 
 #: bin/gscan2pdf:6412
 msgid "Clear device-dependent options cache"
@@ -1263,7 +1275,7 @@ msgstr "Opciones de visibilidad y control"
 
 #: bin/gscan2pdf:6431 lib/Gscan2pdf/Dialog.pm:225
 msgid "Title"
-msgstr "Titulo"
+msgstr "Título"
 
 #: bin/gscan2pdf:6432
 msgid "Type"
@@ -1283,15 +1295,15 @@ msgstr "Ocultar"
 
 #: bin/gscan2pdf:6459
 msgid "List current options"
-msgstr ""
+msgstr "Listar opciones actuales"
 
 #: bin/gscan2pdf:6479
 msgid "No scanner currently open with command line frontend."
-msgstr ""
+msgstr "Ningún escáner se encuentra abierto con interfaz de línea de comando."
 
 #: bin/gscan2pdf:6487
 msgid "Show options not listed"
-msgstr ""
+msgstr "Mostrar opciones no listadas"
 
 #: bin/gscan2pdf:6531
 msgid "Restore window settings on startup"
@@ -1303,7 +1315,7 @@ msgstr "Ver archivos al guardar"
 
 #: bin/gscan2pdf:6545
 msgid "Default PDF & DjVu filename"
-msgstr "Nombre predeterminado PDF & DjVu"
+msgstr "Nombre de archivo predeterminado PDF & DjVu"
 
 #: bin/gscan2pdf:6550
 msgid ""
@@ -1322,11 +1334,11 @@ msgstr ""
 
 #: bin/gscan2pdf:6561
 msgid "Replace whitespace in filenames with underscores"
-msgstr ""
+msgstr "Reemplazar espacios en blanco en nombres de archivo con guiones bajos"
 
 #: bin/gscan2pdf:6569
 msgid "Set access and modification times to metadata date"
-msgstr ""
+msgstr "Establecer tiempos de acceso y modificación en la fecha de la metadata"
 
 #: bin/gscan2pdf:6576
 msgid "Temporary directory"
@@ -1349,6 +1361,8 @@ msgid ""
 "Warn if the available space in the temporary directory is less than this "
 "value"
 msgstr ""
+"Avisar si el espacio disponible en el directorio temporal es menor a este "
+"valor"
 
 #: bin/gscan2pdf:6616
 msgid "Blank threshold"
@@ -1375,30 +1389,29 @@ msgid "Replace"
 msgstr "Reemplazar"
 
 #: bin/gscan2pdf:6647
-msgid ""
-"Replace the contents of the text buffer with that from the OCR output."
+msgid "Replace the contents of the text buffer with that from the OCR output."
 msgstr ""
 "Reemplazar el contenido del búfer de texto con aquel de la salida de OCR."
 
 #: bin/gscan2pdf:6651
 msgid "Prepend"
-msgstr "Anteponer"
+msgstr "Añadir al principio"
 
 #: bin/gscan2pdf:6652
 msgid "Prepend the OCR output to the text buffer."
-msgstr "Añadir la salida del OCR al principio del buffer de texto."
+msgstr "Añadir la salida del OCR al principio del búfer de texto."
 
 #: bin/gscan2pdf:6655
 msgid "Append"
-msgstr "Anexar"
+msgstr "Añadir"
 
 #: bin/gscan2pdf:6656
 msgid "Append the OCR output to the text buffer."
-msgstr "Añadir la salida del OCR al buffer de texto."
+msgstr "Añadir la salida del OCR al búfer de texto."
 
 #: bin/gscan2pdf:6664
 msgid "Manage user-defined tools"
-msgstr ""
+msgstr "Administrar herramientas definidas por el usuario"
 
 #: bin/gscan2pdf:6773
 msgid ""
@@ -1410,9 +1423,9 @@ msgid ""
 "%r resolution"
 msgstr ""
 "Use %i y %o para los nombres de los ficheros de entrada y salida "
-"respectivamente, o unicamente %i si va a modificar directamente la imagen.\n"
+"respectivamente, o únicamente %i si va a modificar directamente la imagen.\n"
 "\n"
-"La otra variable es:\n"
+"La otra variable disponible es:\n"
 "\n"
 "%r resolución"
 
@@ -1430,7 +1443,7 @@ msgstr "ppp"
 
 #: bin/gscan2pdf:6922
 msgid "Don't show this message again"
-msgstr "No mostrar el mensaje otra vez"
+msgstr "No mostrar este mensaje otra vez"
 
 #: lib/Gscan2pdf/Config.pm:307
 msgid "A3"
@@ -1470,7 +1483,7 @@ msgstr "Hoy"
 
 #: lib/Gscan2pdf/Dialog.pm:218
 msgid "Select date with calendar"
-msgstr ""
+msgstr "Seleccionar fecha con calendario"
 
 #: lib/Gscan2pdf/Dialog.pm:226
 msgid "Author"
@@ -1494,7 +1507,7 @@ msgstr "Numeración de páginas"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:121 lib/Gscan2pdf/Dialog/Scan.pm:392
 msgid "Start"
-msgstr "Iniciar"
+msgstr "Comienzo"
 
 #: lib/Gscan2pdf/Dialog/Renumber.pm:142 lib/Gscan2pdf/Dialog/Scan.pm:411
 msgid "Increment"
@@ -1514,19 +1527,19 @@ msgstr "Opciones de página"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:306
 msgid "# Pages"
-msgstr "# Paginas"
+msgstr "# Páginas"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:317 lib/Gscan2pdf/PageRange.pm:39
 msgid "All"
-msgstr "Todos"
+msgstr "Todas"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:318
 msgid "Scan all pages"
-msgstr "Escanear todas las paginas"
+msgstr "Escanear todas las páginas"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:331 lib/Gscan2pdf/Dialog/Scan.pm:336
 msgid "Set number of pages to scan"
-msgstr "Numero de paginas a escanear"
+msgstr "Número de páginas a escanear"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:376
 msgid "Extended page numbering"
@@ -1554,7 +1567,7 @@ msgstr "Doble cara"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:467
 msgid "Source document is double-sided"
-msgstr "El documento esta a doble cara"
+msgstr "El documento está a doble cara"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:473
 msgid "Side to scan"
@@ -1570,7 +1583,7 @@ msgstr "Reverso"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:495
 msgid "Sets which side of a double-sided document is scanned"
-msgstr "Determina la cara que esta escaneada"
+msgstr "Determina la cara que está escaneada"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:522
 msgid "Scan profiles"
@@ -1594,12 +1607,12 @@ msgstr "Determina el dispositivo a utilizar para el escaneo"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:634 lib/Gscan2pdf/Dialog/Scan.pm:640
 msgid "Name of scan profile"
-msgstr "Nombre del pefil"
+msgstr "Nombre del perfil de escaneo"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:656
 #, perl-format
 msgid "Profile '%s' exists. Overwrite?"
-msgstr "El perfil '%s' ya existe. ¿Desea sobreescribirlo?"
+msgstr "El perfil '%s' ya existe. ¿Desea sobrescribirlo?"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:773 lib/Gscan2pdf/Dialog/Scan.pm:940
 #: lib/Gscan2pdf/Dialog/Scan.pm:1114 lib/Gscan2pdf/Dialog/Scan.pm:1127
@@ -1662,17 +1675,21 @@ msgid ""
 "The following paper sizes are too big to be scanned by the selected device:"
 msgstr ""
 "Los siguientes tamaños de papel son demasiado grandes para ser escaneados "
-"por el dispositivo selecionado:"
+"por el dispositivo seleccionado:"
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:1845
 msgid ""
 "Multiple unconstrained values are not currently supported. Please file a bug."
 msgstr ""
+"No son soportados actualmente múltiples valores sin restricciones. Por "
+"favor, realice un informe sobre el bug."
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:1859
 msgid ""
 "Multiple non-numerical values are not currently supported. Please file a bug."
 msgstr ""
+"No son soportados actualmente múltiples valores no numéricos. Por favor, "
+"realice un informe sobre el bug."
 
 #: lib/Gscan2pdf/Dialog/Scan.pm:2289
 #, perl-format
@@ -1701,7 +1718,7 @@ msgstr "Actualizando opciones"
 #: lib/Gscan2pdf/Dialog/Scan/CLI.pm:834
 #: lib/Gscan2pdf/Dialog/Scan/Image_Sane.pm:456
 msgid "Must scan facing pages first"
-msgstr "Escanear las paginas primero"
+msgstr "Se deben escanear las páginas de anverso primero"
 
 #: lib/Gscan2pdf/Dialog/Scan/Image_Sane.pm:142
 msgid "Opening device"
@@ -1721,7 +1738,7 @@ msgstr "Error al abrir el dispositivo: "
 
 #: lib/Gscan2pdf/Dialog/Scan/Image_Sane.pm:439
 msgid "Error setting option: "
-msgstr ""
+msgstr "Error al habilitar opción: "
 
 #: lib/Gscan2pdf/Document.pm:120
 msgid "Thumbnails"
@@ -1730,10 +1747,14 @@ msgstr "Miniaturas"
 #: lib/Gscan2pdf/Document.pm:353
 msgid "Error: cannot open a session file at the same time as another file."
 msgstr ""
+"Error: no se pudo abrir un archivo de sesión al mismo tiempo que otro "
+"archivo."
 
 #: lib/Gscan2pdf/Document.pm:366
 msgid "Error: import a multipage file at the same time as another file."
 msgstr ""
+"Error: importar un archivo de muchas páginas al mismo tiempo que otro "
+"archivo."
 
 #: lib/Gscan2pdf/Document.pm:620
 msgid "Unable to load image"
@@ -1742,7 +1763,7 @@ msgstr "No es posible cargar la imagen"
 #: lib/Gscan2pdf/Document.pm:1782
 #, perl-format
 msgid "Error importing page %d. Ignoring."
-msgstr "Error al importar la pagina %d. Omitir"
+msgstr "Error al importar la página %d. Omitiendo."
 
 #: lib/Gscan2pdf/Document.pm:1894
 msgid "No pages to process"
@@ -1760,11 +1781,11 @@ msgstr "Archivo %s no encontrado"
 #: lib/Gscan2pdf/Document.pm:2485
 #, perl-format
 msgid "Error importing zero-length file %s."
-msgstr ""
+msgstr "Error importando archivo de longitud cero %s."
 
 #: lib/Gscan2pdf/Document.pm:2528
 msgid "Unknown DjVu file structure. Please contact the author."
-msgstr "Archivo Djvu sin estructura conocida. Por favor, contacte al autor."
+msgstr "Archivo DjVu sin estructura conocida. Por favor, contacte al autor."
 
 #: lib/Gscan2pdf/Document.pm:2601 lib/Gscan2pdf/Document.pm:2609
 #, perl-format
@@ -1796,6 +1817,11 @@ msgid ""
 "If you wish to add scans to an existing PDF, use the prepend/append to PDF "
 "options in the Save dialogue.\n"
 msgstr ""
+"Aviso: gscan2pdf espera una imagen por página, pero esto no fue satisfecho. "
+"Es probable que el PDF no fue correctamente importado.\n"
+"\n"
+"Si desea agregar escaneos a un PDF existente, use las opciones anteponer/"
+"agregar a PDF en el diálogo de Guardar.\n"
 
 #: lib/Gscan2pdf/Document.pm:2913
 msgid "Setting up PDF"
@@ -1817,17 +1843,17 @@ msgstr "Convirtiendo a PS"
 #: lib/Gscan2pdf/Document.pm:2972
 #, perl-format
 msgid "Error converting PDF to PS: %s"
-msgstr ""
+msgstr "Error al convertir PDF a PS: %s"
 
 #: lib/Gscan2pdf/Document.pm:2999
 #, perl-format
 msgid "Error prepending PDF: %s"
-msgstr "Error añadiendo delante PDF: %s"
+msgstr "Error añadiendo PDF adelante: %s"
 
 #: lib/Gscan2pdf/Document.pm:3007
 #, perl-format
 msgid "Error appending PDF: %s"
-msgstr "Error adjuntando PDF: %s"
+msgstr "Error añadiendo PDF: %s"
 
 #: lib/Gscan2pdf/Document.pm:3013
 msgid "Error creating backup of PDF"
@@ -1835,7 +1861,7 @@ msgstr "Error al crear copia de seguridad de PDF"
 
 #: lib/Gscan2pdf/Document.pm:3035
 msgid "Unable to set file timestamp for dates prior to 1970"
-msgstr ""
+msgstr "Incapaz de configurar tiempo de archivo para fechas anteriores a 1970"
 
 #: lib/Gscan2pdf/Document.pm:3138
 #, perl-format
@@ -1872,7 +1898,7 @@ msgstr "Error fusionando DjVu"
 #: lib/Gscan2pdf/Document.pm:3499
 #, perl-format
 msgid "Can't write to file: %s"
-msgstr "No se puede escribir a archivo: %s"
+msgstr "No se puede escribir al archivo: %s"
 
 #: lib/Gscan2pdf/Document.pm:3518 lib/Gscan2pdf/Document.pm:3549
 #: lib/Gscan2pdf/Document.pm:3823 lib/Gscan2pdf/Document.pm:3848
@@ -1914,7 +1940,7 @@ msgstr "Error convirtiendo TIFF a PS: %s"
 
 #: lib/Gscan2pdf/Document.pm:3776 lib/Gscan2pdf/Document.pm:3797
 msgid "Error saving image"
-msgstr "Error guardando la imágen"
+msgstr "Error guardando la imagen"
 
 #: lib/Gscan2pdf/Document.pm:4642
 msgid "Error copying page"
@@ -1932,7 +1958,7 @@ msgstr "Escaneado página %i..."
 
 #: lib/Gscan2pdf/Frontend/CLI.pm:205 lib/Gscan2pdf/Frontend/CLI.pm:416
 msgid "Scanner warming up"
-msgstr "Calentando el Escaner"
+msgstr "Calentando el escáner"
 
 #: lib/Gscan2pdf/Frontend/CLI.pm:216
 msgid "Document feeder out of documents"
@@ -1948,7 +1974,7 @@ msgstr "Operación cancelada"
 
 #: lib/Gscan2pdf/Frontend/CLI.pm:255 lib/Gscan2pdf/Frontend/CLI.pm:470
 msgid "Unknown message: "
-msgstr "Mensaje desconocido : "
+msgstr "Mensaje desconocido: "
 
 #: lib/Gscan2pdf/Page.pm:88 lib/Gscan2pdf/Page.pm:93
 #, perl-format
@@ -1974,7 +2000,7 @@ msgstr "Sencillo"
 
 #: lib/Gscan2pdf/Unpaper.pm:50
 msgid "One page per sheet, oriented upwards without rotation."
-msgstr "Una página por hoja, orientada hacia arriba sin rotación"
+msgstr "Una página por hoja, orientada hacia arriba sin rotación."
 
 #: lib/Gscan2pdf/Unpaper.pm:54
 msgid "Double"
@@ -1986,7 +2012,7 @@ msgid ""
 "page on the right half)."
 msgstr ""
 "Dos páginas por hoja, orientación apaisada (una hoja en la parte izquierda, "
-"una hoja en la parte derecha)"
+"una hoja en la parte derecha)."
 
 #: lib/Gscan2pdf/Unpaper.pm:64
 msgid "# Output pages"
@@ -2006,7 +2032,7 @@ msgstr "De izquierda a derecha"
 
 #: lib/Gscan2pdf/Unpaper.pm:78
 msgid "Most writings systems, e.g. Latin, Greek, Cyrillic."
-msgstr "Mayoría de alfabetos, p. e. Latin, Griego, Cirílico."
+msgstr "Mayoría de alfabetos, p. e. Latín, Griego, Cirílico."
 
 #: lib/Gscan2pdf/Unpaper.pm:82
 msgid "Right-to-left"
@@ -2014,7 +2040,7 @@ msgstr "De derecha a izquierda"
 
 #: lib/Gscan2pdf/Unpaper.pm:83
 msgid "Scripts like Arabic or Hebrew."
-msgstr "Scripts como Arábico o Hebreo"
+msgstr "Scripts como Arábico o Hebreo."
 
 #: lib/Gscan2pdf/Unpaper.pm:91
 msgid "No deskew"
@@ -2022,7 +2048,7 @@ msgstr "No restablecer"
 
 #: lib/Gscan2pdf/Unpaper.pm:92
 msgid "Disable deskewing."
-msgstr "Desactivar restablecimiento"
+msgstr "Desactivar restablecimiento."
 
 #: lib/Gscan2pdf/Unpaper.pm:97
 msgid "No mask scan"
@@ -2034,11 +2060,11 @@ msgstr "Deshabilitar detección de máscara."
 
 #: lib/Gscan2pdf/Unpaper.pm:103
 msgid "No mask centering"
-msgstr ""
+msgstr "Centrado sin máscara"
 
 #: lib/Gscan2pdf/Unpaper.pm:104
 msgid "Disable mask centering."
-msgstr "Desactivar centrado de máscara"
+msgstr "Desactivar centrado de máscara."
 
 #: lib/Gscan2pdf/Unpaper.pm:109
 msgid "No black filter"
@@ -2046,7 +2072,7 @@ msgstr "Sin filtro negro"
 
 #: lib/Gscan2pdf/Unpaper.pm:110
 msgid "Disable black area scan."
-msgstr "Desactivar el escaneado de la zona negra"
+msgstr "Desactivar el escaneado de la zona negra."
 
 #: lib/Gscan2pdf/Unpaper.pm:115
 msgid "No gray filter"
@@ -2054,7 +2080,7 @@ msgstr "Sin filtro gris"
 
 #: lib/Gscan2pdf/Unpaper.pm:116
 msgid "Disable gray area scan."
-msgstr "Desactivar el escaneado de la zona gris"
+msgstr "Desactivar el escaneado de la zona gris."
 
 #: lib/Gscan2pdf/Unpaper.pm:121
 msgid "No noise filter"
@@ -2062,23 +2088,23 @@ msgstr "Sin filtro de ruido"
 
 #: lib/Gscan2pdf/Unpaper.pm:122
 msgid "Disable noise filter."
-msgstr "Desactivar el filtro de ruido"
+msgstr "Desactivar el filtro de ruido."
 
 #: lib/Gscan2pdf/Unpaper.pm:127
 msgid "No blur filter"
-msgstr "Sin filtro blur"
+msgstr "Sin filtro de difuminado"
 
 #: lib/Gscan2pdf/Unpaper.pm:128
 msgid "Disable blur filter."
-msgstr "Desactivar filtro blur"
+msgstr "Desactivar filtro de difuminado."
 
 #: lib/Gscan2pdf/Unpaper.pm:133
 msgid "No border scan"
-msgstr "No escanear el borde"
+msgstr "No escanear bordes"
 
 #: lib/Gscan2pdf/Unpaper.pm:134
 msgid "Disable border scanning."
-msgstr "Desactivar el escaneado el borde"
+msgstr "Desactivar el escaneado de bordes."
 
 #: lib/Gscan2pdf/Unpaper.pm:139
 msgid "No border align"
@@ -2086,7 +2112,7 @@ msgstr "No alinear al borde"
 
 #: lib/Gscan2pdf/Unpaper.pm:141
 msgid "Disable aligning of the area detected by border scanning."
-msgstr "Deshabilitar alineado al area detectada por el escaneo de bordes"
+msgstr "Deshabilitar alineado al área detectada por el escaneo de bordes."
 
 #: lib/Gscan2pdf/Unpaper.pm:146
 msgid "Deskew to edge"
@@ -2099,26 +2125,26 @@ msgid ""
 "value will be used, unless the statistical deviation exceeds --deskew-scan-"
 "deviation."
 msgstr ""
-"Bordes desde el cual escanear para rotación. Cada borde de máscara puede ser "
-"usado para detectar la rotación de la máscara. Si múltiples bordes son "
-"especificados, la posibilidad promedio será utilizada, salvo que la "
-"estadística exceda la desviación  --deskew-scan-deviation."
+"Bordes desde los cuales escanear para rotación. Cada borde de máscara puede "
+"ser usado para detectar la rotación de la máscara. Si múltiples bordes son "
+"especificados, el valor promedio será utilizado, salvo que la desviación "
+"estadística exceda --deskew-scan-deviation."
 
 #: lib/Gscan2pdf/Unpaper.pm:155
 msgid "Use 'left' for scanning from the left edge."
-msgstr "Usa 'Izquierda' para escanear desde el borde izquierdo"
+msgstr "Usa 'Izquierda' para escanear desde el borde izquierdo."
 
 #: lib/Gscan2pdf/Unpaper.pm:160
 msgid "Use 'top' for scanning from the top edge."
-msgstr "Usa 'Arriba' para escanear desde el borde superior"
+msgstr "Usa 'Arriba' para escanear desde el borde superior."
 
 #: lib/Gscan2pdf/Unpaper.pm:164 lib/Gscan2pdf/Unpaper.pm:193
 msgid "Right"
-msgstr "A la derecha"
+msgstr "Derecha"
 
 #: lib/Gscan2pdf/Unpaper.pm:166
 msgid "Use 'right' for scanning from the right edge."
-msgstr "Usa 'Derecho' para escanear desde el borde derecho"
+msgstr "Usa 'Derecho' para escanear desde el borde derecho."
 
 #: lib/Gscan2pdf/Unpaper.pm:170 lib/Gscan2pdf/Unpaper.pm:198
 msgid "Bottom"
@@ -2126,35 +2152,35 @@ msgstr "Abajo"
 
 #: lib/Gscan2pdf/Unpaper.pm:171
 msgid "Use 'bottom' for scanning from the bottom."
-msgstr "Usa 'Abajo' para escanear desde el borde inferior"
+msgstr "Usa 'Abajo' para escanear desde el borde inferior."
 
 #: lib/Gscan2pdf/Unpaper.pm:178
 msgid "Align to edge"
-msgstr "Alinear al margen"
+msgstr "Alinear al borde"
 
 #: lib/Gscan2pdf/Unpaper.pm:179
 msgid "Edge to which to align the page."
-msgstr "Borde hacia el cual para alinear la página"
+msgstr "Borde hacia el cual alinear la página."
 
 #: lib/Gscan2pdf/Unpaper.pm:184
 msgid "Use 'left' to align to the left edge."
-msgstr "Use \"izquierda\" para alinear a la izquierda"
+msgstr "Use 'izquierda' para alinear a la izquierda."
 
 #: lib/Gscan2pdf/Unpaper.pm:189
 msgid "Use 'top' to align to the top edge."
-msgstr "Use \"arriba\" para alinear arriba"
+msgstr "Use 'arriba' para alinear arriba."
 
 #: lib/Gscan2pdf/Unpaper.pm:194
 msgid "Use 'right' to align to the right edge."
-msgstr "Use \"derecha\" para alinear a la derecha"
+msgstr "Use 'derecha' para alinear a la derecha."
 
 #: lib/Gscan2pdf/Unpaper.pm:199
 msgid "Use 'bottom' to align to the bottom."
-msgstr "Usa 'Abajo' para escanear desde el borde inferior"
+msgstr "Usa 'abajo' para alinear abajo."
 
 #: lib/Gscan2pdf/Unpaper.pm:205
 msgid "Border margin"
-msgstr "Borde marginal"
+msgstr "Margen del borde"
 
 #: lib/Gscan2pdf/Unpaper.pm:209
 msgid "Vertical margin"
@@ -2164,8 +2190,8 @@ msgstr "Margen vertical"
 msgid ""
 "Vertical distance to keep from the sheet edge when aligning a border area."
 msgstr ""
-"Distancia vertical para mantener desde el borde de la hoja cuando se alinea "
-"un borde de área."
+"Distancia vertical a mantener desde el borde de la hoja cuando se alinea un "
+"área de borde."
 
 #: lib/Gscan2pdf/Unpaper.pm:220
 msgid "Horizontal margin"
@@ -2175,8 +2201,8 @@ msgstr "Margen horizontal"
 msgid ""
 "Horizontal distance to keep from the sheet edge when aligning a border area."
 msgstr ""
-"Distancia horizontal para mantener desde el borde de la hoja cuando se "
-"alinea el borde del área."
+"Distancia horizontal a mantener desde el borde de la hoja cuando se alinea "
+"un área de borde."
 
 #: lib/Gscan2pdf/Unpaper.pm:233
 msgid "White threshold"
@@ -2184,7 +2210,7 @@ msgstr "Umbral blanco"
 
 #: lib/Gscan2pdf/Unpaper.pm:235
 msgid "Brightness ratio above which a pixel is considered white."
-msgstr "Proporcion de brillo debajo del cual un pixel es considerado blanco"
+msgstr "Proporción de brillo sobre del cual un píxel es considerado blanco."
 
 #: lib/Gscan2pdf/Unpaper.pm:243
 msgid "Black threshold"
@@ -2196,9 +2222,9 @@ msgid ""
 "used by the gray-filter. This value is also used when converting a grayscale "
 "image to black-and-white mode."
 msgstr ""
-"Proporcion de brillo debajo del cual un pixel es considerado negro (no "
+"Proporción de brillo debajo del cual un píxel es considerado negro (no "
 "gris). Esto es usado por el filtro de grises. Este valor es usado cuando se "
-"convierte una imagen en escala de gris a modo blanco y negro."
+"convierte una imagen en escala de grises a modo blanco y negro."
 
 #: lib/Gscan2pdf/Unpaper.pm:289
 msgid "Deskew"
